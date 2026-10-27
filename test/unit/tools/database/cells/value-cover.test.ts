@@ -50,6 +50,16 @@ describe('cell editors over a row page value', () => {
     document.body.innerHTML = '';
   });
 
+  it('marks only a table cell editor for the no-motion open; a row page value editor is not', () => {
+    openCellEditor(makeProperty('text'), 'a', cellAnchor(), makeEditorContext({ coverCell: true }));
+    expect(popoverRoot().getAttribute('data-blok-popover-custom-class')?.split(' ')).toContain('blok-database-table-cell-editor');
+    document.body.innerHTML = '';
+    PopoverRegistry.resetForTests();
+
+    openCellEditor(makeProperty('text'), 'a', cellAnchor(), makeEditorContext({ coverCell: 'value' }));
+    expect(popoverRoot().getAttribute('data-blok-popover-custom-class')?.split(' ')).not.toContain('blok-database-table-cell-editor');
+  });
+
   const widthTracking: PropertyType[] = ['text', 'number', 'url', 'select', 'status', 'multiSelect', 'person', 'files', 'relation'];
 
   /** Person needs people and relation its target to open at all. */

@@ -21,6 +21,8 @@ export interface CellPopoverOptions {
 const CELL_EDITOR_CLASS = 'blok-database-cell-editor';
 /** The row page's look on top of it (database.css). */
 const VALUE_EDITOR_CLASS = 'blok-database-value-editor';
+/** research/08 Motion: a table cell editor mounts at its final size, with no fade (database.css). */
+const TABLE_EDITOR_CLASS = 'blok-database-table-cell-editor';
 
 /**
  * research/22 §4: the box's corner sits 1px past the cell's, so its 1px ring
@@ -103,7 +105,7 @@ export class CellPopover {
       flippable: false,
       width: 'auto',
       autoFocusFirstItem: false,
-      class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : [])].join(' '),
+      class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
     const coverOrNone = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value') : {};

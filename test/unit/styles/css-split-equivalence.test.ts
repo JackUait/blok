@@ -1209,6 +1209,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PANEL_LIST_CAP_SEARCH_BYTES = 666;
     // database.css: tabular figures in table Number and Formula cells (research/35 §17).
     const DATABASE_TABLE_TABULAR_FIGURES_BYTES = 240;
+    // database.css: table cell editors open with no fade or scale (research/08 Motion).
+    const DATABASE_TABLE_EDITOR_NO_MOTION_BYTES = 406;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1469,7 +1471,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_MIRROR_NAME_FIELD_BYTES
       + DATABASE_PANEL_LIST_CAP_SEARCH_BYTES
       + DATABASE_CONFIRM_SCROLL_BYTES
-      + DATABASE_TABLE_TABULAR_FIGURES_BYTES;
+      + DATABASE_TABLE_TABULAR_FIGURES_BYTES
+      + DATABASE_TABLE_EDITOR_NO_MOTION_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

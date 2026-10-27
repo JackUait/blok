@@ -6573,6 +6573,13 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
+/* research/08 Motion: a table cell editor mounts at its final size and opacity. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor'] > [data-blok-popover-container],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor']:not([data-blok-popover-opened='true']) > [data-blok-popover-container] {
+  transition: none;
+  transform: none;
+}
+
 [data-blok-database-cell-editor] {
   display: flex;
   flex-direction: column;

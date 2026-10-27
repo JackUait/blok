@@ -77,6 +77,16 @@ describe('cell editor CSS', () => {
       .forEach((selector) => expect(reduced(selector), selector).toBe(true));
   });
   describe('editor box (research/22 §4)', () => {
+    // research/08 Motion: Notion's table cell editors mount at their final size and opacity.
+    it('a table cell editor opens with no fade or scale, opened or not yet', () => {
+      const TABLE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-table-cell-editor']";
+
+      [`${TABLE} > [data-blok-popover-container]`, `${TABLE}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`].forEach((selector) => {
+        expect(declared(selector, 'transition'), selector).toEqual(['none']);
+        expect(declared(selector, 'transform'), selector).toEqual(['none']);
+      });
+    });
+
     const BOX = "[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]";
     const ITEMS = "[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-items]";
 

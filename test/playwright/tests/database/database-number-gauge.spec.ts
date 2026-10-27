@@ -409,7 +409,12 @@ for (const theme of THEMES) {
       });
     }
 
-    for (const view of [ { type: 'board', groupBy: 'p-stage' }, { type: 'gallery' }, { type: 'list' } ]) {
+    // notion-spec-2 §16.3: on a board or gallery card the bar fills the line and the ring is 18px. A list row was not measured.
+    for (const { ring: ringSize, barMax, ...view } of [
+      { type: 'board', groupBy: 'p-stage', ring: 18, barMax: Infinity },
+      { type: 'gallery', ring: 18, barMax: Infinity },
+      { type: 'list', ring: 21, barMax: 160 },
+    ]) {
       test(`a ${view.type} card draws the gauge as the row page does`, async ({ page }) => {
         await mount(page, blocks(view));
         const scope = page.locator('[data-blok-id="db-1"]');
@@ -418,8 +423,8 @@ for (const theme of THEMES) {
 
         expect(bar).toMatchObject({ height: 4, gap: 8 });
         expect(bar.width).toBeGreaterThanOrEqual(48);
-        expect(bar.width).toBeLessThanOrEqual(160);
-        expect(ring).toMatchObject({ width: 21, height: 21, gap: 8 });
+        expect(bar.width).toBeLessThanOrEqual(barMax);
+        expect(ring).toMatchObject({ width: ringSize, height: ringSize, gap: 8 });
         // Nothing of the number or its gauge is clipped by the card's slot.
         for (const gauge of [ BAR, RING ]) {
           const clipped = await scope.locator(gauge).first().evaluate((el) => {
@@ -538,6 +543,232 @@ for (const theme of THEMES) {
       expect(geometry.lineStart).toBe(6);
       expect(geometry.lineHeight).toBe(28);
       // §14.11: the card's rollup list wrapper is `gap: 4px 6px`.
+      expect(geometry.listGap).toBe(6);
+    });
+  }
+}
+
+/** notion-spec-2 §16.2: a side peek rollup list of five related rows, as Bar and as Ring. */
+const PEEK_LIST_SCHEMA = [
+  { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'p-link', name: 'Link', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db-1' } },
+  { id: 'p-num', name: 'Num', type: 'number', position: 'a2' },
+  { id: 'p-bars', name: 'Bars', type: 'rollup', position: 'a3', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'show_original' }, number: { showAs: 'bar', color: 'green', divideBy: 5000 } },
+  { id: 'p-rings', name: 'Rings', type: 'rollup', position: 'a4', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'show_original' }, number: { showAs: 'ring', color: 'green', divideBy: 5000, format: 'dollar' } },
+];
+
+const peekListBlocks = (values: number[]): OutputBlockData[] => {
+  const ids = values.map((_, i) => `r${i + 1}`);
+
+  return [
+    {
+      id: 'db-1',
+      type: 'database',
+      data: {
+        schema: PEEK_LIST_SCHEMA,
+        views: [ { id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'p-num' ], type: 'table' } ],
+        activeViewId: 'v1',
+      },
+      content: ids,
+    },
+    ...values.map((value, i): OutputBlockData => ({
+      id: ids[i],
+      type: 'database-row',
+      parent: 'db-1',
+      data: { position: `a${i}`, properties: { 'p-title': ids[i], 'p-num': value, ...(i === 0 ? { 'p-link': ids.map((id) => ({ id })) } : {}) } },
+    })),
+  ];
+};
+
+interface PeekItem { left: number; right: number; top: number; bottom: number; text: { left: number; right: number }; gauge: { left: number; top: number; width: number; height: number } }
+
+const peekItems = async (value: Locator): Promise<{ rowLeft: number; rowRight: number; boxHeight: number; items: PeekItem[] }> => {
+  await expect(value.locator('[data-blok-database-number-item]').first()).toBeVisible();
+
+  return value.evaluate((el) => {
+    const round = (n: number): number => Math.round(n * 10) / 10;
+    const style = getComputedStyle(el);
+    const box = el.getBoundingClientRect();
+    const items = [ ...el.querySelectorAll('[data-blok-database-number-item]') ].map((item) => {
+      const rect = item.getBoundingClientRect();
+      const text = item.querySelector('[data-blok-database-number-text]')?.getBoundingClientRect();
+      const gauge = item.querySelector('[data-blok-database-number-bar], [data-blok-database-number-ring]')?.getBoundingClientRect();
+
+      if (text === undefined || gauge === undefined) throw new Error('no text or gauge');
+
+      return {
+        left: round(rect.left), right: round(rect.right), top: round(rect.top), bottom: round(rect.bottom),
+        text: { left: round(text.left), right: round(text.right) },
+        gauge: { left: round(gauge.left), top: round(gauge.top), width: round(gauge.width), height: round(gauge.height) },
+      };
+    });
+
+    return { rowLeft: round(box.left + parseFloat(style.paddingLeft)), rowRight: round(box.right - parseFloat(style.paddingRight)), boxHeight: round(box.height), items };
+  });
+};
+
+const linesOf = (items: PeekItem[]): PeekItem[][] => items.reduce<PeekItem[][]>((lines, item) => {
+  const last = lines[lines.length - 1];
+
+  if (last !== undefined && Math.abs(last[0].top - item.top) < 1) last.push(item);
+  else lines.push([ item ]);
+
+  return lines;
+}, []);
+
+const openPeekOf = async (page: Page, rowId: string): Promise<Locator> => {
+  const row = page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`);
+
+  await row.hover();
+  await row.locator('[data-blok-database-table-open]').click();
+  const drawer = page.locator('[data-blok-database-drawer]');
+
+  await expect(drawer).toHaveCSS('transform', 'none');
+
+  return drawer;
+};
+
+for (const theme of THEMES) {
+  test.describe(`side peek rollup list, ${theme.name}`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme.name });
+    });
+
+    test('three bars share one line and shrink to the same width', async ({ page }) => {
+      await mount(page, peekListBlocks([ 100, 2469, 1554 ]));
+      const { rowLeft, rowRight, items } = await peekItems(peekValue(await openPeekOf(page, 'r1'), 'p-bars'));
+
+      expect(linesOf(items)).toHaveLength(1);
+      const widths = items.map((item) => item.gauge.width);
+
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(0.5);
+      expect(widths[0]).toBeGreaterThanOrEqual(48);
+      expect(widths[0]).toBeLessThan(160);
+      // The items fill the line, 8px apart, each bar 8px after its text.
+      expect(Math.abs(items[0].left - rowLeft)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(items[2].right - rowRight)).toBeLessThanOrEqual(0.5);
+      expect(items.map((item) => Math.round(item.gauge.left - item.text.right))).toEqual([ 8, 8, 8 ]);
+      expect(items.slice(1).map((item, i) => Math.round(item.left - items[i].right))).toEqual([ 8, 8 ]);
+    });
+
+    test('five bars wrap: 6px between lines, equal bars per line, a lone last item spans the line with its bar at 160', async ({ page }) => {
+      await mount(page, peekListBlocks([ 100, 2469, 1554, 1776, 1998 ]));
+      const { rowLeft, rowRight, boxHeight, items } = await peekItems(peekValue(await openPeekOf(page, 'r1'), 'p-bars'));
+      const lines = linesOf(items);
+
+      expect(lines.length).toBeGreaterThan(1);
+      for (const line of lines) {
+        const widths = line.map((item) => item.gauge.width);
+
+        expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(0.5);
+        expect(Math.min(...widths)).toBeGreaterThanOrEqual(48);
+        expect(Math.max(...widths)).toBeLessThanOrEqual(160);
+        expect(Math.abs(line[0].left - rowLeft)).toBeLessThanOrEqual(0.5);
+        line.slice(1).forEach((item, i) => expect(Math.round(item.left - line[i].right)).toBe(8));
+      }
+      for (let i = 1; i < lines.length; i++) {
+        expect(Math.round(lines[i][0].top - lines[i - 1][0].bottom)).toBe(6);
+      }
+      // Each line is 21 tall, the 4px track 8.5 down.
+      for (const item of items) {
+        expect(item.bottom - item.top).toBe(21);
+        expect(Math.round((item.gauge.top - item.top) * 10) / 10).toBe(8.5);
+      }
+      // Two lines in a value box with 6px above, between and below.
+      expect(lines).toHaveLength(2);
+      expect(boxHeight).toBe(60);
+      const last = lines[lines.length - 1];
+
+      expect(last).toHaveLength(1);
+      expect(Math.abs(last[0].right - rowRight)).toBeLessThanOrEqual(0.5);
+      expect(last[0].gauge.width).toBe(160);
+    });
+
+    test('rings stay 21px, 8px after the text, and wrap 6px apart', async ({ page }) => {
+      await mount(page, peekListBlocks([ 50, 1234.5, 777, 888, 999 ]));
+      const { items } = await peekItems(peekValue(await openPeekOf(page, 'r1'), 'p-rings'));
+
+      for (const item of items) {
+        expect(item.gauge).toMatchObject({ width: 21, height: 21 });
+        expect(Math.round(item.gauge.left - item.text.right)).toBe(8);
+      }
+      const lines = linesOf(items);
+
+      for (let i = 1; i < lines.length; i++) {
+        expect(Math.round(lines[i][0].top - lines[i - 1][0].bottom)).toBe(6);
+      }
+    });
+  });
+}
+
+/** notion-spec-2 §16.3: a card with Show number on. */
+const CARD_ON_SCHEMA = [
+  { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'p-stage', name: 'Stage', type: 'select', position: 'a1', config: { options: [ { id: 'o-plan', label: 'Plan', color: 'blue', position: 'a0' } ] } },
+  { id: 'p-link', name: 'Link', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db-1' } },
+  { id: 'p-num', name: 'Num', type: 'number', position: 'a3' },
+  { id: 'p-bar-on', name: 'Bar on', type: 'number', position: 'a4', number: { showAs: 'bar', color: 'green', divideBy: 100 } },
+  { id: 'p-ring-on', name: 'Ring on', type: 'number', position: 'a5', number: { showAs: 'ring', color: 'green', divideBy: 100 } },
+  { id: 'p-list-bar', name: 'List bar', type: 'rollup', position: 'a6', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'show_original' }, number: { showAs: 'bar', color: 'green', divideBy: 5000 } },
+];
+
+const cardOnBlocks = (view: Record<string, unknown>): OutputBlockData[] => [
+  {
+    id: 'db-1',
+    type: 'database',
+    data: {
+      schema: CARD_ON_SCHEMA,
+      views: [ { id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'p-bar-on', 'p-ring-on', 'p-list-bar' ], ...view } ],
+      activeViewId: 'v1',
+    },
+    content: [ 'r1', 'r2' ],
+  },
+  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'A', 'p-num': 100, 'p-bar-on': 50, 'p-ring-on': 50, 'p-stage': 'o-plan', 'p-link': [ { id: 'r1' }, { id: 'r2' } ] } } },
+  { id: 'r2', type: 'database-row', parent: 'db-1', data: { position: 'a1', properties: { 'p-title': 'B', 'p-num': 2469, 'p-bar-on': 1234.5, 'p-ring-on': 1234.5, 'p-stage': 'o-plan' } } },
+];
+
+for (const theme of THEMES) {
+  for (const view of [
+    { name: 'gallery', data: { type: 'gallery' }, card: '[data-blok-database-gallery-card]', line: '[data-blok-database-gallery-property]' },
+    { name: 'board', data: { type: 'board', groupBy: 'p-stage' }, card: '[data-blok-database-card]', line: '[data-blok-database-card-property]' },
+  ]) {
+    test(`a ${view.name} card with Show number on: the bar fills the line, an 18px ring, list bars at 48, ${theme.name}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme.name });
+      await mount(page, cardOnBlocks(view.data));
+      const card = page.locator(view.card).filter({ hasText: 'A' }).first();
+
+      await expect(card.locator(BAR).first()).toBeVisible();
+      const geometry = await card.evaluate((el, lineSelector) => {
+        const round = (n: number): number => Math.round(n * 10) / 10;
+        const box = el.getBoundingClientRect();
+        const within = (id: string, selector: string): DOMRect[] => [ ...el.querySelectorAll(`${lineSelector}[data-property-id="${id}"] ${selector}`) ].map((node) => node.getBoundingClientRect());
+        const line = (id: string): DOMRect => {
+          const found = el.querySelector(`${lineSelector}[data-property-id="${id}"]`);
+
+          if (found === null) throw new Error(`no line ${id}`);
+
+          return found.getBoundingClientRect();
+        };
+        const barText = within('p-bar-on', '[data-blok-database-number-text]')[0];
+        const bar = within('p-bar-on', '[data-blok-database-number-bar]')[0];
+        const ringText = within('p-ring-on', '[data-blok-database-number-text]')[0];
+        const ring = within('p-ring-on', '[data-blok-database-number-ring]')[0];
+        const ringLine = line('p-ring-on');
+        const barLine = line('p-bar-on');
+        const listBars = within('p-list-bar', '[data-blok-database-number-bar]');
+        const listItems = within('p-list-bar', '[data-blok-database-number-item]');
+
+        return {
+          bar: { gap: round(bar.left - barText.right), toEnd: round(box.right - 11 - bar.right), fromLine: round(bar.top - barLine.top) },
+          ring: { gap: round(ring.left - ringText.right), size: round(ring.width), fromLine: round(ring.top - ringLine.top), textFromLine: round(ringText.top - ringLine.top) },
+          listBars: listBars.map((b) => round(b.width)),
+          listGap: round(listItems[1].left - listItems[0].right),
+        };
+      }, view.line);
+
+      expect(geometry.bar).toEqual({ gap: 8, toEnd: 0, fromLine: 12 });
+      expect(geometry.ring).toEqual({ gap: 8, size: 18, fromLine: 5, textFromLine: 5 });
+      expect(geometry.listBars).toEqual([ 48, 48 ]);
       expect(geometry.listGap).toBe(6);
     });
   }

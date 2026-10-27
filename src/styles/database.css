@@ -6216,9 +6216,18 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   flex: none;
 }
 
-/* The side peek splits its width between the items. */
+/* The side peek splits its width between the items. notion-spec-2 §16.2: wrapped lines are 21 tall, 6px apart. */
 [data-blok-database-drawer-prop-value] > [data-blok-database-cell][data-blok-database-number-list] {
   flex: 1 1 auto;
+  row-gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-drawer-prop-value]:has(> [data-blok-database-number-list]) {
+  padding-block: var(--blok-space-1-5);
+}
+
+[data-blok-database-drawer-prop-value] [data-blok-database-number-item] {
+  min-block-size: 21px;
 }
 
 [data-blok-database-number-item] > [data-blok-database-number-bar] {
@@ -6227,17 +6236,18 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   max-inline-size: 160px;
 }
 
-/* notion-spec-2 §14.3: on a card, a gauge with no number is a bar across the line or an 18px ring. */
-:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell]:has(> [data-blok-database-number-bar]:only-child) {
+/* notion-spec-2 §14.3, §16.3: on a card a Number's bar fills the rest of the line, and every ring is 18px. A list item's bar keeps its 48. */
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell]:has(> [data-blok-database-number-bar]) {
   flex: 1 1 auto;
 }
 
-:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-bar]:only-child {
-  flex: 1 1 100%;
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell] > [data-blok-database-number-bar] {
+  flex: 1 1 auto;
   inline-size: auto;
+  max-inline-size: none;
 }
 
-:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-ring]:only-child {
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-ring] {
   inline-size: 18px;
   block-size: 18px;
 }

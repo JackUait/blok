@@ -175,6 +175,8 @@ const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px', class:
 const checkedIf = (current: boolean): { isActive: boolean; trailingIcon?: string } => ({ isActive: current, ...(current ? { trailingIcon: IconCheck } : {}) });
 /** notion-spec-2 §17.2: a rollup's Relation and Target property lists are 280 wide and check nothing. */
 const TARGET_LIST = { clickOnly: true, placement: 'under', width: '280px', class: PANEL_LIST_CLASS } as const;
+/** notion-spec-2 §17.2: Target property's own search field size, in database.css. */
+const TARGET_SEARCH_LIST_CLASS = `${PANEL_LIST_CLASS} blok-database-target-list`;
 
 /** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
 const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
@@ -1115,6 +1117,7 @@ export class DatabasePropertyMenu {
         valueLabel: picked?.name ?? this.t('tools.database.rollupSelect'),
         children: {
           ...TARGET_LIST,
+          class: TARGET_SEARCH_LIST_CLASS,
           searchable: true,
           searchPlaceholder: this.t('tools.database.settingsSearchProperty'),
           // H-rr: a rollup of a rollup is not offered.

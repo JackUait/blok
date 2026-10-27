@@ -6781,6 +6781,24 @@ textarea[data-blok-database-cell-input] {
    250x210 = 4 + 7 x 28 + 6 x 1 + 4). The ">" keeps a list's own submenus, mounted in its root, out. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] {
   padding-inline: var(--blok-space-1);
+  /* §16.1: Notion's 44 formats show 502 tall in a 717 window, then scroll. 70vh is inferred from that one window. */
+  --max-height: min(70vh, calc(100dvh - 24px));
+}
+
+/* §17.2: Target property's search input is 244x20, 18px in and 16px down; its rows start 52 down.
+   The box around it is inferred: no room is left for the search glyph. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-target-list'] > [data-blok-popover-container] > [data-blok-field='search'] {
+  margin-block: var(--blok-space-3) var(--blok-space-2);
+  padding-inline: 13px;
+
+  &::before {
+    display: none;
+  }
+
+  > input {
+    height: 20px;
+    line-height: 20px;
+  }
 }
 
 /* §17.10: the row holding the current value opens in the hover tint. Literals: the selected-state law rejects an alias of an alias. */

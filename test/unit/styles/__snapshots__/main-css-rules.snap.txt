@@ -9923,6 +9923,15 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] {
   padding-inline: var(--blok-space-1);
+  --max-height: min(70vh, calc(100dvh - 24px));
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-target-list'] > [data-blok-popover-container] > [data-blok-field='search'] {
+  margin-block: var(--blok-space-3) var(--blok-space-2);
+  padding-inline: 13px;
+  display: none;
+  height: 20px;
+  line-height: 20px;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] {

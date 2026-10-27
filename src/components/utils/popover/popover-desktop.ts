@@ -59,6 +59,9 @@ interface AnchorSnapshot {
   contextRect?: DOMRect;
 }
 
+/** An 'under' list's gap to the window edges (notion-spec-2 §16.1: Number format ends at 705 in a 717 window). */
+const UNDER_VIEWPORT_MARGIN = 12;
+
 /** A list that opens on a click or a key only, and ignores pointer moves while open. */
 const isClickOnly = (item: PopoverItem | null | undefined): item is PopoverItem =>
   item?.childrenPlacement === 'dropdown' || item?.childrenClickOnly === true;
@@ -1871,6 +1874,8 @@ export class PopoverDesktop extends PopoverAbstract {
       const rightAligned = (anchor?.right ?? parentRect.right) - nestedWidth;
       // In RTL the edges swap: 'under' then lines up left edges, the others right edges.
       const anchorLeft = isRtl === (under === undefined) ? rightAligned : leftAligned;
+      // notion-spec-2 §16.1, §17.3: an 'under' list keeps 12px off the window's edges, so it flips with 11.6 left.
+      const margin = under === undefined ? NESTED_POPOVER_VIEWPORT_MARGIN : UNDER_VIEWPORT_MARGIN;
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
         parentRect: { left: anchorLeft, top: flush?.top ?? parentRect.top, bottom: flush?.bottom ?? parentRect.bottom },
         nestedWidth,
@@ -1878,6 +1883,7 @@ export class PopoverDesktop extends PopoverAbstract {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         gap: flush === undefined ? undefined : 0,
+        margin,
       });
 
       // A left below anchorLeft means the right-viewport clamp engaged.
@@ -1888,7 +1894,7 @@ export class PopoverDesktop extends PopoverAbstract {
       // strand the card past the viewport edge.
       if (left < anchorLeft) {
         nestedContainer.style.left = 'auto';
-        nestedContainer.style.right = `${parentRootRect.right - (window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN)}px`;
+        nestedContainer.style.right = `${parentRootRect.right - (window.innerWidth - margin)}px`;
       } else {
         nestedContainer.style.right = 'auto';
         nestedContainer.style.left = `${left - parentRootRect.left}px`;

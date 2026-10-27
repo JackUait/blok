@@ -133,6 +133,8 @@ test('the group submenus are 250 wide', async ({ page }) => {
 });
 
 test('Decimal places is 250x210 under its row: Default and 0 to 5, no scrolling', async ({ page }) => {
+  // At 717 the row ends 11px too low for the list to fit under it with the 12px margin.
+  await page.setViewportSize({ width: 1512, height: 800 });
   await openPanel(page);
   const row = await box(page, 'decimals');
 
@@ -193,4 +195,61 @@ test('Type swaps the panel for the type list, fitted in the window; Escape lands
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   await expect(page.locator('[data-blok-item-name^="type-"]')).toHaveCount(0);
+});
+
+// §16.1: Notion's 44 formats show 502 tall at y 203 in a 717 window (0.7 x 717 = 502, inferred), 12 over its bottom.
+test('Number format is capped and scrolls, its bottom 12px over the window\'s', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="numberFormat"]').click();
+  const list = await listBox(page, 'format-number');
+  const scrolls = await page.locator('[data-blok-item-name="format-number"]').evaluate((el) => {
+    const items = el.closest('[data-blok-popover-items]');
+
+    return items !== null && items.scrollHeight > items.clientHeight;
+  });
+
+  expect(list.y + list.height).toBeCloseTo(717 - 12, 0);
+  expect(list.height).toBeCloseTo(717 * 0.7, 0);
+  expect(scrolls).toBe(true);
+});
+
+// §17.3: with 11.6px left under the row, Display as flipped above it. Blok's lists flip below a 12px margin.
+test('a list flips above its row when less than 12px would be left under it', async ({ page }) => {
+  await openPanel(page);
+  const row = await box(page, 'decimals');
+
+  // 210 tall list; leave 10px under it.
+  await page.setViewportSize({ width: 1512, height: Math.ceil(row.bottom + 210 + 10) });
+  const moved = await box(page, 'decimals');
+  const height = page.viewportSize()?.height ?? 0;
+
+  expect(height - (moved.bottom + 210)).toBeGreaterThan(8);
+  expect(height - (moved.bottom + 210)).toBeLessThan(12);
+  await page.locator('[data-blok-item-name="decimals"]').click();
+  const list = await listBox(page, 'decimals-default');
+
+  expect(list.y + list.height).toBe(moved.y);
+});
+
+// §17.2: Notion's search input is 244x20, 18px in and 16px down; the rows start 52 down. 258 tall with 7 properties.
+test('Target property\'s search field has Notion\'s size, so the list is Notion\'s height', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="rollupProperty"]').click();
+  const list = await listBox(page, 'rollupProperty-p-title');
+  const input = await page.locator('[data-blok-popover-container]:has([data-blok-item-name="rollupProperty-p-title"]) [data-blok-testid="popover-search-input"]').boundingBox();
+  const first = await box(page, 'rollupProperty-p-title');
+  const count = await page.locator('[data-blok-item-name^="rollupProperty-"]').count();
+
+  expect({ x: (input?.x ?? 0) - list.x, y: (input?.y ?? 0) - list.y, width: input?.width, height: input?.height }).toEqual({ x: 18, y: 16, width: 244, height: 20 });
+  expect(first.y - list.y).toBe(52);
+  expect(list.height).toBe(52 + count * 29 - 1 + 4);
+});
+
+test('other searchable lists keep the shared search field', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="numberFormat"]').click();
+  await listBox(page, 'format-number');
+  const input = await page.locator('[data-blok-popover-container]:has([data-blok-item-name="format-number"]) [data-blok-testid="popover-search-input"]').boundingBox();
+
+  expect(input?.height).toBe(22);
 });

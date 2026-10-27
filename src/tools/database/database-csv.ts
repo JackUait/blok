@@ -5,7 +5,7 @@ import { isOutputData, placeText, verificationStatus } from './tier3-values';
 
 import type { DatabaseData, DatabaseRowData, DateFormat, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
-import { generateKeyBetween } from '../../shared/database/fractional-index';
+import { generateNKeysBetween } from '../../shared/database/fractional-index';
 import { freePropertyName, newView } from '../../shared/database/schema-ops';
 import { positionBetween } from '../../shared/database/positions';
 import { planTypeChange } from './property-conversion';
@@ -631,7 +631,7 @@ export const csvDatabaseBlocks = (
   const imported = buildCsvImport(table, options);
   const titleProperty = imported.schema.find((property) => property.type === 'title');
   const viewId = options.newId();
-  const positions = imported.rows.reduce<string[]>((list) => [...list, generateKeyBetween(list.at(-1) ?? null, null)], []);
+  const positions = generateNKeysBetween(null, null, imported.rows.length);
 
   return {
     id,

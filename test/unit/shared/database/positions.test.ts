@@ -104,6 +104,78 @@ describe('positionBetween', () => {
   });
 });
 
+describe('positions next to keys the library misreads', () => {
+  /** In order and strictly inside: `null` is an open end. */
+  const inside = (low: string | null, keys: string[], high: string | null): boolean =>
+    keys.every((key, i) => (i === 0 ? low === null || low < key : keys[i - 1] < key) && (high === null || key < high));
+  const ALPHABET = /^[0-9A-Za-z]+$/u;
+
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+
+  // The library reads a character outside its alphabet as '0', so these keys come out below `low`.
+  it.each<[string, string | null]>([
+    ['a0~', 'a1'],
+    ['a0_', 'a1'],
+    ['Zé-', null],
+    ['a_', null],
+  ])('places a key after %j and before %j in order', (low, high) => {
+    expect(inside(low, [positionBetween(low, high)], high)).toBe(true);
+    expect(inside(low, positionsBetween(low, high, 3), high)).toBe(true);
+  });
+
+  it.each<[string, string]>([
+    ['a0', 'a00'],
+    ['a', 'aa'],
+    ['a00', 'a000'],
+  ])('keeps placing in order after %j and before %j, where no library key fits', (low, high) => {
+    const keys = Array.from({ length: 20 }).reduce<string[]>(list => [...list, positionBetween(list.at(-1) ?? low, high)], []);
+
+    expect(inside(low, keys, high)).toBe(true);
+    expect(inside(low, positionsBetween(low, high, 5), high)).toBe(true);
+  });
+
+  it.each<[string, string | null]>([['a0000', 'a0010'], ['a0010', null], [null, 'a0000']] as Array<[string, string | null]>)('reads padded keys after %j and before %j, so new keys stay in the alphabet', (low, high) => {
+    const key = positionBetween(low, high);
+
+    expect(ALPHABET.test(key) && readableBy400(key)).toBe(true);
+    expect(positionsBetween(low, high, 3).every(each => ALPHABET.test(each))).toBe(true);
+  });
+
+  it.each<[string[], number]>([
+    [['2'], 0],
+    [['0', '1', 'a0'], 2],
+    [['a', 'b'], 1],
+    [['Z', 'a'], 1],
+  ])('keeps keys short when 100 rows go in after unreadable keys %j', (seed, at) => {
+    const keys = [...seed];
+
+    Array.from({ length: 100 }).forEach(() => {
+      const slot = at === 0 ? keys.length : keys.length - at + 1;
+
+      keys.splice(slot, 0, positionBetween(keys[slot - 1] ?? null, keys[slot] ?? null));
+    });
+    expect([...keys].sort()).toEqual(keys);
+    // Inserting before the last key grows keys even among readable ones; a loose chain grew 5 characters a row.
+    expect(Math.max(...keys.map(key => key.length))).toBeLessThanOrEqual(40);
+  });
+
+  it('gives a batch in order even where nothing fits below the upper neighbour', () => {
+    const keys = positionsBetween(null, '', 3);
+
+    expect(new Set(keys).size).toBe(3);
+    expect([...keys].sort()).toEqual(keys);
+  });
+
+  it('leaves room after two equal keys for a batch', () => {
+    // 0 is the smallest tail, 0001, which leaves the least room above a5.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    expect(Math.max(...positionsBetween('a5', 'a5', 40).map(key => key.length))).toBeLessThanOrEqual(10);
+  });
+});
+
 describe('positionsBetween', () => {
   it('gives n keys in order, strictly inside the gap, each readable by 4.0.0', () => {
     const keys = positionsBetween('a0', 'a1', 200);

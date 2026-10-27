@@ -24,22 +24,37 @@ const integerLength = (head: string): number | null => {
  * `a000` (a `padStart` key), but `a0` names the same spot: every key it mints
  * above `a0` is also above `a000`, and every one below is below it.
  */
-export const normalizeKey = (key: string | null): string | null => {
-  if (key === null) return null;
+const withoutTrailingZeros = (key: string): string => {
   const length = integerLength(key.charAt(0));
 
-  if (length === null || key.length <= length) return key;
-  const fraction = key.slice(length).replace(/0+$/, '');
+  return length === null || key.length <= length ? key : key.slice(0, length) + key.slice(length).replace(/0+$/u, '');
+};
 
-  return key.slice(0, length) + fraction;
+const ALPHABET = /^[0-9A-Za-z]+$/u;
+
+/**
+ * The key as the library reads it, or null for one it rejects or misreads:
+ * it reads a character outside its alphabet as '0' and would mint below it.
+ */
+const readable = (key: string): string | null => {
+  const read = withoutTrailingZeros(key);
+
+  if (!ALPHABET.test(read)) return null;
+  try {
+    generateKeyBetween(read, null);
+
+    return read;
+  } catch {
+    return null;
+  }
 };
 
 /**
- * A key strictly between two keys the library cannot read (a bad head, an
- * empty string), by code-unit order. Never throws: a stored key from an old
- * document or a host must not kill a drop.
+ * A key strictly between two keys, by code-unit order alone, for gaps the
+ * library cannot fill. Never throws: a stored key from an old document or a
+ * host must not kill a drop.
  */
-export const looseKeyBetween = (after: string, before: string | null, tail: string): string => {
+const looseKeyBetween = (after: string, before: string | null, tail: string): string => {
   if (before === null || !before.startsWith(after)) {
     // Any extension of `after` stays below a `before` it does not prefix.
     return `${after}V${tail}`;
@@ -80,44 +95,51 @@ const randomKeySuffix = (): string => {
 const withTail = (low: string | null, key: string, high: string | null): string =>
   (high !== null && high.startsWith(key) ? withTail(low, generateKeyBetween(low, key), key) : key + randomKeySuffix());
 
-/**
- * A fractional-index key between two neighbours (DatabaseModel.positionBetween documents
- * the cases). Every key ends in a random tail, so two peers placing into the same gap at
- * the same moment never land on the same key.
- */
-export const positionBetween = (after: string | null, before: string | null): string => {
-  const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
+const inOrder = (keys: Array<string | null>): boolean =>
+  keys.every((key, i) => i === 0 || key === null || keys[i - 1] === null || (keys[i - 1] ?? '') < key);
 
-  if (low !== null && low === high) {
-    return low + randomKeySuffix();
-  }
+/**
+ * `n` tailed keys the library mints for the gap, or null when they do not land
+ * strictly inside it. An end the library cannot read is left open, so a key
+ * next to an odd stored key is still short when one fits.
+ */
+const libraryKeys = (low: string | null, high: string | null, n: number): string[] | null => {
+  const bottom = low === null ? null : readable(low);
+  const top = high === null ? null : readable(high);
 
   try {
-    const [bottom, top] = [normalizeKey(low), normalizeKey(high)];
+    const keys = generateNKeysBetween(bottom, top, n);
+    const tailed = keys.map((key, i) => withTail(keys[i - 1] ?? bottom, key, keys[i + 1] ?? top));
 
-    return withTail(bottom, generateKeyBetween(bottom, top), top);
+    return inOrder([low, ...tailed, high]) ? tailed : null;
   } catch {
-    return looseKeyBetween(low ?? '', high, randomKeySuffix());
+    return null;
   }
 };
+
+/** Code-unit keys for a gap the library cannot fill; past `high` only where nothing fits below it. */
+const looseKeys = (low: string | null, high: string | null, n: number): string[] =>
+  Array.from({ length: n }).reduce<string[]>((keys) => {
+    const after = keys.at(-1) ?? low ?? '';
+    const key = looseKeyBetween(after, high, randomKeySuffix());
+
+    return [...keys, key > after || (keys.length === 0 && low === null) ? key : looseKeyBetween(after, null, randomKeySuffix())];
+  }, []);
 
 /**
  * `n` keys between two neighbours, in order, for rows placed together. The
- * gap is bisected, so the keys stay short: a chain of positionBetween calls
- * into one gap grows a character every few rows.
+ * gap is bisected, so the keys stay short: a chain of single keys into one
+ * gap grows a character every few rows. Every key ends in a random tail, so
+ * two peers placing into the same gap at the same moment never mint the same
+ * key. Never throws (DatabaseModel.positionBetween documents the cases).
  */
 export const positionsBetween = (after: string | null, before: string | null, n: number): string[] => {
   const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
-  const tied = low !== null && low === high;
+  // Equal neighbours leave no gap: the keys go just after both.
+  const cap = low !== null && low === high ? `${low}V` : high;
 
-  try {
-    // Equal neighbours leave no gap: the keys go just after both, as positionBetween's do.
-    const bottom = normalizeKey(low);
-    const top = tied ? `${bottom ?? ''}${randomKeySuffix()}` : normalizeKey(high);
-    const keys = generateNKeysBetween(bottom, top, n);
-
-    return keys.map((key, i) => withTail(keys[i - 1] ?? bottom, key, keys[i + 1] ?? top));
-  } catch {
-    return Array.from({ length: n }).reduce<string[]>(keys => [...keys, positionBetween(keys.at(-1) ?? low, tied ? null : high)], []);
-  }
+  return libraryKeys(low, cap, n) ?? looseKeys(low, cap, n);
 };
+
+/** One key between two neighbours: see positionsBetween. */
+export const positionBetween = (after: string | null, before: string | null): string => positionsBetween(after, before, 1)[0];

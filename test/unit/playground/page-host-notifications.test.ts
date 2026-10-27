@@ -9,7 +9,7 @@ import {
   type PageMap,
 } from '../../../src/playground/page-host';
 import { buildPageTree, findPageLink } from '../../../src/playground/page-tree';
-import { attachCreatedPageSeed, titleCallbacks } from '../../../src/playground/page-title-wiring';
+import { attachCreatedPageSeed, createHeldDocuments, titleCallbacks } from '../../../src/playground/page-title-wiring';
 
 const seed = (): PageMap => ({
   guide: { title: 'Guide', icon: '📘', parentId: null, blocks: [] },
@@ -281,11 +281,13 @@ describe('playground collaboration title seed', () => {
     });
     const editor = { on, title: { get: () => '', set, icon: { get: () => null, set: vi.fn() } } };
     const pages = new PageRegistry({ fresh: { title: 'Named here', parentId: null, blocks: [] } });
+    const createdHere = new Set(created);
 
     runInNewContext(`${source}; wireCollaborationTitleSeed(editor, 'fresh')`, {
       editor,
       pages,
-      createdHere: new Set(created),
+      createdHere,
+      heldDocuments: createHeldDocuments(createdHere),
       attachCreatedPageSeed,
       collabStatus: new WeakMap(lastStatus === undefined ? [] : [[editor, lastStatus]]),
       collaborationConfig: () => (collab ? { doc: 'shared' } : null),

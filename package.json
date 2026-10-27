@@ -257,7 +257,7 @@
     "@vitest/ui": "5.0.5",
     "@vue/test-utils": "^2.5.1",
     "chromatic": "18.13.3",
-    "cldr-annotations-full": "^48.2.0",
+    "cldr-annotations-full": "^49.0.0",
     "docx-preview": "0.4.1",
     "dompurify": "^3.4.17",
     "es-module-lexer": "^3.0.4",

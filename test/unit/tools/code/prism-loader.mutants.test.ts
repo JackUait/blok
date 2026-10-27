@@ -6,13 +6,10 @@
  * invisible to positives alone. Mermaid cases assert the WHOLE emitted HTML:
  * a token that splits in two, shifts by one character, or swallows its
  * neighbour still contains the right class names, so `toContain` cannot see it.
- *
- * Prism state is process-global and `vi.resetModules()` does not reset it
- * (prismjs and its components live in node_modules and are never re-evaluated),
- * so the order of the blocks below is load-bearing — see the notes on each.
  */
-import Prism from 'prismjs';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Highlighter } from '../../../../src/tools/code/highlight/engine';
+import type * as PrismLoader from '../../../../src/tools/code/prism-loader';
 import { DEFAULT_LANGUAGE, LANGUAGES } from '../../../../src/tools/code/constants';
 import { resetPrismState, tokenizePrism } from '../../../../src/tools/code/prism-loader';
 
@@ -20,11 +17,7 @@ const mermaid = (code: string): Promise<string | null> => tokenizePrism(code, 'm
 
 const HIGHLIGHTABLE_IDS = LANGUAGES.map((lang) => lang.id).filter((id) => id !== DEFAULT_LANGUAGE);
 
-/**
- * One snippet per shipped language. Order follows `LANGUAGES`, which the loop
- * below relies on: prism-cpp extends the `c` grammar and prism-scala extends
- * `java`, so those two must already be registered when their turn comes.
- */
+/** One snippet per shipped language. */
 const SNIPPETS: Record<string, string> = {
   javascript: 'const x = 1;',
   typescript: 'const x: number = 1;',
@@ -61,8 +54,6 @@ const SNIPPETS: Record<string, string> = {
 describe('prism-loader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Undoes the grammar deletions further down, so each test starts from a
-    // loader that will re-register whatever it needs.
     resetPrismState();
   });
 
@@ -214,22 +205,8 @@ describe('prism-loader', () => {
       );
     });
 
-    it('registers the grammar once and reuses that object', async () => {
-      await mermaid('graph TD');
-      const registered = Prism.languages.mermaid;
-
-      resetPrismState();
-      await mermaid('graph TD');
-
-      expect(Prism.languages.mermaid).toBe(registered);
-    });
   });
 
-  /**
-   * Runs before the failure cases below: it must be the first thing in the file
-   * to pull in `markup-templating`, or php keeps highlighting from the global
-   * Prism registry and nothing notices a broken prerequisite chain.
-   */
   describe('language map', () => {
     it.each(HIGHLIGHTABLE_IDS)('loads a grammar and emits tokens for %s', async (lang) => {
       const code = SNIPPETS[lang];
@@ -243,137 +220,148 @@ describe('prism-loader', () => {
     });
   });
 
-  /**
-   * Every case here re-imports the loader behind a `vi.doMock`, so it gets a
-   * module with an empty loaded-language cache. They run last because the mocks
-   * replace components the block above needs for real.
-   */
+  /** Every case here re-imports the loader behind a `vi.doMock` of one grammar module. */
   describe('grammar loading failures', () => {
+    const GRAMMARS_DIR = '../../../../src/tools/code/highlight/grammars';
+
+    const freshLoader = async (): Promise<typeof PrismLoader> => {
+      vi.resetModules();
+
+      return import('../../../../src/tools/code/prism-loader');
+    };
+
     afterEach(() => {
+      vi.doUnmock(`${GRAMMARS_DIR}/css`);
+      vi.doUnmock(`${GRAMMARS_DIR}/javascript`);
+      vi.doUnmock(`${GRAMMARS_DIR}/markup`);
+      vi.doUnmock(`${GRAMMARS_DIR}/bash`);
+      vi.doUnmock(`${GRAMMARS_DIR}/markup-templating`);
+      vi.doUnmock(`${GRAMMARS_DIR}/mermaid`);
       vi.resetModules();
     });
 
     it('returns null and warns when a grammar import throws', async () => {
-      vi.resetModules();
-      vi.doMock('prismjs/components/prism-css', () => {
+      vi.doMock(`${GRAMMARS_DIR}/css`, () => {
         throw new Error('nope');
       });
 
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const loader = await import('../../../../src/tools/code/prism-loader');
+      const loader = await freshLoader();
       const html = await loader.tokenizePrism('body { margin: 0; }', 'css');
 
-      // Prism ships `css` in its core bundle, so a mutant that ignores the
-      // failed import would highlight this rather than bail out.
       expect(html).toBeNull();
       expect(warn).toHaveBeenCalledWith('[blok] Failed to load Prism grammar for "css":', expect.anything());
-
-      vi.doUnmock('prismjs/components/prism-css');
     });
 
-    it('loads its own component for javascript', async () => {
-      vi.resetModules();
-      vi.doMock('prismjs/components/prism-javascript', () => {
+    it('loads its own grammar for javascript', async () => {
+      vi.doMock(`${GRAMMARS_DIR}/javascript`, () => {
         throw new Error('nope');
       });
 
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-      const loader = await import('../../../../src/tools/code/prism-loader');
+      const loader = await freshLoader();
 
       expect(await loader.tokenizePrism('const x = 1;', 'javascript')).toBeNull();
-
-      vi.doUnmock('prismjs/components/prism-javascript');
     });
 
-    it('loads the markup component for both html and xml', async () => {
-      vi.resetModules();
-      vi.doMock('prismjs/components/prism-markup', () => {
+    it('loads the markup grammar for both html and xml', async () => {
+      vi.doMock(`${GRAMMARS_DIR}/markup`, () => {
         throw new Error('nope');
       });
 
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-      const loader = await import('../../../../src/tools/code/prism-loader');
+      const loader = await freshLoader();
 
       expect(await loader.tokenizePrism('<p class="x">hi</p>', 'html')).toBeNull();
       expect(await loader.tokenizePrism('<root><a id="1"/></root>', 'xml')).toBeNull();
-
-      vi.doUnmock('prismjs/components/prism-markup');
     });
 
-    it('loads the bash component for shell', async () => {
-      vi.resetModules();
-      vi.doMock('prismjs/components/prism-bash', () => {
+    it('loads the bash grammar for shell', async () => {
+      vi.doMock(`${GRAMMARS_DIR}/bash`, () => {
         throw new Error('nope');
       });
 
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-      const loader = await import('../../../../src/tools/code/prism-loader');
+      const loader = await freshLoader();
 
       expect(await loader.tokenizePrism('echo "x" | wc -l', 'shell')).toBeNull();
-
-      vi.doUnmock('prismjs/components/prism-bash');
     });
 
-    it('warns about a failed prerequisite and still loads the language', async () => {
-      vi.resetModules();
-      vi.doMock('prismjs/components/prism-markup', () => {
-        throw new Error('nope');
+    it('fails a language whose prerequisite fails, and retries it on the next call', async () => {
+      type Templating = { define: (hl: Highlighter) => void };
+      const fail = vi.fn()
+        .mockImplementationOnce(() => {
+          throw new Error('nope');
+        })
+        .mockImplementation(() => undefined);
+
+      vi.doMock(`${GRAMMARS_DIR}/markup-templating`, async (importOriginal) => {
+        const real = await importOriginal<Templating>();
+
+        return {
+          ...real,
+          define: (hl: Highlighter): void => {
+            fail();
+            real.define(hl);
+          },
+        };
       });
 
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const loader = await import('../../../../src/tools/code/prism-loader');
-      const html = await loader.tokenizePrism('<?php echo "hi";', 'php');
+      const loader = await freshLoader();
 
-      expect(warn).toHaveBeenCalledWith(
-        '[blok] Failed to load Prism prerequisite grammar "markup":',
-        expect.anything(),
-      );
-      expect(html).toContain('class="token');
-
-      vi.doUnmock('prismjs/components/prism-markup');
+      expect(await loader.tokenizePrism('<?php echo "hi";', 'php')).toBeNull();
+      expect(warn).toHaveBeenCalledWith('[blok] Failed to load Prism grammar for "php":', expect.anything());
+      expect(await loader.tokenizePrism('<?php echo "hi";', 'php')).toContain('class="token');
     });
 
-    it('returns null without warning when a loaded language has no grammar', async () => {
-      await mermaid('graph TD');
+    it('returns null without warning when a loaded grammar registers nothing', async () => {
+      vi.doMock(`${GRAMMARS_DIR}/mermaid`, () => ({ define: (): void => undefined }));
+
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const loader = await freshLoader();
 
-      // The cache says mermaid is loaded, so the importer that would put the
-      // grammar back never runs.
-      delete Prism.languages.mermaid;
-
-      expect(await mermaid('graph TD')).toBeNull();
+      expect(await loader.tokenizePrism('graph TD', 'mermaid')).toBeNull();
       expect(warn).not.toHaveBeenCalled();
     });
 
-    it('reloads a grammar after resetPrismState', async () => {
-      await mermaid('graph TD');
-      delete Prism.languages.mermaid;
-      resetPrismState();
+    it('defines a grammar once, and again after resetPrismState', async () => {
+      const real = await vi.importActual<{ define: (hl: Highlighter) => void }>(`${GRAMMARS_DIR}/mermaid`);
+      const define = vi.fn(real.define);
 
-      expect(await mermaid('graph TD')).toBe('<span class="token diagram-name">graph</span> <span class="token keyword">TD</span>');
+      vi.doMock(`${GRAMMARS_DIR}/mermaid`, () => ({ define }));
+
+      const loader = await freshLoader();
+
+      await loader.tokenizePrism('graph TD', 'mermaid');
+      await loader.tokenizePrism('graph LR', 'mermaid');
+      expect(define).toHaveBeenCalledTimes(1);
+
+      loader.resetPrismState();
+
+      expect(await loader.tokenizePrism('graph TD', 'mermaid'))
+        .toBe('<span class="token diagram-name">graph</span> <span class="token keyword">TD</span>');
+      expect(define).toHaveBeenCalledTimes(2);
     });
 
-    it('returns null and warns when Prism throws while highlighting', async () => {
-      await tokenizePrism('<?php echo "hi";', 'php');
+    it('returns null and warns when highlighting throws', async () => {
+      vi.doMock(`${GRAMMARS_DIR}/mermaid`, () => ({
+        define: (hl: Highlighter): void => {
+          Object.assign(hl.languages, { mermaid: {} });
+          hl.hooks.add('before-tokenize', () => {
+            throw new Error('boom');
+          });
+        },
+      }));
+
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const loader = await freshLoader();
 
-      // php reaches for this grammar from a before-tokenize hook on every run.
-      // Prism's registry is process-wide and its components evaluate once, so
-      // the entry has to be handed back or php stops highlighting for every
-      // later test file sharing this worker.
-      const templating = Prism.languages['markup-templating'];
-
-      delete Prism.languages['markup-templating'];
-
-      try {
-        expect(await tokenizePrism('<?php echo "hi";', 'php')).toBeNull();
-        expect(warn).toHaveBeenCalledWith('[blok] Prism highlight error for "php":', expect.anything());
-      } finally {
-        Prism.languages['markup-templating'] = templating;
-      }
+      expect(await loader.tokenizePrism('graph TD', 'mermaid')).toBeNull();
+      expect(warn).toHaveBeenCalledWith('[blok] Prism highlight error for "mermaid":', expect.anything());
     });
   });
 });

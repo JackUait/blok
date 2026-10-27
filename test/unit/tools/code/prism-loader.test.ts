@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// We'll test the module behavior via its exported functions.
-// Prism itself is a real dependency; we mock the language components.
-
-vi.mock('prismjs/components/prism-javascript', () => ({}));
-vi.mock('prismjs/components/prism-typescript', () => ({}));
-vi.mock('prismjs/components/prism-python', () => ({}));
-
 describe('prism-loader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -159,7 +152,7 @@ describe('prism-loader', () => {
     });
 
     it('returns null and logs warning when grammar import fails', async () => {
-      vi.doMock('prismjs/components/prism-dart', () => { throw new Error('load failed'); });
+      vi.doMock('../../../../src/tools/code/highlight/grammars/dart', () => { throw new Error('load failed'); });
       const { tokenizePrism, resetPrismState } = await import('../../../../src/tools/code/prism-loader');
       resetPrismState();
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

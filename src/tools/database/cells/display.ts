@@ -535,6 +535,8 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
       const status = verificationStatus(value, ctx.now);
 
       cell.setAttribute('data-verification', status);
+      // Unverified is a state with a label, so the peek and cards show it as the table does.
+      cell.removeAttribute('data-empty');
       cell.textContent = ctx.i18n.t(VERIFICATION_LABEL_KEYS[status]);
       break;
     }

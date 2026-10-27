@@ -66,6 +66,17 @@ describe('place and verification cells', () => {
     expect(renderCellValue(makeProperty('verification'), { state: 'verified' }, ctx).textContent).toBe('tools.database.verificationVerified');
   });
 
+  it('an untouched verification is a state, not empty: the table, peek and card all say Unverified', () => {
+    const ctx = makeEditorContext();
+
+    [undefined, null].forEach((value) => {
+      const cell = renderCellValue(makeProperty('verification'), value, ctx);
+
+      expect(cell.hasAttribute('data-empty')).toBe(false);
+      expect(cell.textContent).toBe('tools.database.verificationUnverified');
+    });
+  });
+
   it('clicking a verification verifies it as the current user, and again unverifies it', () => {
     const onCommit = vi.fn();
 

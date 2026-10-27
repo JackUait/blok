@@ -23,6 +23,7 @@ import { deepEqual } from './deep-equal';
 import { OPAQUE_TAGS } from './rich-text/html-to-segments';
 import { ownEntry } from './own-entry';
 import { validPattern } from './schema/validate';
+import { COMMENT_COMMANDS } from './tool-descriptions/database-comments';
 import { RICH_TEXT_MARKS, RICH_TEXT_PRIMER, richText } from './tool-descriptions/rich-text';
 
 export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'html', 'history'] as const;
@@ -346,6 +347,12 @@ export interface ContractWhere {
   restores?: boolean;
   /** The host gives the agent a file uploader (uploadByFile), so `uploadFile` actions run. */
   uploadsFiles?: boolean;
+  /**
+   * Headless only: the host's editors keep Blok's built-in comments and its people may comment.
+   * Saved data cannot say so, and a host with its own comments never shows these blocks,
+   * so without it the comment commands are unavailable. The editor checks each database instead.
+   */
+  comments?: boolean;
 }
 
 /** An action that sends a file's bytes to the host's file uploader. */
@@ -421,6 +428,9 @@ const toolAvailability = (
   }
   // The editor lists `uploader` for uploadByUrl alone, so the service name cannot say this.
   if (action.name === FILE_UPLOAD_ACTION && where.uploadsFiles !== true) {
+    return { available: false, unavailableReason: 'host' };
+  }
+  if (COMMENT_COMMANDS.has(action.command) && where.runtime !== 'editor' && where.comments !== true) {
     return { available: false, unavailableReason: 'host' };
   }
 

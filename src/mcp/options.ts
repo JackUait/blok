@@ -19,6 +19,11 @@ export interface BlokMcpOptions {
   maxHandlesPerPrincipal?: number;
   principal?: string;
   uploads?: McpUploads;
+  /**
+   * The editors behind these documents keep Blok's built-in comments (no `comments` hook), and
+   * every person the agent acts for may comment. Absent: the comment commands are unavailable.
+   */
+  comments?: boolean;
 }
 
 /** The host's own uploader, which `<tool>.uploadFile` sends files through. */

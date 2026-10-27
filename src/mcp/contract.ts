@@ -22,6 +22,8 @@ export const buildMcpContracts = (input: {
   versionHistory?: boolean;
   /** The host gave an uploader: `<tool>.uploadFile` runs. */
   uploadsFiles?: boolean;
+  /** BlokMcpOptions.comments. */
+  comments?: boolean;
 }): McpContracts => {
   // With a sync URL every handle is live (resolveMode), so the listed stored contract may name the history reads too.
   const services: HostService[] = [
@@ -34,6 +36,7 @@ export const buildMcpContracts = (input: {
     // The sync server's history restores too.
     ...(input.versionHistory === true && { restores: true }),
     ...(input.uploadsFiles === true && { uploadsFiles: true }),
+    ...(input.comments === true && { comments: true }),
   };
   const stored = createHeadlessAgentSetup({
     customTools: input.manifest,

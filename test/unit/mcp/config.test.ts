@@ -365,6 +365,11 @@ describe('parseMcpArgs', () => {
     expect(() => parseMcpArgs(['--http', '127.0.0.1:1', ...argv], {})).toThrow(McpConfigError);
   });
 
+  it('turns on built-in comments only with --comments', () => {
+    expect(parseMcpArgs(['--comments'], {}).options.comments).toBe(true);
+    expect(parseMcpArgs([], {}).options).not.toHaveProperty('comments');
+  });
+
   it('refuses --public without --http, where it would mean nothing', () => {
     expect(() => parseMcpArgs(['--public'], {})).toThrow(McpConfigError);
   });

@@ -87,6 +87,12 @@ public sealed class BlokAgentOptions
 
   /// <summary>ManifestOverrides as JSON.</summary>
   public string? OverridesJson { get; init; }
+
+  /// <summary>
+  /// The editors behind these documents keep Blok's built-in comments (no <c>comments</c> hook),
+  /// and every person the agent acts for may comment. Off: the comment commands are unavailable.
+  /// </summary>
+  public bool BuiltInComments { get; init; }
 }
 
 /// <summary>Resolves a target page's stored document or live room.</summary>

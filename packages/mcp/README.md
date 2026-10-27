@@ -250,6 +250,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--schema mixed\|envelope\|full` | | `mixed` | How `blok_execute` describes its commands. `mixed` gives the full arguments of the common commands, so the model needs no `blok_describe` call for them. |
 | `--handle-idle-ms <ms>` | | `600000` | Idle time before a handle expires. |
 | `--max-handles <n>` | | `8` | Open handles per principal. |
+| `--comments` | | off | Turn on the database comment commands. Use it only when your editors keep Blok's built-in comments (no `comments` hook) and everyone may comment. |
 
 ## Limits
 

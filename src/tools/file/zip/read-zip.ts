@@ -1,6 +1,8 @@
 import { inflateRaw } from './inflate';
-import { decodeUtf8 } from './utf8';
 import { ZipError } from './zip-error';
+
+// Keeps a BOM, as JSZip did.
+const utf8 = new TextDecoder('utf-8', { ignoreBOM: true });
 
 export interface ZipLimits {
   maxEntries: number;
@@ -279,7 +281,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
     }
     // The local name wins over the central one, like JSZip.
     const nameLength = reader.u16(record.offset + 26);
-    const rawName = decodeUtf8(reader.slice(record.offset + 30, nameLength));
+    const rawName = utf8.decode(reader.slice(record.offset + 30, nameLength));
     const dataStart = record.offset + 30 + nameLength + reader.u16(record.offset + 28);
 
     if (record.method !== STORED && record.method !== DEFLATED) {

@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { describe, it, expect } from 'vitest';
 
 import type { ArchiveSnapshot } from './archive-snapshot';
-import { ROOT, readGolden, sha256, snapshotShim, textSha256, expectedFor } from './archive-snapshot';
+import { ROOT, readGolden, sha256, snapshotShim, textSha256, expectedFor, isUtf8 } from './archive-snapshot';
 
 // Live check against the real jszip while it is still installed. Delete this file
 // when jszip leaves; jszip-parity.test.ts keeps the same checks on golden data.
@@ -48,13 +48,14 @@ async function snapshotJSZip(jszip: RefJSZip, bytes: Uint8Array): Promise<Archiv
 
     for (const [name, file] of Object.entries(zip.files)) {
       const size = file._data?.uncompressedSize;
+      const bytes = await file.async('uint8array');
 
       entries.push({
         name,
         dir: file.dir,
         size: typeof size === 'number' ? size : null,
-        sha256: sha256(Uint8Array.from(await file.async('uint8array'))),
-        text: textSha256(await file.async('string')),
+        sha256: sha256(Uint8Array.from(bytes)),
+        text: isUtf8(bytes) ? textSha256(await file.async('string')) : 'not-utf8',
       });
     }
 

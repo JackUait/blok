@@ -18,6 +18,17 @@ export const sha256 = (bytes: Uint8Array): string => createHash('sha256').update
 
 export const textSha256 = (text: string): string => sha256(Buffer.from(text, 'utf16le'));
 
+/** Text is compared only for valid UTF-8: on invalid bytes JSZip emitted NULs and lone surrogates, the shim emits U+FFFD. */
+export const isUtf8 = (bytes: Uint8Array): boolean => {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const readGolden = (): Record<string, ArchiveSnapshot & { stage?: string }> =>
   JSON.parse(readFileSync(resolve(__dirname, 'fixtures/golden/jszip-archives.json'), 'utf8')) as Record<string, ArchiveSnapshot>;
 
@@ -29,6 +40,18 @@ export const readGolden = (): Record<string, ArchiveSnapshot & { stage?: string 
 export const expectedFor = (rel: string, snapshot: ArchiveSnapshot & { stage?: string }): ArchiveSnapshot => {
   if ('error' in snapshot) {
     return { error: true };
+  }
+  if (rel.endsWith('/local_encoding_in_name.zip')) {
+    // CP866 names without the UTF-8 flag: JSZip's decoder made control characters, TextDecoder makes U+FFFD.
+    const names = [
+      '����� �����/',
+      '����� �����/���� ⥪�⮢� ���㬥��.txt',
+    ];
+
+    return {
+      entries: snapshot.entries.map((e, i) => ({ ...e, name: names[i] ?? e.name })),
+      fileNull: [names[0] ?? ''],
+    };
   }
   if (rel.endsWith('/winrar_utf8_in_name.zip')) {
     return { ...snapshot, entries: snapshot.entries.map((e) => ({ ...e, name: e.name.replace('€', '_') })) };
@@ -45,13 +68,14 @@ export async function snapshotShim(bytes: Uint8Array): Promise<ArchiveSnapshot> 
 
     for (const [name, file] of Object.entries(zip.files)) {
       const size = file._data.uncompressedSize;
+      const bytes = await file.async('uint8array');
 
       entries.push({
         name,
         dir: file.dir,
         size: size === 0 ? null : size,
-        sha256: sha256(await file.async('uint8array')),
-        text: textSha256(await file.async('string')),
+        sha256: sha256(bytes),
+        text: isUtf8(bytes) ? textSha256(await file.async('string')) : 'not-utf8',
       });
     }
 

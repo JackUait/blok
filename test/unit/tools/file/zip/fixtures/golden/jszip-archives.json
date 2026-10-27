@@ -418,7 +418,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": [
@@ -446,7 +446,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": [
@@ -467,7 +467,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": []
@@ -493,7 +493,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": [
@@ -521,7 +521,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": [
@@ -553,7 +553,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": [
@@ -605,7 +605,7 @@
     "dir": false,
     "size": 63925,
     "sha256": "7ff60dd51a19c4ffea0365e5da21595c8d5ad49627aabb1299fb618b2cccda61",
-    "text": "6b1499232bf8511e2c011fba90e1c5949455c78189ec620e6097d6f0fb990e78"
+    "text": "not-utf8"
    },
    {
     "name": "settings.xml",
@@ -647,7 +647,7 @@
     "dir": false,
     "size": 10743,
     "sha256": "b988cc44166914fb45b62a416a880024e778673ad9137f9f77f1c774af068604",
-    "text": "139bdb77147ad37fe1fb4fa88a9a1c2c4f3747b2f741e7ebd1b4c5ee57acfd1c"
+    "text": "not-utf8"
    },
    {
     "name": "Configurations2/images/Bitmaps/",
@@ -911,21 +911,21 @@
     "dir": false,
     "size": 7747,
     "sha256": "ca5ec3e222ccdb807c111c37dfdabce680b0f634acb457ad10281aeb76d3df7e",
-    "text": "5bd308d50ffe6f6a041439b230cb40f8674757e2af5af0dd4af9648ac609fc48"
+    "text": "not-utf8"
    },
    {
     "name": "OPS/images/logo-feedbooks.png",
     "dir": false,
     "size": 2738,
     "sha256": "8bfd0ce0fb50699ba99c161cd4e5d45cfbc8637a168265b21fa0a863b8f95e73",
-    "text": "60816a26b152ed53228ee705a81a7e14e1dd1b9b00e5c1f33a451c9c0dac7e0c"
+    "text": "not-utf8"
    },
    {
     "name": "OPS/images/cover.png",
     "dir": false,
     "size": 208353,
     "sha256": "6a47dd32b48f5157051f871b62318e86885b7f8f3fefd07b1cd0a1eb27257d4a",
-    "text": "c93e3e02e68cee6a0efe4d66f036178b293221c1577bc6d5d83a4dfeda5a7f41"
+    "text": "not-utf8"
    },
    {
     "name": "OPS/css/",
@@ -1089,7 +1089,7 @@
     "dir": false,
     "size": 190100,
     "sha256": "fe8170078e5d6cac97a797b8a079ef74c4d69f8c08d3bdd8310fdce210bd6a19",
-    "text": "f2b3b1e36c867e5cc9850d2537e5136971b391f9cbeb7d99738b7b429e7d3501"
+    "text": "not-utf8"
    },
    {
     "name": "Documents/1/Pages/_rels/1.fpage.rels",
@@ -1103,28 +1103,28 @@
     "dir": false,
     "size": 190540,
     "sha256": "0ac8511ef6dcbd608d489739c68754128f4778576cf72303a576f756641aff8b",
-    "text": "786d9cacf70efca96424d193e636fc1ee0301e955d9fd8fa545fb378ef5c1486"
+    "text": "not-utf8"
    },
    {
     "name": "Resources/fde65366-92a7-4139-9a38-a9492e59fc5d.ODTTF",
     "dir": false,
     "size": 20132,
     "sha256": "667ed9d5910912fadec256d6eab39c74450e0e17d0d12af38c5368d1482f7099",
-    "text": "57b053511aa44af6730c0102c2bccedd6adf302e53a1cf476a85c6795adb6935"
+    "text": "not-utf8"
    },
    {
     "name": "Resources/b9eed69f-975a-4140-b33f-47754c97c469.png",
     "dir": false,
     "size": 142,
     "sha256": "d5bb62be478e19f34dff7623d432b3605d32ce51e29b46da88beb3fedbcccfa5",
-    "text": "bb379830b7b5aa447f5aa0ca6ff43778ffb93af9339bda23208ee6ed33fcd79e"
+    "text": "not-utf8"
    },
    {
     "name": "Resources/129b8a31-1c3a-47d5-83bf-f65b5f582fa5.ODTTF",
     "dir": false,
     "size": 26528,
     "sha256": "fdb2bb5fb607bb5ba57dcf5632430423309d9c2dc877c66d4d17a5dc41f90903",
-    "text": "ec6fe30b365e9b59a151b4c2e3d20d5c2f2158606f1351949bf2fbe0404fcf6c"
+    "text": "not-utf8"
    },
    {
     "name": "Documents/1/Document_PT.xml",
@@ -1241,7 +1241,7 @@
     "dir": false,
     "size": 41,
     "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
-    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+    "text": "not-utf8"
    }
   ],
   "fileNull": []
@@ -1305,7 +1305,7 @@
     "dir": false,
     "size": 128,
     "sha256": "b26abd95cf662d89ed22b374ab2f79c6d6ee13fdd2c7f891c7d6e3203dd93c1d",
-    "text": "8bdeb538eab4f92103ed4a365cc9cb30b8885d2ff437ec5963a85514ef282e2b"
+    "text": "not-utf8"
    }
   ],
   "fileNull": []
@@ -1317,7 +1317,7 @@
     "dir": false,
     "size": 196,
     "sha256": "14e965f2e62e6faf170e1d379f52aa4431361208e5e592b748529100109c28e7",
-    "text": "daf1b61b088638e47ea9faeb7a0c0afcc14ef6e71d4624ec44f4f338d9cd690e"
+    "text": "not-utf8"
    }
   ],
   "fileNull": []
@@ -1329,7 +1329,7 @@
     "dir": false,
     "size": 288,
     "sha256": "188719263f4df8f262bc9d10b237976af1fdddd1697b3d9d226129e9ba56b237",
-    "text": "af5dd57a24fd5a2a250e2d0ecc1bf21240a8a94425ca5b995cfe87fe4124f109"
+    "text": "not-utf8"
    }
   ],
   "fileNull": []
@@ -2294,35 +2294,35 @@
     "dir": false,
     "size": 24,
     "sha256": "0638bf3c7df8680d05d4c1fbdfee6c48222b17c85f210c8ad6e40b646cd0f6f1",
-    "text": "81aa5a39f84568ee8bcd928252d714a158ea0493a55aa317ebe4ada7dd4375e4"
+    "text": "not-utf8"
    },
    {
     "name": "edges-stored.txt",
     "dir": false,
     "size": 70000,
     "sha256": "7da369649c6dc95ccbb9b24a4afc0e964e7fc0d9dfc600f1a58e322f90be3326",
-    "text": "c234c0c5a69c596b843335806d75c091f35f86c28fe401cd00f33a2fa97f16f6"
+    "text": "not-utf8"
    },
    {
     "name": "edges-deflated.txt",
     "dir": false,
     "size": 70000,
     "sha256": "7da369649c6dc95ccbb9b24a4afc0e964e7fc0d9dfc600f1a58e322f90be3326",
-    "text": "c234c0c5a69c596b843335806d75c091f35f86c28fe401cd00f33a2fa97f16f6"
+    "text": "not-utf8"
    },
    {
     "name": "random-stored.bin",
     "dir": false,
     "size": 70000,
     "sha256": "80e35d6d7c5ba98d4eb0373c9f4410ba2197123f83c12f3446149ae81b22e1c5",
-    "text": "3ea8baa1e2ac85315d28b3362d2ca1b585b8fc895a3b96b2ed64accde2258659"
+    "text": "not-utf8"
    },
    {
     "name": "random-deflated.bin",
     "dir": false,
     "size": 70000,
     "sha256": "80e35d6d7c5ba98d4eb0373c9f4410ba2197123f83c12f3446149ae81b22e1c5",
-    "text": "3ea8baa1e2ac85315d28b3362d2ca1b585b8fc895a3b96b2ed64accde2258659"
+    "text": "not-utf8"
    }
   ],
   "fileNull": []

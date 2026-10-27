@@ -2,8 +2,10 @@
 // @aiden0z/pptx-renderer use; the bundle aliases the `jszip` package to it.
 import { readZip } from './read-zip';
 import type { ZipEntry } from './read-zip';
-import { decodeUtf8Text } from './utf8';
 import { ZipError } from './zip-error';
+
+// Keeps a BOM, as JSZip did.
+const utf8 = new TextDecoder('utf-8', { ignoreBOM: true });
 
 export interface ShimFile {
   readonly name: string;
@@ -31,7 +33,7 @@ function convert(bytes: Uint8Array<ArrayBuffer>, type: string): unknown {
   switch (type.toLowerCase()) {
     case 'string':
     case 'text':
-      return decodeUtf8Text(bytes);
+      return utf8.decode(bytes);
     case 'uint8array':
       return bytes;
     case 'arraybuffer':

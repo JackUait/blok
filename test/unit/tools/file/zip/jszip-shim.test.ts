@@ -125,13 +125,13 @@ describe('jszip-shim', () => {
     await expect(fileOf(zip, 'bom.txt').async('string')).resolves.toBe('﻿hi\n');
   });
 
-  it('decodes invalid UTF-8 the way the browser JSZip build does', async () => {
+  it('decodes invalid UTF-8 to U+FFFD like TextDecoder, not into NULs and lone surrogates like JSZip', async () => {
     const zip = await JSZipShim.loadAsync(fixture('text/text-decoding.zip'));
     const text = await fileOf(zip, 'invalid.txt').async('string');
 
-    // Captured from jszip/dist/jszip.min.js with no Buffer global.
     expect([...text].map((c) => c.codePointAt(0))).toEqual([
-      0x41, 0x0, 0x0, 0x2082, 0xd800, 0xfffd, 0x43, 0xfffd, 0xfffd,
+      0x41, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0x42, 0xfffd, 0xfffd, 0xfffd, 0xfffd, 0xfffd,
+      0xfffd, 0xfffd, 0xfffd, 0x43, 0xfffd, 0x44, 0x45, 0x46, 0x47, 0x48, 0xfffd,
     ]);
   });
 });

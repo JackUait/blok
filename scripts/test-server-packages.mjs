@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import {
@@ -14,8 +14,6 @@ import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import JSZip from 'jszip';
 
 import { buildServerRuntime } from './build-server-runtime.mjs';
 
@@ -173,21 +171,27 @@ function xmlAttributes(tag) {
   );
 }
 
+// Needs Info-ZIP unzip on PATH (both callers run on ubuntu-latest).
+function unzip(args) {
+  return execFileSync('unzip', args, { maxBuffer: 512 * 1024 * 1024 });
+}
+
 async function readPackedPackage(feed, packageId) {
   const packagePath = join(feed, `${packageId}.${packageVersion}.nupkg`);
-  const archive = await JSZip.loadAsync(await readFile(packagePath));
-  const nuspecName = Object.keys(archive.files)
-    .find((name) => !name.includes('/') && name.endsWith('.nuspec'));
+  const names = unzip(['-Z1', packagePath]).toString('utf8').split('\n').filter(Boolean);
+  // unzip -p reads a name as a wildcard pattern; these names hold no wildcards.
+  const read = (name) => (names.includes(name) ? unzip(['-p', packagePath, name]) : undefined);
+  const nuspecName = names.find((name) => !name.includes('/') && name.endsWith('.nuspec'));
 
   assert.notEqual(nuspecName, undefined, `${packageId} package has no nuspec`);
 
-  const nuspec = await archive.file(nuspecName)?.async('string');
+  const nuspec = read(nuspecName)?.toString('utf8');
 
   assert.notEqual(nuspec, undefined, `${packageId} nuspec could not be read`);
 
   const dllPath = `lib/net10.0/${packageId}.dll`;
-  const dll = await archive.file(dllPath)?.async('nodebuffer');
-  const readme = await archive.file('README.md')?.async('string');
+  const dll = read(dllPath);
+  const readme = read('README.md')?.toString('utf8');
 
   assert.notEqual(dll, undefined, `${packageId} package is missing ${dllPath}`);
   assert.notEqual(readme, undefined, `${packageId} package is missing README.md`);

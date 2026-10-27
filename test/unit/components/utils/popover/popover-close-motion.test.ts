@@ -90,6 +90,8 @@ const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia')
 describe('PopoverDesktop close motion (animateClose)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // A hide() whose motion never ends arms a real 400ms fallback that would fire after jsdom is gone.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     PopoverRegistry.resetForTests();
     enablePopoverApi();
     setReducedMotion(false);
@@ -269,8 +271,6 @@ describe('PopoverDesktop close motion (animateClose)', () => {
   });
 
   it('a reopen during the close is not undone by the fallback timer', () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-
     const popover = open({ animateClose: true });
 
     stubAnimations(popover, [controllableAnimation().animation]);
@@ -283,8 +283,6 @@ describe('PopoverDesktop close motion (animateClose)', () => {
   });
 
   it('leaves the top layer on the fallback timer when the motion never reports its end', () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-
     const popover = open({ animateClose: true });
 
     stubAnimations(popover, [controllableAnimation().animation]);

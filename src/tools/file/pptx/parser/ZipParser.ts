@@ -178,8 +178,9 @@ interface StreamingZipObject {
   internalStream(type: 'uint8array'): ZipChunkStream;
 }
 
-function canStream(file: JSZipObject): file is JSZipObject & StreamingZipObject {
-  return typeof (file as Partial<StreamingZipObject>).internalStream === 'function';
+/** JSZip's chunked reader; its typings leave it out. */
+function streamOf(file: JSZipObject): ZipChunkStream {
+  return (file as JSZipObject & StreamingZipObject).internalStream('uint8array');
 }
 
 /** Charges inflated bytes to the limits; throws once any limit is passed. */
@@ -215,19 +216,11 @@ function chargeInflatedBytes(path: string, entryBytes: number, chunkBytes: numbe
  * entry whose header declares 100 bytes cannot inflate gigabytes first.
  */
 async function inflateEntry(path: string, file: JSZipObject, state: ZipLimitState): Promise<Uint8Array> {
-  if (!canStream(file)) {
-    const bytes = await file.async('uint8array');
-
-    chargeInflatedBytes(path, bytes.byteLength, bytes.byteLength, state);
-
-    return bytes;
-  }
-
   const chunks: Uint8Array[] = [];
   const read = { bytes: 0 };
 
   await new Promise<void>((resolve, reject) => {
-    const stream = file.internalStream('uint8array');
+    const stream = streamOf(file);
 
     stream
       .on('data', (chunk) => {

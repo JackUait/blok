@@ -17,7 +17,9 @@ import {
 function expectFast(fn: () => unknown): void {
   const start = performance.now();
   fn();
-  expect(performance.now() - start).toBeLessThan(50);
+  // The backtracking CSS-length regex these parsers replaced took ~11 s on the 30k-char
+  // input below; 1 s still catches that without tripping on a busy CI machine.
+  expect(performance.now() - start).toBeLessThan(1000);
 }
 
 describe('safe CSS value parsing', () => {

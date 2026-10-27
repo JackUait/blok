@@ -25,13 +25,33 @@ const SKELETON: Array<{ path: string; data: string }> = [
   { path: 'ppt/_rels/presentation.xml.rels', data: '<Relationships />' },
 ];
 
+/** Mimics JSZip's internal stream: one data chunk, then end. */
+function fakeStream(bytes: Uint8Array) {
+  const listeners: Record<string, (arg?: unknown) => void> = {};
+  const stream = {
+    on(event: string, listener: (arg?: unknown) => void) {
+      listeners[event] = listener;
+      return stream;
+    },
+    pause: () => stream,
+    resume() {
+      queueMicrotask(() => {
+        listeners.data?.(bytes);
+        listeners.end?.();
+      });
+      return stream;
+    },
+  };
+  return stream;
+}
+
 function mockLoadedZipWithoutPrivateSizes(files: Record<string, string | Uint8Array>) {
   const zipFiles = Object.fromEntries(
     Object.entries(files).map(([path, data]) => [
       path,
       {
         dir: false,
-        async: vi.fn(async () => data),
+        internalStream: vi.fn(() => fakeStream(typeof data === 'string' ? new TextEncoder().encode(data) : data)),
       },
     ]),
   );
@@ -304,7 +324,7 @@ describe('parseZip – categorization', () => {
       files.mediaResolver!.resolve('../media/image1.png'),
     ]);
 
-    expect(zipFiles['ppt/media/image1.png'].async).toHaveBeenCalledTimes(1);
+    expect(zipFiles['ppt/media/image1.png'].internalStream).toHaveBeenCalledTimes(1);
     expect(first?.mediaPath).toBe('ppt/media/image1.png');
     expect(second?.mediaPath).toBe('ppt/media/image1.png');
     expect(first?.data).toBe(second?.data);

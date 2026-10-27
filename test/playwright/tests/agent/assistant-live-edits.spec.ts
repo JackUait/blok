@@ -490,10 +490,10 @@ test.describe('Ask AI live edits', () => {
     const before = await changes();
     const gap = (): Promise<number> => p1.evaluate((holder) => parseFloat(holder.style.getPropertyValue('--blok-ai-gap')) || 0);
 
-    // The first stream event drops the shimmer slots, so the bar's own gap is read after it.
-    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
-
+    // Read before tool_start: from it until the preview draws, the shimmer slots add to the gap.
     const barGap = await gap();
+
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
 
     await emit(page, 0, { type: 'tool_input', index: 0, json: prefix(input, 'Quiet words land here', 'Quiet words '.length) });
     await expect(page.getByTestId('ai-preview').filter({ hasText: 'Quiet words' })).toBeVisible();

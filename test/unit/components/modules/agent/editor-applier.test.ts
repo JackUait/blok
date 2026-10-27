@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../../../src/components/core';
 import type { Block } from '../../../../../src/components/block';
 import { ConvertConflictError } from '../../../../../src/components/errors/convert-conflict';
+import { BlockChanged } from '../../../../../src/components/events';
 import { EditorApplier } from '../../../../../src/components/modules/agent/editor-applier';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
@@ -548,6 +549,37 @@ describe('EditorApplier', () => {
     await settle(applier);
     expect(applier.snapshot().childrenOf('tg')).toEqual(['k', 'p', 'r']);
     expect(modules.YjsManager.undoStepTag(modules.YjsManager.topUndoToken())).toEqual(tag);
+  });
+
+  it('names the parent a later move sends a block to on that block\'s earlier change events', async () => {
+    const modules = await boot();
+    const applier = createApplier(modules);
+    const agents: unknown[] = [];
+    const onChange = (payload: { event: CustomEvent }): void => {
+      const detail: unknown = payload.event.detail;
+
+      if (payload.event.type === 'block-changed' && typeof detail === 'object' && detail !== null && 'agent' in detail) agents.push(detail.agent);
+    };
+
+    modules.EventsAPI.methods.on(BlockChanged, onChange);
+    try {
+      await apply(applier, [
+        { op: 'setData', id: 'r', patch: { extra: 'out' } },
+        { op: 'move', id: 'r', parentId: 'tg', afterId: 'k' },
+      ], ['r']);
+      expect(agents.length).toBeGreaterThan(0);
+      expect(agents.every(agent => typeof agent === 'object' && agent !== null && 'movingTo' in agent && agent.movingTo === 'tg')).toBe(true);
+
+      agents.length = 0;
+      await apply(applier, [
+        { op: 'setData', id: 'r', patch: { extra: 'same' } },
+        { op: 'move', id: 'r', parentId: 'tg', afterId: null },
+      ], ['r']);
+      expect(agents.length).toBeGreaterThan(0);
+      expect(agents.some(agent => typeof agent === 'object' && agent !== null && 'movingTo' in agent)).toBe(false);
+    } finally {
+      modules.EventsAPI.methods.off(BlockChanged, onChange);
+    }
   });
 
   it('holds one step across a real awaited update, same-ID conversion, rich edit and title', async () => {

@@ -490,11 +490,32 @@ test.describe('database New data source', () => {
           const art = q('[data-blok-database-confirm-art] svg');
           const title = q('[data-blok-database-confirm-title]');
           const group = q('[data-blok-database-confirm-choices]');
-          const [picked, other] = [...box.querySelectorAll('[data-blok-database-confirm-choice]')];
+          const cards = [...box.querySelectorAll('[data-blok-database-confirm-choice]')];
+          const [picked, other] = cards;
           const pickedDot = picked.querySelector('[data-blok-database-confirm-choice-dot]') ?? picked;
           const otherDot = other.querySelector('[data-blok-database-confirm-choice-dot]') ?? other;
           const label = picked.querySelector('[data-blok-database-confirm-choice-label]') ?? picked;
           const remove = q('[data-blok-database-confirm-action="confirm"]');
+          const cancel = q('[data-blok-database-confirm-action="cancel"]');
+          // Text heights vary with the OS font (a description may wrap); the 20px and 16px line boxes do not.
+          const option = (card: Element): { name: string | null | undefined; counts: number[]; labelLines: boolean; hintLines: boolean; hintGap: number; pad: number[]; expectedPad: number } => {
+            const labels = card.querySelectorAll('[data-blok-database-confirm-choice-label]');
+            const hints = card.querySelectorAll('[data-blok-database-confirm-choice-description]');
+            const [head, hint] = [rect(labels[0] ?? card), rect(hints[0] ?? card)];
+            const text = hint.bottom - head.top;
+            const c = rect(card);
+
+            return {
+              name: labels[0]?.textContent,
+              counts: [labels.length, hints.length],
+              labelLines: head.height > 0 && head.height % 20 === 0,
+              hintLines: hint.height > 0 && hint.height % 16 === 0,
+              hintGap: hint.top - head.bottom,
+              // Centred, 12px padding, 70px min height.
+              pad: [head.top - c.top, c.bottom - hint.bottom],
+              expectedPad: Math.max(12, (70 - text) / 2),
+            };
+          };
 
           return {
             backdrop: style(box.parentElement ?? box).backgroundColor,
@@ -506,8 +527,10 @@ test.describe('database New data source', () => {
             ring: style(other).boxShadow,
             radio: [style(otherDot).backgroundColor, style(otherDot).borderTopColor],
             dot: style(pickedDot).backgroundColor,
-            card: [rect(label).left - rect(picked).left, rect(label).top - rect(picked).top, rect(picked).right - rect(pickedDot).right],
-            heights: [rect(picked).height, rect(other).height, b.height],
+            card: [rect(label).left - rect(picked).left, rect(picked).right - rect(pickedDot).right],
+            options: cards.map(option),
+            stack: [cards.length, rect(other).top - rect(picked).bottom],
+            fit: [b.bottom - rect(cancel).bottom, box.scrollHeight - box.clientHeight],
           };
         });
 
@@ -520,8 +543,15 @@ test.describe('database New data source', () => {
         expect(measured.ring).toBe(`${look.ring} 0px 0px 0px 1px inset`);
         expect(measured.radio).toEqual(look.radio);
         expect(measured.dot).toBe('rgb(240, 239, 237)');
-        expect(measured.card).toEqual([14, 12, 14]);
-        expect(measured.heights).toEqual([78, 70, 368]);
+        expect(measured.card).toEqual([14, 14]);
+        // "Delete view only" sits above "Delete view and data source", 8px apart, no overlap.
+        expect(measured.stack).toEqual([2, 8]);
+        expect(measured.options.map((option) => option.name)).toEqual(['Delete view only', 'Delete view and data source']);
+        for (const { expectedPad, name, ...option } of measured.options) {
+          expect(option, name ?? '').toEqual({ counts: [1, 1], labelLines: true, hintLines: true, hintGap: 2, pad: [expectedPad, expectedPad] });
+        }
+        // The box grows to its content: Cancel sits on the 20px padding and nothing scrolls.
+        expect(measured.fit).toEqual([20, 0]);
       });
     }
 

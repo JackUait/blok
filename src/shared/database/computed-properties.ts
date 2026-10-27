@@ -192,8 +192,9 @@ export class ComputedProperties {
         return { ...rest, ...shape, config: shape.config ?? property.config };
       }
       const number = rollupHasFormat(settings.function) ? property.number ?? shape.number : withoutFormat(property.number, shape.number);
+      const { number: _own, ...rest } = property;
 
-      return { ...property, ...shape, ...(number !== undefined ? { number } : {}), config: shape.config ?? property.config };
+      return { ...rest, ...shape, ...(number !== undefined ? { number } : {}), config: shape.config ?? property.config };
     }
 
     return property;

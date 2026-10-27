@@ -296,6 +296,15 @@ describe('ComputedProperties', () => {
       expect(engine.valueProperty(count).number).toEqual({ showAs: 'ring' });
     });
 
+    it('a count rollup whose only setting is a format shows a plain number', () => {
+      const count = { ...rollup('cnt', 'tasks', 'hours', 'count'), number: { format: 'euro' as const } };
+      const engine = new ComputedProperties('db');
+
+      engine.apply([title, tasks, count], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
+
+      expect(engine.valueProperty(count).number?.format).toBeUndefined();
+    });
+
     it('drops number settings left on a list rollup whose target is not a Number', () => {
       const names = { ...rollup('names', 'tasks', 'title', 'show_original'), number: { format: 'dollar' as const } };
       const engine = new ComputedProperties('db');

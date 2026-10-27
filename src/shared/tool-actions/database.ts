@@ -1,5 +1,5 @@
 import { DATABASE_DEFAULT_TEXT } from '../database/default-text';
-import { comparePositions } from '../database/positions';
+import { comparePositions, positionBetween } from '../database/positions';
 import { isAnnotationType } from '../annotation-blocks';
 import { resolveDynamicProperties } from '../database/dynamic-values';
 import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../database/relation-values';
@@ -19,7 +19,6 @@ import {
   freePropertyName,
   isListValueType,
   newView,
-  positionBetween,
 } from '../database/schema-ops';
 import { applyViewChanges, GROUPABLE_TYPES, groupByChange, layoutChange, subGroupByChange, withEntryIds } from '../database/view-changes';
 import { DATE_VALUE_FORMAT, parseDateValue } from '../database/date-value';

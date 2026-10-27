@@ -1,4 +1,5 @@
-import { createDefaultStatusSettings, isListValueType, positionBetween } from './schema-ops';
+import { positionBetween } from './positions';
+import { createDefaultStatusSettings, isListValueType } from './schema-ops';
 import { parseDateValue, toIsoDay, toIsoTime } from './date-value';
 import { pickOptionColor } from './option-colors';
 import { isEmptyObjectValue, isOutputData, isPlaceValue, isVerificationValue, placeText } from './tier3-values';

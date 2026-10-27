@@ -6,7 +6,8 @@ import { isOutputData, placeText, verificationStatus } from './tier3-values';
 import type { DatabaseData, DatabaseRowData, DateFormat, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { generateKeyBetween } from '../../shared/database/fractional-index';
-import { freePropertyName, newView, positionBetween } from '../../shared/database/schema-ops';
+import { freePropertyName, newView } from '../../shared/database/schema-ops';
+import { positionBetween } from '../../shared/database/positions';
 import { planTypeChange } from './property-conversion';
 
 const BOM = '﻿';

@@ -22,7 +22,8 @@ import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from 
 import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
 import { parentMap, relationPair } from './sub-items';
 import { comparePositions } from './positions';
-import { createDefaultSchema, createDefaultView, freePropertyName, newView, positionBetween } from '../../shared/database/schema-ops';
+import { createDefaultSchema, createDefaultView, freePropertyName, newView } from '../../shared/database/schema-ops';
+import { positionBetween } from '../../shared/database/positions';
 import { createSeedDefinition } from '../../shared/database/seed-layouts';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 import { applyViewChanges } from '../../shared/database/view-changes';
@@ -624,8 +625,8 @@ export class DatabaseModel {
    *   so the key still lands between the two;
    * - keys the library rejects (`a000` from a `padStart`, a bad head) are
    *   normalized, or else get a code-unit key between them.
-   * Appending (`before === null`) adds a random suffix, so two peers adding at
-   * the same moment never land on the same key.
+   * Every key ends in a random suffix, so two peers placing at the same moment
+   * never land on the same key.
    */
   static positionBetween(after: string | null, before: string | null): string {
     return positionBetween(after, before);

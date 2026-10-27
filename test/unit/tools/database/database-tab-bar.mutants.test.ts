@@ -144,7 +144,7 @@ import { DatabaseTabBar, type TabBarOptions } from '../../../../src/tools/databa
 import { positionFixedAnchored } from '../../../../src/components/utils/popover/anchored-position';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
-import { positionBetween } from '../../../../src/shared/database/schema-ops';
+import { positionBetween } from '../../../../src/shared/database/positions';
 
 interface I18nStub {
   t(key: string, vars?: Record<string, string | number>): string;

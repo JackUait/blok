@@ -1,6 +1,4 @@
 import { DATABASE_DEFAULT_TEXT } from './default-text';
-import { generateKeyBetween } from './fractional-index';
-import { looseKeyBetween, normalizeKey } from './positions';
 import { resolveViewProperties, visibleRowPropertyIds } from './view-properties';
 
 import type { DatabaseViewConfig, DatabaseViewSettingKey, PropertyDefinition, PropertyType, SelectOption, StatusGroup, StatusSettings, ViewType } from './types';
@@ -11,21 +9,6 @@ import type { DatabaseViewConfig, DatabaseViewSettingKey, PropertyDefinition, Pr
  */
 
 export type ViewCreateConfig = Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | DatabaseViewSettingKey>>;
-
-/**
- * Random tail for an appended key. `key + suffix` sorts strictly after `key`
- * and strictly before the next key with a larger integer part, so the suffix
- * only breaks ties between peers.
- *
- * Digits only, although fractional-indexing takes the whole base62 alphabet:
- * a digit tail keeps a key the library can read and extend. The last digit
- * may not be '0' — the library rejects a key ending in one.
- */
-const randomKeySuffix = (): string => {
-  const digit = (from: number): string => String(from + Math.floor(Math.random() * (10 - from)));
-
-  return `${digit(0)}${digit(0)}${digit(0)}${digit(1)}`;
-};
 
 /**
  * The name a new property gets: `wanted`, or "<wanted> N" with the lowest free N
@@ -40,27 +23,6 @@ export const freePropertyName = (names: readonly string[], wanted: string): stri
   const free = Array.from({ length: names.length + 1 }, (_, i) => `${wanted} ${i + 1}`).find((name) => !taken.has(name));
 
   return free ?? wanted;
-};
-
-/**
- * A fractional-index key between two neighbours (DatabaseModel.positionBetween documents
- * the cases). Appending (`before === null`) adds a random suffix, so two peers adding at
- * the same moment never land on the same key.
- */
-export const positionBetween = (after: string | null, before: string | null): string => {
-  const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
-
-  if (low !== null && low === high) {
-    return low + randomKeySuffix();
-  }
-
-  try {
-    const key = generateKeyBetween(normalizeKey(low), normalizeKey(high));
-
-    return low !== null && high === null ? key + randomKeySuffix() : key;
-  } catch {
-    return looseKeyBetween(low ?? '', high, randomKeySuffix());
-  }
 };
 
 export const createDefaultSchema = (mintId: (name: string) => string): PropertyDefinition[] => [

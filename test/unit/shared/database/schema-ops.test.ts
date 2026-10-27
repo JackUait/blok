@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import en from '../../../../src/components/i18n/locales/en.json';
 import { DATABASE_DEFAULT_TEXT } from '../../../../src/shared/database/default-text';
-import { createDefaultSchema, createDefaultView, freePropertyName, positionBetween } from '../../../../src/shared/database/schema-ops';
+import { createDefaultSchema, createDefaultView, freePropertyName } from '../../../../src/shared/database/schema-ops';
+import { positionBetween } from '../../../../src/shared/database/positions';
 import { DATABASE_DEFAULT_TEXT as EDITOR_DEFAULT_TEXT } from '../../../../src/tools/database/database-localization';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 

@@ -13,7 +13,7 @@ import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
 import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { isHistoryKey } from './database-keyboard';
-import { positionBetween } from '../../shared/database/schema-ops';
+import { positionBetween } from '../../shared/database/positions';
 
 const DRAG_THRESHOLD = 10;
 

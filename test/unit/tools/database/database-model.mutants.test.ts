@@ -139,7 +139,8 @@ describe('DatabaseModel — mutation coverage', () => {
 
       expect(add).not.toThrow();
       expect(model.getSchema()).toStrictEqual([
-        { id: expect.any(String), name: 'First', type: 'text', position: 'a0' },
+        // Every new key carries a random peer suffix, so only the run is fixed.
+        { id: expect.any(String), name: 'First', type: 'text', position: expect.stringMatching(/^a0./u) },
       ]);
     });
   });
@@ -344,7 +345,7 @@ describe('DatabaseModel — mutation coverage', () => {
           id: expect.any(String),
           name: 'Board',
           type: 'board',
-          position: 'a0',
+          position: expect.stringMatching(/^a0./u),
           groupBy: undefined,
           sorts: [],
           filters: [],
@@ -413,7 +414,7 @@ describe('DatabaseModel — mutation coverage', () => {
     });
 
     it('generates the first key when both neighbours are null', () => {
-      expect(DatabaseModel.positionBetween(null, null)).toBe('a0');
+      expect(DatabaseModel.positionBetween(null, null)).toMatch(/^a0\d{3}[1-9]$/u);
     });
 
     // `'0' > null` is false under numeric coercion; a guard that stops

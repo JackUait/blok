@@ -1,4 +1,5 @@
-import { newView, positionBetween, createDefaultStatusOptions, createDefaultStatusSettings } from '../../shared/database/schema-ops';
+import { positionBetween } from '../../shared/database/positions';
+import { newView, createDefaultStatusOptions, createDefaultStatusSettings } from '../../shared/database/schema-ops';
 import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 import { ME_FILTER_VALUE } from './database-query';
 import type { DatabaseIcon, DatabaseRowData, DatabaseStarterId, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, ViewType } from './types';

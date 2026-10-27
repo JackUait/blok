@@ -1,4 +1,5 @@
-import { newView, positionBetween } from '../../shared/database/schema-ops';
+import { newView } from '../../shared/database/schema-ops';
+import { positionBetween } from '../../shared/database/positions';
 import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 import { PROPERTY_TYPE_META } from './database-property-types';
 import type { DatabaseSetup, DatabaseViewConfig, PropertyDefinition, ViewType } from './types';

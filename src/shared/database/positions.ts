@@ -1,3 +1,5 @@
+import { generateKeyBetween, generateNKeysBetween } from './fractional-index';
+
 /**
  * Row, option and view positions are fractional-index keys. They are ordered
  * by plain code-unit compare, the order the library mints them in.
@@ -50,4 +52,72 @@ export const looseKeyBetween = (after: string, before: string | null, tail: stri
   }
 
   return rest.length > 1 ? `${after}${rest.charAt(0)}${looseKeyBetween('', rest.slice(1), tail)}` : after;
+};
+
+/**
+ * Random tail for a new key, so two peers placing into the same gap at the
+ * same moment do not mint the same key.
+ *
+ * Digits only, although fractional-indexing takes the whole base62 alphabet.
+ * Digits sort below 'V', the first character the library writes when it
+ * extends a key, so a tailed key stays below a key minted just past it; a
+ * base62 tail breaks positionsBetween's order. The last digit may not be
+ * '0' — the library rejects a key ending in one.
+ */
+const randomKeySuffix = (): string => {
+  const digit = (from: number): string => String(from + Math.floor(Math.random() * (10 - from)));
+
+  return `${digit(0)}${digit(0)}${digit(0)}${digit(1)}`;
+};
+
+/**
+ * `key` plus a random tail, still below `high`. A tail could pass a `high`
+ * that `key` is a prefix of (a0V under a0V5), so the key first moves toward
+ * `low` until it is not. Moving toward `high` instead would dig into high's
+ * digit tail, where repeated inserts grow keys several times as fast.
+ * All three keys must be ones the library reads.
+ */
+const withTail = (low: string | null, key: string, high: string | null): string =>
+  (high !== null && high.startsWith(key) ? withTail(low, generateKeyBetween(low, key), key) : key + randomKeySuffix());
+
+/**
+ * A fractional-index key between two neighbours (DatabaseModel.positionBetween documents
+ * the cases). Every key ends in a random tail, so two peers placing into the same gap at
+ * the same moment never land on the same key.
+ */
+export const positionBetween = (after: string | null, before: string | null): string => {
+  const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
+
+  if (low !== null && low === high) {
+    return low + randomKeySuffix();
+  }
+
+  try {
+    const [bottom, top] = [normalizeKey(low), normalizeKey(high)];
+
+    return withTail(bottom, generateKeyBetween(bottom, top), top);
+  } catch {
+    return looseKeyBetween(low ?? '', high, randomKeySuffix());
+  }
+};
+
+/**
+ * `n` keys between two neighbours, in order, for rows placed together. The
+ * gap is bisected, so the keys stay short: a chain of positionBetween calls
+ * into one gap grows a character every few rows.
+ */
+export const positionsBetween = (after: string | null, before: string | null, n: number): string[] => {
+  const [low, high] = after !== null && before !== null && after > before ? [before, after] : [after, before];
+  const tied = low !== null && low === high;
+
+  try {
+    // Equal neighbours leave no gap: the keys go just after both, as positionBetween's do.
+    const bottom = normalizeKey(low);
+    const top = tied ? `${bottom ?? ''}${randomKeySuffix()}` : normalizeKey(high);
+    const keys = generateNKeysBetween(bottom, top, n);
+
+    return keys.map((key, i) => withTail(keys[i - 1] ?? bottom, key, keys[i + 1] ?? top));
+  } catch {
+    return Array.from({ length: n }).reduce<string[]>(keys => [...keys, positionBetween(keys.at(-1) ?? low, tied ? null : high)], []);
+  }
 };

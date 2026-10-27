@@ -246,19 +246,35 @@ const openPlaceEditor = (
    * place: its name, a ×, a map and a Google Maps link. Notion's first key
    * here clears the saved place; Blok has no field here, so it cannot.
    */
-  const showPicked = (picked: PlaceValue): void => {
+  const showPicked = (picked: PlaceValue, reopened = false): void => {
     const content = field?.parentElement;
 
-    if (content === null || content === undefined) return;
+    if (content === null || content === undefined || field === null || field === undefined) return;
     const view = document.createElement('div');
     const head = document.createElement('div');
     const pickedLink = googleMapsLink(picked, ctx);
+    const searchNodes = [...content.childNodes];
 
     view.setAttribute('data-blok-database-place-view', '');
     head.setAttribute('data-blok-database-place-head', '');
     head.append(placeChip(placeText(picked)), clearButton(ctx, clear));
     view.appendChild(head);
     content.replaceChildren(view);
+    if (reopened) {
+      // research/35 §9: a typed key starts a search. Notion clears the saved place here; Blok keeps it until a pick or ×.
+      view.tabIndex = -1;
+      view.addEventListener('keydown', (event) => {
+        if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+        event.preventDefault();
+        state.map?.destroy();
+        state.map = null;
+        content.replaceChildren(...searchNodes);
+        field.value = event.key;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.focus();
+      });
+      view.focus();
+    }
     const draw = ctx.renderPlace;
 
     if (draw !== undefined && picked.lat !== undefined && picked.lon !== undefined) {
@@ -288,6 +304,9 @@ const openPlaceEditor = (
       if (event.key === 'Enter' && !event.isComposing) state.entered = true;
     }, true);
   }
+
+  // research/35 §9: a cell that holds a place opens on it, as after a pick.
+  if (search !== undefined && place !== undefined && placeText(place) !== '') showPicked(place, true);
 
   if (header !== undefined) {
     const chip = placeChip(name);

@@ -195,11 +195,56 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
     });
   });
 
+  describe('a cell that holds a place opens on it, not on the search (research/35 §9)', () => {
+    const view = (): HTMLElement | null => editorRoot()?.querySelector<HTMLElement>('[data-blok-database-place-view]') ?? null;
+
+    it('shows the name, a × and the Google Maps link, and writes nothing', () => {
+      const onCommit = vi.fn();
+      const onCancel = vi.fn();
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode: vi.fn(), onCommit, onCancel }));
+
+      expect(view()?.querySelector('[data-blok-database-place-name]')?.textContent).toBe('Eiffel Tower');
+      expect(view()?.querySelector('[data-blok-database-place-clear]')).not.toBeNull();
+      expect(view()?.querySelector('[data-blok-database-place-google-maps]')).not.toBeNull();
+      expect(editorRoot()?.querySelector('[data-blok-database-cell-input]')).toBeNull();
+      press(window, 'Escape');
+
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(editorRoot()).toBeNull();
+    });
+
+    it('a typed key opens the search with that key and keeps the saved place', () => {
+      const onCommit = vi.fn();
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode: vi.fn().mockResolvedValue([]), onCommit }));
+      const key = press(document.activeElement ?? document.body, 'B');
+
+      expect(key.defaultPrevented).toBe(true);
+      expect(field().value).toBe('B');
+      expect(field()).toHaveFocus();
+      press(window, 'Escape');
+
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('× clears it', () => {
+      const onCommit = vi.fn();
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode: vi.fn(), onCommit }));
+      view()?.querySelector<HTMLElement>('[data-blok-database-place-clear]')?.click();
+
+      expect(onCommit).toHaveBeenCalledWith(null);
+    });
+  });
+
   it('picking the place a cell already holds still stores it whole', async () => {
     const onCommit = vi.fn();
     const geocode = vi.fn().mockResolvedValue([EIFFEL]);
 
     openCellEditor(makeProperty('place'), { address: EIFFEL.address }, makeAnchor(), makeEditorContext({ geocode, onCommit }));
+    // The editor opens on the saved place: a key starts the search.
+    press(document.activeElement ?? document.body, '5');
     type(EIFFEL.address ?? '');
     await settle();
     document.querySelector<HTMLElement>('[data-blok-database-place-result]')?.click();
@@ -327,6 +372,7 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       const geocode = vi.fn().mockResolvedValue([EIFFEL]);
 
       openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode, onCommit }));
+      press(document.activeElement ?? document.body, 'B');
       type('Ber');
       await settle();
       press(field(), 'Escape');
@@ -340,6 +386,7 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       const geocode = vi.fn().mockResolvedValue([EIFFEL]);
 
       openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode, onCommit }));
+      press(document.activeElement ?? document.body, 'B');
       type('Ber');
       await settle();
       pressOutside();

@@ -330,6 +330,8 @@ test.describe('Place with Blok\'s map', () => {
   test('"Search for a location..." uses the host geocoder; a pick stores name, address and point', async ({ page }) => {
     await mount(page, blocks({ type: 'table' }), { style: true, geocode: true });
     await cell(page, 'r2', 'p-where').click();
+    // A cell that holds a place opens on it (research/35 §9); × goes back to the search.
+    await page.locator('[data-blok-database-cell-editor]').getByRole('button', { name: 'Clear' }).click();
     const field = page.getByPlaceholder('Search for a location...');
 
     await field.fill('Louvre');
@@ -352,6 +354,7 @@ test.describe('Place with Blok\'s map', () => {
 
     await expect(peek).toBeVisible();
     await peek.locator('[data-blok-database-drawer-prop-value][data-property-id="p-where"]').click();
+    await page.locator('[data-blok-database-cell-editor]').getByRole('button', { name: 'Clear' }).click();
     await page.getByPlaceholder('Search for a location...').fill('Louvre');
     await page.locator('[data-blok-database-place-result]').click();
 

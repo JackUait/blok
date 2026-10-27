@@ -6,6 +6,7 @@ import { PopoverRegistry } from '../../../../src/components/utils/popover/popove
 import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
 import { pageLayoutOf } from '../../../../src/tools/database/page-layout';
 import type { PageLayoutOp } from '../../../../src/tools/database/page-layout';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: vi.fn(function stubBlok() {
@@ -413,5 +414,95 @@ describe('DatabaseCardDrawer — page header and body start', () => {
     });
 
     expect(scroll).toHaveBeenCalledWith({ block: 'nearest' });
+  });
+});
+
+// notion-spec-2 §15.1: an option pill names its option above it, 6px off, centred.
+describe('DatabaseCardDrawer — option pill hints', () => {
+  const OPTIONS = [
+    { id: 'opt-red', label: 'Red', color: 'red', position: 'a0' },
+    { id: 'opt-ocean', label: 'Ocean', color: 'blue', position: 'a1' },
+  ] as const;
+  const PILL_SCHEMA: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-select', name: 'Select', type: 'select', position: 'a1', config: { options: [...OPTIONS] } },
+    { id: 'prop-multi', name: 'Multi-select', type: 'multiSelect', position: 'a2', config: { options: [...OPTIONS] } },
+    { id: 'prop-status', name: 'Status', type: 'status', position: 'a3', config: { options: [...OPTIONS] } },
+  ];
+  const PILL_ROW: DatabaseRow = {
+    id: 'row-1',
+    position: 'a0',
+    properties: { 'prop-title': 'Card', 'prop-select': 'opt-red', 'prop-multi': ['opt-red', 'opt-ocean'], 'prop-status': 'opt-ocean' },
+  };
+
+  const shownHint = (): { text: string; placement: string | null; top: string } | null => {
+    const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]');
+
+    return wrapper?.getAttribute('data-blok-shown') === 'true'
+      ? { text: document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent ?? '', placement: wrapper.getAttribute('data-blok-placement'), top: wrapper.style.top }
+      : null;
+  };
+
+  const pillsOf = (options: CardDrawerOptions, propertyId: string): HTMLElement[] =>
+    [...(valueOf(options, propertyId)?.querySelectorAll<HTMLElement>('[data-blok-database-option-pill]') ?? [])];
+
+  const hover = (pill: HTMLElement): void => {
+    vi.spyOn(pill, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 1000, y: 361, width: 40, height: 20 }));
+    pill.dispatchEvent(new MouseEvent('mouseenter'));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
+    destroyTooltip();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    destroyTooltip();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it.each([
+    ['prop-select', 0, 'Red'],
+    ['prop-multi', 0, 'Red'],
+    ['prop-multi', 1, 'Ocean'],
+  ])('hovering a %s pill shows its option name 6px above it, after the hint delay', (propertyId, index, name) => {
+    const options = createOptions({ schema: PILL_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(PILL_ROW);
+    const pill = pillsOf(options, propertyId)[index];
+
+    hover(pill);
+    vi.advanceTimersByTime(HINT_DELAY - 1);
+    expect(shownHint()).toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(shownHint()).toEqual({ text: name, placement: 'top', top: '355px' });
+  });
+
+  it('focus alone shows no pill hint', () => {
+    const options = createOptions({ schema: PILL_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(PILL_ROW);
+    const pill = pillsOf(options, 'prop-select')[0];
+
+    pill.dispatchEvent(new FocusEvent('focus'));
+    vi.advanceTimersByTime(HINT_DELAY * 2);
+    expect(shownHint()).toBeNull();
+  });
+
+  // Notion was measured on Select and Multi-select only.
+  it('a status pill has no hint', () => {
+    const options = createOptions({ schema: PILL_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(PILL_ROW);
+    const [pill] = pillsOf(options, 'prop-status');
+
+    expect(pill).toBeDefined();
+    hover(pill);
+    vi.advanceTimersByTime(HINT_DELAY * 2);
+    expect(shownHint()).toBeNull();
   });
 });

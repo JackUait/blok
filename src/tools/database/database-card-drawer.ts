@@ -3403,7 +3403,13 @@ export class DatabaseCardDrawer {
       ...rowCellContext(this.currentRow ?? undefined, def.id),
     });
 
-    cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));
+    cell.querySelectorAll<HTMLElement>('[data-blok-database-option-pill]').forEach((pill) => {
+      pill.setAttribute('data-blok-database-drawer-prop-pill', '');
+      // notion-spec-2 §15.1: measured on Select and Multi-select only.
+      if (def.type === 'select' || def.type === 'multiSelect') {
+        onHover(pill, pill.textContent ?? '', { placement: 'top', gap: 6 });
+      }
+    });
     // R29: the page glyph before a file name, as the table draws it.
     cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
     if (cell.hasAttribute('data-empty')) {

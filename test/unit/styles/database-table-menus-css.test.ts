@@ -38,9 +38,9 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-grid]', 'grid-template-columns')).toEqual(['minmax(0, 1fr)']);
   });
 
-  // notion-spec-2 §18.5: the full list is 290x573.6 and scrolls inside, wherever it sits.
-  it('stops at Notion\'s 573.6px, or the viewport when that is shorter, and scrolls the types inside', () => {
-    expect(declared('[data-blok-database-property-type-popover]', 'max-height')).toEqual(['min(573.6px, calc(100dvh - 2 * var(--blok-space-3)))']);
+  // notion-spec-2 §19.10: 573.6 tall in a 717 window and 800 in a 1000 one; the types scroll inside.
+  it('stops at 80% of the window height and scrolls the types inside', () => {
+    expect(declared('[data-blok-database-property-type-popover]', 'max-height')).toEqual(['80dvh']);
     expect(declared('[data-blok-database-property-type-body]', 'overflow-y')).toEqual(['auto']);
   });
 

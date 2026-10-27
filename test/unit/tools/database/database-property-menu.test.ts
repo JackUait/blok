@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { IconCheck, IconInfo, IconPageLayout, IconReplace } from '../../../../src/components/icons';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
   name?: string;
@@ -59,7 +60,10 @@ vi.mock('../../../../src/components/utils/popover', () => ({
       // Mounts the html rows so a test can see what has focus.
       for (const item of this.record.items) {
         if (item.type === 'html' && item.element !== undefined) document.body.appendChild(item.element);
+        // Named rows, as the real popover draws them, so a test can hover one.
+        if (item.type === undefined && item.name !== undefined) this.element.appendChild(document.createElement('div')).setAttribute('data-blok-item-name', item.name);
       }
+      document.body.appendChild(this.element);
     }
 
     on(_event: string, handler: () => void): void {
@@ -1416,6 +1420,93 @@ describe('row page property menu', () => {
     byName(lastItems(), 'comment').onActivate?.(byName(lastItems(), 'comment'));
 
     expect(onComment).toHaveBeenCalledTimes(1);
+    menu.destroy();
+  });
+});
+
+// notion-spec-2 §15.7: Edit property (label menu) and Decimal places (Edit property panel) explain themselves on hover.
+describe('row page menu hints', () => {
+  const t = (key: string): string => ({
+    'tools.database.editPropertyHint': 'Edit property name, type, and other options…',
+    'tools.database.decimalPlacesHint': 'Round to a specified number of decimal places. The underlying remains unchanged.',
+  } as Record<string, string>)[key] ?? key;
+  const newMenu = (): InstanceType<typeof DatabasePropertyMenu> =>
+    new DatabasePropertyMenu({ i18n: { t, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+  const row = (name: string): HTMLElement => {
+    const popover = captured.popovers[captured.popovers.length - 1];
+    const el = document.querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`);
+
+    if (popover === undefined || el === null) throw new Error(`no row ${name}`);
+
+    return el;
+  };
+
+  const hintAfterHover = (el: HTMLElement): { text: string; placement: string | null; left: string } | null => {
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 300, y: 300, width: 278, height: 28 }));
+    el.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
+    const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]');
+
+    return wrapper?.getAttribute('data-blok-shown') === 'true'
+      ? { text: document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent ?? '', placement: wrapper.getAttribute('data-blok-placement'), left: wrapper.style.left }
+      : null;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    captured.popovers.length = 0;
+    destroyTooltip();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    destroyTooltip();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('Edit property shows its hint 6px to the inline-start of the item', () => {
+    const menu = newMenu();
+
+    menu.openRowPage(prop('number'), document.createElement('div'));
+    // jsdom: the bubble is 0 wide, so its left is the item's left minus the gap. jsdom's window is 1024 wide.
+    expect(hintAfterHover(row('editProperty'))).toEqual({ text: 'Edit property name, type, and other options…', placement: 'left', left: '294px' });
+    menu.destroy();
+  });
+
+  it.each(['rename', 'duplicate'])('%s shows no hint', (name) => {
+    const menu = newMenu();
+
+    menu.openRowPage(prop('number'), document.createElement('div'));
+    expect(hintAfterHover(row(name))).toBeNull();
+    menu.destroy();
+  });
+
+  it('Decimal places shows its hint 6px to the inline-end of the row', () => {
+    const menu = newMenu();
+
+    menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+    expect(hintAfterHover(row('decimals'))).toEqual({ text: 'Round to a specified number of decimal places. The underlying remains unchanged.', placement: 'right', left: '584px' });
+    menu.destroy();
+  });
+
+  it('Number format shows no hint', () => {
+    const menu = newMenu();
+
+    menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+    expect(hintAfterHover(row('numberFormat'))).toBeNull();
+    menu.destroy();
+  });
+
+  it('focus alone shows no hint', () => {
+    const menu = newMenu();
+
+    menu.openRowPage(prop('number'), document.createElement('div'));
+    row('editProperty').dispatchEvent(new FocusEvent('focus'));
+    vi.advanceTimersByTime(HINT_DELAY * 2);
+    expect(document.querySelector('[data-blok-testid="tooltip"]')?.getAttribute('data-blok-shown')).not.toBe('true');
     menu.destroy();
   });
 });

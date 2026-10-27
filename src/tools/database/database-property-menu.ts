@@ -18,6 +18,8 @@ import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-tabl
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import { overlayMountFor } from '../../components/utils/top-layer';
+import { onHover } from '../../components/utils/tooltip';
+import { getElementDirection } from '../../components/utils/direction';
 import type {
   DateDisplay,
   DateReminderOffset,
@@ -302,6 +304,21 @@ export class DatabasePropertyMenu {
     ];
 
     this.show(items, anchor, '220px', ROW_PAGE_MENU_CLASS);
+    this.rowHint('editProperty', 'tools.database.editPropertyHint', 'start');
+  }
+
+  /** notion-spec-2 §15.7: a row's hint, 6px off its inline `side`. */
+  private rowHint(name: string, key: string, side: 'start' | 'end'): void {
+    const row = this.popover?.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.itemName}="${name}"]`);
+
+    if (row === null || row === undefined) return;
+    onHover(row, this.t(key), {
+      gap: 6,
+      // A getter: the row is read for its direction on hover.
+      get placement(): string {
+        return (getElementDirection(row) === 'rtl') === (side === 'start') ? 'right' : 'left';
+      },
+    });
   }
 
   /** Notion's row page submenu: 180 wide, a check on the right of the current choice. */
@@ -353,6 +370,7 @@ export class DatabasePropertyMenu {
     ];
 
     this.show(items, anchor, '290px', PROPERTY_PANEL_CLASS, typed !== undefined);
+    this.rowHint('decimals', 'tools.database.decimalPlacesHint', 'end');
     const input = name.querySelector('input');
 
     if (typed !== undefined) {

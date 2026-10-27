@@ -94,13 +94,28 @@ const centreY = async (page: Page, index: number): Promise<number> => {
   }, index);
 };
 
-/** Index of the block row at client y; the last block when y is below them all. */
+/**
+ * Index of the first row whose bottom is below client y: the top row of a band whose top
+ * edge is at y. In the 1px gap between rows it is the row below the gap.
+ */
 const rowAt = async (page: Page, y: number): Promise<number> => {
   return page.evaluate((clientY) => {
     const holders = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
     const hit = holders.findIndex((h) => h.getBoundingClientRect().bottom > clientY);
 
     return hit === -1 ? holders.length - 1 : hit;
+  }, y);
+};
+
+/**
+ * Index of the last row whose top is above client y: the bottom row of a band whose bottom
+ * edge is at y. In the 1px gap between rows it is the row above the gap, as the lasso sees it.
+ */
+const lastRowAbove = async (page: Page, y: number): Promise<number> => {
+  return page.evaluate((clientY) => {
+    const holders = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
+
+    return holders.filter((h) => h.getBoundingClientRect().top < clientY).length - 1;
   }, y);
 };
 
@@ -165,7 +180,7 @@ test.describe('rubber band selection while the page scrolls', () => {
         await expect.poll(() => scrollOffset(page, mode)).toBeGreaterThan(before + 200);
 
         // The pointer has not moved on screen; the content scrolled under it.
-        const lastRow = await rowAt(page, pointerY);
+        const lastRow = await lastRowAbove(page, pointerY);
 
         await expect.poll(() => selectedIndices(page)).toEqual(range(1, lastRow));
         await page.mouse.up();
@@ -186,7 +201,7 @@ test.describe('rubber band selection while the page scrolls', () => {
 
         await page.mouse.up();
 
-        const lastRow = await rowAt(page, edgeY);
+        const lastRow = await lastRowAbove(page, edgeY);
 
         expect(await selectedIndices(page)).toEqual(range(1, lastRow));
       });
@@ -206,6 +221,23 @@ test.describe('rubber band selection while the page scrolls', () => {
         await page.mouse.up();
 
         expect(await selectedIndices(page)).toEqual(range(1, 5));
+      });
+
+      test('a band released in the gap between two rows stops at the row above it', async ({ page }) => {
+        await mount(page, mode, 10);
+
+        const gapY = await page.evaluate(() => {
+          const holder = document.querySelectorAll('[data-blok-testid="block-wrapper"]')[4];
+
+          return Math.ceil(holder.getBoundingClientRect().bottom);
+        });
+
+        await page.mouse.move(BAND_X, await centreY(page, 1));
+        await page.mouse.down();
+        await page.mouse.move(await contentX(page), gapY, { steps: 4 });
+        await page.mouse.up();
+
+        expect(await selectedIndices(page)).toEqual(range(1, await lastRowAbove(page, gapY)));
       });
 
       test('a quick drag released at once selects up to the release point', async ({ page }) => {
@@ -263,7 +295,7 @@ test.describe('rubber band selection while the page scrolls', () => {
     await expect.poll(() => scrollOffset(page, 'window'), { timeout: 5000 }).toBeGreaterThan(back + 300);
     await page.mouse.up();
 
-    expect(await selectedIndices(page)).toEqual(range(1, await rowAt(page, viewport - 10)));
+    expect(await selectedIndices(page)).toEqual(range(1, await lastRowAbove(page, viewport - 10)));
   });
 
   test('auto-scroll speeds up while the band stays at the edge and starts slow again after leaving it', async ({ page }) => {

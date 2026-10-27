@@ -4,6 +4,8 @@ import { join, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
+import { AGENT_SKILLS } from '../../../../src/shared/skills';
+
 type LifecycleCategory =
   | 'executable-literal'
   | 'finite-dynamic'
@@ -199,6 +201,8 @@ const deriveLifecycle = (): {
   for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`toolbox.preview.heading${level}`);
   // The Ask AI bar's thinking menu reads assistant.thinking.<level>.
   for (const level of ['off', 'low', 'medium', 'high', 'xhigh', 'max']) addDynamic(`assistant.thinking.${level}`);
+  // Ask AI's action chips read assistant.action.<skill id> (actions.ts).
+  for (const skill of AGENT_SKILLS) addDynamic(`assistant.action.${skill.id}`);
   addDynamic('tools.image.errorRetry');
   addDynamic('tools.image.errorReplace');
   // The tab block has no toolbox entry. Its name is read as toolNames.<block.name>
@@ -270,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1870 + 126 + 524 + 4 closure for all 2524 keys', () => {
+  it('rebuilds a disjoint 1877 + 136 + 528 + 4 closure for all 2545 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2524);
+    expect(lifecycle.size).toBe(2545);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -452,7 +456,12 @@ describe('current English catalog lifecycle coverage', () => {
       // reads "Duplicate view"/"Delete view" (feel/findings-toolbar V04, V07). The keys still ship.
       // -2: tools.database.addCard and addRow; the add buttons are named by their visible
       // "New page" text (axe label-content-name-mismatch). The keys still ship.
-      'executable-literal': 1870,
+      // -9: the Ask AI action labels, now read as assistant.action.<skill id> (25d88cef).
+      // +16: toolbox.preview.databaseFullPage, the Ask AI unlock/restore questions and answers, assistant.edited,
+      // discardPartial, discardRestored, and the property menu's propertyTypeListHeading, editFormula, showNumber
+      // and rollupTargetProperty, all by literal.
+      // -2: tools.database.propertyNamePlaceholder (58acb411) and rollupProperty (47825485) lost their literal callers.
+      'executable-literal': 1877,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -462,7 +471,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: toolNames.askAi, the Ask AI inline tool's titleKey.
       // +6: the thinking menu's assistant.thinking.<level> labels.
       // +1: the Table view toolbox entry's toolNames.tableView (toolNames.mapView is a literal: the seeded map view's name).
-      'finite-dynamic': 126,
+      // +9: the Ask AI action labels, assistant.action.<skill id>.
+      // +1: toolNames.databaseFullPage (f6d462a0).
+      'finite-dynamic': 136,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.
@@ -521,7 +532,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.galleryNew (see executable-literal).
       // +12: see executable-literal (Add view descriptions, old tab menu labels).
       // +2: tools.database.addCard and addRow (see above).
-      'registered-namespace-compatible': 524,
+      // +2: the formula errors tooComplex and patternTooComplex, composed from formulaErrorKey.
+      // +2: propertyNamePlaceholder and rollupProperty (see executable-literal); still shipped.
+      'registered-namespace-compatible': 528,
       'catalog-only': 4,
     });
     expect(

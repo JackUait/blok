@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import JSZip from 'jszip';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+
+import { createZip } from '../../../../scripts/lib/zip-writer.mjs';
 
 const loaders = vi.hoisted(() => ({
   loadBinaryPreview: vi.fn(),
@@ -20,6 +21,9 @@ vi.mock('../../../../src/tools/file/office-loaders', () => ({
 
 import { fillOfficeBody, isOfficeKind, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import type { FilePreviewOptions } from '../../../../src/tools/file/preview-modal';
+import type * as OfficeLoadersModule from '../../../../src/tools/file/office-loaders';
+
+type OfficeLoaders = typeof OfficeLoadersModule;
 
 const SHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
@@ -29,21 +33,18 @@ const sheetXml = (rows: string): string =>
 const sharedXml = (strings: string[]): string =>
   `<?xml version="1.0"?><sst xmlns="${SHEET_NS}">${strings.map((s) => `<si>${s}</si>`).join('')}</sst>`;
 
-const workbook = async (files: Record<string, string>): Promise<ArrayBuffer> => {
-  const zip = new JSZip();
+const workbook = (files: Record<string, string>): ArrayBuffer => {
+  const zip = createZip(Object.entries(files).map(([name, data]) => ({ name, data })));
 
-  for (const [path, content] of Object.entries(files)) {
-    zip.file(path, content);
-  }
-
-  return zip.generateAsync({ type: 'arraybuffer' });
+  // A small Buffer can be a view into Node's shared pool, so copy out its own bytes.
+  return new Uint8Array(zip).buffer;
 };
 
 const renderSheet = async (files: Record<string, string>): Promise<HTMLElement> => {
   const container = document.createElement('div');
 
   document.body.appendChild(container);
-  await renderXlsxInto(await workbook(files), container);
+  await renderXlsxInto(workbook(files), container);
 
   return container;
 };
@@ -53,10 +54,19 @@ const rowTexts = (container: HTMLElement): string[][] =>
     Array.from(tr.querySelectorAll('td')).map((td) => td.textContent ?? ''));
 
 describe('office preview mutants', () => {
+  let realZip: Awaited<ReturnType<OfficeLoaders['loadZip']>>;
+
+  beforeAll(async () => {
+    // The real loader, so this file never imports the zip library itself.
+    const actual = await vi.importActual<OfficeLoaders>('../../../../src/tools/file/office-loaders');
+
+    realZip = await actual.loadZip();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     // restoreAllMocks in afterEach drops the implementations, so re-prime here.
-    loaders.loadZip.mockResolvedValue(JSZip);
+    loaders.loadZip.mockResolvedValue(realZip);
     loaders.loadBinaryPreview.mockResolvedValue({ ok: false, reason: 'fetch-error' });
     document.body.innerHTML = '';
   });

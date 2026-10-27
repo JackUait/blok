@@ -1028,7 +1028,13 @@ export class DatabasePropertyMenu {
     const row = this.popover?.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.itemName}="rollupFunction-show_unique"]`);
 
     if (row === null || row === undefined) return;
-    onHover(row, this.t('tools.database.rollupShowUniqueHint'), { placement: getElementDirection(row) === 'rtl' ? 'left' : 'right', gap: 6 });
+    const text = document.createElement('span');
+
+    // Notion's box is 156 wide: 140 + the bubble's 8px padding on each side.
+    text.style.display = 'block';
+    text.style.maxWidth = '140px';
+    text.textContent = this.t('tools.database.rollupShowUniqueHint');
+    onHover(row, text, { placement: getElementDirection(row) === 'rtl' ? 'left' : 'right', gap: 6 });
   }
 
   /** Binds hints to rows drawn now. Each draw makes new rows, so it runs again on every open. */

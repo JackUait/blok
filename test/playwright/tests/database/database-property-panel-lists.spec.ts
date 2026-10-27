@@ -253,3 +253,16 @@ test('other searchable lists keep the shared search field', async ({ page }) => 
 
   expect(input?.height).toBe(22);
 });
+
+// §17.8: Notion's box is 156 wide; other hints keep the 300 max-width.
+test('the Show unique values hint is 156 wide', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="rollupFunction"]').click();
+  await page.locator('[data-blok-item-name="rollupFunction-show_unique"]').hover();
+  const hint = page.getByTestId('tooltip');
+
+  await expect(hint).toBeVisible();
+  const rect = await hint.boundingBox();
+
+  expect(rect?.width).toBe(156);
+});

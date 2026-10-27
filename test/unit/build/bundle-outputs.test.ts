@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
 import { resolve, join, dirname } from 'node:path'
 import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
+import ts from 'typescript'
 import { describe, it, expect } from 'vitest'
 
 import { ENTRIES as OVERRIDE_ENTRIES } from '../../../scripts/override/generate-override-entries.mjs'
@@ -688,6 +689,26 @@ describe('dist weight (consumer parse cost)', () => {
     expect(codeBytes).toBeLessThan(14.4 * 1024 * 1024)
   })
 
+  // Minifiers keep the newlines inside string and template literals (the SVG
+  // icon strings are multi-line), so only newlines in the code itself count.
+  const codeLineCount = (code: string): number => {
+    const source = ts.createSourceFile('chunk.mjs', code, ts.ScriptTarget.Latest, false, ts.ScriptKind.JS)
+    let literalNewlines = 0
+    const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
+        literalNewlines += node.getText(source).split('\n').length - 1
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+    return code.split('\n').length - literalNewlines
+  }
+
+  it('counts code lines without the newlines inside literals', () => {
+    expect(codeLineCount('var a=`\n<svg>\n</svg>\n`,b=`x\n${a}\ny`;export{a,b};')).toBe(1)
+    expect(codeLineCount('function f() {\n  return "a"\n}\n')).toBe(4)
+  })
+
   it('emits minified chunks (no indented multi-line output)', () => {
     // Unminified lib output averages ~40-70 chars per line; minified output is a
     // handful of very long lines. Guard every substantial code chunk.
@@ -696,7 +717,8 @@ describe('dist weight (consumer parse cost)', () => {
       if (code.length < 100 * 1024 || code.slice(0, 200).includes('JSON.parse(')) {
         return false
       }
-      return code.length / code.split('\n').length < 200
+      // Parsing is slow, so only chunks the plain count flags get parsed.
+      return code.length / code.split('\n').length < 200 && code.length / codeLineCount(code) < 200
     })
     expect(bloated).toEqual([])
   })

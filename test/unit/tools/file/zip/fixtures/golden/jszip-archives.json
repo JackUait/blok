@@ -1,0 +1,2588 @@
+{
+ "public/samples/pitch-deck.pptx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 1763,
+    "sha256": "b2acaa5a285b5840f2df1c3a9982abafa82f8f4f27eb21e5f72f672818ca0d6a",
+    "text": "3c7ec5a9d18d76c7b8cb46588bc8a6170846b9dae94aeeac2e7e38e91a90a749"
+   },
+   {
+    "name": "_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 303,
+    "sha256": "d6f1dc8994e75883b1f18780e909ecf37d28b2c9584b8e9034d0954a903f97d6",
+    "text": "bf02191b69a987978e9a7583deb89b16df7f08739763f7eac4cc73312bc11ab0"
+   },
+   {
+    "name": "ppt/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/presentation.xml",
+    "dir": false,
+    "size": 702,
+    "sha256": "a32ce2bbe62026db22596cc791ef34f688b6e218698563f535fba90ca2805081",
+    "text": "60b72d444bf1ec88cbd0b43f5b758a4fbcfaf4ea9a5bc820a23ba29c0fc322dd"
+   },
+   {
+    "name": "ppt/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/_rels/presentation.xml.rels",
+    "dir": false,
+    "size": 1374,
+    "sha256": "e97b453249185ab98e5cb680e7297dcf7cac953448bc26efe360af8e1a079e9f",
+    "text": "07a3acc95994b9bd041bc7193b919fa3a58503f5070f3fb89565fe81ebf2f525"
+   },
+   {
+    "name": "ppt/slides/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slides/slide1.xml",
+    "dir": false,
+    "size": 2513,
+    "sha256": "a2d55eb48e530885e32b87f08368678faa144be44b568613f9a9868d1e2e719a",
+    "text": "85a3985be03402bba18a9c1000253f96be07d868c26d39c21ed230b5f2cd28f3"
+   },
+   {
+    "name": "ppt/slides/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slides/_rels/slide1.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide2.xml",
+    "dir": false,
+    "size": 2281,
+    "sha256": "139a9febe7624ba64c77c5e8ed0da693a8ee112fff1d591c4140482822a8fb57",
+    "text": "f86d95d041a094c23447dedcebafcdd9965fb825c5416d21a666a34f396f4fad"
+   },
+   {
+    "name": "ppt/slides/_rels/slide2.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide3.xml",
+    "dir": false,
+    "size": 3291,
+    "sha256": "0243f78803cc0f30e2ebfaba348234e850dcc47bf8dad531a57b086fa8dde59f",
+    "text": "9eca3472d0ea309c1de78ac1efca4eb5e7abb16586f0312d4ad4512aef660154"
+   },
+   {
+    "name": "ppt/slides/_rels/slide3.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide4.xml",
+    "dir": false,
+    "size": 3347,
+    "sha256": "19af06e4f1109d1bef5f0e9a4580997a62bd78ff77b0e159099f51bcfc5b1ee2",
+    "text": "c884ba093da973b9e09611f770b2c5530ced8e2cd5ce98d7f242f1f80dea35b6"
+   },
+   {
+    "name": "ppt/slides/_rels/slide4.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide5.xml",
+    "dir": false,
+    "size": 3910,
+    "sha256": "89e1e1406c958cdef48dfd9b6bb4d079bd842c69d98d33b84182b4cda457be7c",
+    "text": "3da39e88cd404fdeff5f4f83e89ba70dd831a823c1218fa84f41866a21132f8a"
+   },
+   {
+    "name": "ppt/slides/_rels/slide5.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide6.xml",
+    "dir": false,
+    "size": 3278,
+    "sha256": "79f3ca215aa9ce9c71e28d2be3c99cfb705f92105689006b2ef40644f83883e7",
+    "text": "e4ab69dae9d1a5f93013ad08f021f09feb0edd551fb3a609d2d05f6432fbdd18"
+   },
+   {
+    "name": "ppt/slides/_rels/slide6.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide7.xml",
+    "dir": false,
+    "size": 2290,
+    "sha256": "4959a4497055faf368f510d1b1004ada8d887ab4ee562278e3d80915c917dc09",
+    "text": "d5bbd2e7d15b91a9597c1be48a460224eae7176315baf0c945bd9a2bed22c682"
+   },
+   {
+    "name": "ppt/slides/_rels/slide7.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slideLayouts/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideLayouts/slideLayout1.xml",
+    "dir": false,
+    "size": 499,
+    "sha256": "b77b0b29650ec8c8845095cc441a1bcfe3c2c1ef4c3e966a15eb736b9dc392af",
+    "text": "4914ecd71ffa0d6eb3c1d85bc79b2db34420c1fd3a7d0d4d10f8575be1e5f56e"
+   },
+   {
+    "name": "ppt/slideLayouts/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "3359f7a2caacff28ae2a987d867774335a415ffb7f7e84bcd313e625ce8b5c02",
+    "text": "e33c1f46adbf19348d00136d309ba1bbd16ae4928116d5c10ee8f09d0e77177a"
+   },
+   {
+    "name": "ppt/slideMasters/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideMasters/slideMaster1.xml",
+    "dir": false,
+    "size": 698,
+    "sha256": "b6489aa5fc4e455ab3e42262e2057f394cd82cdaebf9f6bc24b672a4a3f93604",
+    "text": "086270d1d07716e1e92d449ca394fd8c2ee328b109bdc20f592d1fe0e53a8c69"
+   },
+   {
+    "name": "ppt/slideMasters/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+    "dir": false,
+    "size": 448,
+    "sha256": "988722a344c05a5b806fcf5eb8f229ced905a6f5b134827feb719019f5206249",
+    "text": "d63aaea0e64bdcfebf97757138762cca9bbf588cfb48cd416da7da21367126b8"
+   },
+   {
+    "name": "ppt/theme/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/theme/theme1.xml",
+    "dir": false,
+    "size": 1878,
+    "sha256": "ab35061e6e654717789ac6da8bc763db5ee7ad9a4577ea8b9acfe3914dcc4045",
+    "text": "5691cfe2132521cddc2e2779292b7be0269bbecd7a242386fe3755bc11bc94da"
+   }
+  ],
+  "fileNull": [
+   "_rels/",
+   "ppt/",
+   "ppt/_rels/",
+   "ppt/slides/",
+   "ppt/slides/_rels/",
+   "ppt/slideLayouts/",
+   "ppt/slideLayouts/_rels/",
+   "ppt/slideMasters/",
+   "ppt/slideMasters/_rels/",
+   "ppt/theme/"
+  ]
+ },
+ "public/samples/quarterly-budget.xlsx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 700,
+    "sha256": "2a8e8867a818c3bb2257b080185ca34a511ba9122407243ae79d7f91d17d0233",
+    "text": "92c00f231408837738141f05df28922865caaf15016c730a7a857603ee59e130"
+   },
+   {
+    "name": "_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 298,
+    "sha256": "8000e940976640c5ae48764d860de56bd5a73cf27e54a4e82fe32cf2a2c6ba05",
+    "text": "e6fe8f3dd449f03771d31c3ebaaf270e636b10856d6d8aae3b63e62257d1b86e"
+   },
+   {
+    "name": "xl/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "xl/workbook.xml",
+    "dir": false,
+    "size": 286,
+    "sha256": "231285caccd4ba02ccb30e8658cc934e0a6fe762df7236905665e5b9184637dd",
+    "text": "ea4c99e87950844700c34b3935a5e7b7ea50e502a2d19204f8a3424fadd17257"
+   },
+   {
+    "name": "xl/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "xl/_rels/workbook.xml.rels",
+    "dir": false,
+    "size": 441,
+    "sha256": "d82d3c173793e0f8f93ffec087558bae6d027eac0d1ca947fe18a8d6a3bc7c02",
+    "text": "ac74371050721e43cf199579c210b998110757dff4163d1728c17f399aa3f7c9"
+   },
+   {
+    "name": "xl/sharedStrings.xml",
+    "dir": false,
+    "size": 1587,
+    "sha256": "805c846bc3426bac30b8f989f5cceaeb668db409ff5a14ed0d81f29c8a5a6db9",
+    "text": "60ed40a6714e1137ef3262dd59e187ebf30ff7cba2baea1f4317a10d4f975e3b"
+   },
+   {
+    "name": "xl/worksheets/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "xl/worksheets/sheet1.xml",
+    "dir": false,
+    "size": 6406,
+    "sha256": "4d7be7da27a5ed5cc34cac475a65cd7d37ae85091d7a4548b9c53b64b7e1abe2",
+    "text": "93ec8bd35ce9585995e36a1e03b3b1be1868679a9431062fdecb9bdddb1b5bbe"
+   }
+  ],
+  "fileNull": [
+   "_rels/",
+   "xl/",
+   "xl/_rels/",
+   "xl/worksheets/"
+  ]
+ },
+ "public/samples/service-agreement.docx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 434,
+    "sha256": "bbbf76a77ae97c1fccfc830d01029e8345efeef9fa090748d9d8708f319dd036",
+    "text": "f94c814b41df59848b3f96b0fdf1ba971632dd48321c3010b06c86873517a92c"
+   },
+   {
+    "name": "_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 300,
+    "sha256": "054e97d2d76fcc179d7268db97e2c950cb4f8aa40c783d5633eab70787621374",
+    "text": "15522299064a921c400d0b6f9a649bec477d22da7d70766d0e84d8e7f99102f0"
+   },
+   {
+    "name": "word/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "word/document.xml",
+    "dir": false,
+    "size": 2716,
+    "sha256": "6c37c363621b01d83527d98009e3826cf4e6918010854b91a5283f18b1b5abdf",
+    "text": "b4011870fd4deb0d88421bc127a39e00ab292abc5b2710de8e6b97bd57bbecb0"
+   }
+  ],
+  "fileNull": [
+   "_rels/",
+   "word/"
+  ]
+ },
+ "test/playwright/fixtures/office/sample.docx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 434,
+    "sha256": "bbbf76a77ae97c1fccfc830d01029e8345efeef9fa090748d9d8708f319dd036",
+    "text": "f94c814b41df59848b3f96b0fdf1ba971632dd48321c3010b06c86873517a92c"
+   },
+   {
+    "name": "_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 300,
+    "sha256": "054e97d2d76fcc179d7268db97e2c950cb4f8aa40c783d5633eab70787621374",
+    "text": "15522299064a921c400d0b6f9a649bec477d22da7d70766d0e84d8e7f99102f0"
+   },
+   {
+    "name": "word/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "word/document.xml",
+    "dir": false,
+    "size": 284,
+    "sha256": "5b41b0e71788a52635ee5534aad81817dac5d9c3d0298b128dca36bb0622402e",
+    "text": "49815dcdd7d8e628a5673bf88abd2fb2e4f334ddc29bafb5fb67f2fae7d349e3"
+   }
+  ],
+  "fileNull": [
+   "_rels/",
+   "word/"
+  ]
+ },
+ "test/playwright/fixtures/office/sample.pptx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 983,
+    "sha256": "27c4f4b88da84c8d4468b13d1aecf63f39ca9d6a6d6ba586bc7b02f6557d68b6",
+    "text": "28b3a2294909564c272c9e309e3dd47324dab5c8dcff8de9ba69329f940a8582"
+   },
+   {
+    "name": "_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 303,
+    "sha256": "d6f1dc8994e75883b1f18780e909ecf37d28b2c9584b8e9034d0954a903f97d6",
+    "text": "bf02191b69a987978e9a7583deb89b16df7f08739763f7eac4cc73312bc11ab0"
+   },
+   {
+    "name": "ppt/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/presentation.xml",
+    "dir": false,
+    "size": 516,
+    "sha256": "ad3404fd2a7a7ef66580f3b177fb30645f575d4a84b13c7fb28382206c3a8457",
+    "text": "18768f90757466467c1d6b1e6815432222b8eec0f4d7f43d2a495e99a6040bef"
+   },
+   {
+    "name": "ppt/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/_rels/presentation.xml.rels",
+    "dir": false,
+    "size": 576,
+    "sha256": "0ef1ebbd4964bb20397e4886d47f81cde25653e3a689660ffffc081ef0c84b9b",
+    "text": "bf3764e9214912a60cd7e9860d4c83de688060fe132e9ae617dfeae8da697d2d"
+   },
+   {
+    "name": "ppt/slides/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slides/slide1.xml",
+    "dir": false,
+    "size": 809,
+    "sha256": "6bc7537293629dca3cdbec079df413d4a0c98a9d6d9d119f89fae13003196e9c",
+    "text": "7320e5454214aacc83032e51d0aa2eeea02492bd535782d798a69370b3babb86"
+   },
+   {
+    "name": "ppt/slides/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slides/_rels/slide1.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slideLayouts/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideLayouts/slideLayout1.xml",
+    "dir": false,
+    "size": 499,
+    "sha256": "b77b0b29650ec8c8845095cc441a1bcfe3c2c1ef4c3e966a15eb736b9dc392af",
+    "text": "4914ecd71ffa0d6eb3c1d85bc79b2db34420c1fd3a7d0d4d10f8575be1e5f56e"
+   },
+   {
+    "name": "ppt/slideLayouts/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "3359f7a2caacff28ae2a987d867774335a415ffb7f7e84bcd313e625ce8b5c02",
+    "text": "e33c1f46adbf19348d00136d309ba1bbd16ae4928116d5c10ee8f09d0e77177a"
+   },
+   {
+    "name": "ppt/slideMasters/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideMasters/slideMaster1.xml",
+    "dir": false,
+    "size": 698,
+    "sha256": "b6489aa5fc4e455ab3e42262e2057f394cd82cdaebf9f6bc24b672a4a3f93604",
+    "text": "086270d1d07716e1e92d449ca394fd8c2ee328b109bdc20f592d1fe0e53a8c69"
+   },
+   {
+    "name": "ppt/slideMasters/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+    "dir": false,
+    "size": 448,
+    "sha256": "988722a344c05a5b806fcf5eb8f229ced905a6f5b134827feb719019f5206249",
+    "text": "d63aaea0e64bdcfebf97757138762cca9bbf588cfb48cd416da7da21367126b8"
+   },
+   {
+    "name": "ppt/theme/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "ppt/theme/theme1.xml",
+    "dir": false,
+    "size": 1878,
+    "sha256": "ab35061e6e654717789ac6da8bc763db5ee7ad9a4577ea8b9acfe3914dcc4045",
+    "text": "5691cfe2132521cddc2e2779292b7be0269bbecd7a242386fe3755bc11bc94da"
+   }
+  ],
+  "fileNull": [
+   "_rels/",
+   "ppt/",
+   "ppt/_rels/",
+   "ppt/slides/",
+   "ppt/slides/_rels/",
+   "ppt/slideLayouts/",
+   "ppt/slideLayouts/_rels/",
+   "ppt/slideMasters/",
+   "ppt/slideMasters/_rels/",
+   "ppt/theme/"
+  ]
+ },
+ "test/playwright/fixtures/office/sample.xlsx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 700,
+    "sha256": "2a8e8867a818c3bb2257b080185ca34a511ba9122407243ae79d7f91d17d0233",
+    "text": "92c00f231408837738141f05df28922865caaf15016c730a7a857603ee59e130"
+   },
+   {
+    "name": "_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 298,
+    "sha256": "8000e940976640c5ae48764d860de56bd5a73cf27e54a4e82fe32cf2a2c6ba05",
+    "text": "e6fe8f3dd449f03771d31c3ebaaf270e636b10856d6d8aae3b63e62257d1b86e"
+   },
+   {
+    "name": "xl/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "xl/workbook.xml",
+    "dir": false,
+    "size": 286,
+    "sha256": "8290779bfe4cc9d569acc452e89fbfda2fe5ad73aadc7c4e462db0285ed316df",
+    "text": "17118a03f9f7760bd00a564948b997f74ebf8cc8bda8de6c29ca351225589efc"
+   },
+   {
+    "name": "xl/_rels/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "xl/_rels/workbook.xml.rels",
+    "dir": false,
+    "size": 441,
+    "sha256": "d82d3c173793e0f8f93ffec087558bae6d027eac0d1ca947fe18a8d6a3bc7c02",
+    "text": "ac74371050721e43cf199579c210b998110757dff4163d1728c17f399aa3f7c9"
+   },
+   {
+    "name": "xl/sharedStrings.xml",
+    "dir": false,
+    "size": 203,
+    "sha256": "2b5fed850f88f603546d80cf988a41d2d8092cc7c4503670b50f627803a351f6",
+    "text": "8642dd1f0e7bef5e6f8db90fe1e8680d7f05425e279c3082de49a8e065a1d2f9"
+   },
+   {
+    "name": "xl/worksheets/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "xl/worksheets/sheet1.xml",
+    "dir": false,
+    "size": 243,
+    "sha256": "0d9e0772630c20f955085159491ef484b4386cc43d8cb7162869f59ff195bc4d",
+    "text": "1400868ef5cefdd8d49b18a6136cf8a0ac739deca14506235124dbaf656fa399"
+   }
+  ],
+  "fileNull": [
+   "_rels/",
+   "xl/",
+   "xl/_rels/",
+   "xl/worksheets/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all-stream.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "images/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "images/smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": [
+   "images/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all.7zip.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "images/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "images/smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": [
+   "images/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all.windows.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "images/smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "images/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "images/smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": [
+   "images/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all_appended_bytes.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "images/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "images/smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": [
+   "images/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all_missing_bytes.zip": {
+  "error": true,
+  "stage": "load"
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/all_prepended_bytes.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "images/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "images/smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": [
+   "images/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/archive_comment.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/backslash.zip": {
+  "entries": [
+   {
+    "name": "Hel\\lo.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/complex_files/AntarcticaTemps.ods": {
+  "entries": [
+   {
+    "name": "mimetype",
+    "dir": false,
+    "size": 46,
+    "sha256": "252a8b94d7a7231935a1e64b941040221ebe10b640ba182f6780fbb89be1d8b1",
+    "text": "585b4a0e49414c2ed8932baf6db9e82fe004bc5ab68d00e0666fb6b7366b9a6c"
+   },
+   {
+    "name": "meta.xml",
+    "dir": false,
+    "size": 621,
+    "sha256": "eb81f07144465846163fd249bd351d7553db01cc968c37491a6b8dec465978af",
+    "text": "15b924aba3fbfc59224e6b6eb95a337cda14d8c63ecfcfb717fb16b74aae39f0"
+   },
+   {
+    "name": "ObjectReplacements/Object 1",
+    "dir": false,
+    "size": 63925,
+    "sha256": "7ff60dd51a19c4ffea0365e5da21595c8d5ad49627aabb1299fb618b2cccda61",
+    "text": "6b1499232bf8511e2c011fba90e1c5949455c78189ec620e6097d6f0fb990e78"
+   },
+   {
+    "name": "settings.xml",
+    "dir": false,
+    "size": 10139,
+    "sha256": "aee068a322d857870845682998ae5dc22c33b02148fa53f0a6374efdbbe00800",
+    "text": "3cffcccbedec8661e04d64c816424a52a6c4ee048ae80f2dfffd142508c4a2e4"
+   },
+   {
+    "name": "content.xml",
+    "dir": false,
+    "size": 218818,
+    "sha256": "cee47fca88c3bb544635b1c2c6653326467e8dc26e471ea2357900eba464d965",
+    "text": "36fd67d9bcd6186d81797452bd0c963e3bf636db3e8ffbbc77d99caccb3528df"
+   },
+   {
+    "name": "Object 1/meta.xml",
+    "dir": false,
+    "size": 579,
+    "sha256": "6666859d98b32d320b355d72a352942c170a9ea071c91d00cd217cff31d45ada",
+    "text": "a12ab94c5c794371af2d5bfe960d9a40363674a4f0edbeafdfb682eed86c83be"
+   },
+   {
+    "name": "Object 1/content.xml",
+    "dir": false,
+    "size": 84282,
+    "sha256": "25d9b0d5133aa2284d1baf111d2fa9d892a6b77c387528cd8c0281444df4f28d",
+    "text": "680cf13c0e11e0a77c08569f51b2e239b06961e3641dfe5191f8f8b65dc36b03"
+   },
+   {
+    "name": "Object 1/styles.xml",
+    "dir": false,
+    "size": 1441,
+    "sha256": "58f3e08bbd6b15aeaa4b1fd6a71acf1dcdba17b5854fe9ce8d13dc813c2d336c",
+    "text": "7b2735db6b94a7d192380787a50cd17c406b9b1883b49929da98cb7fc4577f04"
+   },
+   {
+    "name": "Thumbnails/thumbnail.png",
+    "dir": false,
+    "size": 10743,
+    "sha256": "b988cc44166914fb45b62a416a880024e778673ad9137f9f77f1c774af068604",
+    "text": "139bdb77147ad37fe1fb4fa88a9a1c2c4f3747b2f741e7ebd1b4c5ee57acfd1c"
+   },
+   {
+    "name": "Configurations2/images/Bitmaps/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/popupmenu/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/toolpanel/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/statusbar/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/progressbar/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/toolbar/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/menubar/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/accelerator/current.xml",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "Configurations2/floater/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "styles.xml",
+    "dir": false,
+    "size": 22734,
+    "sha256": "bf9c12b20be9147f294bd9ee011df0b55091cf79435e967b1a1b311f541a3d2e",
+    "text": "c787cef6143bcfe3d2336a38c175f94c1b23d9890c4f66f267d8bdc988518ea5"
+   },
+   {
+    "name": "META-INF/manifest.xml",
+    "dir": false,
+    "size": 1573,
+    "sha256": "e7f35965de9fff998ee06b02e23ce8620e69a3c0218dff7c2a72c62c240f17dd",
+    "text": "9090c8dd84ceaeacf9a791025b32fc2e77ebc89df624a9ac9cb03b25bab8d55e"
+   }
+  ],
+  "fileNull": [
+   "Configurations2/images/Bitmaps/",
+   "Configurations2/popupmenu/",
+   "Configurations2/toolpanel/",
+   "Configurations2/statusbar/",
+   "Configurations2/progressbar/",
+   "Configurations2/toolbar/",
+   "Configurations2/menubar/",
+   "Configurations2/floater/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/complex_files/AntarcticaTemps.xlsx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 1812,
+    "sha256": "f40cc0aa96f85bc28449ab1c9efdfa5b70990447427df5d56f56f3b5b52bb539",
+    "text": "e6d5ad576cd8982f0af2f38dc23f33b4e8ed2680647a1c050b2397893ed2475e"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 588,
+    "sha256": "73e5a29f48d5ab979eeda062493bc7e679265c1344ef936978b8becec5549497",
+    "text": "1eeb9155a1fdd8fb321e94c3156d262d21ab5da6649a03d3954e8a30f2e8bc49"
+   },
+   {
+    "name": "xl/_rels/workbook.xml.rels",
+    "dir": false,
+    "size": 1113,
+    "sha256": "e78d068ac070c3530957983264003e584de786a9534cf67e667be243370a96dd",
+    "text": "4bc848c020104bbbd463c77722c5fa8e54c9b22a098f9a5de5b3149a1c130b95"
+   },
+   {
+    "name": "xl/workbook.xml",
+    "dir": false,
+    "size": 626,
+    "sha256": "06fae8d539c54ed981d7e41d08f193a44817b64cbed2254a3c6f97f6b0205f8d",
+    "text": "720dd8a80351bff2accdc28513cd5d52de5c7994d8880414e4234c9b7c77d9d1"
+   },
+   {
+    "name": "xl/theme/theme1.xml",
+    "dir": false,
+    "size": 6995,
+    "sha256": "156137ac2d7fae74e0286df47c4d1c75e65d5ef1455ff74c4d46176aef06fe56",
+    "text": "d3a4c1e34421db84195e120a5b05929bd8311d669ab2c44562f6d3d971b515dd"
+   },
+   {
+    "name": "xl/drawings/_rels/drawing1.xml.rels",
+    "dir": false,
+    "size": 293,
+    "sha256": "b81851df8558c606f8f94bc8454fe26b5c88c6d0c0b0ae0ae4ba02e650793dc8",
+    "text": "a8c62114421f8f17ef26e78971638385530f764c6a5c1a709503f053ad35b823"
+   },
+   {
+    "name": "xl/worksheets/_rels/sheet1.xml.rels",
+    "dir": false,
+    "size": 527,
+    "sha256": "2f7eac562365277aa71b3c7ddc7e7f8c614ecc1e89dd316c55cffb23dcc19ce9",
+    "text": "fc6dfc6d9458a82839dd7399803c1c1ebbf6cd5593d19c58e30e89032a04b0e5"
+   },
+   {
+    "name": "xl/worksheets/sheet2.xml",
+    "dir": false,
+    "size": 439,
+    "sha256": "ad7fb391a2c913467e23c42feb13811e83d11db7f93622ef9d70c3be52e5b3bf",
+    "text": "7e2ac6a04ea448fe0a8a7ed0b0ffdb1f5318273b3622959d243b82e487f57a39"
+   },
+   {
+    "name": "xl/worksheets/sheet3.xml",
+    "dir": false,
+    "size": 439,
+    "sha256": "ad7fb391a2c913467e23c42feb13811e83d11db7f93622ef9d70c3be52e5b3bf",
+    "text": "7e2ac6a04ea448fe0a8a7ed0b0ffdb1f5318273b3622959d243b82e487f57a39"
+   },
+   {
+    "name": "xl/worksheets/sheet1.xml",
+    "dir": false,
+    "size": 77642,
+    "sha256": "e5c50801f8191ffac3334cf4a0c3ee8d8cbfc1f361948f7fea2f58a4d77ecd79",
+    "text": "2b8486ac8a9e83c5112952d011c0fabafbf99279a785d944d9ccb0d0f995b2d1"
+   },
+   {
+    "name": "xl/charts/chart1.xml",
+    "dir": false,
+    "size": 29760,
+    "sha256": "0a10538e6ee7a4d325292c8c3b345c22370e5f2f404a4f895882cfb4ea0b067d",
+    "text": "1091ab3c405808f6a0fa4ee5acfd8061d0d5e49e1763b45f01e1a9e4256d727f"
+   },
+   {
+    "name": "xl/drawings/drawing1.xml",
+    "dir": false,
+    "size": 1013,
+    "sha256": "e94342304a8961f2f1e6bb8f3b34f7a7129bd4c0102b4bf0469c3a021c111368",
+    "text": "9ff4bcb1062649cc97c9558bdaaa65d46258c57416a80fd9994c83081e44a33a"
+   },
+   {
+    "name": "xl/sharedStrings.xml",
+    "dir": false,
+    "size": 69731,
+    "sha256": "d5588e8c5aa3b27143ee4591a7a4be780d9c7dca075438887d51c7c5521607b7",
+    "text": "48f410edee1d463e76b3c199148b2e029e1a94e4239a7608953d40e26d216692"
+   },
+   {
+    "name": "xl/styles.xml",
+    "dir": false,
+    "size": 3623,
+    "sha256": "630c2ab6a82b2017305dc6900ddbd7eaea8fa020560307f6fd3bc20e0718f6f5",
+    "text": "765e81a13beed7b20327f952afcc76aabf37ceddfcda3e719f93e6e64d79abea"
+   },
+   {
+    "name": "xl/calcChain.xml",
+    "dir": false,
+    "size": 7268,
+    "sha256": "9cb1be6371f225eb41239cab4004d246b02ec6f424afc7e9e6035b00b19e200f",
+    "text": "60d7e8c57f4a16f33fa3be5534b6dd06ea77ea231eb41601bc1ef485e235a550"
+   },
+   {
+    "name": "docProps/core.xml",
+    "dir": false,
+    "size": 601,
+    "sha256": "c55c7da64ecbe7628d90dc0c495fddb6f3b3b7d4c3dbb4f2d45e61460c81e3ea",
+    "text": "d300b2b00cab47d26d16163a2acf85edfb9725cb81d305a712c686e374941702"
+   },
+   {
+    "name": "docProps/app.xml",
+    "dir": false,
+    "size": 848,
+    "sha256": "f41da7305ba9121c2eb54554b00ba0677c2bc3914272414c6e83785c969f591d",
+    "text": "ecea1e1ebddb7264847615e941ba516791785afd3dce637079ef319760d47b2f"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/complex_files/Franz Kafka - The Metamorphosis.epub": {
+  "entries": [
+   {
+    "name": "mimetype",
+    "dir": false,
+    "size": 22,
+    "sha256": "338312c1ae3989057348595a23872534eb07a22f6f4b26a4f1dda2ee74754ff3",
+    "text": "30c26d9fb14d67136c20927e4f6a05bd8251998223520ea3338a41348bf1a7cd"
+   },
+   {
+    "name": "META-INF/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "META-INF/container.xml",
+    "dir": false,
+    "size": 250,
+    "sha256": "df89d404c285a0accada27b2a9afd211b5f67b203f8177ff87d417133e7e412b",
+    "text": "d8cecacb646db4fae086bc77eb654f4018ed0c5635c3b8a454520d4b17e2d1da"
+   },
+   {
+    "name": "META-INF/metadata.xml",
+    "dir": false,
+    "size": 3251,
+    "sha256": "017c286f7e4a506dc42a53a325eb6af97bb82648938cd021a4e0f6d87a370fbe",
+    "text": "cf7fd36612cbb348a7911bff44d26a1abcc5319e85edf0c1bb354530bce88bf5"
+   },
+   {
+    "name": "OPS/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "OPS/images/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "OPS/images/logo-feedbooks-tiny.png",
+    "dir": false,
+    "size": 7747,
+    "sha256": "ca5ec3e222ccdb807c111c37dfdabce680b0f634acb457ad10281aeb76d3df7e",
+    "text": "5bd308d50ffe6f6a041439b230cb40f8674757e2af5af0dd4af9648ac609fc48"
+   },
+   {
+    "name": "OPS/images/logo-feedbooks.png",
+    "dir": false,
+    "size": 2738,
+    "sha256": "8bfd0ce0fb50699ba99c161cd4e5d45cfbc8637a168265b21fa0a863b8f95e73",
+    "text": "60816a26b152ed53228ee705a81a7e14e1dd1b9b00e5c1f33a451c9c0dac7e0c"
+   },
+   {
+    "name": "OPS/images/cover.png",
+    "dir": false,
+    "size": 208353,
+    "sha256": "6a47dd32b48f5157051f871b62318e86885b7f8f3fefd07b1cd0a1eb27257d4a",
+    "text": "c93e3e02e68cee6a0efe4d66f036178b293221c1577bc6d5d83a4dfeda5a7f41"
+   },
+   {
+    "name": "OPS/css/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "OPS/css/feedbooks.css",
+    "dir": false,
+    "size": 254,
+    "sha256": "d5b036c377a63cd302f1f2145bbf08afac7f920f94b296284ea7e19f8d0b0653",
+    "text": "42f025301656a4ca26520de84e1d14b9c0883e4c658e5492f84a50d33d91240b"
+   },
+   {
+    "name": "OPS/css/about.css",
+    "dir": false,
+    "size": 272,
+    "sha256": "cb9fb02ea1181eb4b67251686f6536650d590394edfb5e8eaf80c14e24c1008d",
+    "text": "65d101e993ed40fb671cfecff1b6557e2d5abd9623bb36a3ceb32fd4a49dc083"
+   },
+   {
+    "name": "OPS/css/main.css",
+    "dir": false,
+    "size": 2437,
+    "sha256": "3cc02a29e99ea29e781ef8f43541afab8b0a203e18aa28a0ae615b3b3c1d83aa",
+    "text": "49addf46efa1fb7cabdf5ea94e891b8dee1e7d2aee8adf454ef98606f6e09ce8"
+   },
+   {
+    "name": "OPS/css/footnotes.css",
+    "dir": false,
+    "size": 94,
+    "sha256": "c8de1be948871f6558554fe1e0ae27661f25a3bd84f34ce5efad64675380abef",
+    "text": "2f04220a06e7ad1aac04c25ff42c9f1e04269dc69c094655566c85c5168a92fd"
+   },
+   {
+    "name": "OPS/css/page.css",
+    "dir": false,
+    "size": 103,
+    "sha256": "9b7640520897a642fc1a292834ae53c6d020bdbcc3e7d1d4c20c2cac94a5e7aa",
+    "text": "f6b2d6c93442fa0f076d9147d620fd217e99346cc7e71adb81b8d1fccc39d7d6"
+   },
+   {
+    "name": "OPS/css/title.css",
+    "dir": false,
+    "size": 437,
+    "sha256": "746ba8732eada27d0c69bc719ed9910cd0c8eef920ad1f04fc42ffef042f06be",
+    "text": "c319085d42bcaef70ed75ad147ca0f089200ef547f12a9d71a07cff4129e5544"
+   },
+   {
+    "name": "OPS/feedbooks.xml",
+    "dir": false,
+    "size": 695,
+    "sha256": "4fd04be5233b377c528847511e388f8c6bc5325c24097661c3cad0f76a2a1489",
+    "text": "3fae379dc9705c4530304fb786d1f49b4fac43fc19f5bbc44eee4673005beb0e"
+   },
+   {
+    "name": "OPS/main0.xml",
+    "dir": false,
+    "size": 39447,
+    "sha256": "fcf3d698985a5418e44f8e799a120da926c35584a1b69fce1470674d4992e065",
+    "text": "9edc609982922178dd94db66d1699bf7a62258947b41a1109c33339ffdab5569"
+   },
+   {
+    "name": "OPS/main1.xml",
+    "dir": false,
+    "size": 43102,
+    "sha256": "838dbe47d75b05a6bca4754a064f50c0c8e34e2293550671bb230c2e86482991",
+    "text": "880e33ac5c610d05decfa6a8d091fbe6a82e40bcaa10ae7a77fc03348350da66"
+   },
+   {
+    "name": "OPS/main2.xml",
+    "dir": false,
+    "size": 41360,
+    "sha256": "908f40c88c7fda407b11c4fee8054cf384fcf08c6cf4af75cad93a6744c6e9f4",
+    "text": "a67825988a2abc9b470847644dd31afe83dbaa02c2389c3502fba9fe834ba670"
+   },
+   {
+    "name": "OPS/cover.xml",
+    "dir": false,
+    "size": 532,
+    "sha256": "3d3d85fa9c6b19235798f9cb48a9f810995c084acf41d9b87e4b7255bced5d81",
+    "text": "112ce81eb73073a0ecde5a045342f46c6f46f5065370059bab533afe867980ca"
+   },
+   {
+    "name": "OPS/title.xml",
+    "dir": false,
+    "size": 811,
+    "sha256": "7d1d277c939dbb4e2d713afda73e48ced0d29f999d18cce94c5ed987e9a02d8a",
+    "text": "b07e84efc304a53aa192c91f2112f8babe1b81d77badc3d87f919f014a49448d"
+   },
+   {
+    "name": "OPS/similar.xml",
+    "dir": false,
+    "size": 9173,
+    "sha256": "46aa98ee7ae726d85d7a57688f8abb7d89ec0a539b988dd51e94dde8a4cd803e",
+    "text": "beb960345aeb886c542623aa3801d21a6f3e32f67b49cca6d4d35efd2ca01c92"
+   },
+   {
+    "name": "OPS/about.xml",
+    "dir": false,
+    "size": 2125,
+    "sha256": "de31e2b9e40ebe89009763c3ad46e4c72b4fa1e204699c72ae572d77382e5b0b",
+    "text": "aba727484f3671d832e4204b3a9c7efdfc0e32a9439a8050746f1b56b9d306f4"
+   },
+   {
+    "name": "OPS/fb.ncx",
+    "dir": false,
+    "size": 1864,
+    "sha256": "49a9865d892daaa8524532e38f46bbaa715943e388611e308d31ebc8c0e6bbed",
+    "text": "763e6ed4b15b1eaf9b29d0cd7adb642b898fa76df4fad53090f5b05598edc5ff"
+   },
+   {
+    "name": "OPS/fb.opf",
+    "dir": false,
+    "size": 4240,
+    "sha256": "8db6ac175485461c7999ddeb758a9abafb1329a9af6a6ccf8f152a54c002f8da",
+    "text": "fb39fd24b8e92c8a880134aa985d9a233a5047d4af942383ea6d257eea95f133"
+   }
+  ],
+  "fileNull": [
+   "META-INF/",
+   "OPS/",
+   "OPS/images/",
+   "OPS/css/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/complex_files/Outlook2007_Calendar.xps": {
+  "entries": [
+   {
+    "name": "FixedDocumentSequence.fdseq",
+    "dir": false,
+    "size": 160,
+    "sha256": "a0f3956215a725bb3ca7029c025667a20786a3c7bd9987ca71edabe930ca02d7",
+    "text": "da74ef87c6d0ee455f8d3e32e22f8b24281c6084ac8cdaf882f114ffdb277304"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 286,
+    "sha256": "f7c4aa851d96e69fa329bca0acf5106f54c97748eca8bdde8d29011dcf0ed358",
+    "text": "88380b7704bbdf07a8b37404497fd0d530964a79ef193f76c245847de1b09db4"
+   },
+   {
+    "name": "Documents/1/FixedDocument.fdoc",
+    "dir": false,
+    "size": 121,
+    "sha256": "9e4ba08cbd6caf5b6c29a5f478a6f08b525a663ce236a325b7f5ac5102b733e5",
+    "text": "578a410091e4788406eee4e18fceb3c12f9b0adfd687649614e16b6d125756ae"
+   },
+   {
+    "name": "Documents/1/Pages/1.fpage",
+    "dir": false,
+    "size": 67454,
+    "sha256": "7c950cbf4585c00b8c1298e8d4d60719d4fb098ab948dd6dc0fc0eb6f0825ea5",
+    "text": "d2f544c37a3cdc2d9bafb111924a73d05d0dda3e8aef311fb0f449db9386d920"
+   },
+   {
+    "name": "Resources/b80cd388-2afe-401d-b9cd-f9796222bde5.ODTTF",
+    "dir": false,
+    "size": 190100,
+    "sha256": "fe8170078e5d6cac97a797b8a079ef74c4d69f8c08d3bdd8310fdce210bd6a19",
+    "text": "f2b3b1e36c867e5cc9850d2537e5136971b391f9cbeb7d99738b7b429e7d3501"
+   },
+   {
+    "name": "Documents/1/Pages/_rels/1.fpage.rels",
+    "dir": false,
+    "size": 1019,
+    "sha256": "140a7f6f6875ad9c953ab96e0317d15e4d208579e829def30fccb3a2b9b61ead",
+    "text": "9e6fbf25627c4e65798f53a65560b74afe5df978b3fffe3d353e33303c555627"
+   },
+   {
+    "name": "Resources/db9e4051-6ce0-4874-9fd0-cf471ec96f7a.ODTTF",
+    "dir": false,
+    "size": 190540,
+    "sha256": "0ac8511ef6dcbd608d489739c68754128f4778576cf72303a576f756641aff8b",
+    "text": "786d9cacf70efca96424d193e636fc1ee0301e955d9fd8fa545fb378ef5c1486"
+   },
+   {
+    "name": "Resources/fde65366-92a7-4139-9a38-a9492e59fc5d.ODTTF",
+    "dir": false,
+    "size": 20132,
+    "sha256": "667ed9d5910912fadec256d6eab39c74450e0e17d0d12af38c5368d1482f7099",
+    "text": "57b053511aa44af6730c0102c2bccedd6adf302e53a1cf476a85c6795adb6935"
+   },
+   {
+    "name": "Resources/b9eed69f-975a-4140-b33f-47754c97c469.png",
+    "dir": false,
+    "size": 142,
+    "sha256": "d5bb62be478e19f34dff7623d432b3605d32ce51e29b46da88beb3fedbcccfa5",
+    "text": "bb379830b7b5aa447f5aa0ca6ff43778ffb93af9339bda23208ee6ed33fcd79e"
+   },
+   {
+    "name": "Resources/129b8a31-1c3a-47d5-83bf-f65b5f582fa5.ODTTF",
+    "dir": false,
+    "size": 26528,
+    "sha256": "fdb2bb5fb607bb5ba57dcf5632430423309d9c2dc877c66d4d17a5dc41f90903",
+    "text": "ec6fe30b365e9b59a151b4c2e3d20d5c2f2158606f1351949bf2fbe0404fcf6c"
+   },
+   {
+    "name": "Documents/1/Document_PT.xml",
+    "dir": false,
+    "size": 6799,
+    "sha256": "7601abb013cce2510228cd88920c492ea90763710ce0f58b04230d5d3ff7f4e0",
+    "text": "3b03a9e843aff4d702d123966962c0788694823910e09a399277a600751674c4"
+   },
+   {
+    "name": "Documents/1/_rels/FixedDocument.fdoc.rels",
+    "dir": false,
+    "size": 265,
+    "sha256": "4441ed29bf2ebcd138ae1c7c6c1fa2ea01ad752c25da28d4555f015fb87037fc",
+    "text": "be95e6b399d37d1ab6df772d1b112e4ba61769bd005732b51b03d7f613c9a22f"
+   },
+   {
+    "name": "MetaData/Job_PT.xml",
+    "dir": false,
+    "size": 6799,
+    "sha256": "7601abb013cce2510228cd88920c492ea90763710ce0f58b04230d5d3ff7f4e0",
+    "text": "3b03a9e843aff4d702d123966962c0788694823910e09a399277a600751674c4"
+   },
+   {
+    "name": "_rels/FixedDocumentSequence.fdseq.rels",
+    "dir": false,
+    "size": 269,
+    "sha256": "b15ade5f1b1bb468ec56f5d8b7953e678bfaf70fc77c58ebab0506eba91230af",
+    "text": "bbd02838bba2b35e2e1ed97d1b6ac7da72437e5f9765b46fe86fbecf7f12ad3a"
+   },
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 729,
+    "sha256": "8d48b008bba19f29e26fea1a7f45009bad52117fa65e5fb70ca69135c2dcf3e2",
+    "text": "9003e7c67dda165c8b811cddbbb55b33b0921f80d79eafd978b868bfc4657cca"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/data_descriptor.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/deflate-stream.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 94,
+    "sha256": "5ba82c991b055a1ce12c0a16ad65b5beb38251bb1cf11c7d830f1b8ed32cafdd",
+    "text": "e4d21c0501ab3fd51d9fc43d71f738b6902d9efd040de21342080c468f22f8a0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/deflate.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 94,
+    "sha256": "5ba82c991b055a1ce12c0a16ad65b5beb38251bb1cf11c7d830f1b8ed32cafdd",
+    "text": "e4d21c0501ab3fd51d9fc43d71f738b6902d9efd040de21342080c468f22f8a0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/empty.zip": {
+  "entries": [],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/encrypted.zip": {
+  "error": true,
+  "stage": "load"
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/extra_attributes.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/folder.zip": {
+  "entries": [
+   {
+    "name": "folder/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "folder/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/image.zip": {
+  "entries": [
+   {
+    "name": "smile.gif",
+    "dir": false,
+    "size": 41,
+    "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb",
+    "text": "78623f7de827936750db9b2f343828e15e47da2633dbdc62bb112a5070342a31"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/invalid/bad_decompressed_size.zip": {
+  "error": true,
+  "stage": "read"
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/invalid/bad_offset.zip": {
+  "error": true,
+  "stage": "load"
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/invalid/compression.zip": {
+  "error": true,
+  "stage": "load"
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/invalid/crc32.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/local_encoding_in_name.zip": {
+  "entries": [
+   {
+    "name": "\u0005\u0006\u0002\u0000\u0000\u0007\u0002\u0000/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "\u0005\u0006\u0002\u0000\u0000\u0007\u0002\u0000/\u0005\u0006\u0002멠⥪᢮\u0002멠\u0004\u0006\u0002㬥\u0005⮴xt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "\u0005\u0006\u0002\u0000\u0000\u0007\u0002\u0000/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/nested.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   },
+   {
+    "name": "zip_within_zip.zip",
+    "dir": false,
+    "size": 128,
+    "sha256": "b26abd95cf662d89ed22b374ab2f79c6d6ee13fdd2c7f891c7d6e3203dd93c1d",
+    "text": "8bdeb538eab4f92103ed4a365cc9cb30b8885d2ff437ec5963a85514ef282e2b"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/nested_data_descriptor.zip": {
+  "entries": [
+   {
+    "name": "data_descriptor.zip",
+    "dir": false,
+    "size": 196,
+    "sha256": "14e965f2e62e6faf170e1d379f52aa4431361208e5e592b748529100109c28e7",
+    "text": "daf1b61b088638e47ea9faeb7a0c0afcc14ef6e71d4624ec44f4f338d9cd690e"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/nested_zip64.zip": {
+  "entries": [
+   {
+    "name": "zip64.zip",
+    "dir": false,
+    "size": 288,
+    "sha256": "188719263f4df8f262bc9d10b237976af1fdddd1697b3d9d226129e9ba56b237",
+    "text": "af5dd57a24fd5a2a250e2d0ecc1bf21240a8a94425ca5b995cfe87fe4124f109"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/linux_7z.zip": {
+  "entries": [
+   {
+    "name": "dir_500/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_755/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_777/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_400",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_640",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_666",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_755",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir_500/",
+   "dir_755/",
+   "dir_777/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/linux_ark.zip": {
+  "entries": [
+   {
+    "name": "dir_500/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_755/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_400",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_640",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_755",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_777/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_666",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir_500/",
+   "dir_755/",
+   "dir_777/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/linux_file_roller-ubuntu.zip": {
+  "entries": [
+   {
+    "name": "dir_500/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_755/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_777/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_400",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_640",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_666",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_755",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir_500/",
+   "dir_755/",
+   "dir_777/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/linux_file_roller-xubuntu.zip": {
+  "entries": [
+   {
+    "name": "file_755",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_666",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_640",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_400",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_777/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_755/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_500/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir_777/",
+   "dir_755/",
+   "dir_500/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/linux_zip.zip": {
+  "entries": [
+   {
+    "name": "file_400",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_755/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_666",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_755",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_500/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_640",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_777/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir_755/",
+   "dir_500/",
+   "dir_777/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/mac_finder.zip": {
+  "entries": [
+   {
+    "name": "dir_500/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_755/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_777/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_400",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_640",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_666",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_755",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir_500/",
+   "dir_755/",
+   "dir_777/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/windows_7z.zip": {
+  "entries": [
+   {
+    "name": "dir/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_hidden/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_hidden/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir/",
+   "dir_hidden/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/windows_compressed_folders.zip": {
+  "entries": [
+   {
+    "name": "dir/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_hidden/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/windows_izarc.zip": {
+  "entries": [
+   {
+    "name": "file",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_hidden/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/permissions/windows_winrar.zip": {
+  "entries": [
+   {
+    "name": "file",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "file_ro_hidden",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_hidden/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "dir_hidden/plop.txt",
+    "dir": false,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "dir/",
+   "dir_hidden/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/pile_of_poo.zip": {
+  "entries": [
+   {
+    "name": "Iñtërnâtiônàlizætiøn☃💩.txt",
+    "dir": false,
+    "size": 34,
+    "sha256": "75781ac975ff76899629e996d8e96aa5e89db77315473d8b3281cb8aa700b2e6",
+    "text": "22098926946f5d9a19994153fc8368ebc379985d1f994f55eb2cadb763691da5"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/pollution.zip": {
+  "entries": [
+   {
+    "name": "toString",
+    "dir": false,
+    "size": 6,
+    "sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
+    "text": "ffe3017ad2485bea3fdc3910b428da15acb74543ad31ae69138eb4e11a3dea94"
+   },
+   {
+    "name": "__proto__",
+    "dir": false,
+    "size": 6,
+    "sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
+    "text": "ffe3017ad2485bea3fdc3910b428da15acb74543ad31ae69138eb4e11a3dea94"
+   },
+   {
+    "name": "constructor",
+    "dir": false,
+    "size": 6,
+    "sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03",
+    "text": "ffe3017ad2485bea3fdc3910b428da15acb74543ad31ae69138eb4e11a3dea94"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/slashes_and_izarc.zip": {
+  "entries": [
+   {
+    "name": "test/Hello.txt",
+    "dir": false,
+    "size": 13,
+    "sha256": "c86217a0cf751350e22a3bc205c0bc3655b2c39e1375f310d3cb1db70b4e3b82",
+    "text": "b45812556a0b02aaae4617559923f7a90b8beed1bf5307b9e230a3a46d62368e"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/store-stream.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 94,
+    "sha256": "5ba82c991b055a1ce12c0a16ad65b5beb38251bb1cf11c7d830f1b8ed32cafdd",
+    "text": "e4d21c0501ab3fd51d9fc43d71f738b6902d9efd040de21342080c468f22f8a0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/store.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 94,
+    "sha256": "5ba82c991b055a1ce12c0a16ad65b5beb38251bb1cf11c7d830f1b8ed32cafdd",
+    "text": "e4d21c0501ab3fd51d9fc43d71f738b6902d9efd040de21342080c468f22f8a0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/subfolder.zip": {
+  "entries": [
+   {
+    "name": "folder/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   {
+    "name": "folder/subfolder/",
+    "dir": true,
+    "size": null,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "text": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  ],
+  "fileNull": [
+   "folder/",
+   "folder/subfolder/"
+  ]
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/text.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/utf8.zip": {
+  "entries": [
+   {
+    "name": "amount.txt",
+    "dir": false,
+    "size": 6,
+    "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83",
+    "text": "9a7bc2e56b2b691cbd0855ce18caf82e157068639bf8e31ac545c57347ae4c4b"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/utf8_in_name.zip": {
+  "entries": [
+   {
+    "name": "€15.txt",
+    "dir": false,
+    "size": 6,
+    "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83",
+    "text": "9a7bc2e56b2b691cbd0855ce18caf82e157068639bf8e31ac545c57347ae4c4b"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/winrar_utf8_in_name.zip": {
+  "entries": [
+   {
+    "name": "€15.txt",
+    "dir": false,
+    "size": 6,
+    "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83",
+    "text": "9a7bc2e56b2b691cbd0855ce18caf82e157068639bf8e31ac545c57347ae4c4b"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/zip64.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/zip64_appended_bytes.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/zip64_missing_bytes.zip": {
+  "error": true,
+  "stage": "load"
+ },
+ "test/unit/tools/file/zip/fixtures/jszip/zip64_prepended_bytes.zip": {
+  "entries": [
+   {
+    "name": "Hello.txt",
+    "dir": false,
+    "size": 12,
+    "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26",
+    "text": "007ed1f5f14b94ad7693b410999390cc3edefb5da68fe48533aec950b8389fe0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/office-deflated/pitch-deck.pptx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 1763,
+    "sha256": "b2acaa5a285b5840f2df1c3a9982abafa82f8f4f27eb21e5f72f672818ca0d6a",
+    "text": "3c7ec5a9d18d76c7b8cb46588bc8a6170846b9dae94aeeac2e7e38e91a90a749"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 303,
+    "sha256": "d6f1dc8994e75883b1f18780e909ecf37d28b2c9584b8e9034d0954a903f97d6",
+    "text": "bf02191b69a987978e9a7583deb89b16df7f08739763f7eac4cc73312bc11ab0"
+   },
+   {
+    "name": "ppt/presentation.xml",
+    "dir": false,
+    "size": 702,
+    "sha256": "a32ce2bbe62026db22596cc791ef34f688b6e218698563f535fba90ca2805081",
+    "text": "60b72d444bf1ec88cbd0b43f5b758a4fbcfaf4ea9a5bc820a23ba29c0fc322dd"
+   },
+   {
+    "name": "ppt/_rels/presentation.xml.rels",
+    "dir": false,
+    "size": 1374,
+    "sha256": "e97b453249185ab98e5cb680e7297dcf7cac953448bc26efe360af8e1a079e9f",
+    "text": "07a3acc95994b9bd041bc7193b919fa3a58503f5070f3fb89565fe81ebf2f525"
+   },
+   {
+    "name": "ppt/slides/slide1.xml",
+    "dir": false,
+    "size": 2513,
+    "sha256": "a2d55eb48e530885e32b87f08368678faa144be44b568613f9a9868d1e2e719a",
+    "text": "85a3985be03402bba18a9c1000253f96be07d868c26d39c21ed230b5f2cd28f3"
+   },
+   {
+    "name": "ppt/slides/_rels/slide1.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide2.xml",
+    "dir": false,
+    "size": 2281,
+    "sha256": "139a9febe7624ba64c77c5e8ed0da693a8ee112fff1d591c4140482822a8fb57",
+    "text": "f86d95d041a094c23447dedcebafcdd9965fb825c5416d21a666a34f396f4fad"
+   },
+   {
+    "name": "ppt/slides/_rels/slide2.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide3.xml",
+    "dir": false,
+    "size": 3291,
+    "sha256": "0243f78803cc0f30e2ebfaba348234e850dcc47bf8dad531a57b086fa8dde59f",
+    "text": "9eca3472d0ea309c1de78ac1efca4eb5e7abb16586f0312d4ad4512aef660154"
+   },
+   {
+    "name": "ppt/slides/_rels/slide3.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide4.xml",
+    "dir": false,
+    "size": 3347,
+    "sha256": "19af06e4f1109d1bef5f0e9a4580997a62bd78ff77b0e159099f51bcfc5b1ee2",
+    "text": "c884ba093da973b9e09611f770b2c5530ced8e2cd5ce98d7f242f1f80dea35b6"
+   },
+   {
+    "name": "ppt/slides/_rels/slide4.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide5.xml",
+    "dir": false,
+    "size": 3910,
+    "sha256": "89e1e1406c958cdef48dfd9b6bb4d079bd842c69d98d33b84182b4cda457be7c",
+    "text": "3da39e88cd404fdeff5f4f83e89ba70dd831a823c1218fa84f41866a21132f8a"
+   },
+   {
+    "name": "ppt/slides/_rels/slide5.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide6.xml",
+    "dir": false,
+    "size": 3278,
+    "sha256": "79f3ca215aa9ce9c71e28d2be3c99cfb705f92105689006b2ef40644f83883e7",
+    "text": "e4ab69dae9d1a5f93013ad08f021f09feb0edd551fb3a609d2d05f6432fbdd18"
+   },
+   {
+    "name": "ppt/slides/_rels/slide6.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slides/slide7.xml",
+    "dir": false,
+    "size": 2290,
+    "sha256": "4959a4497055faf368f510d1b1004ada8d887ab4ee562278e3d80915c917dc09",
+    "text": "d5bbd2e7d15b91a9597c1be48a460224eae7176315baf0c945bd9a2bed22c682"
+   },
+   {
+    "name": "ppt/slides/_rels/slide7.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+    "text": "d524940cd86278bcfd58818c91d5b860c4a4f46a9d6fd25c5cd2eac55ca61eed"
+   },
+   {
+    "name": "ppt/slideLayouts/slideLayout1.xml",
+    "dir": false,
+    "size": 499,
+    "sha256": "b77b0b29650ec8c8845095cc441a1bcfe3c2c1ef4c3e966a15eb736b9dc392af",
+    "text": "4914ecd71ffa0d6eb3c1d85bc79b2db34420c1fd3a7d0d4d10f8575be1e5f56e"
+   },
+   {
+    "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+    "dir": false,
+    "size": 312,
+    "sha256": "3359f7a2caacff28ae2a987d867774335a415ffb7f7e84bcd313e625ce8b5c02",
+    "text": "e33c1f46adbf19348d00136d309ba1bbd16ae4928116d5c10ee8f09d0e77177a"
+   },
+   {
+    "name": "ppt/slideMasters/slideMaster1.xml",
+    "dir": false,
+    "size": 698,
+    "sha256": "b6489aa5fc4e455ab3e42262e2057f394cd82cdaebf9f6bc24b672a4a3f93604",
+    "text": "086270d1d07716e1e92d449ca394fd8c2ee328b109bdc20f592d1fe0e53a8c69"
+   },
+   {
+    "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+    "dir": false,
+    "size": 448,
+    "sha256": "988722a344c05a5b806fcf5eb8f229ced905a6f5b134827feb719019f5206249",
+    "text": "d63aaea0e64bdcfebf97757138762cca9bbf588cfb48cd416da7da21367126b8"
+   },
+   {
+    "name": "ppt/theme/theme1.xml",
+    "dir": false,
+    "size": 1878,
+    "sha256": "ab35061e6e654717789ac6da8bc763db5ee7ad9a4577ea8b9acfe3914dcc4045",
+    "text": "5691cfe2132521cddc2e2779292b7be0269bbecd7a242386fe3755bc11bc94da"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/office-deflated/service-agreement.docx": {
+  "entries": [
+   {
+    "name": "[Content_Types].xml",
+    "dir": false,
+    "size": 434,
+    "sha256": "bbbf76a77ae97c1fccfc830d01029e8345efeef9fa090748d9d8708f319dd036",
+    "text": "f94c814b41df59848b3f96b0fdf1ba971632dd48321c3010b06c86873517a92c"
+   },
+   {
+    "name": "_rels/.rels",
+    "dir": false,
+    "size": 300,
+    "sha256": "054e97d2d76fcc179d7268db97e2c950cb4f8aa40c783d5633eab70787621374",
+    "text": "15522299064a921c400d0b6f9a649bec477d22da7d70766d0e84d8e7f99102f0"
+   },
+   {
+    "name": "word/document.xml",
+    "dir": false,
+    "size": 2716,
+    "sha256": "6c37c363621b01d83527d98009e3826cf4e6918010854b91a5283f18b1b5abdf",
+    "text": "b4011870fd4deb0d88421bc127a39e00ab292abc5b2710de8e6b97bd57bbecb0"
+   }
+  ],
+  "fileNull": []
+ },
+ "test/unit/tools/file/zip/fixtures/text/text-decoding.zip": {
+  "entries": [
+   {
+    "name": "bom.txt",
+    "dir": false,
+    "size": 6,
+    "sha256": "6f6dd753736cf20980444f88ca28e2539375957c93f3bb357fc897e12b20e39f",
+    "text": "384d68dab0d184f1157e29fb659f3d5a8447744d49a5bd0e73da661447f6091c"
+   },
+   {
+    "name": "invalid.txt",
+    "dir": false,
+    "size": 24,
+    "sha256": "0638bf3c7df8680d05d4c1fbdfee6c48222b17c85f210c8ad6e40b646cd0f6f1",
+    "text": "81aa5a39f84568ee8bcd928252d714a158ea0493a55aa317ebe4ada7dd4375e4"
+   },
+   {
+    "name": "edges-stored.txt",
+    "dir": false,
+    "size": 70000,
+    "sha256": "7da369649c6dc95ccbb9b24a4afc0e964e7fc0d9dfc600f1a58e322f90be3326",
+    "text": "c234c0c5a69c596b843335806d75c091f35f86c28fe401cd00f33a2fa97f16f6"
+   },
+   {
+    "name": "edges-deflated.txt",
+    "dir": false,
+    "size": 70000,
+    "sha256": "7da369649c6dc95ccbb9b24a4afc0e964e7fc0d9dfc600f1a58e322f90be3326",
+    "text": "c234c0c5a69c596b843335806d75c091f35f86c28fe401cd00f33a2fa97f16f6"
+   },
+   {
+    "name": "random-stored.bin",
+    "dir": false,
+    "size": 70000,
+    "sha256": "80e35d6d7c5ba98d4eb0373c9f4410ba2197123f83c12f3446149ae81b22e1c5",
+    "text": "3ea8baa1e2ac85315d28b3362d2ca1b585b8fc895a3b96b2ed64accde2258659"
+   },
+   {
+    "name": "random-deflated.bin",
+    "dir": false,
+    "size": 70000,
+    "sha256": "80e35d6d7c5ba98d4eb0373c9f4410ba2197123f83c12f3446149ae81b22e1c5",
+    "text": "3ea8baa1e2ac85315d28b3362d2ca1b585b8fc895a3b96b2ed64accde2258659"
+   }
+  ],
+  "fileNull": []
+ }
+}

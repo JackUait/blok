@@ -1213,6 +1213,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABLE_EDITOR_NO_MOTION_BYTES = 406;
     // database.css: the Place search's one highlighted row (research/36 §7); no ring on the focused place view.
     const DATABASE_PLACE_ROW_HIGHLIGHT_BYTES = 257;
+    // database.css: Add a property's "Search types…" field opens under the Type label (notion-spec-2 §18.5).
+    const DATABASE_ADD_PROPERTY_SEARCH_BYTES = 308;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1475,7 +1477,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CONFIRM_SCROLL_BYTES
       + DATABASE_TABLE_TABULAR_FIGURES_BYTES
       + DATABASE_TABLE_EDITOR_NO_MOTION_BYTES
-      + DATABASE_PLACE_ROW_HIGHLIGHT_BYTES;
+      + DATABASE_PLACE_ROW_HIGHLIGHT_BYTES
+      + DATABASE_ADD_PROPERTY_SEARCH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

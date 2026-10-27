@@ -244,6 +244,11 @@ describe('DatabasePropertyTypePopover', () => {
 
       expect(field).toHaveFocus();
       expect(field?.getAttribute('aria-label')).toBe('i18n:tools.database.csvSearchTypes');
+      // notion-spec-2 §18.5: the label stays, and the field opens under it.
+      expect(heading?.textContent?.trim()).toBe('i18n:tools.database.propertyTypeListHeading');
+      expect(heading?.nextElementSibling).toBe(field);
+      search?.click();
+      expect(root?.querySelectorAll('[data-blok-database-property-type-search-input]')).toHaveLength(1);
       if (field === null || field === undefined) return;
       field.value = 'TIME';
       field.dispatchEvent(new Event('input'));

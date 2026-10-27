@@ -8299,6 +8299,14 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   min-width: 0;
 }
 
+[data-blok-database-property-type-body] > [data-blok-database-property-type-search-input] {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--blok-space-2));
+  height: 28px;
+  margin: 0 var(--blok-space-2) var(--blok-space-1);
+}
+
 [data-blok-database-property-autofill-option] {
   display: flex;
   align-items: center;

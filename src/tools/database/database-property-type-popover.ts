@@ -177,7 +177,7 @@ export class DatabasePropertyTypePopover {
       for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
         option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
       }
-    });
+    }, true);
   }
 
   /** Notion's "AI Autofill" rows: a glyph, the preset's name and a gray "Basic" tag. */
@@ -234,10 +234,11 @@ export class DatabasePropertyTypePopover {
 }
 
 /**
- * Notion's "Type 🔍": the magnifier turns the heading into a field. `filter` gets
+ * Notion's "Type 🔍": the magnifier turns the heading into a field, or with `below`
+ * adds the field under the heading (notion-spec-2 §18.5). `filter` gets
  * its text, trimmed and lower case, on each change.
  */
-export const typeSearchHeading = (t: (key: string) => string, filter: (query: string) => void): HTMLElement => {
+export const typeSearchHeading = (t: (key: string) => string, filter: (query: string) => void, below = false): HTMLElement => {
   const heading = document.createElement('div');
   const label = document.createElement('span');
   const search = document.createElement('button');
@@ -251,6 +252,13 @@ export const typeSearchHeading = (t: (key: string) => string, filter: (query: st
   search.innerHTML = IconSearch;
   heading.append(label, search);
   search.addEventListener('click', () => {
+    const open = heading.nextElementSibling;
+
+    if (open instanceof HTMLInputElement && open.hasAttribute('data-blok-database-property-type-search-input')) {
+      open.focus();
+
+      return;
+    }
     const field = document.createElement('input');
 
     field.type = 'text';
@@ -259,7 +267,8 @@ export const typeSearchHeading = (t: (key: string) => string, filter: (query: st
     field.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
     field.placeholder = t('tools.database.csvSearchTypes');
     field.addEventListener('input', () => filter(field.value.trim().toLowerCase()));
-    heading.replaceChildren(field);
+    if (below) heading.after(field);
+    else heading.replaceChildren(field);
     field.focus();
   });
 

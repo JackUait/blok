@@ -5076,6 +5076,15 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   min-width: 0;
 }
 
+/* notion-spec-2 §18.5: under the label, 266 wide in the 290 box. */
+[data-blok-database-property-type-body] > [data-blok-database-property-type-search-input] {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--blok-space-2));
+  height: 28px;
+  margin: 0 var(--blok-space-2) var(--blok-space-1);
+}
+
 /* An AI Autofill preset row: a type row with a gray "Basic" tag. */
 [data-blok-database-property-autofill-option] {
   display: flex;

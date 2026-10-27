@@ -72,6 +72,40 @@ describe('person cell editor', () => {
     expect(lastCommit(ctx)).toEqual([{ id: 'u2' }]);
   });
 
+  // notion-spec-2 §18.4: no person is highlighted on open; ArrowDown highlights the first, Enter adds and stays open.
+  it('Enter right after opening keeps the chosen people', () => {
+    const ctx = open([{ id: 'u1' }]);
+    const search = q<HTMLInputElement>('[data-blok-database-person-search]');
+
+    expect(editorRoot()?.querySelector('[data-blok-database-person-option][data-active]')).toBeNull();
+    press(search, 'Enter');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onClose).not.toHaveBeenCalled();
+  });
+
+  it('ArrowDown highlights the first person and Enter adds them with the picker still open', () => {
+    const ctx = open([]);
+    const search = q<HTMLInputElement>('[data-blok-database-person-search]');
+
+    press(search, 'ArrowDown');
+    expect(q('[data-blok-database-person-option][data-active]').getAttribute('data-blok-database-person-option')).toBe('me');
+    press(search, 'Enter');
+
+    expect(lastCommit(ctx)).toEqual([{ id: 'me' }]);
+    expect(ctx.onClose).not.toHaveBeenCalled();
+  });
+
+  it('Enter on a highlighted person who is already chosen does not remove them', () => {
+    const ctx = open([{ id: 'me' }]);
+    const search = q<HTMLInputElement>('[data-blok-database-person-search]');
+
+    press(search, 'ArrowDown');
+    press(search, 'Enter');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+  });
+
   it('filters by name as you type and picks the highlighted person with Enter', () => {
     const ctx = open([]);
     const search = q<HTMLInputElement>('[data-blok-database-person-search]');

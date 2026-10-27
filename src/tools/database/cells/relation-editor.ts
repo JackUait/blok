@@ -163,7 +163,8 @@ class RelationEditor implements CellEditorHandle {
       event.preventDefault();
       const row = rows[this.activeIndex];
 
-      if (row !== undefined) this.toggle(row.id);
+      // Enter only links: the first row is highlighted on open, and Enter there must not unlink it.
+      if (row !== undefined && !this.selected.includes(row.id)) this.toggle(row.id);
     }
   };
 

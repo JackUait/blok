@@ -21,7 +21,8 @@ class PersonEditor implements CellEditorHandle {
   private readonly people: DatabasePerson[];
   private selected: string[];
   private query = '';
-  private activeIndex = 0;
+  // notion-spec-2 §18.4: no person is highlighted on open.
+  private activeIndex = -1;
   private open = true;
 
   constructor(
@@ -61,7 +62,7 @@ class PersonEditor implements CellEditorHandle {
 
     this.search.addEventListener('input', () => {
       this.query = this.search.value;
-      this.activeIndex = 0;
+      this.activeIndex = this.query.trim() === '' ? -1 : 0;
       this.renderList();
     });
     this.search.addEventListener('keydown', this.handleKey);
@@ -147,13 +148,17 @@ class PersonEditor implements CellEditorHandle {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       if (rows.length === 0) return;
-      this.activeIndex = (this.activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length;
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      const from = this.activeIndex < 0 && step < 0 ? 0 : this.activeIndex;
+
+      this.activeIndex = (from + step + rows.length) % rows.length;
       this.renderList();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       const person = rows[this.activeIndex];
 
-      if (person !== undefined) this.toggle(person.id);
+      // Enter only adds; the chip's × removes.
+      if (person !== undefined && !this.selected.includes(person.id)) this.toggle(person.id);
     } else if (event.key === 'Backspace' && this.search.value === '' && this.selected.length > 0) {
       event.preventDefault();
       this.toggle(this.selected[this.selected.length - 1]);
@@ -188,6 +193,8 @@ class PersonEditor implements CellEditorHandle {
 
   private renderList(): void {
     const rows = this.filtered();
+
+    this.search.removeAttribute('aria-activedescendant');
 
     this.list.replaceChildren(...rows.map((person, index) => {
       const row = document.createElement('div');

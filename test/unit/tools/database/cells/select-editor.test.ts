@@ -127,6 +127,20 @@ describe('select cell editor', () => {
     expect(ctx.onCommit).toHaveBeenCalledWith('o3');
   });
 
+  // notion-spec-2 §18.4: no row is highlighted on open, so Enter there must not change the value.
+  it.each([
+    ['select', 'o2', false],
+    ['multi-select', ['o1'], true],
+  ] as const)('Enter right after opening a %s leaves the value and the picker alone', (_name, value, multi) => {
+    const ctx = openSelect(typeof value === 'string' ? value : [...value], {}, multi);
+
+    expect(search().getAttribute('aria-activedescendant')).toBeNull();
+    press(search(), 'Enter');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onClose).not.toHaveBeenCalled();
+  });
+
   it('arrows move the active row and Enter picks it', () => {
     const ctx = openSelect(null);
 
@@ -507,6 +521,21 @@ describe('status cell editor', () => {
 
     expect(row('dn').querySelector('[data-blok-database-option-pill]')?.getAttribute('data-status-group')).toBe('complete');
     expect(row('ip').querySelector('[data-blok-database-select-option-check]')).not.toBeNull();
+  });
+
+  // notion-spec-2 §18.4: no highlight on open; ArrowDown highlights the first option and Enter picks it and closes.
+  it('Enter right after opening keeps the status; ArrowDown then Enter picks the first option and closes', () => {
+    const ctx = makeEditorContext({ options: STATUS, onOptionsChange: vi.fn() });
+
+    openCellEditor(makeProperty('status', STATUS), 'ip', makeAnchor(), ctx);
+    press(search(), 'Enter');
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onClose).not.toHaveBeenCalled();
+
+    press(search(), 'ArrowDown');
+    press(search(), 'Enter');
+    expect(ctx.onCommit).toHaveBeenCalledWith('ns');
+    expect(ctx.onClose).toHaveBeenCalledTimes(1);
   });
 
   it('ends with "Edit property" behind the sliders glyph', () => {

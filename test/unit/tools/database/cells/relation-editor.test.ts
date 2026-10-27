@@ -67,6 +67,27 @@ describe('relation editor', () => {
     expect(onCommit).toHaveBeenLastCalledWith([{ id: 'r2' }]);
   });
 
+  // notion-spec-2 §18.4: the first page is highlighted on open and Enter links it. Enter never unlinks.
+  it('Enter right after opening links the first page and stays open', () => {
+    const onCommit = vi.fn();
+    const onClose = vi.fn();
+
+    openCellEditor(relation(), [], makeAnchor(), makeEditorContext({ relationCandidates: () => candidates, onCommit, onClose }));
+    press(search(), 'Enter');
+
+    expect(onCommit).toHaveBeenLastCalledWith([{ id: 'r1' }]);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('Enter on a highlighted page that is already linked keeps it linked', () => {
+    const onCommit = vi.fn();
+
+    openCellEditor(relation(), [{ id: 'r1' }], makeAnchor(), makeEditorContext({ relationCandidates: () => candidates, onCommit }));
+    press(search(), 'Enter');
+
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
   it('filters by the search text and picks the active row with Enter', () => {
     const onCommit = vi.fn();
 

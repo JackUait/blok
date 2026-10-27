@@ -278,7 +278,8 @@ class SelectEditor {
       }
       case 'Enter': {
         event.preventDefault();
-        const target = targets[Math.max(this.activeIndex, 0)];
+        // notion-spec-2 §18.4: nothing is highlighted on open, so Enter there changes nothing.
+        const target = targets[this.activeIndex];
 
         if (target === undefined) {
           return;

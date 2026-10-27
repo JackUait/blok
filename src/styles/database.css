@@ -4926,7 +4926,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  /* notion-spec-2 §18.5: 290x573.6 with the full list; the types scroll inside. */
+  /* notion-spec-2 §18.5: 290x573.6; the types scroll inside. */
   width: 290px;
   max-width: calc(100vw - 2 * var(--blok-space-3));
   max-height: min(573.6px, calc(100dvh - 2 * var(--blok-space-3)));
@@ -4988,7 +4988,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
   font-weight: 500;
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-ink-secondary);
   user-select: none;
 }
 

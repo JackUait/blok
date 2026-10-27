@@ -8219,7 +8219,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
   font-weight: 500;
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-ink-secondary);
   user-select: none;
 }
 

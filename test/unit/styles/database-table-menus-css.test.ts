@@ -52,6 +52,11 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // notion-spec-2 §17.9: Notion's section label is its gray rgb(125,122,117), not a blue-gray. It fails AA, so it takes Blok's passing gray.
+  it('draws the section labels in the database gray', () => {
+    expect(declared('[data-blok-database-property-type-heading]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
+  });
+
   // Notion keeps the gray glyph on hover; only the row gets a fill. No blue (selected/hover law).
   it('keeps the type glyph ink on hover', () => {
     expect(declared('[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon]', 'color')).toEqual([]);

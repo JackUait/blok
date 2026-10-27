@@ -151,19 +151,25 @@ export class DatabasePropertyTypePopover {
 
     // Inside a top-layer panel (a peek, the layout builder): on body the panel covers the menu, and a modal's focus trap takes the name field.
     overlayMountFor(anchor).appendChild(popover);
+    // The side is picked once: a search shrinks the menu and it keeps its bottom (notion-spec-2 §18.5).
+    const picked: { side?: 'below' | 'above' | 'cover' } = {};
     const reposition = (): void => {
       positionFixedAnchored(popover, anchor, { side: 'bottom', offset: BELOW_GAP });
       // notion-spec-2 §18.5: above, the bottom sits 1px over the button; fitting neither side, it covers the button, bottom pinned 11px up.
       const { top, bottom } = anchor.getBoundingClientRect();
       const height = popover.offsetHeight;
       const bottomLimit = window.innerHeight - VIEWPORT_BOTTOM_MARGIN;
+      const fitsAbove = top - ABOVE_GAP - height >= VIEWPORT_MARGIN;
 
-      const below = bottom + BELOW_GAP + height <= bottomLimit;
-      const above = !below && top - ABOVE_GAP - height >= VIEWPORT_MARGIN;
+      const away = fitsAbove ? 'above' : 'cover';
+
+      picked.side ??= bottom + BELOW_GAP + height <= bottomLimit ? 'below' : away;
+      const below = picked.side === 'below';
+      const above = picked.side === 'above';
       const covering = Math.max(VIEWPORT_MARGIN, bottomLimit - height);
-      const away = above ? top - ABOVE_GAP - height : covering;
+      const awayTop = above ? top - ABOVE_GAP - height : covering;
 
-      popover.style.top = `${below ? bottom + BELOW_GAP : away}px`;
+      popover.style.top = `${below ? bottom + BELOW_GAP : awayTop}px`;
       popover.setAttribute('data-side', above ? 'top' : 'bottom');
     };
 

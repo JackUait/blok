@@ -151,6 +151,31 @@ describe('DatabasePropertyTypePopover', () => {
       expect(el.style.top).toBe('106px');
     });
 
+    // notion-spec-2 §18.5: a search shrinks the list and it stays bottom-anchored; it never jumps under the button.
+    it('keeps the side it opened on when a search shrinks it', () => {
+      const scrollHost = document.createElement('div');
+      let height = 600;
+
+      scrollHost.appendChild(anchor);
+      document.body.appendChild(scrollHost);
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
+        rect({ top: 390, bottom: 424, left: 50, right: 182, width: 132, height: 34 })
+      );
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight(this: HTMLElement): number {
+        return this.hasAttribute('data-blok-database-property-type-popover') ? height : 0;
+      });
+
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
+
+      height = 200;
+      scrollHost.dispatchEvent(new Event('scroll'));
+
+      expect(el.style.top).toBe('506px');
+      expect(el.getAttribute('data-side')).toBe('bottom');
+    });
+
     it('renders every user-addable property type', () => {
       popover.open(anchor);
       const types: PropertyType[] = ['text', 'number', 'select', 'multiSelect', 'status', 'date', 'files', 'checkbox', 'url', 'phone', 'email', 'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy'];

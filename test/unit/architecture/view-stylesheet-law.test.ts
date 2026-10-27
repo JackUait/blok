@@ -46,8 +46,12 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
  * Raised to 60,000 (owner's decision) for the table of contents: the sheet
  * was already at 56,396 and its rules add ~2.3 KB. The media split stays the
  * next step.
+ *
+ * Raised to 61,000 (owner's decision, 2026-10-27): regenerating for token
+ * changes (font stack, selection, dark background, assistant highlight)
+ * measured 60,485 bytes.
  */
-const VIEW_CSS_BYTE_BUDGET = 60_000;
+const VIEW_CSS_BYTE_BUDGET = 61_000;
 
 const readManifest = (): Record<string, unknown> =>
   JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8')) as Record<string, unknown>;

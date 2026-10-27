@@ -128,9 +128,9 @@ const panel = (property: PropertyDefinition, extras = computed()): CapturedItem[
 };
 
 const names = (items: CapturedItem[]): Array<string | undefined> => items.map((item) => item.name);
-/** Notion marks the current choice with a ✓ only: no active fill (CLAUDE.md, no blue selected states). */
+/** Notion marks the current choice with a ✓; it stays the one checked item for assistive tech. */
 const checked = (items: CapturedItem[]): Array<string | undefined> => {
-  expect(items.filter((item) => item.isActive !== undefined)).toEqual([]);
+  expect(items.filter((item) => item.isActive === true).map((item) => item.name)).toEqual(items.filter((item) => item.trailingIcon === IconCheck).map((item) => item.name));
 
   return items.filter((item) => item.trailingIcon === IconCheck).map((item) => item.name);
 };
@@ -178,7 +178,7 @@ describe('Edit property rows with a value open on a click only, under the row', 
   });
 });
 
-describe('the current choice of a value list carries a ✓ and no fill', () => {
+describe('the current choice of a value list carries a ✓', () => {
   it.each<[string, PropertyDefinition, string]>([
     ['dateFormat', prop('date'), 'dateFormat-full'],
     ['timeFormat', prop('date', { date: { timeFormat: '24_hour' } }), 'timeFormat-24_hour'],

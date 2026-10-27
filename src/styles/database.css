@@ -4926,10 +4926,10 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  /* Notion 2026-10-25: 290 wide; in a short peek it runs down to the viewport and scrolls inside. */
+  /* notion-spec-2 §18.5: 290x573.6 with the full list; the types scroll inside. */
   width: 290px;
   max-width: calc(100vw - 2 * var(--blok-space-3));
-  max-height: calc(100dvh - 2 * var(--blok-space-3));
+  max-height: min(573.6px, calc(100dvh - 2 * var(--blok-space-3)));
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);

@@ -8164,7 +8164,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-sizing: border-box;
   width: 290px;
   max-width: calc(100vw - 2 * var(--blok-space-3));
-  max-height: calc(100dvh - 2 * var(--blok-space-3));
+  max-height: min(573.6px, calc(100dvh - 2 * var(--blok-space-3)));
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);

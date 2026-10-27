@@ -130,11 +130,13 @@ describe('DatabasePropertyTypePopover', () => {
       popover.open(anchor);
       const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
 
-      expect(el.style.top).toBe('496px');
+      // notion-spec-2 §18.5: above, its bottom sits 1px over the button.
+      expect(el.style.top).toBe('499px');
+      expect(el.getAttribute('data-side')).toBe('top');
     });
 
-    // Notion 2026-10-25: too tall for either side, the menu slides up over its button and stays on screen.
-    it('slides up over the anchor when it fits neither below nor above', () => {
+    // notion-spec-2 §18.5: too tall for either side, it covers its button with its bottom 11px over the viewport's.
+    it('covers the anchor, bottom pinned 11px above the viewport bottom, when it fits neither below nor above', () => {
       vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
       vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
         rect({ top: 390, bottom: 424, left: 50, right: 182, width: 132, height: 34 })
@@ -146,7 +148,7 @@ describe('DatabasePropertyTypePopover', () => {
       popover.open(anchor);
       const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
 
-      expect(el.style.top).toBe('105px');
+      expect(el.style.top).toBe('106px');
     });
 
     it('renders every user-addable property type', () => {

@@ -12,7 +12,13 @@ import {
   type PositionTracker,
 } from '../../components/utils/popover/anchored-position';
 
+/** Top margin; it matches the CSS max-height margin. Notion's is unmeasured. */
 const VIEWPORT_MARGIN = 12;
+/** notion-spec-2 §18.5 measured these two. */
+const VIEWPORT_BOTTOM_MARGIN = 11;
+const ABOVE_GAP = 1;
+/** Notion's gap below the button is unmeasured. */
+const BELOW_GAP = 4;
 
 export interface PropertyTypePopoverOptions {
   /** `name` is the name field's text, '' without the field. */
@@ -131,14 +137,19 @@ export class DatabasePropertyTypePopover {
     // Inside a top-layer panel (a peek, the layout builder): on body the panel covers the menu, and a modal's focus trap takes the name field.
     overlayMountFor(anchor).appendChild(popover);
     const reposition = (): void => {
-      positionFixedAnchored(popover, anchor, { side: 'bottom', offset: 4 });
-      // Too tall for either side, Notion's menu slides up over its button. 12px matches the CSS max-height margin.
-      const top = Number.parseFloat(popover.style.top);
-      const bottomLimit = window.innerHeight - VIEWPORT_MARGIN;
+      positionFixedAnchored(popover, anchor, { side: 'bottom', offset: BELOW_GAP });
+      // notion-spec-2 §18.5: above, the bottom sits 1px over the button; fitting neither side, it covers the button, bottom pinned 11px up.
+      const { top, bottom } = anchor.getBoundingClientRect();
+      const height = popover.offsetHeight;
+      const bottomLimit = window.innerHeight - VIEWPORT_BOTTOM_MARGIN;
 
-      if (top + popover.offsetHeight > bottomLimit) {
-        popover.style.top = `${Math.max(VIEWPORT_MARGIN, bottomLimit - popover.offsetHeight)}px`;
-      }
+      const below = bottom + BELOW_GAP + height <= bottomLimit;
+      const above = !below && top - ABOVE_GAP - height >= VIEWPORT_MARGIN;
+      const covering = Math.max(VIEWPORT_MARGIN, bottomLimit - height);
+      const away = above ? top - ABOVE_GAP - height : covering;
+
+      popover.style.top = `${below ? bottom + BELOW_GAP : away}px`;
+      popover.setAttribute('data-side', above ? 'top' : 'bottom');
     };
 
     // The anchor mirrors with the editor, so a flip re-places the menu.

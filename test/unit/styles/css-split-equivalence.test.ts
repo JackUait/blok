@@ -1203,6 +1203,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CARD_LIST_ITEM_BYTES = 181;
     // database.css: lists off the Edit property panel pad 4px, open on the current row in the hover tint, keep a checked row unfilled; the type list's "Type" line.
     const DATABASE_PANEL_LIST_BYTES = 2_428;
+    // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
+    const FONT_REFRESH_BYTES = 148;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1451,7 +1453,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROLLUP_NUMERIC_CELL_BYTES
       + DATABASE_PEEK_LIST_CARD_BAR_BYTES
       + DATABASE_CARD_LIST_ITEM_BYTES
-      + DATABASE_PANEL_LIST_BYTES;
+      + DATABASE_PANEL_LIST_BYTES
+      + FONT_REFRESH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

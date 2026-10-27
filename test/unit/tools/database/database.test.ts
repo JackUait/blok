@@ -116,6 +116,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
     }
 
     off(): void { /* no-op */ }
+
+    getElement(): HTMLElement {
+      return this.container ?? document.createElement('div');
+    }
   }
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType };

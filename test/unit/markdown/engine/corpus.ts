@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import path from 'node:path';
 
 export interface CorpusCase {
@@ -10,7 +11,9 @@ export interface CorpusCase {
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 
-export const readFixture = <T>(name: string): T => JSON.parse(readFileSync(path.join(FIXTURES, name), 'utf8')) as T;
+/** Fixtures are stored gzipped: tsconfig includes every JSON file, and 13 MB of plain fixtures run tsc out of memory. */
+export const readFixture = <T>(name: string): T =>
+  JSON.parse(gunzipSync(readFileSync(path.join(FIXTURES, `${name}.gz`))).toString('utf8')) as T;
 
 export const fixturePath = (name: string): string => path.join(FIXTURES, name);
 

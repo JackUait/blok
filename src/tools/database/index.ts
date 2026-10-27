@@ -825,7 +825,8 @@ export class DatabaseTool implements BlockTool {
 
       if (this.destroyed || this.readOnly) return;
       if (Object.keys(changes).length > 0) this.sync.syncUpdateRow({ rowId, properties: changes });
-      if (before !== undefined && typeof data?.position === 'string' && data.position !== before.position) {
+      // A write the same batch then moves to another database is part of that move: the move's delete covers it.
+      if (before !== undefined && typeof data?.position === 'string' && data.position !== before.position && !this.leavesWith(detail.agent)) {
         void this.sync.syncMoveRow({ rowId, position: data.position });
       }
 
@@ -840,6 +841,10 @@ export class DatabaseTool implements BlockTool {
       void this.sync.syncCreateRow({ id: rowId, properties: { ...data.properties }, position: data.position, ...(isTemplateData(data) ? { template: true } : {}) });
     });
   };
+
+  private leavesWith(agent: unknown): boolean {
+    return typeof agent === 'object' && agent !== null && 'movingTo' in agent && agent.movingTo !== this.dataId;
+  }
 
   /** A view's own row order the agent changed goes to the backend, as placeRow sends it. */
   private syncAgentRowOrders(): void {

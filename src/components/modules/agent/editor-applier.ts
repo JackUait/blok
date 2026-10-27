@@ -301,6 +301,7 @@ export class EditorApplier implements AgentApplier {
     const release = BlockManager.attributeTo({
       ids: plan.touched, actor: this.options.actor, turnId: this.options.turnId,
       stampLastEditedBy: this.options.attributeLastEditedBy !== false,
+      movingTo: this.movesOut(plan),
     });
 
     try {
@@ -339,6 +340,17 @@ export class EditorApplier implements AgentApplier {
    * A delete, a type change or a move also stops when it would carry one along.
    * A block whose own data is frozen (BlockTool.isDataReadOnly) takes no data or type write.
    */
+  /** Where the batch moves each block that ends under another parent: a write before its move belongs to the move. */
+  private movesOut(plan: Plan): ReadonlyMap<string, string | null> {
+    const last = new Map<string, string | null>();
+
+    for (const edit of plan.edits) {
+      if (edit.op === 'move') last.set(edit.id, edit.parentId);
+    }
+
+    return new Map([...last].filter(([id, parentId]) => (this.Blok.BlockManager.getBlockById(id)?.parentId ?? null) !== parentId));
+  }
+
   /** The planned convert skips blocks.convert, so it repeats that method's convertibility check. */
   private refuseUnconvertible(block: Block, type: string): void {
     const { blockTools } = this.Blok.Tools;

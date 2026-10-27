@@ -23,6 +23,9 @@ export interface BlockMutationEventDetail {
   /** Captured replay participation; history wins. Not field ownership. */
   replaySource?: 'history' | 'remote';
 
-  /** Local agents keep origin 'local'. */
-  agent?: { id: string; name: string; turnId: string };
+  /**
+   * Local agents keep origin 'local'. `movingTo` is set when a later edit of
+   * the same agent batch moves the block to that parent (null: top level).
+   */
+  agent?: { id: string; name: string; turnId: string; movingTo?: string | null };
 }

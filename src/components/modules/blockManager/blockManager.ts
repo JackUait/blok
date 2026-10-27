@@ -52,6 +52,8 @@ interface AgentScopeInput {
   actor: { id: string; name: string; onBehalfOf?: string };
   turnId: string;
   stampLastEditedBy?: boolean;
+  /** Blocks a later edit of the batch moves to another parent, by that parent. */
+  movingTo?: ReadonlyMap<string, string | null>;
 }
 
 type AgentScope = AgentScopeInput & { attribution: Attribution };
@@ -101,12 +103,13 @@ export class BlockManager extends Module {
     };
   }
 
-  private agentFor(blockId: string): { id: string; name: string; turnId: string } | undefined {
+  private agentFor(blockId: string): { id: string; name: string; turnId: string; movingTo?: string | null } | undefined {
     const scope = this.agentScope;
 
-    return scope !== null && scope.ids.has(blockId)
-      ? { id: scope.actor.id, name: scope.actor.name, turnId: scope.turnId }
-      : undefined;
+    if (scope === null || !scope.ids.has(blockId)) return undefined;
+    const agent = { id: scope.actor.id, name: scope.actor.name, turnId: scope.turnId };
+
+    return scope.movingTo?.has(blockId) === true ? { ...agent, movingTo: scope.movingTo.get(blockId) ?? null } : agent;
   }
 
   public stampBlockEdit(block: Block, at = Date.now()): void {

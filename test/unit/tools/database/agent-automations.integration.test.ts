@@ -618,6 +618,25 @@ describe('agent row deletes and moves reach the host adapter as a person\'s do',
     expect(rowCalls(spies.calls)).toEqual(personCalls);
   });
 
+  it('agent moveRowTo into a database with rows sends what the person\'s Move to sends', async () => {
+    const filled = (): OutputBlockData[] => withSecondDatabase().flatMap((block) => (block.id === 'db2'
+      ? [{ ...block, content: ['q1'] }, { id: 'q1', type: 'database-row', parent: 'db2', data: { position: 'a5', title: 'Q', properties: { t2: 'Q' } } }]
+      : [block]));
+    const person = await boot(filled(), undefined, { adapter: true });
+
+    person.instance.moduleInstances.BlockManager.getBlockById('db')?.call('moveRowTo', { rowId: 'r1', databaseId: 'db2' });
+    await settled();
+    const personCalls = rowCalls(person.spies.calls);
+
+    await teardown();
+    const { instance, spies } = await boot(filled(), undefined, { adapter: true });
+
+    expect(await runAgent(instance, { commands: [{ name: 'database.moveRowTo', args: { id: 'db', rowId: 'r1', databaseId: 'db2' } }] })).toBeNull();
+    await settled();
+
+    expect(rowCalls(spies.calls)).toEqual(personCalls);
+  });
+
   it('undoing an agent moveRowTo sends what undoing the person\'s Move to sends', async () => {
     const person = await boot(withSecondDatabase(), undefined, { adapter: true });
 

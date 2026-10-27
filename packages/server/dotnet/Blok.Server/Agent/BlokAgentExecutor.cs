@@ -891,7 +891,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         return Failure("VERSION_NOT_FOUND", $"There is no version \"{version}\". history.versions lists them.", false, null);
       default:
         return Failure("TOOL_ACTION_FAILED", $"The version history failed: the restore could not run ({restored.History}).",
-            HttpStatus(restored.History) is 429 or (>= 500 and not 501), null);
+            RestoreRetryable(restored.History), null);
     }
 
     var edit = restored.Edit ?? throw new InvalidOperationException("A ready restore carries its edit.");
@@ -1058,6 +1058,12 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   /// What HistoryEndpoint answers for this refusal. Jint decides from it whether a
   /// retry can help, as it does for MCP's HTTP reads, so the two must stay the same.
   /// </summary>
+  /// <summary>
+  /// As the shared runtime's restore: never asked twice, so a plain 500 is reported, not retryable.
+  /// Mirrors ask(..., retry = false) in src/shared/agent/version-history.ts.
+  /// </summary>
+  internal static bool RestoreRetryable(CollabHistoryStatus status) => HttpStatus(status) is 429 or (>= 500 and not 500 and not 501);
+
   private static int HttpStatus(CollabHistoryStatus status) => status switch
   {
     CollabHistoryStatus.NoHistory => 501,

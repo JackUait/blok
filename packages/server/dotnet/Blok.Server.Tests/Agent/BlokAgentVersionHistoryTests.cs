@@ -120,6 +120,18 @@ public sealed class BlokAgentVersionHistoryTests
     Assert.Equal("service", error["details"]!["reason"]!.GetValue<string>());
   }
 
+  // As the shared runtime: a restore is never asked twice, so a plain 500 is reported as not retryable.
+  [Theory]
+  [InlineData("ExportFailed", false)]
+  [InlineData("Corrupt", false)]
+  [InlineData("NoHistory", false)]
+  [InlineData("Purged", false)]
+  [InlineData("Unavailable", true)]
+  public void AFailedRestoreIsRetryableOnlyWhenTheSharedRuntimeWouldSaySo(string status, bool retryable)
+  {
+    Assert.Equal(retryable, BlokAgentExecutor.RestoreRetryable(Enum.Parse<CollabHistoryStatus>(status)));
+  }
+
   [Fact]
   public async Task APurgedRoomIsNotRetryable()
   {

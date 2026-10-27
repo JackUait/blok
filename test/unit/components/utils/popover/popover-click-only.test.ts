@@ -113,6 +113,29 @@ describe('Popover: children.clickOnly and placement under', () => {
     expect(cover()).toBeNull();
   });
 
+  it.each([['ArrowRight', 39], ['Enter', 13]] as const)('%s on the row opens the list, covered; Escape closes both', (name, keyCode) => {
+    const popover = open();
+
+    popover.escapeClosesSubmenuFirst = true;
+    const key = (k: string, code: number): void => {
+      popover.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: k, code: k, keyCode: code, bubbles: true }));
+    };
+
+    for (const _ of [0, 1, 2]) {
+      if (itemEl('decimals')?.getAttribute('data-blok-focused') !== 'true') key('ArrowDown', 40);
+    }
+    key(name, keyCode);
+
+    expect(itemEl('two')).not.toBeNull();
+    expect(cover()).not.toBeNull();
+
+    // What the registry's Escape handler calls.
+    popover.closeSubmenuOnEscape();
+
+    expect(itemEl('two')).toBeNull();
+    expect(cover()).toBeNull();
+  });
+
   it('other rows still open on hover', () => {
     vi.useFakeTimers();
     open();

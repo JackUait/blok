@@ -47,7 +47,7 @@ describe('normalizeTable', () => {
     vi.stubGlobal('crypto', { getRandomValues });
 
     expect(normalizeTable({ content: [[{ blocks: [] }]] }).content).toEqual([
-      [{ blocks: [], id: 'uuuuuuuuuu', rowId: 'ssssssssss' }],
+      [{ blocks: [], id: '5555555555', rowId: '7777777777' }],
     ]);
     expect(getRandomValues.mock.calls.map(([bytes]) => bytes?.length)).toEqual([10, 10]);
   });
@@ -325,7 +325,7 @@ describe('table runtime normalization', () => {
 
     expect(normalize?.(data)).toEqual({
       withHeadings: false,
-      content: [[{ blocks: ['a'], id: 'uuuuuuuuuu', rowId: 'ssssssssss' }]],
+      content: [[{ blocks: ['a'], id: '5555555555', rowId: '7777777777' }]],
     });
     expect(data).toEqual({ withHeadings: false, content: [[{ blocks: ['a'] }]] });
     expect(getRandomValues.mock.calls.map(([bytes]) => bytes?.length)).toEqual([10, 10]);

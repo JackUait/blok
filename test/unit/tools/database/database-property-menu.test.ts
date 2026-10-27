@@ -154,6 +154,22 @@ describe('DatabasePropertyMenu', () => {
     menu.destroy();
   });
 
+  // blok-capture §0: a 489px menu under a header at y=258 ran off a 717px window. It caps at the larger side's room.
+  it('caps the header menu at the room on its larger side, so its last rows stay on screen', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+    const anchor = document.createElement('button');
+
+    vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 1151, y: 258, width: 200, height: 36 }));
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.open(prop('date'), anchor);
+    const container = captured.instances[0] as unknown as { element: HTMLElement };
+
+    // 717 − 294 below, less the 8px gap and a 12px margin.
+    expect(container.element.querySelector<HTMLElement>('[data-blok-popover-container]')?.style.getPropertyValue('--max-height')).toBe('403px');
+    menu.destroy();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';

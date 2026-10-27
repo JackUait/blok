@@ -47,6 +47,21 @@ const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
   'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button', 'person',
 ]);
 
+/** PopoverDesktop's default gap under the trigger. */
+const MENU_GAP = 8;
+const MENU_VIEWPORT_MARGIN = 12;
+
+/**
+ * Core places a menu that fits neither side below and lets it run off the window.
+ * Capped at the larger side's room, it fits there and scrolls inside. Notion's own fit is unmeasured.
+ */
+const capToRoom = (popover: PopoverDesktop, anchor: HTMLElement): void => {
+  const { top, bottom } = anchor.getBoundingClientRect();
+  const room = Math.max(window.innerHeight - bottom, top) - MENU_GAP - MENU_VIEWPORT_MARGIN;
+
+  popover.getElement().querySelector<HTMLElement>('[data-blok-popover-container]')?.style.setProperty('--max-height', `${room}px`);
+};
+
 /** Types whose Edit property is the options list. */
 const OPTION_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['select', 'multiSelect', 'status']);
 
@@ -564,6 +579,7 @@ export class DatabasePropertyMenu {
     const container = redraw ? popover.getElement().querySelector<HTMLElement>('[data-blok-popover-container]') : null;
 
     if (container !== null) container.style.transition = 'none';
+    if (className === DATABASE_HEADER_MENU_CLASS) capToRoom(popover, anchor);
     popover.show();
     if (container !== null) requestAnimationFrame(() => container.style.removeProperty('transition'));
   }

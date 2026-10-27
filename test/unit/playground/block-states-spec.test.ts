@@ -402,7 +402,7 @@ describe('block states gallery covers every state a block can show', () => {
     ['page', [ 'Draft', 'Colored', 'Creating' ]],
     ['page-link', [ 'Page', 'Emoji icon', 'Image icon', 'Untitled', 'Loading', 'Missing', 'No access' ]],
     ['stub', [ 'Unknown block type' ]],
-    ['database', [ 'Table view · every stored property type', 'Several views (tab strip)', 'Title and icon', 'Gallery view', 'Gallery · cover preview', 'Calendar view', 'Calendar · no date property', 'Timeline view', 'Chart · column', 'Chart · donut', 'Chart · number', 'Chart · no data', 'Feed view', 'Form view', 'Form · closed', 'Map view', 'Map · no map style', 'Map · no place property', 'Dashboard', 'List · grouped', 'Filter and sort applied', 'Table · calculations and colour rule', 'Number as bar and ring', 'Locked database', 'Read-only', 'Linked view · source deleted', 'Rows with comments', 'Table · filter matches nothing' ]],
+    ['database', [ 'Table view · every stored property type', 'Several views (tab strip)', 'Title and icon', 'Gallery view', 'Gallery · cover preview', 'Calendar view', 'Calendar · no date property', 'Timeline view', 'Chart · column', 'Chart · donut', 'Chart · number', 'Chart · no data', 'Feed view', 'Form view', 'Form · closed', 'Map view', 'Map · one pin', 'Map · no place property', 'Dashboard', 'List · grouped', 'Filter and sort applied', 'Table · calculations and colour rule', 'Number as bar and ring', 'Locked database', 'Read-only', 'Linked view · source deleted', 'Rows with comments', 'Table · filter matches nothing' ]],
   ])('the %s tab shows its missing states', (tool, labels) => {
     const found = entry(tool);
 

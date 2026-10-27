@@ -4254,8 +4254,6 @@
           },
           {
             label: 'Map view',
-            // OpenFreeMap: a public style that needs no key.
-            toolConfig: { database: { map: { styleUrl: 'https://tiles.openfreemap.org/styles/liberty' } } },
             blocks: [
               {
                 id: 'db-map-live',
@@ -4273,7 +4271,7 @@
             ]
           },
           {
-            label: 'Map · no map style',
+            label: 'Map · one pin',
             blocks: [
               {
                 id: 'db-map',
@@ -5149,7 +5147,8 @@
           table: Table,
           toggle: Toggle,
           callout: Callout,
-          database: Database,
+          // OpenFreeMap: a public style that needs no key.
+          database: { class: Database, config: { map: { styleUrl: 'https://tiles.openfreemap.org/styles/liberty' } } },
           'database-row': DatabaseRow,
           'database-comment': DatabaseComment,
           divider: Divider,

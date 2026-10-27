@@ -886,7 +886,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
       ? { ...block, data: { ...(block.data as DatabaseData), activeViewId: 'v' } }
       : block);
 
-    // Read-only: core reports no DOM changes, so the redraw loop cannot start and hang the test.
+    // Read-only: the redraw loop does not start here, so a regression fails the check instead of hanging.
     await make(blocks, {}, { readOnly: true });
     const toolbar = holder?.querySelector<HTMLElement>(
       '[data-blok-element][data-blok-id="dashboard-capability-definition"] [data-blok-database-view-toolbar]'

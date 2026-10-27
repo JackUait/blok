@@ -1,0 +1,203 @@
+**foobar**
+**foo
+bar**
+__foobar__
+__foo
+bar__
+
+__foo *bar* baz__
+__foo _bar_ baz__
+__foo ~bar~ baz__
+__foo ~~bar~~ baz__
+__foo[bar](baz)__
+__foo `bar`__
+
+**foo *bar* baz**
+**foo _bar_ baz**
+**foo ~bar~ baz**
+**foo ~~bar~~ baz**
+**foo[bar](baz)**
+**foo `bar`**
+
+not__bold__ __this__either
+
+----------------------------------------------------
+
+[
+	["bold", [
+		["punctuation", "**"],
+		["content", ["foobar"]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "**"],
+		["content", ["foo\r\nbar"]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", ["foobar"]],
+		["punctuation", "__"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", ["foo\r\nbar"]],
+		["punctuation", "__"]
+	]],
+
+	["bold", [
+		["punctuation", "__"],
+		["content", [
+			"foo ",
+			["italic", [
+				["punctuation", "*"],
+				["content", ["bar"]],
+				["punctuation", "*"]
+			]],
+			" baz"
+		]],
+		["punctuation", "__"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", [
+			"foo ",
+			["italic", [
+				["punctuation", "_"],
+				["content", ["bar"]],
+				["punctuation", "_"]
+			]],
+			" baz"
+		]],
+		["punctuation", "__"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", [
+			"foo ",
+			["strike", [
+				["punctuation", "~"],
+				["content", ["bar"]],
+				["punctuation", "~"]
+			]],
+			" baz"
+		]],
+		["punctuation", "__"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", [
+			"foo ",
+			["strike", [
+				["punctuation", "~~"],
+				["content", ["bar"]],
+				["punctuation", "~~"]
+			]],
+			" baz"
+		]],
+		["punctuation", "__"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", [
+			"foo",
+			["url", [
+				"[",
+				["content", ["bar"]],
+				"](",
+				["url", "baz"],
+				")"
+			]]
+		]],
+		["punctuation", "__"]
+	]],
+	["bold", [
+		["punctuation", "__"],
+		["content", [
+			"foo ",
+			["code-snippet", "`bar`"]
+		]],
+		["punctuation", "__"]
+	]],
+
+	["bold", [
+		["punctuation", "**"],
+		["content", [
+			"foo ",
+			["italic", [
+				["punctuation", "*"],
+				["content", ["bar"]],
+				["punctuation", "*"]
+			]],
+			" baz"
+		]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "**"],
+		["content", [
+			"foo ",
+			["italic", [
+				["punctuation", "_"],
+				["content", ["bar"]],
+				["punctuation", "_"]
+			]],
+			" baz"
+		]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "**"],
+		["content", [
+			"foo ",
+			["strike", [
+				["punctuation", "~"],
+				["content", ["bar"]],
+				["punctuation", "~"]
+			]],
+			" baz"
+		]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "**"],
+		["content", [
+			"foo ",
+			["strike", [
+				["punctuation", "~~"],
+				["content", ["bar"]],
+				["punctuation", "~~"]
+			]],
+			" baz"
+		]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "**"],
+		["content", [
+			"foo",
+			["url", [
+				"[",
+				["content", ["bar"]],
+				"](",
+				["url", "baz"],
+				")"
+			]]
+		]],
+		["punctuation", "**"]
+	]],
+	["bold", [
+		["punctuation", "**"],
+		["content", [
+			"foo ",
+			["code-snippet", "`bar`"]
+		]],
+		["punctuation", "**"]
+	]],
+
+	"\r\n\r\nnot__bold__ __this__either"
+]
+
+----------------------------------------------------
+
+Checks for bold. Also tests for inclusion of italic, strike, and url.

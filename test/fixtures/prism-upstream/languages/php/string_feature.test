@@ -1,0 +1,59 @@
+<<<FOO_BAR
+Heredoc string
+FOO_BAR;
+<<<"FOO"
+	some
+	content
+FOO;
+<<<'NOWDOC'
+This is a nowdoc string
+NOWDOC;
+"https://example.com"
+" /* not a comment */ "
+"multi-line
+string"
+'multi-line
+string'
+`multi-line
+shell exec string`
+
+----------------------------------------------------
+
+[
+	["string", [
+		["delimiter", [
+			["punctuation", "<<<"], "FOO_BAR"
+		]],
+		"\r\nHeredoc string\r\n",
+		["delimiter", [
+			"FOO_BAR", ["punctuation", ";"]
+		]]
+	]],
+	["string", [
+		["delimiter", [
+			["punctuation", "<<<\""], "FOO", ["punctuation", "\""]
+		]],
+		"\r\n\tsome\r\n\tcontent\r\n",
+		["delimiter", [
+			"FOO", ["punctuation", ";"]
+		]]
+	]],
+	["string", [
+		["delimiter", [
+			["punctuation", "<<<'"], "NOWDOC", ["punctuation", "'"]
+		]],
+		"\r\nThis is a nowdoc string\r\n",
+		["delimiter", [
+			"NOWDOC", ["punctuation", ";"]
+		]]
+	]],
+	["string", ["\"https://example.com\""]],
+	["string", ["\" /* not a comment */ \""]],
+	["string", ["\"multi-line\r\nstring\""]],
+	["string", "'multi-line\r\nstring'"],
+	["string", "`multi-line\r\nshell exec string`"]
+]
+
+----------------------------------------------------
+
+Checks for strings.

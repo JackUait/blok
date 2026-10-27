@@ -63,6 +63,27 @@ describe('cell text editors', () => {
     expect(field().tagName).toBe('TEXTAREA');
   });
 
+  it('Tab is left to the browser unless the host asks the editor to close on it', () => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty('text'), 'a', makeAnchor(), ctx);
+    const event = press(field(), 'Tab');
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(handle.isOpen).toBe(true);
+  });
+
+  it('Tab on an editor that closes on it saves and closes', () => {
+    const ctx = makeEditorContext({ tabCloses: true });
+    const handle = openCellEditor(makeProperty('url'), 'a', makeAnchor(), ctx);
+
+    type('https://b.co');
+    const event = press(field(), 'Tab', { shiftKey: true });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(ctx.onCommit).toHaveBeenCalledWith('https://b.co');
+    expect(handle.isOpen).toBe(false);
+  });
+
   it('Enter while an IME is composing does not commit', () => {
     const ctx = makeEditorContext();
 

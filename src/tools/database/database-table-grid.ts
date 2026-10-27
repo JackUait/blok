@@ -260,6 +260,7 @@ export class DatabaseTableGrid {
       i18n: this.i18n,
       readOnly: false,
       coverCell: true,
+      tabCloses: true,
       options: property.config?.options ?? [],
       ...(reminder !== undefined ? { reminder } : {}),
       ...(property.type === 'date' && this.callbacks.commitReminder !== undefined
@@ -337,7 +338,7 @@ export class DatabaseTableGrid {
 
     this.state.selection = { kind: 'cell', anchor: target, focus: target };
     this.paint();
-    if (key === 'Enter' || key === 'Escape' || this.root.contains(document.activeElement) || document.activeElement === document.body) {
+    if (key === 'Enter' || key === 'Escape' || key === 'Tab' || this.root.contains(document.activeElement) || document.activeElement === document.body) {
       this.root.focus({ preventScroll: true });
     }
     this.callbacks.editEnded();

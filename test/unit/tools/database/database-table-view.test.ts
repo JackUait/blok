@@ -585,6 +585,21 @@ describe('DatabaseTableView', () => {
       expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
     });
 
+    it('Tab in a cell editor saves, closes and keeps focus on the same cell instead of leaving the database', () => {
+      const { root, handlers } = mount();
+
+      cell(root, 'r1', 'p-notes').click();
+      editorField().value = 'typed';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      const event = press(editorField(), 'Tab');
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(editor()).toBeNull();
+      expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'typed');
+      expect(selectedCells(root)).toEqual(['r1/p-notes']);
+      expect(grid(root)).toHaveFocus();
+    });
+
     // feel/findings-table T13: Notion's bar shows the first 4 properties; the rest wait under "…".
     it('shows glyph segments for the first 4 properties and keeps the rest under "…"', () => {
       const extra = ['Owner', 'Due', 'Link'].map((name, i): PropertyDefinition => ({ id: `p-x${i}`, name, type: 'text', position: `b${i}` }));

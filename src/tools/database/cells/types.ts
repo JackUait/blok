@@ -77,6 +77,11 @@ export interface CellContext {
    * level with its top, its right edge on the value's.
    */
   coverCell?: boolean | 'value';
+  /**
+   * The table grid: Tab saves and closes a text-like editor, so focus stays in
+   * the grid. Elsewhere Tab moves to the next field.
+   */
+  tabCloses?: boolean;
   /** The table (research/16 §4): a url shows without its http(s) scheme. */
   shortUrls?: boolean;
   /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */

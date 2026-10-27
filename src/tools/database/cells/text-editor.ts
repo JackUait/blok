@@ -119,7 +119,17 @@ export const openTextEditor = (
     ctx.onDraft?.(field.value);
   });
   field.addEventListener('keydown', (event: Event) => {
-    if (!(event instanceof KeyboardEvent) || event.key !== 'Enter' || event.isComposing || (multiline && event.shiftKey)) {
+    if (!(event instanceof KeyboardEvent) || event.isComposing) {
+      return;
+    }
+    // A header or footer has its own controls, so Tab must still reach them.
+    if (event.key === 'Tab' && ctx.tabCloses === true && header === undefined && footer === undefined) {
+      event.preventDefault();
+      finish(resolve() ?? { kind: 'cancel' });
+
+      return;
+    }
+    if (event.key !== 'Enter' || (multiline && event.shiftKey)) {
       return;
     }
     event.preventDefault();

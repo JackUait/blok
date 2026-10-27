@@ -545,8 +545,8 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
     await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
-    // Seven statuses and No Status, all empty: Hide empty groups is saved off (research/33 §3.3).
-    await expect(page.locator('[data-blok-database-add-card]')).toHaveText(Array<string>(8).fill('New issue'));
+    // Seven statuses, all empty: Hide empty groups is saved off (research/33 §3.3). No row lacks a status, so no "No Status" (6bae8a6f).
+    await expect(page.locator('[data-blok-database-add-card]')).toHaveText(Array<string>(7).fill('New issue'));
   });
 
   test('Event Management draws its three measured rows', async ({ page }) => {

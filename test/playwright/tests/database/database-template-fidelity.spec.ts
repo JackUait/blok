@@ -94,8 +94,8 @@ test('the By Status board reads "New task" under each column; a click there star
   await openBoard(page);
   const buttons = page.locator('[data-blok-database-add-card]');
 
-  // Not started, In progress, Done and No Status.
-  await expect(buttons).toHaveText(['New task', 'New task', 'New task', 'New task']);
+  // Not started, In progress and Done. Every row has a status, so there is no "No Status" column (6bae8a6f).
+  await expect(buttons).toHaveText(['New task', 'New task', 'New task']);
   await page.locator('[data-blok-database-column][data-option-id] [data-blok-database-add-card]').nth(1).click();
   await expect.poll(async () => (await read(page)).rows.length).toBe(4);
   const { db, rows } = await read(page);

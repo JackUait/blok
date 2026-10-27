@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 
 import type { Download, Locator, Page } from '@playwright/test';
 
-import { generateKeyBetween } from 'fractional-indexing';
+import { generateKeyBetween } from '../../../../src/shared/database/fractional-index';
 
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';

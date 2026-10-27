@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { generateKeyBetween } from 'fractional-indexing';
+import { generateKeyBetween } from '../../../../src/shared/database/fractional-index';
 
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { sortRows } from '../../../../src/tools/database/database-query';

@@ -1305,7 +1305,6 @@ __metadata:
     eslint-plugin-tailwindcss: "npm:4.4.0"
     eslint-plugin-testing-library: "npm:^7.16.2"
     fake-indexeddb: "npm:6.2.6"
-    fractional-indexing: "npm:^4.0.0"
     glob: "npm:13.0.6"
     html-janitor: "npm:2.0.4"
     husky: "npm:9.1.7"
@@ -9272,13 +9271,6 @@ __metadata:
   dependencies:
     is-callable: "npm:^1.2.7"
   checksum: 10c0/0e0b50f6a843a282637d43674d1fb278dda1dd85f4f99b640024cfb10b85058aac0cc781bf689d5fe50b4b7f638e91e548560723a4e76e04fe96ae35ef039cee
-  languageName: node
-  linkType: hard
-
-"fractional-indexing@npm:^4.0.0":
-  version: 4.0.0
-  resolution: "fractional-indexing@npm:4.0.0"
-  checksum: 10c0/1b081fb507a147583714b8bb8f8199801b9ef17499523aafd12e4811dd173f377bc5f320fd27e1a1aead67e397f4b8a5ca64d3eb5efe7f027ac255de17ccb839
   languageName: node
   linkType: hard
 

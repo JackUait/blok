@@ -1915,10 +1915,11 @@ export class PopoverDesktop extends PopoverAbstract {
     // Submenus open toward the inline end of their parent (right, or left in
     // RTL), overlapping its edge by `overlap` px. The side depends only on
     // fit, never on the parent's own side: when the end side has no room the
-    // submenu flips to the start side. Flipped, it covers the parent and ends
-    // `flipGap` px before the trigger's "…" or chevron (research/30 X1:
-    // Notion's template submenu ends 12px before the "…" it opened from).
-    // Without either it sits outside the parent's start edge. Fitting on neither
+    // submenu flips to the start side. Flipped from a "…", it covers the parent
+    // and ends `flipGap` px before the "…" (research/30 X1: Notion's template
+    // submenu ends 12px before the "…" it opened from). Any other row's submenu
+    // sits outside the parent's start edge, 4px over it, as Notion's chevron
+    // submenus do (notion-spec-2 §17.8). Fitting on neither
     // side, it stays on the end side and slides back inside the viewport;
     // one wider than the viewport keeps its left margin.
     const flipGap = 12;
@@ -1943,7 +1944,7 @@ export class PopoverDesktop extends PopoverAbstract {
       ? (chevronRect?.right ?? 0) + flipGap
       : (chevronRect?.left ?? 0) - flipGap - nestedWidth;
     const outsideLeft = isRtl ? rightSideLeft : leftSideLeft;
-    const startLeft = chevronRect === undefined ? outsideLeft : coveringLeft;
+    const startLeft = moreTop === undefined ? outsideLeft : coveringLeft;
     const flips = nestedWidth > 0 && !fits(endLeft) && fits(startLeft);
     const viewportLeft = flips ? startLeft : endLeft;
     const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;

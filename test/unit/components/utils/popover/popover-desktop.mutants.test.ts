@@ -3002,12 +3002,12 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       .mockReturnValue({ width: 320, height: 80 });
 
     try {
-      // research/30 X1: Right side: 900 - 4 + 320 > 1024 - 8. Flipped, it covers the
-      // parent and ends 12px before the chevron (left 874): 874 - 12 - 320 = 542.
+      // notion-spec-2 §17.8: Right side: 900 - 4 + 320 > 1024 - 8. A chevron row's submenu flips
+      // outside the parent's left edge, overlapping it by 4px: 700 + 4 - 320 = 384.
       const { nested, rootLeft } = showWideSubmenu({ left: 700, right: 900 });
       const nestedContainer = asInternal(nested).nodes.popoverContainer;
 
-      expect(nestedContainer.style.left).toBe(`${542 - rootLeft}px`);
+      expect(nestedContainer.style.left).toBe(`${384 - rootLeft}px`);
       expect(nested.getElement().getAttribute('data-side')).toBe('left');
       expect(nestedContainer.style.top).toBe('20px');
     } finally {
@@ -3131,7 +3131,7 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       .mockReturnValue({ width: 700, height: 80 });
 
     try {
-      // Right: 396 + 700 > 1016. Flipped: 374 - 12 - 700 < 8. Clamped to 1024 - 8 - 700 = 316.
+      // Right: 396 + 700 > 1016. Flipped: 304 - 700 < 8. Clamped to 1024 - 8 - 700 = 316.
       const { nested, rootLeft } = showWideSubmenu({ left: 300, right: 400 });
 
       expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${316 - rootLeft}px`);
@@ -3146,11 +3146,10 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       .mockReturnValue({ width: 320, height: 80 });
 
     try {
-      // Left (inline end): 100 + 4 - 320 < 8. Flipped, it starts 12px after the
-      // chevron's right edge (126): 138.
+      // Left (inline end): 100 + 4 - 320 < 8. Flipped outside the parent's right edge, 4px over it: 296.
       const { nested, rootLeft } = showWideSubmenu({ left: 100, right: 300 }, true);
 
-      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${138 - rootLeft}px`);
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${296 - rootLeft}px`);
       expect(nested.getElement().getAttribute('data-side')).toBe('right');
     } finally {
       sizeSpy.mockRestore();

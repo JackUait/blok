@@ -1700,7 +1700,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   private get controls(): DatabaseViewControls {
-    if (this.binding !== null) return this.binding.controls;
+    return this.binding?.controls ?? this.ownControls;
+  }
+
+  /** This block's controls, also while bound: `controls` is then the holder's. */
+  private get ownControls(): DatabaseViewControls {
     if (this.viewControls === null) {
       this.viewControls = new DatabaseViewControls(this.controlsHost());
       this.viewControls.load(this.model.getViews().map((v) => v.id));
@@ -4603,7 +4607,9 @@ export class DatabaseTool implements BlockTool {
     const views = this.model.getViews();
     const addBtn = this.tabBar.getAddBtnEl();
     const single = views.length === 1;
-    const toolbar = this.controls.toolbar;
+    // Not `controls`: while bound that is the holder's toolbar, and moving it here
+    // files its writes under this block, so the two blocks redraw each other forever.
+    const toolbar = this.ownControls.toolbar;
 
     // One view: the toolbar shares the title row (feel/findings-toolbar V01, research/35:221).
     this.titleRowElement.toggleAttribute('data-single-view', single);

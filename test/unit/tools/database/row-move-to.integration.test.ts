@@ -879,6 +879,23 @@ describe('row ⋮⋮ menu with a real editor', () => {
     vi.restoreAllMocks();
   });
 
+  // A toolbar moved into another block makes its refresh writes count as that
+  // block's changes, and two related views then redraw each other forever.
+  it('keeps the toolbar of a view bound to a second source in its own block', async () => {
+    const blocks = dashboardCapabilityLinkedDrawerDoc().map((block) => block.id === 'db'
+      ? { ...block, data: { ...(block.data as DatabaseData), activeViewId: 'v' } }
+      : block);
+
+    // Read-only: core reports no DOM changes, so the redraw loop cannot start and hang the test.
+    await make(blocks, {}, { readOnly: true });
+    const toolbar = holder?.querySelector<HTMLElement>(
+      '[data-blok-element][data-blok-id="dashboard-capability-definition"] [data-blok-database-view-toolbar]'
+    );
+    const owner = toolbar?.closest('[data-blok-element]')?.getAttribute('data-blok-id');
+
+    expect(owner).toBe('dashboard-capability-definition');
+  });
+
   describe('dashboard notification redraw boundaries', () => {
     it('does not remount same-database widgets for its own database notification', async () => {
       const current = await make(dashboardOwnerDoc(), {}, { readOnly: true });

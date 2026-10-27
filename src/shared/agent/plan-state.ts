@@ -1,4 +1,5 @@
 import { isRichText, readEmbed } from '../rich-text/guards';
+import { lockedAmong } from './approval';
 import { annotationMessage, annotationOf } from './document-view';
 import { failure, warning } from './errors';
 import { applyEdits } from './json-applier';
@@ -320,6 +321,7 @@ export class PlanState {
           break;
         case 'remove': {
           const ids = edit.withChildren ? this.draft.subtree(edit.id) : [edit.id];
+          this.refuseLockedRemoval(ids);
 
           this.changed.removed.push(...ids);
           ids.forEach(id => this.touched.delete(id));
@@ -346,6 +348,16 @@ export class PlanState {
           break;
       }
       applyEdits(this.draft, [edit], this.stamp);
+    }
+  }
+
+  // Every agent removal lands in emit, core or tool action. Removing and re-adding would unlock a database.
+  private refuseLockedRemoval(ids: readonly string[]): void {
+    const locked = lockedAmong(this.draft, ids);
+
+    if (locked.length > 0) {
+      this.fail('PRECONDITION_FAILED', `A person locked database "${locked[0]}", and this command removes it. `
+        + 'The agent does not delete a locked database. Ask the person to delete it.', '/id', { reason: 'locked', blockIds: locked });
     }
   }
 

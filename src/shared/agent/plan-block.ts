@@ -7,7 +7,6 @@ import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
 import { matchVariants, titleSentence, variantSentence } from './variant-hint';
 import { cloneRecord } from './snapshot';
-import { lockedAmong } from './approval';
 import { insertUnavailableReason, notPreparedHere } from './errors';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
@@ -834,14 +833,6 @@ export const planDelete = (state: PlanState, args: Record<string, unknown>): unk
     removedIds: withChildren ? state.draft.subtree(block.id) : [block.id],
     liftedIds: withChildren ? [] : [...state.draft.childrenOf(block.id)],
   };
-  // Deleting and re-inserting would hand the agent an unlocked copy, so a lock's database stays.
-  const locked = lockedAmong(state.draft, result.removedIds);
-
-  if (locked.length > 0) {
-    state.fail('PRECONDITION_FAILED', `A person locked database "${locked[0]}", and this delete removes it. `
-      + 'The agent does not delete a locked database. Ask the person to delete it.', '/id', { reason: 'locked', blockIds: locked });
-  }
-
   // Explicit lifts give every applier the same move attribution.
   result.liftedIds.reduce((after, child) => {
     state.emit({ op: 'move', id: child, parentId: block.parent, afterId: after });

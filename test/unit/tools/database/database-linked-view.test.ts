@@ -93,7 +93,7 @@ describe('DatabaseTool — linked database', () => {
     const { el } = buildDatabase(doc, 'linked', linkedData());
 
     expect(rowIds(el)).toEqual(['r1', 'r2']);
-    expect(el.querySelector('[data-blok-database-table-row][data-row-id="r1"] [data-property-id="status"]')?.textContent).toBe('open');
+    expect(el.querySelector('[data-blok-database-table-row][data-row-id="r1"] [data-property-id="status"] [data-blok-database-cell]')?.textContent).toBe('open');
   });
 
   it('writes a cell edit to the source\'s row block', () => {
@@ -232,7 +232,7 @@ describe('DatabaseTool — linked database', () => {
     expect(tool.setData({ ...linkedData(), views: [{ ...linkedData().views[0], name: 'Renamed' }] })).toBe(true);
     (tool as unknown as { rerenderView: () => void }).rerenderView();
 
-    expect(el.querySelector('[data-blok-database-table-row][data-row-id="r1"] [data-property-id="status"]')?.textContent).toBe('open');
+    expect(el.querySelector('[data-blok-database-table-row][data-row-id="r1"] [data-property-id="status"] [data-blok-database-cell]')?.textContent).toBe('open');
   });
 
   it('shows a "source deleted" state when the source is gone', () => {

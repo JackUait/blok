@@ -698,8 +698,8 @@ describe('table bulk actions and clipboard', () => {
       editorField().value = 'live';
       editorField().dispatchEvent(new Event('input', { bubbles: true }));
 
-      expect(cell(root, 'r1', 'p-notes').textContent).toBe('live');
-      expect(cell(root, 'r2', 'p-notes').textContent).toBe('live');
+      expect(cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-cell]')?.textContent).toBe('live');
+      expect(cell(root, 'r2', 'p-notes').querySelector('[data-blok-database-cell]')?.textContent).toBe('live');
       expect(commitsOf(handlers)).toEqual([]);
 
       press(editorField(), 'Escape');
@@ -723,7 +723,7 @@ describe('table bulk actions and clipboard', () => {
       press(editorField(), 'Escape');
 
       expect(commitsOf(handlers)).toEqual([]);
-      expect(cell(root, 'r1', 'p-notes').textContent).toBe('short');
+      expect(cell(root, 'r1', 'p-notes').querySelector('[data-blok-database-cell]')?.textContent).toBe('short');
       expect(cell(root, 'r2', 'p-notes').textContent).toBe('');
     });
 

@@ -151,7 +151,7 @@ describe('DatabaseTool — computed properties', () => {
     const doc = makeDoc([fakeRow('a', 'db', { title: 'Alpha', amount: 3 }, 'a0')]);
     const { el } = build(doc);
 
-    expect(cell(el, 'a', 'double')?.textContent).toBe('6');
+    expect(cell(el, 'a', 'double')?.querySelector('[data-blok-database-cell]')?.textContent).toBe('6');
     expect(doc.rows.get('a')?.data.properties.double).toBeUndefined();
   });
 

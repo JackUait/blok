@@ -460,6 +460,8 @@ function tableFlipTransform(node: TableNodeData): string {
 // Table Rendering
 // ---------------------------------------------------------------------------
 
+const MAX_TABLE_CELLS = 10_000;
+
 /**
  * Render a table node into an absolutely-positioned HTML element.
  */
@@ -488,6 +490,12 @@ export function renderTable(node: TableNodeData, ctx: RenderContext): HTMLElemen
   }
   if (transforms.length > 0) {
     wrapper.style.transform = transforms.join(' ');
+  }
+
+  // A hostile deck can declare a huge grid: 10,000 cells already cost about 450 MB
+  // and 400 ms in Chromium, while real slide tables stay far below that.
+  if (node.rows.length * node.columns.length > MAX_TABLE_CELLS) {
+    return wrapper;
   }
 
   // Resolve table style

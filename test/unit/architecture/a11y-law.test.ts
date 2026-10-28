@@ -117,8 +117,9 @@ const INDIRECTLY_NAMED: Record<string, string> = {
     'translated label before returning; the role is only upgraded to menuitemcheckbox afterwards',
   'tools/file/pptx/renderer/TextRenderer.ts » span » link':
     'DELIBERATE — named by the deck\'s own run text: the span is stored as `element`, and the ' +
-    'run text is written into `element` right after (textContent or text children); a deck ' +
-    'tooltip, when present, is only a title on top',
+    'run text is written into `element` right after (textContent, innerHTML or text children). ' +
+    'A deck tooltip, when present, is a title on top. KNOWN GAP: a link run with empty text stays ' +
+    'nameless; an English fallback name would be untranslated UI text',
 };
 
 /**

@@ -1,6 +1,5 @@
 import type { Link, PhrasingContent, Text } from '../../../types/data-formats/markdown-tree';
-import { isAsciiAlpha, isAsciiAlphanumeric, isAsciiControl, isSpaceOrLineEnding } from './inline-scan';
-import { isUnicodePunctuation, isUnicodeWhitespace } from './text';
+import { isAsciiAlpha, isAsciiAlphanumeric, isAsciiControl, isSpaceOrLineEnding, isUnicodePunctuation, isUnicodeWhitespace } from './text';
 
 /**
  * GFM autolink literals (`www.x.com`, `https://x.com`, `a@b.co`). Blok's old
@@ -263,7 +262,7 @@ const URL_START = /https?:\/\/|www(?=\.)/gi;
 
 const isDomainChar = (char: string | undefined): boolean => char !== undefined && /^[-.\w]$/.test(char);
 
-/** Ends a domain or email local part: what the old regexes' classes left out. */
+/** Trailing characters a domain or email local part never ends with. */
 const SPLIT_TRAIL = /[!"&'),.:;<>?\]}]+$/;
 
 const count = (value: string, char: string): number => value.split(char).length - 1;
@@ -317,7 +316,7 @@ interface Match {
 
 /**
  * Whether the character before `index` lets a literal start: input start,
- * whitespace or punctuation (one UTF-16 unit, as before).
+ * whitespace or punctuation (one UTF-16 unit).
  * @param value - text node value
  * @param index - match start
  */

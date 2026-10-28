@@ -6,8 +6,13 @@ import type { BracketItem, DelimItem, Item, LinkTarget } from './inline-items';
  * as deep as the input is long must not overflow the stack.
  */
 
+/** Most spans and links one inside another; a deeper one is dropped and its content kept. */
+export const MAX_INLINE_DEPTH = 100;
+
 interface Frame {
   children: PhrasingContent[];
+  /** Spans and links around this frame's content in the tree. */
+  depth: number;
   /** Set for an image, whose children become its `alt`. */
   image?: LinkTarget;
 }
@@ -36,7 +41,7 @@ const appendText = (children: PhrasingContent[], value: string): void => {
  * values, and nested images' alts.
  * @param nodes - the image's content
  */
-export const plainText = (nodes: PhrasingContent[]): string => {
+const plainText = (nodes: PhrasingContent[]): string => {
   const stack = [...nodes].reverse();
   const parts: string[] = [];
 
@@ -74,8 +79,8 @@ const targetNode = (target: LinkTarget, children: PhrasingContent[]): PhrasingCo
 };
 
 /** Walks the items once, keeping the open spans and links as frames. */
-class TreeBuilder {
-  private readonly frames: Frame[] = [{ children: [] }];
+class PhrasingBuilder {
+  private readonly frames: Frame[] = [{ children: [], depth: 0 }];
 
   /** The innermost open frame. */
   private get top(): Frame {
@@ -125,11 +130,26 @@ class TreeBuilder {
     appendText(this.top.children, run.char.repeat(run.rest));
 
     for (const type of [...run.opens].reverse()) {
-      const node = { type, children: [] as PhrasingContent[] };
-
-      this.top.children.push(node);
-      this.frames.push({ children: node.children });
+      this.open({ type, children: [] });
     }
+  }
+
+  /**
+   * Append a span or link and make it the open frame. Past the depth cap
+   * the node is left out and its content goes to the frame around it.
+   * @param node - the new wrapper, still empty
+   */
+  private open(node: PhrasingContent & { children: PhrasingContent[] }): void {
+    const top = this.top;
+
+    if (top.depth >= MAX_INLINE_DEPTH) {
+      this.frames.push({ children: top.children, depth: top.depth });
+
+      return;
+    }
+
+    top.children.push(node);
+    this.frames.push({ children: node.children, depth: top.depth + 1 });
   }
 
   /**
@@ -146,15 +166,16 @@ class TreeBuilder {
     }
 
     if (target.type === 'image' || target.type === 'imageReference') {
-      this.frames.push({ children: [], image: target });
+      this.frames.push({ children: [], depth: this.top.depth, image: target });
 
       return;
     }
 
     const node = targetNode(target, []);
 
-    this.top.children.push(node);
-    this.frames.push({ children: 'children' in node ? node.children : [] });
+    if ('children' in node) {
+      this.open(node);
+    }
   }
 
   /** The end of a link or image. */
@@ -171,4 +192,4 @@ class TreeBuilder {
  * The phrasing tree of resolved items.
  * @param items - items after emphasis resolution
  */
-export const buildTree = (items: Item[]): PhrasingContent[] => new TreeBuilder().build(items);
+export const buildTree = (items: Item[]): PhrasingContent[] => new PhrasingBuilder().build(items);

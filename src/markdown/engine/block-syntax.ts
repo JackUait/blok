@@ -4,40 +4,9 @@
  * there. All are single forward passes: no regex that can backtrack.
  */
 
+import { isAsciiAlpha, isSpaceOrTab, MAX_LABEL, runLength, skipSpaces } from './text';
+
 export type Align = 'left' | 'right' | 'center' | null;
-
-export const isSpaceOrTab = (char: string | undefined): boolean => char === ' ' || char === '\t';
-
-/**
- * How many times `char` repeats from `pos`.
- * @param line - the line
- * @param pos - start index
- * @param char - the character to count
- */
-export const runLength = (line: string, pos: number, char: string): number => {
-  const cursor = { index: pos };
-
-  while (line[cursor.index] === char) {
-    cursor.index++;
-  }
-
-  return cursor.index - pos;
-};
-
-/**
- * Index of the first character at or after `pos` that is not a space or tab.
- * @param line - the line
- * @param pos - start index
- */
-export const skipSpaces = (line: string, pos: number): number => {
-  const cursor = { index: pos };
-
-  while (isSpaceOrTab(line[cursor.index])) {
-    cursor.index++;
-  }
-
-  return cursor.index;
-};
 
 /**
  * The string without trailing spaces and tabs.
@@ -65,33 +34,7 @@ export const trimStart = (value: string): string => value.slice(skipSpaces(value
  * The string without leading and trailing spaces and tabs.
  * @param value - any string
  */
-export const trimSpaces = (value: string): string => trimEnd(value.slice(skipSpaces(value, 0)));
-
-/**
- * Text with the leading spaces and tabs of every line removed.
- * @param text - lines joined with their endings
- */
-export const stripLineStarts = (text: string): string => {
-  const parts: string[] = [];
-  const cursor = { index: 0, start: 0 };
-
-  while (cursor.index <= text.length) {
-    const char = text[cursor.index];
-
-    if (char === '\n' || char === '\r' || cursor.index === text.length) {
-      const width = char === '\r' && text[cursor.index + 1] === '\n' ? 2 : 1;
-
-      parts.push(text.slice(skipSpaces(text, cursor.start), cursor.index + width));
-      cursor.index += width;
-      cursor.start = cursor.index;
-      continue;
-    }
-
-    cursor.index++;
-  }
-
-  return parts.join('');
-};
+const trimSpaces = (value: string): string => trimEnd(value.slice(skipSpaces(value, 0)));
 
 /**
  * An ATX heading at `pos`: its depth and its content without the closing
@@ -187,7 +130,7 @@ export const setextLevel = (line: string, pos: number): number => {
   return marker === '=' ? 1 : 2;
 };
 
-export interface FenceOpen {
+interface FenceOpen {
   char: string;
   length: number;
   /** Everything after the fence. */
@@ -308,7 +251,7 @@ export const scanFootnoteLabel = (line: string, pos: number): { label: string; e
 
   const cursor = { index: pos + 2 };
 
-  while (cursor.index < line.length && cursor.index - pos - 2 <= 999) {
+  while (cursor.index < line.length && cursor.index - pos - 2 <= MAX_LABEL) {
     const char = line[cursor.index];
 
     if (char === ']') {
@@ -449,8 +392,6 @@ const HTML_BLOCK_TAGS = new Set([
   'summary', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'track', 'ul',
 ]);
 
-const isAsciiAlpha = (char: string | undefined): boolean => char !== undefined && /^[A-Za-z]$/.test(char);
-
 const isTagNameChar = (char: string | undefined): boolean => char !== undefined && /^[A-Za-z0-9-]$/.test(char);
 
 /**
@@ -584,8 +525,9 @@ const isAttributeNameStart = (char: string | undefined): boolean => char !== und
 const isAttributeNameChar = (char: string | undefined): boolean => char !== undefined && /^[A-Za-z0-9_.:-]$/.test(char);
 
 /**
- * One attribute (name, optional value) at `pos`. Returns the index after it,
- * or -1.
+ * One attribute at `pos`: a name and any `= value` initializers. After an
+ * unquoted value another `=` starts a new value;
+ * a quoted value ends the attribute. Returns the index after it, or -1.
  * @param line - the line
  * @param pos - index of the name's first character
  */
@@ -600,43 +542,55 @@ const scanAttribute = (line: string, pos: number): number => {
     cursor.index++;
   }
 
-  const equals = skipSpaces(line, cursor.index);
+  for (;;) {
+    const equals = skipSpaces(line, cursor.index);
 
-  if (line[equals] !== '=') {
-    return cursor.index;
+    if (line[equals] !== '=') {
+      return cursor.index;
+    }
+
+    const value = skipSpaces(line, equals + 1);
+    const quote = line[value];
+
+    if (quote === '"' || quote === '\'') {
+      const close = line.indexOf(quote, value + 1);
+
+      return close === -1 ? -1 : close + 1;
+    }
+
+    cursor.index = unquotedValueEnd(line, value);
+
+    if (cursor.index === -1) {
+      return -1;
+    }
   }
-
-  return scanAttributeValue(line, skipSpaces(line, equals + 1));
 };
 
 /**
- * An attribute value: quoted, or unquoted without `"'=<>` and backticks.
+ * The end of an unquoted attribute value, or -1. It stops at `/` and `=`
+ * too; a value may be empty only when `/` follows.
  * @param line - the line
  * @param pos - index of the value's first character
  */
-const scanAttributeValue = (line: string, pos: number): number => {
-  const quote = line[pos];
-
-  if (quote === '"' || quote === '\'') {
-    const close = line.indexOf(quote, pos + 1);
-
-    return close === -1 ? -1 : close + 1;
+const unquotedValueEnd = (line: string, pos: number): number => {
+  if (pos >= line.length || '<=>`'.includes(line[pos])) {
+    return -1;
   }
 
   const cursor = { index: pos };
 
-  while (cursor.index < line.length && !'"\'=<>` \t'.includes(line[cursor.index])) {
+  while (cursor.index < line.length && !'"\'/<=>` \t'.includes(line[cursor.index])) {
     cursor.index++;
   }
 
-  return cursor.index === pos ? -1 : cursor.index;
+  return cursor.index;
 };
 
 type HtmlEndState = 'data' | 'dash' | 'lessThan' | 'endTag' | 'bracket' | 'closing';
 
 /**
  * Where the end search of an HTML block starts on its first line, and in
- * which state: right after the opener, as the old parser scans.
+ * which state: right after the opener.
  * @param kind - the block kind
  * @param text - the first line, from its `<`
  */
@@ -736,7 +690,7 @@ const htmlDataStep = (kind: number, char: string): HtmlEndState | null => {
 
 /**
  * Whether a line ends an HTML block of kinds 1–5. The search does not
- * backtrack, as the old parser's did not: `]]]>` does not end CDATA.
+ * backtrack: `]]]>` does not end CDATA.
  * @param kind - the block kind
  * @param text - the line
  * @param first - the line opened the block

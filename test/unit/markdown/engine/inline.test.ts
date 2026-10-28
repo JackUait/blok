@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parseMarkdown } from '../../../../src/markdown/engine';
 import type { InlineContext } from '../../../../src/markdown/engine/inline';
 import { parseInline } from '../../../../src/markdown/engine/inline';
-import type { PhrasingContent } from '../../../../types/data-formats/markdown-tree';
+import { MAX_INLINE_DEPTH } from '../../../../src/markdown/engine/inline-build';
+import type { Nodes, PhrasingContent } from '../../../../types/data-formats/markdown-tree';
 
 /**
  * The inline parser on its own: a leaf's content in, phrasing nodes out.
@@ -27,7 +28,7 @@ describe('parseInline', () => {
     });
 
     it('reads NUL as U+FFFD', () => {
-      expect(inline('a\0b')).toStrictEqual([text('a�b')]);
+      expect(parseMarkdown('a\0b').children[0]).toStrictEqual({ type: 'paragraph', children: [text('a�b')] });
     });
   });
 
@@ -188,6 +189,33 @@ describe('parseInline', () => {
     it('drops up to three columns of a continuation line\'s indent inside HTML', () => {
       expect(inline('a <x\n    y>')).toStrictEqual([text('a '), { type: 'html', value: '<x\n y>' }]);
     });
+
+    it('measures those three columns from where the line really starts, after its container prefix', () => {
+      const html = (markdown: string): unknown => {
+        const stack: unknown[] = [parseMarkdown(markdown)];
+
+        while (stack.length > 0) {
+          const node = stack.pop() as { type: string; value?: string; children?: unknown[] };
+
+          if (node.type === 'html') {
+            return node.value;
+          }
+
+          stack.push(...[...(node.children ?? [])].reverse());
+        }
+
+        return undefined;
+      };
+
+      expect(html('- x <a\n\t\t> y')).toBe('<a\n   >');
+      expect(html('> x <a\n> \t\t> y')).toBe('<a\n   >');
+      expect(html('> x <a\n>\t\t> y')).toBe('<a\n   >');
+      expect(html('- x <!--\n\t\ta\n\t-->')).toBe('<!--\n   a\n-->');
+      expect(html('1. x <a\n\t\t\t> y')).toBe('<a\n  \t>');
+      expect(html('- x <a\nb\n\t\t> y')).toBe('<a\nb\n   >');
+      expect(html('x <a\n\t\t> y')).toBe('<a\n \t>');
+      expect(html('- - x <a\n\t\t\t> y')).toBe('<a\n \t>');
+    });
   });
 
   describe('footnote calls', () => {
@@ -258,42 +286,102 @@ describe('parseInline', () => {
     });
   });
 
-  describe('adversarial input stays fast and never throws', () => {
-    const N = 20_000;
-    const cases: Record<string, string> = {
-      'open brackets': '['.repeat(N),
-      'nested labels': `${'['.repeat(N)}${']'.repeat(N)}`,
-      'nested links': `${'['.repeat(N)}a${'](b)'.repeat(N)}`,
-      'image openers': `${'!['.repeat(N)}${'[a](b)'.repeat(N)}`,
-      'star runs': '*a'.repeat(N),
-      'deep emphasis': `${'*a '.repeat(N)}b${' a*'.repeat(N)}`,
-      'rule of 3 misses': `${'a*'.repeat(N)}${'a**'.repeat(N)}`,
-      'deep strikethrough': `${'~~a '.repeat(N)}b${' a~~'.repeat(N)}`,
-      'backticks': '`'.repeat(N),
-      'backtick runs': '`a``b'.repeat(N),
-      'dollar runs': '$a$$b'.repeat(N),
-      'less-than signs': '<'.repeat(N),
-      'open comments': '<!--'.repeat(N),
-      'open quoted attributes': '<a b="'.repeat(N),
-      'ampersands': '&amp'.repeat(N),
-      'long www label': `www.${'a'.repeat(N)}`,
-      'www dots': `www.a${'.'.repeat(N)}b`,
-      'url parens': `www.a.com/${'('.repeat(N)}`,
-      'destination parens': `[a](${'('.repeat(N)}`,
-      'open titles': '[a](b ('.repeat(N),
-      'email runs': `${'a.'.repeat(N)}@`,
-      'rejected urls': 'éwww.a.b'.repeat(N),
-      'hard breaks': 'a  \n'.repeat(N),
-      // These two need more input: without their memo they are quadratic but cheap per step.
-      'www with many dots': `www.a${'.'.repeat(N * 10)}b`,
-      'closers that never find an opener': `${'_a '.repeat(N * 5)}${'a* '.repeat(N * 5)}`,
+  describe('nesting cap', () => {
+    const N = 10_000;
+
+    /** Deepest level below the paragraph (the paragraph is 0) and the text in order. */
+    const measure = (markdown: string): { depth: number; text: string } => {
+      const stack: Array<{ node: Nodes; depth: number }> = [{ node: parseMarkdown(markdown), depth: -1 }];
+      const state = { depth: 0, text: '' };
+
+      for (const cursor = { entry: stack.pop() }; cursor.entry !== undefined; cursor.entry = stack.pop()) {
+        const { node, depth } = cursor.entry;
+
+        state.depth = Math.max(state.depth, depth);
+        state.text += node.type === 'text' ? node.value : '';
+
+        if ('children' in node) {
+          stack.push(...[...(node.children as Nodes[])].reverse().map((child) => ({ node: child, depth: depth + 1 })));
+        }
+      }
+
+      return state;
     };
 
-    it.each(Object.entries(cases))('%s', (_name, src) => {
-      const started = performance.now();
+    const count = (text: string, part: string): number => text.split(part).length - 1;
 
-      expect(() => inline(src, { definitions: new Set(['a']), footnotes: new Set(['1']), math: true })).not.toThrow();
-      expect(performance.now() - started).toBeLessThan(2000);
+    it.each(['**', '*', '~~'].flatMap((marker) => [[marker, MAX_INLINE_DEPTH + 1], [marker, N]] as const))('drops %j spans past the cap and keeps their text (%i levels)', (marker, size) => {
+      const { depth, text } = measure(`${`${marker}a `.repeat(size)}b${` c${marker}`.repeat(size)}`);
+
+      expect(depth).toBeLessThanOrEqual(MAX_INLINE_DEPTH + 1);
+      expect([count(text, 'a'), count(text, 'b'), count(text, 'c')]).toStrictEqual([size, 1, size]);
+    });
+
+    it('keeps nested link brackets shallow', () => {
+      const { depth, text } = measure(`${'['.repeat(N)}a${'](u)'.repeat(N)}`);
+
+      expect(depth).toBeLessThanOrEqual(MAX_INLINE_DEPTH + 1);
+      expect(count(text, 'a')).toBe(1);
+      expect(count(text, '](u)')).toBe(N - 1);
+    });
+
+    it('drops spans inside links past the cap', () => {
+      const { depth, text } = measure(`${'*a [b '.repeat(N)}c${'](u) d*'.repeat(N)}`);
+
+      expect(depth).toBeLessThanOrEqual(MAX_INLINE_DEPTH + 1);
+      expect([count(text, 'a'), count(text, 'b'), count(text, 'c'), count(text, 'd')]).toStrictEqual([N, N, 1, N]);
+    });
+  });
+
+  describe('adversarial input stays linear and never throws', () => {
+    const N = 20_000;
+    const context = { definitions: new Set(['a']), footnotes: new Set(['1']), math: true };
+    const cases: Record<string, (n: number) => string> = {
+      'open brackets': (n) => '['.repeat(n),
+      'nested labels': (n) => `${'['.repeat(n)}${']'.repeat(n)}`,
+      'nested links': (n) => `${'['.repeat(n)}a${'](b)'.repeat(n)}`,
+      'image openers': (n) => `${'!['.repeat(n)}${'[a](b)'.repeat(n)}`,
+      'star runs': (n) => '*a'.repeat(n),
+      'deep emphasis': (n) => `${'*a '.repeat(n)}b${' a*'.repeat(n)}`,
+      'rule of 3 misses': (n) => `${'a*'.repeat(n)}${'a**'.repeat(n)}`,
+      'deep strikethrough': (n) => `${'~~a '.repeat(n)}b${' a~~'.repeat(n)}`,
+      'backticks': (n) => '`'.repeat(n),
+      'backtick runs': (n) => '`a``b'.repeat(n),
+      'dollar runs': (n) => '$a$$b'.repeat(n),
+      'less-than signs': (n) => '<'.repeat(n),
+      'open comments': (n) => '<!--'.repeat(n),
+      'open quoted attributes': (n) => '<a b="'.repeat(n),
+      'ampersands': (n) => '&amp'.repeat(n),
+      'long www label': (n) => `www.${'a'.repeat(n)}`,
+      'www dots': (n) => `www.a${'.'.repeat(n)}b`,
+      'url parens': (n) => `www.a.com/${'('.repeat(n)}`,
+      'destination parens': (n) => `[a](${'('.repeat(n)}`,
+      'open titles': (n) => '[a](b ('.repeat(n),
+      'email runs': (n) => `${'a.'.repeat(n)}@`,
+      'rejected urls': (n) => 'éwww.a.b'.repeat(n),
+      'hard breaks': (n) => 'a  \n'.repeat(n),
+      // These two need more input: without their memo they are quadratic but cheap per step.
+      'www with many dots': (n) => `www.a${'.'.repeat(n * 10)}b`,
+      'closers that never find an opener': (n) => `${'_a '.repeat(n * 5)}${'a* '.repeat(n * 5)}`,
+    };
+
+    /** Fastest of three runs, in milliseconds. */
+    const fastest = (src: string): number => Math.min(...[0, 1, 2].map(() => {
+      const start = performance.now();
+
+      inline(src, context);
+
+      return performance.now() - start;
+    }));
+
+    // Four times the input must cost about four times the time (~4); a quadratic
+    // path costs ~16. A ratio holds on a busy machine, where a wall-clock limit flakes.
+    it.each(Object.entries(cases))('%s', (_name, make) => {
+      const small = make(Math.floor(N / 2));
+      const large = make(N * 2);
+
+      expect(() => inline(small, context)).not.toThrow();
+      expect(fastest(large) / Math.max(fastest(small), 1)).toBeLessThan(8);
     });
   });
 });

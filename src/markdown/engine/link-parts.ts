@@ -1,3 +1,5 @@
+import { isAsciiControl, isLineEnding, MAX_LABEL } from './text';
+
 /**
  * Scanners for the three parts of a link that definitions (block level) and
  * inline links share: `[label]`, a destination and a title. Each reads `src`
@@ -5,19 +7,13 @@
  * with the index just past it, or null when no such part starts there.
  */
 
-export interface Scanned {
+interface Scanned {
   /** The part's text without its delimiters, as written. */
   value: string;
   /** Index just past the part. */
   end: number;
 }
 
-/** Labels longer than this are not labels, which keeps lookups cheap. */
-const MAX_LABEL = 999;
-
-const isAsciiControl = (code: number): boolean => code < 32 || code === 127;
-
-const isLineEnding = (char: string): boolean => char === '\n' || char === '\r';
 
 /**
  * How far a character at `index` moves the scan: 2 for a backslash before
@@ -109,7 +105,7 @@ const scanRawDestination = (src: string, pos: number, maxDepth: number): Scanned
       cursor.depth++;
     } else if (char === ')') {
       cursor.depth--;
-    } else if (char === ' ' || char === '(' || isAsciiControl(char.charCodeAt(0))) {
+    } else if (char === ' ' || char === '(' || isAsciiControl(char)) {
       return null;
     }
 
@@ -133,7 +129,8 @@ const TITLE_CLOSERS: Record<string, string> = { '"': '"', '\'': '\'', '(': ')' }
 /**
  * A title in `"…"`, `'…'` or `(…)`, ended by the first unescaped closer. A
  * backslash escapes only the closer or another backslash. An unescaped `(`
- * inside parens is allowed, as the parser Blok used before allowed it.
+ * inside parens is allowed. The indents of its continuation lines are not
+ * part of the value (a label keeps them).
  * @param src - source text
  * @param pos - index of the opening quote or paren
  */
@@ -148,7 +145,7 @@ export const scanLinkTitle = (src: string, pos: number): Scanned | null => {
 
   while (cursor.index < src.length) {
     if (src[cursor.index] === close) {
-      return { value: src.slice(pos + 1, cursor.index), end: cursor.index + 1 };
+      return { value: src.slice(pos + 1, cursor.index).replace(/(\r\n|\r|\n)[\t ]+/g, '$1'), end: cursor.index + 1 };
     }
 
     cursor.index += step(src, cursor.index, `${close}\\`);

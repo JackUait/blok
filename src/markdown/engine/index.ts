@@ -1,3 +1,8 @@
+/**
+ * Blok's Markdown parser. Its output matches the parser Blok used before
+ * (micromark, mdast-util-from-markdown, GFM and math); the goldens in
+ * test/unit/markdown/engine pin it.
+ */
 import type { Root } from '../../../types/data-formats/markdown-tree';
 import { parseBlocks } from './block';
 import { parseInline } from './inline';
@@ -26,7 +31,7 @@ export const parseMarkdown = (source: string, options: ParseOptions = {}): Root 
   for (const pending of inline) {
     const inTable = 'type' in pending.node && pending.node.type === 'tableCell';
 
-    pending.node.children = parseInline(pending.raw, { definitions, footnotes, gfm, math, inTable });
+    pending.node.children = parseInline(pending.raw, { definitions, footnotes, gfm, math, inTable, lineColumns: pending.lineColumns });
   }
 
   return root;

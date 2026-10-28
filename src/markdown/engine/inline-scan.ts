@@ -1,32 +1,8 @@
-import { decodeNamedEntity, decodeNumericEntity } from './text';
-
 /**
- * Scanners for the inline constructs that are read in one go from their
- * opening character: references, code and math spans, autolinks and raw
- * HTML. Each takes the source and a start index and returns where the
- * construct ends, or -1 when none starts there.
+ * Helpers for the inline scanner: line ending widths, the run index that
+ * code and math spans find their closers with, span padding, and
+ * autolinks. Raw HTML is in inline-html.ts, references in text.ts.
  */
-
-export const isAsciiAlpha = (char: string | undefined): boolean => char !== undefined && /^[A-Za-z]$/.test(char);
-
-export const isAsciiAlphanumeric = (char: string | undefined): boolean => char !== undefined && /^[\dA-Za-z]$/.test(char);
-
-export const isLineEnding = (char: string | undefined): boolean => char === '\n' || char === '\r';
-
-export const isSpaceOrTab = (char: string | undefined): boolean => char === ' ' || char === '\t';
-
-/** Space, tab or line ending: what CommonMark calls whitespace inside constructs. */
-export const isSpaceOrLineEnding = (char: string | undefined): boolean => isSpaceOrTab(char) || isLineEnding(char);
-
-/** Controls, tab and line endings included. */
-export const isAsciiControl = (char: string | undefined): boolean => {
-  const code = char === undefined ? -1 : char.charCodeAt(0);
-
-  return code >= 0 && (code < 32 || code === 127);
-};
-
-/** The characters an email autolink's local part may hold (no `!`, as before). */
-const ATEXT = /^[#-'*+\--9=?A-Z^-~]$/;
 
 /**
  * Length of the line ending at `index`: 2 for CRLF, 1 for LF or CR, else 0.
@@ -39,49 +15,6 @@ export const lineEndingLength = (src: string, index: number): number => {
   }
 
   return src[index] === '\n' ? 1 : 0;
-};
-
-const REFERENCE_BODY = { hex: /^[\dA-Fa-f]{1,6}/, decimal: /^\d{1,7}/, named: /^[\dA-Za-z]{1,31}/ };
-
-const referenceKind = (numeric: boolean, hex: boolean): keyof typeof REFERENCE_BODY => {
-  if (hex) {
-    return 'hex';
-  }
-
-  return numeric ? 'decimal' : 'named';
-};
-
-export interface Decoded {
-  value: string;
-  end: number;
-}
-
-/**
- * A character reference at `pos` (the `&`): `&amp;`, `&#35;`, `&#x23;`.
- * Named ones must be HTML entities.
- * @param src - source text
- * @param pos - index of the `&`
- */
-export const scanCharacterReference = (src: string, pos: number): Decoded | null => {
-  const numeric = src[pos + 1] === '#';
-  const hex = numeric && (src[pos + 2] === 'x' || src[pos + 2] === 'X');
-  const start = pos + 1 + (numeric ? 1 : 0) + (hex ? 1 : 0);
-  const pattern = REFERENCE_BODY[referenceKind(numeric, hex)];
-  const match = pattern.exec(src.slice(start, start + 32));
-
-  if (match === null || src[start + match[0].length] !== ';') {
-    return null;
-  }
-
-  const end = start + match[0].length + 1;
-
-  if (numeric) {
-    return { value: decodeNumericEntity(match[0], hex ? 16 : 10), end };
-  }
-
-  const value = decodeNamedEntity(match[0]);
-
-  return value === undefined ? null : { value, end };
 };
 
 /**
@@ -146,7 +79,7 @@ export const stripSpanPadding = (content: string): string => {
   return content.slice(head, content.length - tail);
 };
 
-export interface Autolink {
+interface Autolink {
   url: string;
   value: string;
   end: number;
@@ -186,5 +119,3 @@ export const scanAutolink = (src: string, pos: number): Autolink | null => {
 
   return { url: `mailto:${value}`, value, end: pos + 1 + email[0].length };
 };
-
-export const isAtext = (char: string | undefined): boolean => char !== undefined && ATEXT.test(char);

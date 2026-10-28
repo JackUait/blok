@@ -5,10 +5,8 @@ import type {
 import type { BlockOptions, BlockResult, PendingInline } from './block';
 import { extractDefinitions } from './block-definitions';
 import { joinLines, type Block } from './block-model';
-import { isSpaceOrTab, skipSpaces, splitInfo, trimEnd, trimStart } from './block-syntax';
-import { decodeString, normalizeIdentifier } from './text';
-
-const isLineEnding = (char: string | undefined): boolean => char === '\n' || char === '\r';
+import { splitInfo, trimEnd, trimStart } from './block-syntax';
+import { decodeString, isLineEnding, isSpaceOrTab, normalizeIdentifier, skipSpaces, TAB_STOP } from './text';
 
 /**
  * Drop one line ending from the end of a value.
@@ -24,16 +22,19 @@ const dropFinalEnding = (value: string): string => {
 
 /**
  * The checkbox of a GFM task item at the start of its first paragraph:
- * the state, and the text after the box. Mirrors what the old parser kept:
- * one whitespace character after `]` goes, unless the line ends there.
+ * the state, and the text after the box. One whitespace character after
+ * `]` goes, unless the line ends there.
+ * A tab inside the box counts only when it is one column wide.
  * @param raw - the paragraph's text
+ * @param column - the column of its `[`
  */
-const taskCheck = (raw: string): { checked: boolean; rest: string } | null => {
+const taskCheck = (raw: string, column: number): { checked: boolean; rest: string } | null => {
   const inside = raw[1];
   const crlf = inside === '\r' && raw[2] === '\n';
   const close = crlf ? 3 : 2;
+  const wideTab = inside === '\t' && (column + 1) % TAB_STOP !== TAB_STOP - 1;
 
-  if (raw[0] !== '[' || raw[close] !== ']' || !(isSpaceOrTab(inside) || isLineEnding(inside) || inside === 'x' || inside === 'X')) {
+  if (raw[0] !== '[' || raw[close] !== ']' || wideTab || !(isSpaceOrTab(inside) || isLineEnding(inside) || inside === 'x' || inside === 'X')) {
     return null;
   }
 
@@ -67,7 +68,7 @@ const afterBoxSpace = (after: string): string => {
     return after.slice(1);
   }
 
-  // Two or more spaces before a line ending are a hard break, which the old parser kept.
+  // Two or more spaces before a line ending are a hard break, so they stay.
   if (ws.length >= 2 && !ws.includes('\t')) {
     return after;
   }
@@ -76,12 +77,58 @@ const afterBoxSpace = (after: string): string => {
 };
 
 /**
- * Drop one character of the line ending that starts `text`, as the old
- * parser did (so `\r\n` leaves its `\n`), and the next line's indentation
- * once the ending is gone, which text drops after a line ending anyway.
+ * Drop one character of the line ending that starts `text` (so `\r\n`
+ * leaves its `\n`), and the next line's indentation once the ending is
+ * gone, which text drops after a line ending anyway.
  * @param text - text starting with a line ending
  */
 const dropOneEndingChar = (text: string): string => (text.startsWith('\r\n') ? text.slice(1) : trimStart(text.slice(1)));
+
+/**
+ * The column of index `at` in a paragraph's joined lines.
+ * @param block - the paragraph
+ * @param at - an index in its joined lines, inside a line's leading whitespace or at its end
+ */
+const columnAt = (block: Block, at: number): number => {
+  const cursor = { offset: 0, index: 0 };
+
+  while (cursor.index < block.lines.length - 1 && cursor.offset + block.lines[cursor.index].length + block.endings[cursor.index].length <= at) {
+    cursor.offset += block.lines[cursor.index].length + block.endings[cursor.index].length;
+    cursor.index++;
+  }
+
+  const state = { column: block.columns[cursor.index] ?? 0 };
+
+  for (const char of block.lines[cursor.index].slice(0, at - cursor.offset)) {
+    state.column += char === '\t' ? TAB_STOP - (state.column % TAB_STOP) : 1;
+  }
+
+  return state.column;
+};
+
+/**
+ * The start columns the inline parser needs for a leaf's text that begins
+ * at index `start` of the paragraph's joined lines: lines after the first,
+ * keyed by index in that text. Tab stops are left out; they read as 0.
+ * @param block - the paragraph
+ * @param start - where the leaf's text starts
+ */
+const lineColumns = (block: Block, start: number): ReadonlyMap<number, number> | undefined => {
+  const columns = new Map<number, number>();
+  const cursor = { offset: 0 };
+
+  block.lines.forEach((line, index) => {
+    const column = block.columns[index] ?? 0;
+
+    if (cursor.offset > start && column % TAB_STOP !== 0) {
+      columns.set(cursor.offset - start, column);
+    }
+
+    cursor.offset += line.length + block.endings[index].length;
+  });
+
+  return columns.size === 0 ? undefined : columns;
+};
 
 const DEPTHS: Array<Heading['depth']> = [1, 2, 3, 4, 5, 6];
 
@@ -95,12 +142,12 @@ const headingDepth = (depth: number): Heading['depth'] => DEPTHS[Math.min(Math.m
  * Builds the mdast tree from the parsed blocks, with an explicit stack so
  * deep nesting cannot overflow the call stack.
  */
-class TreeBuilder {
+class BlockTreeBuilder {
   public readonly inline: PendingInline[] = [];
   public readonly definitions = new Set<string>();
   public readonly footnotes = new Set<string>();
-  /** Raw text of paragraphs that a task checkbox shortened. */
-  private readonly taskRest = new Map<Block, string>();
+  /** Paragraphs that a task checkbox shortened: the text left, and where it starts in the joined lines. */
+  private readonly taskRest = new Map<Block, { text: string; start: number }>();
 
   /**
    * @param options - syntax switches
@@ -205,11 +252,15 @@ class TreeBuilder {
       return node;
     }
 
-    const check = taskCheck(trimEnd(trimStart(extractDefinitions(joinLines(first)).rest)));
+    const { joined, rest } = extractDefinitions(first);
+    const leading = trimStart(rest);
+    const start = joined.length - leading.length;
+    const text = trimEnd(leading);
+    const check = taskCheck(text, columnAt(first, start));
 
     if (check !== null) {
       node.checked = check.checked;
-      this.taskRest.set(first, check.rest);
+      this.taskRest.set(first, { text: check.rest, start: start + text.length - check.rest.length });
     }
 
     return node;
@@ -282,20 +333,20 @@ class TreeBuilder {
    * @param into - the parent's children
    */
   private paragraph(block: Block, into: RootContent[]): void {
-    const { definitions, rest } = extractDefinitions(joinLines(block));
+    const { joined, definitions, rest } = extractDefinitions(block);
 
     this.addDefinitions(definitions, into);
-
-    const raw = trimEnd(this.taskRest.get(block) ?? trimStart(rest));
 
     if (rest === '') {
       return;
     }
 
+    const leading = trimStart(rest);
+    const { text, start } = this.taskRest.get(block) ?? { text: leading, start: joined.length - leading.length };
     const node: Paragraph = { type: 'paragraph', children: [] };
 
     into.push(node);
-    this.inline.push({ node, raw });
+    this.inline.push({ node, raw: trimEnd(text), lineColumns: lineColumns(block, start) });
   }
 
   /**
@@ -304,14 +355,20 @@ class TreeBuilder {
    * @param into - the parent's children
    */
   private heading(block: Block, into: RootContent[]): void {
-    if (block.setext) {
-      this.addDefinitions(extractDefinitions(joinLines(block)).definitions, into);
-    }
-
     const node: Heading = { type: 'heading', depth: headingDepth(block.depth), children: [] };
 
+    if (!block.setext) {
+      into.push(node);
+      this.inline.push({ node, raw: block.raw });
+
+      return;
+    }
+
+    const { joined, definitions, rest } = extractDefinitions(block);
+
+    this.addDefinitions(definitions, into);
     into.push(node);
-    this.inline.push({ node, raw: block.raw });
+    this.inline.push({ node, raw: block.raw, lineColumns: lineColumns(block, joined.length - trimStart(rest).length) });
   }
 
   /**
@@ -391,7 +448,7 @@ class TreeBuilder {
  * @param options - syntax switches
  */
 export const toTree = (doc: Block, options: BlockOptions): BlockResult => {
-  const builder = new TreeBuilder(options);
+  const builder = new BlockTreeBuilder(options);
   const root = builder.build(doc);
 
   return { root, inline: builder.inline, definitions: builder.definitions, footnotes: builder.footnotes };

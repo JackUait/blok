@@ -1,4 +1,4 @@
-import { isAsciiAlpha, isSpaceOrLineEnding } from './inline-scan';
+import { isAsciiAlpha, skipWhitespace } from './text';
 
 /**
  * Raw inline HTML: open and closing tags, comments, processing
@@ -67,21 +67,6 @@ const scanDeclarationLike = (src: string, pos: number, next: NextIndex): number 
   }
 
   return src[pos + 1] === '!' && isAsciiAlpha(src[pos + 2]) ? end('>', pos + 3) : -1;
-};
-
-/**
- * Skip spaces, tabs and line endings.
- * @param src - source text
- * @param pos - first index to look at
- */
-const skipWhitespace = (src: string, pos: number): number => {
-  const cursor = { at: pos };
-
-  while (isSpaceOrLineEnding(src[cursor.at])) {
-    cursor.at++;
-  }
-
-  return cursor.at;
 };
 
 /**

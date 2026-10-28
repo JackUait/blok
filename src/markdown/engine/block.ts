@@ -1,17 +1,20 @@
 import type { PhrasingContent, Root } from '../../../types/data-formats/markdown-tree';
 import { extractDefinitions } from './block-definitions';
-import { joinLines, makeBlock, type Block, type Kind } from './block-model';
+import { makeBlock, type Block, type Kind } from './block-model';
 import {
-  endsHtmlBlock, htmlBlockStart, isClosingFence, isSpaceOrTab, isThematicBreak, scanAtxHeading, scanCodeFence,
-  scanDelimiterRow, scanFootnoteLabel, scanListMarker, scanMathFence, setextLevel, skipSpaces, splitRow, trimEnd, trimStart,
+  endsHtmlBlock, htmlBlockStart, isClosingFence, isThematicBreak, scanAtxHeading, scanCodeFence,
+  scanDelimiterRow, scanFootnoteLabel, scanListMarker, scanMathFence, setextLevel, splitRow, trimEnd, trimStart,
 } from './block-syntax';
 import { toTree } from './block-tree';
+import { isSpaceOrTab, skipSpaces, TAB_STOP } from './text';
 
 /** A leaf whose inline content is parsed after the block pass. */
 export interface PendingInline {
   node: { children: PhrasingContent[] };
   /** The leaf's content with block syntax removed: what the inline parser reads. */
   raw: string;
+  /** Start column of each later line whose column is not a tab stop, by its index in `raw`. */
+  lineColumns?: ReadonlyMap<number, number>;
 }
 
 export interface BlockResult {
@@ -29,7 +32,8 @@ export interface BlockOptions {
   math: boolean;
 }
 
-const TAB_STOP = 4;
+/** Most containers one inside another; a deeper marker is read as text. */
+export const MAX_CONTAINER_DEPTH = 100;
 
 /** Characters a block start can begin with; any other line is a paragraph line. */
 const MAYBE_SPECIAL = new Set(['#', '`', '~', '*', '+', '_', '=', '<', '>', '-', '[', '$', '|', ':', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
@@ -59,10 +63,23 @@ const leadingColumns = (line: string): number => {
  * The block itself when it is a container, else its parent.
  * @param block - any block
  */
-const innermostContainer = (block: Block): Block | null =>
-  (block.kind === 'document' || block.kind === 'blockquote' || block.kind === 'list' || block.kind === 'item' || block.kind === 'footnote'
-    ? block
-    : block.parent);
+const innermostContainer = (block: Block): Block | null => (isContainer(block.kind) ? block : block.parent);
+
+/**
+ * Whether blocks of `kind` hold other blocks.
+ * @param kind - a block kind
+ */
+const isContainer = (kind: Kind): boolean =>
+  kind === 'document' || kind === 'blockquote' || kind === 'list' || kind === 'item' || kind === 'footnote';
+
+/**
+ * Whether `levels` more containers fit inside `container` under the cap.
+ * Measured from `container` itself, which may be a leaf the new block
+ * will close, so it can refuse one level early but never lets one past.
+ * @param container - the block new blocks would go into
+ * @param levels - containers the start would open
+ */
+const fitsUnderCap = (container: Block, levels: number): boolean => container.nesting + levels <= MAX_CONTAINER_DEPTH;
 
 /**
  * The last index holding a character other than `marker`, a space or a tab.
@@ -81,7 +98,7 @@ const lastBlocker = (line: string, marker: string): number => {
 
 /**
  * Whether a raw block that a new container line closes keeps the line
- * ending before it, as the old parser did; a lazy line drops it.
+ * ending before it; a lazy line drops it.
  * @param block - the block being closed
  */
 const keepsLastEnding = (block: Block): boolean =>
@@ -102,9 +119,8 @@ const canContain = (parent: Kind, child: Kind): boolean => {
 
 /**
  * The block parser: CommonMark's two-phase line algorithm (continue the open
- * blocks, then look for new ones), with the extra rules the parser Blok used
- * before (micromark) follows. Every walk over the open blocks is a loop, so
- * nesting depth never grows the call stack.
+ * blocks, then look for new ones), with micromark's extra rules. Every walk
+ * over the open blocks is a loop, so nesting depth never grows the call stack.
  */
 class BlockParser {
   private readonly doc: Block = makeBlock('document', null);
@@ -127,12 +143,16 @@ class BlockParser {
   private readonly breakBlockers = new Map<string, number>();
   /** The line's content once the open containers took their prefixes; a split tab leaves spaces. */
   private content = '';
+  /** The column `content` starts at. */
+  private contentColumn = 0;
   /** A paragraph or indented code was open with every container matched: lists may not start empty or past 1. */
   private interrupt = false;
   /** A container started on this line. */
   private newContainer = false;
   /** The line is an indented-code line that is blank and short of four columns. */
   private shortBlank = false;
+  /** A footnote start on this line was refused at the nesting cap: its text must not read as a link definition. */
+  private footnoteRefused = false;
 
   /**
    * @param options - syntax switches
@@ -189,6 +209,7 @@ class BlockParser {
     this.breakBlockers.clear();
     this.newContainer = false;
     this.shortBlank = false;
+    this.footnoteRefused = false;
 
     const container = this.continueOpenBlocks();
 
@@ -197,9 +218,8 @@ class BlockParser {
     }
 
     this.lastMatched = container;
-    this.content = this.partiallyConsumedTab
-      ? ' '.repeat(TAB_STOP - (this.column % TAB_STOP)) + this.line.slice(this.offset + 1)
-      : this.line.slice(this.offset);
+    this.content = this.restOfLine();
+    this.contentColumn = this.column;
     this.interrupt = container.kind === 'paragraph'
       || (this.oldTip.kind === 'code' && !this.oldTip.fenced && container === this.oldTip.parent);
 
@@ -292,7 +312,7 @@ class BlockParser {
    */
   private addRest(container: Block): void {
     if (this.tip !== this.lastMatched && !this.blank && this.tip.kind === 'paragraph' && this.lastMatched === container) {
-      this.addParagraphLine(this.tip, this.content);
+      this.addParagraphLine(this.tip, this.content, this.contentColumn);
 
       return;
     }
@@ -330,17 +350,16 @@ class BlockParser {
     }
 
     if (container.kind === 'paragraph') {
-      this.addParagraphLine(container, this.content);
+      this.addParagraphLine(container, this.content, this.contentColumn);
 
       return;
     }
 
     const paragraph = this.addChild('paragraph');
 
-    // The old parser tried this lazy line as a row of the table before it and
-    // never as a table head.
+    // A lazy line after a table can never be a table head.
     paragraph.noHead = afterTable;
-    this.addParagraphLine(paragraph, this.line.slice(this.nextNonspace));
+    this.addParagraphLine(paragraph, this.line.slice(this.nextNonspace), this.nextNonspaceColumn);
   }
 
   /**
@@ -412,7 +431,7 @@ class BlockParser {
     }
 
     this.advanceOffset(item.size, true);
-    // Indentation left over before an item's first content hides a task box from the old parser.
+    // Indentation left over before an item's first content rules out a task box.
     Object.assign(item, { noTask: item.noTask || (firstContent && this.nextNonspaceColumn > this.column) });
 
     return Continue.Matched;
@@ -421,8 +440,8 @@ class BlockParser {
   /**
    * A footnote definition continues on blank lines and lines indented by
    * four. Inside another footnote that just took four columns, a line with no
-   * indentation left continues it too: the old parser found the outer
-   * footnote's indent and took it for its own.
+   * indentation left continues it too: the outer footnote's indent counts
+   * for the inner one.
    * @param footnote - the footnote block
    */
   private continueFootnote(footnote: Block): Continue {
@@ -499,9 +518,12 @@ class BlockParser {
     return Start.None;
   }
 
-  /** `>` starts a block quote. */
-  private startBlockquote(): Start {
-    if (this.indented || this.line[this.nextNonspace] !== '>') {
+  /**
+   * `>` starts a block quote.
+   * @param container - the block it would go into
+   */
+  private startBlockquote(container: Block): Start {
+    if (this.indented || this.line[this.nextNonspace] !== '>' || !fitsUnderCap(container, 1)) {
       return Start.None;
     }
 
@@ -512,11 +534,20 @@ class BlockParser {
     return Start.Container;
   }
 
-  /** `[^label]:` starts a GFM footnote definition. */
-  private startFootnote(): Start {
+  /**
+   * `[^label]:` starts a GFM footnote definition.
+   * @param container - the block it would go into
+   */
+  private startFootnote(container: Block): Start {
     const found = this.options.gfm && !this.indented ? scanFootnoteLabel(this.line, this.nextNonspace) : null;
 
     if (found === null) {
+      return Start.None;
+    }
+
+    if (!fitsUnderCap(container, 1)) {
+      this.footnoteRefused = true;
+
       return Start.None;
     }
 
@@ -600,8 +631,8 @@ class BlockParser {
     }
 
     if (kind === 7 && this.tip.kind === 'paragraph' && this.isLazy() && this.ending !== '') {
-      // The old parser decides this interruption only on the next line, and
-      // by then it has placed the line inside the open containers.
+      // This interruption is decided only on the next line, by when the line
+      // already sits inside the open containers.
       this.finalize(this.tip);
       this.lastMatched = this.tip;
       this.oldTip = this.tip;
@@ -630,7 +661,7 @@ class BlockParser {
       return Start.None;
     }
 
-    const { rest } = extractDefinitions(joinLines(container));
+    const { rest } = extractDefinitions(container);
 
     if (rest === '') {
       return Start.None;
@@ -667,6 +698,12 @@ class BlockParser {
       return Start.None;
     }
 
+    const sameList = container.kind === 'list' && container.marker === found.marker && container.ordered === found.ordered;
+
+    if (!fitsUnderCap(container, sameList ? 1 : 2)) {
+      return Start.None;
+    }
+
     if ((found.marker === '*' || found.marker === '-') && this.isThematicBreakHere()) {
       return Start.None;
     }
@@ -681,7 +718,7 @@ class BlockParser {
 
     this.closeUnmatched(true);
 
-    if (container.kind !== 'list' || container.marker !== found.marker || container.ordered !== found.ordered) {
+    if (!sameList) {
       const list = this.addChild('list');
 
       list.marker = found.marker;
@@ -740,7 +777,7 @@ class BlockParser {
     const head = lastLine.slice(skipSpaces(lastLine, 0));
     const cells = splitRow(head);
 
-    // An indented continuation line is plain paragraph text to the old parser, never a head row.
+    // An indented continuation line is plain paragraph text, never a head row.
     if (
       align === null || cells.length !== align.length || trimEnd(head) === '|' || leadingColumns(lastLine) >= TAB_STOP
       || (container.noHead && container.lines.length === 1)
@@ -750,6 +787,7 @@ class BlockParser {
 
     this.closeUnmatched();
     container.lines.pop();
+    container.columns.pop();
 
     const headEnding = container.endings.pop() ?? '';
 
@@ -759,8 +797,8 @@ class BlockParser {
       this.finalize(container);
     }
 
-    // Once the table has ended the paragraph, the old parser reads the head
-    // line afresh, and an HTML tag line that could not interrupt now starts HTML.
+    // Once the table has ended the paragraph, the head line is read afresh:
+    // an HTML tag line that could not interrupt now starts HTML.
     if (htmlBlockStart(head, 0, false) === 7) {
       const html = this.addChild('html');
 
@@ -789,7 +827,7 @@ class BlockParser {
 
     this.advanceOffset(TAB_STOP, true);
     this.closeUnmatched();
-    // Code begun on a lazy line ends with it: the old parser checks laziness before the line ending.
+    // Code begun on a lazy line ends with it: laziness is checked before the line ending.
     this.addChild('code').closed = lazy;
 
     return Start.Leaf;
@@ -816,6 +854,7 @@ class BlockParser {
 
     const block = makeBlock(kind, this.tip);
 
+    block.nesting = this.tip.nesting + (isContainer(kind) ? 1 : 0);
     this.tip.children.push(block);
     this.tip = block;
 
@@ -853,19 +892,19 @@ class BlockParser {
     }
   }
 
+  /** The line from the current offset. A tab cut by a container prefix leaves its remaining columns as spaces. */
+  private restOfLine(): string {
+    return this.partiallyConsumedTab
+      ? ' '.repeat(TAB_STOP - (this.column % TAB_STOP)) + this.line.slice(this.offset + 1)
+      : this.line.slice(this.offset);
+  }
+
   /**
-   * Add the line from the current offset to a code, HTML or math block. A
-   * tab cut by a container prefix leaves its remaining columns as spaces.
+   * Add the rest of the line to a code, HTML or math block.
    * @param block - the leaf
    */
   private addLine(block: Block): void {
-    if (this.partiallyConsumedTab) {
-      this.offset++;
-      block.lines.push(' '.repeat(TAB_STOP - (this.column % TAB_STOP)) + this.line.slice(this.offset));
-    } else {
-      block.lines.push(this.line.slice(this.offset));
-    }
-
+    block.lines.push(this.restOfLine());
     block.endings.push(this.ending);
   }
 
@@ -874,10 +913,16 @@ class BlockParser {
    * which a multi-line definition label keeps.
    * @param paragraph - the paragraph
    * @param text - the line's content
+   * @param column - the column it starts at
    */
-  private addParagraphLine(paragraph: Block, text: string): void {
+  private addParagraphLine(paragraph: Block, text: string, column: number): void {
+    if (this.footnoteRefused) {
+      Object.assign(paragraph, { definitionLines: Math.min(paragraph.definitionLines, paragraph.lines.length) });
+    }
+
     paragraph.lines.push(text);
     paragraph.endings.push(this.ending);
+    paragraph.columns.push(column);
   }
 
   /**

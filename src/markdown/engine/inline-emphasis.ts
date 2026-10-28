@@ -2,8 +2,8 @@ import type { DelimItem, Item, SpanType } from './inline-items';
 
 /**
  * Pairs `*`/`_` runs into emphasis and strong, and `~` runs into delete,
- * after the scan. The two kinds run as separate passes, as the old parser
- * ran them: the kind used first in the leaf goes first, and a span one pass
+ * after the scan. The two kinds run as separate passes: the kind used
+ * first in the leaf goes first, and a span one pass
  * makes confines the other pass, so spans never cross. Inside a link,
  * strikethrough goes first.
  *
@@ -65,7 +65,7 @@ class RunList {
 /**
  * Rule of 3: when either run could both open and close, a pair whose sizes
  * add up to a multiple of 3 is refused unless both are. Remaining sizes
- * count, not sizes as written, as before.
+ * count, not sizes as written.
  * @param opener - candidate opener
  * @param closer - the closer
  */

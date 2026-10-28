@@ -6,19 +6,24 @@ import { NextIndex, scanHtml } from './inline-html';
 import type { BracketItem, Item, LinkTarget } from './inline-items';
 import { canPrecedeWww, isEmailAtext, LiteralScanner, linkLiteralsInText } from './inline-literal';
 import { isInlineMath } from './inline-math';
+import { lineEndingLength, RunIndex, scanAutolink, stripSpanPadding } from './inline-scan';
+import { scanLinkDestination, scanLinkLabel, scanLinkTitle } from './link-parts';
 import {
+  decodeString,
   isAsciiAlpha,
+  isAsciiPunctuation,
   isLineEnding,
   isSpaceOrLineEnding,
   isSpaceOrTab,
-  lineEndingLength,
-  RunIndex,
-  scanAutolink,
+  isUnicodePunctuation,
+  isUnicodeWhitespace,
+  MAX_LABEL,
+  normalizeIdentifier,
+  runLength,
   scanCharacterReference,
-  stripSpanPadding,
-} from './inline-scan';
-import { scanLinkDestination, scanLinkLabel, scanLinkTitle } from './link-parts';
-import { decodeString, isAsciiPunctuation, isUnicodePunctuation, isUnicodeWhitespace, normalizeIdentifier } from './text';
+  skipWhitespace,
+  TAB_STOP,
+} from './text';
 
 export interface InlineContext {
   /** Link definition identifiers a reference may resolve to. */
@@ -29,6 +34,8 @@ export interface InlineContext {
   math: boolean;
   /** The leaf is a table cell: `\|` in code turns into `|`. */
   inTable?: boolean;
+  /** Start column of later lines, by index in the leaf's text; a missing line starts at a tab stop. */
+  lineColumns?: ReadonlyMap<number, number>;
 }
 
 type CharClass = 'whitespace' | 'punctuation' | 'other';
@@ -51,37 +58,6 @@ const MAX_PAREN_DEPTH = 32;
 
 /** A label with more visible characters than this cannot match a definition. */
 const MAX_LABEL_VISIBLE = 4000;
-
-/**
- * Length of the run of `char` at `pos`.
- * @param src - source text
- * @param pos - first index
- * @param char - the run character
- */
-const runLength = (src: string, pos: number, char: string): number => {
-  const cursor = { at: pos };
-
-  while (src[cursor.at] === char) {
-    cursor.at++;
-  }
-
-  return cursor.at - pos;
-};
-
-/**
- * Skip spaces, tabs and line endings.
- * @param src - source text
- * @param pos - first index
- */
-const skipWhitespace = (src: string, pos: number): number => {
-  const cursor = { at: pos };
-
-  while (isSpaceOrLineEnding(src[cursor.at])) {
-    cursor.at++;
-  }
-
-  return cursor.at;
-};
 
 interface Resolved {
   target: LinkTarget;
@@ -354,7 +330,7 @@ class InlineScanner {
       return;
     }
 
-    // The guard reads line endings and tabs as spaces, as before.
+    // The guard reads line endings and tabs as spaces.
     if (size === 1 && !isInlineMath(content.replace(/\r\n|[\t\n\r]/g, ' '))) {
       this.text('$');
       this.pos++;
@@ -376,21 +352,27 @@ class InlineScanner {
     const before = classify(previous);
     const after = classify(following);
     // Another delimiter character next to the run (`*`, `_`, and `~` in GFM)
-    // loosens flanking, as the old parser did.
+    // loosens flanking.
     const open = after === 'other' || (after === 'punctuation' && before !== 'other') || this.isMarker(following);
     const close = before === 'other' || (before === 'punctuation' && after !== 'other') || this.isMarker(previous);
 
-    this.items.push({
-      kind: 'delim',
-      char,
-      size,
-      rest: size,
-      canOpen: char === '*' ? open : open && (before !== 'other' || !close),
-      canClose: char === '*' ? close : close && (after !== 'other' || !open),
-      opens: [],
-      closes: [],
-    });
+    // `_` inside a word neither opens nor closes.
+    const canOpen = char === '*' ? open : open && (before !== 'other' || !close);
+    const canClose = char === '*' ? close : close && (after !== 'other' || !open);
+
+    this.delimiter(char, size, canOpen, canClose);
     this.firstKind ??= 'attention';
+  }
+
+  /**
+   * Push a delimiter run and step past it.
+   * @param char - `*`, `_` or `~`
+   * @param size - run length
+   * @param canOpen - it may open a span
+   * @param canClose - it may close a span
+   */
+  private delimiter(char: string, size: number, canOpen: boolean, canClose: boolean): void {
+    this.items.push({ kind: 'delim', char, size, rest: size, canOpen, canClose, opens: [], closes: [] });
     this.pos += size;
   }
 
@@ -417,18 +399,11 @@ class InlineScanner {
     const before = classify(src[this.pos - 1]);
     const after = classify(src[this.pos + size]);
 
-    this.items.push({
-      kind: 'delim',
-      char: '~',
-      size,
-      rest: size,
-      canOpen: after === 'other' || (after === 'punctuation' && before !== 'other'),
-      canClose: before === 'other' || (before === 'punctuation' && after !== 'other'),
-      opens: [],
-      closes: [],
-    });
+    const canOpen = after === 'other' || (after === 'punctuation' && before !== 'other');
+    const canClose = before === 'other' || (before === 'punctuation' && after !== 'other');
+
+    this.delimiter('~', size, canOpen, canClose);
     this.firstKind ??= 'strike';
-    this.pos += size;
   }
 
   /** `<`: autolink, raw HTML, or text. */
@@ -451,7 +426,11 @@ class InlineScanner {
       return;
     }
 
-    this.node({ type: 'html', value: this.src.slice(this.pos, end).replace(/(\r\n|\r|\n)([\t ]*)/g, (_, eol: string, indent: string) => eol + dropColumns(indent, 3)) });
+    const start = this.pos;
+    const value = this.src.slice(start, end).replace(/(\r\n|\r|\n)([\t ]*)/g, (_, eol: string, indent: string, at: number) =>
+      eol + dropColumns(indent, 3, this.context.lineColumns?.get(start + at + eol.length) ?? 0));
+
+    this.node({ type: 'html', value });
     this.pos = end;
   }
 
@@ -464,7 +443,7 @@ class InlineScanner {
 
     this.lastLabel = this.items.length;
     this.brackets.push(this.items.length);
-    this.items.push({ kind: 'bracket', image, contentStart: this.pos + width, active: true, close: -1 });
+    this.items.push({ kind: 'bracket', image, contentStart: this.pos + width });
     this.pos += width;
   }
 
@@ -476,7 +455,7 @@ class InlineScanner {
     for (;;) {
       const char = src[cursor.at];
 
-      if (cursor.size > 999 || char === undefined || char === '[' || isSpaceOrLineEnding(char) || (char === ']' && cursor.size === 0)) {
+      if (cursor.size > MAX_LABEL || char === undefined || char === '[' || isSpaceOrLineEnding(char) || (char === ']' && cursor.size === 0)) {
         return false;
       }
 
@@ -535,7 +514,6 @@ class InlineScanner {
     // A link deactivates every link bracket below it: links do not nest.
     this.linkFloor = opener.image ? Math.min(this.linkFloor, this.brackets.length) : this.brackets.length;
     opener.target = resolved.target;
-    opener.close = this.items.length;
     this.lastLabel = this.items.length;
     this.items.push({ kind: 'close' });
     this.pos = resolved.end;
@@ -593,10 +571,10 @@ class InlineScanner {
     const raw = src.slice(opener.contentStart, this.pos);
     const defined = this.isDefined(opener.contentStart, this.pos);
     const after = this.pos + 1;
-    const reference = (identifierSource: string, label: string, referenceType: 'full' | 'collapsed' | 'shortcut', end: number): Resolved => ({
+    const reference = (label: string, referenceType: 'full' | 'collapsed' | 'shortcut', end: number): Resolved => ({
       target: {
         type: opener.image ? 'imageReference' : 'linkReference',
-        identifier: normalizeIdentifier(identifierSource),
+        identifier: normalizeIdentifier(label),
         label: decodeString(label),
         referenceType,
       },
@@ -615,17 +593,17 @@ class InlineScanner {
       const label = scanLinkLabel(src, after);
 
       if (label !== null && this.isDefined(after + 1, label.end - 1)) {
-        return reference(label.value, label.value, 'full', label.end);
+        return reference(label.value, 'full', label.end);
       }
 
       if (!defined || src[after + 1] !== ']') {
         return null;
       }
 
-      return reference(raw, raw, 'collapsed', after + 2);
+      return reference(raw, 'collapsed', after + 2);
     }
 
-    return defined ? reference(raw, raw, 'shortcut', after) : null;
+    return defined ? reference(raw, 'shortcut', after) : null;
   }
 
   /**
@@ -661,8 +639,7 @@ class InlineScanner {
 
     return {
       url: decodeString(destination.value),
-      // Indents of the title's continuation lines are not part of it.
-      title: title === undefined || title.value === '' ? null : decodeString(title.value.replace(/(\r\n|\r|\n)[\t ]+/g, '$1')),
+      title: title === undefined || title.value === '' ? null : decodeString(title.value),
       end: end + 1,
     };
   }
@@ -710,15 +687,16 @@ const trailingStart = (src: string, end: number): number => {
 
 /**
  * An indent with its first `limit` columns removed. A tab cut in two leaves
- * its remaining columns as spaces. Lines are taken to start at column 0.
+ * its remaining columns as spaces.
  * @param indent - spaces and tabs
  * @param limit - columns to drop
+ * @param column - the column the indent starts at, which sets each tab's width
  */
-const dropColumns = (indent: string, limit: number): string => {
-  const state = { column: 0, dropped: 0, rest: '' };
+const dropColumns = (indent: string, limit: number, column: number): string => {
+  const state = { column, dropped: 0, rest: '' };
 
   for (const char of indent) {
-    const width = char === '\t' ? 4 - (state.column % 4) : 1;
+    const width = char === '\t' ? TAB_STOP - (state.column % TAB_STOP) : 1;
     const take = Math.min(width, limit - state.dropped);
 
     if (take <= 0) {
@@ -758,8 +736,8 @@ export const parseInline = (raw: string, context: InlineContext): PhrasingConten
     return [];
   }
 
-  // NUL reads as U+FFFD everywhere, as in the old parser's preprocessing.
-  const children = new InlineScanner(raw.replaceAll('\0', '\uFFFD'), context).parse();
+  // NUL is already U+FFFD: the block parser replaced it in the whole source.
+  const children = new InlineScanner(raw, context).parse();
 
   return context.gfm ? linkLiteralsInText(children) : children;
 };

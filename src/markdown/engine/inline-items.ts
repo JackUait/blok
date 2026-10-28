@@ -43,11 +43,7 @@ export interface BracketItem {
   image: boolean;
   /** Source index just past the bracket. */
   contentStart: number;
-  /** Cleared when a link before it closes: links do not nest. */
-  active: boolean;
   target?: LinkTarget;
-  /** Index of the matching close item, once there is one. */
-  close: number;
 }
 
 /** The end of a link or image: `](…)`, `][…]`, `][]` or `]`. */

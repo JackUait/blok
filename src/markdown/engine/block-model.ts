@@ -12,11 +12,17 @@ export interface Block {
   kind: Kind;
   parent: Block | null;
   children: Block[];
+  /** Containers this block is in, counting itself when it is one. */
+  nesting: number;
   open: boolean;
   /** Content lines of a paragraph, code, HTML or math block. */
   lines: string[];
   /** The line ending after each line in `lines` ('' at the end of input). */
   endings: string[];
+  /** Paragraph: the column each line in `lines` starts at, where its tabs are measured from. */
+  columns: number[];
+  /** Paragraph: link definitions end before this line; later lines began as a footnote refused at the nesting cap. */
+  definitionLines: number;
   /** List and item: bullet character, or `.`/`)` for ordered. */
   marker: string;
   ordered: boolean;
@@ -45,7 +51,7 @@ export interface Block {
   depth: number;
   /** Heading: its content. Setext headings also carry `lines`. */
   raw: string;
-  /** Heading made from a paragraph: the definitions that preceded it. */
+  /** Heading: made from a paragraph by an underline, so `lines` holds its text and any definitions before it. */
   setext: boolean;
   /** Paragraph: its first line cannot be a table head. */
   noHead: boolean;
@@ -64,9 +70,12 @@ export const makeBlock = (kind: Kind, parent: Block | null): Block => ({
   kind,
   parent,
   children: [],
+  nesting: 0,
   open: true,
   lines: [],
   endings: [],
+  columns: [],
+  definitionLines: Number.POSITIVE_INFINITY,
   marker: '',
   ordered: false,
   start: 0,

@@ -172,7 +172,6 @@ function renderMathNode(node: MathNode): Element {
 /** Render the bounded OMML model as browser-native Presentation MathML. */
 export function renderMathFormula(formula: MathFormula): HTMLElement {
   const wrapper = document.createElement('span');
-  wrapper.className = 'pptx-math';
   wrapper.style.display = 'inline-block';
   wrapper.style.verticalAlign = 'middle';
   wrapper.style.whiteSpace = 'nowrap';

@@ -16,7 +16,7 @@ import { DEFAULT_ZIP_LIMITS, readZip } from '../../../../../src/tools/file/zip/r
 import type { ZipArchive } from '../../../../../src/tools/file/zip/read-zip';
 import { ZipError } from '../../../../../src/tools/file/zip/zip-error';
 import { buildZip, zip64Extra } from './zip-builder';
-import { RECOMMENDED_ZIP_LIMITS } from '@aiden0z/pptx-renderer';
+import { RECOMMENDED_ZIP_LIMITS } from '../../../../../src/tools/file/pptx/parser/ZipParser';
 
 const ROOT = resolve(__dirname, '../../../../..');
 const fixture = (rel: string): Uint8Array => new Uint8Array(readFileSync(resolve(__dirname, 'fixtures/jszip', rel)));
@@ -485,7 +485,7 @@ describe('readZip — limits are checked before any inflate', () => {
     expect(DEFAULT_ZIP_LIMITS).toEqual({ maxEntries: 65535, maxEntryBytes: 512 * MiB, maxTotalBytes: 1024 * MiB });
   });
 
-  it('is never stricter than pptx-renderer, which still applies its own limits', () => {
+  it('is never stricter than the pptx engine, which applies its own limits', () => {
     expect(RECOMMENDED_ZIP_LIMITS.maxEntries).toBeLessThanOrEqual(DEFAULT_ZIP_LIMITS.maxEntries);
     expect(RECOMMENDED_ZIP_LIMITS.maxEntryUncompressedBytes).toBeLessThanOrEqual(DEFAULT_ZIP_LIMITS.maxEntryBytes);
     expect(RECOMMENDED_ZIP_LIMITS.maxTotalUncompressedBytes).toBeLessThanOrEqual(DEFAULT_ZIP_LIMITS.maxTotalBytes);

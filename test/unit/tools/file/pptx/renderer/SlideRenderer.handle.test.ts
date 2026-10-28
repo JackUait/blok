@@ -83,13 +83,12 @@ describe('SlideHandle lifecycle', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns a SlideHandle with element, dispose, and Symbol.dispose', () => {
+  it('returns a SlideHandle with element and dispose', () => {
     const pres = makeMinimalPres();
     const handle = renderSlide(pres, makeSlide());
 
     expect(handle.element).toBeInstanceOf(HTMLElement);
     expect(typeof handle.dispose).toBe('function');
-    expect(typeof handle[Symbol.dispose]).toBe('function');
   });
 
   it('standalone mode: dispose() revokes blob URLs from its own cache', () => {
@@ -132,7 +131,7 @@ describe('SlideHandle lifecycle', () => {
     }).not.toThrow();
   });
 
-  it('Symbol.dispose performs same cleanup as dispose()', () => {
+  it('dispose revokes the picture URLs of a standalone slide', () => {
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     const pres = makeMinimalPres();
     pres.media.set('ppt/media/image1.png', new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
@@ -157,7 +156,7 @@ describe('SlideHandle lifecycle', () => {
     const src = handle.element.querySelector('img')?.getAttribute('src');
     expect(src).toMatch(/^blob:/);
 
-    handle[Symbol.dispose]();
+    handle.dispose();
     expect(revokeSpy).toHaveBeenCalledWith(src);
   });
 });

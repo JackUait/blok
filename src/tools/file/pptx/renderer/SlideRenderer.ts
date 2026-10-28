@@ -54,8 +54,6 @@ export interface SlideHandle {
   readonly ready: Promise<void>;
   /** Dispose slide-specific resources (charts inside this slide, blob URLs if standalone). */
   dispose(): void;
-  /** Support `using` declarations (TC39 Explicit Resource Management). */
-  [Symbol.dispose](): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -312,8 +310,5 @@ export function renderSlide(
     element: container,
     ready,
     dispose,
-    [Symbol.dispose](): void {
-      dispose();
-    },
   };
 }

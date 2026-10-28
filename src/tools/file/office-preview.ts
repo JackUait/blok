@@ -128,7 +128,12 @@ export async function renderXlsxInto(buf: ArrayBuffer, container: HTMLElement): 
 }
 
 /** Render into `container`; resolves with a function that frees what the render holds. */
-async function renderInto(buf: ArrayBuffer, container: HTMLElement, kind: OfficeKind): Promise<(() => void) | null> {
+async function renderInto(
+  buf: ArrayBuffer,
+  container: HTMLElement,
+  kind: OfficeKind,
+  isClosed: () => boolean,
+): Promise<(() => void) | null> {
   if (kind === 'docx') {
     const render = await loadDocxRenderer();
 
@@ -173,7 +178,7 @@ export async function fillOfficeBody(
   body.replaceChildren(container);
 
   try {
-    const release = await renderInto(result.buf, container, kind);
+    const release = await renderInto(result.buf, container, kind, isClosed);
     if (release !== null && isClosed()) {
       release();
     } else if (release !== null) {

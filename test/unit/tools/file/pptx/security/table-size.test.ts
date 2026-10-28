@@ -25,8 +25,8 @@ const table = (columns: number, rowCells: number[]): TableNodeData => ({
 const grid = (rows: number, cols: number): TableNodeData => table(cols, Array.from({ length: rows }, () => cols));
 
 const frameXml = (gridCols: number, rowCells: number[]): string => {
-  const cell = '<tc><txBody><bodyPr/><p><r><t>x</t></r></p></txBody></tc>';
-  const rows = rowCells.map((count) => `<tr h="100">${cell.repeat(count)}</tr>`).join('');
+  // Empty cells keep jsdom's XML parse fast; the count is what matters.
+  const rows = rowCells.map((count) => `<tr h="100">${'<tc/>'.repeat(count)}</tr>`).join('');
 
   return '<graphicFrame><xfrm><off x="0" y="0"/><ext cx="9144000" cy="6858000"/></xfrm>'
     + `<graphic><graphicData><tbl><tblPr/><tblGrid>${'<gridCol w="100"/>'.repeat(gridCols)}</tblGrid>${rows}</tbl></graphicData></graphic></graphicFrame>`;
@@ -62,8 +62,9 @@ describe('a pptx table with more cells than a slide can sensibly show', () => {
     expect(renderTable(node, createMockRenderContext()).querySelectorAll('td')).toHaveLength(0);
   });
 
-  it('does not parse the cells of a one-column grid whose row holds thousands of cells', () => {
-    const node = parseTableNode(xmlNode(frameXml(1, [10_001])));
+  it('does not parse the cells of a one-column grid whose rows hold far more cells', () => {
+    // 101 rows of 100 cells: the grid alone claims only 101 cells.
+    const node = parseTableNode(xmlNode(frameXml(1, Array.from({ length: 101 }, () => 100))));
 
     expect(cellCount(node)).toBe(0);
   });

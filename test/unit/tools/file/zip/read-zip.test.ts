@@ -332,6 +332,28 @@ describe('readZip — corrupt structures', () => {
     expectZipError(() => readZip(zip));
   });
 
+  it('rejects many records sharing one huge local name before decoding any name', () => {
+    const count = 2000;
+    const name = 'a/'.repeat(32767);
+    // One real local header; every other central record points back at it.
+    const attack = buildZip(Array.from({ length: count }, (_, i) => (
+      i === 0 ? { name, data: utf8('x') } : { name: '', localName: '', data: utf8('x'), localOffset: 0 }
+    )));
+    const legit = buildZip(Array.from({ length: count }, (_, i) => ({ name: `${i}`, data: utf8('x') })));
+    const time = (fn: () => void): number => {
+      const started = performance.now();
+
+      fn();
+
+      return performance.now() - started;
+    };
+    const legitMs = time(() => readZip(legit));
+    const attackMs = time(() => expectZipError(() => readZip(attack)));
+
+    // Decoding the shared name once per record costs seconds; a generous bound against our own legit read.
+    expect(attackMs).toBeLessThan(20 * legitMs + 100);
+  });
+
   it('rejects a stored entry whose sizes differ', () => {
     expectZipError(() => readZip(buildZip([{ name: 'a.txt', data: utf8('abc'), size: 5 }])));
   });

@@ -277,23 +277,35 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
   const { reader, records, offset } = readEnd(new Reader(data instanceof Uint8Array ? data : new Uint8Array(data)));
   const byName = new Map<string, ZipEntry>();
   const contents = new Map<ZipEntry, Stored>();
-  const regions: Array<{ start: number; end: number }> = [];
-
-  readCentral(reader, offset, records, limits).forEach((record) => {
+  const located = readCentral(reader, offset, records, limits).map((record) => {
     if (reader.u32(record.offset) !== SIG_LOCAL) {
       throw new ZipError('Corrupted zip: bad local header');
     }
-    // The local name wins: some Windows tools write backslashes only in the central one.
     const nameLength = reader.u16(record.offset + 26);
-    const rawName = utf8.decode(reader.slice(record.offset + 30, nameLength));
     const dataStart = record.offset + 30 + nameLength + reader.u16(record.offset + 28);
+
+    return { record, nameLength, end: dataStart + record.compressedSize, compressed: reader.slice(dataStart, record.compressedSize) };
+  });
+
+  // Overlapping entries (one region read by many records) make a CPU bomb; real zips never overlap.
+  // Checked before any name is decoded, so name work stays bounded by the file size.
+  const regions = located.map(({ record, end }) => ({ start: record.offset, end })).sort((a, b) => a.start - b.start);
+
+  regions.forEach((region, i) => {
+    const next = regions[i + 1];
+
+    if (next !== undefined && region.end > next.start) {
+      throw new ZipError('Corrupted zip: entries overlap');
+    }
+  });
+
+  located.forEach(({ record, nameLength, compressed }) => {
+    // The local name wins: some Windows tools write backslashes only in the central one.
+    const rawName = utf8.decode(reader.slice(record.offset + 30, nameLength));
 
     if (record.method !== STORED && record.method !== DEFLATED) {
       throw new ZipError(`Corrupted zip: unknown compression method ${record.method}`);
     }
-    const compressed = reader.slice(dataStart, record.compressedSize);
-
-    regions.push({ start: record.offset, end: dataStart + record.compressedSize });
     const unixDir = record.madeBy === MADE_BY_UNIX && ((record.externalAttr >>> 16) & 0x4000) !== 0;
     const dir = (record.externalAttr & 0x10) !== 0 || unixDir || rawName.endsWith('/');
     const resolved = resolveName(rawName);
@@ -311,15 +323,6 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
     }
     byName.set(name, entry);
     contents.set(entry, { method: record.method, data: compressed });
-  });
-
-  // Overlapping entries (one compressed region read by many records) make a CPU bomb; real zips never overlap.
-  regions.sort((a, b) => a.start - b.start).forEach((region, i) => {
-    const next = regions[i + 1];
-
-    if (next !== undefined && region.end > next.start) {
-      throw new ZipError('Corrupted zip: entries overlap');
-    }
   });
 
   return {

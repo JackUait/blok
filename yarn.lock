@@ -12,9 +12,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aiden0z/pptx-renderer@npm:1.3.0":
-  version: 1.3.0
-  resolution: "@aiden0z/pptx-renderer@npm:1.3.0"
+"@aiden0z/pptx-renderer@npm:1.4.0":
+  version: 1.4.0
+  resolution: "@aiden0z/pptx-renderer@npm:1.4.0"
   dependencies:
     echarts: "npm:^6.0.0"
     jszip: "npm:^3.10.1"
@@ -24,7 +24,7 @@ __metadata:
   peerDependenciesMeta:
     pdfjs-dist:
       optional: true
-  checksum: 10c0/0febd90f622e9c340ecd7a65134ad62e51e89571a16dd796edb9b79cb43e684360e37da187fe49f6ea01edd4ab92cbce91b27bd39ced2fb6fcb8d4f82cd9afd1
+  checksum: 10c0/df4582f097042d62c7adbe450cdb8218d2626d158043632d3c83fed3637deebe58b987550539de10351e8bdec166abd2f1275d637a445d736b76f404a03303f5
   languageName: node
   linkType: hard
 
@@ -1246,7 +1246,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bloklabs/core@workspace:."
   dependencies:
-    "@aiden0z/pptx-renderer": "npm:1.3.0"
+    "@aiden0z/pptx-renderer": "npm:1.4.0"
     "@analogjs/vite-plugin-angular": "npm:2.9.2"
     "@angular/build": "npm:22.2.4"
     "@angular/common": "npm:22.2.3"

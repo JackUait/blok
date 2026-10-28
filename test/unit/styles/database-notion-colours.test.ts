@@ -667,6 +667,15 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-name]')).toContain('text-overflow: ellipsis');
   });
 
+  it('notion-spec-2 §19.18: the hover card is a white menu surface with 6px corners and the menu shadow', () => {
+    const CARD = '[data-blok-database-place-card]';
+
+    expect(ruleBody(CARD)).toContain('background-color: var(--blok-database-popover-bg)');
+    expect(ruleBody(CARD)).toContain('border-radius: var(--blok-radius-control)');
+    expect(ruleBody(CARD)).toContain('box-shadow: var(--blok-database-popover-shadow)');
+    expect(themed('--blok-database-popover-shadow').light).toBe('rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px');
+  });
+
   it('the × takes Notion\'s icon grey: 142,139,134 light, 173,169,163 dark', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-table-header-icon)');
     expect(themed('--blok-database-table-header-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });

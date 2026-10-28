@@ -1025,6 +1025,32 @@ describe('Tooltip utility', () => {
       expect(content?.className).toMatch(/text-tooltip-font/);
     });
 
+    it('places the bubble against the anchor it is given, not the trigger', () => {
+      const { target, wrapper } = setUp();
+      const cell = createTargetElement({ left: 192, top: 292, width: 200, height: 48 });
+
+      showReadout(target, 'x', { placement: 'bottom', align: 'start', gap: 6, anchor: () => cell });
+
+      // left = the anchor's left; top = 292 + 48 + 6
+      expect(placed(wrapper)).toEqual({ left: '192px', top: '346px' });
+    });
+
+    it('a surface hint drops the bubble fill and the hint ink, and the next plain hint brings them back', () => {
+      const { target, wrapper } = setUp();
+      const content = document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"]');
+
+      showReadout(target, 'x', { placement: 'bottom', surface: true });
+
+      expect(wrapper.hasAttribute('data-blok-tooltip-surface')).toBe(true);
+      expect(wrapper.className).toMatch(/data-\[blok-tooltip-surface\]:bg-transparent/);
+      expect(content?.className).not.toMatch(/text-tooltip-font|px-|py-/);
+
+      showReadout(target, 'x', { placement: 'bottom' });
+
+      expect(wrapper.hasAttribute('data-blok-tooltip-surface')).toBe(false);
+      expect(content?.className).toMatch(/text-tooltip-font/);
+    });
+
     it('the next plain hint is centred, 10px off, with the default padding again', () => {
       const { target, wrapper } = setUp();
       const content = document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"]');

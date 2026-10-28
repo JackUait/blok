@@ -17102,8 +17102,16 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-1);
+  box-sizing: border-box;
   inline-size: 284px;
   max-inline-size: 100%;
+  padding: var(--blok-space-1-25) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-popover-bg);
+  box-shadow: var(--blok-database-popover-shadow);
+  color: var(--blok-database-ink);
+  font-size: 12px;
+  line-height: 16.8px;
   text-align: start;
 }
 

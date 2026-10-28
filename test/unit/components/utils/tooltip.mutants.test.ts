@@ -149,6 +149,8 @@ describe('Tooltip utility — mutation coverage', () => {
         'left-0',
         'bg-tooltip-bg',
         'opacity-0',
+        'data-[blok-tooltip-surface]:bg-transparent',
+        'data-[blok-tooltip-surface]:shadow-none',
         'select-none',
         'rounded-(--blok-radius-control)',
         'shadow-tooltip',

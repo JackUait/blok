@@ -41,6 +41,21 @@ describe('place cell (research/20 §1d)', () => {
     expect(card?.querySelector('[data-blok-database-place-card-map]')).toBeNull();
   });
 
+  it('notion-spec-2 §19.18: the card is its own surface, its left edge on the cell, 6px below the row, after the hint delay', () => {
+    const tableCell = document.createElement('div');
+    const cell = renderCellValue(makeProperty('place'), EIFFEL, makeEditorContext());
+
+    tableCell.setAttribute('data-blok-database-table-cell', '');
+    tableCell.appendChild(cell);
+    const options = vi.mocked(onHover).mock.calls.find(([element]) => element === cell)?.[2];
+
+    expect(options).toMatchObject({ placement: 'bottom', align: 'start', gap: 6, surface: true });
+    expect(options?.delay).toBeUndefined();
+    expect(options?.anchor?.(cell)).toBe(tableCell);
+    // Off a table (a card, the row page) the value itself is the anchor.
+    expect(options?.anchor?.(document.createElement('span'))).toBeInstanceOf(HTMLSpanElement);
+  });
+
   it('the card draws the host mini-map only once it is on screen, and drops it when the card closes', () => {
     vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout'] });
     const destroy = vi.fn();

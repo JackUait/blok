@@ -361,7 +361,14 @@ const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext)
       state.hovered = false;
     });
   }
-  onHover(cell, card);
+  // notion-spec-2 §19.18: a white card, left edge on the table cell, 6px below the row. The delay stays Blok's hint delay.
+  onHover(cell, card, {
+    placement: 'bottom',
+    align: 'start',
+    gap: 6,
+    surface: true,
+    anchor: (trigger) => trigger.closest<HTMLElement>('[data-blok-database-table-cell]') ?? trigger,
+  });
 };
 
 /** A formula with no value: a muted mark, the reason as its label and its hover hint. */

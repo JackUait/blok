@@ -23,6 +23,10 @@ export interface HintOptions extends TooltipOptions {
   gap?: number;
   /** The content brings its own padding, alignment and line height. */
   bare?: boolean;
+  /** The content paints its own surface: the bubble drops its fill, shadow, padding and ink. */
+  surface?: boolean;
+  /** The element the bubble is placed against, read on each show. Defaults to the trigger. */
+  anchor?: (trigger: HTMLElement) => HTMLElement;
 }
 
 const DEFAULT_OFFSET = 10;
@@ -83,6 +87,7 @@ class Tooltip {
          */
         'fixed z-overlay top-0 left-0',
         'bg-tooltip-bg opacity-0',
+        'data-[blok-tooltip-surface]:bg-transparent data-[blok-tooltip-surface]:shadow-none',
         /**
          * Click-transparency is applied as an inline `pointer-events: none
          * !important` in prepare() — NOT as a `pointer-events-none` utility —
@@ -340,7 +345,10 @@ class Tooltip {
 
     this.nodes.content.innerHTML = '';
     // Set on every show: the singleton must not keep the last hint's layout.
-    this.nodes.content.className = (showingOptions.bare === true ? this.CSS.tooltipBareContent : [this.CSS.tooltipContent].flat()).join(' ');
+    this.nodes.content.className = showingOptions.surface === true
+      ? ''
+      : (showingOptions.bare === true ? this.CSS.tooltipBareContent : [this.CSS.tooltipContent].flat()).join(' ');
+    this.nodes.wrapper.toggleAttribute('data-blok-tooltip-surface', showingOptions.surface === true);
     this.nodes.content.appendChild(contentNode);
 
     /**
@@ -351,24 +359,25 @@ class Tooltip {
     // A flip moves the anchor; the bubble goes rather than float at the old spot.
     syncPortalDirection(this.nodes.wrapper, { source: element, onResync: () => this.hide() });
 
-    const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom', this.gapOf(showingOptions));
+    const anchor = showingOptions.anchor?.(element) ?? element;
+    const resolvedPlacement = this.resolvePlacement(anchor, showingOptions.placement ?? 'bottom', this.gapOf(showingOptions));
 
     switch (resolvedPlacement) {
       case 'top':
-        this.placeTop(element, showingOptions);
+        this.placeTop(anchor, showingOptions);
         break;
 
       case 'left':
-        this.placeLeft(element, showingOptions);
+        this.placeLeft(anchor, showingOptions);
         break;
 
       case 'right':
-        this.placeRight(element, showingOptions);
+        this.placeRight(anchor, showingOptions);
         break;
 
       case 'bottom':
       default:
-        this.placeBottom(element, showingOptions);
+        this.placeBottom(anchor, showingOptions);
         break;
     }
 

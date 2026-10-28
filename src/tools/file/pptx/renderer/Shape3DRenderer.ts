@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Bounded DrawingML static 3D renderer.
  *
@@ -372,7 +373,7 @@ export function applyStaticGroup3DPlane(
     plan.corners,
   );
   if (!transform) return false;
-  childLayer.dataset.pptxShape3dProjectedGroupPlane = plan.camera.kind;
+  childLayer.setAttribute('data-pptx-shape3d-projected-group-plane', plan.camera.kind);
   childLayer.style.transformOrigin = '0px 0px';
   childLayer.style.transform = transform;
   return true;
@@ -390,7 +391,7 @@ export function applyStaticShape3DTextPlane(
     plan.corners,
   );
   if (!transform) return false;
-  textContainer.dataset.pptxShape3dProjectedTextPlane = plan.camera.kind;
+  textContainer.setAttribute('data-pptx-shape3d-projected-text-plane', plan.camera.kind);
   textContainer.style.transformOrigin = '0px 0px';
   textContainer.style.transform = transform;
   return true;
@@ -408,7 +409,7 @@ export function applyStaticShape3DPicturePlane(
     plan.corners,
   );
   if (!transform) return false;
-  pictureStage.dataset.pptxShape3dProjectedPicturePlane = plan.camera.kind;
+  pictureStage.setAttribute('data-pptx-shape3d-projected-picture-plane', plan.camera.kind);
   pictureStage.style.transformOrigin = '0px 0px';
   pictureStage.style.transform = transform;
   return true;
@@ -1437,7 +1438,7 @@ function appendLightingImage(
   bounds: { width: number; height: number },
 ): void {
   const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-  image.dataset.pptxShape3dLighting = 'distance-field';
+  image.setAttribute('data-pptx-shape3d-lighting', 'distance-field');
   image.setAttribute('x', '0');
   image.setAttribute('y', '0');
   image.setAttribute('width', String(bounds.width));
@@ -1629,9 +1630,9 @@ function appendCameraProjectedPlane(
   const ns = 'http://www.w3.org/2000/svg';
   const id = ++shape3dIdCounter;
   const group = document.createElementNS(ns, 'g');
-  group.dataset.pptxShape3dCamera = plan.camera.preset;
-  group.dataset.pptxShape3dCameraGeometry = plan.geometry;
-  if (plan.frontMaterial) group.dataset.pptxShape3dFrontMaterial = plan.frontMaterial;
+  group.setAttribute('data-pptx-shape3d-camera', plan.camera.preset);
+  group.setAttribute('data-pptx-shape3d-camera-geometry', plan.geometry);
+  if (plan.frontMaterial) group.setAttribute('data-pptx-shape3d-front-material', plan.frontMaterial);
   group.setAttribute('pointer-events', 'none');
 
   const projectedPath = document.createElementNS(ns, 'path');
@@ -1643,11 +1644,11 @@ function appendCameraProjectedPlane(
       plan.corners,
     );
     if (!projectedPathData) return undefined;
-    projectedPath.dataset.pptxShape3dProjectedCustomPlane = plan.camera.kind;
+    projectedPath.setAttribute('data-pptx-shape3d-projected-custom-plane', plan.camera.kind);
     projectedPath.setAttribute('d', projectedPathData);
     projectedPath.setAttribute('fill-rule', basePath.getAttribute('fill-rule') ?? 'evenodd');
   } else {
-    projectedPath.dataset.pptxShape3dProjectedPlane = plan.camera.kind;
+    projectedPath.setAttribute('data-pptx-shape3d-projected-plane', plan.camera.kind);
     projectedPath.setAttribute('d', cameraPlanePath(plan.corners));
   }
   projectedPath.setAttribute('stroke', 'none');
@@ -1657,7 +1658,7 @@ function appendCameraProjectedPlane(
     const gradientId = `shape3d-camera-gradient-${id}`;
     const gradient = document.createElementNS(ns, 'linearGradient');
     gradient.id = gradientId;
-    gradient.dataset.pptxShape3dCameraGradient = plan.camera.preset;
+    gradient.setAttribute('data-pptx-shape3d-camera-gradient', plan.camera.preset);
     gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
     gradient.setAttribute('color-interpolation', 'linearRGB');
     const yValues = plan.corners.map((point) => point.y);
@@ -1710,7 +1711,7 @@ export function appendStaticShape3DEffects(
   defs.appendChild(clipPath);
 
   const group = document.createElementNS(ns, 'g');
-  group.dataset.pptxShape3dBevel = 'orthographic-top-bevel';
+  group.setAttribute('data-pptx-shape3d-bevel', 'orthographic-top-bevel');
   group.setAttribute('clip-path', `url(#${clipId})`);
   group.setAttribute('pointer-events', 'none');
 
@@ -1720,7 +1721,7 @@ export function appendStaticShape3DEffects(
     faceSheen.setAttribute('fill', plan.faceColor);
     faceSheen.setAttribute('fill-rule', 'evenodd');
     faceSheen.setAttribute('stroke', 'none');
-    faceSheen.dataset.pptxShape3dSurface = 'sheen';
+    faceSheen.setAttribute('data-pptx-shape3d-surface', 'sheen');
     group.appendChild(faceSheen);
   }
 
@@ -1740,7 +1741,7 @@ export function appendStaticShape3DEffects(
 
     const gradient = document.createElementNS(ns, 'linearGradient');
     gradient.id = gradientId;
-    gradient.dataset.pptxShape3dFaceGradient = definition.face;
+    gradient.setAttribute('data-pptx-shape3d-face-gradient', definition.face);
     gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
     gradient.setAttribute('color-interpolation', 'linearRGB');
     for (const [name, value] of Object.entries(definition.gradient)) {
@@ -1760,7 +1761,7 @@ export function appendStaticShape3DEffects(
     defs.appendChild(faceClip);
 
     const facePath = document.createElementNS(ns, 'path');
-    facePath.dataset.pptxShape3dFace = definition.face;
+    facePath.setAttribute('data-pptx-shape3d-face', definition.face);
     facePath.setAttribute('d', pathD);
     facePath.setAttribute('fill', 'none');
     facePath.setAttribute('stroke', `url(#${gradientId})`);
@@ -1773,7 +1774,7 @@ export function appendStaticShape3DEffects(
 
   if (plan.contour) {
     const contour = document.createElementNS(ns, 'path');
-    contour.dataset.pptxShape3dContour = 'true';
+    contour.setAttribute('data-pptx-shape3d-contour', 'true');
     contour.setAttribute('d', pathD);
     contour.setAttribute('fill', 'none');
     contour.setAttribute('stroke', plan.contour.color);

@@ -1,11 +1,13 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Slide parser — converts a slide XML into a structured SlideData
  * with typed node objects for each shape on the slide.
  */
 
-import { parseXml, SafeXmlNode } from '../parser/XmlParser';
-import { RelEntry } from '../parser/RelParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
+import { parseXml } from '../parser/XmlParser';
+import type { RelEntry } from '../parser/RelParser';
 import { parseRenderableChildren, type RenderableNode } from './RenderableChild';
 import { parseOoxmlBool } from '../parser/booleans';
 import { parseColorMapOverride, type ColorMapOverrideMode } from './Layout';

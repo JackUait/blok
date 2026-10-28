@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Predefined (built-in) Office table styles.
  *
@@ -11,7 +12,8 @@
  * cross-verified against the Microsoft OOXML predefined style map.
  */
 
-import { SafeXmlNode, parseXml } from '../parser/XmlParser';
+import type { SafeXmlNode} from '../parser/XmlParser';
+import { parseXml } from '../parser/XmlParser';
 
 // ---------------------------------------------------------------------------
 // UUID → (styleName, accent) map — 74 entries across 11 style groups

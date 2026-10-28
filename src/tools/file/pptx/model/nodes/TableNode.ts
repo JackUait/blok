@@ -3,9 +3,11 @@
  * Table node parser — handles graphicFrame elements containing a:tbl.
  */
 
-import { SafeXmlNode } from '../../parser/XmlParser';
-import { BaseNodeData, parseBaseProps } from './BaseNode';
-import { TextBody, parseTextBody } from './ShapeNode';
+import type { SafeXmlNode } from '../../parser/XmlParser';
+import type { BaseNodeData} from './BaseNode';
+import { parseBaseProps } from './BaseNode';
+import type { TextBody} from './ShapeNode';
+import { parseTextBody } from './ShapeNode';
 import { emuToPx } from '../../parser/units';
 import { parseOoxmlBool } from '../../parser/booleans';
 

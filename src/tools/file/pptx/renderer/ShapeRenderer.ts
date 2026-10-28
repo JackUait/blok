@@ -1,10 +1,11 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Shape renderer — converts ShapeNodeData into positioned HTML/SVG elements.
  */
 
-import { ShapeNodeData, LineEndInfo, TextBody } from '../model/nodes/ShapeNode';
-import { RenderContext } from './RenderContext';
+import type { ShapeNodeData, LineEndInfo, TextBody } from '../model/nodes/ShapeNode';
+import type { RenderContext } from './RenderContext';
 import { parseOoxmlBool } from '../parser/booleans';
 import { isExternalTargetMode } from '../parser/RelParser';
 import { applyReflectionEffect } from './ReflectionRenderer';
@@ -128,11 +129,12 @@ import {
 import { applyShapeBackgroundFill } from './ShapeBackgroundFill';
 import { renderTextBody, resolveTextFields, type DrawingMLVerticalTextMode } from './TextRenderer';
 import { renderCustomGeometry } from '../shapes/customGeometry';
+import type {
+  PresetSubPath} from '../shapes/presets';
 import {
   getPresetShapePath,
   getActionButtonIconPath,
-  getMultiPathPreset,
-  PresetSubPath,
+  getMultiPathPreset
 } from '../shapes/presets';
 import {
   getOoxmlPresetTextRectangle,
@@ -140,7 +142,7 @@ import {
 } from '../shapes/ooxmlGeometryRuntime';
 import { emuToPx } from '../parser/units';
 import { applyTint, hexToRgb, rgbToHex } from '../utils/color';
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
@@ -1966,7 +1968,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
     lnRef?.exists() &&
     (lnRef.numAttr('idx') ?? 0) > 0 &&
     (ctx.theme.lineStyles?.length ?? 0) >= (lnRef.numAttr('idx') ?? 0)
-      ? ctx.theme.lineStyles![(lnRef.numAttr('idx') ?? 1) - 1]
+      ? ctx.theme.lineStyles[(lnRef.numAttr('idx') ?? 1) - 1]
       : undefined;
   let effectiveLine = hasExplicitLine ? node.line! : themeLineFromLnRef;
   if (lineIsNoFill) effectiveLine = undefined;
@@ -2103,7 +2105,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
         }
       }
 
-      const mainPathStrokeSuppressed = multiPaths && multiPaths[0]?.stroke === false;
+      const mainPathStrokeSuppressed = multiPaths && !(multiPaths[0]?.stroke);
       if (
         !isCircularArrow &&
         !mainPathStrokeSuppressed &&
@@ -2414,7 +2416,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
       // For multi-path presets where the first sub-path specifies stroke:false (e.g. callout1/2/3,
       // accentCallout1/2/3), suppress stroke on the main path element — the leader line and accent
       // bar are rendered as separate sub-path elements with their own stroke settings.
-      const mainPathStrokeSuppressed = multiPaths && multiPaths[0]?.stroke === false;
+      const mainPathStrokeSuppressed = multiPaths && !(multiPaths[0]?.stroke);
       let sharedGradientStrokePaint: { paint: string; width: number } | null = null;
       if (
         !isCircularArrow &&

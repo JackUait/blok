@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Typed observations for DrawingML `a:scene3d` and `a:sp3d` properties.
  *
@@ -6,7 +7,7 @@
  * Capability classification belongs to the renderer planner.
  */
 
-import { SafeXmlNode } from '../../parser/XmlParser';
+import type { SafeXmlNode } from '../../parser/XmlParser';
 import { angleToDeg, emuToPx, pctToDecimal } from '../../parser/units';
 
 /** Problems with the source data itself, independent of renderer capability. */

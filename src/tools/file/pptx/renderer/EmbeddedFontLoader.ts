@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 import { decompressMtx } from '../fonts/mtx';
 import type { EmbeddedFontFaceData, PresentationData } from '../model/Presentation';
 
@@ -250,8 +251,8 @@ export function useEmbeddedFonts(
         state.faces.set(key, loaded);
         state.totalBytes += loaded.byteLength;
         void loaded.ready.catch(() => {
-          state!.rejected.add(key);
-          releaseLoadedFace(state!, key, loaded!);
+          state.rejected.add(key);
+          releaseLoadedFace(state, key, loaded!);
         });
       } catch {
         state.rejected.add(key);
@@ -272,7 +273,7 @@ export function useEmbeddedFonts(
         loaded.references--;
         if (loaded.references > 0) continue;
         const release = (): void => {
-          if (loaded.references <= 0) releaseLoadedFace(state!, key, loaded);
+          if (loaded.references <= 0) releaseLoadedFace(state, key, loaded);
         };
         void loaded.ready.then(release, release);
       }

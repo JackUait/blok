@@ -1,10 +1,11 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Style resolver — converts OOXML color and fill nodes to CSS values.
  */
 
-import { SafeXmlNode } from '../parser/XmlParser';
-import { RenderContext } from './RenderContext';
+import type { SafeXmlNode } from '../parser/XmlParser';
+import type { RenderContext } from './RenderContext';
 import {
   applyColorModifiers,
   presetColorToHex,

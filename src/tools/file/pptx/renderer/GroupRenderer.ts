@@ -1,17 +1,18 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Group renderer — renders grouped shapes with coordinate space remapping.
  */
 
 import { composeTransforms, nodeTransform } from './coordinateTransform';
-import { GroupNodeData } from '../model/nodes/GroupNode';
-import { RenderContext } from './RenderContext';
-import { BaseNodeData } from '../model/nodes/BaseNode';
+import type { GroupNodeData } from '../model/nodes/GroupNode';
+import type { RenderContext } from './RenderContext';
+import type { BaseNodeData } from '../model/nodes/BaseNode';
 import type { ShapeNodeData } from '../model/nodes/ShapeNode';
 import { parseRenderableChild } from '../model/RenderableChild';
 import { resolveNodePlaceholderInheritance } from '../model/Presentation';
 import { emuToPx } from '../parser/units';
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import { hexToRgb } from '../utils/color';
 import { resolveColor } from './StyleResolver';
 import { applyReflectionEffect } from './ReflectionRenderer';
@@ -296,7 +297,7 @@ export function renderGroup(
     childLayer.style.height = `${groupH}px`;
     if (applyStaticGroup3DPlane(childLayer, group3dPlan)) {
       const contentLayer = document.createElement('div');
-      contentLayer.dataset.pptxShape3dGroupContent = 'true';
+      contentLayer.setAttribute('data-pptx-shape3d-group-content', 'true');
       contentLayer.style.position = 'absolute';
       contentLayer.style.inset = '0';
       contentLayer.style.filter = `brightness(${group3dPlan.lighting.brightness})`;
@@ -305,10 +306,10 @@ export function renderGroup(
       childHost = contentLayer;
       projectedGroupLayer = childLayer;
     } else {
-      wrapper.dataset.pptxShape3dFallback = 'projection-out-of-range';
+      wrapper.setAttribute('data-pptx-shape3d-fallback', 'projection-out-of-range');
     }
   } else if (node.shape3d) {
-    wrapper.dataset.pptxShape3dFallback = group3dPlan.reason;
+    wrapper.setAttribute('data-pptx-shape3d-fallback', group3dPlan.reason);
   }
   childCtx.groupAncestorHas3dScene = Boolean(ctx.groupAncestorHas3dScene || node.shape3d?.scene);
 
@@ -464,7 +465,7 @@ export function renderGroup(
 
   if (projectedGroupLayer && group3dPlan.mode === 'camera-projected-group-plane') {
     const lighting = document.createElement('div');
-    lighting.dataset.pptxShape3dGroupLighting = 'threePt:t';
+    lighting.setAttribute('data-pptx-shape3d-group-lighting', 'threePt:t');
     lighting.style.position = 'absolute';
     lighting.style.inset = '0';
     lighting.style.pointerEvents = 'none';

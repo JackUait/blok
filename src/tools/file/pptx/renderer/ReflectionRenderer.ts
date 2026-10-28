@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * DrawingML reflection rendering.
  *
@@ -9,7 +10,7 @@
  * vertical scale.
  */
 
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import { emuToPx } from '../parser/units';
 
 const MAX_ABSOLUTE_SCALE = 16;
@@ -100,7 +101,7 @@ function rewriteCloneIds(root: HTMLElement): void {
 
 function cloneVisualSource(wrapper: HTMLElement, width: number, height: number): HTMLElement {
   const clone = wrapper.cloneNode(true) as HTMLElement;
-  clone.dataset.pptxReflectionSource = 'true';
+  clone.setAttribute('data-pptx-reflection-source', 'true');
   clone.setAttribute('aria-hidden', 'true');
   clone.style.position = 'absolute';
   clone.style.left = '0';
@@ -197,7 +198,7 @@ export function applyReflectionEffect(
   const maxY = Math.max(...corners.map((point) => point.y));
 
   const layer = document.createElement('div');
-  layer.dataset.pptxReflectionLayer = 'true';
+  layer.setAttribute('data-pptx-reflection-layer', 'true');
   layer.setAttribute('aria-hidden', 'true');
   layer.style.position = 'absolute';
   layer.style.left = `${cssNumber(minX)}px`;

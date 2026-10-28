@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Top-level presentation builder — assembles all parsed components
  * (themes, masters, layouts, slides) into a single PresentationData structure.
@@ -9,16 +10,22 @@ import {
   findMatchingMasterPlaceholder,
   getPlaceholderInfo,
 } from './placeholderMatching';
-import { PptxFiles } from '../parser/ZipParser';
+import type { PptxFiles } from '../parser/ZipParser';
 import type { MediaResolver } from '../utils/media';
 import { parseXml, SafeXmlNode } from '../parser/XmlParser';
-import { parseRels, RelEntry, resolveRelTarget } from '../parser/RelParser';
+import type { RelEntry} from '../parser/RelParser';
+import { parseRels, resolveRelTarget } from '../parser/RelParser';
 import { emuToPx } from '../parser/units';
-import { ThemeData, parseTheme } from './Theme';
-import { MasterData, parseMaster } from './Master';
-import { LayoutData, parseLayout, PlaceholderEntry } from './Layout';
-import { SlideData, SlideNode, createLazySlide, materializeSlideData, parseSlide } from './Slide';
-import { BaseNodeData, PlaceholderInfo, Position, Size, findXfrm } from './nodes/BaseNode';
+import type { ThemeData} from './Theme';
+import { parseTheme } from './Theme';
+import type { MasterData} from './Master';
+import { parseMaster } from './Master';
+import type { LayoutData, PlaceholderEntry } from './Layout';
+import { parseLayout } from './Layout';
+import type { SlideData, SlideNode} from './Slide';
+import { createLazySlide, materializeSlideData, parseSlide } from './Slide';
+import type { BaseNodeData, PlaceholderInfo, Position, Size} from './nodes/BaseNode';
+import { findXfrm } from './nodes/BaseNode';
 import type { GroupNodeData } from './nodes/GroupNode';
 
 export interface PresentationData {

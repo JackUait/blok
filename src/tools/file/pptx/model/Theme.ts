@@ -1,9 +1,10 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable max-depth -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Theme parser — extracts color scheme and font definitions from a:theme XML.
  */
 
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 
 export interface ThemeFontInfo {
   latin: string;

@@ -1,22 +1,24 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Image renderer — converts PicNodeData into positioned HTML image/video/audio elements.
  */
 
-import { PicNodeData } from '../model/nodes/PicNode';
-import { RenderContext } from './RenderContext';
+import type { PicNodeData } from '../model/nodes/PicNode';
+import type { RenderContext } from './RenderContext';
 import {
   findMediaByTarget,
   findMediaByTargetAsync,
   getOrCreateBlobUrl,
   resolveMediaPath,
 } from '../utils/media';
-import { isExternalTargetMode, RelEntry } from '../parser/RelParser';
+import type { RelEntry } from '../parser/RelParser';
+import { isExternalTargetMode } from '../parser/RelParser';
 import { resolveColor, resolveFill, resolveLineStyle } from './StyleResolver';
 import { hexToRgb } from '../utils/color';
 import { parseEmfContent } from '../utils/emfParser';
 import { emuToPx } from '../parser/units';
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
 import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
 import { renderCustomGeometry } from '../shapes/customGeometry';
@@ -398,7 +400,7 @@ function renderImageUrl(
       img.style.filter = `brightness(${shape3dPlan.lighting.brightness})`;
       pictureStage.appendChild(img);
       const lighting = document.createElement('div');
-      lighting.dataset.pptxShape3dPictureLighting = 'threePt:t';
+      lighting.setAttribute('data-pptx-shape3d-picture-lighting', 'threePt:t');
       lighting.style.position = 'absolute';
       lighting.style.inset = '0';
       lighting.style.pointerEvents = 'none';
@@ -564,7 +566,7 @@ function renderClippedSvgImage(
   }
   if (pictureOutline) {
     const outline = document.createElementNS(svgNs, 'path');
-    outline.dataset.pptxPictureOutline = 'true';
+    outline.setAttribute('data-pptx-picture-outline', 'true');
     outline.setAttribute('d', clipPathD);
     outline.setAttribute('fill', 'none');
     outline.setAttribute('stroke', pictureOutline.color);
@@ -723,7 +725,7 @@ function resolvePictureOutlineStyle(
     lnRef.exists() &&
     (lnRef.numAttr('idx') ?? 0) > 0 &&
     (ctx.theme.lineStyles?.length ?? 0) >= (lnRef.numAttr('idx') ?? 0)
-      ? ctx.theme.lineStyles![(lnRef.numAttr('idx') ?? 1) - 1]
+      ? ctx.theme.lineStyles[(lnRef.numAttr('idx') ?? 1) - 1]
       : undefined;
   const line = hasExplicitLine ? node.line! : themeLineFromLnRef;
   if (!line?.exists()) return undefined;

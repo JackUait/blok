@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 // ============================================================================
 // OOXML Color Utilities
 // Full color manipulation for PowerPoint XML color processing

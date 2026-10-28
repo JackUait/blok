@@ -1,12 +1,15 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Picture node parser — handles images, video placeholders, and audio placeholders.
  */
 
-import { SafeXmlNode } from '../../parser/XmlParser';
-import { BaseNodeData, parseBaseProps } from './BaseNode';
+import type { SafeXmlNode } from '../../parser/XmlParser';
+import type { BaseNodeData} from './BaseNode';
+import { parseBaseProps } from './BaseNode';
 import { parseAdjustments } from './ShapeNode';
-import { parseShape3DProperties, Shape3DProperties } from './Shape3D';
+import type { Shape3DProperties } from './Shape3D';
+import { parseShape3DProperties } from './Shape3D';
 
 export interface CropRect {
   top: number;

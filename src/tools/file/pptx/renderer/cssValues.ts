@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 const MAX_CSS_LENGTH_VALUE_CHARS = 128;
 
 export function scaleCssLengthForTransform(length: string, scale: number): string {

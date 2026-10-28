@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 import type { ShapeNodeData } from '../model/nodes/ShapeNode';
 import type { RenderContext } from './RenderContext';
 import { renderBackground } from './BackgroundRenderer';
@@ -42,7 +43,7 @@ export function applyShapeBackgroundFill(
   const inverse = invertTransform(composeTransforms(ctx.parentToSlide, nodeTransform(node)));
   viewport.setAttribute('transform', `matrix(${inverse.join(' ')})`);
   const surface = document.createElement('div');
-  surface.dataset.pptxShapeBackground = 'true';
+  surface.setAttribute('data-pptx-shape-background', 'true');
   surface.style.position = 'relative';
   surface.style.width = `${ctx.presentation.width}px`;
   surface.style.height = `${ctx.presentation.height}px`;

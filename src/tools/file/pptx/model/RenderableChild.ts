@@ -1,12 +1,20 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
-import { SafeXmlNode, parseXml } from '../parser/XmlParser';
-import { RelEntry, resolveRelTarget, isExternalTargetMode } from '../parser/RelParser';
+/* eslint-disable max-depth -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
+import type { SafeXmlNode} from '../parser/XmlParser';
+import { parseXml } from '../parser/XmlParser';
+import type { RelEntry} from '../parser/RelParser';
+import { resolveRelTarget, isExternalTargetMode } from '../parser/RelParser';
 import { parseBaseProps } from './nodes/BaseNode';
-import { ShapeNodeData, parseShapeNode } from './nodes/ShapeNode';
-import { PicNodeData, parsePicNode } from './nodes/PicNode';
-import { TableNodeData, parseTableNode } from './nodes/TableNode';
-import { GroupNodeData, parseGroupNode } from './nodes/GroupNode';
-import { ChartNodeData, parseChartNode } from './nodes/ChartNode';
+import type { ShapeNodeData} from './nodes/ShapeNode';
+import { parseShapeNode } from './nodes/ShapeNode';
+import type { PicNodeData} from './nodes/PicNode';
+import { parsePicNode } from './nodes/PicNode';
+import type { TableNodeData} from './nodes/TableNode';
+import { parseTableNode } from './nodes/TableNode';
+import type { GroupNodeData} from './nodes/GroupNode';
+import { parseGroupNode } from './nodes/GroupNode';
+import type { ChartNodeData} from './nodes/ChartNode';
+import { parseChartNode } from './nodes/ChartNode';
 import { DRAWINGML_MATH_NAMESPACE, isSupportedDrawingmlMathChoice } from './nodes/MathNode';
 
 export type RenderableNode =

@@ -1,24 +1,27 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Slide renderer — orchestrates rendering of a complete slide with all its nodes.
  */
 
-import { SlideData } from '../model/Slide';
-import { materializeSlideNodes, PresentationData } from '../model/Presentation';
-import { RenderContext, createRenderContext } from './RenderContext';
+import type { SlideData } from '../model/Slide';
+import type { PresentationData } from '../model/Presentation';
+import { materializeSlideNodes } from '../model/Presentation';
+import type { RenderContext} from './RenderContext';
+import { createRenderContext } from './RenderContext';
 import { renderBackground } from './BackgroundRenderer';
 import { renderShape } from './ShapeRenderer';
 import { renderImage } from './ImageRenderer';
 import { renderTable } from './TableRenderer';
 import { renderGroup } from './GroupRenderer';
 import { renderChart } from './ChartRenderer';
-import { ShapeNodeData } from '../model/nodes/ShapeNode';
-import { PicNodeData } from '../model/nodes/PicNode';
-import { TableNodeData } from '../model/nodes/TableNode';
-import { GroupNodeData } from '../model/nodes/GroupNode';
-import { ChartNodeData } from '../model/nodes/ChartNode';
-import { BaseNodeData } from '../model/nodes/BaseNode';
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { ShapeNodeData } from '../model/nodes/ShapeNode';
+import type { PicNodeData } from '../model/nodes/PicNode';
+import type { TableNodeData } from '../model/nodes/TableNode';
+import type { GroupNodeData } from '../model/nodes/GroupNode';
+import type { ChartNodeData } from '../model/nodes/ChartNode';
+import type { BaseNodeData } from '../model/nodes/BaseNode';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import type { RelEntry } from '../parser/RelParser';
 import { parseTemplateShapes } from '../model/TemplateShapes';
 import { useEmbeddedFonts } from './EmbeddedFontLoader';

@@ -1,9 +1,10 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Base node types and property parser shared by all slide node kinds.
  */
 
-import { SafeXmlNode } from '../../parser/XmlParser';
+import type { SafeXmlNode } from '../../parser/XmlParser';
 import { emuToPx, angleToDeg } from '../../parser/units';
 import { parseOoxmlBool } from '../../parser/booleans';
 

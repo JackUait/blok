@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Table renderer — converts TableNodeData into positioned HTML table elements.
  *
@@ -10,8 +11,9 @@
  *   and uses tcTxStyle from each part for cell text color/font (a:tcTxStyle under firstRow, firstCol, etc.).
  */
 
-import { TableNodeData, TableCell, MAX_TABLE_CELLS, tableCellCount } from '../model/nodes/TableNode';
-import { RenderContext } from './RenderContext';
+import type { TableNodeData, TableCell} from '../model/nodes/TableNode';
+import { MAX_TABLE_CELLS, tableCellCount } from '../model/nodes/TableNode';
+import type { RenderContext } from './RenderContext';
 import {
   resolveColor,
   resolveFill,
@@ -22,7 +24,7 @@ import { renderTextBody } from './TextRenderer';
 import { emuToPx } from '../parser/units';
 import { parseOoxmlBool } from '../parser/booleans';
 import { hexToRgb } from '../utils/color';
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import { getPredefinedTableStyle } from './predefinedTableStyles';
 import { resolveThemeFontStack } from './fontResolver';
 import { splitTiledPatternFillCss } from './cssValues';

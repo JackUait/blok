@@ -1,10 +1,11 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Slide master parser — extracts color map, background, text styles,
  * and placeholder shapes from a p:sldMaster XML.
  */
 
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import { emuToPx } from '../parser/units';
 import type { PlaceholderEntry } from './Layout';
 import { expandCompatibleChildren } from './RenderableChild';

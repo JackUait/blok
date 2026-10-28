@@ -1,11 +1,14 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Chart node — represents a chart embedded in a graphicFrame element.
  */
 
-import { SafeXmlNode } from '../../parser/XmlParser';
-import { RelEntry, resolveRelTarget } from '../../parser/RelParser';
-import { BaseNodeData, parseBaseProps } from './BaseNode';
+import type { SafeXmlNode } from '../../parser/XmlParser';
+import type { RelEntry} from '../../parser/RelParser';
+import { resolveRelTarget } from '../../parser/RelParser';
+import type { BaseNodeData} from './BaseNode';
+import { parseBaseProps } from './BaseNode';
 
 export interface ChartNodeData extends BaseNodeData {
   nodeType: 'chart';

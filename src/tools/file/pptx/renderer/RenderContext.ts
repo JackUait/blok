@@ -3,12 +3,12 @@
  * Render context — provides resolved theme/master/layout chain for a given slide.
  */
 
-import { PresentationData } from '../model/Presentation';
-import { SlideData } from '../model/Slide';
-import { ThemeData } from '../model/Theme';
-import { MasterData } from '../model/Master';
-import { LayoutData } from '../model/Layout';
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { PresentationData } from '../model/Presentation';
+import type { SlideData } from '../model/Slide';
+import type { ThemeData } from '../model/Theme';
+import type { MasterData } from '../model/Master';
+import type { LayoutData } from '../model/Layout';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import type { AffineMatrix } from './coordinateTransform';
 
 export interface RenderContext {

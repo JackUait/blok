@@ -1,6 +1,7 @@
 // Derived from mtx-decompressor 1.8.0 (MPL-2.0); modified for Blok. See NOTICE.
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of
 // the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Adaptive Huffman coder using a splay-tree that maintains the sibling
  * property (nodes ordered by non-increasing weight).
@@ -16,7 +17,7 @@
  * The tree is initialised as a perfect / near-perfect binary tree and
  * then optionally pre-biased depending on the symbol range.
  */
-import { BitIO } from './bitio';
+import type { BitIO } from './bitio';
 
 /** A single node in the adaptive Huffman tree. */
 interface AHuffNode {

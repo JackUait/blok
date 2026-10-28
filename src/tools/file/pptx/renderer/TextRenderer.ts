@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign, no-nested-ternary -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Text renderer — converts OOXML text body into HTML DOM elements
  * with full 7-level style inheritance.
@@ -11,9 +12,9 @@ import {
   masterPlaceholderType,
 } from '../model/placeholderMatching';
 import { SafeXmlNode } from '../parser/XmlParser';
-import { RenderContext } from './RenderContext';
+import type { RenderContext } from './RenderContext';
 import type { TextBody, TextParagraph, TextRun } from '../model/nodes/ShapeNode';
-import { PlaceholderInfo } from '../model/nodes/BaseNode';
+import type { PlaceholderInfo } from '../model/nodes/BaseNode';
 import { resolveColor, resolveColorToCss, resolveFill } from './StyleResolver';
 import { emuToPx, pctToDecimal, angleToDeg } from '../parser/units';
 import { parseOoxmlBool } from '../parser/booleans';
@@ -60,13 +61,13 @@ function appendTerminalHangingPunctuation(parent: HTMLElement, text: string): bo
   appendWhitespacePreservingText(parent, prefix);
 
   const cluster = document.createElement('span');
-  cluster.dataset.pptxHangingPunctuationCluster = 'true';
+  cluster.setAttribute('data-pptx-hanging-punctuation-cluster', 'true');
   cluster.style.display = 'inline-block';
   cluster.style.whiteSpace = 'nowrap';
   cluster.appendChild(document.createTextNode(anchorGlyph));
 
   const hanging = document.createElement('span');
-  hanging.dataset.pptxHangingPunctuation = 'true';
+  hanging.setAttribute('data-pptx-hanging-punctuation', 'true');
   hanging.style.display = 'inline-block';
   hanging.style.width = '0px';
   hanging.style.overflow = 'visible';
@@ -901,7 +902,7 @@ function appendExplicitTabText(
     appendWhitespacePreservingText(element, part);
     if (index === parts.length - 1) continue;
     const marker = document.createElement('span');
-    marker.dataset.pptxTabStop = 'explicit';
+    marker.setAttribute('data-pptx-tab-stop', 'explicit');
     marker.setAttribute('aria-hidden', 'true');
     marker.style.display = 'inline-block';
     marker.style.width = axis === 'vertical' ? '1px' : '0px';
@@ -1027,8 +1028,8 @@ function applyExplicitTabLayout(
       spacerSize = candidate.position - cursor - fieldOffset;
     }
 
-    marker.dataset.pptxTabAlign = candidate.align;
-    marker.dataset.pptxTabPosition = String(candidate.position);
+    marker.setAttribute('data-pptx-tab-align', candidate.align);
+    marker.setAttribute('data-pptx-tab-position', String(candidate.position));
     if (axis === 'vertical') marker.style.height = `${Math.max(0, spacerSize)}px`;
     else marker.style.width = `${Math.max(0, spacerSize)}px`;
   }

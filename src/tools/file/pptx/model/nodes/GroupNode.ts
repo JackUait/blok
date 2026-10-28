@@ -3,8 +3,9 @@
  * Group node parser — handles grouped shapes (p:grpSp).
  */
 
-import { SafeXmlNode } from '../../parser/XmlParser';
-import { BaseNodeData, Position, Size, parseBaseProps } from './BaseNode';
+import type { SafeXmlNode } from '../../parser/XmlParser';
+import type { BaseNodeData, Position, Size} from './BaseNode';
+import { parseBaseProps } from './BaseNode';
 import { emuToPx } from '../../parser/units';
 import { parseShape3DProperties, type Shape3DProperties } from './Shape3D';
 

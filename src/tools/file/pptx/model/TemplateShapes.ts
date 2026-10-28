@@ -1,4 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable max-depth -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Template shapes — the non-placeholder shapes a slide layout or slide master
  * contributes to every slide that uses it (logos, rules, background artwork).
@@ -8,7 +9,7 @@
  * them would paint the layout's prompt text over the author's content.
  */
 
-import { SafeXmlNode } from '../parser/XmlParser';
+import type { SafeXmlNode } from '../parser/XmlParser';
 import type { RelEntry } from '../parser/RelParser';
 import type { BaseNodeData } from './nodes/BaseNode';
 import { isPlaceholderNode, parseRenderableChildren } from './RenderableChild';

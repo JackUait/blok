@@ -1,10 +1,11 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Background renderer — resolves and applies slide/layout/master backgrounds.
  */
 
 import { SafeXmlNode } from '../parser/XmlParser';
-import { RenderContext } from './RenderContext';
+import type { RenderContext } from './RenderContext';
 import {
   resolveColor,
   resolveFill,
@@ -14,7 +15,8 @@ import {
   type GradientFillData,
 } from './StyleResolver';
 import { hexToRgb } from '../utils/color';
-import { isExternalTargetMode, RelEntry } from '../parser/RelParser';
+import type { RelEntry } from '../parser/RelParser';
+import { isExternalTargetMode } from '../parser/RelParser';
 import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
 import { splitTiledPatternFillCss } from './cssValues';
 

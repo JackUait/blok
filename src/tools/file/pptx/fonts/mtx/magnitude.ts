@@ -1,8 +1,9 @@
 // Derived from mtx-decompressor 1.8.0 (MPL-2.0); modified for Blok. See NOTICE.
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of
 // the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+/* eslint-disable no-restricted-syntax, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 import { EotError, EotErrorCode } from './errors';
-import { Stream } from './stream';
+import type { Stream } from './stream';
 
 /**
  * Read one MTX magnitude-dependent signed value (section 5.3).

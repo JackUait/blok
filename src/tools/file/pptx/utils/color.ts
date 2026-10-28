@@ -10,6 +10,14 @@
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns a colour attribute only when it is six hex digits, else black.
+ * Colours are pasted raw into CSS, so anything else could add a url() layer.
+ */
+export function safeHexColor(value: string | undefined): string {
+  return value !== undefined && /^[0-9A-Fa-f]{6}$/.test(value) ? value : '000000';
+}
+
+/**
  * Parse a hex color string (with or without '#') into RGB components.
  */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {

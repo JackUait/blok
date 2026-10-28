@@ -12,6 +12,7 @@ import {
   hexToRgb,
   hslToRgb,
   rgbToHex,
+  safeHexColor,
 } from '../utils/color';
 import type { ColorModifier } from '../utils/color';
 import { pctToDecimal, angleToDeg, emuToPx } from '../parser/units';
@@ -132,7 +133,7 @@ function resolveColorUncached(
 
     switch (tag) {
       case 'srgbClr': {
-        const hex = child.attr('val') || '000000';
+        const hex = safeHexColor(child.attr('val'));
         return applyColorModifiers(hex, modifiers);
       }
 
@@ -149,7 +150,7 @@ function resolveColorUncached(
       }
 
       case 'sysClr': {
-        const hex = child.attr('lastClr') || child.attr('val') || '000000';
+        const hex = safeHexColor(child.attr('lastClr') || child.attr('val'));
         return applyColorModifiers(hex, modifiers);
       }
 
@@ -186,7 +187,7 @@ function resolveColorUncached(
   // If the node itself is a color type (no wrapper)
   const selfTag = colorNode.localName;
   if (selfTag === 'srgbClr') {
-    const hex = colorNode.attr('val') || '000000';
+    const hex = safeHexColor(colorNode.attr('val'));
     return applyColorModifiers(hex, collectModifiers(colorNode));
   }
   if (selfTag === 'schemeClr') {
@@ -201,7 +202,7 @@ function resolveColorUncached(
     return applyColorModifiers(hex, collectModifiers(colorNode));
   }
   if (selfTag === 'sysClr') {
-    const hex = colorNode.attr('lastClr') || colorNode.attr('val') || '000000';
+    const hex = safeHexColor(colorNode.attr('lastClr') || colorNode.attr('val'));
     return applyColorModifiers(hex, collectModifiers(colorNode));
   }
   if (selfTag === 'prstClr') {

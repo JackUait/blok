@@ -5,6 +5,7 @@
  */
 
 import type { SafeXmlNode } from '../parser/XmlParser';
+import { safeHexColor } from '../utils/color';
 
 export interface ThemeFontInfo {
   latin: string;
@@ -39,6 +40,11 @@ const COLOR_SLOTS = [
   'folHlink',
 ] as const;
 
+/** A missing value stays missing, so the slot falls back as before. */
+function checkedHex(value: string | undefined): string | undefined {
+  return value === undefined ? undefined : safeHexColor(value);
+}
+
 /**
  * Extract a hex color value from a color definition node.
  * Handles both `a:srgbClr@val` and `a:sysClr@lastClr`.
@@ -46,11 +52,11 @@ const COLOR_SLOTS = [
 function extractColor(node: SafeXmlNode): string | undefined {
   const srgb = node.child('srgbClr');
   if (srgb.exists()) {
-    return srgb.attr('val');
+    return checkedHex(srgb.attr('val'));
   }
   const sys = node.child('sysClr');
   if (sys.exists()) {
-    return sys.attr('lastClr') ?? sys.attr('val');
+    return checkedHex(sys.attr('lastClr') ?? sys.attr('val'));
   }
   return undefined;
 }

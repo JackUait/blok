@@ -129,6 +129,10 @@ describe('property menu entries (research/08 header menus, property-level items)
     ['checkbox', ['changeType', 'visibility', 'duplicate', 'delete']],
     ['files', ['changeType', 'visibility', 'duplicate', 'delete']],
     ['createdTime', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    // notion-spec-2 §19.21: URL, Created by and Last edited by have no Edit property.
+    ['url', ['changeType', 'visibility', 'duplicate', 'delete']],
+    ['createdBy', ['changeType', 'visibility', 'duplicate', 'delete']],
+    ['lastEditedBy', ['changeType', 'visibility', 'duplicate', 'delete']],
     ['uniqueId', ['editProperty', 'visibility', 'delete']],
     ['person', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
   ])('%s → %j', (type, entries) => {
@@ -1124,6 +1128,15 @@ describe('DatabasePropertyMenu', () => {
       expect(choices.map((c) => c.trailingIcon === IconCheck)).toEqual([true, false, false, false, false]);
       byName(choices, 'dateNotifications-1_week_before').onActivate?.(byName(choices, 'dateNotifications-1_week_before'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', defaultReminder: '1_week_before' } });
+    });
+
+    // notion-spec-2 §17.4: Created time and Last edited time have only Date format and Time format; no Notifications.
+    it.each<PropertyType>(['createdTime', 'lastEditedTime'])('has no Notifications row on %s', (type) => {
+      open(prop(type));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(items.map((item) => item.name)).not.toContain('dateNotifications');
+      expect(items.map((item) => item.name)).toContain('dateFormat');
     });
 
     it('shows the chosen default without its time, and None removes it', () => {

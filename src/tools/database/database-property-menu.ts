@@ -1420,7 +1420,8 @@ export class DatabasePropertyMenu {
           ],
         },
       },
-      this.notificationsItem(date, update),
+      // notion-spec-2 §17.4: Created time and Last edited time have no Notifications row.
+      ...(property.type === 'date' ? [this.notificationsItem(date, update)] : []),
     ];
   }
 

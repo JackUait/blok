@@ -249,6 +249,8 @@ class DateEditor {
     this.popover = new CellPopover({
       anchor,
       cover: this.ctx.coverCell,
+      // notion-spec-2 §19.9: in the table the picker opens under the cell, so the cell stays in view.
+      below: true,
       content: this.root,
       // research/22 §4: Notion's picker is 248 wide.
       minWidth: '248px',

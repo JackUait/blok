@@ -9,6 +9,8 @@ export interface CellPopoverOptions {
   minWidth?: string;
   /** Open over the anchor instead of below it (see CellEditorContext.coverCell). */
   cover?: boolean | 'value';
+  /** With `cover: true`, open under the anchor instead of over it, still kept inside the window. */
+  below?: boolean;
   /** Dock at the window's end edge, top level with the anchor, like Notion's view settings (research/26 §1a). */
   docked?: boolean;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
@@ -32,17 +34,19 @@ const TABLE_EDITOR_CLASS = 'blok-database-table-cell-editor';
 const COVER_OUTSET = 1;
 const COVER_VIEWPORT_MARGIN = 12;
 
-const coverPlacement = (anchor: HTMLElement, value: boolean): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+const coverPlacement = (anchor: HTMLElement, value: boolean, below: boolean): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const cell = anchor.getBoundingClientRect();
   // notion-spec §7: a row page value has no border to land on, so the box keeps its top.
   const top = value ? 0 : COVER_OUTSET;
+  // notion-spec-2 §19.9: the box's top sits 1px over the cell's bottom line.
+  const y = below ? cell.bottom - COVER_OUTSET : cell.y - top;
 
   return {
     cover: true,
     viewportMargin: COVER_VIEWPORT_MARGIN,
     position: new DOMRect(
       cell.x - COVER_OUTSET,
-      cell.y - top,
+      y,
       cell.width + 2 * COVER_OUTSET,
       cell.height + 2 * top
     ),
@@ -108,7 +112,7 @@ export class CellPopover {
       class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : []), ...(cover === true ? [TABLE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const coverOrNone = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value') : {};
+    const coverOrNone = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value', cover === true && this.options.below === true) : {};
     const placement = docked === true ? dockPlacement(anchor) : coverOrNone;
     const popover = new PopoverDesktop({ ...base, ...placement });
 

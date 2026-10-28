@@ -92,4 +92,11 @@ describe('cell editors over a row page value', () => {
     expect(box()).toEqual({ left: CELL.x - 1, top: CELL.y - 1, width: CELL.width });
     expect(popoverRoot().getAttribute('data-blok-popover-custom-class')?.split(' ')).not.toContain('blok-database-value-editor');
   });
+
+  // notion-spec-2 §19.9: the table's date picker opens under the cell, over its bottom line by 1px.
+  it('a table date picker opens under the cell, 1px left of it and 1px over its bottom line', () => {
+    openCellEditor(makeProperty('date'), undefined, cellAnchor(), makeEditorContext({ coverCell: true }));
+
+    expect(box()).toEqual({ left: CELL.x - 1, top: CELL.y + CELL.height - 1, width: 248 });
+  });
 });

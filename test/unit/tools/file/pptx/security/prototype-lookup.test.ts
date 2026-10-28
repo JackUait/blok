@@ -5,9 +5,12 @@ import { cssFontFamilyStack } from '../../../../../../src/tools/file/pptx/render
 import { getMimeType } from '../../../../../../src/tools/file/pptx/utils/media';
 import { drawMarker } from '../../../../../../src/tools/file/pptx/renderer/chart/marker';
 import { renderTable } from '../../../../../../src/tools/file/pptx/renderer/TableRenderer';
-import { SafeXmlNode } from '../../../../../../src/tools/file/pptx/parser/XmlParser';
+import { parseXml, SafeXmlNode } from '../../../../../../src/tools/file/pptx/parser/XmlParser';
 import { createMockRenderContext } from '../helpers/mockContext';
 import { xmlNode } from '../helpers/xmlNode';
+import { textShapeXml } from '../fixtures/text-coverage';
+import { parseShapeNode } from '../../../../../../src/tools/file/pptx/model/nodes/ShapeNode';
+import { renderShape } from '../../../../../../src/tools/file/pptx/renderer/ShapeRenderer';
 
 // Names every plain object inherits from Object.prototype.
 const INHERITED = ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__', 'isPrototypeOf'];
@@ -48,5 +51,17 @@ describe('a pptx that names a built-in object property where a preset is expecte
     const td = renderTable(node, createMockRenderContext()).querySelector('td');
 
     expect(td?.style.verticalAlign).toBe('top');
+  });
+
+  it('aligns a paragraph aligned to "constructor" to the left, like an unknown alignment', () => {
+    const alignOf = (algn: string): string => {
+      const xml = textShapeXml().replace('<a:pPr>', `<a:pPr algn="${algn}">`);
+      const shape = renderShape(parseShapeNode(parseXml(xml)), createMockRenderContext());
+
+      return shape.querySelector<HTMLElement>('div[style*="text-align"]')?.style.textAlign ?? '';
+    };
+
+    INHERITED.forEach((name) => expect(alignOf(name)).toBe('left'));
+    expect(alignOf('ctr')).toBe('center');
   });
 });

@@ -115,7 +115,8 @@ export function extractNumericValuesWithBlanks(refNode: SafeXmlNode): NumericVal
   const values = raw.map((text, idx) => {
     const v = parseFloat(text);
 
-    if (text === '' || Number.isNaN(v)) {
+    // An infinite value cannot be placed on an axis; treat it like a blank point.
+    if (text === '' || !Number.isFinite(v)) {
       blankIndices.add(idx);
 
       return 0;

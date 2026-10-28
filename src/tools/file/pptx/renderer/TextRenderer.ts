@@ -1410,7 +1410,9 @@ export function renderTextBody(
         dist: 'justify',
         thaiDist: 'justify',
       };
-      paraDiv.style.textAlign = alignMap[merged.align] || 'left';
+      paraDiv.style.textAlign = Object.prototype.hasOwnProperty.call(alignMap, merged.align)
+        ? alignMap[merged.align]
+        : 'left';
     }
     if (merged.rtl !== undefined) {
       paraDiv.style.direction = merged.rtl ? 'rtl' : 'ltr';

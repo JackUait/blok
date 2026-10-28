@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { gunzipSync } from 'node:zlib';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import path from 'node:path';
 
 export interface CorpusCase {
@@ -15,7 +15,15 @@ const FIXTURES = path.join(__dirname, 'fixtures');
 export const readFixture = <T>(name: string): T =>
   JSON.parse(gunzipSync(readFileSync(path.join(FIXTURES, `${name}.gz`))).toString('utf8')) as T;
 
-export const fixturePath = (name: string): string => path.join(FIXTURES, name);
+/**
+ * Write rows to a gzipped fixture, one row per line so a diff of the
+ * unzipped file reads case by case.
+ * @param name - fixture name without `.gz`
+ * @param rows - one entry per corpus case
+ */
+export const writeFixture = (name: string, rows: unknown[]): void => {
+  writeFileSync(path.join(FIXTURES, `${name}.gz`), gzipSync(`[\n${rows.map(row => JSON.stringify(row)).join(',\n')}\n]\n`, { level: 9 }));
+};
 
 /** Fragments the fuzzer glues together: every construct's opener and closer, and the characters between them. */
 const FRAGMENTS = [

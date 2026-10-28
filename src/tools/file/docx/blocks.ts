@@ -4,7 +4,7 @@ import { MAX_DEPTH, deeper } from './context';
 import { alternateBranch, renderInline } from './inline';
 import { applyCss, mergeCss, mergePara, parseParaProps, runDeclarations } from './props';
 import { renderTable } from './table';
-import { kid, kids } from './xml';
+import { attr, kid, kids } from './xml';
 
 /** Where block-level output goes. Only the main body can break pages. */
 export interface BlockSink {
@@ -106,13 +106,34 @@ export function renderParagraph(p: Element, ctx: RenderContext, sink: BlockSink)
   }
 }
 
+/** Bookmarks between blocks (pandoc puts every heading's there) point at the next block. */
+function bookmarkingSink(sink: BlockSink, pending: string[], ctx: RenderContext): BlockSink {
+  return {
+    pageBreak: () => sink.pageBreak(),
+    endSection: () => sink.endSection(),
+    add: (node) => {
+      for (const name of pending.splice(0)) {
+        if (node instanceof Element && !ctx.bookmarks.has(name)) {
+          ctx.bookmarks.set(name, node);
+        }
+      }
+      sink.add(node);
+    },
+  };
+}
+
 /** Render the block-level children of a body, cell, text box, note or header. */
-export function renderBlocks(parent: Element, ctx: RenderContext, sink: BlockSink): void {
+export function renderBlocks(parent: Element, ctx: RenderContext, target: BlockSink): void {
   if (ctx.depth > MAX_DEPTH) {
     return;
   }
+  const pending: string[] = [];
+  const sink = bookmarkingSink(target, pending, ctx);
   for (const child of kids(parent)) {
     switch (child.localName) {
+      case 'bookmarkStart':
+        pending.push(attr(child, 'name') ?? '');
+        break;
       case 'p':
         renderParagraph(child, ctx, sink);
         break;

@@ -346,6 +346,22 @@ describe('renderDocxInto — links and bookmarks', () => {
     expect(c.textContent).toContain('link');
   });
 
+  it('scrolls to a bookmark that sits between paragraphs, as pandoc writes headings', async () => {
+    const c = await render({
+      body: `<w:p><w:hyperlink w:anchor="intro"><w:r><w:t>jump</w:t></w:r></w:hyperlink></w:p><w:bookmarkStart w:id="0" w:name="intro"/><w:p><w:r><w:t>Intro</w:t></w:r></w:p><w:bookmarkEnd w:id="0"/>`,
+    });
+    const scrolled: Element[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function record(this: Element) {
+      scrolled.push(this);
+    };
+
+    c.querySelector('a')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    Element.prototype.scrollIntoView = original;
+
+    expect(scrolled).toEqual([paras(c)[1]]);
+  });
+
   it('scrolls an internal anchor to its bookmark inside the preview without touching the page URL or ids', async () => {
     const c = await render({
       body: `<w:p><w:hyperlink w:anchor="target"><w:r><w:t>jump</w:t></w:r></w:hyperlink></w:p><w:p><w:bookmarkStart w:id="0" w:name="target"/><w:r><w:t>here</w:t></w:r><w:bookmarkEnd w:id="0"/></w:p>`,

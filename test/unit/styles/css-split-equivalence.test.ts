@@ -1211,6 +1211,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABLE_TABULAR_FIGURES_BYTES = 240;
     // database.css: table cell editors open with no fade or scale (research/08 Motion).
     const DATABASE_TABLE_EDITOR_NO_MOTION_BYTES = 406;
+    // database.css: a number formula sits at the end of its table cell (notion-spec-2 §19.13).
+    const DATABASE_FORMULA_NUMBER_END_BYTES = 129;
     // database.css: the Place search's one highlighted row (research/36 §7); no ring on the focused place view.
     const DATABASE_PLACE_ROW_HIGHLIGHT_BYTES = 257;
     // database.css: Add a property's "Search types…" field opens under the Type label (notion-spec-2 §18.5).
@@ -1520,7 +1522,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TABLE_PICKER_SCOPE_BYTES
       + DOCX_PAPER_BYTES
       + DATABASE_ADD_PROPERTY_CLOSE_BYTES
-      + DATABASE_HEADER_PLUS_NAME_BOX_BYTES;
+      + DATABASE_HEADER_PLUS_NAME_BOX_BYTES
+      + DATABASE_FORMULA_NUMBER_END_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

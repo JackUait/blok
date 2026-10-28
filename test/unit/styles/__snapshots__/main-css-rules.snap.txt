@@ -11268,7 +11268,7 @@ textarea[data-blok-database-cell-input] {
   justify-content: flex-end;
 }
 
-[data-blok-database-table-cell][data-type="rollup"] > [data-blok-database-cell][data-result-type="number"] {
+[data-blok-database-table-cell][data-type="rollup"] > [data-blok-database-cell][data-result-type="number"], [data-blok-database-table-cell][data-type="formula"] > [data-blok-database-cell][data-result-type="number"] {
   justify-content: flex-end;
   text-align: end;
   font-variant-numeric: lining-nums tabular-nums;

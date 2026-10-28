@@ -164,3 +164,13 @@ describe('database table number figures', () => {
     expect(ruleBody(`[data-blok-database-table-cell][data-type="${type}"]`)).toContain('font-variant-numeric: lining-nums tabular-nums');
   });
 });
+
+describe('database table formula alignment', () => {
+  // notion-spec-2 §19.13, §18.1: a formula that returns a number sits at the cell's end, like a Number.
+  it('a number formula sits at the end of its table cell', () => {
+    const body = ruleBody('[data-blok-database-table-cell][data-type="formula"] > [data-blok-database-cell][data-result-type="number"]');
+
+    expect(body).toMatch(/justify-content:\s*flex-end/);
+    expect(body).toMatch(/text-align:\s*end/);
+  });
+});

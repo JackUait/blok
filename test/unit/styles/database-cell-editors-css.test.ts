@@ -22,6 +22,28 @@ const declared = (selector: string, name: string): string[] =>
     .flatMap((rule) => [...rule[2].matchAll(new RegExp(`(?:^|[;\\s])${escape(name)} ?: ?([^;]+);`, 'g'))].map((m) => m[1].trim()));
 
 describe('cell editor CSS', () => {
+  // notion-spec-2 §19.15: table relation rows are radius 4px; a 24x24 white button, radius 4px, 6px from the row's right.
+  describe('table relation picker row', () => {
+    const PICKER = '[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"]';
+    const TOGGLE = `${PICKER} [data-blok-database-relation-toggle]`;
+
+    it('rounds the row 4px and drops the check mark', () => {
+      expect(declared(`${PICKER} [data-blok-database-relation-option]`, 'border-radius')).toEqual(['var(--blok-radius-control-sm)']);
+      expect(declared(`${PICKER} [data-blok-database-relation-option][aria-selected="true"]::after`, 'content')).toEqual(['none']);
+    });
+
+    it('draws the +/− button 24x24, white, radius 4px, at the row end, shown on the highlighted or hovered row', () => {
+      expect(declared(TOGGLE, 'width')).toEqual(['24px']);
+      expect(declared(TOGGLE, 'height')).toEqual(['24px']);
+      expect(declared(TOGGLE, 'margin-inline-start')).toEqual(['auto']);
+      expect(declared(TOGGLE, 'border-radius')).toEqual(['var(--blok-radius-control-sm)']);
+      expect(declared(TOGGLE, 'background-color')).toEqual(['var(--blok-database-popover-bg)']);
+      expect(declared(TOGGLE, 'visibility')).toEqual(['hidden']);
+      expect(declared(`${PICKER} [data-blok-database-relation-option][data-active] > [data-blok-database-relation-toggle]`, 'visibility')).toEqual(['visible']);
+      expect(declared(`${TOGGLE} svg`, 'width')).toEqual(['16px']);
+    });
+  });
+
   // notion-spec-2 §19.16: a person's avatar is a plain circle with no ring or shadow. Notion's 100% draws
   // the same circle on a square box; the radius law spells a circle 50%.
   it.each(['[data-blok-database-person-avatar]', '[data-blok-database-person-initial]'])('draws %s as a circle with no ring', (selector) => {

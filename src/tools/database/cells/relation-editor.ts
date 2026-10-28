@@ -1,3 +1,4 @@
+import { IconMinus, IconPlus } from '../../../components/icons';
 import type { PropertyDefinition, PropertyValue, RelationValue } from '../types';
 import { relationIdsOf } from '../relation-values';
 import { pagePlaceholderIcon } from '../page-icon';
@@ -218,6 +219,15 @@ class RelationEditor implements CellEditorHandle {
       row.setAttribute('role', 'option');
       row.setAttribute('aria-selected', chosen ? 'true' : 'false');
       row.append(pagePlaceholderIcon(), this.titleOf(candidate));
+      if (this.heading !== null) {
+        // notion-spec-2 §19.15: "+" links, "−" unlinks; a click on it is the row's click.
+        const toggle = document.createElement('span');
+
+        toggle.setAttribute('data-blok-database-relation-toggle', chosen ? 'remove' : 'add');
+        toggle.setAttribute('aria-hidden', 'true');
+        toggle.innerHTML = chosen ? IconMinus : IconPlus;
+        row.appendChild(toggle);
+      }
       if (candidate.id === this.activeId) {
         row.setAttribute('data-active', '');
         this.search.setAttribute('aria-activedescendant', row.id);

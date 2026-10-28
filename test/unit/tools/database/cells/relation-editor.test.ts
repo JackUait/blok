@@ -158,6 +158,18 @@ describe('relation editor', () => {
         expect(onClose).not.toHaveBeenCalled();
       });
 
+      // notion-spec-2 §19.15 / §19.2: a "+" at the right of a page to link, a "−" on a linked one.
+      it('ends each row with "+" to link, or "−" on a linked page', () => {
+        openLinked();
+
+        const glyph = (id: string): string | undefined =>
+          document.querySelector(`[data-blok-database-relation-option="${id}"] > [data-blok-database-relation-toggle]`)?.getAttribute('data-blok-database-relation-toggle');
+
+        expect(glyph('r2')).toBe('remove');
+        expect(glyph('r1')).toBe('add');
+        expect(document.querySelector('[data-blok-database-relation-toggle]')?.getAttribute('aria-hidden')).toBe('true');
+      });
+
       it('keeps "Select a page" over the list while nothing is linked', () => {
         openInTable();
 

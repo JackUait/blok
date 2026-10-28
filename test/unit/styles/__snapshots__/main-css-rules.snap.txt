@@ -15329,8 +15329,40 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option] {
   min-height: 32px;
   padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control-sm);
   font-weight: 500;
   line-height: 16.8px;
+}
+
+[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option][aria-selected="true"]::after {
+  content: none;
+}
+
+[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-toggle] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: auto;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-popover-bg);
+  color: var(--blok-database-table-header-icon);
+  visibility: hidden;
+}
+
+[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option][data-active] > [data-blok-database-relation-toggle] {
+  visibility: visible;
+}
+
+[@media (hover: hover)] [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option]:hover > [data-blok-database-relation-toggle] {
+  visibility: visible;
+}
+
+[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-toggle] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-relation-option] > [data-blok-database-page-icon-placeholder] {

@@ -251,6 +251,24 @@ describe('renderChart', () => {
       expect((bottom - b[0][1]) / 15).toBeCloseTo((bottom - a[0][1]) / 10, 2);
     });
 
+    it('breaks the line at a blank point', () => {
+      const withGap = ser({ cats: ['a', 'b', 'c', 'd'], vals: [1, 2, 3, 4] }).replace('<c:pt idx="1"><c:v>2</c:v></c:pt>', '');
+      const frame = render(chartXml(`<c:lineChart><c:grouping val="standard"/>${withGap}</c:lineChart><c:catAx/><c:valAx/>`));
+      const d = part(frame, 'line').getAttribute('d') ?? '';
+
+      expect(d.match(/M/g)).toHaveLength(2);
+      expect(pathPoints(d)).toHaveLength(3);
+    });
+
+    it('draws a smoothed line as curves', () => {
+      const smooth = ser({ cats: ['a', 'b', 'c'], vals: [1, 3, 2], extra: '<c:smooth val="1"/>' });
+      const frame = render(chartXml(`<c:lineChart><c:grouping val="standard"/>${smooth}</c:lineChart><c:catAx/><c:valAx/>`));
+      const d = part(frame, 'line').getAttribute('d') ?? '';
+
+      expect(d.match(/C/g)).toHaveLength(2);
+      expect(d).not.toContain('L');
+    });
+
     it('stacks areas edge to edge on a midCat axis', () => {
       const frame = render(chartXml(`<c:areaChart><c:grouping val="stacked"/>
         ${ser({ order: 0, cats: ['a', 'b'], vals: [10, 20] })}${ser({ order: 1, cats: ['a', 'b'], vals: [10, 10] })}
@@ -281,6 +299,26 @@ describe('renderChart', () => {
         <c:dLbls><c:showPercent val="1"/></c:dLbls></c:pieChart>`));
 
       expect(texts(part(frame, 'data-labels'))).toEqual(['25%', '75%']);
+    });
+  });
+
+  describe('doughnuts', () => {
+    const doughnut = (series: string): string => chartXml(`<c:doughnutChart>${series}<c:holeSize val="50"/></c:doughnutChart>`);
+
+    it('cuts a hole in the middle', () => {
+      const frame = render(doughnut(ser({ cats: ['x', 'y'], vals: [1, 3] })));
+      const slices = [...part(frame, 'series').querySelectorAll('path')].map((p) => p.getAttribute('d') ?? '');
+
+      expect(slices).toHaveLength(2);
+      // A slice with a hole has an outer and an inner arc; a pie slice has one.
+      slices.forEach((d) => expect(d.match(/A/g)).toHaveLength(2));
+    });
+
+    it('draws one ring per series', () => {
+      const frame = render(doughnut(ser({ order: 0, cats: ['x', 'y'], vals: [1, 3] }) + ser({ order: 1, cats: ['x', 'y'], vals: [2, 2] })));
+
+      expect(parts(frame, 'series')).toHaveLength(2);
+      expect(parts(frame, 'series').map((g) => g.querySelectorAll('path').length)).toEqual([2, 2]);
     });
   });
 

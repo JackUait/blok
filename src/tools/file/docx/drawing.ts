@@ -1,11 +1,19 @@
 import type { RenderContext } from './context';
 import { nested } from './context';
 import { sniffImageType } from './package';
-import { attr, emuToPx, find, kid } from './xml';
+import { attr, emuToPx, find, kid, round } from './xml';
 
 interface Size {
   width: number | null;
   height: number | null;
+}
+
+/** `a:srcRect` sides, as fractions of the image cut away. */
+interface Crop {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }
 
 /** CSS pixels per unit, for the VML `style` lengths we accept. */
@@ -69,7 +77,44 @@ function sharedImageUrl(path: string, ctx: RenderContext): Promise<string | null
   return loading;
 }
 
-async function loadImage(path: string, box: HTMLElement, size: Size, alt: string, ctx: RenderContext): Promise<void> {
+const cropSide = (rect: Element, side: string): number => Number(attr(rect, side) ?? '0') / 100_000;
+
+/** The crop of a `a:blipFill`, or null when there is none we can draw: negative sides pad in Word. */
+function readCrop(blipFill: Element | null): Crop | null {
+  const rect = kid(blipFill, 'srcRect');
+  if (rect === null) {
+    return null;
+  }
+  const crop = { left: cropSide(rect, 'l'), top: cropSide(rect, 't'), right: cropSide(rect, 'r'), bottom: cropSide(rect, 'b') };
+  const sides = Object.values(crop);
+  const drawable = sides.every((v) => Number.isFinite(v) && v >= 0) && crop.left + crop.right < 1 && crop.top + crop.bottom < 1;
+
+  return drawable && sides.some((v) => v > 0) ? crop : null;
+}
+
+/** Fill the box like Word: stretched to the frame, showing only the uncropped part. */
+function fitToBox(img: HTMLImageElement, box: HTMLElement, crop: Crop | null): void {
+  if (crop === null) {
+    img.style.setProperty('width', '100%');
+    img.style.setProperty('height', '100%');
+
+    return;
+  }
+  const shownX = 1 - crop.left - crop.right;
+  const shownY = 1 - crop.top - crop.bottom;
+  box.style.setProperty('position', 'relative');
+  box.style.setProperty('overflow', 'hidden');
+  img.style.setProperty('position', 'absolute');
+  img.style.setProperty('max-width', 'none');
+  img.style.setProperty('width', `${round(100 / shownX)}%`);
+  img.style.setProperty('height', `${round(100 / shownY)}%`);
+  img.style.setProperty('left', `${round(-100 * crop.left / shownX)}%`);
+  img.style.setProperty('top', `${round(-100 * crop.top / shownY)}%`);
+}
+
+const hasBoth = (size: Size): boolean => (size.width ?? 0) > 0 && (size.height ?? 0) > 0;
+
+async function loadImage(path: string, box: HTMLElement, size: Size, alt: string, crop: Crop | null, ctx: RenderContext): Promise<void> {
   const url = await sharedImageUrl(path, ctx);
   if (url === null) {
     return;
@@ -85,6 +130,10 @@ async function loadImage(path: string, box: HTMLElement, size: Size, alt: string
     img.height = size.height;
   }
   img.style.setProperty('display', 'block');
+  // Without a sized box the picture keeps its own shape (the stylesheet's height: auto).
+  if (hasBoth(size)) {
+    fitToBox(img, box, crop);
+  }
   img.src = url;
   box.appendChild(img);
 }
@@ -94,7 +143,7 @@ async function loadImage(path: string, box: HTMLElement, size: Size, alt: string
  * not a raster image (EMF, WMF, SVG…) leave the box empty, so the text around
  * them keeps the place Word gave it. External targets are never fetched.
  */
-function picture(id: string | null, size: Size, alt: string, block: boolean, ctx: RenderContext): HTMLElement | null {
+function picture(id: string | null, size: Size, alt: string, block: boolean, crop: Crop | null, ctx: RenderContext): HTMLElement | null {
   const rel = id === null ? undefined : ctx.rels.find((r) => r.id === id);
   if (rel === undefined || rel.external) {
     return null;
@@ -102,7 +151,7 @@ function picture(id: string | null, size: Size, alt: string, block: boolean, ctx
   const box = document.createElement('span');
   box.style.setProperty('display', block ? 'block' : 'inline-block');
   setSize(box, size);
-  ctx.resources.tasks.push(loadImage(rel.target, box, size, alt, ctx));
+  ctx.resources.tasks.push(loadImage(rel.target, box, size, alt, crop, ctx));
 
   return box;
 }
@@ -125,10 +174,10 @@ function renderFrame(frame: Element, ctx: RenderContext): HTMLElement | null {
   const data = kid(kid(frame, 'graphic'), 'graphicData');
   const pic = kid(data, 'pic');
   if (pic !== null) {
-    const blip = kid(kid(pic, 'blipFill'), 'blip');
+    const blipFill = kid(pic, 'blipFill');
     const alt = attr(kid(frame, 'docPr'), 'descr') ?? '';
 
-    return picture(relId(blip, 'embed'), size, alt, kid(frame, 'wrapTopAndBottom') !== null, ctx);
+    return picture(relId(kid(blipFill, 'blip'), 'embed'), size, alt, kid(frame, 'wrapTopAndBottom') !== null, readCrop(blipFill), ctx);
   }
   const content = kid(kid(kid(data, 'wsp'), 'txbx'), 'txbxContent');
 
@@ -141,7 +190,7 @@ function renderVml(el: Element, ctx: RenderContext): HTMLElement | null {
   if (imagedata !== null) {
     const shape = imagedata.parentElement;
 
-    return picture(relId(imagedata, 'id'), vmlSize(attr(shape, 'style')), attr(shape, 'alt') ?? '', false, ctx);
+    return picture(relId(imagedata, 'id'), vmlSize(attr(shape, 'style')), attr(shape, 'alt') ?? '', false, null, ctx);
   }
   const textbox = find(el, 'textbox');
   const content = kid(textbox, 'txbxContent');

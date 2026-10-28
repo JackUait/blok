@@ -99,6 +99,40 @@ describe('renderDocxInto — drawings', () => {
     expect(img.decoding).toBe('async');
   });
 
+  it('stretches the picture to its wp:extent box, not to the image shape', async () => {
+    const { c } = await render(withImage(run(inlineDrawing())));
+    const [img] = imgs(c);
+
+    expect(img.style.getPropertyValue('width')).toBe('100%');
+    expect(img.style.getPropertyValue('height')).toBe('100%');
+  });
+
+  it('shows only the a:srcRect part of a cropped picture, filling the box', async () => {
+    const { c } = await render(withImage(run(inlineDrawing('<a:blip r:embed="rIdImg"/><a:srcRect l="25000" t="10000" r="25000" b="40000"/>'))));
+    const [img] = imgs(c);
+    const box = img.parentElement;
+
+    expect(box?.style.getPropertyValue('overflow')).toBe('hidden');
+    expect(box?.style.getPropertyValue('position')).toBe('relative');
+    expect(img.style.getPropertyValue('position')).toBe('absolute');
+    expect(img.style.getPropertyValue('max-width')).toBe('none');
+    expect(img.style.getPropertyValue('width')).toBe('200%');
+    expect(img.style.getPropertyValue('height')).toBe('200%');
+    expect(img.style.getPropertyValue('left')).toBe('-50%');
+    expect(img.style.getPropertyValue('top')).toBe('-20%');
+  });
+
+  it('ignores a crop that leaves nothing or is not a number', async () => {
+    for (const rect of ['<a:srcRect l="60000" r="60000"/>', '<a:srcRect l="x" t="-5"/>']) {
+      const { c } = await render(withImage(run(inlineDrawing(`<a:blip r:embed="rIdImg"/>${rect}`))));
+      const [img] = imgs(c);
+
+      expect(img.style.getPropertyValue('position')).toBe('');
+      expect(img.style.getPropertyValue('width')).toBe('100%');
+      document.body.replaceChildren();
+    }
+  });
+
   it('uses an empty alt when docPr has no descr', async () => {
     const { c } = await render(withImage(run(inlineDrawing(undefined, '<wp:docPr id="1" name="Picture 1"/>'))));
 

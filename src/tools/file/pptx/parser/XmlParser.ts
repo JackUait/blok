@@ -57,11 +57,10 @@ export class SafeXmlNode {
    * Returns an empty SafeXmlNode if not found, so chaining never crashes.
    */
   child(localName: string): SafeXmlNode {
-    if (!this.el) return new SafeXmlNode(null);
-    const children = this.el.children;
-    for (let i = 0; i < children.length; i++) {
-      if (children[i].localName === localName) {
-        return new SafeXmlNode(children[i]);
+    // Walk siblings: jsdom recomputes a live `children` collection on every index read.
+    for (let el = this.el?.firstElementChild ?? null; el !== null; el = el.nextElementSibling) {
+      if (el.localName === localName) {
+        return new SafeXmlNode(el);
       }
     }
     return new SafeXmlNode(null);
@@ -72,12 +71,10 @@ export class SafeXmlNode {
    * If no localName is given, returns all direct child elements.
    */
   children(localName?: string): SafeXmlNode[] {
-    if (!this.el) return [];
     const result: SafeXmlNode[] = [];
-    const children = this.el.children;
-    for (let i = 0; i < children.length; i++) {
-      if (localName === undefined || children[i].localName === localName) {
-        result.push(new SafeXmlNode(children[i]));
+    for (let el = this.el?.firstElementChild ?? null; el !== null; el = el.nextElementSibling) {
+      if (localName === undefined || el.localName === localName) {
+        result.push(new SafeXmlNode(el));
       }
     }
     return result;

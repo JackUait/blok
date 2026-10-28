@@ -65,7 +65,16 @@ interface LoadedPresentationFonts {
   // Many entries can point at one font part (same array from the zip map), so a
   // file rejected once is never decoded again under another name.
   rejectedData: WeakSet<Uint8Array>;
+  /** Decode time spent on this deck so far. */
+  spentMs: number;
 }
+
+/**
+ * Decode time a whole deck may spend. The per-slide budget alone would let a deck
+ * with many heavy faces block the page once per slide. A real 4.9 MB face takes
+ * 2-3.5 s to decode, so this keeps such a deck's fonts and still bounds the total.
+ */
+const DECK_DECODE_BUDGET_MS = 5000;
 
 const loadedByPresentation = new WeakMap<PresentationData, LoadedPresentationFonts>();
 
@@ -196,7 +205,7 @@ export function useEmbeddedFonts(
 
   let state = loadedByPresentation.get(presentation);
   if (!state) {
-    state = { faces: new Map(), rejected: new Set(), totalBytes: 0, attempted: new Set(), rejectedData: new WeakSet() };
+    state = { faces: new Map(), rejected: new Set(), totalBytes: 0, attempted: new Set(), rejectedData: new WeakSet(), spentMs: 0 };
     loadedByPresentation.set(presentation, state);
   }
 
@@ -212,13 +221,16 @@ export function useEmbeddedFonts(
       if (
         state.faces.size >= resolvedLimits.maxFaces ||
         (firstTry && state.attempted.size >= resolvedLimits.maxFaces) ||
-        now() - startedAt > resolvedLimits.maxProcessingMs
+        now() - startedAt > resolvedLimits.maxProcessingMs ||
+        state.spentMs > DECK_DECODE_BUDGET_MS
       ) {
         break;
       }
       state.attempted.add(key);
 
+      const decodeStartedAt = now();
       const fontBytes = decodeFace(face, resolvedLimits.maxInputBytesPerFace);
+      state.spentMs += now() - decodeStartedAt;
       if (
         !fontBytes ||
         now() - startedAt > resolvedLimits.maxProcessingMs ||

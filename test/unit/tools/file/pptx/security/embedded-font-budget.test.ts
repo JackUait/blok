@@ -112,6 +112,21 @@ describe('a pptx that embeds one heavy font under many names', () => {
     expect(fonts.add).toHaveBeenCalledTimes(1);
   });
 
+  it('stops decoding once the deck has spent its whole time budget, however the faces are spread', () => {
+    installFontMocks();
+    decompressMtxMock.mockImplementation(() => {
+      clock += 3000;
+
+      return new Uint8Array([0, 1, 0, 0]);
+    });
+    const { presentation, families } = deck(16, false);
+
+    Array.from({ length: 16 }, () => useEmbeddedFonts(presentation, families));
+
+    // 3 s per decode against a 5 s deck budget: the decode that crosses it is the last.
+    expect(decompressMtxMock).toHaveBeenCalledTimes(2);
+  });
+
   it('still loads the fonts of a normal deck on every slide and after slides are closed', async () => {
     const fonts = installFontMocks();
     decompressMtxMock.mockImplementation(() => {

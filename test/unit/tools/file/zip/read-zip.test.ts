@@ -303,6 +303,27 @@ describe('readZip — corrupt structures', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
+  it('rejects two central records that point at one local header', () => {
+    // Both records resolve to the local name "a.txt", so they would collapse into one entry.
+    const zip = buildZip([
+      { name: 'a.txt', data: utf8('abc') },
+      { name: 'b.txt', localName: 'a.txt', data: utf8('abc'), localOffset: 0 },
+    ]);
+
+    expectZipError(() => readZip(zip));
+  });
+
+  it('rejects a record whose local header sits inside another record\'s data', () => {
+    // A's stored bytes hold a valid local header for b.txt, so only the overlap gives it away.
+    const inner = buildZip([{ name: 'b.txt', data: utf8('b') }]);
+    const zip = buildZip([
+      { name: 'a.txt', data: inner },
+      { name: 'b.txt', data: utf8('b'), localOffset: 30 + 'a.txt'.length },
+    ]);
+
+    expectZipError(() => readZip(zip));
+  });
+
   it('rejects a stored entry whose sizes differ', () => {
     expectZipError(() => readZip(buildZip([{ name: 'a.txt', data: utf8('abc'), size: 5 }])));
   });

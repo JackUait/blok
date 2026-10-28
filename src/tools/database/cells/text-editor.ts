@@ -23,8 +23,11 @@ const escapeCommits = (type: PropertyDefinition['type']): boolean =>
 
 /** notion-spec-2 §19.7: a number opens as its cell shows it ("$42.00", "3550%"). */
 const initialText = (property: PropertyDefinition, value: PropertyValue | undefined, locale: string): string => {
-  if (property.type === 'number' && typeof value === 'number' && Number.isFinite(value)) {
-    return formatNumberValue(value, property.number ?? {}, locale);
+  // A number stored as text shows as a number in its cell too (display.ts).
+  const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+
+  if (property.type === 'number' && typeof n === 'number' && Number.isFinite(n)) {
+    return formatNumberValue(n, property.number ?? {}, locale);
   }
 
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
@@ -71,7 +74,7 @@ export const openTextEditor = (
 
   const resolve = (): Outcome | null => {
     // The shown number may be rounded: left as shown, the stored value stays.
-    if (property.type === 'number' && field.value === shown && typeof value === 'number') {
+    if (property.type === 'number' && field.value === shown) {
       return { kind: 'cancel' };
     }
     if (property.type === 'number') {

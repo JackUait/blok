@@ -116,7 +116,8 @@ export const parseNumberText = (text: string, display: NumberDisplay, locale: st
     return undefined;
   }
 
-  return percent ? read / 100 : read;
+  // 15 digits drop the float noise of the division (1.1 / 100 is 0.011000000000000001).
+  return percent ? Number((read / 100).toPrecision(15)) : read;
 };
 
 const readFormatted = (text: string, display: NumberDisplay, locale: string): number | undefined => {

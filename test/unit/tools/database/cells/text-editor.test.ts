@@ -394,6 +394,27 @@ describe('cell text editors', () => {
         expect(ctx.onCommit).not.toHaveBeenCalled();
       });
 
+      // A number stored as text still shows as a number in its cell (display.ts toNumber).
+      it.each(['Enter', 'Escape', 'outside'])('a number stored as text opens as shown and is kept when left as shown (%s)', (key) => {
+        const ctx = makeEditorContext();
+
+        openCellEditor(formatted('percent'), '42', makeAnchor(), ctx);
+        expect(field().value).toBe('4200%');
+        if (key === 'outside') pressOutside(); else press(field(), key);
+
+        expect(ctx.onCommit).not.toHaveBeenCalled();
+      });
+
+      it('Percent stores 1.1 typed as 0.011, with no float noise', () => {
+        const ctx = makeEditorContext();
+
+        openCellEditor(formatted('percent'), null, makeAnchor(), ctx);
+        type('1.1');
+        press(field(), 'Enter');
+
+        expect(ctx.onCommit).toHaveBeenCalledWith(0.011);
+      });
+
       it('a value rounded for display is kept on a click outside', () => {
         const ctx = makeEditorContext();
 

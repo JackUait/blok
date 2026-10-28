@@ -8,6 +8,30 @@ import type { RichText } from '../../../../types/rich-text';
 const readers = [['parse5', htmlToSegmentsNode], ['dom', htmlToSegmentsDom]] as const;
 
 describe.each(readers)('htmlToSegments (%s)', (_name, read) => {
+  it('folds a long space run in linear time', () => {
+    // Repeat until 25ms pass: one fast read is too short to time.
+    const perRead = (html: string): number => {
+      const started = performance.now();
+      const reads = { count: 0 };
+
+      while (reads.count === 0 || performance.now() - started < 25) {
+        read(html);
+        reads.count += 1;
+      }
+
+      return (performance.now() - started) / reads.count;
+    };
+    const fastest = (html: string): number => Math.min(...[0, 1, 2].map(() => perRead(html)));
+    const ratio = fastest(`x${' '.repeat(64_000)}x`) / fastest(`x${' '.repeat(16_000)}x`);
+
+    // Linear is ~4, quadratic ~16.
+    expect(ratio).toBeLessThan(8);
+  });
+
+  it('folds a whitespace run holding a newline into one space, and keeps one without', () => {
+    expect(read('a \t\n\r\f b\n\nc  d')).toEqual([{ text: 'a b c  d' }]);
+  });
+
   it('decodes entities into plain text', () => {
     expect(read('a &lt; b &amp;&amp; "c"')).toEqual([{ text: 'a < b && "c"' }]);
   });

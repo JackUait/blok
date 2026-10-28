@@ -147,7 +147,8 @@ const walk = (nodes: InlineNode[], marks: RichTextMarks, out: RichTextSegment[])
   for (const node of nodes) {
     if (node.kind === 'text') {
       // HTML renders a raw newline as a space; only <br> is a line break.
-      out.push(withMarks({ text: node.value.replace(/[ \t\n\r\f]*\n[ \t\n\r\f]*/g, ' ') }, marks));
+      // Match whole runs, then test for \n: `\s*\n\s*` backtracks to quadratic on a long run with no \n.
+      out.push(withMarks({ text: node.value.replace(/[ \t\n\r\f]+/g, (run) => (run.includes('\n') ? ' ' : run)) }, marks));
       continue;
     }
 

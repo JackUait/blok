@@ -4,7 +4,6 @@ import '../helpers/domShims';
 import {
   resolveSlideJumpIndex,
   resolveSlideNavigationIndex,
-  slideJumpTitle,
 } from '../../../../../../src/tools/file/pptx/renderer/navigation';
 import { createMockRenderContext } from '../helpers/mockContext';
 
@@ -185,9 +184,5 @@ describe('renderer navigation helpers', () => {
     expect(resolveSlideNavigationIndex(ctx, undefined)).toBeUndefined();
     expect(resolveSlideNavigationIndex(ctx, 'ppaction://hlinksldjump')).toBeUndefined();
     expect(resolveSlideNavigationIndex(ctx, 'ppaction://unknown?jump=nextslide')).toBeUndefined();
-  });
-
-  it('formats slide jump titles using one-based numbering', () => {
-    expect(slideJumpTitle(4)).toBe('Go to slide 5');
   });
 });

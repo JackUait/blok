@@ -8,6 +8,12 @@ import { xmlNode } from '../helpers/xmlNode';
 import type { PicNodeData } from '../../../../../../src/tools/file/pptx/model/nodes/PicNode';
 import type { RenderContext } from '../../../../../../src/tools/file/pptx/renderer/RenderContext';
 
+/** A missing or unshown picture keeps its box, with no words in it. */
+function expectBlankPlaceholder(el: HTMLElement): void {
+  expect(el.textContent).toBe('');
+  expect(el.querySelector('div[style*="dashed"]')).not.toBeNull();
+}
+
 /** Helper: create a minimal PicNodeData for testing. */
 function createPicNode(overrides: Partial<PicNodeData> = {}): PicNodeData {
   const source =
@@ -274,7 +280,7 @@ describe('renderImage', () => {
       const el = renderImage(createPicNode(), ctx);
 
       expect(el.querySelector('img')).toBeNull();
-      expect(el.textContent).toContain('Image not found');
+      expectBlankPlaceholder(el);
       expect(ctx.mediaUrlCache.size).toBe(0);
     });
 
@@ -290,7 +296,7 @@ describe('renderImage', () => {
       const el = renderImage(createPicNode(), ctx);
 
       expect(el.querySelector('img')).toBeNull();
-      expect(el.textContent).toContain('Image not found');
+      expectBlankPlaceholder(el);
       expect(ctx.mediaUrlCache.size).toBe(0);
     });
 
@@ -309,7 +315,7 @@ describe('renderImage', () => {
       const el = renderImage(node, ctx);
 
       expect(el.querySelector('img')).toBeNull();
-      expect(el.textContent).toContain('Image not found');
+      expectBlankPlaceholder(el);
     });
 
     it('renders an embedded image after lazy media resolves asynchronously', async () => {
@@ -754,7 +760,7 @@ describe('renderImage', () => {
       const el = renderImage(createPicNode(), ctx);
 
       expect(el.querySelector('img')).toBeNull();
-      expect(el.textContent).toContain('Image not found');
+      expectBlankPlaceholder(el);
       expect(ctx.mediaUrlCache.size).toBe(0);
     });
 
@@ -775,7 +781,7 @@ describe('renderImage', () => {
       );
 
       expect(el.querySelector('img')).toBeNull();
-      expect(el.textContent).toContain('Image not found');
+      expectBlankPlaceholder(el);
     });
 
     it('navigates picture-level external hyperlinks through onNavigate', () => {
@@ -818,8 +824,25 @@ describe('renderImage', () => {
       el.click();
 
       expect(el.style.cursor).toBe('pointer');
-      expect(el.title).toBe('Go to slide 3');
+      expect(el.hasAttribute('title')).toBe(false);
       expect(onNavigate).toHaveBeenCalledWith({ slideIndex: 2 });
+    });
+
+    it('keeps the deck tooltip as the title of a picture-level slide jump', () => {
+      const ctx = createCtxWithMedia();
+      ctx.slide.rels.set('rIdJump', { type: 'slide', target: 'slide2.xml' });
+      ctx.presentation.slides = [
+        ctx.slide,
+        { ...ctx.slide, index: 1, slidePath: 'ppt/slides/slide2.xml', rels: new Map() },
+      ];
+      ctx.onNavigate = vi.fn();
+      const node = createPicNode({
+        hlinkClick: { rId: 'rIdJump', action: 'ppaction://hlinksldjump', tooltip: 'Back to agenda' },
+      });
+
+      const el = renderImage(node, ctx);
+
+      expect(el.title).toBe('Back to agenda');
     });
 
     it('navigates picture-level hlinkshowjump lastslide actions without a relationship id', () => {
@@ -840,7 +863,7 @@ describe('renderImage', () => {
       el.click();
 
       expect(el.style.cursor).toBe('pointer');
-      expect(el.title).toBe('Go to slide 3');
+      expect(el.hasAttribute('title')).toBe(false);
       expect(onNavigate).toHaveBeenCalledWith({ slideIndex: 2 });
     });
   });
@@ -994,29 +1017,29 @@ describe('renderImage', () => {
       const ctx = createMockRenderContext();
       const node = createPicNode({ blipEmbed: undefined });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('No image data');
+      expectBlankPlaceholder(el);
     });
 
     it('shows placeholder when relationship is missing', () => {
       const ctx = createMockRenderContext();
       const node = createPicNode({ blipEmbed: 'rId999' });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('Missing image reference');
+      expectBlankPlaceholder(el);
     });
 
     it('shows placeholder when media data is not found', () => {
       const ctx = createMockRenderContext();
       ctx.slide.rels.set('rId1', { type: 'image', target: 'ppt/media/missing.png' });
       const el = renderImage(createPicNode(), ctx);
-      expect(el.textContent).toContain('Image not found');
+      expectBlankPlaceholder(el);
     });
 
-    it('shows unsupported format placeholder for WMF', () => {
+    it('shows a blank placeholder for WMF', () => {
       const ctx = createMockRenderContext();
       ctx.slide.rels.set('rId1', { type: 'image', target: 'ppt/media/image1.wmf' });
       const el = renderImage(createPicNode(), ctx);
-      expect(el.textContent).toContain('Unsupported format');
-      expect(el.textContent).toContain('WMF');
+      expectBlankPlaceholder(el);
+      expect(el.querySelector('div[style*="dashed"]')?.children).toHaveLength(0);
     });
   });
 
@@ -1073,11 +1096,11 @@ describe('renderImage', () => {
       expect(el.textContent).toContain('\u25B6');
     });
 
-    it('shows Video placeholder when no video or poster available', () => {
+    it('shows a blank video placeholder when no video or poster available', () => {
       const ctx = createMockRenderContext();
       const node = createPicNode({ isVideo: true, blipEmbed: undefined });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('Video');
+      expectBlankPlaceholder(el);
     });
 
     it('never fetches an https external video URL', () => {
@@ -1090,7 +1113,7 @@ describe('renderImage', () => {
       const node = createPicNode({ isVideo: true, mediaRId: 'rId2', blipEmbed: undefined });
       const el = renderImage(node, ctx);
       expect(el.querySelector('video')).toBeNull();
-      expect(el.textContent).toContain('Video');
+      expectBlankPlaceholder(el);
     });
   });
 
@@ -1137,11 +1160,11 @@ describe('renderImage', () => {
       expect(ctx.mediaUrlCache.has('ppt/media/image1.png')).toBe(false);
     });
 
-    it('shows Audio placeholder when no audio URL available', () => {
+    it('shows a blank audio placeholder when no audio URL available', () => {
       const ctx = createMockRenderContext();
       const node = createPicNode({ isAudio: true, blipEmbed: undefined });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('Audio');
+      expectBlankPlaceholder(el);
     });
   });
 
@@ -1523,7 +1546,7 @@ describe('renderImage', () => {
         const el = renderImage(node, ctx);
 
         expect(el.querySelector('video')).toBeNull();
-        expect(el.textContent).toContain('Video');
+        expectBlankPlaceholder(el);
       },
     );
 
@@ -1538,7 +1561,7 @@ describe('renderImage', () => {
       const el = renderImage(node, ctx);
 
       expect(el.querySelector('audio')).toBeNull();
-      expect(el.textContent).toContain('Audio');
+      expectBlankPlaceholder(el);
     });
 
     it('does not attach external media URLs without TargetMode="External"', () => {
@@ -1548,7 +1571,7 @@ describe('renderImage', () => {
       const el = renderImage(node, ctx);
 
       expect(el.querySelector('video')).toBeNull();
-      expect(el.textContent).toContain('Video');
+      expectBlankPlaceholder(el);
     });
 
     it('does not fall back to embedded media for disallowed external TargetMode URLs', () => {
@@ -1563,7 +1586,7 @@ describe('renderImage', () => {
       const el = renderImage(node, ctx);
 
       expect(el.querySelector('video')).toBeNull();
-      expect(el.textContent).toContain('Video');
+      expectBlankPlaceholder(el);
     });
 
     it('resolves embedded media URL when rel target is not http', () => {
@@ -1960,14 +1983,14 @@ describe('renderImage', () => {
       const ctx = createMockRenderContext();
       const node = createPicNode({ isAudio: true, mediaRId: undefined, blipEmbed: undefined });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('Audio');
+      expectBlankPlaceholder(el);
     });
 
     it('renders audio placeholder when mediaRId relationship missing', () => {
       const ctx = createMockRenderContext();
       const node = createPicNode({ isAudio: true, mediaRId: 'rId999', blipEmbed: undefined });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('Audio');
+      expectBlankPlaceholder(el);
     });
 
     it('renders audio placeholder when media data not in presentation', () => {
@@ -1975,7 +1998,7 @@ describe('renderImage', () => {
       ctx.slide.rels.set('rId2', { type: 'audio', target: 'ppt/media/missing.mp3' });
       const node = createPicNode({ isAudio: true, mediaRId: 'rId2', blipEmbed: undefined });
       const el = renderImage(node, ctx);
-      expect(el.textContent).toContain('Audio');
+      expectBlankPlaceholder(el);
     });
   });
 

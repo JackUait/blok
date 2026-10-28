@@ -1835,18 +1835,16 @@ describe('renderGroup — per-child error isolation', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders an error placeholder div when renderNode throws', () => {
+  it('shows nothing for a child whose render throws', () => {
     const group = makeGroup([makeSpXml()]);
     const throwingRender = (_childNode: BaseNodeData, _ctx: RenderContext): HTMLElement => {
       throw new Error('render boom');
     };
 
     const el = renderGroup(group, createMockRenderContext(), throwingRender);
-    // Error placeholder is appended instead of crashing
-    expect(el.children.length).toBe(1);
-    const placeholder = el.children[0] as HTMLElement;
-    expect(placeholder.textContent).toContain('Group child error');
-    expect(placeholder.style.border).toContain('dashed');
+
+    expect(el.children).toHaveLength(0);
+    expect(el.textContent).toBe('');
   });
 
   it('continues rendering subsequent valid children after one fails', () => {
@@ -1861,23 +1859,10 @@ describe('renderGroup — per-child error isolation', () => {
     const group = makeGroup([makeSpXml('1'), makeSpXml('2')]);
     const el = renderGroup(group, createMockRenderContext(), conditionalRender);
 
-    // Both slots produce a child element: error placeholder + valid child
-    expect(el.children.length).toBe(2);
-    const first = el.children[0] as HTMLElement;
-    const second = el.children[1] as HTMLElement;
-    expect(first.textContent).toContain('Group child error');
-    expect(second.getAttribute('data-node-type')).toBe('shape');
-  });
-
-  it('produces an error placeholder with the expected dashed border style', () => {
-    const group = makeGroup([makeSpXml()]);
-    const el = renderGroup(group, createMockRenderContext(), () => {
-      throw new Error('boom');
-    });
-    const placeholder = el.children[0] as HTMLElement;
-    expect(placeholder.style.border).toMatch(/dashed/);
-    expect(placeholder.style.backgroundColor).toBeTruthy();
-    expect(placeholder.style.color).toBe('rgb(204, 0, 0)');
+    // Only the valid child is drawn; the failed one leaves no trace
+    expect(el.children).toHaveLength(1);
+    expect(el.children[0].getAttribute('data-node-type')).toBe('shape');
+    expect(el.textContent).toBe('');
   });
 });
 

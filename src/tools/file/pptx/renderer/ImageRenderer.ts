@@ -18,7 +18,7 @@ import { parseEmfContent } from '../utils/emfParser';
 import { emuToPx } from '../parser/units';
 import { SafeXmlNode } from '../parser/XmlParser';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
-import { resolveSlideNavigationIndex, slideJumpTitle } from './navigation';
+import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
 import { renderCustomGeometry } from '../shapes/customGeometry';
 import { getPresetShapeClipPath } from '../shapes/presets';
 import { splitTiledPatternFillCss } from './cssValues';
@@ -136,17 +136,17 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
   if (embedId) {
     const rel = ctx.slide.rels.get(embedId);
     if (!rel) {
-      renderPlaceholder(wrapper, 'Missing image reference');
+      renderPlaceholder(wrapper);
       return wrapper;
     }
 
     if (isExternalTargetMode(rel.targetMode)) {
-      renderPlaceholder(wrapper, 'Image not found');
+      renderPlaceholder(wrapper);
       return wrapper;
     } else {
       const mediaPathForType = resolveMediaPath(rel.target);
       if (isUnsupportedFormat(mediaPathForType)) {
-        renderUnsupportedPlaceholder(wrapper, mediaPathForType);
+        renderUnsupportedPlaceholder(wrapper);
         return wrapper;
       }
 
@@ -161,7 +161,7 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
             .then((lazyResolved) => {
               if (ctx.signal?.aborted) return;
               if (!lazyResolved) {
-                renderPlaceholder(wrapper, 'Image not found');
+                renderPlaceholder(wrapper);
                 return;
               }
 
@@ -174,14 +174,14 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
               );
             })
             .catch(() => {
-              if (!ctx.signal?.aborted) renderPlaceholder(wrapper, 'Image not found');
+              if (!ctx.signal?.aborted) renderPlaceholder(wrapper);
             });
           ctx.asyncTasks?.push(task);
           if (!ctx.asyncTasks) void task;
           return wrapper;
         }
 
-        renderPlaceholder(wrapper, 'Image not found');
+        renderPlaceholder(wrapper);
         return wrapper;
       }
       renderResolvedImage(node, ctx, wrapper, resolved.mediaPath, resolved.data);
@@ -193,18 +193,18 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
       const task = linked.then((linkedUrl) => {
         if (ctx.signal?.aborted) return;
         if (linkedUrl) renderImageUrl(node, ctx, wrapper, linkedUrl);
-        else renderPlaceholder(wrapper, 'Image not found');
+        else renderPlaceholder(wrapper);
       });
       ctx.asyncTasks?.push(task);
       return wrapper;
     }
     url = linked;
     if (!url) {
-      renderPlaceholder(wrapper, 'Image not found');
+      renderPlaceholder(wrapper);
       return wrapper;
     }
   } else {
-    renderPlaceholder(wrapper, 'No image data');
+    renderPlaceholder(wrapper);
     return wrapper;
   }
 
@@ -896,7 +896,7 @@ function applyPictureHyperlink(wrapper: HTMLElement, node: PicNodeData, ctx: Ren
   const slideIndex = resolveSlideNavigationIndex(ctx, action, rel);
   if (slideIndex !== undefined) {
     wrapper.style.cursor = 'pointer';
-    wrapper.title = node.hlinkClick.tooltip || slideJumpTitle(slideIndex);
+    applyLinkTooltip(wrapper, node.hlinkClick.tooltip);
     wrapper.addEventListener('click', (e) => {
       e.stopPropagation();
       ctx.onNavigate!({ slideIndex });
@@ -1013,7 +1013,7 @@ function renderAudioVideo(
       overlay.textContent = '\u25B6';
       wrapper.appendChild(overlay);
     } else {
-      renderPlaceholder(wrapper, kind === 'video' ? 'Video' : 'Audio');
+      renderPlaceholder(wrapper);
     }
   };
   if (media instanceof Promise || poster instanceof Promise) {
@@ -1035,9 +1035,9 @@ function resolveMediaUrl(
 }
 
 /**
- * Render a placeholder div for missing or error content.
+ * Render an empty box for missing content. No text: it would be English in a localized UI.
  */
-function renderPlaceholder(wrapper: HTMLElement, message: string): void {
+function renderPlaceholder(wrapper: HTMLElement): void {
   const placeholder = document.createElement('div');
   placeholder.style.width = '100%';
   placeholder.style.height = '100%';
@@ -1048,15 +1048,13 @@ function renderPlaceholder(wrapper: HTMLElement, message: string): void {
   placeholder.style.color = '#888';
   placeholder.style.fontSize = '12px';
   placeholder.style.border = '1px dashed #ccc';
-  placeholder.textContent = message;
   wrapper.appendChild(placeholder);
 }
 
 /**
  * Render a placeholder for unsupported image formats (WMF).
  */
-function renderUnsupportedPlaceholder(wrapper: HTMLElement, path: string): void {
-  const ext = path.split('.').pop()?.toUpperCase() || 'Unknown';
+function renderUnsupportedPlaceholder(wrapper: HTMLElement): void {
   const placeholder = document.createElement('div');
   placeholder.style.width = '100%';
   placeholder.style.height = '100%';
@@ -1068,17 +1066,6 @@ function renderUnsupportedPlaceholder(wrapper: HTMLElement, path: string): void 
   placeholder.style.color = '#999';
   placeholder.style.fontSize = '11px';
   placeholder.style.border = '1px dashed #ddd';
-
-  const icon = document.createElement('div');
-  icon.style.fontSize = '24px';
-  icon.style.marginBottom = '4px';
-  icon.textContent = '\uD83D\uDDBC'; // framed picture emoji
-
-  const label = document.createElement('div');
-  label.textContent = `Unsupported format: ${ext}`;
-
-  placeholder.appendChild(icon);
-  placeholder.appendChild(label);
   wrapper.appendChild(placeholder);
 }
 

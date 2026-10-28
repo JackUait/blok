@@ -110,6 +110,7 @@ export function resolveSlideNavigationIndex(
   return undefined;
 }
 
-export function slideJumpTitle(slideIndex: number): string {
-  return `Go to slide ${slideIndex + 1}`;
+/** Shows the deck's own tooltip on a slide-jump link. No fallback text: it would be untranslated. */
+export function applyLinkTooltip(el: HTMLElement, tooltip: string | undefined): void {
+  if (tooltip) el.setAttribute('title', tooltip);
 }

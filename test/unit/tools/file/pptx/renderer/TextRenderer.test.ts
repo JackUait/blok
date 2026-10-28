@@ -982,10 +982,40 @@ describe('TextRenderer — renderTextBody', () => {
 
       expect(link).not.toBeNull();
       expect(link!.textContent).toBe('Jump');
-      expect(link!.title).toBe('Go to slide 3');
+      expect(link?.hasAttribute('title')).toBe(false);
       expect(link!.style.cursor).toBe('pointer');
       expect(link!.style.color).toBe('rgb(5, 99, 193)');
       expect(navigateCalls).toEqual([{ slideIndex: 2 }]);
+    });
+
+    it('keeps the deck tooltip as the title of a text slide jump', () => {
+      const body = makeTextBody({
+        paragraphs: [
+          {
+            runs: [
+              {
+                text: 'Jump',
+                properties: xmlNode(
+                  '<rPr xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><hlinkClick r:id="rIdJump" action="ppaction://hlinksldjump" tooltip="Back to agenda"/></rPr>',
+                ),
+              },
+            ],
+            level: 0,
+          },
+        ],
+      });
+      const ctx = createMockRenderContext();
+      ctx.slide.rels.set('rIdJump', { type: 'slide', target: 'slide2.xml' });
+      ctx.presentation.slides = [
+        ctx.slide,
+        { ...ctx.slide, index: 1, slidePath: 'ppt/slides/slide2.xml', rels: new Map() },
+      ];
+      ctx.onNavigate = () => {};
+      const container = document.createElement('div');
+
+      renderTextBody(body, undefined, ctx, container);
+
+      expect(container.querySelector('[role="link"]')?.getAttribute('title')).toBe('Back to agenda');
     });
 
     it('renders hlinkshowjump text actions as clickable slide navigation without r:id', () => {
@@ -1021,7 +1051,7 @@ describe('TextRenderer — renderTextBody', () => {
 
       expect(link).not.toBeNull();
       expect(link!.textContent).toBe('Next');
-      expect(link!.title).toBe('Go to slide 3');
+      expect(link?.hasAttribute('title')).toBe(false);
       expect(link!.style.color).toBe('rgb(5, 99, 193)');
       expect(navigateCalls).toEqual([{ slideIndex: 2 }]);
     });

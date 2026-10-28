@@ -145,7 +145,7 @@ import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '.
 import { isAllowedExternalUrl } from '../utils/urlSafety';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
-import { resolveSlideNavigationIndex, slideJumpTitle } from './navigation';
+import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
 import { scaleCssLengthForTransform } from './cssValues';
 import {
   flipAbsoluteSvgPathData,
@@ -3931,7 +3931,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
     const slideIndex = resolveSlideNavigationIndex(ctx, action, rel);
     if (slideIndex !== undefined) {
       wrapper.style.cursor = 'pointer';
-      wrapper.title = node.hlinkClick.tooltip || slideJumpTitle(slideIndex);
+      applyLinkTooltip(wrapper, node.hlinkClick.tooltip);
       wrapper.addEventListener('click', (e) => {
         e.stopPropagation();
         ctx.onNavigate!({ slideIndex });

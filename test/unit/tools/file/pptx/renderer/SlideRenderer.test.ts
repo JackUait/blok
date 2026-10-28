@@ -5,7 +5,6 @@ import { parseXml, SafeXmlNode } from '../../../../../../src/tools/file/pptx/par
 import { buildPresentation, type PresentationData } from '../../../../../../src/tools/file/pptx/model/Presentation';
 import type { SlideData } from '../../../../../../src/tools/file/pptx/model/Slide';
 import type { ShapeNodeData } from '../../../../../../src/tools/file/pptx/model/nodes/ShapeNode';
-import type { TableNodeData } from '../../../../../../src/tools/file/pptx/model/nodes/TableNode';
 import type { PptxFiles } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
 
 const emptyXml = new SafeXmlNode(null);
@@ -297,43 +296,39 @@ describe('renderSlide', () => {
     expect(handle.element.children.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('calls onNodeError for failing nodes and renders error placeholder', () => {
+  it('calls onNodeError for a failing node and draws nothing for it', () => {
     const pres = makeMinimalPres();
-    // Create a node whose renderer will throw by using a table with null source
-    // that will fail during rendering when trying to access table properties
     const badNode = {
       id: 'bad',
       name: 'bad-node',
-      nodeType: 'table',
+      nodeType: 'shape',
       position: { x: 0, y: 0 },
       size: { w: 100, h: 100 },
       rotation: 0,
       flipH: false,
       flipV: false,
       source: emptyXml,
-      columns: null, // This will cause renderTable to throw
-      rows: null,
-    } as unknown as TableNodeData;
-
-    const onNodeError = vi.fn();
-    const slide: SlideData = {
+      get hidden(): boolean {
+        throw new Error('node boom');
+      },
+    } as unknown as ShapeNodeData;
+    const slideWith = (nodes: SlideData['nodes']): SlideData => ({
       index: 0,
       layoutIndex: '',
       slidePath: '',
-      nodes: [badNode],
+      nodes,
       rels: new Map(),
       showMasterSp: true,
-    };
-    const { element: el } = renderSlide(pres, slide, { onNodeError });
-    // Either error placeholder is rendered or onNodeError is called
-    if (onNodeError.mock.calls.length > 0) {
-      expect(onNodeError).toHaveBeenCalledWith('bad', expect.anything());
-      const errorPlaceholder = el.querySelector('[title*="bad"]');
-      expect(errorPlaceholder).not.toBeNull();
-    } else {
-      // If rendering didn't throw, the node was rendered somehow — still valid
-      expect(el.children.length).toBeGreaterThanOrEqual(1);
-    }
+    });
+
+    const onNodeError = vi.fn();
+    const { element: el } = renderSlide(pres, slideWith([badNode]), { onNodeError });
+    const { element: empty } = renderSlide(pres, slideWith([]));
+
+    expect(onNodeError).toHaveBeenCalledWith('bad', expect.any(Error));
+    expect(el.children).toHaveLength(empty.children.length);
+    expect(el.textContent).toBe('');
+    expect(el.querySelector('[title]')).toBeNull();
   });
 
   it('skips master shapes when showMasterSp is false', () => {

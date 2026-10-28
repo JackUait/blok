@@ -23,7 +23,7 @@ import { safeHref } from '../../../../shared/sanitize-url';
 import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
-import { resolveSlideNavigationIndex, slideJumpTitle } from './navigation';
+import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
 import { renderMathFormula } from './MathRenderer';
 
 // ---------------------------------------------------------------------------
@@ -1694,7 +1694,7 @@ export function renderTextBody(
         const slideIndex = runStyle.hlinkSlideIndex;
         span.setAttribute('role', 'link');
         span.tabIndex = 0;
-        span.title = runStyle.hlinkTooltip || slideJumpTitle(slideIndex);
+        applyLinkTooltip(span, runStyle.hlinkTooltip);
         span.style.cursor = 'pointer';
         span.addEventListener('click', (e) => {
           e.stopPropagation();

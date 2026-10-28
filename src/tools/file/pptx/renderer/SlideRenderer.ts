@@ -91,36 +91,6 @@ function renderNode(node: BaseNodeData, ctx: RenderContext): HTMLElement | null 
 }
 
 // ---------------------------------------------------------------------------
-// Error Placeholder
-// ---------------------------------------------------------------------------
-
-/**
- * Create a visual error placeholder at the node's position.
- */
-function createErrorPlaceholder(node: BaseNodeData): HTMLElement {
-  const el = document.createElement('div');
-  el.style.position = 'absolute';
-  el.style.left = `${node.position.x}px`;
-  el.style.top = `${node.position.y}px`;
-  el.style.width = `${node.size.w}px`;
-  el.style.height = `${node.size.h}px`;
-  el.style.border = '2px dashed #ff4444';
-  el.style.backgroundColor = 'rgba(255,68,68,0.08)';
-  el.style.display = 'flex';
-  el.style.alignItems = 'center';
-  el.style.justifyContent = 'center';
-  el.style.color = '#cc0000';
-  el.style.fontSize = '11px';
-  el.style.fontFamily = 'monospace';
-  el.style.overflow = 'hidden';
-  el.style.boxSizing = 'border-box';
-  el.style.padding = '4px';
-  el.textContent = `Render Error`;
-  el.title = `Failed to render node: ${node.id} (${node.name})`;
-  return el;
-}
-
-// ---------------------------------------------------------------------------
 // Master/Layout Shape Parsing
 // ---------------------------------------------------------------------------
 
@@ -306,8 +276,8 @@ export function renderSlide(
         const el = renderNode(node, ctx);
         if (el) container.appendChild(el);
       } catch (e) {
+        // Draw nothing: PowerPoint shows nothing either, and any text here would be untranslated.
         options?.onNodeError?.(node.id, e);
-        container.appendChild(createErrorPlaceholder(node));
       }
     }
   } finally {

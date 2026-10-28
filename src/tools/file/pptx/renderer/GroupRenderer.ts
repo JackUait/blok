@@ -458,19 +458,7 @@ export function renderGroup(
       const el = renderNode(childNode, { ...childCtx, groupChildScale });
       if (el) childHost.appendChild(el);
     } catch {
-      // Per-child error handling — create error placeholder
-      const errDiv = document.createElement('div');
-      errDiv.style.position = 'absolute';
-      errDiv.style.border = '1px dashed #ff6b6b';
-      errDiv.style.backgroundColor = 'rgba(255,107,107,0.1)';
-      errDiv.style.fontSize = '10px';
-      errDiv.style.color = '#cc0000';
-      errDiv.style.display = 'flex';
-      errDiv.style.alignItems = 'center';
-      errDiv.style.justifyContent = 'center';
-      errDiv.style.padding = '2px';
-      errDiv.textContent = 'Group child error';
-      childHost.appendChild(errDiv);
+      // A failed child draws nothing; the rest of the group still shows.
     }
   }
 

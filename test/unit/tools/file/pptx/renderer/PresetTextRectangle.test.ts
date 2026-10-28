@@ -34,11 +34,12 @@ describe('preset text box layout (issue #37)', () => {
       );
       const ctx = createMockRenderContext();
       ctx.slide.nodes = [parseShapeNode(parseXml(xml))];
-      const h = renderSlide(ctx.presentation, ctx.slide);
+      const onNodeError = vi.fn();
+      const h = renderSlide(ctx.presentation, ctx.slide, { onNodeError });
       await h.ready;
       expect(h.element.querySelector('svg')).not.toBeNull();
       expect(h.element.textContent).toContain('Sample text');
-      expect(h.element.textContent).not.toContain('Render Error');
+      expect(onNodeError).not.toHaveBeenCalled();
       h.dispose();
     },
   );

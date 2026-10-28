@@ -5843,7 +5843,7 @@ describe('ShapeRenderer', () => {
     const el = renderShape(shapeNode, ctx);
 
     expect(el.style.cursor).toBe('pointer');
-    expect(el.title).toBe('Go to slide 3');
+    expect(el.hasAttribute('title')).toBe(false);
     el.click();
     expect(navigateCalls).toEqual([{ slideIndex: 2 }]);
   });
@@ -5880,7 +5880,7 @@ describe('ShapeRenderer', () => {
     const el = renderShape(shapeNode, ctx);
 
     expect(el.style.cursor).toBe('pointer');
-    expect(el.title).toBe('Go to slide 3');
+    expect(el.hasAttribute('title')).toBe(false);
     el.click();
     expect(navigateCalls).toEqual([{ slideIndex: 2 }]);
   });
@@ -5918,7 +5918,7 @@ describe('ShapeRenderer', () => {
     expect(el.title).toBe('Go to summary');
   });
 
-  it('hlinkClick ppaction://hlinksldjump falls back to "Go to slide N" title when no tooltip', () => {
+  it('hlinkClick ppaction://hlinksldjump sets no title when no tooltip', () => {
     const xml = `
       <p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -5948,7 +5948,7 @@ describe('ShapeRenderer', () => {
 
     const el = renderShape(shapeNode, ctx);
 
-    expect(el.title).toBe('Go to slide 10');
+    expect(el.hasAttribute('title')).toBe(false);
   });
 
   it('hlinkClick ppaction://hlinksldjump is a no-op when onNavigate is not set', () => {

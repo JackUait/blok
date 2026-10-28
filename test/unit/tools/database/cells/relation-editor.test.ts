@@ -144,6 +144,20 @@ describe('relation editor', () => {
         expect(options().find((o) => o.hasAttribute('data-active'))?.getAttribute('data-blok-database-relation-option')).toBe('r2');
       });
 
+      // notion-spec-2 §19.2 (02-rel-enter-linked.png): Enter opens the linked page; it stays linked and the picker stays open.
+      it('Enter on the highlighted linked page opens it, keeps it linked and stays open', () => {
+        const openRelated = vi.fn();
+        const onCommit = vi.fn();
+        const onClose = vi.fn();
+
+        openLinked({ openRelated, onCommit, onClose });
+        press(search(), 'Enter');
+
+        expect(openRelated).toHaveBeenCalledWith(relation(), 'r2');
+        expect(onCommit).not.toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
+      });
+
       it('keeps "Select a page" over the list while nothing is linked', () => {
         openInTable();
 

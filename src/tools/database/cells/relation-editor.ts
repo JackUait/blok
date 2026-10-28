@@ -190,8 +190,11 @@ class RelationEditor implements CellEditorHandle {
       event.preventDefault();
       const row = rows[index];
 
+      if (row === undefined) return;
       // Enter only links: the first row is highlighted on open, and Enter there must not unlink it.
-      if (row !== undefined && !this.selected.includes(row.id)) this.toggle(row.id);
+      if (!this.selected.includes(row.id)) this.toggle(row.id);
+      // notion-spec-2 §19.2: in the table picker, Enter on a linked page opens it.
+      else if (this.heading !== null) this.ctx.openRelated?.(this.property, row.id);
     }
   };
 

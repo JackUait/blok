@@ -555,7 +555,8 @@ export function renderTable(node: TableNodeData, ctx: RenderContext): HTMLElemen
       td.style.overflow = 'hidden';
 
       // Spanning, clamped to the grid: browsers lay out every column and row a span claims.
-      const colSpan = Math.min(cell.gridSpan, totalCols - colIdx);
+      // A table may have no tblGrid, so the longest row also counts as grid width.
+      const colSpan = Math.min(cell.gridSpan, Math.max(totalCols, longestRow) - colIdx);
       const rowSpan = Math.min(cell.rowSpan, totalRows - rowIdx);
       if (colSpan > 1) {
         td.colSpan = colSpan;

@@ -127,6 +127,16 @@ describe('a pptx table cell that claims a huge span', () => {
     expect(td.rowSpan).toBe(2);
   });
 
+  it('keeps a span when the table has no grid, as long as it fits the widest row', () => {
+    // No tblGrid: row 0 holds three cells, row 1 one cell spanning all three.
+    const node = table(0, [3, 1]);
+    node.rows[1].cells[0] = { ...plainCell, gridSpan: 3 };
+
+    const td = renderTable(node, createMockRenderContext()).querySelectorAll('tr')[1].querySelector('td');
+
+    expect(td?.colSpan).toBe(3);
+  });
+
   it('keeps an honest span as written', () => {
     const node = grid(3, 3);
     node.rows[0].cells[0] = { ...plainCell, gridSpan: 3, rowSpan: 3 };

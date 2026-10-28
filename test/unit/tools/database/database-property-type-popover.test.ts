@@ -411,6 +411,27 @@ describe('DatabasePropertyTypePopover', () => {
         flow.destroy();
       });
 
+      // notion-spec-2 §18.5: a typed name then Enter makes Text. Typing drops the on-open highlight, so Enter never starts Summarize.
+      it.each<'grid' | 'list'>(['grid', 'list'])('makes Text from a typed name on Enter in the %s, not the highlighted row', (layout) => {
+        const named = vi.fn<(type: PropertyType, name: string) => void>();
+        const autofill = vi.fn<(mode: 'summary' | 'translate', name: string) => void>();
+        const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, layout, onAutofill: autofill });
+
+        flow.open(anchor);
+        press('ArrowDown');
+        const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+        if (field === null) throw new Error('no name field');
+        field.value = 'Budget';
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(active()).toEqual([]);
+        press('Enter');
+
+        expect(autofill).not.toHaveBeenCalled();
+        expect(named).toHaveBeenCalledWith('text', 'Budget');
+        flow.destroy();
+      });
+
       it('leaves Left and Right to the name field while an AI row is highlighted', () => {
         const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', onAutofill: vi.fn() });
 

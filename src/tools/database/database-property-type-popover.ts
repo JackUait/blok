@@ -115,6 +115,10 @@ export class DatabasePropertyTypePopover {
       nameField.placeholder = this.i18n?.t(placeholderKey) ?? placeholderKey;
       nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
       header.appendChild(nameField);
+      // notion-spec-2 §18.5: a typed name then Enter makes Text, so typing drops any highlight and Enter never starts a highlighted row.
+      nameField.addEventListener('input', () => {
+        popover.querySelectorAll(`[${OPTION_ACTIVE}]`).forEach((row) => row.removeAttribute(OPTION_ACTIVE));
+      });
       popover.appendChild(header);
     }
 

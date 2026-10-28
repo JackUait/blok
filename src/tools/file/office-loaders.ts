@@ -26,7 +26,7 @@ export async function loadZipReader(): Promise<typeof readZip> {
 
 /** Dynamic-import the in-house pptx viewer (code-split out of the main bundle). */
 export async function loadPptxRenderer(): Promise<{
-  open: (buf: ArrayBuffer, container: HTMLElement) => Promise<DeckView>;
+  open: (buf: ArrayBuffer, container: HTMLElement, isCancelled?: () => boolean) => Promise<DeckView>;
 }> {
   const mod = await import('./pptx/viewer');
 

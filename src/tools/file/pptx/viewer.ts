@@ -19,9 +19,19 @@ const nextFrame = (): Promise<void> => new Promise((resolve) => {
  * Draws every slide of a .pptx into `container`, scaled to its width, and keeps
  * the scale in step with the container's width. Resolves once the deck is
  * parsed and the first slides are on screen; the rest follow frame by frame.
+ * When `isCancelled` says yes after parsing, nothing is drawn.
  */
-export async function openDeck(buf: ArrayBuffer, container: HTMLElement): Promise<DeckView> {
-  const presentation = buildPresentation(await parseZip(buf, RECOMMENDED_ZIP_LIMITS));
+export async function openDeck(
+  buf: ArrayBuffer,
+  container: HTMLElement,
+  isCancelled: () => boolean = () => false,
+): Promise<DeckView> {
+  const files = await parseZip(buf, RECOMMENDED_ZIP_LIMITS);
+
+  if (isCancelled()) {
+    return { destroy: () => undefined };
+  }
+  const presentation = buildPresentation(files);
   const mediaUrlCache = new Map<string, string>();
   const handles: SlideHandle[] = [];
   const cards: HTMLElement[] = [];
@@ -29,12 +39,16 @@ export async function openDeck(buf: ArrayBuffer, container: HTMLElement): Promis
 
   const scale = (): number => (container.clientWidth || presentation.width) / presentation.width;
 
-  const fit = (card: HTMLElement, handle: SlideHandle, factor: number): void => {
+  const fit = (card: HTMLElement, factor: number): void => {
     Object.assign(card.style, {
       width: `${presentation.width * factor}px`,
       height: `${presentation.height * factor}px`,
     });
-    Object.assign(handle.element.style, { transform: `scale(${factor})` });
+    const slide = card.firstElementChild;
+
+    if (slide instanceof HTMLElement) {
+      slide.style.transform = `scale(${factor})`;
+    }
   };
 
   const goTo = (target: { slideIndex?: number; url?: string }): void => {
@@ -61,13 +75,11 @@ export async function openDeck(buf: ArrayBuffer, container: HTMLElement): Promis
       handle.element.style.transformOrigin = 'top left';
       handles.push(handle);
       card.appendChild(handle.element);
-      fit(card, handle, scale());
     } catch (error) {
       // A slide that cannot be drawn stays a blank card; the rest of the deck still shows.
       console.warn('[blok] Failed to render pptx slide', index + 1, error);
-      card.style.width = `${presentation.width * scale()}px`;
-      card.style.height = `${presentation.height * scale()}px`;
     }
+    fit(card, scale());
 
     return card;
   };
@@ -75,13 +87,7 @@ export async function openDeck(buf: ArrayBuffer, container: HTMLElement): Promis
   const refit = (): void => {
     const factor = scale();
 
-    handles.forEach((handle) => {
-      const card = handle.element.parentElement;
-
-      if (card !== null) {
-        fit(card, handle, factor);
-      }
-    });
+    cards.forEach((card) => fit(card, factor));
   };
 
   const observer = new ResizeObserver(refit);

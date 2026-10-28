@@ -21,4 +21,16 @@ describe('loadPptxRenderer', () => {
     await expect(open(buf, container)).resolves.toBe(deck);
     expect(openDeck).toHaveBeenCalledWith(buf, container);
   });
+
+  it('hands the viewer the check for a closed preview', async () => {
+    openDeck.mockResolvedValue({ destroy: vi.fn() });
+    const { open } = await loadPptxRenderer();
+    const buf = new ArrayBuffer(8);
+    const container = document.createElement('div');
+    const isClosed = (): boolean => true;
+
+    await open(buf, container, isClosed);
+
+    expect(openDeck).toHaveBeenCalledWith(buf, container, isClosed);
+  });
 });

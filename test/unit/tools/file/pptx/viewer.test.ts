@@ -122,9 +122,8 @@ describe('openDeck', () => {
 
   it('jumps to the linked slide when a link points inside the deck', async () => {
     const container = containerOfWidth(SLIDE_WIDTH);
-    const scrollIntoView = vi.fn();
-
-    Element.prototype.scrollIntoView = scrollIntoView;
+    // The shared test setup installs scrollIntoView; restoreAllMocks puts it back.
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => undefined);
     await openDeck(await buildDeck([
       { text: 'Go to the end', link: { target: 'slide2.xml', external: false } },
       { text: 'The end' },

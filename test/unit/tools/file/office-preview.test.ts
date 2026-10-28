@@ -76,6 +76,17 @@ describe('fillOfficeBody pptx lifecycle', () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
+  it('lets the viewer stop before drawing when the modal closes while the deck parses', async () => {
+    vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
+    const open = vi.fn().mockResolvedValue({ destroy: vi.fn() });
+    const isClosed = vi.fn(() => false);
+    vi.mocked(loadPptxRenderer).mockResolvedValue({ open });
+
+    await fillOfficeBody(document.createElement('div'), PPTX, 'pptx', isClosed, () => undefined);
+
+    expect(open).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.any(HTMLElement), isClosed);
+  });
+
   it('destroys a deck that finished opening after the modal closed', async () => {
     vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
     const destroy = vi.fn();

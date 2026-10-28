@@ -30,7 +30,6 @@ print(json.dumps({'bad': bad, 'entries': [{
   'data': base64.b64encode(z.read(i)).decode()} for i in z.infolist()]}))
 `;
 
-const STORE = 0;
 const DEFLATE = 8;
 const UTF8_NAME_FLAG = 0x800;
 const LOCAL_CRC_OFFSET = 14;
@@ -94,17 +93,11 @@ describe('createZip', () => {
     expect([...bytesOf(entries[1])]).toEqual([1, 2, 3]);
   });
 
-  it('deflates by default and stores when asked', () => {
-    const data = 'abc'.repeat(1000);
+  it('deflates every entry and sets no general-purpose flags for ASCII names', () => {
+    const [entry] = readWithPython(createZip([{ name: 'x', data: 'abc'.repeat(1000) }]));
 
-    expect(readWithPython(createZip([{ name: 'x', data }]))[0]?.method).toBe(DEFLATE);
-    expect(readWithPython(createZip([{ name: 'x', data }], { compression: 'deflate' }))[0]?.method).toBe(DEFLATE);
-
-    const stored = readWithPython(createZip([{ name: 'x', data }], { compression: 'store' }));
-
-    expect(stored[0]?.method).toBe(STORE);
-    expect(bytesOf(stored[0]).toString('utf8')).toBe(data);
-    expect(run('zipinfo', [save(createZip([{ name: 'x', data }]))])).toMatch(/ defX /);
+    expect(entry?.method).toBe(DEFLATE);
+    expect(entry?.flags).toBe(0);
   });
 
   it('writes an empty file and an empty archive', () => {
@@ -132,12 +125,10 @@ describe('createZip', () => {
     expect((readWithPython(createZip([{ name: 'plain.txt', data: 'x' }]))[0]?.flags ?? -1) & UTF8_NAME_FLAG).toBe(0);
   });
 
-  it('keeps every byte value in binary data, stored and deflated', () => {
+  it('keeps every byte value in binary data', () => {
     const all = Uint8Array.from({ length: 256 }, (_, index) => index);
 
-    for (const compression of ['store', 'deflate'] as const) {
-      expect([...bytesOf(readWithPython(createZip([{ name: 'b', data: all }], { compression }))[0])]).toEqual([...all]);
-    }
+    expect([...bytesOf(readWithPython(createZip([{ name: 'b', data: all }]))[0])]).toEqual([...all]);
   });
 
   it('round-trips a 5 MB file', () => {
@@ -166,12 +157,6 @@ describe('createZip', () => {
     expect(readWithPython(createZip([{ name: 'a', data: 'a' }]))[0]?.system).toBe(0);
   });
 
-  it('writes a directory entry only for a name ending in a slash', () => {
-    const entries = readWithPython(createZip([{ name: 'dir/', data: '' }, { name: 'dir/a', data: 'a' }]));
-
-    expect(entries.map((entry) => entry.name)).toEqual(['dir/', 'dir/a']);
-  });
-
   it('produces the same bytes for the same input', () => {
     const files = [{ name: 'a', data: 'same' }, { name: 'b', data: new Uint8Array([9, 8, 7]), mode: 0o100644 }];
 
@@ -187,7 +172,7 @@ describe('createZip', () => {
     ['123456789', 0xcbf43926],
     ['The quick brown fox jumps over the lazy dog', 0x414fa339],
   ])('writes CRC-32 of %j as %i', (text, crc) => {
-    const archive = createZip([{ name: 'v', data: text }], { compression: 'store' });
+    const archive = createZip([{ name: 'v', data: text }]);
 
     expect(archive.readUInt32LE(LOCAL_CRC_OFFSET)).toBe(crc);
     expect(readWithPython(archive)[0]?.crc).toBe(crc);
@@ -205,6 +190,7 @@ describe('createZip', () => {
     const files = Array.from({ length: 0xffff }, (_, index) => ({ name: `${index}`, data: '' }));
 
     expect(() => createZip(files)).toThrow(/zip64/);
-    expect(() => createZip(files.slice(1), { compression: 'store' })).not.toThrow();
-  });
+    expect(() => createZip(files.slice(1))).not.toThrow();
+    // 65534 deflate calls take a few seconds.
+  }, 30_000);
 });

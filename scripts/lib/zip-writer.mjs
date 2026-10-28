@@ -11,9 +11,6 @@ const DOS_DATE = (0 << 9) | (1 << 5) | 1;
 const VERSION = 20;
 const MADE_BY_UNIX = (3 << 8) | VERSION;
 const UTF8_NAME_FLAG = 0x800;
-// Deflate option bits 1-2 = 01 tells readers level 9 was used (zipinfo: defX).
-const MAX_DEFLATE_FLAG = 0x2;
-const DOS_DIRECTORY_ATTR = 0x10;
 
 const CRC_TABLE = new Uint32Array(256).map((_, index) => {
   let value = index;
@@ -51,15 +48,13 @@ function assertFits(what, value) {
 
 /**
  * @param {Array<{ name: string, data: Uint8Array | string, mode?: number }>} files
- * @param {{ compression?: 'store' | 'deflate' }} [options]
  * @returns {Buffer}
  */
-export function createZip(files, options = {}) {
+export function createZip(files) {
   if (files.length >= LIMIT_ENTRIES) {
     throw new Error(`createZip: ${files.length} entries need zip64, which is not supported`);
   }
 
-  const deflate = (options.compression ?? 'deflate') === 'deflate';
   /** @type {Buffer[]} */
   const locals = [];
   /** @type {Buffer[]} */
@@ -72,13 +67,11 @@ export function createZip(files, options = {}) {
     assertFits(`${file.name} (${data.byteLength} bytes)`, data.byteLength);
 
     const name = Buffer.from(file.name, 'utf8');
-    const flags = (/^[\x00-\x7f]*$/.test(file.name) ? 0 : UTF8_NAME_FLAG) | (deflate ? MAX_DEFLATE_FLAG : 0);
-    const body = deflate ? deflateRawSync(data, { level: 9 }) : data;
+    const flags = /^[\x00-\x7f]*$/.test(file.name) ? 0 : UTF8_NAME_FLAG;
+    const body = deflateRawSync(data, { level: 9 });
     const crc = crc32(data);
     const unix = file.mode !== undefined;
-    const attributes = unix
-      ? file.mode * 0x10000
-      : file.name.endsWith('/') ? DOS_DIRECTORY_ATTR : 0;
+    const attributes = unix ? file.mode * 0x10000 : 0;
 
     assertFits(`${file.name} (compressed)`, body.byteLength);
     assertFits('archive offset', offset);
@@ -88,7 +81,7 @@ export function createZip(files, options = {}) {
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(VERSION, 4);
     local.writeUInt16LE(flags, 6);
-    local.writeUInt16LE(deflate ? 8 : 0, 8);
+    local.writeUInt16LE(8, 8);
     local.writeUInt16LE(DOS_TIME, 10);
     local.writeUInt16LE(DOS_DATE, 12);
     local.writeUInt32LE(crc, 14);

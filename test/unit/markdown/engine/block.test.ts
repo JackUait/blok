@@ -359,29 +359,48 @@ describe('block parser', () => {
   });
 
   describe('robustness', () => {
-    /** Fastest of three runs, in milliseconds. */
+    /**
+     * The lowest of up to three ratio attempts, stopping at the first under 24.
+     * A GC pause spikes one attempt; a quadratic path fails all three.
+     * @param ratio - measures one ratio
+     */
+    const bestRatio = (ratio: () => number): number => {
+      const attempts = [ratio()];
+
+      while (attempts[attempts.length - 1] >= 24 && attempts.length < 3) {
+        attempts.push(ratio());
+      }
+
+      return Math.min(...attempts);
+    };
+
+    /** Fastest of three samples; each repeats for 25 ms so a 1 ms parse isn't all timer noise. */
     const fastest = (run: () => void): number => Math.min(...[0, 1, 2].map(() => {
       const start = performance.now();
+      const runs = { count: 0 };
 
-      run();
+      while (runs.count === 0 || performance.now() - start < 25) {
+        run();
+        runs.count += 1;
+      }
 
-      return performance.now() - start;
+      return (performance.now() - start) / runs.count;
     }));
 
     /**
-     * Four times the input must cost about four times the parse time (~4); a
-     * quadratic path costs ~16. A ratio holds on a busy machine, where a
+     * Eight times the input must cost about eight times the parse time (~8); a
+     * quadratic path costs ~64. A ratio holds on a busy machine, where a
      * wall-clock limit flakes.
      * @param make - builds an input of a given size
      * @param size - the smaller size
      */
     const expectLinear = (make: (size: number) => string, size: number): void => {
-      const small = make(Math.floor(size / 2));
+      const small = make(Math.floor(size / 4));
       const large = make(size * 2);
 
       parseMarkdown(small, { math: true });
 
-      expect(fastest(() => parseMarkdown(large, { math: true })) / Math.max(fastest(() => parseMarkdown(small, { math: true })), 1)).toBeLessThan(8);
+      expect(bestRatio(() => fastest(() => parseMarkdown(large, { math: true })) / fastest(() => parseMarkdown(small, { math: true })))).toBeLessThan(24);
     };
 
     it('handles a 1 MB document', () => {

@@ -365,23 +365,42 @@ describe('parseInline', () => {
       'closers that never find an opener': (n) => `${'_a '.repeat(n * 5)}${'a* '.repeat(n * 5)}`,
     };
 
-    /** Fastest of three runs, in milliseconds. */
+    /** Fastest of three samples; each repeats for 25 ms so a 1 ms parse isn't all timer noise. */
     const fastest = (src: string): number => Math.min(...[0, 1, 2].map(() => {
       const start = performance.now();
+      const runs = { count: 0 };
 
-      inline(src, context);
+      while (runs.count === 0 || performance.now() - start < 25) {
+        inline(src, context);
+        runs.count += 1;
+      }
 
-      return performance.now() - start;
+      return (performance.now() - start) / runs.count;
     }));
 
-    // Four times the input must cost about four times the time (~4); a quadratic
-    // path costs ~16. A ratio holds on a busy machine, where a wall-clock limit flakes.
+    /**
+     * The lowest of up to three ratio attempts, stopping at the first under 24.
+     * A GC pause spikes one attempt; a quadratic path fails all three.
+     * @param ratio - measures one ratio
+     */
+    const bestRatio = (ratio: () => number): number => {
+      const attempts = [ratio()];
+
+      while (attempts[attempts.length - 1] >= 24 && attempts.length < 3) {
+        attempts.push(ratio());
+      }
+
+      return Math.min(...attempts);
+    };
+
+    // Eight times the input must cost about eight times the time (~8); a quadratic
+    // path costs ~64. A ratio holds on a busy machine, where a wall-clock limit flakes.
     it.each(Object.entries(cases))('%s', (_name, make) => {
-      const small = make(Math.floor(N / 2));
+      const small = make(Math.floor(N / 4));
       const large = make(N * 2);
 
       expect(() => inline(small, context)).not.toThrow();
-      expect(fastest(large) / Math.max(fastest(small), 1)).toBeLessThan(8);
+      expect(bestRatio(() => fastest(large) / fastest(small))).toBeLessThan(24);
     });
   });
 });

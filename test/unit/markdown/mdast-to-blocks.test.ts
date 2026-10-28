@@ -830,13 +830,13 @@ describe('mdastToBlocks', () => {
     }));
 
     it('converts a long list in linear time', () => {
-      const small = listOf(10_000);
+      const small = listOf(5_000);
       const large = listOf(40_000);
       const ratio = fastest(() => mdastToBlocks({ type: 'root', children: [large] }))
         / fastest(() => mdastToBlocks({ type: 'root', children: [small] }));
 
-      // Linear is ~4, quadratic ~16.
-      expect(ratio).toBeLessThan(8);
+      // Eight times the items: linear is ~8, quadratic ~64.
+      expect(ratio).toBeLessThan(24);
     });
 
     // Past ~125k items, spreading one result into push() overflows the stack.

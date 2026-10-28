@@ -8,8 +8,9 @@ import { loadCorpus, normalizeIds, readFixture, type CorpusCase } from './corpus
  * What callers see, recorded before Blok had its own parser: the blocks and
  * warnings `markdownToBlocksWithReport` returns, the paste path's HTML-text
  * blocks, and the preview HTML. Any difference here reaches a document.
- * Six preview goldens (217, 839, 1961, 1975, 1995, 1996) were re-recorded on
- * purpose: the preview now resolves definitions inside quotes and lists.
+ * Re-recorded on purpose: six preview goldens (217, 839, 1961, 1975, 1995,
+ * 1996), since the preview now resolves definitions inside quotes and lists,
+ * and real-world html 60, whose code block the new highlighter colours.
  */
 const corpus = loadCorpus().map((entry, index) => ({ ...entry, index }));
 const blocks = readFixture<unknown[]>('golden-blocks.json');

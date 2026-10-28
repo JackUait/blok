@@ -1,4 +1,4 @@
-import { pageIconElement, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
@@ -279,6 +279,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       if (cell.hasAttribute('data-empty')) {
         continue;
       }
+      // notion-spec-2 §19.17: a card file chip has the page glyph, as in the table.
+      cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
 
       const item = document.createElement('div');
 

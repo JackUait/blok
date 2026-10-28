@@ -269,6 +269,19 @@ describe('DatabaseGalleryView', () => {
     });
   });
 
+  it('notion-spec-2 §19.17: a file chip on a card starts with the page glyph', () => {
+    const properties = [{ id: 'p-title', visible: true }, { id: 'p-files', visible: true }];
+    const { root } = mount({
+      view: galleryView({ properties }),
+      schema: [...schema, { id: 'p-files', name: 'Files', type: 'files', position: 'a4' }],
+      groups: single([row('r1', 'Alpha', { 'p-files': [{ id: 'f1', name: 'brief.pdf', url: 'https://example.com/brief.pdf' }] })]),
+    });
+    const chip = cards(root)[0].querySelector('[data-blok-database-file-chip]');
+
+    expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
+    expect(chip?.querySelector('[data-blok-database-cell-link]')?.textContent).toBe('brief.pdf');
+  });
+
   it('skips empty property values on a card', () => {
     const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];
     const { root } = mount({ view: galleryView({ properties }) });

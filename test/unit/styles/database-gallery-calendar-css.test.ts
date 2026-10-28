@@ -286,4 +286,14 @@ describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
     expect(darkValues('--blok-database-calendar-today-text')).toEqual(['#ffffff', '#ffffff']);
     expect(darkValues('--blok-database-today')).toEqual(['rgb(229, 100, 88)', 'rgb(229, 100, 88)']);
   });
+
+  it('notion-spec-2 §19.17: a card file chip is 20 tall, at most 200 wide, text 12/20 cut with "…", in a 28px row with 4px padding', () => {
+    const chip = ruleBody('[data-blok-database-gallery-property] [data-blok-database-file-chip]');
+
+    expect(chip).toMatch(/height:\s*20px/);
+    expect(chip).toMatch(/line-height:\s*20px/);
+    expect(chip).toMatch(/max-width:\s*200px/);
+    expect(ruleBody('[data-blok-database-gallery-property] [data-blok-database-file-chip] > [data-blok-database-cell-link]')).toMatch(/text-overflow:\s*ellipsis/);
+    expect(ruleBody('[data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"])')).toMatch(/padding:\s*var\(--blok-space-1\)/);
+  });
 });

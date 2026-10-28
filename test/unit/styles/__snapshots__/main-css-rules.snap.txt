@@ -14054,6 +14054,25 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
+[data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"]) {
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-gallery-property] [data-blok-database-file-chip] {
+  height: 20px;
+  line-height: 20px;
+  max-width: 200px;
+}
+
+[data-blok-database-gallery-property] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
+}
+
 [data-blok-database-gallery-new] {
   flex-direction: row;
   align-items: center;

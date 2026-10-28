@@ -276,6 +276,31 @@ describe('select cell editor', () => {
       expect(editorRoot()).not.toBeNull();
     });
 
+    // notion-spec-2 §19.1 (01-ms-arrow-enter.png): the added option stays in the list, still highlighted.
+    it('ArrowDown then Enter adds the option, keeps it in the list highlighted, and stays open', () => {
+      const ctx = openSelect([], {}, true);
+
+      press(search(), 'ArrowDown');
+      press(search(), 'Enter');
+
+      expect(row('o1').hasAttribute('data-active')).toBe(true);
+      expect(ctx.onCommit).toHaveBeenLastCalledWith(['o1']);
+      expect(rowIds()).toEqual(['o1', 'o2', 'o3']);
+      expect(ctx.onClose).not.toHaveBeenCalled();
+    });
+
+    // Enter never removes an option, so a second Enter on the same highlighted row keeps it.
+    it('a second Enter on the highlighted, just added option keeps it chosen', () => {
+      const ctx = openSelect([], {}, true);
+
+      press(search(), 'ArrowDown');
+      press(search(), 'Enter');
+      press(search(), 'Enter');
+
+      expect(ctx.onCommit).toHaveBeenCalledTimes(1);
+      expect(q('[data-blok-database-select-chip="o1"]')).not.toBeNull();
+    });
+
     it('Enter on a typed option that is already selected does nothing', () => {
       const ctx = openSelect(['o1'], {}, true);
 

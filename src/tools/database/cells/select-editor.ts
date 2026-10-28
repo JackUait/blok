@@ -203,6 +203,8 @@ class SelectEditor {
       this.selected = this.selected.includes(id) ? this.selected.filter((s) => s !== id) : [...this.selected, id];
       this.commit();
       this.clearSearch();
+      // notion-spec-2 §19.1: the picked option stays in the list, still highlighted.
+      this.activeIndex = this.activeTargets().findIndex((target) => target.kind === 'option' && target.id === id);
       this.renderChips();
       this.renderList();
 
@@ -286,8 +288,8 @@ class SelectEditor {
         }
         if (target.kind === 'create') {
           this.create(target.label);
-        } else if (this.multi && this.query.trim() !== '' && this.selected.includes(target.id)) {
-          // research/22 §13: Enter on a typed, already selected option does nothing (no toggle-off).
+        } else if (this.multi && this.selected.includes(target.id)) {
+          // research/22 §13: Enter on an already selected option does nothing (no toggle-off).
           return;
         } else {
           this.pick(target.id);

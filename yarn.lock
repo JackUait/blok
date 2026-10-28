@@ -1290,7 +1290,6 @@ __metadata:
     "@vue/test-utils": "npm:^2.5.1"
     chromatic: "npm:18.13.3"
     cldr-annotations-full: "npm:^49.0.0"
-    docx-preview: "npm:0.4.1"
     dompurify: "npm:^3.4.17"
     es-module-lexer: "npm:^3.0.4"
     esbuild: "npm:0.28.2"
@@ -8058,15 +8057,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"docx-preview@npm:0.4.1":
-  version: 0.4.1
-  resolution: "docx-preview@npm:0.4.1"
-  dependencies:
-    jszip: "npm:>=3.0.0"
-  checksum: 10c0/5baf489e9cc611eb216ae8ea7fdf50107816e96ef0f1f103028417f88831528474038b9372a75b817bd344fbd4c9d07fd8b37c54360b02d293a873831c72161a
-  languageName: node
-  linkType: hard
-
 "dom-accessibility-api@npm:^0.5.9":
   version: 0.5.16
   resolution: "dom-accessibility-api@npm:0.5.16"
@@ -10613,7 +10603,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jszip@npm:>=3.0.0, jszip@npm:^3.10.1, jszip@npm:^3.10.2":
+"jszip@npm:^3.10.1, jszip@npm:^3.10.2":
   version: 3.10.2
   resolution: "jszip@npm:3.10.2"
   dependencies:

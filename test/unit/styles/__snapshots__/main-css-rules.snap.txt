@@ -9516,7 +9516,6 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  outline: 1px solid var(--blok-database-avatar-ring);
   object-fit: cover;
 }
 

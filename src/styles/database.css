@@ -6297,7 +6297,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   color: var(--blok-database-ink-tertiary);
 }
 
-/* Person chip: 20px round avatar with a 1px ring, 6px gap (research/08). */
+/* Person chip: 20px round avatar, 6px gap (research/08). No ring (notion-spec-2 §19.16). */
 [data-blok-database-person-chip] {
   display: inline-flex;
   align-items: center;
@@ -6312,7 +6312,6 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  outline: 1px solid var(--blok-database-avatar-ring);
   object-fit: cover;
 }
 

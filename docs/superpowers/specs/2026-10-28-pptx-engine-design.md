@@ -54,8 +54,7 @@ scaled to the container width and re-fit on resize. Nothing else.
 | Groups, backgrounds, reflection | must | look |
 | Static 3D (bevel, camera projection) | must | shipped today; dropping is a visible regression |
 | OMML math | must | shipped today; 9 KB |
-| Embedded fonts, uncompressed EOT | must | look |
-| Embedded fonts, MTX-compressed EOT | skip | needs MPL `mtx-decompressor`; falls back to system font |
+| Embedded fonts (MTX-compressed EOT) | must | 2 of 20 real decks embed fonts, all MTX-compressed; dropping them changed up to 4% of pixels per slide. Decoder vendored from mtx-decompressor 1.8.0 (MPL-2.0, file-level) with its 265 tests; no npm dependency |
 | Charts | own | SVG renderer for bar/column, line, area, pie, doughnut, scatter; others get a titled frame. Removes ECharts (628 KB) |
 | EMF → PDF via pdfjs | skip | we pass `pdfjs: false` today |
 | Viewer: list, fit-to-width, resize re-fit, batched mount, destroy | own | ~200 lines instead of 1,331 |
@@ -70,7 +69,7 @@ scaled to the container width and re-fit on resize. Nothing else.
   `@aiden0z/pptx-renderer` 1.4.0, modified. Attribution goes in `NOTICE`.
 - Generated geometry is mechanically derived from ECMA-376: the ECMA copyright notice goes
   in `NOTICE` with the provenance hash.
-- No MPL code (MTX branch dropped).
+- MPL-2.0 files: `src/tools/file/pptx/fonts/mtx/*` only, each with the MPL notice and its LICENSE beside it.
 
 ## Test strategy ("nothing breaks")
 
@@ -99,3 +98,14 @@ scaled to the container width and re-fit on resize. Nothing else.
    in `bundle-outputs.test.ts`; NOTICE.
 6. Security + code review (parallel), fixes with regression tests first.
 7. Pixel parity run; report.
+
+## Outcome log (2026-10-28)
+
+- Parity vs upstream 1.4.0 in Chromium: 209 synthetic + 20 real decks, 589 slides. Every non-chart
+  slide identical in DOM and pixels; 0 crashes; 0 network requests.
+- Security (audit with Chromium PoCs): DOCTYPE entity blow-up (68 s / 6.8 GB → 24 ms), zip size
+  lies (2 GB heap → rejected in <250 ms), unbounded tables, prototype lookups in colour names,
+  non-finite numbers, per-slide font budget. External media never fetched; viewer destroyed on close.
+- Visible English placeholder text removed from slides (Blok has no i18n channel into the engine).
+- Lint: the four style rules (`let`, max-depth, param-reassign, nested ternary) are disabled per
+  vendored file with a reason; every other rule is fixed.

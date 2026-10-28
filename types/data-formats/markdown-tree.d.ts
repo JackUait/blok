@@ -143,7 +143,7 @@ export interface Image {
   type: 'image';
   url: string;
   title: string | null;
-  alt: string | null;
+  alt: string;
 }
 
 export type ReferenceType = 'shortcut' | 'collapsed' | 'full';
@@ -161,7 +161,7 @@ export interface ImageReference {
   identifier: string;
   label: string;
   referenceType: ReferenceType;
-  alt: string | null;
+  alt: string;
 }
 
 export interface FootnoteReference {

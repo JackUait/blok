@@ -31,7 +31,7 @@ const step = (src: string, index: number, escapable: string): number =>
 
 /**
  * `[label]`: no unescaped brackets, at least one character that is not a
- * space, tab or line ending.
+ * space, tab or line ending, at most 999 characters besides line endings.
  * @param src - source text
  * @param pos - index of the `[`
  */
@@ -40,9 +40,9 @@ export const scanLinkLabel = (src: string, pos: number): Scanned | null => {
     return null;
   }
 
-  const cursor = { index: pos + 1, seen: false };
+  const cursor = { index: pos + 1, seen: false, size: 0 };
 
-  while (cursor.index < src.length && cursor.index - pos - 1 <= MAX_LABEL) {
+  while (cursor.index < src.length && cursor.size <= MAX_LABEL) {
     const char = src[cursor.index];
 
     if (char === '[') {
@@ -53,8 +53,11 @@ export const scanLinkLabel = (src: string, pos: number): Scanned | null => {
       return cursor.seen ? { value: src.slice(pos + 1, cursor.index), end: cursor.index + 1 } : null;
     }
 
+    const width = step(src, cursor.index, '[]\\');
+
     cursor.seen ||= char !== ' ' && char !== '\t' && !isLineEnding(char);
-    cursor.index += step(src, cursor.index, '[]\\');
+    cursor.size += isLineEnding(char) ? 0 : width;
+    cursor.index += width;
   }
 
   return null;
@@ -128,14 +131,14 @@ export const scanLinkDestination = (src: string, pos: number, maxDepth = Number.
 const TITLE_CLOSERS: Record<string, string> = { '"': '"', '\'': '\'', '(': ')' };
 
 /**
- * A title in `"…"`, `'…'` or `(…)`. An unescaped closer ends it; inside
- * parens an unescaped `(` is not allowed.
+ * A title in `"…"`, `'…'` or `(…)`, ended by the first unescaped closer. A
+ * backslash escapes only the closer or another backslash. An unescaped `(`
+ * inside parens is allowed, as the parser Blok used before allowed it.
  * @param src - source text
  * @param pos - index of the opening quote or paren
  */
 export const scanLinkTitle = (src: string, pos: number): Scanned | null => {
-  const open = src[pos];
-  const close = TITLE_CLOSERS[open];
+  const close = TITLE_CLOSERS[src[pos]];
 
   if (close === undefined) {
     return null;
@@ -144,17 +147,11 @@ export const scanLinkTitle = (src: string, pos: number): Scanned | null => {
   const cursor = { index: pos + 1 };
 
   while (cursor.index < src.length) {
-    const char = src[cursor.index];
-
-    if (char === close) {
+    if (src[cursor.index] === close) {
       return { value: src.slice(pos + 1, cursor.index), end: cursor.index + 1 };
     }
 
-    if (open === '(' && char === '(') {
-      return null;
-    }
-
-    cursor.index += src[cursor.index] === '\\' && cursor.index + 1 < src.length ? 2 : 1;
+    cursor.index += step(src, cursor.index, `${close}\\`);
   }
 
   return null;

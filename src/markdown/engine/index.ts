@@ -24,7 +24,9 @@ export const parseMarkdown = (source: string, options: ParseOptions = {}): Root 
   const { root, inline, definitions, footnotes } = parseBlocks(source, { gfm, math });
 
   for (const pending of inline) {
-    pending.node.children = parseInline(pending.raw, { definitions, footnotes, gfm, math });
+    const inTable = 'type' in pending.node && pending.node.type === 'tableCell';
+
+    pending.node.children = parseInline(pending.raw, { definitions, footnotes, gfm, math, inTable });
   }
 
   return root;

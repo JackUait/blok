@@ -152,7 +152,7 @@ export class DatabasePropertyTypePopover {
       grid.appendChild(item);
     }
 
-    popover.addEventListener('keydown', (e) => this.onKey(e, grid, nameField));
+    popover.addEventListener('keydown', (e) => this.onKey(e, body, nameField));
 
     // Inside a top-layer panel (a peek, the layout builder): on body the panel covers the menu, and a modal's focus trap takes the name field.
     overlayMountFor(anchor).appendChild(popover);
@@ -200,12 +200,12 @@ export class DatabasePropertyTypePopover {
   }
 
   /**
-   * notion-spec-2 §18.5: arrows highlight a shown type and Enter makes it at once.
+   * notion-spec-2 §18.5, §19.8: arrows walk the menu from its top (AI Autofill rows, then the shown types) and Enter takes the highlighted row at once.
    * With none highlighted, a typed name then Enter makes a Text property; on an empty name it is unmeasured, so it does nothing.
    */
-  private onKey(e: KeyboardEvent, grid: HTMLElement, nameField: HTMLInputElement | null): void {
+  private onKey(e: KeyboardEvent, body: HTMLElement, nameField: HTMLInputElement | null): void {
     if (e.isComposing) return;
-    const shown = [...grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')].filter((option) => !option.hidden);
+    const shown = [...body.querySelectorAll<HTMLElement>('[data-blok-database-property-autofill-option], [data-blok-database-property-type-option]')].filter((option) => !option.hidden);
     const current = shown.findIndex((option) => option.hasAttribute(OPTION_ACTIVE));
     const name = nameField?.value.trim() ?? '';
 
@@ -220,7 +220,16 @@ export class DatabasePropertyTypePopover {
       return;
     }
     if (e.key !== 'Enter') return;
-    const type = shown[current]?.getAttribute('data-blok-database-property-type-option') as PropertyType | undefined;
+    const highlighted = shown[current];
+
+    // Notion's Enter on a highlighted AI row is unmeasured; it takes the row as a click does.
+    if (highlighted?.hasAttribute('data-blok-database-property-autofill-option')) {
+      e.preventDefault();
+      highlighted.click();
+
+      return;
+    }
+    const type = highlighted?.getAttribute('data-blok-database-property-type-option') as PropertyType | undefined;
 
     if (type === undefined && (e.target !== nameField || name === '')) return;
     e.preventDefault();
@@ -236,12 +245,19 @@ export class DatabasePropertyTypePopover {
       return this.i18n?.t(shown) ?? shown;
     };
 
-    return typeSearchHeading(t, (query) => {
+    const heading = typeSearchHeading(t, (query) => {
       for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
         option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
         option.removeAttribute(OPTION_ACTIVE);
       }
     }, !this.grid);
+
+    // notion-spec-2 §19.8: opening "Search types" drops the highlight, so the next ArrowDown starts at the menu's top.
+    heading.querySelector('[data-blok-database-property-type-search]')?.addEventListener('click', () => {
+      heading.closest('[data-blok-database-property-type-popover]')?.querySelectorAll(`[${OPTION_ACTIVE}]`).forEach((row) => row.removeAttribute(OPTION_ACTIVE));
+    });
+
+    return heading;
   }
 
   /** Notion's "AI Autofill" rows: a glyph, the preset's name and a gray "Basic" tag. */

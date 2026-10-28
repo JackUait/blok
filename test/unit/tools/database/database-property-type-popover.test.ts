@@ -262,6 +262,39 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // notion-spec-2 §19.8: the arrows walk the menu from its top, AI Autofill rows first; a 🔍 click drops the highlight.
+    it('walks from "Search types" into the AI Autofill rows first, then the types', () => {
+      const autofill = vi.fn<(mode: 'summary' | 'translate', name: string) => void>();
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, onAutofill: autofill });
+      const active = (): string[] => [...document.querySelectorAll('[data-blok-database-property-type-option-active]')]
+        .map((el) => el.getAttribute('data-blok-database-property-autofill-option') ?? el.getAttribute('data-blok-database-property-type-option') ?? '');
+
+      flow.open(anchor);
+      const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+      field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      expect(active()).toEqual(['summary']);
+      document.querySelector<HTMLElement>('[data-blok-database-property-type-search]')?.click();
+      expect(active()).toEqual([]);
+      const search = document.querySelector<HTMLInputElement>('[data-blok-database-property-type-search-input]');
+      const key = (k: string): void => {
+        search?.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      };
+
+      key('ArrowDown');
+      expect(active()).toEqual(['summary']);
+      key('ArrowDown');
+      expect(active()).toEqual(['translate']);
+      key('ArrowDown');
+      expect(active()).toEqual(['text']);
+      key('ArrowUp');
+      key('Enter');
+
+      expect(autofill).toHaveBeenCalledWith('translate', '');
+      expect(flow.isOpen).toBe(false);
+      flow.destroy();
+    });
+
     it('skips types the search hid', () => {
       const named = vi.fn<(type: PropertyType, name: string) => void>();
       const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, i18n: { t: (k: string) => k.replace('tools.database.propertyType', ''), has: () => true } as unknown as I18n });

@@ -23,7 +23,7 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
 }
 
-interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string }
+interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string; moves: Array<{ position: DOMRect; positionContext?: HTMLElement }> }
 
 const captured = vi.hoisted((): { popovers: CapturedPopover[]; instances: Array<{ closeSubmenuOnEscape: () => boolean }> } => ({ popovers: [], instances: [] }));
 
@@ -33,7 +33,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     readonly element = document.createElement('div');
 
     constructor(params: { items: CapturedItem[] }) {
-      this.record = { items: params.items, destroyed: false, params, activated: [], focused: [], hidden: {}, hide: () => this.hide() };
+      this.record = { items: params.items, destroyed: false, params, activated: [], focused: [], hidden: {}, hide: () => this.hide(), moves: [] };
       this.element.appendChild(document.createElement('div')).setAttribute('data-blok-popover-container', '');
       captured.popovers.push(this.record);
       captured.instances.push(this);
@@ -49,6 +49,10 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     activateItemByName(name: string): void {
       this.record.activated.push(name);
+    }
+
+    updatePosition(position: DOMRect, update: { positionContext?: HTMLElement }): void {
+      this.record.moves.push({ position, positionContext: update.positionContext });
     }
 
     toggleItemHiddenByName(name: string, isHidden: boolean): void {
@@ -986,6 +990,33 @@ describe('DatabasePropertyMenu', () => {
       list?.querySelector<HTMLElement>('[data-blok-database-option-color="red"]')?.click();
 
       expect(cb.onOptionsChange).toHaveBeenCalledWith('p', [options[0], { ...options[1], color: 'red' }]);
+    });
+
+    // The host redraws the board on an options edit. A menu still placed on the old header is closed by the next scroll.
+    it('an options edit moves the open header menu onto the column\'s new header', () => {
+      const old = document.body.appendChild(document.createElement('div'));
+      let live = old;
+      const onOptionsChange = vi.fn(() => {
+        const next = document.createElement('div');
+
+        vi.spyOn(next, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 40, y: 100, width: 200, height: 33 }));
+        old.replaceWith(next);
+        live = next;
+      });
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks(), onOptionsChange, liveAnchor: () => live });
+
+      menu.open(prop('select', { config: { options } }), old);
+      const popover = captured.popovers[captured.popovers.length - 1];
+      const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
+
+      list?.querySelector<HTMLElement>('[data-blok-database-select-option="o2"] [data-blok-database-select-option-menu]')?.click();
+      list?.querySelector<HTMLElement>('[data-blok-database-option-color="red"]')?.click();
+
+      expect(onOptionsChange).toHaveBeenCalled();
+      expect(popover?.moves.map((move) => [move.positionContext, move.position.x, move.position.y, move.position.width])).toEqual([[live, 40, 133, 200]]);
+      expect(captured.popovers[captured.popovers.length - 1]).toBe(popover);
+      menu.destroy();
+      live.remove();
     });
 
     it('a status option\'s "Set as default" saves the default with the status settings (research/30 §10f)', () => {

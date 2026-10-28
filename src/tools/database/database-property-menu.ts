@@ -329,6 +329,20 @@ export class DatabasePropertyMenu {
     if (typed !== undefined && input !== null) input.value = typed;
   }
 
+  /**
+   * An options edit redraws the board but not this menu, so the header it sits on is replaced.
+   * Placed on the detached one, the popover closes on the next nested scroll, such as the board's own scroll restore.
+   */
+  private followLiveHeader(): void {
+    const live = this.options.liveAnchor?.();
+
+    if (this.popover === null || live === null || live === undefined || live === this.anchor || this.anchor?.isConnected !== false) return;
+    this.anchor = live;
+    const { position, positionContext } = headerMenuPosition(live);
+
+    this.popover.updatePosition(position, { positionContext });
+  }
+
   /** A swap, not a close: onClose would tell the host the menu is gone and its writes would stop. */
   private swap(): void {
     const previous = this.popover;
@@ -1306,7 +1320,10 @@ export class DatabasePropertyMenu {
     const element = createOptionsEditor({
       property: shown,
       i18n: this.options.i18n,
-      onChange: (options) => this.options.onOptionsChange?.(property.id, options),
+      onChange: (options) => {
+        this.options.onOptionsChange?.(property.id, options);
+        this.followLiveHeader();
+      },
       ...(property.type === 'status'
         ? { onSetDefault: (defaultOptionId: string) => update({ status: { groups: status?.groups ?? [], ...status, defaultOptionId } }) }
         : {}),

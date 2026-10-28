@@ -571,3 +571,18 @@ describe('FieldState', () => {
     expect(performance.now() - started).toBeLessThan(2_000);
   });
 });
+
+describe('renderDocxInto — math stays linear', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it('renders each part of a radical once, even with no base', async () => {
+    const nest = Array.from({ length: 20 }).reduce<string>((inner) => `<m:rad><m:deg>${inner}<m:r><m:t>d</m:t></m:r></m:deg></m:rad>`, '');
+    const c = await render({ body: `<w:p><m:oMath>${nest}</m:oMath></w:p>` });
+    const text = paras(c)[0].textContent ?? '';
+
+    expect(text.length).toBeLessThan(200);
+    expect(text).toContain('d');
+  });
+});

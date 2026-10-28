@@ -11,6 +11,17 @@ const prop = (el: Element, pr: string, name: string): string | null => attr(kid(
 
 type Handler = (el: Element, target: HTMLElement, depth: number) => void;
 
+/**
+ * The `m:e` base of `el`, alone. Never `el` itself as a fallback: that walks the
+ * other children a second time, and nesting doubles the work at every level.
+ */
+function renderBase(el: Element, target: HTMLElement, depth: number): void {
+  const base = kid(el, 'e');
+  if (base !== null) {
+    renderMath(base, target, depth + 1);
+  }
+}
+
 function wrapped(tag: string, el: Element | null, target: HTMLElement, depth: number): HTMLElement {
   const wrap = document.createElement(tag);
   if (el !== null) {
@@ -55,13 +66,13 @@ const HANDLERS: Record<string, Handler> = {
       wrapped('sup', degree, target, depth);
     }
     target.append('√');
-    renderMath(kid(el, 'e') ?? el, target, depth + 1);
+    renderBase(el, target, depth);
   },
   bar: (el, target, depth) => {
     wrapped('span', kid(el, 'e'), target, depth).style.textDecorationLine = 'overline';
   },
   accent: (el, target, depth) => {
-    renderMath(kid(el, 'e') ?? el, target, depth + 1);
+    renderBase(el, target, depth);
     target.append(prop(el, 'accPr', 'chr') ?? '̂');
   },
   eqArr: (el, target, depth) => joined(kids(el, 'e'), target, depth, null),

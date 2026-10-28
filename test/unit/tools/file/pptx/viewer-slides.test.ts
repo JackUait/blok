@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import JSZip from 'jszip';
 import './helpers/domShims';
 import { buildDeck } from './helpers/buildDeck';
+import { editZip } from '../docx/build-docx';
+import { readZip } from '../../../../../src/tools/file/zip/read-zip';
 import type * as SlideRendererModule from '../../../../../src/tools/file/pptx/renderer/SlideRenderer';
 import type { SlideHandle } from '../../../../../src/tools/file/pptx/renderer/SlideRenderer';
 
@@ -90,11 +91,10 @@ describe('openDeck with real decks', () => {
   });
 
   it('refuses a zip with more entries than an upload may have', async () => {
-    const zip = await JSZip.loadAsync(await buildDeck([{ text: 'Only slide' }]));
-    const present = Object.values(zip.files).filter((file) => !file.dir).length;
-
-    Array.from({ length: 4_001 - present }, (_, i) => zip.file(`ppt/padding/${i}.txt`, 'x'));
-    const buf = await zip.generateAsync({ type: 'arraybuffer' });
+    const deck = await buildDeck([{ text: 'Only slide' }]);
+    const present = readZip(deck).entries.filter((entry) => !entry.dir).length;
+    const padding = Object.fromEntries(Array.from({ length: 4_001 - present }, (_, i) => [`ppt/padding/${i}.txt`, 'x']));
+    const buf = editZip(deck, padding);
 
     await expect(openDeck(buf, containerOf({ value: SLIDE_WIDTH }))).rejects.toThrow(/zip limit exceeded: entries/);
   });

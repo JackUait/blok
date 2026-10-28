@@ -1,19 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import JSZip from 'jszip';
 import '../helpers/domShims';
 import { buildDeck } from '../helpers/buildDeck';
+import { editZip } from '../../docx/build-docx';
 import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
 import { buildPresentation } from '../../../../../../src/tools/file/pptx/model/Presentation';
 
 /** buildDeck with the slide size swapped for `size`. */
-const deckOfSize = async (size: string): Promise<ArrayBuffer> => {
-  const zip = await JSZip.loadAsync(await buildDeck([{ text: 'Sized' }]));
-  const presentation = await zip.file('ppt/presentation.xml')?.async('string') ?? '';
-
-  zip.file('ppt/presentation.xml', presentation.replace('<p:sldSz cx="9144000" cy="6858000"/>', size));
-
-  return zip.generateAsync({ type: 'arraybuffer' });
-};
+const deckOfSize = async (size: string): Promise<ArrayBuffer> => editZip(await buildDeck([{ text: 'Sized' }]), {
+  'ppt/presentation.xml': (presentation) => presentation.replace('<p:sldSz cx="9144000" cy="6858000"/>', size),
+});
 
 describe('a pptx whose slide size is zero or negative', () => {
   beforeEach(() => { vi.clearAllMocks(); });

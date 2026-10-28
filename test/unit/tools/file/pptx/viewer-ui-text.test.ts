@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import JSZip from 'jszip';
 import './helpers/domShims';
 import { buildDeck } from './helpers/buildDeck';
+import { zipToBuffer } from '../docx/build-docx';
+import { readZip } from '../../../../../src/tools/file/zip/read-zip';
 import { openDeck } from '../../../../../src/tools/file/pptx/viewer';
 
 /** English text the engine used to write into slides. Blok's UI is localized, so none may show. */
@@ -30,14 +31,13 @@ class FakeResizeObserver {
 
 /** A deck whose picture points at a media file the zip does not hold. */
 const deckWithMissingPicture = async (): Promise<ArrayBuffer> => {
-  const zip = await JSZip.loadAsync(await buildDeck([
+  const archive = readZip(await buildDeck([
     { text: 'Intro', picture: true, link: { target: 'slide2.xml', external: false } },
     { text: 'Summary' },
   ]));
+  const kept = archive.entries.filter((entry) => !entry.dir && entry.name !== 'ppt/media/image1.png');
 
-  zip.remove('ppt/media/image1.png');
-
-  return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+  return zipToBuffer(new Map(kept.map((entry) => [entry.name, archive.read(entry)])));
 };
 
 describe('openDeck — no untranslated UI text in slides', () => {

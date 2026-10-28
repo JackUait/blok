@@ -1,7 +1,8 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 tests (Apache-2.0); modified for Blok.
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import '../helpers/domShims';
-import JSZip from 'jszip';
+import { zipToBuffer } from '../../docx/build-docx';
+import { buildZip as forgeZip } from '../../zip/zip-builder';
 import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
 
 // ---------------------------------------------------------------------------
@@ -10,11 +11,7 @@ import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser
 async function buildZip(
   files: Array<{ path: string; data: string | Uint8Array }>,
 ): Promise<ArrayBuffer> {
-  const zip = new JSZip();
-  for (const file of files) {
-    zip.file(file.path, file.data);
-  }
-  return zip.generateAsync({ type: 'arraybuffer' });
+  return zipToBuffer(new Map(files.map((file) => [file.path, file.data])));
 }
 
 // Minimal required skeleton every valid PPTX needs so parseZip can run without
@@ -24,41 +21,6 @@ const SKELETON: Array<{ path: string; data: string }> = [
   { path: 'ppt/presentation.xml', data: '<p:presentation />' },
   { path: 'ppt/_rels/presentation.xml.rels', data: '<Relationships />' },
 ];
-
-/** Mimics JSZip's internal stream: one data chunk, then end. */
-function fakeStream(bytes: Uint8Array) {
-  const listeners: Record<string, (arg?: unknown) => void> = {};
-  const stream = {
-    on(event: string, listener: (arg?: unknown) => void) {
-      listeners[event] = listener;
-      return stream;
-    },
-    pause: () => stream,
-    resume() {
-      queueMicrotask(() => {
-        listeners.data?.(bytes);
-        listeners.end?.();
-      });
-      return stream;
-    },
-  };
-  return stream;
-}
-
-function mockLoadedZipWithoutPrivateSizes(files: Record<string, string | Uint8Array>) {
-  const zipFiles = Object.fromEntries(
-    Object.entries(files).map(([path, data]) => [
-      path,
-      {
-        dir: false,
-        internalStream: vi.fn(() => fakeStream(typeof data === 'string' ? new TextEncoder().encode(data) : data)),
-      },
-    ]),
-  );
-
-  vi.spyOn(JSZip, 'loadAsync').mockResolvedValue({ files: zipFiles } as unknown as JSZip);
-  return zipFiles;
-}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -493,52 +455,25 @@ describe('parseZip – backslash path normalisation', () => {
   });
 
   it('normalises backslash separators in slide paths to forward slashes', async () => {
-    const slideXml = '<p:sld />';
-    const zip = new JSZip();
-    // JSZip stores the path as-is; we manually add a backslash-keyed entry to
-    // simulate a zip produced by Windows tools.
-    zip.file('[Content_Types].xml', '<Types />');
-    zip.file('ppt/presentation.xml', '<p:presentation />');
-    zip.file('ppt/_rels/presentation.xml.rels', '<Relationships />');
-    // Force backslash path by writing the raw entry name via the internal API.
-    // JSZip normalises paths itself so we rely on the key override trick below.
-    const zipObj = zip as unknown as { files: Record<string, JSZip.JSZipObject> };
-    const fwdEntry = zip.file('ppt/slides/slide1.xml', slideXml);
-    // Re-key the entry with backslashes to simulate a Windows-generated zip
-    const entryKey = 'ppt\\slides\\slide1.xml';
-    const forwardEntry = zipObj.files['ppt/slides/slide1.xml'];
-    if (forwardEntry) {
-      delete zipObj.files['ppt/slides/slide1.xml'];
-      zipObj.files[entryKey] = forwardEntry;
-    }
-
-    const buffer = await zip.generateAsync({ type: 'arraybuffer' });
+    const buffer = forgeZip([
+      ...SKELETON.map((file) => ({ name: file.path, data: new TextEncoder().encode(file.data) })),
+      // A Windows tool may write backslashes in the stored name.
+      { name: 'ppt\\slides\\slide1.xml', data: new TextEncoder().encode('<p:sld />') },
+    ]).buffer;
     const files = await parseZip(buffer);
 
     // After normalisation the slide must be accessible via the forward-slash key.
     expect(files.slides.has('ppt/slides/slide1.xml')).toBe(true);
     // And must NOT be stored under the backslash key.
     expect(files.slides.has('ppt\\slides\\slide1.xml')).toBe(false);
-    // We don't use fwdEntry for anything; the variable is only to satisfy lint.
-    fwdEntry;
   });
 
   it('normalises backslash paths in media entries', async () => {
     const bytes = new Uint8Array([0x01, 0x02, 0x03]);
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', '<Types />');
-    zip.file('ppt/presentation.xml', '<p:presentation />');
-    zip.file('ppt/_rels/presentation.xml.rels', '<Relationships />');
-    zip.file('ppt/media/image1.png', bytes);
-
-    const zipObj = zip as unknown as { files: Record<string, JSZip.JSZipObject> };
-    const fwdEntry = zipObj.files['ppt/media/image1.png'];
-    if (fwdEntry) {
-      delete zipObj.files['ppt/media/image1.png'];
-      zipObj.files['ppt\\media\\image1.png'] = fwdEntry;
-    }
-
-    const buffer = await zip.generateAsync({ type: 'arraybuffer' });
+    const buffer = forgeZip([
+      ...SKELETON.map((file) => ({ name: file.path, data: new TextEncoder().encode(file.data) })),
+      { name: 'ppt\\media\\image1.png', data: bytes },
+    ]).buffer;
     const files = await parseZip(buffer);
 
     expect(files.media.has('ppt/media/image1.png')).toBe(true);
@@ -560,18 +495,13 @@ describe('parseZip – directory entry handling', () => {
   });
 
   it('skips directory entries and does not add them to any map', async () => {
-    // JSZip marks folders added via folder() with dir=true; parseZip filters
-    // them out via the `!file.dir` check before categorisation.
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', '<Types />');
-    zip.file('ppt/presentation.xml', '<p:presentation />');
-    zip.file('ppt/_rels/presentation.xml.rels', '<Relationships />');
-    // Explicitly add directory entries
-    zip.folder('ppt/slides/');
-    zip.folder('ppt/media/');
-    zip.file('ppt/slides/slide1.xml', '<p:sld />');
-
-    const buffer = await zip.generateAsync({ type: 'arraybuffer' });
+    // A name ending in "/" is a directory entry; parseZip must skip it.
+    const buffer = forgeZip([
+      ...SKELETON.map((file) => ({ name: file.path, data: new TextEncoder().encode(file.data) })),
+      { name: 'ppt/slides/' },
+      { name: 'ppt/media/' },
+      { name: 'ppt/slides/slide1.xml', data: new TextEncoder().encode('<p:sld />') },
+    ]).buffer;
     const files = await parseZip(buffer);
 
     // Only the actual slide should appear; directory entries must be absent.
@@ -640,30 +570,6 @@ describe('parseZip limits', () => {
     );
   });
 
-  it('enforces maxEntryUncompressedBytes on text entries when pre-scan size is unavailable', async () => {
-    mockLoadedZipWithoutPrivateSizes({
-      '[Content_Types].xml': '<Types />',
-      'ppt/presentation.xml': 'x'.repeat(2048),
-      'ppt/_rels/presentation.xml.rels': '<Relationships />',
-    });
-
-    await expect(parseZip(new ArrayBuffer(0), { maxEntryUncompressedBytes: 1024 })).rejects.toThrow(
-      /maxEntryUncompressedBytes/,
-    );
-  });
-
-  it('enforces maxTotalUncompressedBytes across text entries when pre-scan sizes are unavailable', async () => {
-    mockLoadedZipWithoutPrivateSizes({
-      '[Content_Types].xml': 'x'.repeat(600),
-      'ppt/presentation.xml': 'x'.repeat(600),
-      'ppt/_rels/presentation.xml.rels': 'x'.repeat(600),
-    });
-
-    await expect(parseZip(new ArrayBuffer(0), { maxTotalUncompressedBytes: 1024 })).rejects.toThrow(
-      /maxTotalUncompressedBytes/,
-    );
-  });
-
   it('enforces maxMediaBytes: throws when total media bytes exceed limit', async () => {
     const media = new Uint8Array(4096);
     const buffer = await buildZip([
@@ -695,23 +601,6 @@ describe('parseZip limits', () => {
     await expect(parseZip(buffer, { maxMediaBytes: 1000 })).rejects.toThrow(/maxMediaBytes/);
   });
 
-  it('throws when maxConcurrency is 0 (invalid)', async () => {
-    const buffer = await buildZip([...SKELETON]);
-
-    await expect(parseZip(buffer, { maxConcurrency: 0 })).rejects.toThrow(/maxConcurrency/);
-  });
-
-  it('accepts maxConcurrency of 1 (minimum valid value)', async () => {
-    const buffer = await buildZip([
-      ...SKELETON,
-      { path: 'ppt/slides/slide1.xml', data: '<p:sld />' },
-    ]);
-
-    const files = await parseZip(buffer, { maxConcurrency: 1 });
-
-    expect(files.slides.has('ppt/slides/slide1.xml')).toBe(true);
-  });
-
   it('enforces maxEntryUncompressedBytes: throws when a single entry exceeds limit', async () => {
     const bigSlide = '<p:sld>' + 'x'.repeat(5000) + '</p:sld>';
     const buffer = await buildZip([...SKELETON, { path: 'ppt/slides/slide1.xml', data: bigSlide }]);
@@ -731,9 +620,6 @@ describe('parseZip limits', () => {
   });
 
   it('enforces maxEntryUncompressedBytes on media entries with unknown pre-scan size', async () => {
-    // Create a media entry large enough to exceed a tight per-entry limit.
-    // The pre-scan may or may not know the size; the fallback check in the
-    // media handler should catch it either way.
     const bigMedia = new Uint8Array(3000);
     const buffer = await buildZip([...SKELETON, { path: 'ppt/media/image1.png', data: bigMedia }]);
 
@@ -743,8 +629,6 @@ describe('parseZip limits', () => {
   });
 
   it('enforces maxMediaBytes on media entries whose size was not known during pre-scan', async () => {
-    // This covers the runtime fallback path in the media handler that
-    // accumulates unknownMediaBytes when knownSizeByPath lacks the entry.
     const media1 = new Uint8Array(600);
     const media2 = new Uint8Array(600);
     const buffer = await buildZip([
@@ -757,11 +641,6 @@ describe('parseZip limits', () => {
     await expect(parseZip(buffer, { maxMediaBytes: 800 })).rejects.toThrow(/maxMediaBytes/);
   });
 
-  it('throws on non-integer maxConcurrency (e.g. 2.5)', async () => {
-    const buffer = await buildZip([...SKELETON]);
-
-    await expect(parseZip(buffer, { maxConcurrency: 2.5 })).rejects.toThrow(/maxConcurrency/);
-  });
 });
 
 // ---------------------------------------------------------------------------

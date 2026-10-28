@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import JSZip from 'jszip';
 import '../helpers/domShims';
 import { buildDeck } from '../helpers/buildDeck';
+import { editZip } from '../../docx/build-docx';
 import { xmlNode } from '../helpers/xmlNode';
 import { createMockRenderContext } from '../helpers/mockContext';
 import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
@@ -44,20 +44,20 @@ interface Hostile {
 
 /** Renders one slide of a deck carrying the hostile parts and returns its HTML. */
 const renderHostile = async (hostile: Hostile): Promise<string> => {
-  const zip = await JSZip.loadAsync(await buildDeck([{ text: 'x' }]));
-  const slide = await zip.file('ppt/slides/slide1.xml')?.async('string') ?? '';
   const bg = hostile.background === undefined ? '' : `<p:bg><p:bgPr>${hostile.background}<a:effectLst/></p:bgPr></p:bg>`;
+  const edits: Record<string, (old: string) => string> = {
+    'ppt/slides/slide1.xml': (slide) => slide
+      .replace('<p:cSld>', `<p:cSld>${bg}`)
+      .replace('</p:spTree>', `${hostile.tree ?? ''}</p:spTree>`),
+  };
 
-  zip.file('ppt/slides/slide1.xml', slide
-    .replace('<p:cSld>', `<p:cSld>${bg}`)
-    .replace('</p:spTree>', `${hostile.tree ?? ''}</p:spTree>`));
   if (hostile.accent1 !== undefined) {
-    const theme = await zip.file('ppt/theme/theme1.xml')?.async('string') ?? '';
+    const accent1 = hostile.accent1;
 
-    zip.file('ppt/theme/theme1.xml', theme.replace('<a:srgbClr val="4F81BD"/>', hostile.accent1));
+    edits['ppt/theme/theme1.xml'] = (theme) => theme.replace('<a:srgbClr val="4F81BD"/>', accent1);
   }
 
-  const files = await parseZip(await zip.generateAsync({ type: 'arraybuffer' }));
+  const files = await parseZip(editZip(await buildDeck([{ text: 'x' }]), edits));
   const presentation = buildPresentation(files);
   const handle = renderSlide(presentation, presentation.slides[0]);
 

@@ -1,136 +1,80 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import JSZip from 'jszip';
+import type * as InflateModule from '../../../../../../src/tools/file/zip/inflate';
+
+vi.mock('../../../../../../src/tools/file/zip/inflate', async (importOriginal) => {
+  const actual = await importOriginal<typeof InflateModule>();
+
+  return { ...actual, inflateRaw: vi.fn(actual.inflateRaw) };
+});
+
+import { inflateRaw } from '../../../../../../src/tools/file/zip/inflate';
+import { readZip } from '../../../../../../src/tools/file/zip/read-zip';
 import { buildDeck } from '../helpers/buildDeck';
-import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
-
-const LOCAL_HEADER = 0x04034b50;
-const CENTRAL_HEADER = 0x02014b50;
-
-/** Rewrites the uncompressed size that the zip headers declare for `name`, as a hostile file would. */
-const lieAboutSize = (zip: Uint8Array, name: string, declared: number): Uint8Array => {
-  const out = zip.slice();
-  const view = new DataView(out.buffer);
-  const encodedName = new TextEncoder().encode(name);
-  const nameAt = (offset: number): boolean => encodedName.every((byte, i) => out[offset + i] === byte);
-
-  Array.from({ length: out.length - 46 }, (_, offset) => offset).forEach((offset) => {
-    const signature = view.getUint32(offset, true);
-
-    if (signature === LOCAL_HEADER && nameAt(offset + 30)) {
-      view.setUint32(offset + 22, declared, true);
-    }
-    if (signature === CENTRAL_HEADER && nameAt(offset + 46)) {
-      view.setUint32(offset + 24, declared, true);
-    }
-  });
-
-  return out;
-};
-
-/** A real deck plus extra entries of zeros (they deflate to almost nothing). */
-const deckWith = async (entries: Record<string, number>): Promise<Uint8Array> => {
-  const zip = await JSZip.loadAsync(await buildDeck([{ text: 'Bomb' }]));
-
-  Object.entries(entries).forEach(([name, size]) => zip.file(name, new Uint8Array(size)));
-
-  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
-};
+import { buildZip } from '../../zip/zip-builder';
+import type { BuildEntry } from '../../zip/zip-builder';
+import { parseZip, RECOMMENDED_ZIP_LIMITS } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
 
 const MB = 1024 * 1024;
 
-/** Bytes that do not compress, so an entry inflates over many input chunks. */
-const noise = (size: number): Uint8Array => {
-  const bytes = new Uint8Array(size);
-  const seed = { value: 1 };
+/** A real deck plus the given extra entries, all deflated. */
+const deckWith = async (extra: BuildEntry[]): Promise<ArrayBuffer> => {
+  const archive = readZip(await buildDeck([{ text: 'Bomb' }]));
+  const parts = archive.entries
+    .filter((entry) => !entry.dir)
+    .map((entry): BuildEntry => ({ name: entry.name, data: archive.read(entry), method: 8 }));
 
-  bytes.forEach((_, i) => {
-    seed.value = (seed.value * 1103515245 + 12345) >>> 0;
-    bytes[i] = seed.value >>> 24;
-  });
+  vi.mocked(inflateRaw).mockClear();
 
-  return bytes;
+  return buildZip([...parts, ...extra]).buffer;
 };
 
-interface ChunkStream {
-  on(event: string, listener: (chunk: Uint8Array) => void): ChunkStream;
-}
-
-interface StreamingEntry {
-  internalStream(type: string): ChunkStream;
-}
-
-/** Counts every entry stream parseZip opens and every byte it inflates. */
-const watchInflation = async (): Promise<{ streams: number; bytes: number }> => {
-  const sample = await JSZip.loadAsync(await buildDeck([{ text: 'x' }]));
-  const proto = Object.getPrototypeOf(Object.values(sample.files)[0]) as StreamingEntry;
-  const original = proto.internalStream;
-  const seen = { streams: 0, bytes: 0 };
-
-  vi.spyOn(proto, 'internalStream').mockImplementation(function (this: StreamingEntry, type: string) {
-    seen.streams += 1;
-
-    return original.call(this, type).on('data', (chunk) => { seen.bytes += chunk.byteLength; });
-  });
-
-  return seen;
-};
-
-/** Lets every pending stream chunk and worker run. */
-const settle = (): Promise<void> => new Promise((resolve) => { setTimeout(resolve, 300); });
+/** An entry that declares `size` bytes but holds only a few; never inflated if refused up front. */
+const declared = (name: string, size: number): BuildEntry => ({
+  name,
+  data: new Uint8Array(1),
+  method: 8,
+  size,
+});
 
 describe('parseZip against entries that lie about their size', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('stops inflating an entry once it passes the per-entry cap', async () => {
-    const zip = lieAboutSize(await deckWith({ 'ppt/media/image9.png': 8 * MB }), 'ppt/media/image9.png', 100);
+  it('refuses an entry that inflates past the size it declares, inflating only up to that size', async () => {
+    const zip = await deckWith([{ name: 'ppt/media/image9.png', data: new Uint8Array(8 * MB), method: 8, size: 100 }]);
 
-    await expect(parseZip(zip.buffer, { maxEntryUncompressedBytes: MB }))
-      .rejects.toThrow(/PPTX zip limit exceeded: ppt\/media\/image9\.png/);
+    await expect(parseZip(zip)).rejects.toThrow('output larger than declared size');
+    // The inflater is handed the declared 100 bytes as its output size, never the real 8 MB.
+    expect(vi.mocked(inflateRaw).mock.calls.map(([, size]) => size)).toContain(100);
+    expect(vi.mocked(inflateRaw).mock.calls.every(([, size]) => size < MB)).toBe(true);
   });
 
-  it('counts the real inflated bytes against the total cap', async () => {
-    const entries = { 'ppt/media/a.png': 600 * 1024, 'ppt/media/b.png': 600 * 1024, 'ppt/media/c.png': 600 * 1024 };
-    const zip = Object.keys(entries).reduce(
-      (bytes, name) => lieAboutSize(bytes, name, 100),
-      await deckWith(entries)
-    );
+  it('refuses an entry declared over the per-entry limit before inflating anything', async () => {
+    const zip = await deckWith([declared('ppt/media/big.png', RECOMMENDED_ZIP_LIMITS.maxEntryUncompressedBytes + 1)]);
 
-    await expect(parseZip(zip.buffer, { maxTotalUncompressedBytes: MB }))
-      .rejects.toThrow(/PPTX zip limit exceeded: total uncompressed bytes/);
+    await expect(parseZip(zip, RECOMMENDED_ZIP_LIMITS))
+      .rejects.toThrow(/PPTX zip limit exceeded: ppt\/media\/big\.png is \d+ bytes > maxEntryUncompressedBytes/);
+    expect(inflateRaw).not.toHaveBeenCalled();
   });
 
-  it('counts the real inflated bytes against the media cap', async () => {
-    const entries = { 'ppt/media/a.png': 600 * 1024, 'ppt/media/b.png': 600 * 1024 };
-    const zip = Object.keys(entries).reduce(
-      (bytes, name) => lieAboutSize(bytes, name, 100),
-      await deckWith(entries)
-    );
+  it('refuses entries whose declared sizes pass the total limit before inflating anything', async () => {
+    const zip = await deckWith(Array.from({ length: 9 }, (_, i) => declared(`ppt/embeddings/part${i}.bin`, 30 * MB)));
 
-    await expect(parseZip(zip.buffer, { maxMediaBytes: MB }))
-      .rejects.toThrow(/PPTX zip limit exceeded: media bytes/);
+    await expect(parseZip(zip, RECOMMENDED_ZIP_LIMITS))
+      .rejects.toThrow(/PPTX zip limit exceeded: total uncompressed bytes \d+ > maxTotalUncompressedBytes/);
+    expect(inflateRaw).not.toHaveBeenCalled();
   });
 
-  it('stops opening and inflating other entries once one passes a limit', async () => {
-    const deck = await JSZip.loadAsync(await deckWith({ 'ppt/media/bomb.png': 8 * MB }));
+  it('refuses media whose declared sizes pass the media limit before inflating anything', async () => {
+    const zip = await deckWith(Array.from({ length: 7 }, (_, i) => declared(`ppt/media/image${i}.png`, 30 * MB)));
 
-    Array.from({ length: 24 }, (_, i) => deck.file(`ppt/media/h${i}.png`, noise(256 * 1024)));
-    const zip = lieAboutSize(await deck.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }), 'ppt/media/bomb.png', 100);
-    const seen = await watchInflation();
-
-    const failure = await parseZip(zip.buffer, { maxEntryUncompressedBytes: MB }).catch((error: unknown) => error);
-    const atFailure = { ...seen };
-
-    await settle();
-
-    expect(seen.streams - atFailure.streams).toBe(0);
-    // A stream that was already open may still hand over a few chunks it had inflated.
-    expect(seen.bytes - atFailure.bytes).toBeLessThan(MB);
-    expect(String(failure)).toMatch(/PPTX zip limit exceeded: ppt\/media\/bomb\.png/);
+    await expect(parseZip(zip, RECOMMENDED_ZIP_LIMITS))
+      .rejects.toThrow(/PPTX zip limit exceeded: media bytes \d+ > maxMediaBytes/);
+    expect(inflateRaw).not.toHaveBeenCalled();
   });
 
   it('still reads an honest deck within the limits', async () => {
-    const files = await parseZip((await deckWith({ 'ppt/media/a.png': 1024 })).buffer, {
+    const files = await parseZip(await deckWith([{ name: 'ppt/media/a.png', data: new Uint8Array(1024), method: 8 }]), {
       maxEntryUncompressedBytes: MB,
       maxTotalUncompressedBytes: MB,
       maxMediaBytes: MB,

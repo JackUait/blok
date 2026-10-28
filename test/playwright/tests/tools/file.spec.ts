@@ -3,10 +3,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
-import JSZip from 'jszip';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { createZip } from '../../../../scripts/lib/zip-writer.mjs';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { readZip } from '../../../../src/tools/file/zip/read-zip';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 // Playwright runs from the repo root, so resolve fixtures relative to cwd.
@@ -347,13 +348,29 @@ test('pptx file renders an inline slide preview', async ({ page }) => {
 
 const EXTERNAL_MEDIA_HOST = 'http://pptx-external-media.test';
 
+/** Every part of sample.pptx, in archive order. */
+const sampleDeckParts = (): Map<string, string | Uint8Array> => {
+  const archive = readZip(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
+
+  return new Map(archive.entries.filter((entry) => !entry.dir).map((entry) => [entry.name, archive.read(entry)]));
+};
+
+const partText = (parts: Map<string, string | Uint8Array>, name: string): string => {
+  const part = parts.get(name);
+
+  return typeof part === 'string' ? part : new TextDecoder().decode(part);
+};
+
+const zipParts = (parts: Map<string, string | Uint8Array>): Promise<Buffer> =>
+  Promise.resolve(createZip([...parts].map(([name, data]) => ({ name, data }))));
+
 /** sample.pptx plus a picture whose image lives on another host. */
-const deckWithExternalPicture = async (): Promise<Buffer> => {
-  const zip = await JSZip.loadAsync(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
+const deckWithExternalPicture = (): Promise<Buffer> => {
+  const zip = sampleDeckParts();
   const slidePath = 'ppt/slides/slide1.xml';
   const relsPath = 'ppt/slides/_rels/slide1.xml.rels';
-  const slide = await zip.file(slidePath)?.async('string') ?? '';
-  const rels = await zip.file(relsPath)?.async('string') ?? '';
+  const slide = partText(zip, slidePath);
+  const rels = partText(zip, relsPath);
   const picture = '<p:pic><p:nvPicPr><p:cNvPr id="9" name="Remote"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>'
     + '<p:blipFill><a:blip r:link="rIdRemote"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
     + '<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>'
@@ -361,10 +378,10 @@ const deckWithExternalPicture = async (): Promise<Buffer> => {
   const relationship = '<Relationship Id="rIdRemote" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
     + ` Target="${EXTERNAL_MEDIA_HOST}/pixel.png" TargetMode="External"/>`;
 
-  zip.file(slidePath, slide.replace('</p:spTree>', `${picture}</p:spTree>`));
-  zip.file(relsPath, rels.replace('</Relationships>', `${relationship}</Relationships>`));
+  zip.set(slidePath, slide.replace('</p:spTree>', `${picture}</p:spTree>`));
+  zip.set(relsPath, rels.replace('</Relationships>', `${relationship}</Relationships>`));
 
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+  return zipParts(zip);
 };
 
 test('pptx preview never fetches a picture the deck links from another host', async ({ page }) => {
@@ -396,32 +413,32 @@ test('pptx preview never fetches a picture the deck links from another host', as
 const LONG_DECK_SLIDES = 14;
 
 /** sample.pptx copied into a deck longer than one drawing batch, each slide with its own text. */
-const longDeck = async (): Promise<Buffer> => {
-  const zip = await JSZip.loadAsync(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
-  const slide = await zip.file('ppt/slides/slide1.xml')?.async('string') ?? '';
-  const slideRels = await zip.file('ppt/slides/_rels/slide1.xml.rels')?.async('string') ?? '';
-  const presentation = await zip.file('ppt/presentation.xml')?.async('string') ?? '';
-  const presentationRels = await zip.file('ppt/_rels/presentation.xml.rels')?.async('string') ?? '';
-  const contentTypes = await zip.file('[Content_Types].xml')?.async('string') ?? '';
+const longDeck = (): Promise<Buffer> => {
+  const zip = sampleDeckParts();
+  const slide = partText(zip, 'ppt/slides/slide1.xml');
+  const slideRels = partText(zip, 'ppt/slides/_rels/slide1.xml.rels');
+  const presentation = partText(zip, 'ppt/presentation.xml');
+  const presentationRels = partText(zip, 'ppt/_rels/presentation.xml.rels');
+  const contentTypes = partText(zip, '[Content_Types].xml');
   const numbers = Array.from({ length: LONG_DECK_SLIDES }, (_, i) => i + 1);
   const slideType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide';
 
   numbers.forEach((n) => {
-    zip.file(`ppt/slides/slide${n}.xml`, slide.replace('Blok pptx preview fixture', `Long deck slide ${n}`));
-    zip.file(`ppt/slides/_rels/slide${n}.xml.rels`, slideRels);
+    zip.set(`ppt/slides/slide${n}.xml`, slide.replace('Blok pptx preview fixture', `Long deck slide ${n}`));
+    zip.set(`ppt/slides/_rels/slide${n}.xml.rels`, slideRels);
   });
-  zip.file('ppt/presentation.xml', presentation.replace(
+  zip.set('ppt/presentation.xml', presentation.replace(
     /<p:sldIdLst>.*<\/p:sldIdLst>/,
     `<p:sldIdLst>${numbers.map((n) => `<p:sldId id="${255 + n}" r:id="rIdLong${n}"/>`).join('')}</p:sldIdLst>`
   ));
-  zip.file('ppt/_rels/presentation.xml.rels', presentationRels
+  zip.set('ppt/_rels/presentation.xml.rels', presentationRels
     .replace(/<Relationship Id="rId2"[^>]*\/>/, '')
     .replace('</Relationships>', `${numbers.map((n) => `<Relationship Id="rIdLong${n}" Type="${slideType}" Target="slides/slide${n}.xml"/>`).join('')}</Relationships>`));
-  zip.file('[Content_Types].xml', contentTypes
+  zip.set('[Content_Types].xml', contentTypes
     .replace(/<Override PartName="\/ppt\/slides\/slide1\.xml"[^>]*\/>/, '')
     .replace('</Types>', `${numbers.map((n) => `<Override PartName="/ppt/slides/slide${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}</Types>`));
 
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+  return zipParts(zip);
 };
 
 test('pptx preview shows the last slide of a deck longer than one batch', async ({ page }) => {
@@ -458,23 +475,23 @@ test('pptx preview draws text, tables and charts from a real deck', async ({ pag
 });
 
 /** sample.pptx plus one embedded picture. */
-const deckWithPicture = async (): Promise<Buffer> => {
-  const zip = await JSZip.loadAsync(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
+const deckWithPicture = (): Promise<Buffer> => {
+  const zip = sampleDeckParts();
   const slidePath = 'ppt/slides/slide1.xml';
   const relsPath = 'ppt/slides/_rels/slide1.xml.rels';
-  const slide = await zip.file(slidePath)?.async('string') ?? '';
-  const rels = await zip.file(relsPath)?.async('string') ?? '';
+  const slide = partText(zip, slidePath);
+  const rels = partText(zip, relsPath);
   const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const picture = '<p:pic><p:nvPicPr><p:cNvPr id="9" name="Pixel"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>'
     + '<p:blipFill><a:blip r:embed="rIdPixel"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
     + '<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>'
     + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
 
-  zip.file('ppt/media/pixel.png', pixel);
-  zip.file(slidePath, slide.replace('</p:spTree>', `${picture}</p:spTree>`));
-  zip.file(relsPath, rels.replace('</Relationships>', '<Relationship Id="rIdPixel" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/pixel.png"/></Relationships>'));
+  zip.set('ppt/media/pixel.png', pixel);
+  zip.set(slidePath, slide.replace('</p:spTree>', `${picture}</p:spTree>`));
+  zip.set(relsPath, rels.replace('</Relationships>', '<Relationship Id="rIdPixel" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/pixel.png"/></Relationships>'));
 
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+  return zipParts(zip);
 };
 
 test('closing a pptx preview frees the pictures it decoded', async ({ page }) => {

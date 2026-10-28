@@ -106,22 +106,12 @@ const EXEMPT_SINKS: FontSizeSink[] = [
     reason: 'text-edit textarea in a body-mounted image dialog, not cell body text; its size follows image zoom',
   },
   {
-    file: 'src/tools/file/pptx/renderer/GroupRenderer.ts',
-    match: 'fontSize',
-    reason: PPTX_SLIDE_TEXT,
-  },
-  {
     file: 'src/tools/file/pptx/renderer/ImageRenderer.ts',
     match: 'fontSize',
     reason: PPTX_SLIDE_TEXT,
   },
   {
     file: 'src/tools/file/pptx/renderer/ShapeRenderer.ts',
-    match: 'fontSize',
-    reason: PPTX_SLIDE_TEXT,
-  },
-  {
-    file: 'src/tools/file/pptx/renderer/SlideRenderer.ts',
     match: 'fontSize',
     reason: PPTX_SLIDE_TEXT,
   },

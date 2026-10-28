@@ -115,6 +115,10 @@ const INDIRECTLY_NAMED: Record<string, string> = {
   'tools/video/controls.ts » ctxLoop » menuitemcheckbox':
     'DELIBERATE — built by the local ctxItem() factory, which sets item.textContent to the ' +
     'translated label before returning; the role is only upgraded to menuitemcheckbox afterwards',
+  'tools/file/pptx/renderer/TextRenderer.ts » span » link':
+    'DELIBERATE — named by the deck\'s own run text: the span is stored as `element`, and the ' +
+    'run text is written into `element` right after (textContent or text children); a deck ' +
+    'tooltip, when present, is only a title on top',
 };
 
 /**

@@ -130,7 +130,7 @@ describe('openDeck', () => {
       { text: 'The end' },
     ]), container);
 
-    const link = Array.from(container.querySelectorAll<HTMLElement>('[title]')).find((el) => el.textContent === 'Go to the end');
+    const link = Array.from(container.querySelectorAll<HTMLElement>('[role="link"]')).find((el) => el.textContent === 'Go to the end');
 
     link?.click();
 

@@ -214,7 +214,7 @@ test.describe('editable table', () => {
     await expect(page.getByRole('textbox', { name: 'Link' })).toHaveValue('https://example.com');
   });
 
-  test('hovering a filled cell shows a 52x24 pill with Comment and Copy to Clipboard; empty and number cells show none', async ({ page }) => {
+  test('hovering a filled cell shows a 52x24 pill with Comment and Copy to Clipboard; an empty cell shows none', async ({ page }) => {
     const filled = cell(page, 'r1', 'p-link');
     const copy = filled.getByRole('button', { name: 'Copy to clipboard' });
 
@@ -228,8 +228,8 @@ test.describe('editable table', () => {
     const cellBox = await filled.boundingBox();
 
     expect([box?.width, box?.height]).toEqual([52, 24]);
-    // 6px inside the cell's 1px column line, like the AI Autofill button.
-    expect(Math.round((cellBox?.x ?? 0) + (cellBox?.width ?? 0) - 1 - ((box?.x ?? 0) + (box?.width ?? 0)))).toBe(6);
+    // notion-spec-2 §19.6: 4px inside the cell's 1px column line (x 843-895 in a 700-900 cell).
+    expect(Math.round((cellBox?.x ?? 0) + (cellBox?.width ?? 0) - 1 - ((box?.x ?? 0) + (box?.width ?? 0)))).toBe(4);
     expect(await pill.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe('6px');
     expect([(await copy.boundingBox())?.width, (await copy.boundingBox())?.height]).toEqual([24, 20]);
 
@@ -239,8 +239,12 @@ test.describe('editable table', () => {
     }
     await cell(page, 'r2', 'p-link').hover();
     await expect(cell(page, 'r2', 'p-link').getByRole('button')).toHaveCount(0);
-    await cell(page, 'r1', 'p-points').hover();
-    await expect(cell(page, 'r1', 'p-points').getByRole('button')).toHaveCount(0);
+    // notion-spec-2 §19.20: a filled Number shows the box too, at the cell's start edge, 4px in.
+    const points = cell(page, 'r1', 'p-points');
+
+    await points.hover();
+    await expect(points.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
+    expect(Math.round(((await points.locator('[data-blok-database-table-cell-actions]').boundingBox())?.x ?? 0) - ((await points.boundingBox())?.x ?? 0))).toBe(4);
   });
 
   test('the pill hints show only after a hover delay', async ({ page }) => {

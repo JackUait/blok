@@ -69,6 +69,36 @@ describe('a pptx table with more cells than a slide can sensibly show', () => {
     expect(cellCount(node)).toBe(0);
   });
 
+  it('does not build a column for every grid column of a table with no rows', () => {
+    const el = renderTable(table(10_001, []), createMockRenderContext());
+
+    expect(el.querySelectorAll('col')).toHaveLength(0);
+  });
+
+  it('does not build a row for every empty row of a table', () => {
+    const el = renderTable(table(0, Array.from({ length: 10_001 }, () => 0)), createMockRenderContext());
+
+    expect(el.querySelectorAll('tr')).toHaveLength(0);
+  });
+
+  it('marks a parsed table with a huge grid and no rows as oversized', () => {
+    const node = parseTableNode(xmlNode(frameXml(10_001, [])));
+
+    expect(node.oversized).toBe(true);
+  });
+
+  it('marks a parsed table with a huge number of empty rows as oversized', () => {
+    const node = parseTableNode(xmlNode(frameXml(0, Array.from({ length: 10_001 }, () => 0))));
+
+    expect(node.oversized).toBe(true);
+    expect(node.rows).toHaveLength(0);
+  });
+
+  it('still draws a grid or a row count at the limit', () => {
+    expect(renderTable(table(10_000, []), createMockRenderContext()).querySelectorAll('col')).toHaveLength(10_000);
+    expect(renderTable(table(0, Array.from({ length: 10_000 }, () => 0)), createMockRenderContext()).querySelectorAll('tr')).toHaveLength(10_000);
+  });
+
   it('still draws every cell of a table at the limit', () => {
     const el = renderTable(grid(2000, 5), createMockRenderContext());
 

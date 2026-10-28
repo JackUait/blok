@@ -12,7 +12,7 @@
  */
 
 import type { TableNodeData, TableCell} from '../model/nodes/TableNode';
-import { MAX_TABLE_CELLS, tableCellCount } from '../model/nodes/TableNode';
+import { isOversizedTable } from '../model/nodes/TableNode';
 import type { RenderContext } from './RenderContext';
 import {
   resolveColor,
@@ -493,7 +493,7 @@ export function renderTable(node: TableNodeData, ctx: RenderContext): HTMLElemen
   }
 
   const longestRow = node.rows.reduce((longest, row) => Math.max(longest, row.cells.length), 0);
-  if (node.oversized || tableCellCount(node.rows.length, node.columns.length, longestRow) > MAX_TABLE_CELLS) {
+  if (node.oversized || isOversizedTable(node.rows.length, node.columns.length, longestRow)) {
     return wrapper;
   }
 

@@ -41,9 +41,15 @@ export interface TableNodeData extends BaseNodeData {
 // and 400 ms in Chromium, while real slide tables stay far below that.
 export const MAX_TABLE_CELLS = 10_000;
 
-/** Counts rows times the widest of the declared grid and the longest row. */
-export function tableCellCount(rows: number, gridColumns: number, longestRow: number): number {
-  return rows * Math.max(gridColumns, longestRow);
+/**
+ * True when the table passes MAX_TABLE_CELLS: in rows, in grid columns, or in
+ * rows times the widest of the grid and the longest row. The product alone is
+ * 0 for a table with no rows or no cells, however many columns or rows it has.
+ */
+export function isOversizedTable(rows: number, gridColumns: number, longestRow: number): boolean {
+  return rows > MAX_TABLE_CELLS
+    || gridColumns > MAX_TABLE_CELLS
+    || rows * Math.max(gridColumns, longestRow) > MAX_TABLE_CELLS;
 }
 
 /**
@@ -132,7 +138,7 @@ export function parseTableNode(frameNode: SafeXmlNode): TableNodeData {
   // --- Rows ---
   const trNodes = tbl.children('tr');
   const longestRow = trNodes.reduce((longest, trNode) => Math.max(longest, trNode.children('tc').length), 0);
-  const oversized = tableCellCount(trNodes.length, columns.length, longestRow) > MAX_TABLE_CELLS;
+  const oversized = isOversizedTable(trNodes.length, columns.length, longestRow);
   const rows: TableRow[] = oversized ? [] : trNodes.map(parseRow);
 
   const gridWidth = columns.reduce((sum, width) => sum + width, 0);

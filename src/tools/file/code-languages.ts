@@ -33,5 +33,7 @@ const EXT_TO_LANG: Record<string, string> = {
 };
 
 export function extToPrismLang(ext: string): string | null {
-  return EXT_TO_LANG[ext.toLowerCase()] ?? null;
+  const key = ext.toLowerCase();
+
+  return Object.prototype.hasOwnProperty.call(EXT_TO_LANG, key) ? EXT_TO_LANG[key] : null;
 }

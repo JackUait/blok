@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { extToPrismLang } from '../../../../src/tools/file/code-languages';
 
 describe('extToPrismLang', () => {
+  // A file named `x.constructor` must not read Object.prototype.constructor.
+  it.each(['constructor', '__proto__', 'tostring', 'hasownproperty', 'valueof'])('returns null for %s', (ext) => {
+    expect(extToPrismLang(ext)).toBeNull();
+  });
+
   it('maps common code extensions to Prism language ids', () => {
     expect(extToPrismLang('js')).toBe('javascript');
     expect(extToPrismLang('jsx')).toBe('javascript');

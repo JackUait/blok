@@ -154,19 +154,24 @@ describe('DatabasePropertyMenu', () => {
     menu.destroy();
   });
 
-  // blok-capture §0: a 489px menu under a header at y=258 ran off a 717px window. It caps at the larger side's room.
-  it('caps the header menu at the room on its larger side, so its last rows stay on screen', () => {
-    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+  // notion-spec-2 §19.12: in a 520 window the header menu is capped at 364 (70% of the window), opens on the header's bottom
+  // and moves up to stay 11.6 over the window bottom, covering its own header.
+  it('caps the header menu at 70% of the window and lets it move up over its own header', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(520);
     const anchor = document.createElement('button');
 
-    vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 1151, y: 258, width: 200, height: 36 }));
+    vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 654, y: 166.4, width: 200, height: 36 }));
     const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
 
-    menu.open(prop('date'), anchor);
+    menu.open(prop('status'), anchor);
     const container = captured.instances[0] as unknown as { element: HTMLElement };
+    const params = captured.popovers[0].params;
+    const position = params.position as DOMRect;
 
-    // 717 − 294 below, less the 8px gap and a 12px margin.
-    expect(container.element.querySelector<HTMLElement>('[data-blok-popover-container]')?.style.getPropertyValue('--max-height')).toBe('403px');
+    expect(container.element.querySelector<HTMLElement>('[data-blok-popover-container]')?.style.getPropertyValue('--max-height')).toBe('364px');
+    expect(params.cover).toBe(true);
+    expect(params.viewportMargin).toBe(11.6);
+    expect([position.x, position.y]).toEqual([654, 202.4]);
     menu.destroy();
   });
 

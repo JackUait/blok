@@ -47,19 +47,23 @@ const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
   'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button', 'person',
 ]);
 
-/** PopoverDesktop's default gap under the trigger. */
-const MENU_GAP = 8;
-const MENU_VIEWPORT_MARGIN = 12;
-
 /**
- * Core places a menu that fits neither side below and lets it run off the window.
- * Capped at the larger side's room, it fits there and scrolls inside. Notion's own fit is unmeasured.
+ * notion-spec-2 §19.12, one case: in a 520 window the menu was 364 tall (70%), and moved up from the header's
+ * bottom to end 11.6 over the window, over its own header. At 717 the 498 menu fit under the header. The 70% rule is unverified.
  */
-const capToRoom = (popover: PopoverDesktop, anchor: HTMLElement): void => {
-  const { top, bottom } = anchor.getBoundingClientRect();
-  const room = Math.max(window.innerHeight - bottom, top) - MENU_GAP - MENU_VIEWPORT_MARGIN;
+const HEADER_MENU_HEIGHT_SHARE = 0.7;
+const HEADER_MENU_BOTTOM_MARGIN = 11.6;
 
-  popover.getElement().querySelector<HTMLElement>('[data-blok-popover-container]')?.style.setProperty('--max-height', `${room}px`);
+const capHeaderMenu = (popover: PopoverDesktop): void => {
+  popover.getElement().querySelector<HTMLElement>('[data-blok-popover-container]')
+    ?.style.setProperty('--max-height', `${Math.round(window.innerHeight * HEADER_MENU_HEIGHT_SHARE * 10) / 10}px`);
+};
+
+/** On the header's bottom edge, with no gap; cover slides it up when it would pass the window's bottom margin. */
+const headerMenuPosition = (anchor: HTMLElement): PlaceOver => {
+  const { left, bottom, width } = anchor.getBoundingClientRect();
+
+  return { cover: true, viewportMargin: HEADER_MENU_BOTTOM_MARGIN, position: DOMRect.fromRect({ x: left, y: bottom, width, height: 0 }), positionContext: anchor };
 };
 
 /** Types whose Edit property is the options list. */
@@ -562,7 +566,9 @@ export class DatabasePropertyMenu {
       // Notion opens the row page menu 1px under the label.
       ...(rowPage ? { offset: 1 } : {}),
     };
-    const popover = new PopoverDesktop(place === undefined ? params : { ...params, ...place });
+    const header = className === DATABASE_HEADER_MENU_CLASS;
+    const at = place ?? (header ? headerMenuPosition(anchor) : undefined);
+    const popover = new PopoverDesktop(at === undefined ? params : { ...params, ...at });
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;
@@ -579,7 +585,7 @@ export class DatabasePropertyMenu {
     const container = redraw ? popover.getElement().querySelector<HTMLElement>('[data-blok-popover-container]') : null;
 
     if (container !== null) container.style.transition = 'none';
-    if (className === DATABASE_HEADER_MENU_CLASS) capToRoom(popover, anchor);
+    if (header) capHeaderMenu(popover);
     popover.show();
     if (container !== null) requestAnimationFrame(() => container.style.removeProperty('transition'));
   }

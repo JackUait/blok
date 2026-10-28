@@ -1215,6 +1215,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FORMULA_NUMBER_END_BYTES = 129;
     // database.css: a Number or number formula cell's Comment + Copy box hugs the start edge (notion-spec-2 §19.20).
     const DATABASE_CELL_PILL_START_BYTES = 460;
+    // database.css: peek value editors open with no fade or scale too (notion-spec-2 §19.22).
+    const DATABASE_VALUE_EDITOR_NO_MOTION_BYTES = 306;
     // database.css: the Place search's one highlighted row (research/36 §7); no ring on the focused place view.
     const DATABASE_PLACE_ROW_HIGHLIGHT_BYTES = 257;
     // database.css: Add a property's "Search types…" field opens under the Type label (notion-spec-2 §18.5).
@@ -1526,7 +1528,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ADD_PROPERTY_CLOSE_BYTES
       + DATABASE_HEADER_PLUS_NAME_BOX_BYTES
       + DATABASE_FORMULA_NUMBER_END_BYTES
-      + DATABASE_CELL_PILL_START_BYTES;
+      + DATABASE_CELL_PILL_START_BYTES
+      + DATABASE_VALUE_EDITOR_NO_MOTION_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

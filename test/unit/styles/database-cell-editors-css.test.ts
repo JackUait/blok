@@ -120,6 +120,16 @@ describe('cell editor CSS', () => {
       });
     });
 
+    // notion-spec-2 §19.22: Notion's peek value editors have no open motion either.
+    it('a row page value editor opens with no fade or scale, opened or not yet', () => {
+      const VALUE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-value-editor']";
+
+      [`${VALUE} > [data-blok-popover-container]`, `${VALUE}:not([data-blok-popover-opened='true']) > [data-blok-popover-container]`].forEach((selector) => {
+        expect(declared(selector, 'transition'), selector).toEqual(['none']);
+        expect(declared(selector, 'transform'), selector).toEqual(['none']);
+      });
+    });
+
     const BOX = "[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]";
     const ITEMS = "[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-items]";
 

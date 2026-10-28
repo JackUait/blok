@@ -25,27 +25,45 @@ export interface ShimZip {
   file(name: string): ShimFile | null;
 }
 
-function convert(bytes: Uint8Array<ArrayBuffer>, type: string): unknown {
-  switch (type) {
-    case 'string':
-      return utf8.decode(bytes);
-    case 'uint8array':
-      return bytes;
-    case 'blob':
-      return new Blob([bytes]);
-    default:
-      throw new ZipError(`Unsupported output type: ${type}`);
-  }
-}
-
 async function loadAsync(data: ArrayBuffer | Uint8Array): Promise<ShimZip> {
   const archive = readZip(data);
   const files = Object.create(null) as Record<string, ShimFile>;
+  // One inflate and one Blob per entry: docx-preview re-reads an image for every
+  // reference to it. Each entry is cached once, so the reader's total limit bounds the cache.
+  const cache = new Map<ZipEntry, Uint8Array<ArrayBuffer>>();
+  const blobs = new Map<ZipEntry, Blob>();
+  const bytesOf = (entry: ZipEntry): Uint8Array<ArrayBuffer> => {
+    const bytes = cache.get(entry) ?? archive.read(entry);
+
+    cache.set(entry, bytes);
+
+    return bytes;
+  };
+  const blobOf = (entry: ZipEntry): Blob => {
+    const blob = blobs.get(entry) ?? new Blob([bytesOf(entry)]);
+
+    blobs.set(entry, blob);
+
+    return blob;
+  };
+  const output = (entry: ZipEntry, type: string): unknown => {
+    switch (type) {
+      case 'string':
+        return utf8.decode(bytesOf(entry));
+      case 'uint8array':
+        // A copy: docx-preview deobfuscates fonts in place on what it gets.
+        return bytesOf(entry).slice();
+      case 'blob':
+        return blobOf(entry);
+      default:
+        throw new ZipError(`Unsupported output type: ${type}`);
+    }
+  };
   const toFile = (entry: ZipEntry): ShimFile => ({
     name: entry.name,
     dir: entry.dir,
     _data: { uncompressedSize: entry.size },
-    async: ((type: string) => Promise.resolve().then(() => convert(archive.read(entry), type))) as ShimFile['async'],
+    async: ((type: string) => Promise.resolve().then(() => output(entry, type))) as ShimFile['async'],
   });
 
   archive.entries.forEach((entry) => {

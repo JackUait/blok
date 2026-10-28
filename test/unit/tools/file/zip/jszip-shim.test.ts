@@ -83,6 +83,36 @@ describe('jszip-shim', () => {
     await expect(blob.text()).resolves.toBe('Hello World\n');
   });
 
+  it('inflates an entry once however often it is read', async () => {
+    const zip = await JSZipShim.loadAsync(buildZip([{ name: 'img.bin', data: new Uint8Array(4096).fill(9), method: 8 }]));
+    const file = fileOf(zip, 'img.bin');
+
+    for (let i = 0; i < 5; i++) {
+      await file.async('blob');
+      await file.async('uint8array');
+      await file.async('string');
+    }
+    expect(inflateRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands out one Blob per entry, since a Blob cannot be changed', async () => {
+    const zip = await JSZipShim.loadAsync(buildZip([{ name: 'img.bin', data: new Uint8Array(64).fill(1), method: 8 }]));
+    const file = fileOf(zip, 'img.bin');
+
+    expect(await file.async('blob')).toBe(await file.async('blob'));
+  });
+
+  it('never hands out its cached bytes: a caller changing them in place changes nothing later', async () => {
+    // docx-preview deobfuscates fonts in place on the uint8array it gets.
+    const zip = await JSZipShim.loadAsync(buildZip([{ name: 'font.odttf', data: utf8('font bytes'), method: 8 }]));
+    const file = fileOf(zip, 'font.odttf');
+
+    (await file.async('uint8array')).fill(0);
+    expect(new TextDecoder().decode(await file.async('uint8array'))).toBe('font bytes');
+    await expect(file.async('string')).resolves.toBe('font bytes');
+    await expect((await file.async('blob')).text()).resolves.toBe('font bytes');
+  });
+
   it('gives a fresh copy on every read', async () => {
     const zip = await JSZipShim.loadAsync(fixture('jszip/deflate.zip'));
     const file = fileOf(zip, 'Hello.txt');

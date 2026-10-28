@@ -132,4 +132,12 @@ describe('AI Autofill in the add-property menu', () => {
 
     expect(menu.getAttribute('data-blok-database-property-type-layout')).toBe('grid');
   });
+
+  // notion-spec-2 §19.11: the "+" name box sits in the header cell, over the "+".
+  it('puts the table header "+" name box over the "+"', async () => {
+    await mount(false);
+    const menu = openAddProperty();
+
+    expect(menu.hasAttribute('data-blok-database-property-type-name-over-anchor')).toBe(true);
+  });
 });

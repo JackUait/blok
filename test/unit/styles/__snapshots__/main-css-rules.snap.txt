@@ -8233,6 +8233,30 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   min-height: 32px;
 }
 
+[data-blok-database-property-type-name-over-anchor] {
+  max-height: 50dvh;
+}
+
+[data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-body] {
+  mask-image: linear-gradient(black 0%, black calc(100% - 34px), transparent 100%);
+}
+
+[data-blok-database-property-type-name-over-anchor] > [data-blok-database-property-type-header] {
+  position: absolute;
+  box-sizing: border-box;
+  width: 378px;
+  height: 28px;
+  padding: 0 var(--blok-space-0-5);
+  background: var(--blok-database-popover-bg);
+  border-radius: var(--blok-radius-control);
+  box-shadow: none;
+}
+
+[data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-glyph] {
+  width: 24px;
+  height: 24px;
+}
+
 [data-blok-database-property-type-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;

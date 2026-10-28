@@ -5002,6 +5002,32 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   min-height: 32px;
 }
 
+/* notion-spec-2 §19.11: the table header "+" grid shows half the window; its last 34px fade. */
+[data-blok-database-property-type-name-over-anchor] {
+  max-height: 50dvh;
+}
+
+[data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-body] {
+  mask-image: linear-gradient(black 0%, black calc(100% - 34px), transparent 100%);
+}
+
+/* The name box sits in the header cell, over the "+"; the script sets its top and left. */
+[data-blok-database-property-type-name-over-anchor] > [data-blok-database-property-type-header] {
+  position: absolute;
+  box-sizing: border-box;
+  width: 378px;
+  height: 28px;
+  padding: 0 var(--blok-space-0-5);
+  background: var(--blok-database-popover-bg);
+  border-radius: var(--blok-radius-control);
+  box-shadow: none;
+}
+
+[data-blok-database-property-type-name-over-anchor] [data-blok-database-property-type-glyph] {
+  width: 24px;
+  height: 24px;
+}
+
 /**
  * Section label above the types: Notion's 12px/500 sentence case.
  */

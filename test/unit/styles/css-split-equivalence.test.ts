@@ -1241,6 +1241,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DOCX_PAPER_BYTES = 1_224;
     // database.css + keyframes.css: Add a property closes as its open in reverse (notion-spec-2 §19.22).
     const DATABASE_ADD_PROPERTY_CLOSE_BYTES = 432;
+    // database.css: the table header "+" name box in the header cell, its grid at half the window (notion-spec-2 §19.11).
+    const DATABASE_HEADER_PLUS_NAME_BOX_BYTES = 907;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1517,7 +1519,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_SELECT_PICKER_BYTES
       + DATABASE_TABLE_PICKER_SCOPE_BYTES
       + DOCX_PAPER_BYTES
-      + DATABASE_ADD_PROPERTY_CLOSE_BYTES;
+      + DATABASE_ADD_PROPERTY_CLOSE_BYTES
+      + DATABASE_HEADER_PLUS_NAME_BOX_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

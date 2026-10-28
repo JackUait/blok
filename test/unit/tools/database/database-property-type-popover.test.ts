@@ -334,6 +334,94 @@ describe('DatabasePropertyTypePopover', () => {
       grid.destroy();
     });
 
+    // notion-spec-2 §19.11: the table header "+" puts its name box in the header cell, at the "+", and the type grid under the header row.
+    describe('header "+" grid', () => {
+      const ACTIVE = '[data-blok-database-property-type-option-active]';
+      const active = (): string[] => [...document.querySelectorAll(ACTIVE)]
+        .map((el) => el.getAttribute('data-blok-database-property-autofill-option') ?? el.getAttribute('data-blok-database-property-type-option') ?? '');
+      const press = (k: string): KeyboardEvent => {
+        const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+
+        document.activeElement?.dispatchEvent(event);
+
+        return event;
+      };
+
+      it('puts the name box over the "+" and the grid 4px under it, at the header row\'s bottom', () => {
+        vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(rect({ x: 654, left: 654, y: 170.4, top: 170.4, width: 28, height: 28, right: 682, bottom: 198.4 }));
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', nameOverAnchor: true });
+
+        flow.open(anchor);
+        const root = document.querySelector<HTMLElement>('[data-blok-database-property-type-popover]');
+        const header = root?.querySelector<HTMLElement>(':scope > [data-blok-database-property-type-header]');
+
+        expect(root?.hasAttribute('data-blok-database-property-type-name-over-anchor')).toBe(true);
+        expect(root?.style.top).toBe('202.4px');
+        expect(header?.style.top).toBe('-32px');
+        expect(header?.style.left).toBe('0px');
+        expect(header?.querySelector('[data-blok-database-property-name-input]')).toHaveFocus();
+        flow.destroy();
+      });
+
+      it('opens with the first row highlighted, and Enter on an empty name makes it', () => {
+        const named = vi.fn<(type: PropertyType, name: string) => void>();
+        const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, layout: 'grid', nameOverAnchor: true });
+
+        flow.open(anchor);
+        expect(active()).toEqual(['text']);
+        press('Enter');
+
+        expect(named).toHaveBeenCalledWith('text', '');
+        flow.destroy();
+      });
+
+      it('highlights Summarize on open when AI Autofill heads the grid', () => {
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', onAutofill: vi.fn() });
+
+        flow.open(anchor);
+        expect(active()).toEqual(['summary']);
+        flow.destroy();
+      });
+
+      it('walks two columns: Down to the same column of the next row, Right to the other column', () => {
+        const named = vi.fn<(type: PropertyType, name: string) => void>();
+        const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, layout: 'grid', onAutofill: vi.fn() });
+
+        flow.open(anchor);
+        press('ArrowDown');
+        expect(active()).toEqual(['translate']);
+        press('ArrowDown');
+        expect(active()).toEqual(['text']);
+        press('ArrowDown');
+        expect(active()).toEqual(['select']);
+        press('ArrowRight');
+        expect(active()).toEqual(['multiSelect']);
+        press('ArrowUp');
+        expect(active()).toEqual(['number']);
+        press('ArrowLeft');
+        expect(active()).toEqual(['text']);
+        press('ArrowUp');
+        expect(active()).toEqual(['translate']);
+        press('ArrowDown');
+        press('ArrowDown');
+        press('ArrowRight');
+        press('Enter');
+
+        expect(named).toHaveBeenCalledWith('multiSelect', '');
+        flow.destroy();
+      });
+
+      it('leaves Left and Right to the name field while an AI row is highlighted', () => {
+        const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, layout: 'grid', onAutofill: vi.fn() });
+
+        flow.open(anchor);
+
+        expect(press('ArrowRight').defaultPrevented).toBe(false);
+        expect(active()).toEqual(['summary']);
+        flow.destroy();
+      });
+    });
+
     it('keeps the list layout by default', () => {
       popover.open(anchor);
 

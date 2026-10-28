@@ -61,6 +61,21 @@ describe('add property menu (T12)', () => {
     expect(declared(`${GRID} [data-blok-database-property-type-option]`, 'min-height')).toEqual(['32px']);
   });
 
+  // notion-spec-2 §19.11: the header "+" name box is a white 378x28 box over the "+"; the grid shows half the window and fades its last 34px.
+  it('draws the header "+" name box in the header cell and caps the grid at half the window', () => {
+    const OVER = '[data-blok-database-property-type-name-over-anchor]';
+
+    expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'position')).toEqual(['absolute']);
+    expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'width')).toEqual(['378px']);
+    expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'height')).toEqual(['28px']);
+    expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'border-radius')).toEqual(['var(--blok-radius-control)']);
+    expect(declared(`${OVER} > [data-blok-database-property-type-header]`, 'box-shadow')).toEqual(['none']);
+    expect(declared(`${OVER} [data-blok-database-property-type-glyph]`, 'width')).toEqual(['24px']);
+    expect(declared(`${OVER} [data-blok-database-property-type-glyph]`, 'height')).toEqual(['24px']);
+    expect(declared(OVER, 'max-height')).toEqual(['50dvh']);
+    expect(declared(`${OVER} [data-blok-database-property-type-body]`, 'mask-image')).toEqual(['linear-gradient(black 0%, black calc(100% - 34px), transparent 100%)']);
+  });
+
   // notion-spec-2 §18.5: the row the arrows are on takes the hover fill, never blue.
   it('fills the arrow-highlighted type like a hovered one', () => {
     expect(declared('[data-blok-database-property-type-option-active]', 'background-color')).toEqual(['var(--blok-database-popover-hover)']);

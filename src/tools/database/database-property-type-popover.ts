@@ -14,6 +14,8 @@ import {
 
 /** Top margin; it matches the CSS max-height margin. Notion's is unmeasured. */
 const VIEWPORT_MARGIN = 12;
+/** Every row the arrows walk, top to bottom. */
+const ROWS = '[data-blok-database-property-autofill-option], [data-blok-database-property-type-option]';
 /** The type row the arrows are on. */
 const OPTION_ACTIVE = 'data-blok-database-property-type-option-active';
 /** notion-spec-2 §18.5 measured these two. */
@@ -39,6 +41,8 @@ export interface PropertyTypePopoverOptions {
    * 'list' (default): the row page's one column under "Type" (notion-spec-2 §18.5).
    */
   layout?: 'list' | 'grid';
+  /** notion-spec-2 §19.11: the name box sits over `anchor`, in the header cell, and the grid opens under it. */
+  nameOverAnchor?: boolean;
 }
 
 export class DatabasePropertyTypePopover {
@@ -48,6 +52,7 @@ export class DatabasePropertyTypePopover {
   private readonly withNameField: boolean;
   private readonly onAutofill: PropertyTypePopoverOptions['onAutofill'];
   private readonly grid: boolean;
+  private readonly nameOverAnchor: boolean;
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
   private positionTracker: PositionTracker | null = null;
@@ -61,6 +66,7 @@ export class DatabasePropertyTypePopover {
     this.withNameField = options.withNameField === true;
     this.onAutofill = options.onAutofill;
     this.grid = options.layout === 'grid';
+    this.nameOverAnchor = options.nameOverAnchor === true;
   }
 
   get isOpen(): boolean {
@@ -76,6 +82,7 @@ export class DatabasePropertyTypePopover {
     popover.setAttribute('data-blok-popover-opened', '');
     popover.setAttribute('data-blok-database-property-type-popover', '');
     if (this.grid) popover.setAttribute('data-blok-database-property-type-layout', 'grid');
+    if (this.nameOverAnchor) popover.setAttribute('data-blok-database-property-type-name-over-anchor', '');
     popover.style.zIndex = '1000';
     // Blok's editor keydown would blur the field on Escape instead of closing the menu.
     popover.setAttribute(DATA_ATTR.keyboardOwner, '');
@@ -88,10 +95,10 @@ export class DatabasePropertyTypePopover {
     });
 
     const nameField = this.withNameField ? document.createElement('input') : null;
+    // Inside the menu's root, so outside clicks, keys and cleanup cover it too.
+    const header = document.createElement('div');
 
     if (nameField !== null) {
-      const header = document.createElement('div');
-
       header.setAttribute('data-blok-database-property-type-header', '');
       const glyph = document.createElement('div');
 
@@ -176,6 +183,12 @@ export class DatabasePropertyTypePopover {
 
       popover.style.top = `${below ? bottom + BELOW_GAP : awayTop}px`;
       popover.setAttribute('data-side', above ? 'top' : 'bottom');
+      if (this.nameOverAnchor) {
+        const box = anchor.getBoundingClientRect();
+
+        header.style.top = `${box.top - parseFloat(popover.style.top)}px`;
+        header.style.left = `${box.left - parseFloat(popover.style.left)}px`;
+      }
     };
 
     // The anchor mirrors with the editor, so a flip re-places the menu.
@@ -197,6 +210,8 @@ export class DatabasePropertyTypePopover {
 
     document.addEventListener('mousedown', this.boundOutsideClick);
     nameField?.focus();
+    // notion-spec-2 §19.11: the grid opens with its first row highlighted.
+    if (this.grid) body.querySelector(ROWS)?.setAttribute(OPTION_ACTIVE, '');
   }
 
   /**
@@ -205,17 +220,16 @@ export class DatabasePropertyTypePopover {
    */
   private onKey(e: KeyboardEvent, body: HTMLElement, nameField: HTMLInputElement | null): void {
     if (e.isComposing) return;
-    const shown = [...body.querySelectorAll<HTMLElement>('[data-blok-database-property-autofill-option], [data-blok-database-property-type-option]')].filter((option) => !option.hidden);
+    const shown = [...body.querySelectorAll<HTMLElement>(ROWS)].filter((option) => !option.hidden);
     const current = shown.findIndex((option) => option.hasAttribute(OPTION_ACTIVE));
     const name = nameField?.value.trim() ?? '';
+    const next = this.step(e.key, shown, current);
 
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (next !== null) {
       e.preventDefault();
       shown[current]?.removeAttribute(OPTION_ACTIVE);
-      const next = shown[e.key === 'ArrowDown' ? Math.min(current + 1, shown.length - 1) : Math.max(current - 1, 0)];
-
-      next?.setAttribute(OPTION_ACTIVE, '');
-      next?.scrollIntoView({ block: 'nearest' });
+      shown[next]?.setAttribute(OPTION_ACTIVE, '');
+      shown[next]?.scrollIntoView({ block: 'nearest' });
 
       return;
     }
@@ -235,6 +249,43 @@ export class DatabasePropertyTypePopover {
     e.preventDefault();
     this.onSelect(type ?? 'text', name);
     this.close();
+  }
+
+  /**
+   * The row an arrow moves to, or null when the key is not a move.
+   * The grid's types sit two to a row (notion-spec-2 §19.11): Down and Up keep the column, Left and Right switch it.
+   */
+  private step(key: string, shown: HTMLElement[], current: number): number | null {
+    const last = shown.length - 1;
+
+    if (!this.grid) {
+      if (key === 'ArrowDown') return Math.min(current + 1, last);
+
+      return key === 'ArrowUp' ? Math.max(current - 1, 0) : null;
+    }
+    // The AI rows come first, one per row.
+    const firstType = shown.findIndex((row) => row.hasAttribute('data-blok-database-property-type-option'));
+    const typeStart = firstType === -1 ? shown.length : firstType;
+    const inTypes = current >= typeStart;
+    const column = (current - typeStart) % 2;
+
+    if (key === 'ArrowDown') {
+      if (!inTypes) return Math.min(current + 1, last);
+
+      return current + 2 <= last ? current + 2 : current;
+    }
+    if (key === 'ArrowUp') {
+      if (!inTypes) return Math.max(current - 1, 0);
+      if (current - 2 >= typeStart) return current - 2;
+
+      // The first row of types goes up to the last AI row.
+      return typeStart > 0 ? typeStart - 1 : current;
+    }
+    // Off the types, Left and Right stay the name field's caret keys.
+    if ((key !== 'ArrowLeft' && key !== 'ArrowRight') || !inTypes) return null;
+    const other = column === 0 ? current + 1 : current - 1;
+
+    return other <= last ? other : current;
   }
 
   private typeListHeading(grid: HTMLElement): HTMLElement {

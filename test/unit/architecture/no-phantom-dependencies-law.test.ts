@@ -261,8 +261,8 @@ describe('LAW: no phantom dependencies', () => {
       const relative = path.relative(REPO_ROOT, file);
 
       return importedPackages(readFileSync(file, 'utf-8'))
-        // `import type { Root } from 'mdast'` is satisfied by `@types/mdast`:
-        // the module name comes from the types package, not a runtime one.
+        // A type-only import of `x` is satisfied by `@types/x`: the module
+        // name comes from the types package, not a runtime one.
         .filter((name) => !declared.has(name) && !declared.has(`@types/${name}`))
         .map((name) => `${relative}: imports undeclared "${name}"`);
     });

@@ -784,7 +784,7 @@ await editor.blocks.renderFromHTML(html);
         name: "blocks.importMarkdown(md, options?)",
         returnType: "Promise<OutputData>",
         description:
-          "Converts a Markdown string to blocks and renders them. This REPLACES the current document, because it calls `blocks.render()` internally.\n\nThe converter is lazy-loaded on the first call. The resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions).\n\nTo add blocks instead of replacing them, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.\n\nWith `title: true` in `options`, a leading `#` heading becomes the page title, and a leading emoji in it becomes the icon. The Markdown then owns both fields. A heading with no emoji clears the icon, and no such heading clears both. Without the option, they stay as they are.",
+          "Converts a Markdown string to blocks and renders them. This REPLACES the current document, because it calls `blocks.render()` internally.\n\nThe converter is lazy-loaded on the first call. The resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle).\n\nTo add blocks instead of replacing them, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.\n\nWith `title: true` in `options`, a leading `#` heading becomes the page title, and a leading emoji in it becomes the icon. The Markdown then owns both fields. A heading with no emoji clears the icon, and no such heading clears both. Without the option, they stay as they are.",
         example: `const data = await editor.blocks.importMarkdown('# Title\\n\\n- one\\n- two');
 // The whole document is replaced; data is the rendered OutputData`,
         params: [
@@ -799,7 +799,7 @@ await editor.blocks.renderFromHTML(html);
             type: "MarkdownImportConfig",
             required: false,
             default: "undefined",
-            description: "Tool mapping, GFM toggle, micromark/mdast extensions, and `title`.",
+            description: "Tool mapping, GFM toggle and `title`.",
           },
         ],
       },

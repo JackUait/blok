@@ -1,4 +1,4 @@
-import type { Blockquote, PhrasingContent, RootContent } from 'mdast';
+import type { Blockquote, PhrasingContent, RootContent } from '../../types/data-formats/markdown-tree';
 
 /** GitHub alert markers: `> [!NOTE]`, `[!WARNING]`, etc. */
 export const ALERT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;

@@ -162,7 +162,7 @@ export interface Blocks {
    * Convert a Markdown string into blocks and render them, replacing the
    * current document. Lazy-loads the markdown converter on first call.
    * @param md - Markdown source string
-   * @param options - Optional tool mapping, GFM toggle, and micromark/mdast extensions
+   * @param options - Optional tool mapping, GFM toggle and title lifting
    * @returns The rendered OutputData
    */
   importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData>;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { phrasingToHtml } from '../../../src/markdown/phrasing-to-html';
-import type { Definition, PhrasingContent } from 'mdast';
+import type { Definition, PhrasingContent } from '../../../types/data-formats/markdown-tree';
 
 /**
  * Serialize with no link/image definitions in scope.
@@ -72,6 +72,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: 'https://example.com',
+      title: null,
       children: [{ type: 'text', value: 'click here' }],
     }];
 
@@ -84,6 +85,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: '#results',
+      title: null,
       children: [{ type: 'text', value: 'jump' }],
     }];
 
@@ -96,6 +98,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: 'https://example.com/?a="b"',
+      title: null,
       children: [{ type: 'text', value: 'link' }],
     }];
 
@@ -108,6 +111,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: 'javascript:alert(1)',
+      title: null,
       children: [{ type: 'text', value: 'click here' }],
     }];
 
@@ -122,6 +126,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: '  JaVaScRiPt:alert(1)',
+      title: null,
       children: [{ type: 'text', value: 'x' }],
     }];
 
@@ -134,6 +139,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: 'java\nscript:alert(1)',
+      title: null,
       children: [{ type: 'text', value: 'click here' }],
     }];
 
@@ -147,6 +153,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',
       url: 'data:text/html,<script>alert(1)</script>',
+      title: null,
       children: [{ type: 'text', value: 'x' }],
     }];
 
@@ -167,6 +174,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'image',
       url: 'https://img.com/pic.png',
+      title: null,
       alt: 'a picture',
     }];
 
@@ -177,6 +185,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'image',
       url: 'javascript:alert(1)',
+      title: null,
       alt: 'x',
     }];
 
@@ -187,6 +196,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'image',
       url: 'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+',
+      title: null,
       alt: 'x',
     }];
 
@@ -197,6 +207,7 @@ describe('phrasingToHtml', () => {
     const nodes: PhrasingContent[] = [{
       type: 'image',
       url: 'data:image/png;base64,iVBORw0KGgo=',
+      title: null,
       alt: 'pic',
     }];
 
@@ -361,12 +372,9 @@ describe('phrasingToHtml', () => {
     });
 
     it('falls back to the identifier when an unresolved reference carries no label', () => {
-      const nodes: PhrasingContent[] = [{
-        type: 'imageReference',
-        identifier: 'gone',
-        referenceType: 'shortcut',
-        alt: 'pic',
-      }];
+      // The parser always sets a label; this pins the fallback for a hand-built tree.
+      const labelless = { type: 'imageReference', identifier: 'gone', referenceType: 'shortcut', alt: 'pic' };
+      const nodes = [labelless] as unknown as PhrasingContent[];
 
       expect(toHtmlWith(nodes, [])).toBe('![pic][gone]');
     });

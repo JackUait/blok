@@ -6,7 +6,7 @@ import type { PageIcon } from './tools/page';
  * Convert a Markdown string to an array of Blok `OutputBlockData`.
  *
  * @param md - Markdown source string
- * @param config - Optional configuration for tool mapping, GFM, and extensions
+ * @param config - Optional configuration for tool mapping and GFM
  * @returns Blocks ready for `blok.blocks.render()` or `blok.blocks.insertMany()`
  *
  * NOTE: this signature is hand-authored to mirror the implementation in
@@ -48,7 +48,7 @@ export interface MarkdownImportResult {
  * block, so markup written into Markdown is escaped into literal text.
  *
  * @param md - Markdown source string
- * @param config - Optional configuration for tool mapping, GFM, and extensions
+ * @param config - Optional configuration for tool mapping and GFM
  * @returns the blocks and their degradations
  */
 export declare function markdownToBlocksWithReport(
@@ -57,3 +57,9 @@ export declare function markdownToBlocksWithReport(
 ): Promise<MarkdownImportResult>;
 
 export type { MarkdownImportConfig, ToolMapEntry } from './data-formats/markdown-import-config';
+
+/** The node `toolMap` and `onUnknownNode` receive. */
+export type { Nodes as MarkdownNode } from './data-formats/markdown-tree';
+
+/** Every node type of the Markdown tree, mdast-shaped: `MarkdownTree.Heading`, `MarkdownTree.Link`… */
+export type * as MarkdownTree from './data-formats/markdown-tree';

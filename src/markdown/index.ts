@@ -1,7 +1,4 @@
-import { fromMarkdown } from 'mdast-util-from-markdown';
-import { gfm } from 'micromark-extension-gfm';
-import { gfmFromMarkdown } from 'mdast-util-gfm';
-import type { Root, RootContent } from 'mdast';
+import type { Root, RootContent } from '../../types/data-formats/markdown-tree';
 import type { PageIcon } from '../../types/tools/page';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { InternalMarkdownImportConfig, MarkdownImportConfig } from './types';
@@ -10,7 +7,8 @@ import { safeHref, safeImageSrc, urlScheme } from '../components/utils/sanitize-
 import type { MarkdownDegradation } from './blocks-to-markdown-core';
 import { isBareBreak } from './phrasing-to-html';
 import { matchAlert } from './alerts';
-import { hasMathSignal, loadMathExtensions } from './math-syntax';
+import { hasMathSignal } from './math-syntax';
+import { parseMarkdown } from './engine';
 import { splitPageTitle } from '../shared/page-title-icon';
 
 export type { MarkdownImportConfig, ToolMapEntry } from './types';
@@ -206,12 +204,18 @@ function softBreaksToBreaks(node: RootContent): void {
   const children = node.children as RootContent[];
 
   children.forEach(softBreaksToBreaks);
-  children.splice(0, children.length, ...children.flatMap((child): RootContent[] => child.type === 'text' && child.value.includes('\n')
+  const split = children.flatMap((child): RootContent[] => child.type === 'text' && child.value.includes('\n')
     ? child.value.split('\n').flatMap((value, index): RootContent[] => [
       ...(index > 0 ? [{ type: 'break' } as const] : []),
       ...(value !== '' ? [{ type: 'text', value } as const] : []),
     ])
-    : [child]));
+    : [child]);
+
+  // Refill one by one: spreading into splice() throws past ~125k nodes.
+  children.length = 0;
+  for (const child of split) {
+    children.push(child);
+  }
 }
 
 /**
@@ -277,31 +281,7 @@ export async function markdownToBlocksWithReport(
   md: string,
   config: MarkdownImportConfig = {}
 ): Promise<MarkdownImportResult> {
-  const enableGfm = config.gfm !== false;
-  const hasMath = hasMathSignal(md);
-
-  const extensions = [
-    ...(enableGfm ? [gfm()] : []),
-    ...(config.extensions ?? []),
-  ];
-
-  const mdastExtensions = [
-    ...(enableGfm ? [gfmFromMarkdown()] : []),
-    ...(config.mdastExtensions ?? []),
-  ];
-
-  if (hasMath) {
-    const { mathSyntax, mathFromMarkdown } = await loadMathExtensions();
-
-    extensions.push(mathSyntax);
-    mdastExtensions.push(mathFromMarkdown);
-  }
-
-  const tree = fromMarkdown(md, {
-    extensions,
-    mdastExtensions,
-  });
-
+  const tree = parseMarkdown(md, { gfm: config.gfm !== false, math: hasMathSignal(md) });
   const internal: InternalMarkdownImportConfig = config;
   const { marked, ...page } = config.title === true ? liftTitle(tree) : {};
 

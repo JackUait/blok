@@ -1,11 +1,9 @@
-import type { Extension as MicromarkExtension } from 'micromark-util-types';
-import type { Extension as MdastExtension } from 'mdast-util-from-markdown';
-import type { Nodes } from 'mdast';
+import type { Nodes } from './markdown-tree';
 import type { BlockToolData } from '../tools';
 import type { OutputBlockData } from './output-data';
 
 /**
- * Maps an mdast node type to a Blok tool.
+ * Maps a Markdown tree node type (mdast naming) to a Blok tool.
  *
  * Lives in `types/` (not `src/`) so it can be referenced from the public
  * `Blocks` API surface — reachable from the bare `@bloklabs/core` type entry —
@@ -35,14 +33,8 @@ export interface MarkdownImportConfig {
   /** Catch-all for nodes not handled by toolMap or built-ins. Return null to skip. */
   onUnknownNode?: (node: Nodes) => OutputBlockData[] | null;
 
-  /** Enable GFM (tables, task lists, strikethrough). Default: true */
+  /** Enable GFM (tables, task lists, strikethrough, autolink literals, footnotes). Default: true */
   gfm?: boolean;
-
-  /** Additional micromark syntax extensions */
-  extensions?: MicromarkExtension[];
-
-  /** Additional mdast extensions */
-  mdastExtensions?: MdastExtension[];
 
   /**
    * Lift a leading `#` heading out of the blocks as the page title. A leading

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { markdownToBlocks as markdownToSegmentBlocks, markdownToBlocksWithReport as markdownToSegmentBlocksWithReport } from '../../../src/markdown/index';
 import type { MarkdownImportConfig, MarkdownImportResult } from '../../../src/markdown/index';
+import type { InternalMarkdownImportConfig } from '../../../src/markdown/types';
 import type { OutputBlockData, OutputData } from '../../../types';
 import { blocksToMarkdown } from '../../../src/view';
 import { richTextAsHtml } from '../helpers/rich-text-as-html';
@@ -106,13 +107,6 @@ This is a paragraph with **bold** and *italic*.
 
     expect(blocks[0].type).toBe('codeBlock');
     expect(blocks[0].data.code).toBe('console.log("hi")');
-  });
-
-  it('accepts additional micromark/mdast extensions', async () => {
-    // Verify extensions option is accepted without errors
-    const blocks = await markdownToBlocks('Hello', { extensions: [], mdastExtensions: [] });
-
-    expect(blocks).toHaveLength(1);
   });
 
   it('converts block math ($$) to code blocks with latex language', async () => {
@@ -227,7 +221,7 @@ $$e^{i\\pi} + 1 = 0$$`;
     });
 
     /**
-     * micromark resolves references during the flow pass, so a reference with
+     * The parser resolves references during the block pass, so a reference with
      * no definition never reaches mdast as `linkReference` — it arrives as a
      * plain text node holding the literal source. Nothing is lost, so there is
      * nothing for the degradation report to say.
@@ -576,3 +570,16 @@ describe('markdownToBlocks with title: true', () => {
     expect(result.blocks).toHaveLength(2);
   });
 });
+
+describe('markdownToBlocks with large input', () => {
+  // The paste path splits each soft line into its own node; spreading ~400k
+  // of them into one call overflows the stack.
+  it('reads a paragraph of 200k soft lines on the paste path', async () => {
+    const config: InternalMarkdownImportConfig = { softBreaks: true };
+    const blocks = await markdownToSegmentBlocks('a\n'.repeat(200_000), config);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('paragraph');
+  });
+});
+

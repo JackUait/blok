@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fromMarkdown } from 'mdast-util-from-markdown';
+import { parseMarkdown } from '../../../src/markdown/engine';
 
 import { blocksToMarkdown, blocksToMarkdownWithReport } from '../../../src/view';
 
@@ -173,7 +173,7 @@ describe('blocksToMarkdown (view)', () => {
         node.children?.forEach((child) => walk(child as { type: string; children?: unknown[] }));
       };
 
-      walk(fromMarkdown(markdown));
+      walk(parseMarkdown(markdown, { gfm: false }));
 
       return counts;
     };
@@ -215,7 +215,7 @@ describe('blocksToMarkdown (view)', () => {
         { type: 'page', data: { pageId: 'p1' } },
       ]), { pageInfo: () => ({ title: 'T' }), pageHref: () => '&#106;avascript:alert(3)' });
 
-      collect(fromMarkdown(markdown));
+      collect(parseMarkdown(markdown, { gfm: false }));
 
       expect(urls).toEqual([
         '&#106;avascript:alert(1)',
@@ -412,7 +412,7 @@ describe('blocksToMarkdown (view)', () => {
         pageHref: () => 'https://ok.example/x) [evil](javascript:alert(1)',
       });
 
-      const paragraph = fromMarkdown(markdown).children[0] as { children: Array<{ type: string; url?: string }> };
+      const paragraph = parseMarkdown(markdown, { gfm: false }).children[0] as { children: Array<{ type: string; url?: string }> };
 
       expect(paragraph.children).toEqual([expect.objectContaining({ type: 'link', url: 'https://ok.example/x)%20[evil](javascript:alert(1)' })]);
     });
@@ -531,7 +531,7 @@ describe('blocksToMarkdown (view)', () => {
         { id: 't1', type: 'tab', data: { title: '<b>a</b> & *b*' }, parent: 'tabs' },
       ]));
 
-      expect(fromMarkdown(md).children).toMatchObject([
+      expect(parseMarkdown(md, { gfm: false }).children).toMatchObject([
         { type: 'paragraph', children: [{ type: 'strong', children: [{ type: 'text', value: '<b>a</b> & *b*' }] }] },
       ]);
     });
@@ -554,7 +554,7 @@ describe('blocksToMarkdown (view)', () => {
         { id: 't1', type: 'tab', data: { title: 'A', icon: '**' }, parent: 'tabs' },
       ]));
 
-      expect(fromMarkdown(md).children).toMatchObject([
+      expect(parseMarkdown(md, { gfm: false }).children).toMatchObject([
         { type: 'paragraph', children: [{ type: 'strong', children: [{ type: 'text', value: '** A' }] }] },
       ]);
     });

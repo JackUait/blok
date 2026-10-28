@@ -181,7 +181,7 @@ export interface UseBlocksApi {
    *
    * `config` (optional {@link MarkdownImportConfig}) is forwarded to the
    * converter so custom-tool consumers can map markdown nodes into their tools
-   * (`toolMap`/`onUnknownNode`), toggle GFM, or add micromark/mdast extensions.
+   * (`toolMap`/`onUnknownNode`) or toggle GFM.
    *
    * Returns ALL created {@link BlockNode}s in document order — including any the
    * markdown nested internally (e.g. a table's cell children), not just the

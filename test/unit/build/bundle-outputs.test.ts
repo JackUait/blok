@@ -582,10 +582,7 @@ describe('published package is self-contained (install footprint)', () => {
     const undeclared = [...collectTypeSurfaceExternals()].filter(
       (pkg) => !declared.has(pkg) && existsSync(resolve(repoRoot, 'node_modules', pkg, 'package.json')),
     )
-    // Only direct dependencies must be declared; transitive providers (e.g.
-    // micromark-util-types, @types/mdast) are pulled in by the declared cluster.
-    const transitiveOnly = new Set(['mdast', 'micromark-util-types', '@types/mdast', '@types/unist'])
-    expect(undeclared.filter((pkg) => !transitiveOnly.has(pkg))).toEqual([])
+    expect(undeclared).toEqual([])
   })
 
   it('the bare-import type entry is self-contained (drags no raw src into consumers)', () => {
@@ -659,14 +656,11 @@ describe('dist weight (consumer parse cost)', () => {
   })
 
   it('parses markdown math without shipping a KaTeX renderer', () => {
-    // Markdown import needs only the math tokenizer. If the loader keeps the
-    // whole micromark-extension-math namespace, its `mathHtml` drags in a
-    // nested KaTeX copy (~260 KB) next to Blok's own one.
-    const tokenizerChunks = esFiles.filter((file) =>
-      readFileSync(file, 'utf-8').includes('mathFlowFenceSequence'),
-    )
-    expect(tokenizerChunks.length).toBeGreaterThan(0)
-    const withKatex = tokenizerChunks.filter((file) =>
+    // Markdown import only parses math; KaTeX renders it in its own lazy chunk.
+    // The parser's entity table marks the chunk it lives in.
+    const parserChunks = esFiles.filter((file) => readFileSync(file, 'utf-8').includes('AElig Æ~'))
+    expect(parserChunks.length).toBeGreaterThan(0)
+    const withKatex = parserChunks.filter((file) =>
       readFileSync(file, 'utf-8').includes('KaTeX parse error'),
     )
     expect(withKatex).toEqual([])

@@ -1,12 +1,7 @@
-import { fromMarkdown } from 'mdast-util-from-markdown';
-import type { Extension as MdastExtension } from 'mdast-util-from-markdown';
-import { gfm } from 'micromark-extension-gfm';
-import { gfmFromMarkdown } from 'mdast-util-gfm';
-import type { Extension as MicromarkExtension } from 'micromark-util-types';
 import type {
   RootContent, List, ListItem, Table, TableRow, Code, Heading, Blockquote,
   PhrasingContent, Definition, FootnoteDefinition,
-} from 'mdast';
+} from '../../types/data-formats/markdown-tree';
 import { isSamePageLink } from '../tools/link/registry';
 import { tokenizePrism } from '../tools/code/prism-loader';
 import { normalizeFenceLang } from './fence-language';
@@ -15,19 +10,8 @@ import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { sanitizeBlockHtml } from './sanitize-html';
 import { matchAlert } from './alerts';
 import { isBareBreak } from './phrasing-to-html';
-import { hasMathSignal, loadMathExtensions } from './math-syntax';
-
-/**
- * Math mdast nodes (block `math`, `inlineMath`) come from mdast-util-math and
- * are not part of the base mdast type union, so we describe them locally and
- * widen the node types the walker accepts.
- */
-interface MathNode {
-  type: 'math' | 'inlineMath';
-  value: string;
-}
-type BlockNode = RootContent | MathNode;
-type InlineNode = PhrasingContent | MathNode;
+import { hasMathSignal } from './math-syntax';
+import { parseMarkdown } from './engine';
 
 /**
  * Per-render state. Markdown features like references and footnotes resolve a
@@ -82,7 +66,7 @@ function createSlugger(): (text: string) => string {
 }
 
 /** Flatten phrasing nodes to their plain-text content (for heading slugs). */
-function textContent(nodes: InlineNode[]): string {
+function textContent(nodes: PhrasingContent[]): string {
   return nodes.map((node) => {
     if (node.type === 'text' || node.type === 'inlineCode' || node.type === 'inlineMath') {
       return node.value;
@@ -103,18 +87,8 @@ function textContent(nodes: InlineNode[]): string {
  * references, footnotes, and GitHub alerts are supported.
  */
 export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = {}): Promise<string> {
-  const extensions: MicromarkExtension[] = [gfm()];
-  const mdastExtensions: Array<MdastExtension | MdastExtension[]> = [gfmFromMarkdown()];
-
-  if (hasMathSignal(md)) {
-    const { mathSyntax, mathFromMarkdown } = await loadMathExtensions();
-
-    extensions.push(mathSyntax);
-    mdastExtensions.push(mathFromMarkdown);
-  }
-
-  const tree = fromMarkdown(md, { extensions, mdastExtensions });
-  const children = tree.children as BlockNode[];
+  const tree = parseMarkdown(md, { math: hasMathSignal(md) });
+  const children = tree.children;
 
   const ctx: RenderContext = {
     definitions: new Map(),
@@ -127,27 +101,36 @@ export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = 
   };
 
   // Prepass: collect definitions and footnote definitions so references can
-  // resolve against nodes that live elsewhere in the tree.
-  for (const node of children) {
-    if (node.type === 'definition') {
-      ctx.definitions.set(node.identifier, node);
-    } else if (node.type === 'footnoteDefinition') {
-      ctx.footnoteDefs.set(node.identifier, node);
+  // resolve against nodes that live elsewhere in the tree — including inside
+  // a blockquote or list item, where the parser resolves them too.
+  const collect = (nodes: RootContent[]): void => {
+    for (const node of nodes) {
+      if (node.type === 'definition') {
+        ctx.definitions.set(node.identifier, node);
+      } else if (node.type === 'footnoteDefinition') {
+        ctx.footnoteDefs.set(node.identifier, node);
+      }
+
+      if ('children' in node) {
+        collect(node.children);
+      }
     }
-  }
+  };
+
+  collect(children);
 
   const body = await nodesToHtml(children, ctx);
 
   return body + await renderFootnotes(ctx);
 }
 
-async function nodesToHtml(nodes: BlockNode[], ctx: RenderContext): Promise<string> {
+async function nodesToHtml(nodes: RootContent[], ctx: RenderContext): Promise<string> {
   const parts = await Promise.all(nodes.map((node) => nodeToHtml(node, ctx)));
 
   return parts.join('');
 }
 
-async function nodeToHtml(node: BlockNode, ctx: RenderContext): Promise<string> {
+async function nodeToHtml(node: RootContent, ctx: RenderContext): Promise<string> {
   if (node.type === 'heading') {
     return headingToHtml(node, ctx);
   }
@@ -201,8 +184,8 @@ async function blockquoteToHtml(node: Blockquote, ctx: RenderContext): Promise<s
 }
 
 async function listToHtml(list: List, ctx: RenderContext): Promise<string> {
-  const tag = list.ordered === true ? 'ol' : 'ul';
-  const start = list.ordered === true && list.start != null && list.start !== 1
+  const tag = list.ordered ? 'ol' : 'ul';
+  const start = list.ordered && list.start !== null && list.start !== 1
     ? ` start="${list.start}"`
     : '';
   const items = await Promise.all(list.children.map((item) => itemToHtml(item, ctx)));
@@ -252,13 +235,13 @@ async function cellsToHtml(row: TableRow, tag: 'th' | 'td', ctx: RenderContext):
 }
 
 /** Serialize inline (phrasing) nodes to an HTML string. */
-async function phrasingToHtml(nodes: InlineNode[], ctx: RenderContext): Promise<string> {
+async function phrasingToHtml(nodes: PhrasingContent[], ctx: RenderContext): Promise<string> {
   const parts = await Promise.all(nodes.map((node) => inlineToHtml(node, ctx)));
 
   return parts.join('');
 }
 
-async function inlineToHtml(node: InlineNode, ctx: RenderContext): Promise<string> {
+async function inlineToHtml(node: PhrasingContent, ctx: RenderContext): Promise<string> {
   switch (node.type) {
     case 'text':
       return escapeHtml(node.value);
@@ -286,27 +269,22 @@ async function inlineToHtml(node: InlineNode, ctx: RenderContext): Promise<strin
     }
 
     case 'image':
-      return imageHtml(node.url, node.alt ?? '');
+      return imageHtml(node.url, node.alt);
 
     case 'linkReference': {
+      // The parser only emits a reference whose definition exists, and the
+      // prepass collected every definition, so `def` is always found.
       const def = ctx.definitions.get(node.identifier);
       const children = await phrasingToHtml(node.children, ctx);
-      if (def === undefined) {
-        return referenceFallback(node.label ?? node.identifier, children, false);
-      }
-      const url = safeHref(def.url);
+      const url = def === undefined ? null : safeHref(def.url);
 
       return url === null ? children : anchor(url, children);
     }
 
     case 'imageReference': {
       const def = ctx.definitions.get(node.identifier);
-      const alt = node.alt ?? '';
-      if (def === undefined) {
-        return referenceFallback(node.label ?? node.identifier, escapeHtml(alt), true);
-      }
 
-      return imageHtml(def.url, alt);
+      return def === undefined ? '' : imageHtml(def.url, node.alt);
     }
 
     case 'footnoteReference':
@@ -314,9 +292,6 @@ async function inlineToHtml(node: InlineNode, ctx: RenderContext): Promise<strin
 
     case 'inlineMath':
       return renderLatex(node.value, { displayMode: false });
-
-    case 'math':
-      return renderLatex(node.value, { displayMode: true });
 
     case 'html':
       // Raw inline HTML is escaped, never rendered (XSS-safe preview). A bare
@@ -338,13 +313,6 @@ function imageHtml(rawUrl: string, alt: string): string {
   const url = safeImageSrc(rawUrl);
 
   return url === null ? '' : `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}">`;
-}
-
-/** A reference whose definition is missing renders as its literal source. */
-function referenceFallback(label: string, children: string, isImage: boolean): string {
-  const prefix = isImage ? '!' : '';
-
-  return `${prefix}[${children}][${escapeHtml(label)}]`;
 }
 
 /** Register a footnote reference, returning its superscript marker. */

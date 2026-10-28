@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mdastToBlocks } from '../../../src/markdown/mdast-to-blocks';
 import { markdownToBlocks } from '../../../src/markdown/index';
-import type { Root } from 'mdast';
+import type { Root, RootContent } from '../../../types/data-formats/markdown-tree';
 
 describe('mdastToBlocks', () => {
   describe('paragraph', () => {
@@ -81,9 +81,10 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [
-            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Item 1' }] }] },
-            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Item 2' }] }] },
+            { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Item 1' }] }] },
+            { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Item 2' }] }] },
           ],
         }],
       };
@@ -101,15 +102,18 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [{
             type: 'listItem',
+            checked: null,
             children: [
               { type: 'paragraph', children: [{ type: 'text', value: 'Parent' }] },
               {
                 type: 'list',
                 ordered: false,
+                start: null,
                 children: [
-                  { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Child' }] }] },
+                  { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Child' }] }] },
                 ],
               },
             ],
@@ -134,8 +138,8 @@ describe('mdastToBlocks', () => {
           ordered: true,
           start: 3,
           children: [
-            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Third' }] }] },
-            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Fourth' }] }] },
+            { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Third' }] }] },
+            { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Fourth' }] }] },
           ],
         }],
       };
@@ -154,6 +158,7 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [
             { type: 'listItem', checked: false, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Todo' }] }] },
             { type: 'listItem', checked: true, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Done' }] }] },
@@ -209,6 +214,7 @@ describe('mdastToBlocks', () => {
         type: 'root',
         children: [{
           type: 'table',
+          align: [null, null],
           children: [
             {
               type: 'tableRow',
@@ -255,7 +261,7 @@ describe('mdastToBlocks', () => {
     it('converts fenced code blocks to code tool blocks', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'code', value: 'const x = 1;', lang: 'typescript' }],
+        children: [{ type: 'code', value: 'const x = 1;', lang: 'typescript', meta: null }],
       };
 
       const blocks = mdastToBlocks(tree);
@@ -285,7 +291,7 @@ describe('mdastToBlocks', () => {
 
       const tree: Root = {
         type: 'root',
-        children: aliases.map(([lang]) => ({ type: 'code' as const, value: 'x', lang })),
+        children: aliases.map(([lang]) => ({ type: 'code' as const, value: 'x', lang, meta: null })),
       };
 
       const blocks = mdastToBlocks(tree);
@@ -296,7 +302,7 @@ describe('mdastToBlocks', () => {
     it('keeps an already-canonical language untouched', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'code', value: 'x', lang: 'bash' }],
+        children: [{ type: 'code', value: 'x', lang: 'bash', meta: null }],
       };
 
       expect((mdastToBlocks(tree)[0].data as { language: string }).language).toBe('bash');
@@ -305,7 +311,7 @@ describe('mdastToBlocks', () => {
     it('keeps an unknown language label rather than erasing it', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'code', value: 'x', lang: 'elixir' }],
+        children: [{ type: 'code', value: 'x', lang: 'elixir', meta: null }],
       };
 
       expect((mdastToBlocks(tree)[0].data as { language: string }).language).toBe('elixir');
@@ -314,7 +320,7 @@ describe('mdastToBlocks', () => {
     it('defaults language to "plain text" when lang is null', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'code', value: 'hello world', lang: null }],
+        children: [{ type: 'code', value: 'hello world', lang: null, meta: null }],
       };
 
       const blocks = mdastToBlocks(tree);
@@ -329,7 +335,7 @@ describe('mdastToBlocks', () => {
     it('converts a standalone image paragraph to an image block', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', alt: 'pic' }] }],
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', title: null, alt: 'pic' }] }],
       };
 
       const blocks = mdastToBlocks(tree);
@@ -342,7 +348,7 @@ describe('mdastToBlocks', () => {
     it('stores the alt text verbatim — the caption field is plain text, not HTML', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', alt: 'a & b <c>' }] }],
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', title: null, alt: 'a & b <c>' }] }],
       };
 
       const blocks = mdastToBlocks(tree);
@@ -353,7 +359,7 @@ describe('mdastToBlocks', () => {
     it('omits caption and alt for an image with no alt text', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', alt: '' }] }],
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', title: null, alt: '' }] }],
       };
 
       const blocks = mdastToBlocks(tree);
@@ -369,7 +375,7 @@ describe('mdastToBlocks', () => {
           type: 'paragraph',
           children: [
             { type: 'text', value: '  ' },
-            { type: 'image', url: 'https://img.com/pic.png', alt: 'pic' },
+            { type: 'image', url: 'https://img.com/pic.png', title: null, alt: 'pic' },
             { type: 'text', value: '\n' },
           ],
         }],
@@ -388,7 +394,7 @@ describe('mdastToBlocks', () => {
           type: 'paragraph',
           children: [
             { type: 'text', value: 'before ' },
-            { type: 'image', url: 'https://img.com/pic.png', alt: 'pic' },
+            { type: 'image', url: 'https://img.com/pic.png', title: null, alt: 'pic' },
             { type: 'text', value: ' after' },
           ],
         }],
@@ -404,7 +410,7 @@ describe('mdastToBlocks', () => {
     it('keeps a paragraph for an image whose url has an unsafe scheme', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'javascript:alert(1)', alt: 'pic' }] }],
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'javascript:alert(1)', title: null, alt: 'pic' }] }],
       };
 
       const blocks = mdastToBlocks(tree);
@@ -527,7 +533,7 @@ describe('mdastToBlocks', () => {
     it('uses toolMap entry over built-in handler', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'code', value: 'x = 1', lang: 'python' }],
+        children: [{ type: 'code', value: 'x = 1', lang: 'python', meta: null }],
       };
 
       const blocks = mdastToBlocks(tree, {
@@ -588,7 +594,7 @@ describe('mdastToBlocks', () => {
     it('prefers toolMap over onUnknownNode for same node type', () => {
       const tree: Root = {
         type: 'root',
-        children: [{ type: 'code', value: 'hello', lang: null }],
+        children: [{ type: 'code', value: 'hello', lang: null, meta: null }],
       };
 
       const blocks = mdastToBlocks(tree, {
@@ -612,11 +618,13 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: true,
+          start: null,
           children: [{
             type: 'listItem',
+            checked: null,
             children: [
               { type: 'paragraph', children: [{ type: 'text', value: 'Install it:' }] },
-              { type: 'code', lang: 'bash', value: 'npm i thing' },
+              { type: 'code', lang: 'bash', value: 'npm i thing', meta: null },
             ],
           }],
         }],
@@ -634,8 +642,10 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [{
             type: 'listItem',
+            checked: null,
             children: [
               { type: 'paragraph', children: [{ type: 'text', value: 'First' }] },
               { type: 'paragraph', children: [{ type: 'text', value: 'Second' }] },
@@ -657,8 +667,10 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [{
             type: 'listItem',
+            checked: null,
             children: [
               { type: 'paragraph', children: [{ type: 'text', value: 'Note' }] },
               {
@@ -682,9 +694,11 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [{
             type: 'listItem',
-            children: [{ type: 'code', lang: null, value: 'x' }],
+            checked: null,
+            children: [{ type: 'code', lang: null, value: 'x', meta: null }],
           }],
         }],
       };
@@ -701,16 +715,20 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: false,
+          start: null,
           children: [{
             type: 'listItem',
+            checked: null,
             children: [
               { type: 'paragraph', children: [{ type: 'text', value: 'Parent' }] },
-              { type: 'code', lang: null, value: 'code' },
+              { type: 'code', lang: null, value: 'code', meta: null },
               {
                 type: 'list',
                 ordered: false,
+                start: null,
                 children: [{
                   type: 'listItem',
+                  checked: null,
                   children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Child' }] }],
                 }],
               },
@@ -750,9 +768,10 @@ describe('mdastToBlocks', () => {
         children: [{
           type: 'list',
           ordered: true,
+          start: null,
           children: [
-            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'One' }] }] },
-            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Two' }] }] },
+            { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'One' }] }] },
+            { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Two' }] }] },
           ],
         }],
       };
@@ -786,6 +805,62 @@ describe('mdastToBlocks', () => {
 
       expect(ids.every(id => typeof id === 'string' && id.length > 0)).toBe(true);
       expect(new Set(ids).size).toBe(ids.length); // all unique
+    });
+  });
+
+  describe('large input', () => {
+    const listOf = (count: number): RootContent => ({
+      type: 'list',
+      ordered: false,
+      start: null,
+      children: Array.from({ length: count }, () => ({
+        type: 'listItem',
+        checked: null,
+        children: [{ type: 'paragraph', children: [{ type: 'text', value: 'b' }] }],
+      })),
+    });
+
+    /** Fastest of three runs, in ms, so a busy machine skews it less. */
+    const fastest = (run: () => void): number => Math.min(...[0, 1, 2].map(() => {
+      const started = performance.now();
+
+      run();
+
+      return performance.now() - started;
+    }));
+
+    it('converts a long list in linear time', () => {
+      const small = listOf(10_000);
+      const large = listOf(40_000);
+      const ratio = fastest(() => mdastToBlocks({ type: 'root', children: [large] }))
+        / fastest(() => mdastToBlocks({ type: 'root', children: [small] }));
+
+      // Linear is ~4, quadratic ~16.
+      expect(ratio).toBeLessThan(8);
+    });
+
+    // Past ~125k items, spreading one result into push() overflows the stack.
+    it('converts a list too long to spread into one call', () => {
+      expect(mdastToBlocks({ type: 'root', children: [listOf(200_000)] })).toHaveLength(200_000);
+    });
+
+    it('converts a list item holding a list too long to spread into one call', () => {
+      const tree: Root = { type: 'root', children: [{
+        type: 'list',
+        ordered: false,
+        start: null,
+        children: [{ type: 'listItem', checked: null, children: [
+          { type: 'paragraph', children: [{ type: 'text', value: 'a' }] },
+          listOf(200_000),
+        ] }],
+      }] };
+
+      expect(mdastToBlocks(tree)).toHaveLength(200_001);
+    });
+
+    it('converts a quote holding a list too long to spread into one call', () => {
+      expect(mdastToBlocks({ type: 'root', children: [{ type: 'blockquote', children: [listOf(200_000)] }] }))
+        .toHaveLength(200_000);
     });
   });
 });

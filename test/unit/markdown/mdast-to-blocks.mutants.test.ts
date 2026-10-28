@@ -29,7 +29,7 @@
  *   the same `if (text)`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { Root } from 'mdast';
+import type { Root } from '../../../types/data-formats/markdown-tree';
 import type { MarkdownImportConfig } from '../../../src/markdown/types';
 import { mdastToBlocks } from '../../../src/markdown/mdast-to-blocks';
 
@@ -73,7 +73,7 @@ describe('mdastToBlocks — nodes no handler knows', () => {
   it('turns a value-bearing node into an escaped paragraph', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: A & B <tag> "quoted"' }],
+      children: [{ type: 'text', value: 'title: A & B <tag> "quoted"' }],
     };
 
     const blocks = mdastToBlocks(tree);
@@ -86,24 +86,24 @@ describe('mdastToBlocks — nodes no handler knows', () => {
   it('drops a node that carries no string value', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'definition', identifier: 'lonely', url: 'https://example.com/lonely', title: null }],
+      children: [{ type: 'definition', identifier: 'lonely', label: 'lonely', url: 'https://example.com/lonely', title: null }],
     };
 
     expect(mdastToBlocks(tree)).toStrictEqual([]);
   });
 
   it('drops a node whose value is not a string', () => {
-    expect(mdastToBlocks(looseRoot({ type: 'yaml', value: 42 }))).toStrictEqual([]);
+    expect(mdastToBlocks(looseRoot({ type: 'text', value: 42 }))).toStrictEqual([]);
   });
 
   it('lets onUnknownNode claim a node no built-in handler knows', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: Hook target' }],
+      children: [{ type: 'text', value: 'title: Hook target' }],
     };
 
     const blocks = mdastToBlocks(tree, {
-      onUnknownNode: (node) => (node.type === 'yaml' ? [{ type: 'custom-raw', data: { source: 'hook' } }] : null),
+      onUnknownNode: (node) => (node.type === 'text' ? [{ type: 'custom-raw', data: { source: 'hook' } }] : null),
     });
 
     expect(blocks).toStrictEqual([{ type: 'custom-raw', data: { source: 'hook' } }]);
@@ -112,7 +112,7 @@ describe('mdastToBlocks — nodes no handler knows', () => {
   it('skips the node when onUnknownNode returns null', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: Skipped by hook' }],
+      children: [{ type: 'text', value: 'title: Skipped by hook' }],
     };
     const hook = vi.fn(() => null);
 
@@ -125,7 +125,7 @@ describe('mdastToBlocks — nodes no handler knows', () => {
     const boom = new Error('hook exploded');
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: Throwing hook' }],
+      children: [{ type: 'text', value: 'title: Throwing hook' }],
     };
 
     const blocks = mdastToBlocks(tree, {
@@ -134,7 +134,7 @@ describe('mdastToBlocks — nodes no handler knows', () => {
       },
     });
 
-    expect(warn).toHaveBeenCalledWith('markdownToBlocks: onUnknownNode threw for node type "yaml"', boom);
+    expect(warn).toHaveBeenCalledWith('markdownToBlocks: onUnknownNode threw for node type "text"', boom);
     expect(blocks).toStrictEqual([]);
   });
 });
@@ -143,7 +143,7 @@ describe('mdastToBlocks — math', () => {
   it('converts a math block to a latex code block', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'math', value: 'E = mc^2' }],
+      children: [{ type: 'math', value: 'E = mc^2', meta: null }],
     };
 
     const blocks = mdastToBlocks(tree);
@@ -161,7 +161,7 @@ describe('mdastToBlocks — code fences', () => {
   it('keeps an unknown fence label instead of collapsing it to plain text', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'code', value: 'SELECT 1;', lang: 'weirdlang' }],
+      children: [{ type: 'code', value: 'SELECT 1;', lang: 'weirdlang', meta: null }],
     };
 
     expect(mdastToBlocks(tree)[0]).toStrictEqual({
@@ -205,7 +205,7 @@ describe('mdastToBlocks — standalone images', () => {
       type: 'root',
       children: [{
         type: 'paragraph',
-        children: [{ type: 'image', url: 'https://example.com/pic-one.png', alt: 'A blue square' }],
+        children: [{ type: 'image', url: 'https://example.com/pic-one.png', title: null, alt: 'A blue square' }],
       }],
     };
 
@@ -221,7 +221,7 @@ describe('mdastToBlocks — standalone images', () => {
       type: 'root',
       children: [{
         type: 'paragraph',
-        children: [{ type: 'image', url: 'https://example.com/pic-two.png' }],
+        children: [{ type: 'image', url: 'https://example.com/pic-two.png', title: null, alt: '' }],
       }],
     };
 
@@ -232,13 +232,10 @@ describe('mdastToBlocks — standalone images', () => {
   });
 
   it('omits caption and alt when the alt text is null', () => {
-    const tree: Root = {
-      type: 'root',
-      children: [{
-        type: 'paragraph',
-        children: [{ type: 'image', url: 'https://example.com/pic-three.png', alt: null }],
-      }],
-    };
+    const tree = looseRoot({
+      type: 'paragraph',
+      children: [{ type: 'image', url: 'https://example.com/pic-three.png', title: null, alt: null }],
+    });
 
     expect(mdastToBlocks(tree)[0].data).toStrictEqual({ url: 'https://example.com/pic-three.png' });
   });
@@ -250,7 +247,7 @@ describe('mdastToBlocks — standalone images', () => {
         type: 'paragraph',
         children: [
           { type: 'text', value: 'before ' },
-          { type: 'image', url: 'javascript:alert(1)', alt: 'Unsafe image alt' },
+          { type: 'image', url: 'javascript:alert(1)', title: null, alt: 'Unsafe image alt' },
           { type: 'text', value: ' after' },
         ],
       }],
@@ -266,10 +263,10 @@ describe('mdastToBlocks — standalone images', () => {
     const tree: Root = {
       type: 'root',
       children: [
-        { type: 'definition', identifier: 'badge-ref', url: 'https://example.com/badge.svg', title: null },
+        { type: 'definition', identifier: 'badge-ref', label: 'badge-ref', url: 'https://example.com/badge.svg', title: null },
         {
           type: 'paragraph',
-          children: [{ type: 'imageReference', identifier: 'badge-ref', referenceType: 'full', alt: 'Badge art' }],
+          children: [{ type: 'imageReference', identifier: 'badge-ref', label: 'badge-ref', referenceType: 'full', alt: 'Badge art' }],
         },
       ],
     };
@@ -286,7 +283,7 @@ describe('mdastToBlocks — standalone images', () => {
       type: 'root',
       children: [{
         type: 'paragraph',
-        children: [{ type: 'imageReference', identifier: 'missing-ref', referenceType: 'full', alt: 'Ghost' }],
+        children: [{ type: 'imageReference', identifier: 'missing-ref', label: 'missing-ref', referenceType: 'full', alt: 'Ghost' }],
       }],
     };
 
@@ -317,7 +314,7 @@ describe('mdastToBlocks — paragraphs around images', () => {
       children: [{
         type: 'paragraph',
         children: [
-          { type: 'image', url: 'https://example.com/lead.png', alt: 'Lead picture' },
+          { type: 'image', url: 'https://example.com/lead.png', title: null, alt: 'Lead picture' },
           { type: 'text', value: ' trailing words' },
         ],
       }],
@@ -336,12 +333,12 @@ describe('mdastToBlocks — inline math', () => {
     const tree: Root = {
       type: 'root',
       children: [
-        { type: 'definition', identifier: 'guide-ref', url: 'https://example.com/guide', title: null },
+        { type: 'definition', identifier: 'guide-ref', label: 'guide-ref', url: 'https://example.com/guide', title: null },
         {
           type: 'paragraph',
           children: [
             { type: 'text', value: 'See ' },
-            { type: 'linkReference', identifier: 'guide-ref', referenceType: 'full', children: [{ type: 'text', value: 'the guide' }] },
+            { type: 'linkReference', identifier: 'guide-ref', label: 'guide-ref', referenceType: 'full', children: [{ type: 'text', value: 'the guide' }] },
             { type: 'inlineMath', value: 'x^2 + y^2' },
           ],
         },
@@ -482,7 +479,7 @@ describe('mdastToBlocks — blockquote', () => {
     const blocks = mdastToBlocks(looseRoot({
       type: 'blockquote',
       children: [
-        { type: 'definition', identifier: 'null-children', url: 'https://example.com/null', title: null, children: null },
+        { type: 'definition', identifier: 'null-children', label: 'null-children', url: 'https://example.com/null', title: null, children: null },
         { type: 'paragraph', children: [{ type: 'text', value: 'Quoted body' }] },
       ],
     }));
@@ -499,10 +496,10 @@ describe('mdastToBlocks — blockquote', () => {
           type: 'blockquote',
           children: [{
             type: 'paragraph',
-            children: [{ type: 'linkReference', identifier: 'nested-ref', referenceType: 'full', children: [{ type: 'text', value: 'nested link' }] }],
+            children: [{ type: 'linkReference', identifier: 'nested-ref', label: 'nested-ref', referenceType: 'full', children: [{ type: 'text', value: 'nested link' }] }],
           }],
         },
-        { type: 'definition', identifier: 'nested-ref', url: 'https://example.com/nested', title: null },
+        { type: 'definition', identifier: 'nested-ref', label: 'nested-ref', url: 'https://example.com/nested', title: null },
       ],
     };
 
@@ -519,6 +516,7 @@ describe('mdastToBlocks — list items', () => {
       children: [{
         type: 'list',
         ordered: false,
+        start: null,
         children: [{
           type: 'listItem',
           checked: null,
@@ -539,6 +537,7 @@ describe('mdastToBlocks — list items', () => {
       children: [{
         type: 'list',
         ordered: false,
+        start: null,
         children: [
           { type: 'listItem', checked: true, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Done task' }] }] },
           { type: 'listItem', checked: false, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Open task' }] }] },
@@ -558,6 +557,7 @@ describe('mdastToBlocks — list items', () => {
       children: [{
         type: 'list',
         ordered: true,
+        start: null,
         children: [
           { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'First numbered' }] }] },
           { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Second numbered' }] }] },
@@ -597,13 +597,14 @@ describe('mdastToBlocks — list items', () => {
       children: [{
         type: 'list',
         ordered: true,
+        start: null,
         children: [
           {
             type: 'listItem',
             checked: null,
             children: [
               { type: 'paragraph', children: [{ type: 'text', value: 'First numbered' }] },
-              { type: 'code', lang: 'bash', value: 'echo interrupted' },
+              { type: 'code', lang: 'bash', value: 'echo interrupted', meta: null },
             ],
           },
           { type: 'listItem', checked: null, children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Second numbered' }] }] },
@@ -623,6 +624,7 @@ describe('mdastToBlocks — list items', () => {
       children: [{
         type: 'list',
         ordered: false,
+        start: null,
         children: [{
           type: 'listItem',
           checked: null,
@@ -631,6 +633,7 @@ describe('mdastToBlocks — list items', () => {
             {
               type: 'list',
               ordered: false,
+              start: null,
               children: [{
                 type: 'listItem',
                 checked: null,
@@ -654,12 +657,13 @@ describe('mdastToBlocks — list items', () => {
       children: [{
         type: 'list',
         ordered: false,
+        start: null,
         children: [{
           type: 'listItem',
           checked: null,
           children: [
             { type: 'paragraph', children: [{ type: 'text', value: 'Item body' }] },
-            { type: 'definition', identifier: 'item-def', url: 'https://example.com/item', title: null },
+            { type: 'definition', identifier: 'item-def', label: 'item-def', url: 'https://example.com/item', title: null },
             { type: 'paragraph', children: [{ type: 'text', value: 'Second item paragraph' }] },
           ],
         }],
@@ -680,6 +684,7 @@ describe('mdastToBlocks — tables', () => {
       type: 'root',
       children: [{
         type: 'table',
+        align: [null, null],
         children: [{
           type: 'tableRow',
           children: [
@@ -702,6 +707,7 @@ describe('mdastToBlocks — tables', () => {
       type: 'root',
       children: [{
         type: 'table',
+        align: [null, null],
         children: [
           {
             type: 'tableRow',
@@ -747,12 +753,12 @@ describe('mdastToBlocks — toolMap', () => {
   it('emits the mapped block for a node the toolMap claims', () => {
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: Mapped node' }],
+      children: [{ type: 'text', value: 'title: Mapped node' }],
     };
 
     const blocks = mdastToBlocks(tree, {
       toolMap: {
-        yaml: {
+        text: {
           tool: 'custom-frontmatter',
           data: () => ({ raw: 'Mapped node raw' }),
         },
@@ -803,13 +809,13 @@ describe('mdastToBlocks — toolMap', () => {
         reads += 1;
 
         return reads === 1
-          ? { yaml: { tool: 'custom-frontmatter', data: () => ({ raw: 'first read' }) } }
+          ? { text: { tool: 'custom-frontmatter', data: () => ({ raw: 'first read' }) } }
           : undefined;
       },
     };
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: Vanishing map' }],
+      children: [{ type: 'text', value: 'title: Vanishing map' }],
     };
 
     const blocks = mdastToBlocks(tree, config);
@@ -823,12 +829,12 @@ describe('mdastToBlocks — toolMap', () => {
     const boom = new Error('toolMap data exploded');
     const tree: Root = {
       type: 'root',
-      children: [{ type: 'yaml', value: 'title: Throwing toolMap' }],
+      children: [{ type: 'text', value: 'title: Throwing toolMap' }],
     };
 
     const blocks = mdastToBlocks(tree, {
       toolMap: {
-        yaml: {
+        text: {
           tool: 'custom-frontmatter',
           data: () => {
             throw boom;
@@ -837,7 +843,7 @@ describe('mdastToBlocks — toolMap', () => {
       },
     });
 
-    expect(warn).toHaveBeenCalledWith('markdownToBlocks: toolMap handler threw for node type "yaml"', boom);
+    expect(warn).toHaveBeenCalledWith('markdownToBlocks: toolMap handler threw for node type "text"', boom);
     expect(blocks).toStrictEqual([]);
   });
 });

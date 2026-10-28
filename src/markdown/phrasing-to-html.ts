@@ -1,4 +1,4 @@
-import type { Definition, PhrasingContent } from 'mdast';
+import type { Definition, PhrasingContent } from '../../types/data-formats/markdown-tree';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { isSamePageLink } from '../tools/link/registry';
 
@@ -83,11 +83,11 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
       return '<br>';
 
     case 'image':
-      return imageHtml(node.url, node.alt ?? '');
+      return imageHtml(node.url, node.alt);
 
     case 'imageReference': {
       const definition = definitions.get(node.identifier);
-      const alt = node.alt ?? '';
+      const { alt } = node;
 
       if (definition === undefined) {
         return referenceFallback(node.label ?? node.identifier, escapeHtml(alt), true);
@@ -106,7 +106,7 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
 
     case 'inlineMath': {
       // The equation sanitizer rewrites the span's text to its source, so they must match.
-      const latex = escapeHtml(node.value ?? '');
+      const latex = escapeHtml(node.value);
 
       return `<span data-latex="${latex}">${latex}</span>`;
     }

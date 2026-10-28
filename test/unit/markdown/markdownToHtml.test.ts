@@ -141,6 +141,18 @@ describe('markdownToHtml', () => {
     expect(html).toContain('the site</a>');
   });
 
+  it('resolves a link reference whose definition sits inside a blockquote', async () => {
+    const html = await markdownToHtml('See [the site][site].\n\n> [site]: https://example.com');
+    expect(html).toContain('<a href="https://example.com"');
+    expect(html).not.toContain('[the site][site]');
+  });
+
+  it('renders a footnote whose definition sits inside a list item', async () => {
+    const html = await markdownToHtml('Text.[^n]\n\n- [^n]: Nested body.');
+    expect(html).toContain('class="blok-md-footnotes"');
+    expect(html).toContain('Nested body.');
+  });
+
   it('drops link references with unsafe definition URLs but keeps the text', async () => {
     const html = await markdownToHtml('[x][bad]\n\n[bad]: javascript:alert(1)');
     expect(html).not.toContain('javascript:');

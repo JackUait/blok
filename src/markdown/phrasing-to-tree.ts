@@ -1,4 +1,4 @@
-import type { PhrasingContent } from 'mdast';
+import type { PhrasingContent } from '../../types/data-formats/markdown-tree';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import type { InlineNode } from '../shared/rich-text/inline-tree';
 import { isBareBreak, linkTarget, type DefinitionMap } from './phrasing-to-html';
@@ -78,10 +78,10 @@ const nodeToTree = (node: PhrasingContent, definitions: DefinitionMap): InlineNo
     case 'break':
       return [BREAK];
     case 'image':
-      return image(node.url, node.alt ?? '');
+      return image(node.url, node.alt);
     case 'imageReference': {
       const definition = definitions.get(node.identifier);
-      const alt = node.alt ?? '';
+      const { alt } = node;
 
       return definition === undefined
         ? referenceFallback(node.label ?? node.identifier, text(alt), true)
@@ -90,7 +90,7 @@ const nodeToTree = (node: PhrasingContent, definitions: DefinitionMap): InlineNo
     case 'html':
       return isBareBreak(node.value) ? [BREAK] : text(node.value);
     case 'inlineMath': {
-      const latex = node.value ?? '';
+      const latex = node.value;
 
       return [element('span', text(latex), { 'data-latex': latex })];
     }

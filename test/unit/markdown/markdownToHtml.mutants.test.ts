@@ -328,36 +328,23 @@ describe('markdownToHtml mutants', () => {
   });
 
   describe('references defined outside the top level', () => {
-    it('renders an unresolved link reference as its literal source', async () => {
-      expect(await render('> [ref]: https://e.test/x\n\n[text][ref]'))
-        .toBe('<blockquote></blockquote><p>[text][ref]</p>');
+    it('resolves a link reference against a definition inside a blockquote', async () => {
+      expect(await render('> [ref]: https://e.test/x\n\n[text][Ref]'))
+        .toBe('<blockquote></blockquote><p><a href="https://e.test/x" target="_blank" rel="noopener noreferrer nofollow">text</a></p>');
     });
 
-    it('renders an unresolved image reference as its literal source, marked as an image', async () => {
-      expect(await render('> [ref]: https://e.test/i.png\n\n![alt][ref]'))
-        .toBe('<blockquote></blockquote><p>![alt][ref]</p>');
+    it('resolves an image reference against a definition inside a blockquote', async () => {
+      expect(await render('> [pic]: https://e.test/i.png\n\n![alt][Pic]'))
+        .toBe('<blockquote></blockquote><p><img src="https://e.test/i.png" alt="alt"></p>');
     });
 
-    it('leaves a footnote reference whose definition is out of scope empty', async () => {
+    it('renders a footnote whose definition sits inside a blockquote', async () => {
       expect(await render('> [^x]: note\n\na[^x]'))
         .toBe('<blockquote></blockquote>'
           + '<p>a<sup class="blok-md-fnref" id="fnref-x"><a href="#fn-x">1</a></sup></p>'
           + '<section class="blok-md-footnotes"><hr><ol>'
-          + '<li id="fn-x"><a class="blok-md-fnback" href="#fnref-x" '
+          + '<li id="fn-x"><p>note</p><a class="blok-md-fnback" href="#fnref-x" '
           + 'aria-label="Back to content">↩</a></li></ol></section>');
-    });
-
-    // The fallback prints the LABEL as written, not the lowercased identifier.
-    // A reference only becomes a node when a definition matches it, so the
-    // case difference has to live in the label, not the identifier.
-    it('falls back to the label as written for a link reference', async () => {
-      expect(await render('> [ref]: https://e.test/x\n\n[text][Ref]'))
-        .toBe('<blockquote></blockquote><p>[text][Ref]</p>');
-    });
-
-    it('falls back to the label as written for an image reference', async () => {
-      expect(await render('> [pic]: https://e.test/i.png\n\n![alt][Pic]'))
-        .toBe('<blockquote></blockquote><p>![alt][Pic]</p>');
     });
   });
 

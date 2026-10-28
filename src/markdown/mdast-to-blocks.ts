@@ -1,4 +1,4 @@
-import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, RootContent, Definition } from 'mdast';
+import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, RootContent, Definition } from '../../types/data-formats/markdown-tree';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from './types';
 import type { CellPlacement } from '../tools/table/types';
@@ -143,14 +143,22 @@ function convertNodes(
   const blocks: OutputBlockData[] = [];
 
   for (const node of nodes) {
-    const result = convertNode(node, ctx, listDepth);
-
-    if (result) {
-      blocks.push(...result);
-    }
+    pushAll(blocks, convertNode(node, ctx, listDepth) ?? []);
   }
 
   return blocks;
+}
+
+/**
+ * Append items one by one. `push(...items)` passes each item as an argument
+ * and throws a RangeError past ~125k of them.
+ * @param target - the array to grow
+ * @param items - the items to append
+ */
+function pushAll<T>(target: T[], items: readonly T[]): void {
+  for (const item of items) {
+    target.push(item);
+  }
 }
 
 function convertNode(
@@ -259,8 +267,6 @@ function handleBuiltInNode(
   return undefined;
 }
 
-type ParagraphChild = { type: string; value?: string; children?: unknown[] };
-
 /** Source and alt text of the single image a paragraph consists of. */
 interface StandaloneImage {
   url: string;
@@ -338,8 +344,8 @@ function makeImage(image: StandaloneImage, generateId: () => string): OutputBloc
  * A lone image becomes an image block; inlineMath splits the paragraph into
  * latex code blocks.
  */
-function handleParagraph(children: ParagraphChild[], ctx: ConvertContext): OutputBlockData[] {
-  const image = soleImage(children as PhrasingContent[], ctx.definitions);
+function handleParagraph(children: PhrasingContent[], ctx: ConvertContext): OutputBlockData[] {
+  const image = soleImage(children, ctx.definitions);
 
   if (image !== null) {
     return [makeImage(image, ctx.generateId)];
@@ -348,13 +354,13 @@ function handleParagraph(children: ParagraphChild[], ctx: ConvertContext): Outpu
   const hasInlineMath = children.some(c => c.type === 'inlineMath');
 
   if (!hasInlineMath) {
-    return [makeParagraph(phrasing(children as PhrasingContent[], ctx.definitions), ctx)];
+    return [makeParagraph(phrasing(children, ctx.definitions), ctx)];
   }
 
   return splitOnInlineMath(children, ctx);
 }
 
-function splitOnInlineMath(children: ParagraphChild[], ctx: ConvertContext): OutputBlockData[] {
+function splitOnInlineMath(children: PhrasingContent[], ctx: ConvertContext): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
   const segments = groupByInlineMath(children);
 
@@ -364,7 +370,7 @@ function splitOnInlineMath(children: ParagraphChild[], ctx: ConvertContext): Out
       continue;
     }
 
-    const text = trim(phrasing(segment.nodes as PhrasingContent[], ctx.definitions));
+    const text = trim(phrasing(segment.nodes, ctx.definitions));
 
     if (text.html !== '') {
       blocks.push(makeParagraph(text, ctx));
@@ -374,11 +380,11 @@ function splitOnInlineMath(children: ParagraphChild[], ctx: ConvertContext): Out
   return blocks;
 }
 
-type MathSegment = { type: 'math'; value: string } | { type: 'text'; nodes: ParagraphChild[] };
+type MathSegment = { type: 'math'; value: string } | { type: 'text'; nodes: PhrasingContent[] };
 
-function groupByInlineMath(children: ParagraphChild[]): MathSegment[] {
+function groupByInlineMath(children: PhrasingContent[]): MathSegment[] {
   const segments: MathSegment[] = [];
-  const textNodes: ParagraphChild[] = [];
+  const textNodes: PhrasingContent[] = [];
 
   for (const child of children) {
     if (child.type !== 'inlineMath') {
@@ -456,14 +462,17 @@ function handleList(
   depth: number,
 ): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
+  // Blok's list is flat: a non-list block already emitted for this list ends
+  // the numbering run (ListMarkerCalculator stops counting at a foreign
+  // block), so the items after it must carry their own `start`.
+  // Kept as a flag, not rescanned per item, so a long list stays linear.
+  const run = { interrupted: false };
 
   for (const [index, item] of list.children.entries()) {
-    // Blok's list is flat: a non-list block already emitted for this list ends
-    // the numbering run (ListMarkerCalculator stops counting at a foreign
-    // block), so the items after it must carry their own `start`.
-    const runInterrupted = blocks.some((block) => block.type !== 'list');
+    const itemBlocks = handleListItem(item, list, ctx, depth, index, run.interrupted);
 
-    blocks.push(...handleListItem(item, list, ctx, depth, index, runInterrupted));
+    run.interrupted = run.interrupted || itemBlocks.some((block) => block.type !== 'list');
+    pushAll(blocks, itemBlocks);
   }
 
   return blocks;
@@ -517,11 +526,7 @@ function handleListItem(
       continue;
     }
 
-    const childBlocks = convertNode(child, ctx, depth + 1);
-
-    if (childBlocks) {
-      blocks.push(...childBlocks);
-    }
+    pushAll(blocks, convertNode(child, ctx, depth + 1) ?? []);
   }
 
   return blocks;
@@ -556,7 +561,7 @@ function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[
     }
 
     flush();
-    blocks.push(...(convertNode(child, ctx, 0) ?? []));
+    pushAll(blocks, convertNode(child, ctx, 0) ?? []);
   }
 
   // An empty `>` still makes a quote.

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderDocxInto } from '../../../../../src/tools/file/docx';
-import { buildDocx, editZip, p } from './build-docx';
+import { readZip } from '../../../../../src/tools/file/zip/read-zip';
+import { buildDocx, editZip, p, zipToBuffer } from './build-docx';
 
 async function render(parts: Parameters<typeof buildDocx>[0]): Promise<HTMLElement> {
   const container = document.createElement('div');
@@ -35,6 +36,16 @@ describe('renderDocxInto — document skeleton', () => {
 
     expect(pages(c)).toHaveLength(1);
     expect(paras(c).map((el) => el.textContent)).toEqual(['Hello', 'World']);
+  });
+
+  it('opens a package whose zip names use backslashes', async () => {
+    const archive = readZip(await buildDocx({ body: p('Hello') }));
+    const files = new Map(archive.entries.filter((e) => !e.dir).map((e) => [e.name.replace(/\//g, '\\'), archive.read(e)]));
+    const c = document.createElement('div');
+
+    await renderDocxInto(zipToBuffer(files), c);
+
+    expect(paras(c).map((el) => el.textContent)).toEqual(['Hello']);
   });
 
   it('sizes the page from sectPr and caps it at the container width', async () => {

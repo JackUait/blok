@@ -1,5 +1,5 @@
 import { loadZipReader } from './office-loaders';
-import type { ZipArchive } from './zip/read-zip';
+import type { ZipArchive, ZipEntry } from './zip/read-zip';
 
 /** Largest single part we inflate. Guards a small zip that inflates to gigabytes. */
 const MAX_PART_BYTES = 64 * 1024 * 1024;
@@ -53,9 +53,14 @@ export class ZipParts {
 
   /** Whether the package has a file at `path`. */
   has(path: string): boolean {
-    const entry = this.zip.get(path);
+    const entry = this.entry(path);
 
     return entry !== undefined && !entry.dir;
+  }
+
+  /** Some zip tools store `word\document.xml`; the old docx-preview opened those, so we keep doing it. */
+  private entry(path: string): ZipEntry | undefined {
+    return this.zip.get(path) ?? this.zip.get(path.replace(/\//g, '\\'));
   }
 
   /** A part's XML, or null when the package lacks it. */
@@ -87,7 +92,7 @@ export class ZipParts {
    * exact: the reader's inflate refuses to write past it, so a lying entry throws.
    */
   async bytes(path: string): Promise<Uint8Array<ArrayBuffer> | null> {
-    const entry = this.zip.get(path);
+    const entry = this.entry(path);
     if (entry === undefined || entry.dir) {
       return null;
     }

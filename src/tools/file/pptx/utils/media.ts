@@ -43,7 +43,8 @@ export function getMimeType(path: string): string {
     m4a: 'audio/mp4',
     ogg: 'audio/ogg',
   };
-  return mimeMap[ext] || 'application/octet-stream';
+  // Own keys only: a deck can name a file "image.constructor".
+  return Object.prototype.hasOwnProperty.call(mimeMap, ext) ? mimeMap[ext] : 'application/octet-stream';
 }
 
 function stripUriSuffix(target: string): string {

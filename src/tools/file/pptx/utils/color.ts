@@ -596,8 +596,8 @@ const PRESET_COLORS: Record<string, string> = {
  * Returns undefined if the name is not recognized.
  */
 export function presetColorToHex(name: string): string | undefined {
-  // Try exact match first, then case-insensitive
-  if (PRESET_COLORS[name] !== undefined) {
+  // Try exact match first, then case-insensitive. Own keys only: a deck can name "constructor".
+  if (Object.prototype.hasOwnProperty.call(PRESET_COLORS, name)) {
     return PRESET_COLORS[name];
   }
   const lower = name.toLowerCase();

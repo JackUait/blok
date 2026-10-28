@@ -698,7 +698,8 @@ function applyCellProperties(td: HTMLElement, cell: TableCell, ctx: RenderContex
     ctr: 'middle',
     b: 'bottom',
   };
-  td.style.verticalAlign = alignMap[anchor || 't'] || 'top';
+  // Own keys only: a deck can set anchor="constructor".
+  td.style.verticalAlign = anchor && Object.prototype.hasOwnProperty.call(alignMap, anchor) ? alignMap[anchor] : 'top';
 }
 
 /**

@@ -12,7 +12,8 @@ export function drawMarker(parent: Element, symbol: string, x: number, y: number
     plus: `M${at(0, -r)} L${at(0, r)} M${at(-r, 0)} L${at(r, 0)}`,
     dash: `M${at(-r, 0)} L${at(r, 0)}`,
   };
-  const d = shapes[symbol];
+  // Own keys only: a deck can name a symbol "constructor".
+  const d = Object.prototype.hasOwnProperty.call(shapes, symbol) ? shapes[symbol] : undefined;
   const attrs = { 'data-pptx-chart': 'marker', 'data-x': px(x), 'data-y': px(y) };
 
   if (d === undefined) {

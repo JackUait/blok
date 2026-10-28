@@ -195,7 +195,10 @@ function cssFontFamilyToken(fontFamily: string): string {
 
 function expandFontFamilyAliases(fontFamily: string): string[] {
   const normalized = normalizeFontFamilyName(fontFamily);
-  return FONT_FAMILY_ALIASES[normalized] ?? [fontFamily.trim()];
+  // Own keys only: a deck can name a font "constructor".
+  return Object.prototype.hasOwnProperty.call(FONT_FAMILY_ALIASES, normalized)
+    ? FONT_FAMILY_ALIASES[normalized]
+    : [fontFamily.trim()];
 }
 
 export function cssFontFamilyStack(fontFamily: string | string[]): string {

@@ -90,8 +90,6 @@ function readUncompressedSize(file: JSZipObject): number | undefined {
 interface ZipLimitState {
   limits: ZipParseLimits;
   knownSizeByPath: Map<string, number>;
-  knownTotalBytes: number;
-  knownMediaBytes: number;
   /** Bytes actually inflated so far; zip headers can lie about sizes. */
   inflatedTotalBytes: number;
   inflatedMediaBytes: number;
@@ -333,8 +331,6 @@ export async function parseZip(
   const limitState: ZipLimitState = {
     limits,
     knownSizeByPath,
-    knownTotalBytes,
-    knownMediaBytes,
     inflatedTotalBytes: 0,
     inflatedMediaBytes: 0,
     failed: false,

@@ -192,8 +192,11 @@ export function buildPresentation(files: PptxFiles): PresentationData {
 
   // --- Slide size ---
   const sldSz = presRoot.child('sldSz');
-  const width = emuToPx(sldSz.numAttr('cx') ?? 9144000); // default 10 inches
-  const height = emuToPx(sldSz.numAttr('cy') ?? 6858000); // default 7.5 inches
+  // A zero or negative size would collapse or mirror every slide; use 10 × 7.5 in instead.
+  const positive = (value: number | undefined, fallback: number): number =>
+    value !== undefined && value > 0 ? value : fallback;
+  const width = emuToPx(positive(sldSz.numAttr('cx'), 9144000));
+  const height = emuToPx(positive(sldSz.numAttr('cy'), 6858000));
   const firstSlideNum = presRoot.numAttr('firstSlideNum') ?? 1;
 
   // --- WPS detection ---

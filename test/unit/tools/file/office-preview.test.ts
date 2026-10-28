@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type JSZip from 'jszip';
+import JSZip from 'jszip';
 
 vi.mock('../../../../src/tools/file/binary-preview', () => ({
   loadBinaryPreview: vi.fn(),
@@ -67,29 +67,21 @@ describe('renderXlsxInto', () => {
     + '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1"><v>42</v></c></row>'
     + '</sheetData></worksheet>';
 
-  const fakeZip = {
-    files: { 'xl/worksheets/sheet1.xml': {}, 'xl/sharedStrings.xml': {} },
-    file: (name: string): { async: () => Promise<string> } | null => {
-      if (name === 'xl/sharedStrings.xml') {
-        return { async: () => Promise.resolve(sharedXml) };
-      }
-      if (name === 'xl/worksheets/sheet1.xml') {
-        return { async: () => Promise.resolve(sheetXml) };
-      }
+  const workbook = (): Promise<ArrayBuffer> => {
+    const zip = new JSZip();
+    zip.file('xl/sharedStrings.xml', sharedXml);
+    zip.file('xl/worksheets/sheet1.xml', sheetXml);
 
-      return null;
-    },
+    return zip.generateAsync({ type: 'arraybuffer' });
   };
 
   beforeEach(() => {
-    vi.mocked(loadZip).mockResolvedValue(
-      { loadAsync: vi.fn().mockResolvedValue(fakeZip) } as unknown as typeof JSZip,
-    );
+    vi.mocked(loadZip).mockResolvedValue(JSZip);
   });
 
   it('renders shared-string cells as literal text, never parsed HTML', async () => {
     const container = document.createElement('div');
-    await renderXlsxInto(new ArrayBuffer(4), container);
+    await renderXlsxInto(await workbook(), container);
     const cell = container.querySelector('td');
     expect(cell?.textContent).toBe('<b>x</b>');   // literal text
     expect(cell?.querySelector('b')).toBeNull();  // not injected as an element
@@ -97,14 +89,14 @@ describe('renderXlsxInto', () => {
 
   it('resolves shared strings and inline values across the row', async () => {
     const container = document.createElement('div');
-    await renderXlsxInto(new ArrayBuffer(4), container);
+    await renderXlsxInto(await workbook(), container);
     const cells = Array.from(container.querySelectorAll('td')).map((td) => td.textContent);
     expect(cells).toEqual(['<b>x</b>', 'y', '42']);
   });
 
   it('flags numeric cells (not text) so they can be right-aligned', async () => {
     const container = document.createElement('div');
-    await renderXlsxInto(new ArrayBuffer(4), container);
+    await renderXlsxInto(await workbook(), container);
     const cells = Array.from(container.querySelectorAll('td'));
     const NUM = 'blok-file-preview-xlsx-num';
     expect(cells[0].classList.contains(NUM)).toBe(false); // shared-string text

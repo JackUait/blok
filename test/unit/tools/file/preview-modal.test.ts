@@ -285,19 +285,20 @@ describe('openFilePreview — text kinds', () => {
       expect.objectContaining({ fileName: 'a.docx' }),
       'docx',
       expect.any(Function),
+      expect.any(Function),
     );
     teardown();
   });
 
   it('routes xlsx files to fillOfficeBody', () => {
     const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.xlsx', labels: LABELS });
-    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'xlsx', expect.any(Function));
+    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'xlsx', expect.any(Function), expect.any(Function));
     teardown();
   });
 
   it('routes pptx files to fillOfficeBody', () => {
     const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.pptx', labels: LABELS });
-    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'pptx', expect.any(Function));
+    expect(fillOfficeBody).toHaveBeenCalledWith(expect.any(HTMLElement), expect.any(Object), 'pptx', expect.any(Function), expect.any(Function));
     teardown();
   });
 

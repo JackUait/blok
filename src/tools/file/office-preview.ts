@@ -1,7 +1,8 @@
 import type { PreviewKind } from './preview';
 import type { FilePreviewOptions } from './preview-modal';
 import { loadBinaryPreview } from './binary-preview';
-import { loadDocxRenderer, loadZip, loadPptxRenderer } from './office-loaders';
+import { ZipParts } from './zip-parts';
+import { loadDocxRenderer, loadPptxRenderer } from './office-loaders';
 import { buildErrorInto } from './preview-error';
 
 export type OfficeKind = Extract<PreviewKind, 'docx' | 'xlsx' | 'pptx'>;
@@ -105,56 +106,56 @@ function buildSheetTable(doc: Document, shared: string[]): HTMLTableElement {
 /**
  * Render an .xlsx as DOM tables by parsing the OOXML zip directly (JSZip +
  * DOMParser) — textContent only, never innerHTML. One table per worksheet; cells
- * are placed at their A1 column so sparse rows stay aligned.
+ * are placed at their A1 column so sparse rows stay aligned. Parts are read
+ * through the same guards as the docx renderer: inflate limits, no DOCTYPE.
  */
 export async function renderXlsxInto(buf: ArrayBuffer, container: HTMLElement): Promise<void> {
-  const JSZipCtor = await loadZip();
-  const zip = await JSZipCtor.loadAsync(buf);
-  const parser = new DOMParser();
+  const parts = await ZipParts.open(buf);
+  const sharedDoc = await parts.optionalXml('xl/sharedStrings.xml');
+  const shared = sharedDoc === null ? [] : Array.from(sharedDoc.getElementsByTagName('si')).map(sharedString);
 
-  const sharedFile = zip.file('xl/sharedStrings.xml');
-  const shared = sharedFile === null
-    ? []
-    : Array.from(
-      parser.parseFromString(await sharedFile.async('text'), 'application/xml').getElementsByTagName('si'),
-    ).map(sharedString);
-
-  const sheetPaths = Object.keys(zip.files)
+  const sheetPaths = parts.paths()
     .filter((path) => /^xl\/worksheets\/sheet\d+\.xml$/.test(path))
     .sort((a, b) => sheetNumber(a) - sheetNumber(b));
 
   for (const path of sheetPaths) {
-    const sheetFile = zip.file(path);
-    if (sheetFile === null) {
-      continue;
+    // A sheet that fails to parse is left out; the others still show.
+    const doc = await parts.optionalXml(path);
+    if (doc !== null) {
+      container.appendChild(buildSheetTable(doc, shared));
     }
-    const doc = parser.parseFromString(await sheetFile.async('text'), 'application/xml');
-    container.appendChild(buildSheetTable(doc, shared));
   }
 }
 
-async function renderInto(buf: ArrayBuffer, container: HTMLElement, kind: OfficeKind): Promise<void> {
+/** Render into `container`; resolves with a function that frees what the render holds. */
+async function renderInto(buf: ArrayBuffer, container: HTMLElement, kind: OfficeKind): Promise<(() => void) | null> {
   if (kind === 'docx') {
     const render = await loadDocxRenderer();
-    await render(buf, container);
 
-    return;
+    return render(buf, container);
   }
   if (kind === 'xlsx') {
     await renderXlsxInto(buf, container);
 
-    return;
+    return null;
   }
   const pptx = await loadPptxRenderer();
   await pptx.open(buf, container);
+
+  return null;
 }
 
-/** Fetch and render a docx/xlsx/pptx body, unless the modal was torn down. */
+/**
+ * Fetch and render a docx/xlsx/pptx body, unless the modal was torn down.
+ * `onRelease` receives the function that frees the render's resources; when the
+ * modal closed mid-render they are freed at once instead.
+ */
 export async function fillOfficeBody(
   body: HTMLElement,
   opts: FilePreviewOptions,
   kind: OfficeKind,
   isClosed: () => boolean,
+  onRelease: (release: () => void) => void = () => undefined,
 ): Promise<void> {
   const result = await loadBinaryPreview(opts.url);
   if (isClosed()) {
@@ -172,7 +173,12 @@ export async function fillOfficeBody(
   body.replaceChildren(container);
 
   try {
-    await renderInto(result.buf, container, kind);
+    const release = await renderInto(result.buf, container, kind);
+    if (release !== null && isClosed()) {
+      release();
+    } else if (release !== null) {
+      onRelease(release);
+    }
   } catch (e) {
     console.warn(`[blok] Failed to render ${kind} preview:`, e);
     if (!isClosed()) {

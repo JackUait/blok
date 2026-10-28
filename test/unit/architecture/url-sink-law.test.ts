@@ -53,6 +53,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'renderLink takes an href every caller already gated: safeHref(url), or mailtoHref/telHref, which build the URL and return safeHref of it',
   'tools/image/index.ts » src':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
+  'tools/file/docx/drawing.ts » url':
+    'HTMLImageElement src set to a blob: URL this file made from zip bytes whose raster signature it checked — image loads cannot run script',
   'tools/image/tone-sampler.ts » src':
     'HTMLImageElement src for a hidden CORS copy of the picture already on screen, only read for its tone — image loads cannot run script',
   'tools/image/error-state.ts » file.preview':

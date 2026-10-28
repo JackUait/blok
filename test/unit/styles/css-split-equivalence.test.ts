@@ -1231,6 +1231,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SELECT_PICKER_BYTES = 287;
     // database.css: the table picker rules are scoped off the row page, which keeps its own measurements.
     const DATABASE_TABLE_PICKER_SCOPE_BYTES = 1_796;
+    // file.css: the Word preview's paper, page and note rules; its renderer writes inline styles only.
+    const DOCX_PAPER_BYTES = 1_224;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1502,7 +1504,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FILE_CHIP_FILL_BYTES
       + DATABASE_PICKER_LENGTH_TOKENS_BYTES
       + DATABASE_SELECT_PICKER_BYTES
-      + DATABASE_TABLE_PICKER_SCOPE_BYTES;
+      + DATABASE_TABLE_PICKER_SCOPE_BYTES
+      + DOCX_PAPER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

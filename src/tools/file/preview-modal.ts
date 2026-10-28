@@ -288,6 +288,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   // Remember the caller's inline overflow so scroll lock restores it exactly.
   const previousBodyOverflow = document.body.style.overflow;
   const state = { closed: false };
+  const releases: Array<() => void> = [];
 
   // Edge haze that marks the previewable content as scrollable. PDFs render in
   // an iframe with its own scrollbar, so they opt out.
@@ -310,6 +311,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
     onClose: () => {
       state.closed = true;
       haze.destroy();
+      releases.splice(0).forEach((release) => release());
       document.body.style.overflow = previousBodyOverflow;
     },
   });
@@ -321,7 +323,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
 
   const startFill = (): Promise<void> => {
     if (officeKind !== null) {
-      return fillOfficeBody(body, opts, officeKind, () => state.closed);
+      return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release));
     }
     if (textualKind !== null) {
       return fillTextBody(body, header, opts, textualKind, () => state.closed);

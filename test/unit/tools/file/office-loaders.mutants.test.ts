@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const docx = vi.hoisted(() => ({ renderAsync: vi.fn(async () => undefined) }));
+const docx = vi.hoisted(() => ({ release: vi.fn(), renderDocxInto: vi.fn() }));
 const pptx = vi.hoisted(() => ({
   open: vi.fn(async () => ({ viewer: true })),
   limits: { maxFiles: 7 },
 }));
 
-vi.mock('docx-preview', () => ({ renderAsync: docx.renderAsync }));
+vi.mock('../../../../src/tools/file/docx', () => ({ renderDocxInto: docx.renderDocxInto }));
 vi.mock('@aiden0z/pptx-renderer', () => ({
   PptxViewer: { open: pptx.open },
   RECOMMENDED_ZIP_LIMITS: pptx.limits,
@@ -20,20 +20,17 @@ describe('office loaders mutants', () => {
   });
 
   describe('docx', () => {
-    it('renders into a wrapper of its own, class-named, shrunk to content height, with no altChunk iframe', async () => {
+    it('renders with the in-house renderer and hands back its release function', async () => {
+      docx.renderDocxInto.mockResolvedValue(docx.release);
       const render = await loadDocxRenderer();
       const buf = new ArrayBuffer(8);
       const container = document.createElement('div');
 
-      await render(buf, container);
+      const release = await render(buf, container);
 
-      expect(docx.renderAsync).toHaveBeenCalledTimes(1);
-      expect(docx.renderAsync).toHaveBeenCalledWith(buf, container, undefined, {
-        inWrapper: true,
-        className: 'blok-docx',
-        ignoreHeight: true,
-        renderAltChunks: false,
-      });
+      expect(docx.renderDocxInto).toHaveBeenCalledTimes(1);
+      expect(docx.renderDocxInto).toHaveBeenCalledWith(buf, container);
+      expect(release).toBe(docx.release);
     });
   });
 

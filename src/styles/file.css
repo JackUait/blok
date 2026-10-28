@@ -1030,22 +1030,70 @@
 }
 
 /* --- docx: paper pages centred on the desk -------------------------------- */
-/* docx-preview emits a .blok-docx-wrapper (its own grey desk) wrapping one
-   section.blok-docx per page. Our two-class selectors out-specify the library's
-   single-class injected styles, so we reclaim the desk tone and page chrome. */
+/* The docx renderer emits .blok-docx-wrapper holding one section.blok-docx per
+   page: an optional header, the body article, an optional footer. The renderer
+   writes only inline styles, so every shared rule lives here. The paper keeps
+   white with black ink in both themes: a document's own colours assume it. */
 .blok-file-preview-docx {
+  --blok-docx-paper: #ffffff;
+  --blok-docx-ink: #000000;
+
   padding: 0;
 }
 
 .blok-file-preview-docx .blok-docx-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-6);
   background: transparent;
   padding: clamp(var(--blok-space-5), 4vw, var(--blok-space-10)) var(--blok-space-5);
 }
 
+/* A page wider than the modal (landscape) shrinks to fit instead of clipping. */
 .blok-file-preview-docx .blok-docx {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  font: 10pt / normal "Times New Roman", serif;
+  color: var(--blok-docx-ink);
+  background: var(--blok-docx-paper);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-image-shadow-resting);
+  text-underline-position: from-font;
+}
+
+.blok-file-preview-docx .blok-docx p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.blok-file-preview-docx .blok-docx table {
+  border-collapse: collapse;
+}
+
+.blok-file-preview-docx .blok-docx td {
+  vertical-align: top;
+}
+
+.blok-file-preview-docx .blok-docx a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.blok-file-preview-docx .blok-docx img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Each note's own first run carries its number (w:footnoteRef). */
+.blok-file-preview-docx .blok-docx-footnotes,
+.blok-file-preview-docx .blok-docx-endnotes {
+  margin: var(--blok-space-6) 0 0;
+  padding: var(--blok-space-2) 0 0;
+  list-style: none;
+  border-top: 1px solid currentColor;
 }
 
 /* --- xlsx: a single crisp data card, centred on the desk ------------------ */

@@ -307,6 +307,36 @@ describe('office preview mutants', () => {
     });
   });
 
+  describe('xlsx untrusted packages', () => {
+    it('leaves out a sheet that declares a DOCTYPE, so entities never expand', async () => {
+      const bomb = '<?xml version="1.0"?><!DOCTYPE w [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]>'
+        + `<worksheet xmlns="${SHEET_NS}"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>&b;</t></is></c></row></sheetData></worksheet>`;
+      const container = document.createElement('div');
+
+      await renderXlsxInto(await workbook({ 'xl/worksheets/sheet1.xml': bomb }), container);
+
+      expect(container.querySelector('table')).toBeNull();
+      expect(container.textContent).toBe('');
+    });
+
+    it('still shows the good sheets when one sheet is not well-formed XML', async () => {
+      const c = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row r="1"><c r="A1"><v>7</v></c></row>'),
+        'xl/worksheets/sheet2.xml': `<?xml version="1.0"?><worksheet xmlns="${SHEET_NS}"><sheetData>`,
+      });
+
+      expect(rowTexts(c)).toEqual([['7']]);
+    });
+
+    it('refuses a sheet that inflates past the preview limit', async () => {
+      const zip = new JSZip();
+      zip.file('xl/worksheets/sheet1.xml', sheetXml(`<row r="1"><c r="A1" t="inlineStr"><is><t>${'a'.repeat(65 * 1024 * 1024)}</t></is></c></row>`));
+      const buf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+
+      await expect(renderXlsxInto(buf, document.createElement('div'))).rejects.toThrow(/too large/);
+    }, 30_000);
+  });
+
   describe('fillOfficeBody', () => {
     const options = (): FilePreviewOptions => ({
       url: 'blob:file',
@@ -347,7 +377,7 @@ describe('office preview mutants', () => {
 
     it('hands a docx body to the docx renderer', async () => {
       const buf = new ArrayBuffer(8);
-      const render = vi.fn<(data: ArrayBuffer, host: HTMLElement) => Promise<void>>(async () => undefined);
+      const render = vi.fn<(data: ArrayBuffer, host: HTMLElement) => Promise<() => void>>(async () => () => undefined);
 
       loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf });
       loaders.loadDocxRenderer.mockResolvedValue(render);
@@ -359,6 +389,35 @@ describe('office preview mutants', () => {
       expect(render.mock.calls[0][0]).toBe(buf);
       expect(render.mock.calls[0][1].className).toBe('blok-file-preview-office blok-file-preview-docx');
       expect(loaders.loadPptxRenderer).not.toHaveBeenCalled();
+    });
+
+    it('passes the docx release function to the caller', async () => {
+      const release = vi.fn();
+      const onRelease = vi.fn();
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf: new ArrayBuffer(8) });
+      loaders.loadDocxRenderer.mockResolvedValue(vi.fn(async () => release));
+
+      await fillOfficeBody(document.createElement('div'), options(), 'docx', () => false, onRelease);
+
+      expect(onRelease).toHaveBeenCalledWith(release);
+      expect(release).not.toHaveBeenCalled();
+    });
+
+    it('releases the docx resources at once when the modal closed while it rendered', async () => {
+      const release = vi.fn();
+      const onRelease = vi.fn();
+      const closed = { value: false };
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf: new ArrayBuffer(8) });
+      loaders.loadDocxRenderer.mockResolvedValue(vi.fn(async () => {
+        closed.value = true;
+
+        return release;
+      }));
+
+      await fillOfficeBody(document.createElement('div'), options(), 'docx', () => closed.value, onRelease);
+
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(onRelease).not.toHaveBeenCalled();
     });
 
     it('hands a pptx body to the pptx viewer', async () => {

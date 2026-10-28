@@ -186,6 +186,8 @@ const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/tooltip.ts': 'Writes named tooltip CSS custom properties and dismisses on capture-phase scrolling.',
   'components/modules/assistant/gap.ts': 'Writes the --blok-ai-gap / --blok-ai-gap-start custom properties on a block holder; assistant.css turns them into a holder margin, never a coordinate.',
   'components/modules/assistant/live-preview.ts': 'Copies the anchor holder\'s font-size, font-family and color, and the rewritten field\'s type and padding properties, onto its wrapper-local preview box.',
+  'tools/file/docx/props.ts': 'Applies the Word preview\'s run and paragraph CSS maps; keys come from fixed property tables, never from the document, and no key is a position or offset.',
+  'tools/file/docx/table.ts': 'Writes per-edge border and padding properties on Word preview table cells from a fixed side list; values are validated lengths and hex colours.',
   'tools/database/copy-ghost-radius.ts': 'Copies the board and column custom properties a drag ghost names (preview height, group tint/ring/accent) from its source onto the ghost; none set coordinates.',
 };
 

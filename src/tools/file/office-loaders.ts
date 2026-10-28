@@ -1,31 +1,24 @@
 import type { PptxViewer } from '@aiden0z/pptx-renderer';
 import type JSZip from 'jszip';
 
-/** Dynamic-import docx-preview's renderAsync (code-split out of the main bundle). */
+/**
+ * Dynamic-import the in-house docx renderer (code-split out of the main bundle).
+ * Rendering resolves with a function that frees the images' blob URLs.
+ */
 export async function loadDocxRenderer(): Promise<
-  (data: ArrayBuffer, bodyContainer: HTMLElement) => Promise<void>
+  (data: ArrayBuffer, bodyContainer: HTMLElement) => Promise<() => void>
 > {
-  const mod = await import('docx-preview');
+  const mod = await import('./docx');
 
-  return (data, bodyContainer) =>
-    mod.renderAsync(data, bodyContainer, undefined, {
-      inWrapper: true,
-      className: 'blok-docx',
-      // Shrink each page to its content height instead of enforcing the full
-      // paper height — otherwise a half-page document leaves a tall white void.
-      ignoreHeight: true,
-      // An altChunk renders as an unsandboxed srcdoc iframe: its scripts run in
-      // our origin the moment the preview opens.
-      renderAltChunks: false,
-    });
+  return (data, bodyContainer) => mod.renderDocxInto(data, bodyContainer);
 }
 
 /**
  * Dynamic-import JSZip (code-split out of the main bundle). We parse .xlsx as a
  * raw OOXML zip rather than via a spreadsheet library: ExcelJS's reader breaks
  * when re-bundled by Vite (its worksheet reader throws on `_processWorksheetEntry`
- * once polyfills are double-bundled), and SheetJS dropped the npm registry. JSZip
- * is already pulled in (and proven in-browser) by docx-preview and pptx-renderer.
+ * once polyfills are double-bundled), and SheetJS dropped the npm registry. The
+ * docx renderer and pptx-renderer read their packages with JSZip too.
  */
 export async function loadZip(): Promise<typeof JSZip> {
   const mod = await import('jszip');

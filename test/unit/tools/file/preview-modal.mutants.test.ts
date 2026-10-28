@@ -625,4 +625,23 @@ describe('openFilePreview — office bodies', () => {
 
     expect(isClosed()).toBe(true);
   });
+
+  it('frees what the office render holds when the modal closes, once', () => {
+    teardown = openFilePreview({ url: 'blob:https://example.com/abc', fileName: 'letter.docx', labels: FULL_LABELS });
+
+    const call = vi.mocked(fillOfficeBody).mock.calls[0];
+    const onRelease = call?.[4];
+    if (onRelease === undefined) {
+      throw new Error('fillOfficeBody got no release hook');
+    }
+    const release = vi.fn();
+    onRelease(release);
+
+    expect(release).not.toHaveBeenCalled();
+
+    teardown();
+    teardown = null;
+
+    expect(release).toHaveBeenCalledTimes(1);
+  });
 });

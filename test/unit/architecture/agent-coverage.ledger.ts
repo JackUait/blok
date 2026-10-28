@@ -125,6 +125,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/index.ts': cmds(['block.update', 'database.addRow'], 'Title edit writes database.title; add-row buttons.'),
   'ui-file:src/tools/database/database-comment-badge.ts': cmds(['doc.read'], 'The badge counts open comments: commentCount on a row in any read.'),
   'ui-file:src/tools/database/page-layout-builder.ts': cmds(['database.updateProperty'], PAGE_LAYOUT),
+  'ui-file:src/tools/file/docx/inline.ts': exempt('view-only', 'A link inside a Word preview scrolls the preview to its bookmark; nothing is saved.'),
   'ui-file:src/tools/file/index.ts': cmds(['file.uploadFile', 'file.setSource'], 'Upload or URL.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
   'ui-file:src/tools/file/ui.ts': cmds(['block.update'], 'Rename and caption: file.fileName, file.caption.'),

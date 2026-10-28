@@ -4,7 +4,7 @@
 //   node scripts/gen-office-fixtures.mjs
 //
 // xlsx is built with ExcelJS (a real workbook). docx and pptx are assembled by
-// hand as minimal OOXML ZIPs via JSZip — just enough parts for docx-preview and
+// hand as minimal OOXML ZIPs via JSZip — just enough parts for Blok's docx renderer and
 // @aiden0z/pptx-renderer to render one visible page/slide.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

@@ -68,7 +68,8 @@ const optionsFor = (display: NumberDisplay): Intl.NumberFormatOptions | null => 
 
   if (format === 'number') return { useGrouping: false, maximumFractionDigits: MAX_DECIMALS, ...digits };
   if (format === 'number_with_commas') return { maximumFractionDigits: MAX_DECIMALS, ...digits };
-  if (format === 'percent') return { style: 'percent', maximumFractionDigits: MAX_DECIMALS, ...digits };
+  // notion-spec-2 §19.7: Notion shows 35.5 as "3550%", with no thousands separator.
+  if (format === 'percent') return { style: 'percent', useGrouping: false, maximumFractionDigits: MAX_DECIMALS, ...digits };
   if (format === 'bitcoin') return { maximumFractionDigits: BITCOIN_DECIMALS, ...digits };
 
   const currency = CURRENCY_CODES[format];
@@ -91,6 +92,52 @@ export const formatNumberValue = (value: number, display: NumberDisplay, locale:
   } catch {
     return String(value);
   }
+};
+
+const SPACES = /[\s\u00a0\u202f]/gu;
+
+/**
+ * A number typed into an editor, read in its property's format (notion-spec-2 §19.7):
+ * the format's own symbols, sign and group marks are dropped, so "$1,234.5" is 1234.5.
+ * Percent reads percent points: "50" and "50%" are both 0.5. '' is null; text that
+ * is not a number is undefined.
+ */
+export const parseNumberText = (text: string, display: NumberDisplay, locale: string): number | null | undefined => {
+  const trimmed = text.trim();
+  const percent = display.format === 'percent';
+
+  if (trimmed === '') {
+    return null;
+  }
+  const plain = Number(trimmed);
+  const read = Number.isFinite(plain) ? plain : readFormatted(trimmed, display, locale);
+
+  if (read === undefined || !Number.isFinite(read)) {
+    return undefined;
+  }
+
+  return percent ? read / 100 : read;
+};
+
+const readFormatted = (text: string, display: NumberDisplay, locale: string): number | undefined => {
+  const options = optionsFor(display);
+  const parts = ((): Intl.NumberFormatPart[] => {
+    try {
+      // One forced decimal: a format with none (Yen) still names its decimal mark.
+      return new Intl.NumberFormat(locale, { ...options, useGrouping: true, minimumFractionDigits: 1, maximumFractionDigits: 1 }).formatToParts(-12345.6);
+    } catch {
+      return [];
+    }
+  })();
+  const of = (type: Intl.NumberFormatPartTypes): string[] => parts.filter((part) => part.type === type).map((part) => part.value.replace(SPACES, ''));
+  const decimal = of('decimal')[0] ?? '.';
+  const drop = [...of('currency'), ...of('percentSign'), ...of('group'), '₿'].filter((mark) => mark !== '' && mark !== decimal);
+  const minus = of('minusSign')[0] ?? '-';
+  const bare = drop.reduce((rest, mark) => rest.split(mark).join(''), text.replace(SPACES, ''))
+    .split(minus).join('-')
+    .split(decimal).join('.');
+
+  return bare === '' ? undefined : Number(bare);
 };
 
 /** How full a bar or ring is, 0 to 1. Percent divides by 1, everything else by 100, unless the property says otherwise. */

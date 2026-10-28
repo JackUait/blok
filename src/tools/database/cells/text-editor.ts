@@ -1,19 +1,16 @@
 import type { PropertyDefinition, PropertyValue } from '../types';
 import { CellPopover, coverMinWidth } from './cell-popover';
+import { resolveLocale } from './date-format';
+import { formatNumberValue, parseNumberText } from './number-format';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 type Outcome = { kind: 'commit'; value: PropertyValue } | { kind: 'cancel' };
 
-/** A number entry: '' clears to null, anything not finite is rejected. */
-const parseNumberEntry = (text: string): Outcome | null => {
-  const trimmed = text.trim();
+/** A number entry in its property's format: '' clears to null, anything not a number is rejected. */
+const parseNumberEntry = (text: string, property: PropertyDefinition, locale: string): Outcome | null => {
+  const parsed = parseNumberText(text, property.number ?? {}, locale);
 
-  if (trimmed === '') {
-    return { kind: 'commit', value: null };
-  }
-  const parsed = Number(trimmed);
-
-  return Number.isFinite(parsed) ? { kind: 'commit', value: parsed } : null;
+  return parsed === undefined ? null : { kind: 'commit', value: parsed };
 };
 
 /** research/16 §4: Notion's url, email and phone editors. */
@@ -24,8 +21,14 @@ const escapeCommits = (type: PropertyDefinition['type']): boolean =>
   type === 'title' || type === 'text' || type === 'richText' || type === 'number' || type === 'url'
   || type === 'email' || type === 'phone';
 
-const initialText = (value: PropertyValue | undefined): string =>
-  typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+/** notion-spec-2 §19.7: a number opens as its cell shows it ("$42.00", "3550%"). */
+const initialText = (property: PropertyDefinition, value: PropertyValue | undefined, locale: string): string => {
+  if (property.type === 'number' && typeof value === 'number' && Number.isFinite(value)) {
+    return formatNumberValue(value, property.number ?? {}, locale);
+  }
+
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+};
 
 /**
  * Inline editor for title, text, url, number and rich text read as text.
@@ -43,7 +46,8 @@ export const openTextEditor = (
 ): CellEditorHandle => {
   const multiline = property.type === 'text' || property.type === 'richText';
   const field = document.createElement(multiline ? 'textarea' : 'input');
-  const original = initialText(value);
+  const locale = resolveLocale(ctx.locale);
+  const original = initialText(property, value, locale);
   const content = document.createElement('div');
 
   field.setAttribute('data-blok-database-cell-input', property.type);
@@ -66,8 +70,12 @@ export const openTextEditor = (
   if (footer !== undefined) content.appendChild(footer);
 
   const resolve = (): Outcome | null => {
+    // The shown number may be rounded: left as shown, the stored value stays.
+    if (property.type === 'number' && field.value === shown && typeof value === 'number') {
+      return { kind: 'cancel' };
+    }
     if (property.type === 'number') {
-      return parseNumberEntry(field.value);
+      return parseNumberEntry(field.value, property, locale);
     }
 
     return { kind: 'commit', value: field.value };

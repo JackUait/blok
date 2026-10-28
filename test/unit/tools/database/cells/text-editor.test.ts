@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { openCellEditor } from '../../../../../src/tools/database/cells';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
+import { NUMBER_FORMATS, formatNumberValue } from '../../../../../src/tools/database/cells/number-format';
+import type { NumberFormat, PropertyDefinition } from '../../../../../src/tools/database/types';
 import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press, pressOutside } from './helpers';
 
 const field = (): HTMLInputElement | HTMLTextAreaElement => {
@@ -340,6 +342,98 @@ describe('cell text editors', () => {
       press(field(), 'Enter');
 
       expect(ctx.onCommit).toHaveBeenCalledWith(null);
+    });
+
+    // notion-spec-2 §19.7: a formatted number opens as its formatted text and takes typed symbols back.
+    describe('formatted', () => {
+      const formatted = (format: NumberFormat, decimals?: number): PropertyDefinition =>
+        ({ ...makeProperty('number'), number: { format, ...(decimals !== undefined ? { decimals } : {}) } });
+
+      it('US Dollar opens showing "$42.00", caret at the end', () => {
+        openCellEditor(formatted('dollar'), 42, makeAnchor(), makeEditorContext());
+
+        expect(field().value).toBe('$42.00');
+        expect(field().selectionStart).toBe(6);
+        expect(field().selectionEnd).toBe(6);
+      });
+
+      it.each([['$1,234.5', 1234.5], ['35.5', 35.5], ['-$3.25', -3.25]])('US Dollar takes "%s" as %s', (text, stored) => {
+        const ctx = makeEditorContext();
+
+        openCellEditor(formatted('dollar'), 42, makeAnchor(), ctx);
+        type(text);
+        press(field(), 'Enter');
+
+        expect(ctx.onCommit).toHaveBeenCalledWith(stored);
+      });
+
+      it('Percent opens showing the value as percent points with no thousands separator', () => {
+        openCellEditor(formatted('percent'), 35.5, makeAnchor(), makeEditorContext());
+
+        expect(field().value).toBe('3550%');
+      });
+
+      it.each(['50', '50%', ' 50 % '])('Percent reads "%s" as percent points and stores 0.5', (text) => {
+        const ctx = makeEditorContext();
+
+        openCellEditor(formatted('percent'), 35.5, makeAnchor(), ctx);
+        type(text);
+        press(field(), 'Enter');
+
+        expect(ctx.onCommit).toHaveBeenCalledWith(0.5);
+      });
+
+      // Blok's no-data-loss rule: the shown text is rounded, so leaving it untouched must not write it back.
+      it.each(['Enter', 'Escape', 'Tab'])('a value rounded for display is kept when the text is left as shown (%s)', (key) => {
+        const ctx = makeEditorContext({ tabCloses: true });
+
+        openCellEditor(formatted('dollar'), 42.123, makeAnchor(), ctx);
+        expect(field().value).toBe('$42.12');
+        press(field(), key);
+
+        expect(ctx.onCommit).not.toHaveBeenCalled();
+      });
+
+      it('a value rounded for display is kept on a click outside', () => {
+        const ctx = makeEditorContext();
+
+        openCellEditor(formatted('dollar', 0), 42.5, makeAnchor(), ctx);
+        pressOutside();
+
+        expect(ctx.onCommit).not.toHaveBeenCalled();
+      });
+
+      it('rejects text that is not a number and stays open', () => {
+        const ctx = makeEditorContext();
+        const handle = openCellEditor(formatted('dollar'), 42, makeAnchor(), ctx);
+
+        type('$12abc');
+        press(field(), 'Enter');
+
+        expect(ctx.onCommit).not.toHaveBeenCalled();
+        expect(handle.isOpen).toBe(true);
+      });
+
+      // Every format reads back what it shows, in locales with other separators, signs and spaces.
+      const LOCALES = ['en-US', 'de-DE', 'fr-FR', 'sv-SE', 'ja-JP'];
+
+      it.each(LOCALES.flatMap((locale) => NUMBER_FORMATS.map((format) => [locale, format] as const)))('%s %s reads its own shown text back', (locale, format) => {
+        [1234.5, -0.25, 7].forEach((value) => {
+          const ctx = makeEditorContext({ locale });
+
+          const shown = formatNumberValue(value, { format }, locale);
+
+          openCellEditor(formatted(format), null, makeAnchor(), ctx);
+          type(shown);
+          press(field(), 'Enter');
+          const committed = vi.mocked(ctx.onCommit).mock.calls[0]?.[0];
+
+          expect(typeof committed, `${shown}`).toBe('number');
+          expect(formatNumberValue(committed as number, { format }, locale), `${shown}`).toBe(shown);
+          document.body.innerHTML = '';
+          PopoverRegistry.resetForTests();
+        });
+      });
     });
   });
 });

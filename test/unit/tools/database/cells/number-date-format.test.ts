@@ -43,6 +43,12 @@ describe('number-format', () => {
     expect(formatNumberValue(1234567.5, { format: 'number_with_commas' }, 'en-US')).toBe(nf({ maximumFractionDigits: 10 }, 1234567.5));
   });
 
+  // notion-spec-2 §19.7: 35.5 shows as "3550%", 1234.5 as "123450%".
+  it('draws percent with no thousands separator', () => {
+    expect(formatNumberValue(35.5, { format: 'percent' }, 'en-US')).toBe('3550%');
+    expect(formatNumberValue(1234.5, { format: 'percent' }, 'en-US')).toBe('123450%');
+  });
+
   it('reads 0.25 as 25% for percent', () => {
     expect(formatNumberValue(0.25, { format: 'percent' }, 'en-US')).toBe(nf({ style: 'percent', maximumFractionDigits: 10 }, 0.25));
   });

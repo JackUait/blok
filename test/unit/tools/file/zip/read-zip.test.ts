@@ -482,7 +482,7 @@ describe('readZip — limits are checked before any inflate', () => {
   afterEach(() => { vi.restoreAllMocks(); });
 
   it('defaults to limits that open real large spreadsheets', () => {
-    expect(DEFAULT_ZIP_LIMITS).toEqual({ maxEntries: 65535, maxEntryBytes: 256 * MiB, maxTotalBytes: 1024 * MiB });
+    expect(DEFAULT_ZIP_LIMITS).toEqual({ maxEntries: 65535, maxEntryBytes: 512 * MiB, maxTotalBytes: 1024 * MiB });
   });
 
   it('is never stricter than pptx-renderer, which still applies its own limits', () => {
@@ -521,20 +521,20 @@ describe('readZip — limits are checked before any inflate', () => {
   });
 
   // Declared sizes lie, so these allocate nothing big; the header alone must refuse them.
-  it('rejects an entry declared over 256 MiB before inflating it', () => {
-    const zip = buildZip([{ name: 'bomb.bin', method: 8, compressed: TINY_DEFLATE, size: 256 * MiB + 1 }]);
+  it('rejects an entry declared over 512 MiB before inflating it', () => {
+    const zip = buildZip([{ name: 'bomb.bin', method: 8, compressed: TINY_DEFLATE, size: 512 * MiB + 1 }]);
 
     expectZipError(() => readZip(zip));
-    expect(readZip(buildZip([{ name: 'ok.bin', method: 8, compressed: TINY_DEFLATE, size: 256 * MiB }])).entries).toHaveLength(1);
+    expect(readZip(buildZip([{ name: 'ok.bin', method: 8, compressed: TINY_DEFLATE, size: 512 * MiB }])).entries).toHaveLength(1);
     expect(inflateRaw).not.toHaveBeenCalled();
   });
 
   it('rejects a total declared over 1 GiB before inflating anything', () => {
     const entries = (count: number): Parameters<typeof buildZip>[0] =>
-      Array.from({ length: count }, (_, i) => ({ name: `${i}.bin`, method: 8, compressed: TINY_DEFLATE, size: 256 * MiB }));
+      Array.from({ length: count }, (_, i) => ({ name: `${i}.bin`, method: 8, compressed: TINY_DEFLATE, size: 512 * MiB }));
 
-    expectZipError(() => readZip(buildZip(entries(5))));
-    expect(readZip(buildZip(entries(4))).entries).toHaveLength(4);
+    expectZipError(() => readZip(buildZip(entries(3))));
+    expect(readZip(buildZip(entries(2))).entries).toHaveLength(2);
     expect(inflateRaw).not.toHaveBeenCalled();
   });
 

@@ -10,13 +10,13 @@ export interface ZipLimits {
 }
 
 /**
- * Loose enough that nothing JSZip opened is refused: a part past ~256 MiB cannot
- * become a string or DOM anyway (V8's string cap). pptx-renderer still applies its
- * own stricter limits from `_data.uncompressedSize`.
+ * Loose enough that real large spreadsheets still open: V8 cannot make a string from
+ * a part much past 512 MiB, so no text part JSZip could read is refused. pptx-renderer
+ * still applies its own stricter limits from `_data.uncompressedSize`.
  */
 export const DEFAULT_ZIP_LIMITS: Readonly<ZipLimits> = Object.freeze({
   maxEntries: 65535,
-  maxEntryBytes: 256 * 1024 * 1024,
+  maxEntryBytes: 512 * 1024 * 1024,
   maxTotalBytes: 1024 * 1024 * 1024,
 });
 

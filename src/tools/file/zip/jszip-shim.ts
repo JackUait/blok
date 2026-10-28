@@ -6,7 +6,7 @@ import { readZip } from './read-zip';
 import type { ZipEntry } from './read-zip';
 import { ZipError } from './zip-error';
 
-// JSZip kept a BOM in text; an XML parser handed the BOM still reads the part.
+// A part's BOM stays in its text; the libraries' XML parsers accept it.
 const utf8 = new TextDecoder('utf-8', { ignoreBOM: true });
 
 export interface ShimFile {

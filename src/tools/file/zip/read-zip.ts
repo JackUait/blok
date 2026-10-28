@@ -1,7 +1,6 @@
 import { inflateRaw } from './inflate';
 import { ZipError } from './zip-error';
 
-// Keeps a BOM, as JSZip did.
 const utf8 = new TextDecoder('utf-8', { ignoreBOM: true });
 
 export interface ZipLimits {
@@ -121,7 +120,7 @@ interface Stored {
   data: Uint8Array;
 }
 
-/** JSZip's utils.resolve: drops "." and empty middle segments, ".." pops. */
+/** Drops "." and empty middle segments and lets ".." pop, so no name climbs above the archive root. */
 const resolveName = (path: string): string => {
   const parts = path.split('/');
   const out: string[] = [];
@@ -168,7 +167,7 @@ function readZip64End(reader: Reader): CentralDirectory {
   return { records: reader.u64(end64 + 32), offset, expectedEnd: offset + size + 20 + 12 + reader.u64(end64 + 4) };
 }
 
-/** Finds the central directory and a reader shifted past any bytes prepended to the archive (JSZip readEndOfCentral). */
+/** Finds the central directory. Offsets skip any bytes prepended to the archive (self-extractors, signed packages). */
 function readEnd(unshifted: Reader): { reader: Reader; records: number; offset: number } {
   const end = unshifted.lastIndexOf(SIG_END);
 
@@ -180,7 +179,7 @@ function readEnd(unshifted: Reader): { reader: Reader; records: number; offset: 
   const size = unshifted.u32(end + 12);
   const offset = unshifted.u32(end + 16);
 
-  // The archive comment must be all there, as JSZip requires.
+  // A cut-off archive comment means a truncated file.
   unshifted.slice(end + 22, unshifted.u16(end + 20));
   const isZip64 = [4, 6, 8, 10].some((at) => unshifted.u16(end + at) === MAX_16) || size === MAX_32 || offset === MAX_32;
   const directory = isZip64
@@ -195,12 +194,12 @@ function readEnd(unshifted: Reader): { reader: Reader; records: number; offset: 
   return { reader: unshifted.shifted(extraBytes), records: directory.records, offset: directory.offset };
 }
 
-/** The value bytes of the last ZIP64 extra field (id 0x0001), the one JSZip keeps. */
+/** The value bytes of the ZIP64 extra field (id 0x0001); if repeated, the last one wins. */
 function findZip64Field(reader: Reader, start: number, end: number): Uint8Array | undefined {
   /* eslint-disable no-restricted-syntax -- walks variable-length fields */
   let found: Uint8Array | undefined;
 
-  // JSZip's loop condition: a field needs more than its 4 header bytes left.
+  // Android tools leave up to 4 bytes of padding at the end; it is skipped, not read as a field.
   for (let at = start; at + 4 < end;) {
     const value = reader.slice(at + 4, reader.u16(at + 2));
 
@@ -284,7 +283,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
     if (reader.u32(record.offset) !== SIG_LOCAL) {
       throw new ZipError('Corrupted zip: bad local header');
     }
-    // The local name wins over the central one, like JSZip.
+    // The local name wins: some Windows tools write backslashes only in the central one.
     const nameLength = reader.u16(record.offset + 26);
     const rawName = utf8.decode(reader.slice(record.offset + 30, nameLength));
     const dataStart = record.offset + 30 + nameLength + reader.u16(record.offset + 28);
@@ -332,7 +331,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
       if (stored === undefined) {
         throw new ZipError('Entry is not from this archive');
       }
-      // JSZip never reads the data of a dir or an empty entry.
+      // Dirs and empty entries may carry junk data; it is never inflated.
       if (entry.size === 0) {
         return new Uint8Array(0);
       }

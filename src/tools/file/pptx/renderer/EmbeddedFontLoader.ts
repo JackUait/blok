@@ -59,6 +59,10 @@ interface LoadedPresentationFonts {
   faces: Map<string, LoadedFace>;
   rejected: Set<string>;
   totalBytes: number;
+  // The face cap and time budget hold for the whole deck, not per slide.
+  // A face decoded again after its slides were disposed is not charged twice.
+  attempted: Set<string>;
+  spentMs: number;
 }
 
 const loadedByPresentation = new WeakMap<PresentationData, LoadedPresentationFonts>();
@@ -156,6 +160,18 @@ function createLoadedFace(face: EmbeddedFontFaceData, fontBytes: Uint8Array): Lo
   }
 }
 
+function decodeFace(face: EmbeddedFontFaceData, maxInputBytes: number): Uint8Array | undefined {
+  try {
+    const payload = extractEotPayload(face.data, maxInputBytes);
+    return decompressMtx(payload.bytes, {
+      compressed: payload.compressed,
+      encrypted: payload.encrypted,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 function now(): number {
   return typeof performance === 'undefined' ? Date.now() : performance.now();
 }
@@ -178,38 +194,37 @@ export function useEmbeddedFonts(
 
   let state = loadedByPresentation.get(presentation);
   if (!state) {
-    state = { faces: new Map(), rejected: new Set(), totalBytes: 0 };
+    state = { faces: new Map(), rejected: new Set(), totalBytes: 0, attempted: new Set(), spentMs: 0 };
     loadedByPresentation.set(presentation, state);
   }
 
-  const startedAt = now();
   const acquired: Array<[string, LoadedFace]> = [];
-  let attemptedFaces = 0;
   for (const face of presentation.embeddedFonts ?? []) {
     if (!families.has(face.renderFamily)) continue;
     const key = faceKey(face);
     if (state.rejected.has(key)) continue;
     let loaded = state.faces.get(key);
     if (!loaded) {
+      const firstTry = !state.attempted.has(key);
       if (
         state.faces.size >= resolvedLimits.maxFaces ||
-        attemptedFaces >= resolvedLimits.maxFaces ||
-        now() - startedAt > resolvedLimits.maxProcessingMs
+        (firstTry &&
+          (state.attempted.size >= resolvedLimits.maxFaces ||
+            state.spentMs > resolvedLimits.maxProcessingMs))
       ) {
         break;
       }
-      attemptedFaces++;
+      state.attempted.add(key);
+
+      const decodeStart = now();
+      const fontBytes = decodeFace(face, resolvedLimits.maxInputBytesPerFace);
+      state.spentMs += firstTry ? now() - decodeStart : 0;
+      if (!fontBytes || (firstTry && state.spentMs > resolvedLimits.maxProcessingMs)) {
+        state.rejected.add(key);
+        continue;
+      }
 
       try {
-        const payload = extractEotPayload(face.data, resolvedLimits.maxInputBytesPerFace);
-        const fontBytes = decompressMtx(payload.bytes, {
-          compressed: payload.compressed,
-          encrypted: payload.encrypted,
-        });
-        if (now() - startedAt > resolvedLimits.maxProcessingMs) {
-          state.rejected.add(key);
-          break;
-        }
         if (fontBytes.byteLength > resolvedLimits.maxDecompressedBytesPerFace) {
           state.rejected.add(key);
           continue;

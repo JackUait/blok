@@ -165,7 +165,12 @@ describe('EmbeddedFontLoader', () => {
 
   it('stops registering faces when the processing budget is exhausted', async () => {
     const fonts = installFontMocks();
-    vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValue(101);
+    let clock = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    decompressMtxMock.mockImplementation(() => {
+      clock += 101;
+      return new Uint8Array([0, 1, 0, 0]);
+    });
 
     await useEmbeddedFonts(presentation(), new Set(['__embedded_0']), limits).ready;
 

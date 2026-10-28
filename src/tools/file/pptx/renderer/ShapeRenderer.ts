@@ -365,7 +365,8 @@ function renderWarpedTextBody(node: ShapeNodeData, ctx: RenderContext): SVGSVGEl
   if (!text) return null;
 
   const rPr = getFirstVisibleRunProperties(node.textBody);
-  const fontSize = rPr?.numAttr('sz') !== undefined ? rPr.numAttr('sz')! / 100 : 12;
+  const runSize = rPr?.numAttr('sz');
+  const fontSize = runSize !== undefined ? runSize / 100 : 12;
   const fontStack = resolveThemeFontStack(
     [
       rPr?.child('latin').attr('typeface'),
@@ -534,6 +535,8 @@ function appendShapeBlipImage(
 // ---------------------------------------------------------------------------
 
 let markerIdCounter = 0;
+const markerIds = new WeakMap<Element, string>();
+const rectBlendGroups = new WeakMap<Element, Element>();
 let gradientIdCounter = 0;
 const DEFAULT_OUTER_SHADOW_STDDEV_PER_BLUR_RADIUS = 1 / 2;
 const BOUNDED_ZERO_DISTANCE_OUTER_SHADOW_STDDEV_PER_BLUR_RADIUS = 3 / 8;
@@ -1139,6 +1142,7 @@ function getMarkerSize(size: string | undefined): number {
       return 0.5;
     case 'lg':
       return 1.5;
+    case undefined:
     default:
       return 1.0; // 'med' or undefined
   }
@@ -1709,8 +1713,7 @@ function createArrowMarker(
       return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (marker as any)._markerId = id;
+  markerIds.set(marker, id);
   return marker;
 }
 
@@ -1970,7 +1973,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
     (ctx.theme.lineStyles?.length ?? 0) >= (lnRef.numAttr('idx') ?? 0)
       ? ctx.theme.lineStyles[(lnRef.numAttr('idx') ?? 1) - 1]
       : undefined;
-  let effectiveLine = hasExplicitLine ? node.line! : themeLineFromLnRef;
+  let effectiveLine = hasExplicitLine ? node.line : themeLineFromLnRef;
   if (lineIsNoFill) effectiveLine = undefined;
 
   if (effectiveLine?.exists()) {
@@ -2269,8 +2272,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
             // Mark path as no-fill; the blend group handles it.
             // Tag the blend group so we can insert it before the main path later.
             path.setAttribute('fill', 'none');
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (path as any).__rectBlendGroup = blendGroup;
+            rectBlendGroups.set(path, blendGroup);
           } else if (gradientFillData.type === 'radial') {
             const radialGrad = document.createElementNS(svgNs, 'radialGradient');
             radialGrad.setAttribute('id', fillGradId);
@@ -2481,8 +2483,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
           );
           if (marker) {
             defs.appendChild(marker);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            path.setAttribute('marker-start', `url(#${(marker as any)._markerId})`);
+            path.setAttribute('marker-start', `url(#${markerIds.get(marker)})`);
           }
         }
 
@@ -2496,19 +2497,16 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
           );
           if (marker) {
             defs.appendChild(marker);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            path.setAttribute('marker-end', `url(#${(marker as any)._markerId})`);
+            path.setAttribute('marker-end', `url(#${markerIds.get(marker)})`);
           }
         }
       }
 
       // Insert rect blend group (two linear gradients + lighten) before the main path
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((path as any).__rectBlendGroup) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        svg.appendChild((path as any).__rectBlendGroup);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        delete (path as any).__rectBlendGroup;
+      const rectBlendGroup = rectBlendGroups.get(path);
+      if (rectBlendGroup) {
+        svg.appendChild(rectBlendGroup);
+        rectBlendGroups.delete(path);
       }
 
       svg.appendChild(path);
@@ -2820,12 +2818,13 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
           presetGeometry: node.presetGeometry,
           width: svgW,
           height: svgH,
-          sourceBounds: hasNonIdentityGroupScale
-            ? {
-                width: svgW / groupChildScale!.x,
-                height: svgH / groupChildScale!.y,
-              }
-            : undefined,
+          sourceBounds:
+            hasNonIdentityGroupScale && groupChildScale
+              ? {
+                  width: svgW / groupChildScale.x,
+                  height: svgH / groupChildScale.y,
+                }
+              : undefined,
           isLineLike,
           paintKind: shape3dPaintKind,
           baseFill: /^#[0-9a-f]{6}$/i.test(fillCss) ? fillCss : undefined,
@@ -3927,7 +3926,8 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
   }
 
   // ---- Shape-level hyperlink / action button navigation ----
-  if (node.hlinkClick && ctx.onNavigate) {
+  const onNavigate = ctx.onNavigate;
+  if (node.hlinkClick && onNavigate) {
     const { action, rId } = node.hlinkClick;
     const rel = rId ? ctx.slide.rels.get(rId) : undefined;
     const slideIndex = resolveSlideNavigationIndex(ctx, action, rel);
@@ -3936,7 +3936,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
       applyLinkTooltip(wrapper, node.hlinkClick.tooltip);
       wrapper.addEventListener('click', (e) => {
         e.stopPropagation();
-        ctx.onNavigate!({ slideIndex });
+        onNavigate({ slideIndex });
       });
     } else if (rId) {
       // External URL link
@@ -3945,7 +3945,7 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
         wrapper.title = node.hlinkClick.tooltip || rel.target;
         wrapper.addEventListener('click', (e) => {
           e.stopPropagation();
-          ctx.onNavigate!({ url: rel.target });
+          onNavigate({ url: rel.target });
         });
       }
     }

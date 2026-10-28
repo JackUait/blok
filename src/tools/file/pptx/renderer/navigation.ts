@@ -90,6 +90,7 @@ function resolveShowJumpIndex(ctx: RenderContext, action: string): number | unde
       const previousIndex = currentSlideIndex(ctx) - 1;
       return previousIndex >= 0 ? previousIndex : undefined;
     }
+    case undefined:
     default:
       return undefined;
   }

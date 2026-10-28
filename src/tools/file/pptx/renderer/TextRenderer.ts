@@ -804,10 +804,8 @@ function applyClippedTextBackground(element: HTMLElement, css: string): void {
       element.style.backgroundColor = backgroundColor;
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (element.style as any).webkitBackgroundClip = 'text';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (element.style as any).backgroundClip = 'text';
+  element.style.setProperty('-webkit-background-clip', 'text');
+  element.style.backgroundClip = 'text';
   element.style.color = 'transparent';
 }
 
@@ -858,10 +856,8 @@ function applyClippedTextPicture(element: HTMLElement, blipFill: SafeXmlNode, ur
     element.style.backgroundPosition = 'center';
     element.style.backgroundRepeat = 'no-repeat';
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (element.style as any).webkitBackgroundClip = 'text';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (element.style as any).backgroundClip = 'text';
+  element.style.setProperty('-webkit-background-clip', 'text');
+  element.style.backgroundClip = 'text';
   element.style.color = 'transparent';
 }
 
@@ -1078,6 +1074,16 @@ function withConnectedTextMeasurement(
   }
 }
 
+function nextFrame(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
 function scheduleTerminalHangingPunctuation(
   paragraph: HTMLElement,
   element: HTMLElement,
@@ -1091,14 +1097,6 @@ function scheduleTerminalHangingPunctuation(
   const punctuationStart = anchorStart + anchorGlyph.length;
   const punctuationEnd = punctuationStart + punctuation.length;
 
-  const nextFrame = () =>
-    new Promise<void>((resolve) => {
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => resolve());
-      } else {
-        setTimeout(resolve, 0);
-      }
-    });
   const measure = () => {
     if (ctx.signal?.aborted) return;
     withConnectedTextMeasurement(paragraph, ctx, () => {
@@ -1145,14 +1143,6 @@ function scheduleExplicitTabLayout(
   ctx: RenderContext,
   axis: ExplicitTabAxis,
 ): void {
-  const nextFrame = () =>
-    new Promise<void>((resolve) => {
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => resolve());
-      } else {
-        setTimeout(resolve, 0);
-      }
-    });
   const measure = () => {
     if (ctx.signal?.aborted) return;
     withConnectedTextMeasurement(paragraph, ctx, () =>
@@ -1449,7 +1439,7 @@ export function renderTextBody(
       } else if (isSingleLineAutoFitParagraph && merged.lineHeightAbsolute) {
         effectiveLineHeight = 'normal';
       }
-      paraDiv.style.lineHeight = effectiveLineHeight!;
+      paraDiv.style.lineHeight = effectiveLineHeight;
     }
     const firstVisibleTextRun = paragraph.runs.find(
       (run) => run.text != null && run.text.length > 0 && run.text !== '\n' && run.text !== '\t',
@@ -1639,20 +1629,23 @@ export function renderTextBody(
       const defaultTabPx = merged.defaultTabSize ?? 96; // 914400 EMU at 96 dpi
       paraDiv.style.tabSize = `${defaultTabPx}px`;
     }
-    const useLineWrappers = merged.lineHeightAbsolute && hasLineBreaks && effectiveLineHeight;
+    const lineWrapperHeight =
+      merged.lineHeightAbsolute && hasLineBreaks && effectiveLineHeight
+        ? effectiveLineHeight
+        : undefined;
     let currentLineDiv: HTMLElement | null = null;
-    if (useLineWrappers) {
+    if (lineWrapperHeight) {
       currentLineDiv = document.createElement('div');
-      currentLineDiv.style.height = effectiveLineHeight!;
+      currentLineDiv.style.height = lineWrapperHeight;
       currentLineDiv.style.overflow = 'visible';
       paraDiv.appendChild(currentLineDiv);
     }
 
     for (const [runIndex, run] of paragraph.runs.entries()) {
-      if (run.text === '\n' && useLineWrappers) {
+      if (run.text === '\n' && lineWrapperHeight) {
         // Absolute line spacing owns the line height, so start the next fixed-height line.
         currentLineDiv = document.createElement('div');
-        currentLineDiv.style.height = effectiveLineHeight!;
+        currentLineDiv.style.height = lineWrapperHeight;
         currentLineDiv.style.overflow = 'visible';
         paraDiv.appendChild(currentLineDiv);
         continue;
@@ -1882,37 +1875,27 @@ export function renderTextBody(
           // Ghost text: no fill + gradient outline → show outline fading via mask
           const outlineColor = '#ffffff'; // base stroke color (gradient applied via mask)
           element.style.color = 'transparent';
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitTextStrokeWidth = `${strokeW}px`;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitTextStrokeColor = outlineColor;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).paintOrder = 'stroke fill';
+          element.style.webkitTextStrokeWidth = `${strokeW}px`;
+          element.style.webkitTextStrokeColor = outlineColor;
+          element.style.paintOrder = 'stroke fill';
           // Use mask-image to apply the gradient fade to the entire text element
           const maskGrad = runStyle.textOutlineGradientCss;
           element.style.maskImage = maskGrad;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitMaskImage = maskGrad;
+          element.style.setProperty('-webkit-mask-image', maskGrad);
         } else if (runStyle.textNoFill && runStyle.textOutlineColor) {
           // Ghost text with solid outline
           element.style.color = 'transparent';
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitTextStrokeWidth = `${strokeW}px`;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitTextStrokeColor = runStyle.textOutlineColor;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).paintOrder = 'stroke fill';
+          element.style.webkitTextStrokeWidth = `${strokeW}px`;
+          element.style.webkitTextStrokeColor = runStyle.textOutlineColor;
+          element.style.paintOrder = 'stroke fill';
         } else if (runStyle.textNoFill) {
           // noFill with no outline — invisible text (but keep space)
           element.style.color = 'transparent';
         } else if (runStyle.textOutlineColor) {
           // Outline with normal fill
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitTextStrokeWidth = `${strokeW}px`;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).webkitTextStrokeColor = runStyle.textOutlineColor;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (element.style as any).paintOrder = 'stroke fill';
+          element.style.webkitTextStrokeWidth = `${strokeW}px`;
+          element.style.webkitTextStrokeColor = runStyle.textOutlineColor;
+          element.style.paintOrder = 'stroke fill';
         }
       }
 

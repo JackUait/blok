@@ -80,6 +80,7 @@ function renderNode(node: BaseNodeData, ctx: RenderContext): HTMLElement | null 
       return renderGroup(node as GroupNodeData, ctx, renderNode);
     case 'chart':
       return renderChart(node as ChartNodeData, ctx);
+    case 'unknown':
     default: {
       // Unknown node type — render as empty positioned div
       const el = document.createElement('div');

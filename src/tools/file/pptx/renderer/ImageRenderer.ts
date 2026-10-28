@@ -186,7 +186,7 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
         renderPlaceholder(wrapper);
         return wrapper;
       }
-      renderResolvedImage(node, ctx, wrapper, resolved.mediaPath, resolved.data);
+      void renderResolvedImage(node, ctx, wrapper, resolved.mediaPath, resolved.data);
       return wrapper;
     }
   } else if (node.blipLink) {
@@ -727,7 +727,7 @@ function resolvePictureOutlineStyle(
     (ctx.theme.lineStyles?.length ?? 0) >= (lnRef.numAttr('idx') ?? 0)
       ? ctx.theme.lineStyles[(lnRef.numAttr('idx') ?? 1) - 1]
       : undefined;
-  const line = hasExplicitLine ? node.line! : themeLineFromLnRef;
+  const line = hasExplicitLine ? node.line : themeLineFromLnRef;
   if (!line?.exists()) return undefined;
 
   const style = resolveLineStyle(line, ctx, lnRef);
@@ -866,14 +866,12 @@ function applyPictureSoftEdge(
   wrapper.style.setProperty('-webkit-mask-composite', 'source-in');
   wrapper.style.setProperty('mask-composite', 'intersect');
   const style = wrapper.style as CSSStyleDeclaration & {
-    webkitMaskImage?: string;
-    webkitMaskComposite?: string;
     maskImage?: string;
     maskComposite?: string;
   };
-  style.webkitMaskImage = maskImage;
+  style.setProperty('-webkit-mask-image', maskImage);
   style.maskImage = maskImage;
-  style.webkitMaskComposite = 'source-in';
+  style.setProperty('-webkit-mask-composite', 'source-in');
   style.maskComposite = 'intersect';
 }
 
@@ -886,12 +884,13 @@ function applyPictureReflection(wrapper: HTMLElement, reflection: SafeXmlNode): 
   const mask = `linear-gradient(to bottom, rgba(255,255,255,${stA.toFixed(3)}) ${stPos.toFixed(1)}%, rgba(255,255,255,${endA.toFixed(3)}) ${endPos.toFixed(1)}%)`;
   const reflectValue = `below ${dist.toFixed(1)}px ${mask}`;
   wrapper.style.setProperty('-webkit-box-reflect', reflectValue);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (wrapper.style as any).webkitBoxReflect = reflectValue;
+  (wrapper.style as CSSStyleDeclaration & { webkitBoxReflect?: string }).webkitBoxReflect =
+    reflectValue;
 }
 
 function applyPictureHyperlink(wrapper: HTMLElement, node: PicNodeData, ctx: RenderContext): void {
-  if (!node.hlinkClick || !ctx.onNavigate) return;
+  const onNavigate = ctx.onNavigate;
+  if (!node.hlinkClick || !onNavigate) return;
 
   const { action, rId } = node.hlinkClick;
   const rel = rId ? ctx.slide.rels.get(rId) : undefined;
@@ -901,7 +900,7 @@ function applyPictureHyperlink(wrapper: HTMLElement, node: PicNodeData, ctx: Ren
     applyLinkTooltip(wrapper, node.hlinkClick.tooltip);
     wrapper.addEventListener('click', (e) => {
       e.stopPropagation();
-      ctx.onNavigate!({ slideIndex });
+      onNavigate({ slideIndex });
     });
     return;
   }
@@ -913,7 +912,7 @@ function applyPictureHyperlink(wrapper: HTMLElement, node: PicNodeData, ctx: Ren
   wrapper.title = node.hlinkClick.tooltip || rel.target;
   wrapper.addEventListener('click', (e) => {
     e.stopPropagation();
-    ctx.onNavigate!({ url: rel.target });
+    onNavigate({ url: rel.target });
   });
 }
 

@@ -8,7 +8,7 @@ import type { SlideData } from '../model/Slide';
 import type { ThemeData } from '../model/Theme';
 import type { MasterData } from '../model/Master';
 import type { LayoutData } from '../model/Layout';
-import type { SafeXmlNode } from '../parser/XmlParser';
+import { SafeXmlNode } from '../parser/XmlParser';
 import type { AffineMatrix } from './coordinateTransform';
 
 export interface RenderContext {
@@ -69,8 +69,7 @@ export function createRenderContext(
 
   const layout: LayoutData = presentation.layouts.get(layoutPath) || {
     placeholders: [],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    spTree: {} as any,
+    spTree: new SafeXmlNode(null),
     rels: new Map(),
     showMasterSp: true,
   };
@@ -79,8 +78,7 @@ export function createRenderContext(
     colorMap: new Map(),
     textStyles: {},
     placeholders: [],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    spTree: {} as any,
+    spTree: new SafeXmlNode(null),
     rels: new Map(),
   };
 
@@ -103,7 +101,7 @@ export function createRenderContext(
     partPath: slide.slidePath,
     layoutPath,
     masterPath,
-    mediaUrlCache: mediaUrlCache ?? new Map(),
+    mediaUrlCache: mediaUrlCache ?? new Map<string, string>(),
     colorCache: new Map(),
     nodeOrigin: 'slide',
     groupDepth: 0,

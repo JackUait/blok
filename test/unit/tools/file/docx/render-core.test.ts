@@ -447,6 +447,12 @@ describe('renderDocxInto — fidelity fixes', () => {
     expect(para.querySelectorAll('br')).toHaveLength(2);
   });
 
+  it('keeps math accents: a hat by default, the m:chr one when given', async () => {
+    const c = await math(`<m:acc><m:e>${mr('x')}</m:e></m:acc><m:acc><m:accPr><m:chr m:val="⃗"/></m:accPr><m:e>${mr('v')}</m:e></m:acc>`);
+
+    expect(paras(c)[0].textContent).toBe('x̂v⃗');
+  });
+
   it('sets math in a math font', async () => {
     const c = await math(mr('x'));
 

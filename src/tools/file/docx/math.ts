@@ -71,7 +71,7 @@ const HANDLERS: Record<string, Handler> = {
   bar: (el, target, depth) => {
     wrapped('span', kid(el, 'e'), target, depth).style.textDecorationLine = 'overline';
   },
-  accent: (el, target, depth) => {
+  acc: (el, target, depth) => {
     renderBase(el, target, depth);
     target.append(prop(el, 'accPr', 'chr') ?? '̂');
   },

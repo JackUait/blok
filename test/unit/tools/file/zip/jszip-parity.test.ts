@@ -9,20 +9,19 @@ import { ROOT, readGolden, sha256, snapshotShim, expectedFor } from './archive-s
 // Golden data captured from the browser build of jszip 3.10.2 (no Buffer global),
 // the build Blok's bundle shipped. It stays valid after jszip leaves the tree.
 const golden = readGolden();
-const archives = Object.keys(golden);
 const bytesOf = (rel: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, rel)));
 
 describe('JSZip parity against golden data', () => {
   it('covers the upstream refs, the Office samples and the text fixture', () => {
-    expect(archives.length).toBeGreaterThan(55);
+    expect(Object.keys(golden).length).toBeGreaterThan(55);
   });
 
-  it.each(archives)('shim reads %s like JSZip did', async (rel) => {
-    expect(await snapshotShim(bytesOf(rel))).toEqual(expectedFor(rel, golden[rel] ?? { error: true }));
+  it.each(Object.entries(golden))('shim reads %s like JSZip did', async (rel, snapshot) => {
+    expect(await snapshotShim(bytesOf(rel))).toEqual(expectedFor(rel, snapshot));
   });
 
-  it.each(archives)('readZip reads %s like JSZip did', (rel) => {
-    const expected = expectedFor(rel, golden[rel] ?? { error: true });
+  it.each(Object.entries(golden))('readZip reads %s like JSZip did', (rel, snapshot) => {
+    const expected = expectedFor(rel, snapshot);
     const read = (): Array<{ name: string; dir: boolean; sha256: string }> => {
       const archive = readZip(bytesOf(rel));
 

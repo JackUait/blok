@@ -393,10 +393,6 @@
   ],
   "fileNull": []
  },
- "test/unit/tools/file/zip/fixtures/golden/docx-preview-render.html": {
-  "error": true,
-  "stage": "load"
- },
  "test/unit/tools/file/zip/fixtures/jszip/all-stream.zip": {
   "entries": [
    {

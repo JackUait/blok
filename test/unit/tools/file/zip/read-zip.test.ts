@@ -239,6 +239,10 @@ describe('readZip — names and entries', () => {
     expect(archive.entries.map((e) => e.name)).toEqual(['a/b/d.txt', 'evil.txt']);
   });
 
+  it('keeps a leading slash in a name', () => {
+    expect(readZip(buildZip([{ name: '/abs/a.txt', data: utf8('x') }])).entries[0]?.name).toBe('/abs/a.txt');
+  });
+
   it('uses the local header name over the central one', () => {
     const archive = readZip(buildZip([{ name: 'central.txt', localName: 'local.txt', data: utf8('x') }]));
 
@@ -369,11 +373,56 @@ describe('readZip — corrupt structures', () => {
 
     expectZipError(() => archive.read(archive.entries[0] ?? { name: '', dir: false, size: 0 }));
   });
+  it('rejects a directory that declares records but holds none', () => {
+    const zip = buildZip([]);
+    const view = new DataView(zip.buffer);
+
+    view.setUint16(zip.length - 22 + 8, 3, true);
+    view.setUint16(zip.length - 22 + 10, 3, true);
+    expectZipError(() => readZip(zip));
+  });
+
+  it('rejects a multi-volume ZIP64 archive', () => {
+    const zip = buildZip([{ name: 'a.txt', data: utf8('a') }], { zip64: {} });
+
+    // Total-disks field of the ZIP64 locator, which sits right before the 22-byte end record.
+    new DataView(zip.buffer).setUint32(zip.length - 22 - 20 + 16, 2, true);
+    expectZipError(() => readZip(zip));
+  });
+
+  it('opens a valid archive whose central records are not in local-offset order', () => {
+    const zip = buildZip([{ name: 'a.txt', data: utf8('aa') }, { name: 'b.txt', data: utf8('bb') }]);
+    const view = new DataView(zip.buffer);
+    const cd = view.getUint32(zip.length - 22 + 16, true);
+    const record = 46 + 'a.txt'.length;
+    const first = zip.slice(cd, cd + record);
+
+    zip.copyWithin(cd, cd + record, cd + 2 * record);
+    zip.set(first, cd + record);
+
+    const archive = readZip(zip);
+
+    expect(archive.entries.map((e) => e.name)).toEqual(['b.txt', 'a.txt']);
+    expect(textOf(archive, 'a.txt')).toBe('aa');
+  });
 });
 
 describe('readZip — ZIP64 values', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
+
+  it('takes the ZIP64 path when only the directory size is 0xFFFFFFFF', () => {
+    const zip = buildZip([{ name: 'a.txt', data: utf8('hello') }], { zip64: {} });
+    const view = new DataView(zip.buffer);
+    const end = zip.length - 22;
+    const eocd64 = end - 20 - 56;
+
+    // Real counts and offset in the end record; only the size field stays a sentinel.
+    [8, 10].forEach((at) => view.setUint16(end + at, 1, true));
+    view.setUint32(end + 16, Number(view.getBigUint64(eocd64 + 48, true)), true);
+    expect(view.getUint32(end + 12, true)).toBe(0xffffffff);
+    expect(textOf(readZip(zip), 'a.txt')).toBe('hello');
+  });
 
   it('reads 64-bit sizes and offset from the 0x0001 extra field', () => {
     const data = utf8('zip64 body');

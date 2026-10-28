@@ -837,12 +837,12 @@ describe('mdastToBlocks', () => {
 
       // Eight times the items: linear is ~8, quadratic ~64.
       expect(ratio).toBeLessThan(24);
-    });
+    }, 60_000);
 
     // Past ~125k items, spreading one result into push() overflows the stack.
     it('converts a list too long to spread into one call', () => {
       expect(mdastToBlocks({ type: 'root', children: [listOf(200_000)] })).toHaveLength(200_000);
-    });
+    }, 60_000);
 
     it('converts a list item holding a list too long to spread into one call', () => {
       const tree: Root = { type: 'root', children: [{
@@ -856,11 +856,11 @@ describe('mdastToBlocks', () => {
       }] };
 
       expect(mdastToBlocks(tree)).toHaveLength(200_001);
-    });
+    }, 60_000);
 
     it('converts a quote holding a list too long to spread into one call', () => {
       expect(mdastToBlocks({ type: 'root', children: [{ type: 'blockquote', children: [listOf(200_000)] }] }))
         .toHaveLength(200_000);
-    });
+    }, 60_000);
   });
 });

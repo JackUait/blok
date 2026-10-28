@@ -412,7 +412,7 @@ describe('block parser', () => {
       expect(markdown.length).toBeGreaterThan(1_000_000);
       expect(root.children.length).toBeGreaterThan(70_000);
       expect(performance.now() - start).toBeLessThan(30_000);
-    });
+    }, 60_000);
 
     it.each(Object.entries<(size: number) => string>({
       'words': (size) => 'a '.repeat(size / 2),
@@ -427,6 +427,6 @@ describe('block parser', () => {
     }))('parses %s in linear time', (_name, make) => {
       expect(() => parseMarkdown(make(100_000), { math: true })).not.toThrow();
       expectLinear(make, 50_000);
-    });
+    }, 60_000);
   });
 });

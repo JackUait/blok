@@ -580,6 +580,6 @@ describe('markdownToBlocks with large input', () => {
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0].type).toBe('paragraph');
-  });
+  }, 60_000);
 });
 

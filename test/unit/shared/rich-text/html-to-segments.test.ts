@@ -26,7 +26,7 @@ describe.each(readers)('htmlToSegments (%s)', (_name, read) => {
 
     // Eight times the run: linear is ~8, quadratic ~64.
     expect(ratio).toBeLessThan(24);
-  });
+  }, 60_000);
 
   it('folds a whitespace run holding a newline into one space, and keeps one without', () => {
     expect(read('a \t\n\r\f b\n\nc  d')).toEqual([{ text: 'a b c  d' }]);

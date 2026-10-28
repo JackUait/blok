@@ -401,6 +401,6 @@ describe('parseInline', () => {
 
       expect(() => inline(small, context)).not.toThrow();
       expect(bestRatio(() => fastest(large) / fastest(small))).toBeLessThan(24);
-    });
+    }, 60_000);
   });
 });

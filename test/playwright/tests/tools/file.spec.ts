@@ -388,3 +388,61 @@ test('pptx preview never fetches a picture the deck links from another host', as
   expect(remoteRequests).toEqual([]);
 });
 
+test('pptx preview draws text, tables and charts from a real deck', async ({ page }) => {
+  await uploadFixture(page, 'dashboard.pptx');
+  await page.getByRole('button', { name: /dashboard\.pptx/i }).click();
+
+  const preview = page.getByRole('dialog').locator('[data-role="file-preview-pptx"]');
+
+  await expect(preview).toContainText('Dashboard: Monthly KPIs');
+  await expect(preview.getByRole('cell', { name: 'Revenue' })).toBeVisible();
+  await expect(preview.locator('[data-pptx-chart="category-axis"]')).toContainText('Wed');
+  // Five weekdays of visits, one bar each.
+  await expect(preview.locator('[data-pptx-chart="series"] rect')).toHaveCount(5);
+});
+
+/** sample.pptx plus one embedded picture. */
+const deckWithPicture = async (): Promise<Buffer> => {
+  const zip = await JSZip.loadAsync(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
+  const slidePath = 'ppt/slides/slide1.xml';
+  const relsPath = 'ppt/slides/_rels/slide1.xml.rels';
+  const slide = await zip.file(slidePath)?.async('string') ?? '';
+  const rels = await zip.file(relsPath)?.async('string') ?? '';
+  const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const picture = '<p:pic><p:nvPicPr><p:cNvPr id="9" name="Pixel"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>'
+    + '<p:blipFill><a:blip r:embed="rIdPixel"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
+    + '<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>'
+    + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+
+  zip.file('ppt/media/pixel.png', pixel);
+  zip.file(slidePath, slide.replace('</p:spTree>', `${picture}</p:spTree>`));
+  zip.file(relsPath, rels.replace('</Relationships>', '<Relationship Id="rIdPixel" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/pixel.png"/></Relationships>'));
+
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+};
+
+test('closing a pptx preview frees the pictures it decoded', async ({ page }) => {
+  await uploadFixture(page, {
+    name: 'picture.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    buffer: await deckWithPicture(),
+  });
+  await page.getByRole('button', { name: /picture\.pptx/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  const picture = dialog.locator('[data-role="file-preview-pptx"] img');
+
+  await expect(picture).toHaveCount(1);
+  const pictureUrl = await picture.getAttribute('src') ?? '';
+
+  expect(pictureUrl).toMatch(/^blob:/);
+  await expect.poll(() => page.evaluate(async (url) => (await fetch(url)).ok, pictureUrl)).toBe(true);
+
+  await dialog.getByRole('button', { name: /close/i }).click();
+  await expect(dialog).toBeHidden();
+
+  const stillReadable = await page.evaluate(async (url) => fetch(url).then(() => true, () => false), pictureUrl);
+
+  expect(stillReadable).toBe(false);
+});
+

@@ -15,13 +15,21 @@ import { BASE_GRAMMARS, createGrammarLoader, GRAMMARS } from '../../../../../src
 
 const FIXTURE = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../fixtures/prism-upstream/grammar-structure.json');
 
-/** Same walk as the generator: regexes as source+flags, a revisit as the path of its first visit. */
+/**
+ * Same walk as the generator: regexes as source+flags, a revisit as the path of
+ * its first visit, an explicit `undefined` as a marker. Compared as JSON text,
+ * so key order counts at every level: token order decides what matches first.
+ */
 const serialize = (root: unknown): unknown => {
   const seen = new Map<unknown, string>();
 
   const walk = (value: unknown, path: string): unknown => {
     if (value instanceof RegExp) {
       return { $re: value.source, flags: value.flags };
+    }
+
+    if (value === undefined) {
+      return { $undefined: true };
     }
 
     if (value === null || typeof value !== 'object') {
@@ -71,7 +79,7 @@ describe('grammar structure matches Prism 1.30.0', () => {
     expect(Object.keys(actual)).toEqual(Object.keys(expected));
 
     for (const name of Object.keys(expected)) {
-      expect(actual[name], name).toEqual(expected[name]);
+      expect(JSON.stringify(actual[name], null, 1), name).toBe(JSON.stringify(expected[name], null, 1));
     }
   });
 });

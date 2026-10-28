@@ -471,8 +471,12 @@ const toPatternRun = (
   const greedy = Boolean(tokenObj?.greedy);
 
   if (tokenObj && greedy && !tokenObj.pattern.global) {
-    // Written back so the next run reuses the global copy.
-    tokenObj.pattern = RegExp(tokenObj.pattern.source, `${tokenObj.pattern.flags.replace(/[^imsuy]/g, '')}g`);
+    // Written back so the next run reuses the global copy. Flags are read off
+    // the end of the source text, as Prism does: a trailing flag outside imsuy
+    // drops them all.
+    const flags = (/[imsuy]*$/.exec(tokenObj.pattern.toString()) ?? [''])[0];
+
+    tokenObj.pattern = RegExp(tokenObj.pattern.source, `${flags}g`);
   }
 
   return {

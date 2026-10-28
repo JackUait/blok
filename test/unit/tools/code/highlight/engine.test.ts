@@ -119,6 +119,13 @@ describe('tokenize', () => {
     expect(token instanceof Token && token.length).toBe(3);
   });
 
+  // Prism reads the flags off the end of the regex's source text, so a trailing
+  // flag outside imsuy (like v) drops all of them.
+  it('rebuilds greedy flags the way Prism does', () => {
+    expect(tokens({ a: { pattern: /a/iv, greedy: true } }, 'A')).toEqual(['A']);
+    expect(tokens({ a: { pattern: /a/di, greedy: true } }, 'A')).toEqual([['a', 'A']]);
+  });
+
   it('keeps the flags of a greedy pattern', () => {
     expect(tokens({ a: { pattern: /A/i, greedy: true } }, 'a')).toEqual([['a', 'a']]);
   });

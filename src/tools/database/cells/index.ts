@@ -221,6 +221,8 @@ const openPlaceEditor = (
   };
   const header = name === '' ? undefined : document.createElement('div');
   const search = placeSearch(ctx, (picked) => {
+    // Current Location can answer after the editor closed: a closed editor writes nothing.
+    if (!handle.isOpen) return;
     state.stored = true;
     ctx.onCommit(picked);
     showPicked(picked);

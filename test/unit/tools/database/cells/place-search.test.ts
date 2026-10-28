@@ -362,6 +362,24 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       expect(document.querySelector('[data-blok-database-place-view] [data-blok-database-place-name]')?.textContent).toBe('Eiffel Tower');
     });
 
+    it('a Current Location that arrives after the editor closed writes nothing', async () => {
+      const onCommit = vi.fn();
+      const late: { resolve: (place: PlaceValue) => void } = { resolve: () => undefined };
+      const currentLocation = vi.fn(() => new Promise<PlaceValue>((resolve) => {
+        late.resolve = resolve;
+      }));
+      const handle = openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ currentLocation, onCommit }));
+
+      press(field(), 'Enter');
+      await settle();
+      handle.cancel();
+      onCommit.mockClear();
+      late.resolve(EIFFEL);
+      await settle();
+
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
     it('ArrowDown then Enter picks the first result and saves it at once', async () => {
       const onCommit = vi.fn();
       const geocode = vi.fn().mockResolvedValue([EIFFEL, { name: 'Paris', address: 'Paris, France', lat: 1, lon: 2 }]);

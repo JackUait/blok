@@ -24,17 +24,20 @@ import { pctToDecimal, angleToDeg, emuToPx } from '../parser/units';
 /**
  * Build a cache key for a color node based on its tag, value, and modifiers.
  */
+/** Every attribute counts: lastClr, r/g/b and hue/sat/lum change the colour as much as val. */
+function describeColorNode(node: SafeXmlNode): string {
+  const attrs = Array.from(node.element?.attributes ?? [], (attr) => `${attr.name}=${attr.value}`);
+
+  return `${node.localName}(${attrs.join(',')})`;
+}
+
 function buildColorCacheKey(colorNode: SafeXmlNode): string {
-  const parts: string[] = [colorNode.localName, colorNode.attr('val') ?? ''];
+  const parts: string[] = [describeColorNode(colorNode)];
   for (const child of colorNode.allChildren()) {
-    const tag = child.localName;
-    const val = child.attr('val') ?? child.attr('amt');
-    if (tag) parts.push(`${tag}:${val ?? ''}`);
+    parts.push(describeColorNode(child));
     // Include nested color children for wrapper nodes
     for (const grandchild of child.allChildren()) {
-      const gtag = grandchild.localName;
-      const gval = grandchild.attr('val') ?? grandchild.attr('amt');
-      if (gtag) parts.push(`${gtag}:${gval ?? ''}`);
+      parts.push(describeColorNode(grandchild));
     }
   }
   return parts.join('|');

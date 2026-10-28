@@ -1153,10 +1153,8 @@
 }
 
 /* --- pptx: stacked slide cards -------------------------------------------- */
-/* With fitMode: 'contain' the renderer scales each slide to the container width
-   and patches its wrapper's height to match. We stack those wrappers down the
-   desk with vertical breathing room; the sides stay flush because the renderer
-   already centres each slide via its own inline `margin: 0 auto`. */
+/* The viewer sizes each card to its slide scaled to the container width, so the
+   column only stacks the cards with vertical room and centres them. */
 .blok-file-preview-pptx {
   display: flex;
   flex-direction: column;

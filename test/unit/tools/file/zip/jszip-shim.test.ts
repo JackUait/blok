@@ -34,9 +34,8 @@ describe('jszip-shim', () => {
   afterEach(() => { vi.restoreAllMocks(); });
 
   it.each([
-    ['Uint8Array', (b: Uint8Array): Uint8Array | ArrayBuffer | Blob => b],
-    ['ArrayBuffer', (b: Uint8Array): Uint8Array | ArrayBuffer | Blob => new Uint8Array(b).buffer],
-    ['Blob', (b: Uint8Array): Uint8Array | ArrayBuffer | Blob => new Blob([new Uint8Array(b)])],
+    ['Uint8Array', (b: Uint8Array): Uint8Array | ArrayBuffer => b],
+    ['ArrayBuffer', (b: Uint8Array): Uint8Array | ArrayBuffer => new Uint8Array(b).buffer],
   ])('loads a %s', async (_label, wrap) => {
     const zip = await JSZipShim.loadAsync(wrap(fixture('jszip/all.zip')));
 
@@ -70,21 +69,18 @@ describe('jszip-shim', () => {
     expect(zip.file('d/a.txt')?.name).toBe('d/a.txt');
   });
 
-  it('returns each output type as its own buffer', async () => {
+  it('returns the three output types docx-preview and pptx-renderer ask for', async () => {
     const zip = await JSZipShim.loadAsync(fixture('jszip/all.zip'));
     const file = fileOf(zip, 'Hello.txt');
-    const arraybuffer = await file.async('arraybuffer');
     const uint8array = await file.async('uint8array');
     const blob = await file.async('blob');
 
-    expect(arraybuffer).toBeInstanceOf(ArrayBuffer);
-    expect(arraybuffer.byteLength).toBe(12);
+    await expect(file.async('string')).resolves.toBe('Hello World\n');
     expect(uint8array).toBeInstanceOf(Uint8Array);
     expect(uint8array.buffer.byteLength).toBe(12);
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.type).toBe('');
     await expect(blob.text()).resolves.toBe('Hello World\n');
-    await expect(file.async('text')).resolves.toBe('Hello World\n');
   });
 
   it('gives a fresh copy on every read', async () => {
@@ -96,10 +92,12 @@ describe('jszip-shim', () => {
     await expect(file.async('string')).resolves.toContain('looong');
   });
 
-  it('rejects an unsupported output type', async () => {
+  it.each(['text', 'arraybuffer', 'base64', 'STRING'])('rejects output type %s, which no consumer asks for', async (type) => {
     const zip = await JSZipShim.loadAsync(fixture('jszip/all.zip'));
 
-    await expect(fileOf(zip, 'Hello.txt').async('base64')).rejects.toThrow(ZipError);
+    const untyped = fileOf(zip, 'Hello.txt').async as (type: string) => Promise<unknown>;
+
+    await expect(untyped(type)).rejects.toThrow(ZipError);
   });
 
   it('rejects a bad archive with a ZipError', async () => {
@@ -110,13 +108,6 @@ describe('jszip-shim', () => {
     const zip = await JSZipShim.loadAsync(buildZip([{ name: 'a.txt', data: utf8('hello'), method: 8, size: 3 }]));
 
     await expect(fileOf(zip, 'a.txt').async('string')).rejects.toThrow(ZipError);
-  });
-
-  it('does not support writing', async () => {
-    const zip = await JSZipShim.loadAsync(fixture('jszip/all.zip'));
-
-    expect(() => zip.file('new.txt', 'x')).toThrow(/not supported/);
-    await expect(zip.generateAsync({ type: 'blob' })).rejects.toThrow(/not supported/);
   });
 
   it('keeps a UTF-8 BOM in text, like JSZip', async () => {

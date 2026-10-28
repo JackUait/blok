@@ -96,6 +96,17 @@ describe('DatabaseTool — button property', () => {
     expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ databaseId: 'db', rowId: 'r1', propertyId: 'btn', action: expect.objectContaining({ name: 'notify' }) }));
   });
 
+  it('notion-spec-2 §19.19: a press on a gallery card runs the actions and does not open the card', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+    const gallery = { ...data(), views: [{ id: 'v', name: 'Gallery', type: 'gallery' as const, position: 'a0', sorts: [], filters: [], visibleProperties: ['status', 'btn'] }] };
+    const { el } = buildDatabase(doc, 'db', gallery);
+
+    buttonOf(el, 'r1')?.click();
+
+    expect(doc.row('r1').properties.status).toBe('done');
+    expect(document.querySelector('[data-blok-database-drawer]')).toBeNull();
+  });
+
   it('never stores a value for the button', () => {
     const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
     const { el } = buildDatabase(doc, 'db', data());

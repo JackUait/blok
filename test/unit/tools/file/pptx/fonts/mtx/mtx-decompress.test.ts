@@ -3,7 +3,7 @@
 // the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 import { describe, it, expect, expectTypeOf } from 'vitest';
 
-import { decompressMtx, decompressEotFont, unpackMtx } from '../../../../../../../src/tools/file/pptx/fonts/mtx/mtx-decompress';
+import { decompressMtx, unpackMtx } from '../../../../../../../src/tools/file/pptx/fonts/mtx/mtx-decompress';
 import { EotError, EotErrorCode } from '../../../../../../../src/tools/file/pptx/fonts/mtx/errors';
 
 describe('decompressMtx', () => {
@@ -64,26 +64,6 @@ describe('decompressMtx', () => {
 		const input = new Uint8Array([0x50]);
 		const result = decompressMtx(input, { compressed: false });
 		expect(result[0]).toBe(0x50); // not decrypted
-	});
-});
-
-describe('decompressEotFont', () => {
-	it('delegates to decompressMtx with explicit parameters', () => {
-		const input = new Uint8Array([0x01, 0x02, 0x03]);
-		// compressed=false, encrypted=false -> passthrough
-		const result = decompressEotFont(input, false, false);
-		expect(result).toStrictEqual(input);
-	});
-
-	it('applies encryption when encrypted=true', () => {
-		const input = new Uint8Array([0x50]);
-		const result = decompressEotFont(input, false, true);
-		expect(result[0]).toBe(0x00); // 0x50 ^ 0x50
-	});
-
-	it('throws on compressed=true with insufficient data', () => {
-		const input = new Uint8Array(4);
-		expect(() => decompressEotFont(input, true, false)).toThrow();
 	});
 });
 

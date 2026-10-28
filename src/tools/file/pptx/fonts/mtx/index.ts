@@ -13,17 +13,4 @@
  * @packageDocumentation
  */
 
-export { decompressMtx, decompressEotFont, unpackMtx } from './mtx-decompress';
-export { parseCTF } from './ctf-parser';
-export type { SFNTContainer, SFNTTable, ParseCTFOptions } from './ctf-parser';
-export { EotError, EotErrorCode, EOT_WARN } from './errors';
-export {
-	parseEotMetadata,
-	inspectEotProtection,
-	eotToTtf,
-	canLegallyEdit,
-	TTEMBED_SUBSET,
-	TTEMBED_TTCOMPRESSED,
-	TTEMBED_XORENCRYPTDATA,
-} from './eot';
-export type { EotMetadata, EotVersion, EotProtection } from './eot';
+export { decompressMtx } from './mtx-decompress';

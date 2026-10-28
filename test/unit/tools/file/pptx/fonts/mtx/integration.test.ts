@@ -19,7 +19,7 @@ import { describe, it, expect } from 'vitest';
 
 import { parseCTF } from '../../../../../../../src/tools/file/pptx/fonts/mtx/ctf-parser';
 import type { SFNTContainer } from '../../../../../../../src/tools/file/pptx/fonts/mtx/ctf-parser';
-import { decompressMtx, decompressEotFont } from '../../../../../../../src/tools/file/pptx/fonts/mtx/mtx-decompress';
+import { decompressMtx } from '../../../../../../../src/tools/file/pptx/fonts/mtx/mtx-decompress';
 import { dumpContainer } from '../../../../../../../src/tools/file/pptx/fonts/mtx/sfnt-builder';
 import { Stream } from '../../../../../../../src/tools/file/pptx/fonts/mtx/stream';
 import { TRIPLET_ENCODINGS } from '../../../../../../../src/tools/file/pptx/fonts/mtx/triplet-encodings';
@@ -265,10 +265,8 @@ function buildCTFStream0(opts: CTFStreamOptions): Uint8Array {
 
 	// Table data (non-glyf)
 	for (const tl of tableLayouts) {
-		if (tl.data) {
-			for (let i = 0; i < tl.data.length; i++) {
-				s.writeU8(tl.data[i]);
-			}
+		for (const byte of tl.data ?? []) {
+			s.writeU8(byte);
 		}
 	}
 
@@ -992,18 +990,6 @@ describe('decompressMtx — XOR decryption integration', () => {
 
 		// Original not mutated
 		expect(input).toStrictEqual(inputCopy);
-	});
-});
-
-describe('decompressEotFont — parameter delegation', () => {
-	it('correctly passes compressed and encrypted flags', () => {
-		const input = new Uint8Array([0x50, 0x51, 0x52]);
-
-		// compressed=false, encrypted=true → XOR decrypt only
-		const result = decompressEotFont(input, false, true);
-		expect(result[0]).toBe(0x00);
-		expect(result[1]).toBe(0x01);
-		expect(result[2]).toBe(0x02);
 	});
 });
 

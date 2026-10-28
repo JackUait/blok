@@ -164,26 +164,3 @@ export function decompressMtx(
 	// --- Assemble final TrueType font -------------------------------------
 	return dumpContainer(container);
 }
-
-// ---------------------------------------------------------------------------
-// Convenience wrapper (explicit boolean parameters)
-// ---------------------------------------------------------------------------
-
-/**
- * Decompress an EOT-embedded font.
- *
- * This is a thin wrapper around {@link decompressMtx} that accepts explicit
- * boolean parameters instead of an options object.
- *
- * @param fontData    Raw font bytes extracted from the EOT container.
- * @param compressed  Whether the data is MTX-compressed.
- * @param encrypted   Whether the data is XOR-encrypted.
- * @returns A `Uint8Array` containing a valid TrueType (.ttf) font.
- */
-export function decompressEotFont(
-	fontData: Uint8Array,
-	compressed: boolean,
-	encrypted: boolean,
-): Uint8Array {
-	return decompressMtx(fontData, { encrypted, compressed });
-}

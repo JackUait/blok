@@ -5,6 +5,7 @@
  * and placeholder shapes from a p:sldLayout XML.
  */
 
+import type { RelEntry } from '../parser/RelParser';
 import type { SafeXmlNode } from '../parser/XmlParser';
 import { emuToPx } from '../parser/units';
 import { parseOoxmlBool } from '../parser/booleans';
@@ -30,7 +31,7 @@ export interface LayoutData {
   background?: SafeXmlNode;
   placeholders: PlaceholderEntry[];
   spTree: SafeXmlNode;
-  rels: Map<string, import('../parser/RelParser').RelEntry>;
+  rels: Map<string, RelEntry>;
   /** When false, shapes from the slide master should NOT be rendered on this layout. */
   showMasterSp: boolean;
 }

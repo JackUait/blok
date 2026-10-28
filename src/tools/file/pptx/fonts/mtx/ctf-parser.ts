@@ -903,7 +903,7 @@ function parseMaxp(table: SFNTTable): MaxpData {
  *                   [2] = hinting code data
  * @returns An `SFNTContainer` holding all reconstructed SFNT tables.
  */
-export function parseCTF(streams: Stream[], options?: ParseCTFOptions): SFNTContainer {
+export function parseCTF(streams: Stream[], _options?: ParseCTFOptions): SFNTContainer {
 	const s0 = streams[0];
 
 	// --- Read SFNT offset (header) table -----------------------------------

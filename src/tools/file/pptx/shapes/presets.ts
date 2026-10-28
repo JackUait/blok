@@ -151,6 +151,71 @@ function mirrorAbsolutePathVertically(path: string, height: number): string {
 
 export const presetShapes: Map<string, PresetShapeGenerator> = new Map();
 
+const svgArcBetweenAngles = (
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  startDeg: number,
+  endDeg: number,
+): string => {
+  const s = (startDeg * Math.PI) / 180;
+  const e = (endDeg * Math.PI) / 180;
+  const xS = cx + rx * Math.cos(s);
+  const yS = cy + ry * Math.sin(s);
+  const xE = cx + rx * Math.cos(e);
+  const yE = cy + ry * Math.sin(e);
+  const delta = endDeg - startDeg;
+  const largeArc = Math.abs(delta) > 180 ? 1 : 0;
+  const sweep = delta >= 0 ? 1 : 0;
+  return `M${xS},${yS} A${rx},${ry} 0 ${largeArc},${sweep} ${xE},${yE}`;
+};
+
+const ooxmlAngleToDeg = (ooxmlAng: number) => ooxmlAng / 60000;
+const ooxmlArcFrom = (
+  x0: number,
+  y0: number,
+  rx: number,
+  ry: number,
+  stAng: number,
+  swAng: number,
+) => {
+  const st = (ooxmlAngleToDeg(stAng) * Math.PI) / 180;
+  const sw = (ooxmlAngleToDeg(swAng) * Math.PI) / 180;
+  const cx = x0 - rx * Math.cos(st);
+  const cy = y0 - ry * Math.sin(st);
+  const x1 = cx + rx * Math.cos(st + sw);
+  const y1p = cy + ry * Math.sin(st + sw);
+  const large = Math.abs(ooxmlAngleToDeg(swAng)) > 180 ? 1 : 0;
+  const sweep = swAng >= 0 ? 1 : 0;
+  return { cmd: `A${rx},${ry} 0 ${large},${sweep} ${x1},${y1p}`, x: x1, y: y1p };
+};
+
+const ooxmlArcTo = (
+  curX: number,
+  curY: number,
+  wR: number,
+  hR: number,
+  stDeg: number,
+  swDeg: number,
+) => {
+  const stRad = (stDeg * Math.PI) / 180;
+  const endRad = ((stDeg + swDeg) * Math.PI) / 180;
+  const cx = curX - wR * Math.cos(stRad);
+  const cy = curY - hR * Math.sin(stRad);
+  const endX = cx + wR * Math.cos(endRad);
+  const endY = cy + hR * Math.sin(endRad);
+  const largeArc = Math.abs(swDeg) > 180 ? 1 : 0;
+  const sweep = swDeg > 0 ? 1 : 0;
+  return { endX, endY, svg: `A${wR},${hR} 0 ${largeArc},${sweep} ${endX},${endY}` };
+};
+
+function getPresetShape(name: string): PresetShapeGenerator {
+  const generator = presetShapes.get(name);
+  if (!generator) throw new TypeError(`Unknown preset shape: ${name}`);
+  return generator;
+}
+
 // ===== Basic Shapes =====
 
 presetShapes.set('rect', (w, h) => `M0,0 L${w},0 L${w},${h} L0,${h} Z`);
@@ -1438,45 +1503,25 @@ presetShapes.set('curvedRightArrow', (w, h, adjustments) => {
   const swAngDg = (swAng * 180) / Math.PI;
   const swAng2Dg = (swAng2 * 180) / Math.PI;
 
-  const arc = (
-    cx: number,
-    cy: number,
-    rx: number,
-    ry: number,
-    startDeg: number,
-    endDeg: number,
-  ): string => {
-    const s = (startDeg * Math.PI) / 180;
-    const e = (endDeg * Math.PI) / 180;
-    const xS = cx + rx * Math.cos(s);
-    const yS = cy + ry * Math.sin(s);
-    const xE = cx + rx * Math.cos(e);
-    const yE = cy + ry * Math.sin(e);
-    const delta = endDeg - startDeg;
-    const largeArc = Math.abs(delta) > 180 ? 1 : 0;
-    const sweep = delta >= 0 ? 1 : 0;
-    return `M${xS},${yS} A${rx},${ry} 0 ${largeArc},${sweep} ${xE},${yE}`;
-  };
-
   return [
     `M${l},${hR}`,
-    arc(w, hR, w, hR, cd2, cd2 + mswAngDg).replace('M', 'L'),
+    svgArcBetweenAngles(w, hR, w, hR, cd2, cd2 + mswAngDg).replace('M', 'L'),
     `L${x1},${y5}`,
     `L${x1},${y4}`,
     `L${r},${y6}`,
     `L${x1},${y8}`,
     `L${x1},${y7}`,
-    arc(w, y3, w, hR, stAngDg, stAngDg + swAngDg).replace('M', 'L'),
+    svgArcBetweenAngles(w, y3, w, hR, stAngDg, stAngDg + swAngDg).replace('M', 'L'),
     'Z',
-    arc(w, hR, w, hR, cd2, cd2 + cd4),
+    svgArcBetweenAngles(w, hR, w, hR, cd2, cd2 + cd4),
     `L${r},${th}`,
-    arc(w, y3, w, hR, c3d4, c3d4 + swAng2Dg).replace('M', 'L'),
+    svgArcBetweenAngles(w, y3, w, hR, c3d4, c3d4 + swAng2Dg).replace('M', 'L'),
     'Z',
   ].join(' ');
 });
 
 presetShapes.set('curvedLeftArrow', (w, h, adjustments) =>
-  mirrorAbsolutePathHorizontally(presetShapes.get('curvedRightArrow')!(w, h, adjustments), w),
+  mirrorAbsolutePathHorizontally(getPresetShape('curvedRightArrow')(w, h, adjustments), w),
 );
 
 function splitFirstClosedContour(path: string): { outer: string; remainder: string } {
@@ -1495,7 +1540,7 @@ function buildCurvedArrowMultiPath(
   h: number,
   adjustments?: Map<string, number>,
 ): PresetSubPath[] {
-  const fullPath = presetShapes.get(shapeName)!(w, h, adjustments);
+  const fullPath = getPresetShape(shapeName)(w, h, adjustments);
   const { outer, remainder } = splitFirstClosedContour(fullPath);
   if (!remainder) {
     return [{ d: fullPath, fill: 'norm', stroke: true }];
@@ -1520,7 +1565,7 @@ function buildCurvedVerticalArrowMultiPath(
   h: number,
   adjustments?: Map<string, number>,
 ): PresetSubPath[] {
-  const downFullPath = presetShapes.get('curvedDownArrow')!(w, h, adjustments);
+  const downFullPath = getPresetShape('curvedDownArrow')(w, h, adjustments);
   const { outer, remainder } = splitFirstClosedContour(downFullPath);
   const ordered: PresetSubPath[] = remainder
     ? [
@@ -1547,26 +1592,6 @@ function buildCurvedVerticalArrowMultiPath(
  * Returns { path, endX, endY }.
  */
 presetShapes.set('curvedUpArrow', (w, h, adjustments) => {
-  const arc = (
-    cx: number,
-    cy: number,
-    rx: number,
-    ry: number,
-    startDeg: number,
-    endDeg: number,
-  ): string => {
-    const s = (startDeg * Math.PI) / 180;
-    const e = (endDeg * Math.PI) / 180;
-    const xS = cx + rx * Math.cos(s);
-    const yS = cy + ry * Math.sin(s);
-    const xE = cx + rx * Math.cos(e);
-    const yE = cy + ry * Math.sin(e);
-    const delta = endDeg - startDeg;
-    const largeArc = Math.abs(delta) > 180 ? 1 : 0;
-    const sweep = delta >= 0 ? 1 : 0;
-    return `M${xS},${yS} A${rx},${ry} 0 ${largeArc},${sweep} ${xE},${yE}`;
-  };
-
   const ss = Math.min(w, h);
   const wd2 = w / 2;
   const a1Raw = adjustments?.get('adj1') ?? 25000;
@@ -1605,42 +1630,22 @@ presetShapes.set('curvedUpArrow', (w, h, adjustments) => {
   const swAngDeg = (swAng * 180) / Math.PI;
 
   return [
-    arc(wR, 0, wR, h, stAng2Deg, stAng2Deg + swAng2Deg),
+    svgArcBetweenAngles(wR, 0, wR, h, stAng2Deg, stAng2Deg + swAng2Deg),
     `L${x5},${y1}`,
     `L${x4},${y1}`,
     `L${x6},0`,
     `L${x8},${y1}`,
     `L${x7},${y1}`,
-    arc(x3, 0, wR, h, stAng3Deg, stAng3Deg + swAngDeg).replace('M', 'L'),
+    svgArcBetweenAngles(x3, 0, wR, h, stAng3Deg, stAng3Deg + swAngDeg).replace('M', 'L'),
     `L${wR},${h}`,
-    arc(wR, 0, wR, h, 90, 180).replace('M', 'L'),
+    svgArcBetweenAngles(wR, 0, wR, h, 90, 180).replace('M', 'L'),
     `L${th},0`,
-    arc(x3, 0, wR, h, 180, 90).replace('M', 'L'),
+    svgArcBetweenAngles(x3, 0, wR, h, 180, 90).replace('M', 'L'),
     'Z',
   ].join(' ');
 });
 
 presetShapes.set('curvedDownArrow', (w, h, adjustments) => {
-  const arc = (
-    cx: number,
-    cy: number,
-    rx: number,
-    ry: number,
-    startDeg: number,
-    endDeg: number,
-  ): string => {
-    const s = (startDeg * Math.PI) / 180;
-    const e = (endDeg * Math.PI) / 180;
-    const xS = cx + rx * Math.cos(s);
-    const yS = cy + ry * Math.sin(s);
-    const xE = cx + rx * Math.cos(e);
-    const yE = cy + ry * Math.sin(e);
-    const delta = endDeg - startDeg;
-    const largeArc = Math.abs(delta) > 180 ? 1 : 0;
-    const sweep = delta >= 0 ? 1 : 0;
-    return `M${xS},${yS} A${rx},${ry} 0 ${largeArc},${sweep} ${xE},${yE}`;
-  };
-
   const ss = Math.min(w, h);
   const wd2 = w / 2;
   const a1Raw = adjustments?.get('adj1') ?? 25000;
@@ -1681,15 +1686,15 @@ presetShapes.set('curvedDownArrow', (w, h, adjustments) => {
     `M${x6},${h}`,
     `L${x4},${y1}`,
     `L${x5},${y1}`,
-    arc(wR, h, wR, h, stAng, stAng - swAngDeg).replace('M', 'L'),
+    svgArcBetweenAngles(wR, h, wR, h, stAng, stAng - swAngDeg).replace('M', 'L'),
     `L${x3},0`,
-    arc(x3, h, wR, h, 270, 270 + swAngDeg).replace('M', 'L'),
+    svgArcBetweenAngles(x3, h, wR, h, 270, 270 + swAngDeg).replace('M', 'L'),
     `L${x5 + th},${y1}`,
     `L${x8},${y1}`,
     'Z',
     `M${x3},0`,
-    arc(x3, h, wR, h, stAng2, stAng2 + swAng2).replace('M', 'L'),
-    arc(wR, h, wR, h, 180, 180 + swAng3).replace('M', 'L'),
+    svgArcBetweenAngles(x3, h, wR, h, stAng2, stAng2 + swAng2).replace('M', 'L'),
+    svgArcBetweenAngles(wR, h, wR, h, 180, 180 + swAng3).replace('M', 'L'),
     'Z',
   ].join(' ');
 });
@@ -2621,39 +2626,20 @@ presetShapes.set('flowChartMagneticTape', (w, h) => {
   const vc = hd2;
   const ang1 = Math.atan2(h, w); // OOXML at2 w h = atan2(h, w)
   const ib = vc + hd2 * Math.sin(Math.PI / 4); // sin(45°) * hd2
-  // arcTo helper: compute SVG arc from OOXML arcTo parameters
-  const arcTo = (
-    curX: number,
-    curY: number,
-    wR: number,
-    hR: number,
-    stDeg: number,
-    swDeg: number,
-  ) => {
-    const stRad = (stDeg * Math.PI) / 180;
-    const endRad = ((stDeg + swDeg) * Math.PI) / 180;
-    const cx = curX - wR * Math.cos(stRad);
-    const cy = curY - hR * Math.sin(stRad);
-    const endX = cx + wR * Math.cos(endRad);
-    const endY = cy + hR * Math.sin(endRad);
-    const largeArc = Math.abs(swDeg) > 180 ? 1 : 0;
-    const sweep = swDeg > 0 ? 1 : 0;
-    return { endX, endY, svg: `A${wR},${hR} 0 ${largeArc},${sweep} ${endX},${endY}` };
-  };
   // Start at bottom center: M(hc, b)
   let curX = hc;
   let curY = h;
-  const a1 = arcTo(curX, curY, wd2, hd2, 90, 90); // cd4, cd4 → 90° to 180°
+  const a1 = ooxmlArcTo(curX, curY, wd2, hd2, 90, 90); // cd4, cd4 → 90° to 180°
   curX = a1.endX;
   curY = a1.endY;
-  const a2 = arcTo(curX, curY, wd2, hd2, 180, 90); // cd2, cd4 → 180° to 270°
+  const a2 = ooxmlArcTo(curX, curY, wd2, hd2, 180, 90); // cd2, cd4 → 180° to 270°
   curX = a2.endX;
   curY = a2.endY;
-  const a3 = arcTo(curX, curY, wd2, hd2, 270, 90); // 3cd4, cd4 → 270° to 360°
+  const a3 = ooxmlArcTo(curX, curY, wd2, hd2, 270, 90); // 3cd4, cd4 → 270° to 360°
   curX = a3.endX;
   curY = a3.endY;
   const ang1Deg = (ang1 * 180) / Math.PI;
-  const a4 = arcTo(curX, curY, wd2, hd2, 0, ang1Deg); // 0, ang1
+  const a4 = ooxmlArcTo(curX, curY, wd2, hd2, 0, ang1Deg); // 0, ang1
   return [`M${hc},${h}`, a1.svg, a2.svg, a3.svg, a4.svg, `L${w},${ib}`, `L${w},${h}`, 'Z'].join(
     ' ',
   );
@@ -2818,7 +2804,7 @@ presetShapes.set('cloudCallout', (w, h, adjustments) => {
   const tipX = w / 2 + w * ax;
   const tipY = h / 2 + h * ay;
   // Simplified cloud with callout circles
-  const cloud = presetShapes.get('cloud')!(w, h);
+  const cloud = getPresetShape('cloud')(w, h);
   // Small circles leading to tip
   const cx = w / 2;
   const cy = h / 2;
@@ -3773,28 +3759,9 @@ presetShapes.set('leftBracket', (w, h, adjustments) => {
   const maxAdj = ss > 0 ? (50000 * h) / ss : 0;
   const a = Math.max(0, Math.min(adjustments?.get('adj') ?? 8333, maxAdj));
   const y1 = (ss * a) / 100000;
-  const toDeg = (ooxmlAng: number) => ooxmlAng / 60000;
-  const arcFrom = (
-    x0: number,
-    y0: number,
-    rx: number,
-    ry: number,
-    stAng: number,
-    swAng: number,
-  ) => {
-    const st = (toDeg(stAng) * Math.PI) / 180;
-    const sw = (toDeg(swAng) * Math.PI) / 180;
-    const cx = x0 - rx * Math.cos(st);
-    const cy = y0 - ry * Math.sin(st);
-    const x1 = cx + rx * Math.cos(st + sw);
-    const y1p = cy + ry * Math.sin(st + sw);
-    const large = Math.abs(toDeg(swAng)) > 180 ? 1 : 0;
-    const sweep = swAng >= 0 ? 1 : 0;
-    return { cmd: `A${rx},${ry} 0 ${large},${sweep} ${x1},${y1p}`, x: x1, y: y1p };
-  };
 
-  const a1 = arcFrom(w, h, w, y1, 5400000, 5400000); // cd4, cd4
-  const a2 = arcFrom(0, y1, w, y1, 10800000, 5400000); // cd2, cd4
+  const a1 = ooxmlArcFrom(w, h, w, y1, 5400000, 5400000); // cd4, cd4
+  const a2 = ooxmlArcFrom(0, y1, w, y1, 10800000, 5400000); // cd2, cd4
   return [`M${w},${h}`, a1.cmd, `L0,${y1}`, a2.cmd].join(' ');
 });
 
@@ -3804,28 +3771,9 @@ presetShapes.set('rightBracket', (w, h, adjustments) => {
   const a = Math.max(0, Math.min(adjustments?.get('adj') ?? 8333, maxAdj));
   const y1 = (ss * a) / 100000;
   const y2 = h - y1;
-  const toDeg = (ooxmlAng: number) => ooxmlAng / 60000;
-  const arcFrom = (
-    x0: number,
-    y0: number,
-    rx: number,
-    ry: number,
-    stAng: number,
-    swAng: number,
-  ) => {
-    const st = (toDeg(stAng) * Math.PI) / 180;
-    const sw = (toDeg(swAng) * Math.PI) / 180;
-    const cx = x0 - rx * Math.cos(st);
-    const cy = y0 - ry * Math.sin(st);
-    const x1 = cx + rx * Math.cos(st + sw);
-    const y1p = cy + ry * Math.sin(st + sw);
-    const large = Math.abs(toDeg(swAng)) > 180 ? 1 : 0;
-    const sweep = swAng >= 0 ? 1 : 0;
-    return { cmd: `A${rx},${ry} 0 ${large},${sweep} ${x1},${y1p}`, x: x1, y: y1p };
-  };
 
-  const a1 = arcFrom(0, 0, w, y1, 16200000, 5400000); // 3cd4, cd4
-  const a2 = arcFrom(w, y2, w, y1, 0, 5400000); // 0, cd4
+  const a1 = ooxmlArcFrom(0, 0, w, y1, 16200000, 5400000); // 3cd4, cd4
+  const a2 = ooxmlArcFrom(w, y2, w, y1, 0, 5400000); // 0, cd4
   return [`M0,0`, a1.cmd, `L${w},${y2}`, a2.cmd].join(' ');
 });
 
@@ -3842,34 +3790,15 @@ presetShapes.set('leftBrace', (w, h, adjustments) => {
   const y4 = y3 + y1;
   const wd2 = w / 2;
   const hc = w / 2;
-  const toDeg = (ooxmlAng: number) => ooxmlAng / 60000;
-  const arcFrom = (
-    x0: number,
-    y0: number,
-    rx: number,
-    ry: number,
-    stAng: number,
-    swAng: number,
-  ) => {
-    const st = (toDeg(stAng) * Math.PI) / 180;
-    const sw = (toDeg(swAng) * Math.PI) / 180;
-    const cx = x0 - rx * Math.cos(st);
-    const cy = y0 - ry * Math.sin(st);
-    const x1 = cx + rx * Math.cos(st + sw);
-    const y1p = cy + ry * Math.sin(st + sw);
-    const large = Math.abs(toDeg(swAng)) > 180 ? 1 : 0;
-    const sweep = swAng >= 0 ? 1 : 0;
-    return { cmd: `A${rx},${ry} 0 ${large},${sweep} ${x1},${y1p}`, x: x1, y: y1p };
-  };
 
   let x = w;
   let y = h;
-  const aTop = arcFrom(x, y, wd2, y1, 5400000, 5400000); // cd4, cd4
+  const aTop = ooxmlArcFrom(x, y, wd2, y1, 5400000, 5400000); // cd4, cd4
   x = aTop.x;
   y = aTop.y;
-  const aMid1 = arcFrom(hc, y4, wd2, y1, 0, -5400000);
-  const aMid2 = arcFrom(aMid1.x, aMid1.y, wd2, y1, 5400000, -5400000);
-  const aBot = arcFrom(hc, y1, wd2, y1, 10800000, 5400000); // cd2, cd4
+  const aMid1 = ooxmlArcFrom(hc, y4, wd2, y1, 0, -5400000);
+  const aMid2 = ooxmlArcFrom(aMid1.x, aMid1.y, wd2, y1, 5400000, -5400000);
+  const aBot = ooxmlArcFrom(hc, y1, wd2, y1, 10800000, 5400000); // cd2, cd4
   return [
     `M${w},${h}`,
     aTop.cmd,
@@ -3895,30 +3824,11 @@ presetShapes.set('rightBrace', (w, h, adjustments) => {
   const y4 = h - y1;
   const wd2 = w / 2;
   const hc = w / 2;
-  const toDeg = (ooxmlAng: number) => ooxmlAng / 60000;
-  const arcFrom = (
-    x0: number,
-    y0: number,
-    rx: number,
-    ry: number,
-    stAng: number,
-    swAng: number,
-  ) => {
-    const st = (toDeg(stAng) * Math.PI) / 180;
-    const sw = (toDeg(swAng) * Math.PI) / 180;
-    const cx = x0 - rx * Math.cos(st);
-    const cy = y0 - ry * Math.sin(st);
-    const x1 = cx + rx * Math.cos(st + sw);
-    const y1p = cy + ry * Math.sin(st + sw);
-    const large = Math.abs(toDeg(swAng)) > 180 ? 1 : 0;
-    const sweep = swAng >= 0 ? 1 : 0;
-    return { cmd: `A${rx},${ry} 0 ${large},${sweep} ${x1},${y1p}`, x: x1, y: y1p };
-  };
 
-  const aTop = arcFrom(0, 0, wd2, y1, 16200000, 5400000); // 3cd4, cd4
-  const aMid1 = arcFrom(hc, y2, wd2, y1, 10800000, -5400000); // cd2,-cd4
-  const aMid2 = arcFrom(aMid1.x, aMid1.y, wd2, y1, 16200000, -5400000); //3cd4,-cd4
-  const aBot = arcFrom(hc, y4, wd2, y1, 0, 5400000); //0,cd4
+  const aTop = ooxmlArcFrom(0, 0, wd2, y1, 16200000, 5400000); // 3cd4, cd4
+  const aMid1 = ooxmlArcFrom(hc, y2, wd2, y1, 10800000, -5400000); // cd2,-cd4
+  const aMid2 = ooxmlArcFrom(aMid1.x, aMid1.y, wd2, y1, 16200000, -5400000); //3cd4,-cd4
+  const aBot = ooxmlArcFrom(hc, y4, wd2, y1, 0, 5400000); //0,cd4
   return [`M0,0`, aTop.cmd, `L${hc},${y2}`, aMid1.cmd, aMid2.cmd, `L${hc},${y4}`, aBot.cmd].join(
     ' ',
   );
@@ -4884,56 +4794,35 @@ multiPathPresets.set('actionButtonHelp', (w, h) => {
   const g36 = g11 + g19;
   const g37 = g11 + g20;
 
-  // Helper: OOXML arcTo → SVG arc segment
-  // Computes endpoint from center (derived from current point + start angle) and returns SVG A command
-  const arcSeg = (
-    curX: number,
-    curY: number,
-    wR: number,
-    hR: number,
-    stDeg: number,
-    swDeg: number,
-  ) => {
-    const stRad = (stDeg * Math.PI) / 180;
-    const endRad = ((stDeg + swDeg) * Math.PI) / 180;
-    const cx = curX - wR * Math.cos(stRad);
-    const cy = curY - hR * Math.sin(stRad);
-    const endX = cx + wR * Math.cos(endRad);
-    const endY = cy + hR * Math.sin(endRad);
-    const largeArc = Math.abs(swDeg) > 180 ? 1 : 0;
-    const sweep = swDeg > 0 ? 1 : 0;
-    return { endX, endY, svg: `A${wR},${hR} 0 ${largeArc},${sweep} ${endX},${endY}` };
-  };
-
   // Build question mark path following OOXML arcTo sequence exactly
   // Start at (g33, g27)
   let cx = g33,
     cy = g27;
 
   // Arc 1: wR=g16 hR=g16 stAng=180° swAng=180° (top semicircle, clockwise)
-  const a1 = arcSeg(cx, cy, g16, g16, 180, 180);
+  const a1 = ooxmlArcTo(cx, cy, g16, g16, 180, 180);
   cx = a1.endX;
   cy = a1.endY;
 
   // Arc 2: wR=g14 hR=g15 stAng=0° swAng=90° (curve down right)
-  const a2 = arcSeg(cx, cy, g14, g15, 0, 90);
+  const a2 = ooxmlArcTo(cx, cy, g14, g15, 0, 90);
   cx = a2.endX;
   cy = a2.endY;
 
   // Arc 3: wR=g41 hR=g42 stAng=270° swAng=-90° (small reverse curve)
-  const a3 = arcSeg(cx, cy, g41, g42, 270, -90);
+  const a3 = ooxmlArcTo(cx, cy, g41, g42, 270, -90);
   // After arc 3, lines to stem
   // lnTo (g37, g30), (g36, g30), (g36, g29)
   // then more arcs back up
 
   // Arc 4: wR=g14 hR=g15 stAng=180° swAng=90° (inner curve going up)
-  const a4 = arcSeg(g36, g29, g14, g15, 180, 90);
+  const a4 = ooxmlArcTo(g36, g29, g14, g15, 180, 90);
 
   // Arc 5: wR=g41 hR=g42 stAng=90° swAng=-90° (small inner reverse curve)
-  const a5 = arcSeg(a4.endX, a4.endY, g41, g42, 90, -90);
+  const a5 = ooxmlArcTo(a4.endX, a4.endY, g41, g42, 90, -90);
 
   // Arc 6: wR=g14 hR=g14 stAng=0° swAng=-180° (inner top semicircle, counter-clockwise)
-  const a6 = arcSeg(a5.endX, a5.endY, g14, g14, 0, -180);
+  const a6 = ooxmlArcTo(a5.endX, a5.endY, g14, g14, 0, -180);
 
   // Bottom dot circle at (hc, g31) with radius g42
   const dot = `M${hc},${g31} A${g42},${g42} 0 1,1 ${hc},${g31 + g42 * 2} A${g42},${g42} 0 1,1 ${hc},${g31} Z`;
@@ -5544,36 +5433,18 @@ multiPathPresets.set('can', (w, h, adjustments) => {
   const y1 = (ss * a) / 200000;
   const y3 = h - y1;
   const wd2 = w / 2;
-  const arcSeg = (
-    curX: number,
-    curY: number,
-    wR: number,
-    hR: number,
-    stDeg: number,
-    swDeg: number,
-  ) => {
-    const stRad = (stDeg * Math.PI) / 180;
-    const endRad = ((stDeg + swDeg) * Math.PI) / 180;
-    const cx = curX - wR * Math.cos(stRad);
-    const cy = curY - hR * Math.sin(stRad);
-    const endX = cx + wR * Math.cos(endRad);
-    const endY = cy + hR * Math.sin(endRad);
-    const largeArc = Math.abs(swDeg) > 180 ? 1 : 0;
-    const sweep = swDeg > 0 ? 1 : 0;
-    return { endX, endY, svg: `A${wR},${hR} 0 ${largeArc},${sweep} ${endX},${endY}` };
-  };
   // Path 1: Body (stroke:false, fill:norm)
-  const a1 = arcSeg(0, y1, wd2, y1, 180, -180);
-  const a2 = arcSeg(w, y3, wd2, y1, 0, 180);
+  const a1 = ooxmlArcTo(0, y1, wd2, y1, 180, -180);
+  const a2 = ooxmlArcTo(w, y3, wd2, y1, 0, 180);
   const body = `M0,${y1} ${a1.svg} L${w},${y3} ${a2.svg} Z`;
   // Path 2: Top face (stroke:false, fill:lighten)
-  const a3 = arcSeg(0, y1, wd2, y1, 180, 180);
-  const a4 = arcSeg(a3.endX, a3.endY, wd2, y1, 0, 180);
+  const a3 = ooxmlArcTo(0, y1, wd2, y1, 180, 180);
+  const a4 = ooxmlArcTo(a3.endX, a3.endY, wd2, y1, 0, 180);
   const topFace = `M0,${y1} ${a3.svg} ${a4.svg} Z`;
   // Path 3: Outline (fill:none, stroke:true)
-  const a5 = arcSeg(w, y1, wd2, y1, 0, 180);
-  const a6 = arcSeg(a5.endX, a5.endY, wd2, y1, 180, 180);
-  const a7 = arcSeg(w, y3, wd2, y1, 0, 180);
+  const a5 = ooxmlArcTo(w, y1, wd2, y1, 0, 180);
+  const a6 = ooxmlArcTo(a5.endX, a5.endY, wd2, y1, 180, 180);
+  const a7 = ooxmlArcTo(w, y3, wd2, y1, 0, 180);
   const outline = `M${w},${y1} ${a5.svg} ${a6.svg} L${w},${y3} ${a7.svg} L0,${y1}`;
   return [
     { d: body, fill: 'norm', stroke: false },

@@ -5,6 +5,7 @@
  * and placeholder shapes from a p:sldMaster XML.
  */
 
+import type { RelEntry } from '../parser/RelParser';
 import type { SafeXmlNode } from '../parser/XmlParser';
 import { emuToPx } from '../parser/units';
 import type { PlaceholderEntry } from './Layout';
@@ -23,7 +24,7 @@ export interface MasterData {
   /** Placeholders with slide-space absolute transforms when nested in groups. */
   placeholderEntries?: PlaceholderEntry[];
   spTree: SafeXmlNode;
-  rels: Map<string, import('../parser/RelParser').RelEntry>;
+  rels: Map<string, RelEntry>;
 }
 
 /**

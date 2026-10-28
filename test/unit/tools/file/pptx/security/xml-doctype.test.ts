@@ -17,14 +17,17 @@ describe('parseXml and document type declarations', () => {
     expect(root.exists()).toBe(false);
   });
 
-  it('spots the declaration however it is spelled or spaced', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const variants = [
-      `<!doctype x><p:sld ${NS}/>`,
-      `<?xml version="1.0"?>\n<!DocType x SYSTEM "x.dtd">\n<p:sld ${NS}/>`,
-    ];
+  it.each([
+    ['upper case', `<!DOCTYPE p:sld><p:sld ${NS}/>`],
+    ['lower case', `<!doctype p:sld><p:sld ${NS}/>`],
+    ['mixed case, spread over lines', `<?xml version="1.0"?>\n<!DocType\n  p:sld   SYSTEM "x.dtd" >\n<p:sld ${NS}/>`],
+  ])('spots the declaration in %s', (_, xml) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    variants.forEach((xml) => expect(parseXml(xml).exists()).toBe(false));
+    const root = parseXml(xml);
+
+    expect(warn).toHaveBeenCalledWith('XML parse error: document type declarations are not allowed');
+    expect(root.exists()).toBe(false);
   });
 
   it('still parses an ordinary part that mentions the word in its text', () => {

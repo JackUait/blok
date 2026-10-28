@@ -9,7 +9,7 @@ import { Stream } from '../../../../../../../src/tools/file/pptx/fonts/mtx/strea
 
 function magnitudeBits(value: number): number[] {
 	if (value === 0) return [0];
-	return [...Array(Math.abs(value)).fill(1), 0, value < 0 ? 1 : 0];
+	return [...new Array<number>(Math.abs(value)).fill(1), 0, value < 0 ? 1 : 0];
 }
 
 function packLsbBits(bits: number[]): Uint8Array {

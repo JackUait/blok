@@ -305,7 +305,7 @@ describe('openFilePreview — text kinds', () => {
   it('releases what an office renderer registered once the modal closes', () => {
     const release = vi.fn();
     vi.mocked(fillOfficeBody).mockImplementationOnce((_body, _opts, _kind, _isClosed, onTeardown) => {
-      onTeardown(release);
+      onTeardown?.(release);
 
       return Promise.resolve();
     });

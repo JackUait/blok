@@ -213,7 +213,7 @@ it('concurrent EMF bitmap completions retain a single owned cache URL', async ()
 });
 it('EMF pictures holding a PDF render no image and create no blob URL', async () => {
   const emf = await import('../../../../../../src/tools/file/pptx/utils/emfParser');
-  vi.spyOn(emf, 'parseEmfContent').mockReturnValue({ type: 'pdf', data: new Uint8Array([1]) });
+  vi.spyOn(emf, 'parseEmfContent').mockReturnValue({ type: 'unsupported' });
   const create = vi.spyOn(URL, 'createObjectURL');
   const p = presentation();
   p.slides[0].nodes = [picture(), picture()];

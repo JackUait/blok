@@ -37,10 +37,8 @@ function largeCompositeGlyph(componentCount: number, extraScaleBytes = 0): Uint8
 		s.writeU16(0); // glyph index
 		s.writeU8(0); // x argument
 		s.writeU8(0); // y argument
-		if (hasScale) {
-			s.writeS16(0x4000);
-			if (extraScaleBytes === 4) s.writeS16(0x4000);
-		}
+		if (hasScale) s.writeS16(0x4000);
+		if (hasScale && extraScaleBytes === 4) s.writeS16(0x4000);
 	}
 	return s.toUint8Array();
 }

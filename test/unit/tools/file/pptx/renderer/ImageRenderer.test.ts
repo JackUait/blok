@@ -3214,12 +3214,10 @@ describe('renderImage', () => {
       return ctx;
     }
 
-    it('renders nothing when parseEmfContent returns pdf type, even with a cached emf-pdf URL', async () => {
+    it('renders nothing for an unsupported EMF, even with a cached emf-pdf URL', async () => {
       const emfModule = await import('../../../../../../src/tools/file/pptx/utils/emfParser');
-      const spy = vi.spyOn(emfModule, 'parseEmfContent').mockReturnValue({
-        type: 'pdf',
-        data: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
-      });
+      // The parser reports an EMF that wraps a PDF as unsupported.
+      const spy = vi.spyOn(emfModule, 'parseEmfContent').mockReturnValue({ type: 'unsupported' });
       const ctx = createEmfCtx();
       ctx.mediaUrlCache.set('ppt/media/image1.emf:emf-pdf', 'blob:pdf-cached');
 
@@ -3308,10 +3306,7 @@ describe('renderImage', () => {
   describe('EMF holding a PDF', () => {
     it('queues no async work and adds no image', async () => {
       const emfModule = await import('../../../../../../src/tools/file/pptx/utils/emfParser');
-      const emfSpy = vi.spyOn(emfModule, 'parseEmfContent').mockReturnValue({
-        type: 'pdf',
-        data: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
-      });
+      const emfSpy = vi.spyOn(emfModule, 'parseEmfContent').mockReturnValue({ type: 'unsupported' });
       const ctx = createMockRenderContext();
       ctx.slide.rels.set('rId1', { type: 'image', target: 'ppt/media/image1.emf' });
       ctx.presentation.media.set('ppt/media/image1.emf', new Uint8Array([0x01]));

@@ -20,43 +20,11 @@ export function normalize(value: unknown): unknown {
   return value;
 }
 
-/** The options Blok's office-loaders.ts passes to docx-preview. */
-export const DOCX_OPTIONS = { inWrapper: true, className: 'blok-docx', ignoreHeight: true, renderAltChunks: false };
-
 export const OFFICE_CASES = {
-  docx: 'fixtures/office-deflated/service-agreement.docx',
   pptx: 'fixtures/office-deflated/pitch-deck.pptx',
   xlsx: 'fixtures/jszip/complex_files/AntarcticaTemps.xlsx',
-  docxImage: 'fixtures/office-deflated/service-agreement-image.docx',
   pptxImage: 'fixtures/office-deflated/pitch-deck-image.pptx',
 } as const;
-
-/**
- * Runs `render` with URL.createObjectURL swapped for one that records each blob and
- * hands out `blob:#<n>`, so the output is stable and the blob bytes can be compared.
- */
-export async function withRecordedBlobs(render: () => Promise<string>): Promise<{ html: string; blobs: unknown[] }> {
-  const blobs: Blob[] = [];
-  const original = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
-
-  Object.defineProperty(URL, 'createObjectURL', {
-    configurable: true,
-    value: (blob: Blob): string => `blob:#${blobs.push(blob) - 1}`,
-  });
-  try {
-    const html = await render();
-    const described = await Promise.all(blobs.map(async (blob) => ({
-      type: blob.type,
-      bytes: normalize(new Uint8Array(await blob.arrayBuffer())),
-    })));
-
-    return { html, blobs: described };
-  } finally {
-    if (original !== undefined) {
-      Object.defineProperty(URL, 'createObjectURL', original);
-    }
-  }
-}
 
 interface ListedFile {
   dir: boolean;

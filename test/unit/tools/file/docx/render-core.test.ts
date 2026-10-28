@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderDocxInto } from '../../../../../src/tools/file/docx';
-import { buildDocx, p } from './build-docx';
+import { buildDocx, editZip, p } from './build-docx';
 
 async function render(parts: Parameters<typeof buildDocx>[0]): Promise<HTMLElement> {
   const container = document.createElement('div');
@@ -65,12 +65,11 @@ describe('renderDocxInto — document skeleton', () => {
 
   it('rejects a document part that declares a DOCTYPE', async () => {
     const container = document.createElement('div');
-    const buf = await buildDocx({ body: '' });
-    const JSZip = (await import('jszip')).default;
-    const zip = await JSZip.loadAsync(buf);
-    zip.file('word/document.xml', '<?xml version="1.0"?><!DOCTYPE d [<!ENTITY e "boom">]><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>&e;</w:t></w:r></w:p></w:body></w:document>');
+    const buf = editZip(await buildDocx({ body: '' }), {
+      'word/document.xml': '<?xml version="1.0"?><!DOCTYPE d [<!ENTITY e "boom">]><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>&e;</w:t></w:r></w:p></w:body></w:document>',
+    });
 
-    await expect(renderDocxInto(await zip.generateAsync({ type: 'arraybuffer' }), container)).rejects.toThrow();
+    await expect(renderDocxInto(buf, container)).rejects.toThrow();
     expect(container.textContent).not.toContain('boom');
   });
 
@@ -496,11 +495,10 @@ describe('renderDocxInto — review fixes', () => {
   it('paints the document background colour on every page', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
-    const JSZip = (await import('jszip')).default;
-    const zip = await JSZip.loadAsync(await buildDocx({ body: p('x') }));
-    const xml = (await zip.file('word/document.xml')?.async('text')) ?? '';
-    zip.file('word/document.xml', xml.replace('<w:body>', '<w:background w:color="FFF2CC"/><w:body>'));
-    await renderDocxInto(await zip.generateAsync({ type: 'arraybuffer' }), container);
+    const buf = editZip(await buildDocx({ body: p('x') }), {
+      'word/document.xml': (xml) => xml.replace('<w:body>', '<w:background w:color="FFF2CC"/><w:body>'),
+    });
+    await renderDocxInto(buf, container);
 
     expect(pages(container)[0].style.backgroundColor).toBe('rgb(255, 242, 204)');
   });

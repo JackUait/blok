@@ -104,8 +104,8 @@ function buildSheetTable(doc: Document, shared: string[]): HTMLTableElement {
 }
 
 /**
- * Render an .xlsx as DOM tables by parsing the OOXML zip directly (JSZip +
- * DOMParser) — textContent only, never innerHTML. One table per worksheet; cells
+ * Render an .xlsx as DOM tables by parsing the OOXML zip directly (in-house
+ * zip reader + DOMParser) — textContent only, never innerHTML. One table per worksheet; cells
  * are placed at their A1 column so sparse rows stay aligned. Parts are read
  * through the same guards as the docx renderer: inflate limits, no DOCTYPE.
  */

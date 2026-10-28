@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import JSZip from 'jszip';
+import { readZip } from '../../../../src/tools/file/zip/read-zip';
+import { createZip } from '../../../../scripts/lib/zip-writer.mjs';
 
 vi.mock('../../../../src/tools/file/binary-preview', () => ({
   loadBinaryPreview: vi.fn(),
 }));
 vi.mock('../../../../src/tools/file/office-loaders', () => ({
   loadDocxRenderer: vi.fn(),
-  loadZip: vi.fn(),
+  loadZipReader: vi.fn(),
   loadPptxRenderer: vi.fn(),
 }));
 
 import { fillOfficeBody, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import { loadBinaryPreview } from '../../../../src/tools/file/binary-preview';
-import { loadDocxRenderer, loadPptxRenderer, loadZip } from '../../../../src/tools/file/office-loaders';
+import { loadDocxRenderer, loadPptxRenderer, loadZipReader } from '../../../../src/tools/file/office-loaders';
 
 const OPTS = { url: 'blob:x', fileName: 'a.docx', labels: { close: 'Close', error: 'Error', download: 'Download' } };
 
@@ -67,16 +68,13 @@ describe('renderXlsxInto', () => {
     + '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1"><v>42</v></c></row>'
     + '</sheetData></worksheet>';
 
-  const workbook = (): Promise<ArrayBuffer> => {
-    const zip = new JSZip();
-    zip.file('xl/sharedStrings.xml', sharedXml);
-    zip.file('xl/worksheets/sheet1.xml', sheetXml);
-
-    return zip.generateAsync({ type: 'arraybuffer' });
-  };
+  const workbook = (): Promise<ArrayBuffer> => Promise.resolve(Uint8Array.from(createZip([
+    { name: 'xl/sharedStrings.xml', data: sharedXml },
+    { name: 'xl/worksheets/sheet1.xml', data: sheetXml },
+  ])).buffer);
 
   beforeEach(() => {
-    vi.mocked(loadZip).mockResolvedValue(JSZip);
+    vi.mocked(loadZipReader).mockResolvedValue(readZip);
   });
 
   it('renders shared-string cells as literal text, never parsed HTML', async () => {

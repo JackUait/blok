@@ -44,8 +44,8 @@ export default defineConfig({
     setupFiles: ['test/unit/vitest.setup.ts'],
     testTimeout: 30000,
     hookTimeout: 30000,
-    // Both import `jszip`; inlined, the alias below sends it to the sandbox's mutated shim.
-    server: { deps: { inline: ['docx-preview', '@aiden0z/pptx-renderer'] } },
+    // It imports `jszip`; inlined, the alias below sends it to the sandbox's mutated shim.
+    server: { deps: { inline: ['@aiden0z/pptx-renderer'] } },
   },
   server: {
     fs: {

@@ -79,7 +79,7 @@ export async function snapshotShim(bytes: Uint8Array): Promise<ArchiveSnapshot> 
       });
     }
 
-    return { entries, fileNull: Object.keys(zip.files).filter((n) => zip.file(n) === null) };
+    return { entries, fileNull: Object.entries(zip.files).filter(([, f]) => f.dir).map(([n]) => n) };
   } catch {
     return { error: true };
   }

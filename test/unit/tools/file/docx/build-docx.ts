@@ -1,4 +1,5 @@
-import JSZip from 'jszip';
+import { createZip } from '../../../../../scripts/lib/zip-writer.mjs';
+import { readZip } from '../../../../../src/tools/file/zip/read-zip';
 
 export const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -59,7 +60,7 @@ export const part = (root: string, inner: string): string =>
 
 /** Build a .docx (as an ArrayBuffer) from the given parts. */
 export async function buildDocx(parts: DocxParts): Promise<ArrayBuffer> {
-  const zip = new JSZip();
+  const zip = new Map<string, string | Uint8Array>();
   const rels: DocxRel[] = [...(parts.rels ?? [])];
   const optional: Array<[keyof DocxParts, string, string]> = [
     ['styles', 'styles', 'styles.xml'],
@@ -69,28 +70,51 @@ export async function buildDocx(parts: DocxParts): Promise<ArrayBuffer> {
     ['endnotes', 'endnotes', 'endnotes.xml'],
   ];
 
-  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>');
-  zip.file('_rels/.rels', relXml([{ id: 'rId1', type: 'officeDocument', target: 'word/document.xml' }]));
+  zip.set('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>');
+  zip.set('_rels/.rels', relXml([{ id: 'rId1', type: 'officeDocument', target: 'word/document.xml' }]));
 
   for (const [key, root, file] of optional) {
     const inner = parts[key];
     if (typeof inner === 'string') {
-      zip.file(`word/${file}`, part(root, inner));
+      zip.set(`word/${file}`, part(root, inner));
       rels.push({ id: `rIdAuto${root}`, type: root, target: file });
     }
   }
   if (parts.theme !== undefined) {
-    zip.file('word/theme/theme1.xml', parts.theme);
+    zip.set('word/theme/theme1.xml', parts.theme);
     rels.push({ id: 'rIdAutoTheme', type: 'theme', target: 'theme/theme1.xml' });
   }
   for (const [path, content] of Object.entries(parts.files ?? {})) {
-    zip.file(path, content);
+    zip.set(path, content);
   }
 
-  zip.file('word/_rels/document.xml.rels', relXml(rels));
-  zip.file('word/document.xml', part('document', `<w:body>${parts.body}</w:body>`));
+  zip.set('word/_rels/document.xml.rels', relXml(rels));
+  zip.set('word/document.xml', part('document', `<w:body>${parts.body}</w:body>`));
 
-  return zip.generateAsync({ type: 'arraybuffer' });
+  return zipToBuffer(zip);
+}
+
+/** Zip the files, in insertion order, into a fresh ArrayBuffer. */
+export function zipToBuffer(files: Map<string, string | Uint8Array>): ArrayBuffer {
+  return Uint8Array.from(createZip([...files].map(([name, data]) => ({ name, data })))).buffer;
+}
+
+/** Re-zip a package with some parts replaced or added; a function gets the part's old text. */
+export function editZip(buf: ArrayBuffer, edits: Record<string, string | ((old: string) => string)>): ArrayBuffer {
+  const archive = readZip(buf);
+  const files = new Map<string, string | Uint8Array>();
+
+  for (const entry of archive.entries.filter((e) => !e.dir)) {
+    files.set(entry.name, archive.read(entry));
+  }
+  for (const [name, edit] of Object.entries(edits)) {
+    const old = files.get(name);
+    const oldText = typeof old === 'string' ? old : new TextDecoder().decode(old);
+
+    files.set(name, typeof edit === 'string' ? edit : edit(oldText));
+  }
+
+  return zipToBuffer(files);
 }
 
 /** Shorthand for a paragraph holding one plain run. */

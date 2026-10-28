@@ -1,5 +1,5 @@
-import type JSZip from 'jszip';
-import { loadZip } from './office-loaders';
+import { loadZipReader } from './office-loaders';
+import type { ZipArchive } from './zip/read-zip';
 
 /** Largest single part we inflate. Guards a small zip that inflates to gigabytes. */
 const MAX_PART_BYTES = 64 * 1024 * 1024;
@@ -8,26 +8,6 @@ const MAX_TOTAL_BYTES = 256 * 1024 * 1024;
 
 /** The package is too large to inflate safely. */
 export class ZipLimitError extends Error {}
-
-/** JSZip's per-entry stream; public in its docs, missing from its typings. */
-interface StreamingEntry {
-  internalStream(type: 'uint8array'): JSZip.JSZipStreamHelper<Uint8Array>;
-}
-
-function isStreaming(file: JSZip.JSZipObject): file is JSZip.JSZipObject & StreamingEntry {
-  return typeof (file as Partial<StreamingEntry>).internalStream === 'function';
-}
-
-function concat(chunks: Uint8Array[], size: number): Uint8Array<ArrayBuffer> {
-  const out = new Uint8Array(size);
-  chunks.reduce((offset, chunk) => {
-    out.set(chunk, offset);
-
-    return offset + chunk.length;
-  }, 0);
-
-  return out;
-}
 
 /** Parse XML, refusing DTDs (entity expansion) and malformed markup. */
 export function parseXml(text: string, path: string): Document {
@@ -54,52 +34,28 @@ export function parseXml(text: string, path: string): Document {
 export class ZipParts {
   private inflated = 0;
 
-  protected constructor(protected readonly zip: JSZip) {}
+  protected constructor(protected readonly zip: ZipArchive) {}
 
   static async open(buf: ArrayBuffer): Promise<ZipParts> {
     return new ZipParts(await ZipParts.load(buf));
   }
 
-  protected static async load(buf: ArrayBuffer): Promise<JSZip> {
-    const JSZipCtor = await loadZip();
+  protected static async load(buf: ArrayBuffer): Promise<ZipArchive> {
+    const readZip = await loadZipReader();
 
-    return JSZipCtor.loadAsync(buf);
+    return readZip(buf);
   }
 
   /** Every entry path in the zip. */
   paths(): string[] {
-    return Object.keys(this.zip.files);
+    return this.zip.entries.map((entry) => entry.name);
   }
 
-  /**
-   * Inflate a part, counting the bytes as they come out. The sizes a zip
-   * declares are not trusted: an entry claiming 10 bytes may inflate to gigabytes.
-   */
-  private inflate(file: JSZip.JSZipObject, path: string): Promise<Uint8Array<ArrayBuffer>> {
-    if (!isStreaming(file)) {
-      return Promise.reject(new Error('zip entries cannot be streamed'));
-    }
+  /** Whether the package has a file at `path`. */
+  has(path: string): boolean {
+    const entry = this.zip.get(path);
 
-    return new Promise((resolve, reject) => {
-      const chunks: Uint8Array[] = [];
-      const part = { size: 0 };
-      const stream = file.internalStream('uint8array');
-      stream
-        .on('data', (chunk) => {
-          part.size += chunk.length;
-          this.inflated += chunk.length;
-          if (part.size > MAX_PART_BYTES || this.inflated > MAX_TOTAL_BYTES) {
-            stream.pause();
-            reject(new ZipLimitError(`${path} is too large to preview`));
-
-            return;
-          }
-          chunks.push(chunk);
-        })
-        .on('error', reject)
-        .on('end', () => resolve(concat(chunks, part.size)))
-        .resume();
-    });
+    return entry !== undefined && !entry.dir;
   }
 
   /** A part's XML, or null when the package lacks it. */
@@ -126,11 +82,20 @@ export class ZipParts {
     }
   }
 
-  /** A part's raw bytes, or null when the package lacks it. */
+  /**
+   * A part's raw bytes, or null when the package lacks it. The declared size is
+   * exact: the reader's inflate refuses to write past it, so a lying entry throws.
+   */
   async bytes(path: string): Promise<Uint8Array<ArrayBuffer> | null> {
-    const file = this.zip.file(path);
+    const entry = this.zip.get(path);
+    if (entry === undefined || entry.dir) {
+      return null;
+    }
+    this.inflated += entry.size;
+    if (entry.size > MAX_PART_BYTES || this.inflated > MAX_TOTAL_BYTES) {
+      throw new ZipLimitError(`${path} is too large to preview`);
+    }
 
-    return file === null ? null : this.inflate(file, path);
+    return this.zip.read(entry);
   }
-
 }

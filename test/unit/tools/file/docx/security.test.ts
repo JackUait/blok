@@ -1,9 +1,9 @@
-import JSZip from 'jszip';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderDocxInto } from '../../../../../src/tools/file/docx';
 import { MAX_DEPTH } from '../../../../../src/tools/file/docx/context';
 import { ZipLimitError } from '../../../../../src/tools/file/zip-parts';
-import { buildDocx, p, part, PNG_1X1 } from './build-docx';
+import { buildDocx, editZip, p, part, PNG_1X1, zipToBuffer } from './build-docx';
+import { ZipError } from '../../../../../src/tools/file/zip/zip-error';
 import type { DocxParts } from './build-docx';
 
 const MARK = 'SAFE-MARKER';
@@ -62,14 +62,14 @@ const blipDrawing = (blip: string): string =>
 
 /** Zip of document.xml with the given full text, plus the minimum package parts. */
 async function rawDocx(documentXml: string, extra: Record<string, string> = {}): Promise<ArrayBuffer> {
-  const zip = new JSZip();
-  zip.file('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-  zip.file('word/document.xml', documentXml);
+  const zip = new Map<string, string>();
+  zip.set('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  zip.set('word/document.xml', documentXml);
   for (const [path, text] of Object.entries(extra)) {
-    zip.file(path, text);
+    zip.set(path, text);
   }
 
-  return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+  return Promise.resolve(zipToBuffer(zip));
 }
 
 /** Overwrite every local and central size field so the zip claims tiny parts. */
@@ -390,10 +390,9 @@ describe('renderDocxInto — untrusted documents', () => {
 
     it('drops a styles part with a DOCTYPE but still renders the body', async () => {
       const styles = `${BILLION_LAUGHS}<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:styleId="&d;"/></w:styles>`;
-      const zip = await JSZip.loadAsync(await buildDocx({ body: p(MARK), styles: '' }));
-      zip.file('word/styles.xml', styles);
+      const buf = editZip(await buildDocx({ body: p(MARK), styles: '' }), { 'word/styles.xml': styles });
       const c = document.createElement('div');
-      await renderDocxInto(await zip.generateAsync({ type: 'arraybuffer' }), c);
+      await renderDocxInto(buf, c);
 
       expectRendered(c);
     });
@@ -411,21 +410,21 @@ describe('renderDocxInto — untrusted documents', () => {
 
   describe('resource limits', () => {
     it('rejects a part whose zip entry honestly declares more than the limit', async () => {
-      const zip = await JSZip.loadAsync(await buildDocx({ body: p(MARK) }));
-      zip.file('word/styles.xml', 'a'.repeat(65 * 1024 * 1024));
-      const rels = (await zip.file('word/_rels/document.xml.rels')?.async('text')) ?? '';
-      zip.file('word/_rels/document.xml.rels', rels.replace('</Relationships>', '<Relationship Id="rS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'));
-      const buf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+      const buf = editZip(await buildDocx({ body: p(MARK) }), {
+        'word/styles.xml': 'a'.repeat(65 * 1024 * 1024),
+        'word/_rels/document.xml.rels': (rels) => rels.replace('</Relationships>', '<Relationship Id="rS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'),
+      });
 
       await expect(renderDocxInto(buf, document.createElement('div'))).rejects.toBeInstanceOf(ZipLimitError);
     }, 30_000);
 
     it('rejects a part that inflates past the limit while its zip entry claims 10 bytes', async () => {
-      const zip = await JSZip.loadAsync(await buildDocx({ body: p(MARK) }));
-      zip.file('word/document.xml', `${part('document', `<w:body>${p(MARK)}</w:body>`)}<!--${'a'.repeat(70 * 1024 * 1024)}-->`);
-      const buf = lieAboutSizes(await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' }), 'word/document.xml');
+      const buf = lieAboutSizes(editZip(await buildDocx({ body: p(MARK) }), {
+        'word/document.xml': `${part('document', `<w:body>${p(MARK)}</w:body>`)}<!--${'a'.repeat(70 * 1024 * 1024)}-->`,
+      }), 'word/document.xml');
 
-      await expect(renderDocxInto(buf, document.createElement('div'))).rejects.toBeInstanceOf(ZipLimitError);
+      // Inflate stops at the declared 10 bytes, so the lie surfaces as a corrupt zip.
+      await expect(renderDocxInto(buf, document.createElement('div'))).rejects.toBeInstanceOf(ZipError);
     }, 30_000);
 
     it('bounds nesting of tables and text boxes', async () => {

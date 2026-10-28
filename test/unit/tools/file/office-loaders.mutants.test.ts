@@ -12,7 +12,7 @@ vi.mock('@aiden0z/pptx-renderer', () => ({
   RECOMMENDED_ZIP_LIMITS: pptx.limits,
 }));
 
-import { loadDocxRenderer, loadZip, loadPptxRenderer } from '../../../../src/tools/file/office-loaders';
+import { loadDocxRenderer, loadZipReader, loadPptxRenderer } from '../../../../src/tools/file/office-loaders';
 
 describe('office loaders mutants', () => {
   beforeEach(() => {
@@ -34,26 +34,11 @@ describe('office loaders mutants', () => {
     });
   });
 
-  describe('jszip interop', () => {
-    it('accepts the constructor on the module default', async () => {
-      const ctor = function JSZip() { /* stand-in */ };
+  describe('zip reader', () => {
+    it('hands back the in-house reader', async () => {
+      const read = await loadZipReader();
 
-      vi.doMock('jszip', () => ({ default: ctor }));
-      vi.resetModules();
-
-      const { loadZip: fresh } = await import('../../../../src/tools/file/office-loaders');
-
-      await expect(fresh()).resolves.toBe(ctor);
-
-      vi.doUnmock('jszip');
-      vi.resetModules();
-    });
-
-    it('accepts a real jszip module and hands back something constructible', async () => {
-      const Zip = await loadZip();
-
-      expect(typeof Zip).toBe('function');
-      expect(new Zip()).toBeDefined();
+      expect(read).toBe((await import('../../../../src/tools/file/zip/read-zip')).readZip);
     });
   });
 

@@ -1,6 +1,6 @@
 // test/playwright/tests/tools/file-docx-security.spec.ts
 
-import JSZip from 'jszip';
+import { createZip } from '../../../../scripts/lib/zip-writer.mjs';
 import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
@@ -61,16 +61,16 @@ const relsXml = (rels: Rel[]): string =>
     .join('')}</Relationships>`;
 
 async function buildDocx(attack: Attack): Promise<Buffer> {
-  const zip = new JSZip();
-  zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>');
-  zip.file('_rels/.rels', relsXml([{ id: 'rId1', type: 'officeDocument', target: 'word/document.xml' }]));
-  zip.file('word/_rels/document.xml.rels', relsXml(attack.rels ?? []));
-  zip.file('word/document.xml', attack.documentXml ?? `<?xml version="1.0" encoding="UTF-8"?><w:document ${NS}><w:body>${attack.body ?? ''}</w:body></w:document>`);
+  const zip = new Map<string, string | Uint8Array>();
+  zip.set('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>');
+  zip.set('_rels/.rels', relsXml([{ id: 'rId1', type: 'officeDocument', target: 'word/document.xml' }]));
+  zip.set('word/_rels/document.xml.rels', relsXml(attack.rels ?? []));
+  zip.set('word/document.xml', attack.documentXml ?? `<?xml version="1.0" encoding="UTF-8"?><w:document ${NS}><w:body>${attack.body ?? ''}</w:body></w:document>`);
   for (const [path, content] of Object.entries(attack.files ?? {})) {
-    zip.file(path, content);
+    zip.set(path, content);
   }
 
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+  return Promise.resolve(createZip([...zip].map(([name, data]) => ({ name, data }))));
 }
 
 test.beforeAll(() => {

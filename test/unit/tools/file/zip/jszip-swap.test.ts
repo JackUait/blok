@@ -10,7 +10,7 @@ const manifest = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'))
 };
 const lockfile = readFileSync(resolve(ROOT, 'yarn.lock'), 'utf8');
 
-// docx-preview and pptx-renderer depend on jszip themselves; without the resolution
+// pptx-renderer depends on jszip itself; without the resolution
 // the real jszip (and pako) would quietly come back into the bundle.
 describe('jszip is replaced by the in-house shim', () => {
   it('points every jszip import at the shim package', () => {

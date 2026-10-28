@@ -1,4 +1,4 @@
-import type JSZip from 'jszip';
+import type { ZipArchive } from '../zip/read-zip';
 import { ZipParts } from '../zip-parts';
 import { attr, kids } from './xml';
 
@@ -58,7 +58,7 @@ const relsPathOf = (path: string): string => `${folderOf(path)}_rels/${path.slic
 export class DocxPackage extends ZipParts {
   private readonly relsCache = new Map<string, Promise<Relationship[]>>();
 
-  private constructor(zip: JSZip, readonly mainPath: string) {
+  private constructor(zip: ZipArchive, readonly mainPath: string) {
     super(zip);
   }
 
@@ -68,7 +68,7 @@ export class DocxPackage extends ZipParts {
     const rootRels = await probe.rels('');
     const main = rootRels.find((rel) => rel.type === 'officeDocument' && !rel.external)?.target ?? 'word/document.xml';
 
-    if (zip.file(main) === null) {
+    if (!probe.has(main)) {
       throw new Error('docx: package has no main document part');
     }
 

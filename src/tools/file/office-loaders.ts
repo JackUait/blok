@@ -1,5 +1,5 @@
 import type { PptxViewer } from '@aiden0z/pptx-renderer';
-import type JSZip from 'jszip';
+import type { readZip } from './zip/read-zip';
 
 /**
  * Dynamic-import the in-house docx renderer (code-split out of the main bundle).
@@ -14,20 +14,14 @@ export async function loadDocxRenderer(): Promise<
 }
 
 /**
- * Dynamic-import JSZip (code-split out of the main bundle). We parse .xlsx as a
+ * Dynamic-import the zip reader (code-split out of the main bundle). We parse .xlsx as a
  * raw OOXML zip rather than via a spreadsheet library: ExcelJS's reader breaks
  * when re-bundled by Vite (its worksheet reader throws on `_processWorksheetEntry`
  * once polyfills are double-bundled), and SheetJS dropped the npm registry. The
- * docx renderer and pptx-renderer read their packages with JSZip too.
+ * docx renderer reads its package with it too.
  */
-export async function loadZip(): Promise<typeof JSZip> {
-  const mod = await import('jszip');
-
-  // JSZip is CJS — interop lands the constructor on `.default` under some
-  // bundlers and at the top level under others. Accept either.
-  const candidate = mod as unknown as { default?: typeof JSZip } & typeof JSZip;
-
-  return candidate.default ?? candidate;
+export async function loadZipReader(): Promise<typeof readZip> {
+  return (await import('./zip/read-zip')).readZip;
 }
 
 /** Dynamic-import pptx-renderer's viewer + recommended zip limits. */

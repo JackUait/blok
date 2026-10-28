@@ -1,11 +1,12 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { createZip } from '../../../../scripts/lib/zip-writer.mjs';
+import { readZip } from '../../../../src/tools/file/zip/read-zip';
 
 const loaders = vi.hoisted(() => ({
   loadBinaryPreview: vi.fn(),
   loadDocxRenderer: vi.fn(),
-  loadZip: vi.fn(),
+  loadZipReader: vi.fn(),
   loadPptxRenderer: vi.fn(),
 }));
 
@@ -15,15 +16,13 @@ vi.mock('../../../../src/tools/file/binary-preview', () => ({
 
 vi.mock('../../../../src/tools/file/office-loaders', () => ({
   loadDocxRenderer: loaders.loadDocxRenderer,
-  loadZip: loaders.loadZip,
+  loadZipReader: loaders.loadZipReader,
   loadPptxRenderer: loaders.loadPptxRenderer,
 }));
 
 import { fillOfficeBody, isOfficeKind, renderXlsxInto } from '../../../../src/tools/file/office-preview';
 import type { FilePreviewOptions } from '../../../../src/tools/file/preview-modal';
-import type * as OfficeLoadersModule from '../../../../src/tools/file/office-loaders';
 
-type OfficeLoaders = typeof OfficeLoadersModule;
 
 const SHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
@@ -54,19 +53,10 @@ const rowTexts = (container: HTMLElement): string[][] =>
     Array.from(tr.querySelectorAll('td')).map((td) => td.textContent ?? ''));
 
 describe('office preview mutants', () => {
-  let realZip: Awaited<ReturnType<OfficeLoaders['loadZip']>>;
-
-  beforeAll(async () => {
-    // The real loader, so this file never imports the zip library itself.
-    const actual = await vi.importActual<OfficeLoaders>('../../../../src/tools/file/office-loaders');
-
-    realZip = await actual.loadZip();
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
     // restoreAllMocks in afterEach drops the implementations, so re-prime here.
-    loaders.loadZip.mockResolvedValue(realZip);
+    loaders.loadZipReader.mockResolvedValue(readZip);
     loaders.loadBinaryPreview.mockResolvedValue({ ok: false, reason: 'fetch-error' });
     document.body.innerHTML = '';
   });
@@ -339,9 +329,9 @@ describe('office preview mutants', () => {
     });
 
     it('refuses a sheet that inflates past the preview limit', async () => {
-      const zip = new JSZip();
-      zip.file('xl/worksheets/sheet1.xml', sheetXml(`<row r="1"><c r="A1" t="inlineStr"><is><t>${'a'.repeat(65 * 1024 * 1024)}</t></is></c></row>`));
-      const buf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+      const buf = workbook({
+        'xl/worksheets/sheet1.xml': sheetXml(`<row r="1"><c r="A1" t="inlineStr"><is><t>${'a'.repeat(65 * 1024 * 1024)}</t></is></c></row>`),
+      });
 
       await expect(renderXlsxInto(buf, document.createElement('div'))).rejects.toThrow(/too large/);
     }, 30_000);
@@ -365,7 +355,7 @@ describe('office preview mutants', () => {
       await fillOfficeBody(body, options(), 'xlsx', () => false);
 
       // A failed fetch must not pull a renderer chunk in to render nothing.
-      expect(loaders.loadZip).not.toHaveBeenCalled();
+      expect(loaders.loadZipReader).not.toHaveBeenCalled();
       expect(body.querySelector('[data-role="file-preview-error"]')?.textContent).toBe('Preview failed');
       expect(body.querySelector('.blok-file-preview-office')).toBeNull();
     });

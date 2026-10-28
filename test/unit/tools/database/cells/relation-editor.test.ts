@@ -162,7 +162,7 @@ describe('relation editor', () => {
       it('ends each row with "+" to link, or "−" on a linked page', () => {
         openLinked();
 
-        const glyph = (id: string): string | undefined =>
+        const glyph = (id: string): string | null | undefined =>
           document.querySelector(`[data-blok-database-relation-option="${id}"] > [data-blok-database-relation-toggle]`)?.getAttribute('data-blok-database-relation-toggle');
 
         expect(glyph('r2')).toBe('remove');

@@ -471,6 +471,82 @@ describe('inflateRaw - differential against zlib.deflateRawSync', () => {
   });
 });
 
+describe('inflateRaw - work per block', () => {
+  /**
+   * One dynamic block whose literal/length and distance codes reach 15 bits and
+   * that holds only end-of-block. About 31 bytes, so input is mostly table builds.
+   */
+  const deepBlock = (w: BitWriter): void => {
+    const order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+    const litLens = lens(257, { 256: 15 });
+    const distLens = [...Array.from({ length: 15 }, (_, i) => i + 1), 15];
+
+    for (let i = 0; i < 15; i++) {
+      litLens[i] = i + 1;
+    }
+    // Code length code: symbols 0-12 four bits, 13-18 five bits (complete).
+    const clLens = Array.from({ length: 19 }, (_, i) => (i < 13 ? 4 : 5));
+    const clCodes = canonical(clLens);
+    const emit = (sym: number): void => {
+      w.code(clCodes[sym], clLens[sym]);
+    };
+
+    w.bits(0, 1).bits(2, 2).bits(0, 5).bits(distLens.length - 1, 5).bits(15, 4);
+    order.forEach((sym) => w.bits(clLens[sym], 3));
+    litLens.slice(0, 15).forEach(emit);
+    // 241 zeros for symbols 15..255, then 256's length.
+    emit(18);
+    w.bits(127, 7);
+    emit(18);
+    w.bits(92, 7);
+    emit(15);
+    distLens.forEach(emit);
+    w.code(canonical(litLens)[256], 15);
+  };
+
+  const fastest = (fn: () => void): number => {
+    let best = Infinity;
+
+    for (let i = 0; i < 3; i++) {
+      const start = performance.now();
+
+      fn();
+      best = Math.min(best, performance.now() - start);
+    }
+
+    return best;
+  };
+
+  it('spends little time on many tiny blocks with 15-bit codes', () => {
+    const w = new BitWriter();
+
+    for (let i = 0; i < 2000; i++) {
+      deepBlock(w);
+    }
+    const last = fixedBlock(w, true);
+
+    last.lit(0x41);
+    last.lit(256);
+    const src = w.finish();
+
+    expect(Buffer.from(zlib.inflateRawSync(src)).toString()).toBe('A');
+    expect(Buffer.from(inflateRaw(src, 1)).toString()).toBe('A');
+
+    // Baseline that does not depend on the machine: our own time on an ordinary
+    // Huffman-coded stream of at least the same input size (random letters).
+    const letters = randomBytes(src.length * 2, 5).map((b) => 0x61 + (b % 26));
+    const normal = u8(zlib.deflateRawSync(letters));
+
+    expect(normal.length).toBeGreaterThanOrEqual(src.length);
+    const ours = fastest(() => inflateRaw(src, 1));
+    const zlibTime = fastest(() => zlib.inflateRawSync(src));
+    const oursNormal = fastest(() => inflateRaw(normal, letters.length));
+
+    expect(ours).toBeLessThan(20 * oursNormal + 20);
+    expect(ours).toBeLessThan(Math.max(150, 30 * zlibTime));
+  });
+});
+
 describe('inflateRaw - malformed input', () => {
   /** Ours must throw this message, and zlib must reject the same stream. */
   const expectRejected = (src: Uint8Array, message: string, zlibMessage = message): void => {

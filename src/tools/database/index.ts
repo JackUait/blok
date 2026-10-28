@@ -20,7 +20,7 @@ import { DatabaseDashboardView } from './database-dashboard-view';
 import type { DashboardMount } from './database-dashboard-view';
 import { planTypeChange } from './property-conversion';
 import { openCellEditor } from './cells';
-import type { CellContext, CellEditorHandle } from './cells';
+import type { CellContext, CellEditorHandle, RelatedPeek } from './cells';
 import { ComputedProperties } from './computed-properties';
 import { openFormulaEditor } from './database-formula-editor';
 import type { FormulaEditorHandle } from './database-formula-editor';
@@ -9150,6 +9150,8 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawerSession = null;
     this.cardDrawer = null;
     drawer?.destroy();
+    // destroy() skips onClose; a held picker must not keep its keys suspended.
+    this.endRelatedPeek();
   }
 
   private revokeCardDrawer(origin: DrawerAuthority): void {
@@ -9273,6 +9275,8 @@ export class DatabaseTool implements BlockTool {
           // The next open asks the host again.
           this.hostBacklinks = null;
           this.view?.rowPageClosed?.();
+          // Last: the picker under the peek takes focus back.
+          this.endRelatedPeek();
         },
         onCopyViewLink: (rowId, tabId) => this.copyRowLink(rowId, tabId),
         onAddProperty: (type, name) => {
@@ -10679,16 +10683,35 @@ export class DatabaseTool implements BlockTool {
     return (source?.rows ?? []).map((row) => ({ id: row.id, title: source === undefined ? '' : DatabaseTool.titleOf(source, row) }));
   }
 
-  private openRelated(property: PropertyDefinition, rowId: string): void {
+  /**
+   * @returns true when `peek.onClose` will run as this block's peek closes. A
+   * linked view's or another database's peek opens too, but reports nothing.
+   */
+  private openRelated(property: PropertyDefinition, rowId: string, peek?: RelatedPeek): boolean {
     const databaseId = property.relation?.targetDatabaseId;
 
-    if (databaseId === undefined || property.relation?.targetDocumentId !== undefined) return;
-    if (databaseId === this.dataId) {
-      this.handleRowClick(rowId);
+    if (databaseId === undefined || property.relation?.targetDocumentId !== undefined) return false;
+    if (databaseId !== this.dataId) {
+      this.api.blocks.getById(databaseId)?.call('openRow', { rowId, ...(peek !== undefined ? { mode: peek.mode, explicit: true } : {}) });
 
-      return;
+      return false;
     }
-    this.api.blocks.getById(databaseId)?.call('openRow', { rowId });
+    this.handleRowClick(rowId, peek?.mode);
+    if (peek === undefined || this.source !== undefined || this.cardDrawer?.isOpen !== true || this.cardDrawer.openRowId !== rowId) return false;
+    this.endRelatedPeek();
+    this.relatedPeekClosed = peek.onClose;
+
+    return true;
+  }
+
+  /** The relation picker held open under the peek (notion-spec-2 §19.2). */
+  private relatedPeekClosed: (() => void) | null = null;
+
+  private endRelatedPeek(): void {
+    const done = this.relatedPeekClosed;
+
+    this.relatedPeekClosed = null;
+    done?.();
   }
 
   private writeForeignRow(databaseId: string, rowId: string, changes: Record<string, PropertyValue>): void {
@@ -10885,7 +10908,7 @@ export class DatabaseTool implements BlockTool {
       relationTitle: (property, rowId) => this.relatedTitle(property, rowId),
       relationCandidates: (property) => this.relationCandidates(property),
       relationScope: (property) => this.relatedDatabaseName(property),
-      openRelated: (property, rowId) => this.openRelated(property, rowId),
+      openRelated: (property, rowId, peek) => this.openRelated(property, rowId, peek),
       ...this.mapCellContext(),
       ...(this.config.helpLinks !== undefined ? { helpLinks: this.config.helpLinks } : {}),
       ...(this.people !== undefined ? { people: this.people } : {}),

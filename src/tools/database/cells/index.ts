@@ -11,7 +11,7 @@ import { safeHref } from '../../../components/utils/sanitize-url';
 import { IconCross, IconMap } from '../../../components/icons';
 
 export { renderCellValue, createOptionPill } from './display';
-export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer } from './types';
+export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer, RelatedPeek } from './types';
 export { DATE_VALUE_FORMAT, formatDateValue, parseDateValue } from './date-value';
 export type { ParsedDateValue } from './date-value';
 export { OPTION_COLORS, optionColorOf, pickOptionColor } from './option-colors';

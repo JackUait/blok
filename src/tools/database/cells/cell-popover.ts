@@ -90,6 +90,8 @@ const dockPlacement = (anchor: HTMLElement): Pick<PopoverParams, 'cover' | 'view
 export class CellPopover {
   private popover: PopoverDesktop | null = null;
   private readonly options: CellPopoverOptions;
+  /** A surface opened from the editor owns focus, presses and Escape. */
+  private held = false;
 
   constructor(options: CellPopoverOptions) {
     this.options = options;
@@ -143,13 +145,35 @@ export class CellPopover {
     popover.destroy();
   }
 
+  /**
+   * Keeps the editor open under a surface it opened, such as a row peek, until
+   * the release. Outside presses, focus and Escape go to that surface meanwhile.
+   */
+  hold(): () => void {
+    const popover = this.popover;
+
+    if (popover === null) {
+      return () => undefined;
+    }
+    const release = popover.holdOpen();
+
+    this.held = true;
+
+    return () => {
+      if (this.popover !== popover || !this.held) return;
+      this.held = false;
+      release();
+    };
+  }
+
   private teardown(): void {
     this.popover = null;
+    this.held = false;
     window.removeEventListener('keydown', this.handleEscape, true);
   }
 
   private readonly handleEscape = (event: KeyboardEvent): void => {
-    if (event.key !== 'Escape' || event.isComposing || this.popover === null) {
+    if (event.key !== 'Escape' || event.isComposing || this.popover === null || this.held) {
       return;
     }
     event.preventDefault();

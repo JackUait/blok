@@ -195,9 +195,26 @@ class RelationEditor implements CellEditorHandle {
       // Enter only links: the first row is highlighted on open, and Enter there must not unlink it.
       if (!this.selected.includes(row.id)) this.toggle(row.id);
       // notion-spec-2 §19.2: in the table picker, Enter on a linked page opens it.
-      else if (this.heading !== null) this.ctx.openRelated?.(this.property, row.id);
+      else if (this.heading !== null) this.openPeek(row.id);
     }
   };
+
+  /**
+   * notion-spec-2 §19.2: a centred peek opens over the picker, which stays
+   * open under it. The hold must start before the peek takes focus.
+   */
+  private openPeek(rowId: string): void {
+    const release = this.popover.hold();
+    const opened = this.ctx.openRelated?.(this.property, rowId, {
+      mode: 'center',
+      onClose: () => {
+        release();
+        if (this.open) this.search.focus();
+      },
+    });
+
+    if (opened !== true) release();
+  }
 
   private renderList(): void {
     const rows = this.rows();

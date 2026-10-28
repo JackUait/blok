@@ -3,6 +3,12 @@ import type { DateDisplayChange } from './date-format';
 import type { FormulaProblem } from '../computed-properties';
 import type { DatabaseHelpLinks, DatabaseMap, DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
+/** The relation picker's way to open a page over itself (notion-spec-2 §19.2). */
+export interface RelatedPeek {
+  mode: 'center';
+  onClose: () => void;
+}
+
 /**
  * What every cell renderer and editor needs from its host: the table, a board
  * card, a list row or the row drawer.
@@ -56,8 +62,12 @@ export interface CellContext {
   formulaProblem?: (property: PropertyDefinition, rowId: string) => FormulaProblem | undefined;
   /** A related row's title, '' when untitled, undefined when unknown. */
   relationTitle?: (property: PropertyDefinition, rowId: string) => string | undefined;
-  /** Opens a related row. Without it a relation chip is plain text. */
-  openRelated?: (property: PropertyDefinition, rowId: string) => void;
+  /**
+   * Opens a related row. Without it a relation chip is plain text. With `peek`
+   * it opens in that mode and returns true when `peek.onClose` will run as the
+   * page closes.
+   */
+  openRelated?: (property: PropertyDefinition, rowId: string, peek?: RelatedPeek) => boolean | void;
   /** Rows a relation cell can pick, for the relation editor. */
   relationCandidates?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
   /**

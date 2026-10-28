@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { openCellEditor } from '../../../../../src/tools/database/cells';
 import type { PropertyDefinition } from '../../../../../src/tools/database/types';
-import { makeAnchor, makeEditorContext, press } from './helpers';
+import { makeAnchor, makeEditorContext, press, pressOutside } from './helpers';
 
 const relation = (limit?: 1): PropertyDefinition => ({
   id: 'rel', name: 'Related', type: 'relation', position: 'a0', relation: { targetDatabaseId: 'db', ...(limit !== undefined ? { limit } : {}) },
@@ -153,9 +153,62 @@ describe('relation editor', () => {
         openLinked({ openRelated, onCommit, onClose });
         press(search(), 'Enter');
 
-        expect(openRelated).toHaveBeenCalledWith(relation(), 'r2');
+        expect(openRelated).toHaveBeenCalledWith(relation(), 'r2', { mode: 'center', onClose: expect.any(Function) });
         expect(onCommit).not.toHaveBeenCalled();
         expect(onClose).not.toHaveBeenCalled();
+      });
+
+      // notion-spec-2 §19.2 (02-after-peek-esc.png): the picker stays open under the centred peek; Escape on the peek returns to it.
+      describe('while the page is open in a peek', () => {
+        const openPeek = (): { closePeek: () => void; onClose: ReturnType<typeof vi.fn>; peekField: HTMLInputElement } => {
+          const peekField = document.createElement('input');
+          const onClose = vi.fn();
+          const peek: { close?: () => void } = {};
+
+          document.body.appendChild(peekField);
+          openLinked({
+            onClose,
+            openRelated: (_property, _rowId, options) => {
+              peek.close = options?.onClose;
+              peekField.focus();
+
+              return true;
+            },
+          });
+          press(search(), 'Enter');
+
+          return { closePeek: () => peek.close?.(), onClose, peekField };
+        };
+
+        it('keeps the picker open while focus, presses and Escape belong to the peek', () => {
+          const { onClose, peekField } = openPeek();
+
+          pressOutside();
+          press(peekField, 'Escape');
+
+          expect(onClose).not.toHaveBeenCalled();
+          expect(search().isConnected).toBe(true);
+        });
+
+        it('gives the keys back to the picker when the peek closes', () => {
+          const { closePeek, onClose } = openPeek();
+
+          closePeek();
+
+          expect(search()).toHaveFocus();
+          press(search(), 'Escape');
+          expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not hold the picker when no peek opened', () => {
+          const onClose = vi.fn();
+
+          openLinked({ onClose, openRelated: () => false });
+          press(search(), 'Enter');
+          pressOutside();
+
+          expect(onClose).toHaveBeenCalledTimes(1);
+        });
       });
 
       // notion-spec-2 §19.15 / §19.2: a "+" at the right of a page to link, a "−" on a linked one.

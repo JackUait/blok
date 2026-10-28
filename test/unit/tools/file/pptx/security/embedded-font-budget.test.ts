@@ -65,6 +65,19 @@ describe('a pptx that embeds one heavy font under many names', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    Reflect.deleteProperty(document, 'fonts');
+  });
+
+  it('decodes a face that does not fit the total size budget only once', () => {
+    const fonts = installFontMocks();
+    decompressMtxMock.mockReturnValue(new Uint8Array(12 * 1024 * 1024));
+    const { presentation, families } = deck(4, false);
+
+    Array.from({ length: SLIDES }, () => useEmbeddedFonts(presentation, families));
+
+    // 12 MB faces against a 32 MB total: two load, two are refused once each.
+    expect(decompressMtxMock).toHaveBeenCalledTimes(4);
+    expect(fonts.add).toHaveBeenCalledTimes(2);
   });
 
   it('decodes a heavy font file once, however many names point at it', () => {

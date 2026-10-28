@@ -71,9 +71,10 @@ interface LoadedPresentationFonts {
 }
 
 /**
- * Decode time a whole deck may spend. The per-slide budget alone would let a deck
- * with many heavy faces block the page once per slide. A real 4.9 MB face takes
- * 2-3.5 s to decode, so this keeps such a deck's fonts and still bounds the total.
+ * Decode time a whole deck may spend. A face that takes longer than the per-slide
+ * budget is still decoded, then thrown away (upstream does the same). Without this
+ * cap a deck with many slow faces would freeze the page once per slide. It bounds
+ * the total freeze; it does not keep slow faces.
  */
 const DECK_DECODE_BUDGET_MS = 5000;
 
@@ -243,8 +244,11 @@ export function useEmbeddedFonts(
       }
 
       try {
+        // Refused for good, so later slides do not decode it again.
         if (state.totalBytes + fontBytes.byteLength > resolvedLimits.maxTotalDecompressedBytes) {
-          break;
+          state.rejected.add(key);
+          state.rejectedData.add(face.data);
+          continue;
         }
 
         const created = createLoadedFace(face, fontBytes);

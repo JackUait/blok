@@ -130,12 +130,13 @@ describe('EmbeddedFontLoader', () => {
       .mockReturnValueOnce(new Uint8Array(9))
       .mockReturnValueOnce(new Uint8Array(7))
       .mockReturnValueOnce(new Uint8Array(7))
-      .mockReturnValueOnce(new Uint8Array(7));
+      .mockReturnValueOnce(new Uint8Array(4));
 
     await useEmbeddedFonts(pres, families, { ...limits, maxFaces: 4 }).ready;
 
-    expect(decompressMtxMock).toHaveBeenCalledTimes(3);
-    expect(fonts.add).toHaveBeenCalledTimes(1);
+    // 9 is over the per-face cap and 7 + 7 over the total; the last face still fits.
+    expect(decompressMtxMock).toHaveBeenCalledTimes(4);
+    expect(fonts.add).toHaveBeenCalledTimes(2);
   });
 
   it('accepts partial overrides, validates limits, and passes FontFace a typed-array view', async () => {

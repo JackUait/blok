@@ -58,7 +58,7 @@ class Writer {
     this.bytes(b);
   }
 
-  public join(): Uint8Array {
+  public join(): Uint8Array<ArrayBuffer> {
     const out = new Uint8Array(this.length);
     let at = 0;
 
@@ -82,7 +82,7 @@ export function zip64Extra(...values: bigint[]): Uint8Array {
   return w.join();
 }
 
-export function buildZip(entries: BuildEntry[], options: BuildOptions = {}): Uint8Array {
+export function buildZip(entries: BuildEntry[], options: BuildOptions = {}): Uint8Array<ArrayBuffer> {
   const body = new Writer();
   const central = new Writer();
 

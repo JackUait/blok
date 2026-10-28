@@ -16,6 +16,7 @@ import { DEFAULT_ZIP_LIMITS, readZip } from '../../../../../src/tools/file/zip/r
 import type { ZipArchive } from '../../../../../src/tools/file/zip/read-zip';
 import { ZipError } from '../../../../../src/tools/file/zip/zip-error';
 import { buildZip, zip64Extra } from './zip-builder';
+import { RECOMMENDED_ZIP_LIMITS } from '@aiden0z/pptx-renderer';
 
 const ROOT = resolve(__dirname, '../../../../..');
 const fixture = (rel: string): Uint8Array => new Uint8Array(readFileSync(resolve(__dirname, 'fixtures/jszip', rel)));
@@ -35,6 +36,9 @@ const expectZipError = (fn: () => unknown): void => {
   expect(fn).toThrow(ZipError);
 };
 
+const MiB = 1024 * 1024;
+/** A one-byte deflate stream: honest data whose declared size can lie. */
+const TINY_DEFLATE = new Uint8Array(deflateRawSync(new Uint8Array(1)));
 const HELLO = 'Hello World\n';
 const LOOONG = 'This a looong file : we need to see the difference between the different compression methods.\n';
 
@@ -191,7 +195,7 @@ describe('readZip — upstream JSZip load cases', () => {
     ['AntarcticaTemps.xlsx', 17, '[Content_Types].xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'],
     ['AntarcticaTemps.ods', 20, 'META-INF/manifest.xml', 'application/vnd.oasis.opendocument.spreadsheet'],
   ])('reads complex file %s under the default limits', (name, count, part, needle) => {
-    const archive = readZip(fixture(`complex_files/${name}`), DEFAULT_ZIP_LIMITS);
+    const archive = readZip(fixture(`complex_files/${name}`));
 
     expect(archive.entries).toHaveLength(count);
     expect(textOf(archive, part)).toContain(needle);
@@ -406,8 +410,35 @@ describe('readZip — limits are checked before any inflate', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('defaults to the pptx-renderer recommended limits', () => {
-    expect(DEFAULT_ZIP_LIMITS).toEqual({ maxEntries: 4000, maxEntryBytes: 32 * 1024 * 1024, maxTotalBytes: 256 * 1024 * 1024 });
+  it('defaults to limits that open real large spreadsheets', () => {
+    expect(DEFAULT_ZIP_LIMITS).toEqual({ maxEntries: 65535, maxEntryBytes: 256 * MiB, maxTotalBytes: 1024 * MiB });
+  });
+
+  it('is never stricter than pptx-renderer, which still applies its own limits', () => {
+    expect(RECOMMENDED_ZIP_LIMITS.maxEntries).toBeLessThanOrEqual(DEFAULT_ZIP_LIMITS.maxEntries);
+    expect(RECOMMENDED_ZIP_LIMITS.maxEntryUncompressedBytes).toBeLessThanOrEqual(DEFAULT_ZIP_LIMITS.maxEntryBytes);
+    expect(RECOMMENDED_ZIP_LIMITS.maxTotalUncompressedBytes).toBeLessThanOrEqual(DEFAULT_ZIP_LIMITS.maxTotalBytes);
+  });
+
+  it('opens an xlsx with a 57 MB sheet', () => {
+    const row = '<row><c t="n"><v>12345</v></c><c t="n"><v>67890</v></c></row>';
+    const sheet = Buffer.from(`<worksheet><sheetData>${row.repeat(Math.ceil((57 * 1000 * 1000) / row.length))}</sheetData></worksheet>`);
+    const zip = buildZip([
+      { name: '[Content_Types].xml', data: utf8('<Types/>'), method: 8 },
+      { name: 'xl/workbook.xml', data: utf8('<workbook/>'), method: 8 },
+      { name: 'xl/worksheets/sheet1.xml', data: sheet, method: 8 },
+    ]);
+    const archive = readZip(zip);
+    const entry = archive.get('xl/worksheets/sheet1.xml');
+
+    expect(entry?.size).toBe(sheet.length);
+    expect(entry === undefined ? 0 : archive.read(entry).length).toBe(sheet.length);
+  });
+
+  it('opens 4001 entries', () => {
+    const zip = buildZip(Array.from({ length: 4001 }, (_, i) => ({ name: `${i}.xml`, data: utf8('x') })));
+
+    expect(readZip(zip).entries).toHaveLength(4001);
   });
 
   it('rejects too many entries', () => {
@@ -418,13 +449,21 @@ describe('readZip — limits are checked before any inflate', () => {
     expect(inflateRaw).not.toHaveBeenCalled();
   });
 
-  it('rejects an honest 64 MiB bomb from the header alone', () => {
-    const bomb = new Uint8Array(deflateRawSync(new Uint8Array(64 * 1024 * 1024)));
-    const zip = buildZip([{ name: 'bomb.bin', method: 8, compressed: bomb, size: 64 * 1024 * 1024 }]);
-    const started = performance.now();
+  // Declared sizes lie, so these allocate nothing big; the header alone must refuse them.
+  it('rejects an entry declared over 256 MiB before inflating it', () => {
+    const zip = buildZip([{ name: 'bomb.bin', method: 8, compressed: TINY_DEFLATE, size: 256 * MiB + 1 }]);
 
     expectZipError(() => readZip(zip));
-    expect(performance.now() - started).toBeLessThan(500);
+    expect(readZip(buildZip([{ name: 'ok.bin', method: 8, compressed: TINY_DEFLATE, size: 256 * MiB }])).entries).toHaveLength(1);
+    expect(inflateRaw).not.toHaveBeenCalled();
+  });
+
+  it('rejects a total declared over 1 GiB before inflating anything', () => {
+    const entries = (count: number): Parameters<typeof buildZip>[0] =>
+      Array.from({ length: count }, (_, i) => ({ name: `${i}.bin`, method: 8, compressed: TINY_DEFLATE, size: 256 * MiB }));
+
+    expectZipError(() => readZip(buildZip(entries(5))));
+    expect(readZip(buildZip(entries(4))).entries).toHaveLength(4);
     expect(inflateRaw).not.toHaveBeenCalled();
   });
 
@@ -462,7 +501,7 @@ describe('readZip — every Office file in the repo', () => {
   });
 
   it.each(office)('reads every entry of %s under the default limits', (rel) => {
-    const archive = readZip(new Uint8Array(readFileSync(resolve(ROOT, rel))), DEFAULT_ZIP_LIMITS);
+    const archive = readZip(new Uint8Array(readFileSync(resolve(ROOT, rel))));
 
     expect(archive.entries.length).toBeGreaterThan(0);
     for (const entry of archive.entries) {

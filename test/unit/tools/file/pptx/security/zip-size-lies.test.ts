@@ -38,6 +38,46 @@ const deckWith = async (entries: Record<string, number>): Promise<Uint8Array> =>
 
 const MB = 1024 * 1024;
 
+/** Bytes that do not compress, so an entry inflates over many input chunks. */
+const noise = (size: number): Uint8Array => {
+  const bytes = new Uint8Array(size);
+  const seed = { value: 1 };
+
+  bytes.forEach((_, i) => {
+    seed.value = (seed.value * 1103515245 + 12345) >>> 0;
+    bytes[i] = seed.value >>> 24;
+  });
+
+  return bytes;
+};
+
+interface ChunkStream {
+  on(event: string, listener: (chunk: Uint8Array) => void): ChunkStream;
+}
+
+interface StreamingEntry {
+  internalStream(type: string): ChunkStream;
+}
+
+/** Counts every entry stream parseZip opens and every byte it inflates. */
+const watchInflation = async (): Promise<{ streams: number; bytes: number }> => {
+  const sample = await JSZip.loadAsync(await buildDeck([{ text: 'x' }]));
+  const proto = Object.getPrototypeOf(Object.values(sample.files)[0]) as StreamingEntry;
+  const original = proto.internalStream;
+  const seen = { streams: 0, bytes: 0 };
+
+  vi.spyOn(proto, 'internalStream').mockImplementation(function (this: StreamingEntry, type: string) {
+    seen.streams += 1;
+
+    return original.call(this, type).on('data', (chunk) => { seen.bytes += chunk.byteLength; });
+  });
+
+  return seen;
+};
+
+/** Lets every pending stream chunk and worker run. */
+const settle = (): Promise<void> => new Promise((resolve) => { setTimeout(resolve, 300); });
+
 describe('parseZip against entries that lie about their size', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
@@ -69,6 +109,24 @@ describe('parseZip against entries that lie about their size', () => {
 
     await expect(parseZip(zip.buffer, { maxMediaBytes: MB }))
       .rejects.toThrow(/PPTX zip limit exceeded: media bytes/);
+  });
+
+  it('stops opening and inflating other entries once one passes a limit', async () => {
+    const deck = await JSZip.loadAsync(await deckWith({ 'ppt/media/bomb.png': 8 * MB }));
+
+    Array.from({ length: 24 }, (_, i) => deck.file(`ppt/media/h${i}.png`, noise(256 * 1024)));
+    const zip = lieAboutSize(await deck.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }), 'ppt/media/bomb.png', 100);
+    const seen = await watchInflation();
+
+    const failure = await parseZip(zip.buffer, { maxEntryUncompressedBytes: MB }).catch((error: unknown) => error);
+    const atFailure = { ...seen };
+
+    await settle();
+
+    expect(seen.streams - atFailure.streams).toBe(0);
+    // A stream that was already open may still hand over a few chunks it had inflated.
+    expect(seen.bytes - atFailure.bytes).toBeLessThan(MB);
+    expect(String(failure)).toMatch(/PPTX zip limit exceeded: ppt\/media\/bomb\.png/);
   });
 
   it('still reads an honest deck within the limits', async () => {

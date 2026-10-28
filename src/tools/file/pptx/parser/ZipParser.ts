@@ -98,6 +98,8 @@ interface ZipLimitState {
   /** Bytes actually inflated so far; zip headers can lie about sizes. */
   inflatedTotalBytes: number;
   inflatedMediaBytes: number;
+  /** Set once any entry fails, so the other workers stop reading. */
+  failed: boolean;
 }
 
 interface LazyMediaEntry {
@@ -219,12 +221,21 @@ function chargeInflatedBytes(path: string, entryBytes: number, chunkBytes: numbe
 async function inflateEntry(path: string, file: JSZipObject, state: ZipLimitState): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   const read = { bytes: 0 };
+  const stopped = (): Error => new Error(`PPTX zip parse stopped before ${path}: another entry failed`);
+
+  if (state.failed) throw stopped();
 
   await new Promise<void>((resolve, reject) => {
     const stream = streamOf(file);
 
     stream
       .on('data', (chunk) => {
+        if (state.failed) {
+          stream.pause();
+          reject(stopped());
+
+          return;
+        }
         read.bytes += chunk.byteLength;
         try {
           chargeInflatedBytes(path, read.bytes, chunk.byteLength, state);
@@ -286,17 +297,25 @@ async function countUncategorizedEntryIfNeeded(
 async function mapWithConcurrency<T>(
   items: T[],
   concurrency: number,
+  state: ZipLimitState,
   mapper: (item: T) => Promise<void>,
 ): Promise<void> {
   if (items.length === 0) return;
   const workerCount = Math.min(concurrency, items.length);
   let cursor = 0;
 
+  // Promise.all rejects on the first failure but the other workers keep going,
+  // so the flag stops them taking new entries and stops their open streams.
   const workers = Array.from({ length: workerCount }, async () => {
-    while (true) {
+    while (!state.failed) {
       const index = cursor++;
       if (index >= items.length) return;
-      await mapper(items[index]);
+      try {
+        await mapper(items[index]);
+      } catch (error) {
+        state.failed = true;
+        throw error;
+      }
     }
   });
 
@@ -409,10 +428,11 @@ async function parseZipInternal(
     knownMediaBytes,
     inflatedTotalBytes: 0,
     inflatedMediaBytes: 0,
+    failed: false,
   };
   const lazyMediaEntries = new Map<string, LazyMediaEntry>();
 
-  await mapWithConcurrency(entries, maxConcurrency, async ([path, file]) => {
+  await mapWithConcurrency(entries, maxConcurrency, limitState, async ([path, file]) => {
     const normalizedPath = path.replace(/\\/g, '/');
 
     // --- Content Types ---

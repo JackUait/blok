@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Хуудас хайх…",
   "tools.database.relationHint": "Хүссэн хэмжээгээрээ хуудас сонгоно уу",
   "tools.database.relationHintOne": "Нэг хуудас сонгоно уу",
+  "tools.database.relationSelectMore": "Илүү сонгох",
   "tools.database.formulaLabel": "Томьёо",
   "tools.database.formulaPlaceholder": "Томьёо бичих",
   "tools.database.formulaReference": "Шинж ба функцүүд",

@@ -12648,6 +12648,11 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+/* notion-spec-2 §19.2: "Select more" over the unlinked pages, its text level with the head's label. Its spacing is unmeasured. */
+[data-blok-database-relation-editor] [role="listbox"] > [data-blok-database-relation-heading] {
+  padding-inline: var(--blok-space-2);
+}
+
 /* Rows 544x32, 8px in, 1px apart; the title 30px into the row, 14/16.8 weight 500. */
 [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] {
   gap: var(--blok-space-0-25);

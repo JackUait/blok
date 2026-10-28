@@ -1223,6 +1223,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PERSON_PICKER_BYTES = 759;
     // database.css: the table relation picker takes Notion's head, label and 32px page rows (notion-spec-2 §18.3).
     const DATABASE_RELATION_PICKER_BYTES = 1_019;
+    // database.css: the table relation picker's "Select more" label (notion-spec-2 §19.2).
+    const DATABASE_RELATION_GROUPS_BYTES = 92;
     // database.css: a lone file chip fills its table cell (notion-spec-2 §18.1).
     const DATABASE_FILE_CHIP_FILL_BYTES = 423;
     // database.css: the picker head's 9.25px as one token, and the 1px row gaps as the space token.
@@ -1501,6 +1503,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_STATUS_PICKER_TABLE_BYTES
       + DATABASE_PERSON_PICKER_BYTES
       + DATABASE_RELATION_PICKER_BYTES
+      + DATABASE_RELATION_GROUPS_BYTES
       + DATABASE_FILE_CHIP_FILL_BYTES
       + DATABASE_PICKER_LENGTH_TOKENS_BYTES
       + DATABASE_SELECT_PICKER_BYTES

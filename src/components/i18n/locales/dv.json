@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ޞަފްޙާއެއް ހޯދާ…",
   "tools.database.relationHint": "ބޭނުންވާވަރަކަށް ޞަފްޙާ ހޮވާ",
   "tools.database.relationHintOne": "އެއް ޞަފްޙާ ހޮވާ",
+  "tools.database.relationSelectMore": "އިތުރަށް ހޮވާ",
   "tools.database.formulaLabel": "ފޯމިއުލާ",
   "tools.database.formulaPlaceholder": "ފޯމިއުލާއެއް ލިޔޭ",
   "tools.database.formulaReference": "ޕްރޮޕަރޓީތަކާއި ފަންކްޝަންތައް",

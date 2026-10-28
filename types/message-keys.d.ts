@@ -1372,6 +1372,7 @@ export type BlokMessageKey =
   | 'tools.database.relationRelatedToHint'
   | 'tools.database.relationReverseName'
   | 'tools.database.relationSearchPlaceholder'
+  | 'tools.database.relationSelectMore'
   | 'tools.database.relationThisDatabase'
   | 'tools.database.relationTwoWay'
   | 'tools.database.relationTwoWayEnable'

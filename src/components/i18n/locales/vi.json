@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Tìm một trang…",
   "tools.database.relationHint": "Chọn bao nhiêu trang tùy thích",
   "tools.database.relationHintOne": "Chọn một trang",
+  "tools.database.relationSelectMore": "Chọn thêm",
   "tools.database.formulaLabel": "Công thức",
   "tools.database.formulaPlaceholder": "Nhập công thức",
   "tools.database.formulaReference": "Thuộc tính và hàm",

@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "یوه پاڼه ولټوئ…",
   "tools.database.relationHint": "څومره پاڼې چې غواړئ وټاکئ",
   "tools.database.relationHintOne": "یوه پاڼه وټاکئ",
+  "tools.database.relationSelectMore": "نور وټاکئ",
   "tools.database.formulaLabel": "فورمول",
   "tools.database.formulaPlaceholder": "فورمول ولیکئ",
   "tools.database.formulaReference": "ځانګړتیاوې او فنکشنونه",

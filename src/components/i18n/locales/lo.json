@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ຄົ້ນຫາໜ້າ…",
   "tools.database.relationHint": "ເລືອກໜ້າໄດ້ຫຼາຍເທົ່າທີ່ຕ້ອງການ",
   "tools.database.relationHintOne": "ເລືອກໜຶ່ງໜ້າ",
+  "tools.database.relationSelectMore": "ເລືອກເພີ່ມ",
   "tools.database.formulaLabel": "ສູດ",
   "tools.database.formulaPlaceholder": "ພິມສູດ",
   "tools.database.formulaReference": "ຄຸນສົມບັດ ແລະ ຟັງຊັນ",

@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Bir sayfa arayın…",
   "tools.database.relationHint": "İstediğiniz kadar sayfa seçin",
   "tools.database.relationHintOne": "Bir sayfa seçin",
+  "tools.database.relationSelectMore": "Daha fazla seç",
   "tools.database.formulaLabel": "Formül",
   "tools.database.formulaPlaceholder": "Bir formül yazın",
   "tools.database.formulaReference": "Özellikler ve işlevler",

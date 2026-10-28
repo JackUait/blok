@@ -1741,6 +1741,7 @@
   "tools.database.relationSearchPlaceholder": "Wyszukaj stronę…",
   "tools.database.relationHint": "Wybierz dowolną liczbę stron",
   "tools.database.relationHintOne": "Wybierz jedną stronę",
+  "tools.database.relationSelectMore": "Wybierz więcej",
   "tools.database.formulaLabel": "Formuła",
   "tools.database.formulaPlaceholder": "Wpisz formułę",
   "tools.database.formulaReference": "Właściwości i funkcje",

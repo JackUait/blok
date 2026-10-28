@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "පිටුවක් සොයන්න…",
   "tools.database.relationHint": "ඔබට අවශ්‍ය තරම් පිටු තෝරන්න",
   "tools.database.relationHintOne": "එක් පිටුවක් තෝරන්න",
+  "tools.database.relationSelectMore": "තවත් තෝරන්න",
   "tools.database.formulaLabel": "සූත්‍රය",
   "tools.database.formulaPlaceholder": "සූත්‍රයක් ටයිප් කරන්න",
   "tools.database.formulaReference": "ගුණාංග සහ ශ්‍රිත",

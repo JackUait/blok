@@ -1745,6 +1745,7 @@
   "tools.database.relationSearchPlaceholder": "البحث عن صفحة…",
   "tools.database.relationHint": "حدد أي عدد تريده من الصفحات",
   "tools.database.relationHintOne": "حدد صفحة واحدة",
+  "tools.database.relationSelectMore": "اختر المزيد",
   "tools.database.formulaLabel": "صيغة",
   "tools.database.formulaPlaceholder": "اكتب صيغة",
   "tools.database.formulaReference": "الخصائص والدوال",

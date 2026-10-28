@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ஒரு பக்கத்தைத் தேடு…",
   "tools.database.relationHint": "வேண்டிய அளவு பக்கங்களைத் தேர்ந்தெடுக்கவும்",
   "tools.database.relationHintOne": "ஒரு பக்கத்தைத் தேர்ந்தெடுக்கவும்",
+  "tools.database.relationSelectMore": "மேலும் தேர்ந்தெடுக்கவும்",
   "tools.database.formulaLabel": "சூத்திரம்",
   "tools.database.formulaPlaceholder": "சூத்திரத்தை உள்ளிடவும்",
   "tools.database.formulaReference": "பண்புகளும் செயல்பாடுகளும்",

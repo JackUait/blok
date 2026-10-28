@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ਕੋਈ ਪੰਨਾ ਲੱਭੋ…",
   "tools.database.relationHint": "ਜਿੰਨੇ ਚਾਹੋ ਪੰਨੇ ਚੁਣੋ",
   "tools.database.relationHintOne": "ਇੱਕ ਪੰਨਾ ਚੁਣੋ",
+  "tools.database.relationSelectMore": "ਹੋਰ ਚੁਣੋ",
   "tools.database.formulaLabel": "ਫਾਰਮੂਲਾ",
   "tools.database.formulaPlaceholder": "ਫਾਰਮੂਲਾ ਲਿਖੋ",
   "tools.database.formulaReference": "ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਅਤੇ ਫੰਕਸ਼ਨ",

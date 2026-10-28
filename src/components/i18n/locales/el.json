@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Αναζήτηση σελίδας…",
   "tools.database.relationHint": "Επιλέξτε όσες σελίδες θέλετε",
   "tools.database.relationHintOne": "Επιλέξτε μία σελίδα",
+  "tools.database.relationSelectMore": "Επιλέξτε περισσότερα",
   "tools.database.formulaLabel": "Τύπος",
   "tools.database.formulaPlaceholder": "Πληκτρολογήστε έναν τύπο",
   "tools.database.formulaReference": "Ιδιότητες και συναρτήσεις",

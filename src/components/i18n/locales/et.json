@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Otsi lehte…",
   "tools.database.relationHint": "Vali nii palju lehti kui soovid",
   "tools.database.relationHintOne": "Vali üks leht",
+  "tools.database.relationSelectMore": "Vali veel",
   "tools.database.formulaLabel": "Valem",
   "tools.database.formulaPlaceholder": "Sisesta valem",
   "tools.database.formulaReference": "Omadused ja funktsioonid",

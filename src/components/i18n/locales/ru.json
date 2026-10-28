@@ -1741,6 +1741,7 @@
   "tools.database.relationSearchPlaceholder": "Найти страницу…",
   "tools.database.relationHint": "Выберите сколько угодно страниц",
   "tools.database.relationHintOne": "Выберите одну страницу",
+  "tools.database.relationSelectMore": "Выбрать ещё",
   "tools.database.formulaLabel": "Формула",
   "tools.database.formulaPlaceholder": "Введите формулу",
   "tools.database.formulaReference": "Свойства и функции",

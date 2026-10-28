@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Tafuta ukurasa…",
   "tools.database.relationHint": "Chagua kurasa nyingi upendavyo",
   "tools.database.relationHintOne": "Chagua ukurasa mmoja",
+  "tools.database.relationSelectMore": "Chagua zaidi",
   "tools.database.formulaLabel": "Fomula",
   "tools.database.formulaPlaceholder": "Andika fomula",
   "tools.database.formulaReference": "Sifa na vitendakazi",

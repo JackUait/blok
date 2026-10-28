@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "کوئی صفحہ تلاش کریں…",
   "tools.database.relationHint": "جتنے چاہیں صفحات منتخب کریں",
   "tools.database.relationHintOne": "ایک صفحہ منتخب کریں",
+  "tools.database.relationSelectMore": "مزید منتخب کریں",
   "tools.database.formulaLabel": "فارمولا",
   "tools.database.formulaPlaceholder": "فارمولا ٹائپ کریں",
   "tools.database.formulaReference": "پراپرٹیز اور فنکشنز",

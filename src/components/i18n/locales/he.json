@@ -1739,6 +1739,7 @@
   "tools.database.relationSearchPlaceholder": "חיפוש דף…",
   "tools.database.relationHint": "אפשר לבחור כמה דפים שרוצים",
   "tools.database.relationHintOne": "בחירת דף אחד",
+  "tools.database.relationSelectMore": "בחירת פריטים נוספים",
   "tools.database.formulaLabel": "נוסחה",
   "tools.database.formulaPlaceholder": "הקלדת נוסחה",
   "tools.database.formulaReference": "מאפיינים ופונקציות",

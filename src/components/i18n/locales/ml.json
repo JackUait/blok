@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ഒരു പേജ് തിരയുക…",
   "tools.database.relationHint": "ആവശ്യമുള്ളത്ര പേജുകൾ തിരഞ്ഞെടുക്കുക",
   "tools.database.relationHintOne": "ഒരു പേജ് തിരഞ്ഞെടുക്കുക",
+  "tools.database.relationSelectMore": "കൂടുതൽ തിരഞ്ഞെടുക്കുക",
   "tools.database.formulaLabel": "സൂത്രവാക്യം",
   "tools.database.formulaPlaceholder": "ഒരു സൂത്രവാക്യം ടൈപ്പ് ചെയ്യുക",
   "tools.database.formulaReference": "പ്രോപ്പർട്ടികളും ഫംഗ്ഷനുകളും",

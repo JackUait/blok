@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "પૃષ્ઠ શોધો…",
   "tools.database.relationHint": "તમે ઇચ્છો તેટલાં પૃષ્ઠો પસંદ કરો",
   "tools.database.relationHintOne": "એક પૃષ્ઠ પસંદ કરો",
+  "tools.database.relationSelectMore": "વધુ પસંદ કરો",
   "tools.database.formulaLabel": "ફોર્મ્યુલા",
   "tools.database.formulaPlaceholder": "ફોર્મ્યુલા લખો",
   "tools.database.formulaReference": "ગુણધર્મો અને ફંક્શન",

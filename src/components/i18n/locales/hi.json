@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "कोई पृष्ठ खोजें…",
   "tools.database.relationHint": "जितने चाहें उतने पृष्ठ चुनें",
   "tools.database.relationHintOne": "एक पृष्ठ चुनें",
+  "tools.database.relationSelectMore": "और चुनें",
   "tools.database.formulaLabel": "फ़ॉर्मूला",
   "tools.database.formulaPlaceholder": "फ़ॉर्मूला लिखें",
   "tools.database.formulaReference": "प्रॉपर्टी और फ़ंक्शन",

@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Пребарајте страница…",
   "tools.database.relationHint": "Изберете колку страници сакате",
   "tools.database.relationHintOne": "Изберете една страница",
+  "tools.database.relationSelectMore": "Изберете уште",
   "tools.database.formulaLabel": "Формула",
   "tools.database.formulaPlaceholder": "Внесете формула",
   "tools.database.formulaReference": "Својства и функции",

@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Søk etter en side…",
   "tools.database.relationHint": "Velg så mange sider du vil",
   "tools.database.relationHintOne": "Velg én side",
+  "tools.database.relationSelectMore": "Velg flere",
   "tools.database.formulaLabel": "Formel",
   "tools.database.formulaPlaceholder": "Skriv inn en formel",
   "tools.database.formulaReference": "Egenskaper og funksjoner",

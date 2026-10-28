@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Oldal keresése…",
   "tools.database.relationHint": "Tetszőleges számú oldal kiválasztható",
   "tools.database.relationHintOne": "Egy oldal kiválasztása",
+  "tools.database.relationSelectMore": "Továbbiak kiválasztása",
   "tools.database.formulaLabel": "Képlet",
   "tools.database.formulaPlaceholder": "Képlet beírása",
   "tools.database.formulaReference": "Tulajdonságok és függvények",

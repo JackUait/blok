@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Zoek een pagina…",
   "tools.database.relationHint": "Selecteer zoveel pagina's als je wilt",
   "tools.database.relationHintOne": "Selecteer één pagina",
+  "tools.database.relationSelectMore": "Meer selecteren",
   "tools.database.formulaLabel": "Formule",
   "tools.database.formulaPlaceholder": "Typ een formule",
   "tools.database.formulaReference": "Eigenschappen en functies",

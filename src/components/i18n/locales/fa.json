@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "جستجوی یک صفحه…",
   "tools.database.relationHint": "هر تعداد صفحه که می‌خواهید انتخاب کنید",
   "tools.database.relationHintOne": "یک صفحه انتخاب کنید",
+  "tools.database.relationSelectMore": "انتخاب موارد بیشتر",
   "tools.database.formulaLabel": "فرمول",
   "tools.database.formulaPlaceholder": "یک فرمول بنویسید",
   "tools.database.formulaReference": "ویژگی‌ها و توابع",

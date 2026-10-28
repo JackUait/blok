@@ -24,8 +24,11 @@ class RelationEditor implements CellEditorHandle {
   private readonly popover: CellPopover;
   private selected: string[];
   private query = '';
-  private activeIndex = 0;
+  /** By id, not index: a link regroups the rows. */
+  private activeId: string | null = null;
   private open = true;
+  /** The table picker's label over the list; null elsewhere. */
+  private heading: HTMLElement | null = null;
 
   constructor(
     private readonly property: PropertyDefinition,
@@ -64,7 +67,7 @@ class RelationEditor implements CellEditorHandle {
 
     this.search.addEventListener('input', () => {
       this.query = this.search.value;
-      this.activeIndex = 0;
+      this.activeId = this.rows()[0]?.id ?? null;
       this.renderList();
     });
     this.search.addEventListener('keydown', this.handleKey);
@@ -84,6 +87,8 @@ class RelationEditor implements CellEditorHandle {
       onDismiss: () => this.finish(false),
     });
 
+    // notion-spec-2 §19.2: the first row is highlighted on open, a linked one when any is linked.
+    this.activeId = this.rows()[0]?.id ?? null;
     this.renderList();
     this.popover.show();
     this.search.focus();
@@ -110,6 +115,9 @@ class RelationEditor implements CellEditorHandle {
     heading.textContent = this.ctx.i18n.t('tools.database.formRelationHeading');
     bar.append(this.search, chip);
     header.append(bar, heading);
+    if (this.ctx.coverCell === true) {
+      this.heading = heading;
+    }
 
     return header;
   }
@@ -143,6 +151,18 @@ class RelationEditor implements CellEditorHandle {
     return needle === '' ? this.candidates : this.candidates.filter((c) => this.titleOf(c).toLowerCase().includes(needle));
   }
 
+  /** notion-spec-2 §19.2: the table picker lists the linked pages first. */
+  private rows(): Candidate[] {
+    const rows = this.filtered();
+
+    if (this.heading === null) {
+      return rows;
+    }
+    const linked = this.selected.flatMap((id) => rows.filter((row) => row.id === id));
+
+    return [...linked, ...rows.filter((row) => !this.selected.includes(row.id))];
+  }
+
   private toggle(id: string): void {
     if (this.property.relation?.limit === 1) {
       this.selected = this.selected.includes(id) ? [] : [id];
@@ -158,16 +178,17 @@ class RelationEditor implements CellEditorHandle {
 
   private readonly handleKey = (event: KeyboardEvent): void => {
     if (event.isComposing) return;
-    const rows = this.filtered();
+    const rows = this.rows();
+    const index = rows.findIndex((row) => row.id === this.activeId);
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       if (rows.length === 0) return;
-      this.activeIndex = (this.activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length;
+      this.activeId = rows[(index + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length].id;
       this.renderList();
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const row = rows[this.activeIndex];
+      const row = rows[index];
 
       // Enter only links: the first row is highlighted on open, and Enter there must not unlink it.
       if (row !== undefined && !this.selected.includes(row.id)) this.toggle(row.id);
@@ -175,9 +196,17 @@ class RelationEditor implements CellEditorHandle {
   };
 
   private renderList(): void {
-    const rows = this.filtered();
+    const rows = this.rows();
+    const linked = rows.filter((row) => this.selected.includes(row.id)).length;
 
-    this.list.replaceChildren(...rows.map((candidate, index) => {
+    this.search.removeAttribute('aria-activedescendant');
+    if (this.heading !== null) {
+      this.heading.textContent = linked === 0
+        ? this.ctx.i18n.t('tools.database.formRelationHeading')
+        : this.ctx.i18n.t('tools.database.tableSelectedCount').replace('{count}', String(linked));
+    }
+
+    const items = rows.map((candidate, index) => {
       const row = document.createElement('div');
       const chosen = this.selected.includes(candidate.id);
 
@@ -186,14 +215,24 @@ class RelationEditor implements CellEditorHandle {
       row.setAttribute('role', 'option');
       row.setAttribute('aria-selected', chosen ? 'true' : 'false');
       row.append(pagePlaceholderIcon(), this.titleOf(candidate));
-      if (index === this.activeIndex) {
+      if (candidate.id === this.activeId) {
         row.setAttribute('data-active', '');
         this.search.setAttribute('aria-activedescendant', row.id);
       }
       row.addEventListener('click', () => this.toggle(candidate.id));
 
       return row;
-    }));
+    });
+
+    if (this.heading !== null && linked > 0 && linked < rows.length) {
+      const more = document.createElement('div');
+
+      more.setAttribute('data-blok-database-relation-heading', '');
+      more.setAttribute('role', 'presentation');
+      more.textContent = this.ctx.i18n.t('tools.database.relationSelectMore');
+      items.splice(linked, 0, more);
+    }
+    this.list.replaceChildren(...items);
   }
 }
 

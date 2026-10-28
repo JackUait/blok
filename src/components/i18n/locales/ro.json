@@ -1739,6 +1739,7 @@
   "tools.database.relationSearchPlaceholder": "Căutați o pagină…",
   "tools.database.relationHint": "Selectați oricâte pagini doriți",
   "tools.database.relationHintOne": "Selectați o pagină",
+  "tools.database.relationSelectMore": "Selectează mai multe",
   "tools.database.formulaLabel": "Formulă",
   "tools.database.formulaPlaceholder": "Introduceți o formulă",
   "tools.database.formulaReference": "Proprietăți și funcții",

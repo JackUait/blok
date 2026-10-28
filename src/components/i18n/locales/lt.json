@@ -1741,6 +1741,7 @@
   "tools.database.relationSearchPlaceholder": "Ieškoti puslapio…",
   "tools.database.relationHint": "Pasirinkite tiek puslapių, kiek norite",
   "tools.database.relationHintOne": "Pasirinkite vieną puslapį",
+  "tools.database.relationSelectMore": "Pasirinkti daugiau",
   "tools.database.formulaLabel": "Formulė",
   "tools.database.formulaPlaceholder": "Įveskite formulę",
   "tools.database.formulaReference": "Savybės ir funkcijos",

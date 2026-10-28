@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "بەت ئىزدەش…",
   "tools.database.relationHint": "خالىغانچە بەت تاللاڭ",
   "tools.database.relationHintOne": "بىر بەت تاللاڭ",
+  "tools.database.relationSelectMore": "تېخىمۇ كۆپ تاللاڭ",
   "tools.database.formulaLabel": "فورمۇلا",
   "tools.database.formulaPlaceholder": "فورمۇلا كىرگۈزۈڭ",
   "tools.database.formulaReference": "خاسلىقلار ۋە فۇنكسىيەلەر",

@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Cari halaman…",
   "tools.database.relationHint": "Pilih seberapa banyak halaman yang anda mahu",
   "tools.database.relationHintOne": "Pilih satu halaman",
+  "tools.database.relationSelectMore": "Pilih lagi",
   "tools.database.formulaLabel": "Rumus",
   "tools.database.formulaPlaceholder": "Taip rumus",
   "tools.database.formulaReference": "Sifat dan fungsi",

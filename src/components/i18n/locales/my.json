@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "စာမျက်နှာကို ရှာပါ…",
   "tools.database.relationHint": "လိုသလောက် စာမျက်နှာများ ရွေးပါ",
   "tools.database.relationHintOne": "စာမျက်နှာတစ်ခု ရွေးပါ",
+  "tools.database.relationSelectMore": "ထပ်ရွေးပါ",
   "tools.database.formulaLabel": "ဖော်မြူလာ",
   "tools.database.formulaPlaceholder": "ဖော်မြူလာ ရိုက်ထည့်ပါ",
   "tools.database.formulaReference": "ဂုဏ်သတ္တိများနှင့် ဖန်ရှင်များ",

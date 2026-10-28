@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Səhifə axtar…",
   "tools.database.relationHint": "İstədiyiniz qədər səhifə seçin",
   "tools.database.relationHintOne": "Bir səhifə seçin",
+  "tools.database.relationSelectMore": "Daha çox seçin",
   "tools.database.formulaLabel": "Düstur",
   "tools.database.formulaPlaceholder": "Düstur yazın",
   "tools.database.formulaReference": "Xüsusiyyətlər və funksiyalar",

@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ページを検索…",
   "tools.database.relationHint": "ページをいくつでも選択できます",
   "tools.database.relationHintOne": "ページを1つ選択",
+  "tools.database.relationSelectMore": "さらに選択",
   "tools.database.formulaLabel": "数式",
   "tools.database.formulaPlaceholder": "数式を入力",
   "tools.database.formulaReference": "プロパティと関数",

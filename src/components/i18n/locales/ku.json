@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "پەڕەیەک بدۆزەرەوە…",
   "tools.database.relationHint": "هەر چەند پەڕەیەکت دەوێت هەڵیبژێرە",
   "tools.database.relationHintOne": "یەک پەڕە هەڵبژێرە",
+  "tools.database.relationSelectMore": "Zêdetir hilbijêre",
   "tools.database.formulaLabel": "فۆرموولە",
   "tools.database.formulaPlaceholder": "فۆرموولەیەک بنووسە",
   "tools.database.formulaReference": "تایبەتمەندییەکان و فەنکشنەکان",

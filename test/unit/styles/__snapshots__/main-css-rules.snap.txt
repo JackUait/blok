@@ -15317,6 +15317,10 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-relation-editor] [role="listbox"] > [data-blok-database-relation-heading] {
+  padding-inline: var(--blok-space-2);
+}
+
 [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] {
   gap: var(--blok-space-0-25);
   padding: 0 var(--blok-space-2) var(--blok-space-2);

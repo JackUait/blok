@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "გვერდის ძიება…",
   "tools.database.relationHint": "აირჩიეთ იმდენი გვერდი, რამდენიც გსურთ",
   "tools.database.relationHintOne": "აირჩიეთ ერთი გვერდი",
+  "tools.database.relationSelectMore": "მეტის არჩევა",
   "tools.database.formulaLabel": "ფორმულა",
   "tools.database.formulaPlaceholder": "შეიყვანეთ ფორმულა",
   "tools.database.formulaReference": "თვისებები და ფუნქციები",

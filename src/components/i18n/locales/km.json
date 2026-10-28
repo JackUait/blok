@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ស្វែងរកទំព័រ…",
   "tools.database.relationHint": "ជ្រើសរើសទំព័របានច្រើនតាមចិត្ត",
   "tools.database.relationHintOne": "ជ្រើសរើសទំព័រមួយ",
+  "tools.database.relationSelectMore": "ជ្រើសរើសបន្ថែម",
   "tools.database.formulaLabel": "រូបមន្ត",
   "tools.database.formulaPlaceholder": "វាយរូបមន្ត",
   "tools.database.formulaReference": "លក្ខណៈ និងអនុគមន៍",

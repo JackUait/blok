@@ -1741,6 +1741,7 @@
   "tools.database.relationSearchPlaceholder": "Знайти сторінку…",
   "tools.database.relationHint": "Виберіть скільки завгодно сторінок",
   "tools.database.relationHintOne": "Виберіть одну сторінку",
+  "tools.database.relationSelectMore": "Вибрати ще",
   "tools.database.formulaLabel": "Формула",
   "tools.database.formulaPlaceholder": "Введіть формулу",
   "tools.database.formulaReference": "Властивості та функції",

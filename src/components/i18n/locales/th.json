@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ค้นหาหน้า…",
   "tools.database.relationHint": "เลือกหน้าได้มากเท่าที่ต้องการ",
   "tools.database.relationHintOne": "เลือกหนึ่งหน้า",
+  "tools.database.relationSelectMore": "เลือกเพิ่ม",
   "tools.database.formulaLabel": "สูตร",
   "tools.database.formulaPlaceholder": "พิมพ์สูตร",
   "tools.database.formulaReference": "คุณสมบัติและฟังก์ชัน",

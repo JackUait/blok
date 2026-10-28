@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "ገጽ ፈልግ…",
   "tools.database.relationHint": "የፈለጉትን ያህል ገጾች ይምረጡ",
   "tools.database.relationHintOne": "አንድ ገጽ ይምረጡ",
+  "tools.database.relationSelectMore": "ተጨማሪ ይምረጡ",
   "tools.database.formulaLabel": "ቀመር",
   "tools.database.formulaPlaceholder": "ቀመር ይተይቡ",
   "tools.database.formulaReference": "ንብረቶች እና ተግባራት",

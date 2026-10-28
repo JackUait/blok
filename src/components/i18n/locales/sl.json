@@ -1741,6 +1741,7 @@
   "tools.database.relationSearchPlaceholder": "Poiščite stran…",
   "tools.database.relationHint": "Izberite poljubno število strani",
   "tools.database.relationHintOne": "Izberite eno stran",
+  "tools.database.relationSelectMore": "Izberite več",
   "tools.database.formulaLabel": "Formula",
   "tools.database.formulaPlaceholder": "Vnesite formulo",
   "tools.database.formulaReference": "Lastnosti in funkcije",

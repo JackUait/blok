@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Kërko një faqe…",
   "tools.database.relationHint": "Zgjidh sa faqe të duash",
   "tools.database.relationHintOne": "Zgjidh një faqe",
+  "tools.database.relationSelectMore": "Zgjidh më shumë",
   "tools.database.formulaLabel": "Formulë",
   "tools.database.formulaPlaceholder": "Shkruaj një formulë",
   "tools.database.formulaReference": "Vetitë dhe funksionet",

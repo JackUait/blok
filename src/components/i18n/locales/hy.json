@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Որոնել էջ…",
   "tools.database.relationHint": "Ընտրեք այնքան էջ, որքան ցանկանում եք",
   "tools.database.relationHintOne": "Ընտրեք մեկ էջ",
+  "tools.database.relationSelectMore": "Ընտրել ավելին",
   "tools.database.formulaLabel": "Բանաձև",
   "tools.database.formulaPlaceholder": "Մուտքագրեք բանաձև",
   "tools.database.formulaReference": "Հատկություններ և ֆունկցիաներ",

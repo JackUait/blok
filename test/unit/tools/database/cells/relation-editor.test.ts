@@ -121,6 +121,36 @@ describe('relation editor', () => {
       expect(search().placeholder).toBe('tools.database.relationSearchPlaceholder');
     });
 
+    // notion-spec-2 §19.2 (02-rel-reopen.png): linked pages first under "1 selected", then "Select more".
+    describe('with pages already linked', () => {
+      const openLinked = (overrides: Parameters<typeof makeEditorContext>[0] = {}): void => {
+        openCellEditor(relation(), [{ id: 'r2' }], makeAnchor(), makeEditorContext({
+          relationCandidates: () => candidates, relationScope: () => 'Tasks', coverCell: true, ...overrides,
+        }));
+      };
+      const labels = (): string[] =>
+        [...document.querySelectorAll('[data-blok-database-relation-heading], [data-blok-database-relation-option]')].map((el) =>
+          el.hasAttribute('data-blok-database-relation-heading') ? `# ${el.textContent ?? ''}` : el.getAttribute('data-blok-database-relation-option') ?? '');
+
+      it('groups the linked pages first, then the rest under "Select more"', () => {
+        openLinked({ i18n: { t: (key: string) => (key === 'tools.database.tableSelectedCount' ? '{count} selected' : key) } });
+
+        expect(labels()).toEqual(['# 1 selected', 'r2', '# tools.database.relationSelectMore', 'r1', 'r3']);
+      });
+
+      it('highlights the first linked page on open', () => {
+        openLinked();
+
+        expect(options().find((o) => o.hasAttribute('data-active'))?.getAttribute('data-blok-database-relation-option')).toBe('r2');
+      });
+
+      it('keeps "Select a page" over the list while nothing is linked', () => {
+        openInTable();
+
+        expect(labels()).toEqual(['# tools.database.formRelationHeading', 'r1', 'r2', 'r3']);
+      });
+    });
+
     it('draws a page glyph before each title', () => {
       openInTable();
 

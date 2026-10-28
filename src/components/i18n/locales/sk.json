@@ -1741,6 +1741,7 @@
   "tools.database.relationSearchPlaceholder": "Hľadať stránku…",
   "tools.database.relationHint": "Vyberte ľubovoľný počet stránok",
   "tools.database.relationHintOne": "Vyberte jednu stránku",
+  "tools.database.relationSelectMore": "Vybrať ďalšie",
   "tools.database.formulaLabel": "Vzorec",
   "tools.database.formulaPlaceholder": "Zadajte vzorec",
   "tools.database.formulaReference": "Vlastnosti a funkcie",

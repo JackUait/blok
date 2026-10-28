@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "搜索页面…",
   "tools.database.relationHint": "可选择任意数量的页面",
   "tools.database.relationHintOne": "选择一个页面",
+  "tools.database.relationSelectMore": "选择更多",
   "tools.database.formulaLabel": "公式",
   "tools.database.formulaPlaceholder": "输入公式",
   "tools.database.formulaReference": "属性和函数",

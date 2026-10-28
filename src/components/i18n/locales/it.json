@@ -1739,6 +1739,7 @@
   "tools.database.relationSearchPlaceholder": "Cerca una pagina…",
   "tools.database.relationHint": "Seleziona tutte le pagine che vuoi",
   "tools.database.relationHintOne": "Seleziona una pagina",
+  "tools.database.relationSelectMore": "Seleziona altri",
   "tools.database.formulaLabel": "Formula",
   "tools.database.formulaPlaceholder": "Digita una formula",
   "tools.database.formulaReference": "Proprietà e funzioni",

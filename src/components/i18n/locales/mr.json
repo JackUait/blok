@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "पृष्ठ शोधा…",
   "tools.database.relationHint": "हवी तितकी पृष्ठे निवडा",
   "tools.database.relationHintOne": "एक पृष्ठ निवडा",
+  "tools.database.relationSelectMore": "आणखी निवडा",
   "tools.database.formulaLabel": "सूत्र",
   "tools.database.formulaPlaceholder": "सूत्र टाइप करा",
   "tools.database.formulaReference": "गुणधर्म आणि फंक्शन्स",

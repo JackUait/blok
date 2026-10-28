@@ -1737,6 +1737,7 @@
   "tools.database.relationSearchPlaceholder": "Cari halaman…",
   "tools.database.relationHint": "Pilih halaman sebanyak yang Anda inginkan",
   "tools.database.relationHintOne": "Pilih satu halaman",
+  "tools.database.relationSelectMore": "Pilih lainnya",
   "tools.database.formulaLabel": "Rumus",
   "tools.database.formulaPlaceholder": "Ketik rumus",
   "tools.database.formulaReference": "Properti dan fungsi",

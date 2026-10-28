@@ -44,6 +44,8 @@ export default defineConfig({
     setupFiles: ['test/unit/vitest.setup.ts'],
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Both import `jszip`; inlined, the alias below sends it to the sandbox's mutated shim.
+    server: { deps: { inline: ['docx-preview', '@aiden0z/pptx-renderer'] } },
   },
   server: {
     fs: {
@@ -60,6 +62,7 @@ export default defineConfig({
       '@bloklabs/vue': path.resolve(dirname, './packages/vue/src/index.ts'),
       '@bloklabs/core/adapters': path.resolve(dirname, './src/adapters.ts'),
       '@bloklabs/core': path.resolve(dirname, './src/blok.ts'),
+      jszip: path.resolve(dirname, './src/tools/file/zip/jszip-shim.ts'),
     },
   },
 });

@@ -17,7 +17,8 @@ describe('office libraries read zips the same through jszip or the shim', () => 
     const fromRoot = createRequire(resolve(__dirname, '../../../../../package.json'));
     const fromLibrary = createRequire(fromRoot.resolve(library));
 
-    expect(fromLibrary.resolve('jszip')).toBe(resolve(__dirname, '../../../../../shims/jszip/index.ts'));
+    // Ends-with: Stryker's sandbox links node_modules back to the repo.
+    expect(fromLibrary.resolve('jszip')).toMatch(/\/shims\/jszip\/index\.ts$/);
   });
 
   it('docx-preview renders the deflated docx to the golden HTML', async () => {

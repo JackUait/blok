@@ -86,31 +86,43 @@ export const tokenizePlaceholders = (hl: Highlighter, env: TokenizeEnv, language
   let j = 0;
   const keys = Object.keys(tokenStack);
 
-  /** Swaps the placeholder in `s` (the text of `tokens[i]`) for its tokens, if it is there. */
+  /**
+   * Swaps the placeholders in `s` (the text of `tokens[i]`) for their tokens.
+   * Prism recursed into the text after each placeholder, one stack level per
+   * block; this loops over it instead, with the same result.
+   */
   const replaceAt = (tokens: TokenStream, i: number, token: string | Token, s: string): void => {
-    const k = keys[j];
-    const t = tokenStack[Number(k)];
-    const placeholder = getPlaceholder(language, k);
-
-    const index = s.indexOf(placeholder);
-
-    if (index <= -1) {
-      return;
-    }
-    ++j;
-
-    const before = s.substring(0, index);
-    const middle = new Token(language, hl.tokenize(t, grammar), 'language-' + language, t);
-    const after = s.substring(index + placeholder.length);
-
     const replacement: TokenStream = [];
+    // eslint-disable-next-line no-restricted-syntax -- the text still to scan
+    let rest = s;
 
-    if (before) {
-      replacement.push(...walkTokens([before]));
-    }
-    replacement.push(middle);
-    if (after) {
-      replacement.push(...walkTokens([after]));
+    for (;;) {
+      const k = keys[j];
+      const index = j < keys.length ? rest.indexOf(getPlaceholder(language, k)) : -1;
+
+      if (index <= -1 && rest === s) {
+        return;
+      }
+
+      if (index <= -1) {
+        replacement.push(rest);
+        break;
+      }
+      ++j;
+
+      const t = tokenStack[Number(k)];
+      const before = rest.substring(0, index);
+      const after = rest.substring(index + getPlaceholder(language, k).length);
+
+      if (before) {
+        replacement.push(...walkTokens([before]));
+      }
+      replacement.push(new Token(language, hl.tokenize(t, grammar), 'language-' + language, t));
+
+      if (!after) {
+        break;
+      }
+      rest = after;
     }
 
     if (typeof token === 'string') {

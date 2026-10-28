@@ -59,10 +59,12 @@ interface LoadedPresentationFonts {
   faces: Map<string, LoadedFace>;
   rejected: Set<string>;
   totalBytes: number;
-  // The face cap and time budget hold for the whole deck, not per slide.
-  // A face decoded again after its slides were disposed is not charged twice.
+  // The face cap holds for the whole deck, not per slide. A face decoded again
+  // after its slides were disposed is not counted twice.
   attempted: Set<string>;
-  spentMs: number;
+  // Many entries can point at one font part (same array from the zip map), so a
+  // file rejected once is never decoded again under another name.
+  rejectedData: WeakSet<Uint8Array>;
 }
 
 const loadedByPresentation = new WeakMap<PresentationData, LoadedPresentationFonts>();
@@ -194,41 +196,40 @@ export function useEmbeddedFonts(
 
   let state = loadedByPresentation.get(presentation);
   if (!state) {
-    state = { faces: new Map(), rejected: new Set(), totalBytes: 0, attempted: new Set(), spentMs: 0 };
+    state = { faces: new Map(), rejected: new Set(), totalBytes: 0, attempted: new Set(), rejectedData: new WeakSet() };
     loadedByPresentation.set(presentation, state);
   }
 
+  const startedAt = now();
   const acquired: Array<[string, LoadedFace]> = [];
   for (const face of presentation.embeddedFonts ?? []) {
     if (!families.has(face.renderFamily)) continue;
     const key = faceKey(face);
-    if (state.rejected.has(key)) continue;
+    if (state.rejected.has(key) || state.rejectedData.has(face.data)) continue;
     let loaded = state.faces.get(key);
     if (!loaded) {
       const firstTry = !state.attempted.has(key);
       if (
         state.faces.size >= resolvedLimits.maxFaces ||
-        (firstTry &&
-          (state.attempted.size >= resolvedLimits.maxFaces ||
-            state.spentMs > resolvedLimits.maxProcessingMs))
+        (firstTry && state.attempted.size >= resolvedLimits.maxFaces) ||
+        now() - startedAt > resolvedLimits.maxProcessingMs
       ) {
         break;
       }
       state.attempted.add(key);
 
-      const decodeStart = now();
       const fontBytes = decodeFace(face, resolvedLimits.maxInputBytesPerFace);
-      state.spentMs += firstTry ? now() - decodeStart : 0;
-      if (!fontBytes || (firstTry && state.spentMs > resolvedLimits.maxProcessingMs)) {
+      if (
+        !fontBytes ||
+        now() - startedAt > resolvedLimits.maxProcessingMs ||
+        fontBytes.byteLength > resolvedLimits.maxDecompressedBytesPerFace
+      ) {
         state.rejected.add(key);
+        state.rejectedData.add(face.data);
         continue;
       }
 
       try {
-        if (fontBytes.byteLength > resolvedLimits.maxDecompressedBytesPerFace) {
-          state.rejected.add(key);
-          continue;
-        }
         if (state.totalBytes + fontBytes.byteLength > resolvedLimits.maxTotalDecompressedBytes) {
           break;
         }

@@ -23,13 +23,13 @@ function eot(): Uint8Array {
   return bytes;
 }
 
-/** Many embeddedFont entries that all point at the same font file. */
-function deck(entries: number): { presentation: PresentationData; families: Set<string> } {
-  const data = eot();
+/** Embedded font entries; by default they all point at the same font file. */
+function deck(entries: number, sharedFile = true): { presentation: PresentationData; families: Set<string> } {
+  const shared = eot();
   const embeddedFonts = Array.from({ length: entries }, (_, index) => ({
     family: `Face ${index}`,
     renderFamily: `__embedded_${index}`,
-    data,
+    data: sharedFile ? shared : eot(),
     weight: '400',
     style: 'normal',
   }));
@@ -67,7 +67,7 @@ describe('a pptx that embeds one heavy font under many names', () => {
     vi.unstubAllGlobals();
   });
 
-  it('spends the font time budget once for the whole deck, not once per slide', () => {
+  it('decodes a heavy font file once, however many names point at it', () => {
     installFontMocks();
     decompressMtxMock.mockImplementation(() => {
       clock += 300;
@@ -84,11 +84,32 @@ describe('a pptx that embeds one heavy font under many names', () => {
   it('tries at most the face limit across the whole deck, not per slide', () => {
     installFontMocks();
     decompressMtxMock.mockReturnValue(new Uint8Array(17 * 1024 * 1024));
-    const { presentation, families } = deck(40);
+    const { presentation, families } = deck(40, false);
 
     Array.from({ length: SLIDES }, () => useEmbeddedFonts(presentation, families));
 
     expect(decompressMtxMock).toHaveBeenCalledTimes(16);
+  });
+
+  it('still loads a light font on a later slide after a heavy one ran out of time', () => {
+    const fonts = installFontMocks();
+    decompressMtxMock
+      .mockImplementationOnce(() => {
+        clock += 300;
+
+        return new Uint8Array([0, 1, 0, 0]);
+      })
+      .mockImplementation(() => {
+        clock += 20;
+
+        return new Uint8Array([0, 1, 0, 0]);
+      });
+    const { presentation, families } = deck(2, false);
+
+    useEmbeddedFonts(presentation, families);
+    useEmbeddedFonts(presentation, families);
+
+    expect(fonts.add).toHaveBeenCalledTimes(1);
   });
 
   it('still loads the fonts of a normal deck on every slide and after slides are closed', async () => {

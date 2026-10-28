@@ -31,6 +31,17 @@ export interface TableNodeData extends BaseNodeData {
   /** @internal Raw XML node — opaque to consumers. Use serializePresentation() for JSON-safe data. */
   properties?: SafeXmlNode;
   tableStyleId?: string;
+  /** @internal The grid passes MAX_TABLE_CELLS, so its cells were not parsed. */
+  oversized?: boolean;
+}
+
+// A hostile deck can declare a huge grid: 10,000 cells already cost about 450 MB
+// and 400 ms in Chromium, while real slide tables stay far below that.
+export const MAX_TABLE_CELLS = 10_000;
+
+/** Counts rows times the widest of the declared grid and the longest row. */
+export function tableCellCount(rows: number, gridColumns: number, longestRow: number): number {
+  return rows * Math.max(gridColumns, longestRow);
 }
 
 /**
@@ -117,13 +128,13 @@ export function parseTableNode(frameNode: SafeXmlNode): TableNodeData {
   }
 
   // --- Rows ---
-  const rows: TableRow[] = [];
-  for (const trNode of tbl.children('tr')) {
-    rows.push(parseRow(trNode));
-  }
+  const trNodes = tbl.children('tr');
+  const longestRow = trNodes.reduce((longest, trNode) => Math.max(longest, trNode.children('tc').length), 0);
+  const oversized = tableCellCount(trNodes.length, columns.length, longestRow) > MAX_TABLE_CELLS;
+  const rows: TableRow[] = oversized ? [] : trNodes.map(parseRow);
 
   const gridWidth = columns.reduce((sum, width) => sum + width, 0);
-  const gridHeight = rows.reduce((sum, row) => sum + row.height, 0);
+  const gridHeight = trNodes.reduce((sum, trNode) => sum + emuToPx(trNode.numAttr('h') ?? 0), 0);
 
   // --- Table properties ---
   const tblPr = tbl.child('tblPr');
@@ -140,5 +151,6 @@ export function parseTableNode(frameNode: SafeXmlNode): TableNodeData {
     rows,
     properties: tblPr.exists() ? tblPr : undefined,
     tableStyleId,
+    ...(oversized ? { oversized } : {}),
   };
 }

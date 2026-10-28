@@ -10,7 +10,7 @@
  *   and uses tcTxStyle from each part for cell text color/font (a:tcTxStyle under firstRow, firstCol, etc.).
  */
 
-import { TableNodeData, TableCell } from '../model/nodes/TableNode';
+import { TableNodeData, TableCell, MAX_TABLE_CELLS, tableCellCount } from '../model/nodes/TableNode';
 import { RenderContext } from './RenderContext';
 import {
   resolveColor,
@@ -460,8 +460,6 @@ function tableFlipTransform(node: TableNodeData): string {
 // Table Rendering
 // ---------------------------------------------------------------------------
 
-const MAX_TABLE_CELLS = 10_000;
-
 /**
  * Render a table node into an absolutely-positioned HTML element.
  */
@@ -492,9 +490,8 @@ export function renderTable(node: TableNodeData, ctx: RenderContext): HTMLElemen
     wrapper.style.transform = transforms.join(' ');
   }
 
-  // A hostile deck can declare a huge grid: 10,000 cells already cost about 450 MB
-  // and 400 ms in Chromium, while real slide tables stay far below that.
-  if (node.rows.length * node.columns.length > MAX_TABLE_CELLS) {
+  const longestRow = node.rows.reduce((longest, row) => Math.max(longest, row.cells.length), 0);
+  if (node.oversized || tableCellCount(node.rows.length, node.columns.length, longestRow) > MAX_TABLE_CELLS) {
     return wrapper;
   }
 
@@ -555,12 +552,14 @@ export function renderTable(node: TableNodeData, ctx: RenderContext): HTMLElemen
       const td = document.createElement('td');
       td.style.overflow = 'hidden';
 
-      // Spanning
-      if (cell.gridSpan > 1) {
-        td.colSpan = cell.gridSpan;
+      // Spanning, clamped to the grid: browsers lay out every column and row a span claims.
+      const colSpan = Math.min(cell.gridSpan, totalCols - colIdx);
+      const rowSpan = Math.min(cell.rowSpan, totalRows - rowIdx);
+      if (colSpan > 1) {
+        td.colSpan = colSpan;
       }
-      if (cell.rowSpan > 1) {
-        td.rowSpan = cell.rowSpan;
+      if (rowSpan > 1) {
+        td.rowSpan = rowSpan;
       }
 
       // Apply table style first (as base), then direct tcPr overrides

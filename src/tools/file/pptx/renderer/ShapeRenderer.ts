@@ -147,7 +147,7 @@ import { findMediaByTarget, getOrCreateBlobUrl } from '../utils/media';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
-import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
+import { applyLinkTooltip, makeKeyboardLink, resolveSlideNavigationIndex } from './navigation';
 import { scaleCssLengthForTransform } from './cssValues';
 import {
   flipAbsoluteSvgPathData,
@@ -3888,19 +3888,13 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
     if (slideIndex !== undefined) {
       wrapper.style.cursor = 'pointer';
       applyLinkTooltip(wrapper, node.hlinkClick.tooltip);
-      wrapper.addEventListener('click', (e) => {
-        e.stopPropagation();
-        onNavigate({ slideIndex });
-      });
+      makeKeyboardLink(wrapper, () => onNavigate({ slideIndex }));
     } else if (rId) {
       // External URL link
       if (rel && isExternalTargetMode(rel.targetMode) && isAllowedExternalUrl(rel.target)) {
         wrapper.style.cursor = 'pointer';
         wrapper.title = node.hlinkClick.tooltip || rel.target;
-        wrapper.addEventListener('click', (e) => {
-          e.stopPropagation();
-          onNavigate({ url: rel.target });
-        });
+        makeKeyboardLink(wrapper, () => onNavigate({ url: rel.target }));
       }
     }
   }

@@ -115,11 +115,12 @@ const INDIRECTLY_NAMED: Record<string, string> = {
   'tools/video/controls.ts » ctxLoop » menuitemcheckbox':
     'DELIBERATE — built by the local ctxItem() factory, which sets item.textContent to the ' +
     'translated label before returning; the role is only upgraded to menuitemcheckbox afterwards',
-  'tools/file/pptx/renderer/TextRenderer.ts » span » link':
-    'DELIBERATE — named by the deck\'s own run text: the span is stored as `element`, and the ' +
-    'run text is written into `element` right after (textContent, innerHTML or text children). ' +
-    'A deck tooltip, when present, is a title on top. KNOWN GAP: a link run with empty text stays ' +
-    'nameless; an English fallback name would be untranslated UI text',
+  'tools/file/pptx/renderer/navigation.ts » el » link':
+    'DELIBERATE — makeKeyboardLink() is shared by deck links, which the deck names: a text run ' +
+    'by its run text (TextRenderer), a shape by its text body (ShapeRenderer), a picture by its ' +
+    'img alt or svg aria-label from cNvPr@descr (ImageRenderer). The deck tooltip, when present, ' +
+    'is a title that names it when nothing else does. KNOWN GAP: a link with no text, descr or ' +
+    'tooltip stays nameless; an English fallback name would be untranslated UI text',
 };
 
 /**

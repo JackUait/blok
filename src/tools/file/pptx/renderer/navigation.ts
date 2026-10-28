@@ -111,6 +111,25 @@ export function resolveSlideNavigationIndex(
   return undefined;
 }
 
+/**
+ * Makes `el` a link a keyboard can reach: Enter and Space follow it like a click.
+ * Sets role and tabindex first so text-run links keep their attribute order.
+ */
+export function makeKeyboardLink(el: HTMLElement, follow: () => void): void {
+  el.setAttribute('role', 'link');
+  el.setAttribute('tabindex', '0');
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    follow();
+  });
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    follow();
+  });
+}
+
 /** Shows the deck's own tooltip on a slide-jump link. No fallback text: it would be untranslated. */
 export function applyLinkTooltip(el: HTMLElement, tooltip: string | undefined): void {
   if (tooltip) el.setAttribute('title', tooltip);

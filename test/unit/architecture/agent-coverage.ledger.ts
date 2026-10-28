@@ -127,6 +127,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/page-layout-builder.ts': cmds(['database.updateProperty'], PAGE_LAYOUT),
   'ui-file:src/tools/file/docx/inline.ts': exempt('view-only', 'A link inside a Word preview scrolls the preview to its bookmark; nothing is saved.'),
   'ui-file:src/tools/file/index.ts': cmds(['file.uploadFile', 'file.setSource'], 'Upload or URL.'),
+  'ui-file:src/tools/file/pptx/renderer/navigation.ts': exempt('view-only', 'A link in a PowerPoint preview scrolls to a slide or opens a web page; nothing is saved.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
   'ui-file:src/tools/file/ui.ts': cmds(['block.update'], 'Rename and caption: file.fileName, file.caption.'),
   'ui-file:src/tools/file/uploading-state.ts': exempt('chrome', 'Cancel button of an in-flight upload. An agent upload (file.uploadFile) finishes before the block exists, so there is nothing to cancel.'),

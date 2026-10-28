@@ -20,6 +20,8 @@ export interface CropRect {
 
 export interface PicNodeData extends BaseNodeData {
   nodeType: 'picture';
+  /** cNvPr@descr, the deck's alt text. */
+  descr?: string;
   blipEmbed?: string;
   blipLink?: string;
   crop?: CropRect;
@@ -121,6 +123,7 @@ export function parsePicNode(picNode: SafeXmlNode): PicNodeData {
   return {
     ...base,
     nodeType: 'picture',
+    descr: picNode.child('nvPicPr').child('cNvPr').attr('descr') || undefined,
     blipEmbed,
     blipLink,
     crop,

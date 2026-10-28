@@ -19,7 +19,7 @@ import { parseEmfContent } from '../utils/emfParser';
 import { emuToPx } from '../parser/units';
 import type { SafeXmlNode } from '../parser/XmlParser';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
-import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
+import { applyLinkTooltip, makeKeyboardLink, resolveSlideNavigationIndex } from './navigation';
 import { renderCustomGeometry } from '../shapes/customGeometry';
 import { getPresetShapeClipPath } from '../shapes/presets';
 import { splitTiledPatternFillCss } from './cssValues';
@@ -264,6 +264,7 @@ function renderImageUrl(
   // Create image element
   const img = document.createElement('img');
   img.src = url;
+  img.alt = node.descr ?? '';
   img.style.width = '100%';
   img.style.height = '100%';
   img.style.maxWidth = 'none';
@@ -447,6 +448,12 @@ function renderClippedSvgImage(
   svg.setAttribute('height', '100%');
   svg.style.display = 'block';
   svg.style.overflow = shape3dPlan?.mode === 'orthographic-top-bevel' ? 'visible' : 'hidden';
+  if (node.descr) {
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', node.descr);
+  } else {
+    svg.setAttribute('aria-hidden', 'true');
+  }
 
   const clipId = `picture-clip-${pictureClipPathIdCounter++}`;
   const defs = document.createElementNS(svgNs, 'defs');
@@ -843,10 +850,7 @@ function applyPictureHyperlink(wrapper: HTMLElement, node: PicNodeData, ctx: Ren
   if (slideIndex !== undefined) {
     wrapper.style.cursor = 'pointer';
     applyLinkTooltip(wrapper, node.hlinkClick.tooltip);
-    wrapper.addEventListener('click', (e) => {
-      e.stopPropagation();
-      onNavigate({ slideIndex });
-    });
+    makeKeyboardLink(wrapper, () => onNavigate({ slideIndex }));
     return;
   }
 
@@ -855,10 +859,7 @@ function applyPictureHyperlink(wrapper: HTMLElement, node: PicNodeData, ctx: Ren
 
   wrapper.style.cursor = 'pointer';
   wrapper.title = node.hlinkClick.tooltip || rel.target;
-  wrapper.addEventListener('click', (e) => {
-    e.stopPropagation();
-    onNavigate({ url: rel.target });
-  });
+  makeKeyboardLink(wrapper, () => onNavigate({ url: rel.target }));
 }
 
 /**
@@ -924,7 +925,7 @@ function renderAudioVideo(
         if (posterUrl) (element as HTMLVideoElement).poster = posterUrl;
       } else {
         if (posterUrl) {
-          const img = createFillImage(posterUrl);
+          const img = createFillImage(posterUrl, node.descr ?? '');
           img.style.height = 'calc(100% - 32px)';
           img.style.objectFit = 'contain';
           wrapper.appendChild(img);
@@ -944,7 +945,7 @@ function renderAudioVideo(
         { once: true },
       );
     } else if (posterUrl && kind === 'video') {
-      wrapper.appendChild(createFillImage(posterUrl));
+      wrapper.appendChild(createFillImage(posterUrl, node.descr ?? ''));
       const overlay = document.createElement('div');
       Object.assign(overlay.style, {
         position: 'absolute',
@@ -1025,7 +1026,7 @@ function renderEmf(
 
   switch (content.type) {
     case 'bitmap':
-      return renderEmfBitmap(content.imageData, wrapper, ctx, mediaPath);
+      return renderEmfBitmap(content.imageData, wrapper, ctx, mediaPath, node.descr ?? '');
     case 'empty':
       // Render nothing — transparent placeholder
       break;
@@ -1046,11 +1047,12 @@ function renderEmfBitmap(
   wrapper: HTMLElement,
   ctx: RenderContext,
   mediaPath: string,
+  alt: string,
 ): void | Promise<void> {
   const cacheKey = `${mediaPath}:emf-bitmap`;
   const cached = ctx.mediaUrlCache.get(cacheKey);
   if (cached) {
-    wrapper.appendChild(createFillImage(cached));
+    wrapper.appendChild(createFillImage(cached, alt));
     return;
   }
 
@@ -1066,7 +1068,7 @@ function renderEmfBitmap(
       if (blob && !ctx.signal?.aborted) {
         const url = ctx.mediaUrlCache.get(cacheKey) ?? URL.createObjectURL(blob);
         ctx.mediaUrlCache.set(cacheKey, url);
-        wrapper.appendChild(createFillImage(url));
+        wrapper.appendChild(createFillImage(url, alt));
       }
       resolve();
     }, 'image/png');
@@ -1078,9 +1080,10 @@ function renderEmfBitmap(
 /**
  * Create an <img> element that fills its container.
  */
-function createFillImage(url: string): HTMLImageElement {
+function createFillImage(url: string, alt: string): HTMLImageElement {
   const img = document.createElement('img');
   img.src = url;
+  img.alt = alt;
   img.style.width = '100%';
   img.style.height = '100%';
   img.style.objectFit = 'fill';

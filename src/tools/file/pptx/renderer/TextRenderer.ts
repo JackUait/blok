@@ -24,7 +24,7 @@ import { safeHref } from '../../../../shared/sanitize-url';
 import { findMediaByTarget, getOrCreateBlobUrl } from '../utils/media';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
-import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
+import { applyLinkTooltip, makeKeyboardLink, resolveSlideNavigationIndex } from './navigation';
 import { renderMathFormula } from './MathRenderer';
 
 // ---------------------------------------------------------------------------
@@ -1653,20 +1653,9 @@ export function renderTextBody(
       } else if (runStyle.hlinkSlideIndex !== undefined) {
         const span = document.createElement('span');
         const slideIndex = runStyle.hlinkSlideIndex;
-        span.setAttribute('role', 'link');
-        span.tabIndex = 0;
+        makeKeyboardLink(span, () => ctx.onNavigate?.({ slideIndex }));
         applyLinkTooltip(span, runStyle.hlinkTooltip);
         span.style.cursor = 'pointer';
-        span.addEventListener('click', (e) => {
-          e.stopPropagation();
-          ctx.onNavigate?.({ slideIndex });
-        });
-        span.addEventListener('keydown', (e) => {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault();
-          e.stopPropagation();
-          ctx.onNavigate?.({ slideIndex });
-        });
         element = span;
       } else if (runStyle.hlinkClick && safeHref(runStyle.hlinkClick) !== null) {
         const a = document.createElement('a');

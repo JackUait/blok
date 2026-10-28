@@ -84,11 +84,11 @@ const utf8 = new TextDecoder('utf-8', { ignoreBOM: true });
  * Reads one entry. The zip reader never inflates past the size the entry declares,
  * and every declared size was checked against the limits before any entry is read.
  */
-function readZipTextEntry(archive: ZipArchive, entry: ZipEntry): string {
-  return utf8.decode(archive.read(entry));
+async function readZipTextEntry(archive: ZipArchive, entry: ZipEntry): Promise<string> {
+  return utf8.decode(await archive.read(entry));
 }
 
-function readZipBinaryEntry(archive: ZipArchive, entry: ZipEntry): Uint8Array {
+function readZipBinaryEntry(archive: ZipArchive, entry: ZipEntry): Promise<Uint8Array> {
   return archive.read(entry);
 }
 
@@ -161,46 +161,46 @@ export async function parseZip(
   };
 
   for (const file of entries) {
-    categorize(file);
+    await categorize(file);
   }
 
-  function categorize(file: ZipEntry): void {
+  async function categorize(file: ZipEntry): Promise<void> {
     const normalizedPath = file.name.replace(/\\/g, '/');
 
     // --- Content Types ---
     if (normalizedPath === '[Content_Types].xml') {
-      result.contentTypes = readZipTextEntry(archive, file);
+      result.contentTypes = await readZipTextEntry(archive, file);
       return;
     }
 
     // --- Presentation ---
     if (normalizedPath === 'ppt/presentation.xml') {
-      result.presentation = readZipTextEntry(archive, file);
+      result.presentation = await readZipTextEntry(archive, file);
       return;
     }
 
     // --- Presentation Rels ---
     if (normalizedPath === 'ppt/_rels/presentation.xml.rels') {
-      result.presentationRels = readZipTextEntry(archive, file);
+      result.presentationRels = await readZipTextEntry(archive, file);
       return;
     }
 
     // --- Table Styles ---
     if (normalizedPath === 'ppt/tableStyles.xml') {
-      result.tableStyles = readZipTextEntry(archive, file);
+      result.tableStyles = await readZipTextEntry(archive, file);
       return;
     }
 
     // --- Media (binary) ---
     if (isMediaPath(normalizedPath)) {
-      const bytes = readZipBinaryEntry(archive, file);
+      const bytes = await readZipBinaryEntry(archive, file);
       setPathMapEntry(result.media, normalizedPath, bytes);
       return;
     }
 
     // --- Embedded fonts (binary EOT/.fntdata) ---
     if (/^ppt\/fonts\/[^/]+\.fntdata$/i.test(normalizedPath)) {
-      const bytes = readZipBinaryEntry(archive, file);
+      const bytes = await readZipBinaryEntry(archive, file);
       setPathMapEntry(fonts, normalizedPath, bytes);
       return;
     }
@@ -210,7 +210,7 @@ export async function parseZip(
       setPathMapEntry(
         result.slideRels,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -220,7 +220,7 @@ export async function parseZip(
       setPathMapEntry(
         result.slides,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -230,7 +230,7 @@ export async function parseZip(
       setPathMapEntry(
         result.slideLayoutRels,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -240,7 +240,7 @@ export async function parseZip(
       setPathMapEntry(
         result.slideLayouts,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -250,7 +250,7 @@ export async function parseZip(
       setPathMapEntry(
         result.slideMasterRels,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -260,7 +260,7 @@ export async function parseZip(
       setPathMapEntry(
         result.slideMasters,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -270,7 +270,7 @@ export async function parseZip(
       setPathMapEntry(
         result.themes,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -281,7 +281,7 @@ export async function parseZip(
         setPathMapEntry(
           result.themeOverrides,
           normalizedPath,
-          readZipTextEntry(archive, file),
+          await readZipTextEntry(archive, file),
         );
       }
       return;
@@ -293,7 +293,7 @@ export async function parseZip(
         setPathMapEntry(
           result.chartRels,
           normalizedPath,
-          readZipTextEntry(archive, file),
+          await readZipTextEntry(archive, file),
         );
       }
       return;
@@ -304,7 +304,7 @@ export async function parseZip(
       setPathMapEntry(
         result.charts,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -314,7 +314,7 @@ export async function parseZip(
       setPathMapEntry(
         result.chartStyles,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -324,7 +324,7 @@ export async function parseZip(
       setPathMapEntry(
         result.chartColors,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }
@@ -334,7 +334,7 @@ export async function parseZip(
       setPathMapEntry(
         result.diagramDrawings,
         normalizedPath,
-        readZipTextEntry(archive, file),
+        await readZipTextEntry(archive, file),
       );
       return;
     }

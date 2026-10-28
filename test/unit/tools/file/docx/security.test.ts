@@ -390,7 +390,7 @@ describe('renderDocxInto — untrusted documents', () => {
 
     it('drops a styles part with a DOCTYPE but still renders the body', async () => {
       const styles = `${BILLION_LAUGHS}<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:styleId="&d;"/></w:styles>`;
-      const buf = editZip(await buildDocx({ body: p(MARK), styles: '' }), { 'word/styles.xml': styles });
+      const buf = await editZip(await buildDocx({ body: p(MARK), styles: '' }), { 'word/styles.xml': styles });
       const c = document.createElement('div');
       await renderDocxInto(buf, c);
 
@@ -410,7 +410,7 @@ describe('renderDocxInto — untrusted documents', () => {
 
   describe('resource limits', () => {
     it('rejects a part whose zip entry honestly declares more than the limit', async () => {
-      const buf = editZip(await buildDocx({ body: p(MARK) }), {
+      const buf = await editZip(await buildDocx({ body: p(MARK) }), {
         'word/styles.xml': 'a'.repeat(65 * 1024 * 1024),
         'word/_rels/document.xml.rels': (rels) => rels.replace('</Relationships>', '<Relationship Id="rS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'),
       });
@@ -419,7 +419,7 @@ describe('renderDocxInto — untrusted documents', () => {
     }, 30_000);
 
     it('rejects a part that inflates past the limit while its zip entry claims 10 bytes', async () => {
-      const buf = lieAboutSizes(editZip(await buildDocx({ body: p(MARK) }), {
+      const buf = lieAboutSizes(await editZip(await buildDocx({ body: p(MARK) }), {
         'word/document.xml': `${part('document', `<w:body>${p(MARK)}</w:body>`)}<!--${'a'.repeat(70 * 1024 * 1024)}-->`,
       }), 'word/document.xml');
 

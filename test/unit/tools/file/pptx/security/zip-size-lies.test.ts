@@ -4,10 +4,10 @@ import type * as InflateModule from '../../../../../../src/tools/file/zip/inflat
 vi.mock('../../../../../../src/tools/file/zip/inflate', async (importOriginal) => {
   const actual = await importOriginal<typeof InflateModule>();
 
-  return { ...actual, inflateRaw: vi.fn(actual.inflateRaw) };
+  return { ...actual, inflateRawAsync: vi.fn(actual.inflateRawAsync) };
 });
 
-import { inflateRaw } from '../../../../../../src/tools/file/zip/inflate';
+import { inflateRawAsync } from '../../../../../../src/tools/file/zip/inflate';
 import { readZip } from '../../../../../../src/tools/file/zip/read-zip';
 import { buildDeck } from '../helpers/buildDeck';
 import { buildZip } from '../../zip/zip-builder';
@@ -19,11 +19,11 @@ const MB = 1024 * 1024;
 /** A real deck plus the given extra entries, all deflated. */
 const deckWith = async (extra: BuildEntry[]): Promise<ArrayBuffer> => {
   const archive = readZip(await buildDeck([{ text: 'Bomb' }]));
-  const parts = archive.entries
+  const parts = await Promise.all(archive.entries
     .filter((entry) => !entry.dir)
-    .map((entry): BuildEntry => ({ name: entry.name, data: archive.read(entry), method: 8 }));
+    .map(async (entry): Promise<BuildEntry> => ({ name: entry.name, data: await archive.read(entry), method: 8 })));
 
-  vi.mocked(inflateRaw).mockClear();
+  vi.mocked(inflateRawAsync).mockClear();
 
   return buildZip([...parts, ...extra]).buffer;
 };
@@ -45,8 +45,8 @@ describe('parseZip against entries that lie about their size', () => {
 
     await expect(parseZip(zip)).rejects.toThrow('output larger than declared size');
     // The inflater is handed the declared 100 bytes as its output size, never the real 8 MB.
-    expect(vi.mocked(inflateRaw).mock.calls.map(([, size]) => size)).toContain(100);
-    expect(vi.mocked(inflateRaw).mock.calls.every(([, size]) => size < MB)).toBe(true);
+    expect(vi.mocked(inflateRawAsync).mock.calls.map(([, size]) => size)).toContain(100);
+    expect(vi.mocked(inflateRawAsync).mock.calls.every(([, size]) => size < MB)).toBe(true);
   });
 
   it('refuses an entry declared over the per-entry limit before inflating anything', async () => {
@@ -54,7 +54,7 @@ describe('parseZip against entries that lie about their size', () => {
 
     await expect(parseZip(zip, RECOMMENDED_ZIP_LIMITS))
       .rejects.toThrow(/PPTX zip limit exceeded: ppt\/media\/big\.png is \d+ bytes > maxEntryUncompressedBytes/);
-    expect(inflateRaw).not.toHaveBeenCalled();
+    expect(inflateRawAsync).not.toHaveBeenCalled();
   });
 
   it('refuses entries whose declared sizes pass the total limit before inflating anything', async () => {
@@ -62,7 +62,7 @@ describe('parseZip against entries that lie about their size', () => {
 
     await expect(parseZip(zip, RECOMMENDED_ZIP_LIMITS))
       .rejects.toThrow(/PPTX zip limit exceeded: total uncompressed bytes \d+ > maxTotalUncompressedBytes/);
-    expect(inflateRaw).not.toHaveBeenCalled();
+    expect(inflateRawAsync).not.toHaveBeenCalled();
   });
 
   it('refuses media whose declared sizes pass the media limit before inflating anything', async () => {
@@ -70,7 +70,7 @@ describe('parseZip against entries that lie about their size', () => {
 
     await expect(parseZip(zip, RECOMMENDED_ZIP_LIMITS))
       .rejects.toThrow(/PPTX zip limit exceeded: media bytes \d+ > maxMediaBytes/);
-    expect(inflateRaw).not.toHaveBeenCalled();
+    expect(inflateRawAsync).not.toHaveBeenCalled();
   });
 
   it('still reads an honest deck within the limits', async () => {

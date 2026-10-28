@@ -100,12 +100,12 @@ export function zipToBuffer(files: Map<string, string | Uint8Array>): ArrayBuffe
 }
 
 /** Re-zip a package with some parts replaced or added; a function gets the part's old text. */
-export function editZip(buf: ArrayBuffer, edits: Record<string, string | ((old: string) => string)>): ArrayBuffer {
+export async function editZip(buf: ArrayBuffer, edits: Record<string, string | ((old: string) => string)>): Promise<ArrayBuffer> {
   const archive = readZip(buf);
   const files = new Map<string, string | Uint8Array>();
 
   for (const entry of archive.entries.filter((e) => !e.dir)) {
-    files.set(entry.name, archive.read(entry));
+    files.set(entry.name, await archive.read(entry));
   }
   for (const [name, edit] of Object.entries(edits)) {
     const old = files.get(name);

@@ -40,7 +40,7 @@ describe('renderDocxInto — document skeleton', () => {
 
   it('opens a package whose zip names use backslashes', async () => {
     const archive = readZip(await buildDocx({ body: p('Hello') }));
-    const files = new Map(archive.entries.filter((e) => !e.dir).map((e) => [e.name.replace(/\//g, '\\'), archive.read(e)]));
+    const files = new Map(await Promise.all(archive.entries.filter((e) => !e.dir).map(async (e) => [e.name.replace(/\//g, '\\'), await archive.read(e)] as const)));
     const c = document.createElement('div');
 
     await renderDocxInto(zipToBuffer(files), c);
@@ -76,7 +76,7 @@ describe('renderDocxInto — document skeleton', () => {
 
   it('rejects a document part that declares a DOCTYPE', async () => {
     const container = document.createElement('div');
-    const buf = editZip(await buildDocx({ body: '' }), {
+    const buf = await editZip(await buildDocx({ body: '' }), {
       'word/document.xml': '<?xml version="1.0"?><!DOCTYPE d [<!ENTITY e "boom">]><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>&e;</w:t></w:r></w:p></w:body></w:document>',
     });
 
@@ -528,7 +528,7 @@ describe('renderDocxInto — review fixes', () => {
   it('paints the document background colour on every page', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
-    const buf = editZip(await buildDocx({ body: p('x') }), {
+    const buf = await editZip(await buildDocx({ body: p('x') }), {
       'word/document.xml': (xml) => xml.replace('<w:body>', '<w:background w:color="FFF2CC"/><w:body>'),
     });
     await renderDocxInto(buf, container);

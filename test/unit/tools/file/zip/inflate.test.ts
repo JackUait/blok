@@ -4,7 +4,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
-import { inflateRaw } from '../../../../../src/tools/file/zip/inflate';
+import { inflateRaw, inflateRawAsync } from '../../../../../src/tools/file/zip/inflate';
 import { ZipError } from '../../../../../src/tools/file/zip/zip-error';
 
 const FIXTURES = path.join(__dirname, 'fixtures', 'pako');
@@ -576,6 +576,90 @@ describe('inflateRaw - work per block', () => {
 
     expect(ours).toBeLessThan(20 * oursNormal + 20);
     expect(ours).toBeLessThan(Math.max(150, 30 * zlibTime));
+  });
+});
+
+describe('inflateRawAsync - the page stays responsive', () => {
+  /** Times a 0 ms timer got to run while `work` was pending. A decode that never yields scores 0. */
+  const timerRunsDuring = async (work: Promise<unknown>): Promise<number> => {
+    let runs = 0;
+    let pending = true;
+    const tick = (): void => {
+      if (pending) {
+        runs++;
+        setTimeout(tick, 0);
+      }
+    };
+
+    setTimeout(tick, 0);
+    await work;
+    pending = false;
+
+    return runs;
+  };
+
+  /** One fixed-Huffman block of `n` literal "a" bytes, so nothing ends a block for zlib-style yielding. */
+  const oneLongBlock = (n: number): Uint8Array => {
+    const out = new Uint8Array(Math.ceil((3 + 8 * n + 7) / 8));
+    let bit = 0;
+    const put = (value: number, count: number): void => {
+      for (let i = 0; i < count; i++, bit++) {
+        out[bit >> 3] |= ((value >>> i) & 1) << (bit & 7);
+      }
+    };
+
+    put(1, 1);
+    put(1, 2);
+    // Fixed code for "a" is 0x30 + 0x61 = 0x91 (8 bits, sent MSB first): reversed, that is 0x89.
+    for (let i = 0; i < n; i++) {
+      put(0x89, 8);
+    }
+    put(0, 7);
+
+    return out;
+  };
+
+  it('lets timers run while it decodes one long block', async () => {
+    const size = 8 << 20;
+    const src = oneLongBlock(size);
+
+    expectBytes(u8(zlib.inflateRawSync(src)), new Uint8Array(size).fill(0x61));
+    const result = inflateRawAsync(src, size);
+
+    expect(await timerRunsDuring(result)).toBeGreaterThanOrEqual(2);
+    expectBytes(await result, new Uint8Array(size).fill(0x61));
+ }, 30_000);
+
+  it('lets timers run while it decodes many empty blocks', async () => {
+    const w = new BitWriter();
+
+    const order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+
+    // Each block builds fresh tables and holds only end-of-block: all cost, no output.
+    for (let i = 0; i < 30000; i++) {
+      w.bits(0, 1).bits(2, 2).bits(0, 5).bits(0, 5).bits(15, 4);
+      order.forEach((sym) => w.bits(sym < 16 ? 4 : 0, 3));
+      [...lens(257, { 256: 1 }), 1].forEach((l) => w.code(l, 4));
+      w.code(0, 1);
+    }
+    const last = fixedBlock(w, true);
+
+    last.lit(0x41);
+    last.lit(256);
+    const src = w.finish();
+    const result = inflateRawAsync(src, 1);
+
+    expect(await timerRunsDuring(result)).toBeGreaterThanOrEqual(2);
+    expect(Buffer.from(await result).toString()).toBe('A');
+  });
+
+  it('decodes the same bytes as inflateRaw and rejects the same streams', async () => {
+    const data = makeData('text', 3 << 20);
+    const src = u8(zlib.deflateRawSync(data));
+
+    expectBytes(await inflateRawAsync(src, data.length), data);
+    await expect(inflateRawAsync(src.subarray(0, src.length - 4), data.length)).rejects.toThrow(ZipError);
+    await expect(inflateRawAsync(src, data.length - 1)).rejects.toThrow(new ZipError('output larger than declared size'));
   });
 });
 

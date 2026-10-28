@@ -57,7 +57,7 @@ const renderHostile = async (hostile: Hostile): Promise<string> => {
     edits['ppt/theme/theme1.xml'] = (theme) => theme.replace('<a:srgbClr val="4F81BD"/>', accent1);
   }
 
-  const files = await parseZip(editZip(await buildDeck([{ text: 'x' }]), edits));
+  const files = await parseZip(await editZip(await buildDeck([{ text: 'x' }]), edits));
   const presentation = buildPresentation(files);
   const handle = renderSlide(presentation, presentation.slides[0]);
 

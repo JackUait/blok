@@ -24,10 +24,10 @@ export interface ShimZip {
 async function loadAsync(data: ArrayBuffer | Uint8Array): Promise<ShimZip> {
   const archive = readZip(data);
   const files = Object.create(null) as Record<string, ShimFile>;
-  const output = (entry: ZipEntry, type: string): unknown => {
+  const output = async (entry: ZipEntry, type: string): Promise<unknown> => {
     switch (type) {
       case 'string':
-        return utf8.decode(archive.read(entry));
+        return utf8.decode(await archive.read(entry));
       case 'uint8array':
         return archive.read(entry);
       default:

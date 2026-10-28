@@ -20,6 +20,11 @@ const BAD_DIST = 'invalid distance code';
  */
 const ROOT_BITS = 9;
 
+/** Output bytes decoded between chances to pause, so one long block cannot hold the thread. */
+const CHUNK = 1 << 18;
+/** How long the async decode runs before it lets the page handle other work. */
+const SLICE_MS = 8;
+
 interface Huffman {
   /** `fast[next input bits]` is `symbol << 4 | codeLength`; 0 for longer codes and for no code. */
   fast: Uint16Array;
@@ -125,7 +130,8 @@ class Inflater {
     this.out = new Uint8Array(size);
   }
 
-  public run(): Uint8Array<ArrayBuffer> {
+  /** Decodes the stream, pausing after every block and every CHUNK output bytes. */
+  public *run(): Generator<void, Uint8Array<ArrayBuffer>> {
     let final = 0;
 
     while (final === 0) {
@@ -135,12 +141,13 @@ class Inflater {
       if (type === 0) {
         this.stored();
       } else if (type === 1) {
-        this.codes(FIXED_LIT, FIXED_DIST);
+        yield* this.codes(FIXED_LIT, FIXED_DIST);
       } else if (type === 2) {
-        this.dynamic();
+        yield* this.dynamic();
       } else {
         throw new ZipError('invalid block type');
       }
+      yield;
     }
     this.fill(0);
     if (this.outPos !== this.out.length) {
@@ -200,7 +207,7 @@ class Inflater {
     this.cnt = 0;
   }
 
-  private dynamic(): void {
+  private *dynamic(): Generator<void> {
     const nlen = this.bits(5) + 257;
     const ndist = this.bits(5) + 1;
     const ncode = this.bits(4) + 4;
@@ -247,7 +254,7 @@ class Inflater {
     const lit = buildTable(lengths, 0, nlen, 'invalid literal/lengths set', true);
     const dist = buildTable(lengths, nlen, ndist, 'invalid distances set', true);
 
-    this.codes(lit, dist);
+    yield* this.codes(lit, dist);
   }
 
   /** How many times code length symbol 16, 17 or 18 repeats. */
@@ -294,8 +301,18 @@ class Inflater {
     return outPos + length;
   }
 
-  /** Decodes one Huffman-coded block. Keeps state in locals: this loop is where the time goes. */
-  private codes(lit: Huffman, dist: Huffman): void {
+  /** Decodes one Huffman-coded block, pausing every CHUNK output bytes. */
+  private *codes(lit: Huffman, dist: Huffman): Generator<void> {
+    while (!this.codeChunk(lit, dist, this.outPos + CHUNK)) {
+      yield;
+    }
+  }
+
+  /**
+   * Decodes symbols until end-of-block (returns true) or until the output reaches
+   * `pauseAt` (returns false). Keeps state in locals: this loop is where the time goes.
+   */
+  private codeChunk(lit: Huffman, dist: Huffman, pauseAt: number): boolean {
     const { src, out } = this;
     const srcBits = src.length * 8;
     const litFast = lit.fast;
@@ -303,8 +320,12 @@ class Inflater {
     const litMask = litFast.length - 1;
     const distMask = distFast.length - 1;
     let { pos, buf, cnt, outPos } = this;
+    let ended = false;
 
     for (;;) {
+      if (outPos >= pauseAt) {
+        break;
+      }
       // Refilling never changes pos * 8 - cnt, the bits consumed, so one check per symbol is enough.
       if (pos * 8 - cnt > srcBits) {
         throw new ZipError(END);
@@ -336,6 +357,7 @@ class Inflater {
         throw new ZipError(LARGER);
       }
       if (sym === 256) {
+        ended = true;
         break;
       }
       if (sym > 285) {
@@ -396,6 +418,8 @@ class Inflater {
     this.buf = buf;
     this.cnt = cnt;
     this.outPos = outPos;
+
+    return ended;
   }
 }
 
@@ -405,5 +429,59 @@ class Inflater {
  * Never writes past `size`, so a declared size caps the memory a zip bomb can take.
  */
 export function inflateRaw(src: Uint8Array, size: number): Uint8Array<ArrayBuffer> {
-  return new Inflater(src, size).run();
+  const steps = new Inflater(src, size).run();
+
+  for (;;) {
+    const step = steps.next();
+
+    if (step.done === true) {
+      return step.value;
+    }
+  }
+}
+
+interface YieldingScheduler {
+  yield?: () => Promise<void>;
+}
+
+/** A macrotask break. Not setTimeout: background tabs throttle it to about once a second. */
+const yieldToHost = (): Promise<void> => {
+  const scheduler = (globalThis as { scheduler?: YieldingScheduler }).scheduler;
+
+  if (scheduler?.yield !== undefined) {
+    return scheduler.yield();
+  }
+
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(null);
+  });
+};
+
+/** Shared by every decode, so back-to-back small entries still give the page a turn. */
+let sliceStart = performance.now();
+
+/**
+ * Same as inflateRaw, but gives the page a turn every SLICE_MS. A crafted stream can
+ * cost seconds of CPU for a few output bytes; this keeps that from freezing the tab.
+ */
+export async function inflateRawAsync(src: Uint8Array, size: number): Promise<Uint8Array<ArrayBuffer>> {
+  const steps = new Inflater(src, size).run();
+
+  for (;;) {
+    const step = steps.next();
+
+    if (step.done === true) {
+      return step.value;
+    }
+    if (performance.now() - sliceStart >= SLICE_MS) {
+      await yieldToHost();
+      sliceStart = performance.now();
+    }
+  }
 }

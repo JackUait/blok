@@ -349,10 +349,12 @@ test('pptx file renders an inline slide preview', async ({ page }) => {
 const EXTERNAL_MEDIA_HOST = 'http://pptx-external-media.test';
 
 /** Every part of sample.pptx, in archive order. */
-const sampleDeckParts = (): Map<string, string | Uint8Array> => {
+const sampleDeckParts = async (): Promise<Map<string, string | Uint8Array>> => {
   const archive = readZip(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
 
-  return new Map(archive.entries.filter((entry) => !entry.dir).map((entry) => [entry.name, archive.read(entry)]));
+  const parts = archive.entries.filter((entry) => !entry.dir);
+
+  return new Map(await Promise.all(parts.map(async (entry) => [entry.name, await archive.read(entry)] as const)));
 };
 
 const partText = (parts: Map<string, string | Uint8Array>, name: string): string => {
@@ -365,8 +367,8 @@ const zipParts = (parts: Map<string, string | Uint8Array>): Promise<Buffer> =>
   Promise.resolve(createZip([...parts].map(([name, data]) => ({ name, data }))));
 
 /** sample.pptx plus a picture whose image lives on another host. */
-const deckWithExternalPicture = (): Promise<Buffer> => {
-  const zip = sampleDeckParts();
+const deckWithExternalPicture = async (): Promise<Buffer> => {
+  const zip = await sampleDeckParts();
   const slidePath = 'ppt/slides/slide1.xml';
   const relsPath = 'ppt/slides/_rels/slide1.xml.rels';
   const slide = partText(zip, slidePath);
@@ -413,8 +415,8 @@ test('pptx preview never fetches a picture the deck links from another host', as
 const LONG_DECK_SLIDES = 14;
 
 /** sample.pptx copied into a deck longer than one drawing batch, each slide with its own text. */
-const longDeck = (): Promise<Buffer> => {
-  const zip = sampleDeckParts();
+const longDeck = async (): Promise<Buffer> => {
+  const zip = await sampleDeckParts();
   const slide = partText(zip, 'ppt/slides/slide1.xml');
   const slideRels = partText(zip, 'ppt/slides/_rels/slide1.xml.rels');
   const presentation = partText(zip, 'ppt/presentation.xml');
@@ -475,8 +477,8 @@ test('pptx preview draws text, tables and charts from a real deck', async ({ pag
 });
 
 /** sample.pptx plus one embedded picture. */
-const deckWithPicture = (): Promise<Buffer> => {
-  const zip = sampleDeckParts();
+const deckWithPicture = async (): Promise<Buffer> => {
+  const zip = await sampleDeckParts();
   const slidePath = 'ppt/slides/slide1.xml';
   const relsPath = 'ppt/slides/_rels/slide1.xml.rels';
   const slide = partText(zip, slidePath);

@@ -1,4 +1,4 @@
-import { inflateRaw } from './inflate';
+import { inflateRawAsync } from './inflate';
 import { ZipError } from './zip-error';
 
 const utf8 = new TextDecoder('utf-8', { ignoreBOM: true });
@@ -32,8 +32,8 @@ export interface ZipArchive {
   readonly entries: readonly ZipEntry[];
   /** Any entry by its resolved name, dirs included (their names end in "/"). */
   get(name: string): ZipEntry | undefined;
-  /** A fresh copy of the entry's bytes; inflate never goes past the declared size. */
-  read(entry: ZipEntry): Uint8Array<ArrayBuffer>;
+  /** A fresh copy of the entry's bytes; inflate never goes past the declared size, and lets the page run while it works. */
+  read(entry: ZipEntry): Promise<Uint8Array<ArrayBuffer>>;
 }
 
 const SIG_LOCAL = 0x04034b50;
@@ -328,7 +328,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
   return {
     entries: Object.freeze(Array.from(byName.values())),
     get: (name) => byName.get(name),
-    read: (entry) => {
+    read: async (entry) => {
       const stored = contents.get(entry);
 
       if (stored === undefined) {
@@ -341,7 +341,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
       if (stored.method === STORED) {
         return stored.data.slice();
       }
-      return inflateRaw(stored.data, entry.size);
+      return inflateRawAsync(stored.data, entry.size);
     },
   };
 }

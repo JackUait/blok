@@ -94,7 +94,7 @@ describe('openDeck with real decks', () => {
     const deck = await buildDeck([{ text: 'Only slide' }]);
     const present = readZip(deck).entries.filter((entry) => !entry.dir).length;
     const padding = Object.fromEntries(Array.from({ length: 4_001 - present }, (_, i) => [`ppt/padding/${i}.txt`, 'x']));
-    const buf = editZip(deck, padding);
+    const buf = await editZip(deck, padding);
 
     await expect(openDeck(buf, containerOf({ value: SLIDE_WIDTH }))).rejects.toThrow(/zip limit exceeded: entries/);
   });

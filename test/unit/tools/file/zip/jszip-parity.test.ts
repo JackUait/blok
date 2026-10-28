@@ -20,22 +20,22 @@ describe('JSZip parity against golden data', () => {
     expect(await snapshotShim(bytesOf(rel))).toEqual(expectedFor(rel, snapshot));
   });
 
-  it.each(Object.entries(golden))('readZip reads %s like JSZip did', (rel, snapshot) => {
+  it.each(Object.entries(golden))('readZip reads %s like JSZip did', async (rel, snapshot) => {
     const expected = expectedFor(rel, snapshot);
-    const read = (): Array<{ name: string; dir: boolean; sha256: string }> => {
+    const read = async (): Promise<Array<{ name: string; dir: boolean; sha256: string }>> => {
       const archive = readZip(bytesOf(rel));
 
-      return archive.entries.map((e) => ({ name: e.name, dir: e.dir, sha256: sha256(archive.read(e)) }));
+      return Promise.all(archive.entries.map(async (e) => ({ name: e.name, dir: e.dir, sha256: sha256(await archive.read(e)) })));
     };
 
     if ('error' in expected) {
-      expect(read).toThrow(ZipError);
+      await expect(read()).rejects.toThrow(ZipError);
 
       return;
     }
     const byName = (a: { name: string }, b: { name: string }): number => (a.name < b.name ? -1 : 1);
 
-    expect(read().sort(byName)).toEqual(
+    expect((await read()).sort(byName)).toEqual(
       expected.entries.map((e) => ({ name: e.name, dir: e.dir, sha256: e.sha256 })).sort(byName)
     );
   });

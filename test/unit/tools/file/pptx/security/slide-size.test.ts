@@ -6,7 +6,7 @@ import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser
 import { buildPresentation } from '../../../../../../src/tools/file/pptx/model/Presentation';
 
 /** buildDeck with the slide size swapped for `size`. */
-const deckOfSize = async (size: string): Promise<ArrayBuffer> => editZip(await buildDeck([{ text: 'Sized' }]), {
+const deckOfSize = async (size: string): Promise<ArrayBuffer> => await editZip(await buildDeck([{ text: 'Sized' }]), {
   'ppt/presentation.xml': (presentation) => presentation.replace('<p:sldSz cx="9144000" cy="6858000"/>', size),
 });
 

@@ -37,7 +37,7 @@ const deckWithMissingPicture = async (): Promise<ArrayBuffer> => {
   ]));
   const kept = archive.entries.filter((entry) => !entry.dir && entry.name !== 'ppt/media/image1.png');
 
-  return zipToBuffer(new Map(kept.map((entry) => [entry.name, archive.read(entry)])));
+  return zipToBuffer(new Map(await Promise.all(kept.map(async (entry) => [entry.name, await archive.read(entry)] as const))));
 };
 
 describe('openDeck — no untranslated UI text in slides', () => {

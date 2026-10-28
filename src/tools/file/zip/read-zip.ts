@@ -339,11 +339,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
       if (stored.method === STORED) {
         return stored.data.slice();
       }
-      const out = inflateRaw(stored.data, entry.size);
-
-      return out.buffer instanceof ArrayBuffer && out.byteOffset === 0 && out.buffer.byteLength === out.length
-        ? new Uint8Array(out.buffer)
-        : out.slice();
+      return inflateRaw(stored.data, entry.size);
     },
   };
 }

@@ -114,7 +114,7 @@ const FIXED_DIST = buildTable(fixedLengths, 288, 32, BAD_DIST, false);
 const lengths = new Uint8Array(286 + 30);
 
 class Inflater {
-  private readonly out: Uint8Array;
+  private readonly out: Uint8Array<ArrayBuffer>;
   private outPos = 0;
   /** Next input byte to load into `buf`. Runs past the end by a few bytes, which read as zeros. */
   private pos = 0;
@@ -125,7 +125,7 @@ class Inflater {
     this.out = new Uint8Array(size);
   }
 
-  public run(): Uint8Array {
+  public run(): Uint8Array<ArrayBuffer> {
     let final = 0;
 
     while (final === 0) {
@@ -366,6 +366,6 @@ class Inflater {
  * Throws ZipError on any malformed stream, or one that does not inflate to exactly `size` bytes.
  * Never writes past `size`, so a declared size caps the memory a zip bomb can take.
  */
-export function inflateRaw(src: Uint8Array, size: number): Uint8Array {
+export function inflateRaw(src: Uint8Array, size: number): Uint8Array<ArrayBuffer> {
   return new Inflater(src, size).run();
 }

@@ -3986,6 +3986,7 @@ span[data-blok-slash-search] {
   --blok-database-title-placeholder: rgb(149, 148, 145);
   --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-pressed-bg: rgba(33, 27, 23, 0.102);
+  --blok-database-button-pressed-bg: rgba(33, 27, 23, 0.076);
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
@@ -4260,6 +4261,7 @@ span[data-blok-slash-search] {
   --blok-database-title-placeholder: rgb(106, 104, 101);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -4527,6 +4529,7 @@ span[data-blok-slash-search] {
   --blok-database-title-placeholder: rgb(106, 104, 101);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -16057,10 +16060,19 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.02s ease-in;
 }
 
 [data-blok-database-button]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-button]:active:not(:disabled) {
+  background-color: var(--blok-database-button-pressed-bg);
+}
+
+[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"]) {
+  padding: var(--blok-space-1);
 }
 
 [data-blok-database-button]:disabled {

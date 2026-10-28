@@ -22,6 +22,8 @@
   --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
   /* Pressed header cell and toolbar icon: the hover ink at double alpha (research/33 §4.2). */
   --blok-database-pressed-bg: rgba(33, 27, 23, 0.102);
+  /* notion-spec-2 §19.19. Dark is unmeasured: the hover-to-press ratio applied to the dark hover. */
+  --blok-database-button-pressed-bg: rgba(33, 27, 23, 0.076);
   /* Line under a row page's properties (research/33 §4.1). */
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
@@ -390,6 +392,7 @@
     --blok-database-title-placeholder: rgb(106, 104, 101);
     --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+    --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
     --blok-database-page-divider: rgba(255, 255, 255, 0.094);
     /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
     --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
@@ -696,6 +699,7 @@
   --blok-database-title-placeholder: rgb(106, 104, 101);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
@@ -13441,10 +13445,20 @@ button[data-blok-database-feed-reaction]:hover,
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.02s ease-in;
 }
 
 [data-blok-database-button]:hover:not(:disabled) {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-button]:active:not(:disabled) {
+  background-color: var(--blok-database-button-pressed-bg);
+}
+
+/* notion-spec-2 §19.19: on a card the button keeps the table's size, in a 32px row. */
+[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"]) {
+  padding: var(--blok-space-1);
 }
 
 [data-blok-database-button]:disabled {

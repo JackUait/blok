@@ -282,6 +282,22 @@ describe('DatabaseGalleryView', () => {
     expect(chip?.querySelector('[data-blok-database-cell-link]')?.textContent).toBe('brief.pdf');
   });
 
+  it('notion-spec-2 §19.19: a Button on a card can be pressed, unless the view is read-only', () => {
+    const properties = [{ id: 'p-title', visible: true }, { id: 'p-btn', visible: true }];
+    const options = {
+      view: galleryView({ properties }),
+      schema: [...schema, { id: 'p-btn', name: 'Run', type: 'button' as const, position: 'a4' }],
+      groups: single([row('r1', 'Alpha')]),
+    };
+    const editable = mount(options).root.querySelector<HTMLButtonElement>('[data-blok-database-button]');
+
+    expect(editable?.disabled).toBe(false);
+    document.body.innerHTML = '';
+    const locked = mount({ ...options, readOnly: true }).root.querySelector<HTMLButtonElement>('[data-blok-database-button]');
+
+    expect(locked?.disabled).toBe(true);
+  });
+
   it('skips empty property values on a card', () => {
     const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];
     const { root } = mount({ view: galleryView({ properties }) });

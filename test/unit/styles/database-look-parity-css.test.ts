@@ -144,6 +144,17 @@ describe('table cells (research/07:69-75, 98; 08:279-280, 380)', () => {
     expect(body).toContain('font-weight: 500');
     expect(body).toContain('line-height: 16.8px');
   });
+
+  it('notion-spec-2 §19.19: fills 5.1% on hover and 7.6% on press, over 0.02s', () => {
+    expect(ruleBody('[data-blok-database-button]')).toContain('transition: background-color 0.02s ease-in');
+    expect(ruleBody('[data-blok-database-button]:hover:not(:disabled)')).toContain('background-color: var(--blok-database-hover-bg)');
+    expect(ruleBody('[data-blok-database-button]:active:not(:disabled)')).toContain('background-color: var(--blok-database-button-pressed-bg)');
+    expect(tokenValues('--blok-database-button-pressed-bg')[0]).toBe('rgba(33, 27, 23, 0.076)');
+  });
+
+  it('notion-spec-2 §19.19: on a gallery card the button keeps its size, in a 32px row with 4px padding', () => {
+    expect(ruleBody('[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"])')).toContain('padding: var(--blok-space-1)');
+  });
 });
 
 describe('select editor head (research/08:306)', () => {

@@ -87,6 +87,36 @@ describe('grammar loader', () => {
     await expect(load('nope')).rejects.toThrow('Unknown grammar "nope"');
   });
 
+  it('does not run a grammar definition again after it threw', async () => {
+    const hl = createHighlighter();
+    const define = vi.fn((h: Highlighter) => {
+      h.hooks.add('wrap', (env) => {
+        env.classes.push('hooked');
+      });
+      throw new Error('half-defined');
+    });
+    const load = createGrammarLoader(hl, { base: [], optional: false }, { broken: { load: () => Promise.resolve({ define }) } });
+
+    await expect(load('broken')).rejects.toThrow('half-defined');
+    await expect(load('broken')).rejects.toThrow('half-defined');
+
+    expect(define).toHaveBeenCalledTimes(1);
+    expect(hl.highlight('a', { a: /a/ }, 'x')).toBe('<span class="token a hooked">a</span>');
+  });
+
+  it('still defines a grammar whose optional grammar failed to load', async () => {
+    const log: string[] = [];
+    const table: GrammarTable = {
+      ...recordingTable(log, { md: { optional: ['yaml'] } }),
+      yaml: { load: () => Promise.reject(new Error('network')) },
+    };
+    const load = createGrammarLoader(createHighlighter(), { base: [], optional: true }, table);
+
+    await load('md');
+
+    expect(log).toEqual(['md']);
+  });
+
   it('retries a grammar whose chunk failed to load', async () => {
     const hl = createHighlighter();
     const define = vi.fn((hl: Highlighter) => {

@@ -290,24 +290,17 @@ describe('prism-loader', () => {
       expect(await loader.tokenizePrism('echo "x" | wc -l', 'shell')).toBeNull();
     });
 
-    it('fails a language whose prerequisite fails, and retries it on the next call', async () => {
-      type Templating = { define: (hl: Highlighter) => void };
-      const fail = vi.fn()
-        .mockImplementationOnce(() => {
-          throw new Error('nope');
-        })
-        .mockImplementation(() => undefined);
+    it('fails a language whose prerequisite chunk fails, and retries it on the next call', async () => {
+      const attempts = { count: 0 };
 
       vi.doMock(`${GRAMMARS_DIR}/markup-templating`, async (importOriginal) => {
-        const real = await importOriginal<Templating>();
+        attempts.count++;
 
-        return {
-          ...real,
-          define: (hl: Highlighter): void => {
-            fail();
-            real.define(hl);
-          },
-        };
+        if (attempts.count === 1) {
+          throw new Error('nope');
+        }
+
+        return importOriginal();
       });
 
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

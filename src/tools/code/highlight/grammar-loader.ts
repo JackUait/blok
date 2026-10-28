@@ -64,8 +64,11 @@ export interface GrammarLoaderOptions {
 
 /**
  * Returns `load(id)`, which defines a grammar, its dependencies and the whole
- * base on `hl`, each exactly once. Concurrent calls share one promise. A failed chunk load is
- * forgotten, so the next call tries again.
+ * base on `hl`, each exactly once. Concurrent calls share one promise.
+ *
+ * A failed chunk load is forgotten, so the next call tries again. A `define`
+ * that throws is not: running it again would register its hooks twice. An
+ * optional grammar that fails to load is skipped, as Prism does.
  */
 export const createGrammarLoader = (
   hl: Highlighter,
@@ -74,11 +77,11 @@ export const createGrammarLoader = (
 ): ((id: string) => Promise<void>) => {
   const loading = new Map<string, Promise<void>>();
 
-  const dependenciesOf = (id: string, entry: GrammarEntry): string[] => {
+  const requiredOf = (id: string, entry: GrammarEntry): string[] => {
     const baseIndex = options.base.indexOf(id);
     const base = baseIndex === -1 ? options.base : options.base.slice(0, baseIndex);
 
-    return [...base, ...(entry.requires ?? []), ...(options.optional ? entry.optional ?? [] : [])];
+    return [...base, ...(entry.requires ?? [])];
   };
 
   const load = (id: string): Promise<void> => {
@@ -94,19 +97,27 @@ export const createGrammarLoader = (
       return Promise.reject(new Error(`Unknown grammar "${id}"`));
     }
 
+    const progress = { defining: false };
     const promise = (async (): Promise<void> => {
-      for (const dependency of dependenciesOf(id, entry)) {
+      for (const dependency of requiredOf(id, entry)) {
         await load(dependency);
+      }
+
+      for (const dependency of options.optional ? entry.optional ?? [] : []) {
+        await load(dependency).catch(() => undefined);
       }
 
       const { define } = await entry.load();
 
+      progress.defining = true;
       define(hl);
     })();
 
     loading.set(id, promise);
     promise.catch(() => {
-      loading.delete(id);
+      if (!progress.defining) {
+        loading.delete(id);
+      }
     });
 
     return promise;

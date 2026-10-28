@@ -69,17 +69,19 @@ export function drawLegend(model: ChartModel, area: Box, root: Element, style: T
     const total = widths.reduce((a, b) => a + b, 0) + pad * (items.length - 1);
     const y = position === 't' ? area.y + rowH / 2 : area.y + area.h - rowH / 2;
     const x0 = area.x + Math.max(0, (area.w - total) / 2);
+    const offset = { value: 0 };
 
     items.forEach((e, i) => {
-      const x = x0 + widths.slice(0, i).reduce((a, b) => a + b + pad, 0);
+      const x = x0 + offset.value;
 
+      offset.value = offset.value + widths[i] + pad;
       drawKey(g, e, x, y, key, model.kind);
       text(g, x + key + gap, y, e.label, style, 'start');
     });
 
     return { x: area.x, y: position === 't' ? area.y + rowH + pad : area.y, w: area.w, h: area.h - rowH - pad };
   }
-  const colW = Math.max(...widths);
+  const colW = widths.reduce((max, w) => Math.max(max, w), -Infinity);
   const x = position === 'r' ? area.x + area.w - colW : area.x;
   const y0 = area.y + (area.h - rowH * items.length) / 2 + rowH / 2;
 

@@ -3,6 +3,9 @@ import type { SafeXmlNode } from '../../parser/XmlParser';
 
 // A hostile file can declare millions of points; never allocate past this.
 const MAX_CHART_CACHE_POINTS = 10_000;
+// toFixed throws past 100 digits. toLocaleString allows more, but 20 is plenty.
+const MAX_FIXED_DIGITS = 100;
+const MAX_LOCALE_DIGITS = 20;
 
 function isPointIndex(idx: number | undefined, limit: number): idx is number {
   return idx !== undefined && Number.isInteger(idx) && idx >= 0 && idx < limit && idx < MAX_CHART_CACHE_POINTS;
@@ -14,7 +17,8 @@ function getCachePointLimit(cache: SafeXmlNode): number {
     .children('pt')
     .map((pt) => pt.numAttr('idx'))
     .filter((idx): idx is number => isPointIndex(idx, MAX_CHART_CACHE_POINTS));
-  const presentCount = Math.max(-1, ...present) + 1;
+  // A spread over a huge list overflows the call stack.
+  const presentCount = present.reduce((max, idx) => Math.max(max, idx), -1) + 1;
 
   if (declared === undefined || !Number.isFinite(declared) || declared < 0) {
     return presentCount;
@@ -168,7 +172,7 @@ function formatOfficeNumber(value: number, formatCode: string): string | undefin
     return undefined;
   }
   const decimalMatch = normalized.match(/\.(0+|#+)/);
-  const decimals = decimalMatch ? decimalMatch[1].length : 0;
+  const decimals = Math.min(decimalMatch ? decimalMatch[1].length : 0, MAX_LOCALE_DIGITS);
   const formatted = (useNegativeSection ? Math.abs(value) : value).toLocaleString('en-US', {
     useGrouping: normalized.includes(','),
     minimumFractionDigits: decimalMatch?.[1].includes('0') ? decimals : 0,
@@ -196,7 +200,7 @@ export function formatValue(value: number, formatCode: string | undefined): stri
   if (formatCode.includes('%')) {
     const match = formatCode.match(/0\.(0+)%/);
 
-    return `${(value * 100).toFixed(match ? match[1].length : 0)}%`;
+    return `${(value * 100).toFixed(Math.min(match ? match[1].length : 0, MAX_FIXED_DIGITS))}%`;
   }
   const officeNumber = formatOfficeNumber(value, formatCode);
 
@@ -206,7 +210,7 @@ export function formatValue(value: number, formatCode: string | undefined): stri
   const decMatch = formatCode.match(/\.(0+|#+)/);
 
   if (decMatch) {
-    return parseFloat(value.toFixed(decMatch[1].length)).toString();
+    return parseFloat(value.toFixed(Math.min(decMatch[1].length, MAX_FIXED_DIGITS))).toString();
   }
   if (/^[#0,]+$/.test(formatCode.replace(/[[\]"\\]/g, ''))) {
     return Math.round(value).toString();

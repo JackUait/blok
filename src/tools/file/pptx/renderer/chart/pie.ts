@@ -20,12 +20,16 @@ export interface Ring {
 export function pieSlices(values: number[], firstSliceAngle: number): Slice[] {
   const sizes = values.map((v) => (Number.isFinite(v) ? Math.abs(v) : 0));
   const total = sizes.reduce((a, b) => a + b, 0);
-  const ends = sizes.map((_, i) => sizes.slice(0, i + 1).reduce((a, b) => a + b, 0));
+  const running = { sum: 0 };
 
-  return sizes.map((size, i) => ({
-    start: firstSliceAngle + (total > 0 ? ((ends[i] - size) / total) * 360 : 0),
-    end: firstSliceAngle + (total > 0 ? (ends[i] / total) * 360 : 0),
-  }));
+  return sizes.map((size) => {
+    running.sum += size;
+
+    return {
+      start: firstSliceAngle + (total > 0 ? ((running.sum - size) / total) * 360 : 0),
+      end: firstSliceAngle + (total > 0 ? (running.sum / total) * 360 : 0),
+    };
+  });
 }
 
 function point(cx: number, cy: number, r: number, deg: number): string {
@@ -70,7 +74,8 @@ function labelText(model: ChartModel, seriesIndex: number, i: number, share: num
 export function drawPie(model: ChartModel, box: Box, root: Element, style: TextStyle): void {
   const doughnut = model.kind === 'doughnut';
   const drawn = doughnut ? model.series : model.series.slice(0, 1);
-  const maxExplosion = Math.max(0, ...drawn.flatMap((s) => s.explosion)) / 100;
+  // A spread over a huge list overflows the call stack.
+  const maxExplosion = drawn.reduce((max, s) => s.explosion.reduce((m, e) => Math.max(m, e), max), 0) / 100;
   const radius = (Math.min(box.w, box.h) / 2) / (1 + maxExplosion);
   const hole = doughnut ? radius * Math.min(Math.max(model.holeSize, 10), 90) / 100 : 0;
   const ringWidth = drawn.length > 0 ? (radius - hole) / drawn.length : 0;

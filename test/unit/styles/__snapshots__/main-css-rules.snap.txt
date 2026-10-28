@@ -11328,7 +11328,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-cell-actions] {
   position: absolute;
   inset-block-start: 6px;
-  inset-inline-end: 6px;
+  inset-inline-end: 4px;
   z-index: 1;
   display: none;
   padding: var(--blok-space-0-5);
@@ -11339,6 +11339,11 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-cell]:hover > [data-blok-database-table-cell-actions] {
   display: flex;
+}
+
+[data-blok-database-table-cell][data-type="number"] > [data-blok-database-table-cell-actions=""], [data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""] {
+  inset-inline-start: 4px;
+  inset-inline-end: auto;
 }
 
 [data-blok-database-table-cell-action] {

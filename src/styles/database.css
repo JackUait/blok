@@ -8365,11 +8365,11 @@ textarea[data-blok-database-cell-input] {
 
 /* ─── URL, email and phone cells: hover pill with Comment and Copy (research/16 §4) ─── */
 
-/* Notion: 52x24 at the cell's right edge, radius 6, the OPEN button's shadow; hover only. */
+/* Notion: 52x24 at the cell's right edge, radius 6, the OPEN button's shadow; hover only, no delay (notion-spec-2 §19.23). */
 [data-blok-database-table-cell-actions] {
   position: absolute;
   inset-block-start: 6px;
-  inset-inline-end: 6px;
+  inset-inline-end: 4px;
   z-index: 1;
   display: none;
   padding: var(--blok-space-0-5);
@@ -8380,6 +8380,13 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-cell]:hover > [data-blok-database-table-cell-actions] {
   display: flex;
+}
+
+/* notion-spec-2 §18.2, §19.20: on a right-aligned value the box hugs the start edge. An autofill pill keeps its side (unmeasured). */
+[data-blok-database-table-cell][data-type="number"] > [data-blok-database-table-cell-actions=""],
+[data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""] {
+  inset-inline-start: 4px;
+  inset-inline-end: auto;
 }
 
 [data-blok-database-table-cell-action] {

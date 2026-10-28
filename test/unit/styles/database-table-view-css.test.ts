@@ -174,3 +174,23 @@ describe('database table formula alignment', () => {
     expect(body).toMatch(/text-align:\s*end/);
   });
 });
+
+describe('database table hover pill side', () => {
+  // notion-spec-2 §18.2, §19.20: on a right-aligned value the Comment + Copy box hugs the cell's left edge, 4px in.
+  it.each([
+    '[data-blok-database-table-cell][data-type="number"] > [data-blok-database-table-cell-actions=""]',
+    '[data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""]',
+  ])('%s sits at the start edge', (selector) => {
+    const body = ruleBody(selector);
+
+    expect(body).toMatch(/inset-inline-start:\s*4px/);
+    expect(body).toMatch(/inset-inline-end:\s*auto/);
+  });
+});
+
+describe('database table hover pill at the end edge', () => {
+  // notion-spec-2 §19.6: x 843-895 in a cell 700-900. Blok's cell rect holds its 1px end border, so 4px in lands 5px from the rect's edge.
+  it('sits 4px in from the end border', () => {
+    expect(ruleBody('[data-blok-database-table-cell-actions]')).toMatch(/inset-inline-end:\s*4px/);
+  });
+});

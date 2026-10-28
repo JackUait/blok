@@ -161,11 +161,59 @@ describe('table URL, email and phone cells', () => {
       expect(action(cell(root, 'r1', propertyId), 'tools.database.cellCopy')).not.toBeNull();
     });
 
-    it('an empty url cell and a number cell carry none', () => {
+    it('an empty url cell and an empty number cell carry none', () => {
       const { root } = mount({ comment: vi.fn() });
 
       expect(actions(cell(root, 'r2', 'p-link'))).toBeNull();
-      expect(actions(cell(root, 'r1', 'p-amount'))).toBeNull();
+      expect(actions(cell(root, 'r2', 'p-amount'))).toBeNull();
+    });
+
+    // notion-spec-2 §18.2, §19.6, §19.20: filled Text, Number and Formula cells show Comment + Copy too.
+    describe('text, number and formula cells', () => {
+      const more: PropertyDefinition[] = [
+        ...schema,
+        { id: 'p-notes', name: 'Notes', type: 'text', position: 'a5' },
+        { id: 'p-calc', name: 'Calc', type: 'formula', position: 'a6', formula: { expression: '1 + 1' } },
+        { id: 'p-word', name: 'Word', type: 'formula', position: 'a7', formula: { expression: '"hi"' } },
+      ];
+      const moreRows = (): DatabaseRow[] => [
+        { ...rows()[0], properties: { ...rows()[0].properties, 'p-notes': 'hello' }, computed: { 'p-calc': 2, 'p-word': 'hi' } },
+        { ...rows()[1], computed: { 'p-calc': null, 'p-word': null } },
+      ];
+      const valueProperty = (property: PropertyDefinition): PropertyDefinition => {
+        if (property.id === 'p-calc') return { ...property, type: 'number' };
+        if (property.id === 'p-word') return { ...property, type: 'text' };
+
+        return property;
+      };
+      const mountMore = (): HTMLElement => mount({ comment: vi.fn(), schema: more, rows: moreRows(), cellContext: { valueProperty } }).root;
+
+      it.each(['p-notes', 'p-amount', 'p-calc', 'p-word'])('a filled %s cell carries Comment and Copy to Clipboard', (propertyId) => {
+        const root = mountMore();
+
+        expect(action(cell(root, 'r1', propertyId), 'tools.database.tableComment')).not.toBeNull();
+        expect(action(cell(root, 'r1', propertyId), 'tools.database.cellCopy')).not.toBeNull();
+      });
+
+      it.each(['p-notes', 'p-calc'])('an empty %s cell carries none', (propertyId) => {
+        const root = mountMore();
+
+        expect(actions(cell(root, 'r2', propertyId))).toBeNull();
+      });
+
+      it.each([['p-notes', 'hello'], ['p-calc', '2']])('Copy on a %s cell copies what the cell shows and opens no editor', async (propertyId, text) => {
+        const writeText = vi.fn(() => Promise.resolve());
+
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+        const root = mountMore();
+
+        clickOn(action(cell(root, 'r1', propertyId), 'tools.database.cellCopy') as HTMLButtonElement);
+        await Promise.resolve();
+
+        expect(writeText).toHaveBeenCalledWith(text);
+        expect(editorField()).toBeNull();
+        vi.unstubAllGlobals();
+      });
     });
 
     it('without host comments there is no Comment button, Copy stays', () => {

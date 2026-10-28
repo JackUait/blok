@@ -245,6 +245,8 @@ const MAX_SHOWN_COUNT = 99;
 
 /** Cells whose value is a link: a click on it follows it, and a hover shows the action pill. */
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
+/** notion-spec-2 §18.2, §19.6, §19.20: filled cells whose hover shows Comment + Copy. */
+const COPY_PILL_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number', 'formula']);
 
 const tableIds = { next: 0 };
 
@@ -985,14 +987,14 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       cell.appendChild(this.createCellActions(run));
     } else if (run !== null) {
       cell.appendChild(run);
-    } else if (LINK_TYPES.has(column.property.type) && filled) {
+    } else if (COPY_PILL_TYPES.has(column.property.type) && filled && !value.hasAttribute('data-formula-error')) {
       cell.appendChild(this.createCellActions());
     }
     if (fillHandle !== null) cell.appendChild(fillHandle);
   }
 
   /**
-   * research/16 §4: a filled url, email or phone cell's hover pill, "Comment" and "Copy to Clipboard".
+   * research/16 §4, notion-spec-2 §18.2: a filled url, email, phone, text, number or formula cell's hover pill, "Comment" and "Copy to Clipboard".
    * research/12 §2: a filled autofill cell puts its Autofill button first.
    */
   private createCellActions(autofill?: HTMLElement): HTMLElement {

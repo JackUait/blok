@@ -1012,7 +1012,7 @@ function renderUnsupportedPlaceholder(wrapper: HTMLElement): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Render EMF content by extracting embedded PDF or bitmap data.
+ * Render EMF content by extracting an embedded bitmap.
  */
 function renderEmf(
   data: Uint8Array,
@@ -1029,7 +1029,6 @@ function renderEmf(
     case 'empty':
       // Render nothing — transparent placeholder
       break;
-    case 'pdf':
     case 'unsupported':
       // Vector-only EMF cannot be faithfully rendered in the browser. A visible
       // placeholder is worse than transparent fallback because it pollutes the

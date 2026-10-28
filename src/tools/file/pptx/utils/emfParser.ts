@@ -5,15 +5,15 @@
  *
  * PPTX files frequently embed EMF images as OLE object previews.
  * Most contain embedded PDF data inside GDI comment records, or DIB bitmaps
- * via STRETCHDIBITS records. This parser extracts those embedded resources
- * without implementing full EMF record interpretation.
+ * via STRETCHDIBITS records. This parser extracts the bitmaps without
+ * implementing full EMF record interpretation. A PDF cannot be drawn here,
+ * so an EMF that carries one is reported as unsupported.
  *
  * EMF record format: each record is { type: u32, size: u32, ...data }
  * Records are walked sequentially until EOF record (type 14).
  */
 
 export type EmfContent =
-  | { type: 'pdf'; data: Uint8Array }
   | { type: 'bitmap'; imageData: ImageData }
   | { type: 'empty' }
   | { type: 'unsupported' };
@@ -31,9 +31,8 @@ const GDIC_MULTIFORMATS = 0x40000004;
 // EMF header signature at offset 40
 const EMF_SIGNATURE = 0x464d4520; // " EMF"
 
-// PDF markers
+// PDF marker
 const PDF_HEADER = [0x25, 0x50, 0x44, 0x46]; // "%PDF"
-const PDF_EOF = [0x25, 0x25, 0x45, 0x4f, 0x46]; // "%%EOF"
 
 // DIB compression
 const BI_RGB = 0;
@@ -66,10 +65,9 @@ export function parseEmfContent(data: Uint8Array): EmfContent {
 
     if (recordType === EMR_EOF) break;
 
-    // Check GDI Comment records for embedded PDF
-    if (recordType === EMR_COMMENT && recordSize > 16) {
-      const result = parseGdiComment(data, view, offset, recordSize);
-      if (result) return result;
+    // A PDF comment ends the walk: a bitmap after it is not drawn.
+    if (recordType === EMR_COMMENT && recordSize > 16 && hasGdiCommentPdf(data, view, offset, recordSize)) {
+      return { type: 'unsupported' };
     }
 
     // Check STRETCHDIBITS for embedded bitmaps
@@ -90,16 +88,16 @@ export function parseEmfContent(data: Uint8Array): EmfContent {
 }
 
 /**
- * Parse a GDI Comment record looking for embedded PDF data.
+ * Check a GDI Comment record for embedded PDF data.
  */
-function parseGdiComment(
+function hasGdiCommentPdf(
   data: Uint8Array,
   view: DataView,
   offset: number,
   recordSize: number,
-): EmfContent | null {
+): boolean {
   // Record layout: type(4) + size(4) + cbData(4) + commentId(4) + ...
-  if (offset + 16 > data.length) return null;
+  if (offset + 16 > data.length) return false;
 
   const commentId = view.getUint32(offset + 12, true);
 
@@ -108,43 +106,28 @@ function parseGdiComment(
 
     if (publicType === GDIC_BEGINGROUP) {
       // Search for %PDF signature in the record data
-      const recordData = data.subarray(offset + 8, offset + recordSize);
-      const pdf = extractPdfFromBuffer(recordData);
-      if (pdf) return { type: 'pdf', data: pdf };
+      if (containsPdf(data.subarray(offset + 8, offset + recordSize))) return true;
     }
 
     if (publicType === GDIC_MULTIFORMATS && offset + 24 <= data.length) {
-      // MULTIFORMATS: parse format descriptors and extract first usable one
-      const result = parseMultiformats(data, view, offset, recordSize);
-      if (result) return result;
+      if (hasMultiformatsPdf(data, view, offset)) return true;
     }
   }
 
   // Also search non-GDIC comments for raw PDF data
-  if (recordSize > 100) {
-    const recordData = data.subarray(offset + 8, offset + recordSize);
-    const pdf = extractPdfFromBuffer(recordData);
-    if (pdf) return { type: 'pdf', data: pdf };
-  }
-
-  return null;
+  return recordSize > 100 && containsPdf(data.subarray(offset + 8, offset + recordSize));
 }
 
 /**
- * Parse MULTIFORMATS GDI comment — contains format descriptors pointing to embedded data.
+ * Check a MULTIFORMATS GDI comment's format descriptors for embedded PDF data.
  */
-function parseMultiformats(
-  data: Uint8Array,
-  view: DataView,
-  offset: number,
-  _recordSize: number,
-): EmfContent | null {
+function hasMultiformatsPdf(data: Uint8Array, view: DataView, offset: number): boolean {
   // Layout from record start:
   // +12: commentIdentifier(4), +16: publicCommentIdentifier(4)
   // +20: outputRect(16 = RECTL)
   // +36: countFormats(4)
   // +40: format descriptors array, each: { signature(4), version(4), cbData(4), offData(4) }
-  if (offset + 40 > data.length) return null;
+  if (offset + 40 > data.length) return false;
 
   const countFormats = view.getUint32(offset + 36, true);
   const descriptorStart = offset + 40;
@@ -160,36 +143,14 @@ function parseMultiformats(
     const dataStart = offset + offData;
     if (dataStart + cbData > data.length || cbData === 0) continue;
 
-    const formatData = data.subarray(dataStart, dataStart + cbData);
-    const pdf = extractPdfFromBuffer(formatData);
-    if (pdf) return { type: 'pdf', data: pdf };
+    if (containsPdf(data.subarray(dataStart, dataStart + cbData))) return true;
   }
 
-  return null;
+  return false;
 }
 
-/**
- * Search for %PDF...%%EOF in a buffer and extract the PDF bytes.
- */
-function extractPdfFromBuffer(buf: Uint8Array): Uint8Array | null {
-  const pdfStart = findSequence(buf, PDF_HEADER);
-  if (pdfStart === -1) return null;
-
-  // Search for %%EOF from the end (PDF may have multiple %%EOF; take the last one)
-  let pdfEnd = -1;
-  for (let i = buf.length - PDF_EOF.length; i >= pdfStart; i--) {
-    if (matchesAt(buf, i, PDF_EOF)) {
-      pdfEnd = i + PDF_EOF.length;
-      break;
-    }
-  }
-
-  if (pdfEnd === -1) {
-    // No %%EOF found — take everything from %PDF to end of buffer
-    pdfEnd = buf.length;
-  }
-
-  return buf.slice(pdfStart, pdfEnd);
+function containsPdf(buf: Uint8Array): boolean {
+  return findSequence(buf, PDF_HEADER) !== -1;
 }
 
 /**

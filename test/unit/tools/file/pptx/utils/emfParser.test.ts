@@ -282,100 +282,59 @@ describe('parseEmfContent', () => {
     });
   });
 
-  describe('PDF extraction via MULTIFORMATS', () => {
-    it('extracts PDF from GDIC MULTIFORMATS comment record', () => {
-      const comment = buildMultiformatsPdfComment(MINI_PDF);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+  // The renderer cannot draw an embedded PDF, so a PDF-bearing EMF is unsupported.
+  describe('embedded PDF', () => {
+    it('treats a GDIC MULTIFORMATS comment with a PDF as unsupported', () => {
+      const emf = concat(buildEmfHeader(), buildMultiformatsPdfComment(MINI_PDF), buildEofRecord());
 
-      const result = parseEmfContent(emf);
-      expect(result.type).toBe('pdf');
-      if (result.type === 'pdf') {
-        const text = new TextDecoder().decode(result.data);
-        expect(text).toContain('%PDF-1.4');
-        expect(text).toContain('%%EOF');
-      }
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
 
-    it('extracts complete PDF data (no truncation)', () => {
-      const comment = buildMultiformatsPdfComment(MINI_PDF);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+    it('treats a PDF without %%EOF as unsupported', () => {
+      const pdfNoEof = new TextEncoder().encode('%PDF-1.4\nsome content');
+      const emf = concat(buildEmfHeader(), buildMultiformatsPdfComment(pdfNoEof), buildEofRecord());
 
-      const result = parseEmfContent(emf);
-      expect(result.type).toBe('pdf');
-      if (result.type === 'pdf') {
-        const text = new TextDecoder().decode(result.data);
-        // Should start exactly at %PDF and end at %%EOF
-        expect(text.startsWith('%PDF')).toBe(true);
-        expect(text.endsWith('%%EOF')).toBe(true);
-      }
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
 
     it('continues when MULTIFORMATS descriptors contain no PDF payload', () => {
-      const comment = buildMultiformatsNonPdfComment();
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+      const emf = concat(buildEmfHeader(), buildMultiformatsNonPdfComment(), buildEofRecord());
 
-      const result = parseEmfContent(emf);
-
-      expect(result.type).toBe('unsupported');
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
-  });
 
-  describe('PDF extraction via BEGINGROUP', () => {
-    it('extracts PDF from GDIC BEGINGROUP comment record', () => {
-      const comment = buildBegingroupPdfComment(MINI_PDF);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+    it('treats a GDIC BEGINGROUP comment with a PDF as unsupported', () => {
+      const emf = concat(buildEmfHeader(), buildBegingroupPdfComment(MINI_PDF), buildEofRecord());
 
-      const result = parseEmfContent(emf);
-      expect(result.type).toBe('pdf');
-      if (result.type === 'pdf') {
-        const text = new TextDecoder().decode(result.data);
-        expect(text).toContain('%PDF');
-        expect(text).toContain('%%EOF');
-      }
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
-  });
 
-  describe('PDF extraction via brute-force fallback', () => {
-    it('extracts PDF from non-GDIC comment records (recordSize > 100)', () => {
-      // The fallback only triggers for recordSize > 100, so pad the PDF data
+    it('treats a large non-GDIC comment with a PDF as unsupported', () => {
+      // The raw scan only looks at records over 100 bytes.
       const paddedPdf = new Uint8Array(120);
-      paddedPdf.set(MINI_PDF, 40); // pad 40 bytes before %PDF
-      const comment = buildRawPdfComment(paddedPdf);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+      paddedPdf.set(MINI_PDF, 40);
+      const emf = concat(buildEmfHeader(), buildRawPdfComment(paddedPdf), buildEofRecord());
 
-      const result = parseEmfContent(emf);
-      expect(result.type).toBe('pdf');
-      if (result.type === 'pdf') {
-        const text = new TextDecoder().decode(result.data);
-        expect(text).toContain('%PDF');
-      }
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
 
     it('returns unsupported for large non-GDIC comments without a PDF marker', () => {
       const raw = new Uint8Array(140);
       raw.fill(0x41);
-      const comment = buildRawPdfComment(raw);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+      const emf = concat(buildEmfHeader(), buildRawPdfComment(raw), buildEofRecord());
 
-      const result = parseEmfContent(emf);
-
-      expect(result.type).toBe('unsupported');
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
-  });
 
-  describe('PDF without %%EOF', () => {
-    it('extracts to end of buffer if %%EOF is missing', () => {
-      const pdfNoEof = new TextEncoder().encode('%PDF-1.4\nsome content');
-      const comment = buildMultiformatsPdfComment(pdfNoEof);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+    it('stops at the PDF comment and ignores a bitmap that follows it', () => {
+      const emf = concat(
+        buildEmfHeader(),
+        buildMultiformatsPdfComment(MINI_PDF),
+        buildStretchDibitsRecord(4, 3, 24),
+        buildEofRecord(),
+      );
 
-      const result = parseEmfContent(emf);
-      expect(result.type).toBe('pdf');
-      if (result.type === 'pdf') {
-        const text = new TextDecoder().decode(result.data);
-        expect(text).toContain('%PDF-1.4');
-        expect(text).toContain('some content');
-      }
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
   });
 
@@ -483,16 +442,6 @@ describe('parseEmfContent', () => {
   });
 
   describe('priority', () => {
-    it('returns PDF over bitmap when both present (PDF record comes first)', () => {
-      const comment = buildMultiformatsPdfComment(MINI_PDF);
-      const dib = buildStretchDibitsRecord(2, 2, 24);
-      const emf = concat(buildEmfHeader(), comment, dib, buildEofRecord());
-
-      const result = parseEmfContent(emf);
-      // PDF record comes first, should be returned
-      expect(result.type).toBe('pdf');
-    });
-
     it('returns bitmap when no PDF is present', () => {
       const dib = buildStretchDibitsRecord(2, 2, 24);
       const emf = concat(buildEmfHeader(), dib, buildEofRecord());
@@ -517,7 +466,7 @@ describe('parseEmfContent', () => {
   });
 
   describe('EMF+ dual mode', () => {
-    it('skips EMF+ comment and extracts PDF from subsequent GDIC comment', () => {
+    it('skips EMF+ comment and still finds the PDF in a later GDIC comment', () => {
       // First comment: EMF+ identifier (0x2B464D45)
       const emfPlusComment = new Uint8Array(24);
       writeU32(emfPlusComment, 0, EMR_COMMENT);
@@ -527,21 +476,18 @@ describe('parseEmfContent', () => {
 
       // Second comment: GDIC with PDF
       const pdfComment = buildMultiformatsPdfComment(MINI_PDF);
-      const emf = concat(buildEmfHeader(), emfPlusComment, pdfComment, buildEofRecord());
+      // The bitmap after the PDF shows the walk stopped at the PDF.
+      const dib = buildStretchDibitsRecord(2, 2, 24);
+      const emf = concat(buildEmfHeader(), emfPlusComment, pdfComment, dib, buildEofRecord());
 
-      const result = parseEmfContent(emf);
-      expect(result.type).toBe('pdf');
-      if (result.type === 'pdf') {
-        const text = new TextDecoder().decode(result.data);
-        expect(text).toContain('%PDF');
-      }
+      expect(parseEmfContent(emf)).toEqual({ type: 'unsupported' });
     });
   });
 
   describe('edge cases', () => {
     it('handles Uint8Array that is a subarray of a larger buffer', () => {
-      const comment = buildMultiformatsPdfComment(MINI_PDF);
-      const emf = concat(buildEmfHeader(), comment, buildEofRecord());
+      const dib = buildStretchDibitsRecord(2, 2, 24);
+      const emf = concat(buildEmfHeader(), dib, buildEofRecord());
 
       // Wrap in a larger buffer and create a subarray
       const padded = new Uint8Array(emf.length + 100);
@@ -549,7 +495,7 @@ describe('parseEmfContent', () => {
       const subarray = padded.subarray(50, 50 + emf.length);
 
       const result = parseEmfContent(subarray);
-      expect(result.type).toBe('pdf');
+      expect(result.type).toBe('bitmap');
     });
 
     it('handles corrupted record size gracefully', () => {

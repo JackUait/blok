@@ -385,7 +385,63 @@ test('pptx preview never fetches a picture the deck links from another host', as
   const preview = page.getByRole('dialog').locator('[data-role="file-preview-pptx"]');
 
   await expect(preview).toContainText('Blok pptx preview fixture');
+  const remoteRefs = await preview.evaluate((root, host) => Array.from(root.querySelectorAll('*'))
+    .flatMap((el) => ['src', 'srcset', 'href', 'xlink:href', 'style'].map((name) => el.getAttribute(name) ?? ''))
+    .filter((value) => value.includes(host)), EXTERNAL_MEDIA_HOST);
+
+  expect(remoteRefs).toEqual([]);
   expect(remoteRequests).toEqual([]);
+});
+
+const LONG_DECK_SLIDES = 14;
+
+/** sample.pptx copied into a deck longer than one drawing batch, each slide with its own text. */
+const longDeck = async (): Promise<Buffer> => {
+  const zip = await JSZip.loadAsync(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
+  const slide = await zip.file('ppt/slides/slide1.xml')?.async('string') ?? '';
+  const slideRels = await zip.file('ppt/slides/_rels/slide1.xml.rels')?.async('string') ?? '';
+  const presentation = await zip.file('ppt/presentation.xml')?.async('string') ?? '';
+  const presentationRels = await zip.file('ppt/_rels/presentation.xml.rels')?.async('string') ?? '';
+  const contentTypes = await zip.file('[Content_Types].xml')?.async('string') ?? '';
+  const numbers = Array.from({ length: LONG_DECK_SLIDES }, (_, i) => i + 1);
+  const slideType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide';
+
+  numbers.forEach((n) => {
+    zip.file(`ppt/slides/slide${n}.xml`, slide.replace('Blok pptx preview fixture', `Long deck slide ${n}`));
+    zip.file(`ppt/slides/_rels/slide${n}.xml.rels`, slideRels);
+  });
+  zip.file('ppt/presentation.xml', presentation.replace(
+    /<p:sldIdLst>.*<\/p:sldIdLst>/,
+    `<p:sldIdLst>${numbers.map((n) => `<p:sldId id="${255 + n}" r:id="rIdLong${n}"/>`).join('')}</p:sldIdLst>`
+  ));
+  zip.file('ppt/_rels/presentation.xml.rels', presentationRels
+    .replace(/<Relationship Id="rId2"[^>]*\/>/, '')
+    .replace('</Relationships>', `${numbers.map((n) => `<Relationship Id="rIdLong${n}" Type="${slideType}" Target="slides/slide${n}.xml"/>`).join('')}</Relationships>`));
+  zip.file('[Content_Types].xml', contentTypes
+    .replace(/<Override PartName="\/ppt\/slides\/slide1\.xml"[^>]*\/>/, '')
+    .replace('</Types>', `${numbers.map((n) => `<Override PartName="/ppt/slides/slide${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}</Types>`));
+
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+};
+
+test('pptx preview shows the last slide of a deck longer than one batch', async ({ page }) => {
+  await uploadFixture(page, {
+    name: 'long.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    buffer: await longDeck(),
+  });
+  await page.getByRole('button', { name: /long\.pptx/i }).click();
+
+  const preview = page.getByRole('dialog').locator('[data-role="file-preview-pptx"]');
+
+  await expect(preview).toContainText('Long deck slide 1');
+  const lastSlide = preview.getByText(`Long deck slide ${LONG_DECK_SLIDES}`, { exact: true });
+
+  // Slides after the first batch are drawn on later frames.
+  await expect(lastSlide).toBeAttached();
+  await lastSlide.scrollIntoViewIfNeeded();
+  await expect(lastSlide).toBeInViewport();
+  await expect(preview.getByText(/^Long deck slide \d+$/)).toHaveCount(LONG_DECK_SLIDES);
 });
 
 test('pptx preview draws text, tables and charts from a real deck', async ({ page }) => {

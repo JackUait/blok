@@ -100,6 +100,12 @@ from @aiden0z/pptx-renderer 1.4.0 (https://github.com/aiden0z/pptx-renderer),
 by Aiden Luo and contributors, licensed under the Apache License, Version 2.0.
 Every derived file says so in its first line and has been modified for Blok.
 
+Its embedded-font decoder (src/tools/file/pptx/fonts/mtx) is derived from
+mtx-decompressor 1.8.0 (https://github.com/ChristopherVR/mtx-decompressor),
+itself ported from libeot by Brennan T. Vincent. These files are licensed under
+the Mozilla Public License, Version 2.0; each says so in its header, and the
+license text is in src/tools/file/pptx/fonts/mtx/LICENSE.
+
 Its preset shape geometry (src/tools/file/pptx/shapes/generated) is
 mechanically derived from the DrawingML preset shape definitions of ECMA-376
 Part 1, 5th edition (2016), and is covered by this notice:

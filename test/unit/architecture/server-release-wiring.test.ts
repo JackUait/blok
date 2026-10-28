@@ -625,6 +625,19 @@ describe('server release wiring', () => {
     expect(workspaces.filter((name) => !beforeInstall.includes(`COPY packages/${name}/package.json packages/${name}/package.json`))).toEqual([]);
   });
 
+  it('copies every local resolution target before the immutable yarn install', () => {
+    const dockerfile = read('packages/server/Dockerfile');
+    const beforeInstall = dockerfile.slice(0, dockerfile.indexOf('yarn install --immutable'));
+    const manifest = JSON.parse(read('package.json')) as { resolutions?: Record<string, string> };
+    const localTargets = Object.values(manifest.resolutions ?? {})
+      .map((spec) => /^(?:portal|link|file):\.\/(.+)$/.exec(spec)?.[1])
+      .filter((target): target is string => target !== undefined);
+
+    // yarn resolves a portal by reading its manifest; without it --immutable fails with "Manifest not found".
+    expect(localTargets.length).toBeGreaterThan(0);
+    expect(localTargets.filter((target) => !beforeInstall.includes(`COPY ${target}/ ${target}/`))).toEqual([]);
+  });
+
   it('builds the C# host from the root context into .NET 10 runtime-deps', () => {
     const dockerfile = read('packages/server/Dockerfile');
     const workflow = read(RELEASE_WORKFLOW);

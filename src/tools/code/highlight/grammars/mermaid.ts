@@ -1,6 +1,7 @@
 import type { Highlighter } from '../engine';
 
-/** Blok's own grammar for Mermaid diagram syntax; Prism has none.
+/** Blok's own grammar for Mermaid diagram syntax, not Prism's mermaid component:
+ * its token names feed the Mermaid colors in prism-applier.ts.
  *
  * Token types and their semantic meaning:
  *   directive     — %%{init: {...}}%% front-matter directives
@@ -49,7 +50,10 @@ export const define = (hl: Highlighter): void => {
     // Capture the bracket + content + closing bracket as a unit; split inside
     'node-definition': {
       // Opening bracket types: [ [[ [( ( (( { (( )) ]] ]) )
-      pattern: /(?:\(\[|\[\[|\[\(|\[|\(+|>|\{|\(\()(?:[^\[\]{}()\n])*(?:\]\)|\]\]|\)\]|\]|\)+|\}|\)\))/,
+      // `(?<!\()` starts a paren run only at its first paren. Starting mid-run can
+      // never match where the run's start did not, and retrying every position
+      // made an unclosed run of `(` quadratic.
+      pattern: /(?:\(\[|\[\[|\[\(|\[|(?<!\()\(+|>|\{|\(\()(?:[^\[\]{}()\n])*(?:\]\)|\]\]|\)\]|\]|\)+|\}|\)\))/,
       greedy: true,
       inside: {
         'node-bracket': /^\(?[\[{(>]|[\]})]\)?$/,
@@ -57,8 +61,10 @@ export const define = (hl: Highlighter): void => {
       },
     },
 
-    // Diagram type keywords — first token on a line, colored cyan
-    'diagram-name': /^\s*(?:flowchart|graph|sequenceDiagram|classDiagram|erDiagram|stateDiagram(?:-v2)?|gitGraph|pie(?:\s+title)?|mindmap|timeline|quadrantChart|requirementDiagram|xychart-beta|C4Context|C4Container|C4Component)\b/m,
+    // Diagram type keywords — first token on a line, colored cyan.
+    // Only spaces and tabs may lead: `\s*` would also eat blank lines, retried
+    // from every line start, which is quadratic.
+    'diagram-name': /^[^\S\r\n]*(?:flowchart|graph|sequenceDiagram|classDiagram|erDiagram|stateDiagram(?:-v2)?|gitGraph|pie(?:\s+title)?|mindmap|timeline|quadrantChart|requirementDiagram|xychart-beta|C4Context|C4Container|C4Component)\b/m,
 
     // Structural / direction keywords
     'keyword': /\b(?:TD|TB|LR|RL|BT|subgraph|end|direction|participant|actor|as|activate|deactivate|loop|alt|else|opt|par|and|rect|critical|note|over|title|section|classDef|class|linkStyle|style|click|left of|right of)\b/,

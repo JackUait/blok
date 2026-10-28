@@ -735,8 +735,9 @@ const cellBlockLines = (
     return lines;
   }
 
+  // Pushed one by one: spreading into push() throws past ~125k lines.
   for (const child of context.childrenOf.get(block.id ?? '') ?? []) {
-    lines.push(...cellBlockLines(child, context, depth + 1, degraded));
+    cellBlockLines(child, context, depth + 1, degraded).forEach((line) => lines.push(line));
   }
 
   return lines;

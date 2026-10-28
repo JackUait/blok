@@ -618,4 +618,19 @@ describe('blocksToMarkdown: child order', () => {
     expect(markdown.indexOf('First in array')).toBeLessThan(markdown.indexOf('Unlisted'));
     expect(markdown.split('First in content')).toHaveLength(2);
   });
+
+  // Past ~125k lines, spreading a child's lines into push() overflows the stack.
+  it('serializes a table cell whose nested child holds 200k blocks', () => {
+    const children: SerializableBlock[] = Array.from({ length: 200_000 }, (_, index) => ({
+      id: `k${index}`, tool: 'paragraph', parentId: 'mid', data: { text: '' },
+    }));
+    const md = blocksToMarkdown([
+      { id: 't', tool: 'table', data: { withHeadings: false, content: [[{ blocks: ['cc'] }]] } },
+      { id: 'cc', tool: 'paragraph', parentId: 't', data: { text: 'cell' } },
+      { id: 'mid', tool: 'paragraph', parentId: 'cc', data: { text: 'mid' } },
+      ...children,
+    ]);
+
+    expect(md.startsWith('|  |\n| --- |\n| cell')).toBe(true);
+  }, 30_000);
 });

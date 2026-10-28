@@ -97,7 +97,7 @@ function makeTextShape(id: string, name: string, text: string): ShapeNodeData {
   };
 }
 
-function makeLazySlideFiles(): PptxFiles {
+function makeSlideFiles(): PptxFiles {
   return {
     contentTypes: '',
     presentation: `
@@ -173,7 +173,7 @@ function makeLazySlideFiles(): PptxFiles {
 }
 
 function makeNestedCompatibleGroupFiles(): PptxFiles {
-  const files = makeLazySlideFiles();
+  const files = makeSlideFiles();
   files.slides.set(
     'ppt/slides/slide1.xml',
     `
@@ -255,18 +255,6 @@ describe('renderSlide', () => {
 
     expect(handle.ready).toBeInstanceOf(Promise);
     await expect(handle.ready).resolves.toBeUndefined();
-  });
-
-  it('materializes lazy slide nodes before rendering slide content', () => {
-    const pres = buildPresentation(makeLazySlideFiles(), { lazySlides: true });
-    const slide = pres.slides[0];
-
-    expect(slide.nodes).toHaveLength(0);
-
-    const handle = renderSlide(pres, slide);
-
-    expect(slide.nodes).toHaveLength(1);
-    expect(handle.element.textContent).toContain('Deferred label');
   });
 
   it('renders multiple selected children inside nested groups in source order', () => {

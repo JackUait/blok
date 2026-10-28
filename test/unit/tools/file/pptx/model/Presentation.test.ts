@@ -1,11 +1,7 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 tests (Apache-2.0); modified for Blok.
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import '../helpers/domShims';
-import {
-  buildPresentation,
-  materializeAllSlideNodes,
-  materializeSlideNodes,
-} from '../../../../../../src/tools/file/pptx/model/Presentation';
+import { buildPresentation } from '../../../../../../src/tools/file/pptx/model/Presentation';
 import type { PresentationData } from '../../../../../../src/tools/file/pptx/model/Presentation';
 import { parseRenderableChildren, type RenderableNode } from '../../../../../../src/tools/file/pptx/model/RenderableChild';
 import type { ShapeNodeData } from '../../../../../../src/tools/file/pptx/model/nodes/ShapeNode';
@@ -148,11 +144,10 @@ interface NodeTree {
 
 /**
  * Upstream read nested groups through `serializePresentation` and `buildTextIndex`
- * (both cut). Walk the first slide the same way: materialize, then parse group children.
+ * (both cut). Walk the first slide the same way: parse group children.
  */
 function nodeTree(pres: PresentationData): NodeTree[] {
   const slide = pres.slides[0];
-  materializeSlideNodes(pres, slide);
   const walk = (node: RenderableNode): NodeTree => {
     const tree: NodeTree = { id: node.id };
     if (node.nodeType === 'shape' && node.textBody) {
@@ -309,19 +304,7 @@ describe('buildPresentation', () => {
     expect(pres.slides[0].nodes[0].nodeType).toBe('shape');
   });
 
-  it('can defer slide node parsing until the slide is materialized', () => {
-    const pres = buildPresentation(makeMinimalFiles(), { lazySlides: true });
-
-    expect(pres.slides).toHaveLength(1);
-    expect(pres.slides[0].nodes).toHaveLength(0);
-
-    materializeSlideNodes(pres, pres.slides[0]);
-
-    expect(pres.slides[0].nodes).toHaveLength(1);
-    expect(pres.slides[0].nodes[0].nodeType).toBe('shape');
-  });
-
-  it('materializes compatible fallback content and slide color metadata for lazy slides', () => {
+  it('parses compatible fallback content and slide color metadata', () => {
     const files = makeMinimalFiles();
     files.slides.set(
       'ppt/slides/slide1.xml',
@@ -332,7 +315,7 @@ describe('buildPresentation', () => {
             <mc:AlternateContent>
               <mc:Choice Requires="p14"><p14:contentPart/></mc:Choice>
               <mc:Fallback>
-                <sp><nvSpPr><cNvPr id="9" name="Lazy fallback"/><nvPr/></nvSpPr><spPr/></sp>
+                <sp><nvSpPr><cNvPr id="9" name="Fallback shape"/><nvPr/></nvSpPr><spPr/></sp>
               </mc:Fallback>
             </mc:AlternateContent>
           </spTree></cSld>
@@ -340,47 +323,28 @@ describe('buildPresentation', () => {
         </sld>
       `,
     );
-    const pres = buildPresentation(files, { lazySlides: true });
+    const pres = buildPresentation(files);
 
-    expect(pres.slides[0].nodes).toHaveLength(0);
-    materializeSlideNodes(pres, pres.slides[0]);
-
-    expect(pres.slides[0].nodes.map((node) => node.name)).toEqual(['Lazy fallback']);
+    expect(pres.slides[0].nodes.map((node) => node.name)).toEqual(['Fallback shape']);
     expect(pres.slides[0].colorMapOverrideMode).toBe('override');
     expect(pres.slides[0].colorMapOverride?.get('accent1')).toBe('accent2');
   });
 
-  it('materializes lazy slides on demand', () => {
-    const pres = buildPresentation(makeMinimalFiles(), { lazySlides: true });
+  it('keeps selected nested group children in source order', () => {
+    const pres = buildPresentation(makeNestedCompatibleGroupFiles());
 
-    expect(pres.slides[0].nodes).toHaveLength(0);
-    expect(texts(nodeTree(pres))).toContain('Deferred title');
-    expect(pres.slides[0].nodes).toHaveLength(1);
-  });
-
-  it('keeps selected nested group children in source order for eager and lazy slides', () => {
-    const eager = buildPresentation(makeNestedCompatibleGroupFiles());
-    const lazy = buildPresentation(makeNestedCompatibleGroupFiles(), { lazySlides: true });
-
-    expect(texts(nodeTree(eager))).toEqual([
+    expect(texts(nodeTree(pres))).toEqual([
       'First nested',
       'Second nested',
     ]);
-    expect(lazy.slides[0].nodes).toHaveLength(0);
-    expect(texts(nodeTree(lazy))).toEqual([
-      'First nested',
-      'Second nested',
-    ]);
-    expect(lazy.slides[0].nodes).toHaveLength(1);
   });
 
-  it('materializes multiple selected children inside nested lazy groups', () => {
-    const pres = buildPresentation(makeNestedCompatibleGroupFiles(), { lazySlides: true });
+  it('reads multiple selected children inside nested groups', () => {
+    const pres = buildPresentation(makeNestedCompatibleGroupFiles());
 
     const outer = nodeTree(pres)[0];
     const inner = outer.children?.[0];
 
-    expect(pres.slides[0].nodesMaterialized).toBe(true);
     expect(outer.id).toBe('10');
     expect(inner?.id).toBe('11');
     expect(inner?.children?.map((child) => child.id)).toEqual(['12', '13']);
@@ -388,14 +352,6 @@ describe('buildPresentation', () => {
       'First nested',
       'Second nested',
     ]);
-  });
-
-  it('can materialize all lazy slides explicitly', () => {
-    const pres = buildPresentation(makeMinimalFiles(), { lazySlides: true });
-
-    materializeAllSlideNodes(pres);
-
-    expect(pres.slides[0].nodes).toHaveLength(1);
   });
 
   it('preserves diagram fallback drawings for render/export/search contexts', () => {

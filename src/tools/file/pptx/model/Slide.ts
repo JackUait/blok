@@ -1,12 +1,10 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
-/* eslint-disable no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Slide parser — converts a slide XML into a structured SlideData
  * with typed node objects for each shape on the slide.
  */
 
 import type { SafeXmlNode } from '../parser/XmlParser';
-import { parseXml } from '../parser/XmlParser';
 import type { RelEntry } from '../parser/RelParser';
 import { parseRenderableChildren, type RenderableNode } from './RenderableChild';
 import { parseOoxmlBool } from '../parser/booleans';
@@ -31,12 +29,6 @@ export interface SlideData {
   colorMapOverride?: Map<string, string>;
   /** Whether clrMapOvr supplies an override map or explicitly resets to the master map. */
   colorMapOverrideMode?: ColorMapOverrideMode;
-  /** @internal Raw slide XML used when slide node parsing is deferred. */
-  sourceXml?: string;
-  /** @internal Whether `nodes` has been parsed from `sourceXml`. */
-  nodesMaterialized?: boolean;
-  /** @internal Whether layout/master placeholder inheritance has been applied. */
-  placeholderInheritanceResolved?: boolean;
 }
 
 function parseDefaultTrueBoolAttr(value: string | undefined): boolean {
@@ -109,54 +101,5 @@ export function parseSlide(
     showMasterSp,
     colorMapOverride,
     colorMapOverrideMode,
-    nodesMaterialized: true,
   };
-}
-
-export function createLazySlide(
-  sourceXml: string,
-  index: number,
-  rels: Map<string, RelEntry>,
-  slidePath: string = '',
-): SlideData {
-  return {
-    index,
-    nodes: [],
-    layoutIndex: findLayoutRel(rels),
-    rels,
-    slidePath,
-    showMasterSp: true,
-    sourceXml,
-    nodesMaterialized: false,
-  };
-}
-
-export function materializeSlideData(
-  slide: SlideData,
-  diagramDrawings?: Map<string, string>,
-): void {
-  if (slide.nodesMaterialized) return;
-  if (!slide.sourceXml) {
-    slide.nodesMaterialized = true;
-    return;
-  }
-
-  const resolvedLayoutIndex = slide.layoutIndex;
-  const parsed = parseSlide(
-    parseXml(slide.sourceXml),
-    slide.index,
-    slide.rels,
-    slide.slidePath,
-    diagramDrawings,
-  );
-
-  slide.hidden = parsed.hidden;
-  slide.nodes = parsed.nodes;
-  slide.background = parsed.background;
-  slide.layoutIndex = resolvedLayoutIndex || parsed.layoutIndex;
-  slide.showMasterSp = parsed.showMasterSp;
-  slide.colorMapOverride = parsed.colorMapOverride;
-  slide.colorMapOverrideMode = parsed.colorMapOverrideMode;
-  slide.nodesMaterialized = true;
-  slide.sourceXml = undefined;
 }

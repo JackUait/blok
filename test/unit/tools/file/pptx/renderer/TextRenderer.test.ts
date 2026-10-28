@@ -2753,47 +2753,6 @@ describe('TextRenderer — renderTextBody', () => {
       expect(span.style.backgroundImage).toBe('');
     });
 
-    it('applies a lazily resolved blipFill before the slide-ready tasks settle', async () => {
-      const body = makeTextBody({
-        paragraphs: [
-          {
-            runs: [
-              {
-                text: 'Lazy picture fill',
-                properties: xmlNode(`
-                  <rPr xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                    <blipFill><blip r:embed="rIdLazy"/><stretch><fillRect/></stretch></blipFill>
-                  </rPr>
-                `),
-              },
-            ],
-            level: 0,
-          },
-        ],
-      });
-      const ctx = createMockRenderContext();
-      ctx.slide.rels.set('rIdLazy', {
-        type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image',
-        target: '../media/lazy.jpeg',
-      });
-      ctx.presentation.mediaResolver = {
-        resolve: async () => ({
-          mediaPath: 'ppt/media/lazy.jpeg',
-          data: new Uint8Array([0xff, 0xd8, 0xff]),
-        }),
-      };
-      ctx.asyncTasks = [];
-      const container = document.createElement('div');
-
-      renderTextBody(body, undefined, ctx, container);
-      expect(ctx.asyncTasks).toHaveLength(1);
-      await Promise.all(ctx.asyncTasks);
-
-      const span = container.querySelector('span') as HTMLElement;
-      expect(span.style.backgroundImage).toContain('blob:');
-      expect(span.style.color).toBe('transparent');
-    });
-
     it('does not use package media for a disallowed external picture fill target', () => {
       const body = makeTextBody({
         paragraphs: [

@@ -3,7 +3,6 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import '../helpers/domShims';
 import {
   buildPresentation,
-  materializeSlideNodes,
   resolveNodePlaceholderInheritance,
 } from '../../../../../../src/tools/file/pptx/model/Presentation';
 import { parseBaseProps } from '../../../../../../src/tools/file/pptx/model/nodes/BaseNode';
@@ -31,7 +30,6 @@ afterEach(() => {
  */
 function firstGroup(p: PresentationData) {
   const slide = p.slides[0];
-  materializeSlideNodes(p, slide);
   const group = slide.nodes[0];
   if (group.nodeType !== 'group') throw new Error(`expected a group, got ${group.nodeType}`);
   const layoutPath = p.slideToLayout.get(slide.index) || slide.layoutIndex;
@@ -93,12 +91,9 @@ const cases = [
   },
 ];
 
-for (const lazySlides of [false, true]) {
-  describe(`${lazySlides ? 'lazy' : 'eager'} group placeholder transform`, () => {
+describe('group placeholder transform', () => {
     it.each(cases)('honors source presence for $label', ({ xml, position, size }) => {
-      const p = buildPresentation(groupPlaceholderFiles(groupXml(xml)), { lazySlides });
-      if (lazySlides) expect(p.slides[0].nodes).toEqual([]);
-      materializeSlideNodes(p, p.slides[0]);
+      const p = buildPresentation(groupPlaceholderFiles(groupXml(xml)));
       const group = p.slides[0].nodes[0];
       expect({ position: group.position, size: group.size }).toEqual({ position, size });
       const read = firstGroup(p);
@@ -115,7 +110,6 @@ for (const lazySlides of [false, true]) {
     it('keeps non-placeholder group bounds despite the layout', () => {
       const p = buildPresentation(
         groupPlaceholderFiles(groupXml(transform(0, -20, 240, 120), false)),
-        { lazySlides },
       );
       const group = firstGroup(p);
       expect({ position: group.position, size: group.size }).toEqual({
@@ -125,8 +119,8 @@ for (const lazySlides of [false, true]) {
       expect(group.children.map((child) => child.id)).toEqual(['3', '4']);
     });
 
-    it('reads unmaterialized slides with explicit parent bounds and child order', () => {
-      const p = buildPresentation(groupPlaceholderFiles(), { lazySlides });
+    it('reads slides with explicit parent bounds and child order', () => {
+      const p = buildPresentation(groupPlaceholderFiles());
       const group = firstGroup(p);
       expect({ position: group.position, size: group.size }).toEqual({
         position: { x: 200, y: 100 },
@@ -134,8 +128,7 @@ for (const lazySlides of [false, true]) {
       });
       expect(group.children.map((child) => child.id)).toEqual(['3', '4']);
     });
-  });
-}
+});
 
 it.each([
   ['sp', 'nvSpPr', 'spPr'],

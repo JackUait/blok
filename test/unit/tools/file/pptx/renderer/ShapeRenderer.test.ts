@@ -255,32 +255,32 @@ describe('ShapeRenderer', () => {
     expect(children.indexOf(image!)).toBeLessThan(children.indexOf(paths[0]));
   });
 
-  it('keeps generated multi-path details above a lazily resolved image fill', async () => {
+  it('strokes generated multi-path details with the outline above an image fill', () => {
     const xml = buildFlowchartShapeXml(
       'flowChartPredefinedProcess',
       `<a:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></a:blipFill>
        <a:ln w="12700"><a:solidFill><a:srgbClr val="203864"/></a:solidFill></a:ln>`,
     );
-    const ctx = createMockRenderContext();
-    ctx.asyncTasks = [];
-    ctx.slide.rels.set('rId1', { type: 'image', target: '../media/lazy-flowchart.png' });
-    ctx.presentation.mediaResolver = {
-      resolve: vi.fn(async () => ({
-        mediaPath: 'ppt/media/lazy-flowchart.png',
-        data: new Uint8Array([137, 80, 78, 71]),
-      })),
-    };
+    const base = createMockRenderContext();
+    const ctx = createMockRenderContext({
+      slide: {
+        ...base.slide,
+        rels: new Map([['rId1', { type: 'image', target: '../media/image1.png' }]]),
+      },
+      presentation: {
+        ...base.presentation,
+        media: new Map([['ppt/media/image1.png', new Uint8Array([137, 80, 78, 71])]]),
+      },
+    });
+    const children = Array.from(renderShape(parseShapeNode(parseXml(xml)), ctx).querySelector('svg')?.children ?? []);
+    // With an image fill only the detail paths are drawn as paths.
+    const details = children.filter((child): child is SVGPathElement => child.localName === 'path');
+    const imageIndex = children.findIndex((child) => child.localName === 'image');
 
-    const svg = renderShape(parseShapeNode(parseXml(xml)), ctx).querySelector('svg')!;
-    await Promise.all(ctx.asyncTasks);
-    const children = Array.from(svg.children);
-    const image = children.find((child) => child.localName === 'image');
-    const paths = children.filter((child): child is SVGPathElement => child.localName === 'path');
-
-    expect(image).toBeTruthy();
-    expect(paths).toHaveLength(3);
-    expect(children.indexOf(image!)).toBeLessThan(children.indexOf(paths[0]));
-    expect(paths.slice(1).every((path) => path.getAttribute('stroke') === '#203864')).toBe(true);
+    expect(details).toHaveLength(2);
+    expect(details.every((path) => path.getAttribute('stroke') === '#203864')).toBe(true);
+    expect(imageIndex).toBeGreaterThanOrEqual(0);
+    expect(imageIndex).toBeLessThan(children.indexOf(details[0]));
   });
 
   it('renders wordArtVert as upright stacked text instead of sideways vertical text', () => {
@@ -5022,46 +5022,6 @@ describe('ShapeRenderer', () => {
     expect(image!.getAttribute('preserveAspectRatio')).toBe('none');
     const clipPath = defs?.querySelector('clipPath');
     expect(clipPath).toBeTruthy();
-  });
-
-  it('renders shape blipFill after lazy media resolves asynchronously', async () => {
-    const xml = `
-      <p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-        <p:nvSpPr><p:cNvPr id="205" name="LazyBlipShape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
-        <p:spPr>
-          <a:xfrm><a:off x="0" y="0"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
-          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-          <a:blipFill>
-            <a:blip r:embed="rId1"/>
-            <a:stretch><a:fillRect/></a:stretch>
-          </a:blipFill>
-        </p:spPr>
-      </p:sp>
-    `;
-    const ctx = createMockRenderContext();
-    ctx.asyncTasks = [];
-    ctx.slide.rels.set('rId1', { type: 'image', target: '../media/lazy-shape.png' });
-    ctx.presentation.mediaResolver = {
-      resolve: vi.fn(async () => ({
-        mediaPath: 'ppt/media/lazy-shape.png',
-        data: new Uint8Array([137, 80, 78, 71]),
-      })),
-    };
-
-    const el = renderShape(parseShapeNode(parseXml(xml)), ctx);
-
-    expect(el.querySelector('svg image')).toBeNull();
-    expect(ctx.asyncTasks).toHaveLength(1);
-
-    await Promise.all(ctx.asyncTasks);
-
-    const image = el.querySelector('svg image');
-    expect(ctx.presentation.mediaResolver.resolve).toHaveBeenCalledWith('../media/lazy-shape.png');
-    expect(ctx.mediaUrlCache.has('ppt/media/lazy-shape.png')).toBe(true);
-    expect(image).not.toBeNull();
-    expect(image!.getAttribute('preserveAspectRatio')).toBe('none');
   });
 
   it('honors non-zero stretch fillRect insets for shape blipFill images', () => {

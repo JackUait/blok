@@ -19,10 +19,10 @@ describe('external media is never fetched', () => {
     vi.restoreAllMocks();
   });
 
-  it.each([false, true])(
-    'blocks every external media path with lazyMedia=%s and retains embedded images',
-    async (lazy) => {
-      const p = externalMediaPresentation(lazy);
+  it(
+    'blocks every external media path and retains embedded images',
+    async () => {
+      const p = externalMediaPresentation();
       const handle = renderSlide(p, p.slides[0]);
       await handle.ready;
       expect(handle.element.outerHTML).not.toContain(externalMediaOrigin);

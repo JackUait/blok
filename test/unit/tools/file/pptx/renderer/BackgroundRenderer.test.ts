@@ -313,43 +313,6 @@ describe('renderBackground', () => {
     expect(container.style.backgroundSize).toBe('100% 100%');
   });
 
-  it('renders blipFill backgrounds after lazy media resolves asynchronously', async () => {
-    const rId = 'rIdLazy';
-    const bg = bgPrXml(`
-      <a:blipFill>
-        <a:blip r:embed="${rId}"
-                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
-        <a:stretch><a:fillRect/></a:stretch>
-      </a:blipFill>
-    `);
-    const ctx = createMockRenderContext({
-      slide: slideWith({
-        rels: new Map([[rId, { type: 'image', target: '../media/lazy-bg.png' }]]),
-        background: bg,
-      }),
-    });
-    ctx.asyncTasks = [];
-    ctx.presentation.mediaResolver = {
-      resolve: vi.fn(async () => ({
-        mediaPath: 'ppt/media/lazy-bg.png',
-        data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
-      })),
-    };
-
-    renderBackground(ctx, container);
-
-    expect(container.style.backgroundImage).toBe('');
-    expect(ctx.asyncTasks).toHaveLength(1);
-
-    await Promise.all(ctx.asyncTasks);
-
-    expect(ctx.presentation.mediaResolver.resolve).toHaveBeenCalledWith('../media/lazy-bg.png');
-    expect(ctx.mediaUrlCache.has('ppt/media/lazy-bg.png')).toBe(true);
-    expect(container.style.backgroundImage).toMatch(/^url\(/);
-    expect(container.style.backgroundSize).toBe('100% 100%');
-    expect(container.style.backgroundRepeat).toBe('no-repeat');
-  });
-
   it('honors non-zero stretch fillRect insets for blipFill backgrounds', () => {
     const mediaPath = 'ppt/media/inset-bg.png';
     const rId = 'rIdInset';

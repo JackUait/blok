@@ -21,7 +21,7 @@ import { parseOoxmlBool } from '../parser/booleans';
 import { isExternalTargetMode } from '../parser/RelParser';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
 import { safeHref } from '../../../../shared/sanitize-url';
-import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
+import { findMediaByTarget, getOrCreateBlobUrl } from '../utils/media';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
 import { applyLinkTooltip, resolveSlideNavigationIndex } from './navigation';
@@ -824,28 +824,6 @@ function resolveTextPictureUrl(blipFill: SafeXmlNode, ctx: RenderContext): strin
   return getOrCreateBlobUrl(resolved.mediaPath, resolved.data, ctx.mediaUrlCache);
 }
 
-async function resolveTextPictureUrlAsync(
-  blipFill: SafeXmlNode,
-  ctx: RenderContext,
-): Promise<string | undefined> {
-  const blip = blipFill.child('blip');
-  const relId =
-    blip.attr('embed') ?? blip.attr('r:embed') ?? blip.attr('link') ?? blip.attr('r:link');
-  if (!relId) return undefined;
-  const rel = ctx.slide.rels.get(relId);
-  if (!rel) return undefined;
-  if (isExternalTargetMode(rel.targetMode)) {
-    return undefined;
-  }
-  const resolved = await findMediaByTargetAsync(
-    rel.target,
-    ctx.presentation.media,
-    ctx.presentation.mediaResolver,
-  );
-  if (!resolved) return undefined;
-  return getOrCreateBlobUrl(resolved.mediaPath, resolved.data, ctx.mediaUrlCache);
-}
-
 function applyClippedTextPicture(element: HTMLElement, blipFill: SafeXmlNode, url: string): void {
   const escapedUrl = url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   element.style.backgroundImage = `url("${escapedUrl}")`;
@@ -869,20 +847,7 @@ function applyTextPictureFill(
   const immediateUrl = resolveTextPictureUrl(blipFill, ctx);
   if (immediateUrl) {
     applyClippedTextPicture(element, blipFill, immediateUrl);
-    return;
   }
-  if (!ctx.presentation.mediaResolver) return;
-
-  const task = resolveTextPictureUrlAsync(blipFill, ctx)
-    .then((url) => {
-      if (!url || ctx.signal?.aborted) return;
-      applyClippedTextPicture(element, blipFill, url);
-    })
-    .catch(() => {
-      // Preserve the normal text fallback when lazy package media cannot be loaded.
-    });
-  ctx.asyncTasks?.push(task);
-  if (!ctx.asyncTasks) void task;
 }
 
 type ExplicitTabAxis = 'horizontal' | 'vertical';

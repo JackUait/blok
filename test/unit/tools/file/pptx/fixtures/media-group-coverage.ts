@@ -63,15 +63,6 @@ export function ordinaryCycleGroup() {
     ),
   );
 }
-export function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((a, b) => {
-    resolve = a;
-    reject = b;
-  });
-  return { promise, resolve, reject };
-}
 /** Original one-pixel red EMF: HEADER + STRETCHDIBITS with 24-bit BI_RGB. */
 export function bitmapEmf(): Uint8Array {
   const data = new Uint8Array(212);

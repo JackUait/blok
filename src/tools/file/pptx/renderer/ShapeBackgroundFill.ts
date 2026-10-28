@@ -47,7 +47,7 @@ export function applyShapeBackgroundFill(
   surface.style.position = 'relative';
   surface.style.width = `${ctx.presentation.width}px`;
   surface.style.height = `${ctx.presentation.height}px`;
-  // Share gradient, image, relationship, lazy-loading and external-media policy behavior.
+  // Share gradient, image, relationship and external-media policy behavior.
   // A missing background becomes white; authored alpha retains the background renderer's semantics.
   // Template shapes sample their own part's background chain: master, or layout → master.
   // A slide-local background must not override paint authored on those ancestor parts.

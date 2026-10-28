@@ -9,9 +9,7 @@ import {
   picture,
   presentation,
   ordinaryCycleGroup,
-  deferred,
 } from '../fixtures/media-group-coverage';
-import type { ResolvedMedia } from '../../../../../../src/tools/file/pptx/utils/media';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -20,57 +18,20 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-for (const background of [false, true]) {
-  for (const outcome of ['resolve', 'reject'] as const) {
-    it(`disposed ${background ? 'background' : 'picture'} ignores late ${outcome}`, async () => {
-      const p = presentation();
-      const pending = deferred<ResolvedMedia | undefined>();
-      p.mediaResolver = { resolve: () => pending.promise };
-      if (background)
-        p.slides[0].background = parseXml(
-          '<p:bg xmlns:p="p" xmlns:a="a" xmlns:r="r"><p:bgPr><a:blipFill><a:blip r:embed="poster"/><a:stretch/></a:blipFill></p:bgPr></p:bg>',
-        );
-      else p.slides[0].nodes = [picture()];
-      const cache = new Map<string, string>();
-      const handle = renderSlide(p, p.slides[0], { mediaUrlCache: cache });
-      handle.dispose();
-      const before = handle.element.outerHTML;
-      if (outcome === 'resolve')
-        pending.resolve({ mediaPath: 'ppt/media/poster.png', data: new Uint8Array([1]) });
-      else pending.reject(new Error('missing'));
-      await handle.ready;
-      expect(cache.size).toBe(0);
-      expect(handle.element.outerHTML).toBe(before);
-    });
-  }
-}
 for (const kind of ['audio', 'video'] as const) {
-  for (const disposed of [false, true]) {
-    it(`lazy ${kind} resolves media and poster; disposed=${disposed}`, async () => {
-      const p = presentation();
-      p.slides[0].nodes = [picture({ kind })];
-      const pending = deferred<ResolvedMedia | undefined>();
-      p.mediaResolver = {
-        resolve: async (target) =>
-          target.includes('poster')
-            ? { mediaPath: 'ppt/media/poster.png', data: new Uint8Array([1]) }
-            : pending.promise,
-      };
-      const handle = renderSlide(p, p.slides[0]);
-      if (disposed) handle.dispose();
-      const before = handle.element.outerHTML;
-      pending.resolve({ mediaPath: 'ppt/media/clip.webm', data: new Uint8Array([1]) });
-      await handle.ready;
-      if (disposed) expect(handle.element.outerHTML).toBe(before);
-      else {
-        expect(handle.element.querySelector(kind)?.getAttribute('src')).toMatch(/^blob:/);
-        expect(
-          handle.element.querySelector(kind === 'video' ? 'video[poster]' : 'img'),
-        ).not.toBeNull();
-      }
-      handle.dispose();
-    });
-  }
+  it(`${kind} resolves media and poster`, async () => {
+    const p = presentation();
+    p.slides[0].nodes = [picture({ kind })];
+    p.media.set('ppt/media/poster.png', new Uint8Array([1]));
+    p.media.set('ppt/media/clip.webm', new Uint8Array([1]));
+    const handle = renderSlide(p, p.slides[0]);
+    await handle.ready;
+    expect(handle.element.querySelector(kind)?.getAttribute('src')).toMatch(/^blob:/);
+    expect(
+      handle.element.querySelector(kind === 'video' ? 'video[poster]' : 'img'),
+    ).not.toBeNull();
+    handle.dispose();
+  });
 }
 it('ordinary six-shape cycle-like group retains exact source order and coordinate mapping', () => {
   const p = presentation();
@@ -83,35 +44,24 @@ it('ordinary six-shape cycle-like group retains exact source order and coordinat
     Array.from({ length: 6 }, (_, i) => [String(i + 1), i * 20, 20, (i + 1) * 20, 30]),
   );
 });
-for (const missing of ['undefined', 'reject'] as const) {
-  it(`lazy failed video ${missing} retains its available poster while sibling image succeeds`, async () => {
-    const p = presentation();
-    p.slides[0].nodes = [picture({ kind: 'video' }), picture()];
-    p.mediaResolver = {
-      resolve: async (target) => {
-        if (target.includes('poster'))
-          return { mediaPath: 'ppt/media/poster.png', data: new Uint8Array([1]) };
-        if (missing === 'reject') throw new Error('missing');
-        return undefined;
-      },
-    };
-    const h = renderSlide(p, p.slides[0]);
-    await h.ready;
-    expect(h.element.querySelector('video')).toBeNull();
-    expect(h.element.querySelectorAll('img')).toHaveLength(2);
-    expect(h.element.textContent).toContain('▶');
-    h.dispose();
-  });
-}
-it('internal lazy blipLink resolves without admitting unsafe external media', async () => {
+it('missing video retains its available poster while sibling image succeeds', async () => {
+  const p = presentation();
+  p.slides[0].nodes = [picture({ kind: 'video' }), picture()];
+  p.media.set('ppt/media/poster.png', new Uint8Array([1]));
+  const h = renderSlide(p, p.slides[0]);
+  await h.ready;
+  expect(h.element.querySelector('video')).toBeNull();
+  expect(h.element.querySelectorAll('img')).toHaveLength(2);
+  expect(h.element.textContent).toContain('▶');
+  h.dispose();
+});
+it('internal blipLink resolves without admitting unsafe external media', async () => {
   const p = presentation();
   const linked = picture();
   linked.blipEmbed = undefined;
   linked.blipLink = 'poster';
   p.slides[0].nodes = [linked];
-  p.mediaResolver = {
-    resolve: async () => ({ mediaPath: 'ppt/media/poster.png', data: new Uint8Array([1]) }),
-  };
+  p.media.set('ppt/media/poster.png', new Uint8Array([1]));
   const h = renderSlide(p, p.slides[0]);
   await h.ready;
   expect(h.element.querySelector('img')?.src).toMatch(/^blob:/);
@@ -127,7 +77,7 @@ it('internal lazy blipLink resolves without admitting unsafe external media', as
   blocked.dispose();
 });
 for (const disposed of [false, true]) {
-  it(`lazy EMF bitmap ready includes delayed toBlob; disposed=${disposed}`, async () => {
+  it(`EMF bitmap ready includes delayed toBlob; disposed=${disposed}`, async () => {
     const emf = await import('../../../../../../src/tools/file/pptx/utils/emfParser');
     const spy = vi.spyOn(emf, 'parseEmfContent').mockReturnValue({
       type: 'bitmap',
@@ -147,9 +97,7 @@ for (const disposed of [false, true]) {
     const p = presentation();
     p.slides[0].nodes = [picture()];
     p.slides[0].rels.set('poster', { type: 'image', target: '../media/poster.emf' });
-    p.mediaResolver = {
-      resolve: async () => ({ mediaPath: 'ppt/media/poster.emf', data: new Uint8Array([1]) }),
-    };
+    p.media.set('ppt/media/poster.emf', new Uint8Array([1]));
     const cache = new Map<string, string>();
     const h = renderSlide(p, p.slides[0], { mediaUrlCache: cache });
     let ready = false;

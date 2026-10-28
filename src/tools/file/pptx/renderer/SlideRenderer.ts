@@ -6,7 +6,6 @@
 
 import type { SlideData } from '../model/Slide';
 import type { PresentationData } from '../model/Presentation';
-import { materializeSlideNodes } from '../model/Presentation';
 import type { RenderContext} from './RenderContext';
 import { createRenderContext } from './RenderContext';
 import { renderBackground } from './BackgroundRenderer';
@@ -184,8 +183,6 @@ export function renderSlide(
   slide: SlideData,
   options?: SlideRendererOptions,
 ): SlideHandle {
-  materializeSlideNodes(presentation, slide);
-
   const isSharedCache = !!options?.mediaUrlCache;
   const asyncTasks: Promise<void>[] = [];
   const abortController = new AbortController();

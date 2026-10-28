@@ -143,7 +143,7 @@ import {
 import { emuToPx } from '../parser/units';
 import { applyTint, hexToRgb, rgbToHex } from '../utils/color';
 import type { SafeXmlNode } from '../parser/XmlParser';
-import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
+import { findMediaByTarget, getOrCreateBlobUrl } from '../utils/media';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
@@ -435,30 +435,6 @@ function resolveShapeBlipUrl(blipFill: SafeXmlNode, ctx: RenderContext): string 
     return null;
   }
   const resolved = findMediaByTarget(rel.target, ctx.presentation.media);
-  if (!resolved) return null;
-  const { mediaPath, data } = resolved;
-  return getOrCreateBlobUrl(mediaPath, data, ctx.mediaUrlCache);
-}
-
-async function resolveShapeBlipUrlAsync(
-  blipFill: SafeXmlNode,
-  ctx: RenderContext,
-): Promise<string | null> {
-  const blip = blipFill.child('blip');
-  const embedId = blip.attr('embed') ?? blip.attr('r:embed');
-  const linkId = blip.attr('link') ?? blip.attr('r:link');
-  const relId = embedId ?? linkId;
-  if (!relId) return null;
-  const rel = ctx.slide.rels.get(relId);
-  if (!rel) return null;
-  if (isExternalTargetMode(rel.targetMode)) {
-    return null;
-  }
-  const resolved = await findMediaByTargetAsync(
-    rel.target,
-    ctx.presentation.media,
-    ctx.presentation.mediaResolver,
-  );
   if (!resolved) return null;
   const { mediaPath, data } = resolved;
   return getOrCreateBlobUrl(mediaPath, data, ctx.mediaUrlCache);
@@ -2510,28 +2486,6 @@ export function renderShape(node: ShapeNodeData, ctx: RenderContext): HTMLElemen
       }
 
       svg.appendChild(path);
-
-      if (blipFill.exists() && ctx.presentation.mediaResolver) {
-        const task = resolveShapeBlipUrlAsync(blipFill, ctx)
-          .then((lazyBlipUrl) => {
-            if (!lazyBlipUrl) return;
-            appendShapeBlipImage(
-              svgNs,
-              svg,
-              defs,
-              blipFill,
-              pathD,
-              { w: svgW, h: svgH },
-              lazyBlipUrl,
-              path,
-            );
-          })
-          .catch(() => {
-            // Keep the shape's fallback fill/stroke when lazy media cannot be decoded.
-          });
-        ctx.asyncTasks?.push(task);
-        if (!ctx.asyncTasks) void task;
-      }
 
       // --- Multi-path preset rendering ---
       // For complex shapes (scrolls, etc.) that have multiple sub-paths with different

@@ -11,7 +11,6 @@ import {
   getPlaceholderInfo,
 } from './placeholderMatching';
 import type { PptxFiles } from '../parser/ZipParser';
-import type { MediaResolver } from '../utils/media';
 import { parseXml, SafeXmlNode } from '../parser/XmlParser';
 import type { RelEntry} from '../parser/RelParser';
 import { parseRels, resolveRelTarget } from '../parser/RelParser';
@@ -23,7 +22,7 @@ import { parseMaster } from './Master';
 import type { LayoutData, PlaceholderEntry } from './Layout';
 import { parseLayout } from './Layout';
 import type { SlideData, SlideNode} from './Slide';
-import { createLazySlide, materializeSlideData, parseSlide } from './Slide';
+import { parseSlide } from './Slide';
 import type { BaseNodeData, PlaceholderInfo, Position, Size} from './nodes/BaseNode';
 import { findXfrm } from './nodes/BaseNode';
 import type { GroupNodeData } from './nodes/GroupNode';
@@ -41,7 +40,6 @@ export interface PresentationData {
   layoutToMaster: Map<string, string>;
   masterToTheme: Map<string, string>;
   media: Map<string, Uint8Array>;
-  mediaResolver?: MediaResolver;
   /** Embedded font faces, isolated behind a presentation-specific CSS family. */
   embeddedFonts?: EmbeddedFontFaceData[];
   embeddedFontFamilies?: Map<string, string>;
@@ -66,14 +64,6 @@ export interface EmbeddedFontFaceData {
   data: Uint8Array;
   weight: '400' | '700';
   style: 'normal' | 'italic';
-}
-
-export interface BuildPresentationOptions {
-  /**
-   * Defer per-slide shape/table/chart node parsing until a slide is rendered,
-   * searched, serialized, or explicitly materialized.
-   */
-  lazySlides?: boolean;
 }
 
 /**
@@ -195,10 +185,7 @@ function parseEmbeddedFonts(
  * 2. Resolves the full relationship chain: slide → layout → master → theme
  * 3. Parses each component and assembles the final structure
  */
-export function buildPresentation(
-  files: PptxFiles,
-  options: BuildPresentationOptions = {},
-): PresentationData {
+export function buildPresentation(files: PptxFiles): PresentationData {
   // --- Parse presentation root ---
   const presRoot = parseXml(files.presentation);
   const presRels = parseRels(files.presentationRels);
@@ -372,9 +359,7 @@ export function buildPresentation(
     const slideRelsXml = files.slideRels.get(slideRelsPath);
     const slideRels = slideRelsXml ? parseRels(slideRelsXml) : new Map<string, RelEntry>();
 
-    const slideData = options.lazySlides
-      ? createLazySlide(slideXml, i, slideRels, slidePath)
-      : parseSlide(parseXml(slideXml), i, slideRels, slidePath, files.diagramDrawings);
+    const slideData = parseSlide(parseXml(slideXml), i, slideRels, slidePath, files.diagramDrawings);
 
     // Resolve layout path from the slide's layout relationship target
     if (slideData.layoutIndex) {
@@ -407,7 +392,6 @@ export function buildPresentation(
     layoutToMaster,
     masterToTheme,
     media: files.media,
-    mediaResolver: files.mediaResolver,
     embeddedFonts: embeddedFonts.faces,
     embeddedFontFamilies: embeddedFonts.families,
     tableStyles,
@@ -421,9 +405,7 @@ export function buildPresentation(
   };
 
   // --- Resolve placeholder position inheritance ---
-  if (!options.lazySlides) {
-    resolvePlaceholderInheritance(result);
-  }
+  resolvePlaceholderInheritance(result);
 
   return result;
 }
@@ -469,7 +451,6 @@ function resolvePlaceholderInheritance(pres: PresentationData): void {
 }
 
 function resolveSlidePlaceholderInheritance(pres: PresentationData, slide: SlideData): void {
-  if (slide.placeholderInheritanceResolved) return;
 
   const layoutPath = pres.slideToLayout.get(slide.index) || slide.layoutIndex;
   const layout = layoutPath ? pres.layouts.get(layoutPath) : undefined;
@@ -477,18 +458,6 @@ function resolveSlidePlaceholderInheritance(pres: PresentationData, slide: Slide
   const master = masterPath ? pres.masters.get(masterPath) : undefined;
 
   resolveNodesPlaceholders(slide.nodes, layout, master);
-  slide.placeholderInheritanceResolved = true;
-}
-
-export function materializeSlideNodes(pres: PresentationData, slide: SlideData): void {
-  materializeSlideData(slide, pres.diagramDrawings);
-  resolveSlidePlaceholderInheritance(pres, slide);
-}
-
-export function materializeAllSlideNodes(pres: PresentationData): void {
-  for (const slide of pres.slides) {
-    materializeSlideNodes(pres, slide);
-  }
 }
 
 /** Extract bodyPr from a placeholder shape node (layout or master). */

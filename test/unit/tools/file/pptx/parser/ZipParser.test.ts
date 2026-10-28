@@ -2,7 +2,7 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import '../helpers/domShims';
 import JSZip from 'jszip';
-import { parseZip, parseZipLazyMedia } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
+import { parseZip } from '../../../../../../src/tools/file/pptx/parser/ZipParser';
 
 // ---------------------------------------------------------------------------
 // Helper: build an in-memory zip and return its ArrayBuffer
@@ -291,45 +291,6 @@ describe('parseZip – categorization', () => {
     const stored = files.media.get('ppt/media/image1.png');
     expect(stored).toBeInstanceOf(Uint8Array);
     expect(stored).toEqual(pngBytes);
-  });
-
-  it('can index media lazily without decoding bytes until requested', async () => {
-    const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    const buffer = await buildZip([...SKELETON, { path: 'ppt/media/image1.png', data: pngBytes }]);
-
-    const files = await parseZipLazyMedia(buffer);
-
-    expect(files.media.size).toBe(0);
-    expect(files.mediaResolver).toBeDefined();
-
-    const resolved = await files.mediaResolver!.resolve('../media/image1.png');
-
-    expect(resolved?.mediaPath).toBe('ppt/media/image1.png');
-    expect(resolved?.data).toEqual(pngBytes);
-    expect(files.media.get('ppt/media/image1.png')).toEqual(pngBytes);
-  });
-
-  it('deduplicates concurrent lazy media reads for the same target', async () => {
-    const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    const zipFiles = mockLoadedZipWithoutPrivateSizes({
-      '[Content_Types].xml': '<Types />',
-      'ppt/presentation.xml': '<p:presentation />',
-      'ppt/_rels/presentation.xml.rels': '<Relationships />',
-      'ppt/media/image1.png': pngBytes,
-    });
-
-    const files = await parseZipLazyMedia(new ArrayBuffer(0));
-    const [first, second] = await Promise.all([
-      files.mediaResolver!.resolve('../media/image1.png'),
-      files.mediaResolver!.resolve('../media/image1.png'),
-    ]);
-
-    expect(zipFiles['ppt/media/image1.png'].internalStream).toHaveBeenCalledTimes(1);
-    expect(first?.mediaPath).toBe('ppt/media/image1.png');
-    expect(second?.mediaPath).toBe('ppt/media/image1.png');
-    expect(first?.data).toBe(second?.data);
-    expect(files.mediaResolver!.loadedCount).toBe(1);
-    expect(files.mediaResolver!.loadedBytes).toBe(pngBytes.byteLength);
   });
 
   it('parses tableStyles.xml into result.tableStyles', async () => {

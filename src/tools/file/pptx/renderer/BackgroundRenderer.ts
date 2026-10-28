@@ -1,5 +1,5 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
-/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
+/* eslint-disable no-restricted-syntax, no-param-reassign -- vendored upstream code: restyling it risks behaviour the parity suite cannot see */
 /**
  * Background renderer — resolves and applies slide/layout/master backgrounds.
  */
@@ -17,7 +17,7 @@ import {
 import { hexToRgb } from '../utils/color';
 import type { RelEntry } from '../parser/RelParser';
 import { isExternalTargetMode } from '../parser/RelParser';
-import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
+import { findMediaByTarget, getOrCreateBlobUrl } from '../utils/media';
 import { splitTiledPatternFillCss } from './cssValues';
 
 let backgroundGradientIdCounter = 0;
@@ -419,30 +419,7 @@ function renderBlipBackground(
     return;
   } else {
     const resolved = findMediaByTarget(rel.target, ctx.presentation.media);
-    if (!resolved) {
-      if (ctx.presentation.mediaResolver) {
-        const task = findMediaByTargetAsync(
-          rel.target,
-          ctx.presentation.media,
-          ctx.presentation.mediaResolver,
-        )
-          .then((lazyResolved) => {
-            if (ctx.signal?.aborted || !lazyResolved) return;
-            const lazyUrl = getOrCreateBlobUrl(
-              lazyResolved.mediaPath,
-              lazyResolved.data,
-              ctx.mediaUrlCache,
-            );
-            applyBlipBackground(blipFill, container, lazyUrl);
-          })
-          .catch(() => {
-            // Leave the background unchanged when lazy media cannot be decoded.
-          });
-        ctx.asyncTasks?.push(task);
-        if (!ctx.asyncTasks) void task;
-      }
-      return;
-    }
+    if (!resolved) return;
     const { mediaPath, data } = resolved;
     url = getOrCreateBlobUrl(mediaPath, data, ctx.mediaUrlCache);
   }

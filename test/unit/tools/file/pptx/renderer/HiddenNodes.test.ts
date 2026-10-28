@@ -2,7 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import '../helpers/domShims';
 import { parseXml } from '../../../../../../src/tools/file/pptx/parser/XmlParser';
-import { createLazySlide, parseSlide } from '../../../../../../src/tools/file/pptx/model/Slide';
+import { parseSlide } from '../../../../../../src/tools/file/pptx/model/Slide';
 import { renderSlide } from '../../../../../../src/tools/file/pptx/renderer/SlideRenderer';
 import { presentation } from '../fixtures/media-group-coverage';
 import { groupPlaceholderFiles, groupXml } from '../fixtures/group-placeholder-transform';
@@ -18,14 +18,12 @@ const group = (content: string, hidden?: string) =>
   `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="3" name="group"${flag(hidden)}/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1905000" cy="1905000"/><a:chOff x="0" y="0"/><a:chExt cx="952500" cy="952500"/></a:xfrm></p:grpSpPr>${content}</p:grpSp>`;
 const picture = `<p:pic><p:nvPicPr><p:cNvPr id="4" name="hidden picture" hidden="1"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="poster"/></p:blipFill><p:spPr>${xfrm}</p:spPr></p:pic>`;
 
-function fixture(origin: 'slide' | 'layout' | 'master', content: string, lazy = false) {
+function fixture(origin: 'slide' | 'layout' | 'master', content: string) {
   const p = presentation();
   const tree = parseXml(`<p:spTree ${ns}>${content}</p:spTree>`);
   const xml = `<p:sld ${ns}><p:cSld><p:spTree>${origin === 'slide' ? content : ''}</p:spTree></p:cSld></p:sld>`;
   const rels = p.slides[0].rels;
-  p.slides[0] = lazy
-    ? createLazySlide(xml, 0, rels, 'ppt/slides/slide1.xml')
-    : parseSlide(parseXml(xml), 0, rels, 'ppt/slides/slide1.xml');
+  p.slides[0] = parseSlide(parseXml(xml), 0, rels, 'ppt/slides/slide1.xml');
   p.slideToLayout.set(0, 'layout');
   p.layoutToMaster.set('layout', 'master');
   p.layouts.set('layout', {
@@ -81,9 +79,7 @@ describe('hidden nodes (issue #36)', () => {
   );
 
   for (const origin of ['slide', 'layout', 'master'] as const) {
-    it.each([false, true])(
-      `skips hidden ${origin} shapes and nested groups, lazySlides=%s`,
-      async (lazy) => {
+    it(`skips hidden ${origin} shapes and nested groups`, async () => {
         const content =
           shape('hidden-one', '1') +
           shape('hidden-true', 'true') +
@@ -91,26 +87,20 @@ describe('hidden nodes (issue #36)', () => {
           shape('visible-false', 'false') +
           shape('visible-absent') +
           group(group(shape('hidden-descendant', '0'), '1') + shape('visible-sibling'));
-        const p = fixture(origin, content, lazy);
+        const p = fixture(origin, content);
         const h = renderSlide(p, p.slides[0]);
         await h.ready;
         expect(h.element.textContent).not.toContain('hidden-');
         for (const text of ['visible-zero', 'visible-false', 'visible-absent', 'visible-sibling'])
           expect(h.element.textContent).toContain(text);
         h.dispose();
-      },
-    );
+    });
 
-    it(`does not resolve media in hidden ${origin} pictures or groups`, async () => {
+    it(`does not render media in hidden ${origin} pictures or groups`, async () => {
       const p = fixture(origin, picture + group(picture.replace(' hidden="1"', ''), 'true'));
-      const resolve = vi.fn(async () => ({
-        mediaPath: 'ppt/media/poster.png',
-        data: new Uint8Array([1]),
-      }));
-      p.mediaResolver = { resolve };
+      p.media.set('ppt/media/poster.png', new Uint8Array([1]));
       const h = renderSlide(p, p.slides[0]);
       await h.ready;
-      expect(resolve).not.toHaveBeenCalled();
       expect(h.element.querySelector('img')).toBeNull();
       h.dispose();
     });
@@ -125,16 +115,16 @@ describe('hidden nodes (issue #36)', () => {
     expect(hiddenGroup.nodeType === 'group' ? hiddenGroup.children : []).toHaveLength(1);
   });
 
-  it.each([false, true])(
-    'keeps hidden layout placeholders available for visible slide inheritance, lazySlides=%s',
-    async (lazySlides) => {
+  it(
+    'keeps hidden layout placeholders available for visible slide inheritance',
+    async () => {
       const files = groupPlaceholderFiles(groupXml(null));
       const path = 'ppt/slideLayouts/slideLayout1.xml';
       files.slideLayouts.set(
         path,
         files.slideLayouts.get(path)!.replace('name="Template"', 'name="Template" hidden="1"'),
       );
-      const p = buildPresentation(files, { lazySlides });
+      const p = buildPresentation(files);
       const h = renderSlide(p, p.slides[0]);
       await h.ready;
       expect(p.slides[0].nodes[0].hidden).not.toBe(true);

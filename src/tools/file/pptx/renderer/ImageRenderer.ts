@@ -8,7 +8,6 @@ import type { PicNodeData } from '../model/nodes/PicNode';
 import type { RenderContext } from './RenderContext';
 import {
   findMediaByTarget,
-  findMediaByTargetAsync,
   getOrCreateBlobUrl,
   resolveMediaPath,
 } from '../utils/media';
@@ -49,28 +48,13 @@ function isEmfFormat(path: string): boolean {
 
 let pictureClipPathIdCounter = 0;
 
-function resolveImageRelUrl(
-  rel: RelEntry,
-  ctx: RenderContext,
-): string | undefined | Promise<string | undefined> {
+function resolveImageRelUrl(rel: RelEntry, ctx: RenderContext): string | undefined {
   if (isExternalTargetMode(rel.targetMode)) {
     return undefined;
   }
 
   const resolved = findMediaByTarget(rel.target, ctx.presentation.media);
-  if (!resolved) {
-    if (!ctx.presentation.mediaResolver) return undefined;
-    return findMediaByTargetAsync(
-      rel.target,
-      ctx.presentation.media,
-      ctx.presentation.mediaResolver,
-    )
-      .then((value) => {
-        if (ctx.signal?.aborted || !value || isUnsupportedFormat(value.mediaPath)) return undefined;
-        return getOrCreateBlobUrl(value.mediaPath, value.data, ctx.mediaUrlCache);
-      })
-      .catch(() => undefined);
-  }
+  if (!resolved) return undefined;
   const { mediaPath, data } = resolved;
   if (isUnsupportedFormat(mediaPath)) return undefined;
 
@@ -154,35 +138,6 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
 
       const resolved = findMediaByTarget(rel.target, ctx.presentation.media);
       if (!resolved) {
-        if (ctx.presentation.mediaResolver) {
-          const task = findMediaByTargetAsync(
-            rel.target,
-            ctx.presentation.media,
-            ctx.presentation.mediaResolver,
-          )
-            .then((lazyResolved) => {
-              if (ctx.signal?.aborted) return;
-              if (!lazyResolved) {
-                renderPlaceholder(wrapper);
-                return;
-              }
-
-              return renderResolvedImage(
-                node,
-                ctx,
-                wrapper,
-                lazyResolved.mediaPath,
-                lazyResolved.data,
-              );
-            })
-            .catch(() => {
-              if (!ctx.signal?.aborted) renderPlaceholder(wrapper);
-            });
-          ctx.asyncTasks?.push(task);
-          if (!ctx.asyncTasks) void task;
-          return wrapper;
-        }
-
         renderPlaceholder(wrapper);
         return wrapper;
       }
@@ -190,17 +145,7 @@ export function renderImage(node: PicNodeData, ctx: RenderContext): HTMLElement 
       return wrapper;
     }
   } else if (node.blipLink) {
-    const linked = resolveMediaUrl(node.blipLink, ctx);
-    if (linked instanceof Promise) {
-      const task = linked.then((linkedUrl) => {
-        if (ctx.signal?.aborted) return;
-        if (linkedUrl) renderImageUrl(node, ctx, wrapper, linkedUrl);
-        else renderPlaceholder(wrapper);
-      });
-      ctx.asyncTasks?.push(task);
-      return wrapper;
-    }
-    url = linked;
+    url = resolveMediaUrl(node.blipLink, ctx);
     if (!url) {
       renderPlaceholder(wrapper);
       return wrapper;
@@ -1017,19 +962,11 @@ function renderAudioVideo(
       renderPlaceholder(wrapper);
     }
   };
-  if (media instanceof Promise || poster instanceof Promise) {
-    const task = Promise.all([media, poster]).then(([mediaUrl, posterUrl]) =>
-      apply(mediaUrl, posterUrl),
-    );
-    ctx.asyncTasks?.push(task);
-  } else apply(media, poster);
+  apply(media, poster);
 }
 
-/** Resolve embedded eager/lazy media and allowlisted external relationships alike. */
-function resolveMediaUrl(
-  rId: string | undefined,
-  ctx: RenderContext,
-): string | undefined | Promise<string | undefined> {
+/** Resolves a relationship id to a blob URL for media inside the package. */
+function resolveMediaUrl(rId: string | undefined, ctx: RenderContext): string | undefined {
   if (!rId) return undefined;
   const rel = ctx.slide.rels.get(rId);
   return rel ? resolveImageRelUrl(rel, ctx) : undefined;

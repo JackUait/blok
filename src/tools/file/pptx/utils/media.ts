@@ -9,14 +9,6 @@ export interface ResolvedMedia {
   data: Uint8Array;
 }
 
-export interface MediaResolver {
-  resolve(target: string): Promise<ResolvedMedia | undefined>;
-  readonly loadedBytes?: number;
-  readonly loadedCount?: number;
-  readonly totalBytes?: number;
-  readonly totalCount?: number;
-}
-
 /**
  * Determine MIME type from file extension.
  * Covers images, video, and audio formats used in PPTX files.
@@ -118,16 +110,6 @@ export function findMediaByTarget(
     if (data) return { mediaPath, data };
   }
   return undefined;
-}
-
-export async function findMediaByTargetAsync(
-  target: string,
-  media: Map<string, Uint8Array>,
-  resolver?: MediaResolver,
-): Promise<ResolvedMedia | undefined> {
-  const eager = findMediaByTarget(target, media);
-  if (eager) return eager;
-  return resolver?.resolve(target);
 }
 
 /**

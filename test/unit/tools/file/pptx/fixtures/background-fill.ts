@@ -11,7 +11,6 @@ export interface BackgroundFillCase {
   rotation?: number;
   flipH?: boolean;
   grouped?: boolean;
-  lazy?: boolean;
   external?: boolean;
   origin?: 'slide' | 'layout' | 'master';
   localFill?: string;
@@ -79,11 +78,7 @@ export function backgroundFillPresentation(options: BackgroundFillCase = {}) {
     const data = new TextEncoder().encode(
       '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><path fill="#ff0000" d="M0 0h150v300H0z"/><path fill="#0000ff" d="M150 0h150v300H150z"/><path fill="#ffff00" d="M300 0h150v300H300z"/><path fill="#ff00ff" d="M450 0h150v300H450z"/></svg>',
     );
-    if (options.lazy)
-      p.mediaResolver = {
-        resolve: async () => ({ mediaPath: 'ppt/media/background-fill.svg', data }),
-      };
-    else p.media.set('ppt/media/background-fill.svg', data);
+    p.media.set('ppt/media/background-fill.svg', data);
   }
   p.slides[0].background = fill
     ? parseXml(`<p:bg ${ns}><p:bgPr>${fill}</p:bgPr></p:bg>`)

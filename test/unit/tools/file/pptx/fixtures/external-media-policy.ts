@@ -16,7 +16,7 @@ const shape = (id: string, pictureText = false) =>
 const tree = (content: string) => parseXml(`<p:spTree ${ns}>${content}</p:spTree>`);
 
 /** A model fixture shared by DOM tests and browser network interception tests. */
-export function externalMediaPresentation(lazy = false) {
+export function externalMediaPresentation() {
   const p = presentation();
   const rels = p.slides[0].rels;
   rels.clear();
@@ -48,9 +48,7 @@ export function externalMediaPresentation(lazy = false) {
     ),
     (c) => c.charCodeAt(0),
   );
-  if (lazy)
-    p.mediaResolver = { resolve: async () => ({ mediaPath: 'ppt/media/embedded.png', data: png }) };
-  else p.media.set('ppt/media/embedded.png', png);
+  p.media.set('ppt/media/embedded.png', png);
   const group = `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="9" name="group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="952500" cy="952500"/><a:chOff x="0" y="0"/><a:chExt cx="952500" cy="952500"/></a:xfrm></p:grpSpPr>${picture('group')}</p:grpSp>`;
   const svgPicture = picture('embedded').replace(
     '<a:blip r:embed="embedded"/>',

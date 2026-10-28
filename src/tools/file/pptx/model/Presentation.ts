@@ -585,10 +585,11 @@ export function resolveNodePlaceholderInheritance(
   if ('textBody' in node && node.textBody) {
     const layoutBodyPr = layoutMatch && getPhBodyPr(layoutMatch.node);
     const masterBodyPr = masterMatch && getPhBodyPr(masterMatch.node);
-    if (layoutBodyPr && masterBodyPr) {
+    const layoutBodyEl = layoutBodyPr?.element;
+    if (layoutBodyPr && masterBodyPr && layoutBodyEl) {
       // Placeholder attributes inherit independently through empty/partial layout bodyPr.
       // Keep child-mode behavior unchanged; this evidence covers anchor and insets only.
-      const merged = layoutBodyPr.element!.cloneNode(true) as Element;
+      const merged = layoutBodyEl.cloneNode(true) as Element;
       for (const attr of ['anchor', 'lIns', 'tIns', 'rIns', 'bIns']) {
         const value = masterBodyPr.attr(attr);
         if (!merged.hasAttribute(attr) && value !== undefined) merged.setAttribute(attr, value);

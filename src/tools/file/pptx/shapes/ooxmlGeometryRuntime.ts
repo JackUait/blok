@@ -407,9 +407,12 @@ function createDefinitionEnvironment(
     if (adjustmentNames.has(name)) finiteNumber(value, `Adjustment ${name}`);
   }
   for (const guide of definition.adjustmentGuides) {
-    const value = adjustments.has(guide.name)
-      ? finiteNumber(adjustments.get(guide.name)!, `Adjustment ${guide.name}`)
-      : evaluateFormula(guide.formula, environment);
+    // The loop above already rejected a non-finite adjustment, so get() is defined whenever has() was.
+    const adjusted = adjustments.get(guide.name);
+    const value =
+      adjusted !== undefined
+        ? finiteNumber(adjusted, `Adjustment ${guide.name}`)
+        : evaluateFormula(guide.formula, environment);
     environment.set(guide.name, value);
   }
   for (const guide of definition.calculatedGuides) {

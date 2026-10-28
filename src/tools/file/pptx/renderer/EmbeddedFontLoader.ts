@@ -247,12 +247,13 @@ export function useEmbeddedFonts(
           break;
         }
 
-        loaded = createLoadedFace(face, fontBytes);
-        state.faces.set(key, loaded);
-        state.totalBytes += loaded.byteLength;
-        void loaded.ready.catch(() => {
+        const created = createLoadedFace(face, fontBytes);
+        loaded = created;
+        state.faces.set(key, created);
+        state.totalBytes += created.byteLength;
+        void created.ready.catch(() => {
           state.rejected.add(key);
-          releaseLoadedFace(state, key, loaded!);
+          releaseLoadedFace(state, key, created);
         });
       } catch {
         state.rejected.add(key);

@@ -15,7 +15,8 @@ export class SafeXmlNode {
   /** Get a string attribute value, or undefined if missing. */
   attr(name: string): string | undefined {
     if (!this.el) return undefined;
-    if (this.el.hasAttribute(name)) return this.el.getAttribute(name)!;
+    const direct = this.el.getAttribute(name);
+    if (direct !== null) return direct;
 
     const colonIndex = name.indexOf(':');
     const localName = colonIndex >= 0 ? name.slice(colonIndex + 1) : name;

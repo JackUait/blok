@@ -380,6 +380,7 @@ async function parseZipInternal(
     }
   }
 
+  const fonts = new Map<string, Uint8Array>();
   const result: PptxFiles = {
     contentTypes: '',
     presentation: '',
@@ -393,7 +394,7 @@ async function parseZipInternal(
     themes: new Map(),
     themeOverrides: new Map(),
     media: new Map(),
-    fonts: new Map(),
+    fonts,
     charts: new Map(),
     chartRels: new Map(),
     chartStyles: new Map(),
@@ -453,7 +454,7 @@ async function parseZipInternal(
     // --- Embedded fonts (binary EOT/.fntdata) ---
     if (/^ppt\/fonts\/[^/]+\.fntdata$/i.test(normalizedPath)) {
       const bytes = await readZipBinaryEntry(normalizedPath, file, limitState);
-      setPathMapEntry(result.fonts!, normalizedPath, bytes);
+      setPathMapEntry(fonts, normalizedPath, bytes);
       return;
     }
 

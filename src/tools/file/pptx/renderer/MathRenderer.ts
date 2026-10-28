@@ -38,7 +38,8 @@ function renderText(value: string, normal = false): Element {
       row.appendChild(mathElement('mo', token));
     }
   }
-  return row.childElementCount === 1 ? row.firstElementChild! : row;
+  const only = row.childElementCount === 1 ? row.firstElementChild : null;
+  return only ?? row;
 }
 
 function renderScripts(node: Extract<MathNode, { kind: 'scripts' }>): Element {

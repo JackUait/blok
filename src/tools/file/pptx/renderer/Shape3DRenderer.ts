@@ -8,7 +8,13 @@
  * plan so detection cannot be confused with rendering support.
  */
 
-import type { Shape3DProperties, Shape3DRotation } from '../model/nodes/Shape3D';
+import type {
+  Scene3DProperties,
+  Shape3DBevelProperties,
+  Shape3DFormatProperties,
+  Shape3DProperties,
+  Shape3DRotation,
+} from '../model/nodes/Shape3D';
 import type { RenderContext } from './RenderContext';
 import { resolveColor } from './StyleResolver';
 import {
@@ -326,7 +332,8 @@ export function buildStaticGroup3DPlan(
   if (scene.fieldOfView === undefined || Math.abs(scene.fieldOfView - 95) > 1e-6) {
     return flat('camera-field-of-view');
   }
-  if (!rotationEquals(scene.cameraRotation, { latitude: 0, longitude: 25, revolution: 0 })) {
+  const cameraRotation = scene.cameraRotation;
+  if (!cameraRotation || !rotationEquals(cameraRotation, { latitude: 0, longitude: 25, revolution: 0 })) {
     return flat('camera-rotation');
   }
   if (scene.cameraZoom !== undefined) return flat('camera-zoom');
@@ -340,7 +347,7 @@ export function buildStaticGroup3DPlan(
     width: target.width,
     height: target.height,
     presentationWidth: ctx.presentation.width,
-    rotation: scene.cameraRotation!,
+    rotation: cameraRotation,
     fieldOfView: scene.fieldOfView,
     presetViewportScale: PERSPECTIVE_LEFT_VIEWPORT_SCALE,
   });
@@ -354,7 +361,7 @@ export function buildStaticGroup3DPlan(
     camera: {
       kind: 'perspective',
       preset: 'perspectiveLeft',
-      rotation: scene.cameraRotation!,
+      rotation: cameraRotation,
       fieldOfView: scene.fieldOfView,
     },
     lighting: groupPictureLighting(target.width, target.height),
@@ -754,13 +761,12 @@ function isNativeBackedBottomBevelAspect(width: number, height: number): boolean
 }
 
 function buildBottomBevelFrontMaterialPlan(
-  properties: Shape3DProperties,
+  scene: Scene3DProperties,
+  shape: Shape3DFormatProperties,
+  bevel: Shape3DBevelProperties,
   target: StaticShape3DTarget,
   ctx: RenderContext,
 ): StaticShape3DPlan {
-  const scene = properties.scene!;
-  const shape = properties.shape!;
-  const bevel = shape.bevelBottom!;
   if (scene.cameraPreset !== 'orthographicFront') return flat('camera-preset');
   if (scene.cameraRotation) return flat('camera-rotation');
   if (scene.fieldOfView !== undefined) return flat('camera-field-of-view');
@@ -843,16 +849,17 @@ function buildBottomBevelFrontMaterialPlan(
 
 function buildCameraProjectionPlan(
   properties: Shape3DProperties,
+  scene: Scene3DProperties,
   target: StaticShape3DTarget,
   ctx: RenderContext,
 ): StaticShape3DPlan {
-  const scene = properties.scene!;
   const shape = properties.shape;
   if (target.hasVisibleStroke) return flat('visible-stroke');
   if ((target.rotation ?? 0) !== 0 || target.flipH || target.flipV) return flat('shape-transform');
   if (properties.effectKinds.length > 0) return flat('effect-list-conflict');
   if ((shape?.extrusionHeight ?? 0) > 0) return flat('extrusion-height');
-  if (shape?.bevelBottom) return buildBottomBevelFrontMaterialPlan(properties, target, ctx);
+  const bottomBevel = shape?.bevelBottom;
+  if (shape && bottomBevel) return buildBottomBevelFrontMaterialPlan(scene, shape, bottomBevel, target, ctx);
   if (shape?.presetMaterial !== undefined) return flat('preset-material');
   if ((shape?.contourWidth ?? 0) > 0 || shape?.contourColorSource?.exists()) {
     return flat('contour-paint');
@@ -950,9 +957,12 @@ function buildCameraProjectionPlan(
         longitude: 19532225 / 60000,
         revolution: 0,
       };
-      if (!rotationEquals(scene.cameraRotation, expectedRotation)) return flat('camera-rotation');
+      const cameraRotation = scene.cameraRotation;
+      if (!cameraRotation || !rotationEquals(cameraRotation, expectedRotation)) {
+        return flat('camera-rotation');
+      }
       preset = 'perspectiveContrastingRightFacing';
-      rotation = scene.cameraRotation!;
+      rotation = cameraRotation;
       fieldOfView = scene.fieldOfView;
       presetViewportScale = PERSPECTIVE_CONTRASTING_RIGHT_FACING_VIEWPORT_SCALE;
     } else if (scene.cameraPreset === 'perspectiveLeft') {
@@ -1042,10 +1052,13 @@ function buildCameraProjectionPlan(
       longitude: 0,
       revolution: 0,
     };
-    if (!rotationEquals(scene.cameraRotation, expectedRotation)) return flat('camera-rotation');
+    const cameraRotation = scene.cameraRotation;
+    if (!cameraRotation || !rotationEquals(cameraRotation, expectedRotation)) {
+      return flat('camera-rotation');
+    }
     kind = 'perspective';
     preset = 'perspectiveRelaxedModerately';
-    rotation = scene.cameraRotation!;
+    rotation = cameraRotation;
     fieldOfView = scene.fieldOfView;
     materialKind = 'perspective';
     presetViewportScale = isCustomCameraPlane
@@ -1118,9 +1131,10 @@ export function buildStaticShape3DPlan(
     candidateSourceLightingBounds.width > 0 &&
     candidateSourceLightingBounds.height > 0,
   );
-  const lightingBounds = usesGroupedDonutChildSpace
-    ? candidateSourceLightingBounds!
-    : { width: target.width, height: target.height };
+  const lightingBounds =
+    usesGroupedDonutChildSpace && candidateSourceLightingBounds
+      ? candidateSourceLightingBounds
+      : { width: target.width, height: target.height };
   if (target.isLineLike) return flat('line-like');
   if (target.isTiledPicture) return flat('tiled-picture');
   if (target.nodeType === 'picture' && !hasSupportedPictureSourceCrop(target.sourceCrop)) {
@@ -1134,7 +1148,7 @@ export function buildStaticShape3DPlan(
   if (scene.hasBackdrop) return flat('backdrop');
   if (Math.abs(shape?.zPosition ?? 0) > 1e-9) return flat('z-position');
   if (shape?.extrusionColor) return flat('extrusion-paint');
-  if (!shape?.bevelTop) return buildCameraProjectionPlan(properties, target, ctx);
+  if (!shape?.bevelTop) return buildCameraProjectionPlan(properties, scene, target, ctx);
   if (scene.cameraPreset !== 'orthographicFront') return flat('camera-preset');
   if (scene.cameraRotation) return flat('camera-rotation');
   if (!scene.lightRig) return flat('missing-light-rig');
@@ -1153,11 +1167,15 @@ export function buildStaticShape3DPlan(
   if ((shape.extrusionHeight ?? 0) > 0) return flat('extrusion-height');
   if (shape.bevelBottom) return flat('bottom-bevel');
   if (shape.bevelTop.preset !== 'circle') return flat('top-bevel-preset');
+  const topBevelWidth = shape.bevelTop.width;
+  const topBevelHeight = shape.bevelTop.height;
   if (
-    !Number.isFinite(shape.bevelTop.width) ||
-    !Number.isFinite(shape.bevelTop.height) ||
-    !(shape.bevelTop.width! > 0) ||
-    !(shape.bevelTop.height! > 0)
+    topBevelWidth === undefined ||
+    topBevelHeight === undefined ||
+    !Number.isFinite(topBevelWidth) ||
+    !Number.isFinite(topBevelHeight) ||
+    !(topBevelWidth > 0) ||
+    !(topBevelHeight > 0)
   ) {
     return flat('top-bevel-dimensions');
   }
@@ -1177,15 +1195,13 @@ export function buildStaticShape3DPlan(
     return flat('paint-kind');
   }
 
-  const bevel = shape.bevelTop;
-
   const contour = resolveContour(properties, ctx);
   if ((properties.shape?.contourWidth ?? 0) > 0 && !contour) {
     return flat('contour-paint');
   }
 
-  const width = Math.min(bevel.width!, lightingBounds.width / 2);
-  const height = Math.min(bevel.height!, lightingBounds.height / 2);
+  const width = Math.min(topBevelWidth, lightingBounds.width / 2);
+  const height = Math.min(topBevelHeight, lightingBounds.height / 2);
   if (!(width > 0) || !(height > 0)) return flat('invalid-bounds');
 
   const rig = scene.lightRig;

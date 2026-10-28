@@ -318,14 +318,15 @@ export function isSupportedDrawingmlMathChoice(choice: SafeXmlNode): boolean {
   if (!root) return false;
   const stack = Array.from(root.children);
   let mathCount = 0;
-  while (stack.length > 0) {
-    const element = stack.pop()!;
+  let element = stack.pop();
+  while (element) {
     if (element.namespaceURI === DRAWINGML_MATH_NAMESPACE) {
       if (element.localName !== 'm') return false;
       mathCount += 1;
       if (!parseDrawingmlMath(new SafeXmlNode(element))) return false;
     }
     stack.push(...Array.from(element.children));
+    element = stack.pop();
   }
   return mathCount > 0;
 }
@@ -335,12 +336,13 @@ export function firstMathRunProperties(wrapper: SafeXmlNode): SafeXmlNode | unde
   const root = wrapper.element;
   if (!root) return undefined;
   const stack = Array.from(root.children);
-  while (stack.length > 0) {
-    const element = stack.shift()!;
+  let element = stack.shift();
+  while (element) {
     if (DRAWINGML_NAMESPACES.has(element.namespaceURI ?? '') && element.localName === 'rPr') {
       return new SafeXmlNode(element);
     }
     stack.unshift(...Array.from(element.children));
+    element = stack.shift();
   }
   return undefined;
 }

@@ -78,10 +78,12 @@ function isSupportedGroupPictureChild(child: SafeXmlNode): boolean {
   if (
     !shapeProperties.exists() ||
     !transform.exists() ||
+    width === undefined ||
+    height === undefined ||
     !Number.isFinite(width) ||
     !Number.isFinite(height) ||
-    !(width! > 0) ||
-    !(height! > 0) ||
+    !(width > 0) ||
+    !(height > 0) ||
     !numericAttributeIsZeroOrAbsent(transform, 'rot') ||
     !numericAttributeIsZeroOrAbsent(transform, 'flipH') ||
     !numericAttributeIsZeroOrAbsent(transform, 'flipV') ||
@@ -335,10 +337,12 @@ export function renderGroup(
     const nextArrow = node.children.slice(3, 6).every((c) => prst(c) === 'circularArrow');
     if (firstPie && nextArrow) {
       // Use diagram extent center and a single circle size so the circle is centered and fits.
-      const pieNodes = [0, 1, 2].map((i) => parseByIndex(i)).filter(Boolean);
+      const pieNodes = [0, 1, 2]
+        .map((i) => parseByIndex(i))
+        .filter((n): n is BaseNodeData => Boolean(n));
       if (pieNodes.length === 3) {
-        const pieW = Math.max(...pieNodes.map((n) => n!.size.w));
-        const pieH = Math.max(...pieNodes.map((n) => n!.size.h));
+        const pieW = Math.max(...pieNodes.map((n) => n.size.w));
+        const pieH = Math.max(...pieNodes.map((n) => n.size.h));
         const circleSize = Math.min(pieW, pieH, chExt.w, chExt.h);
         const centerX = chOff.x + chExt.w / 2;
         const centerY = chOff.y + chExt.h / 2;
@@ -351,19 +355,19 @@ export function renderGroup(
           h: (circleSize / chExt.h) * groupH,
         };
 
-        const firstPieSize = pieNodes[0]!.size;
+        const firstPieSize = pieNodes[0].size;
         const samePieSize = pieNodes.every(
           (n) =>
-            Math.abs(n!.size.w - firstPieSize.w) < 0.01 &&
-            Math.abs(n!.size.h - firstPieSize.h) < 0.01,
+            Math.abs(n.size.w - firstPieSize.w) < 0.01 &&
+            Math.abs(n.size.h - firstPieSize.h) < 0.01,
         );
         if (samePieSize) {
           pieCenterOffsets = new Map(
             pieNodes.map((n, i) => [
               i,
               {
-                x: ((n!.position.x + n!.size.w / 2 - centerX) / chExt.w) * groupW,
-                y: ((n!.position.y + n!.size.h / 2 - centerY) / chExt.h) * groupH,
+                x: ((n.position.x + n.size.w / 2 - centerX) / chExt.w) * groupW,
+                y: ((n.position.y + n.size.h / 2 - centerY) / chExt.h) * groupH,
               },
             ]),
           );

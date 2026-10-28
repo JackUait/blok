@@ -4078,6 +4078,7 @@ span[data-blok-slash-search] {
   --blok-database-place-map-link-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-place-map-link-icon: rgb(142, 139, 134);
   --blok-database-place-map-link-hover-bg: rgb(244, 243, 243);
+  --blok-database-place-view-head-bg: rgb(249, 248, 247);
   --blok-database-sort-button-hover-bg: rgb(244, 243, 243);
   --blok-database-property-icon-button-ink: rgb(85, 83, 78);
   --blok-database-property-icon-button-hover-bg: rgb(249, 248, 247);
@@ -4342,6 +4343,7 @@ span[data-blok-slash-search] {
   --blok-database-place-map-link-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-place-map-link-icon: rgb(173, 169, 163);
   --blok-database-place-map-link-hover-bg: rgb(38, 38, 38);
+  --blok-database-place-view-head-bg: rgb(32, 32, 32);
   --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
   --blok-database-property-icon-button-ink: rgb(211, 211, 211);
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -4608,6 +4610,7 @@ span[data-blok-slash-search] {
   --blok-database-place-map-link-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-place-map-link-icon: rgb(173, 169, 163);
   --blok-database-place-map-link-hover-bg: rgb(38, 38, 38);
+  --blok-database-place-view-head-bg: rgb(32, 32, 32);
   --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
   --blok-database-property-icon-button-ink: rgb(211, 211, 211);
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -17133,6 +17136,32 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-place-view] {
   position: relative;
+}
+
+[data-blok-database-place-view] > [data-blok-database-place-head] {
+  flex-wrap: nowrap;
+  box-sizing: border-box;
+  block-size: 37px;
+  padding: var(--blok-space-1);
+  border-start-start-radius: var(--blok-radius-control);
+  border-start-end-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-place-view-head-bg);
+}
+
+[data-blok-database-place-view] [data-blok-database-place-chip] {
+  min-inline-size: 0;
+  max-inline-size: 198px;
+  padding: 0 var(--blok-space-1-5);
+  background-color: var(--blok-database-hover-bg);
+  font-size: 12px;
+  line-height: 14.4px;
+}
+
+[data-blok-database-place-view] [data-blok-database-place-name] {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 [data-blok-database-place-view]:focus-visible {

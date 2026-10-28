@@ -644,6 +644,29 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(ruleBody(LINK)).toContain('inset-inline-end: calc(var(--blok-space-1) + var(--blok-space-2))');
   });
 
+  it('notion-spec-2 §19.18: the place sits in a 37px bar on 249,248,247 with 6px top corners and 4px padding', () => {
+    const BAR = '[data-blok-database-place-view] > [data-blok-database-place-head]';
+
+    expect(themed('--blok-database-place-view-head-bg').light).toBe('rgb(249, 248, 247)');
+    expect(ruleBody(BAR)).toContain('background-color: var(--blok-database-place-view-head-bg)');
+    expect(ruleBody(BAR)).toContain('block-size: 37px');
+    expect(ruleBody(BAR)).toContain('padding: var(--blok-space-1)');
+    expect(ruleBody(BAR)).toContain('border-start-start-radius: var(--blok-radius-control)');
+    expect(ruleBody(BAR)).toContain('border-start-end-radius: var(--blok-radius-control)');
+  });
+
+  it('notion-spec-2 §19.18: the address chip is 20 tall, 12/14.4, 4px corners, padding 0 6px, on 33,27,23 at 5.1%, at most 198 wide and cut with "…"', () => {
+    const CHIP = '[data-blok-database-place-view] [data-blok-database-place-chip]';
+
+    expect(ruleBody(CHIP)).toContain('font-size: 12px');
+    expect(ruleBody(CHIP)).toContain('line-height: 14.4px');
+    expect(ruleBody(CHIP)).toContain('padding: 0 var(--blok-space-1-5)');
+    expect(ruleBody(CHIP)).toContain('max-inline-size: 198px');
+    expect(ruleBody(CHIP)).toContain('background-color: var(--blok-database-hover-bg)');
+    expect(themed('--blok-database-hover-bg').light).toBe('rgba(33, 27, 23, 0.051)');
+    expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-name]')).toContain('text-overflow: ellipsis');
+  });
+
   it('the × takes Notion\'s icon grey: 142,139,134 light, 173,169,163 dark', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-table-header-icon)');
     expect(themed('--blok-database-table-header-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });

@@ -1255,6 +1255,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FORMULA_ERROR_MARK_BYTES = 212;
     // database.css: the confirm dialog scrolls, so a button's long agent message can be read to its end.
     const DATABASE_CONFIRM_SCROLL_BYTES = 219;
+    // database.css: the bar over a filled place, its address chip and its token (notion-spec-2 §19.18).
+    const DATABASE_PLACE_VIEW_BAR_BYTES = 1_090;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1529,7 +1531,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_HEADER_PLUS_NAME_BOX_BYTES
       + DATABASE_FORMULA_NUMBER_END_BYTES
       + DATABASE_CELL_PILL_START_BYTES
-      + DATABASE_VALUE_EDITOR_NO_MOTION_BYTES;
+      + DATABASE_VALUE_EDITOR_NO_MOTION_BYTES
+      + DATABASE_PLACE_VIEW_BAR_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

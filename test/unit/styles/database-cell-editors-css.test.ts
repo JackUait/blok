@@ -266,6 +266,11 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle]', 'display')).toEqual(['none']);
     });
 
+    // notion-spec-2 §19.14: the handle's 16px glyph at row x + 10 (row padding 8 + the 20px box's 2), "⋯" at row right − 2.
+    it.each(['select', 'multiSelect'])('puts the %s handle glyph 10px into the row and "⋯" 2px from its end', (type) => {
+      expect(declared(`${TABLE} [data-blok-database-select-editor="${type}"] [data-blok-database-select-option]`, 'padding-inline')).toEqual(['var(--blok-space-2) 2px']);
+    });
+
     // notion-spec-2 §19.14: every Select row shows its drag handle at rest, as Multi-select's do.
     it('shows the Select and Multi-select drag handles at rest', () => {
       expect(declared('[data-blok-database-select-editor="select"] [data-blok-database-select-option-handle]', 'opacity')).toEqual(['1']);

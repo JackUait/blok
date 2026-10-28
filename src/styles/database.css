@@ -7276,6 +7276,12 @@ textarea[data-blok-database-cell-input] {
   display: none;
 }
 
+/* notion-spec-2 §19.14: the handle glyph at row x + 10, "⋯" ending 2px short of the row. */
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="select"] [data-blok-database-select-option],
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option] {
+  padding-inline: var(--blok-space-2) 2px;
+}
+
 [data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-option] {
   padding-inline: var(--blok-space-2);
 }

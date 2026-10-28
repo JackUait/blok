@@ -1227,6 +1227,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_RELATION_GROUPS_BYTES = 92;
     // database.css: the table relation picker's 4px rows and "+" / "−" button (notion-spec-2 §19.15).
     const DATABASE_RELATION_TOGGLE_BYTES = 1_408;
+    // database.css: Select and Multi-select picker rows place the handle and "⋯" as measured (notion-spec-2 §19.14).
+    const DATABASE_SELECT_ROW_INSET_BYTES = 568;
     // database.css: a lone file chip fills its table cell (notion-spec-2 §18.1).
     const DATABASE_FILE_CHIP_FILL_BYTES = 423;
     // database.css: the picker head's 9.25px as one token, and the 1px row gaps as the space token.
@@ -1507,6 +1509,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_RELATION_PICKER_BYTES
       + DATABASE_RELATION_GROUPS_BYTES
       + DATABASE_RELATION_TOGGLE_BYTES
+      + DATABASE_SELECT_ROW_INSET_BYTES
       + DATABASE_FILE_CHIP_FILL_BYTES
       + DATABASE_PICKER_LENGTH_TOKENS_BYTES
       + DATABASE_SELECT_PICKER_BYTES

@@ -259,6 +259,41 @@ class Inflater {
     return sym === 17 ? 3 + this.bits(3) : 11 + this.bits(7);
   }
 
+  /**
+   * Copies a long match that overlaps what it writes, and returns the new output position.
+   * Such a match repeats the last `distance` bytes. A single copyWithin would read bytes it
+   * has not written yet, so the copy grows in whole periods.
+   */
+  private copyMatch(outPos: number, distance: number, length: number): number {
+    const { out } = this;
+    const from = outPos - distance;
+
+    if (distance === 1) {
+      out.fill(out[from], outPos, outPos + length);
+
+      return outPos + length;
+    }
+    let done = 0;
+
+    // Lay down a few short periods by hand so the copyWithin calls start large.
+    if (distance < 16) {
+      const head = Math.min(length, distance * Math.ceil(32 / distance));
+
+      for (; done < head; done++) {
+        out[outPos + done] = out[from + done];
+      }
+    }
+    // `done` stays a whole number of periods, so the bytes at `from` line up with `outPos + done`.
+    while (done < length) {
+      const n = Math.min(length - done, distance + done);
+
+      out.copyWithin(outPos + done, from, from + n);
+      done += n;
+    }
+
+    return outPos + length;
+  }
+
   /** Decodes one Huffman-coded block. Keeps state in locals: this loop is where the time goes. */
   private codes(lit: Huffman, dist: Huffman): void {
     const { src, out } = this;
@@ -344,10 +379,13 @@ class Inflater {
       if (outPos + length > out.length) {
         throw new ZipError(LARGER);
       }
-      // copyWithin is only right when source and target do not overlap; it beats the loop on long copies.
-      if (distance >= length && length > 32) {
+      if (length > 32 && distance >= length) {
         out.copyWithin(outPos, outPos - distance, outPos - distance + length);
         outPos += length;
+        continue;
+      }
+      if (length > 32) {
+        outPos = this.copyMatch(outPos, distance, length);
         continue;
       }
       for (let i = 0; i < length; i++, outPos++) {

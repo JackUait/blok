@@ -373,6 +373,16 @@ describe('inflateRaw - differential against zlib.deflateRawSync', () => {
     kinds.forEach((kind) => roundTrip(makeData(kind, 1_048_583)));
   });
 
+  it('round-trips data with every short period, where matches overlap what they write', () => {
+    for (let period = 1; period <= 40; period++) {
+      const unit = randomBytes(period, period);
+      const data = new Uint8Array(5000).map((_, i) => unit[i % period]);
+
+      [1, 9].forEach((level) => roundTrip(data, { level }));
+      roundTrip(data, { strategy: zlib.constants.Z_RLE });
+    }
+  });
+
   it('round-trips long runs that repeat 32 KB back', () => {
     const block = randomBytes(32768, 7);
     const data = new Uint8Array(32768 * 6);
@@ -504,10 +514,10 @@ describe('inflateRaw - work per block', () => {
     w.code(canonical(litLens)[256], 15);
   };
 
-  const fastest = (fn: () => void): number => {
+  const fastest = (fn: () => void, runs = 3): number => {
     let best = Infinity;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < runs; i++) {
       const start = performance.now();
 
       fn();
@@ -516,6 +526,28 @@ describe('inflateRaw - work per block', () => {
 
     return best;
   };
+
+  it('fills a long run at distance 1 about as fast as it copies distant matches', () => {
+    // Same output size both ways. The baseline is a 300-byte block repeated, so every
+    // match is 300 bytes back and does not overlap the bytes it writes.
+    const size = 32 << 20;
+    const run = new Uint8Array(size).fill(0x41);
+    const block = randomBytes(300, 9);
+    const repeated = new Uint8Array(size);
+
+    for (let i = 0; i < size; i += 300) {
+      repeated.set(block.subarray(0, Math.min(300, size - i)), i);
+    }
+    const runSrc = u8(zlib.deflateRawSync(run, { strategy: zlib.constants.Z_RLE }));
+    const repeatedSrc = u8(zlib.deflateRawSync(repeated));
+
+    expectBytes(inflateRaw(runSrc, size), run);
+    expectBytes(inflateRaw(repeatedSrc, size), repeated);
+    const runTime = fastest(() => inflateRaw(runSrc, size), 5);
+    const repeatedTime = fastest(() => inflateRaw(repeatedSrc, size), 5);
+
+    expect(runTime).toBeLessThan(5 * repeatedTime + 10);
+  });
 
   it('spends little time on many tiny blocks with 15-bit codes', () => {
     const w = new BitWriter();

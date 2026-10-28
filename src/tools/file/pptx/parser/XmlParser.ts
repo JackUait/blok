@@ -42,12 +42,12 @@ export class SafeXmlNode {
     );
   }
 
-  /** Get a numeric attribute value, or undefined if missing or not a number. */
+  /** Get a numeric attribute value, or undefined if missing, not a number, or not finite. */
   numAttr(name: string): number | undefined {
     const raw = this.attr(name);
     if (raw === undefined) return undefined;
     const n = Number(raw);
-    return Number.isNaN(n) ? undefined : n;
+    return Number.isFinite(n) ? n : undefined;
   }
 
   /**

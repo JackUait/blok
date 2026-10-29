@@ -169,6 +169,11 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-file-chip]')).toMatch(/gap:\s*var\(--blok-space-1\)/);
   });
 
+  // side-by-side-2 #14 (files-rest.png, files-peek.png): Notion draws no underline under a file name.
+  it('draws no link underline under a file chip\'s name', () => {
+    expect(ruleBody('[data-blok-database-file-chip] > [data-blok-database-cell-link]')).toMatch(/background-image:\s*none/);
+  });
+
   it('floats the sub-item toggle too, so a nested title stays on the toggle\'s line', () => {
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-subitem-toggle]')).toMatch(/float:\s*inline-start/);
   });

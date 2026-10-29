@@ -6576,6 +6576,11 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   white-space: nowrap;
 }
 
+/* side-by-side-2 #14: no underline under a file name, unlike other cell links. */
+[data-blok-database-file-chip] > [data-blok-database-cell-link] {
+  background-image: none;
+}
+
 /* feel/findings-rowpage R29, R32: on the row page a chip is at most 200 wide and its name ends in "…". */
 [data-blok-database-drawer-prop-value] [data-blok-database-file-chip] {
   max-width: 200px;

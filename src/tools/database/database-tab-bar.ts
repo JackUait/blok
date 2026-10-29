@@ -1,9 +1,10 @@
-import { IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline, IconLink, IconDotsHorizontal } from '../../components/icons';
+import { IconChevronDown, IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline, IconLink, IconDotsHorizontal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
-import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
+import { OverflowList } from '../../components/utils/overflow-list';
+import { planViewBarFold } from './database-view-bar-fold';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -98,6 +99,9 @@ export class DatabaseTabBar {
 
   private overflowList: OverflowList | null = null;
   private moreBtnEl: HTMLElement | null = null;
+  /** "Table ⌄": the current view as one button once fewer than two tabs fit. */
+  private compactBtnEl: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
 
   private isDragging = false;
   /** The click after a drop belongs to the drag, not the tab. */
@@ -242,39 +246,8 @@ export class DatabaseTabBar {
     });
 
     if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(() => {
-        if (this.element === null) {
-          return;
-        }
-
-        const tabs = Array.from(this.element.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
-
-        for (const tab of tabs) {
-          tab.style.display = '';
-        }
-        this.moreBtnEl?.remove();
-        this.moreBtnEl = null;
-
-        // The 28px "+", its 1px margin, and the 1px gaps before it and before "N more…";
-        // each tab pays the 1px gap before it (database.css).
-        const addBtnWidth = 31;
-        const active = tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId);
-        const widths = tabs.map((tab) => tab.offsetWidth + 1);
-        // clientWidth counts the padding that centres the bar on a wide page.
-        const style = getComputedStyle(this.element);
-        const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
-        const budget = this.element.clientWidth - padding - addBtnWidth;
-
-        if (tabsThatFit(widths, active, budget, 0).length === tabs.length) {
-          return;
-        }
-        // Once a tab folds, "N more…" takes room too; measured with the widest count it can show.
-        const more = this.placeMoreButton(tabs.length);
-
-        this.foldTabs(tabsThatFit(widths, active, budget - more.offsetWidth, 0));
-      });
-
-      ro.observe(bar);
+      this.resizeObserver = new ResizeObserver(() => this.refold());
+      this.resizeObserver.observe(bar);
     }
 
     const restoreFocus = tabFocusHandoff.pending;
@@ -292,6 +265,117 @@ export class DatabaseTabBar {
     }
 
     return bar;
+  }
+
+  /**
+   * Folds the view bar to its width (notion-spec-2 §26.1): tabs into "N more…",
+   * then "Table ⌄", then the toolbar's icon group, then New. The marks for the
+   * toolbar go on the view bar, so a toolbar moved to the title row drops them.
+   */
+  private refold(): void {
+    const bar = this.element;
+
+    if (bar === null) return;
+    const parent = bar.parentElement;
+    const viewBar = parent?.hasAttribute('data-blok-database-view-bar') === true ? parent : null;
+    const toolbar = viewBar?.querySelector<HTMLElement>(':scope > [data-blok-database-view-toolbar]') ?? null;
+    const tabs = Array.from(bar.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
+
+    for (const tab of tabs) {
+      tab.style.display = '';
+    }
+    this.moreBtnEl?.remove();
+    this.moreBtnEl = null;
+    this.compactBtnEl?.remove();
+    this.compactBtnEl = null;
+    bar.removeAttribute('data-blok-database-tab-folded');
+    viewBar?.removeAttribute('data-blok-database-fold-icons');
+    viewBar?.removeAttribute('data-blok-database-fold-new');
+    if (!bar.isConnected) return;
+
+    // The padding that centres the bar on a wide page is not room for tabs.
+    const style = getComputedStyle(bar);
+    const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
+    const full = toolbar?.offsetWidth ?? 0;
+
+    viewBar?.setAttribute('data-blok-database-fold-icons', '');
+    const noIcons = toolbar?.offsetWidth ?? 0;
+
+    viewBar?.removeAttribute('data-blok-database-fold-icons');
+
+    const width = viewBar === null ? bar.clientWidth - padding : this.viewBarRoom(viewBar, full) - padding;
+    // The 28px "+", its 1px margin, and the 1px gaps before it and before "N more…";
+    // each tab pays the 1px gap before it (database.css).
+    const add = this.addBtnEl !== null && bar.contains(this.addBtnEl) ? 31 : 0;
+    // "N more…" is measured with the widest count it can show.
+    const probe = this.placeMoreButton(tabs.length);
+    const more = probe.offsetWidth;
+
+    probe.remove();
+    this.moreBtnEl = null;
+
+    const fold = planViewBarFold({
+      width,
+      tabs: tabs.map((tab) => tab.offsetWidth + 1),
+      current: tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId),
+      add,
+      more,
+      toolbar: { full, noIcons },
+    });
+
+    viewBar?.toggleAttribute('data-blok-database-fold-icons', !fold.icons);
+    viewBar?.toggleAttribute('data-blok-database-fold-new', !fold.newButton);
+    if (fold.tabs === 'all') return;
+    // Notion's "+" leaves once a tab folds.
+    bar.setAttribute('data-blok-database-tab-folded', '');
+    if (fold.tabs === 'compact') {
+      for (const tab of tabs) {
+        tab.style.display = 'none';
+      }
+      this.placeCompactButton();
+
+      return;
+    }
+    this.foldTabs(fold.tabs);
+  }
+
+  /** The view bar's width for the tabs and the toolbar, less the gap between them. */
+  private viewBarRoom(viewBar: HTMLElement, toolbarWidth: number): number {
+    const style = getComputedStyle(viewBar);
+    const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
+    const gap = toolbarWidth > 0 ? Number.parseFloat(style.columnGap) || 0 : 0;
+
+    return viewBar.clientWidth - padding - gap;
+  }
+
+  /** "Table ⌄": the current view's icon and name and a chevron; it opens the views list. */
+  private placeCompactButton(): void {
+    const view = this.options.views.find((v) => v.id === this.options.activeViewId);
+    const button = document.createElement('div');
+    const icon = document.createElement('span');
+    const name = document.createElement('span');
+    const chevron = document.createElement('span');
+
+    button.setAttribute('data-blok-database-tab-compact', '');
+    button.setAttribute('role', 'button');
+    button.setAttribute('tabindex', '0');
+    button.setAttribute('aria-haspopup', 'listbox');
+    icon.setAttribute('data-blok-database-tab-icon', '');
+    icon.innerHTML = view === undefined ? '' : VIEW_ICONS[view.type] ?? '';
+    name.setAttribute('data-blok-database-tab-name', '');
+    name.textContent = view?.name ?? '';
+    chevron.setAttribute('data-blok-database-tab-compact-chevron', '');
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.innerHTML = IconChevronDown;
+    button.append(icon, name, chevron);
+    button.addEventListener('click', () => {
+      this.openOverflowDropdown(button);
+    });
+    activateOnEnterOrSpace(button, () => {
+      this.openOverflowDropdown(button);
+    });
+    this.element?.insertBefore(button, this.element.querySelector('[data-blok-database-add-view]'));
+    this.compactBtnEl = button;
   }
 
   private consumeDragClick(): boolean {
@@ -693,9 +777,9 @@ export class DatabaseTabBar {
       onNew: () => {
         const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
 
-        if (addBtn !== null && addBtn !== undefined) {
-          this.openViewPopover(addBtn);
-        }
+        if (addBtn === null || addBtn === undefined) return;
+        // A folded "+" has no box to hang the menu from.
+        this.openViewPopover(this.element?.hasAttribute('data-blok-database-tab-folded') === true ? anchor : addBtn);
       },
       ...(this.readOnly || this.options.onNewDataSource === undefined ? {} : {
         onNewSecond: { label: this.t('tools.database.newDataSource', 'New data source'), icon: IconDatabase, activate: this.options.onNewDataSource },
@@ -831,6 +915,8 @@ export class DatabaseTabBar {
   }
 
   destroy(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.cleanupDrag();
     this.closeContextPopover();
     this.closeOverflowDropdown();

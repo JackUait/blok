@@ -113,3 +113,22 @@ describe('dragging a tab (V27)', () => {
     expect(rule('[data-blok-database-tab-ghost]')).toMatch(/box-shadow: none/);
   });
 });
+
+describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
+  it('"+" leaves once a tab folds', () => {
+    expect(rule('[data-blok-database-tab-bar][data-blok-database-tab-folded] > [data-blok-database-add-view]')).toMatch(/display: none/);
+  });
+
+  it('the icon group hides together, and New hides on its own', () => {
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable]')).toMatch(/display: none/);
+    expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new]')).toMatch(/display: none/);
+  });
+
+  it('"Table ⌄" wears the current tab\'s fill and ink', () => {
+    const body = rule('[data-blok-database-tab-compact]');
+
+    expect(body).toMatch(/background-color: var\(--blok-database-tab-bg-active\)/);
+    expect(body).toMatch(/color: var\(--blok-database-tab-text-active\)/);
+    expect(body).toMatch(/border-radius: var\(--blok-radius-pill\)/);
+  });
+});

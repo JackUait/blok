@@ -212,6 +212,10 @@ export class DatabaseViewControls {
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
     this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
+    // A narrow view bar hides these together (notion-spec-2 §26.1, database-tab-bar.ts).
+    for (const icon of [this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton]) {
+      icon.setAttribute('data-blok-database-toolbar-foldable', '');
+    }
     this.searchInput = document.createElement('input');
     this.searchInput.type = 'search';
     this.searchInput.hidden = true;

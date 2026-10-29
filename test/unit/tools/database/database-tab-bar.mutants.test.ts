@@ -880,15 +880,15 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
     it('keeps the tabs that fit and folds the rest behind a count button', () => {
       const { el } = mount(threeViews(), 'v1');
 
-      // One short of 31 (add) + 2 × 101.
-      layOutForOverflow(el, 232);
+      // 2 × 101 fit; "+" keeps no room once a tab folds (notion-spec-2 §26.1).
+      layOutForOverflow(el, 202);
       lastResizeProbe().fire();
 
       const more = queryOne(el, '[data-blok-database-tab-more]');
 
-      expect(more.textContent).toBe('2 more…');
+      expect(more.textContent).toBe('1 more…');
       expect(tabOf(el, 'v1').style.display).toBe('');
-      expect(tabOf(el, 'v2').style.display).toBe('none');
+      expect(tabOf(el, 'v2').style.display).toBe('');
       expect(tabOf(el, 'v3').style.display).toBe('none');
     });
 
@@ -928,7 +928,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       it('takes the place of the last tab that fits, keeping view order', () => {
         const { el } = mount(eightViews(), 'v4');
 
-        // 31 (add) + 3 × 101 = 334 of 346: three tabs fit, a fourth does not.
+        // 3 × 101 = 303 of 346: three tabs fit, a fourth does not.
         layOutForOverflow(el, 346);
         lastResizeProbe().fire();
 
@@ -936,14 +936,17 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
         expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('5 more…');
       });
 
-      it('budgets the 28px "+" with its margin and gaps, and 1px between tabs (feel/findings-toolbar V26, V33)', () => {
-        const { el } = mount(eightViews(), 'v1');
+      it('budgets the 28px "+" with its margin and gaps, and 1px between tabs, while every tab shows (feel/findings-toolbar V26, V33)', () => {
+        const { el } = mount(threeViews(), 'v1');
 
-        // 31 (add) + 3 × 101 = 334: three tabs fit exactly.
+        // 31 (add) + 3 × 101 = 334: every tab fits exactly.
         layOutForOverflow(el, 334);
         lastResizeProbe().fire();
+        expect(el.querySelector('[data-blok-database-tab-more]')).toBeNull();
 
-        expect(shownIds(el)).toEqual(['v0', 'v1', 'v2']);
+        layOutForOverflow(el, 333);
+        lastResizeProbe().fire();
+        expect(el.querySelector('[data-blok-database-tab-more]')?.textContent).toBe('1 more…');
       });
 
       it('changes nothing when the current view already fits', () => {
@@ -962,7 +965,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
         });
         const { el } = mount(eightViews(), 'v1');
 
-        // 346 − 31 (add) − 80 ("N more…") = 235: two 101px tabs.
+        // 346 − 80 ("N more…") = 266: two 101px tabs.
         layOutForOverflow(el, 346);
         lastResizeProbe().fire();
 

@@ -87,6 +87,20 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
   });
 
+  it('marks Filter, Sort, Automations, AI Autofill and search as the group a narrow bar hides together (notion-spec-2 §26.1)', () => {
+    setup({ levers: {
+      automations: { read: () => undefined, schema: () => schema, views: () => [], writable: () => true, write: () => true },
+      autofill: { properties: () => schema, writable: () => true, open: vi.fn() },
+    } });
+    const foldable = [...document.querySelectorAll<HTMLElement>('[data-blok-database-toolbar-foldable]')]
+      .map((el) => el.getAttribute('data-blok-testid'));
+
+    expect(foldable).toEqual([
+      'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-autofill', 'database-toolbar-search',
+    ]);
+    expect(q('database-toolbar-settings')?.hasAttribute('data-blok-database-toolbar-foldable')).toBe(false);
+  });
+
   describe('"No date (N)" for a calendar or timeline (findings C03/C04)', () => {
     it('shows the view\'s count left of Filter and opens the view\'s popover from itself', () => {
       const open = vi.fn();

@@ -6412,6 +6412,51 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-tab-bg-hover);
 }
 
+[data-blok-database-tab-bar][data-blok-database-tab-folded] > [data-blok-database-add-view] {
+  display: none;
+}
+
+[data-blok-database-view-bar][data-blok-database-fold-icons] > [data-blok-database-view-toolbar] > [data-blok-database-toolbar-foldable] {
+  display: none;
+}
+
+[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new] {
+  display: none;
+}
+
+[data-blok-database-tab-compact] {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: var(--blok-space-1-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  background-color: var(--blok-database-tab-bg-active);
+  color: var(--blok-database-tab-text-active);
+}
+
+[data-blok-database-tab-compact] [data-blok-database-tab-icon] svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-tab-compact-chevron] {
+  display: flex;
+  color: var(--blok-database-tab-text);
+}
+
+[data-blok-database-tab-compact-chevron] svg {
+  width: 12px;
+  height: 12px;
+}
+
 [data-blok-database-tab-overflow-dropdown] {
   width: 290px;
   box-sizing: border-box;

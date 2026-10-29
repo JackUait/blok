@@ -6245,14 +6245,15 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect(owner?.activeViewId).toBe('dash');
   });
 
-  it.each(['table', 'list'] as const)('widget Unwrap shows at once while the source active view is %s', async (sourceLayout) => {
+  // A new table does not wrap (notion-spec-2 §21.1), so the row offers Wrap content.
+  it.each(['table', 'list'] as const)('widget Wrap shows at once while the source active view is %s', async (sourceLayout) => {
     await make(dashboardNativeHeaderDoc(sourceLayout));
     const notes = (): Element | null => dashboardWidget('foreign').querySelector('[data-row-id="q1"] [role="gridcell"][data-property-id="n2"]');
 
-    expect(notes()?.hasAttribute('data-wrap')).toBe(true);
-    await dashboardNativeHeaderAction('Unwrap content');
-
     expect(notes()?.hasAttribute('data-wrap')).toBe(false);
+    await dashboardNativeHeaderAction('Wrap content');
+
+    expect(notes()?.hasAttribute('data-wrap')).toBe(true);
   });
 
   it.each(['table', 'list'] as const)('widget Calculate shows at once while the source active view is %s', async (sourceLayout) => {

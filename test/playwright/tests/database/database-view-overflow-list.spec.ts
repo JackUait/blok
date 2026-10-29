@@ -131,7 +131,9 @@ test.describe('database view overflow list', () => {
         const last = tabs.at(-1)?.getBoundingClientRect();
         const moreBox = more.getBoundingClientRect();
         const barRight = bar.getBoundingClientRect().right;
-        const add = bar.querySelector<HTMLElement>('[data-blok-database-add-view]')?.getBoundingClientRect();
+        // "+" leaves once a tab folds (notion-spec-2 §26.1): a hidden one has no box.
+        const addBox = bar.querySelector<HTMLElement>('[data-blok-database-add-view]')?.getBoundingClientRect();
+        const add = addBox !== undefined && addBox.width > 0 ? addBox : undefined;
         const end = add?.left ?? barRight;
         const clipped = tabs.some((tab) => tab.scrollWidth > tab.clientWidth + 1) || more.scrollWidth > more.clientWidth + 1;
         // A crowded row squeezes the 28px add button and pushes it past the bar.

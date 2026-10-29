@@ -1571,6 +1571,8 @@
   "tools.database.filesLinkLabel": "Посилання на файл",
   "tools.database.filesLinkPlaceholder": "Вставте https://…",
   "tools.database.filesEmbed": "Вбудувати посилання",
+  "tools.database.filesTabUpload": "Завантажити",
+  "tools.database.filesTabLink": "Посилання",
   "tools.database.addProperty": "+ Додати властивість",
   "tools.database.propertyName": "Назва властивості",
   "tools.database.propertyNameTaken": "Властивість із назвою «{name}» уже є в цій базі даних.",

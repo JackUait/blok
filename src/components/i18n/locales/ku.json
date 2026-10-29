@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "بەستەری فایل",
   "tools.database.filesLinkPlaceholder": "https://… بلکێنە",
   "tools.database.filesEmbed": "جێگیرکردنی بەستەر",
+  "tools.database.filesTabUpload": "بارکردن",
+  "tools.database.filesTabLink": "بەستەر",
   "tools.database.addProperty": "+ زیادکردنی تایبەتمەندی",
   "tools.database.propertyName": "ناوی تایبەتمەندی",
   "tools.database.propertyNameTaken": "تایبەتمەندییەک بە ناوی {name} پێشتر لەم داتابەیسەدا هەیە.",

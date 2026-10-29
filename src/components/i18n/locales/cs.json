@@ -1571,6 +1571,8 @@
   "tools.database.filesLinkLabel": "Odkaz na soubor",
   "tools.database.filesLinkPlaceholder": "Vložte https://…",
   "tools.database.filesEmbed": "Vložit odkaz",
+  "tools.database.filesTabUpload": "Nahrát",
+  "tools.database.filesTabLink": "Odkaz",
   "tools.database.addProperty": "+ Přidat vlastnost",
   "tools.database.propertyName": "Název vlastnosti",
   "tools.database.propertyNameTaken": "Vlastnost s názvem {name} v této databázi už existuje.",

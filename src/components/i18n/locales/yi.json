@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "טעקע־לינק",
   "tools.database.filesLinkPlaceholder": "אַרײַנקלעבן https://…",
   "tools.database.filesEmbed": "אײַנבעטן לינק",
+  "tools.database.filesTabUpload": "אַרויפֿלאָדן",
+  "tools.database.filesTabLink": "לינק",
   "tools.database.addProperty": "+ צולייגן אַן אייגנשאפט",
   "tools.database.propertyName": "אייגנשאפט נאָמען",
   "tools.database.propertyNameTaken": "אַן אייגנשאפט מיטן נאָמען {name} איז שוין דאָ אין דעם דאטאבאנק.",

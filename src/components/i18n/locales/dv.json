@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ފައިލުގެ ލިންކް",
   "tools.database.filesLinkPlaceholder": "https://… ޕޭސްޓްކުރޭ",
   "tools.database.filesEmbed": "ލިންކް އެމްބެޑްކުރޭ",
+  "tools.database.filesTabUpload": "އަޕްލޯޑް",
+  "tools.database.filesTabLink": "ލިންކް",
   "tools.database.addProperty": "+ ޕްރޮޕަރޓީއެއް އިތުރުކުރޭ",
   "tools.database.propertyName": "ޕްރޮޕަރޓީގެ ނަން",
   "tools.database.propertyNameTaken": "{name} ގެ ނަމުގައި ޕްރޮޕަރޓީއެއް މި ޑޭޓާބޭސްގައި ކުރިން ވެސް އެބަހުރި.",

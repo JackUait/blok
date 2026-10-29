@@ -1569,6 +1569,8 @@
   "tools.database.filesLinkLabel": "Veza do datoteke",
   "tools.database.filesLinkPlaceholder": "Zalijepite https://…",
   "tools.database.filesEmbed": "Ugradi vezu",
+  "tools.database.filesTabUpload": "Otpremi",
+  "tools.database.filesTabLink": "Veza",
   "tools.database.addProperty": "+ Dodaj svojstvo",
   "tools.database.propertyName": "Naziv svojstva",
   "tools.database.propertyNameTaken": "Svojstvo s nazivom {name} već postoji u ovoj bazi podataka.",

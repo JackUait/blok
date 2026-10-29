@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "فائل کا لنک",
   "tools.database.filesLinkPlaceholder": "https://… پیسٹ کریں",
   "tools.database.filesEmbed": "لنک ایمبیڈ کریں",
+  "tools.database.filesTabUpload": "اپ لوڈ",
+  "tools.database.filesTabLink": "لنک",
   "tools.database.addProperty": "+ پراپرٹی شامل کریں",
   "tools.database.propertyName": "پراپرٹی کا نام",
   "tools.database.propertyNameTaken": "اس ڈیٹابیس میں {name} نامی پراپرٹی پہلے سے موجود ہے۔",

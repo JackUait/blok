@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ფაილის ბმული",
   "tools.database.filesLinkPlaceholder": "ჩასვით https://…",
   "tools.database.filesEmbed": "ბმულის ჩაშენება",
+  "tools.database.filesTabUpload": "ატვირთვა",
+  "tools.database.filesTabLink": "ბმული",
   "tools.database.addProperty": "+ თვისების დამატება",
   "tools.database.propertyName": "თვისების სახელი",
   "tools.database.propertyNameTaken": "ამ მონაცემთა ბაზაში {name} სახელის თვისება უკვე არსებობს.",

@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Σύνδεσμος αρχείου",
   "tools.database.filesLinkPlaceholder": "Επικόλληση https://…",
   "tools.database.filesEmbed": "Ενσωμάτωση συνδέσμου",
+  "tools.database.filesTabUpload": "Μεταφόρτωση",
+  "tools.database.filesTabLink": "Σύνδεσμος",
   "tools.database.addProperty": "+ Προσθήκη ιδιότητας",
   "tools.database.propertyName": "Όνομα ιδιότητας",
   "tools.database.propertyNameTaken": "Υπάρχει ήδη ιδιότητα με το όνομα {name} σε αυτή τη βάση δεδομένων.",

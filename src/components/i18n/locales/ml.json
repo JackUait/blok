@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ഫയൽ ലിങ്ക്",
   "tools.database.filesLinkPlaceholder": "https://… ഒട്ടിക്കുക",
   "tools.database.filesEmbed": "ലിങ്ക് എംബെഡ് ചെയ്യുക",
+  "tools.database.filesTabUpload": "അപ്‌ലോഡ്",
+  "tools.database.filesTabLink": "ലിങ്ക്",
   "tools.database.addProperty": "+ പ്രോപ്പർട്ടി ചേർക്കുക",
   "tools.database.propertyName": "പ്രോപ്പർട്ടിയുടെ പേര്",
   "tools.database.propertyNameTaken": "{name} എന്ന പേരിലുള്ള പ്രോപ്പർട്ടി ഈ ഡാറ്റാബേസിൽ ഇതിനകം ഉണ്ട്.",

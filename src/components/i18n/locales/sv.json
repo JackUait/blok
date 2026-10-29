@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Fillänk",
   "tools.database.filesLinkPlaceholder": "Klistra in https://…",
   "tools.database.filesEmbed": "Bädda in länk",
+  "tools.database.filesTabUpload": "Ladda upp",
+  "tools.database.filesTabLink": "Länk",
   "tools.database.addProperty": "+ Lägg till en egenskap",
   "tools.database.propertyName": "Egenskapsnamn",
   "tools.database.propertyNameTaken": "Det finns redan en egenskap med namnet {name} i den här databasen.",

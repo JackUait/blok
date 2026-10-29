@@ -151,6 +151,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',
   'tools/callout/emoji-picker/index.ts': 'Fixed-backdrop picker continuously repositions from its live callout anchor.',
   'tools/database/cells/date-editor.ts': 'The Remind menu is placed once beside the date picker when it opens, clamped to the viewport; it lives inside the picker and closes with it.',
+  'tools/database/cells/files-editor.ts': 'The table Upload / Link panel is placed once under the files box when it opens, clamped to the viewport; it lives inside the box and closes with it.',
   'tools/database/database-calendar-view.ts': 'The calendar drag box sits in the grid and is re-placed from the grid rect on every pointer move.',
   'tools/database/database-card-drag.ts': 'Fixed pointer-following card ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-column-drag.ts': 'Fixed pointer-following column ghost refreshes coordinates on every drag pointer move.',

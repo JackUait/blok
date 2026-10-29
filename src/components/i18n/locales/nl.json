@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Bestandslink",
   "tools.database.filesLinkPlaceholder": "Plak https://…",
   "tools.database.filesEmbed": "Link insluiten",
+  "tools.database.filesTabUpload": "Uploaden",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Eigenschap toevoegen",
   "tools.database.propertyName": "Naam van eigenschap",
   "tools.database.propertyNameTaken": "Er bestaat al een eigenschap met de naam {name} in deze database.",

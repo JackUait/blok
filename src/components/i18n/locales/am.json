@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "የፋይል አገናኝ",
   "tools.database.filesLinkPlaceholder": "https://… ለጥፍ",
   "tools.database.filesEmbed": "አገናኙን አካት",
+  "tools.database.filesTabUpload": "ስቀል",
+  "tools.database.filesTabLink": "አገናኝ",
   "tools.database.addProperty": "+ ንብረት ጨምር",
   "tools.database.propertyName": "የንብረት ስም",
   "tools.database.propertyNameTaken": "{name} የሚባል ንብረት በዚህ የውሂብ ጎታ ውስጥ አስቀድሞ አለ።",

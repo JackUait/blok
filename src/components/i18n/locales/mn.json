@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Файлын холбоос",
   "tools.database.filesLinkPlaceholder": "https://… буулгах",
   "tools.database.filesEmbed": "Холбоос шигтгэх",
+  "tools.database.filesTabUpload": "Байршуулах",
+  "tools.database.filesTabLink": "Холбоос",
   "tools.database.addProperty": "+ Шинж нэмэх",
   "tools.database.propertyName": "Шинжийн нэр",
   "tools.database.propertyNameTaken": "Энэ мэдээллийн санд {name} нэртэй шинж аль хэдийн байна.",

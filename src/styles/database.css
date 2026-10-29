@@ -12814,6 +12814,181 @@ textarea[data-blok-database-cell-input] {
   overflow-y: auto;
 }
 
+/* notion-spec-2 §18.3, §19.17: the table files box, 240 wide (min-width) and as wide as its longest
+   name. The width follows the content live, so a file added while it is open is not cut. */
+[data-blok-popover-custom-class~='blok-database-table-cell-editor'] [data-blok-popover-container]:has([data-blok-database-files-editor][data-layout="table"]) {
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--blok-space-3));
+}
+
+[data-blok-database-files-editor][data-layout="table"] {
+  padding: var(--blok-space-0-75) var(--blok-space-1);
+}
+
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row],
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add] {
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  font-size: 14px;
+  line-height: 16.8px;
+}
+
+/* §19.17: the full name, never cut. */
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row] > span:not([data-blok-database-file-chip-icon]) {
+  overflow: visible;
+}
+
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row] > [data-blok-database-file-chip-icon] {
+  flex: none;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-files-add] {
+  display: flex;
+  align-items: center;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-files-add] > span[aria-hidden] {
+  display: inline-flex;
+  flex: none;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-files-add] svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
+/* §18.3: the Upload / Link panel, 300 wide, radius 10px, menu shadow, under the box.
+   §19.22: it fades out over 0.2s; it opens at once.
+   The [popover] compound outranks main.css's top-layer reset (width: auto). */
+[data-blok-database-files-panel],
+[data-blok-database-files-panel][data-blok-top-layer][popover] {
+  box-sizing: border-box;
+  width: 300px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-popover-bg, var(--blok-popover-bg));
+  box-shadow: var(--blok-database-cell-editor-shadow);
+  color: var(--blok-database-ink);
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+
+[data-blok-database-files-panel][data-closing] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* §18.3: 40 tall, 8px sides, a 1px line under it. */
+[data-blok-database-files-tabs] {
+  display: flex;
+  height: 40px;
+  padding: 0 var(--blok-space-2);
+  box-shadow: inset 0 -1px 0 var(--blok-database-table-border);
+}
+
+[data-blok-database-files-tab] {
+  position: relative;
+  align-self: center;
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font: inherit;
+  line-height: 16.8px;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  [data-blok-database-files-tab]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
+/* §18.3: the picked tab is ink with a 2px ink line under its text, on the row's bottom edge. */
+[data-blok-database-files-tab][aria-selected="true"] {
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-files-tab][aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--blok-space-2);
+  bottom: -6px;
+  height: 2px;
+  background-color: var(--blok-database-ink);
+}
+
+/* §18.3: Upload tab 300x122 (button 12px under the tabs), Link tab 300x134. */
+[data-blok-database-files-panel] [data-blok-database-files-tabpanel] {
+  padding: var(--blok-space-3) var(--blok-space-1) 10px;
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-tabpanel]:has([data-blok-database-files-link]) {
+  padding: var(--blok-space-2) 0 6px;
+}
+
+/* §18.3: the blue "Upload file" and "Link" buttons, 28 tall, weight 500 (a button, not a selected state). */
+[data-blok-database-files-panel] [data-blok-database-files-upload],
+[data-blok-database-files-panel] [data-blok-database-files-link-submit] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-new-bg);
+  font: inherit;
+  font-weight: 500;
+  line-height: 16.8px;
+  color: var(--blok-database-new-text);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  [data-blok-database-files-panel] [data-blok-database-files-upload]:hover,
+  [data-blok-database-files-panel] [data-blok-database-files-link-submit]:hover {
+    background-color: var(--blok-database-new-hover-bg);
+  }
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-link] {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+/* §18.3: the field row is 44 tall (field 36, 4px around), the button row 36 (button 276 wide). */
+[data-blok-database-files-panel] [data-blok-database-files-link-input] {
+  flex: none;
+  box-sizing: border-box;
+  width: auto;
+  height: 36px;
+  margin: var(--blok-space-1);
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-link-submit] {
+  margin: var(--blok-space-1) var(--blok-space-3);
+}
+
 [data-blok-database-formula-editor] {
   display: flex;
   flex-direction: column;

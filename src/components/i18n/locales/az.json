@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Fayl keçidi",
   "tools.database.filesLinkPlaceholder": "https://… yapışdırın",
   "tools.database.filesEmbed": "Keçidi yerləşdir",
+  "tools.database.filesTabUpload": "Yüklə",
+  "tools.database.filesTabLink": "Keçid",
   "tools.database.addProperty": "+ Xüsusiyyət əlavə et",
   "tools.database.propertyName": "Xüsusiyyətin adı",
   "tools.database.propertyNameTaken": "Bu verilənlər bazasında {name} adlı xüsusiyyət artıq var.",

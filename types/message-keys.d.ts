@@ -849,6 +849,8 @@ export type BlokMessageKey =
   | 'tools.database.filesEmbed'
   | 'tools.database.filesLinkLabel'
   | 'tools.database.filesLinkPlaceholder'
+  | 'tools.database.filesTabLink'
+  | 'tools.database.filesTabUpload'
   | 'tools.database.filesUpload'
   | 'tools.database.filterAdd'
   | 'tools.database.filterAddGroup'

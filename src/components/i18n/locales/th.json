@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ลิงก์ไฟล์",
   "tools.database.filesLinkPlaceholder": "วาง https://…",
   "tools.database.filesEmbed": "ฝังลิงก์",
+  "tools.database.filesTabUpload": "อัปโหลด",
+  "tools.database.filesTabLink": "ลิงก์",
   "tools.database.addProperty": "+ เพิ่มคุณสมบัติ",
   "tools.database.propertyName": "ชื่อคุณสมบัติ",
   "tools.database.propertyNameTaken": "มีคุณสมบัติชื่อ {name} อยู่แล้วในฐานข้อมูลนี้",

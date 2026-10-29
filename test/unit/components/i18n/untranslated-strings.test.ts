@@ -523,7 +523,20 @@ const AUDIO_COGNATE_RETENTIONS: Record<string, string[]> = {
   vi: ['toolNames.audio'],
 };
 
-for (const [locale, keys] of Object.entries(AUDIO_COGNATE_RETENTIONS)) {
+/** The table files picker's Upload / Link tabs reuse the audio cover tabs' words. */
+const FILES_TAB_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.database.filesTabUpload', 'tools.database.filesTabLink'],
+  de: ['tools.database.filesTabLink'],
+  et: ['tools.database.filesTabLink'],
+  fil: ['tools.database.filesTabLink'],
+  it: ['tools.database.filesTabLink'],
+  nl: ['tools.database.filesTabLink'],
+  pl: ['tools.database.filesTabLink'],
+  pt: ['tools.database.filesTabLink'],
+  ro: ['tools.database.filesTabLink'],
+};
+
+for (const [locale, keys] of [...Object.entries(AUDIO_COGNATE_RETENTIONS), ...Object.entries(FILES_TAB_COGNATE_RETENTIONS)]) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);
 }

@@ -1569,6 +1569,8 @@
   "tools.database.filesLinkLabel": "Enlace del archivo",
   "tools.database.filesLinkPlaceholder": "Pega https://…",
   "tools.database.filesEmbed": "Insertar enlace",
+  "tools.database.filesTabUpload": "Subir",
+  "tools.database.filesTabLink": "Enlace",
   "tools.database.addProperty": "+ Añadir una propiedad",
   "tools.database.propertyName": "Nombre de la propiedad",
   "tools.database.propertyNameTaken": "Ya existe una propiedad llamada {name} en esta base de datos.",

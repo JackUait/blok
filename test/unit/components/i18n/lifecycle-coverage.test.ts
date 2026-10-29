@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1903 + 136 + 520 + 4 closure for all 2563 keys', () => {
+  it('rebuilds a disjoint 1905 + 136 + 520 + 4 closure for all 2565 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2563);
+    expect(lifecycle.size).toBe(2565);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -473,7 +473,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.propertyNamePlaceholder is the table header "+" field's placeholder again, by literal.
       // +1: the table relation picker's "Select more" label, tools.database.relationSelectMore, by literal.
       // +1: a table rollup cell's Configure rollup button, tools.database.rollupConfigure, by literal.
-      'executable-literal': 1903,
+      // +2: the table files panel's Upload and Link tabs, tools.database.filesTabUpload/filesTabLink, by literal.
+      'executable-literal': 1905,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "File link",
   "tools.database.filesLinkPlaceholder": "Paste in https://…",
   "tools.database.filesEmbed": "Embed link",
+  "tools.database.filesTabUpload": "Upload",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Add a property",
   "tools.database.propertyName": "Property name",
   "tools.database.propertyNameTaken": "A property named {name} already exists in this database.",

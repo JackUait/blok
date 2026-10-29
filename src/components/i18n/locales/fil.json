@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Link ng file",
   "tools.database.filesLinkPlaceholder": "I-paste ang https://…",
   "tools.database.filesEmbed": "I-embed ang link",
+  "tools.database.filesTabUpload": "Mag-upload",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Magdagdag ng property",
   "tools.database.propertyName": "Pangalan ng property",
   "tools.database.propertyNameTaken": "May property na nang {name} ang pangalan sa database na ito.",

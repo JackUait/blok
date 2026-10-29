@@ -1569,6 +1569,8 @@
   "tools.database.filesLinkLabel": "Poveznica na datoteku",
   "tools.database.filesLinkPlaceholder": "Zalijepi https://…",
   "tools.database.filesEmbed": "Ugradi poveznicu",
+  "tools.database.filesTabUpload": "Prenesi",
+  "tools.database.filesTabLink": "Poveznica",
   "tools.database.addProperty": "+ Dodaj svojstvo",
   "tools.database.propertyName": "Naziv svojstva",
   "tools.database.propertyNameTaken": "Svojstvo s nazivom {name} već postoji u ovoj bazi podataka.",

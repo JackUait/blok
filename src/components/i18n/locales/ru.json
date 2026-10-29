@@ -1571,6 +1571,8 @@
   "tools.database.filesLinkLabel": "Ссылка на файл",
   "tools.database.filesLinkPlaceholder": "Вставьте https://…",
   "tools.database.filesEmbed": "Встроить ссылку",
+  "tools.database.filesTabUpload": "Загрузить",
+  "tools.database.filesTabLink": "Ссылка",
   "tools.database.addProperty": "+ Добавить свойство",
   "tools.database.propertyName": "Название свойства",
   "tools.database.propertyNameTaken": "Свойство с названием {name} уже есть в этой базе данных.",

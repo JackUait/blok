@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "د فایل لینک",
   "tools.database.filesLinkPlaceholder": "https://… دلته پېسټ کړئ",
   "tools.database.filesEmbed": "لینک ځای پر ځای کړئ",
+  "tools.database.filesTabUpload": "اپلوډ کړئ",
+  "tools.database.filesTabLink": "لینک",
   "tools.database.addProperty": "+ ځانګړتیا اضافه کړئ",
   "tools.database.propertyName": "د ځانګړتیا نوم",
   "tools.database.propertyNameTaken": "په دې ډیټابیس کې د {name} په نوم ځانګړتیا له مخکې شته.",

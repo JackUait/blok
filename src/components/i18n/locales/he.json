@@ -1569,6 +1569,8 @@
   "tools.database.filesLinkLabel": "קישור לקובץ",
   "tools.database.filesLinkPlaceholder": "הדבק https://…",
   "tools.database.filesEmbed": "הטמע קישור",
+  "tools.database.filesTabUpload": "העלאה",
+  "tools.database.filesTabLink": "קישור",
   "tools.database.addProperty": "+ הוסף מאפיין",
   "tools.database.propertyName": "שם המאפיין",
   "tools.database.propertyNameTaken": "מאפיין בשם {name} כבר קיים במסד הנתונים הזה.",

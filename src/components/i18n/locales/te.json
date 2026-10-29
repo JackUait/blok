@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ఫైల్ లింక్",
   "tools.database.filesLinkPlaceholder": "https://… ను అతికించండి",
   "tools.database.filesEmbed": "లింక్‌ను పొందుపరచు",
+  "tools.database.filesTabUpload": "అప్‌లోడ్",
+  "tools.database.filesTabLink": "లింక్",
   "tools.database.addProperty": "+ ప్రాపర్టీని జోడించండి",
   "tools.database.propertyName": "ప్రాపర్టీ పేరు",
   "tools.database.propertyNameTaken": "{name} పేరుతో ప్రాపర్టీ ఈ డేటాబేస్‌లో ఇప్పటికే ఉంది.",

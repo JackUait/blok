@@ -1569,6 +1569,8 @@
   "tools.database.filesLinkLabel": "Link do arquivo",
   "tools.database.filesLinkPlaceholder": "Cole https://…",
   "tools.database.filesEmbed": "Incorporar link",
+  "tools.database.filesTabUpload": "Enviar",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Adicionar uma propriedade",
   "tools.database.propertyName": "Nome da propriedade",
   "tools.database.propertyNameTaken": "Já existe uma propriedade chamada {name} neste banco de dados.",

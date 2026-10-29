@@ -1571,6 +1571,8 @@
   "tools.database.filesLinkLabel": "Link do pliku",
   "tools.database.filesLinkPlaceholder": "Wklej https://…",
   "tools.database.filesEmbed": "Osadź link",
+  "tools.database.filesTabUpload": "Prześlij",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Dodaj właściwość",
   "tools.database.propertyName": "Nazwa właściwości",
   "tools.database.propertyNameTaken": "W tej bazie danych istnieje już właściwość o nazwie {name}.",

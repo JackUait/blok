@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "文件链接",
   "tools.database.filesLinkPlaceholder": "粘贴 https://…",
   "tools.database.filesEmbed": "嵌入链接",
+  "tools.database.filesTabUpload": "上传",
+  "tools.database.filesTabLink": "链接",
   "tools.database.addProperty": "+ 添加属性",
   "tools.database.propertyName": "属性名称",
   "tools.database.propertyNameTaken": "此数据库中已存在名为“{name}”的属性。",

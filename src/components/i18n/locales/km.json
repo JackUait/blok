@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "តំណឯកសារ",
   "tools.database.filesLinkPlaceholder": "បិទភ្ជាប់ https://…",
   "tools.database.filesEmbed": "បង្កប់តំណ",
+  "tools.database.filesTabUpload": "បង្ហោះ",
+  "tools.database.filesTabLink": "តំណ",
   "tools.database.addProperty": "+ បន្ថែមលក្ខណៈ",
   "tools.database.propertyName": "ឈ្មោះលក្ខណៈ",
   "tools.database.propertyNameTaken": "លក្ខណៈឈ្មោះ {name} មានរួចហើយនៅក្នុងមូលដ្ឋានទិន្នន័យនេះ។",

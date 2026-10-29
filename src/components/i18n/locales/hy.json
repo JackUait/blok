@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Ֆայլի հղում",
   "tools.database.filesLinkPlaceholder": "Տեղադրեք https://…",
   "tools.database.filesEmbed": "Ներկառուցել հղումը",
+  "tools.database.filesTabUpload": "Վերբեռնել",
+  "tools.database.filesTabLink": "Հղում",
   "tools.database.addProperty": "+ Ավելացնել հատկություն",
   "tools.database.propertyName": "Հատկության անուն",
   "tools.database.propertyNameTaken": "{name} անունով հատկություն արդեն կա այս տվյալների բազայում։",

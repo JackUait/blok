@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Tiedoston linkki",
   "tools.database.filesLinkPlaceholder": "Liitä https://…",
   "tools.database.filesEmbed": "Upota linkki",
+  "tools.database.filesTabUpload": "Lataa",
+  "tools.database.filesTabLink": "Linkki",
   "tools.database.addProperty": "+ Lisää ominaisuus",
   "tools.database.propertyName": "Ominaisuuden nimi",
   "tools.database.propertyNameTaken": "Tässä tietokannassa on jo ominaisuus nimeltä {name}.",

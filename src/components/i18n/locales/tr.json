@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Dosya bağlantısı",
   "tools.database.filesLinkPlaceholder": "https://… yapıştırın",
   "tools.database.filesEmbed": "Bağlantıyı yerleştir",
+  "tools.database.filesTabUpload": "Yükle",
+  "tools.database.filesTabLink": "Bağlantı",
   "tools.database.addProperty": "+ Özellik ekle",
   "tools.database.propertyName": "Özellik adı",
   "tools.database.propertyNameTaken": "Bu veritabanında {name} adlı bir özellik zaten var.",

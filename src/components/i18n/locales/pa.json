@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ਫ਼ਾਈਲ ਲਿੰਕ",
   "tools.database.filesLinkPlaceholder": "https://… ਪੇਸਟ ਕਰੋ",
   "tools.database.filesEmbed": "ਲਿੰਕ ਏਮਬੈੱਡ ਕਰੋ",
+  "tools.database.filesTabUpload": "ਅੱਪਲੋਡ",
+  "tools.database.filesTabLink": "ਲਿੰਕ",
   "tools.database.addProperty": "+ ਵਿਸ਼ੇਸ਼ਤਾ ਜੋੜੋ",
   "tools.database.propertyName": "ਵਿਸ਼ੇਸ਼ਤਾ ਦਾ ਨਾਮ",
   "tools.database.propertyNameTaken": "ਇਸ ਡਾਟਾਬੇਸ ਵਿੱਚ {name} ਨਾਮ ਦੀ ਵਿਸ਼ੇਸ਼ਤਾ ਪਹਿਲਾਂ ਤੋਂ ਹੈ।",

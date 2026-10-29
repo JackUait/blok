@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "檔案連結",
   "tools.database.filesLinkPlaceholder": "貼上 https://…",
   "tools.database.filesEmbed": "嵌入連結",
+  "tools.database.filesTabUpload": "上傳",
+  "tools.database.filesTabLink": "連結",
   "tools.database.addProperty": "+ 新增屬性",
   "tools.database.propertyName": "屬性名稱",
   "tools.database.propertyNameTaken": "此資料庫中已有名為「{name}」的屬性。",

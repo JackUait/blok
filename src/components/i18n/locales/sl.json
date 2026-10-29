@@ -1571,6 +1571,8 @@
   "tools.database.filesLinkLabel": "Povezava do datoteke",
   "tools.database.filesLinkPlaceholder": "Prilepite https://…",
   "tools.database.filesEmbed": "Vdelaj povezavo",
+  "tools.database.filesTabUpload": "Naloži",
+  "tools.database.filesTabLink": "Povezava",
   "tools.database.addProperty": "+ Dodaj lastnost",
   "tools.database.propertyName": "Ime lastnosti",
   "tools.database.propertyNameTaken": "Lastnost z imenom {name} v tej zbirki podatkov že obstaja.",

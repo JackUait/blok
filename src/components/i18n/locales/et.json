@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Faili link",
   "tools.database.filesLinkPlaceholder": "Kleebi https://…",
   "tools.database.filesEmbed": "Manusta link",
+  "tools.database.filesTabUpload": "Laadi üles",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Lisa omadus",
   "tools.database.propertyName": "Omaduse nimi",
   "tools.database.propertyNameTaken": "Selles andmebaasis on juba omadus nimega {name}.",

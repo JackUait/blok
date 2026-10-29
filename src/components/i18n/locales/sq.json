@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Lidhja e skedarit",
   "tools.database.filesLinkPlaceholder": "Ngjit https://…",
   "tools.database.filesEmbed": "Integro lidhjen",
+  "tools.database.filesTabUpload": "Ngarko",
+  "tools.database.filesTabLink": "Lidhje",
   "tools.database.addProperty": "+ Shto një veti",
   "tools.database.propertyName": "Emri i vetisë",
   "tools.database.propertyNameTaken": "Në këtë bazë të dhënash ekziston tashmë një veti me emrin {name}.",

@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Fillenke",
   "tools.database.filesLinkPlaceholder": "Lim inn https://…",
   "tools.database.filesEmbed": "Bygg inn lenke",
+  "tools.database.filesTabUpload": "Last opp",
+  "tools.database.filesTabLink": "Lenke",
   "tools.database.addProperty": "+ Legg til en egenskap",
   "tools.database.propertyName": "Egenskapsnavn",
   "tools.database.propertyNameTaken": "Det finnes allerede en egenskap med navnet {name} i denne databasen.",

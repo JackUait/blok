@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "파일 링크",
   "tools.database.filesLinkPlaceholder": "https://… 붙여넣기",
   "tools.database.filesEmbed": "링크 임베드",
+  "tools.database.filesTabUpload": "업로드",
+  "tools.database.filesTabLink": "링크",
   "tools.database.addProperty": "+ 속성 추가",
   "tools.database.propertyName": "속성 이름",
   "tools.database.propertyNameTaken": "이 데이터베이스에 이름이 {name}인 속성이 이미 있습니다.",

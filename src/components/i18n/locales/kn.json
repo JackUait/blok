@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ಫೈಲ್ ಲಿಂಕ್",
   "tools.database.filesLinkPlaceholder": "https://… ಅಂಟಿಸಿ",
   "tools.database.filesEmbed": "ಲಿಂಕ್ ಎಂಬೆಡ್ ಮಾಡಿ",
+  "tools.database.filesTabUpload": "ಅಪ್‌ಲೋಡ್",
+  "tools.database.filesTabLink": "ಲಿಂಕ್",
   "tools.database.addProperty": "+ ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
   "tools.database.propertyName": "ಗುಣಲಕ್ಷಣದ ಹೆಸರು",
   "tools.database.propertyNameTaken": "{name} ಹೆಸರಿನ ಗುಣಲಕ್ಷಣ ಈ ಡೇಟಾಬೇಸ್‌ನಲ್ಲಿ ಈಗಾಗಲೇ ಇದೆ.",

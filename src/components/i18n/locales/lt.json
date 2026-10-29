@@ -1571,6 +1571,8 @@
   "tools.database.filesLinkLabel": "Failo nuoroda",
   "tools.database.filesLinkPlaceholder": "Įklijuoti https://…",
   "tools.database.filesEmbed": "Įterpti nuorodą",
+  "tools.database.filesTabUpload": "Įkelti",
+  "tools.database.filesTabLink": "Nuoroda",
   "tools.database.addProperty": "+ Pridėti savybę",
   "tools.database.propertyName": "Savybės pavadinimas",
   "tools.database.propertyNameTaken": "Šioje duomenų bazėje jau yra savybė pavadinimu {name}.",

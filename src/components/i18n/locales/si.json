@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ගොනු සබැඳිය",
   "tools.database.filesLinkPlaceholder": "https://… අලවන්න",
   "tools.database.filesEmbed": "සබැඳිය කාවද්දන්න",
+  "tools.database.filesTabUpload": "උඩුගත",
+  "tools.database.filesTabLink": "සබැඳිය",
   "tools.database.addProperty": "+ ගුණාංගයක් එක් කරන්න",
   "tools.database.propertyName": "ගුණාංගයේ නම",
   "tools.database.propertyNameTaken": "{name} නමින් ගුණාංගයක් මෙම දත්ත ගබඩාවේ දැනටමත් ඇත.",

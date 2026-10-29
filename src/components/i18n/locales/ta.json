@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "கோப்பு இணைப்பு",
   "tools.database.filesLinkPlaceholder": "https://… ஐ ஒட்டவும்",
   "tools.database.filesEmbed": "இணைப்பை உட்பொதி",
+  "tools.database.filesTabUpload": "பதிவேற்று",
+  "tools.database.filesTabLink": "இணைப்பு",
   "tools.database.addProperty": "+ பண்பைச் சேர்",
   "tools.database.propertyName": "பண்பின் பெயர்",
   "tools.database.propertyNameTaken": "{name} என்ற பெயரில் ஒரு பண்பு இந்தத் தரவுத்தளத்தில் ஏற்கெனவே உள்ளது.",

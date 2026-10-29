@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "پیوند فایل",
   "tools.database.filesLinkPlaceholder": "https://… را جای‌گذاری کنید",
   "tools.database.filesEmbed": "جاسازی پیوند",
+  "tools.database.filesTabUpload": "بارگذاری",
+  "tools.database.filesTabLink": "پیوند",
   "tools.database.addProperty": "+ افزودن ویژگی",
   "tools.database.propertyName": "نام ویژگی",
   "tools.database.propertyNameTaken": "ویژگی‌ای با نام {name} از قبل در این پایگاه داده وجود دارد.",

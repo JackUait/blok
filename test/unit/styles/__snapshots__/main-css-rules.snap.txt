@@ -15462,6 +15462,160 @@ textarea[data-blok-database-cell-input] {
   overflow-y: auto;
 }
 
+[data-blok-popover-custom-class~='blok-database-table-cell-editor'] [data-blok-popover-container]:has([data-blok-database-files-editor][data-layout="table"]) {
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--blok-space-3));
+}
+
+[data-blok-database-files-editor][data-layout="table"] {
+  padding: var(--blok-space-0-75) var(--blok-space-1);
+}
+
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row], [data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add] {
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  font-size: 14px;
+  line-height: 16.8px;
+}
+
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row] > span:not([data-blok-database-file-chip-icon]) {
+  overflow: visible;
+}
+
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row] > [data-blok-database-file-chip-icon] {
+  flex: none;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-files-add] {
+  display: flex;
+  align-items: center;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-files-add] > span[aria-hidden] {
+  display: inline-flex;
+  flex: none;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-files-add] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[@media (hover: hover)] [data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-files-panel], [data-blok-database-files-panel][data-blok-top-layer][popover] {
+  box-sizing: border-box;
+  width: 300px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-popover-bg, var(--blok-popover-bg));
+  box-shadow: var(--blok-database-cell-editor-shadow);
+  color: var(--blok-database-ink);
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+
+[data-blok-database-files-panel][data-closing] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-blok-database-files-tabs] {
+  display: flex;
+  height: 40px;
+  padding: 0 var(--blok-space-2);
+  box-shadow: inset 0 -1px 0 var(--blok-database-table-border);
+}
+
+[data-blok-database-files-tab] {
+  position: relative;
+  align-self: center;
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font: inherit;
+  line-height: 16.8px;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[@media (hover: hover)] [data-blok-database-files-tab]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-files-tab][aria-selected="true"] {
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-files-tab][aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--blok-space-2);
+  bottom: -6px;
+  height: 2px;
+  background-color: var(--blok-database-ink);
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-tabpanel] {
+  padding: var(--blok-space-3) var(--blok-space-1) 10px;
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-tabpanel]:has([data-blok-database-files-link]) {
+  padding: var(--blok-space-2) 0 6px;
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-upload], [data-blok-database-files-panel] [data-blok-database-files-link-submit] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-new-bg);
+  font: inherit;
+  font-weight: 500;
+  line-height: 16.8px;
+  color: var(--blok-database-new-text);
+  cursor: pointer;
+}
+
+[@media (hover: hover)] [data-blok-database-files-panel] [data-blok-database-files-upload]:hover, [data-blok-database-files-panel] [data-blok-database-files-link-submit]:hover {
+  background-color: var(--blok-database-new-hover-bg);
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-link] {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-link-input] {
+  flex: none;
+  box-sizing: border-box;
+  width: auto;
+  height: 36px;
+  margin: var(--blok-space-1);
+}
+
+[data-blok-database-files-panel] [data-blok-database-files-link-submit] {
+  margin: var(--blok-space-1) var(--blok-space-3);
+}
+
 [data-blok-database-formula-editor] {
   display: flex;
   flex-direction: column;

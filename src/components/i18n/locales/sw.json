@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "Kiungo cha faili",
   "tools.database.filesLinkPlaceholder": "Bandika https://…",
   "tools.database.filesEmbed": "Pachika kiungo",
+  "tools.database.filesTabUpload": "Pakia",
+  "tools.database.filesTabLink": "Kiungo",
   "tools.database.addProperty": "+ Ongeza sifa",
   "tools.database.propertyName": "Jina la sifa",
   "tools.database.propertyNameTaken": "Sifa inayoitwa {name} tayari ipo katika hifadhidata hii.",

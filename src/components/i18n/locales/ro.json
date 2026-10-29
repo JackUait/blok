@@ -1569,6 +1569,8 @@
   "tools.database.filesLinkLabel": "Linkul fișierului",
   "tools.database.filesLinkPlaceholder": "Lipiți https://…",
   "tools.database.filesEmbed": "Încorporează linkul",
+  "tools.database.filesTabUpload": "Încarcă",
+  "tools.database.filesTabLink": "Link",
   "tools.database.addProperty": "+ Adaugă o proprietate",
   "tools.database.propertyName": "Numele proprietății",
   "tools.database.propertyNameTaken": "În această bază de date există deja o proprietate numită {name}.",

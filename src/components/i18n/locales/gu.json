@@ -1567,6 +1567,8 @@
   "tools.database.filesLinkLabel": "ફાઇલ લિંક",
   "tools.database.filesLinkPlaceholder": "https://… પેસ્ટ કરો",
   "tools.database.filesEmbed": "લિંક એમ્બેડ કરો",
+  "tools.database.filesTabUpload": "અપલોડ",
+  "tools.database.filesTabLink": "લિંક",
   "tools.database.addProperty": "+ ગુણધર્મ ઉમેરો",
   "tools.database.propertyName": "ગુણધર્મનું નામ",
   "tools.database.propertyNameTaken": "આ ડેટાબેઝમાં {name} નામનો ગુણધર્મ પહેલેથી છે.",

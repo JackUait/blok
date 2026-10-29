@@ -138,6 +138,10 @@ const EXEMPT_NON_MODAL_DIALOGS: Record<string, string> = {
     'DELIBERATE — "The picker is an anchored, non-modal dialog, so it advertises its open ' +
     'state on the trigger button (mirrors the alt-text popover) rather than inert-ing" the ' +
     'background; declaring aria-modal would lie about a background that stays reachable',
+  'tools/database/cells/files-editor.ts » panel':
+    'DELIBERATE — the table Upload / Link panel hangs under the files box it belongs to; the ' +
+    'box stays reachable (its first Escape closes only the panel) and an outside press closes ' +
+    'both, so aria-modal would lie about a background that stays reachable',
   'tools/video/controls.ts » menu':
     'DELIBERATE — the player settings card is anchored to the gear and non-modal: the video ' +
     'and page stay reachable and an outside press closes it, so aria-modal would be a lie',

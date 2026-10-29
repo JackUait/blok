@@ -161,6 +161,32 @@ test.describe('database New data source', () => {
     await expect(grid(page).getByRole('columnheader')).toHaveCount(2);
   });
 
+  // A linked view redraws a moment after the write. The menu must survive it and a scroll after it.
+  test('a rename from a linked view\'s header menu keeps the menu open, then the header shows it', async ({ page }) => {
+    await mount(page, bound);
+    await grid(page).getByRole('columnheader', { name: 'Stage' }).click();
+    const name = page.locator('[data-blok-database-property-menu-name-input]');
+    // The popover's outer host is a 0x0 box: its container is what shows.
+    const menu = page.locator('[data-blok-popover][data-blok-popover-opened="true"] [data-blok-popover-container]').filter({ has: name });
+
+    await expect(menu).toBeVisible();
+    await name.fill('Phase');
+    // Leaving the field saves the name.
+    await name.blur();
+    await expect.poll(async () => {
+      const source = (await save(page)).find((block) => block.id === 'src-b')?.data as { schema: Array<{ id: string; name: string }> } | undefined;
+
+      return source?.schema.find((property) => property.id === 'b-stage')?.name;
+    }).toBe('Phase');
+    await page.locator('[data-blok-database-table-scroller]').evaluate((scroller) => {
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    await expect(menu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(grid(page).getByRole('columnheader', { name: 'Phase' })).toBeVisible();
+  });
+
   test('Layout switches a second source\'s view to a board of its rows, and CSV exports them', async ({ page }) => {
     await mount(page, bound);
     const settings = page.getByTestId('database-toolbar-settings');

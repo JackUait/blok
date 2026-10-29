@@ -740,6 +740,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       ...this.settings.cellContext,
       i18n: this.i18n,
       readOnly: true,
+      shortUrls: true,
       ...rowCellContext(row, propDef.id),
       ...(this.settings.locale !== undefined ? { locale: this.settings.locale } : {}),
     });

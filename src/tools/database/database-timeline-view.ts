@@ -886,6 +886,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         i18n: this.options.i18n,
         readOnly: true,
         locale: this.options.locale,
+        shortUrls: true,
         ...rowCellContext(row, property.id),
       });
 

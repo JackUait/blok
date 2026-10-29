@@ -568,6 +568,19 @@ describe('DatabaseListView', () => {
       expect(site?.hasAttribute('data-editable')).toBe(true);
     });
 
+    // notion-spec-2 §24.1 (104-list-url.png): the table's cut, scheme hidden, path in grey.
+    it('cuts a URL as the table does: host, then the path\'s first 4, "…", last 6', () => {
+      const linked: PropertyDefinition[] = [...schema, { id: 'site', name: 'Site', type: 'url', position: 'a7' }];
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow({ id: 'r1', properties: { title: 'Row', site: 'https://example.com/abc/defg/hijk/lmno' } })],
+        titlePropertyId: 'title', schema: linked, visiblePropertyIds: ['site'],
+      }).createView();
+      const link = slot(list, 'site')?.querySelector('a[href]');
+
+      expect(link?.textContent).toBe('example.com/abc…k/lmno');
+      expect(link?.querySelector('[data-blok-database-url-path]')?.textContent).toBe('/abc…k/lmno');
+    });
+
     it('marks a slot editable only when its type has an editor and the list is editable', () => {
       const list = make();
 

@@ -219,6 +219,20 @@ describe('DatabaseTimelineView', () => {
       expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
     });
 
+    // notion-spec-2 §24.1 (113-timeline-url.png): the table's cut after a bar, scheme hidden.
+    it('cuts a URL after a bar as the table does', () => {
+      const withSite: PropertyDefinition[] = [...schema, { id: 'p-site', name: 'Site', type: 'url', position: 'a4' }];
+      const { root } = mount({
+        schema: withSite,
+        view: timelineView({ properties: [{ id: 'p-site', visible: true }] }),
+        groups: single([row('r1', 'Launch', '2026-10-09', { 'p-site': 'https://example.com/abc/defg/hijk/lmno' })]),
+      });
+      const link = bar(root, 'r1').querySelector('[data-property-id="p-site"] a[href]');
+
+      expect(link?.textContent).toBe('example.com/abc…k/lmno');
+      expect(link?.querySelector('[data-blok-database-url-path]')?.textContent).toBe('/abc…k/lmno');
+    });
+
     it('labels today\'s dot with the locale\'s day number', () => {
       const { root } = mount({ locale: 'ar-EG' });
 

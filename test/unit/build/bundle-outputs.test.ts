@@ -304,6 +304,15 @@ describe('CDN bundles ship compiled Tailwind CSS', () => {
       expect(code.includes('@tailwind utilities')).toBe(false)
       expect(code.includes('@theme')).toBe(false)
     })
+
+    it(`${bundle} keeps logical properties, like the ESM bundle`, () => {
+      const code = readFileSync(resolve(dist, bundle), 'utf-8')
+
+      // An old cssTarget lowers logical properties into `:lang()` rules keyed
+      // on the host page's language, which breaks RTL. Blok's CSS has none.
+      expect(code.includes(':lang(')).toBe(false)
+      expect(code.includes('padding-inline-start')).toBe(true)
+    })
   }
 })
 

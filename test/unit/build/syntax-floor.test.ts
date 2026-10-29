@@ -4,6 +4,8 @@ import ts from 'typescript'
 import { describe, it, expect } from 'vitest'
 
 import viteConfig from '../../../vite.config.mjs'
+import iifeConfig from '../../../vite.config.iife.mjs'
+import umdConfig from '../../../vite.config.umd.mjs'
 
 const dist = resolve(__dirname, '../../../dist')
 
@@ -101,11 +103,15 @@ describe('syntax floor scanner', () => {
 })
 
 describe('JS build target', () => {
-  it('matches the CSS browser floor', () => {
-    const { build } = viteConfig({ mode: 'production', command: 'build' })
-    expect(build?.cssTarget).toEqual(FLOOR)
-    expect(build?.target).toEqual(FLOOR)
-  })
+  // The CDN configs once had no cssTarget, so their CSS fell back to es2017
+  // and got the `:lang()` lowering that breaks RTL.
+  for (const [name, config] of [['ESM/CJS', viteConfig], ['IIFE', iifeConfig], ['UMD', umdConfig]] as const) {
+    it(`${name} build matches the CSS browser floor`, () => {
+      const { build } = config({ mode: 'production', command: 'build' })
+      expect(build?.cssTarget).toEqual(FLOOR)
+      expect(build?.target).toEqual(FLOOR)
+    })
+  }
 
   it('emits no syntax newer than the floor', () => {
     const hits = listJsFiles(dist).flatMap((file) =>

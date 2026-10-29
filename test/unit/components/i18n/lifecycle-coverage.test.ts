@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1910 + 136 + 520 + 4 closure for all 2570 keys', () => {
+  it('rebuilds a disjoint 1911 + 136 + 519 + 4 closure for all 2570 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -476,7 +476,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the table files panel's Upload and Link tabs, tools.database.filesTabUpload/filesTabLink, by literal.
       // +2: the Files Limit choice and its Replace row, tools.database.filesLimitOne/filesReplace, by literal.
       // +1: the URL header menu's Show full URL switch, by literal.
-      'executable-literal': 1910,
+      // +1: tools.database.rollupProperty, called by literal in the rollup setup menu (moved from registered-namespace-compatible).
+      'executable-literal': 1911,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -552,7 +553,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -3: settingsSearchProperty, settingsOn and settingsOff (see executable-literal).
       // -4: the groupSort* keys (see executable-literal).
       // -1: propertyNamePlaceholder (see executable-literal).
-      'registered-namespace-compatible': 520,
+      // -1: tools.database.rollupProperty (see executable-literal).
+      'registered-namespace-compatible': 519,
       'catalog-only': 4,
     });
     expect(

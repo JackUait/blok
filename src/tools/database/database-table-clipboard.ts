@@ -1,5 +1,7 @@
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { resolveLocale } from './cells/date-format';
 import { parseDateValue } from './cells/date-value';
+import { formatNumberValue, parseNumberText } from './cells/number-format';
 import type { CellContext } from './cells/types';
 import { personIdsOf } from './property-values';
 import { placeText, verificationStatus } from './tier3-values';
@@ -63,7 +65,10 @@ export const cellText = (property: PropertyDefinition, value: PropertyValue | un
       return listText(labels);
     }
     case 'number':
-      return typeof value === 'number' ? String(value) : '';
+      if (typeof value !== 'number') return '';
+
+      // Percent points with no rounding, so a paste (read as points, notion-spec-2 §19.7) gets the same value back.
+      return property.number?.format === 'percent' ? formatNumberValue(value, { format: 'percent' }, resolveLocale(context.locale)) : String(value);
     case 'person':
       return personIdsOf(value).join(', ');
     case 'relation': {
@@ -203,11 +208,9 @@ export const valueFromText = (property: PropertyDefinition, text: string, contex
     case 'email':
     case 'phone':
       return text;
-    case 'number': {
-      const number = Number(trimmed.replace(/,/g, ''));
-
-      return Number.isFinite(number) ? number : undefined;
-    }
+    // notion-spec-2 §19.7: read as typing reads it, so Percent takes "50" as 0.5.
+    case 'number':
+      return parseNumberText(trimmed, property.number ?? {}, resolveLocale(context.locale)) ?? undefined;
     case 'checkbox':
       return TRUE_WORDS.has(trimmed.toLowerCase());
     case 'select':

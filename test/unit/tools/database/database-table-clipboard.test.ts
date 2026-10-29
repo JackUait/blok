@@ -97,4 +97,30 @@ describe('table clipboard', () => {
     expect(valueFromText(date, 'soon')).toBeUndefined();
     expect(valueFromText(text, '')).toBeNull();
   });
+
+  // notion-spec-2 §19.7: in Percent a typed number is read as percent points; a paste reads the same way.
+  describe('percent cells', () => {
+    const percent: PropertyDefinition = { ...number, number: { format: 'percent' } };
+    const rounded: PropertyDefinition = { ...number, number: { format: 'percent', decimals: 0 } };
+
+    it.each([['50', 0.5], ['50%', 0.5], ['7.5', 0.075]])('a pasted "%s" stores %s, as typing it does', (pasted, stored) => {
+      expect(valueFromText(percent, pasted, { locale: 'en-US' })).toBe(stored);
+    });
+
+    it('a paste that is not a number is skipped, not cleared', () => {
+      expect(valueFromText(percent, 'abc', { locale: 'en-US' })).toBeUndefined();
+    });
+
+    it.each(['en-US', 'de-DE'])('copy and paste keep the stored value in %s', (locale) => {
+      [0.5, 0.075, -0.25, 0.123456].forEach((value) => {
+        [percent, rounded].forEach((property) => {
+          expect(valueFromText(property, cellText(property, value, { locale }), { locale })).toBeCloseTo(value, 12);
+        });
+      });
+    });
+
+    it('a percent cell copies as percent points', () => {
+      expect(cellText(percent, 0.5, { locale: 'en-US' })).toBe('50%');
+    });
+  });
 });

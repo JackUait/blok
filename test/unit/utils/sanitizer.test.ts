@@ -1633,3 +1633,19 @@ describe('legacy <b> becomes <strong>', () => {
     expect(sanitizeText('<br>a<blockquote>q</blockquote>', { b: {}, strong: {}, br: {} })).toBe('<br>aq');
   });
 });
+
+describe('stripUnsafeUrlsDeep namespaced URL attributes', () => {
+  // The HTML parser stores xlink:href in the XLink namespace, where neither
+  // the [href] selector nor getAttribute('href') can see it.
+  it('strips a javascript: xlink:href on an SVG link', () => {
+    const result = stripUnsafeUrlsDeep({ text: '<svg><a xlink:href="javascript:alert(1)"><text>x</text></a></svg>' }) as { text: string };
+
+    expect(result.text).not.toContain('javascript:');
+  });
+
+  it('keeps a safe xlink:href', () => {
+    const text = '<svg><a xlink:href="https://example.com"><text>x</text></a></svg>';
+
+    expect((stripUnsafeUrlsDeep({ text }) as { text: string }).text).toBe(text);
+  });
+});

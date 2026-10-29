@@ -17,22 +17,13 @@ import { BUILT_IN_TOOL_RUNTIMES } from '../shared/tool-actions';
 import type { ToolRuntimeRegistry } from '../shared/tool-actions/runtime';
 import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
 import { getEffectiveRuleForString, isPlaintextRule, walkSanitize, type StringCleaner } from '../shared/sanitize-walk';
-import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import { htmlToSegmentsNode } from './rich-text-node';
-import { sanitizeHtmlFragment } from './sanitize';
+import { sanitizeHtmlFragment, stripUnsafeUrlsFragment } from './sanitize';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
-
-// Match the editor's URL pass without a DOM.
-const URL_ATTR = /\s*(href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
-const stripUnsafeUrlAttributes = (html: string): string => html.indexOf('<') === -1 ? html : html.replace(
-  URL_ATTR,
-  (match: string, attribute: string, dq?: string, sq?: string, uq?: string) =>
-    hasUnsafeUrlProtocol(dq ?? sq ?? uq ?? '', attribute.toLowerCase()) ? '' : match
-);
 
 const cleanHeadless: StringCleaner = (value, rule, globalRules) => {
   if (isPlaintextRule(rule)) {
@@ -42,7 +33,7 @@ const cleanHeadless: StringCleaner = (value, rule, globalRules) => {
   const effective = getEffectiveRuleForString(rule, globalRules);
 
   if (effective === null) {
-    return stripUnsafeUrlAttributes(value);
+    return stripUnsafeUrlsFragment(value);
   }
 
   const anchorRule = effective.a;
@@ -55,7 +46,7 @@ const cleanHeadless: StringCleaner = (value, rule, globalRules) => {
 
 const urlsOnly = (value: unknown): unknown => {
   if (typeof value === 'string') {
-    return stripUnsafeUrlAttributes(value);
+    return stripUnsafeUrlsFragment(value);
   }
   if (isArray(value)) {
     return value.map(urlsOnly);

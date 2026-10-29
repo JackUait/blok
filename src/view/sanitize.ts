@@ -923,6 +923,73 @@ const needsSanitizing = (html: string): boolean => /[<>&\r\u0000\u00A0]/.test(ht
 const DIV_CONTEXT = parseFragment('<div></div>').childNodes[0] as HtmlElement;
 
 /**
+ * Retried on the input the parser refuses outright (where parse5 8.0.1 did): two adjacent low surrogates
+ * make it throw, and one such field must not cost the whole document. See
+ * `repairSurrogates`.
+ * @param source - fragment markup to parse in the div context
+ */
+const parseInDivContext = (source: string): HtmlDocumentFragment => {
+  try {
+    return parseFragment(DIV_CONTEXT, source);
+  } catch (error) {
+    const repaired = repairSurrogates(source);
+
+    // Same text again would fail again: a stack overflow is a RangeError too.
+    if (!(error instanceof RangeError) || repaired === source) {
+      throw error;
+    }
+
+    return parseFragment(DIV_CONTEXT, repaired);
+  }
+};
+
+const URL_ATTRIBUTE_NAME = /href|src/i;
+
+/** Removes the element's `href`/`src` values whose scheme can execute; true when any went. */
+const dropUnsafeUrlAttrs = (element: HtmlElement): boolean => {
+  const kept = element.attrs.filter((attr) => !((attr.name === 'href' || attr.name === 'src') && hasUnsafeUrlProtocol(attr.value, attr.name)));
+
+  if (kept.length === element.attrs.length) {
+    return false;
+  }
+  replaceAttrs(element, kept);
+
+  return true;
+};
+
+/**
+ * Remove `href`/`src` values whose scheme can execute, DOM-free, without tag
+ * allowlisting: the headless twin of `stripUnsafeUrls`. Returns the input
+ * byte for byte unless an attribute was removed, because a round trip
+ * re-escapes text that plaintext-like fields legitimately carry.
+ * @param html - fragment markup
+ */
+export const stripUnsafeUrlsFragment = (html: string): string => {
+  // Attribute names are never entity-decoded, so a field without these
+  // letters has no URL attribute. Skipping the parse matters on the server's
+  // interpreter, where a parse costs far more than this scan.
+  if (html.indexOf('<') === -1 || !URL_ATTRIBUTE_NAME.test(html)) {
+    return html;
+  }
+
+  const fragment = parseInDivContext(html);
+  const pending: HtmlParentNode[] = [ fragment ];
+  const removed = { any: false };
+
+  // A stack, not recursion: 10 000 nested tags must not overflow.
+  while (pending.length > 0) {
+    const elements = (pending.pop() as HtmlParentNode).childNodes.filter(isElementNode);
+
+    elements.forEach((element) => {
+      removed.any = dropUnsafeUrlAttrs(element) || removed.any;
+      pending.push(element, ...(isTemplateNode(element) ? [ element.content ] : []));
+    });
+  }
+
+  return removed.any ? serialize(fragment) : html;
+};
+
+/**
  * Sanitize an HTML fragment string against a {@link SanitizerConfig},
  * DOM-free. When the config is the {@link PLAINTEXT} sentinel the input is
  * treated as literal text and returned entity-escaped.
@@ -943,29 +1010,7 @@ export const sanitizeHtmlFragment = (
     return html;
   }
 
-  const contextElement = DIV_CONTEXT;
-  /**
-   * Retried on the input the parser refuses outright (where parse5 8.0.1 did): two adjacent low surrogates
-   * make it throw, and one such field must not cost the whole document. See
-   * `repairSurrogates`.
-   * @param source - fragment markup to parse in the div context
-   */
-  const parseInContext = (source: string): HtmlDocumentFragment => {
-    try {
-      return parseFragment(contextElement, source);
-    } catch (error) {
-      const repaired = repairSurrogates(source);
-
-      // Same text again would fail again: a stack overflow is a RangeError too.
-      if (!(error instanceof RangeError) || repaired === source) {
-        throw error;
-      }
-
-      return parseFragment(contextElement, repaired);
-    }
-  };
-
-  const fragment = parseInContext(html);
+  const fragment = parseInDivContext(html);
 
   sanitizeTree(fragment, config, transform);
   normalizeInlineMarkupFragment(fragment);

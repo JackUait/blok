@@ -32,6 +32,7 @@ import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sani
 import type { SavedData } from '../../../types/data-formats';
 import { protectPageReferenceAnchor } from '../../shared/page-reference';
 import { cleanHtml, type CleanerTags } from './html-cleaner';
+import { parseUntrustedHtml } from './inert-html';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
 import {
   cloneSanitizerConfig,
@@ -53,12 +54,6 @@ import { normalizeInlineMarkupHtml, renameLegacyBoldHtml } from './inline-normal
  * see {@link module:src/shared/sanitize-rules} for the definitions.
  */
 export { isSafeAttribute, PLAINTEXT };
-
-/**
- * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
- * name and its value so the value can be normalized before the scheme check.
- */
-const URL_ATTR_FALLBACK_PATTERN = /\s*(href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
 
 /**
  * Sanitize Blocks
@@ -183,44 +178,37 @@ export const stripUnsafeUrls = (value: string): string => {
     return value;
   }
 
-  if (typeof document !== 'undefined') {
-    // A detached <div> of an inert document: the same context the cleaner and
-    // a block's innerHTML parse in. A <template> parses a leading <col> in
-    // column-group mode and drops every later tag, so it would miss them.
-    const root = document.implementation.createHTMLDocument('').createElement('div');
+  // Needs a DOM, like clean(). Headless code uses stripUnsafeUrlsFragment
+  // in src/view/sanitize.ts.
+  // A detached <div> of an inert document: the same context the cleaner and
+  // a block's innerHTML parse in. A <template> parses a leading <col> in
+  // column-group mode and drops every later tag, so it would miss them.
+  const root = document.implementation.createHTMLDocument('').createElement('div');
 
-    root.innerHTML = value;
+  root.innerHTML = value;
 
-    const unsafe = Array.from(root.querySelectorAll('[href],[src]'))
-      .flatMap((element) => ['href', 'src']
-        .filter((attribute) => hasUnsafeUrlProtocol(element.getAttribute(attribute), attribute))
-        .map((attribute) => ({ element,
-          attribute })));
+  // By localName: `[href]` and getAttribute('href') miss xlink:href, which
+  // the parser puts in the XLink namespace, and an SVG link still follows it.
+  const unsafe = Array.from(root.querySelectorAll('*'))
+    .flatMap((element) => Array.from(element.attributes)
+      .filter(({ localName, value }) => (localName === 'href' || localName === 'src') && hasUnsafeUrlProtocol(value, localName))
+      .map((attribute) => ({ element,
+        attribute })));
 
-    /**
-     * The innerHTML round-trip is a parser, not a transform: it entity-encodes
-     * bare `<`/`&` and silently deletes text that looks like a stray end tag.
-     * That destroys plaintext fields (code, captions) which legitimately carry
-     * those characters. Only pay the round-trip when an attribute actually
-     * needs stripping — otherwise the input is returned byte-identical.
-     */
-    if (unsafe.length === 0) {
-      return value;
-    }
-
-    unsafe.forEach(({ element, attribute }) => element.removeAttribute(attribute));
-
-    return root.innerHTML;
+  /**
+   * The innerHTML round-trip is a parser, not a transform: it entity-encodes
+   * bare `<`/`&` and silently deletes text that looks like a stray end tag.
+   * That destroys plaintext fields (code, captions) which legitimately carry
+   * those characters. Only pay the round-trip when an attribute actually
+   * needs stripping — otherwise the input is returned byte-identical.
+   */
+  if (unsafe.length === 0) {
+    return value;
   }
 
-  return value.replace(
-    URL_ATTR_FALLBACK_PATTERN,
-    (match, attribute: string, doubleQuoted?: string, singleQuoted?: string, unquoted?: string) => {
-      const url = doubleQuoted ?? singleQuoted ?? unquoted ?? '';
+  unsafe.forEach(({ element, attribute }) => element.removeAttributeNode(attribute));
 
-      return hasUnsafeUrlProtocol(url, attribute.toLowerCase()) ? '' : match;
-    }
-  );
+  return root.innerHTML;
 };
 
 /**
@@ -352,12 +340,12 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
     return html;
   }
 
-  const template = document.createElement('template');
-
-  template.innerHTML = html;
+  // A <div>, as the cleaner parsed it: a <template> parses a leading <col> in
+  // column-group mode and drops every later tag with its text.
+  const root = parseUntrustedHtml(html);
 
   entries.forEach(([tag, rule]) => {
-    const elements = template.content.querySelectorAll(tag);
+    const elements = root.querySelectorAll(tag);
 
     elements.forEach((element) => {
       const ruleResult = (rule as (el: Element) => SanitizerRule)(element);
@@ -385,5 +373,5 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
     });
   });
 
-  return template.innerHTML;
+  return root.innerHTML;
 };

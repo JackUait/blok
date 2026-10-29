@@ -12796,6 +12796,20 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
+/* notion-live-3/relation-editor.png: the glyph spans 15px, 8px after "In" and 6px before the name.
+   A 21px svg draws IconDatabase that size; the word space and 3px give those gaps. */
+[data-blok-database-relation-scope-icon] {
+  display: inline-flex;
+  vertical-align: -5px;
+  margin-inline-end: var(--blok-space-0-75);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-relation-scope-icon] svg {
+  width: 21px;
+  height: 21px;
+}
+
 [data-blok-database-relation-scope] strong {
   font-weight: 600;
   color: var(--blok-database-ink);

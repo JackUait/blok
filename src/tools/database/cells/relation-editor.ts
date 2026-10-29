@@ -1,4 +1,4 @@
-import { IconMinus, IconPlus } from '../../../components/icons';
+import { IconDatabase, IconMinus, IconPlus } from '../../../components/icons';
 import type { PropertyDefinition, PropertyValue, RelationValue } from '../types';
 import { relationIdsOf } from '../relation-values';
 import { pagePlaceholderIcon } from '../page-icon';
@@ -111,7 +111,17 @@ class RelationEditor implements CellEditorHandle {
     bar.setAttribute('data-blok-database-relation-search-bar', '');
     chip.setAttribute('data-blok-database-relation-scope', '');
     name.textContent = scope;
-    chip.append(before, name, after);
+    if (this.ctx.coverCell === true) {
+      // notion-live-3/relation-editor.png: a database icon sits right before the name.
+      const icon = document.createElement('span');
+
+      icon.setAttribute('data-blok-database-relation-scope-icon', '');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.innerHTML = IconDatabase;
+      chip.append(before, icon, name, after);
+    } else {
+      chip.append(before, name, after);
+    }
     heading.setAttribute('data-blok-database-relation-heading', '');
     heading.textContent = this.ctx.i18n.t('tools.database.formRelationHeading');
     bar.append(this.search, chip);

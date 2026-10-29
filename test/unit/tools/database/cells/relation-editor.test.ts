@@ -121,6 +121,18 @@ describe('relation editor', () => {
       expect(search().placeholder).toBe('tools.database.relationSearchPlaceholder');
     });
 
+    // notion-live-3/relation-editor.png: "In", a database icon, then the name.
+    it('puts a database icon right before the database name', () => {
+      openInTable();
+
+      const name = document.querySelector('[data-blok-database-relation-scope] strong');
+      const icon = name?.previousElementSibling;
+
+      expect(icon?.hasAttribute('data-blok-database-relation-scope-icon')).toBe(true);
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(icon?.querySelector('ellipse')).not.toBeNull();
+    });
+
     // notion-spec-2 §19.2 (02-rel-reopen.png): linked pages first under "1 selected", then "Select more".
     describe('with pages already linked', () => {
       const openLinked = (overrides: Parameters<typeof makeEditorContext>[0] = {}): void => {

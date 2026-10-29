@@ -87,6 +87,15 @@ describe('cell editor CSS', () => {
     expect(declared('[data-blok-database-select-search]', 'width')).toEqual(['0']);
   });
 
+  // notion-live-3/relation-editor.png: the database glyph is 15px tall, 8px after "In" and 6px before the name.
+  it('sizes the relation head database icon 21px with 3px before the name', () => {
+    const ICON = '[data-blok-database-relation-scope-icon]';
+
+    expect(declared(`${ICON} svg`, 'width')).toEqual(['21px']);
+    expect(declared(`${ICON} svg`, 'height')).toEqual(['21px']);
+    expect(declared(ICON, 'margin-inline-end')).toEqual(['var(--blok-space-0-75)']);
+  });
+
   // notion-spec-2 §19.16: a person's avatar is a plain circle with no ring or shadow. Notion's 100% draws
   // the same circle on a square box; the radius law spells a circle 50%.
   it.each(['[data-blok-database-person-avatar]', '[data-blok-database-person-initial]'])('draws %s as a circle with no ring', (selector) => {

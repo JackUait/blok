@@ -1277,6 +1277,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_RELATION_CHIP_BYTES = 1_107;
     // database.css: the option search takes no natural width, so the picker stays 300 (notion-spec-2 §19.1).
     const DATABASE_SELECT_SEARCH_WIDTH_BYTES = 154;
+    // database.css: the database icon in the table relation picker's head (notion-live-3/relation-editor.png).
+    const DATABASE_RELATION_SCOPE_ICON_BYTES = 456;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1562,7 +1564,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FILES_PICKER_BYTES
       + DATABASE_URL_PATH_AND_SWITCH_ROW_BYTES
       + DATABASE_RELATION_CHIP_BYTES
-      + DATABASE_SELECT_SEARCH_WIDTH_BYTES;
+      + DATABASE_SELECT_SEARCH_WIDTH_BYTES
+      + DATABASE_RELATION_SCOPE_ICON_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

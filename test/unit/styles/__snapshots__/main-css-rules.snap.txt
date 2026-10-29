@@ -15788,6 +15788,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-formula-editor]) {
+  min-inline-size: 0;
+  max-inline-size: calc(100vw - 2 * var(--blok-space-3));
   border-radius: var(--blok-radius-dialog);
 }
 

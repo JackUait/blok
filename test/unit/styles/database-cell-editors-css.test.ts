@@ -30,6 +30,14 @@ describe('cell editor CSS', () => {
       expect(colors).toContain('--blok-radius-dialog: var(--blok-radius-12)');
     });
 
+    // §18.3: the box's bottom sits 12px from the window edge; a window under 764px must not cut its ×.
+    it('never runs past the window', () => {
+      expect(declared("[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-formula-editor])", 'max-inline-size'))
+        .toEqual(['calc(100vw - 2 * var(--blok-space-3))']);
+      expect(declared("[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-formula-editor])", 'min-inline-size'))
+        .toEqual(['0']);
+    });
+
     it('puts the title first and the close × at the row end', () => {
       expect(declared('[data-blok-database-formula-head]', 'display')).toEqual(['flex']);
       expect(declared('[data-blok-database-formula-close]', 'margin-inline-start')).toEqual(['auto']);

@@ -13181,6 +13181,9 @@ textarea[data-blok-database-cell-input] {
 
 /* notion-spec-2 §18.3: the Edit formula box is radius 12px. */
 [data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-formula-editor]) {
+  /* The popover's min-width is its --width (740); without 0 here the cap cannot win. */
+  min-inline-size: 0;
+  max-inline-size: calc(100vw - 2 * var(--blok-space-3));
   border-radius: var(--blok-radius-dialog);
 }
 

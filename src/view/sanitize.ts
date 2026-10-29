@@ -2,17 +2,18 @@
  * DOM-free HTML sanitizer for the synchronous view renderer.
  *
  * Enforces the same {@link SanitizerConfig} rule shapes as the editor's
- * html-janitor pipeline (`src/components/utils/sanitizer.ts` → clean +
+ * sanitizer pipeline (`src/components/utils/sanitizer.ts` → clean +
  * applyAttributeOverrides + stripUnsafeUrls), but over a src/html tree so it
  * runs in Node / workers / RSC with no `document`/`window` access.
  *
- * Semantics matched against html-janitor (node_modules/html-janitor):
+ * Semantics matched against the DOM cleaner (`src/components/utils/html-cleaner.ts`):
  * - non-allowlisted (or `false`) tag → unwrapped, children survive;
  *   `script`/`style` are the exception — dropped with their contents;
  * - comments are removed;
  * - whitespace-only text nodes adjacent to block-element siblings are removed;
  * - inline elements containing block elements are unwrapped (invalid markup);
- * - nested block elements are unwrapped (janitor keepNestedBlockElements=false);
+ * - nested block elements are unwrapped;
+ * - `on*` attributes never survive;
  * - attr-map string values keep the attribute only when the value matches;
  *   FUNCTION-rule string values are forced onto the element afterwards
  *   (mirrors `applyAttributeOverrides`);
@@ -41,7 +42,7 @@ import { repairSurrogates } from './html-text';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
 /**
- * Block/inline tag lists copied from html-janitor — they drive its
+ * Block/inline tag lists copied from the DOM cleaner — they drive its
  * whitespace-trimming and invalid-nesting heuristics, which must match.
  */
 const BLOCK_ELEMENT_NAMES = new Set(['p', 'li', 'td', 'th', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre']);
@@ -90,7 +91,7 @@ const isTemplateNode = (node: HtmlElement): node is HtmlTemplate => {
 };
 
 /**
- * Whether the element is one of html-janitor's "block" tags.
+ * Whether the element is one of the DOM cleaner's "block" tags.
  * @param node - child node
  */
 const isBlockElement = (node: HtmlChildNode | null): boolean => {
@@ -99,7 +100,7 @@ const isBlockElement = (node: HtmlChildNode | null): boolean => {
 
 /**
  * Nearest element sibling in the given direction, skipping text/comments —
- * mirrors DOM previousElementSibling/nextElementSibling for the janitor
+ * mirrors DOM previousElementSibling/nextElementSibling for the DOM cleaner
  * whitespace heuristic.
  * @param parent - parent node whose children are scanned
  * @param index - index of the node whose sibling is requested
@@ -392,7 +393,7 @@ const UNWRAP: RuleResolution = { action: 'unwrap' };
 /**
  * Resolve a tag rule against a concrete element into keep/unwrap + an
  * attribute decision, reproducing the editor pipeline's rule shaping
- * (`cloneTagConfig` / `wrapFunctionRule`) on top of janitor's raw semantics.
+ * (`cloneTagConfig` / `wrapFunctionRule`) on top of the DOM cleaner's raw semantics.
  * @param rule - configured rule for the element's tag (may be undefined)
  * @param node - the element being evaluated
  */
@@ -427,13 +428,16 @@ const resolveRule = (rule: SanitizerRule | undefined, node: HtmlElement): RuleRe
 
 /**
  * Filter an element's attributes per the attr decision, then force
- * function-rule string values (mirrors janitor attr loop +
+ * function-rule string values (mirrors the DOM cleaner's attr loop +
  * applyAttributeOverrides ordering: matching attrs stay in place, forced
  * values that were absent or mismatched are appended).
  * @param node - element to filter
  * @param decision - attribute decision from {@link resolveRule}
  */
 const filterAttributes = (node: HtmlElement, decision: AttrDecision): void => {
+  // Event handlers never survive, whatever the rule says (as in html-cleaner.ts).
+  replaceAttrs(node, node.attrs.filter((attr) => !attr.name.toLowerCase().startsWith('on')));
+
   if (decision.kind === 'all') {
     return;
   }
@@ -503,14 +507,14 @@ const applyUrlPolicy = (node: HtmlElement, transform: FragmentUrlTransform | und
 };
 
 /**
- * Sanitize a parent's children in place — a direct port of html-janitor's
+ * Sanitize a parent's children in place — a direct port of the DOM cleaner's
  * `_sanitize` walk (including its restart-after-mutation behavior, which
  * re-evaluates hoisted children in their new parent context).
  * @param parent - node whose children are sanitized
  * @param config - tag allowlist
  * @param parentIsBlock - whether the parent counts as a block element
  * @param parentIsTop - whether the parent is the top container (nested-block
- * unwrapping is suppressed there, as janitor's root <div> has no parent)
+ * unwrapping is suppressed there, as the DOM cleaner's root <div> has no parent)
  */
 const sanitizeChildren = (
   parent: HtmlParentNode,
@@ -521,7 +525,7 @@ const sanitizeChildren = (
 ): void => {
   /**
    * Handle one child; returns the index to continue scanning from
-   * (0 after any structural mutation — janitor restarts the parent walk).
+   * (0 after any structural mutation — the DOM cleaner restarts the parent walk).
    * @param index - position of the child in parent.childNodes
    */
   const sanitizeChildAt = (index: number): number => {
@@ -556,7 +560,7 @@ const sanitizeChildren = (
     const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
 
     if (resolution.action === 'unwrap' || isInvalidInline || isNestedBlock) {
-      // janitor drops SCRIPT/STYLE contents instead of hoisting them
+      // the DOM cleaner drops SCRIPT/STYLE contents instead of hoisting them
       const hoisted = tagName === 'script' || tagName === 'style' ? [] : node.childNodes;
 
       for (const child of hoisted) {
@@ -571,9 +575,8 @@ const sanitizeChildren = (
     applyUrlPolicy(node, transform);
 
     if (isTemplateNode(node)) {
-      // Stricter than janitor (which cannot see template content via its
-      // TreeWalker): the serializer writes template.content, so it must be
-      // sanitized or an allowed <template> would leak arbitrary markup.
+      // As in the DOM cleaner: the serializer writes template.content, so it must
+      // be sanitized or an allowed <template> would leak arbitrary markup.
       sanitizeChildren(node.content, config, false, true, transform);
     }
 
@@ -755,7 +758,7 @@ const normalizeInlineMarkupFragment = (fragment: HtmlParentNode): void => {
 const needsSanitizing = (html: string): boolean => /[<>&\r\u0000\u00A0]/.test(html);
 
 /**
- * The <div> every fragment is parsed in, to match the DOM pipeline (janitor
+ * The <div> every fragment is parsed in, to match the DOM pipeline (the DOM cleaner
  * parses into a detached <div>); the parser's default context is <template>, which
  * treats table fragments differently. The parser only reads the context element, so
  * one is built once and shared — building it per call parses a second fragment

@@ -17,7 +17,7 @@ import { parseUntrustedHtml } from '../../utils/inert-html';
 
 const SINGLE_BLOCK_CONTAINERS = 'blockquote, pre, li';
 
-/** Divs here are left alone: html-janitor unwraps a `<p>` nested in them too. */
+/** Divs here are left alone: the cleaner unwraps a `<p>` nested in them too. */
 const LEAVE_ALONE_INSIDE = 'td, th, p, h1, h2, h3, h4, h5, h6';
 
 export function preprocessDivLines(html: string): string {

@@ -37,6 +37,11 @@ describe('view sanitizeHtmlFragment', () => {
       expect(result).toBe('hi');
     });
 
+    it('drops on* attributes even when a rule lists them or keeps every attribute', () => {
+      expect(sanitizeHtmlFragment('<b onclick="x()" class="c">b</b>', { b: { onclick: true, class: true } })).toBe('<b class="c">b</b>');
+      expect(sanitizeHtmlFragment('<b onclick="x()" class="c">b</b>', { b: () => true })).toBe('<b class="c">b</b>');
+    });
+
     it('drops attributes named like Object.prototype keys', () => {
       const result = sanitizeHtmlFragment('<b constructor="1" __proto__="2" tostring="3">b</b>', { b: {} });
 
@@ -100,11 +105,11 @@ describe('view sanitizeHtmlFragment', () => {
       expect(result).toBe('inner');
     });
 
-    it('function rule returning true keeps all attributes', () => {
+    it('function rule returning true keeps all attributes except event handlers', () => {
       const rule: SanitizerRule = () => true;
       const result = sanitizeHtmlFragment('<span foo="1" onclick="x()">inner</span>', { span: rule });
 
-      expect(result).toBe('<span foo="1" onclick="x()">inner</span>');
+      expect(result).toBe('<span foo="1">inner</span>');
     });
 
     it('function rule returning null keeps the tag without attributes (wrapFunctionRule semantics)', () => {

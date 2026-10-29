@@ -5,7 +5,8 @@ import {SanitizerConfig} from '../index';
  */
 export interface Sanitizer {
   /**
-   * Clean taint string with html and returns clean string
+   * Clean taint string with html and returns clean string.
+   * `on*` event handler attributes are always removed, whatever the config says.
    *
    * @param {string} taintString
    * @param {SanitizerConfig} config - configuration for sanitizer

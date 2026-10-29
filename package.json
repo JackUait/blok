@@ -271,7 +271,6 @@
     "eslint-plugin-testing-library": "^7.16.2",
     "fake-indexeddb": "6.2.6",
     "glob": "13.0.6",
-    "html-janitor": "2.0.4",
     "husky": "9.1.7",
     "i18next": "26.5.10",
     "jscpd": "5.4.2",

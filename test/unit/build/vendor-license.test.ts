@@ -9,7 +9,6 @@ const PERMISSIVE = ['MIT', 'Apache-2.0', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 
 // Must match the named exceptions in vite.config.mjs's license gate.
 // elkjs is EPL-2.0: mermaid 12 imports it for its default ELK layout.
 const NAMED_EXCEPTIONS: Record<string, string> = {
-  'html-janitor': 'null',
   khroma: 'null',
   elkjs: 'EPL-2.0',
 }

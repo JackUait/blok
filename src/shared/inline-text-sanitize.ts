@@ -22,7 +22,7 @@ const ALLOWED_COLOR_STYLE_PROPS = new Set(['color', 'background-color']);
  * Function rule preserving an inline element's color/background-color styles
  * while removing every other CSS property. Mirrors the Marker inline tool so
  * colored text survives save, paste, and conversion identically.
- * @param node - live DOM node provided by HTMLJanitor
+ * @param node - the cleaner's copy of the node, in its sandbox document
  * @returns attribute config keeping `style` only when a color remains
  */
 export const preserveColorStyles = (node: Element): { [attr: string]: boolean | string } => {
@@ -44,19 +44,19 @@ export const preserveColorStyles = (node: Element): { [attr: string]: boolean | 
  * span's children are REPLACED with that source.
  *
  * Rewriting the children is the load-bearing half. Stripping the KaTeX tags is
- * not enough — HTMLJanitor unwraps a rejected tag and keeps its text, so the
+ * not enough — the cleaner unwraps a rejected tag and keeps its text, so the
  * MathML layer, the `<annotation>` and the hidden HTML layer all collapse into
  * one run of text (`E=mc^2` persists as `E=mc2E=mc^2E=mc2`). See the law in
  * `src/shared/equation-mark.ts`. The node handed to a rule belongs to
- * HTMLJanitor's detached sandbox document, never to the live editor, so this
+ * the cleaner's detached sandbox document, never to the live editor, so this
  * mutates a copy — the same way {@link preserveColorStyles} prunes styles.
  *
- * Decorative / unknown spans return `false` rather than `{}`: HTMLJanitor only
+ * Decorative / unknown spans return `false` rather than `{}`: the cleaner only
  * unwraps a node when its rule is `false`/`undefined`. Returning `{}` keeps the
  * tag (just stripping its attributes), which would leak every `<span>` through
  * as a bare `<span>` — `text` tools allow `span` ONLY to round-trip equations,
  * so a span without `data-latex` must be unwrapped, not emptied.
- * @param node - live DOM node provided by HTMLJanitor
+ * @param node - the cleaner's copy of the node, in its sandbox document
  * @returns attribute config keeping `data-latex` when present, else `false` to drop the tag
  */
 export const preserveEquationSpan = (node: Element): { [attr: string]: boolean | string } | false => {
@@ -67,7 +67,7 @@ export const preserveEquationSpan = (node: Element): { [attr: string]: boolean |
   }
 
   if (node.textContent !== latex) {
-    // eslint-disable-next-line no-param-reassign -- intentional: rewrites HTMLJanitor's detached sandbox node, never the live editor
+    // eslint-disable-next-line no-param-reassign -- intentional: rewrites the cleaner's detached sandbox node, never the live editor
     node.textContent = latex;
   }
 

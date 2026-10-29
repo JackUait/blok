@@ -287,6 +287,44 @@ describe('sanitizer', () => {
         expect(block.data.text).toBe('<b>a</b>hi');
       });
     });
+
+    it('unwraps an ordinary pasted form and keeps its text', () => {
+      const html = '<p>Intro</p><form action="/x"><label>Name</label><input name="name"><input id="title"><button id="submit">Send</button></form>';
+
+      expect(clean(html, { p: {} })).toBe('<p>Intro</p>NameSend');
+    });
+
+    describe('holes the old html-janitor engine left open', () => {
+      it('drops on* attributes even when the tag rule is a bare true', () => {
+        expect(clean('<b onclick="alert(1)" class="c" ONMOUSEOVER="x()">b</b>', { b: true })).toBe('<b class="c">b</b>');
+      });
+
+      it('drops on* attributes even when the config lists them', () => {
+        expect(clean('<b onclick="alert(1)">b</b>', { b: { onclick: true } })).toBe('<b>b</b>');
+      });
+
+      it('cleans inside an allowed <template>, not just around it', () => {
+        const config = { template: {}, img: { src: true }, b: {} };
+
+        expect(clean('<template><img src=x onerror="alert(1)"><b class="c">k</b><x>t</x></template>', config))
+          .toBe('<template><img src="x"><b>k</b>t</template>');
+      });
+
+      it('drops script text inside svg, not only in HTML', () => {
+        expect(clean('<svg><script>alert(1)</script></svg>x', {})).toBe('x');
+      });
+
+      it('treats a null tag rule as {} instead of throwing', () => {
+        const config = { p: null } as unknown as SanitizerConfig;
+
+        expect(clean('<p class="a">x</p>', config)).toBe('<p>x</p>');
+      });
+
+      it('cleans 20 000 removable siblings without overflowing the stack', () => {
+        // Leading comments: jsdom's insertBefore/removeChild mid-list is O(n), browsers' is not.
+        expect(clean(`${'<!-- c -->'.repeat(20000)}end`, {})).toBe('end');
+      });
+    });
   });
 
   describe('composeSanitizerConfig', () => {

@@ -2698,7 +2698,7 @@ class CodeTool {
         name: "sanitizer.clean(taintString, config)",
         returnType: "string",
         description:
-          "Clean an HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing. Allowlisting `href`/`src` allows the attribute, not its scheme. `clean()` also drops URL values that can execute (`javascript:`, `data:text/html`, `data:image/svg+xml`), so an allowlisted anchor can never come back as a live script link.",
+          "Clean an HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing.\n\nAllowlisting `href`/`src` allows the attribute, not its scheme. `clean()` also drops URL values that can execute (`javascript:`, `data:text/html`, `data:image/svg+xml`), so an allowlisted anchor can never come back as a live script link.\n\nEvent handler attributes (`onclick`, `onerror` and every other `on*`) are always removed, even when a rule lists them or keeps every attribute with `true`. An allowed `<template>` has its content cleaned with the same rules.",
         example: `const dirtyHtml = '<script>alert("xss")</script><p>Hello</p>';
 const clean = editor.sanitizer.clean(dirtyHtml, {
   p: true,  // Allow <p> tags
@@ -5238,7 +5238,7 @@ htmlTextContent('<b>Intro</b> &amp; more'); // → 'Intro & more'`,
         name: "sanitizeHtmlFragment(html, config)",
         returnType: "string",
         description:
-          "Sanitize an HTML fragment against a sanitizer config with no DOM. It runs on Blok's own HTML parser and matches the editor's html-janitor semantics. `config` is a tag → rule allowlist, or the `'plaintext'` sentinel to strip markup entirely. It is the DOM-free counterpart of `api.sanitizer.clean()`, so use it in Node, workers and RSC, where the editor's sanitizer cannot run.",
+          "Sanitize an HTML fragment against a sanitizer config with no DOM. It runs on Blok's own HTML parser and follows the same rules as the editor's sanitizer. `config` is a tag → rule allowlist, or the `'plaintext'` sentinel to strip markup entirely. It is the DOM-free counterpart of `api.sanitizer.clean()`, so use it in Node, workers and RSC, where the editor's sanitizer cannot run.",
         example: `import { sanitizeHtmlFragment } from '@bloklabs/core/view';
 
 sanitizeHtmlFragment('<b>bold</b><script>x()</script>', { b: {} });

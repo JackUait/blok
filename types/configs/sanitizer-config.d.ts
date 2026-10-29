@@ -1,6 +1,13 @@
 /**
- * Sanitizer config of each HTML element
- * @see {@link https://github.com/guardian/html-janitor#options}
+ * Rule for one HTML tag.
+ * - `true` keeps the tag. `api.sanitizer.clean()` keeps all its attributes; saved block data keeps only safe ones.
+ * - `false`, or a tag left out, unwraps the tag: its text and children stay. Script and style content is dropped.
+ * - An object keeps the tag and lists its attributes. `true` keeps one, `false` or a missing key drops it,
+ *   and a string keeps it only when the value is exactly that string.
+ *
+ * `on*` event handler attributes are always dropped.
+ *
+ * A function rule must depend only on the element and what is inside it, not on its siblings or parent.
  */
 export type TagConfig = boolean | { [attr: string]: boolean | string };
 
@@ -26,8 +33,7 @@ export type SanitizerRule = TagConfig | PlaintextRule | ((el: Element) => TagCon
 
 export interface SanitizerConfig {
   /**
-   * Tag name and params not to be stripped off
-   * @see {@link https://github.com/guardian/html-janitor}
+   * Tag name and the rule that keeps it. See {@link TagConfig}.
    *
    * @example Save P tags
    * p: true
@@ -37,9 +43,9 @@ export interface SanitizerConfig {
    *   href: true
    * }
    *
-   * @example Save A tags with TARGET="_blank" attribute
+   * @example Save A tags only when TARGET is "_blank"
    * a: function (aTag) {
-   *   return aTag.target === '_black';
+   *   return aTag.target === '_blank';
    * }
    *
    * @example Save U tags that are not empty

@@ -1,7 +1,7 @@
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
 
 /**
- * Stands in for a `<pre>` inside a table cell during paste. html-janitor
+ * Stands in for a `<pre>` inside a table cell during paste. The cleaner
  * unwraps a `<pre>` nested in a `<td>` (both are block tags to it), so the
  * code would land as plain text. It does not know this tag, so it survives.
  */

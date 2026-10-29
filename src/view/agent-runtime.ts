@@ -26,7 +26,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 
-// Match the editor's no-DOM URL pass without importing html-janitor.
+// Match the editor's URL pass without a DOM.
 const URL_ATTR = /\s*(href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
 const stripUnsafeUrlAttributes = (html: string): string => html.indexOf('<') === -1 ? html : html.replace(
   URL_ATTR,

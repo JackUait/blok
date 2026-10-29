@@ -68,12 +68,6 @@ export default defineConfig(({ mode }) => {
             thirdParty: {
               allow: {
                 test: (dependency) => {
-                  // Manually allow html-janitor (https://github.com/guardian/html-janitor/blob/master/LICENSE)
-                  // because of missing LICENSE file in published package
-                  if (dependency.name === 'html-janitor') {
-                    return true;
-                  }
-
                   // Manually allow khroma (MIT, see node_modules/khroma/license)
                   // because package.json is missing the "license" field
                   if (dependency.name === 'khroma') {

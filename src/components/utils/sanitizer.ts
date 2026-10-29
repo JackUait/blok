@@ -27,12 +27,11 @@
  * }
  */
 
-import HTMLJanitor from 'html-janitor';
-
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
 import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
 import { protectPageReferenceAnchor } from '../../shared/page-reference';
+import { cleanHtml, type CleanerTags } from './html-cleaner';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
 import {
   cloneSanitizerConfig,
@@ -104,39 +103,26 @@ export const sanitizeBlocks = (
  */
 export const clean = (taintString: string, customConfig: SanitizerConfig = {}): string => {
   /**
-   * PLAINTEXT is a field-level directive, not a tag rule — html-janitor has no
-   * meaning for it. Drop such entries at the boundary so a config carrying one
-   * can never be handed to the parser.
+   * PLAINTEXT is a field-level directive, not a tag rule. Drop such entries at
+   * the boundary so a config carrying one never reaches the cleaner.
    */
-  // No prototype: html-janitor reads `tags[nodeName]` without an own-key check,
-  // so a `<constructor>` tag would get `Object` as its rule and keep every attribute.
-  const tags = Object.assign(
-    Object.create(null) as Record<string, TagConfig | ((el: Element) => TagConfig)>,
-    Object.fromEntries(Object.entries(customConfig).filter(([, rule]) => !isPlaintextRule(rule)))
+  const tags: CleanerTags = Object.fromEntries(
+    Object.entries(customConfig).filter((entry): entry is [string, Exclude<SanitizerRule, 'plaintext'>] => !isPlaintextRule(entry[1]))
   );
   const anchorRule = tags.a;
 
   if (anchorRule !== undefined && anchorRule !== false) {
-    tags.a = protectPageReferenceAnchor(anchorRule);
+    tags.a = protectPageReferenceAnchor(anchorRule as TagConfig | ((el: Element) => TagConfig));
   }
 
-  const sanitizerConfig = {
-    tags,
-  };
-
   /**
-   * API client can use custom config to manage sanitize process
-   */
-  const sanitizerInstance = new HTMLJanitor(sanitizerConfig);
-
-  /**
-   * html-janitor allowlists the `href`/`src` ATTRIBUTE and never looks at its
+   * The cleaner allowlists the `href`/`src` ATTRIBUTE and never looks at its
    * value, so an allowlisted anchor keeps whatever scheme it carried. The
    * scheme pass belongs here rather than at each call site: `clean()` is the
    * public sanitizer (`api.sanitizer.clean`) and every caller that forgot it
    * shipped a live `javascript:` link.
    */
-  return stripUnsafeUrls(sanitizerInstance.clean(taintString));
+  return stripUnsafeUrls(cleanHtml(taintString, tags));
 };
 
 /**

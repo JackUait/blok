@@ -363,6 +363,25 @@ test.describe('copy and paste', () => {
       await expect(block.getByRole('strong')).toHaveText('Some text');
     });
 
+    // A <form> lets a named control shadow its DOM properties, so a walk that
+    // reads them strays; each engine does this in its own way. Paste swallows
+    // a sanitizer error and falls back to text, so this calls the sanitizer itself.
+    test('should clean around a pasted form whose controls shadow its properties', async ({ page }) => {
+      await createBlok(page);
+
+      const sanitized = await page.evaluate(() => {
+        const shadows = [ 'previousSibling', 'nextSibling', 'nodeType', 'nodeName', 'attributes', 'childNodes' ]
+          .map((name) => `<input name="${name}">`)
+          .join('');
+        const html = `<p>before<img src="x" onerror="alert(1)"><form>${shadows}</form><img src="x" onerror="alert(2)">after</p>`;
+
+        return window.blokInstance?.sanitizer.clean(html, { p: {}, img: { src: true } });
+      });
+
+      // The parser closes the <p> where the <form> starts.
+      expect(sanitized).toBe('<p>before<img src="x"></p><img src="x">after<p></p>');
+    });
+
     test('should paste several blocks if plain text contains new lines', async ({ page }) => {
       await createBlok(page);
 

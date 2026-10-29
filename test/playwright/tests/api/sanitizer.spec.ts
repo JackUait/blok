@@ -103,4 +103,28 @@ test.describe('api.sanitizer', () => {
     expect(sanitized).toContain('<em>content</em>');
     expect(sanitized).not.toContain('style=');
   });
+
+  // A <form> lets a named control shadow its own DOM properties; jsdom does not, so this runs in a browser.
+  test('clean keeps no handler when a form shadows its DOM properties', async ({ page }) => {
+    const results = await page.evaluate(() => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+
+      const shadows = [ 'previousSibling', 'nextSibling', 'firstChild', 'nodeName', 'nodeType', 'attributes', 'childNodes', 'removeChild', 'insertBefore', 'removeAttribute' ]
+        .map((name) => `<input name="${name}">`)
+        .join('');
+      const dirtyHtml = `<p>a<img src="x" onerror="alert(1)"><form>${shadows}<img src="x" onerror="alert(2)"></form><img src="x" onerror="alert(3)">b</p>`;
+      return [
+        window.blokInstance.sanitizer.clean(dirtyHtml, { p: {}, img: { src: true } }),
+        window.blokInstance.sanitizer.clean(dirtyHtml, { p: {}, img: { src: true }, form: {}, input: { name: true } }),
+      ];
+    });
+
+    for (const sanitized of results) {
+      expect(sanitized).not.toContain('onerror');
+      expect(sanitized).toContain('a<img src="x">');
+      expect(sanitized).toContain('<img src="x">b');
+    }
+  });
 });

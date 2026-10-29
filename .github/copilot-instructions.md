@@ -429,4 +429,4 @@ cd docs && yarn test
 2. **JSON Format**: Clean structured output, each block: `{ id, type, data, tunes }`
 3. **Hierarchical Model**: Blocks can have `parentId` and `contentIds` (flat structure with references)
 4. **Progressive Enhancement**: Uses `requestIdleCallback` for non-critical setup
-5. **Sanitization**: HTML Janitor for cleaning pasted content
+5. **Sanitization**: Blok's own allowlist cleaner (`src/components/utils/html-cleaner.ts`) for cleaning pasted content

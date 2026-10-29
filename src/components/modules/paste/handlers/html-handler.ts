@@ -397,7 +397,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
    * inline content between them are grouped into a wrapper that maps to the
    * default tool (paragraph). A `<br>` splits inline runs — the Google Docs
    * preprocessor encodes the cell's original `<p>` boundaries as `<br>`
-   * (html-janitor unwraps block elements nested in `<td>`), so each line
+   * (the cleaner unwraps block elements nested in `<td>`), so each line
    * becomes its own paragraph block again.
    */
   private collectCellContentEntries(cell: HTMLElement): ExpandedNodeEntry[] {

@@ -11,7 +11,7 @@
  * Sanitization is an HTML parse: it entity-encodes bare `<`/`&` and deletes
  * text that looks like a stray end tag. That is correct for rich-text fields
  * and destructive for fields storing literal source text (a code block's
- * `code`). Declaring the field PLAINTEXT skips both janitor and the URL-scheme
+ * `code`). Declaring the field PLAINTEXT skips both the cleaner and the URL-scheme
  * pass, so the value round-trips byte-identical.
  *
  * A plain string (not a Symbol) so it survives JSON and structuredClone —

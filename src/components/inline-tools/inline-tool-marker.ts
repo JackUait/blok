@@ -85,7 +85,7 @@ export class MarkerInlineTool implements InlineTool {
   /**
    * Sanitizer Rule — preserve <mark> tags with only color-related style properties.
    *
-   * Uses a function-based rule so HTMLJanitor calls it with the live DOM node,
+   * Uses a function-based rule so the cleaner calls it with the DOM node,
    * allowing in-place filtering of CSS properties before the node is serialized.
    */
   public static get sanitize(): SanitizerConfig {

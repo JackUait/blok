@@ -49,7 +49,7 @@ import {
   IconChevronRight,
   IconMenu,
   IconPlus,
-  IconSplitView,
+  IconPeekSide,
   IconTrash,
   IconDotsHorizontal,
   IconCopy,
@@ -1039,7 +1039,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       const icon = document.createElement('span');
 
       icon.setAttribute('aria-hidden', 'true');
-      icon.innerHTML = IconSplitView;
+      icon.innerHTML = IconPeekSide;
       open.append(icon, document.createElement('span'));
       this.paintOpen(open, rowId);
       cell.appendChild(open);

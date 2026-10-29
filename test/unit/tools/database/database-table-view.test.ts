@@ -4,7 +4,7 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconInfo, IconSplitView } from '../../../../src/components/icons';
+import { IconInfo, IconPeekSide } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -1206,13 +1206,14 @@ describe('DatabaseTableView', () => {
       expect(handlers.deleteRows).toHaveBeenCalledWith(['r2']);
     });
 
+    // notion-live-7/33-open-hover.png, notion-live-8/62-close-hover.png: a box with its right half filled.
     it('the OPEN button shows the side-peek icon before its label', () => {
       const { root } = mount();
       const open = root.querySelector('[data-row-id="r1"] [data-blok-database-table-open]');
 
       const expected = document.createElement('span');
 
-      expected.innerHTML = IconSplitView;
+      expected.innerHTML = IconPeekSide;
       expect(open?.firstElementChild?.innerHTML).toBe(expected.innerHTML);
       expect(open?.lastElementChild?.textContent).toBe('tools.database.tableOpen');
     });

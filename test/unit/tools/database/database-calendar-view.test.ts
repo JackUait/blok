@@ -232,6 +232,20 @@ describe('DatabaseCalendarView', () => {
       expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
     });
 
+    // notion-spec-2 §21.9, §21.7: a card URL drops the scheme and greys the path, as on the board.
+    it('shortens a card URL as the board card does', () => {
+      const withUrl: PropertyDefinition[] = [...schema, { id: 'p-url', name: 'URL', type: 'url', position: 'a3' }];
+      const { root } = mount({
+        schema: withUrl,
+        view: calendarView({ properties: [{ id: 'p-title', visible: true }, { id: 'p-url', visible: true }] }),
+        rows: [row('r1', 'Launch', '2026-10-09', { 'p-url': 'https://example.com/a/b' })],
+      });
+      const link = events(root, 'r1')[0].querySelector('[data-blok-database-cell-link]');
+
+      expect(link?.textContent).toBe('example.com/a/b');
+      expect(link?.querySelector('[data-blok-database-url-path]')?.textContent).toBe('/a/b');
+    });
+
     // Each shown property is its own card line, so lanes must grow by that many lines.
     it('tells the grid how many property lines a card can have', () => {
       const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];

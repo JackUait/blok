@@ -66,6 +66,11 @@ describe('add property menu (T12)', () => {
     expect(declared(`${GRID} [data-blok-database-property-type-option]`, 'min-height')).toEqual(['32px']);
   });
 
+  // notion-spec-2 §19.11: the type cells are 32 tall at a 34px pitch, so 2px apart.
+  it('sets the header "+" type cells 2px apart', () => {
+    expect(declared("[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid]", 'row-gap')).toEqual(['var(--blok-space-0-5)']);
+  });
+
   // notion-spec-2 §19.11: the header "+" name box is a white 378x28 box over the "+"; the grid shows half the window and fades its last 34px.
   it('draws the header "+" name box in the header cell and caps the grid at half the window', () => {
     const OVER = '[data-blok-database-property-type-name-over-anchor]';

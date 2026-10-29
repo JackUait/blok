@@ -8345,6 +8345,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: var(--blok-space-0-5);
 }
 
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-option] {

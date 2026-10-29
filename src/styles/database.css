@@ -5134,8 +5134,10 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   width: 400px;
 }
 
+/* notion-spec-2 §19.11: 32px cells at a 34px row pitch. */
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: var(--blok-space-0-5);
 }
 
 [data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-option] {

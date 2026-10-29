@@ -117,8 +117,9 @@ export async function convertGifToWebm(
     const cursor = { timestamp: 0 };
     for (const i of indices) {
       const frame = await getFrame(i, first.image, decoder);
-      cursor.timestamp = encodeFrame(encoder, frame, i, cursor.timestamp);
+      // Tracked before encoding, so a throw still closes it.
       collectFrame(openFrames, frame, i);
+      cursor.timestamp = encodeFrame(encoder, frame, i, cursor.timestamp);
       opts.onProgress?.(Math.round(((i + 1) / frameCount) * 100));
     }
 

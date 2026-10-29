@@ -83,6 +83,15 @@ const int16 = (n: number): Uint8Array => {
   return bytes;
 };
 
+// ReferenceBlock is a signed int of any length; 4 bytes covers any GIF delay.
+const int32 = (n: number): Uint8Array => {
+  const bytes = new Uint8Array(4);
+
+  new DataView(bytes.buffer).setInt32(0, n);
+
+  return bytes;
+};
+
 const ms = (us: number): number => Math.round(us / 1000);
 
 /** Track 1, then the int16 time offset, then the flags byte. */
@@ -93,7 +102,7 @@ const blockHead = (offset: number, flags: number): Uint8Array => concat([Uint8Ar
  * A BlockGroup with no ReferenceBlock counts as a key frame, so a delta one names the frame before.
  */
 const lastBlock = (frame: WebmFrame, offset: number, previous: WebmFrame | undefined): Uint8Array => {
-  const reference = frame.key || !previous ? [] : [el(0xfb, int16(ms(previous.timestamp) - ms(frame.timestamp)))];
+  const reference = frame.key || !previous ? [] : [el(0xfb, int32(ms(previous.timestamp) - ms(frame.timestamp)))];
 
   return el(0xa0, el(0xa1, blockHead(offset, 0), frame.data), uint(0x9b, ms(frame.duration)), ...reference);
 };
@@ -101,14 +110,14 @@ const lastBlock = (frame: WebmFrame, offset: number, previous: WebmFrame | undef
 const simpleBlock = (frame: WebmFrame, offset: number): Uint8Array =>
   el(0xa3, blockHead(offset, frame.key ? 0x80 : 0), frame.data);
 
-interface Cluster { time: number; blocks: Uint8Array[] }
+interface Cluster { time: number; key: boolean; blocks: Uint8Array[] }
 
 const clustersOf = (frames: WebmFrame[]): Cluster[] =>
   frames.reduce<Cluster[]>((clusters, frame, i) => {
     const time = ms(frame.timestamp);
     const open = clusters.at(-1);
     const fresh = !open || (frame.key && time - open.time >= CLUSTER_MIN_MS) || time - open.time >= CLUSTER_MAX_OFFSET_MS;
-    const cluster = fresh || !open ? { time, blocks: [] } : open;
+    const cluster = fresh || !open ? { time, key: frame.key, blocks: [] } : open;
 
     if (cluster !== open) clusters.push(cluster);
     cluster.blocks.push(i === frames.length - 1
@@ -134,6 +143,7 @@ export const writeWebm = (track: WebmTrack, frames: WebmFrame[]): Uint8Array<Arr
 
   const clusters = clustersOf(frames).map((cluster) => ({
     time: cluster.time,
+    key: cluster.key,
     bytes: el(ID.cluster, uint(0xe7, cluster.time), ...cluster.blocks),
   }));
 
@@ -151,9 +161,10 @@ export const writeWebm = (track: WebmTrack, frames: WebmFrame[]): Uint8Array<Arr
     [],
   );
   const cuesPos = tracksPos + tracks.length + clusters.reduce((sum, cluster) => sum + cluster.bytes.length, 0);
-  const cues = el(ID.cues, ...clusters.map((cluster, i) =>
-    el(0xbb, uint(0xb3, cluster.time), el(0xb7, uint(0xf7, 1), uint(0xf1, clusterPositions[i]))),
-  ));
+  // A seek lands on a cluster's first frame, so only key-led clusters get a cue.
+  const cues = el(ID.cues, ...clusters.flatMap((cluster, i) => cluster.key
+    ? [el(0xbb, uint(0xb3, cluster.time), el(0xb7, uint(0xf7, 1), uint(0xf1, clusterPositions[i])))]
+    : []));
 
   const header = el(ID.ebml,
     uint(0x4286, 1), uint(0x42f7, 1), uint(0x42f2, 4), uint(0x42f3, 8),

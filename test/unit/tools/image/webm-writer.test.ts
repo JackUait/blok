@@ -51,6 +51,25 @@ const keyIndices = (packets: EncodedPacket[]): number[] =>
 const clusterCount = (bytes: Uint8Array): number =>
   bytes.reduce((count, _byte, i) => (CLUSTER_ID.every((b, j) => bytes[i + j] === b) ? count + 1 : count), 0);
 
+/** Offset just past the 4-byte `id` and its 8-byte size, or -1. */
+const bodyOf = (bytes: Uint8Array, id: number[]): number => {
+  const at = bytes.findIndex((_byte, i) => id.every((b, j) => bytes[i + j] === b) && bytes[i + id.length] === 0x01);
+
+  return at === -1 ? -1 : at + id.length + 8;
+};
+
+/** Number of CuePoints in the Cues element. Every child is a 0xBB id plus an 8-byte size. */
+const cuePointCount = (bytes: Uint8Array): number => {
+  const start = bodyOf(bytes, [0x1c, 0x53, 0xbb, 0x6b]);
+  const view = new DataView(bytes.buffer, bytes.byteOffset);
+  const sizeAt = (offset: number): number => Number(view.getBigUint64(offset) & 0xffffffffffffffn);
+  const end = start + sizeAt(start - 8);
+  const walk = (offset: number, count: number): number =>
+    offset >= end ? count : walk(offset + 1 + 8 + sizeAt(offset + 1), count + 1);
+
+  return walk(start, 0);
+};
+
 describe('writeWebm', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
@@ -117,5 +136,23 @@ describe('writeWebm', () => {
     const parsed = await parse(writeWebm({ codec: 'V_VP9', width: 4, height: 4 }, framesOf([100, 100], [0, 1])));
 
     expect(keyIndices(parsed.packets)).toEqual([0, 1]);
+  });
+
+  it('gives a seek point only to clusters that open on a key frame', () => {
+    const delays = Array.from({ length: 70 }, () => 1000);
+    const bytes = writeWebm({ codec: 'V_VP9', width: 4, height: 4 }, framesOf(delays, [0]));
+
+    expect(cuePointCount(bytes)).toBe(1);
+    expect(clusterCount(bytes)).toBe(3);
+  });
+
+  it('points a delta last frame back at the frame before, however long its delay', () => {
+    const bytes = writeWebm({ codec: 'V_VP9', width: 4, height: 4 }, framesOf([40_000, 1000], [0]));
+    const start = bodyOf(bytes, [0xfb]);
+    const end = start + Number(new DataView(bytes.buffer, bytes.byteOffset).getBigUint64(start - 8) & 0xffffffffffffffn);
+    const reference = bytes.slice(start, end).reduce((n, byte) => n * 256 + byte, 0);
+    const signed = reference >= 2 ** (8 * (end - start) - 1) ? reference - 2 ** (8 * (end - start)) : reference;
+
+    expect(signed).toBe(-40_000);
   });
 });

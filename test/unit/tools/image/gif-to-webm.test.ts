@@ -18,7 +18,11 @@ const makeFrame = (timestamp = 0, duration = 100_000): FakeFrame => new FakeFram
 
 interface Fakes { decoded: FakeFrame[]; copies: FakeFrame[]; encoded: FakeFrame[] }
 
-const installWebCodecs = (frameCount: number, fakes: Fakes = { decoded: [], copies: [], encoded: [] }): Fakes => {
+const installWebCodecs = (
+  frameCount: number,
+  fakes: Fakes = { decoded: [], copies: [], encoded: [] },
+  throwOnEncode = -1,
+): Fakes => {
   class FakeImageDecoder {
     tracks = { ready: Promise.resolve(), selectedTrack: { frameCount } };
     constructor(public init: unknown) {}
@@ -34,6 +38,7 @@ const installWebCodecs = (frameCount: number, fakes: Fakes = { decoded: [], copi
     constructor(public init: { output: (c: unknown, m: unknown) => void; error: (e: unknown) => void }) {}
     configure = vi.fn();
     encode = vi.fn((frame: FakeFrame, opts?: { keyFrame?: boolean }) => {
+      if (fakes.encoded.length === throwOnEncode) throw new Error('encode failed');
       const payload = Uint8Array.of(fakes.encoded.length, 0xaa, 0xbb);
 
       fakes.encoded.push(frame);
@@ -121,6 +126,14 @@ describe('convertGifToWebm', () => {
     await convertGifToWebm(new ArrayBuffer(8));
     expect(fakes.encoded.map((f) => f.timestamp)).toEqual([0, 100_000, 200_000]);
     expect(fakes.encoded).toEqual(fakes.copies);
+  });
+
+  it('closes a decoded frame whose encode throws', async () => {
+    const fakes = installWebCodecs(3, undefined, 1);
+
+    expect(await convertGifToWebm(new ArrayBuffer(8))).toBeNull();
+    expect(fakes.decoded).toHaveLength(2);
+    fakes.decoded.forEach((f) => expect(f.close).toHaveBeenCalled());
   });
 
   it('returns null when encoding throws', async () => {

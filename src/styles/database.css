@@ -375,6 +375,9 @@
   --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
   /* Panels and date picker (research/21 §1c, §1k, §1l): light uses Blok's token for the measured role. */
   --blok-database-date-weekday-text: var(--blok-database-ink-tertiary);
+  --blok-database-date-outside-text: var(--blok-database-ink-tertiary);
+  --blok-database-date-arrow: var(--blok-database-ink-secondary);
+  --blok-database-value-chevron: var(--blok-database-ink-secondary);
   --blok-database-date-today-text: var(--blok-database-ink-tertiary);
   /* research/27 §6: "Today" and "Now" hover. */
   --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
@@ -693,6 +696,10 @@
     --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
     /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
     --blok-database-date-weekday-text: rgb(139, 152, 152);
+    /* notion-spec-2 §23.3. Other-month days pass AA on the menu (5.1:1); arrows and chevrons are icons (3:1). */
+    --blok-database-date-outside-text: rgb(139, 152, 152);
+    --blok-database-date-arrow: rgb(165, 165, 165);
+    --blok-database-value-chevron: rgb(125, 122, 117);
     --blok-database-date-today-text: rgb(142, 139, 134);
     --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -1008,6 +1015,10 @@
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
   --blok-database-date-weekday-text: rgb(139, 152, 152);
+  /* notion-spec-2 §23.3. Other-month days pass AA on the menu (5.1:1); arrows and chevrons are icons (3:1). */
+  --blok-database-date-outside-text: rgb(139, 152, 152);
+  --blok-database-date-arrow: rgb(165, 165, 165);
+  --blok-database-value-chevron: rgb(125, 122, 117);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -7790,7 +7801,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: var(--blok-database-ink-secondary);
+  color: var(--blok-database-date-arrow);
   cursor: pointer;
 }
 
@@ -7873,7 +7884,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-day][data-outside] {
-  color: var(--blok-database-ink-tertiary);
+  color: var(--blok-database-date-outside-text);
 }
 
 /* research/26 §1c: a 24px red circle behind a white digit. Isolation keeps the circle above the hover fill. */
@@ -8014,6 +8025,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-remind-check] {
   display: flex;
   color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-date-remind-chevron] {
+  color: var(--blok-database-value-chevron);
 }
 
 [data-blok-database-date-remind-chevron] > svg,

@@ -4258,6 +4258,9 @@ span[data-blok-slash-search] {
   --blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);
   --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
   --blok-database-date-weekday-text: var(--blok-database-ink-tertiary);
+  --blok-database-date-outside-text: var(--blok-database-ink-tertiary);
+  --blok-database-date-arrow: var(--blok-database-ink-secondary);
+  --blok-database-value-chevron: var(--blok-database-ink-secondary);
   --blok-database-date-today-text: var(--blok-database-ink-tertiary);
   --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-date-setting-value-text: var(--blok-database-ink-secondary);
@@ -4532,6 +4535,9 @@ span[data-blok-slash-search] {
   --blok-database-gauge-box-bg: rgba(255, 255, 255, 0.03);
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   --blok-database-date-weekday-text: rgb(139, 152, 152);
+  --blok-database-date-outside-text: rgb(139, 152, 152);
+  --blok-database-date-arrow: rgb(165, 165, 165);
+  --blok-database-value-chevron: rgb(125, 122, 117);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -4807,6 +4813,9 @@ span[data-blok-slash-search] {
   --blok-database-gauge-box-bg: rgba(255, 255, 255, 0.03);
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   --blok-database-date-weekday-text: rgb(139, 152, 152);
+  --blok-database-date-outside-text: rgb(139, 152, 152);
+  --blok-database-date-arrow: rgb(165, 165, 165);
+  --blok-database-value-chevron: rgb(125, 122, 117);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -10794,7 +10803,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: var(--blok-database-ink-secondary);
+  color: var(--blok-database-date-arrow);
   cursor: pointer;
 }
 
@@ -10869,7 +10878,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-day][data-outside] {
-  color: var(--blok-database-ink-tertiary);
+  color: var(--blok-database-date-outside-text);
 }
 
 [data-blok-database-date-day][data-today] {
@@ -10991,6 +11000,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-remind-chevron], [data-blok-database-date-remind-check] {
   display: flex;
   color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-date-remind-chevron] {
+  color: var(--blok-database-value-chevron);
 }
 
 [data-blok-database-date-remind-chevron] > svg, [data-blok-database-date-remind-check] > svg {

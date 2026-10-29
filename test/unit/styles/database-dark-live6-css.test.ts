@@ -92,3 +92,33 @@ describe('select and multi-select chips in the editor\'s top field in dark (§23
     expect(ruleBody('[data-blok-database-person-remove]')).not.toContain('--blok-database-chip-remove-ink');
   });
 });
+
+describe('date picker in dark (§23.3)', () => {
+  it('greys other-month days with Notion\'s rgb(139, 152, 152), 5.1:1 on the menu', () => {
+    expect(tokenValues('--blok-database-date-outside-text')).toEqual([
+      'var(--blok-database-ink-tertiary)',
+      'rgb(139, 152, 152)',
+      'rgb(139, 152, 152)',
+    ]);
+    expect(ruleBody('[data-blok-database-date-day][data-outside]')).toContain('color: var(--blok-database-date-outside-text)');
+  });
+
+  it('draws the month arrows in rgb(165, 165, 165)', () => {
+    expect(tokenValues('--blok-database-date-arrow')).toEqual([
+      'var(--blok-database-ink-secondary)',
+      'rgb(165, 165, 165)',
+      'rgb(165, 165, 165)',
+    ]);
+    expect(ruleBody('[data-blok-database-date-prev]')).toContain('color: var(--blok-database-date-arrow)');
+  });
+
+  it('draws the chevron after a row value in rgb(125, 122, 117), and leaves the Remind check alone', () => {
+    expect(tokenValues('--blok-database-value-chevron')).toEqual([
+      'var(--blok-database-ink-secondary)',
+      'rgb(125, 122, 117)',
+      'rgb(125, 122, 117)',
+    ]);
+    expect(ruleBody('[data-blok-database-date-remind-chevron]')).toContain('color: var(--blok-database-value-chevron)');
+    expect(ruleBody('[data-blok-database-date-remind-check]')).toContain('color: var(--blok-database-ink-secondary)');
+  });
+});

@@ -1,6 +1,7 @@
 import { FUNCTIONS, paramMismatch } from '../../shared/database/formula/functions';
 import type { ParamSpec } from '../../shared/database/formula/functions';
 import type { FormulaType } from './formula';
+import type { PropertyDefinition } from './types';
 
 export interface FormulaFunctionGroup {
   /** The heading's i18n key. */
@@ -94,6 +95,19 @@ export interface FormulaHelp {
   key: string;
   examples: readonly FormulaExample[];
 }
+
+/** A property name as a formula string literal. */
+export const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
+/**
+ * The help pane's examples for a property row. `30-formula-empty.png`: a Number property
+ * shows itself, itself / 2 and pi() * itself ^ 2. Other types show only themselves: theirs are unmeasured.
+ */
+export const propertyExamples = (property: PropertyDefinition): FormulaExample[] => {
+  const ref = `prop(${quote(property.name)})`;
+
+  return property.type === 'number' ? [{ code: ref }, { code: `${ref} / 2` }, { code: `pi() * ${ref} ^ 2` }] : [{ code: ref }];
+};
 
 const help = (key: string, ...examples: Array<[string, string?]>): FormulaHelp => ({
   key,

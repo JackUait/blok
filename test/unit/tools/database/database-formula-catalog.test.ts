@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  FORMULA_FUNCTION_GROUPS, FORMULA_HELP, FORMULA_OPERATORS, FORMULA_VALUES,
+  FORMULA_FUNCTION_GROUPS, FORMULA_HELP, FORMULA_OPERATORS, FORMULA_VALUES, propertyExamples,
 } from '../../../../src/tools/database/database-formula-catalog';
 import { FORMULA_FUNCTION_NAMES, compileFormula, evaluateFormula, formulaValueToText } from '../../../../src/tools/database/formula';
 import type { FormulaValue } from '../../../../src/tools/database/formula';
@@ -64,5 +64,22 @@ describe('formula function catalogue', () => {
       }
       expect(['UTC', 'America/Los_Angeles', 'Asia/Tokyo'].map(read), code).toEqual([result, result, result]);
     }
+  });
+
+  // `30-formula-empty.png`: a Number property's help shows it alone, halved, and as a circle's area.
+  it('gives a number property three examples that compile to a number', () => {
+    const numbers: PropertyDefinition[] = [{ id: 'n', name: 'Number', type: 'number', position: 'a0' }];
+    const examples = propertyExamples(numbers[0]);
+
+    expect(examples.map((example) => example.code)).toEqual(['prop("Number")', 'prop("Number") / 2', 'pi() * prop("Number") ^ 2']);
+    for (const { code } of examples) {
+      const compiled = compileFormula(code, numbers);
+
+      expect(compiled.ok && compiled.resultType.kind, code).toBe('number');
+    }
+  });
+
+  it('gives any other property one example: the property itself', () => {
+    expect(propertyExamples(schema[0])).toEqual([{ code: 'prop("Owner")' }]);
   });
 });

@@ -3,7 +3,7 @@ import { IconCheck, IconCheckbox, IconChevronDown, IconCopy, IconCross, IconHash
 import { propertyTypeMeta } from './database-property-types';
 import { FormulaField, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
-import { FORMULA_FUNCTION_GROUPS, FORMULA_HELP, FORMULA_OPERATORS, FORMULA_VALUES, fitsAfter } from './database-formula-catalog';
+import { FORMULA_FUNCTION_GROUPS, FORMULA_HELP, FORMULA_OPERATORS, FORMULA_VALUES, fitsAfter, propertyExamples, quote } from './database-formula-catalog';
 import { formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
 import type { FormulaExample } from './database-formula-catalog';
 import type { CompileResult, FormulaType } from './formula';
@@ -55,8 +55,6 @@ const typeLabel = (type: FormulaType | null): string => {
 
   return type.kind;
 };
-
-const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 /** The word the caret sits at the end of. A number is not a word: after `* 2` the whole list stays. */
 const wordBefore = (text: string, caret: number): string => /[\p{L}_$][\p{L}\p{N}_$]*$/u.exec(text.slice(0, caret))?.[0] ?? '';
@@ -412,7 +410,7 @@ class FormulaEditor implements FormulaEditorHandle {
         icon: { kind: p.type, svg: propertyTypeMeta(p.type).icon },
         // `C8-formula-open.png`: "URL property."
         description: this.options.i18n.t('tools.database.formulaPropertyHelp', { type: this.options.i18n.t(propertyTypeMeta(p.type).labelKey) }),
-        examples: [{ code: `prop(${quote(p.name)})` }],
+        examples: propertyExamples(p),
       }));
   }
 

@@ -681,6 +681,21 @@ describe('formula editor', () => {
       expect(examples()).toEqual([{ code: '4 * 5', result: '= 20' }, { code: '1.5 * 4', result: '= 6' }]);
     });
 
+    // `30-formula-empty.png`: "Number", "Number / 2", "pi() * Number ^ 2", each without a result.
+    it('describes a number property with three examples', () => {
+      open();
+      type('');
+      document.querySelector('[data-blok-database-formula-reference-item][data-name="prop:Amount"]')
+        ?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+      // The token's icon markup adds whitespace to textContent.
+      expect(examples().map(({ code, result }) => ({ code: code.replace(/\s+/g, ' ').trim(), result }))).toEqual([
+        { code: 'Amount', result: null },
+        { code: 'Amount / 2', result: null },
+        { code: 'pi() * Amount ^ 2', result: null },
+      ]);
+    });
+
     it('describes a function the pointer moves to', () => {
       open();
       type('');

@@ -14,6 +14,7 @@ import {
   type ChildNode,
   type DocumentFragment,
   type DocumentType,
+  type Element,
   type ParentNode,
 } from '../../../src/html/tree';
 import { serialize, serializeOuter } from '../../../src/html/serializer';
@@ -198,20 +199,58 @@ describe('html serializer', () => {
 });
 
 describe('serializer depth', () => {
-  // The parser builds 20,000 levels without trouble; writing them out must not overflow the stack.
+  // The parser builds trees this deep; writing them out must not overflow the
+  // stack. The trees are built directly, so the test times the serializer only.
   const DEPTH = 20_000;
 
+  /** `depth` nested elements made by `make`, with `leaf` at the bottom. */
+  const nested = (depth: number, make: () => Element, leaf: ChildNode): DocumentFragment => {
+    const fragment = createDocumentFragment();
+    const bottom = Array.from({ length: depth }).reduce<ParentNode>((parent) => {
+      const element = make();
+
+      appendChild(parent, element);
+
+      return element;
+    }, fragment);
+
+    appendChild(bottom, leaf);
+
+    return fragment;
+  };
+
   it('writes a tree nested deeper than the call stack', () => {
-    const fragment = ownParseFragment('<div>'.repeat(DEPTH));
-    const expected = `${'<div>'.repeat(DEPTH)}${'</div>'.repeat(DEPTH)}`;
+    const fragment = nested(DEPTH, () => createElement('div', NS.HTML, []), createTextNode('x'));
+    const expected = `${'<div>'.repeat(DEPTH)}x${'</div>'.repeat(DEPTH)}`;
 
     expect(serialize(fragment)).toBe(expected);
     expect(serializeOuter(fragment.childNodes[0])).toBe(expected);
   });
 
   it('writes deep template content and void elements in place', () => {
-    const fragment = ownParseFragment(`${'<template><b>'.repeat(2000)}x<br>`);
+    const template = (): Element => {
+      const element = createElement('template', NS.HTML, []);
 
-    expect(serialize(fragment)).toBe(`${'<template><b>'.repeat(2000)}x<br>${'</b></template>'.repeat(2000)}`);
+      setTemplateContent(element, createDocumentFragment());
+
+      return element;
+    };
+    const fragment = createDocumentFragment();
+    const bottom = Array.from({ length: 2000 }).reduce<ParentNode>((parent) => {
+      const element = template();
+
+      appendChild(parent, element);
+
+      return 'content' in element ? (element.content as DocumentFragment) : element;
+    }, fragment);
+
+    appendChild(bottom, createTextNode('x'));
+    appendChild(bottom, createElement('br', NS.HTML, []));
+
+    expect(serialize(fragment)).toBe(`${'<template>'.repeat(2000)}x<br>${'</template>'.repeat(2000)}`);
+  });
+
+  it('still reads a parsed tree the same way', () => {
+    expect(serialize(ownParseFragment('<template><b>x<br></b></template>'))).toBe('<template><b>x<br></b></template>');
   });
 });

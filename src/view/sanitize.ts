@@ -107,9 +107,18 @@ const isBlockElement = (node: HtmlChildNode | null): boolean => {
  * @param direction - -1 for previous, +1 for next
  */
 const elementSibling = (parent: HtmlParentNode, index: number, direction: -1 | 1): HtmlChildNode | null => {
-  const siblings = direction === 1 ? parent.childNodes.slice(index + 1) : parent.childNodes.slice(0, Math.max(index, 0)).reverse();
+  const cursor = { at: index + direction };
 
-  return siblings.find(isElementNode) ?? null;
+  while (cursor.at >= 0 && cursor.at < parent.childNodes.length) {
+    const sibling = parent.childNodes[cursor.at];
+
+    if (isElementNode(sibling)) {
+      return sibling;
+    }
+    cursor.at += direction;
+  }
+
+  return null;
 };
 
 /**

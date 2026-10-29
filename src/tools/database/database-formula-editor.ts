@@ -145,10 +145,17 @@ class FormulaEditor implements FormulaEditorHandle {
 
       if (this.picker !== null && !this.picker.contains(target) && !this.rowButton.contains(target)) this.closePicker();
     });
+    // notion-spec-2 §26.3: the arrows walk the list and Enter inserts the highlighted row; the box stays open.
     this.input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      if (event.isComposing || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault();
-        this.save();
+        this.moveHighlight(event.key === 'ArrowDown' ? 1 : -1);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        const ref = this.references.find((candidate) => candidate.name === this.active);
+
+        if (ref !== undefined) this.insert(ref.insert);
       }
     });
 
@@ -331,29 +338,30 @@ class FormulaEditor implements FormulaEditorHandle {
       const item = event.target instanceof Element ? event.target.closest('[data-blok-database-formula-reference-item]') : null;
       const name = item?.getAttribute('data-name') ?? null;
 
-      if (name === null || name === this.active) return;
-      this.active = name;
-      // In place: a rebuilt list would lose its scroll.
-      this.list.querySelectorAll('[data-blok-database-formula-reference-item]').forEach((el) => {
-        el.setAttribute('aria-selected', String(el === item));
-      });
-      this.renderHelp(this.references.find((ref) => ref.name === name));
+      if (name !== null) this.highlight(name);
     });
     panes.append(this.list, this.help);
 
     return panes;
   }
 
-  private save(): void {
-    const compiled = this.options.compile(this.field.value);
+  /** Moves the highlight in place: a rebuilt list would lose its scroll. */
+  private highlight(name: string): HTMLElement | null {
+    if (name === this.active) return null;
+    this.active = name;
+    const rows = [...this.list.querySelectorAll<HTMLElement>('[data-blok-database-formula-reference-item]')];
 
-    if (!compiled.ok) {
-      this.refresh();
+    rows.forEach((el) => el.setAttribute('aria-selected', String(el.getAttribute('data-name') === name)));
+    this.renderHelp(this.references.find((ref) => ref.name === name));
 
-      return;
-    }
-    this.options.onSave(serializeFormula(compiled.formula));
-    this.finish(true);
+    return rows.find((el) => el.getAttribute('data-name') === name) ?? null;
+  }
+
+  private moveHighlight(step: 1 | -1): void {
+    const index = this.references.findIndex((ref) => ref.name === this.active);
+    const next = this.references.at(Math.min(Math.max(index + step, 0), this.references.length - 1));
+
+    if (next !== undefined) this.highlight(next.name)?.scrollIntoView?.({ block: 'nearest' });
   }
 
   private refresh(): void {

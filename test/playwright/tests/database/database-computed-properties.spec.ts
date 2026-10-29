@@ -171,7 +171,7 @@ test.describe('formula', () => {
     await input.fill('prop("Amount") + 100');
     await expect(input.locator('[data-blok-database-formula-token]')).toHaveAttribute('data-property', 'Amount');
     await expect(page.locator('[data-blok-database-formula-preview]')).toHaveText('101');
-    await input.press('Enter');
+    await input.press('Escape');
 
     await expect(cell(page, 'r3', 'p-double')).toHaveText('104');
     expect((await savedSchema(page)).find((p) => p.id === 'p-double')?.formula?.expression).toBe('{{property:p-amount}} + 100');
@@ -196,7 +196,7 @@ test.describe('formula', () => {
     await input.fill('prop("Nope") + 1');
     await expect(page.locator('[data-blok-database-formula-error-message]')).toHaveText('Unknown property "Nope"');
     await expect(page.locator('[data-blok-database-formula-error-range]')).toHaveText('prop("Nope")');
-    await input.press('Enter');
+    await input.press('Escape');
 
     expect((await savedSchema(page)).find((p) => p.id === 'p-double')?.formula?.expression).toBe('{{property:p-amount}} * 2');
   });

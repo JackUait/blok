@@ -112,6 +112,24 @@ describe('a click on a table formula cell', () => {
     expect(document.querySelector('[data-blok-database-formula-preview]')?.textContent).toBe('84');
   });
 
+  // notion-spec-2 §26.3: Enter inserts the highlighted row. It must not reach the table, which commits and moves down.
+  it('Enter in the field inserts the highlighted row and leaves the box open and the table selection alone', async () => {
+    await make();
+    formulaCell()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await quiet();
+    const selected = (): string[] =>
+      [...(holder?.querySelectorAll('[role="gridcell"][aria-selected="true"]') ?? [])].map((cell) => cell.getAttribute('data-property-id') ?? '');
+    const before = selected();
+    const field = document.querySelector<HTMLElement>('[data-blok-database-formula-input]');
+
+    field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-formula-editor]')).not.toBeNull();
+    expect(field?.textContent).toContain('* 2 * ');
+    expect(selected()).toEqual(before);
+  });
+
   it('opens nothing in a read-only editor', async () => {
     await make(true);
     formulaCell()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

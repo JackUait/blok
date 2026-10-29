@@ -69,9 +69,21 @@ const type = (text: string): void => {
 const tokens = (): Array<string | null> =>
   [...input().querySelectorAll('[data-blok-database-formula-token]')].map((el) => el.getAttribute('data-property'));
 
-const enter = (): void => {
-  input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+/** notion-spec-2 §18.3, §25.1: Escape keeps the typed formula and closes. */
+const commit = (): void => {
+  input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 };
+
+const press = (key: string): KeyboardEvent => {
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+  input().dispatchEvent(event);
+
+  return event;
+};
+
+const highlighted = (): string | null | undefined =>
+  document.querySelector('[data-blok-database-formula-reference-item][aria-selected="true"]')?.getAttribute('data-name');
 
 const text = (selector: string): string => document.querySelector(selector)?.textContent?.trim() ?? '';
 
@@ -108,7 +120,7 @@ describe('formula editor', () => {
 
       type('prop("Amount") + 1');
       expect(tokens()).toEqual(['Amount']);
-      enter();
+      commit();
 
       expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
     });
@@ -171,7 +183,7 @@ describe('formula editor', () => {
 
       expect(paste.defaultPrevented).toBe(true);
       expect(tokens()).toEqual(['Amount']);
-      enter();
+      commit();
       expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} - 1');
     });
   });
@@ -266,20 +278,72 @@ describe('formula editor', () => {
     expect(input().getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('saves the formula with property ids on Enter', () => {
+  it('saves the formula with property ids on Escape', () => {
     const options = open();
 
     type('prop("Amount") + 1');
-    enter();
+    commit();
 
     expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
+  });
+
+  // notion-spec-2 §26.3 (`33-after-enter.png`, `36-after-click.png`).
+  describe('keys and clicks on the list', () => {
+    it('Enter inserts the highlighted row, saves nothing and keeps the box and focus', () => {
+      const options = open();
+
+      type('');
+      expect(highlighted()).toBe('prop:Name');
+      const event = press('Enter');
+
+      expect(tokens()).toEqual(['Name']);
+      expect(event.defaultPrevented).toBe(true);
+      expect(options.onSave).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-database-formula-editor]')).not.toBeNull();
+      expect(input()).toHaveFocus();
+    });
+
+    it('ArrowDown and ArrowUp move the highlight and its help, and Enter inserts that row', () => {
+      open();
+      type('');
+      expect(press('ArrowDown').defaultPrevented).toBe(true);
+      press('ArrowDown');
+
+      expect(highlighted()).toBe('not');
+      expect(text('[data-blok-database-formula-help-name]')).toBe('not');
+      press('ArrowUp');
+      expect(highlighted()).toBe('prop:Amount');
+      press('Enter');
+
+      expect(tokens()).toEqual(['Amount']);
+    });
+
+    it('stops the highlight at the ends of the list', () => {
+      open();
+      type('');
+      press('ArrowUp');
+
+      expect(highlighted()).toBe('prop:Name');
+    });
+
+    it('a click on a row inserts it and keeps the box and focus', () => {
+      const options = open();
+
+      type('');
+      document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="prop:Amount"]')?.click();
+
+      expect(tokens()).toEqual(['Amount']);
+      expect(options.onSave).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-database-formula-editor]')).not.toBeNull();
+      expect(input()).toHaveFocus();
+    });
   });
 
   it('does not save a formula that fails to compile', () => {
     const options = open();
 
     type('1 +');
-    enter();
+    commit();
 
     expect(options.onSave).not.toHaveBeenCalled();
   });
@@ -463,7 +527,7 @@ describe('formula editor', () => {
     input().dispatchEvent(new Event('input'));
 
     expect(options.onSave).not.toHaveBeenCalled();
-    enter();
+    commit();
     expect(options.onSave).toHaveBeenCalledWith('1 +\n2');
   });
 
@@ -573,7 +637,7 @@ describe('formula editor', () => {
     document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="true"]')?.click();
     input().append(', 1, 2)');
     input().dispatchEvent(new Event('input'));
-    enter();
+    commit();
 
     expect(options.onSave).toHaveBeenCalledWith('if(true, 1, 2)');
   });
@@ -608,11 +672,11 @@ describe('formula editor', () => {
 
     type('prop("Amount")');
     document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="*"]')?.click();
-    input().append('2');
+    input().append('3');
     input().dispatchEvent(new Event('input'));
-    enter();
+    commit();
 
-    expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} * 2');
+    expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} * 3');
   });
 
   // notion-spec-2 §18.3, §22.5: "Preview with <row>", the output or "No output", and "Type: <type>".

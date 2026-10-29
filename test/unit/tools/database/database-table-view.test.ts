@@ -8,6 +8,7 @@ import { IconInfo, IconSplitView } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
+import { hover, shownHint } from './hint-harness';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
 const schema: PropertyDefinition[] = [
@@ -408,32 +409,37 @@ describe('DatabaseTableView', () => {
       expect(chips[0].textContent?.trim()).toBe('report.pdf');
     });
 
-    // notion-spec-2 §20.11, files-hover.png: the chip shows a dark hint with the full link, not Blok's link card.
-    it('hovering a file chip shows its full link in a hint after the hint delay, and keeps the link card away', () => {
+    // notion-spec-2 §21.3: a cut name shows the full NAME 6px below the chip; one that fits shows nothing. No link card.
+    it('hovering a file chip whose name is cut shows the full name below it after the hint delay', () => {
       destroyTooltip();
       vi.useFakeTimers();
       try {
         const files: PropertyDefinition = { id: 'p-files', name: 'Files', type: 'files', position: 'a1' };
         const { root } = mount({
           schema: [schema[0], files],
-          rows: [row('r1', 'Alpha', { 'p-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] })],
+          rows: [row('r1', 'Alpha', { 'p-files': [{ id: 'f1', name: 'Quarterly report for the whole team.pdf', url: 'https://example.com/a.pdf' }, { id: 'f2', name: 'b.png', url: 'https://example.com/b.png' }] })],
         });
-        const chip = cell(root, 'r1', 'p-files').querySelector<HTMLElement>('[data-blok-database-file-chip]');
-        const link = chip?.querySelector<HTMLElement>('[data-blok-database-cell-link]');
+        const [cut, fits] = [...cell(root, 'r1', 'p-files').querySelectorAll<HTMLElement>('[data-blok-database-file-chip]')];
+        const link = cut.querySelector<HTMLElement>('[data-blok-database-cell-link]');
 
-        if (chip === null || chip === undefined || link === null || link === undefined) throw new Error('no file chip');
+        if (link === null) throw new Error('no file link');
         // Core's link hover card and link click skip a link inside a link owner.
         expect(link.closest('[data-blok-link-owner]')).not.toBeNull();
+        Object.defineProperty(link, 'scrollWidth', { configurable: true, value: 260 });
+        Object.defineProperty(link, 'clientWidth', { configurable: true, value: 148 });
 
-        vi.spyOn(chip, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 184, height: 24 }));
-        chip.dispatchEvent(new MouseEvent('mouseenter'));
-        vi.advanceTimersByTime(HINT_DELAY - 1);
         const wrapper = (): Element | null => document.querySelector('[data-blok-testid="tooltip"]');
 
+        hover(fits);
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(wrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
+        fits.dispatchEvent(new MouseEvent('mouseleave'));
+
+        hover(cut);
+        vi.advanceTimersByTime(HINT_DELAY - 1);
         expect(wrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
         vi.advanceTimersByTime(1);
-        expect(wrapper()?.getAttribute('data-blok-shown')).toBe('true');
-        expect(document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent).toBe('https://example.com/report.pdf');
+        expect(shownHint()).toEqual({ text: 'Quarterly report for the whole team.pdf', placement: 'bottom' });
       } finally {
         destroyTooltip();
         vi.useRealTimers();

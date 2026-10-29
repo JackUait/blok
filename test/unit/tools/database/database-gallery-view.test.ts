@@ -282,6 +282,34 @@ describe('DatabaseGalleryView', () => {
     expect(chip?.querySelector('[data-blok-database-cell-link]')?.textContent).toBe('brief.pdf');
   });
 
+  // notion-spec-2 §21.4 (E8-gallery-chip-hover.png): a cut file name on a card shows in full below the chip.
+  it('notion-spec-2 §21.4: hovering a card file chip whose name is cut shows the full name below it', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      const properties = [{ id: 'p-title', visible: true }, { id: 'p-files', visible: true }];
+      const { root } = mount({
+        view: galleryView({ properties }),
+        schema: [...schema, { id: 'p-files', name: 'Files', type: 'files', position: 'a4' }],
+        groups: single([row('r1', 'Alpha', { 'p-files': [{ id: 'f1', name: 'Quarterly report for the whole team.pdf', url: 'https://example.com/a.pdf' }] })]),
+      });
+      const chip = cards(root)[0].querySelector<HTMLElement>('[data-blok-database-file-chip]');
+      const link = chip?.querySelector<HTMLElement>('[data-blok-database-cell-link]');
+
+      if (chip === null || chip === undefined || link === null || link === undefined) throw new Error('no file chip');
+      Object.defineProperty(link, 'scrollWidth', { configurable: true, value: 260 });
+      Object.defineProperty(link, 'clientWidth', { configurable: true, value: 164 });
+      hover(chip.closest('[data-blok-database-gallery-property]'));
+      hover(chip);
+      vi.advanceTimersByTime(HINT_DELAY);
+
+      expect(shownHint()).toEqual({ text: 'Quarterly report for the whole team.pdf', placement: 'bottom' });
+    } finally {
+      destroyTooltip();
+      vi.useRealTimers();
+    }
+  });
+
   it('notion-spec-2 §19.19: a Button on a card can be pressed, unless the view is read-only', () => {
     const properties = [{ id: 'p-title', visible: true }, { id: 'p-btn', visible: true }];
     const options = {

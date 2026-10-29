@@ -1,6 +1,6 @@
 import { IconAlarm, IconCheck, IconPageEmpty, IconWarning } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
-import { onHover } from '../../../components/utils/tooltip';
+import { hide as hideHint, onHover, show as showHint } from '../../../components/utils/tooltip';
 import { safeHref, safeImageSrc, urlScheme } from '../../../components/utils/sanitize-url';
 import type { PlaceValue, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
@@ -279,6 +279,30 @@ const renderFiles = (cell: HTMLElement, value: PropertyValue | undefined, ctx: C
     renderLink(chip, file.name, safeHref(file.url), ctx);
     cell.appendChild(chip);
   }
+};
+
+/**
+ * notion-spec-2 §21.3, §21.4: a file chip whose name is cut shows the full
+ * name 6px below it. A name that fits shows nothing. Wired by the table, the
+ * side peek and the gallery card, where Notion was measured.
+ */
+export const bindFileNameHint = (chip: HTMLElement): void => {
+  // The link carries `text-overflow`; an unsafe href leaves the name as bare text in the chip.
+  const name = chip.querySelector<HTMLElement>('[data-blok-database-cell-link]') ?? chip;
+  const pointer = { touch: false };
+
+  chip.addEventListener('pointerenter', (event) => {
+    pointer.touch = event.pointerType === 'touch';
+  });
+  chip.addEventListener('mouseenter', () => {
+    const popover = document.querySelector('[data-blok-popover-opened="true"]');
+
+    if (pointer.touch || (popover !== null && !popover.contains(chip)) || name.scrollWidth <= name.clientWidth) return;
+    showHint(chip, name.textContent ?? '', { placement: 'bottom', gap: 6 });
+  });
+  chip.addEventListener('mouseleave', hideHint);
+  // A press opens the editor, which the hint would cover.
+  chip.addEventListener('pointerdown', hideHint, { capture: true });
 };
 
 const renderRelation = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {

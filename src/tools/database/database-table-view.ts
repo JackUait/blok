@@ -3,7 +3,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, DateReminderOffset, NumberDisplay, OpenPagesIn, PropertyDefinition, PropertyValue, SelectOption, CalculationFn } from './types';
 import type { ViewChanges } from './database-model';
-import { renderCellValue, createOptionPill, openCellEditor } from './cells';
+import { bindFileNameHint, renderCellValue, createOptionPill, openCellEditor } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext, CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
@@ -966,8 +966,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         if (link !== null) {
           // Owned: core shows no link card and opens nothing on a plain click; Cmd/Ctrl-click follows target=_blank.
           link.setAttribute(DATA_ATTR.linkOwner, '');
-          onHover(chip, link.href);
         }
+        bindFileNameHint(chip);
       });
     }
 

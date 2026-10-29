@@ -3,7 +3,7 @@ import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseRow, DatabaseRowPages, DateReminderOffset, OpenPagesIn, PageVisibility, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
-import { openCellEditor, renderCellValue } from './cells';
+import { bindFileNameHint, openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
@@ -3424,7 +3424,10 @@ export class DatabaseCardDrawer {
       }
     });
     // R29: the page glyph before a file name, as the table draws it.
-    cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
+    cell.querySelectorAll<HTMLElement>('[data-blok-database-file-chip]').forEach((chip) => {
+      chip.prepend(fileChipIcon());
+      bindFileNameHint(chip);
+    });
     if (cell.hasAttribute('data-empty')) {
       cell.textContent = this.t('tools.database.cellEmpty');
     }

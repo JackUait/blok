@@ -2,7 +2,7 @@ import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
-import { createOptionPill, renderCellValue } from './cells';
+import { bindFileNameHint, createOptionPill, renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { createCardPreview } from './database-card-preview';
@@ -282,7 +282,10 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       // notion-spec-2 §19.17: a card file chip has the page glyph, as in the table.
       // notion-spec-2 §19.19: a card's Button presses as in the table; the card's other values stay read-only.
       cell.querySelectorAll('[data-blok-database-button]').forEach((button) => button.toggleAttribute('disabled', this.options.readOnly));
-      cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
+      cell.querySelectorAll<HTMLElement>('[data-blok-database-file-chip]').forEach((chip) => {
+        chip.prepend(fileChipIcon());
+        bindFileNameHint(chip);
+      });
       // notion-spec-2 §19.17: a card's checkbox has the property name beside it.
       if (property.type === 'checkbox') {
         const name = document.createElement('span');

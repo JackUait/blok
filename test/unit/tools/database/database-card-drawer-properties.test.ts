@@ -7,6 +7,7 @@ import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/data
 import { pageLayoutOf } from '../../../../src/tools/database/page-layout';
 import type { PageLayoutOp } from '../../../../src/tools/database/page-layout';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: vi.fn(function stubBlok() {
@@ -377,6 +378,31 @@ describe('DatabaseCardDrawer — page header and body start', () => {
     new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] } });
 
     expect(valueOf(options, 'prop-files')?.querySelector('[data-blok-database-file-chip] > [data-blok-database-file-chip-icon]:first-child')).not.toBeNull();
+  });
+
+  // notion-spec-2 §21.4: in the side peek a cut file name shows in full below the chip.
+  it('hovering a file chip whose name is cut shows the full name below it', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      const files: PropertyDefinition = { id: 'prop-files', name: 'Files', type: 'files', position: 'a9' };
+      const options = createOptions({ schema: [...SCHEMA, files] });
+
+      new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'Quarterly report for the whole team.pdf', url: 'https://example.com/a.pdf' }] } });
+      const chip = valueOf(options, 'prop-files')?.querySelector<HTMLElement>('[data-blok-database-file-chip]');
+      const link = chip?.querySelector<HTMLElement>('[data-blok-database-cell-link]');
+
+      if (chip === null || chip === undefined || link === null || link === undefined) throw new Error('no file chip');
+      Object.defineProperty(link, 'scrollWidth', { configurable: true, value: 260 });
+      Object.defineProperty(link, 'clientWidth', { configurable: true, value: 148 });
+      hover(chip);
+      vi.advanceTimersByTime(HINT_DELAY);
+
+      expect(shownHint()).toEqual({ text: 'Quarterly report for the whole team.pdf', placement: 'bottom' });
+    } finally {
+      destroyTooltip();
+      vi.useRealTimers();
+    }
   });
 
   // feel/findings-rowpage R25: the empty title reads "New page".

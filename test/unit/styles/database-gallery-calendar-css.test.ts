@@ -160,6 +160,16 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-property] [data-blok-database-button]')).toMatch(/height:\s*20px/);
   });
 
+  // notion-spec-2 §21.9: the file chip keeps its 200 width and the card cuts it (calendar-card.png: the chip runs to the card edge).
+  it('keeps a calendar card file chip up to 200 wide, 20 tall, so the card cuts it', () => {
+    const chip = ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-file-chip]');
+
+    expect(chip).toMatch(/flex:\s*none/);
+    expect(chip).toMatch(/max-width:\s*200px/);
+    expect(chip).toMatch(/height:\s*20px/);
+    expect(chip).toMatch(/line-height:\s*20px/);
+  });
+
   it('makes a week-range row 372px tall (findings C08)', () => {
     expect(ruleBody('[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day]')).toMatch(/max\(372px,/);
   });

@@ -7797,6 +7797,14 @@ textarea[data-blok-database-cell-input] {
   height: 14px;
 }
 
+/* notion-spec-2 §21.9: the chip keeps its 200 width and the card cuts it. */
+[data-blok-database-calendar-event-property] [data-blok-database-file-chip] {
+  flex: none;
+  max-width: 200px;
+  height: 20px;
+  line-height: 20px;
+}
+
 /* notion-spec-2 §21.9: the Button pill is 20 tall here, 24 on board, gallery and table. */
 [data-blok-database-calendar-event-property] [data-blok-database-button],
 [data-blok-database-timeline-bar-property] [data-blok-database-button] {

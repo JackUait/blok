@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { pageIconElement, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from './types';
 import { renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
@@ -441,6 +441,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
         ...rowCellContext(row, property.id),
       });
 
+      cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
       // notion-spec-2 §21.9: a card's checkbox has the property name beside it, as on the board.
       if (property.type === 'checkbox' && !cell.hasAttribute('data-empty')) {
         const name = document.createElement('span');

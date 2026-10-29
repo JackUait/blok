@@ -219,6 +219,19 @@ describe('DatabaseCalendarView', () => {
       expect(name?.parentElement?.lastElementChild).toBe(name);
     });
 
+    // notion-spec-2 §21.9 (calendar-card.png): a file chip starts with the page glyph, as on the board.
+    it('starts a file chip with the page glyph', () => {
+      const withFiles: PropertyDefinition[] = [...schema, { id: 'p-files', name: 'Files', type: 'files', position: 'a3' }];
+      const { root } = mount({
+        schema: withFiles,
+        view: calendarView({ properties: [{ id: 'p-title', visible: true }, { id: 'p-files', visible: true }] }),
+        rows: [row('r1', 'Launch', '2026-10-09', { 'p-files': [{ id: 'f1', name: 'notes.pdf', url: 'https://example.com/notes.pdf' }] })],
+      });
+      const chip = events(root, 'r1')[0].querySelector('[data-blok-database-file-chip]');
+
+      expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
+    });
+
     // Each shown property is its own card line, so lanes must grow by that many lines.
     it('tells the grid how many property lines a card can have', () => {
       const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];

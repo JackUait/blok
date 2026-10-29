@@ -75,9 +75,10 @@ describe('database board card and calendar "No date" styles', () => {
       .toMatch(/--max-height:\s*calc\(100dvh - 24px\)/);
   });
 
-  // research/07:95 (feel findings B17): a select pill on a board card is 18px, 0 6px, 12px/18px. Status keeps 20px.
-  it('draws select and multi-select pills on a card at 18px and 12px', () => {
-    const body = ruleBody('[data-blok-database-card-property] [data-blok-database-option-pill]:not([data-status-group])');
+  // research/07:95 (feel findings B17): a select pill on a board card is 18px, 0 6px, 12px/18px.
+  // notion-spec-2 §21.7 and board-status.png: the status pill too has 12/18 text and spans the same 18 rows as the select.
+  it('draws every pill on a card, status included, at 18px and 12px', () => {
+    const body = ruleBody('[data-blok-database-card-property] [data-blok-database-option-pill]');
 
     expect(body).toMatch(/height:\s*18px/);
     expect(body).toMatch(/font-size:\s*12px/);

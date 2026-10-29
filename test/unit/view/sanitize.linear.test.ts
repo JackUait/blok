@@ -62,3 +62,21 @@ describe('sanitizeHtmlFragment time', SLOW, () => {
     expect(ratios[ratios.length - 1], `n ${n}, ratios ${ratios.map((r) => r.toFixed(1)).join(', ')}`).toBeLessThan(24);
   });
 });
+
+describe('sanitizeHtmlFragment URL transform', () => {
+  // A link the transform changed counts as changed on every revisit, so a
+  // transform run per revisit made links mixed with removals quadratic.
+  it('runs once per link when every link is followed by a removal', () => {
+    const n = 500;
+    const calls = { count: 0 };
+    const links = Array.from({ length: n }, (_, i) => i);
+    const out = sanitizeHtmlFragment(links.map((i) => `<a href="${i}">l</a><!--c-->`).join(''), { a: { href: true } }, (url) => {
+      calls.count += 1;
+
+      return `${url}/`;
+    });
+
+    expect(calls.count).toBe(n);
+    expect(out).toBe(links.map((i) => `<a href="${i}/">l</a>`).join(''));
+  });
+});

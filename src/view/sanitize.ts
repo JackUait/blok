@@ -493,6 +493,48 @@ const filterAttributes = (node: HtmlElement, decision: AttrDecision): void => {
  */
 export type FragmentUrlTransform = (url: string, attr: 'href' | 'src') => string;
 
+/** URL rewrites so far, by attribute: what went into the transform and what came out. */
+type UrlRewrites = Map<'href' | 'src', { from: string; to: string }>;
+
+/**
+ * Keyed by attribute list, not element: the parser gives an element it reopens
+ * (`<a>` split across paragraphs) the same list as the original, and
+ * replaceAttrs edits it in place, so both see the first rewrite.
+ */
+type RewriteMemo = Map<HtmlElement['attrs'], UrlRewrites>;
+
+/**
+ * Run the transform on a URL once. A removal makes the walk visit earlier
+ * elements again, and a second run would rewrite the rewritten URL. A function
+ * or forced-value rule may write the raw URL back, so that maps to the same result.
+ * @param node - element that carries the URL
+ * @param attr - href or src
+ * @param value - the attribute's value now
+ * @param transform - URL rewrite hook
+ * @param rewritten - rewrites so far in this sanitize call
+ */
+const rewriteOnce = (
+  node: HtmlElement,
+  attr: 'href' | 'src',
+  value: string,
+  transform: FragmentUrlTransform,
+  rewritten: RewriteMemo
+): string => {
+  const own = rewritten.get(node.attrs) ?? new Map<'href' | 'src', { from: string; to: string }>();
+  const last = own.get(attr);
+
+  if (last !== undefined && (value === last.to || value === last.from)) {
+    return last.to;
+  }
+
+  const to = transform(value, attr);
+
+  own.set(attr, { from: value, to });
+  rewritten.set(node.attrs, own);
+
+  return to;
+};
+
 /**
  * Apply the URL rewrite hook (if any) then strip href/src attributes whose
  * (possibly rewritten) values resolve to unsafe schemes — the shared URL
@@ -500,14 +542,15 @@ export type FragmentUrlTransform = (url: string, attr: 'href' | 'src') => string
  * strip, so a rewrite can never smuggle in an unsafe scheme.
  * @param node - element to harden
  * @param transform - optional URL rewrite hook
+ * @param rewritten - rewrites so far in this sanitize call
  */
-const applyUrlPolicy = (node: HtmlElement, transform: FragmentUrlTransform | undefined): void => {
+const applyUrlPolicy = (node: HtmlElement, transform: FragmentUrlTransform | undefined, rewritten: RewriteMemo): void => {
   replaceAttrs(node, node.attrs.flatMap((attr) => {
     if (attr.name !== 'href' && attr.name !== 'src') {
       return [attr];
     }
 
-    const resolved = transform === undefined ? attr.value : transform(attr.value, attr.name);
+    const resolved = transform === undefined ? attr.value : rewriteOnce(node, attr.name, attr.value, transform, rewritten);
 
     if (typeof resolved !== 'string' || hasUnsafeUrlProtocol(resolved, attr.name)) {
       return [];
@@ -571,6 +614,7 @@ class CleanRun {
   public readonly stable = new Set<HtmlElement>();
   /** Changes so far; an element is stable when its visit added none. */
   public mutations = 0;
+  private readonly rewritten: RewriteMemo = new Map();
 
   constructor(private readonly config: SanitizerConfig, private readonly transform: FragmentUrlTransform | undefined) {}
 
@@ -615,7 +659,7 @@ class CleanRun {
     }
 
     filterAttributes(node, resolution.attrs);
-    applyUrlPolicy(node, this.transform);
+    applyUrlPolicy(node, this.transform, this.rewritten);
 
     if (!sameAttrs(attrsBefore, node.attrs) || !sameChildren(childrenBefore, node.childNodes)) {
       this.mutations += 1;

@@ -1380,6 +1380,23 @@ describe('blocksToHtml', () => {
       expect(seen).toEqual([{ url: '/a', blockType: undefined }]);
     });
 
+    it('rewrites an inline href once when the text also has something to remove', () => {
+      const seen: string[] = [];
+      const html = blocksToHtml(
+        doc([{ type: 'paragraph', data: { text: '<a href="/a">link</a><!--c--><!--d-->' } }]),
+        {
+          transformUrl: (url) => {
+            seen.push(url);
+
+            return `https://x.test${url}`;
+          },
+        }
+      );
+
+      expect(html).toBe('<p><a href="https://x.test/a">link</a></p>');
+      expect(seen).toEqual(['/a']);
+    });
+
     it('runs the transform BEFORE the unsafe-scheme strip — a transform to javascript: is still dropped', () => {
       const html = blocksToHtml(
         doc([{ type: 'bookmark', data: { url: 'https://ok.test', title: 'T' } }]),

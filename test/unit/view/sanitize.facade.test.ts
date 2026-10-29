@@ -280,6 +280,51 @@ describe('view sanitizer entry paths', () => {
 
       expect(out).toBe('<a>l</a>');
     });
+
+    // A removal makes the walk visit earlier elements again. Those revisits must
+    // not run the transform again: `cdn/` would stack up once per removal.
+    describe('runs once per URL, however often the walk revisits', () => {
+      const prefixing = (): { calls: string[]; transform: (url: string, attr: 'href' | 'src') => string } => {
+        const calls: string[] = [];
+
+        return {
+          calls,
+          transform: (url, attr) => {
+            calls.push(`${attr}:${url}`);
+
+            return `cdn/${url}`;
+          },
+        };
+      };
+
+      it.each<{ name: string; html: string; config: SanitizerConfig; out: string; calls: string[] }>([
+        { name: 'a link before removed comments', html: '<a href="x">l</a><!--c--><!--d-->', config: { a: { href: true } }, out: '<a href="cdn/x">l</a>', calls: ['href:x'] },
+        { name: 'two links before a removed comment', html: '<a href="x">l</a><a href="y">m</a><!--c-->', config: { a: { href: true } }, out: '<a href="cdn/x">l</a><a href="cdn/y">m</a>', calls: ['href:x', 'href:y'] },
+        { name: 'a link before a removed disallowed tag', html: '<a href="x">l</a><script>s</script>', config: { a: { href: true } }, out: '<a href="cdn/x">l</a>', calls: ['href:x'] },
+        { name: 'a link before an unwrapped tag', html: '<a href="x">l</a><foo>t</foo>', config: { a: { href: true } }, out: '<a href="cdn/x">l</a>t', calls: ['href:x'] },
+        // <b> is kept and cleaned first; once <foo> hoists the <div>, a revisit unwraps <b> and the link moves up.
+        { name: 'a link inside an element unwrapped on a revisit', html: '<b><a href="x">l</a><foo><div>d</div></foo></b><!--c-->', config: { b: true, a: { href: true }, div: true }, out: '<a href="cdn/x">l</a><div>d</div>', calls: ['href:x'] },
+        { name: 'an image before a removed comment', html: '<img src="x.png"><!--c-->', config: { img: { src: true } }, out: '<img src="cdn/x.png">', calls: ['src:x.png'] },
+        { name: 'a link in a template with a comment inside', html: '<template><a href="x">l</a><!--c--></template>', config: { template: true, a: { href: true } }, out: '<template><a href="cdn/x">l</a></template>', calls: ['href:x'] },
+        { name: 'a link in a template with a comment after it', html: '<template><a href="x">l</a></template><!--c-->', config: { template: true, a: { href: true } }, out: '<template><a href="cdn/x">l</a></template>', calls: ['href:x'] },
+        // The parser reopens the <a> in the second <p>; both copies share one attribute list.
+        { name: 'a link the parser splits across paragraphs', html: '<p><a href="x">l<p>m</a>', config: { p: true, a: { href: true } }, out: '<p><a href="cdn/x">l</a></p><p><a href="cdn/x">m</a></p>', calls: ['href:x'] },
+      ])('$name', ({ html, config, out, calls }) => {
+        const hook = prefixing();
+
+        expect(sanitizeHtmlFragment(html, config, hook.transform)).toBe(out);
+        expect(hook.calls).toEqual(calls);
+      });
+
+      // A function rule's string value is written again on every visit.
+      it('a rule that forces the raw URL back on every visit', () => {
+        const hook = prefixing();
+        const config: SanitizerConfig = { a: () => ({ href: 'x' }) };
+
+        expect(sanitizeHtmlFragment('<a href="y">l</a><!--c--><!--d-->', config, hook.transform)).toBe('<a href="cdn/x">l</a>');
+        expect(hook.calls).toEqual(['href:x']);
+      });
+    });
   });
 
   // parse5 throws a RangeError on two adjacent low surrogates. One such field

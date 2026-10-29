@@ -296,7 +296,7 @@ export class DatabasePropertyMenu {
     const { isActive, onActivate, icon } = item;
     const on = typeof isActive === 'function' ? isActive() : isActive === true;
 
-    return this.switchItem(SHOW_PAGE_ICON_ITEM, 'tools.database.settingsShowPageIcon', on, () => onActivate(item), icon);
+    return this.switchItem(SHOW_PAGE_ICON_ITEM, 'tools.database.settingsShowPageIcon', on, () => onActivate(item), typeof icon === 'string' ? icon : undefined);
   }
 
   private t(key: string): string {

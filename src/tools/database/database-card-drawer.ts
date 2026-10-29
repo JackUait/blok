@@ -241,6 +241,8 @@ export interface CardDrawerOptions {
   onTitleChange: (rowId: string, title: string) => void;
   onDescriptionChange: (rowId: string, description: OutputData) => void;
   onClose: () => void;
+  /** The peek now shows a row, another row, or the same row in another mode. */
+  onShown?: () => void;
   /** "+ Add a property": the chosen type and the name typed above it ('' when left empty). */
   onAddProperty?: (type: PropertyType, name: string) => void;
   /**
@@ -467,6 +469,7 @@ export class DatabaseCardDrawer {
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
+  private readonly onShown: (() => void) | undefined;
   private readonly onCopyViewLink: CardDrawerOptions['onCopyViewLink'];
   private readonly onAddProperty: CardDrawerOptions['onAddProperty'];
   private readonly onOpenPropertyMenu: CardDrawerOptions['onOpenPropertyMenu'];
@@ -588,6 +591,7 @@ export class DatabaseCardDrawer {
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
+    this.onShown = options.onShown;
     this.onCopyViewLink = options.onCopyViewLink;
     this.onAddProperty = options.onAddProperty;
     this.onOpenPropertyMenu = options.onOpenPropertyMenu;
@@ -667,6 +671,11 @@ export class DatabaseCardDrawer {
   }
 
   open(row: DatabaseRow, mode: OpenPagesIn = this.drawer === null ? 'side' : this.mode): void {
+    this.show(row, mode);
+    this.onShown?.();
+  }
+
+  private show(row: DatabaseRow, mode: OpenPagesIn): void {
     if (this.drawer) {
       if (mode !== this.mode) {
         this.applyMode(mode);
@@ -1753,6 +1762,7 @@ export class DatabaseCardDrawer {
   private switchMode(mode: OpenPagesIn): void {
     if (this.drawer !== null && mode !== this.mode) {
       this.applyMode(mode);
+      this.onShown?.();
     }
   }
 

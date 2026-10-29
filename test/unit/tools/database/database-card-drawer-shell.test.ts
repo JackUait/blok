@@ -318,6 +318,19 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
+    // The table's OPEN reads CLOSE from this (notion-spec-2 §25.3): every show reports, a repeat in the same mode too.
+    it('reports each show to onShown', () => {
+      const onShown = vi.fn();
+      const drawer = new DatabaseCardDrawer(createOptions({ onShown }));
+
+      drawer.open(ROW, 'side');
+      drawer.open({ ...ROW, id: 'row-2' });
+      drawer.open({ ...ROW, id: 'row-2' }, 'center');
+
+      expect(onShown).toHaveBeenCalledTimes(3);
+      drawer.destroy();
+    });
+
     it('marks the mode button expanded while its menu is open', () => {
       const drawer = new DatabaseCardDrawer(createOptions());
 

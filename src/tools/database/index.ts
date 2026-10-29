@@ -9330,6 +9330,7 @@ export class DatabaseTool implements BlockTool {
             this.sync.syncUpdateRow({ rowId, properties: { [property.id]: description } });
           }
         },
+        onShown: () => this.view?.rowPageOpened?.(),
         onClose: () => {
           rowLink.closed = this.openedRowLink ?? rowLink.closed;
           this.openedRowLink = null;
@@ -10156,7 +10157,6 @@ export class DatabaseTool implements BlockTool {
     if (this.cardDrawer?.openRowId === rowId && !navigates) {
       if (explicit !== undefined && explicit !== this.cardDrawer.openMode) {
         this.cardDrawer.open(row, explicit);
-        this.view?.rowPageOpened?.();
       }
 
       return;
@@ -10176,7 +10176,6 @@ export class DatabaseTool implements BlockTool {
       this.cardDrawer?.setRowPageLookup(rowId, 'pending');
     }
     this.cardDrawer?.open(row, mode);
-    this.view?.rowPageOpened?.();
     this.cardDrawer?.setTemplateBanner(null);
     void this.resolveRowPage(rowId);
   }

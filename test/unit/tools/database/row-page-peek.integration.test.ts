@@ -161,6 +161,18 @@ describe('row page peek modes', () => {
       expect(isOpen()).toBe(false);
       expect(label('r2')).toBe('Open');
     });
+
+    it('follows a step with the header arrow and with Ctrl+J', async () => {
+      await make(doc());
+      await openRow('r1');
+      await click(q('[data-blok-database-peek-next]'));
+
+      expect(label('r1')).toBe('Open');
+      expect(label('r2')).toBe('Close');
+      await key({ key: 'j', code: 'KeyJ', ctrlKey: true });
+      expect(label('r2')).toBe('Open');
+      expect(label('r3')).toBe('Close');
+    });
   });
 
   it('opens a center peek as a modal over a backdrop, and Escape closes it', async () => {

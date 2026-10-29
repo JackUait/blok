@@ -7293,8 +7293,11 @@ export class DatabaseTool implements BlockTool {
       clearSearch: () => (context?.controls ?? this.controls).clearSearch(),
       groupToggled: (key, collapsed) => { if (writable()) (context?.owner ?? this).saveGroupCollapse(context?.viewId ?? this.activeViewId, key, collapsed); },
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
-      // Locked: no option edits, so the select editor offers no "Create" (research/05 §12).
-      ...(this.structureLocked() ? {} : { optionsChange: (propertyId: string, options: SelectOption[]) => { if (writable()) this.handleTableOptionsChange(propertyId, options); } }),
+      // Locked: no option edits, so the select editor offers no "Create" (research/05 §12), and no rollup setup.
+      ...(this.structureLocked() ? {} : {
+        optionsChange: (propertyId: string, options: SelectOption[]) => { if (writable()) this.handleTableOptionsChange(propertyId, options); },
+        configureRollup: (propertyId: string, cell: HTMLElement) => { if (writable()) this.openRollupSetup({ cell, propertyId }); },
+      }),
     };
   }
 

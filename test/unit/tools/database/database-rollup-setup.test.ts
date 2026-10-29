@@ -151,6 +151,39 @@ describe('DatabaseTool.openRollupSetup', () => {
     expect(rows).toEqual(['tools.database.rollupRelation', 'tools.database.rollupProperty', 'tools.database.rollupFunction']);
   });
 
+  const filledDoc = (): ReturnType<typeof makeDoc> => makeDoc([
+    { id: 'db', name: 'database', parentId: null, data: {} },
+    rowSeed('r1', 'db', { properties: { title: 'One', rel: [{ id: 'r2' }] } }),
+    rowSeed('r2', 'db', { properties: { title: 'Two', n: 7 } }),
+  ]);
+  const rollupCell = (el: HTMLElement): HTMLElement => {
+    const cell = el.querySelector<HTMLElement>('[data-row-id="r1"] [role="gridcell"][data-property-id="ru"]');
+
+    if (cell === null) throw new Error('no rollup cell');
+
+    return cell;
+  };
+
+  it('the table\'s Configure rollup button opens the menu over the cell (§20.11)', () => {
+    const { el } = buildDatabase(filledDoc(), 'db', data());
+    const cell = rollupCell(el);
+    const configure = cell.querySelector<HTMLButtonElement>('[data-blok-database-table-cell-action="configure"]');
+
+    expect(configure).not.toBeNull();
+    configure?.click();
+
+    expect(menu()?.querySelector('[data-blok-item-name="rollupSetupRelation"]')).not.toBeNull();
+  });
+
+  it('has no Configure rollup button while the database is locked', () => {
+    const locked = data();
+
+    locked.schema[0] = { ...locked.schema[0], databaseLocked: true };
+    const { el } = buildDatabase(filledDoc(), 'db', locked);
+
+    expect(rollupCell(el).querySelector('[data-blok-database-table-cell-action="configure"]')).toBeNull();
+  });
+
   it('opens nothing for a property that is not a rollup', () => {
     const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
     const { tool, el } = buildDatabase(doc, 'db', data());

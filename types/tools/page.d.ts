@@ -61,6 +61,17 @@ export interface PageSearchResult {
   title?: string;
   icon?: PageIcon;
   access?: 'none';
+  /**
+   * Titles of the pages above this one, top first, e.g. `['Home', 'Plans']`.
+   * The page picker shows them under the title. When `resolve` is set, its
+   * `path` wins.
+   */
+  path?: string[];
+  /**
+   * `'draft'` shows the "Draft" badge on the picker row. When `resolve` is
+   * set, its `status` wins.
+   */
+  status?: 'draft' | 'published';
 }
 
 /**

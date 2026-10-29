@@ -48,6 +48,10 @@ export interface PageSearchResult {
   title?: string;
   icon?: PageIcon;
   access?: 'none';
+  /** Titles of the pages above this one, top first. Shown under the title in the picker. */
+  path?: string[];
+  /** `'draft'` shows a "Draft" badge in the picker. */
+  status?: 'draft' | 'published';
 }
 
 /** Page tool config. Every hook is optional. */

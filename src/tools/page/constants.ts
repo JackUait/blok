@@ -44,6 +44,11 @@ export const PAGE_TITLE_CLASSES = SHARED_TITLE_CLASSES.join(' ');
 
 export const PAGE_TITLE_MUTED_CLASSES = SHARED_TITLE_MUTED_CLASSES.join(' ');
 
+/** A page's path: the hover preview and the page picker show it the same way. */
+export const PAGE_PATH_CLASSES = 'w-full truncate text-xs leading-[18px] text-text-secondary';
+
+export const PAGE_PATH_SEPARATOR = ' / ';
+
 /** The neutral gray preset, so it reads as a label, never as a link or a selection. */
 export const PAGE_DRAFT_BADGE_CLASSES = [
   'flex-none',

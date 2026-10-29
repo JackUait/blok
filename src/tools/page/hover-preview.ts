@@ -4,6 +4,7 @@ import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { twJoin } from '../../components/utils/tw';
 import type { PageIcon } from './types';
+import { PAGE_PATH_CLASSES, PAGE_PATH_SEPARATOR } from './constants';
 import { pageIconNode } from './icon-node';
 
 export { pageIconNode };
@@ -259,9 +260,9 @@ export class PageHoverPreview {
     if (content.path.length > 0) {
       const path = document.createElement('div');
 
-      path.className = 'w-full truncate text-xs leading-[18px] text-text-secondary';
+      path.className = PAGE_PATH_CLASSES;
       path.setAttribute(DATA_ATTR.testid, 'page-hover-preview-path');
-      path.textContent = content.path.join(' / ');
+      path.textContent = content.path.join(PAGE_PATH_SEPARATOR);
       parts.push(path);
     }
 

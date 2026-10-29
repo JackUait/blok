@@ -35,6 +35,13 @@ describe('shared inline sanitize rules', () => {
     expect(result).toBe('<mark style="color: red;">hot</mark>');
   });
 
+  it('drops the style of a mark inside MathML, which has no style object', () => {
+    const result = clean('<br><math><mark style="color:red">x</mark></math>', INLINE_TEXT_SANITIZE);
+
+    expect(result).not.toContain('style');
+    expect(result).toContain('x');
+  });
+
   it('keeps color and drops other styles on mark in the headless sanitizer', () => {
     const result = sanitizeHtmlFragment(MARK, INLINE_TEXT_SANITIZE);
 

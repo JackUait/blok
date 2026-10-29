@@ -26,7 +26,12 @@ const ALLOWED_COLOR_STYLE_PROPS = new Set(['color', 'background-color']);
  * @returns attribute config keeping `style` only when a color remains
  */
 export const preserveColorStyles = (node: Element): { [attr: string]: boolean | string } => {
-  const style = (node as HTMLElement).style;
+  // A MathML or SVG copy has no CSSStyleDeclaration; drop its style.
+  const style = (node as Partial<HTMLElement>).style;
+
+  if (style === undefined) {
+    return {};
+  }
 
   const props = Array.from({ length: style.length }, (_, i) => style.item(i));
 

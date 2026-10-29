@@ -57,6 +57,27 @@ describe('database CSV', () => {
 
       expect(parseCsv(serializeCsv(table))).toEqual(table);
     });
+
+    it.each([
+      ['=HYPERLINK("http://evil.example","x")', '"\'=HYPERLINK(""http://evil.example"",""x"")"'],
+      ['+cmd|\'/C calc\'!A0', "'+cmd|'/C calc'!A0"],
+      ['-2+3+cmd', "'-2+3+cmd"],
+      ['@SUM(1+1)', "'@SUM(1+1)"],
+      ['\t=1', '"\'\t=1"'],
+      ['\r=1', '"\'\r=1"'],
+    ])('writes %j so a spreadsheet reads it as text, not a formula', (cell, written) => {
+      expect(serializeCsv([[cell]])).toBe(`\uFEFF${written}`);
+    });
+
+    it.each(['-5', '+1.5', '-0.25', '1e-7'])('keeps the number %s a number', (cell) => {
+      expect(serializeCsv([[cell]])).toBe(`\uFEFF${cell}`);
+    });
+
+    it('reads a formula-like cell back without the guard quote', () => {
+      const table = [['=1+1', '-x', '@a', '+b', "'plain"]];
+
+      expect(parseCsv(serializeCsv(table))).toEqual(table);
+    });
   });
 
   describe('csvCellText', () => {

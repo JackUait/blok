@@ -14,7 +14,20 @@ export { parseCsv, pastedTable } from './csv-parse';
 
 const BOM = '﻿';
 
-const quote = (cell: string): string => (/[",\r\n\t]|^\s|\s$/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell);
+const PLAIN_NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+
+/**
+ * A spreadsheet runs a cell that starts with = + - @ tab or CR as a formula
+ * (CSV injection). A leading ' makes it text. Numbers stay numbers.
+ * `parseCsv` drops the quote again, so Blok reads its own file back unchanged.
+ */
+const guard = (cell: string): string => (/^[=+\-@\t\r]/.test(cell) && !PLAIN_NUMBER.test(cell) ? `'${cell}` : cell);
+
+const quote = (raw: string): string => {
+  const cell = guard(raw);
+
+  return /[",\r\n\t]|^\s|\s$/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+};
 
 /** CSV with a BOM, so spreadsheet apps read it as UTF-8, and CRLF line ends (RFC 4180). */
 export const serializeCsv = (rows: string[][]): string =>

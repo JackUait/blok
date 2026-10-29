@@ -18,7 +18,8 @@ export const parseCsv = (input: string): string[][] => {
   const rows: string[][] = [];
   const state = { row: [] as string[], cell: '', quoted: false };
   const endCell = (): void => {
-    state.row.push(state.cell);
+    // The guard quote serializeCsv puts before a formula-like cell.
+    state.row.push(/^'[=+\-@\t\r]/.test(state.cell) ? state.cell.slice(1) : state.cell);
     state.cell = '';
   };
   const endRow = (): void => {

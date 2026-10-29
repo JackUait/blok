@@ -35,6 +35,27 @@ describe('column header menu (T11)', () => {
   });
 });
 
+// notion-live-8/80-menu-number.png, 83-menu-name.png: the column header menu's own list, not its submenus
+// and not the row page menu that shares its class.
+describe('column header menu dividers and name row', () => {
+  const LIST = `${HEADER}:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items]`;
+
+  // Notion: x 390-585 in a 378-597 box, 12px in from each side; the list pads 4, the divider 8.
+  it('insets each divider 12px from the box sides', () => {
+    expect(declared(`${LIST} > [data-blok-popover-item-separator]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+  });
+
+  // Notion: AI Autofill 347 to Filter 384 and Wrap content 558 to Insert left 595, one 29px row plus 8.
+  it('takes 8px for a divider: 3 above, the 1px line, 4 below', () => {
+    expect(declared(`${LIST} > [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
+  });
+
+  // Notion: the first row's cap top sits at box top + 55; with no divider Blok's sat at + 50.
+  it('keeps 4px under the name field before the first row', () => {
+    expect(declared(`${LIST} > [data-blok-item-name='name']`, 'margin-block-end')).toEqual(['var(--blok-space-1)']);
+  });
+});
+
 describe('add property menu (T12)', () => {
   // Notion 2026-10-25: 290 wide, one column of types.
   it('is 290 wide with one column of types', () => {

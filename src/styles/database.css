@@ -2770,6 +2770,18 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
+/* notion-live-8/80-menu-number.png, 83-menu-name.png: dividers 12px in from the box sides and 8px
+   tall in all, and the first row 44 under the box top. The ">" steps keep the submenus (the line
+   under Sort) and the row page menu, which shares this class, out. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu']:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+  padding-block: var(--blok-space-0-75) var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu']:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name='name'] {
+  margin-block-end: var(--blok-space-1);
+}
+
 /* notion-spec-2 §11, §12: every menu with the header look (the column header menu and its submenus,
    the row page menus, the peek's "•••" and peek mode menus) reads 14px regular, values 14/16.8.
    Notion's value ink fails AA, so a value takes the nearest step that passes on a hovered row. */

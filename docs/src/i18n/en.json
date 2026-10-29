@@ -2530,7 +2530,7 @@
             "description": "Offers \"Database - Full page\" in the toolbox's Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nTurn it on only when `create` stores `document` as the new page's content and the `database` tool is registered."
           },
           "search": {
-            "description": "Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search."
+            "description": "Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nA result may carry `path`, the titles of the pages above it, shown under its title. `status: 'draft'` shows a Draft mark. With `resolve`, Blok checks each result and uses its title, path and status. When nothing matches, the list says Nothing found."
           },
           "subscribe": {
             "description": "Calls `onChange` when page metadata or access changes. Blok re-runs `resolve` and uses the returned function to stop listening."
@@ -2541,7 +2541,12 @@
         }
       },
       "page-link": {
-        "description": "A non-owning reference to a host page. It saves only `data.pageId` and never creates or owns a page. Use it for links to an existing page; an owning `page` block is the page tree edge.\n\nRegister `PageLink` with the same authorized `PageConfig` as `Page`. Missing or denied metadata shows a neutral or locked label without the page title or URL."
+        "description": "A non-owning reference to a host page. It saves only `data.pageId` and never creates or owns a page. Use it for links to an existing page; an owning `page` block is the page tree edge.\n\nRegister `PageLink` with the same authorized `PageConfig` as `Page`. Missing or denied metadata shows a neutral or locked label without the page title or URL.\n\nWith `search` in its config, the \"/\" menu offers Link to page. It opens a page list with its own search field. Picking a page inserts the link; Escape inserts nothing.",
+        "options": {
+          "search": {
+            "description": "Shows Link to page in the \"/\" menu and lists the pages to pick from. Results work as in `Page`: `path`, a Draft mark and Nothing found.\n\n\"/\" reads this tool's config, and `@` reads the `Page` tool's config. Pass both the same object."
+          }
+        }
       },
       "file": {
         "description": "An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.",

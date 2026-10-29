@@ -1167,7 +1167,8 @@ const editor = new Blok({
         option: 'search',
         type: '(query: string) => Promise<readonly PageSearchResult[]>',
         default: 'undefined',
-        description: 'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.',
+        description:
+          'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nA result may carry `path`, the titles of the pages above it, shown under its title. `status: \'draft\'` shows a Draft mark. With `resolve`, Blok checks each result and uses its title, path and status. When nothing matches, the list says Nothing found.',
       },
       {
         option: 'subscribe',
@@ -1231,9 +1232,17 @@ const html = blocksToHtml(savedData, {
     type: 'block',
     title: 'Page link',
     description:
-      'A non-owning reference to a host page. It saves only `data.pageId` and never creates or owns a page. Use it for links to an existing page; an owning `page` block is the page tree edge.\n\nRegister `PageLink` with the same authorized `PageConfig` as `Page`. Missing or denied metadata shows a neutral or locked label without the page title or URL.',
+      'A non-owning reference to a host page. It saves only `data.pageId` and never creates or owns a page. Use it for links to an existing page; an owning `page` block is the page tree edge.\n\nRegister `PageLink` with the same authorized `PageConfig` as `Page`. Missing or denied metadata shows a neutral or locked label without the page title or URL.\n\nWith `search` in its config, the "/" menu offers Link to page. It opens a page list with its own search field. Picking a page inserts the link; Escape inserts nothing.',
     importExample: `import { PageLink } from '@bloklabs/core/tools';`,
-    configOptions: [],
+    configOptions: [
+      {
+        option: 'search',
+        type: '(query: string) => Promise<readonly PageSearchResult[]>',
+        default: 'undefined',
+        description:
+          'Shows Link to page in the "/" menu and lists the pages to pick from. Results work as in `Page`: `path`, a Draft mark and Nothing found.\n\n"/" reads this tool\'s config, and `@` reads the `Page` tool\'s config. Pass both the same object.',
+      },
+    ],
     saveDataShape: `interface PageLinkData {
   pageId: string;
 }`,
@@ -1253,6 +1262,8 @@ const editor = new Blok({
       config: {
         resolve: (pageId) => myApi.getAuthorizedPageInfo(pageId),
         href: (pageId) => \`/pages/\${pageId}\`,
+        // Shows Link to page in the "/" menu.
+        search: (query) => myApi.searchAccessiblePages(query),
         subscribe: (pageId, onChange) => myApi.subscribePage(pageId, onChange),
       },
     },

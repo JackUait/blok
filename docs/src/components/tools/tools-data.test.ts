@@ -287,3 +287,45 @@ describe('inline tool saved data', () => {
     },
   );
 });
+
+describe('Link to page docs', () => {
+  const docsIn = (locale: 'en' | 'ru'): { link: string; search: string; linkSearch: string } => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: { docs?: Record<string, { description?: string; options?: Record<string, { description?: string }> }> };
+    };
+    const docs = catalogue.tools?.docs ?? {};
+
+    return {
+      link: docs['page-link']?.description ?? '',
+      search: docs.page?.options?.search?.description ?? '',
+      linkSearch: docs['page-link']?.options?.search?.description ?? '',
+    };
+  };
+  const section = (id: string) => TOOL_SECTIONS.find((s) => s.id === id);
+
+  it('documents the search option of page-link, with "/" Link to page', () => {
+    const option = section('page-link')?.configOptions.find((o) => o.option === 'search');
+
+    expect(option?.description).toContain('Link to page');
+    expect(section('page-link')?.description).toContain('Link to page');
+    expect(section('page-link')?.usageExample).toContain('search:');
+  });
+
+  it('documents path, Draft and Nothing found on the page search option', () => {
+    const description = section('page')?.configOptions.find((o) => o.option === 'search')?.description ?? '';
+
+    expect(description).toContain('`path`');
+    expect(description).toContain("`status: 'draft'`");
+    expect(description).toContain('Draft');
+    expect(description).toContain('Nothing found');
+  });
+
+  it.each(['en', 'ru'] as const)('carries the same facts in %s.json', (locale) => {
+    const { link, search, linkSearch } = docsIn(locale);
+
+    expect(link).toContain('"/"');
+    expect(linkSearch).toContain('"/"');
+    expect(search).toContain('`path`');
+    expect(search).toContain("`status: 'draft'`");
+  });
+});

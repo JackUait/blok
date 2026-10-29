@@ -107,17 +107,9 @@ const isBlockElement = (node: HtmlChildNode | null): boolean => {
  * @param direction - -1 for previous, +1 for next
  */
 const elementSibling = (parent: HtmlParentNode, index: number, direction: -1 | 1): HtmlChildNode | null => {
-  const step = (i: number): HtmlChildNode | null => {
-    if (i < 0 || i >= parent.childNodes.length) {
-      return null;
-    }
+  const siblings = direction === 1 ? parent.childNodes.slice(index + 1) : parent.childNodes.slice(0, Math.max(index, 0)).reverse();
 
-    const sibling = parent.childNodes[i];
-
-    return isElementNode(sibling) ? sibling : step(i + direction);
-  };
-
-  return step(index + direction);
+  return siblings.find(isElementNode) ?? null;
 };
 
 /**
@@ -591,15 +583,13 @@ const sanitizeChildren = (
     return index + 1;
   };
 
-  const scan = (index: number): void => {
-    if (index >= parent.childNodes.length) {
-      return;
-    }
+  // A loop, not recursion: an unwrap or removal rescans from 0, and a frame per
+  // step overflowed the stack on about 156 sibling tags.
+  const cursor = { index: 0 };
 
-    scan(sanitizeChildAt(index));
-  };
-
-  scan(0);
+  while (cursor.index < parent.childNodes.length) {
+    cursor.index = sanitizeChildAt(cursor.index);
+  }
 };
 
 /**
@@ -649,62 +639,76 @@ const normalizeInlineSweep = (parent: HtmlParentNode, ancestors: InlineElementVi
   };
 
   /**
-   * Walk the children once, unwrapping wrappers that decorate nothing or
-   * repeat an ancestor. Rescans from the same index after a mutation.
-   * @param index - child position to examine
-   * @returns whether anything was unwrapped from here on
+   * Whether a wrapper decorates nothing or repeats an ancestor.
+   * @param node - candidate wrapper
    */
-  const unwrapFrom = (index: number): boolean => {
-    if (index >= parent.childNodes.length) {
+  const isRedundant = (node: HtmlElement): boolean => {
+    if (!MERGEABLE_TAGS.has(node.tagName.toUpperCase())) {
       return false;
     }
-
-    const node = parent.childNodes[index];
-
-    if (!isElementNode(node) || !MERGEABLE_TAGS.has(node.tagName.toUpperCase())) {
-      return unwrapFrom(index + 1);
-    }
-
     const view = inlineViewOf(node);
 
-    if (decoratesNothing(view) || duplicatesAncestor(view, ancestors)) {
-      unwrapAt(node, index);
-      unwrapFrom(index);
+    return decoratesNothing(view) || duplicatesAncestor(view, ancestors);
+  };
 
-      return true;
+  /**
+   * Move every child of `right` to the end of `left`.
+   * @param left - element that keeps the children
+   * @param right - element that gives them up
+   */
+  const moveChildren = (left: HtmlElement, right: HtmlElement): void => {
+    for (const child of right.childNodes) {
+      child.parentNode = left;
+      left.childNodes.push(child);
+    }
+  };
+
+  /**
+   * Walk the children once, unwrapping wrappers that decorate nothing or
+   * repeat an ancestor. Rescans from the same index after a mutation.
+   * @param start - child position to start from
+   * @returns whether anything was unwrapped from here on
+   */
+  const unwrapFrom = (start: number): boolean => {
+    const walk = { index: start, changed: false };
+
+    while (walk.index < parent.childNodes.length) {
+      const node = parent.childNodes[walk.index];
+
+      if (isElementNode(node) && isRedundant(node)) {
+        unwrapAt(node, walk.index);
+        walk.changed = true;
+        continue;
+      }
+      walk.index += 1;
     }
 
-    return unwrapFrom(index + 1);
+    return walk.changed;
   };
 
   /**
    * Merge each child with the following sibling while the two express the
    * same formatting.
-   * @param index - child position to examine
+   * @param start - child position to start from
    * @returns whether anything was merged from here on
    */
-  const mergeFrom = (index: number): boolean => {
-    if (index >= parent.childNodes.length - 1) {
-      return false;
+  const mergeFrom = (start: number): boolean => {
+    const walk = { index: start, changed: false };
+
+    while (walk.index < parent.childNodes.length - 1) {
+      const left = parent.childNodes[walk.index];
+      const right = parent.childNodes[walk.index + 1];
+
+      if (isElementNode(left) && isElementNode(right) && areInterchangeable(inlineViewOf(left), inlineViewOf(right))) {
+        moveChildren(left, right);
+        parent.childNodes.splice(walk.index + 1, 1);
+        walk.changed = true;
+        continue;
+      }
+      walk.index += 1;
     }
 
-    const left = parent.childNodes[index];
-    const right = parent.childNodes[index + 1];
-    const mergeable =
-      isElementNode(left) && isElementNode(right) && areInterchangeable(inlineViewOf(left), inlineViewOf(right));
-
-    if (!mergeable) {
-      return mergeFrom(index + 1);
-    }
-
-    for (const child of right.childNodes) {
-      child.parentNode = left;
-      left.childNodes.push(child);
-    }
-    parent.childNodes.splice(index + 1, 1);
-    mergeFrom(index);
-
-    return true;
+    return walk.changed;
   };
 
   const unwrapped = unwrapFrom(0);

@@ -95,50 +95,53 @@ export const applyInlineRenderers = (
    * @param parent - node whose children are visited
    */
   const visit = (parent: HtmlParentNode): void => {
-    const step = (index: number): void => {
-      if (index >= parent.childNodes.length) {
-        return;
-      }
+    const walk = { index: 0 };
 
-      const node = parent.childNodes[index];
+    while (walk.index < parent.childNodes.length) {
+      walk.index = visitChildAt(parent, walk.index);
+    }
+  };
 
-      if (!isElementNode(node)) {
-        step(index + 1);
+  /**
+   * Render or descend into one child.
+   * @param parent - node whose child is visited
+   * @param index - the child's position
+   * @returns the position of the next child to visit
+   */
+  const visitChildAt = (parent: HtmlParentNode, index: number): number => {
+    const node = parent.childNodes[index];
 
-        return;
-      }
+    if (!isElementNode(node)) {
+      return index + 1;
+    }
 
-      const renderer = renderers[node.tagName.toLowerCase()];
-      const rendered = renderer === undefined
-        ? undefined
-        : renderer({
-          tag: node.tagName.toLowerCase(),
-          attrs: Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value])),
-          html: serialize(node),
-          text: textOf(node),
-        });
+    const renderer = renderers[node.tagName.toLowerCase()];
+    const rendered = renderer === undefined
+      ? undefined
+      : renderer({
+        tag: node.tagName.toLowerCase(),
+        attrs: Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value])),
+        html: serialize(node),
+        text: textOf(node),
+      });
 
-      if (typeof rendered !== 'string') {
-        // Untouched: descend, then continue past this element.
-        visit(node);
-        step(index + 1);
+    if (typeof rendered !== 'string') {
+      // Untouched: descend, then continue past this element.
+      visit(node);
 
-        return;
-      }
+      return index + 1;
+    }
 
-      // Replaced: splice the rendered markup in as nodes and skip past it —
-      // a renderer's output is final and is never fed back through the hooks.
-      const replacement = parseInDivContext(rendered).childNodes;
+    // Replaced: splice the rendered markup in as nodes and skip past it —
+    // a renderer's output is final and is never fed back through the hooks.
+    const replacement = parseInDivContext(rendered).childNodes;
 
-      for (const child of replacement) {
-        child.parentNode = parent;
-      }
-      parent.childNodes.splice(index, 1, ...replacement);
+    for (const child of replacement) {
+      child.parentNode = parent;
+    }
+    parent.childNodes.splice(index, 1, ...replacement);
 
-      step(index + replacement.length);
-    };
-
-    step(0);
+    return index + replacement.length;
   };
 
   visit(fragment);

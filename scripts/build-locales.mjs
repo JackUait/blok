@@ -19,7 +19,8 @@ async function buildLocales() {
     configFile: false,
     build: {
       copyPublicDir: false,
-      target: 'es2017',
+      // Same browser floor as vite.config.mjs.
+      target: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       emptyOutDir: false, // Don't clear dist/ since blok is already built
       lib: {
         entry: path.resolve(__dirname, '../src/locales.ts'),

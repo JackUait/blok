@@ -26,11 +26,13 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       copyPublicDir: false,
-      target: 'es2017',
-      // Without this, CSS inherits the es2017 target and lightningcss lowers
-      // logical properties into rules keyed on the page's `lang`, so an RTL
-      // editor on a `lang="en"` page lays out as LTR. The floor matches what the
-      // CSS already needs (`:has()`, container queries).
+      // JS and CSS share one browser floor: what the CSS already needs (`:has()`,
+      // container queries). An older CSS target makes lightningcss lower logical
+      // properties into rules keyed on the page's `lang`, so an RTL editor on a
+      // `lang="en"` page lays out as LTR. A newer JS target such as es2022 emits
+      // regex lookbehind and class static blocks, which Safari 16.0 cannot parse.
+      // test/unit/build/syntax-floor.test.ts checks the output.
+      target: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       cssTarget: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       lib: {
         entry: {

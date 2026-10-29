@@ -6,7 +6,7 @@ import { safeHref } from '../utils/sanitize-url';
 
 import { BaseToolAdapter, declaredRichTextFields, InternalBlockToolSettings, UserSettings } from './base';
 import { ToolsCollection } from './collection';
-import type { ChildToolRestrictions } from '../../../types/tools';
+import type { ChildToolRestrictions, ToolboxPickContext } from '../../../types/tools';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
 
@@ -213,6 +213,33 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
 
         return data as BlockToolData;
       });
+  }
+
+  /** True when the Tool asks the user for its data after a toolbox pick. */
+  public get picksInsert(): boolean {
+    return typeof (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.PickInsert] === 'function';
+  }
+
+  /**
+   * The data the user picked for a toolbox insert. A rejection means insert nothing.
+   * @param context - the picker's anchor, the API and an abort signal
+   * @param data - the picked toolbox entry's data
+   */
+  public pickInsert(context: ToolboxPickContext, data?: BlockToolData): Promise<BlockToolData> {
+    const pickInsert = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.PickInsert];
+
+    return new Promise<unknown>((resolve) => {
+      if (typeof pickInsert !== 'function') {
+        throw new Error(`Tool «${this.name}» has no pickInsert()`);
+      }
+      resolve(pickInsert.call(this.constructable, this.settings, context, data));
+    }).then((answer) => {
+      if (typeof answer !== 'object' || answer === null || Array.isArray(answer)) {
+        throw new Error(`Tool «${this.name}» pickInsert() did not return block data`);
+      }
+
+      return answer as BlockToolData;
+    });
   }
 
   /**

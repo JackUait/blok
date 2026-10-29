@@ -9,6 +9,20 @@ import { MoveEvent } from './hook-events';
 import { MenuConfig } from './menu-config';
 
 /**
+ * What a Tool's `pickInsert` gets from the toolbox.
+ *
+ * @see BlockToolConstructable.pickInsert
+ */
+export interface ToolboxPickContext {
+  /** The editor's API, for translations and the like. */
+  api: API;
+  /** The block input "/" was typed in. Anchor a picker to it. */
+  anchor: HTMLElement;
+  /** Aborts when the editor goes away. Settle the promise then. */
+  signal: AbortSignal;
+}
+
+/**
  * Which block tools may be direct children of a container block.
  *
  * `deny` wins over `allow` for a tool named in both. Empty (or omitted) lists
@@ -375,6 +389,19 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    *   `blocks.create`. Lets one Tool's entries prepare different things.
    */
   prepareInsert?(config: ToolConfig, data?: BlockToolData): Promise<BlockToolData>;
+
+  /**
+   * Asks the user for the data a block picked from the toolbox needs, like
+   * the page a link points to. The toolbox closes its menu and waits; the
+   * answer is inserted where "/" was typed. A rejection inserts nothing and
+   * puts the caret back. Only the toolbox calls it: `blocks.insert` and agents
+   * pass their data as is.
+   *
+   * @param config - the Tool's config
+   * @param context - where to show the question, and when to give up
+   * @param data - the picked toolbox entry's `data`
+   */
+  pickInsert?(config: ToolConfig, context: ToolboxPickContext, data?: BlockToolData): Promise<BlockToolData>;
 
   /**
    * Drops toolbox entries this config does not support, e.g. an entry that

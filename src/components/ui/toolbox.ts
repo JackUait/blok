@@ -9,6 +9,7 @@ import { getCaretOffset } from '../utils/caret/selection';
 import { restrictedChildToolNames } from '../utils/child-tools';
 import { EventsDispatcher } from '../utils/events';
 import { Listeners } from '../utils/listeners';
+import { findOwn } from '../utils/own-element';
 import type { Popover } from '../utils/popover';
 import { PopoverDesktop, PopoverMobile } from '../utils/popover';
 import { Shortcuts } from '../utils/shortcuts';
@@ -466,6 +467,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   public destroy(): void {
     super.destroy();
+    this.pickAbort?.abort();
 
     if (this.nodes && this.nodes.toolbox) {
       this.nodes.toolbox.remove();
@@ -1223,6 +1225,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   /** A pick that waits on `prepareInsert`; a second one would ask the host twice. */
   private insertPending = false;
 
+  /** Cancels a running `pickInsert` when the toolbox is destroyed. */
+  private pickAbort: AbortController | null = null;
+
   /**
    * Iterate all tools and enable theirs shortcuts if specified
    */
@@ -1297,6 +1302,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
+    if (this.tools.get(toolName)?.picksInsert === true) {
+      await this.pickAndInsert(toolName, blockDataOverrides);
+
+      return;
+    }
+
     const prepared = this.tools.get(toolName)?.prepareInsert(blockDataOverrides);
 
     if (prepared === undefined) {
@@ -1330,6 +1341,58 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     await this.insertBlock(toolName, { ...blockDataOverrides, ...data });
+  }
+
+  /**
+   * Closes the menu, lets the tool ask the user for its data, then inserts it
+   * where "/" was typed. A cancel inserts nothing and leaves the "/query".
+   * @param toolName - the picked tool
+   * @param blockDataOverrides - the picked entry's data
+   */
+  private async pickAndInsert(toolName: string, blockDataOverrides?: BlockToolData): Promise<void> {
+    const tool = this.tools.get(toolName);
+    const block = this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex());
+
+    if (tool === undefined || block === undefined) {
+      return;
+    }
+
+    const field = findOwn(block.holder, '[contenteditable="true"]:not([data-blok-mutation-free])');
+    const anchor = field instanceof HTMLElement ? field : block.holder;
+    const selection = window.getSelection();
+    const caretInAnchor = selection !== null && selection.rangeCount > 0 && anchor.contains(selection.getRangeAt(0).startContainer);
+    const offset = caretInAnchor ? getCaretOffset(anchor) : (anchor.textContent ?? '').length;
+    // Closing resets the span, and the insert needs it to strip only the "/query".
+    const slashQuerySpan = this.openedWithSlash ? this.resolveSlashQuerySpan(anchor) : null;
+    const abort = new AbortController();
+
+    this.insertPending = true;
+    this.pickAbort = abort;
+    this.close();
+
+    const data = await tool.pickInsert({ api: this.api, anchor, signal: abort.signal }, blockDataOverrides)
+      .then((answer) => answer, () => null);
+
+    this.insertPending = false;
+    this.pickAbort = null;
+
+    const live = abort.signal.aborted ? null : this.api.blocks.getById(block.id);
+
+    if (live === null) {
+      return;
+    }
+    // The picker held focus, so the caret is not in the block any more.
+    this.api.caret.setToBlock(live, 'default', offset);
+    if (data === null) {
+      return;
+    }
+
+    this.slashQuerySpan = slashQuerySpan;
+    try {
+      await this.insertBlock(toolName, { ...blockDataOverrides, ...data });
+    } finally {
+      this.slashQuerySpan = null;
+    }
   }
 
   private async insertBlock(toolName: string, blockDataOverrides?: BlockToolData): Promise<void> {

@@ -118,6 +118,11 @@ export enum InternalBlockToolSettings {
    */
   PrepareInsert = 'prepareInsert',
   /**
+   * Data the user picks after choosing the tool in the toolbox (the page a
+   * link points to). Toolbox only.
+   */
+  PickInsert = 'pickInsert',
+  /**
    * Drops toolbox entries the tool's config does not support (an entry that
    * needs a host hook the host did not opt into).
    */

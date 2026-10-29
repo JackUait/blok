@@ -2325,6 +2325,95 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('pickInsert', () => {
+    const pickingTools = (pickInsert: BlockToolAdapter['pickInsert']): ToolsCollection<BlockToolAdapter> => createToolsCollection([
+      ['testTool', mocks.blockToolAdapter],
+      ['page-link', {
+        name: 'page-link',
+        toolbox: [{ title: 'Link to page', icon: '<svg>link</svg>' }],
+        prepareInsert: () => undefined,
+        picksInsert: true,
+        pickInsert,
+      } as unknown as BlockToolAdapter],
+    ]);
+
+    const input = (): HTMLElement => mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]') ?? mocks.blockAPI.holder;
+
+    beforeEach(() => {
+      vi.mocked(mocks.api.blocks.getById).mockImplementation((id: string) => id === mocks.blockAPI.id ? mocks.blockAPI : null);
+    });
+
+    it('closes the menu and asks the tool, anchored to the block input', async () => {
+      const pickInsert = vi.fn<BlockToolAdapter['pickInsert']>(() => new Promise(() => undefined));
+      const toolbox = new Toolbox({ api: mocks.api, tools: pickingTools(pickInsert), i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+      void toolbox.toolButtonActivated('page-link', { kind: 'x' });
+      await Promise.resolve();
+
+      expect(pickInsert).toHaveBeenCalledWith(
+        { api: mocks.api, anchor: input(), signal: expect.any(AbortSignal) },
+        { kind: 'x' }
+      );
+      expect(toolbox.opened).toBe(false);
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+    });
+
+    it('inserts the picked data where the "/" was typed', async () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: pickingTools(() => Promise.resolve({ pageId: 'p1' })),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('page-link');
+
+      expect(mocks.api.caret.setToBlock).toHaveBeenCalledWith(mocks.blockAPI, 'default', 0);
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'page-link', { pageId: 'p1' }, undefined, 0, undefined, true, undefined, undefined, 'user'
+      );
+    });
+
+    it('inserts nothing on a cancel, puts the caret back, and lets the next pick insert', async () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: pickingTools(() => Promise.reject(new Error('cancelled'))),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('page-link');
+
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+      expect(mocks.api.caret.setToBlock).toHaveBeenCalledWith(mocks.blockAPI, 'default', 0);
+
+      await toolbox.toolButtonActivated('testTool');
+
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool', undefined, undefined, 0, undefined, true, undefined, undefined, 'user'
+      );
+    });
+
+    it('aborts the pick when the toolbox is destroyed, and inserts nothing', async () => {
+      const seen: { signal?: AbortSignal } = {};
+      const pickInsert = vi.fn<BlockToolAdapter['pickInsert']>(({ signal }) => new Promise((_resolve, reject) => {
+        seen.signal = signal;
+        signal.addEventListener('abort', () => reject(new Error('aborted')));
+      }));
+      const toolbox = new Toolbox({ api: mocks.api, tools: pickingTools(pickInsert), i18nLabels, i18n: mockI18n });
+      const picking = toolbox.toolButtonActivated('page-link');
+
+      await Promise.resolve();
+      toolbox.destroy();
+      await picking;
+
+      expect(seen.signal?.aborted).toBe(true);
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+      expect(mocks.api.caret.setToBlock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('column_list restriction inside a table cell', () => {
     const columnListAdapter = {
       name: 'column_list',

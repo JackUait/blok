@@ -519,6 +519,29 @@ describe('BlockToolAdapter', () => {
     });
   });
 
+  describe('pick insert', () => {
+    it('says whether the tool asks the user for its data', () => {
+      expect(createBlockTool().tool.picksInsert).toBe(false);
+      expect(createBlockTool({ constructable: createConstructable({ pickInsert: vi.fn() }) }).tool.picksInsert).toBe(true);
+    });
+
+    it('calls the static pickInsert with the tool config, the context and the entry data', async () => {
+      const pickInsert = vi.fn(() => Promise.resolve({ pageId: 'p1' }));
+      const { tool } = createBlockTool({ constructable: createConstructable({ pickInsert }) });
+      const context = { api: {} as API, anchor: document.createElement('div'), signal: new AbortController().signal };
+
+      await expect(tool.pickInsert(context, { kind: 'x' })).resolves.toEqual({ pageId: 'p1' });
+      expect(pickInsert).toHaveBeenCalledWith({ option1: 'option1', option2: 'option2' }, context, { kind: 'x' });
+    });
+
+    it('rejects when the answer is not block data, so nothing is inserted', async () => {
+      const { tool } = createBlockTool({ constructable: createConstructable({ pickInsert: () => Promise.resolve('p1') }) });
+      const context = { api: {} as API, anchor: document.createElement('div'), signal: new AbortController().signal };
+
+      await expect(tool.pickInsert(context)).rejects.toThrow('pickInsert');
+    });
+  });
+
   describe('data upgrade hook', () => {
     it('runs the static upgradeData over incoming data when the tool declares one', () => {
       const constructable = createConstructable({

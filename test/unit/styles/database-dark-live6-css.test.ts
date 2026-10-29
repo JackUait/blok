@@ -83,8 +83,9 @@ describe('OPEN button on a hovered title in dark (§23.2)', () => {
 });
 
 describe('select and multi-select chips in the editor\'s top field in dark (§23.3)', () => {
-  it('draw their × in rgb(173, 169, 163); light keeps the pill ink', () => {
-    expect(tokenValues('--blok-database-chip-remove-ink')).toEqual(['currentColor', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+  // notion-live-3/multi-select-editor.png: light's × is the same neutral grey on every chip colour, not the pill ink.
+  it('draw their × in rgb(173, 169, 163); light draws it neutral grey', () => {
+    expect(tokenValues('--blok-database-chip-remove-ink')).toEqual(['rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
     expect(ruleBody('[data-blok-database-select-chip-remove]')).toContain('color: var(--blok-database-chip-remove-ink)');
   });
 

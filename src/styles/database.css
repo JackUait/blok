@@ -115,7 +115,8 @@
   --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
   /* notion-spec-2 §23.1, §23.4: file and property type glyphs. Light keeps the text ink. */
   --blok-database-glyph: currentColor;
-  --blok-database-chip-remove-ink: currentColor;
+  /* Notion's × is one grey on every chip (darkest pixel 141,139,134); fill unread, so §25.6's icon grey. */
+  --blok-database-chip-remove-ink: rgb(142, 139, 134);
   --blok-database-relation-toggle-shadow: none;
   --blok-database-person-initial-bg: var(--blok-database-option-default-bg);
   --blok-database-person-initial-shadow: none;

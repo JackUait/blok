@@ -28,6 +28,8 @@
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   /* `formula-editor.png` (pixels): the formula box's property token. Dark is unmeasured: the dark divider step. */
   --blok-database-formula-token-bg: rgb(224, 222, 218);
+  /* `32-formula-typed.png` (pixels, x 999): the help example border. Dark is unmeasured: the dark line. */
+  --blok-database-formula-example-border: rgb(241, 240, 238);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   /* Notion's ink at 0.3 is 1.4:1 and the knob is white on a white menu, so the off state was invisible.
@@ -411,6 +413,7 @@
     --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
     --blok-database-page-divider: rgba(255, 255, 255, 0.094);
     --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
+    --blok-database-formula-example-border: #333331;
     /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
     --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
     --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -736,6 +739,7 @@
   --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
+  --blok-database-formula-example-border: #333331;
   /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -13845,9 +13849,13 @@ textarea[data-blok-database-cell-input] {
   cursor: text;
 }
 
+/* `30-formula-empty.png`: "Your formula" is sans, warm grey rgb(188,186,182) (784,284), 1.8:1 on the box;
+   Blok takes that grey's AA step. Its ink is 82px wide (784-865): 14px sans gives 80.6, 13px 75.6. */
 [data-blok-database-formula-input]:empty::before {
   content: attr(data-placeholder);
-  color: var(--blok-search-input-placeholder);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: 14px;
+  color: var(--blok-database-ink-tertiary);
   pointer-events: none;
 }
 
@@ -14140,20 +14148,35 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
-/* `formula-editor.png` (pixels): example boxes 44 tall with a light border.
-   §25.1 (`32-formula-typed.png`): the code, "= result" under it, a copy button at the right. */
+/* `32-formula-typed.png` (pixels): the boxes are 4px apart (580.5 to 584.5). */
+[data-blok-database-formula-help-examples] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+}
+
+/* §25.1 (`32-formula-typed.png`): the code, "= result" under it, a copy button at the right.
+   Pixels: two lines make a 47-tall box and one line 30.5 (`30-formula-empty.png`), so 16.5px lines
+   inside 6px padding; the code starts 6px in. */
 [data-blok-database-formula-help-example] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: var(--blok-space-2);
-  min-height: 44px;
-  padding: var(--blok-space-2);
-  border: 1px solid var(--blok-database-tpl-border);
+  padding: var(--blok-space-1-5);
+  border: 1px solid var(--blok-database-formula-example-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   font-size: 12px;
+  line-height: 16.5px;
+}
+
+/* `30-formula-empty.png` (pixels): the "# Number" chip in an example is 16.5 tall, one line. */
+[data-blok-database-formula-help-example] [data-blok-database-formula-token] {
+  height: 16.5px;
+  vertical-align: top;
+  line-height: 16.5px;
 }
 
 [data-blok-database-formula-help-code],
@@ -14163,14 +14186,16 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
 }
 
+/* `formula-typed.txt`: 22x22. Negative margins keep a one-line box at 30.5: 22 - 6 fits a 16.5 line. */
 [data-blok-database-formula-help-copy] {
   display: inline-flex;
   grid-column: 2;
   grid-row: 1 / span 2;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  margin-block: calc(-1 * var(--blok-space-0-75));
   padding: 0;
   border: 0;
   border-radius: var(--blok-radius-control);

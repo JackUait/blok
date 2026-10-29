@@ -61,12 +61,34 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-formula-input]:empty::before', 'content')).toEqual(['attr(data-placeholder)']);
     });
 
+    // `30-formula-empty.png`: "Your formula" is sans and warm grey; Blok takes the AA step of that grey.
+    it('writes the placeholder in the sans font and the warm tertiary ink', () => {
+      expect(declared('[data-blok-database-formula-input]:empty::before', 'font-family')).toEqual(['var(--blok-font-family, var(--blok-font-sans))']);
+      expect(declared('[data-blok-database-formula-input]:empty::before', 'color')).toEqual(['var(--blok-database-ink-tertiary)']);
+      expect(declared('[data-blok-database-formula-input]:empty::before', 'font-size')).toEqual(['14px']);
+    });
+
     // notion-spec-2 §25.1 (`32-formula-typed.png`): an example box holds its code, "= result" under it, and a copy button at the right.
     it('puts an example\'s copy button at the right of its code and result', () => {
       expect(declared('[data-blok-database-formula-help-example]', 'grid-template-columns')).toEqual(['minmax(0, 1fr) auto']);
       expect(declared('[data-blok-database-formula-help-copy]', 'grid-column')).toEqual(['2']);
       expect(declared('[data-blok-database-formula-help-copy]', 'grid-row')).toEqual(['1 / span 2']);
       expect(declared('[data-blok-database-formula-help-copy]:hover', 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+    });
+
+    // `32-formula-typed.png` (pixels): two-line boxes 47 tall, one-line 30.5 (`30-formula-empty.png`), 4 apart,
+    // a 1px rgb(241,240,238) border (x 999 and 1489), the code 6px in.
+    it('draws example boxes 4px apart with 6px padding, 16.5px lines and a light border', () => {
+      expect(declared('[data-blok-database-formula-help-examples]', 'gap')).toEqual(['var(--blok-space-1)']);
+      expect(declared('[data-blok-database-formula-help-example]', 'padding')).toEqual(['var(--blok-space-1-5)']);
+      expect(declared('[data-blok-database-formula-help-example]', 'line-height')).toEqual(['16.5px']);
+      expect(declared('[data-blok-database-formula-help-example]', 'border')).toEqual(['1px solid var(--blok-database-formula-example-border)']);
+      expect(declared('[data-blok-database-formula-help-example] [data-blok-database-formula-token]', 'height')).toEqual(['16.5px']);
+      expect(declared('[data-blok-database-formula-help-example] [data-blok-database-formula-token]', 'vertical-align')).toEqual(['top']);
+      expect(database).toContain('--blok-database-formula-example-border: rgb(241, 240, 238);');
+      // Notion's copy button is 22x22 (formula-typed.txt) and does not make a one-line box taller than 30.5.
+      expect(declared('[data-blok-database-formula-help-copy]', 'width')).toEqual(['22px']);
+      expect(declared('[data-blok-database-formula-help-copy]', 'margin-block')).toEqual(['calc(-1 * var(--blok-space-0-75))']);
     });
 
     it('highlights the active row gray, never blue', () => {

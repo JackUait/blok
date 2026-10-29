@@ -1421,6 +1421,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROUND15_MENUS_BYTES = 30 + 117 + 240;
     // database.css: round 16: the column header menu's divider inset and height, and the gap under its name field.
     const DATABASE_ROUND16_HEADER_MENU_BYTES = 721;
+    // database.css: round 16: Edit formula example boxes (47 / 30.5 tall, 4 apart) and the sans placeholder.
+    const DATABASE_ROUND16_FORMULA_BOXES_BYTES = 741;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1776,7 +1778,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + LAZY_SHEET_MARKER_BYTES
       + DATABASE_FORMULA_HELP_EXAMPLES_BYTES
       + DATABASE_ROUND15_MENUS_BYTES
-      + DATABASE_ROUND16_HEADER_MENU_BYTES;
+      + DATABASE_ROUND16_HEADER_MENU_BYTES
+      + DATABASE_ROUND16_FORMULA_BOXES_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

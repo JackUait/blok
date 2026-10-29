@@ -3997,6 +3997,7 @@ span[data-blok-slash-search] {
   --blok-database-button-pressed-bg: rgba(33, 27, 23, 0.076);
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-formula-token-bg: rgb(224, 222, 218);
+  --blok-database-formula-example-border: rgb(241, 240, 238);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-switch-off-bg: rgba(135, 131, 120, 0.92);
@@ -4285,6 +4286,7 @@ span[data-blok-slash-search] {
   --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
+  --blok-database-formula-example-border: #333331;
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
   --blok-database-column-orange-accent: rgb(214, 129, 60);
@@ -4566,6 +4568,7 @@ span[data-blok-slash-search] {
   --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
+  --blok-database-formula-example-border: #333331;
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
   --blok-database-column-orange-accent: rgb(214, 129, 60);
@@ -16353,7 +16356,9 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-formula-input]:empty::before {
   content: attr(data-placeholder);
-  color: var(--blok-search-input-placeholder);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: 14px;
+  color: var(--blok-database-ink-tertiary);
   pointer-events: none;
 }
 
@@ -16636,18 +16641,30 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-formula-help-examples] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-1);
+}
+
 [data-blok-database-formula-help-example] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: var(--blok-space-2);
-  min-height: 44px;
-  padding: var(--blok-space-2);
-  border: 1px solid var(--blok-database-tpl-border);
+  padding: var(--blok-space-1-5);
+  border: 1px solid var(--blok-database-formula-example-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   font-size: 12px;
+  line-height: 16.5px;
+}
+
+[data-blok-database-formula-help-example] [data-blok-database-formula-token] {
+  height: 16.5px;
+  vertical-align: top;
+  line-height: 16.5px;
 }
 
 [data-blok-database-formula-help-code], [data-blok-database-formula-help-result] {
@@ -16662,8 +16679,9 @@ textarea[data-blok-database-cell-input] {
   grid-row: 1 / span 2;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  margin-block: calc(-1 * var(--blok-space-0-75));
   padding: 0;
   border: 0;
   border-radius: var(--blok-radius-control);

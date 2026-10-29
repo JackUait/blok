@@ -516,7 +516,11 @@ class FormulaEditor implements FormulaEditorHandle {
 
     description.setAttribute('data-blok-database-formula-help-description', '');
     description.textContent = ref.description;
-    this.help.append(description, ...(ref.examples ?? []).map((example) => this.renderExample(example)));
+    const examples = document.createElement('div');
+
+    examples.setAttribute('data-blok-database-formula-help-examples', '');
+    examples.append(...(ref.examples ?? []).map((example) => this.renderExample(example)));
+    this.help.append(description, examples);
   }
 
   /** notion-spec-2 §25.1 (`32-formula-typed.png`): the code, "= result" under it, a copy button at the right. */

@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1917 + 136 + 519 + 4 closure for all 2576 keys', () => {
+  it('rebuilds a disjoint 1920 + 136 + 519 + 4 closure for all 2579 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2576);
+    expect(lifecycle.size).toBe(2579);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -479,7 +479,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.database.rollupProperty, called by literal in the rollup setup menu (moved from registered-namespace-compatible).
       // +2: the unset rollup setup menu's Relation and Property prompts, rollupSelectRelation/rollupSelectProperty, by literal.
       // +4: a table file's "⋯" menu, its label and its View original, Rename and Delete rows, by literal.
-      'executable-literal': 1917,
+      // +3: the table relation picker's create row: its placeholder, "No results" and "New {page} in {database}", by literal.
+      'executable-literal': 1920,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

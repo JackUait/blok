@@ -6,6 +6,8 @@ import { CellPopover, coverMinWidth } from './cell-popover';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
+/** The create row's id in the keyboard order; no row id is empty. */
+const CREATE = '';
 
 interface Candidate {
   id: string;
@@ -23,6 +25,10 @@ class RelationEditor implements CellEditorHandle {
   private readonly list = document.createElement('div');
   private readonly listId = `blok-database-relation-list-${++listIds.next}`;
   private readonly popover: CellPopover;
+  /** notion-spec-2 §21.2: makes a page in the related database; the table picker only. */
+  private readonly creator: ((title: string) => string | null) | undefined;
+  private readonly scope: string | undefined;
+  private readonly candidates: Candidate[];
   private selected: string[];
   private query = '';
   /** By id, not index: a link regroups the rows. */
@@ -36,8 +42,10 @@ class RelationEditor implements CellEditorHandle {
     value: PropertyValue | undefined,
     anchor: HTMLElement,
     private readonly ctx: CellEditorContext,
-    private readonly candidates: Candidate[]
+    given: Candidate[]
   ) {
+    // A copy: a created page joins this list, never the host's.
+    this.candidates = [...given];
     this.selected = relationIdsOf(value);
     this.root.setAttribute('data-blok-database-relation-editor', '');
     this.root.setAttribute('data-blok-keyboard-owner', '');
@@ -60,6 +68,8 @@ class RelationEditor implements CellEditorHandle {
     // The row page keeps the plain search and hint; a table cell and a form name the database.
     const scope = ctx.coverCell === 'value' ? undefined : ctx.relationScope?.(property);
 
+    this.scope = scope;
+    this.creator = ctx.coverCell === true && scope !== undefined ? ctx.relationCreator?.(property) : undefined;
     if (scope === undefined) {
       this.root.append(this.search, hint, this.list);
     } else {
@@ -68,7 +78,7 @@ class RelationEditor implements CellEditorHandle {
 
     this.search.addEventListener('input', () => {
       this.query = this.search.value;
-      this.activeId = this.rows()[0]?.id ?? null;
+      this.activeId = this.rows()[0]?.id ?? (this.canCreate() ? CREATE : null);
       this.renderList();
     });
     this.search.addEventListener('keydown', this.handleKey);
@@ -106,6 +116,8 @@ class RelationEditor implements CellEditorHandle {
 
     if (this.ctx.coverCell !== true) {
       this.search.placeholder = this.ctx.i18n.t('tools.database.formRelationSearch');
+    } else if (this.creator !== undefined) {
+      this.search.placeholder = this.ctx.i18n.t('tools.database.relationLinkOrCreate');
     }
     header.setAttribute('data-blok-database-relation-head', '');
     bar.setAttribute('data-blok-database-relation-search-bar', '');
@@ -190,15 +202,23 @@ class RelationEditor implements CellEditorHandle {
   private readonly handleKey = (event: KeyboardEvent): void => {
     if (event.isComposing) return;
     const rows = this.rows();
+    const order = [...rows.map((row) => row.id), ...(this.canCreate() ? [CREATE] : [])];
     const index = rows.findIndex((row) => row.id === this.activeId);
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      if (rows.length === 0) return;
-      this.activeId = rows[(index + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length].id;
+      if (order.length === 0) return;
+      const at = this.activeId === null ? -1 : order.indexOf(this.activeId);
+
+      this.activeId = order[(at + (event.key === 'ArrowDown' ? 1 : -1) + order.length) % order.length];
       this.renderList();
     } else if (event.key === 'Enter') {
       event.preventDefault();
+      if (this.activeId === CREATE && this.canCreate()) {
+        this.create();
+
+        return;
+      }
       const row = rows[index];
 
       if (row === undefined) return;
@@ -208,6 +228,61 @@ class RelationEditor implements CellEditorHandle {
       else if (this.heading !== null) this.openPeek(row.id);
     }
   };
+
+  private canCreate(): boolean {
+    const atMax = this.property.relation?.limit !== 1 && this.ctx.maxSelections !== undefined && this.selected.length >= this.ctx.maxSelections;
+
+    return this.creator !== undefined && this.query.trim() !== '' && !atMax;
+  }
+
+  /** notion-spec-2 §21.2: a page titled as typed, linked at once. The picker stays open. */
+  private create(): void {
+    const title = this.query.trim();
+    const id = this.creator?.(title) ?? null;
+
+    if (id === null) return;
+    this.candidates.push({ id, title });
+    this.activeId = id;
+    this.toggle(id);
+  }
+
+  /** "+ New <query> in <database icon> <database>"; "New" and "in" in the secondary ink. */
+  private createRow(): HTMLElement {
+    const row = document.createElement('div');
+    const plus = document.createElement('span');
+    const label = document.createElement('span');
+    const query = document.createElement('span');
+    const database = document.createElement('span');
+    const icon = document.createElement('span');
+
+    row.id = `${this.listId}-create`;
+    row.setAttribute('data-blok-database-relation-create', '');
+    row.setAttribute('role', 'option');
+    row.setAttribute('aria-selected', 'false');
+    plus.setAttribute('aria-hidden', 'true');
+    plus.innerHTML = IconPlus;
+    query.setAttribute('data-blok-database-relation-create-query', '');
+    query.textContent = this.query.trim();
+    icon.setAttribute('data-blok-database-relation-scope-icon', '');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = IconDatabase;
+    database.setAttribute('data-blok-database-relation-create-database', '');
+    database.textContent = this.scope ?? '';
+    label.setAttribute('data-blok-database-relation-create-label', '');
+    this.ctx.i18n.t('tools.database.relationNewIn').split(/(\{page\}|\{database\})/).forEach((part) => {
+      if (part === '{page}') label.append(query);
+      else if (part === '{database}') label.append(icon, database);
+      else if (part !== '') label.append(part);
+    });
+    row.append(plus, label);
+    if (this.activeId === CREATE) {
+      row.setAttribute('data-active', '');
+      this.search.setAttribute('aria-activedescendant', row.id);
+    }
+    row.addEventListener('click', () => this.create());
+
+    return row;
+  }
 
   /**
    * notion-spec-2 §19.2: a centred peek opens over the picker, which stays
@@ -233,9 +308,13 @@ class RelationEditor implements CellEditorHandle {
       this.heading.textContent = linked === 0
         ? this.ctx.i18n.t('tools.database.formRelationHeading')
         : this.ctx.i18n.t('tools.database.tableSelectedCount').replace('{count}', String(linked));
+      // notion-spec-2 §21.2: a query with no match reads "No results".
+      if (rows.length === 0 && this.query.trim() !== '') {
+        this.heading.textContent = this.ctx.i18n.t('tools.database.relationNoResults');
+      }
     }
 
-    const items = rows.map((candidate, index) => {
+    const items: HTMLElement[] = rows.map((candidate, index) => {
       const row = document.createElement('div');
       const chosen = this.selected.includes(candidate.id);
 
@@ -269,6 +348,16 @@ class RelationEditor implements CellEditorHandle {
       more.setAttribute('role', 'presentation');
       more.textContent = this.ctx.i18n.t('tools.database.relationSelectMore');
       items.splice(linked, 0, more);
+    }
+    if (this.canCreate()) {
+      if (rows.length > 0) {
+        const divider = document.createElement('div');
+
+        divider.setAttribute('data-blok-database-relation-divider', '');
+        divider.setAttribute('role', 'presentation');
+        items.push(divider);
+      }
+      items.push(this.createRow());
     }
     this.list.replaceChildren(...items);
   }

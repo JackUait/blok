@@ -241,6 +241,106 @@ describe('relation editor', () => {
       });
     });
 
+    // notion-spec-2 §21.2 (E6-rel-*.png): typing adds "+ New <query> in <database>" as the last row.
+    describe('creating a page', () => {
+      const type = (text: string): void => {
+        search().value = text;
+        search().dispatchEvent(new Event('input'));
+      };
+      const createRow = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-relation-create]');
+      const heading = (): string | null | undefined => document.querySelector('[data-blok-database-relation-heading]')?.textContent;
+      const openCreatable = (overrides: Parameters<typeof makeEditorContext>[0] = {}): ReturnType<typeof vi.fn> => {
+        const create = vi.fn((title: string) => `new-${title}`);
+
+        openCellEditor(relation(), [], makeAnchor(), makeEditorContext({
+          relationCandidates: () => candidates, relationScope: () => 'Tasks', coverCell: true, relationCreator: () => create, ...overrides,
+        }));
+
+        return create;
+      };
+
+      it('reads "Link or create a page…" in the field', () => {
+        openCreatable();
+
+        expect(search().placeholder).toBe('tools.database.relationLinkOrCreate');
+      });
+
+      it('shows no create row while the field is empty', () => {
+        openCreatable();
+
+        expect(createRow()).toBeNull();
+      });
+
+      it('with no match, reads "No results" and highlights the create row', () => {
+        openCreatable({ i18n: { t: (key: string) => (key === 'tools.database.relationNewIn' ? 'New {page} in {database}' : key) } });
+        type('Zeta');
+
+        expect(heading()).toBe('tools.database.relationNoResults');
+        expect(createRow()?.hasAttribute('data-active')).toBe(true);
+        expect(createRow()?.getAttribute('role')).toBe('option');
+        expect(search().getAttribute('aria-activedescendant')).toBe(createRow()?.id);
+        expect(createRow()?.querySelector('[data-blok-database-relation-create-query]')?.textContent).toBe('Zeta');
+        expect(createRow()?.querySelector('[data-blok-database-relation-create-database]')?.textContent).toBe('Tasks');
+      });
+
+      it('with a match, keeps the create row last after a divider, and the match highlighted', () => {
+        openCreatable();
+        type('bra');
+
+        const list = [...(document.querySelector('[role="listbox"]')?.children ?? [])];
+
+        expect(heading()).toBe('tools.database.formRelationHeading');
+        expect(list.at(-1)).toBe(createRow());
+        expect(list.at(-2)?.hasAttribute('data-blok-database-relation-divider')).toBe(true);
+        expect(options()[0].hasAttribute('data-active')).toBe(true);
+        press(search(), 'ArrowDown');
+        expect(createRow()?.hasAttribute('data-active')).toBe(true);
+      });
+
+      it('Enter on the create row makes the page and links it, and the picker stays open', () => {
+        const onCommit = vi.fn();
+        const onClose = vi.fn();
+        const create = openCreatable({ onCommit, onClose });
+
+        type('  Zeta ');
+        press(search(), 'Enter');
+
+        expect(create).toHaveBeenCalledWith('Zeta');
+        expect(onCommit).toHaveBeenLastCalledWith([{ id: 'new-Zeta' }]);
+        expect(onClose).not.toHaveBeenCalled();
+        expect(document.querySelector('[data-blok-database-relation-option="new-Zeta"]')?.getAttribute('aria-selected')).toBe('true');
+      });
+
+      it('a click on the create row makes the page and links it', () => {
+        const onCommit = vi.fn();
+        const create = openCreatable({ onCommit });
+
+        type('Zeta');
+        createRow()?.click();
+
+        expect(create).toHaveBeenCalledWith('Zeta');
+        expect(onCommit).toHaveBeenLastCalledWith([{ id: 'new-Zeta' }]);
+      });
+
+      it('links nothing when the database refuses the page', () => {
+        const onCommit = vi.fn();
+
+        openCreatable({ onCommit, relationCreator: () => () => null });
+        type('Zeta');
+        press(search(), 'Enter');
+
+        expect(onCommit).not.toHaveBeenCalled();
+      });
+
+      it('hides the create row, and keeps the search placeholder, when the database cannot take a page', () => {
+        openCreatable({ relationCreator: () => undefined });
+        type('Zeta');
+
+        expect(createRow()).toBeNull();
+        expect(search().placeholder).toBe('tools.database.relationSearchPlaceholder');
+      });
+    });
+
     it('draws a page glyph before each title', () => {
       openInTable();
 

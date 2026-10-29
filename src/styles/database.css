@@ -13002,6 +13002,67 @@ textarea[data-blok-database-cell-input] {
   line-height: 16.8px;
 }
 
+/* notion-spec-2 §21.2 (E6-rel-match-B.png): a line, then "+ New <query> in <db icon> <db>", 552x32 at box x + 4,
+   padding 0 8px, 14/16.8. "New" and "in" are grey in the shot (colour not read); the line colour is not read. */
+[data-blok-database-relation-editor] [role="listbox"] > [data-blok-database-relation-divider] {
+  flex: none;
+  height: 1px;
+  margin: var(--blok-space-1) calc(-1 * var(--blok-space-2));
+  background-color: var(--blok-database-confirm-divider);
+}
+
+[data-blok-database-relation-create] {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-height: 32px;
+  margin-inline: calc(-1 * var(--blok-space-1));
+  padding: 0 var(--blok-space-2);
+  border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-database-ink-secondary);
+  font-size: 14px;
+  line-height: 16.8px;
+  cursor: pointer;
+}
+
+[data-blok-database-relation-create] > span[aria-hidden] {
+  display: inline-flex;
+  flex: none;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-relation-create] > span[aria-hidden] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-relation-create-label] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-relation-create-query],
+[data-blok-database-relation-create-database] {
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-relation-create] [data-blok-database-relation-scope-icon] {
+  margin-inline: var(--blok-space-1) var(--blok-space-0-75);
+}
+
+[data-blok-database-relation-create][data-active] {
+  background-color: var(--blok-database-hover-bg);
+}
+
+@media (hover: hover) {
+  [data-blok-database-relation-create]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
 /* notion-spec-2 §19.15: the groups say what is linked, so no check; a 24x24 "+" / "−" ends the highlighted row. */
 [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option][aria-selected="true"]::after {
   content: none;

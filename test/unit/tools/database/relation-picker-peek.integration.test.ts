@@ -85,3 +85,70 @@ describe('table relation picker over a linked page', () => {
     expect(document.querySelector('[data-blok-database-relation-option="r2"]')?.getAttribute('aria-selected')).toBe('true');
   });
 });
+
+// notion-spec-2 §21.2 (E6-rel-nomatch.png): "+ New <query> in <database>" makes the page and links it, both ways.
+describe('table relation picker creating a page', () => {
+  let blok: (TestEditor & { save(): Promise<{ blocks: Array<{ id?: string; type: string; data: Record<string, unknown> }> }> }) | undefined;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    const schema: PropertyDefinition[] = [
+      { id: 't', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'rel', name: 'Related', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'back' } },
+      { id: 'back', name: 'Back', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'rel' } },
+    ];
+
+    blok = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks: [
+        { id: 'db', type: 'database', content: ['r1'], data: {
+          title: 'Tasks',
+          schema,
+          views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [],
+            properties: schema.map((p) => ({ id: p.id, visible: true })) }],
+          activeViewId: 'v',
+        } },
+        { id: 'r1', type: 'database-row', parent: 'db', data: { position: 'a0', properties: { t: 'One' } } },
+      ] },
+    }) as unknown as typeof blok;
+    await blok?.isReady;
+    await quiet();
+  });
+
+  afterEach(() => {
+    blok?.destroy();
+    holder?.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('makes a page titled as typed, links it, and writes the other side', async () => {
+    const cell = holder?.querySelector<HTMLElement>('[data-row-id="r1"] [role="gridcell"][data-property-id="rel"]');
+
+    if (cell === null || cell === undefined) throw new Error('missing relation cell');
+    cell.click();
+    await quiet();
+    const field = search();
+
+    if (field === null) throw new Error('picker did not open');
+    expect(field.placeholder).toBe('Link or create a page…');
+    field.value = 'Zeta';
+    field.dispatchEvent(new Event('input'));
+    expect(document.querySelector('[data-blok-database-relation-create]')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('New Zeta in Tasks');
+    press(field, 'Enter');
+    await quiet();
+
+    const saved = await blok?.save();
+    const rows = (saved?.blocks ?? []).filter((block) => block.type === 'database-row');
+    const made = rows.find((row) => (row.data.properties as Record<string, unknown>).t === 'Zeta');
+    const one = rows.find((row) => row.id === 'r1');
+
+    if (made === undefined) throw new Error('no new page');
+    expect((one?.data.properties as Record<string, unknown>).rel).toEqual([{ id: made.id }]);
+    expect((made.data.properties as Record<string, unknown>).back).toEqual([{ id: 'r1' }]);
+    expect(search()?.isConnected).toBe(true);
+  });
+});

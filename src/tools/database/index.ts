@@ -5018,7 +5018,7 @@ export class DatabaseTool implements BlockTool {
         readOnly: this.readOnly,
         source: this.source,
         // A form answer is no row value: an undo must not drop its draft.
-        cellContext: { ...this.cellContext(), openEditors: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
+        cellContext: { ...this.cellContext(), openEditors: undefined, relationCreator: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
         hasPeople: this.hasPeople,
         onInteractionEnd: () => {
           if (this.redrawWhenIdleRetry !== null) this.redrawWhenIdle();
@@ -5240,7 +5240,7 @@ export class DatabaseTool implements BlockTool {
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
       readOnly: false,
       source: this.source,
-      cellContext: { ...this.cellContext(), openEditors: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
+      cellContext: { ...this.cellContext(), openEditors: undefined, relationCreator: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
       hasPeople: this.hasPeople,
       respondent: () => this.respondent(),
       onSubmittedChange: (submitted) => {
@@ -10756,6 +10756,53 @@ export class DatabaseTool implements BlockTool {
     return true;
   }
 
+  /**
+   * notion-spec-2 §21.2: the table relation picker's "+ New <query> in <db>"
+   * row. Undefined, so the row hides, when the related database is in another
+   * document, missing, or refuses writes.
+   */
+  private relationCreator(property: PropertyDefinition): ((title: string) => string | null) | undefined {
+    const databaseId = property.relation?.targetDatabaseId;
+
+    if (this.readOnly || databaseId === undefined || property.relation?.targetDocumentId !== undefined) return undefined;
+    if (databaseId === this.dataId && this.source === undefined) return (title) => this.addRelatedRow(title);
+    const target = this.api.blocks.getById(databaseId === this.dataId ? this.source?.databaseId ?? '' : databaseId);
+
+    if (target === null || target.name !== 'database') return undefined;
+    const writable: boolean[] = [];
+
+    target.call('readRowWritePermission', { receive: (allowed: boolean) => writable.push(allowed) });
+    if (!writable.includes(true)) return undefined;
+
+    return (title) => {
+      const created: Array<string | null> = [];
+
+      target.call('addRelatedPage', { title, receive: (rowId: string | null) => created.push(rowId) });
+
+      return created[0] ?? null;
+    };
+  }
+
+  /** Another database's relation picker adds a page here, titled as typed. */
+  addRelatedPage(param: { title: string; receive: (rowId: string | null) => void }): void {
+    if (this.source !== undefined) {
+      this.api.blocks.getById(this.source.databaseId)?.call('addRelatedPage', param);
+
+      return;
+    }
+    param.receive(this.addRelatedRow(param.title));
+  }
+
+  /** In the model at once: the link's two-way write reads the new row before any redraw. */
+  private addRelatedRow(title: string): string | null {
+    const id = this.insertRow({ [this.titlePropertyId()]: title }, { rerender: false });
+
+    if (id === undefined) return null;
+    this.redrawWhenIdle();
+
+    return id;
+  }
+
   /** The relation picker held open under the peek (notion-spec-2 §19.2). */
   private relatedPeekClosed: (() => void) | null = null;
 
@@ -10962,6 +11009,7 @@ export class DatabaseTool implements BlockTool {
       relationCandidates: (property) => this.relationCandidates(property),
       relationScope: (property) => this.relatedDatabaseName(property),
       openRelated: (property, rowId, peek) => this.openRelated(property, rowId, peek),
+      relationCreator: (property) => this.relationCreator(property),
       ...this.mapCellContext(),
       ...(this.config.helpLinks !== undefined ? { helpLinks: this.config.helpLinks } : {}),
       ...(this.people !== undefined ? { people: this.people } : {}),

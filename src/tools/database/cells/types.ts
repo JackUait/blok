@@ -73,6 +73,11 @@ export interface CellContext {
   /** Rows a relation cell can pick, for the relation editor. */
   relationCandidates?: (property: PropertyDefinition) => Array<{ id: string; title: string }>;
   /**
+   * notion-spec-2 §21.2: makes a page titled as typed in the related database
+   * and returns its id, or null when refused. Undefined when it cannot.
+   */
+  relationCreator?: (property: PropertyDefinition) => ((title: string) => string | null) | undefined;
+  /**
    * A form's page picker (research/19 §3b): the related database's name. The
    * relation editor then reads "Select a page" under "Search…" and "In <name>".
    */

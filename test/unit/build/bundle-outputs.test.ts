@@ -436,6 +436,21 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
     expect(bytes).toBeLessThan(3.9 * 1024 * 1024)
   })
 
+  // The markdown parser's entity table; the parser ships in markdown.mjs.
+  const MARKDOWN_PARSER_FINGERPRINT = 'AElig Æ~'
+
+  it('markdown.mjs loads the markdown parser at import time (fingerprint non-vacuity)', async () => {
+    await initLexer()
+    expect(closureCode('markdown').includes(MARKDOWN_PARSER_FINGERPRINT)).toBe(true)
+  })
+
+  for (const file of ['blok', 'tools', 'full']) {
+    it(`${file}.mjs loads the markdown parser only on demand`, async () => {
+      await initLexer()
+      expect(closureCode(file).includes(MARKDOWN_PARSER_FINGERPRINT)).toBe(false)
+    })
+  }
+
   it('keeps mermaid behind a dynamic import (non-vacuity)', async () => {
     await initLexer()
     const closure = [...staticClosure()]

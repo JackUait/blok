@@ -5,7 +5,6 @@ import { loadTextPreview } from './text-preview';
 import { extToPrismLang } from './code-languages';
 import { tokenizePrism, isHighlightable } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
-import { markdownToHtml } from '../../markdown/markdownToHtml';
 import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
@@ -169,6 +168,7 @@ async function renderMarkdown(
   indicator.style.transition = '';
 
   ensurePrismStyles();
+  const { markdownToHtml } = await import('../../markdown/markdownToHtml');
   renderView.innerHTML = await markdownToHtml(text, {
     baseUrl: opts.url,
     backToContentLabel: opts.labels.backToContent,

@@ -1,0 +1,64 @@
+// @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { sanitizeHtmlFragment } from '../../../src/view/sanitize';
+import { INLINE_TEXT_SANITIZE } from '../../../src/shared/inline-text-sanitize';
+import type { SanitizerConfig } from '../../../types';
+
+const SLOW = { timeout: 120_000 };
+
+const BLOCKS: SanitizerConfig = { p: true, div: true, b: {}, i: {} };
+
+/**
+ * Blok.Server runs this on an interpreter with a 10 s call budget, so one
+ * field must not cost quadratic time. Each shape forces many removals among
+ * siblings (tree walk) or deep / wide redundant marks (inline normalization).
+ */
+const PATHOLOGICAL: Array<{ name: string; build: (n: number) => string; config: SanitizerConfig }> = [
+  { name: 'comments between text', build: (n) => '<!--c-->x'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'disallowed tags', build: (n) => '<foo>x</foo>'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'bare spans', build: (n) => '<span>x</span>'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'paragraphs unwrapped', build: (n) => '<p>x</p>\n'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'divs unwrapped', build: (n) => '<div>x</div> '.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'blanks between kept paragraphs', build: (n) => '<p>x</p> '.repeat(n), config: BLOCKS },
+  { name: 'page references between comments', build: (n) => '<a data-blok-page-id="p">x</a><!--c-->'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'alternating nested marks', build: (n) => `${'<b><i>'.repeat(n)}x${'</i></b>'.repeat(n)}`, config: INLINE_TEXT_SANITIZE },
+  { name: 'nested bold chain', build: (n) => `${'<b>'.repeat(n)}x${'</b>'.repeat(n)}`, config: INLINE_TEXT_SANITIZE },
+  { name: 'adjacent bold runs', build: (n) => '<b>x</b>'.repeat(n), config: INLINE_TEXT_SANITIZE },
+];
+
+type Case = (typeof PATHOLOGICAL)[number];
+
+/** Best of five: the time of `times` runs over `html`. */
+const best = (html: string, testCase: Case, times: number): number =>
+  Math.min(
+    ...Array.from({ length: 5 }, () => {
+      const begin = performance.now();
+
+      Array.from({ length: times }).forEach(() => sanitizeHtmlFragment(html, testCase.config));
+
+      return performance.now() - begin;
+    })
+  );
+
+/** The smallest n (from 250, doubling) whose input takes at least 0.5 ms, so timer noise stays small next to it. */
+const calibrate = (testCase: Case): number =>
+  [250, 500, 1000, 2000].find((n) => best(testCase.build(n), testCase, 1) >= 0.5) ?? 4000;
+
+describe('sanitizeHtmlFragment time', SLOW, () => {
+  // One run over 8n must cost about eight runs over n; a quadratic path costs
+  // 8x more. Eight small runs against one large keeps the work, and the GC, alike.
+  it.each(PATHOLOGICAL)('stays linear on $name', (testCase) => {
+    const n = calibrate(testCase);
+    const small = testCase.build(n);
+    const large = testCase.build(8 * n);
+    const ratios = Array.from({ length: 3 }).reduce<number[]>((seen) => {
+      if (seen.length > 0 && seen[seen.length - 1] < 24) {
+        return seen;
+      }
+
+      return [...seen, (8 * best(large, testCase, 1)) / best(small, testCase, 8)];
+    }, []);
+
+    expect(ratios[ratios.length - 1], `n ${n}, ratios ${ratios.map((r) => r.toFixed(1)).join(', ')}`).toBeLessThan(24);
+  });
+});

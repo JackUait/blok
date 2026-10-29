@@ -39,6 +39,7 @@ import {
   MAX_NORMALIZATION_SWEEPS,
   MERGEABLE_TAGS,
   VOID_CONTENT_TAGS,
+  wrapperSignature,
   type InlineElementView,
 } from '../shared/inline-normalization-policy';
 import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
@@ -106,29 +107,6 @@ const isTemplateNode = (node: HtmlElement): node is HtmlTemplate => {
  */
 const isBlockElement = (node: HtmlChildNode | null): boolean => {
   return node !== null && isElementNode(node) && BLOCK_ELEMENT_NAMES.has(node.tagName.toLowerCase());
-};
-
-/**
- * Nearest element sibling in the given direction, skipping text/comments —
- * mirrors DOM previousElementSibling/nextElementSibling for the DOM cleaner
- * whitespace heuristic.
- * @param parent - parent node whose children are scanned
- * @param index - index of the node whose sibling is requested
- * @param direction - -1 for previous, +1 for next
- */
-const elementSibling = (parent: HtmlParentNode, index: number, direction: -1 | 1): HtmlChildNode | null => {
-  const cursor = { at: index + direction };
-
-  while (cursor.at >= 0 && cursor.at < parent.childNodes.length) {
-    const sibling = parent.childNodes[cursor.at];
-
-    if (isElementNode(sibling)) {
-      return sibling;
-    }
-    cursor.at += direction;
-  }
-
-  return null;
 };
 
 /**
@@ -539,8 +517,8 @@ const applyUrlPolicy = (node: HtmlElement, transform: FragmentUrlTransform | und
   }));
 };
 
-/** One parent whose children the walk is cleaning. */
-interface WalkLevel {
+/** One parent whose children a walk cleans. */
+interface WalkContext {
   parent: HtmlParentNode;
   /** Whether the parent counts as a block element. */
   parentIsBlock: boolean;
@@ -548,184 +526,629 @@ interface WalkLevel {
   parentIsTop: boolean;
   /** Whether the parent is inside SVG or MathML, or is one of their elements. */
   inForeign: boolean;
-  /** Next child to visit; back to 0 after any structural change, as the DOM cleaner restarts the walk. */
-  index: number;
 }
 
-/** What one child visit decided: the child to visit next, and the levels to clean before that. */
-interface WalkStep {
-  /** Next child; 0 restarts the walk. */
-  next: number;
-  /** A kept element's children, then its template content (cleaned first, as the last entry). */
-  descend: WalkLevel[];
-}
+/** What visiting one element decided. */
+type ElementVisit =
+  | { kind: 'kept' }
+  | { kind: 'removed'; hoisted: HtmlChildNode[] }
+  /** Kept, and these must be cleaned before it is settled: its children, then its template content (cleaned first, as the last entry). */
+  | { kind: 'descend'; levels: WalkContext[] };
+
+const KEPT: ElementVisit = { kind: 'kept' };
 
 /**
- * A step that goes on among the same children.
- * @param next - next child to visit
+ * Whether two attribute lists are equal, in order.
+ * @param before - copy taken before the visit
+ * @param after - the element's attributes now
  */
-const moveTo = (next: number): WalkStep => ({ next, descend: [] });
+const sameAttrs = (before: HtmlElement['attrs'], after: HtmlElement['attrs']): boolean =>
+  before.length === after.length
+  && before.every((attr, index) => attr.name === after[index].name && attr.value === after[index].value);
 
 /**
- * Handle the child at `level.index`.
- * @param level - parent being cleaned
- * @param config - tag allowlist
- * @param transform - optional URL rewrite hook
+ * Whether a function rule left the children as they were. Rewriting them to
+ * the same single text counts as no change: the page-reference rule sets
+ * `textContent` on every visit.
+ * @param before - copy taken before the visit
+ * @param after - the element's children now
  */
-const sanitizeChildAt = (level: WalkLevel, config: SanitizerConfig, transform: FragmentUrlTransform | undefined): WalkStep => {
-  const { parent, parentIsBlock, parentIsTop, inForeign, index } = level;
-  const node = parent.childNodes[index];
-
-  if (isTextNode(node)) {
-    const strippable = node.value.trim() === ''
-      && (isBlockElement(elementSibling(parent, index, -1)) || isBlockElement(elementSibling(parent, index, 1)));
-
-    if (!strippable) {
-      return moveTo(index + 1);
-    }
-
-    parent.childNodes.splice(index, 1);
-
-    return moveTo(0);
+const sameChildren = (before: HtmlChildNode[], after: HtmlChildNode[]): boolean => {
+  if (before.length !== after.length) {
+    return false;
   }
 
-  if (node.nodeName === '#comment') {
-    parent.childNodes.splice(index, 1);
-
-    return moveTo(0);
+  if (before.length === 1 && isTextNode(before[0]) && isTextNode(after[0])) {
+    return before[0].value === after[0].value;
   }
 
-  if (!isElementNode(node)) {
-    return moveTo(index + 1);
-  }
-
-  const tagName = node.tagName.toLowerCase();
-  const isForeign = inForeign || node.namespaceURI !== NS.HTML;
-
-  // Their text re-parses as markup once it moves in or out of foreign content: mutation XSS.
-  if (isForeign && (tagName === 'script' || tagName === 'style')) {
-    parent.childNodes.splice(index, 1);
-
-    return moveTo(0);
-  }
-
-  const resolution = resolveRule(Object.hasOwn(config, tagName) ? config[tagName] : undefined, node);
-  const isInvalidInline = INLINE_ELEMENT_NAMES.has(tagName) && node.childNodes.some(isBlockElement);
-  const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
-
-  if (resolution.action === 'unwrap' || isInvalidInline || isNestedBlock) {
-    // Children hoisted into SVG or MathML change namespace on a reparse, so
-    // an HTML <iframe> or <style> there turns its text into live markup.
-    const intoForeign = 'tagName' in parent && parent.namespaceURI !== NS.HTML;
-    // the DOM cleaner drops SCRIPT/STYLE contents instead of hoisting them
-    const hoisted = tagName === 'script' || tagName === 'style' || intoForeign ? [] : node.childNodes;
-
-    for (const child of hoisted) {
-      child.parentNode = parent;
-    }
-    parent.childNodes.splice(index, 1, ...hoisted);
-
-    return moveTo(0);
-  }
-
-  if (node.namespaceURI === NS.HTML && REPARSE_AS_MATHML.has(tagName)) {
-    parent.childNodes.splice(index, 1);
-
-    return moveTo(0);
-  }
-
-  filterAttributes(node, resolution.attrs);
-  applyUrlPolicy(node, transform);
-
-  const children: WalkLevel = { parent: node, parentIsBlock: BLOCK_ELEMENT_NAMES.has(tagName), parentIsTop: false, inForeign: isForeign, index: 0 };
-
-  // As in the DOM cleaner: the serializer writes template.content, so it must
-  // be sanitized or an allowed <template> would leak arbitrary markup.
-  return {
-    next: index + 1,
-    descend: isTemplateNode(node)
-      ? [children, { parent: node.content, parentIsBlock: false, parentIsTop: true, inForeign: isForeign, index: 0 }]
-      : [children],
-  };
+  return before.every((child, index) => child === after[index]);
 };
 
+/** State shared by every walk of one sanitize call. */
+class CleanRun {
+  /** Elements whose last visit changed nothing. Visiting them again is a no-op. */
+  public readonly stable = new Set<HtmlElement>();
+  /** Changes so far; an element is stable when its visit added none. */
+  public mutations = 0;
+
+  constructor(private readonly config: SanitizerConfig, private readonly transform: FragmentUrlTransform | undefined) {}
+
+  /**
+   * Clean one element, except its children.
+   * @param context - its parent
+   * @param node - element to clean
+   */
+  public visitElement(context: WalkContext, node: HtmlElement): ElementVisit {
+    const { parent, parentIsBlock, parentIsTop, inForeign } = context;
+    const tagName = node.tagName.toLowerCase();
+    const isForeign = inForeign || node.namespaceURI !== NS.HTML;
+
+    // Their text re-parses as markup once it moves in or out of foreign content: mutation XSS.
+    if (isForeign && (tagName === 'script' || tagName === 'style')) {
+      return this.removeElement(parent, []);
+    }
+
+    if (this.stable.has(node)) {
+      return KEPT;
+    }
+
+    // Taken before the rule runs: a function rule may rewrite both.
+    const attrsBefore = node.attrs.map(({ name, value }) => ({ name, value }));
+    const rule = Object.hasOwn(this.config, tagName) ? this.config[tagName] : undefined;
+    const childrenBefore = typeof rule === 'function' ? [ ...node.childNodes ] : node.childNodes;
+    const resolution = resolveRule(rule, node);
+    const isInvalidInline = INLINE_ELEMENT_NAMES.has(tagName) && node.childNodes.some(isBlockElement);
+    const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
+
+    if (resolution.action === 'unwrap' || isInvalidInline || isNestedBlock) {
+      // Children hoisted into SVG or MathML change namespace on a reparse, so
+      // an HTML <iframe> or <style> there turns its text into live markup.
+      const intoForeign = 'tagName' in parent && parent.namespaceURI !== NS.HTML;
+
+      // the DOM cleaner drops SCRIPT/STYLE contents instead of hoisting them
+      return this.removeElement(parent, tagName === 'script' || tagName === 'style' || intoForeign ? [] : node.childNodes);
+    }
+
+    if (node.namespaceURI === NS.HTML && REPARSE_AS_MATHML.has(tagName)) {
+      return this.removeElement(parent, []);
+    }
+
+    filterAttributes(node, resolution.attrs);
+    applyUrlPolicy(node, this.transform);
+
+    if (!sameAttrs(attrsBefore, node.attrs) || !sameChildren(childrenBefore, node.childNodes)) {
+      this.mutations += 1;
+    }
+
+    const children: WalkContext = { parent: node, parentIsBlock: BLOCK_ELEMENT_NAMES.has(tagName), parentIsTop: false, inForeign: isForeign };
+
+    // As in the DOM cleaner: the serializer writes template.content, so it must
+    // be sanitized or an allowed <template> would leak arbitrary markup.
+    return {
+      kind: 'descend',
+      levels: isTemplateNode(node)
+        ? [children, { parent: node.content, parentIsBlock: false, parentIsTop: true, inForeign: isForeign }]
+        : [children],
+    };
+  }
+
+  /**
+   * Remove an element: `hoisted` takes its place.
+   * @param parent - its parent
+   * @param hoisted - children that take its place
+   */
+  private removeElement(parent: HtmlParentNode, hoisted: HtmlChildNode[]): ElementVisit {
+    for (const child of hoisted) {
+      child.parentNode = parent;
+      // A moved child gets a new parent, and the nested-block check depends on it.
+      if (isElementNode(child)) {
+        this.stable.delete(child);
+      }
+    }
+    this.mutations += 1;
+
+    return { kind: 'removed', hoisted };
+  }
+}
+
+/** Work a walk does before its next unvisited child. */
+type WalkTask =
+  | { kind: 'revisit'; element: HtmlElement; at: number }
+  /** Decide whether the blank run before a removal goes. */
+  | { kind: 'blanks' }
+  | { kind: 'strip'; blanks: HtmlTextNode[]; next: number };
+
+/** An element whose children are being cleaned; settled once they are. */
+interface FinishFrame {
+  kind: 'finish';
+  walk: ChildWalk;
+  element: HtmlElement;
+  mutationsBefore: number;
+  /** Index in `kept` when this is a revisit; undefined on the first visit. */
+  revisitAt: number | undefined;
+}
+
 /**
- * Sanitize a fragment in place with html-janitor's walk: after any removal it
- * restarts from the parent's first child, so hoisted children are judged again
- * in their new parent. The DOM cleaner gives the same output with fewer visits.
+ * One walk over a parent's children: the DOM cleaner's ChildWalk, over arrays.
  *
- * Depth and restarts both go through an explicit stack, not recursion:
- * deep nesting or a long run of removable siblings would overflow the call stack.
+ * html-janitor started the walk again from the first child after every
+ * removal, and output depends on it. Like the DOM cleaner, this repeats only
+ * the checks a restart can change, in the same order: the elements whose last
+ * visit changed something, then the blank text nodes right before the removal.
+ * If a repeated visit removes an element, the walk starts again from the first child.
+ */
+class ChildWalk {
+  public readonly kind = 'walk';
+  /** Children still to visit, the next one last. */
+  private readonly pending: HtmlChildNode[];
+  /** Children visited and kept, in order. Blanks stripped later are in `dropped`. */
+  private kept: HtmlChildNode[] = [];
+  private readonly dropped = new Set<HtmlChildNode>();
+  /** Kept elements whose last visit changed something, with their index in `kept`. */
+  private readonly unstable = new Map<HtmlElement, number>();
+  /** Blank text nodes kept since the last kept element; they share both neighbours. */
+  private runBlanks: HtmlTextNode[] = [];
+  private previousElement: HtmlElement | null = null;
+  /** First element still pending; undefined until needed. */
+  private nextElement: HtmlElement | null | undefined = undefined;
+  /** Next task last. */
+  private tasks: WalkTask[] = [];
+
+  constructor(private readonly run: CleanRun, private readonly context: WalkContext) {
+    this.pending = [ ...context.parent.childNodes ].reverse();
+  }
+
+  /**
+   * Visit children until one descends or none are left; then write the kept ones back.
+   * @param stack - walk stack, for an element that descends
+   * @returns true when the walk is done
+   */
+  public step(stack: Array<ChildWalk | FinishFrame>): boolean {
+    while (this.tasks.length > 0 || this.pending.length > 0) {
+      const task = this.tasks.pop();
+      const descended = task !== undefined
+        ? this.runTask(task, stack)
+        : this.visitNext(this.pending.pop() as HtmlChildNode, stack);
+
+      if (descended) {
+        return false;
+      }
+    }
+
+    const { childNodes } = this.context.parent;
+
+    childNodes.splice(0, childNodes.length);
+    this.kept.filter((node) => !this.dropped.has(node)).forEach((node) => childNodes.push(node));
+
+    return true;
+  }
+
+  /**
+   * Settle an element once its children are clean.
+   * @param frame - the element's finish frame
+   */
+  public settle(frame: FinishFrame): void {
+    if (this.run.mutations === frame.mutationsBefore) {
+      this.run.stable.add(frame.element);
+    }
+
+    if (frame.revisitAt !== undefined) {
+      this.trackStability(frame.element, frame.revisitAt);
+    } else {
+      this.noteKeptElement(frame.element);
+    }
+  }
+
+  /**
+   * Visit the next pending child. Returns true when it descends.
+   * @param node - child to visit
+   * @param stack - walk stack
+   */
+  private visitNext(node: HtmlChildNode, stack: Array<ChildWalk | FinishFrame>): boolean {
+    if (isTextNode(node)) {
+      this.visitText(node);
+
+      return false;
+    }
+
+    if (node.nodeName === '#comment') {
+      this.afterRemoval();
+
+      return false;
+    }
+
+    if (!isElementNode(node)) {
+      this.kept.push(node);
+
+      return false;
+    }
+
+    const mutationsBefore = this.run.mutations;
+    const visit = this.run.visitElement(this.context, node);
+
+    if (visit.kind === 'kept') {
+      this.noteKeptElement(node);
+
+      return false;
+    }
+
+    if (visit.kind === 'removed') {
+      [ ...visit.hoisted ].reverse().forEach((child) => this.pending.push(child));
+      this.nextElement = undefined;
+      this.afterRemoval();
+
+      return false;
+    }
+
+    return this.descend({ kind: 'finish', walk: this, element: node, mutationsBefore, revisitAt: undefined }, visit.levels, stack);
+  }
+
+  /**
+   * A blank text node goes when an element next to it is a block.
+   * @param node - text child
+   */
+  private visitText(node: HtmlTextNode): void {
+    const blank = node.value.trim() === '';
+
+    if (blank && (isBlockElement(this.previousElement) || isBlockElement(this.nextPendingElement()))) {
+      this.afterRemoval();
+
+      return;
+    }
+
+    this.kept.push(node);
+
+    if (blank) {
+      this.runBlanks.push(node);
+    }
+  }
+
+  /**
+   * Run one task. Returns true when a revisited element descends.
+   * @param task - task to run
+   * @param stack - walk stack
+   */
+  private runTask(task: WalkTask, stack: Array<ChildWalk | FinishFrame>): boolean {
+    if (task.kind === 'revisit') {
+      return this.revisit(task.element, task.at, stack);
+    }
+
+    if (task.kind === 'blanks') {
+      // Every blank in the run has the same neighbours. The one before is not a
+      // block (they would be gone), so only the one after decides.
+      if (this.runBlanks.length > 0 && isBlockElement(this.nextPendingElement())) {
+        this.tasks.push({ kind: 'strip', blanks: this.runBlanks, next: 0 });
+        this.runBlanks = [];
+      }
+
+      return false;
+    }
+
+    if (task.next < task.blanks.length) {
+      this.dropped.add(task.blanks[task.next]);
+      this.run.mutations += 1;
+      // Each removal is another restart, so unstable elements are visited again per blank.
+      this.queueRevisits({ ...task, next: task.next + 1 });
+    }
+
+    return false;
+  }
+
+  /**
+   * Visit a kept element again. Returns true when it descends.
+   * @param element - unstable kept element
+   * @param at - its index in `kept`
+   * @param stack - walk stack
+   */
+  private revisit(element: HtmlElement, at: number, stack: Array<ChildWalk | FinishFrame>): boolean {
+    const mutationsBefore = this.run.mutations;
+    const visit = this.run.visitElement(this.context, element);
+
+    if (visit.kind === 'removed') {
+      this.restart(element, visit.hoisted);
+
+      return false;
+    }
+
+    if (visit.kind === 'descend') {
+      return this.descend({ kind: 'finish', walk: this, element, mutationsBefore, revisitAt: at }, visit.levels, stack);
+    }
+
+    this.trackStability(element, at);
+
+    return false;
+  }
+
+  /**
+   * Clean a kept element's children, then settle it. Returns true when a walk was pushed.
+   * @param frame - the element's finish frame
+   * @param levels - its children, then its template content
+   * @param stack - walk stack
+   */
+  private descend(frame: FinishFrame, levels: WalkContext[], stack: Array<ChildWalk | FinishFrame>): boolean {
+    // A walk over text alone changes nothing: no element, so no block next to a blank.
+    const walks = levels
+      .filter((level) => !level.parent.childNodes.every(isTextNode))
+      .map((level) => new ChildWalk(this.run, level));
+
+    if (walks.length === 0) {
+      this.settle(frame);
+
+      return false;
+    }
+    stack.push(frame, ...walks);
+
+    return true;
+  }
+
+  /** Count a removed child, then queue what a restart from the first child would change. */
+  private afterRemoval(): void {
+    this.run.mutations += 1;
+    this.queueRevisits({ kind: 'blanks' });
+  }
+
+  /**
+   * Queue the unstable elements again, in document order, then `then`.
+   * @param then - task to run after the revisits
+   */
+  private queueRevisits(then: WalkTask): void {
+    const ordered = [ ...this.unstable ].sort((a, b) => b[1] - a[1]);
+
+    this.unstable.clear();
+    this.tasks.push(then);
+    ordered.forEach(([element, at]) => this.tasks.push({ kind: 'revisit', element, at }));
+  }
+
+  /**
+   * Walk again from the first child, `removed` replaced by `hoisted`.
+   * Unlike the DOM cleaner, `unstable` is emptied: only elements before the
+   * removal are revisited, as the old restart did.
+   * @param removed - kept element that was just removed
+   * @param hoisted - children that took its place
+   */
+  private restart(removed: HtmlElement, hoisted: HtmlChildNode[]): void {
+    const order = this.kept.filter((node) => !this.dropped.has(node));
+    const at = order.indexOf(removed);
+
+    [ ...order.slice(0, at), ...hoisted, ...order.slice(at + 1) ].reverse().forEach((node) => this.pending.push(node));
+
+    this.kept = [];
+    this.dropped.clear();
+    this.unstable.clear();
+    this.runBlanks = [];
+    this.previousElement = null;
+    this.nextElement = undefined;
+    this.tasks = [];
+  }
+
+  /**
+   * @param element - kept element
+   */
+  private noteKeptElement(element: HtmlElement): void {
+    this.kept.push(element);
+    this.runBlanks = [];
+    this.previousElement = element;
+    this.nextElement = undefined;
+    this.trackStability(element, this.kept.length - 1);
+  }
+
+  /**
+   * Record whether an element's last visit changed nothing.
+   * @param element - visited element
+   * @param at - its index in `kept`
+   */
+  private trackStability(element: HtmlElement, at: number): void {
+    if (this.run.stable.has(element)) {
+      this.unstable.delete(element);
+    } else {
+      this.unstable.set(element, at);
+    }
+  }
+
+  /** The first element still pending, found once per run. */
+  private nextPendingElement(): HtmlElement | null {
+    if (this.nextElement === undefined) {
+      const cursor = { at: this.pending.length - 1 };
+
+      while (cursor.at >= 0 && !isElementNode(this.pending[cursor.at])) {
+        cursor.at -= 1;
+      }
+      this.nextElement = cursor.at >= 0 ? this.pending[cursor.at] as HtmlElement : null;
+    }
+
+    return this.nextElement;
+  }
+}
+
+/**
+ * Sanitize a fragment in place with html-janitor's semantics (see {@link ChildWalk}).
+ *
+ * Depth goes through an explicit stack, not recursion: deep nesting would
+ * overflow the call stack.
  * @param root - fragment whose children are sanitized
  * @param config - tag allowlist
  * @param transform - optional URL rewrite hook
  */
 const sanitizeTree = (root: HtmlParentNode, config: SanitizerConfig, transform: FragmentUrlTransform | undefined): void => {
-  const levels: WalkLevel[] = [ { parent: root, parentIsBlock: true, parentIsTop: true, inForeign: false, index: 0 } ];
+  const run = new CleanRun(config, transform);
+  const stack: Array<ChildWalk | FinishFrame> = [ new ChildWalk(run, { parent: root, parentIsBlock: true, parentIsTop: true, inForeign: false }) ];
 
-  while (levels.length > 0) {
-    const level = levels[levels.length - 1];
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1];
 
-    if (level.index >= level.parent.childNodes.length) {
-      levels.pop();
-    } else {
-      const step = sanitizeChildAt(level, config, transform);
-
-      level.index = step.next;
-      levels.push(...step.descend);
+    if (frame.kind === 'finish') {
+      stack.pop();
+      frame.walk.settle(frame);
+    } else if (frame.step(stack)) {
+      stack.pop();
     }
   }
 };
 
 /**
- * Build the shared normalization policy's element view from an element.
- * @param node - element to describe
+ * Subtree facts cached for one sweep, so a wrapper in a deep chain does not
+ * walk the whole chain below it. Unwrapping keeps every subtree's text. A merge
+ * changes its left side's, but only after the unwrap pass that reads it.
  */
-const inlineViewOf = (node: HtmlElement): InlineElementView => {
-  const hasVoidContentDescendant = (candidate: HtmlElement): boolean => {
-    // A stack, not recursion: deep nesting would overflow the call stack.
-    const pending: HtmlElement[] = [ candidate ];
+interface SweepMemo {
+  text: Map<HtmlElement, string>;
+  hasVoidContent: Map<HtmlElement, boolean>;
+}
 
-    while (pending.length > 0) {
-      const elements = (pending.pop() as HtmlElement).childNodes.filter(isElementNode);
+/**
+ * Fill `memo` for `root` and every uncached element below it, children first.
+ * A stack, not recursion: deep nesting would overflow the call stack.
+ * @param root - subtree to describe
+ * @param memo - map to fill
+ * @param summarize - an element's value from its children's values
+ */
+const fillMemo = <T>(root: HtmlElement, memo: Map<HtmlElement, T>, summarize: (node: HtmlElement) => T): T => {
+  const pending: HtmlElement[] = [ root ];
 
-      if (elements.some((child) => VOID_CONTENT_TAGS.has(child.tagName.toUpperCase()))) {
-        return true;
-      }
-      pending.push(...elements);
+  while (pending.length > 0) {
+    const node = pending[pending.length - 1];
+    const uncached = node.childNodes.filter((child): child is HtmlElement => isElementNode(child) && !memo.has(child));
+
+    if (uncached.length > 0) {
+      uncached.forEach((child) => pending.push(child));
+    } else {
+      pending.pop();
+      memo.set(node, summarize(node));
     }
+  }
 
-    return false;
-  };
-
-  return {
-    tagName: node.tagName.toUpperCase(),
-    attributes: node.attrs.map((attr) => ({ name: attr.name, value: attr.value })),
-    styleDeclarations: parseStyleText(getAttr(node, 'style') ?? ''),
-    text: () => collectText(node),
-    hasVoidContentDescendant: () => hasVoidContentDescendant(node),
-  };
+  return memo.get(root) as T;
 };
 
 /**
+ * Concatenated descendant text, as {@link collectText}.
+ * @param node - element
+ * @param memo - sweep cache
+ */
+const subtreeText = (node: HtmlElement, memo: SweepMemo): string =>
+  fillMemo(node, memo.text, (element) => element.childNodes
+    .map((child) => {
+      if (isTextNode(child)) {
+        return child.value;
+      }
+
+      return isElementNode(child) ? (memo.text.get(child) as string) : '';
+    })
+    .join(''));
+
+/**
+ * Whether any descendant is content in its own right.
+ * @param node - element
+ * @param memo - sweep cache
+ */
+const subtreeHasVoidContent = (node: HtmlElement, memo: SweepMemo): boolean =>
+  fillMemo(node, memo.hasVoidContent, (element) => element.childNodes.some((child) => isElementNode(child)
+    && (VOID_CONTENT_TAGS.has(child.tagName.toUpperCase()) || memo.hasVoidContent.get(child) === true)));
+
+/**
+ * Build the shared normalization policy's element view from an element.
+ * @param node - element to describe
+ * @param memo - sweep cache for the lazy subtree facts
+ */
+const inlineViewOf = (node: HtmlElement, memo: SweepMemo): InlineElementView => ({
+  tagName: node.tagName.toUpperCase(),
+  attributes: node.attrs.map((attr) => ({ name: attr.name, value: attr.value })),
+  styleDeclarations: parseStyleText(getAttr(node, 'style') ?? ''),
+  text: () => subtreeText(node, memo),
+  hasVoidContentDescendant: () => subtreeHasVoidContent(node, memo),
+});
+
+/**
+ * Replace a parent's children in place (the array is mutated, not reassigned).
+ * @param parent - parent to update
+ * @param children - its new children
+ */
+const replaceChildren = (parent: HtmlParentNode, children: HtmlChildNode[]): void => {
+  parent.childNodes.splice(0, parent.childNodes.length);
+  children.forEach((child) => parent.childNodes.push(child));
+};
+
+/**
+ * Point each child's `parentNode` at its new parent.
+ * @param parent - new parent
+ * @param children - moved children
+ */
+const adopt = (parent: HtmlParentNode, children: HtmlChildNode[]): void => {
+  for (const child of children) {
+    child.parentNode = parent;
+  }
+};
+
+/**
+ * The enclosing wrappers. A wrapper's signature is worked out only once a
+ * lookup needs it: most sweeps never look one up.
+ */
+class AncestorIndex {
+  private readonly entered: InlineElementView[] = [];
+  /** How many of `entered`, from the outermost, have a signature in `bySignature`. */
+  private indexed = 0;
+  private readonly bySignature = new Map<string, { view: InlineElementView; count: number }>();
+  private readonly signatures: string[] = [];
+
+  /**
+   * An enclosing wrapper with the same signature as `view`, if any.
+   * @param view - candidate wrapper
+   */
+  public matching(view: InlineElementView): InlineElementView | undefined {
+    if (this.entered.length === 0) {
+      return undefined;
+    }
+
+    for (const view of this.entered.slice(this.indexed)) {
+      const key = wrapperSignature(view);
+      const entry = this.bySignature.get(key) ?? { view, count: 0 };
+
+      entry.count += 1;
+      this.bySignature.set(key, entry);
+      this.signatures.push(key);
+    }
+    this.indexed = this.entered.length;
+
+    return this.bySignature.get(wrapperSignature(view))?.view;
+  }
+
+  /**
+   * Add a wrapper the sweep enters.
+   * @param view - the wrapper's view
+   */
+  public enter(view: InlineElementView): void {
+    this.entered.push(view);
+  }
+
+  /** Drop the innermost wrapper, as the sweep leaves it. */
+  public leave(): void {
+    this.entered.pop();
+
+    if (this.indexed <= this.entered.length) {
+      return;
+    }
+
+    this.indexed = this.entered.length;
+
+    const key = this.signatures.pop() as string;
+    const entry = this.bySignature.get(key);
+
+    if (entry !== undefined && --entry.count === 0) {
+      this.bySignature.delete(key);
+    }
+  }
+}
+
+/**
  * Unwrap the children of `parent` that decorate nothing or repeat an ancestor.
+ * A hoisted child is checked next, in its wrapper's place.
  * @param parent - element whose children are checked
- * @param ancestors - views of the enclosing wrappers
+ * @param ancestors - the enclosing wrappers
+ * @param memo - sweep cache
  * @returns whether anything was unwrapped
  */
-const unwrapRedundantChildren = (parent: HtmlParentNode, ancestors: InlineElementView[]): boolean => {
-  /**
-   * Hoist a redundant wrapper's children into its place.
-   * @param node - wrapper to unwrap
-   * @param index - its position among the parent's children
-   */
-  const unwrapAt = (node: HtmlElement, index: number): void => {
-    for (const child of node.childNodes) {
-      child.parentNode = parent;
-    }
-    parent.childNodes.splice(index, 1, ...node.childNodes);
-  };
-
+const unwrapRedundantChildren = (parent: HtmlParentNode, ancestors: AncestorIndex, memo: SweepMemo): boolean => {
   /**
    * Whether a wrapper decorates nothing or repeats an ancestor.
    * @param node - candidate wrapper
@@ -734,81 +1157,69 @@ const unwrapRedundantChildren = (parent: HtmlParentNode, ancestors: InlineElemen
     if (!MERGEABLE_TAGS.has(node.tagName.toUpperCase())) {
       return false;
     }
-    const view = inlineViewOf(node);
+    const view = inlineViewOf(node, memo);
 
-    return decoratesNothing(view) || duplicatesAncestor(view, ancestors);
-  };
-
-  /**
-   * Walk the children once, unwrapping wrappers that decorate nothing or
-   * repeat an ancestor. Rescans from the same index after a mutation.
-   * @param start - child position to start from
-   * @returns whether anything was unwrapped from here on
-   */
-  const unwrapFrom = (start: number): boolean => {
-    const walk = { index: start, changed: false };
-
-    while (walk.index < parent.childNodes.length) {
-      const node = parent.childNodes[walk.index];
-
-      if (isElementNode(node) && isRedundant(node)) {
-        unwrapAt(node, walk.index);
-        walk.changed = true;
-        continue;
-      }
-      walk.index += 1;
+    if (decoratesNothing(view)) {
+      return true;
     }
 
-    return walk.changed;
+    // Only an ancestor with the same signature can match, so the policy gets just that one.
+    const match = ancestors.matching(view);
+
+    return duplicatesAncestor(view, match === undefined ? [] : [ match ]);
   };
 
-  return unwrapFrom(0);
+  const pending = [ ...parent.childNodes ].reverse();
+  const kept: HtmlChildNode[] = [];
+  const result = { changed: false };
+
+  while (pending.length > 0) {
+    const node = pending.pop() as HtmlChildNode;
+
+    if (isElementNode(node) && isRedundant(node)) {
+      adopt(parent, node.childNodes);
+      [ ...node.childNodes ].reverse().forEach((child) => pending.push(child));
+      result.changed = true;
+    } else {
+      kept.push(node);
+    }
+  }
+
+  if (result.changed) {
+    replaceChildren(parent, kept);
+  }
+
+  return result.changed;
 };
 
 /**
- * Merge adjacent children of `parent` that express the same formatting.
+ * Merge adjacent children of `parent` that express the same formatting: each
+ * child joins the last kept one while the two match.
  * @param parent - element whose children are merged
+ * @param memo - sweep cache
  * @returns whether anything was merged
  */
-const mergeAdjacentChildren = (parent: HtmlParentNode): boolean => {
-  /**
-   * Move every child of `right` to the end of `left`.
-   * @param left - element that keeps the children
-   * @param right - element that gives them up
-   */
-  const moveChildren = (left: HtmlElement, right: HtmlElement): void => {
-    for (const child of right.childNodes) {
-      child.parentNode = left;
-      left.childNodes.push(child);
+const mergeAdjacentChildren = (parent: HtmlParentNode, memo: SweepMemo): boolean => {
+  const kept: HtmlChildNode[] = [];
+  const result = { changed: false };
+
+  for (const right of parent.childNodes) {
+    const left = kept[kept.length - 1];
+
+    if (left !== undefined && isElementNode(left) && isElementNode(right) && areInterchangeable(inlineViewOf(left, memo), inlineViewOf(right, memo))) {
+      adopt(left, right.childNodes);
+      right.childNodes.forEach((child) => left.childNodes.push(child));
+      result.changed = true;
+    } else {
+      kept.push(right);
     }
-  };
+  }
 
-  /**
-   * Merge each child with the following sibling while the two express the
-   * same formatting.
-   * @param start - child position to start from
-   * @returns whether anything was merged from here on
-   */
-  const mergeFrom = (start: number): boolean => {
-    const walk = { index: start, changed: false };
+  if (result.changed) {
+    replaceChildren(parent, kept);
+  }
 
-    while (walk.index < parent.childNodes.length - 1) {
-      const left = parent.childNodes[walk.index];
-      const right = parent.childNodes[walk.index + 1];
-
-      if (isElementNode(left) && isElementNode(right) && areInterchangeable(inlineViewOf(left), inlineViewOf(right))) {
-        moveChildren(left, right);
-        parent.childNodes.splice(walk.index + 1, 1);
-        walk.changed = true;
-        continue;
-      }
-      walk.index += 1;
-    }
-
-    return walk.changed;
-  };
-
-  return mergeFrom(0);
+  return result.changed;
 };
 
 /** One element the sweep is inside: its children were unwrapped, and are visited one by one. */
@@ -818,6 +1229,8 @@ interface SweepFrame {
   children: HtmlChildNode[];
   next: number;
   changed: boolean;
+  /** Whether it is in the ancestor index; the root is not. */
+  isAncestor: boolean;
 }
 
 /**
@@ -836,14 +1249,14 @@ interface SweepFrame {
  * @param root - subtree to normalize in place
  */
 const normalizeInlineSweep = (root: HtmlParentNode): boolean => {
-  // Outermost first. duplicatesAncestor only asks whether any one matches, so the order does not matter.
-  const ancestors: InlineElementView[] = [];
-  const open = (parent: HtmlParentNode): SweepFrame => {
-    const changed = unwrapRedundantChildren(parent, ancestors);
+  const memo: SweepMemo = { text: new Map(), hasVoidContent: new Map() };
+  const ancestors = new AncestorIndex();
+  const open = (parent: HtmlParentNode, isAncestor: boolean): SweepFrame => {
+    const changed = unwrapRedundantChildren(parent, ancestors, memo);
 
-    return { parent, children: [ ...parent.childNodes ], next: 0, changed };
+    return { parent, children: [ ...parent.childNodes ], next: 0, changed, isAncestor };
   };
-  const frames: SweepFrame[] = [ open(root) ];
+  const frames: SweepFrame[] = [ open(root, false) ];
   const result = { changed: false };
 
   while (frames.length > 0) {
@@ -854,8 +1267,8 @@ const normalizeInlineSweep = (root: HtmlParentNode): boolean => {
     frame.next += 1;
 
     if (child !== undefined && isElementNode(child)) {
-      ancestors.push(inlineViewOf(child));
-      frames.push(open(child));
+      ancestors.enter(inlineViewOf(child, memo));
+      frames.push(open(child, true));
     }
 
     if (child !== undefined) {
@@ -863,14 +1276,17 @@ const normalizeInlineSweep = (root: HtmlParentNode): boolean => {
     }
 
     // Merge runs even when something already changed.
-    const changed = mergeAdjacentChildren(frame.parent) || frame.changed;
+    const changed = mergeAdjacentChildren(frame.parent, memo) || frame.changed;
 
     frames.pop();
+
+    if (frame.isAncestor) {
+      ancestors.leave();
+    }
 
     if (frames.length === 0) {
       result.changed = changed;
     } else {
-      ancestors.pop();
       frames[frames.length - 1].changed ||= changed;
     }
   }

@@ -14226,6 +14226,7 @@ textarea[data-blok-database-cell-input] {
   flex-direction: column;
   gap: var(--blok-space-4);
   padding-block: var(--blok-space-4) var(--blok-space-1);
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-gallery][data-card-size="small"] {
@@ -14523,6 +14524,7 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-calendar-toolbar] {
@@ -14871,6 +14873,7 @@ textarea[data-blok-database-cell-input] {
   --blok-database-timeline-line: 28px;
   --blok-database-timeline-header-rows: 2;
   --blok-database-timeline-day: 40px;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   padding-block-end: var(--blok-space-4);
@@ -14882,6 +14885,7 @@ textarea[data-blok-database-cell-input] {
   align-items: center;
   gap: var(--blok-space-1);
   min-block-size: 42px;
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-timeline-toolbar-spacer] {
@@ -14957,7 +14961,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-timeline-new-lane] [data-blok-database-timeline-new] {
   margin-block-start: 0;
   position: sticky;
-  inset-inline-start: 0;
+  inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2));
   inline-size: 197px;
   block-size: 34px;
   line-height: 20px;

@@ -228,3 +228,15 @@ describe('timeline in dark (research/21 §1i)', () => {
     expect(darkValues('--blok-database-calendar-today-text')).toEqual(['#ffffff', '#ffffff']);
   });
 });
+
+describe('content inset (side-by-side-4 #2)', () => {
+  it('starts the toolbar at the text column, like the table, while the grid stays as wide as the view', () => {
+    expect(ruleBody('[data-blok-database-timeline-toolbar]')).toContain('padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).not.toMatch(/padding-inline|padding-left/);
+  });
+
+  it('keeps "+ New" at the text column while the canvas scrolls, measured against the view\'s width', () => {
+    expect(ruleBody('[data-blok-database-timeline]')).toMatch(/container(-type)?: [^;]*inline-size/);
+    expect(ruleBody('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toContain('inset-inline-start: max(0px, calc((100cqi - var(--blok-content-max-width, var(--max-width-content))) / 2))');
+  });
+});

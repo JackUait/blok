@@ -359,3 +359,21 @@ describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
     expect(ruleBody('[data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"])')).toMatch(/padding:\s*var\(--blok-space-1\)/);
   });
 });
+
+describe('content inset (side-by-side-4 #2)', () => {
+  const inset = 'padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2))';
+
+  it('starts gallery cards at the text column, like the table, and runs them to the view toolbar\'s end', () => {
+    const body = ruleBody('[data-blok-database-gallery]');
+
+    expect(body).toContain(inset);
+    expect(body).not.toMatch(/padding-inline-end|padding-right|padding-inline:/);
+  });
+
+  it('starts the calendar grid at the text column, like the table, and runs it to the view toolbar\'s end', () => {
+    const body = ruleBody('[data-blok-database-calendar]');
+
+    expect(body).toContain(inset);
+    expect(body).not.toMatch(/padding-inline-end|padding-right|padding-inline:/);
+  });
+});

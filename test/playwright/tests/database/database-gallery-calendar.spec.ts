@@ -643,7 +643,9 @@ test.describe('calendar', () => {
       return { height: box.height, top: box.top - el.getBoundingClientRect().top, cut: line.scrollWidth > line.clientWidth };
     }));
 
-    expect(lines).toEqual([{ height: 24, top: 26, cut: false }, { height: 24, top: 50, cut: true }]);
+    // Whether the date line fits depends on the day width; only the long notes line is sure to be cut.
+    expect(lines.map(({ height, top }) => ({ height, top }))).toEqual([{ height: 24, top: 26 }, { height: 24, top: 50 }]);
+    expect(lines[1]?.cut).toBe(true);
     expect((await card('r1').boundingBox())?.height).toBe(76);
     expect((await card('r2').boundingBox())?.height).toBe(52);
     expect((await card('r3').boundingBox())?.height).toBe(52);

@@ -120,6 +120,8 @@ describe('a click on a table formula cell', () => {
     const selected = (): string[] =>
       [...(holder?.querySelectorAll('[role="gridcell"][aria-selected="true"]') ?? [])].map((cell) => cell.getAttribute('data-property-id') ?? '');
     const before = selected();
+
+    expect(before).toEqual(['f']);
     const field = document.querySelector<HTMLElement>('[data-blok-database-formula-input]');
 
     field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));

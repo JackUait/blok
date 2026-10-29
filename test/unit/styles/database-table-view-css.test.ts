@@ -67,6 +67,17 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-number-ring-arc]')).toMatch(/stroke:\s*var\(--blok-database-number-ink\)/);
   });
 
+  it('cuts an unwrapped Text cell at its edge with no ellipsis (notion-spec-2 §21.1)', () => {
+    const text = '[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"]) > [data-blok-database-cell]';
+    const textAt = css.lastIndexOf(`${text} {`);
+    const blockAt = css.lastIndexOf('[data-type="date"]) > [data-blok-database-cell] {');
+
+    expect(exactRule(text)).toMatch(/text-overflow:\s*clip/);
+    // Same weight as the block rule that sets the ellipsis, so it comes after it.
+    expect(textAt).toBeGreaterThan(blockAt);
+    expect(blockAt).toBeGreaterThan(-1);
+  });
+
   it('uses the measured Notion sizes: 36px header, 37px rows, 35px footer, 5px resize handle', () => {
     expect(ruleBody('[data-blok-database-table-header]')).toMatch(/height:\s*36px/);
     expect(ruleBody('[data-blok-database-table-cell]')).toMatch(/min-height:\s*37px/);

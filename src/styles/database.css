@@ -8376,6 +8376,11 @@ textarea[data-blok-database-cell-input] {
   text-overflow: ellipsis;
 }
 
+/* notion-spec-2 §21.1: Text is cut with no "…". Comes after the block rule above. */
+[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"]) > [data-blok-database-cell] {
+  text-overflow: clip;
+}
+
 [data-blok-database-table-cell]:is([data-type="select"], [data-type="multiSelect"]) > [data-blok-database-cell] {
   min-height: 20px;
 }

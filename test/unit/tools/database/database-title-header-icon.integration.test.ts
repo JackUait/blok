@@ -120,7 +120,7 @@ const header = (root: ParentNode, propertyId: string): HTMLElement =>
   element(root, '[role="columnheader"][data-property-id="' + propertyId + '"]');
 
 const iconItem = (menu: ParentNode): HTMLElement | undefined =>
-  [...menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]')]
+  [...menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="switch"]')]
     .find((item) => (item.getAttribute('aria-label') ?? item.textContent?.trim()) === 'Show page icon');
 
 const openHeader = async (root: ParentNode, propertyId: string): Promise<HTMLElement> => {
@@ -222,9 +222,9 @@ describe('title header page icons through the real editor', () => {
     const before = await current.save();
     const action = await iconAction(databaseRoot('db'));
 
-    expect(action.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(action.getAttribute('role')).toBe('switch');
     expect(action.getAttribute('aria-checked')).toBe(String(initial !== false));
-    expect(action.getAttribute('data-blok-item-name')).toBe('database-show-page-icon');
+    expect(action.closest('[data-blok-item-name]')?.getAttribute('data-blok-item-name')).toBe('database-show-page-icon');
     action.click();
     await quiet();
     const changed = await current.save();
@@ -268,7 +268,7 @@ describe('title header page icons through the real editor', () => {
     expect(action, 'title header must offer Show page icon').toBeDefined();
     if (action === undefined) throw new Error('missing title header Show page icon');
     expect(menu.getAttribute('data-blok-popover-opened')).toBe('true');
-    expect(action.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(action.getAttribute('role')).toBe('switch');
     expect(action.getAttribute('aria-checked')).toBe('true');
 
     action.click();
@@ -281,7 +281,7 @@ describe('title header page icons through the real editor', () => {
     const unchecked = iconItem(menu);
 
     expect(unchecked, 'the still-open menu must retain its title icon toggle').toBeDefined();
-    expect(unchecked?.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(unchecked?.getAttribute('role')).toBe('switch');
     expect(unchecked?.getAttribute('aria-checked')).toBe('false');
     const changed = await current.save();
 
@@ -423,7 +423,6 @@ describe('title header page icons through the real editor', () => {
     await quiet();
 
     expect(iconItem(menu)?.getAttribute('aria-checked')).toBe('true');
-    expect(iconItem(menu)?.getAttribute('data-blok-popover-item-active')).toBe('true');
     expect([...widgetRoot('twin').querySelectorAll('[role="gridcell"][data-property-id="t"] [data-blok-database-page-icon]')]
       .map((icon) => icon.textContent)).toEqual(['★']);
     expect([...widgetRoot().querySelectorAll('[role="gridcell"][data-property-id="t"] [data-blok-database-page-icon]')]
@@ -648,7 +647,7 @@ describe('title header page icons through the real editor', () => {
     expect(action, 'title header must offer Show page icon').toBeDefined();
     if (action === undefined) throw new Error('missing title header Show page icon');
     expect(menu.getAttribute('data-blok-popover-opened')).toBe('true');
-    expect(action.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(action.getAttribute('role')).toBe('switch');
     expect(action.getAttribute('aria-checked')).toBe('true');
 
     action.click();
@@ -661,7 +660,7 @@ describe('title header page icons through the real editor', () => {
     const unchecked = iconItem(menu);
 
     expect(unchecked, 'the still-open menu must retain its title icon toggle').toBeDefined();
-    expect(unchecked?.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(unchecked?.getAttribute('role')).toBe('switch');
     expect(unchecked?.getAttribute('aria-checked')).toBe('false');
     const changed = await current.save();
 
@@ -670,11 +669,14 @@ describe('title header page icons through the real editor', () => {
     expectOnlyViewIconChanged(changed, before, 'db', 'v1');
   });
 
-  it('keeps title header icon selection transparent and in primary ink', () => {
-    const rule = readMainCss().match(/\[data-blok-item-name="database-show-page-icon"\]\s*\{([^}]*)\}/)?.[1];
+  // No blue selected states: the switch carries the state, the row keeps no fill and the menu's ink.
+  it('paints Show page icon on with no fill and the same ink as when off', () => {
+    const css = readMainCss();
+    const rule = css.match(/\[data-blok-database-property-menu-switch\]\s*\{([^}]*)\}/)?.[1];
 
-    expect(rule, 'selected paint must be scoped to this menu item').toBeDefined();
-    expect(rule).toMatch(/--blok-icon-active-bg:\s*transparent\s*;/);
-    expect(rule).toMatch(/--blok-icon-active-text:\s*var\(--blok-database-ink\)\s*;/);
+    expect(rule).toMatch(/background:\s*transparent\s*;/);
+    expect(rule).toMatch(/color:\s*var\(--blok-database-ink\)\s*;/);
+    expect(css).not.toMatch(/\[data-blok-database-property-menu-switch\][^{,]*\[aria-checked/);
+    expect(css).not.toContain('[data-blok-item-name="database-show-page-icon"]');
   });
 });

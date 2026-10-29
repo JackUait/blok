@@ -361,15 +361,94 @@ describe('DatabasePropertyMenu', () => {
     expect(cb.onDuplicate).toHaveBeenCalledWith('p');
   });
 
-  it('sets page visibility and marks the current one', () => {
+  // notion-live-7/80-menu-text.png: the header menu has no Property visibility; it lives in the row page label menu (§17.6).
+  it('offers Property visibility in the row page label menu, not the header menu', () => {
     const cb = open(prop('text', { pageVisibility: 'hideWhenEmpty' }));
-    const options = byName(lastItems(), 'visibility').children?.items ?? [];
-    const active = options.find((o) => (typeof o.isActive === 'function' ? o.isActive() : o.isActive === true));
 
-    expect(active?.name).toBe('visibility-hideWhenEmpty');
+    expect(lastItems().some((item) => item.name === 'visibility')).toBe(false);
+
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb });
+
+    menu.openRowPage(prop('text', { pageVisibility: 'hideWhenEmpty' }), document.createElement('div'));
+    const options = byName(lastItems(), 'visibility').children?.items ?? [];
+
     byName(options, 'visibility-hidden').onActivate?.(byName(options, 'visibility-hidden'));
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { pageVisibility: 'hidden' });
+    menu.destroy();
+  });
+
+  // notion-live-7/80-menu-text.png, 90-editprop-Status.png (§24.10): … Wrap content (Display as) │ Insert left, Insert right, Duplicate, Delete.
+  describe('header menu groups', () => {
+    const view = (name: string): CapturedItem => ({ type: 'default', name, title: name });
+    const rows = (property: PropertyDefinition, viewRows: string[]): string[] => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.open(property, document.createElement('button'), viewRows.map(view) as never);
+      const shown = lastItems().map((i) => (i.type === 'separator' ? '--' : i.name ?? ''));
+
+      menu.destroy();
+
+      return shown;
+    };
+    const VIEW = ['database-header-filter', 'database-header-wrap', 'database-header-insert-left', 'database-header-insert-right'];
+
+    it('puts Insert left and right with Duplicate and Delete, after a divider', () => {
+      expect(rows(prop('text'), VIEW)).toEqual([
+        'name', '--', 'changeType', '--', 'database-header-filter', 'database-header-wrap', '--',
+        'database-header-insert-left', 'database-header-insert-right', 'duplicate', 'delete',
+      ]);
+    });
+
+    it('puts Status\'s Display as after the view rows, before the divider', () => {
+      expect(rows(prop('status', { status: createDefaultStatusSettings() }), VIEW)).toEqual([
+        'name', '--', 'editProperty', 'changeType', '--', 'database-header-filter', 'database-header-wrap', 'displayAs', '--',
+        'database-header-insert-left', 'database-header-insert-right', 'duplicate', 'delete',
+      ]);
+    });
+
+    // notion-live-8/83-menu-name.png: the Name menu ends with Insert left and right after a divider.
+    it('sets the title\'s Insert rows apart too', () => {
+      expect(rows(prop('title'), VIEW)).toEqual([
+        'name', '--', 'database-header-filter', 'database-header-wrap', '--', 'database-header-insert-left', 'database-header-insert-right',
+      ]);
+    });
+  });
+
+  // notion-live-8/83-menu-name.png, §25.5: "Show page icon" is a switch, and the Name menu is 243.3 wide.
+  describe('Show page icon on the title header', () => {
+    const openTitle = (on: boolean): { item: CapturedItem; activate: ReturnType<typeof vi.fn>; menu: InstanceType<typeof DatabasePropertyMenu> } => {
+      const activate = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.open(prop('title'), document.createElement('button'), [
+        { type: 'default', name: 'database-show-page-icon', title: 'tools.database.settingsShowPageIcon', icon: '<svg></svg>', isActive: () => on, onActivate: activate } as never,
+      ]);
+
+      return { item: byName(lastItems(), 'database-show-page-icon'), activate, menu };
+    };
+
+    it.each([true, false])('draws a switch that reads %s and runs the row on a click', (on) => {
+      const { item, activate, menu } = openTitle(on);
+      const button = item.element;
+
+      expect(item.type).toBe('html');
+      expect(button?.getAttribute('role')).toBe('switch');
+      expect(button?.getAttribute('aria-checked')).toBe(String(on));
+      expect(button?.textContent).toContain('tools.database.settingsShowPageIcon');
+      button?.click();
+
+      expect(activate).toHaveBeenCalledTimes(1);
+      expect(button?.getAttribute('aria-checked')).toBe(String(!on));
+      menu.destroy();
+    });
+
+    it('opens the title menu 243.3 wide', () => {
+      const { menu } = openTitle(true);
+
+      expect(captured.popovers.at(-1)?.params.minWidth).toBe('243.3px');
+      menu.destroy();
+    });
   });
 
   // research/30 X2: no "Property description" row; the (i) opens a field inside the menu.

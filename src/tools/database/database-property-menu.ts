@@ -1,4 +1,4 @@
-import { IconCalendar, IconCheck, IconHelp, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconSort, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCheck, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconSort, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -41,6 +41,11 @@ export type PropertyMenuEntry = 'editProperty' | 'showFullUrl' | 'displayAs' | '
 
 /** Rows that come before the view's own rows; the rest come after. */
 const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'showFullUrl', 'displayAs', 'changeType']);
+
+/** The row page draws its own Property visibility row. */
+type HeaderEntry = Exclude<PropertyMenuEntry, 'visibility'>;
+
+const INSERT_ITEMS = ['database-header-insert-left', 'database-header-insert-right'];
 
 /** Types whose "Edit property" panel holds settings Blok has. */
 const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
@@ -281,12 +286,17 @@ export class DatabasePropertyMenu {
   }
 
   syncPageIcon(show: boolean): void {
-    const item = this.popover?.getElement().querySelector<HTMLElement>('[data-blok-item-name="database-show-page-icon"]');
+    this.popover?.getElement().querySelector<HTMLElement>(`[data-blok-database-property-menu-switch="${SHOW_PAGE_ICON_ITEM}"]`)
+      ?.setAttribute('aria-checked', String(show));
+  }
 
-    if (item === null || item === undefined) return;
-    item.setAttribute('aria-checked', String(show));
-    if (show) item.setAttribute(DATA_ATTR.popoverItemActive, 'true');
-    else item.removeAttribute(DATA_ATTR.popoverItemActive);
+  /** notion-live-8/83-menu-name.png: the view's Show page icon row, drawn as a switch. */
+  private pageIconSwitch(item: PopoverItemParams): PopoverItemParams {
+    if (item.type !== PopoverItemType.Default || !('onActivate' in item) || item.onActivate === undefined) return item;
+    const { isActive, onActivate, icon } = item;
+    const on = typeof isActive === 'function' ? isActive() : isActive === true;
+
+    return this.switchItem(SHOW_PAGE_ICON_ITEM, 'tools.database.settingsShowPageIcon', on, () => onActivate(item), icon);
   }
 
   private t(key: string): string {
@@ -315,23 +325,32 @@ export class DatabasePropertyMenu {
       this.popover?.activateItemByName('editProperty');
     });
     const entries = propertyMenuEntries(property);
-    const head = entries.filter((entry) => HEAD_ENTRIES.has(entry));
-    const tail = entries.filter((entry) => !HEAD_ENTRIES.has(entry));
+    // notion-live-7/90-editprop-Status.png: Display as follows Wrap content.
+    const head = entries.filter((entry): entry is HeaderEntry => HEAD_ENTRIES.has(entry) && entry !== 'displayAs');
+    // notion-live-7/80-menu-text.png: no Property visibility here; the row page label menu has it (§17.6).
+    const tail = entries.filter((entry): entry is HeaderEntry => !HEAD_ENTRIES.has(entry) && entry !== 'visibility');
+    const named = (item: PopoverItemParams, names: string[]): boolean => item.type === PopoverItemType.Default && names.includes(item.name ?? '');
     // research/08: Title reads "Show page icon, AI Autofill, Filter…".
-    const lead = viewItems.filter((item) => item.type === PopoverItemType.Default && item.name === SHOW_PAGE_ICON_ITEM);
-    const rest = viewItems.filter((item) => !lead.includes(item));
+    const lead = viewItems.filter((item) => named(item, [SHOW_PAGE_ICON_ITEM]));
+    // notion-live-7/80-menu-text.png: Insert left and right start the last group.
+    const inserts = viewItems.filter((item) => named(item, INSERT_ITEMS));
+    const middle = [
+      ...viewItems.filter((item) => !lead.includes(item) && !inserts.includes(item)),
+      ...(entries.includes('displayAs') ? [this.entry('displayAs', property, update)] : []),
+    ];
+    const end = [...inserts, ...tail.map((entry) => this.entry(entry, property))];
+    const separator = { type: PopoverItemType.Separator } as const;
+    const top = [...head.map((entry) => this.entry(entry, property, update)), ...lead.map((item) => this.pageIconSwitch(item)), ...this.autofillItem(property)];
+    const groups = [top, middle, end].filter((group) => group.length > 0);
     const items: PopoverItemParams[] = [
       // research/08: the title has no description.
       { type: PopoverItemType.Html, element: name, name: 'name' },
-      { type: PopoverItemType.Separator },
-      ...head.map((entry) => this.entry(entry, property, update)),
-      ...lead,
-      ...this.autofillItem(property),
-      ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, ...(tail.length > 0 ? [{ type: PopoverItemType.Separator } as const] : [])] : []),
-      ...tail.map((entry) => this.entry(entry, property)),
+      separator,
+      ...groups.flatMap((group, index) => (index === 0 ? group : [separator, ...group])),
       ...this.customizeItem(),
     ];
-    this.show(items, anchor, '220px', DATABASE_HEADER_MENU_CLASS, typed !== undefined);
+    // notion-spec-2 §25.5: the Name menu is 243.3 wide.
+    this.show(items, anchor, property.type === 'title' ? '243.3px' : '220px', DATABASE_HEADER_MENU_CLASS, typed !== undefined);
     const input = name.querySelector('input');
 
     if (typed !== undefined && input !== null) input.value = typed;
@@ -815,7 +834,7 @@ export class DatabasePropertyMenu {
   }
 
   private entry(
-    entry: PropertyMenuEntry,
+    entry: HeaderEntry,
     property: PropertyDefinition,
     update: (patch: Partial<PropertySettingsV2>) => void = (patch) => this.options.onUpdate(property.id, patch),
   ): PopoverItemParams {
@@ -870,24 +889,6 @@ export class DatabasePropertyMenu {
           icon: propertyTypeMeta(property.type).icon,
           children: { items: this.typeChoices(property) },
         };
-      case 'visibility': {
-        const current = property.pageVisibility ?? 'always';
-
-        return {
-          name: entry,
-          title: this.t('tools.database.pageVisibility'),
-          icon: IconEmojiSmile,
-          children: {
-            items: VISIBILITY.map((visibility) => ({
-              name: `visibility-${visibility}`,
-              title: this.t(`tools.database.pageVisibility.${visibility}`),
-              isActive: current === visibility,
-              closeOnActivate: true,
-              onActivate: () => update({ pageVisibility: visibility }),
-            })),
-          },
-        };
-      }
       case 'duplicate':
         return { name: entry, title: this.t('tools.database.duplicateProperty'), icon: IconCopy, closeOnActivate: true, onActivate: () => this.options.onDuplicate(id) };
       case 'delete':

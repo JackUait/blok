@@ -11267,27 +11267,6 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
-[data-blok-item-name="database-show-page-icon"] {
-  --blok-icon-active-bg: transparent;
-  --blok-icon-active-text: var(--blok-database-ink);
-}
-
-[data-blok-item-name="database-show-page-icon"][data-blok-force-hover] {
-  --blok-icon-active-bg: var(--blok-database-hover-bg);
-}
-
-[@media (hover: hover)] [data-blok-item-name="database-show-page-icon"]:hover {
-  --blok-icon-active-bg: var(--blok-database-hover-bg);
-}
-
-[data-blok-item-name="database-show-page-icon"][data-blok-focused="true"] {
-  --blok-icon-active-bg: var(--blok-item-focus-bg);
-}
-
-[data-blok-item-name="database-show-page-icon"]:not([aria-checked="true"]) [data-blok-testid="popover-item-trailing-icon"] {
-  visibility: hidden;
-}
-
 [data-blok-database-table] {
   position: relative;
 }

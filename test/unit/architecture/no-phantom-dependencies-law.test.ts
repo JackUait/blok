@@ -129,9 +129,39 @@ function tsconfigAliases(): string[] {
 
 const ALIASES = tsconfigAliases();
 
+/** Cheap gate: only files with `import`/`require` inside a backtick string get parsed. */
+const TEMPLATE_WITH_IMPORT = /`[^`]*\b(?:import|require)\b/;
+
+/**
+ * The text of every template literal in a file. Build scripts hand code to a
+ * bundler this way (esbuild `stdin.contents`), and its imports resolve like
+ * any other, so they must be declared too.
+ *
+ * @param source - file contents
+ * @returns template texts, with `${…}` holes left empty
+ */
+function templateTexts(source: string): string[] {
+  const texts: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isNoSubstitutionTemplateLiteral(node)) {
+      texts.push(node.text);
+    } else if (ts.isTemplateExpression(node)) {
+      texts.push([node.head.text, ...node.templateSpans.map((span) => span.literal.text)].join(''));
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  // Parsing is the slow part, so most files skip it.
+  return TEMPLATE_WITH_IMPORT.test(source)
+    ? (visit(ts.createSourceFile('scan.ts', source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS)), texts)
+    : texts;
+}
+
 /**
  * Extracts bare package names imported by a source file: static imports and
- * re-exports, `require('x')`, and `import('x')` with a literal argument.
+ * re-exports, `require('x')`, `import('x')` with a literal argument, and the
+ * same inside template literals (see templateTexts).
  *
  * TypeScript's own scanner, not regexes: it knows where comments and strings
  * end, so a `/*` inside a line comment (a glob like `src/yjs/*`) cannot hide
@@ -144,7 +174,8 @@ function importedPackages(source: string): string[] {
   const isAlias = (name: string): boolean =>
     ALIASES.some((alias) => name === alias || name.startsWith(`${alias}/`));
 
-  const names = ts.preProcessFile(source, true, true).importedFiles
+  const names = [source, ...templateTexts(source)]
+    .flatMap((text) => ts.preProcessFile(text, true, true).importedFiles)
     .map(({ fileName }) => toPackageName(fileName))
     .filter((name): name is string => name !== null && !isAlias(name));
 
@@ -322,5 +353,16 @@ describe('LAW: no phantom dependencies', () => {
     ].join('\n');
 
     expect(importedPackages(source).sort()).toEqual(['zz-blok-law-not-a-real-package', 'zz-blok-law-required']);
+  });
+
+  it('sees imports inside a template literal handed to a bundler', () => {
+    const source = [
+      'await build({ stdin: { contents: `',
+      `import React from 'zz-blok-law-in-template';`,
+      'export const x = ${value};',
+      '` } });',
+    ].join('\n');
+
+    expect(importedPackages(source)).toEqual(['zz-blok-law-in-template']);
   });
 });

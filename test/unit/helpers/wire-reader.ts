@@ -1,7 +1,9 @@
 // Test-only reader for frames built by wire-encoding. Strict: a truncated
 // value throws instead of reading past the end.
 
-const utf8 = new TextDecoder();
+// lib0's settings: invalid UTF-8 throws, and a leading BOM is kept, so a
+// malformed server frame still fails the contract tests that read it.
+const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 export class WireReader {
   public constructor(private readonly arr: Uint8Array, private pos = 0) {}

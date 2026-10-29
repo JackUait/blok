@@ -4,12 +4,14 @@
  * it is only the reference: every case must give the same bytes or diff.
  * The phantom-dependency law allows this file to import lib0 for that reason.
  */
+import * as lib0Decoding from 'lib0/decoding';
 import * as lib0Diff from 'lib0/diff';
 import * as lib0Encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Encoder } from '../../../src/components/modules/collaboration/wire-encoding';
 import { simpleDiffString } from '../../../src/components/modules/yjs/simple-diff';
+import { WireReader } from '../helpers/wire-reader';
 
 type Write =
   | { kind: 'uint'; value: number }
@@ -140,5 +142,31 @@ describe('lib0 parity: simpleDiffString', () => {
       expect(simpleDiffString(before, after), `seed ${seed}, pair ${pair}: ${JSON.stringify([before, after])}`)
         .toEqual(lib0Diff.simpleDiffString(before, after));
     }
+  });
+});
+
+describe('lib0 parity: the test reader', () => {
+  const framed = (payload: number[]): Uint8Array => Uint8Array.from([payload.length, ...payload]);
+
+  const outcome = (read: () => string): string => {
+    try {
+      return `ok:${JSON.stringify(read())}`;
+    } catch (error) {
+      return `throws:${(error as Error).name}`;
+    }
+  };
+
+  // Contract tests read server control frames with it, so it must refuse what lib0 refuses.
+  it.each([
+    ['a leading BOM', [0xef, 0xbb, 0xbf, 0x7b, 0x7d]],
+    ['invalid UTF-8', [0x7b, 0xff, 0x7d]],
+    ['a lone surrogate written as UTF-8', [0xed, 0xa0, 0xbd]],
+    ['a truncated sequence', [0xe9, 0xbe]],
+    ['plain JSON', [0x7b, 0x7d]],
+  ])('reads %s as lib0 does', (_name, payload) => {
+    const bytes = framed(payload);
+
+    expect(outcome(() => new WireReader(bytes).readVarString()))
+      .toBe(outcome(() => lib0Decoding.readVarString(lib0Decoding.createDecoder(bytes))));
   });
 });

@@ -2103,6 +2103,10 @@
 
 }
 
+@source not "../tools/file/pptx" {
+
+}
+
 @custom-variant mobile (@media (max-width: 650px)) {
 
 }

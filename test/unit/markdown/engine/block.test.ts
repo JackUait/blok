@@ -301,14 +301,15 @@ describe('block parser', () => {
 
   describe('nesting cap', () => {
     const N = 10_000;
-    // Root, containers, then a table, row and cell (a paragraph is shallower), inline wrappers, text.
-    const bound = MAX_CONTAINER_DEPTH + 3 + MAX_INLINE_DEPTH + 1;
+    // Root, containers (each may sit in an uncounted list), then a table, row
+    // and cell (a paragraph is shallower), inline wrappers, text.
+    const bound = 2 * MAX_CONTAINER_DEPTH + 3 + MAX_INLINE_DEPTH + 1;
 
     it('keeps the tree shallow enough for recursive consumers', () => {
-      expect(bound).toBeLessThanOrEqual(250);
+      expect(bound).toBeLessThanOrEqual(310);
     });
 
-    // Just past the cap (a list level is two containers) and far past it.
+    // Under the cap, just past it, and far past it.
     const sizes = [MAX_CONTAINER_DEPTH / 2 + 1, MAX_CONTAINER_DEPTH + 1, N];
 
     it.each(sizes.flatMap((size) => [
@@ -347,6 +348,17 @@ describe('block parser', () => {
       expect(depth).toBeLessThanOrEqual(bound);
       expect(occurrences(textOf(nodes), 'a')).toBe(1000);
       expect(countOf(nodes, 'listItem') + occurrences(textOf(nodes), '-')).toBe(1000);
+    });
+
+    it.each([
+      ['bullet', (index: number) => `${'  '.repeat(index)}- L${index}`],
+      ['ordered', (index: number) => `${'   '.repeat(index)}1. L${index}`],
+    ] as const)('keeps a %s list as deep as a quote: one level per item, not two', (_name, line) => {
+      const lines = Array.from({ length: MAX_CONTAINER_DEPTH }, (_, index) => line(index));
+      const { nodes } = walk(parseMarkdown(lines.join('\n')));
+
+      expect(countOf(nodes, 'listItem')).toBe(MAX_CONTAINER_DEPTH);
+      expect(countOf(nodes, 'blockquote')).toBe(0);
     });
 
     it('bounds containers and inline wrappers together', () => {

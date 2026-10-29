@@ -32,7 +32,12 @@ export interface BlockOptions {
   math: boolean;
 }
 
-/** Most containers one inside another; a deeper marker is read as text. */
+/**
+ * Most containers one inside another; a deeper marker is read as text. A list
+ * and its item count once, so lists nest as deep as quotes. The converters and
+ * the server runtime (Jint) walk the tree recursively; Jint fails a round trip
+ * near 150 list levels or 200 quotes.
+ */
 export const MAX_CONTAINER_DEPTH = 100;
 
 /** Characters a block start can begin with; any other line is a paragraph line. */
@@ -73,13 +78,12 @@ const isContainer = (kind: Kind): boolean =>
   kind === 'document' || kind === 'blockquote' || kind === 'list' || kind === 'item' || kind === 'footnote';
 
 /**
- * Whether `levels` more containers fit inside `container` under the cap.
+ * Whether one more container fits inside `container` under the cap.
  * Measured from `container` itself, which may be a leaf the new block
  * will close, so it can refuse one level early but never lets one past.
  * @param container - the block new blocks would go into
- * @param levels - containers the start would open
  */
-const fitsUnderCap = (container: Block, levels: number): boolean => container.nesting + levels <= MAX_CONTAINER_DEPTH;
+const fitsUnderCap = (container: Block): boolean => container.nesting < MAX_CONTAINER_DEPTH;
 
 /**
  * The last index holding a character other than `marker`, a space or a tab.
@@ -523,7 +527,7 @@ class BlockParser {
    * @param container - the block it would go into
    */
   private startBlockquote(container: Block): Start {
-    if (this.indented || this.line[this.nextNonspace] !== '>' || !fitsUnderCap(container, 1)) {
+    if (this.indented || this.line[this.nextNonspace] !== '>' || !fitsUnderCap(container)) {
       return Start.None;
     }
 
@@ -545,7 +549,7 @@ class BlockParser {
       return Start.None;
     }
 
-    if (!fitsUnderCap(container, 1)) {
+    if (!fitsUnderCap(container)) {
       this.footnoteRefused = true;
 
       return Start.None;
@@ -700,7 +704,7 @@ class BlockParser {
 
     const sameList = container.kind === 'list' && container.marker === found.marker && container.ordered === found.ordered;
 
-    if (!fitsUnderCap(container, sameList ? 1 : 2)) {
+    if (!fitsUnderCap(container)) {
       return Start.None;
     }
 
@@ -854,7 +858,7 @@ class BlockParser {
 
     const block = makeBlock(kind, this.tip);
 
-    block.nesting = this.tip.nesting + (isContainer(kind) ? 1 : 0);
+    block.nesting = this.tip.nesting + (isContainer(kind) && kind !== 'list' ? 1 : 0);
     this.tip.children.push(block);
     this.tip = block;
 

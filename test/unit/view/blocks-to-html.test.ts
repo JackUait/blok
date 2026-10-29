@@ -465,12 +465,72 @@ describe('blocksToHtml', () => {
   });
 
   describe('embed', () => {
-    it('renders an https embed as an iframe with caption', () => {
+    const SANDBOX = 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation';
+
+    it('derives a registry iframe src from the source and sandboxes it, with caption', () => {
       const html = blocksToHtml(doc([
         { type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x', caption: 'Vid' } },
       ]));
 
-      expect(html).toBe('<figure><iframe src="https://www.youtube.com/embed/x"></iframe><figcaption>Vid</figcaption></figure>');
+      expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/x" sandbox="${SANDBOX}"></iframe><figcaption>Vid</figcaption></figure>`);
+    });
+
+    it('never frames a stored embed URL that differs from the one the source derives', () => {
+      const html = blocksToHtml(doc([
+        {
+          type: 'embed',
+          data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embed: 'https://attacker.example/phish.html' },
+        },
+      ]));
+
+      expect(html).not.toContain('attacker.example');
+      expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" sandbox="${SANDBOX}"></iframe></figure>`);
+    });
+
+    it('renders a non-registry https embed as a link to its source, never an iframe', () => {
+      const html = blocksToHtml(doc([
+        { type: 'embed', data: { service: 'phish', source: 'https://attacker.example/page', embed: 'https://attacker.example/phish.html' } },
+      ]));
+
+      expect(html).not.toContain('<iframe');
+      expect(html).toBe('<a href="https://attacker.example/page">phish</a>');
+    });
+
+    it('renders nothing for a registry service whose source does not match it', () => {
+      const html = blocksToHtml(doc([
+        { type: 'embed', data: { service: 'youtube', source: 'https://attacker.example/x', embed: 'https://www.youtube.com/embed/x' } },
+      ]));
+
+      expect(html).toBe('');
+    });
+
+    it('renders a script-widget service as a link to its source', () => {
+      const html = blocksToHtml(doc([
+        { type: 'embed', data: { service: 'twitter', source: 'https://twitter.com/jack/status/20', embed: 'https://twitter.com/i/status/20' } },
+      ]));
+
+      expect(html).toBe('<a href="https://twitter.com/jack/status/20">twitter</a>');
+    });
+
+    it('passes the derived iframe src through transformUrl', () => {
+      const transformUrl = vi.fn((url: string) => `https://proxy.test/?u=${encodeURIComponent(url)}`);
+      const html = blocksToHtml(
+        doc([{ type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://attacker.example/' } }]),
+        { transformUrl }
+      );
+
+      expect(transformUrl).toHaveBeenCalledWith('https://www.youtube.com/embed/x', { attr: 'src', blockType: 'embed' });
+      expect(html).toBe(`<figure><iframe src="https://proxy.test/?u=https%3A%2F%2Fwww.youtube.com%2Fembed%2Fx" sandbox="${SANDBOX}"></iframe></figure>`);
+    });
+
+    it('falls back to the source link when transformUrl drops the iframe src', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x' } }]),
+        { transformUrl: (url, ctx) => (ctx.attr === 'src' ? '' : url) }
+      );
+
+      expect(html).not.toContain('<iframe');
+      expect(html).toBe('<a href="https://youtu.be/x">youtube</a>');
     });
 
     it('degrades a non-https embed to a source anchor', () => {

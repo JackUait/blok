@@ -152,6 +152,18 @@ describe('BlokView', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/pic.png');
   });
 
+  it('frames an embed only at its registry src, sandboxed', () => {
+    const { container } = render(
+      <BlokView
+        data={{ blocks: [{ type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://attacker.example/phish.html' } }] }}
+      />
+    );
+    const iframe = container.querySelector('iframe');
+
+    expect(iframe?.getAttribute('src')).toBe('https://www.youtube.com/embed/x');
+    expect(iframe?.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation');
+  });
+
   it('forwards pageInfo and pageHref so a page card links to its sub-page', () => {
     const { container } = render(
       <BlokView

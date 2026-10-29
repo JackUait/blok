@@ -127,9 +127,12 @@ export interface BlocksToHtmlOptions {
    */
   blockIds?: boolean;
   /**
-   * Pure URL rewrite hook applied to every block URL (image/video/audio src,
-   * file/bookmark/embed href) and every inline anchor href, sequenced BEFORE
-   * the unsafe-scheme strip. See {@link ViewUrlTransform}.
+   * Pure URL rewrite hook applied to every block URL (image/video/audio/embed
+   * src, file/bookmark/embed href) and every inline anchor href, sequenced
+   * BEFORE the unsafe-scheme strip. See {@link ViewUrlTransform}.
+   *
+   * An embed iframe is sandboxed but may run scripts, so a rewritten embed
+   * src must stay on another origin than the page.
    */
   transformUrl?: ViewUrlTransform;
   /**

@@ -13,6 +13,8 @@
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
 import { isSafeCssColor } from '../shared/css-color';
+import { IFRAME_SANDBOX } from '../shared/embed-frame';
+import { EMBED_SERVICES, matchEmbedService } from '../shared/embed-registry';
 import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
@@ -712,18 +714,36 @@ export const builtinEmitters: Record<string, Emitter> = {
     return trail(`<a${env.url('href', block.data.url, block.type)}>${env.escape(label)}</a>`, block, env);
   },
 
+  /**
+   * The editor's rule: a registry service frames only the URL its own `source`
+   * derives, never the stored `embed`. A non-registry embed is a link (the
+   * editor's generic-embed opt-in needs `new URL`, which the Jint server
+   * runtime lacks). A registry service whose source does not match is
+   * tampered data and renders nothing, so no link wears the service's name.
+   */
   embed: (block, env) => {
-    const embedUrl = str(block.data, 'embed');
+    const service = str(block.data, 'service');
+    const source = str(block.data, 'source');
+    const link = (): string => trail(`<a${env.url('href', source, block.type)}>${env.escape(service || source)}</a>`, block, env);
 
-    /** Only https embed targets reach an iframe src (matches the live tool's toSafeEmbedSrc gate). */
-    if (/^https:\/\//i.test(embedUrl)) {
-      return trail(`<figure><iframe src="${env.escape(embedUrl)}"></iframe>${figcaption(block, env)}</figure>`, block, env);
+    if (!Object.hasOwn(EMBED_SERVICES, service)) {
+      return link();
     }
 
-    const source = str(block.data, 'source');
-    const label = str(block.data, 'service') || source;
+    const match = matchEmbedService(source);
 
-    return trail(`<a${env.url('href', source, block.type)}>${env.escape(label)}</a>`, block, env);
+    if (match?.service !== service) {
+      return trail('', block, env);
+    }
+
+    // Script widgets (X, Telegram, Threads) need the provider's script; the view has none.
+    const srcAttr = match.kind === 'iframe' ? env.url('src', match.embedUrl, block.type) : '';
+
+    if (srcAttr === '') {
+      return link();
+    }
+
+    return trail(`<figure><iframe${srcAttr} sandbox="${IFRAME_SANDBOX}"></iframe>${figcaption(block, env)}</figure>`, block, env);
   },
 
   table: emitTable,

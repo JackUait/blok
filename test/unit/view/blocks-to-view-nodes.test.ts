@@ -28,6 +28,30 @@ describe('blocksToViewNodes', () => {
     ]);
   });
 
+  it('frames only the registry src derived from an embed source, sandboxed', () => {
+    const nodes = blocksToViewNodes({
+      blocks: [{
+        type: 'embed',
+        data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embed: 'https://attacker.example/phish.html' },
+      }],
+    });
+
+    expect(nodes).toEqual([
+      {
+        tag: 'figure',
+        attrs: {},
+        children: [{
+          tag: 'iframe',
+          attrs: {
+            src: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+            sandbox: 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation',
+          },
+          children: [],
+        }],
+      },
+    ]);
+  });
+
   it('carries sanitized attributes as a plain string record', () => {
     const nodes = blocksToViewNodes({
       blocks: [{ type: 'paragraph', data: { text: '<a href="https://x.test" target="_blank" rel="noopener">link</a>' } }],

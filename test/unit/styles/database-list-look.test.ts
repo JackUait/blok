@@ -113,6 +113,10 @@ describe('list row widths (findings-listgallery L01)', () => {
     for (const type of ['multiSelect', 'select', 'files']) {
       expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(200px, 14%)');
     }
+    // notion-spec-2 §21.8: a person slot is capped at max(350px, 4%).
+    for (const type of ['person', 'createdBy', 'lastEditedBy']) {
+      expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(350px, 4%)');
+    }
     for (const type of ['date', 'number']) {
       expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(150px, 14%)');
     }

@@ -3348,6 +3348,13 @@ button[data-blok-database-column-count]:hover {
   max-width: max(150px, 14%);
 }
 
+/* notion-spec-2 §21.8: people show as avatars in a slot capped at max(350px, 4%). */
+[data-blok-database-list-row-property][data-type="person"],
+[data-blok-database-list-row-property][data-type="createdBy"],
+[data-blok-database-list-row-property][data-type="lastEditedBy"] {
+  max-width: max(350px, 4%);
+}
+
 /* A flex box draws no ellipsis, so the time's cell is a block (notion-spec-2 §21.8). */
 [data-blok-database-list-row-property][data-type="createdTime"] > [data-blok-database-cell],
 [data-blok-database-list-row-property][data-type="lastEditedTime"] > [data-blok-database-cell] {

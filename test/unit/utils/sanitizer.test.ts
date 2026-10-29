@@ -270,6 +270,23 @@ describe('sanitizer', () => {
 
       expect(result).toBe('Plain text without HTML');
     });
+
+    describe('tag names that match Object.prototype keys', () => {
+      it('unwraps <constructor> and drops its event handlers', () => {
+        const result = clean('<constructor onclick="alert(1)" onmouseover="x()">hi</constructor>', { b: {} });
+
+        expect(result).toBe('hi');
+      });
+
+      it('unwraps <constructor> on the save path too', () => {
+        const [ block ] = sanitizeBlocks(
+          [ { tool: 'paragraph', data: { text: '<b>a</b><constructor onmouseover="alert(1)">hi</constructor>' } } ],
+          { text: { b: {} } }
+        );
+
+        expect(block.data.text).toBe('<b>a</b>hi');
+      });
+    });
   });
 
   describe('composeSanitizerConfig', () => {

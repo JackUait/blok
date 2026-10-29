@@ -30,6 +30,20 @@ describe('view sanitizeHtmlFragment', () => {
     });
   });
 
+  describe('tag names that match Object.prototype keys', () => {
+    it('unwraps <constructor> and drops its event handlers', () => {
+      const result = sanitizeHtmlFragment('<constructor onclick="alert(1)">hi</constructor>', { b: {} });
+
+      expect(result).toBe('hi');
+    });
+
+    it('drops attributes named like Object.prototype keys', () => {
+      const result = sanitizeHtmlFragment('<b constructor="1" __proto__="2" tostring="3">b</b>', { b: {} });
+
+      expect(result).toBe('<b>b</b>');
+    });
+  });
+
   describe('allowlist enforcement per rule shape', () => {
     it('keeps tags allowed with an empty attr-map and strips their attributes', () => {
       const result = sanitizeHtmlFragment('<b class="x" onclick="y()">text</b>', { b: {} });

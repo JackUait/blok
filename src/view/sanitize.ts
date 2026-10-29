@@ -461,7 +461,8 @@ const filterAttributes = (node: P5Element, decision: AttrDecision): void => {
   const { map, forceStrings } = decision;
 
   replaceAttrs(node, node.attrs.filter((attr) => {
-    const attrRule = map[attr.name.toLowerCase()];
+    const attrName = attr.name.toLowerCase();
+    const attrRule = Object.hasOwn(map, attrName) ? map[attrName] : undefined;
 
     if (attrRule === true) {
       return true;
@@ -564,7 +565,7 @@ const sanitizeChildren = (
     }
 
     const tagName = node.tagName.toLowerCase();
-    const resolution = resolveRule(config[tagName], node);
+    const resolution = resolveRule(Object.hasOwn(config, tagName) ? config[tagName] : undefined, node);
     const isInvalidInline = INLINE_ELEMENT_NAMES.has(tagName) && node.childNodes.some(isBlockElement);
     const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
 

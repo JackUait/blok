@@ -108,9 +108,12 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
    * meaning for it. Drop such entries at the boundary so a config carrying one
    * can never be handed to the parser.
    */
-  const tags = Object.fromEntries(
-    Object.entries(customConfig).filter(([, rule]) => !isPlaintextRule(rule))
-  ) as Record<string, TagConfig | ((el: Element) => TagConfig)>;
+  // No prototype: html-janitor reads `tags[nodeName]` without an own-key check,
+  // so a `<constructor>` tag would get `Object` as its rule and keep every attribute.
+  const tags = Object.assign(
+    Object.create(null) as Record<string, TagConfig | ((el: Element) => TagConfig)>,
+    Object.fromEntries(Object.entries(customConfig).filter(([, rule]) => !isPlaintextRule(rule)))
+  );
   const anchorRule = tags.a;
 
   if (anchorRule !== undefined && anchorRule !== false) {

@@ -529,6 +529,40 @@ test.describe('sanitizing', () => {
       expect(text).toContain('<strong>');
     });
 
+    test('should unwrap a <constructor> tag and its handlers when rendering saved data', async ({ page }) => {
+      await createBlokWithElements(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'a<constructor onmouseover="alert(1)">hi</constructor>' },
+        },
+      ]);
+
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} constructor`)).toHaveCount(0);
+
+      const output = await saveBlok(page);
+
+      expect(getBlockText(output.blocks[0].data)).toBe('ahi');
+    });
+
+    test('should unwrap a pasted <constructor> tag and its handlers', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockById(page, INITIAL_BLOCK_ID);
+
+      await block.click();
+      await paste(page, block, {
+        'text/html': '<p>a<constructor onmouseover="alert(1)">hi</constructor></p>',
+      });
+
+      await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} constructor`)).toHaveCount(0);
+
+      const output = await saveBlok(page);
+      const text = output.blocks.map((saved) => getBlockText(saved.data)).join('');
+
+      expect(text).toContain('ahi');
+      expect(text).not.toContain('constructor');
+    });
+
     test('should remove javascript: URLs', async ({ page }) => {
       await createBlokWithElements(page, [
         {

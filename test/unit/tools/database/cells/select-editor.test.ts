@@ -189,6 +189,20 @@ describe('select cell editor', () => {
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
+  // notion-spec-2 §19.1 (01-select-enter-nohl.png): a hover highlight stays after the pointer leaves, and Enter acts on it.
+  it('keeps the row the pointer moved over highlighted, and Enter picks it', () => {
+    const ctx = openSelect(null);
+
+    row('o3').dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+    row('o3').dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    editorRoot()?.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+
+    expect(row('o3').hasAttribute('data-active')).toBe(true);
+    expect(search().getAttribute('aria-activedescendant')).toBe(row('o3').id);
+    press(search(), 'Enter');
+    expect(ctx.onCommit).toHaveBeenLastCalledWith('o3');
+  });
+
   // notion-spec-2 §19.1, §19.14: in the table the current value is a pill with ×, and the field has no prompt beside it.
   describe('in a table cell', () => {
     it('has no search prompt beside a pill, and the prompt on an empty cell', () => {

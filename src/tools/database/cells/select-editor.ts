@@ -441,6 +441,21 @@ class SelectEditor {
     return [footer];
   }
 
+  /**
+   * notion-spec-2 §19.1: the row under a moving pointer becomes the active
+   * row and stays so after the pointer leaves, so Enter acts on it. Pointer
+   * movement only: a row redrawn under a still pointer is not hovered.
+   */
+  private hoverActive(row: HTMLElement, id: string): void {
+    const index = this.activeTargets().findIndex((target) => target.kind === 'option' && target.id === id);
+
+    if (index === this.activeIndex || index < 0) return;
+    this.activeIndex = index;
+    this.body.querySelectorAll('[data-active]').forEach((el) => el.removeAttribute('data-active'));
+    row.setAttribute('data-active', '');
+    this.search.setAttribute('aria-activedescendant', row.id);
+  }
+
   private renderOptionRow(option: SelectOption): HTMLElement {
     const row = document.createElement('div');
     const selected = this.selected.includes(option.id);
@@ -449,6 +464,7 @@ class SelectEditor {
     row.setAttribute('data-blok-database-select-option', option.id);
     row.setAttribute('role', 'option');
     row.setAttribute('aria-selected', String(selected));
+    row.addEventListener('pointermove', () => this.hoverActive(row, option.id));
 
     if (this.canEditOptions) {
       const handle = iconButton('data-blok-database-select-option-handle', IconMenu, this.t('tools.database.dragOption'));

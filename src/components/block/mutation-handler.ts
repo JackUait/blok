@@ -3,7 +3,25 @@ import type { BlokEventMap } from '../events';
 import { RedactorDomChanged } from '../events';
 import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import type { EventsDispatcher } from '../utils/events';
-import { isMutationBelongsToElement } from '../utils/mutations';
+import { groupMutationsByElement } from '../utils/mutations';
+
+/**
+ * Every block's handler receives the same batch array, so the batch is
+ * grouped once and each block looks up its own records.
+ */
+const groupedBatches = new WeakMap<MutationRecord[], Map<Node, MutationRecord[]>>();
+
+const recordsOf = (mutations: MutationRecord[], toolElement: HTMLElement): MutationRecord[] => {
+  const cached = groupedBatches.get(mutations);
+  const grouped = cached ?? groupMutationsByElement(mutations);
+
+  if (cached === undefined) {
+    groupedBatches.set(mutations, grouped);
+  }
+
+  // A copy: the receiver owns the array it gets, as it did with filter().
+  return [...(grouped.get(toolElement) ?? [])];
+};
 
 /**
  * Result of handling a mutation
@@ -62,7 +80,7 @@ export class MutationHandler {
         return;
       }
 
-      const blockMutations = mutations.filter(record => isMutationBelongsToElement(record, toolElement));
+      const blockMutations = recordsOf(mutations, toolElement);
 
       if (blockMutations.length > 0) {
         this.onMutation(blockMutations);

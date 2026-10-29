@@ -102,13 +102,29 @@ export const hideUnderCollapsedParent = (block: Block, getBlock: GetBlock): void
     return;
   }
 
-  const siblings = parent.contentIds
-    .filter(childId => childId !== block.id)
-    .map(childId => getBlock(childId))
-    .filter((sibling): sibling is Block => sibling !== undefined)
-    .filter(sibling => !(sibling.holder.classList.contains('hidden') && sibling.tool.isLayout));
-  const collapsed = findOwn(parent.holder, '[data-blok-toggle-open="false"]') !== null
-    || (siblings.length > 0 && siblings.every(sibling => sibling.holder.classList.contains('hidden')));
+  // Stops at the first visible sibling: a table cell row adds many children
+  // to one parent, and none of them may cost a walk over all the others.
+  const otherChildrenAllHidden = (): boolean => {
+    const counted = { any: false };
+
+    for (const childId of parent.contentIds) {
+      const sibling = childId === block.id ? undefined : getBlock(childId);
+      const hidden = sibling?.holder.classList.contains('hidden') ?? false;
+
+      if (sibling === undefined || (hidden && sibling.tool.isLayout)) {
+        continue;
+      }
+
+      if (!hidden) {
+        return false;
+      }
+
+      counted.any = true;
+    }
+
+    return counted.any;
+  };
+  const collapsed = findOwn(parent.holder, '[data-blok-toggle-open="false"]') !== null || otherChildrenAllHidden();
 
   if (collapsed) {
     block.holder.classList.add('hidden');

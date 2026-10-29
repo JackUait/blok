@@ -4,6 +4,7 @@ import type { AxisScale } from './scale';
 import type { Box } from './legend';
 import type { TextStyle } from './svg';
 import { formatValue } from './format';
+import { drawBubbles } from './bubble';
 import { drawMarker } from './marker';
 import { areaValueAxis, autoValueAxis, desiredTickCount, niceAxisInterval } from './scale';
 import { group, px, svg, text, textWidth } from './svg';
@@ -388,7 +389,11 @@ function drawXY(model: ChartModel, area: Box, root: Element, style: TextStyle): 
   drawValueAxis(root, plot, { scale: yScale, format: yFormat, axis: yAxis, at: yPx, horizontal: false }, style);
   const labels = group('data-labels', root);
 
-  drawScatter(model, frame, xPx, root, labels, style);
+  if (model.kind === 'bubble') {
+    drawBubbles(model, plot, xPx, yPx, root);
+  } else {
+    drawScatter(model, frame, xPx, root, labels, style);
+  }
   root.appendChild(labels);
 }
 
@@ -405,7 +410,7 @@ function drawLayer(layer: ChartModel, f: Frame, root: Element, labels: Element, 
 }
 
 export function drawCartesian(model: ChartModel, area: Box, root: Element, style: TextStyle): void {
-  if (model.kind === 'scatter') {
+  if (model.kind === 'scatter' || model.kind === 'bubble') {
     drawXY(model, area, root, style);
 
     return;

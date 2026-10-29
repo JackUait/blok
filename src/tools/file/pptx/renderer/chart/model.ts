@@ -7,7 +7,7 @@ import { cssFontFamilyStack, resolveThemeFontStack } from '../fontResolver';
 import { resolveColorToCss } from '../StyleResolver';
 import { extractFormatCode, extractNumericValuesWithBlanks, extractStringValues } from './format';
 
-export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'radar' | 'combo' | 'unsupported';
+export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'bubble' | 'radar' | 'combo' | 'unsupported';
 export type LegendPosition = 't' | 'b' | 'l' | 'r';
 
 const KIND_BY_ELEMENT: Record<string, ChartKind> = {
@@ -22,6 +22,7 @@ const KIND_BY_ELEMENT: Record<string, ChartKind> = {
   doughnutChart: 'doughnut',
   scatterChart: 'scatter',
   radarChart: 'radar',
+  bubbleChart: 'bubble',
 };
 
 /** Plots that can share a category axis with another plot. */
@@ -46,6 +47,8 @@ export interface ChartSeries {
   values: number[];
   blanks: Set<number>;
   xValues: number[];
+  /** c:bubbleSize, for bubble plots. */
+  bubbleSizes?: number[];
   formatCode?: string;
   color: string;
   /** Per-point fills: explicit c:dPt colours, else the palette when colours vary by point. */
@@ -96,6 +99,8 @@ export interface ChartModel {
   secondary?: boolean;
   /** c:radarStyle: standard, marker or filled. */
   radarStyle?: string;
+  /** c:bubbleScale as a percentage, and whether c:sizeRepresents is w (width, not area). */
+  bubble?: { scale: number; byWidth: boolean };
 }
 
 function bool(node: SafeXmlNode, fallback: boolean): boolean {
@@ -317,6 +322,7 @@ function readSeries(ser: SafeXmlNode, index: number, sc: SeriesContext): ChartSe
     values,
     blanks: blankIndices,
     xValues: isXY ? extractNumericValuesWithBlanks(ser.child('xVal')).values : [],
+    ...(ser.child('bubbleSize').exists() ? { bubbleSizes: extractNumericValuesWithBlanks(ser.child('bubbleSize')).values } : {}),
     formatCode: extractFormatCode(valNode),
     color,
     pointColors: readPointColors(ser, values.length, pointFallback, ctx),
@@ -387,7 +393,8 @@ function readPlot(plot: SafeXmlNode, pc: PlotContext): Omit<ChartModel, 'title' 
     holeSize: plot.child('holeSize').numAttr('val') ?? 50,
     firstSliceAngle: plot.child('firstSliceAng').numAttr('val') ?? 0,
     ...(kind === 'radar' ? { radarStyle: plot.child('radarStyle').attr('val') ?? 'standard' } : {}),
-    categoryAxis: readAxis(findAxis(plotArea, kind === 'scatter' ? ['valAx'] : ['catAx', 'dateAx'], axisIds[0]), ctx),
+    ...(kind === 'bubble' ? { bubble: { scale: plot.child('bubbleScale').numAttr('val') ?? 100, byWidth: plot.child('sizeRepresents').attr('val') === 'w' } } : {}),
+    categoryAxis: readAxis(findAxis(plotArea, kind === 'scatter' || kind === 'bubble' ? ['valAx'] : ['catAx', 'dateAx'], axisIds[0]), ctx),
     valueAxis: readAxis(findAxis(plotArea, ['valAx'], axisIds[1]), ctx),
   };
 }

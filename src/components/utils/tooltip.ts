@@ -27,6 +27,8 @@ export interface HintOptions extends TooltipOptions {
   surface?: boolean;
   /** The element the bubble is placed against, read on each show. Defaults to the trigger. */
   anchor?: (trigger: HTMLElement) => HTMLElement;
+  /** A press on the trigger keeps an already shown bubble open. It still cancels one that has not shown yet. */
+  keepOnPress?: boolean;
 }
 
 const DEFAULT_OFFSET = 10;
@@ -635,7 +637,13 @@ class Tooltip {
     // Defer the hide so brief trigger exits/re-entries do not flicker.
     const handleMouseLeave = (): void => this.scheduleGraceHide(options.hideDelay);
     // A press usually opens a menu, and the hint would sit over it. Capture so a child's stopPropagation cannot skip it.
-    const handlePointerDown = (): void => this.hide();
+    const handlePointerDown = (): void => {
+      if (options.keepOnPress === true && this.showed && this.currentTarget === element) {
+        return;
+      }
+
+      this.hide();
+    };
 
     // No focus listener on purpose: hints show on hover only, so a click that focuses the trigger shows nothing.
     element.addEventListener('pointerenter', handlePointerEnter);

@@ -610,6 +610,35 @@ describe('Tooltip utility', () => {
     expect(getTooltipWrapper()?.getAttribute('aria-hidden')).not.toBe('false');
   });
 
+  // notion-spec-2 §19.16 (created-by-editor.png): a profile card stays open when its name is clicked.
+  it('keeps a shown keepOnPress card open when its trigger is pressed', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'card', { keepOnPress: true });
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+    target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(1000);
+
+    expect(getTooltipWrapper()?.getAttribute('aria-hidden')).toBe('false');
+  });
+
+  it('a press still cancels a keepOnPress card that has not shown yet', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'card', { keepOnPress: true });
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY - 100);
+    target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('aria-hidden')).not.toBe('false');
+  });
+
   // A child that stops the press must not keep the hint open.
   it('hides the hint when a child of the trigger stops the press', () => {
     vi.useFakeTimers();

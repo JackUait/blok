@@ -254,7 +254,8 @@ const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: Pr
 
 /**
  * notion-spec-2 §18.2, §19.16 (created-by-editor.png): a profile card above the name. Notion adds a role
- * and the local time; a Blok person has neither. The delay stays Blok's hint delay.
+ * and the local time; a Blok person has neither. The delay stays Blok's hint delay. A click on the name keeps
+ * an open card open (created-by-editor.png).
  */
 const attachPersonCard = (chip: HTMLElement, person: DatabasePerson, ctx: CellContext): void => {
   const card = document.createElement('div');
@@ -274,7 +275,7 @@ const attachPersonCard = (chip: HTMLElement, person: DatabasePerson, ctx: CellCo
   name.setAttribute('data-blok-database-person-card-name', '');
   name.textContent = person.id === ctx.me ? ctx.i18n.t('tools.database.personYou').replace('{name}', person.name) : person.name;
   card.append(avatar, name);
-  onHover(chip, card, { placement: 'top', gap: 6, surface: true });
+  onHover(chip, card, { placement: 'top', gap: 6, surface: true, keepOnPress: true });
 };
 
 const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {

@@ -38,7 +38,8 @@ describe('person profile card', () => {
 
     expect(card?.querySelector('[data-blok-database-person-card-name]')?.textContent).toBe('Ada Lovelace');
     expect(card?.querySelector('img[data-blok-database-person-card-avatar]')?.getAttribute('src')).toBe('https://example.com/ada.png');
-    expect(options).toMatchObject({ placement: 'top', surface: true });
+    // created-by-editor.png: a click on the name keeps the open card.
+    expect(options).toMatchObject({ placement: 'top', surface: true, keepOnPress: true });
     // Blok's hint delay, not Notion's ~416ms (user-approved).
     expect(options?.delay).toBeUndefined();
   });

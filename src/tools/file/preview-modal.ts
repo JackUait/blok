@@ -336,9 +336,14 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   // helpers call body.replaceChildren(), which would otherwise wipe the strips.
   // The haze's own MutationObserver then tracks later changes (e.g. the markdown
   // Preview ⇄ Source toggle). PDFs scroll inside their iframe, so they opt out.
+  // A fill can fail late, e.g. when a lazy renderer chunk does not load.
   void startFill().then(() => {
     if (!state.closed && kind !== 'pdf') {
       haze.init(body);
+    }
+  }, () => {
+    if (!state.closed) {
+      buildErrorInto(body, opts);
     }
   });
 

@@ -268,6 +268,17 @@ describe('openFilePreview — text kinds', () => {
     teardown();
   });
 
+  it('shows the error fallback when the markdown renderer fails to load', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: '# Hi' });
+    vi.mocked(markdownToHtml).mockRejectedValueOnce(new Error('chunk failed'));
+    const teardown = openFilePreview({ url: 'readme.md', fileName: 'readme.md', labels: LABELS });
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+    });
+    teardown();
+  });
+
   it('does not write to the DOM if torn down before the fetch resolves', async () => {
     let resolve!: (v: { ok: true; text: string }) => void;
     vi.mocked(loadTextPreview).mockReturnValue(new Promise(r => { resolve = r; }));

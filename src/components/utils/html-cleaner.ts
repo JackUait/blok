@@ -12,6 +12,8 @@
  *   is removed with its subtree;
  * - an element unwrapped inside SVG or MathML goes with its children, and an
  *   HTML `mglyph`/`malignmark` is removed (both re-parse as live markup);
+ * - `script`/`style` anywhere inside SVG or MathML are removed with their
+ *   text, whatever the config says;
  * - processing instructions are removed (Chromium parses `<!a …>` as one;
  *   html-janitor's walk skipped them and kept them in its output);
  * - removals no longer recurse, so a long run of removable siblings cannot
@@ -49,6 +51,25 @@ const REPARSE_AS_MATHML = new Set([ 'MGLYPH', 'MALIGNMARK' ]);
 
 const BLOCK_ELEMENT_NAMES = ['P', 'LI', 'TD', 'TH', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'PRE'];
 const INLINE_ELEMENT_NAMES = ['A', 'B', 'STRONG', 'I', 'EM', 'SUB', 'SUP', 'U', 'STRIKE'];
+
+const RAW_TEXT_TAGS = new Set([ 'SCRIPT', 'STYLE' ]);
+
+/**
+ * Whether the element is SVG or MathML, or sits inside one.
+ * @param element - element to check
+ */
+const isInsideForeign = (element: Element): boolean => {
+  const cursor: { at: Element | null } = { at: element };
+
+  while (cursor.at !== null) {
+    if (cursor.at.namespaceURI !== HTML_NAMESPACE) {
+      return true;
+    }
+    cursor.at = cursor.at.parentElement;
+  }
+
+  return false;
+};
 
 const isBlockElement = (node: Node | null): boolean => node !== null && BLOCK_ELEMENT_NAMES.includes(node.nodeName);
 
@@ -147,6 +168,11 @@ class CleanerRun {
     }
 
     const element = node as Element;
+
+    // Their text re-parses as markup once it moves in or out of foreign content: mutation XSS.
+    if (RAW_TEXT_TAGS.has(element.nodeName.toUpperCase()) && isInsideForeign(element)) {
+      return this.remove(parent, element);
+    }
 
     if (this.stable.has(element)) {
       return false;

@@ -92,6 +92,19 @@ describe('view sanitizer security parity with the DOM cleaner', () => {
       expect(result).not.toContain('mglyph');
     });
 
+    it.each([
+      [ '<svg><style>a{}</style><rect></rect></svg>', { svg: true, style: true, rect: true }, '<svg><rect></rect></svg>' ],
+      [ '<svg><script>alert(1)</script></svg>', { svg: () => true, script: () => true }, '<svg></svg>' ],
+      [ '<math><style>a{}</style></math>', { math: true, style: true }, '<math></math>' ],
+      [ '<svg><foreignObject><style>a{}</style></foreignObject></svg>', { svg: true, foreignobject: true, style: true }, '<svg><foreignObject></foreignObject></svg>' ],
+    ] as const)('removes script and style inside SVG or MathML even when the config allows them: %s', (html, config, expected) => {
+      expect(sanitizeHtmlFragment(html, config)).toBe(expected);
+    });
+
+    it('keeps an allowed style outside SVG and MathML', () => {
+      expect(sanitizeHtmlFragment('<style>a{}</style><b>x</b>', { style: true, b: {} })).toBe('<style>a{}</style><b>x</b>');
+    });
+
     it('removes an HTML malignmark with its children', () => {
       expect(sanitizeHtmlFragment('<malignmark><b>x</b></malignmark>y', { malignmark: () => true, b: {} })).toBe('y');
     });

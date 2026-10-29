@@ -10,6 +10,8 @@
  * - non-allowlisted (or `false`) tag → unwrapped, children survive;
  *   `script`/`style` are the exception — dropped with their contents, and so
  *   is any element unwrapped inside SVG or MathML;
+ * - `script`/`style` anywhere inside SVG or MathML are dropped with their
+ *   contents, whatever the config says;
  * - an HTML `mglyph`/`malignmark` is removed with its contents;
  * - comments are removed;
  * - whitespace-only text nodes adjacent to block-element siblings are removed;
@@ -544,6 +546,8 @@ interface WalkLevel {
   parentIsBlock: boolean;
   /** Whether the parent is a top container: nested-block unwrapping is off there, as the DOM cleaner's root <div> has no parent. */
   parentIsTop: boolean;
+  /** Whether the parent is inside SVG or MathML, or is one of their elements. */
+  inForeign: boolean;
   /** Next child to visit; back to 0 after any structural change, as the DOM cleaner restarts the walk. */
   index: number;
 }
@@ -569,7 +573,7 @@ const moveTo = (next: number): WalkStep => ({ next, descend: [] });
  * @param transform - optional URL rewrite hook
  */
 const sanitizeChildAt = (level: WalkLevel, config: SanitizerConfig, transform: FragmentUrlTransform | undefined): WalkStep => {
-  const { parent, parentIsBlock, parentIsTop, index } = level;
+  const { parent, parentIsBlock, parentIsTop, inForeign, index } = level;
   const node = parent.childNodes[index];
 
   if (isTextNode(node)) {
@@ -596,6 +600,15 @@ const sanitizeChildAt = (level: WalkLevel, config: SanitizerConfig, transform: F
   }
 
   const tagName = node.tagName.toLowerCase();
+  const isForeign = inForeign || node.namespaceURI !== NS.HTML;
+
+  // Their text re-parses as markup once it moves in or out of foreign content: mutation XSS.
+  if (isForeign && (tagName === 'script' || tagName === 'style')) {
+    parent.childNodes.splice(index, 1);
+
+    return moveTo(0);
+  }
+
   const resolution = resolveRule(Object.hasOwn(config, tagName) ? config[tagName] : undefined, node);
   const isInvalidInline = INLINE_ELEMENT_NAMES.has(tagName) && node.childNodes.some(isBlockElement);
   const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
@@ -624,14 +637,14 @@ const sanitizeChildAt = (level: WalkLevel, config: SanitizerConfig, transform: F
   filterAttributes(node, resolution.attrs);
   applyUrlPolicy(node, transform);
 
-  const children: WalkLevel = { parent: node, parentIsBlock: BLOCK_ELEMENT_NAMES.has(tagName), parentIsTop: false, index: 0 };
+  const children: WalkLevel = { parent: node, parentIsBlock: BLOCK_ELEMENT_NAMES.has(tagName), parentIsTop: false, inForeign: isForeign, index: 0 };
 
   // As in the DOM cleaner: the serializer writes template.content, so it must
   // be sanitized or an allowed <template> would leak arbitrary markup.
   return {
     next: index + 1,
     descend: isTemplateNode(node)
-      ? [children, { parent: node.content, parentIsBlock: false, parentIsTop: true, index: 0 }]
+      ? [children, { parent: node.content, parentIsBlock: false, parentIsTop: true, inForeign: isForeign, index: 0 }]
       : [children],
   };
 };
@@ -648,7 +661,7 @@ const sanitizeChildAt = (level: WalkLevel, config: SanitizerConfig, transform: F
  * @param transform - optional URL rewrite hook
  */
 const sanitizeTree = (root: HtmlParentNode, config: SanitizerConfig, transform: FragmentUrlTransform | undefined): void => {
-  const levels: WalkLevel[] = [ { parent: root, parentIsBlock: true, parentIsTop: true, index: 0 } ];
+  const levels: WalkLevel[] = [ { parent: root, parentIsBlock: true, parentIsTop: true, inForeign: false, index: 0 } ];
 
   while (levels.length > 0) {
     const level = levels[levels.length - 1];

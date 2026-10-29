@@ -169,7 +169,8 @@ test.describe('timeline', () => {
     expect(layout.propStarts[1] - layout.firstPropEnd).toBeCloseTo(6, 0);
     expect(layout.sameLine).toBe(true);
     await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"]')).toHaveCSS('font-size', '12px');
-    await expect(bar(page, 'r1').locator('[data-blok-database-timeline-bar-property]').last()).toHaveCSS('font-size', '13px');
+    // notion-spec-2 §21.9: every value after the bar is 12/18.
+    await expect(bar(page, 'r1').locator('[data-blok-database-timeline-bar-property]').last()).toHaveCSS('font-size', '12px');
     await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(35, 119, 211)');
   });
 

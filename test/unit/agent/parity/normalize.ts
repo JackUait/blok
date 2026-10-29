@@ -1,7 +1,7 @@
 import { outputBlocksToCanonicalSegments } from '../../../../src/shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../../src/shared/rich-text/fields';
 import { BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
-import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../src/view/rich-text-node';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 export interface ParityDocument {

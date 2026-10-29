@@ -24,7 +24,7 @@ import type {
 } from '../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
 import { startServer, type RunningServer } from './run-against';

@@ -19,7 +19,7 @@ import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
 import { getEffectiveRuleForString, isPlaintextRule, walkSanitize, type StringCleaner } from '../shared/sanitize-walk';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
-import { htmlToSegmentsNode } from './rich-text-parse5';
+import { htmlToSegmentsNode } from './rich-text-node';
 import { sanitizeHtmlFragment } from './sanitize';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

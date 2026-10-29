@@ -4,7 +4,7 @@ import { markdownToBlocks } from '../../../src/markdown/index';
 import type { InternalMarkdownImportConfig } from '../../../src/markdown/types';
 import { outputBlocksToSegments } from '../../../src/shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import type { OutputBlockData } from '../../../types';
 
 const fieldsOf = (type: string): string[] =>

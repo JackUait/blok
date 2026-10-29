@@ -1,4 +1,4 @@
-import type { DefaultTreeAdapterMap } from 'parse5';
+import type { ChildNode as HtmlChildNode } from '../html';
 import type { LooseOutputData, OutputData } from '../../types';
 import { isPagePointer } from '../shared/page-pointer';
 import { PAGE_REFERENCE_ATTR } from '../shared/page-reference';
@@ -48,7 +48,7 @@ const inlinePageIds = (value: unknown): string[] => {
   }
 
   const ids: string[] = [];
-  const visit = (nodes: DefaultTreeAdapterMap['childNode'][]): void => {
+  const visit = (nodes: HtmlChildNode[]): void => {
     for (const node of nodes) {
       if (!('tagName' in node)) {
         continue;

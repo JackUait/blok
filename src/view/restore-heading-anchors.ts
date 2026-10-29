@@ -20,10 +20,10 @@
  * one-off upgrade the host decides to run, not in every load. Expects a
  * document already in Blok's hierarchical shape (migrate legacy data first).
  *
- * parse5-backed and DOM-free, so it runs in a Node script over stored records.
+ * Built on src/html and DOM-free, so it runs in a Node script over stored records.
  */
-import { parseFragment } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { parseFragment } from '../html';
+import type { ChildNode as HtmlChildNode, TextNode as HtmlTextNode } from '../html';
 
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { htmlTextContent } from './html-text';
@@ -31,7 +31,6 @@ import { viewBlocksToHtml } from './rich-text-input';
 
 import type { OutputBlockData, OutputData } from '../../types';
 
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
 /** Why a referenced fragment was left as it was. */
 export type HeadingAnchorSkipReason = 'no-match' | 'ambiguous';
@@ -105,7 +104,7 @@ interface FragmentLink {
  * @param html - fragment markup
  * @param found - accumulator, in document order
  */
-const linkFromNode = (node: P5ChildNode): FragmentLink | null => {
+const linkFromNode = (node: HtmlChildNode): FragmentLink | null => {
   if (node.nodeName !== 'a' || !('attrs' in node)) {
     return null;
   }
@@ -123,7 +122,7 @@ const linkFromNode = (node: P5ChildNode): FragmentLink | null => {
   };
 };
 
-const collectLinks = (nodes: P5ChildNode[], found: FragmentLink[]): void => {
+const collectLinks = (nodes: HtmlChildNode[], found: FragmentLink[]): void => {
   for (const node of nodes) {
     const link = linkFromNode(node);
 
@@ -138,21 +137,21 @@ const collectLinks = (nodes: P5ChildNode[], found: FragmentLink[]): void => {
 };
 
 /**
- * Plain text of a parse5 element, reusing the view's own extraction so entities
+ * Plain text of an element, reusing the view's own extraction so entities
  * and `<br>` read the same way they do everywhere else.
  * @param node - element whose text is wanted
  */
-const elementText = (node: P5ChildNode): string => {
+const elementText = (node: HtmlChildNode): string => {
   if (!('childNodes' in node)) {
     return '';
   }
 
   const text: string[] = [];
 
-  const walk = (nodes: P5ChildNode[]): void => {
+  const walk = (nodes: HtmlChildNode[]): void => {
     for (const child of nodes) {
       if (child.nodeName === '#text') {
-        text.push((child as DefaultTreeAdapterMap['textNode']).value);
+        text.push((child as HtmlTextNode).value);
       } else if ('childNodes' in child) {
         walk(child.childNodes);
       }

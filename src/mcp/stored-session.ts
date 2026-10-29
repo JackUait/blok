@@ -13,7 +13,7 @@ export interface StoredSessionInput {
   write: boolean;
   source: DocumentSource;
   contract: AgentContract;
-  /** 01's loader: rich fields holding HTML become segments (parse5). */
+  /** 01's loader: rich fields holding HTML become segments (src/html). */
   loadDocument(raw: unknown): OutputData;
   /** 01's createDocumentAgentSession, bound to tools, contract, actor and ports. */
   createAgentSession(document: OutputData): StoredAgent;

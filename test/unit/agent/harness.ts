@@ -9,7 +9,7 @@ import { buildAgentContract, buildToolManifest } from '../../../src/shared/tool-
 import { validateAgainst } from '../../../src/shared/schema/validate';
 import { createHeadlessAgentSetup, loadStoredDocument } from '../../../src/view/agent-runtime';
 import { blokDocumentSchema } from '../../../src/view/document-schema';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import type { AgentContract, OutputData, ToolRegistrySnapshot } from '../../../types';
 import type { BlokCustomToolsFile } from '../../../types/tool-manifest';
 import type { AgentActor, AgentSession } from '../../../types/agent';

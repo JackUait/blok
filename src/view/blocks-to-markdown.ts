@@ -3,11 +3,11 @@
  * Blok document. The twin of the editor's clipboard serializer
  * (`src/markdown/blocks-to-markdown.ts`): both delegate every block-level
  * decision to `blocks-to-markdown-core.ts` and differ only in how they read a
- * block's inline HTML — a live DOM there, parse5 here.
+ * block's inline HTML — a live DOM there, src/html here.
  *
- * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, parse5).
+ * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, src/html).
  */
-import type { DefaultTreeAdapterMap } from 'parse5';
+import type { ChildNode as HtmlChildNode, TextNode as HtmlTextNode } from '../html';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import {
@@ -41,7 +41,6 @@ export interface MarkdownSerializationResult {
   warnings: MarkdownDegradation[];
 }
 
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
 /** Receives the name of every inline construct the walk had to unwrap. */
 type LossReporter = (construct: string) => void;
@@ -53,11 +52,11 @@ type PageOptions = Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref'>;
 type MarkdownOptions = Pick<BlocksToHtmlOptions, 'pageInfo' | 'pageHref' | 'title'>;
 
 /**
- * Read an attribute off a parse5 element.
+ * Read an attribute off an element.
  * @param node - the node to read
  * @param name - attribute name
  */
-const attr = (node: P5ChildNode, name: string): string | null => {
+const attr = (node: HtmlChildNode, name: string): string | null => {
   if (!('attrs' in node)) {
     return null;
   }
@@ -66,33 +65,33 @@ const attr = (node: P5ChildNode, name: string): string | null => {
 };
 
 /**
- * Serialize parse5 child nodes to inline Markdown.
+ * Serialize child nodes to inline Markdown.
  * @param nodes - nodes to walk
  * @param onLoss - receives every unwrapped inline construct
  * @param escape - escapes text node values
  */
 const serializeNodes = (
-  nodes: P5ChildNode[],
+  nodes: HtmlChildNode[],
   onLoss: LossReporter,
   escape: TextEscaper,
   pages: PageOptions
 ): string => nodes.map((node) => serializeNode(node, onLoss, escape, pages)).join('');
 
 /**
- * Serialize one parse5 node to inline Markdown. Mirrors the tag handling of the
+ * Serialize one node to inline Markdown. Mirrors the tag handling of the
  * DOM backend exactly — the parity test fails on any divergence.
  * @param node - the node to serialize
  * @param onLoss - receives every unwrapped inline construct
  * @param escape - escapes text node values
  */
 const serializeNode = (
-  node: P5ChildNode,
+  node: HtmlChildNode,
   onLoss: LossReporter,
   escape: TextEscaper,
   pages: PageOptions
 ): string => {
   if (node.nodeName === '#text') {
-    return escape((node as DefaultTreeAdapterMap['textNode']).value);
+    return escape((node as HtmlTextNode).value);
   }
 
   if (!('childNodes' in node)) {
@@ -163,8 +162,8 @@ const serializeNode = (
   }
 };
 
-/** Reads inline HTML through parse5. Runs anywhere, including bare Node and Jint. */
-const parse5InlineBackend = (pages: PageOptions): InlineBackend => ({
+/** Reads inline HTML through src/html. Runs anywhere, including bare Node and Jint. */
+const htmlInlineBackend = (pages: PageOptions): InlineBackend => ({
   /**
    * Convert a fragment of inline HTML (a block's `text`) into inline Markdown.
    * @param html - inline HTML string
@@ -263,7 +262,7 @@ export const blocksToMarkdownWithReport = (
   data: OutputData | LooseOutputData | null | undefined,
   options: MarkdownOptions = {}
 ): MarkdownSerializationResult => {
-  const report = serializeBlocksToMarkdown(flattenDocument(data), parse5InlineBackend(options), options.pageInfo, options.pageHref);
+  const report = serializeBlocksToMarkdown(flattenDocument(data), htmlInlineBackend(options), options.pageInfo, options.pageHref);
 
   return options.title === true
     ? { ...report, markdown: withMarkdownTitle(report.markdown, data?.title, data?.icon) }

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const src = resolve(__dirname, '../../../src');
 const root = join(src, 'shared/agent');
-const forbiddenDirectories = ['components', 'tools', 'view'].map(directory => join(src, directory));
+const forbiddenDirectories = ['components', 'tools', 'view', 'html'].map(directory => join(src, directory));
 const files = readdirSync(root, { recursive: true, encoding: 'utf8' })
   .filter(name => name.endsWith('.ts'))
   .sort()
@@ -25,7 +25,7 @@ describe('agent purity law', () => {
     expect(files.length).toBeGreaterThanOrEqual(15);
   });
 
-  it.each(files)('$name imports no DOM-bound editor, tool, view or parse5 module', ({ name, text }) => {
+  it.each(files)('$name imports no DOM-bound editor, tool, view or HTML parser module', ({ name, text }) => {
     const forbidden = [...text.matchAll(/(?:\bfrom|\bimport)\s*\(?\s*['"]([^'"]+)['"]/g)]
       .map(match => match[1])
       .filter(specifier => {

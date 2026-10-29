@@ -81,7 +81,7 @@ async function loadClient() {
         `export { DocumentStore } from ${modulePath('document-store.ts')};\n` +
         `export { readPageFields } from ${modulePath('page-fields.ts')};\n` +
         `export { YBlockSerializer, GRID_ORDER_KEY, GRID_ROWS_KEY } from ${modulePath('serializer.ts')};\n` +
-        `export { htmlToSegmentsNode } from ${JSON.stringify(join(REPO_ROOT, 'src', 'view', 'rich-text-parse5.ts'))};\n` +
+        `export { htmlToSegmentsNode } from ${JSON.stringify(join(REPO_ROOT, 'src', 'view', 'rich-text-node.ts'))};\n` +
         `export { outputBlocksToSegments } from ${JSON.stringify(join(REPO_ROOT, 'src', 'shared', 'rich-text', 'block-data.ts'))};\n` +
         `export { CURRENT_RICH_TEXT_FIELDS } from ${JSON.stringify(join(REPO_ROOT, 'src', 'shared', 'rich-text', 'fields.ts'))};\n`,
       resolveDir: REPO_ROOT,

@@ -6,7 +6,7 @@ import { createEditorAgentSession } from '../../../src/components/modules/agent/
 import { destroy as destroyTooltip } from '../../../src/components/utils/tooltip';
 import { outputBlocksToCanonicalSegments } from '../../../src/shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import type { OutputData } from '../../../types';
 import type { AgentBatch, AgentResult, AgentSession } from '../../../types/agent';
 import { openJsonSession, openStoreSession, TEST_ACTOR } from '../agent/harness';

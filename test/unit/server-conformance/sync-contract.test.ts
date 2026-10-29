@@ -14,7 +14,7 @@ import * as Y from 'yjs';
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { readPageFields } from '../../../src/components/modules/yjs/page-fields';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import { WireReader } from '../helpers/wire-reader';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';

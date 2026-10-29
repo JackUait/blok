@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { htmlToSegmentsDom } from '../../../src/components/utils/rich-text-dom';
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 
 /**
  * The collab fixture generator runs in node and parses rich-field HTML with

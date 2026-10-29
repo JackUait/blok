@@ -14,7 +14,7 @@ import type { Caller } from '../../../src/mcp/dispatcher';
 import { nodeSocketFactory } from '../../../src/mcp/live/node-socket';
 import type { BlokMcpOptions } from '../../../src/mcp/options';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import { startDocEndpoint } from './doc-endpoint';
 import { startServer } from './run-against';
 

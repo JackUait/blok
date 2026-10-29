@@ -13,7 +13,7 @@ import { DocumentStore } from '../../../src/components/modules/yjs/document-stor
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import { buildSdkServer } from '../../../src/mcp/sdk-server';
 import { assembleMcp } from '../../../src/mcp/server';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 
 import type { AssembledMcp } from '../../../src/mcp/server';
 import type { BlokCustomToolsFile } from '../../../types/tool-manifest';

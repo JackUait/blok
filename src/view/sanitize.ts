@@ -3,7 +3,7 @@
  *
  * Enforces the same {@link SanitizerConfig} rule shapes as the editor's
  * html-janitor pipeline (`src/components/utils/sanitizer.ts` → clean +
- * applyAttributeOverrides + stripUnsafeUrls), but over a parse5 tree so it
+ * applyAttributeOverrides + stripUnsafeUrls), but over a src/html tree so it
  * runs in Node / workers / RSC with no `document`/`window` access.
  *
  * Semantics matched against html-janitor (node_modules/html-janitor):
@@ -19,11 +19,11 @@
  * - `true` tag rules keep only the safe attribute set (mirrors
  *   `cloneTagConfig` → `preserveExistingAttributesRule`).
  *
- * parse5 imports are confined to `src/view/` — never import this module from
+ * src/html imports are confined to `src/view/` — never import this module from
  * the editor bundle graph.
  */
-import { parseFragment, serialize } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { parseFragment, serialize } from '../html';
+import type { ChildNode as HtmlChildNode, DocumentFragment as HtmlDocumentFragment, Element as HtmlElement, ParentNode as HtmlParentNode, Template as HtmlTemplate, TextNode as HtmlTextNode } from '../html';
 
 import type { SanitizerConfig, SanitizerRule } from '../../types';
 import type { PlaintextRule, TagConfig } from '../../types/configs/sanitizer-config';
@@ -40,11 +40,6 @@ import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
 import { repairSurrogates } from './html-text';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
-type P5Element = DefaultTreeAdapterMap['element'];
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
-type P5ParentNode = DefaultTreeAdapterMap['parentNode'];
-type P5TextNode = DefaultTreeAdapterMap['textNode'];
-type P5Template = DefaultTreeAdapterMap['template'];
 
 /**
  * Block/inline tag lists copied from html-janitor — they drive its
@@ -73,33 +68,33 @@ export const escapeHtml = (value: string): string => {
 
 /**
  * Whether the node is an element (has a tagName).
- * @param node - parse5 child node
+ * @param node - child node
  */
-const isElementNode = (node: P5ChildNode): node is P5Element => {
+const isElementNode = (node: HtmlChildNode): node is HtmlElement => {
   return 'tagName' in node;
 };
 
 /**
  * Whether the node is a text node.
- * @param node - parse5 child node
+ * @param node - child node
  */
-const isTextNode = (node: P5ChildNode): node is P5TextNode => {
+const isTextNode = (node: HtmlChildNode): node is HtmlTextNode => {
   return node.nodeName === '#text';
 };
 
 /**
  * Whether the node is a template element (content lives in a separate fragment).
- * @param node - parse5 element
+ * @param node - element
  */
-const isTemplateNode = (node: P5Element): node is P5Template => {
+const isTemplateNode = (node: HtmlElement): node is HtmlTemplate => {
   return node.nodeName === 'template' && 'content' in node;
 };
 
 /**
  * Whether the element is one of html-janitor's "block" tags.
- * @param node - parse5 child node
+ * @param node - child node
  */
-const isBlockElement = (node: P5ChildNode | null): boolean => {
+const isBlockElement = (node: HtmlChildNode | null): boolean => {
   return node !== null && isElementNode(node) && BLOCK_ELEMENT_NAMES.has(node.tagName.toLowerCase());
 };
 
@@ -111,8 +106,8 @@ const isBlockElement = (node: P5ChildNode | null): boolean => {
  * @param index - index of the node whose sibling is requested
  * @param direction - -1 for previous, +1 for next
  */
-const elementSibling = (parent: P5ParentNode, index: number, direction: -1 | 1): P5ChildNode | null => {
-  const step = (i: number): P5ChildNode | null => {
+const elementSibling = (parent: HtmlParentNode, index: number, direction: -1 | 1): HtmlChildNode | null => {
+  const step = (i: number): HtmlChildNode | null => {
     if (i < 0 || i >= parent.childNodes.length) {
       return null;
     }
@@ -126,26 +121,26 @@ const elementSibling = (parent: P5ParentNode, index: number, direction: -1 | 1):
 };
 
 /**
- * Read an attribute value from a parse5 element (names are lowercased by the
+ * Read an attribute value from an element (names are lowercased by the
  * HTML parser).
- * @param node - parse5 element
+ * @param node - element
  * @param name - attribute name
  */
-const getAttr = (node: P5Element, name: string): string | null => {
+const getAttr = (node: HtmlElement, name: string): string | null => {
   const attr = node.attrs.find((candidate) => candidate.name === name.toLowerCase());
 
   return attr ? attr.value : null;
 };
 
 /**
- * Set (update-in-place or append) an attribute on a parse5 element — mirrors
+ * Set (update-in-place or append) an attribute on an element — mirrors
  * DOM setAttribute ordering so forced values land where the DOM pipeline puts
  * them.
- * @param node - parse5 element
+ * @param node - element
  * @param name - attribute name (lowercase)
  * @param value - attribute value
  */
-const setAttr = (node: P5Element, name: string, value: string): void => {
+const setAttr = (node: HtmlElement, name: string, value: string): void => {
   const attr = node.attrs.find((candidate) => candidate.name === name);
 
   if (attr) {
@@ -158,29 +153,29 @@ const setAttr = (node: P5Element, name: string, value: string): void => {
 };
 
 /**
- * Replace a parse5 element's attribute list in place (the `attrs` array is
+ * Replace an element's attribute list in place (the `attrs` array is
  * mutated rather than reassigned).
- * @param node - parse5 element
+ * @param node - element
  * @param attrs - attributes to keep
  */
-const replaceAttrs = (node: P5Element, attrs: P5Element['attrs']): void => {
+const replaceAttrs = (node: HtmlElement, attrs: HtmlElement['attrs']): void => {
   node.attrs.splice(0, node.attrs.length, ...attrs);
 };
 
 /**
- * Remove an attribute from a parse5 element.
- * @param node - parse5 element
+ * Remove an attribute from an element.
+ * @param node - element
  * @param name - attribute name (lowercase)
  */
-const removeAttr = (node: P5Element, name: string): void => {
+const removeAttr = (node: HtmlElement, name: string): void => {
   replaceAttrs(node, node.attrs.filter((candidate) => candidate.name !== name));
 };
 
 /**
  * Concatenated descendant text — mirrors DOM textContent for function rules.
- * @param node - parse5 element
+ * @param node - element
  */
-const collectText = (node: P5Element): string => {
+const collectText = (node: HtmlElement): string => {
   return node.childNodes.map((child) => {
     if (isTextNode(child)) {
       return child.value;
@@ -218,9 +213,9 @@ const parseStyleText = (styleText: string): StyleProperty[] => {
 /**
  * Minimal style facade for built-in color rules.
  * Mutations normalize the style attribute; untouched attributes stay byte-identical.
- * @param node - parse5 element backing the facade
+ * @param node - element backing the facade
  */
-const createStyleFacade = (node: P5Element): Pick<CSSStyleDeclaration, 'length' | 'item' | 'removeProperty' | 'getPropertyValue' | 'setProperty'> => {
+const createStyleFacade = (node: HtmlElement): Pick<CSSStyleDeclaration, 'length' | 'item' | 'removeProperty' | 'getPropertyValue' | 'setProperty'> => {
   const properties = parseStyleText(getAttr(node, 'style') ?? '');
 
   const writeBack = (): void => {
@@ -272,15 +267,15 @@ const createStyleFacade = (node: P5Element): Pick<CSSStyleDeclaration, 'length' 
 };
 
 /**
- * Minimal DOMTokenList facade over a parse5 element's `class` attribute.
+ * Minimal DOMTokenList facade over an element's `class` attribute.
  * Supports what `markSanitizerConfig`'s rule uses (`length`, iteration,
  * `remove()`) plus `contains`/`add`/`toggle` for host-authored rules.
  * Mutations are written back to the `class` attribute (space-joined); an
  * emptied list drops the attribute, matching the DOM path. Untouched `class`
  * attributes stay byte-identical.
- * @param node - parse5 element backing the facade
+ * @param node - element backing the facade
  */
-const createClassListFacade = (node: P5Element): DOMTokenList => {
+const createClassListFacade = (node: HtmlElement): DOMTokenList => {
   const tokens = (getAttr(node, 'class') ?? '').split(/\s+/).filter(Boolean);
 
   const writeBack = (): void => {
@@ -350,9 +345,9 @@ const createClassListFacade = (node: P5Element): DOMTokenList => {
  * Minimal Element facade handed to function rules. Supports the surface the
  * repo's real rules use (`getAttribute`, `style`, `classList`) plus tagName /
  * hasAttribute / attributes / textContent for host-authored rules.
- * @param node - parse5 element backing the facade
+ * @param node - element backing the facade
  */
-const createElementFacade = (node: P5Element): Element => {
+const createElementFacade = (node: HtmlElement): Element => {
   const facade = {
     get tagName(): string {
       return node.tagName.toUpperCase();
@@ -377,7 +372,7 @@ const createElementFacade = (node: P5Element): Element => {
      * is written here is what gets sanitized.
      */
     set textContent(value: string) {
-      const textNode: P5TextNode = {
+      const textNode: HtmlTextNode = {
         nodeName: '#text',
         value,
         parentNode: node,
@@ -410,7 +405,7 @@ const UNWRAP: RuleResolution = { action: 'unwrap' };
  * @param rule - configured rule for the element's tag (may be undefined)
  * @param node - the element being evaluated
  */
-const resolveRule = (rule: SanitizerRule | undefined, node: P5Element): RuleResolution => {
+const resolveRule = (rule: SanitizerRule | undefined, node: HtmlElement): RuleResolution => {
   if (rule === true) {
     return { action: 'keep', attrs: { kind: 'safe' } };
   }
@@ -444,10 +439,10 @@ const resolveRule = (rule: SanitizerRule | undefined, node: P5Element): RuleReso
  * function-rule string values (mirrors janitor attr loop +
  * applyAttributeOverrides ordering: matching attrs stay in place, forced
  * values that were absent or mismatched are appended).
- * @param node - parse5 element to filter
+ * @param node - element to filter
  * @param decision - attribute decision from {@link resolveRule}
  */
-const filterAttributes = (node: P5Element, decision: AttrDecision): void => {
+const filterAttributes = (node: HtmlElement, decision: AttrDecision): void => {
   if (decision.kind === 'all') {
     return;
   }
@@ -497,10 +492,10 @@ export type FragmentUrlTransform = (url: string, attr: 'href' | 'src') => string
  * (possibly rewritten) values resolve to unsafe schemes — the shared URL
  * policy (`stripUnsafeUrls` in the DOM pipeline). The transform runs BEFORE the
  * strip, so a rewrite can never smuggle in an unsafe scheme.
- * @param node - parse5 element to harden
+ * @param node - element to harden
  * @param transform - optional URL rewrite hook
  */
-const applyUrlPolicy = (node: P5Element, transform: FragmentUrlTransform | undefined): void => {
+const applyUrlPolicy = (node: HtmlElement, transform: FragmentUrlTransform | undefined): void => {
   replaceAttrs(node, node.attrs.flatMap((attr) => {
     if (attr.name !== 'href' && attr.name !== 'src') {
       return [attr];
@@ -527,7 +522,7 @@ const applyUrlPolicy = (node: P5Element, transform: FragmentUrlTransform | undef
  * unwrapping is suppressed there, as janitor's root <div> has no parent)
  */
 const sanitizeChildren = (
-  parent: P5ParentNode,
+  parent: HtmlParentNode,
   config: SanitizerConfig,
   parentIsBlock: boolean,
   parentIsTop: boolean,
@@ -586,7 +581,7 @@ const sanitizeChildren = (
 
     if (isTemplateNode(node)) {
       // Stricter than janitor (which cannot see template content via its
-      // TreeWalker): parse5 serializes template.content, so it must be
+      // TreeWalker): the serializer writes template.content, so it must be
       // sanitized or an allowed <template> would leak arbitrary markup.
       sanitizeChildren(node.content, config, false, true, transform);
     }
@@ -608,11 +603,11 @@ const sanitizeChildren = (
 };
 
 /**
- * Build the shared normalization policy's element view from a parse5 element.
- * @param node - parse5 element to describe
+ * Build the shared normalization policy's element view from an element.
+ * @param node - element to describe
  */
-const inlineViewOf = (node: P5Element): InlineElementView => {
-  const hasVoidContentDescendant = (candidate: P5Element): boolean =>
+const inlineViewOf = (node: HtmlElement): InlineElementView => {
+  const hasVoidContentDescendant = (candidate: HtmlElement): boolean =>
     candidate.childNodes.some(
       (child) =>
         isElementNode(child) &&
@@ -629,7 +624,7 @@ const inlineViewOf = (node: P5Element): InlineElementView => {
 };
 
 /**
- * One normalization sweep over a parse5 subtree. Mirrors the DOM
+ * One normalization sweep over a subtree. Mirrors the DOM
  * implementation in `src/components/utils/inline-normalization.ts` — the two
  * share every decision via the policy module, and differ only in tree
  * mechanics. Returns whether anything changed so the caller can run to a
@@ -640,13 +635,13 @@ const inlineViewOf = (node: P5Element): InlineElementView => {
  * @param parent - subtree to normalize in place
  * @param ancestors - views of the enclosing wrappers, innermost first
  */
-const normalizeInlineSweep = (parent: P5ParentNode, ancestors: InlineElementView[]): boolean => {
+const normalizeInlineSweep = (parent: HtmlParentNode, ancestors: InlineElementView[]): boolean => {
   /**
    * Hoist a redundant wrapper's children into its place.
    * @param node - wrapper to unwrap
    * @param index - its position among the parent's children
    */
-  const unwrapAt = (node: P5Element, index: number): void => {
+  const unwrapAt = (node: HtmlElement, index: number): void => {
     for (const child of node.childNodes) {
       child.parentNode = parent;
     }
@@ -722,10 +717,10 @@ const normalizeInlineSweep = (parent: P5ParentNode, ancestors: InlineElementView
 };
 
 /**
- * Collapse redundant inline markup in a parse5 fragment, in place.
+ * Collapse redundant inline markup in a fragment, in place.
  * @param fragment - parsed fragment to normalize
  */
-const normalizeInlineMarkupFragment = (fragment: P5ParentNode): void => {
+const normalizeInlineMarkupFragment = (fragment: HtmlParentNode): void => {
   /**
    * @param remaining - sweeps left before the safety valve trips
    */
@@ -748,7 +743,7 @@ const normalizeInlineMarkupFragment = (fragment: P5ParentNode): void => {
  * a form feed, a lone surrogate and an astral emoji all survive the round trip
  * unchanged and must keep taking the fast path.
  *
- * This is most fields of a prose document, and parse5 is a character-by-
+ * This is most fields of a prose document, and the tokenizer is a character-by-
  * character tokenizer: the server package runs this on an interpreter, where
  * one skipped parse per field is the difference between a long article
  * rendering and exhausting the runtime's memory budget.
@@ -758,12 +753,12 @@ const needsSanitizing = (html: string): boolean => /[<>&\r\u0000\u00A0]/.test(ht
 
 /**
  * The <div> every fragment is parsed in, to match the DOM pipeline (janitor
- * parses into a detached <div>); parse5's default context is <template>, which
- * treats table fragments differently. parse5 only reads the context element, so
+ * parses into a detached <div>); the parser's default context is <template>, which
+ * treats table fragments differently. The parser only reads the context element, so
  * one is built once and shared — building it per call parses a second fragment
  * for every inline field in the document.
  */
-const DIV_CONTEXT = parseFragment('<div></div>').childNodes[0] as P5Element;
+const DIV_CONTEXT = parseFragment('<div></div>').childNodes[0] as HtmlElement;
 
 /**
  * Sanitize an HTML fragment string against a {@link SanitizerConfig},
@@ -788,20 +783,20 @@ export const sanitizeHtmlFragment = (
 
   const contextElement = DIV_CONTEXT;
   /**
-   * Retried on the input parse5 refuses outright: two adjacent low surrogates
+   * Retried on the input the parser refuses outright (where parse5 8.0.1 did): two adjacent low surrogates
    * make it throw, and one such field must not cost the whole document. See
    * `repairSurrogates`.
    * @param source - fragment markup to parse in the div context
    */
-  const parseInContext = (source: string): DefaultTreeAdapterMap['documentFragment'] => {
+  const parseInContext = (source: string): HtmlDocumentFragment => {
     try {
-      return parseFragment(contextElement, source, {});
+      return parseFragment(contextElement, source);
     } catch (error) {
       if (!(error instanceof RangeError)) {
         throw error;
       }
 
-      return parseFragment(contextElement, repairSurrogates(source), {});
+      return parseFragment(contextElement, repairSurrogates(source));
     }
   };
 

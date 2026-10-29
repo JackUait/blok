@@ -4,7 +4,7 @@
  * modeled on `src/markdown/blocks-to-markdown.ts`).
  *
  * Sanitization contract: every inline-content field passes through
- * `env.inline` (the parse5 allowlist walker) before interpolation; scalar
+ * `env.inline` (the src/html allowlist walker) before interpolation; scalar
  * non-HTML fields go through `env.escape`; URL attributes go through
  * `env.url`, which applies the `transformUrl` hook then enforces the shared
  * URL scheme policy. Emitters never interpolate unsanitized strings.

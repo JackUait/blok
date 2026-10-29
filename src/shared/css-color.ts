@@ -2,7 +2,7 @@
  * Safe CSS colour check for values written into a `style` (table cell colours).
  *
  * Shared by the editor's table model and the DOM-free /view renderer, so both
- * keep exactly the same set. Pure module: no DOM, no parse5.
+ * keep exactly the same set. Pure module: no DOM, no HTML parser.
  *
  * Allow-list only: every accepted shape is fully anchored and built from
  * characters that cannot end a declaration or open a string, comment or URL.

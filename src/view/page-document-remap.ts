@@ -1,12 +1,10 @@
-import { serialize } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { serialize } from '../html';
+import type { ChildNode as HtmlChildNode, Element as HtmlElement } from '../html';
 import type { OutputBlockData, OutputData } from '../../types';
 import { parseInlineFragment } from './html-text';
 import { cloneJson } from './json-clone';
 import { databaseBlockRefs } from '../shared/database/linked-source';
 
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
-type P5Element = DefaultTreeAdapterMap['element'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -33,7 +31,7 @@ const decodeFragment = (fragment: string): string => {
   }
 };
 
-const rewriteAnchorAttrs = (element: P5Element, ids: PageDocumentIds): boolean => {
+const rewriteAnchorAttrs = (element: HtmlElement, ids: PageDocumentIds): boolean => {
   const attrs = element.attrs;
 
   return attrs.reduce((changed, attr, index) => {
@@ -57,7 +55,7 @@ const rewriteAnchorAttrs = (element: P5Element, ids: PageDocumentIds): boolean =
 
 const rewriteInlineLinks = (html: string, ids: PageDocumentIds): string => {
   const fragment = parseInlineFragment(html);
-  const visit = (nodes: P5ChildNode[]): boolean => nodes.reduce((changed, node) => {
+  const visit = (nodes: HtmlChildNode[]): boolean => nodes.reduce((changed, node) => {
     if (!('tagName' in node)) {
       return changed;
     }

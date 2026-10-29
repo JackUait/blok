@@ -10,7 +10,7 @@ import { createStoreAgentSession } from '../../components/modules/agent/store-se
 import { YBlockSerializer } from '../../components/modules/yjs/serializer';
 import type { AgentActor } from '../../../types/agent';
 import type { AgentPorts } from '../../shared/agent/types';
-import { htmlToSegmentsNode } from '../../view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../view/rich-text-node';
 import type { McpContracts } from '../contract';
 import type { Caller, OpenRequest } from '../dispatcher';
 import { isMcpSurfaceError, McpSurfaceError, surfaceError } from '../errors';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../src/view/rich-text-node';
 import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
 import { isRichText } from '../../../../src/shared/rich-text/guards';
 import { canonicalizeSegments } from '../../../../src/shared/rich-text/html-to-segments';

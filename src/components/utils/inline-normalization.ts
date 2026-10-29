@@ -24,7 +24,7 @@ import { ensureStrongElement } from '../inline-tools/utils/bold-dom-utils';
  * can cost 15x its text in stored bytes, and every render/save round trip
  * carries it forward.
  *
- * Every decision lives in the shared policy module so this and the parse5
+ * Every decision lives in the shared policy module so this and the src/html
  * implementation in `src/view/inline-normalization.ts` cannot drift.
  */
 

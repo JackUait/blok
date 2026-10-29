@@ -6,7 +6,7 @@ import { AGENT_HISTORY_LIMITS } from '../../../../../src/shared/agent/document-s
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import { createHeadlessAgentSetup } from '../../../../../src/view/agent-runtime';
-import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-node';
 
 import type { AgentActor, AgentSession, DocumentView, ViewArgs } from '../../../../../types/agent';
 import type { OutputBlockData } from '../../../../../types/data-formats/output-data';

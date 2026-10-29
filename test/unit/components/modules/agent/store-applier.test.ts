@@ -8,7 +8,7 @@ import { writePageField } from '../../../../../src/components/modules/yjs/page-f
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import { runBatch } from '../../../../../src/shared/agent/executor';
 import { applyEdits } from '../../../../../src/shared/agent/json-applier';
-import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-node';
 import { plannerContext } from '../../../shared/agent/fixtures';
 
 import type { AgentApplier } from '../../../../../src/shared/agent/executor';

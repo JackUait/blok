@@ -6,23 +6,20 @@
  *
  * Implementation: the document is rendered through the exact `blocksToHtml`
  * pipeline (same emitters, same sanitization), then the sanitized HTML is
- * parsed with parse5 and mapped to {@link ViewNode}s. Correctness first — the
+ * parsed with src/html and mapped to {@link ViewNode}s. Correctness first — the
  * serialize→reparse round trip guarantees byte-for-byte parity with
  * `blocksToHtml`.
  *
- * PURITY CONTRACT: DOM-free; parse5 usage stays confined to `src/view/`
+ * PURITY CONTRACT: DOM-free; src/html usage stays confined to `src/view/`
  * (enforced by test/unit/architecture/view-entry-law.test.ts).
  */
-import { parseFragment } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { parseFragment } from '../html';
+import type { ChildNode as HtmlChildNode, Element as HtmlElement, Template as HtmlTemplate } from '../html';
 
 import type { LooseOutputData, OutputData } from '../../types';
 import { blocksToHtml } from './blocks-to-html';
 import type { BlocksToHtmlOptions } from './blocks-to-html';
 
-type P5Element = DefaultTreeAdapterMap['element'];
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
-type P5Template = DefaultTreeAdapterMap['template'];
 
 /**
  * An element in the view tree: lowercase tag name, sanitized attributes as a
@@ -49,27 +46,27 @@ export interface ViewTextNode {
 export type ViewNode = ViewElementNode | ViewTextNode;
 
 /**
- * Whether the parse5 node is an element.
- * @param node - parse5 child node
+ * Whether the node is an element.
+ * @param node - child node
  */
-const isElementNode = (node: P5ChildNode): node is P5Element => {
+const isElementNode = (node: HtmlChildNode): node is HtmlElement => {
   return 'tagName' in node;
 };
 
 /**
- * Whether the parse5 element is a template (children live on `content`).
- * @param node - parse5 element
+ * Whether the element is a template (children live on `content`).
+ * @param node - element
  */
-const isTemplateNode = (node: P5Element): node is P5Template => {
+const isTemplateNode = (node: HtmlElement): node is HtmlTemplate => {
   return node.nodeName === 'template' && 'content' in node;
 };
 
 /**
- * Map a list of parse5 child nodes to ViewNodes, dropping comments and other
+ * Map a list of child nodes to ViewNodes, dropping comments and other
  * non-element/non-text nodes.
- * @param nodes - parse5 child nodes
+ * @param nodes - child nodes
  */
-const mapChildren = (nodes: P5ChildNode[]): ViewNode[] => {
+const mapChildren = (nodes: HtmlChildNode[]): ViewNode[] => {
   return nodes.flatMap((node): ViewNode[] => {
     if (node.nodeName === '#text' && 'value' in node) {
       return [{ text: node.value }];
@@ -115,8 +112,8 @@ export const blocksToViewNodes = (
   }
 
   /** Parse in a <div> context to match the sanitizer's parsing context. */
-  const contextElement = parseFragment('<div></div>').childNodes[0] as P5Element;
-  const fragment = parseFragment(contextElement, html, {});
+  const contextElement = parseFragment('<div></div>').childNodes[0] as HtmlElement;
+  const fragment = parseFragment(contextElement, html);
 
   return mapChildren(fragment.childNodes);
 };

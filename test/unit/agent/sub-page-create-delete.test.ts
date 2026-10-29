@@ -6,7 +6,7 @@ import { DocumentStore } from '../../../src/components/modules/yjs/document-stor
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import { createDocumentAgentSession } from '../../../src/shared/agent';
 import { createHeadlessAgentSetup, loadStoredDocument } from '../../../src/view/agent-runtime';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import { TEST_ACTOR } from './harness';
 
 import type { AgentBatch, AgentResult, AgentSession, OutputData } from '../../../types';

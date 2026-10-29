@@ -4,7 +4,7 @@ import { PAGE_REFERENCE_ATTR } from './page-reference';
  * Shared policy for inline markup normalization.
  *
  * Two implementations collapse redundant inline markup — the DOM one used by
- * the editor's sanitizer, and the parse5 one used by the DOM-free view
+ * the editor's sanitizer, and the src/html one used by the DOM-free view
  * renderer. They must reach identical conclusions or the same document
  * serializes differently depending on which renderer touched it last, so
  * every decision lives here and only the tree mechanics differ.

@@ -1,6 +1,6 @@
 /**
  * What changed between two saved documents, block by block. The HTML reader
- * is passed in, so the editor bundles never pull in parse5.
+ * is passed in, so the editor bundles never pull in the HTML parser.
  */
 import type { LooseOutputData, OutputBlockData, OutputData } from '../../types';
 import type { RichText } from '../../types/rich-text';

@@ -6,7 +6,7 @@
 import type { LooseOutputData, OutputData } from '../../types';
 import { diffOutput } from '../shared/output-diff';
 import type { DiffOutputDataOptions, OutputDataDiff } from '../shared/output-diff';
-import { htmlToSegmentsNode } from './rich-text-parse5';
+import { htmlToSegmentsNode } from './rich-text-node';
 
 export type { DiffOutputDataOptions, OutputBlockChange, OutputBlockMove, OutputDataDiff } from '../shared/output-diff';
 

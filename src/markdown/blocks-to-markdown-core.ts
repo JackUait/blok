@@ -3,13 +3,13 @@
  *
  * A block's inline content is an HTML fragment, and the two callers read it in
  * different ways: the editor walks a live DOM (`src/markdown/blocks-to-markdown.ts`),
- * while the view renderer must stay DOM-free and walks parse5
+ * while the view renderer must stay DOM-free and walks src/html
  * (`src/view/blocks-to-markdown.ts`). Everything ABOVE that line — which tool
  * becomes which Markdown construct, how containers own their children, how a
  * table becomes a pipe grid — is identical, and lives here so the two cannot
  * drift. Parity is pinned by test/unit/markdown/blocks-to-markdown.parity.test.ts.
  *
- * PURITY CONTRACT: no DOM, no parse5, no editor imports. Only the injected
+ * PURITY CONTRACT: no DOM, no HTML parser, no editor imports. Only the injected
  * `InlineBackend` touches HTML.
  */
 

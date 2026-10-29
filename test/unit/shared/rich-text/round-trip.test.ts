@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { segmentsToHtml } from '../../../../src/shared/rich-text/segments-to-html';
-import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../src/view/rich-text-node';
 import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
 import { CANONICAL } from './corpus';
 

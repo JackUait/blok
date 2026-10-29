@@ -9,7 +9,7 @@
  * Block-level serialization lives in `blocks-to-markdown-core.ts`; this module
  * supplies the DOM inline backend. The DOM-free twin used by the view renderer
  * is `src/view/blocks-to-markdown.ts`, and the two are pinned together by
- * test/unit/markdown/blocks-to-markdown.parity.test.ts. Never import parse5
+ * test/unit/markdown/blocks-to-markdown.parity.test.ts. Never import the HTML parser
  * here — it would land in the editor bundle.
  */
 

@@ -6,9 +6,9 @@ import { isBareBreak, linkTarget, orEmpty, type DefinitionMap } from './phrasing
 /**
  * The tree `phrasingToHtml` would parse back into, built without an HTML
  * parser: this module ships in the editor's markdown chunk and runs in the
- * server runtime, so it can use neither parse5 nor a DOM. Every case mirrors
+ * server runtime, so it can use neither the HTML parser nor a DOM. Every case mirrors
  * the one in `phrasingToHtml`; test/unit/markdown/markdown-to-blocks-segments.test.ts
- * pins the two together through parse5.
+ * pins the two together through the HTML parser.
  */
 
 const text = (value: string): InlineNode[] =>
@@ -21,7 +21,7 @@ const element = (tag: string, children: InlineNode[], attrs: Record<string, stri
 
 export const BREAK: InlineNode = element('br', []);
 
-// Same escaping parse5 serializes attribute values with.
+// Same escaping the HTML serializer uses for attribute values.
 const escapeAttribute = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/\u00a0/g, '&nbsp;');
 

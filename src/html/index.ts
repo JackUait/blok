@@ -25,3 +25,4 @@ export function parseFragment(contextOrHtml: Element | string, html?: string): D
 export * from './tree';
 export { NS, DOCUMENT_MODE, TAG_ID, getTagID } from './tags';
 export type { Attribute } from './token';
+export { serialize, serializeOuter } from './serializer';

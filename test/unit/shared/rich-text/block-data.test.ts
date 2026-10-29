@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { blockDataToHtml, blockDataToSegments, outputBlocksToHtml, outputBlocksToSegments, richTextFieldsFor } from '../../../../src/shared/rich-text/block-data';
-import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../src/view/rich-text-node';
 
 const resolve = richTextFieldsFor;
 const paragraphOnly = (type: string): string[] => (type === 'paragraph' ? ['text'] : []);

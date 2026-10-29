@@ -4,7 +4,7 @@
  * Extracted from `src/components/utils/sanitizer.ts` so the decision logic is
  * usable both by the DOM-bound editor sanitizer and the DOM-free view
  * sanitizer (`src/view/sanitize.ts`). Pure module: no DOM access and no
- * parse5 import — it is part of the editor bundle graph.
+ * HTML parser import — it is part of the editor bundle graph.
  */
 import { isSafeRasterImageDataUrl, safeImageSrc, stripIgnoredUrlChars } from './sanitize-url';
 

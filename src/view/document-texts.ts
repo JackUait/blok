@@ -20,7 +20,7 @@ import { ownEntry } from '../shared/own-entry';
 import { isRichText } from '../shared/rich-text/guards';
 import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES, richTextFieldsFor } from '../shared/rich-text/fields';
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
-import { htmlToSegmentsNode } from './rich-text-parse5';
+import { htmlToSegmentsNode } from './rich-text-node';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {

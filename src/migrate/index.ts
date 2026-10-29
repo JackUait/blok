@@ -41,7 +41,7 @@ import { LEGACY_BODY_TYPES, LEGACY_ITEM_TYPES, richTextFieldsFor } from '../shar
 import { segmentsToHtml } from '../shared/rich-text/segments-to-html';
 import { canonicalizeSegments } from '../shared/rich-text/html-to-segments';
 import { PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
-import { htmlToSegmentsNode } from '../view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../view/rich-text-node';
 import { htmlTextContent } from '../view/html-text';
 
 /**

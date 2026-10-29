@@ -1,32 +1,31 @@
 /**
  * DOM-free plain-text extraction from an HTML fragment string — the view
- * renderer's replacement for `element.textContent`. parse5 decodes entities,
+ * renderer's replacement for `element.textContent`. The parser decodes entities,
  * so `a &lt; b` comes back as `a < b`; `<br>` becomes a newline (matching how
  * text with soft breaks reads).
  *
- * parse5 imports are confined to `src/view/` — never import this module from
+ * src/html imports are confined to `src/view/` — never import this module from
  * the editor bundle graph.
  */
-import { parseFragment } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { parseFragment } from '../html';
+import type { ChildNode as HtmlChildNode, DocumentFragment as HtmlDocumentFragment, TextNode as HtmlTextNode } from '../html';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import { PAGE_REFERENCE_ATTR } from '../shared/page-reference';
 
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
 /**
- * Collect the concatenated text of parse5 child nodes.
+ * Collect the concatenated text of child nodes.
  * @param nodes - nodes to walk
  */
 const collect = (
-  nodes: P5ChildNode[],
+  nodes: HtmlChildNode[],
   equations: 'source' | 'skip' = 'source',
   pageReferenceText?: (pageId: string) => string
 ): string => {
   return nodes.map((node) => {
     if (node.nodeName === '#text') {
-      return (node as DefaultTreeAdapterMap['textNode']).value;
+      return (node as HtmlTextNode).value;
     }
 
     if (node.nodeName === 'br') {
@@ -69,9 +68,9 @@ const collect = (
 const NEEDS_TOKENIZING = /[<&\r\u0000]/;
 
 /**
- * Whether a field has to go through parse5 at all. A field that does not is
+ * Whether a field has to go through the parser at all. A field that does not is
  * returned verbatim by every reader here, which is what the tokenizer would
- * have produced — and parse5 is a character-by-character HTML5 tokenizer, so
+ * have produced — and the tokenizer is an HTML5 state machine, so
  * skipping it is most of the cost of reading a document that is mostly prose.
  * This matters far more than it looks: the server package runs this code on an
  * interpreter, where the tokenizer costs orders of magnitude more than it does
@@ -87,7 +86,8 @@ export const needsTokenizing = (html: string): boolean => NEEDS_TOKENIZING.test(
 const SURROGATE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g;
 
 /**
- * Parse a fragment, repairing input parse5 refuses to read at all. Two adjacent
+ * Parse a fragment, repairing input the parser refuses to read at all (it
+ * throws where parse5 8.0.1 threw, to keep output identical). Two adjacent
  * low surrogates make it throw `RangeError` — the shape a truncated UTF-16
  * paste leaves behind — and that would cost a whole document over one field.
  * The server runtime reads STORED articles, where an abort means an article
@@ -101,10 +101,10 @@ export const repairSurrogates = (html: string): string =>
   html.replace(SURROGATE, (match) => (match.length === 2 ? match : '\uFFFD'));
 
 /**
- * Parse an inline fragment, retrying once on the input parse5 refuses.
+ * Parse an inline fragment, retrying once on the input the parser refuses.
  * @param html - fragment markup
  */
-export const parseInlineFragment = (html: string): DefaultTreeAdapterMap['documentFragment'] => {
+export const parseInlineFragment = (html: string): HtmlDocumentFragment => {
   try {
     return parseFragment(html);
   } catch (error) {

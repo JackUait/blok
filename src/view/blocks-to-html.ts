@@ -3,7 +3,7 @@
  * to semantic HTML (design D1: one central dispatcher; custom tools hook in
  * via the `renderers` option).
  *
- * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, parse5 via
+ * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, src/html via
  * ./sanitize, and the pure `INLINE_TEXT_SANITIZE` map). Never import the
  * `src/components/utils` barrel, editor modules, or tool classes.
  */

@@ -13,7 +13,7 @@ import { buildMcpContracts } from '../../../../src/mcp/contract';
 import type { Caller } from '../../../../src/mcp/dispatcher';
 import { assembleMcp, type AssembledMcp } from '../../../../src/mcp/server';
 import { loadStoredDocument } from '../../../../src/view/agent-runtime';
-import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../src/view/rich-text-node';
 import type { OutputData } from '../../../../types';
 import type { AgentActor } from '../../../../types/agent';
 import { openJsonSession, TEST_ACTOR } from '../harness';

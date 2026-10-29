@@ -26,7 +26,7 @@ import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
 import { findRemapProblems, remapPageDocument } from './page-document-remap';
 import { pageIndex } from './page-index';
-import { htmlToSegmentsNode } from './rich-text-parse5';
+import { htmlToSegmentsNode } from './rich-text-node';
 import type { PageIcon, PageInfo } from '../../types/tools/page';
 import type { RichText } from '../../types/rich-text';
 

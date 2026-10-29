@@ -7,7 +7,7 @@ import { INLINE_TEXT_SANITIZE } from '../../../src/shared/inline-text-sanitize';
 import { PLAINTEXT } from '../../../src/shared/sanitize-rules';
 import { segmentsToHtml } from '../../../src/shared/rich-text/segments-to-html';
 import { createHeadlessPorts } from '../../../src/view/agent-runtime';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 
 import type { SanitizerConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { RichText } from '../../../types/rich-text';

@@ -2,7 +2,7 @@
  * `htmlToBlocks` — DOM-free HTML → Blok document conversion, the inverse of
  * `blocksToHtml` and the twin of `markdownToBlocks`.
  *
- * Reads HTML with parse5 rather than a DOM, so it runs in bare Node, workers,
+ * Reads HTML with src/html rather than a DOM, so it runs in bare Node, workers,
  * RSC and — the reason it exists — the Jint engine the `Blok.Server` NuGet
  * package embeds, which has no `document`, `window` or `DOMParser`.
  *
@@ -13,12 +13,12 @@
  * {@link HtmlImportResult.warnings} rather than dropped in silence — a caller
  * storing the result has to be able to tell what did not survive.
  *
- * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, parse5, and the
+ * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, src/html, and the
  * DOM-free leaves of src/markdown + src/components/utils/sanitize-url and
  * default-page-colors).
  */
-import { parse, serialize } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { parse, serialize } from '../html';
+import type { ChildNode as HtmlChildNode, Element as HtmlElement, ParentNode as HtmlParentNode, TextNode as HtmlTextNode } from '../html';
 
 import type { OutputBlockData } from '../../types';
 import type { ImageAlignment } from '../../types/tools/image';
@@ -32,13 +32,11 @@ import type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 import { sanitizeHtmlFragment } from './sanitize';
 import { outputBlocksToSegments } from '../shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../shared/rich-text/fields';
-import { htmlToSegmentsNode } from './rich-text-parse5';
+import { htmlToSegmentsNode } from './rich-text-node';
 import { splitPageTitle } from '../shared/page-title-icon';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
-type P5Element = DefaultTreeAdapterMap['element'];
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
 /** Blocks parsed out of HTML, plus everything the HTML could not carry into them. */
 export interface HtmlImportResult {
@@ -136,31 +134,31 @@ const createIdGenerator = (): () => string => {
 /**
  * @param node - node to test
  */
-const isElement = (node: P5ChildNode): node is P5Element => 'tagName' in node;
+const isElement = (node: HtmlChildNode): node is HtmlElement => 'tagName' in node;
 
 /**
  * @param node - node to test
  */
-const isText = (node: P5ChildNode): node is DefaultTreeAdapterMap['textNode'] => node.nodeName === '#text';
+const isText = (node: HtmlChildNode): node is HtmlTextNode => node.nodeName === '#text';
 
 /**
  * @param node - element to read
  * @param name - attribute name
  */
-const attr = (node: P5Element, name: string): string | undefined =>
+const attr = (node: HtmlElement, name: string): string | undefined =>
   node.attrs.find((candidate) => candidate.name === name)?.value;
 
 /**
  * @param node - node whose children are wanted
  */
-const childrenOf = (node: P5ChildNode): P5ChildNode[] =>
+const childrenOf = (node: HtmlChildNode): HtmlChildNode[] =>
   'childNodes' in node ? node.childNodes : [];
 
 /**
  * Raw text of a subtree, entities already decoded by the tokenizer.
  * @param nodes - nodes to read
  */
-const rawText = (nodes: P5ChildNode[]): string => nodes.map((node) => {
+const rawText = (nodes: HtmlChildNode[]): string => nodes.map((node) => {
   if (isText(node)) {
     return node.value;
   }
@@ -169,12 +167,12 @@ const rawText = (nodes: P5ChildNode[]): string => nodes.map((node) => {
 }).join('');
 
 /**
- * Serialize loose nodes by lending them a fragment to hang off. parse5's
- * serializer only ever reads `childNodes`, so the borrowed parent costs one
+ * Serialize loose nodes by lending them a fragment to hang off. The serializer
+ * only ever reads `childNodes`, so the borrowed parent costs one
  * object rather than a re-parse.
  * @param nodes - nodes to serialize
  */
-const serializeNodes = (nodes: P5ChildNode[]): string =>
+const serializeNodes = (nodes: HtmlChildNode[]): string =>
   serialize({ nodeName: '#document-fragment', childNodes: nodes });
 
 /**
@@ -184,7 +182,7 @@ const serializeNodes = (nodes: P5ChildNode[]): string =>
  * @param ctx - conversion state
  * @param nodes - the inline nodes about to be serialized
  */
-const reportLossyInline = (ctx: Ctx, nodes: P5ChildNode[]): void => {
+const reportLossyInline = (ctx: Ctx, nodes: HtmlChildNode[]): void => {
   for (const node of nodes) {
     if (!isElement(node)) {
       continue;
@@ -203,7 +201,7 @@ const reportLossyInline = (ctx: Ctx, nodes: P5ChildNode[]): void => {
  * @param ctx - conversion state
  * @param nodes - inline nodes
  */
-const inlineHtml = (ctx: Ctx, nodes: P5ChildNode[]): string => {
+const inlineHtml = (ctx: Ctx, nodes: HtmlChildNode[]): string => {
   reportLossyInline(ctx, nodes);
 
   return sanitizeHtmlFragment(serializeNodes(nodes), INLINE_TEXT_SANITIZE).trim();
@@ -228,7 +226,7 @@ const push = (ctx: Ctx, type: string, data: Record<string, unknown>): OutputBloc
  * instead of being silently folded into a paragraph.
  * @param node - node to classify
  */
-const isInline = (node: P5ChildNode): boolean => {
+const isInline = (node: HtmlChildNode): boolean => {
   if (isText(node)) {
     return true;
   }
@@ -241,7 +239,7 @@ const isInline = (node: P5ChildNode): boolean => {
  * so a declaration only has to be compared one way.
  * @param element - element to read
  */
-const styleOf = (element: P5Element): Map<string, string> => {
+const styleOf = (element: HtmlElement): Map<string, string> => {
   const declarations = (attr(element, 'style') ?? '').toLowerCase().split(';');
 
   return new Map(declarations.flatMap((declaration): Array<[string, string]> => {
@@ -311,7 +309,7 @@ const LEGACY_ALIGN = new Map<string, ImageAlignment>([['left', 'left'], ['center
  * @param element - the `img` element
  * @param style - the element's inline style
  */
-const imageAlignment = (element: P5Element, style: Map<string, string>): ImageAlignment | null => {
+const imageAlignment = (element: HtmlElement, style: Map<string, string>): ImageAlignment | null => {
   const float = style.get('float');
 
   if (float === 'left' || float === 'right') {
@@ -328,7 +326,7 @@ const imageAlignment = (element: P5Element, style: Map<string, string>): ImageAl
  * @param element - the `img` element
  * @param caption - caption text overriding the element's own alt
  */
-const imageData = (element: P5Element, caption?: string): Record<string, unknown> | null => {
+const imageData = (element: HtmlElement, caption?: string): Record<string, unknown> | null => {
   const src = (attr(element, 'src') ?? '').trim();
   const url = src === '' ? null : safeImageSrc(src);
 
@@ -359,7 +357,7 @@ const imageData = (element: P5Element, caption?: string): Record<string, unknown
  * @param element - the `img` element
  * @param caption - caption text overriding the element's own alt
  */
-const emitImage = (ctx: Ctx, element: P5Element, caption?: string): void => {
+const emitImage = (ctx: Ctx, element: HtmlElement, caption?: string): void => {
   const data = imageData(element, caption);
 
   if (data === null) {
@@ -377,7 +375,7 @@ const emitImage = (ctx: Ctx, element: P5Element, caption?: string): void => {
  * @param ctx - conversion state
  * @param nodes - nodes to search
  */
-const emitNestedImages = (ctx: Ctx, nodes: P5ChildNode[]): void => {
+const emitNestedImages = (ctx: Ctx, nodes: HtmlChildNode[]): void => {
   for (const node of nodes) {
     if (isElement(node) && node.tagName === 'img') {
       emitImage(ctx, node);
@@ -394,7 +392,7 @@ const emitNestedImages = (ctx: Ctx, nodes: P5ChildNode[]): void => {
  * because the inline sanitizer keeps the wrapper and strips the image.
  * @param node - node to search
  */
-const hasImage = (node: P5ChildNode): boolean =>
+const hasImage = (node: HtmlChildNode): boolean =>
   childrenOf(node).some((child) => (isElement(child) && child.tagName === 'img') || hasImage(child));
 
 /**
@@ -403,14 +401,14 @@ const hasImage = (node: P5ChildNode): boolean =>
  * @param ctx - conversion state
  * @param element - the inline element wrapping an image
  */
-const reportImageLink = (ctx: Ctx, element: P5Element): void => {
+const reportImageLink = (ctx: Ctx, element: HtmlElement): void => {
   if (element.tagName === 'a' && (attr(element, 'href') ?? '').trim() !== '') {
     warn(ctx, 'a', 'degraded', 'A link around an image is dropped and the image kept; Blok\'s image block has no link field');
   }
 };
 
 /** One piece a run of inline nodes splits into, in document order. */
-type InlineSegment = { image: P5Element } | { block: P5Element } | { inline: P5ChildNode[] };
+type InlineSegment = { image: HtmlElement } | { block: HtmlElement } | { inline: HtmlChildNode[] };
 
 /**
  * Split a run of inline nodes on the images inside it, so a paragraph that
@@ -419,9 +417,9 @@ type InlineSegment = { image: P5Element } | { block: P5Element } | { inline: P5C
  * @param ctx - conversion state
  * @param nodes - inline nodes
  */
-const splitOnImages = (ctx: Ctx, nodes: P5ChildNode[]): InlineSegment[] => {
+const splitOnImages = (ctx: Ctx, nodes: HtmlChildNode[]): InlineSegment[] => {
   const segments: InlineSegment[] = [];
-  const pending: { run: P5ChildNode[] } = { run: [] };
+  const pending: { run: HtmlChildNode[] } = { run: [] };
 
   /** Close the run of inline nodes collected so far. */
   const flush = (): void => {
@@ -438,7 +436,7 @@ const splitOnImages = (ctx: Ctx, nodes: P5ChildNode[]): InlineSegment[] => {
    * @param wrapper - the inline element being taken apart
    * @param parts - what its children split into
    */
-  const absorb = (wrapper: P5Element, parts: InlineSegment[]): void => {
+  const absorb = (wrapper: HtmlElement, parts: InlineSegment[]): void => {
     for (const part of parts) {
       if ('inline' in part) {
         pending.run.push({ ...wrapper, childNodes: part.inline });
@@ -508,7 +506,7 @@ const emitSegmentMedia = (ctx: Ctx, segments: InlineSegment[]): void => {
  */
 const emitInlineRun = (
   ctx: Ctx,
-  nodes: P5ChildNode[],
+  nodes: HtmlChildNode[],
   type = 'paragraph',
   extra: Record<string, unknown> = {}
 ): void => {
@@ -535,8 +533,8 @@ const emitInlineRun = (
  * The language a `pre` declares, through its own class or its `code` child's.
  * @param element - the `pre` element
  */
-const codeLanguage = (element: P5Element): string => {
-  const code = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'code');
+const codeLanguage = (element: HtmlElement): string => {
+  const code = element.childNodes.find((node): node is HtmlElement => isElement(node) && node.tagName === 'code');
   const classes = `${attr(element, 'class') ?? ''} ${code === undefined ? '' : attr(code, 'class') ?? ''}`;
   const match = /(?:^|\s)(?:language|lang|highlight)-([\w+#-]+)/.exec(classes);
   const raw = match?.[1] ?? '';
@@ -550,7 +548,7 @@ const codeLanguage = (element: P5Element): string => {
  * @param element - the `pre` element
  * @param filename - the file name a wrapping figure gave it
  */
-const emitCode = (ctx: Ctx, element: P5Element, filename?: string): void => {
+const emitCode = (ctx: Ctx, element: HtmlElement, filename?: string): void => {
   push(ctx, 'code', {
     code: rawText(element.childNodes).replace(/\n$/, ''),
     language: codeLanguage(element),
@@ -571,9 +569,9 @@ const QUOTE_UNWRAPPED = new Set([...TRANSPARENT, 'p']);
  * rather than folding it into a field that cannot hold it.
  * @param nodes - the blockquote's children
  */
-const quoteRuns = (nodes: P5ChildNode[]): P5ChildNode[][] => {
-  const runs: P5ChildNode[][] = [];
-  const pending: { run: P5ChildNode[] } = { run: [] };
+const quoteRuns = (nodes: HtmlChildNode[]): HtmlChildNode[][] => {
+  const runs: HtmlChildNode[][] = [];
+  const pending: { run: HtmlChildNode[] } = { run: [] };
 
   /** Close the run of inline nodes collected so far. */
   const flush = (): void => {
@@ -608,7 +606,7 @@ const quoteRuns = (nodes: P5ChildNode[]): P5ChildNode[][] => {
  * @param ctx - conversion state
  * @param element - the `blockquote` element
  */
-const emitQuote = (ctx: Ctx, element: P5Element): void => {
+const emitQuote = (ctx: Ctx, element: HtmlElement): void => {
   const segments = quoteRuns(element.childNodes).flatMap((run) => splitOnImages(ctx, run));
   const text = segments
     .flatMap((segment) => 'inline' in segment ? [inlineHtml(ctx, segment.inline)] : [])
@@ -643,8 +641,8 @@ const adoptSince = (ctx: Ctx, before: number, parent: OutputBlockData): void => 
  * @param ctx - conversion state
  * @param element - the `details` element
  */
-const emitToggle = (ctx: Ctx, element: P5Element): void => {
-  const summary = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'summary');
+const emitToggle = (ctx: Ctx, element: HtmlElement): void => {
+  const summary = element.childNodes.find((node): node is HtmlElement => isElement(node) && node.tagName === 'summary');
   const segments = summary === undefined ? [] : splitOnImages(ctx, summary.childNodes);
   const toggle = push(ctx, 'toggle', {
     text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
@@ -662,7 +660,7 @@ const emitToggle = (ctx: Ctx, element: P5Element): void => {
  * @param node - node to test
  * @param name - the marker attribute
  */
-const hasMarker = (node: P5ChildNode, name: string): node is P5Element =>
+const hasMarker = (node: HtmlChildNode, name: string): node is HtmlElement =>
   isElement(node) && attr(node, name) !== undefined;
 
 /**
@@ -673,7 +671,7 @@ const hasMarker = (node: P5ChildNode, name: string): node is P5Element =>
  * @param section - the tab's section
  * @param tabs - the tabs block
  */
-const emitTab = (ctx: Ctx, section: P5Element, tabs: OutputBlockData): void => {
+const emitTab = (ctx: Ctx, section: HtmlElement, tabs: OutputBlockData): void => {
   const first = section.childNodes.find(isElement);
   const heading = first !== undefined && hasMarker(first, 'data-blok-tab-title') ? first : undefined;
   const iconNode = heading?.childNodes.find((node) => hasMarker(node, 'data-blok-tab-icon'));
@@ -698,9 +696,9 @@ const emitTab = (ctx: Ctx, section: P5Element, tabs: OutputBlockData): void => {
  * @param ctx - conversion state
  * @param element - the tabs element
  */
-const emitTabs = (ctx: Ctx, element: P5Element): void => {
+const emitTabs = (ctx: Ctx, element: HtmlElement): void => {
   const sections = element.childNodes.filter(
-    (node): node is P5Element => hasMarker(node, 'data-blok-tab') && node.tagName === 'section'
+    (node): node is HtmlElement => hasMarker(node, 'data-blok-tab') && node.tagName === 'section'
   );
 
   if (sections.length === 0) {
@@ -715,7 +713,7 @@ const emitTabs = (ctx: Ctx, element: P5Element): void => {
     emitTab(ctx, section, tabs);
   }
 
-  const tabNodes = new Set<P5ChildNode>(sections);
+  const tabNodes = new Set<HtmlChildNode>(sections);
   const rest = element.childNodes.filter((node) => !tabNodes.has(node) && node.nodeName !== '#comment');
 
   if (rest.some((node) => isElement(node) || rawText([node]).trim() !== '')) {
@@ -726,10 +724,10 @@ const emitTabs = (ctx: Ctx, element: P5Element): void => {
 
 /** One list item, split into the parts a Blok list block is built from. */
 interface ListItemParts {
-  inline: P5ChildNode[];
-  blocks: P5ChildNode[];
-  nested: P5Element[];
-  checkbox: P5Element | undefined;
+  inline: HtmlChildNode[];
+  blocks: HtmlChildNode[];
+  nested: HtmlElement[];
+  checkbox: HtmlElement | undefined;
 }
 
 /**
@@ -737,7 +735,7 @@ interface ListItemParts {
  * block-level content that becomes sibling blocks after it.
  * @param item - the `li` element
  */
-const splitListItem = (item: P5Element): ListItemParts => {
+const splitListItem = (item: HtmlElement): ListItemParts => {
   const parts: ListItemParts = { inline: [], blocks: [], nested: [], checkbox: undefined };
 
   for (const node of item.childNodes) {
@@ -780,12 +778,12 @@ const splitListItem = (item: P5Element): ListItemParts => {
  * @param element - the list element
  * @param depth - nesting level, 0 at the root
  */
-const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
+const emitList = (ctx: Ctx, element: HtmlElement, depth: number): void => {
   const ordered = element.tagName === 'ol';
   const bulletStyle = ordered ? 'ordered' : 'unordered';
   const start = Number(attr(element, 'start'));
   const firstItem = element.childNodes.find(
-    (node): node is P5Element => isElement(node) && node.tagName === 'li'
+    (node): node is HtmlElement => isElement(node) && node.tagName === 'li'
   );
 
   for (const node of element.childNodes) {
@@ -889,7 +887,7 @@ const horizontalPlacement = (value: string | undefined, rtl: boolean): string | 
  * @param cell - the `td`/`th` element
  * @param rtl - whether the grid runs right to left
  */
-const readCellStyle = (cell: P5Element, rtl: boolean): CellStyle => {
+const readCellStyle = (cell: HtmlElement, rtl: boolean): CellStyle => {
   const declarations = new Map<string, string>();
 
   // Split by hand: a property regex would match `color` inside `border-color`.
@@ -935,8 +933,8 @@ const readCellStyle = (cell: P5Element, rtl: boolean): CellStyle => {
  * `pastedGridDirection` (a DOM helper /view cannot import).
  * @param table - the `table` element
  */
-const isRtlGrid = (table: P5Element): boolean => {
-  const direction = (node: DefaultTreeAdapterMap['parentNode'] | null): string | undefined => {
+const isRtlGrid = (table: HtmlElement): boolean => {
+  const direction = (node: HtmlParentNode | null): string | undefined => {
     if (node === null || !('tagName' in node)) {
       return undefined;
     }
@@ -957,7 +955,7 @@ const isRtlGrid = (table: P5Element): boolean => {
  * @param table - the `table` element
  * @param width - the grid's column count
  */
-const readTableLayout = (table: P5Element, width: number): { colWidths?: number[]; stretched?: boolean } => {
+const readTableLayout = (table: HtmlElement, width: number): { colWidths?: number[]; stretched?: boolean } => {
   const layout: { colWidths?: number[]; stretched?: boolean } = {};
   const widths = attr(table, 'data-blok-col-widths')?.split(',').map(Number) ?? [];
 
@@ -977,13 +975,13 @@ const readTableLayout = (table: P5Element, width: number): { colWidths?: number[
  * `thead`/`tbody`/`tfoot`.
  * @param element - the `table` element
  */
-const tableRows = (element: P5Element): P5Element[] => {
-  const rows: P5Element[] = [];
+const tableRows = (element: HtmlElement): HtmlElement[] => {
+  const rows: HtmlElement[] = [];
 
   /**
    * @param nodes - nodes to walk
    */
-  const walk = (nodes: P5ChildNode[]): void => {
+  const walk = (nodes: HtmlChildNode[]): void => {
     for (const node of nodes) {
       if (!isElement(node)) {
         continue;
@@ -1008,15 +1006,15 @@ const tableRows = (element: P5Element): P5Element[] => {
 /**
  * @param row - a `tr` element
  */
-const rowCells = (row: P5Element): P5Element[] =>
-  row.childNodes.filter((node): node is P5Element => isElement(node) && (node.tagName === 'td' || node.tagName === 'th'));
+const rowCells = (row: HtmlElement): HtmlElement[] =>
+  row.childNodes.filter((node): node is HtmlElement => isElement(node) && (node.tagName === 'td' || node.tagName === 'th'));
 
 /**
  * Read a span attribute, clamped to something a grid can be built from.
  * @param cell - the cell element
  * @param name - `colspan` or `rowspan`
  */
-const spanOf = (cell: P5Element, name: 'colspan' | 'rowspan'): number => {
+const spanOf = (cell: HtmlElement, name: 'colspan' | 'rowspan'): number => {
   const value = Number.parseInt(attr(cell, name) ?? '', 10);
 
   return Number.isInteger(value) && value > 1 ? Math.min(value, 1000) : 1;
@@ -1028,9 +1026,9 @@ const spanOf = (cell: P5Element, name: 'colspan' | 'rowspan'): number => {
  * @param ctx - conversion state
  * @param element - the `table` element
  */
-const emitTable = (ctx: Ctx, element: P5Element): void => {
+const emitTable = (ctx: Ctx, element: HtmlElement): void => {
   const rows = tableRows(element);
-  const caption = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'caption');
+  const caption = element.childNodes.find((node): node is HtmlElement => isElement(node) && node.tagName === 'caption');
 
   if (caption !== undefined) {
     warn(ctx, 'caption', 'degraded', 'A table caption leads the table as a paragraph; Blok\'s table has no caption field');
@@ -1075,7 +1073,7 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
    * @param cell - the `td`/`th` element
    * @returns ids of the blocks the cell owns
    */
-  const cellBlockIds = (cell: P5Element): string[] => {
+  const cellBlockIds = (cell: HtmlElement): string[] => {
     const before = ctx.blocks.length;
 
     convertCell(ctx, cell);
@@ -1097,7 +1095,7 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
    * @param row - the `tr` element
    * @param rowIndex - its index among the table's rows
    */
-  const placeRow = (row: P5Element, rowIndex: number): void => {
+  const placeRow = (row: HtmlElement, rowIndex: number): void => {
     const cursor = { column: 0 };
 
     for (const cell of rowCells(row)) {
@@ -1126,14 +1124,14 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
   const width = grid.reduce((widest, row) => Math.max(widest, row.length), 0);
   const content = grid.map((row) => Array.from({ length: width }, (_, index) => row[index] ?? { blocks: [] }));
   const headRow = element.childNodes.some((node) => isElement(node) && node.tagName === 'thead' && rowCells(node).length + tableRows(node).length > 0);
-  const allTh = (row: P5Element): boolean => {
+  const allTh = (row: HtmlElement): boolean => {
     const cells = rowCells(row);
 
     return cells.length > 0 && cells.every((cell) => cell.tagName === 'th');
   };
 
   const withHeadingColumn = rows.length > 1 && rows.every((row) => rowCells(row)[0]?.tagName === 'th');
-  const firstRow: P5Element | undefined = rows[0];
+  const firstRow: HtmlElement | undefined = rows[0];
   // A first row of one th is what a heading column alone looks like (one
   // column, or a full-width colspan), so only a thead marks it a heading row.
   const headingColumnExplainsFirstRow = withHeadingColumn && firstRow !== undefined && rowCells(firstRow).length === 1;
@@ -1153,7 +1151,7 @@ const emitTable = (ctx: Ctx, element: P5Element): void => {
  * @param ctx - conversion state
  * @param cell - the `td`/`th` element
  */
-const convertCell = (ctx: Ctx, cell: P5Element): void => {
+const convertCell = (ctx: Ctx, cell: HtmlElement): void => {
   const before = ctx.blocks.length;
 
   convertNodes({ ...ctx, inCell: true }, cell.childNodes);
@@ -1170,7 +1168,7 @@ const convertCell = (ctx: Ctx, cell: P5Element): void => {
  * @param ctx - conversion state
  * @param table - the nested `table` element
  */
-const emitNestedTable = (ctx: Ctx, table: P5Element): void => {
+const emitNestedTable = (ctx: Ctx, table: HtmlElement): void => {
   warn(ctx, 'table', 'degraded', 'A nested table is flattened into the cell\'s paragraphs; a Blok cell holds blocks, not another grid');
 
   for (const innerCell of tableRows(table).flatMap(rowCells)) {
@@ -1184,7 +1182,7 @@ const emitNestedTable = (ctx: Ctx, table: P5Element): void => {
  * @param ctx - conversion state
  * @param element - the `figure` element
  */
-const emitFigure = (ctx: Ctx, element: P5Element): void => {
+const emitFigure = (ctx: Ctx, element: HtmlElement): void => {
   const parts = element.childNodes.filter((node) => isElement(node) || rawText([node]).trim() !== '');
   const [label, pre] = parts;
 
@@ -1195,13 +1193,13 @@ const emitFigure = (ctx: Ctx, element: P5Element): void => {
     return;
   }
 
-  const images: P5Element[] = [];
-  const found: { caption: P5Element | undefined } = { caption: undefined };
+  const images: HtmlElement[] = [];
+  const found: { caption: HtmlElement | undefined } = { caption: undefined };
 
   /**
    * @param nodes - nodes to walk
    */
-  const walk = (nodes: P5ChildNode[]): void => {
+  const walk = (nodes: HtmlChildNode[]): void => {
     for (const node of nodes) {
       if (!isElement(node)) {
         continue;
@@ -1240,7 +1238,7 @@ const emitFigure = (ctx: Ctx, element: P5Element): void => {
  * @param ctx - conversion state
  * @param element - the element to flatten
  */
-const flatten = (ctx: Ctx, element: P5Element): void => {
+const flatten = (ctx: Ctx, element: HtmlElement): void => {
   if (element.childNodes.some((node) => !isInline(node))) {
     convertNodes(ctx, element.childNodes);
 
@@ -1255,7 +1253,7 @@ const flatten = (ctx: Ctx, element: P5Element): void => {
  * @param ctx - conversion state
  * @param element - the element to convert
  */
-const convertElement = (ctx: Ctx, element: P5Element): void => {
+const convertElement = (ctx: Ctx, element: HtmlElement): void => {
   const tag = element.tagName;
 
   if (SILENTLY_REMOVED.has(tag)) {
@@ -1356,8 +1354,8 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
  * @param ctx - conversion state
  * @param nodes - the nodes to convert
  */
-function convertNodes(ctx: Ctx, nodes: P5ChildNode[]): void {
-  const pending: { run: P5ChildNode[] } = { run: [] };
+function convertNodes(ctx: Ctx, nodes: HtmlChildNode[]): void {
+  const pending: { run: HtmlChildNode[] } = { run: [] };
 
   /** Close the run of loose inline nodes collected so far. */
   const flush = (): void => {
@@ -1393,9 +1391,9 @@ function convertNodes(ctx: Ctx, nodes: P5ChildNode[]): void {
  * @param ctx - conversion state
  * @param head - the parsed `head` element
  */
-const reportTitle = (ctx: Ctx, head: P5ChildNode | undefined): void => {
-  const title = childrenOf(head ?? { nodeName: '#text' } as P5ChildNode)
-    .find((node): node is P5Element => isElement(node) && node.tagName === 'title');
+const reportTitle = (ctx: Ctx, head: HtmlChildNode | undefined): void => {
+  const title = childrenOf(head ?? { nodeName: '#text' } as HtmlChildNode)
+    .find((node): node is HtmlElement => isElement(node) && node.tagName === 'title');
 
   if (title !== undefined && rawText(title.childNodes).trim() !== '') {
     warn(ctx, 'title', 'dropped', 'The document <title> is not imported; with `title: true` a leading <h1> becomes the page title');
@@ -1406,7 +1404,7 @@ const reportTitle = (ctx: Ctx, head: P5ChildNode | undefined): void => {
  * The first node that is not whitespace or a comment.
  * @param nodes - nodes to scan
  */
-const firstContent = (nodes: P5ChildNode[]): P5ChildNode | undefined =>
+const firstContent = (nodes: HtmlChildNode[]): HtmlChildNode | undefined =>
   nodes.find((node) => !(isText(node) && node.value.trim() === '') && node.nodeName !== '#comment');
 
 /**
@@ -1421,7 +1419,7 @@ const TITLE_MARKS_DROPPED: MarkdownDegradation = {
   detail: 'The page title is plain text, so the formatting in the leading heading is dropped',
 };
 
-const liftTitle = (body: P5Element): { title?: string; icon?: PageIcon; marked?: true } => {
+const liftTitle = (body: HtmlElement): { title?: string; icon?: PageIcon; marked?: true } => {
   const outer = firstContent(body.childNodes);
   const wrapped = outer !== undefined && isElement(outer) && outer.tagName === 'div'
     && attr(outer, 'data-blok-interface') !== undefined;
@@ -1465,7 +1463,7 @@ const currentRichTextFields = (type: string): string[] =>
 /**
  * Parse HTML into Blok blocks and report what it could not carry into them.
  *
- * Takes either a fragment (`<p>a</p>`) or a whole document — parse5 builds the
+ * Takes either a fragment (`<p>a</p>`) or a whole document — the parser builds the
  * same `html > head + body` tree for both, and only the body is converted.
  *
  * @param html - the HTML source
@@ -1475,9 +1473,9 @@ const currentRichTextFields = (type: string): string[] =>
 export const htmlToBlocksWithReport = (html: string, options: HtmlImportOptions = {}): HtmlImportResult => {
   const ctx: Ctx = { nextId: createIdGenerator(), warnings: [], blocks: [], inCell: false };
   const document = parse(html);
-  const root = document.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'html');
+  const root = document.childNodes.find((node): node is HtmlElement => isElement(node) && node.tagName === 'html');
   const head = root?.childNodes.find((node) => isElement(node) && node.tagName === 'head');
-  const body = root?.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'body');
+  const body = root?.childNodes.find((node): node is HtmlElement => isElement(node) && node.tagName === 'body');
 
   reportTitle(ctx, head);
 

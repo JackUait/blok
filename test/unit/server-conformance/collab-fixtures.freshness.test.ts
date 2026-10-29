@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { readPageFields, type PageFields } from '../../../src/components/modules/yjs/page-fields';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import { outputBlocksToSegments } from '../../../src/shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';

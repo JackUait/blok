@@ -35,21 +35,22 @@ function listTsFiles(dir: string): string[] {
 }
 
 /**
- * LAW: parse5 is a bundled dependency of the `./view` subpath ONLY.
+ * LAW: the HTML parser (`src/html`) is bundled into the `./view` subpath ONLY.
  *
  * The editor bundles (blok/full/tools/iife/umd) must never pay its weight, and
  * the view graph must stay DOM-free (see test/unit/view/index.purity.test.ts
  * for the runtime half of this contract). Enforced statically: no module
- * outside `src/view/` may import parse5, and no module outside `src/view/`
- * may import from `src/view/` (which would splice the view graph — and
- * parse5 — into an editor bundle). The exceptions are `src/migrate/` and
+ * outside `src/view/` may import `src/html/`, nothing in `src` imports parse5
+ * (it is only the tests' oracle), and no module outside `src/view/` may import
+ * from `src/view/` (which would splice the view graph, parser included, into
+ * an editor bundle). The exceptions are `src/migrate/` and
  * `src/mcp/`, separate bundle entries which no other module may import.
  */
 describe('view entry law', () => {
   const sourceFiles = listTsFiles(srcDir);
   const isViewModule = (file: string): boolean => file.startsWith(`${srcDir}${sep}view${sep}`);
   const migrateDir = `${srcDir}${sep}migrate${sep}`;
-  // src/migrate is its own Node-side bundle entry and may read HTML with parse5.
+  // src/migrate is its own Node-side bundle entry and reads HTML through src/view.
   // It stays out of the editor bundles only while no other module imports it.
   const isMigrateModule = (file: string): boolean => file.startsWith(migrateDir);
 
@@ -112,11 +113,22 @@ describe('view entry law', () => {
     expect(sourceFiles.some(isViewModule)).toBe(true);
   });
 
-  it('only src/view/ imports parse5', () => {
+  it('nothing in src imports parse5', () => {
+    const offenders = sourceFiles.filter((file) => /(?:from|import)\s*\(?\s*['"]parse5(?:\/[^'"]*)?['"]/.test(readFileSync(file, 'utf-8')));
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('only src/view/ imports the HTML parser in src/html/', () => {
+    const htmlDir = `${srcDir}${sep}html${sep}`;
     const offenders = sourceFiles.filter(
-      (file) => !isViewModule(file) && /from\s+['"]parse5['"]/.test(readFileSync(file, 'utf-8'))
+      (file) =>
+        !isViewModule(file) &&
+        !file.startsWith(htmlDir) &&
+        relativeImports(file).some((target) => `${target}${sep}`.startsWith(htmlDir))
     );
 
+    expect(sourceFiles.some((file) => file.startsWith(htmlDir))).toBe(true);
     expect(offenders).toEqual([]);
   });
 

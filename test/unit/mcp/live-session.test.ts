@@ -7,7 +7,7 @@ import { DocumentStore } from '../../../src/components/modules/yjs/document-stor
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import { buildMcpContracts } from '../../../src/mcp/contract';
 import { createLiveSession, terminalToError, type PresenceSink } from '../../../src/mcp/live/live-session';
-import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../src/view/rich-text-node';
 import type { AgentResult, AgentSession } from '../../../types/agent';
 
 const contract = buildMcpContracts({ pageTitles: 'off' }).live;

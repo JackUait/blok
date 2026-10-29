@@ -12,14 +12,11 @@
  * element the allowlist removed, and its output is inserted as-is (trusted, the
  * same contract as a block `renderers` entry).
  *
- * PURITY CONTRACT: parse5 usage stays confined to `src/view/`.
+ * PURITY CONTRACT: src/html usage stays confined to `src/view/`.
  */
-import { parseFragment, serialize } from 'parse5';
-import type { DefaultTreeAdapterMap } from 'parse5';
+import { parseFragment, serialize } from '../html';
+import type { ChildNode as HtmlChildNode, Element as HtmlElement, ParentNode as HtmlParentNode } from '../html';
 
-type P5Element = DefaultTreeAdapterMap['element'];
-type P5ChildNode = DefaultTreeAdapterMap['childNode'];
-type P5ParentNode = DefaultTreeAdapterMap['parentNode'];
 
 /**
  * One sanitized inline element, as handed to a {@link ViewInlineRenderer}.
@@ -44,18 +41,18 @@ export interface ViewInlineElement {
 export type ViewInlineRenderer = (element: ViewInlineElement) => string | undefined | null;
 
 /**
- * Whether the parse5 node is an element.
- * @param node - parse5 child node
+ * Whether the node is an element.
+ * @param node - child node
  */
-const isElementNode = (node: P5ChildNode): node is P5Element => {
+const isElementNode = (node: HtmlChildNode): node is HtmlElement => {
   return 'tagName' in node;
 };
 
 /**
- * Concatenated text of a subtree (entity-decoded by parse5).
- * @param node - parse5 element
+ * Concatenated text of a subtree (entity-decoded by the parser).
+ * @param node - element
  */
-const textOf = (node: P5Element): string => {
+const textOf = (node: HtmlElement): string => {
   return node.childNodes.map((child) => {
     if (child.nodeName === '#text' && 'value' in child) {
       return child.value;
@@ -70,10 +67,10 @@ const textOf = (node: P5Element): string => {
  * the same markup produces the same tree.
  * @param html - fragment markup
  */
-const parseInDivContext = (html: string): P5ParentNode => {
-  const contextElement = parseFragment('<div></div>').childNodes[0] as P5Element;
+const parseInDivContext = (html: string): HtmlParentNode => {
+  const contextElement = parseFragment('<div></div>').childNodes[0] as HtmlElement;
 
-  return parseFragment(contextElement, html, {});
+  return parseFragment(contextElement, html);
 };
 
 /**
@@ -97,7 +94,7 @@ export const applyInlineRenderers = (
    * because a replacement can change the child count.
    * @param parent - node whose children are visited
    */
-  const visit = (parent: P5ParentNode): void => {
+  const visit = (parent: HtmlParentNode): void => {
     const step = (index: number): void => {
       if (index >= parent.childNodes.length) {
         return;

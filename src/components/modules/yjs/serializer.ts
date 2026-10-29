@@ -361,7 +361,7 @@ export const isBoundaryCharacter = (char: string): boolean => {
 export interface YBlockSerializerOptions {
   /** A tool's own `static richTextFields`, added to the built-in table. */
   richTextFieldsFor?: (type: string) => string[];
-  /** Defaults to the DOM parser; node callers (fixtures, server tests) pass parse5's. */
+  /** Defaults to the DOM parser; node callers (fixtures, server tests) pass src/view's htmlToSegmentsNode. */
   htmlToSegments?: (html: string) => RichText;
 }
 

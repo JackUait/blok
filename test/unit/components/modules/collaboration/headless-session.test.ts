@@ -10,7 +10,7 @@ import { decode, encode } from '../../../../../src/components/modules/collaborat
 import type { CollabSocketFactory, SyncWireFrame, WebSocketLike, WorkingSetTag } from '../../../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
-import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../../src/view/rich-text-node';
 
 const TAG: WorkingSetTag = { format: 2, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' };
 

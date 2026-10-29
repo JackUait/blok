@@ -1,6 +1,6 @@
 import type { OutputBlockData, OutputData } from '../../../../types';
 import type { RichTextSegment } from '../../../../types/rich-text';
-import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode } from '../../../../src/view/rich-text-node';
 
 export type BlockRef = { id: string } | { type: string; nth?: number };
 

@@ -87,7 +87,7 @@ export type HistoryDrawerMode = 'list' | 'changes' | 'updates';
 /**
  * The `@bloklabs/core/view` functions the drawer uses. Handed in by the
  * page: the view-entry law keeps every module outside src/view from importing
- * it, so the editor bundles never pull in parse5.
+ * it, so the editor bundles never pull in the HTML parser.
  */
 export interface HistoryView {
   diffOutputData(before: LooseOutputData, after: LooseOutputData): {

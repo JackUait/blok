@@ -33,7 +33,7 @@ import { outlineFromOutputData } from '../../../src/view/outline';
 import { remapPageDocument } from '../../../src/view/page-document-remap';
 import { pageIndex } from '../../../src/view/page-index';
 import { restoreHeadingAnchors } from '../../../src/view/restore-heading-anchors';
-import { htmlToSegmentsNode, parseInlineHtmlWithParse5 } from '../../../src/view/rich-text-parse5';
+import { htmlToSegmentsNode, parseInlineHtmlNode } from '../../../src/view/rich-text-node';
 import { escapeHtml, sanitizeHtmlFragment } from '../../../src/view/sanitize';
 import { blocksToViewNodes } from '../../../src/view/view-nodes';
 import { fuzzHtml, realDocuments, storedFields, treeConstructionInputs } from './corpus';
@@ -392,7 +392,7 @@ const FRAGMENT_FUNCTIONS: Record<string, (html: string) => unknown> = {
   htmlTextContent: (html) => htmlTextContent(html),
   'htmlTextContent:pages': (html) => htmlTextContent(html, PAGE_TEXT),
   proseTextContent: (html) => proseTextContent(html),
-  parseInlineHtmlWithParse5: (html) => parseInlineHtmlWithParse5(html),
+  parseInlineHtmlNode: (html) => parseInlineHtmlNode(html),
   htmlToSegmentsNode: (html) => htmlToSegmentsNode(html),
   'richTextToPlainText(htmlToSegmentsNode)': (html) => richTextToPlainText(htmlToSegmentsNode(html)),
   'YBlockSerializer.toRichSegments': (html) => serializer.toRichSegments(html),

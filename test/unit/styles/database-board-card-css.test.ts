@@ -120,6 +120,11 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-property]:has(> [data-blok-database-cell="files"])')).toContain('padding: var(--blok-space-1)');
   });
 
+  // notion-spec-2 §22.6: the name starts 4px after the 20px file glyph.
+  it('leaves 4px between a card file chip\'s glyph and its name', () => {
+    expect(ruleBody('[data-blok-database-card-property] [data-blok-database-file-chip]')).toMatch(/gap:\s*var\(--blok-space-1\)/);
+  });
+
   // notion-spec-2 §21.7: a relation on a board card is a 14.4px icon and a 12/18 title, weight 500, in a 28px row.
   it('draws a card relation chip with a 14.4px glyph and a 12/18 title', () => {
     const icon = ruleBody('[data-blok-database-card-property] [data-blok-database-relation-chip-icon]');

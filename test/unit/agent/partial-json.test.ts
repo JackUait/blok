@@ -11,6 +11,13 @@ describe('parsePartialJson', () => {
     vi.restoreAllMocks();
   });
 
+  it('drops bad members one by one without overflowing the stack', () => {
+    expect(parsePartialJson(`[${'x,'.repeat(3)}`)).toEqual([]);
+    expect(parsePartialJson(`[${'x,'.repeat(20_000)}`)).toEqual([]);
+    expect(parsePartialJson('[1,2,x,3,')).toEqual([1, 2]);
+    expect(parsePartialJson(`[1,${'2,'.repeat(20_000)}x,3,`)).toHaveLength(20_001);
+  });
+
   it('closes an open string', () => {
     expect(parsePartialJson('{"a":"hel')).toEqual({ a: 'hel' });
   });

@@ -3,8 +3,8 @@ export type PartialCommand = { name?: string; args: Record<string, unknown>; ref
 type Scan = {
   /** Closers for the open containers, innermost last. */
   closers: string[];
-  /** Per open container, where its last member starts: just after the opener or at its last comma. */
-  cuts: number[];
+  /** Per open container, where each member starts: just after the opener, then at each comma. */
+  cuts: number[][];
   inString: boolean;
   /** Where an unfinished escape at the end of an open string starts, or -1. */
   cutEscape: number;
@@ -14,7 +14,7 @@ const HEX = /^[0-9a-fA-F]$/;
 
 const scan = (text: string): Scan => {
   const closers: string[] = [];
-  const cuts: number[] = [];
+  const cuts: number[][] = [];
   const state = { inString: false, escaped: false, escapeAt: -1 };
   const stringChar = (char: string, i: number): void => {
     if (state.escaped) {
@@ -35,12 +35,12 @@ const scan = (text: string): Scan => {
       state.inString = true;
     } else if (char === '{' || char === '[') {
       closers.push(char === '{' ? '}' : ']');
-      cuts.push(i + 1);
+      cuts.push([i + 1]);
     } else if (char === '}' || char === ']') {
       closers.pop();
       cuts.pop();
     } else if (char === ',' && cuts.length > 0) {
-      cuts[cuts.length - 1] = i;
+      cuts[cuts.length - 1].push(i);
     }
   });
 
@@ -75,17 +75,34 @@ export const parsePartialJson = (text: string): unknown => {
     return undefined;
   }
   const state = scan(text);
+  const closing = [...state.closers].reverse().join('');
   const body = state.cutEscape >= 0 ? text.slice(0, state.cutEscape) : text;
-  const parsed = tryParse(`${body}${state.inString ? '"' : ''}${[...state.closers].reverse().join('')}`);
+  const parsed = tryParse(`${body}${state.inString ? '"' : ''}${closing}`);
 
   if (parsed.ok) {
     return parsed.value;
   }
 
-  // Drop the innermost container's last member: a key with no value, a cut literal or a dangling comma.
-  const cut = state.cuts.at(-1);
+  // Drop the innermost container's trailing members: a key with no value, a cut literal or a dangling
+  // comma. Every cut is outside a string and inside the same containers, so this one scan serves every
+  // retry. Dropping members from JSON that parses leaves JSON that parses, so the longest cut that
+  // parses is found by binary search; trying every cut is quadratic on a long run of bad members.
+  const cuts = (state.cuts.at(-1) ?? []).filter((cut) => cut < text.length);
+  const search = { low: 0, high: cuts.length - 1, value: undefined as unknown };
 
-  return cut === undefined || cut >= text.length ? undefined : parsePartialJson(text.slice(0, cut));
+  while (search.low <= search.high) {
+    const middle = (search.low + search.high) >> 1;
+    const retried = tryParse(`${text.slice(0, cuts[middle])}${closing}`);
+
+    if (retried.ok) {
+      search.value = retried.value;
+      search.low = middle + 1;
+    } else {
+      search.high = middle - 1;
+    }
+  }
+
+  return search.value;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decodeAll, hitsEntitiesBug, parse5Attribute, parse5Text } from './entities-oracle-bug';
-import { LEGACY_ENTITIES } from '../../../src/html/legacy-entities';
+import { LEGACY_ENTITIES, NAMED_ENTITIES } from '../../../src/html/entities';
 import { PACKED_ENTITIES } from '../../../src/markdown/engine/entities';
 
 const names = [
@@ -15,6 +15,11 @@ const SUFFIXES = ['', ';', '=', 'x', 'Z', '1', '#', ' ', '<', '&amp;', '"'];
 describe('readCharRef', () => {
   it('knows all 2231 names', () => {
     expect(names).toHaveLength(2231);
+  });
+
+  // The two tables are separate modules on purpose (see scripts/generate-html-entities.mjs).
+  it('reads the same named table as the Markdown engine', () => {
+    expect(NAMED_ENTITIES).toBe(PACKED_ENTITIES);
   });
 
   it('decodes every name like parse5, in text and in attributes', () => {

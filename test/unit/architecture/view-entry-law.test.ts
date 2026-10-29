@@ -132,6 +132,19 @@ describe('view entry law', () => {
     expect(offenders).toEqual([]);
   });
 
+  // A module src/html shares with the editor graph (it once read the Markdown
+  // engine's entity table) lands in a chunk the editor loads up front.
+  it('src/html/ imports nothing outside src/html/', () => {
+    const htmlDir = `${srcDir}${sep}html${sep}`;
+    const offenders = sourceFiles.filter(
+      (file) =>
+        file.startsWith(htmlDir) &&
+        relativeImports(file).some((target) => !`${target}${sep}`.startsWith(htmlDir))
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   it('no module outside src/view/ imports from src/view/', () => {
     const offenders = entryOffenders(
       sourceFiles.map(path => ({ path, text: readFileSync(path, 'utf-8') })),

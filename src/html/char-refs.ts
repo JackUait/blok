@@ -3,8 +3,7 @@
  * reads them: the longest known name wins, legacy names may skip the `;`,
  * and numeric values are repaired the way the spec says.
  */
-import { PACKED_ENTITIES } from '../markdown/engine/entities';
-import { LEGACY_ENTITIES } from './legacy-entities';
+import { LEGACY_ENTITIES, NAMED_ENTITIES } from './entities';
 
 // Values 0x80..0x9F come from windows-1252; 0 means "keep the code point".
 const C1 = [
@@ -18,22 +17,24 @@ const ZEROS = /0*/y;
 const DECIMAL = /[0-9]*/y;
 const HEX = /[0-9a-fA-F]*/y;
 const ALPHANUMERIC = /[a-zA-Z0-9]/;
-// Seven hex or decimal digits already pass 0x10FFFF; more never come back into range.
+// Any value with more significant digits than this is past 0x10FFFF in either
+// base, so it is not parsed: that keeps parseInt exact on very long runs.
 const MAX_DIGITS = 8;
 const LEGACY_LENGTHS = [6, 5, 4, 3, 2];
 
 const tables: { named: Map<string, string> | null; legacy: Set<string> | null } = { named: null, legacy: null };
 
-const namedTable = (): Map<string, string> => {
+/** What a name ending in `;` stands for; `name` has no `&` and no `;`. */
+const decodeNamedEntity = (name: string): string | undefined => {
   tables.named ??= new Map(
-    PACKED_ENTITIES.split('~').map((pair): [string, string] => {
+    NAMED_ENTITIES.split('~').map((pair): [string, string] => {
       const space = pair.indexOf(' ');
 
       return [pair.slice(0, space), pair.slice(space + 1)];
     })
   );
 
-  return tables.named;
+  return tables.named.get(name);
 };
 
 const legacyTable = (): Set<string> => {
@@ -42,8 +43,21 @@ const legacyTable = (): Set<string> => {
   return tables.legacy;
 };
 
+/** Length of the longest legacy name `run` starts with, or 0. */
+const legacyPrefixLength = (run: string): number => {
+  const legacy = legacyTable();
+
+  for (const length of LEGACY_LENGTHS) {
+    if (length <= run.length && legacy.has(run.slice(0, length))) {
+      return length;
+    }
+  }
+
+  return 0;
+};
+
 /** The text a numeric reference stands for. */
-export const codePointText = (code: number): string => {
+const codePointText = (code: number): string => {
   if (code === 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) {
     return '�';
   }
@@ -93,24 +107,21 @@ export class CharRefReader {
 
     if (end === digitsStart) {
       return false;
-  }
-  this.value = codePointText(numericCode(html, significantStart, end, hex));
-  this.end = html.charCodeAt(end) === 0x3b ? end + 1 : end;
+    }
+    this.value = codePointText(numericCode(html, significantStart, end, hex));
+    this.end = html.charCodeAt(end) === 0x3b ? end + 1 : end;
 
-  return true;
+    return true;
   }
 
   private readNamed(html: string, start: number, inAttribute: boolean): boolean {
     NAME_RUN.lastIndex = start;
     if (!NAME_RUN.test(html)) {
       return false;
-  }
-  const runEnd = NAME_RUN.lastIndex;
-  const run = html.slice(start, runEnd);
-  const named = namedTable();
-
-  if (html.charCodeAt(runEnd) === 0x3b) {
-    const value = named.get(run);
+    }
+    const runEnd = NAME_RUN.lastIndex;
+    const run = html.slice(start, runEnd);
+    const value = html.charCodeAt(runEnd) === 0x3b ? decodeNamedEntity(run) : undefined;
 
     if (value !== undefined) {
       this.value = value;
@@ -118,21 +129,19 @@ export class CharRefReader {
 
       return true;
     }
-  }
-  const legacy = legacyTable();
-  const length = LEGACY_LENGTHS.find((candidate) => candidate <= run.length && legacy.has(run.slice(0, candidate)));
+    const length = legacyPrefixLength(run);
 
-  if (length === undefined) {
-    return false;
-  }
-  const next = html.charAt(start + length);
+    if (length === 0) {
+      return false;
+    }
+    const next = html.charAt(start + length);
 
-  if (inAttribute && (next === '=' || ALPHANUMERIC.test(next))) {
-    return false;
-  }
-  this.value = named.get(run.slice(0, length)) ?? '';
-  this.end = start + length;
+    if (inAttribute && (next === '=' || ALPHANUMERIC.test(next))) {
+      return false;
+    }
+    this.value = decodeNamedEntity(run.slice(0, length)) ?? '';
+    this.end = start + length;
 
-  return true;
+    return true;
   }
 }

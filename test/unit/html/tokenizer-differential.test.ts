@@ -5,6 +5,7 @@ import { Tokenizer } from '../../../src/html/tokenizer';
 import { TokenizerMode } from '../../../src/html/token';
 import { fuzzHtml, realDocuments, storedFields, treeConstructionInputs } from './corpus';
 import { hitsEntitiesBug } from './entities-oracle-bug';
+import { repairSurrogates } from '../../../src/view/html-text';
 import { Collector, type Collected } from './token-collector';
 
 /** What the tree builder may set on a tokenizer: the same three fields on ours and parse5's. */
@@ -136,10 +137,31 @@ interface Tally {
   parse5Throws: number;
   entitiesBug: number;
   diffs: string[];
+  /** Inputs compared again after the surrogate repair. */
+  repaired: number;
 }
 
+/**
+ * Compares every input. Inputs both tokenizers throw on are compared again
+ * after the repair Blok's callers apply, so the rest of them is still checked.
+ */
 const compare = (inputs: string[], start: Start): Tally => {
-  const tally: Tally = { compared: 0, parse5Throws: 0, entitiesBug: 0, diffs: [] };
+  const tally = compareOnce(inputs, start);
+  const repaired = compareOnce(repairedInputs.splice(0), start);
+
+  return {
+    compared: tally.compared + repaired.compared,
+    parse5Throws: tally.parse5Throws + repaired.parse5Throws,
+    entitiesBug: tally.entitiesBug + repaired.entitiesBug,
+    diffs: [...tally.diffs, ...repaired.diffs.map((diff) => `after repair: ${diff}`)],
+    repaired: repaired.compared,
+  };
+};
+
+const repairedInputs: string[] = [];
+
+const compareOnce = (inputs: string[], start: Start): Tally => {
+  const tally: Tally = { compared: 0, parse5Throws: 0, entitiesBug: 0, diffs: [], repaired: 0 };
 
   inputs.forEach((html) => {
     const actual = ours(html, start);
@@ -148,6 +170,7 @@ const compare = (inputs: string[], start: Start): Tally => {
     if (actual === null || expected === null) {
       if (actual === null && expected === null) {
         tally.parse5Throws += 1;
+        repairedInputs.push(repairSurrogates(html));
       } else {
         tally.diffs.push(`${actual === null ? 'only ours' : 'only parse5'} throws ${JSON.stringify(html.slice(0, 200))}`);
         tally.compared += 1;
@@ -174,7 +197,7 @@ const compare = (inputs: string[], start: Start): Tally => {
 
 /** Printed so a run shows how much was compared and what was skipped. */
 const report = (name: string, tally: Tally): void => {
-  console.info(`${name}: ${tally.compared} compared, ${tally.parse5Throws} skipped (both throw), ${tally.entitiesBug} skipped (entities 8.0.0 bug), ${tally.diffs.length} diffs`);
+  console.info(`${name}: ${tally.compared} compared, ${tally.parse5Throws} both threw (${tally.repaired} compared after repair), ${tally.entitiesBug} skipped (entities 8.0.0 bug), ${tally.diffs.length} diffs`);
 };
 
 const FUZZ_SEEDS = 20_000;
@@ -190,6 +213,7 @@ describe('Tokenizer against parse5', SLOW, () => {
     report('real documents', tally);
     expect(tally.diffs).toEqual([]);
     expect(tally.compared).toBeGreaterThan(10);
+    expect(tally.entitiesBug).toBe(0);
   });
 
   it('matches on every tree-construction input', () => {
@@ -198,14 +222,18 @@ describe('Tokenizer against parse5', SLOW, () => {
 
     report('tree-construction inputs', tally);
     expect(tally.diffs).toEqual([]);
-    expect(tally.compared + tally.parse5Throws + tally.entitiesBug).toBe(inputs.length);
+    expect(tally.compared - tally.repaired + tally.parse5Throws + tally.entitiesBug).toBe(inputs.length);
+    expect(tally.entitiesBug).toBe(0);
   });
 
   it('matches on stored fields', () => {
-    const tally = compare(storedFields(), DATA);
+    const inputs = storedFields();
+    const tally = compare(inputs, DATA);
 
     report('stored fields', tally);
     expect(tally.diffs).toEqual([]);
+    expect(tally.compared - tally.repaired + tally.parse5Throws).toBe(inputs.length);
+    expect(tally.entitiesBug).toBe(0);
   });
 
   it(`matches on ${FUZZ_SEEDS} fuzzed fragments`, () => {
@@ -213,7 +241,9 @@ describe('Tokenizer against parse5', SLOW, () => {
 
     report('fuzz', tally);
     expect(tally.diffs).toEqual([]);
-    expect(tally.compared + tally.parse5Throws + tally.entitiesBug).toBe(FUZZ_SEEDS);
+    expect(tally.compared - tally.repaired + tally.parse5Throws + tally.entitiesBug).toBe(FUZZ_SEEDS);
+    expect(tally.repaired).toBe(tally.parse5Throws);
+    expect(tally.entitiesBug).toBe(0);
   });
 
   it.each([
@@ -230,5 +260,8 @@ describe('Tokenizer against parse5', SLOW, () => {
 
     report(`mode ${start.mode} after <${start.lastStartTagName}> foreign ${String(start.foreign)}`, tally);
     expect(tally.diffs).toEqual([]);
+    expect(tally.compared - tally.repaired + tally.parse5Throws).toBe(inputs.length);
+    expect(tally.repaired).toBe(tally.parse5Throws);
+    expect(tally.entitiesBug).toBe(0);
   });
 });

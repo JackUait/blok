@@ -155,4 +155,25 @@ describe('pasting a page link as a mention', () => {
     expect(icon?.hasAttribute('data-blok-emoji')).toBe(false);
     expect(icon?.querySelectorAll('svg')).toHaveLength(2);
   });
+
+  it('pastes a draft mention copied from the live paragraph as a plain page reference', async () => {
+    const instance = await createEditor(pageConfig({ title: 'Plans', status: 'draft' }), '<a data-blok-page-id="p1">Page</a>');
+
+    await vi.waitFor(() => expect(reference()?.getAttribute('data-blok-page-status')).toBe('draft'));
+    const live = reference()?.outerHTML ?? '';
+
+    expect(live).toContain('data-blok-label');
+    instance.caret.setToBlock('target', 'end');
+    await instance.module.paste.processDataTransfer({
+      getData: (type: string) => (type === 'text/html' ? live : ''),
+      types: ['text/html'],
+      files: [] as unknown as FileList,
+    } as unknown as DataTransfer);
+    await settle();
+
+    expect(savedAsHtml(await instance.save()).blocks.map((block) => block.data)).toEqual([
+      { text: '<a data-blok-page-id="p1">Page</a>' },
+      { text: '<a data-blok-page-id="p1">Page</a>' },
+    ]);
+  });
 });

@@ -112,7 +112,7 @@ describe('database table view styles', () => {
     expect(tableCss).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
   });
 
-  it('floats the title page icon in a 22px box beside the title, glyph 18px in header-icon ink (research/07:72)', () => {
+  it('floats the title page icon in a 22px box beside the title, glyph 18px in the title icon ink (research/07:72)', () => {
     const box = ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]');
 
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon]')).toBe(box);
@@ -121,7 +121,7 @@ describe('database table view styles', () => {
     expect(box).toMatch(/height:\s*22px/);
     expect(box).toContain('margin-block-start: calc(-1 * var(--blok-space-0-5))');
     expect(box).toContain('margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75)');
-    expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]')).toContain('var(--blok-database-table-header-icon)');
+    expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]')).toContain('var(--blok-database-table-title-icon)');
     expect(ruleBody('[data-blok-database-page-icon-placeholder] svg')).toMatch(/width:\s*18px/);
   });
 

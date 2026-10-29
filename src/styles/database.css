@@ -111,6 +111,10 @@
   --blok-database-status-dot-pink: rgb(219, 105, 153);
   --blok-database-status-dot-red: rgb(229, 100, 88);
   --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
+  /* notion-spec-2 §23.1, §23.4: file and property type glyphs. Light keeps the text ink. */
+  --blok-database-glyph: currentColor;
+  --blok-database-person-initial-bg: var(--blok-database-option-default-bg);
+  --blok-database-person-initial-shadow: none;
   /* notion-spec-2 §7: Number Bar and Ring track, Default and Yellow fills. Other fills are the status dots, the same in dark. */
   --blok-database-number-track: rgba(42, 28, 0, 0.07);
   --blok-database-number-default: rgb(56, 56, 54);
@@ -130,6 +134,7 @@
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
   --blok-database-table-header-text: var(--blok-database-ink-secondary);
   --blok-database-table-header-icon: rgb(142, 139, 134);
+  --blok-database-table-title-icon: var(--blok-database-table-header-icon);
   --blok-database-table-header-hover-bg: var(--blok-database-hover-bg);
   --blok-database-table-cell-text: rgb(44, 44, 43);
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
@@ -458,6 +463,10 @@
     --blok-database-status-dot-blue: rgb(39, 131, 222);
     --blok-database-status-dot-green: rgb(70, 161, 113);
     --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
+    /* notion-spec-2 §23.1, §23.3: glyphs; a letter avatar is the menu fill with a faint ring (pixels). */
+    --blok-database-glyph: rgb(230, 229, 227);
+    --blok-database-person-initial-bg: rgb(37, 37, 37);
+    --blok-database-person-initial-shadow: inset 0 0 0 1px rgba(255, 255, 243, 0.082);
     --blok-database-number-track: rgba(255, 255, 235, 0.1);
     --blok-database-number-default: rgb(230, 229, 227);
     --blok-database-number-yellow: rgb(216, 163, 47);
@@ -473,6 +482,8 @@
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
     --blok-database-table-header-text: rgb(173, 169, 163);
     --blok-database-table-header-icon: rgb(173, 169, 163);
+    /* notion-spec-2 §23.1: an icon, so 3:1 is enough (4.11:1 on the page). */
+    --blok-database-table-title-icon: rgb(125, 122, 117);
     --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-table-cell-text: rgb(240, 239, 237);
     --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
@@ -764,6 +775,10 @@
   --blok-database-status-dot-blue: rgb(39, 131, 222);
   --blok-database-status-dot-green: rgb(70, 161, 113);
   --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
+  /* notion-spec-2 §23.1, §23.3: glyphs; a letter avatar is the menu fill with a faint ring (pixels). */
+  --blok-database-glyph: rgb(230, 229, 227);
+  --blok-database-person-initial-bg: rgb(37, 37, 37);
+  --blok-database-person-initial-shadow: inset 0 0 0 1px rgba(255, 255, 243, 0.082);
   --blok-database-number-track: rgba(255, 255, 235, 0.1);
   --blok-database-number-default: rgb(230, 229, 227);
   --blok-database-number-yellow: rgb(216, 163, 47);
@@ -779,6 +794,8 @@
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
+  /* notion-spec-2 §23.1: an icon, so 3:1 is enough (4.11:1 on the page). */
+  --blok-database-table-title-icon: rgb(125, 122, 117);
   --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-table-cell-text: rgb(240, 239, 237);
   --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
@@ -6453,7 +6470,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  background-color: var(--blok-database-option-default-bg);
+  background-color: var(--blok-database-person-initial-bg);
+  box-shadow: var(--blok-database-person-initial-shadow);
   color: var(--blok-database-ink-secondary);
 }
 
@@ -6554,6 +6572,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 [data-blok-database-file-chip-icon] {
   display: inline-flex;
   flex: none;
+  color: var(--blok-database-glyph);
 }
 
 [data-blok-database-file-chip-icon] svg {
@@ -8416,7 +8435,7 @@ textarea[data-blok-database-cell-input] {
   height: 22px;
   margin-block-start: calc(-1 * var(--blok-space-0-5));
   margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75);
-  color: var(--blok-database-table-header-icon);
+  color: var(--blok-database-table-title-icon);
 }
 
 [data-blok-database-page-icon-placeholder] svg {
@@ -13270,7 +13289,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row] > [data-blok-database-file-chip-icon] {
   flex: none;
-  color: var(--blok-database-ink);
+  color: var(--blok-database-glyph);
 }
 
 [data-blok-database-files-add] {

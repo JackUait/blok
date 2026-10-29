@@ -120,10 +120,15 @@ describe('cell editor CSS', () => {
 
   // notion-spec-2 §19.16: a person's avatar is a plain circle with no ring or shadow. Notion's 100% draws
   // the same circle on a square box; the radius law spells a circle 50%.
-  it.each(['[data-blok-database-person-avatar]', '[data-blok-database-person-initial]'])('draws %s as a circle with no ring', (selector) => {
+  it.each(['[data-blok-database-person-avatar]', '[data-blok-database-person-initial]'])('draws %s as a circle with no outline', (selector) => {
     expect(declared(selector, 'outline')).toEqual([]);
-    expect(declared(selector, 'box-shadow')).toEqual([]);
     expect(declared(selector, 'border-radius')).toEqual(['50%']);
+  });
+
+  // The photo has no ring. The letter avatar's ring is a token: none in light, Notion's faint inner ring in dark (§23.3).
+  it('rings only the letter avatar, through a token', () => {
+    expect(declared('[data-blok-database-person-avatar]', 'box-shadow')).toEqual([]);
+    expect(declared('[data-blok-database-person-initial]', 'box-shadow')).toEqual(['var(--blok-database-person-initial-shadow)']);
   });
 
   it('a selected option row has no fill of its own and keeps the unselected ink', () => {

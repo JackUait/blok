@@ -2,7 +2,8 @@ import type { ToolConstructable } from '../../../types/tools';
 
 /**
  * Brand on a built-in tool class: names its BUILT_IN_RUNTIME_PARTS entry.
- * Core reads the brand instead of importing the classes, so `import { Blok }` stays free of tool code.
+ * Core reads it instead of importing the classes (registry-snapshot.ts, api/agent-services.ts).
+ * An import of a tool class there puts that tool's code back into `import { Blok }`.
  * Define it as a static getter: getters are not enumerable, so copying a class's statics does not copy it.
  */
 export const RUNTIME_PARTS_OWNER: unique symbol = Symbol('blok.runtimePartsOwner');

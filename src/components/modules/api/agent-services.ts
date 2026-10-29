@@ -4,9 +4,9 @@ import type { PageConfig, PageIcon, PageInfo } from '../../../../types/tools/pag
 import type { HostService } from '../../../../types/tools/tool-description';
 import type { LinkMetadataService, PageBackendService, UploaderService } from '../../../shared/tool-actions/services';
 import { createPageMapBackend } from '../../../shared/agent/document-session';
-import { Bookmark } from '../../../tools/link/bookmark';
 import { MetadataFetcher } from '../../../tools/link/metadata-fetcher';
 import type { BlokModules } from '../../../types-internal/blok-modules';
+import { runtimePartsOwnerOf } from '../../tools/runtime-parts-owner';
 import type { PageDocuments } from '../agent/page-documents';
 
 const isRename = (value: unknown): value is NonNullable<PageConfig['rename']> =>
@@ -138,7 +138,7 @@ export const createEditorServices = (
     const settings = tool.settings;
     const endpoint = settings.endpoint;
 
-    if (tool.toolClass !== Bookmark || typeof endpoint !== 'string' || endpoint === '') {
+    if (runtimePartsOwnerOf(tool.toolClass) !== 'bookmark' || typeof endpoint !== 'string' || endpoint === '') {
       continue;
     }
     const fetcher = new MetadataFetcher({ ...settings, endpoint });

@@ -413,6 +413,7 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
     ImageTool: 'image-fullscreen',
     VideoTool: 'video-copy-url-at-time',
     AudioTool: 'audio-cover-remove',
+    Bookmark: 'bookmark-copy-url',
   }
 
   it('tools.mjs loads the block tools at import time (fingerprint non-vacuity)', async () => {
@@ -432,12 +433,13 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
   it('keeps the blok.mjs import-time code under its byte budget', async () => {
     await initLexer()
     const bytes = [...staticClosure(['blok'])].reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    // Measured 3,732,038 bytes (yarn build) once core stopped importing tool and database code; ~5% headroom.
-    expect(bytes).toBeLessThan(3.75 * 1024 * 1024)
+    // 3,721,557 bytes measured under `yarn build`, plus ~5% headroom.
+    expect(bytes).toBeLessThan(3.72 * 1024 * 1024)
   })
 
-  // The markdown parser's entity table; the parser ships in markdown.mjs.
-  const MARKDOWN_PARSER_FINGERPRINT = 'AElig Æ~'
+  // The autolink scheme regex in src/markdown/engine/inline-scan.ts. The entity table is no
+  // fingerprint: src/html/entities.ts holds the same table.
+  const MARKDOWN_PARSER_FINGERPRINT = String.raw`[A-Za-z][+\-.\dA-Za-z]{1,31}:`
 
   it('markdown.mjs loads the markdown parser at import time (fingerprint non-vacuity)', async () => {
     await initLexer()

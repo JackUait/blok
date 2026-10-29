@@ -3,7 +3,8 @@ import { IconCheck, IconCheckbox, IconChevronDown, IconCross, IconHash, IconPage
 import { propertyTypeMeta } from './database-property-types';
 import { FormulaField, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
-import { FORMULA_FUNCTION_NAMES, formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
+import { FORMULA_FUNCTION_GROUPS, fitsAfter } from './database-formula-catalog';
+import { formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
 import type { CompileResult, FormulaType } from './formula';
 import type { PropertyDefinition } from './types';
 
@@ -63,6 +64,9 @@ const OPERATORS: ReadonlyArray<[string, 'number' | 'boolean']> = [
   ['==', 'boolean'], ['!=', 'boolean'],
 ];
 
+/** notion-spec-2 §25.1 (`formula-empty.txt`): Built-ins of an empty formula. */
+const VALUES: ReadonlyArray<[string, string]> = [['not', 'not '], ['true', 'true'], ['false', 'false']];
+
 const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 /** The word the caret sits at the end of. A number is not a word: after `* 2` the whole list stays. */
@@ -88,6 +92,8 @@ class FormulaEditor implements FormulaEditorHandle {
   private readonly popover: CellPopover;
   /** The row the help pane describes, by `data-name`. */
   private active: string | null = null;
+  /** The rows the list shows, in order. */
+  private references: Reference[] = [];
   /** Whether the list showed only Built-ins last time: a switch highlights its first row again. */
   private builtInsOnly = false;
   private open = true;
@@ -343,7 +349,7 @@ class FormulaEditor implements FormulaEditorHandle {
       this.list.querySelectorAll('[data-blok-database-formula-reference-item]').forEach((el) => {
         el.setAttribute('aria-selected', String(el === item));
       });
-      this.renderHelp([...this.properties(), ...this.builtIns()].find((ref) => ref.name === name));
+      this.renderHelp(this.references.find((ref) => ref.name === name));
     });
     panes.append(this.list, this.help);
 
@@ -420,29 +426,54 @@ class FormulaEditor implements FormulaEditorHandle {
       }));
   }
 
-  private builtIns(): Reference[] {
-    const operators = OPERATORS.map(([op, result]): Reference => ({
-      name: op,
-      label: op,
-      insert: ` ${op} `,
-      kind: 'function',
-      icon: { kind: result, svg: result === 'number' ? IconHash : IconCheckbox },
-    }));
-    const functions = FORMULA_FUNCTION_NAMES
-      .filter((name) => name !== 'prop')
-      .map((name): Reference => ({ name, label: name, insert: `${name}(`, kind: 'function' }));
+  /** notion-spec-2 §25.1: the operators after an operand, else not, true and false. */
+  private builtIns(afterOperand: boolean): Reference[] {
+    if (afterOperand) {
+      return OPERATORS.map(([op, result]): Reference => ({
+        name: op,
+        label: op,
+        insert: ` ${op} `,
+        kind: 'function',
+        icon: { kind: result, svg: result === 'number' ? IconHash : IconCheckbox },
+      }));
+    }
 
-    return [...operators, ...functions];
+    return VALUES.map(([word, insert]): Reference => ({
+      name: word,
+      label: word,
+      insert,
+      kind: 'function',
+      icon: { kind: 'boolean', svg: IconCheckbox },
+    }));
+  }
+
+  private functions(names: readonly string[]): Reference[] {
+    return names.map((name): Reference => ({ name: `${name}()`, label: `${name}()`, insert: `${name}(`, kind: 'function' }));
+  }
+
+  /** The type of the text before the caret, when it compiles: only functions it fits follow it. */
+  private operandType(caret: number): FormulaType | null {
+    const compiled = this.options.compile(this.field.value.slice(0, caret));
+
+    return compiled.ok ? compiled.resultType : null;
   }
 
   private renderReference(): void {
     const caret = this.field.caret();
     const word = wordBefore(this.field.value, caret).toLowerCase();
     const afterOperand = word === '' && endsInOperand(this.field.value, caret);
+    const operand = afterOperand ? this.operandType(caret) : null;
     const matches = (ref: Reference): boolean => word === '' || ref.label.toLowerCase().startsWith(word);
-    const section = (labelKey: string, refs: Reference[]): HTMLElement[] => {
-      const shown = refs.filter(matches);
-
+    const groups: Array<[string, Reference[]]> = [
+      ['tools.database.propertiesSection', afterOperand ? [] : this.properties()],
+      ['tools.database.formulaBuiltIns', this.builtIns(afterOperand)],
+      ...FORMULA_FUNCTION_GROUPS.map((group): [string, Reference[]] => [
+        group.labelKey,
+        this.functions(operand === null ? group.names : group.names.filter((name) => fitsAfter(name, operand))),
+      ]),
+    ];
+    const sections = groups.map(([key, refs]): [string, Reference[]] => [key, refs.filter(matches)]);
+    const section = ([labelKey, shown]: [string, Reference[]]): HTMLElement[] => {
       if (shown.length === 0) return [];
       const label = document.createElement('div');
 
@@ -455,15 +486,11 @@ class FormulaEditor implements FormulaEditorHandle {
 
     if (afterOperand !== this.builtInsOnly) this.active = null;
     this.builtInsOnly = afterOperand;
-    const properties = afterOperand ? [] : this.properties();
-    const shown = [...properties, ...this.builtIns()].filter(matches);
-    const active = shown.find((ref) => ref.name === this.active) ?? shown.at(0);
+    this.references = sections.flatMap(([, refs]) => refs);
+    const active = this.references.find((ref) => ref.name === this.active) ?? this.references.at(0);
 
     this.active = active?.name ?? null;
-    this.list.replaceChildren(
-      ...section('tools.database.propertiesSection', properties),
-      ...section('tools.database.formulaBuiltIns', this.builtIns())
-    );
+    this.list.replaceChildren(...sections.flatMap(section));
     this.renderHelp(active);
   }
 

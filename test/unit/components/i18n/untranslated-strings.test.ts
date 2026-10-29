@@ -183,6 +183,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolbox.sectionColor',
     // "General" is the Spanish adjective too, and the OS name for a General section.
     'tools.image.shortcutsGeneral',
+    // The same adjective heads the formula editor's General function group.
+    'tools.database.formulaGroupGeneral',
   ]),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs; "OK" is
   // the conventional compact confirmation label.

@@ -406,7 +406,7 @@ describe('formula editor', () => {
     type('dateA');
     const names = [...document.querySelectorAll('[data-blok-database-formula-reference-item]')].map((el) => el.getAttribute('data-name'));
 
-    expect(names).toEqual(['dateAdd']);
+    expect(names).toEqual(['dateAdd()']);
   });
 
   it('inserts a property reference from the list', () => {
@@ -443,31 +443,73 @@ describe('formula editor', () => {
     expect(document.querySelector('[data-blok-database-formula-reference-item][aria-selected="true"]')?.getAttribute('data-name')).toBe('*');
   });
 
+  // notion-spec-2 §25.1 (`formula-typed.txt`): then only the functions a number fits, under their group headings.
+  it('follows the operators with the functions that take a number, by group', () => {
+    open();
+    type('prop("Amount") * 2');
+
+    expect(labels()).toEqual([
+      'tools.database.formulaBuiltIns',
+      'tools.database.formulaGroupGeneral',
+      'tools.database.propertyTypeNumber',
+      'tools.database.propertyTypeDate',
+    ]);
+    expect(items().slice(10, 17)).toEqual(['and()', 'or()', 'not()', 'empty()', 'format()', 'equal()', 'unequal()']);
+    expect(items()[17]).toBe('formatNumber()');
+    expect(items()).toContain('fromTimestamp()');
+    expect(items()).not.toContain('pi()');
+    expect(items()).not.toContain('upper()');
+  });
+
   // notion-spec-2 §25.1 (37-reopen-saved.png): a saved formula reopens at Built-ins.
   it('reopens a saved formula at Built-ins', () => {
     open();
 
-    expect(labels()).toEqual(['tools.database.formulaBuiltIns']);
+    expect(labels()[0]).toBe('tools.database.formulaBuiltIns');
+    expect(labels()).not.toContain('tools.database.propertiesSection');
     expect(document.querySelector('[data-blok-database-formula-reference-item][aria-selected="true"]')?.getAttribute('data-name')).toBe('*');
   });
 
-  // `C8-formula-open.png`, `formula-editor.png`: a "Properties" section, then "Built-ins".
-  it('heads properties with "Properties" and built-ins with "Built-ins"', () => {
+  // notion-spec-2 §25.1 (`formula-empty.txt`): Properties, Built-ins, then the function groups in one list.
+  it('heads the empty list with Properties, Built-ins and each function group', () => {
     open();
     type('');
-    const labels = [...document.querySelectorAll('[data-blok-database-formula-reference-label]')].map((el) => el.textContent);
 
-    expect(labels).toEqual(['tools.database.propertiesSection', 'tools.database.formulaBuiltIns']);
+    expect(labels()).toEqual([
+      'tools.database.propertiesSection',
+      'tools.database.formulaBuiltIns',
+      'tools.database.formulaGroupGeneral',
+      'tools.database.propertyTypeText',
+      'tools.database.propertyTypeNumber',
+      'tools.database.propertyTypeDate',
+      'tools.database.formulaGroupPeople',
+      'tools.database.formulaGroupLists',
+    ]);
   });
 
-  // `formula-editor.png`: Built-ins open with the operators * / + - > >= <, # for number and a checkbox for compare.
-  it('lists the operators first among built-ins, in Notion\'s order', () => {
+  // notion-spec-2 §25.1 (`formula-empty.txt`): Built-ins read not, true, false; General opens with if(), ifs().
+  it('lists not, true and false as the built-ins of an empty formula', () => {
     open();
     type('');
     const builtIns = [...document.querySelectorAll('[data-blok-database-formula-reference-item="function"]')]
       .map((el) => el.getAttribute('data-name'));
 
-    expect(builtIns.slice(0, 7)).toEqual(['*', '/', '+', '-', '>', '>=', '<']);
+    expect(builtIns.slice(0, 5)).toEqual(['not', 'true', 'false', 'if()', 'ifs()']);
+    expect(builtIns).not.toContain('*');
+    expect(builtIns).toContain('not()');
+  });
+
+  it('inserts true as a value and if() as an open call', () => {
+    const options = open();
+
+    type('');
+    document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="if()"]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="true"]')?.click();
+    input().append(', 1, 2)');
+    input().dispatchEvent(new Event('input'));
+    enter();
+
+    expect(options.onSave).toHaveBeenCalledWith('if(true, 1, 2)');
   });
 
   it('draws each row with its type glyph', () => {
@@ -478,6 +520,8 @@ describe('formula editor', () => {
 
     expect(glyph('prop:Amount')).toBe('number');
     expect(glyph('prop:Name')).toBe('title');
+    expect(glyph('true')).toBe('boolean');
+    type('prop("Amount") * 2');
     expect(glyph('*')).toBe('number');
     expect(glyph('>=')).toBe('boolean');
   });
@@ -612,12 +656,12 @@ describe('formula editor', () => {
     it('follows the row under the pointer', () => {
       open();
       type('');
-      const row = '[data-blok-database-formula-reference-item][data-name="*"]';
+      const row = '[data-blok-database-formula-reference-item][data-name="if()"]';
 
       document.querySelector(row)?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
 
       expect(document.querySelector(row)?.getAttribute('aria-selected')).toBe('true');
-      expect(text('[data-blok-database-formula-help-name]')).toBe('*');
+      expect(text('[data-blok-database-formula-help-name]')).toBe('if()');
       expect(document.querySelector('[data-blok-database-formula-help-description]')).toBeNull();
     });
   });

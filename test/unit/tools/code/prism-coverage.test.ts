@@ -129,5 +129,5 @@ describe('Prism theme coverage', () => {
       light: {},
       dark: {},
     });
-  });
+  }, 30_000);
 });

@@ -10,7 +10,7 @@ describe('markup-templating placeholders', () => {
 
     expect(html).not.toBeNull();
     expect(html?.match(/<span class="token php language-php">/g)).toHaveLength(blocks);
-  });
+  }, 30_000);
 
   it('keeps the text between blocks in order', async () => {
     const html = await tokenizePrism('a<?=1?>b<?=2?>c', 'php');

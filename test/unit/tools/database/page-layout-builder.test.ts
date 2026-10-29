@@ -1312,6 +1312,18 @@ describe('PageLayoutBuilder', () => {
       drawer.destroy();
     });
 
+    it('shows a stored property icon as text in the add menu, never as markup', () => {
+      const icon = '<img src="x" onerror="window.__pwned=1">';
+      const { drawer } = customize({ schema: [...schemaWith(), { ...OWNER, icon }] });
+
+      addModuleButton().click();
+      const row = q('[data-blok-testid="database-layout-add-existing-p-owner"]');
+
+      expect(row?.querySelector('img')).toBeNull();
+      expect(row?.querySelector('[data-blok-database-panel-icon]')?.textContent).toBe(icon);
+      drawer.destroy();
+    });
+
     it('never offers Add to panel for a relation', () => {
       const { drawer } = customize({ schema: [...schemaWith(), REL] });
 

@@ -600,7 +600,7 @@ export class PageLayoutBuilder {
       ...existing.map((def) => panelRow({
         label: def.name,
         testId: `database-layout-add-existing-${def.id}`,
-        icon: def.icon !== undefined && def.icon !== '' ? def.icon : propertyTypeMeta(def.type).icon,
+        ...(def.icon !== undefined && def.icon !== '' ? { iconText: def.icon } : { icon: propertyTypeMeta(def.type).icon }),
         onClick: () => {
           this.closeModuleMenu();
           this.options.edit(addModule(def.id, place, def));

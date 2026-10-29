@@ -219,7 +219,10 @@ export const panelCloseButton = (panel: DatabasePanel, label: string): HTMLButto
 export interface PanelRowOptions {
   label: string;
   testId: string;
+  /** Trusted SVG markup only: it goes through innerHTML. */
   icon?: string;
+  /** A user's own icon (an emoji, saved data): shown as text, never parsed. */
+  iconText?: string;
   /** A gray line under the label. */
   description?: string;
   /** Gray text on the right (research/08: rgb(161,158,153)). */
@@ -250,11 +253,15 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
     row.setAttribute('role', 'menuitemradio');
     row.setAttribute('aria-checked', String(options.checked));
   }
-  if (options.icon !== undefined) {
+  if (options.icon !== undefined || options.iconText !== undefined) {
     const icon = document.createElement('span');
 
     icon.setAttribute('data-blok-database-panel-icon', '');
-    icon.innerHTML = options.icon;
+    if (options.iconText !== undefined) {
+      icon.textContent = options.iconText;
+    } else {
+      icon.innerHTML = options.icon ?? '';
+    }
     row.appendChild(icon);
   }
   const label = document.createElement('span');

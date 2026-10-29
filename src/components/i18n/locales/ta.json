@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "வடிகட்டு",
   "tools.database.tableSort": "வரிசைப்படுத்து",
   "tools.database.tableGroup": "குழுவாக்கு",
-  "tools.database.tableFreeze": "இந்த நெடுவரிசை வரை முடக்கு",
+  "tools.database.tableFreeze": "முடக்கு",
   "tools.database.tableUnfreeze": "நெடுவரிசைகளின் முடக்கத்தை நீக்கு",
   "tools.database.tableHide": "மறை",
   "tools.database.tableWrap": "உள்ளடக்கத்தை மடக்கு",

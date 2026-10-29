@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "ກອງ",
   "tools.database.tableSort": "ຈັດຮຽງ",
   "tools.database.tableGroup": "ຈັດກຸ່ມ",
-  "tools.database.tableFreeze": "ລັອກຮອດຖັນນີ້",
+  "tools.database.tableFreeze": "ລັອກ",
   "tools.database.tableUnfreeze": "ປົດລັອກຖັນ",
   "tools.database.tableHide": "ເຊື່ອງ",
   "tools.database.tableWrap": "ຕັດແຖວເນື້ອຫາ",

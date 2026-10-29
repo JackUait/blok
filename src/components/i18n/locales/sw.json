@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Chuja",
   "tools.database.tableSort": "Panga",
   "tools.database.tableGroup": "Panga katika vikundi",
-  "tools.database.tableFreeze": "Gandisha hadi safu wima hii",
+  "tools.database.tableFreeze": "Gandisha",
   "tools.database.tableUnfreeze": "Acha kugandisha safu wima",
   "tools.database.tableHide": "Ficha",
   "tools.database.tableWrap": "Kunja maudhui",

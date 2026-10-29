@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtern",
   "tools.database.tableSort": "Sortieren",
   "tools.database.tableGroup": "Gruppieren",
-  "tools.database.tableFreeze": "Bis zu dieser Spalte fixieren",
+  "tools.database.tableFreeze": "Fixieren",
   "tools.database.tableUnfreeze": "Spaltenfixierung aufheben",
   "tools.database.tableHide": "Ausblenden",
   "tools.database.tableWrap": "Inhalt umbrechen",

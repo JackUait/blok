@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtra",
   "tools.database.tableSort": "Ordina",
   "tools.database.tableGroup": "Raggruppa",
-  "tools.database.tableFreeze": "Blocca fino a questa colonna",
+  "tools.database.tableFreeze": "Blocca",
   "tools.database.tableUnfreeze": "Sblocca colonne",
   "tools.database.tableHide": "Nascondi",
   "tools.database.tableWrap": "Attiva a capo automatico",

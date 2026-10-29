@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filter",
   "tools.database.tableSort": "Urutkan",
   "tools.database.tableGroup": "Kelompokkan",
-  "tools.database.tableFreeze": "Bekukan hingga kolom ini",
+  "tools.database.tableFreeze": "Bekukan",
   "tools.database.tableUnfreeze": "Batalkan pembekuan kolom",
   "tools.database.tableHide": "Sembunyikan",
   "tools.database.tableWrap": "Bungkus konten",

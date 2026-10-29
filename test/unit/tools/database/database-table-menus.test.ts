@@ -22,6 +22,7 @@ import { openMenu, rowMenuFooter, headerViewItems } from '../../../../src/tools/
 import type { HeaderMenuContext } from '../../../../src/tools/database/database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
+import en from '../../../../src/components/i18n/locales/en.json';
 
 describe('table view menus', () => {
   beforeEach(() => {
@@ -151,6 +152,15 @@ describe('column header menu glyphs', () => {
     ['checkbox', {}],
   ] as const)('gives every %s row an icon', (type, over) => {
     expect(untitled(headerViewItems(ctx(type, over)))).toEqual([]);
+  });
+
+  // notion-spec-2 §25.5: the row reads "Freeze" on every column.
+  it('labels the freeze row "Freeze", as Notion', () => {
+    const messages: Record<string, string> = en;
+    const items = headerViewItems(ctx('number', { i18n: { t: (key: string) => messages[key] ?? key } }));
+    const freeze = items.find((item) => 'name' in item && item.name === 'database-header-freeze');
+
+    expect(freeze && 'title' in freeze ? freeze.title : undefined).toBe('Freeze');
   });
 
   // notion-live-7/80-menu-text.png, 81-menu-*.png: Sort carries a "›"; Filter and Group do not.

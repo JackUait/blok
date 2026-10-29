@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "फिल्टर गर्नुहोस्",
   "tools.database.tableSort": "क्रमबद्ध गर्नुहोस्",
   "tools.database.tableGroup": "समूह बनाउनुहोस्",
-  "tools.database.tableFreeze": "यो स्तम्भसम्म फ्रिज गर्नुहोस्",
+  "tools.database.tableFreeze": "फ्रिज गर्नुहोस्",
   "tools.database.tableUnfreeze": "स्तम्भहरू अनफ्रिज गर्नुहोस्",
   "tools.database.tableHide": "लुकाउनुहोस्",
   "tools.database.tableWrap": "सामग्री र्‍याप गर्नुहोस्",

@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "ఫిల్టర్ చేయి",
   "tools.database.tableSort": "క్రమబద్ధీకరించు",
   "tools.database.tableGroup": "సమూహపరచు",
-  "tools.database.tableFreeze": "ఈ నిలువు వరుస వరకు స్తంభింపజేయి",
+  "tools.database.tableFreeze": "స్తంభింపజేయి",
   "tools.database.tableUnfreeze": "నిలువు వరుసల స్తంభనను తీసివేయి",
   "tools.database.tableHide": "దాచు",
   "tools.database.tableWrap": "కంటెంట్‌ను చుట్టు",

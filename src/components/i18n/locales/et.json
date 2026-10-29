@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtreeri",
   "tools.database.tableSort": "Sordi",
   "tools.database.tableGroup": "Rühmita",
-  "tools.database.tableFreeze": "Külmuta kuni selle veeruni",
+  "tools.database.tableFreeze": "Külmuta",
   "tools.database.tableUnfreeze": "Vabasta veerud",
   "tools.database.tableHide": "Peida",
   "tools.database.tableWrap": "Murra sisu",

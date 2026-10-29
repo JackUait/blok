@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "فلتەرکردن",
   "tools.database.tableSort": "ڕیزکردن",
   "tools.database.tableGroup": "گرووپکردن",
-  "tools.database.tableFreeze": "چەسپاندن تا ئەم ستوونە",
+  "tools.database.tableFreeze": "چەسپاندن",
   "tools.database.tableUnfreeze": "لابردنی چەسپاندنی ستوونەکان",
   "tools.database.tableHide": "شاردنەوە",
   "tools.database.tableWrap": "پەچانەوەی ناوەڕۆک",

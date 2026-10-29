@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "กรอง",
   "tools.database.tableSort": "เรียงลำดับ",
   "tools.database.tableGroup": "จัดกลุ่ม",
-  "tools.database.tableFreeze": "ตรึงถึงคอลัมน์นี้",
+  "tools.database.tableFreeze": "ตรึง",
   "tools.database.tableUnfreeze": "เลิกตรึงคอลัมน์",
   "tools.database.tableHide": "ซ่อน",
   "tools.database.tableWrap": "ตัดบรรทัดเนื้อหา",

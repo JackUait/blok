@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "I-filter",
   "tools.database.tableSort": "I-sort",
   "tools.database.tableGroup": "Pangkatin",
-  "tools.database.tableFreeze": "I-freeze hanggang sa kolum na ito",
+  "tools.database.tableFreeze": "I-freeze",
   "tools.database.tableUnfreeze": "I-unfreeze ang mga kolum",
   "tools.database.tableHide": "Itago",
   "tools.database.tableWrap": "I-wrap ang nilalaman",

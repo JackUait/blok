@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrlə",
   "tools.database.tableSort": "Sırala",
   "tools.database.tableGroup": "Qruplaşdır",
-  "tools.database.tableFreeze": "Bu sütuna qədər dondur",
+  "tools.database.tableFreeze": "Dondur",
   "tools.database.tableUnfreeze": "Sütunların dondurulmasını ləğv et",
   "tools.database.tableHide": "Gizlət",
   "tools.database.tableWrap": "Məzmunu ekrana sığdır",

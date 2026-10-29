@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "تصفية",
   "tools.database.tableSort": "فرز",
   "tools.database.tableGroup": "تجميع",
-  "tools.database.tableFreeze": "تثبيت حتى هذا العمود",
+  "tools.database.tableFreeze": "تثبيت",
   "tools.database.tableUnfreeze": "إلغاء تثبيت الأعمدة",
   "tools.database.tableHide": "إخفاء",
   "tools.database.tableWrap": "التفاف المحتوى",

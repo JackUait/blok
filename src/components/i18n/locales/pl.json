@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtruj",
   "tools.database.tableSort": "Sortuj",
   "tools.database.tableGroup": "Grupuj",
-  "tools.database.tableFreeze": "Zablokuj do tej kolumny",
+  "tools.database.tableFreeze": "Zablokuj",
   "tools.database.tableUnfreeze": "Odblokuj kolumny",
   "tools.database.tableHide": "Ukryj",
   "tools.database.tableWrap": "Zawijaj zawartość",

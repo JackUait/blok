@@ -388,7 +388,7 @@ test.describe('columns', () => {
   test('Freeze up to this column keeps it in place on horizontal scroll', async ({ page }) => {
     await mount(page, blocks());
     await header(page, 'p-notes').click();
-    await page.getByRole('menuitem', { name: 'Freeze up to column' }).click();
+    await page.getByRole('menuitem', { name: 'Freeze' }).click();
 
     expect((await savedView(page)).frozenColumnCount).toBe(2);
     await expect(header(page, 'p-notes')).toHaveCSS('position', 'sticky');
@@ -430,7 +430,7 @@ test.describe('columns', () => {
     await page.mouse.down();
     await page.mouse.up();
 
-    await expect(page.getByRole('menuitem', { name: 'Freeze up to column' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Freeze' })).toBeVisible();
     await expect(shownHint).toHaveCount(0);
     // The pointer stays on the header past the hint delay: the hint must not come back over the menu.
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1000)));

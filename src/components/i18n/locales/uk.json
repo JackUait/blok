@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Фільтрувати",
   "tools.database.tableSort": "Сортувати",
   "tools.database.tableGroup": "Групувати",
-  "tools.database.tableFreeze": "Закріпити до колонки",
+  "tools.database.tableFreeze": "Закріпити",
   "tools.database.tableUnfreeze": "Відкріпити колонки",
   "tools.database.tableHide": "Сховати",
   "tools.database.tableWrap": "Переносити вміст",

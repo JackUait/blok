@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Tapis",
   "tools.database.tableSort": "Isih",
   "tools.database.tableGroup": "Kumpulkan",
-  "tools.database.tableFreeze": "Bekukan hingga lajur ini",
+  "tools.database.tableFreeze": "Bekukan",
   "tools.database.tableUnfreeze": "Nyahbeku lajur",
   "tools.database.tableHide": "Sembunyikan",
   "tools.database.tableWrap": "Balut kandungan",

@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrera",
   "tools.database.tableSort": "Sortera",
   "tools.database.tableGroup": "Gruppera",
-  "tools.database.tableFreeze": "Lås fram till den här kolumnen",
+  "tools.database.tableFreeze": "Lås",
   "tools.database.tableUnfreeze": "Lås upp kolumner",
   "tools.database.tableHide": "Dölj",
   "tools.database.tableWrap": "Radbryt innehåll",

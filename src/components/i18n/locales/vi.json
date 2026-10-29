@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Lọc",
   "tools.database.tableSort": "Sắp xếp",
   "tools.database.tableGroup": "Nhóm",
-  "tools.database.tableFreeze": "Cố định đến cột này",
+  "tools.database.tableFreeze": "Cố định",
   "tools.database.tableUnfreeze": "Bỏ cố định cột",
   "tools.database.tableHide": "Ẩn",
   "tools.database.tableWrap": "Ngắt dòng nội dung",

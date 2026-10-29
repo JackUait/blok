@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filter",
   "tools.database.tableSort": "Sort",
   "tools.database.tableGroup": "Group",
-  "tools.database.tableFreeze": "Freeze up to column",
+  "tools.database.tableFreeze": "Freeze",
   "tools.database.tableUnfreeze": "Unfreeze columns",
   "tools.database.tableHide": "Hide",
   "tools.database.tableWrap": "Wrap content",

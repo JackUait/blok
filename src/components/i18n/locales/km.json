@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "ត្រង",
   "tools.database.tableSort": "តម្រៀប",
   "tools.database.tableGroup": "ដាក់ជាក្រុម",
-  "tools.database.tableFreeze": "បង្កកដល់ជួរឈរនេះ",
+  "tools.database.tableFreeze": "បង្កក",
   "tools.database.tableUnfreeze": "ឈប់បង្កកជួរឈរ",
   "tools.database.tableHide": "លាក់",
   "tools.database.tableWrap": "រុំខ្លឹមសារ",

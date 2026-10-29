@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Suodata",
   "tools.database.tableSort": "Lajittele",
   "tools.database.tableGroup": "Ryhmittele",
-  "tools.database.tableFreeze": "Lukitse tähän sarakkeeseen asti",
+  "tools.database.tableFreeze": "Lukitse",
   "tools.database.tableUnfreeze": "Vapauta sarakkeet",
   "tools.database.tableHide": "Piilota",
   "tools.database.tableWrap": "Rivitä sisältö",

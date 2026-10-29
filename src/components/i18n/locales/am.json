@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "አጣራ",
   "tools.database.tableSort": "ደርድር",
   "tools.database.tableGroup": "በቡድን አደራጅ",
-  "tools.database.tableFreeze": "እስከዚህ አምድ ድረስ እሰር",
+  "tools.database.tableFreeze": "እሰር",
   "tools.database.tableUnfreeze": "አምዶችን ፍታ",
   "tools.database.tableHide": "ደብቅ",
   "tools.database.tableWrap": "ይዘትን ጠቅልል",

@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "ފިލްޓަރުކުރޭ",
   "tools.database.tableSort": "ތަރުތީބުކުރޭ",
   "tools.database.tableGroup": "ގްރޫޕްކުރޭ",
-  "tools.database.tableFreeze": "މި ކޮލަމާހަމައަށް ފްރީޒްކުރޭ",
+  "tools.database.tableFreeze": "ފްރީޒްކުރޭ",
   "tools.database.tableUnfreeze": "ކޮލަމްތައް އަންފްރީޒްކުރޭ",
   "tools.database.tableHide": "ފޮރުވާ",
   "tools.database.tableWrap": "ކޮންޓެންޓް ލަނބާ",

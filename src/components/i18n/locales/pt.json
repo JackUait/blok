@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrar",
   "tools.database.tableSort": "Classificar",
   "tools.database.tableGroup": "Agrupar",
-  "tools.database.tableFreeze": "Congelar até esta coluna",
+  "tools.database.tableFreeze": "Congelar",
   "tools.database.tableUnfreeze": "Descongelar colunas",
   "tools.database.tableHide": "Ocultar",
   "tools.database.tableWrap": "Quebrar conteúdo",

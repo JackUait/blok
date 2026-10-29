@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrer",
   "tools.database.tableSort": "Sorter",
   "tools.database.tableGroup": "Grupper",
-  "tools.database.tableFreeze": "Frys til og med denne kolonnen",
+  "tools.database.tableFreeze": "Frys",
   "tools.database.tableUnfreeze": "Frigi kolonner",
   "tools.database.tableHide": "Skjul",
   "tools.database.tableWrap": "Bryt innhold",

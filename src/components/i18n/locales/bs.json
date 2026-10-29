@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtriraj",
   "tools.database.tableSort": "Sortiraj",
   "tools.database.tableGroup": "Grupiši",
-  "tools.database.tableFreeze": "Zamrzni do kolone",
+  "tools.database.tableFreeze": "Zamrzni",
   "tools.database.tableUnfreeze": "Odmrzni kolone",
   "tools.database.tableHide": "Sakrij",
   "tools.database.tableWrap": "Prelomi sadržaj",

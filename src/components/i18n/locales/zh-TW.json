@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "篩選",
   "tools.database.tableSort": "排序",
   "tools.database.tableGroup": "分組",
-  "tools.database.tableFreeze": "凍結至此欄",
+  "tools.database.tableFreeze": "凍結",
   "tools.database.tableUnfreeze": "取消凍結欄",
   "tools.database.tableHide": "隱藏",
   "tools.database.tableWrap": "內容自動換行",

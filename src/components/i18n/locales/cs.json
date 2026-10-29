@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrovat",
   "tools.database.tableSort": "Seřadit",
   "tools.database.tableGroup": "Seskupit",
-  "tools.database.tableFreeze": "Ukotvit po sloupec",
+  "tools.database.tableFreeze": "Ukotvit",
   "tools.database.tableUnfreeze": "Uvolnit sloupce",
   "tools.database.tableHide": "Skrýt",
   "tools.database.tableWrap": "Zalamovat obsah",

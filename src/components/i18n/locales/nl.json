@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filteren",
   "tools.database.tableSort": "Sorteren",
   "tools.database.tableGroup": "Groeperen",
-  "tools.database.tableFreeze": "Blokkeren tot deze kolom",
+  "tools.database.tableFreeze": "Blokkeren",
   "tools.database.tableUnfreeze": "Blokkering kolommen opheffen",
   "tools.database.tableHide": "Verbergen",
   "tools.database.tableWrap": "Inhoud laten teruglopen",

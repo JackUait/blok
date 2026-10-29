@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "فلٹر کریں",
   "tools.database.tableSort": "ترتیب دیں",
   "tools.database.tableGroup": "گروپ کریں",
-  "tools.database.tableFreeze": "اس کالم تک منجمد کریں",
+  "tools.database.tableFreeze": "منجمد کریں",
   "tools.database.tableUnfreeze": "کالمز غیر منجمد کریں",
   "tools.database.tableHide": "چھپائیں",
   "tools.database.tableWrap": "مواد لپیٹیں",

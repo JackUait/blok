@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Φιλτράρισμα",
   "tools.database.tableSort": "Ταξινόμηση",
   "tools.database.tableGroup": "Ομαδοποίηση",
-  "tools.database.tableFreeze": "Πάγωμα έως τη στήλη",
+  "tools.database.tableFreeze": "Πάγωμα",
   "tools.database.tableUnfreeze": "Ξεπάγωμα στηλών",
   "tools.database.tableHide": "Απόκρυψη",
   "tools.database.tableWrap": "Αναδίπλωση περιεχομένου",

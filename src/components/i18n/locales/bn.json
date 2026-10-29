@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "ফিল্টার করুন",
   "tools.database.tableSort": "সাজান",
   "tools.database.tableGroup": "গোষ্ঠীবদ্ধ করুন",
-  "tools.database.tableFreeze": "এই কলাম পর্যন্ত ফ্রিজ করুন",
+  "tools.database.tableFreeze": "ফ্রিজ করুন",
   "tools.database.tableUnfreeze": "কলাম আনফ্রিজ করুন",
   "tools.database.tableHide": "লুকান",
   "tools.database.tableWrap": "বিষয়বস্তু মোড়ান",

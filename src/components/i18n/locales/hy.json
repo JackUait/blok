@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Ֆիլտրել",
   "tools.database.tableSort": "Տեսակավորել",
   "tools.database.tableGroup": "Խմբավորել",
-  "tools.database.tableFreeze": "Սառեցնել մինչև այս սյունակը",
+  "tools.database.tableFreeze": "Սառեցնել",
   "tools.database.tableUnfreeze": "Ապասառեցնել սյունակները",
   "tools.database.tableHide": "Թաքցնել",
   "tools.database.tableWrap": "Տողադարձել բովանդակությունը",

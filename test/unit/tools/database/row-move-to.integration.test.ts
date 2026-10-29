@@ -6280,7 +6280,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
     const blocks = dashboardNativeHeaderDoc(sourceLayout);
     const current = await make(blocks);
     const sourceBefore = (await current.save()).blocks.find((block) => block.id === 'db2')?.data;
-    await dashboardNativeHeaderAction('Freeze up to column');
+    await dashboardNativeHeaderAction('Freeze');
     const output = await editor?.save();
     const owner = output?.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
 

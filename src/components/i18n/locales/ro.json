@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrează",
   "tools.database.tableSort": "Sortează",
   "tools.database.tableGroup": "Grupează",
-  "tools.database.tableFreeze": "Îngheață până la coloană",
+  "tools.database.tableFreeze": "Îngheață",
   "tools.database.tableUnfreeze": "Dezgheață coloanele",
   "tools.database.tableHide": "Ascunde",
   "tools.database.tableWrap": "Încadrează conținutul",

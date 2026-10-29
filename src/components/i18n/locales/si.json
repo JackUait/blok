@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "පෙරන්න",
   "tools.database.tableSort": "වර්ග කරන්න",
   "tools.database.tableGroup": "සමූහගත කරන්න",
-  "tools.database.tableFreeze": "මෙම තීරුව දක්වා කැටි කරන්න",
+  "tools.database.tableFreeze": "කැටි කරන්න",
   "tools.database.tableUnfreeze": "තීරු කැටි කිරීම ඉවත් කරන්න",
   "tools.database.tableHide": "සඟවන්න",
   "tools.database.tableWrap": "අන්තර්ගතය එතීම",

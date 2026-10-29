@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "סנן",
   "tools.database.tableSort": "מיין",
   "tools.database.tableGroup": "קבץ",
-  "tools.database.tableFreeze": "הקפא עד עמודה זו",
+  "tools.database.tableFreeze": "הקפא",
   "tools.database.tableUnfreeze": "בטל הקפאת עמודות",
   "tools.database.tableHide": "הסתר",
   "tools.database.tableWrap": "גלישת תוכן",

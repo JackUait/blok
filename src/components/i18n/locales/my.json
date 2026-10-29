@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "စစ်ထုတ်ရန်",
   "tools.database.tableSort": "စီရန်",
   "tools.database.tableGroup": "အုပ်စုဖွဲ့ရန်",
-  "tools.database.tableFreeze": "ဤကော်လံအထိ ပုံသေထားရန်",
+  "tools.database.tableFreeze": "ပုံသေထားရန်",
   "tools.database.tableUnfreeze": "ကော်လံ ပုံသေထားမှု ဖြုတ်ရန်",
   "tools.database.tableHide": "ဖျောက်ရန်",
   "tools.database.tableWrap": "အကြောင်းအရာ စာကြောင်းချိုးရန်",

@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Филтрирай",
   "tools.database.tableSort": "Сортирай",
   "tools.database.tableGroup": "Групирай",
-  "tools.database.tableFreeze": "Фиксирай до колоната",
+  "tools.database.tableFreeze": "Фиксирай",
   "tools.database.tableUnfreeze": "Освободи колоните",
   "tools.database.tableHide": "Скрий",
   "tools.database.tableWrap": "Пренасяй съдържанието",

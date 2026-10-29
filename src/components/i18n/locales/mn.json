@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Шүүх",
   "tools.database.tableSort": "Эрэмбэлэх",
   "tools.database.tableGroup": "Бүлэглэх",
-  "tools.database.tableFreeze": "Энэ багана хүртэл бэхлэх",
+  "tools.database.tableFreeze": "Бэхлэх",
   "tools.database.tableUnfreeze": "Баганын бэхлэлтийг цуцлах",
   "tools.database.tableHide": "Нуух",
   "tools.database.tableWrap": "Агуулгын мөр шилжүүлэх",

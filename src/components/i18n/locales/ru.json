@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Фильтровать",
   "tools.database.tableSort": "Сортировать",
   "tools.database.tableGroup": "Группировать",
-  "tools.database.tableFreeze": "Закрепить до столбца",
+  "tools.database.tableFreeze": "Закрепить",
   "tools.database.tableUnfreeze": "Открепить столбцы",
   "tools.database.tableHide": "Скрыть",
   "tools.database.tableWrap": "Переносить содержимое",

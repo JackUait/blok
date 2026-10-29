@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "გაფილტვრა",
   "tools.database.tableSort": "დალაგება",
   "tools.database.tableGroup": "დაჯგუფება",
-  "tools.database.tableFreeze": "ამ სვეტამდე ჩამაგრება",
+  "tools.database.tableFreeze": "ჩამაგრება",
   "tools.database.tableUnfreeze": "სვეტების ჩამაგრების მოხსნა",
   "tools.database.tableHide": "დამალვა",
   "tools.database.tableWrap": "შიგთავსის გადატანა",

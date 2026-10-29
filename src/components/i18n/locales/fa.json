@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "فیلتر",
   "tools.database.tableSort": "مرتب‌سازی",
   "tools.database.tableGroup": "گروه‌بندی",
-  "tools.database.tableFreeze": "ثابت کردن تا این ستون",
+  "tools.database.tableFreeze": "ثابت کردن",
   "tools.database.tableUnfreeze": "لغو ثابت کردن ستون‌ها",
   "tools.database.tableHide": "پنهان کردن",
   "tools.database.tableWrap": "شکستن محتوا",

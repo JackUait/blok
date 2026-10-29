@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Szűrés",
   "tools.database.tableSort": "Rendezés",
   "tools.database.tableGroup": "Csoportosítás",
-  "tools.database.tableFreeze": "Rögzítés eddig az oszlopig",
+  "tools.database.tableFreeze": "Rögzítés",
   "tools.database.tableUnfreeze": "Oszlopok rögzítésének feloldása",
   "tools.database.tableHide": "Elrejtés",
   "tools.database.tableWrap": "Tartalom tördelése",

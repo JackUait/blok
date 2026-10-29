@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "فلټر کړئ",
   "tools.database.tableSort": "ترتیب کړئ",
   "tools.database.tableGroup": "ګروپ کړئ",
-  "tools.database.tableFreeze": "تر دې کالم پورې ثابت کړئ",
+  "tools.database.tableFreeze": "ثابت کړئ",
   "tools.database.tableUnfreeze": "د کالمونو ثابتول لغوه کړئ",
   "tools.database.tableHide": "پټ کړئ",
   "tools.database.tableWrap": "منځپانګه ونغاړئ",

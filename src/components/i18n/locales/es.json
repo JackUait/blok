@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrar",
   "tools.database.tableSort": "Ordenar",
   "tools.database.tableGroup": "Agrupar",
-  "tools.database.tableFreeze": "Inmovilizar hasta esta columna",
+  "tools.database.tableFreeze": "Inmovilizar",
   "tools.database.tableUnfreeze": "Movilizar columnas",
   "tools.database.tableHide": "Ocultar",
   "tools.database.tableWrap": "Ajustar contenido",

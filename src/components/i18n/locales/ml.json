@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "ഫിൽട്ടർ ചെയ്യുക",
   "tools.database.tableSort": "അടുക്കുക",
   "tools.database.tableGroup": "ഗ്രൂപ്പ് ചെയ്യുക",
-  "tools.database.tableFreeze": "ഈ കോളം വരെ ഫ്രീസ് ചെയ്യുക",
+  "tools.database.tableFreeze": "ഫ്രീസ് ചെയ്യുക",
   "tools.database.tableUnfreeze": "കോളങ്ങൾ അൺഫ്രീസ് ചെയ്യുക",
   "tools.database.tableHide": "മറയ്ക്കുക",
   "tools.database.tableWrap": "ഉള്ളടക്കം പൊതിയുക",

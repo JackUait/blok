@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrēt",
   "tools.database.tableSort": "Kārtot",
   "tools.database.tableGroup": "Grupēt",
-  "tools.database.tableFreeze": "Iesaldēt līdz šai kolonnai",
+  "tools.database.tableFreeze": "Iesaldēt",
   "tools.database.tableUnfreeze": "Atsaldēt kolonnas",
   "tools.database.tableHide": "Slēpt",
   "tools.database.tableWrap": "Aplauzt saturu",

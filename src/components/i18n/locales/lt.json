@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtruoti",
   "tools.database.tableSort": "Rikiuoti",
   "tools.database.tableGroup": "Grupuoti",
-  "tools.database.tableFreeze": "Užfiksuoti iki šio stulpelio",
+  "tools.database.tableFreeze": "Užfiksuoti",
   "tools.database.tableUnfreeze": "Atšaukti stulpelių fiksavimą",
   "tools.database.tableHide": "Slėpti",
   "tools.database.tableWrap": "Laužyti turinį",

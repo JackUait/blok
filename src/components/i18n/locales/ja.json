@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "フィルター",
   "tools.database.tableSort": "並べ替え",
   "tools.database.tableGroup": "グループ化",
-  "tools.database.tableFreeze": "この列まで固定",
+  "tools.database.tableFreeze": "固定",
   "tools.database.tableUnfreeze": "列の固定を解除",
   "tools.database.tableHide": "非表示",
   "tools.database.tableWrap": "内容を折り返す",

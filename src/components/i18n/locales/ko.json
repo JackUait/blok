@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "필터",
   "tools.database.tableSort": "정렬",
   "tools.database.tableGroup": "그룹화",
-  "tools.database.tableFreeze": "이 열까지 고정",
+  "tools.database.tableFreeze": "고정",
   "tools.database.tableUnfreeze": "열 고정 해제",
   "tools.database.tableHide": "숨기기",
   "tools.database.tableWrap": "내용 줄 바꿈",

@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrovať",
   "tools.database.tableSort": "Zoradiť",
   "tools.database.tableGroup": "Zoskupiť",
-  "tools.database.tableFreeze": "Ukotviť po stĺpec",
+  "tools.database.tableFreeze": "Ukotviť",
   "tools.database.tableUnfreeze": "Uvoľniť stĺpce",
   "tools.database.tableHide": "Skryť",
   "tools.database.tableWrap": "Zalamovať obsah",

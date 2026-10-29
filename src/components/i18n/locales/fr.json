@@ -1057,7 +1057,7 @@
   "tools.database.tableFilter": "Filtrer",
   "tools.database.tableSort": "Trier",
   "tools.database.tableGroup": "Regrouper",
-  "tools.database.tableFreeze": "Figer jusqu’à cette colonne",
+  "tools.database.tableFreeze": "Figer",
   "tools.database.tableUnfreeze": "Libérer les colonnes",
   "tools.database.tableHide": "Masquer",
   "tools.database.tableWrap": "Renvoyer le contenu à la ligne",

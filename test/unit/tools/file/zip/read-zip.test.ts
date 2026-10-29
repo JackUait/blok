@@ -477,6 +477,52 @@ describe('readZip — ZIP64 values', () => {
   });
 });
 
+describe('readZip — valid archives other tools write', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  const ENTRIES = [{ name: 'a.txt', data: utf8('hello') }, { name: 'b.txt', data: utf8('world'), method: 8 }];
+
+  it('reads ZIP64 records followed by a plain end record, as `zip` writes from stdin', async () => {
+    const archive = readZip(buildZip(ENTRIES, { zip64: {}, plainEnd: true }));
+
+    expect(await textOf(archive, 'a.txt')).toBe('hello');
+    expect(await textOf(archive, 'b.txt')).toBe('world');
+  });
+
+  it('reads an archive whose comment holds an end-of-central-directory signature', async () => {
+    const comment = utf8('see PK\x05\x06 here');
+    const archive = readZip(buildZip(ENTRIES, { comment }));
+
+    expect(await textOf(archive, 'b.txt')).toBe('world');
+  });
+
+  it('reads a ZIP64 archive whose comment holds a ZIP64 locator signature', async () => {
+    const comment = utf8('PK\x06\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00');
+    const archive = readZip(buildZip(ENTRIES, { zip64: {}, comment }));
+
+    expect(await textOf(archive, 'b.txt')).toBe('world');
+  });
+
+  it('reads an end record that counts 0xFFFF entries without ZIP64 records', async () => {
+    const archive = readZip(buildZip(ENTRIES, { endRecords: 0xffff }));
+
+    expect(archive.entries.map((e) => e.name)).toEqual(['a.txt', 'b.txt']);
+  });
+
+  it('keeps a Unix socket or block-device entry as a file, not a dir', async () => {
+    const unix = (mode: number) => ({ name: 'a.txt', data: utf8('x'), versionMadeBy: 3 << 8, externalAttr: (mode << 16) >>> 0 });
+
+    for (const mode of [0o140644, 0o060644]) {
+      const archive = readZip(buildZip([unix(mode)]));
+
+      expect(archive.entries.map((e) => [e.name, e.dir])).toEqual([['a.txt', false]]);
+      expect(await textOf(archive, 'a.txt')).toBe('x');
+    }
+    expect(readZip(buildZip([{ name: 'd', versionMadeBy: 3 << 8, externalAttr: (0o040755 << 16) >>> 0 }])).entries[0]?.dir).toBe(true);
+  });
+});
+
 describe('readZip — limits are checked before any inflate', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });

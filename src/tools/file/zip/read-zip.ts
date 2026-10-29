@@ -83,16 +83,23 @@ class Reader {
     return this.bytes.subarray(start, start + length);
   }
 
-  /** Index (relative to zero) of the last occurrence of a signature, or -1. */
-  public lastIndexOf(signature: number): number {
+  /** Index (relative to zero) of the last occurrence of a signature before `from`, or -1. */
+  public lastIndexOf(signature: number, from = this.bytes.length - 4): number {
     // eslint-disable-next-line no-restricted-syntax -- backwards byte scan
-    for (let i = this.bytes.length - 4; i >= 0; i--) {
+    for (let i = from; i >= 0; i--) {
       if (this.view.getUint32(i, true) === signature) {
         return i - this.zero;
       }
     }
 
     return -1;
+  }
+
+  /** Whether `signature` sits at `index`. Out-of-range reads as no. */
+  public has(signature: number, index: number): boolean {
+    const start = this.zero + index;
+
+    return index >= 0 && start + 4 <= this.bytes.length && this.view.getUint32(start, true) === signature;
   }
 
   private at(index: number, length: number): number {
@@ -146,12 +153,8 @@ interface CentralDirectory {
   expectedEnd: number;
 }
 
-function readZip64End(reader: Reader): CentralDirectory {
-  const locator = reader.lastIndexOf(SIG_ZIP64_LOCATOR);
-
-  if (locator < 0) {
-    throw new ZipError('Corrupted zip: no ZIP64 end of central directory locator');
-  }
+/** `locator` is the ZIP64 locator, which APPNOTE places right before the end record. */
+function readZip64End(reader: Reader, locator: number): CentralDirectory {
   if (reader.u32(locator + 16) > 1) {
     throw new ZipError('Multi-volume zips are not supported');
   }
@@ -167,9 +170,29 @@ function readZip64End(reader: Reader): CentralDirectory {
   return { records: reader.u64(end64 + 32), offset, expectedEnd: offset + size + 20 + 12 + reader.u64(end64 + 4) };
 }
 
+/**
+ * The end record. The last signature usually is it, but an archive comment can hold the
+ * same 4 bytes, so prefer one whose comment ends exactly at the end of the file.
+ */
+function findEnd(reader: Reader): number {
+  const last = reader.lastIndexOf(SIG_END);
+  // eslint-disable-next-line no-restricted-syntax -- backwards scan over candidates
+  let end = last;
+
+  // A comment is at most 65535 bytes, so no end record starts further back than that.
+  while (end >= 0 && reader.bytes.length - end - 22 <= MAX_16) {
+    if (end + 22 <= reader.bytes.length && end + 22 + reader.u16(end + 20) === reader.bytes.length) {
+      return end;
+    }
+    end = end > 0 ? reader.lastIndexOf(SIG_END, end - 1) : -1;
+  }
+
+  return last;
+}
+
 /** Finds the central directory. Offsets skip any bytes prepended to the archive (self-extractors, signed packages). */
 function readEnd(unshifted: Reader): { reader: Reader; records: number; offset: number } {
-  const end = unshifted.lastIndexOf(SIG_END);
+  const end = findEnd(unshifted);
 
   if (end < 0) {
     const looksLikeZip = unshifted.bytes.length >= 4 && unshifted.u32(0) === SIG_LOCAL;
@@ -181,9 +204,11 @@ function readEnd(unshifted: Reader): { reader: Reader; records: number; offset: 
 
   // A cut-off archive comment means a truncated file.
   unshifted.slice(end + 22, unshifted.u16(end + 20));
-  const isZip64 = [4, 6, 8, 10].some((at) => unshifted.u16(end + at) === MAX_16) || size === MAX_32 || offset === MAX_32;
-  const directory = isZip64
-    ? readZip64End(unshifted)
+  // Some writers add ZIP64 records even when the end record holds real values (`zip` reading stdin).
+  // Without the locator, 0xFFFF may be a real count (65535 entries), so plain values are used.
+  const locator = end - 20;
+  const directory = unshifted.has(SIG_ZIP64_LOCATOR, locator)
+    ? readZip64End(unshifted, locator)
     : { records: unshifted.u16(end + 10), offset, expectedEnd: offset + size };
   const extraBytes = end - directory.expectedEnd;
 
@@ -306,7 +331,7 @@ export function readZip(data: ArrayBuffer | Uint8Array, limits: ZipLimits = DEFA
     if (record.method !== STORED && record.method !== DEFLATED) {
       throw new ZipError(`Corrupted zip: unknown compression method ${record.method}`);
     }
-    const unixDir = record.madeBy === MADE_BY_UNIX && ((record.externalAttr >>> 16) & 0x4000) !== 0;
+    const unixDir = record.madeBy === MADE_BY_UNIX && ((record.externalAttr >>> 16) & 0xf000) === 0x4000;
     const dir = (record.externalAttr & 0x10) !== 0 || unixDir || rawName.endsWith('/');
     const resolved = resolveName(rawName);
     const name = dir && !resolved.endsWith('/') ? `${resolved}/` : resolved;

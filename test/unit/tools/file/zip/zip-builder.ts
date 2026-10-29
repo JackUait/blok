@@ -23,6 +23,11 @@ export interface BuildOptions {
   append?: Uint8Array;
   /** Writes ZIP64 end records; fields left out take their real values. */
   zip64?: { cdOffset?: bigint; cdSize?: bigint; records?: bigint };
+  /** With zip64: the end record keeps real values instead of 0xFFFF markers, as `zip` writes when reading stdin. */
+  plainEnd?: boolean;
+  /** Record count written in the end record. */
+  endRecords?: number;
+  comment?: Uint8Array;
 }
 
 const bytesOf = (value: string | Uint8Array): Uint8Array =>
@@ -158,14 +163,18 @@ export function buildZip(entries: BuildEntry[], options: BuildOptions = {}): Uin
     out.u32(1);
   }
 
+  const marked = zip64 !== undefined && options.plainEnd !== true;
+  const comment = options.comment ?? new Uint8Array(0);
+
   out.u32(0x06054b50);
   out.u16(0);
   out.u16(0);
-  out.u16(zip64 ? 0xffff : entries.length);
-  out.u16(zip64 ? 0xffff : entries.length);
-  out.u32(zip64 ? 0xffffffff : central.length);
-  out.u32(zip64 ? 0xffffffff : cdOffset);
-  out.u16(0);
+  out.u16(options.endRecords ?? (marked ? 0xffff : entries.length));
+  out.u16(options.endRecords ?? (marked ? 0xffff : entries.length));
+  out.u32(marked ? 0xffffffff : central.length);
+  out.u32(marked ? 0xffffffff : cdOffset);
+  out.u16(comment.length);
+  out.bytes(comment);
 
   if (options.append) {
     out.bytes(options.append);

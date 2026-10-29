@@ -16,6 +16,14 @@ export type DefinitionMap = ReadonlyMap<string, Definition>;
 export const isBareBreak = (html: string): boolean => /^<br\s*\/?>$/i.test(html);
 
 /**
+ * An optional text field, read as '' when missing. The parser always fills
+ * `alt` and math values, but a toolMap `children` hook may hand `convert()`
+ * nodes it built itself, where mdast leaves them optional.
+ * @param value - the field as found on the node
+ */
+export const orEmpty = (value: string | undefined): string => value ?? '';
+
+/**
  * Escape HTML special characters to prevent XSS.
  */
 function escapeHtml(text: string): string {
@@ -83,11 +91,11 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
       return '<br>';
 
     case 'image':
-      return imageHtml(node.url, node.alt);
+      return imageHtml(node.url, orEmpty(node.alt));
 
     case 'imageReference': {
       const definition = definitions.get(node.identifier);
-      const { alt } = node;
+      const alt = orEmpty(node.alt);
 
       if (definition === undefined) {
         return referenceFallback(node.label ?? node.identifier, escapeHtml(alt), true);
@@ -106,7 +114,7 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
 
     case 'inlineMath': {
       // The equation sanitizer rewrites the span's text to its source, so they must match.
-      const latex = escapeHtml(node.value);
+      const latex = escapeHtml(orEmpty(node.value));
 
       return `<span data-latex="${latex}">${latex}</span>`;
     }

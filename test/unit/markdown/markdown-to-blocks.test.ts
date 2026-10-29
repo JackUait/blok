@@ -150,6 +150,36 @@ $$e^{i\\pi} + 1 = 0$$`;
   });
 
   describe('images', () => {
+    // toolMap children may hand convert() nodes the caller built, where mdast
+    // leaves alt and an inline math value optional.
+    it.each(['html', 'segments'] as const)('keeps a block whose caller-built image has no alt (%s)', async (mode) => {
+      const nodes = [{ type: 'paragraph', children: [
+        { type: 'text', value: 'see ' },
+        { type: 'image', url: 'https://x.test/a.png' },
+        { type: 'inlineMath', value: undefined },
+      ] }];
+      const config: MarkdownImportConfig = {
+        toolMap: {
+          blockquote: {
+            tool: 'callout',
+            data: () => ({}),
+            children: (_node, convert) => convert(nodes as unknown as Parameters<typeof convert>[0]),
+          },
+        },
+      };
+      const read = mode === 'html' ? markdownToBlocks : markdownToSegmentBlocks;
+      const blocks = await read('> q', config);
+
+      const image = '<img src="https://x.test/a.png" alt="">';
+      const text = mode === 'html' ? `see ${image}` : [{ text: 'see ' }, { embed: { html: image } }];
+
+      expect(blocks.map((block) => [block.type, block.data])).toStrictEqual([
+        ['callout', {}],
+        ['paragraph', { text }],
+        ['code', { code: '', language: 'latex' }],
+      ]);
+    });
+
     it('imports a standalone image line as an image block', async () => {
       const blocks = await markdownToBlocks('![a picture](https://img.com/pic.png)');
 

@@ -30,6 +30,8 @@
   --blok-database-formula-token-bg: rgb(224, 222, 218);
   /* `32-formula-typed.png` (pixels, x 999): the help example border. Dark is unmeasured: the dark line. */
   --blok-database-formula-example-border: rgb(241, 240, 238);
+  /* `32-formula-typed.png` (pixels): the ↩ on the highlighted row, darkest ink at (964,517). Dark is unmeasured: the dark tertiary ink. */
+  --blok-database-formula-return-ink: rgb(141, 139, 134);
   /* `32-formula-typed.png` (pixels, glyph cores; antialiasing makes them a lower bound on depth):
      number (876,293), operator (863,290), function name (1017,602), paren (1062,596). */
   --blok-database-formula-number: rgb(140, 26, 84);
@@ -420,6 +422,7 @@
     --blok-database-page-divider: rgba(255, 255, 255, 0.094);
     --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
     --blok-database-formula-example-border: #333331;
+    --blok-database-formula-return-ink: var(--blok-database-ink-tertiary);
     /* Dark is unmeasured: the plum lightened on its hue to 3:1 on rgb(37,37,37). The others already pass there. */
     --blok-database-formula-number: rgb(205, 38, 123);
     /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
@@ -748,6 +751,7 @@
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
   --blok-database-formula-example-border: #333331;
+  --blok-database-formula-return-ink: var(--blok-database-ink-tertiary);
   /* Dark is unmeasured: the plum lightened on its hue to 3:1 on rgb(37,37,37). The others already pass there. */
   --blok-database-formula-number: rgb(205, 38, 123);
   /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
@@ -14142,6 +14146,27 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-formula-reference-item][aria-selected="true"] {
   background-color: var(--blok-database-hover-bg);
+}
+
+/* `32-formula-typed.png` (pixels): the ↩ ink is 12x8 (963-974, 513-520), 10px from the row's end, on the highlighted row only.
+   IconReturn's ink sits 5px inside its box, so the box overhangs the row padding by 3px. */
+[data-blok-database-formula-reference-return] {
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-inline: auto calc(-1 * var(--blok-space-0-75));
+  color: var(--blok-database-formula-return-ink);
+  visibility: hidden;
+}
+
+[data-blok-database-formula-reference-item][aria-selected="true"] > [data-blok-database-formula-reference-return] {
+  visibility: visible;
+}
+
+[data-blok-database-formula-reference-return] svg {
+  width: 100%;
+  height: 100%;
 }
 
 [data-blok-database-formula-reference-icon] {

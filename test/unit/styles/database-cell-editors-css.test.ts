@@ -104,6 +104,15 @@ describe('cell editor CSS', () => {
       expect(database).toContain('--blok-database-formula-punctuation: rgb(158, 158, 158);');
     });
 
+    // `32-formula-typed.png` (pixels): the ↩ ink is 12x8 at x 963-974, darkest rgb(141,139,134) (964,517), only on the highlighted row.
+    it('shows the return glyph at the end of the highlighted row only', () => {
+      expect(declared('[data-blok-database-formula-reference-return]', 'visibility')).toEqual(['hidden']);
+      expect(declared('[data-blok-database-formula-reference-return]', 'margin-inline')).toEqual(['auto calc(-1 * var(--blok-space-0-75))']);
+      expect(declared('[data-blok-database-formula-reference-item][aria-selected="true"] > [data-blok-database-formula-reference-return]', 'visibility')).toEqual(['visible']);
+      expect(declared('[data-blok-database-formula-reference-return]', 'color')).toEqual(['var(--blok-database-formula-return-ink)']);
+      expect(database).toContain('--blok-database-formula-return-ink: rgb(141, 139, 134);');
+    });
+
     it('highlights the active row gray, never blue', () => {
       expect(declared('[data-blok-database-formula-reference-item][aria-selected="true"]', 'background-color'))
         .toEqual(['var(--blok-database-hover-bg)']);

@@ -592,6 +592,17 @@ describe('formula editor', () => {
     expect(glyph('>=')).toBe('boolean');
   });
 
+  // `32-formula-typed.png`, `30-formula-empty.png`: a ↩ at the right end of the highlighted row.
+  it('ends each row with a return glyph that only the highlighted row shows', () => {
+    open();
+    type('');
+    const rows = [...document.querySelectorAll('[data-blok-database-formula-reference-item]')];
+
+    expect(rows.every((row) => row.lastElementChild?.hasAttribute('data-blok-database-formula-reference-return'))).toBe(true);
+    expect(rows[0].lastElementChild?.getAttribute('aria-hidden')).toBe('true');
+    expect(rows[0].lastElementChild?.querySelector('svg')).not.toBeNull();
+  });
+
   it('inserts an operator with a space on each side', () => {
     const options = open();
 

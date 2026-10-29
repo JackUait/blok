@@ -3998,6 +3998,7 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-formula-token-bg: rgb(224, 222, 218);
   --blok-database-formula-example-border: rgb(241, 240, 238);
+  --blok-database-formula-return-ink: rgb(141, 139, 134);
   --blok-database-formula-number: rgb(140, 26, 84);
   --blok-database-formula-operator: rgb(147, 112, 67);
   --blok-database-formula-function: rgb(207, 94, 113);
@@ -4291,6 +4292,7 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
   --blok-database-formula-example-border: #333331;
+  --blok-database-formula-return-ink: var(--blok-database-ink-tertiary);
   --blok-database-formula-number: rgb(205, 38, 123);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -4574,6 +4576,7 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
   --blok-database-formula-example-border: #333331;
+  --blok-database-formula-return-ink: var(--blok-database-ink-tertiary);
   --blok-database-formula-number: rgb(205, 38, 123);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -16626,6 +16629,25 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-formula-reference-item][aria-selected="true"] {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-formula-reference-return] {
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-inline: auto calc(-1 * var(--blok-space-0-75));
+  color: var(--blok-database-formula-return-ink);
+  visibility: hidden;
+}
+
+[data-blok-database-formula-reference-item][aria-selected="true"] > [data-blok-database-formula-reference-return] {
+  visibility: visible;
+}
+
+[data-blok-database-formula-reference-return] svg {
+  width: 100%;
+  height: 100%;
 }
 
 [data-blok-database-formula-reference-icon] {

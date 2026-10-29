@@ -1305,8 +1305,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PEEK_FIRST_ROW_BYTES = 220;
     // database.css: the Edit formula box stays inside a narrow window.
     const DATABASE_FORMULA_BOX_CAP_BYTES = 169;
-    // database.css: a Text cell is cut with no ellipsis (notion-spec-2 §21.1).
-    const DATABASE_TABLE_TEXT_CLIP_BYTES = 224;
+    // database.css: Text, Number, Date and URL cells are cut with no ellipsis (notion-spec-2 §21.1, §22.4).
+    const DATABASE_TABLE_TEXT_CLIP_BYTES = 326;
     // database.css: a board card's Button row pads 4px, as the gallery's (notion-spec-2 §21.7).
     const DATABASE_BOARD_BUTTON_ROW_BYTES = 103;
     // database.css: a board card's checkbox, 14x14 with its name beside it (notion-spec-2 §21.7).

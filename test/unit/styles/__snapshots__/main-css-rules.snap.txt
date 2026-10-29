@@ -11343,7 +11343,7 @@ textarea[data-blok-database-cell-input] {
   text-overflow: ellipsis;
 }
 
-[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"]) > [data-blok-database-cell] {
+[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"], [data-type="number"], [data-type="url"], [data-type="date"]) > [data-blok-database-cell] {
   text-overflow: clip;
 }
 

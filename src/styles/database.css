@@ -8394,8 +8394,8 @@ textarea[data-blok-database-cell-input] {
   text-overflow: ellipsis;
 }
 
-/* notion-spec-2 §21.1: Text is cut with no "…". Comes after the block rule above. */
-[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"]) > [data-blok-database-cell] {
+/* notion-spec-2 §21.1, §22.4: only the Title ends in "…"; the rest are cut at the edge. Comes after the block rule above. */
+[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"], [data-type="number"], [data-type="url"], [data-type="date"]) > [data-blok-database-cell] {
   text-overflow: clip;
 }
 

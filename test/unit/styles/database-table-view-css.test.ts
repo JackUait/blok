@@ -67,15 +67,15 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-number-ring-arc]')).toMatch(/stroke:\s*var\(--blok-database-number-ink\)/);
   });
 
-  it('cuts an unwrapped Text cell at its edge with no ellipsis (notion-spec-2 §21.1)', () => {
-    const text = '[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"]) > [data-blok-database-cell]';
-    const textAt = css.lastIndexOf(`${text} {`);
-    const blockAt = css.lastIndexOf('[data-type="date"]) > [data-blok-database-cell] {');
+  // notion-spec-2 §21.1, §22.4: in an unwrapped table only the Title ends in "…"; Text, Number, Date and URL are cut at the edge.
+  it('cuts an unwrapped Text, Number, Date and URL cell at its edge, and keeps the Title ellipsis', () => {
+    const clip = '[data-blok-database-table-cell]:is([data-type="text"], [data-type="richText"], [data-type="number"], [data-type="url"], [data-type="date"]) > [data-blok-database-cell]';
+    const block = '[data-blok-database-table-cell]:is([data-type="title"], [data-type="text"], [data-type="richText"], [data-type="number"], [data-type="url"], [data-type="date"]) > [data-blok-database-cell]';
 
-    expect(exactRule(text)).toMatch(/text-overflow:\s*clip/);
+    expect(exactRule(clip)).toMatch(/text-overflow:\s*clip/);
+    expect(exactRule(block)).toMatch(/text-overflow:\s*ellipsis/);
     // Same weight as the block rule that sets the ellipsis, so it comes after it.
-    expect(textAt).toBeGreaterThan(blockAt);
-    expect(blockAt).toBeGreaterThan(-1);
+    expect(css.lastIndexOf(`${clip} {`)).toBeGreaterThan(css.lastIndexOf(`${block} {`));
   });
 
   it('uses the measured Notion sizes: 36px header, 37px rows, 35px footer, 5px resize handle', () => {

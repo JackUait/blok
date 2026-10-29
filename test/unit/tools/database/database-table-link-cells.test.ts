@@ -458,7 +458,7 @@ describe('table hover box side and Place buttons', () => {
   const extraRows = (): DatabaseRow[] => [
     {
       ...rows()[0],
-      properties: { ...rows()[0].properties, 'p-due': '2026-10-28', 'p-place': { name: 'Eiffel Tower Ln', address: 'Paris, TN 38242, United States', lat: 36.3, lng: -88.3 } },
+      properties: { ...rows()[0].properties, 'p-due': '2026-10-28', 'p-place': { name: 'Eiffel Tower Ln', address: 'Paris, TN 38242, United States', lat: 36.3, lon: -88.3 } },
       computed: { 'p-rel': [{ id: 'r2' }], 'p-list': '7', 'p-names': 'Beta' },
     },
     rows()[1],

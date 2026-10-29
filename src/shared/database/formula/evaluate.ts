@@ -25,7 +25,9 @@ const ordered = (a: FormulaValue, b: FormulaValue): boolean => a !== null && b !
 
 const arithmetic = (op: string, a: number, b: number): number => {
   switch (op) {
+    case '+': return a + b;
     case '-': return a - b;
+    case '*': return a * b;
     case '/': return a / b;
     case '%': return a % b;
     default: return a ** b;
@@ -93,6 +95,13 @@ const argumentCost = (name: string, values: FormulaValue[]): number => {
   return read;
 };
 
+const zeroForEmpty = (op: '+' | '-' | '*' | '/', a: FormulaValue, b: FormulaValue): FormulaValue => {
+  const x = a ?? 0;
+  const y = b ?? 0;
+
+  return typeof x === 'number' && typeof y === 'number' ? num(arithmetic(op, x, y)) : null;
+};
+
 const evaluateBinary = (
   node: Extract<FormulaNode, { type: 'binary' }>,
   env: EvalEnv,
@@ -110,24 +119,19 @@ const evaluateBinary = (
     case '>=': return ordered(a, b) && compareValues(a, b) >= 0;
     case '<': return ordered(a, b) && compareValues(a, b) < 0;
     case '<=': return ordered(a, b) && compareValues(a, b) <= 0;
-    case '+': {
+    case '+':
       if (isText(a) || isText(b)) {
         const asText = (v: FormulaValue): FormulaText => (isText(v) ? v : formulaValueToText(v, env));
 
         return concatText(asText(a), asText(b));
       }
 
-      return typeof a === 'number' && typeof b === 'number' ? num(a + b) : null;
-    }
-    // notion-spec-2 §18.1: an empty side of `*` counts as 0. The other operators are unmeasured, so they keep empty.
-    case '*': {
-      const x = a ?? 0;
-      const y = b ?? 0;
-
-      return typeof x === 'number' && typeof y === 'number' ? num(x * y) : null;
-    }
+      return zeroForEmpty(node.op, a, b);
+    // notion-spec-2 §18.1, §22.5: an empty side of + - * / counts as 0. `%` and `^` are unmeasured, so they keep empty.
     case '-':
+    case '*':
     case '/':
+      return zeroForEmpty(node.op, a, b);
     case '%':
     case '^':
       return typeof a === 'number' && typeof b === 'number' ? num(arithmetic(node.op, a, b)) : null;

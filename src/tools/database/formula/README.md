@@ -81,8 +81,10 @@ Strings use double quotes; `\"`, `\\`, `\n`, `\t` are escapes, so `"\\d"` is the
 - `empty()` with no argument is the empty value. It fits either branch of `if()` (H-err, "Wrong return type").
 - `if()` and `ifs()` branches may differ in type. H-err: "Unlike formula properties in databases, formulas in automations expect a specific return type"; for `if(Date, Date.dateAdd(1, "day"), "")` "the return type is unknown". The result type is then Any, and the property shows, filters and calculates as text: left-aligned, the text filter conditions, only Count and Percent (research/35 §17). A number branch prints as plain text (`"12"`, no number format). The sort puts the numbers first, in number order, then the text (research/35 §17); a text branch that reads like a number sorts as one. The Goals Tracker template's "Days until due" (`if(dateBetween(...) > 0, dateBetween(...), "Overdue")`) is Notion's own example.
 - Conditions take any type. `false`, `0`, `""`, `[]` and empty are false (H-fxs `empty`: "0, "", and [] are considered empty"; `false` counting as empty is **unverified**).
-- A function given an empty argument returns empty, except `empty`, `format`, `equal`, `unequal`, `includes` (**unverified**). So `prop("Price") + 1` is empty when Price is empty (**unverified**).
-- `*` counts an empty side as 0: `prop("Number") * 2` is `0` on a row with no Number (notion-spec-2 §18.1). `+ - / % ^`, `multiply()` and a bare `prop("Number")` keep empty (**unverified**).
+- A function given an empty argument returns empty, except `empty`, `format`, `equal`, `unequal`, `includes` (**unverified**). So `round(prop("Price"))` is empty when Price is empty (**unverified**).
+- `+ - * /` count an empty side as 0. On a row with no Number, `prop("Number") + 1` is `1`, `- 1` is `-1`, `/ 2` is `0` and `* 2` is `0` (notion-spec-2 §18.1, §22.5). Both sides empty gives `0` (**unverified**).
+- A bare `prop("Number")` on that row stays empty: the cell is blank (notion-spec-2 §22.5).
+- `%`, `^` and the functions `add()`, `subtract()`, `multiply()`, `divide()` keep empty (**unverified**).
 - `"x" + empty` is `"x"`. `<`, `>` with an empty side are `false`. `sort` puts empties last (D8).
 
 ## Number formatting

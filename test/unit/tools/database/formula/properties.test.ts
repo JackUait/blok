@@ -88,15 +88,22 @@ describe('formula properties', () => {
   });
 
   describe('empty propagation', () => {
-    it('propagates an empty number through arithmetic', () => {
-      expect(run('prop("Price") + 1')).toBeNull();
+    it('propagates an empty number through a function', () => {
       expect(run('round(prop("Price"))')).toBeNull();
     });
 
-    // notion-spec-2 §18.1: `prop("Number") * 2` on a row with no Number shows "0". Only `*` was measured.
-    it('multiplies an empty number as 0', () => {
+    // notion-spec-2 §18.1, §22.5: inside + - * / an empty Number counts as 0.
+    it('counts an empty number as 0 in + - * /', () => {
+      expect(run('prop("Price") + 1')).toBe(1);
+      expect(run('prop("Price") - 1')).toBe(-1);
+      expect(run('prop("Price") / 2')).toBe(0);
       expect(run('prop("Price") * 2')).toBe(0);
       expect(run('2 * prop("Price")')).toBe(0);
+    });
+
+    // notion-spec-2 §22.5: a bare empty Number stays empty.
+    it('keeps a bare empty number empty', () => {
+      expect(run('prop("Price")')).toBeNull();
     });
 
     it('treats empty as empty, false and blank text', () => {

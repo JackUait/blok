@@ -157,11 +157,17 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-blank-cell]')).toContain('border-inline-end');
   });
 
-  it('sizes the file chip glyph to 20px in the chip ink (feel T23)', () => {
+  // feel T23, side-by-side-2 #13: Notion's 20px box draws a 12x15 glyph; the page glyph at 17.5px draws 12x16 with the same ink.
+  it('draws the file chip glyph at 17.5px, centred in a 20px box', () => {
     const icon = ruleBody('[data-blok-database-file-chip-icon]');
+    const svg = ruleBody('[data-blok-database-file-chip-icon] svg');
 
     expect(icon).toMatch(/flex:\s*none/);
-    expect(ruleBody('[data-blok-database-file-chip-icon] svg')).toMatch(/width:\s*20px/);
+    expect(icon).toMatch(/width:\s*20px/);
+    expect(icon).toMatch(/height:\s*20px/);
+    expect(icon).toMatch(/justify-content:\s*center/);
+    expect(svg).toMatch(/width:\s*17\.5px/);
+    expect(svg).toMatch(/height:\s*17\.5px/);
   });
 
   // notion-spec-2 §21.3, §22.6: the name starts at glyph + 24, a 4px gap, wherever a file chip shows.

@@ -6611,16 +6611,20 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   white-space: nowrap;
 }
 
-/* research/08:278: a 20px page glyph in the chip ink, as Notion's 20px box. */
+/* research/08:278: Notion's 20px box. Its glyph is 12x15 (side-by-side-2 #13); the page glyph at 17.5px draws 12x16 with the same ink. */
 [data-blok-database-file-chip-icon] {
   display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   color: var(--blok-database-glyph);
 }
 
 [data-blok-database-file-chip-icon] svg {
-  width: 20px;
-  height: 20px;
+  width: 17.5px;
+  height: 17.5px;
 }
 
 /* Property menu and editors. Layout unmeasured: Blok tokens. */

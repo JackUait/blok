@@ -6245,6 +6245,16 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect(owner?.activeViewId).toBe('dash');
   });
 
+  it.each(['table', 'list'] as const)('widget Unwrap shows at once while the source active view is %s', async (sourceLayout) => {
+    await make(dashboardNativeHeaderDoc(sourceLayout));
+    const notes = (): Element | null => dashboardWidget('foreign').querySelector('[data-row-id="q1"] [role="gridcell"][data-property-id="n2"]');
+
+    expect(notes()?.hasAttribute('data-wrap')).toBe(true);
+    await dashboardNativeHeaderAction('Unwrap content');
+
+    expect(notes()?.hasAttribute('data-wrap')).toBe(false);
+  });
+
   it.each(['table', 'list'] as const)('widget Freeze saves on its definition owner while the source active view is %s', async (sourceLayout) => {
     const blocks = dashboardNativeHeaderDoc(sourceLayout);
     const current = await make(blocks);

@@ -362,6 +362,15 @@ const ROW_CONTROL_SELECTOR = [
   'a[data-blok-database-cell-link]',
 ].join(', ');
 
+/** Column header rows that write the view. On a widget they close the menu, so the widget can redraw. */
+const WIDGET_CLOSING_HEADER_ITEMS: ReadonlySet<string> = new Set([
+  'database-header-hide',
+  'database-header-wrap',
+  'database-header-unwrap',
+  'database-header-freeze',
+  'database-header-unfreeze',
+]);
+
 /**
  * Insert-time hint from the "Linked view of data source" toolbox entry: show
  * the source picker. Never saved: a linked view left unpicked saves as an
@@ -11685,6 +11694,9 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     const viewItems = (hostTable?.headerItems(propertyId, anchor) ?? []).map((item): PopoverItemParams => {
+      // A widget holds its redraw while this menu is open, so these writes close it; onClose redraws.
+      if (context !== undefined && item.type === PopoverItemType.Default && WIDGET_CLOSING_HEADER_ITEMS.has(item.name ?? '')
+        && !('children' in item) && !('confirmation' in item)) return { ...item, closeOnActivate: true };
       if (context === undefined || item.type !== PopoverItemType.Default || item.name !== 'database-show-page-icon'
         || 'children' in item || 'confirmation' in item) return item;
 

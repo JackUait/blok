@@ -715,6 +715,12 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const propertiesEl = document.createElement('div');
 
     propertiesEl.setAttribute('data-blok-database-list-row-properties', '');
+    // Focus on a slot past the row edge scrolls the run; once focus leaves, the run starts at its first value again.
+    propertiesEl.addEventListener('focusout', (event) => {
+      if (!(event.relatedTarget instanceof Node && propertiesEl.contains(event.relatedTarget))) {
+        propertiesEl.scrollLeft = 0;
+      }
+    });
 
     for (const propId of this.visiblePropertyIds) {
       const propDef = this.schema.find(p => p.id === propId);

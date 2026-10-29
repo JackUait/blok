@@ -676,6 +676,19 @@ describe('DatabaseListView', () => {
       expect(rowEl(list, 'r1')).toHaveFocus();
     });
 
+    // Focus on a slot past the row edge scrolls the uncut run (notion-spec-2 §21.8); leaving the values puts it back.
+    it('scrolls the values back to their start once focus leaves them', () => {
+      const list = mount({ onPropertyEdit: vi.fn() });
+      const values = rowEl(list, 'r1').querySelector<HTMLElement>('[data-blok-database-list-row-properties]');
+
+      slotOf(list, 'r1', 'prop-1').focus();
+      if (values !== null) values.scrollLeft = 120;
+      press(slotOf(list, 'r1', 'prop-1'), { key: 'Escape' });
+
+      expect(rowEl(list, 'r1')).toHaveFocus();
+      expect(values?.scrollLeft).toBe(0);
+    });
+
     it('Shift+Enter on a row asks for a new item below it', () => {
       const onNewBelow = vi.fn();
       const list = mount({ onNewBelow });

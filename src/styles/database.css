@@ -13062,8 +13062,9 @@ textarea[data-blok-database-cell-input] {
   height: 14.4px;
 }
 
-/* notion-spec-2 §21.6: on a card the emoji is 14.4px. */
-[data-blok-database-gallery-property] [data-blok-database-relation-chip-icon][data-emoji]::before {
+/* notion-spec-2 §21.6, §21.7: on a gallery or board card the emoji is 14.4px. */
+[data-blok-database-gallery-property] [data-blok-database-relation-chip-icon][data-emoji]::before,
+[data-blok-database-card-property] [data-blok-database-relation-chip-icon][data-emoji]::before {
   font-size: 14.4px;
   line-height: 14.4px;
 }

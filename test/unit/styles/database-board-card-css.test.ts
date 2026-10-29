@@ -130,6 +130,14 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-property] [data-blok-database-relation-chip-title]')).toMatch(/line-height:\s*18px/);
   });
 
+  // notion-spec-2 §21.7: the related page's emoji is drawn at 14.4px on a board card, not the table's 18px.
+  it('draws a card relation emoji at 14.4px', () => {
+    const emoji = ruleBody('[data-blok-database-card-property] [data-blok-database-relation-chip-icon][data-emoji]::before');
+
+    expect(emoji).toMatch(/font-size:\s*14\.4px/);
+    expect(emoji).toMatch(/line-height:\s*14\.4px/);
+  });
+
   // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.
   it('draws the "Add …" rows of an edited card in the secondary ink with a 16px glyph', () => {
     expect(ruleBody('[data-blok-database-card-property][data-ghost]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);

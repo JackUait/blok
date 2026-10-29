@@ -15652,7 +15652,7 @@ textarea[data-blok-database-cell-input] {
   height: 14.4px;
 }
 
-[data-blok-database-gallery-property] [data-blok-database-relation-chip-icon][data-emoji]::before {
+[data-blok-database-gallery-property] [data-blok-database-relation-chip-icon][data-emoji]::before, [data-blok-database-card-property] [data-blok-database-relation-chip-icon][data-emoji]::before {
   font-size: 14.4px;
   line-height: 14.4px;
 }

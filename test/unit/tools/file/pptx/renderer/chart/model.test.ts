@@ -38,13 +38,25 @@ describe('readChart', () => {
     expect(kindOf('scatterChart')).toBe('scatter');
   });
 
-  it('marks radar, bubble and combo plots unsupported', () => {
-    const one = `<c:radarChart>${ser({ vals: [1] })}</c:radarChart>`;
-    const combo = `<c:barChart>${ser({ vals: [1] })}</c:barChart><c:lineChart>${ser({ vals: [1] })}</c:lineChart>`;
+  it('marks surface plots, and combos with a plot that cannot share a category axis, unsupported', () => {
+    const kindOf = (plot: string): string => readChart(parseXml(chartXml(plot)), ctx).kind;
 
-    expect(readChart(parseXml(chartXml(one)), ctx).kind).toBe('unsupported');
-    expect(readChart(parseXml(chartXml(`<c:bubbleChart>${ser({ vals: [1] })}</c:bubbleChart>`)), ctx).kind).toBe('unsupported');
-    expect(readChart(parseXml(chartXml(combo)), ctx).kind).toBe('unsupported');
+    expect(kindOf(`<c:surfaceChart>${ser({ vals: [1] })}</c:surfaceChart>`)).toBe('unsupported');
+    expect(kindOf(`<c:surface3DChart>${ser({ vals: [1] })}</c:surface3DChart>`)).toBe('unsupported');
+    expect(kindOf(`<c:barChart>${ser({ vals: [1] })}</c:barChart><c:pieChart>${ser({ vals: [1] })}</c:pieChart>`)).toBe('unsupported');
+  });
+
+  it('reads a combo as one layer per plot, flags the secondary axis and keeps colours running', () => {
+    const model = readChart(parseXml(chartXml(`<c:barChart>${ser({ name: 'A', order: 0, vals: [1] })}${ser({ name: 'B', order: 1, vals: [2] })}<c:axId val="1"/><c:axId val="2"/></c:barChart>
+      <c:lineChart>${ser({ name: 'C', order: 2, vals: [0.5] })}<c:axId val="3"/><c:axId val="4"/></c:lineChart>
+      <c:catAx><c:axId val="1"/></c:catAx><c:valAx><c:axId val="2"/></c:valAx>
+      <c:catAx><c:axId val="3"/></c:catAx><c:valAx><c:axId val="4"/><c:numFmt formatCode="0%" sourceLinked="0"/></c:valAx>`)), ctx);
+
+    expect(model.kind).toBe('combo');
+    expect(model.layers?.map((l) => [l.kind, l.secondary ?? false])).toEqual([['bar', false], ['line', true]]);
+    expect(model.layers?.[1].valueAxis.numFmt).toBe('0%');
+    expect(model.series.map((s) => s.name)).toEqual(['A', 'B', 'C']);
+    expect(model.series[2].color.toLowerCase()).toBe('#a5a5a5');
   });
 
   it('colours series from c:spPr, else the theme accent cycle', () => {

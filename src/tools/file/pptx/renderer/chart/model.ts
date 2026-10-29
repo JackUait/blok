@@ -7,7 +7,7 @@ import { cssFontFamilyStack, resolveThemeFontStack } from '../fontResolver';
 import { resolveColorToCss } from '../StyleResolver';
 import { extractFormatCode, extractNumericValuesWithBlanks, extractStringValues } from './format';
 
-export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'unsupported';
+export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'combo' | 'unsupported';
 export type LegendPosition = 't' | 'b' | 'l' | 'r';
 
 const KIND_BY_ELEMENT: Record<string, ChartKind> = {
@@ -22,6 +22,9 @@ const KIND_BY_ELEMENT: Record<string, ChartKind> = {
   doughnutChart: 'doughnut',
   scatterChart: 'scatter',
 };
+
+/** Plots that can share a category axis with another plot. */
+const COMBO_KINDS = new Set<ChartKind>(['bar', 'line', 'area']);
 
 const AUTO_MARKERS = ['diamond', 'square', 'triangle', 'circle'];
 // Unverified Office default; python-pptx decks never set c:size.
@@ -86,6 +89,10 @@ export interface ChartModel {
   categoryAxis: ChartAxis;
   valueAxis: ChartAxis;
   text: { size: number; color: string; family: string };
+  /** A combo chart's plots, in document order, sharing the category axis. */
+  layers?: ChartModel[];
+  /** The layer's values follow the secondary value axis, drawn on the right. */
+  secondary?: boolean;
 }
 
 function bool(node: SafeXmlNode, fallback: boolean): boolean {
@@ -341,31 +348,31 @@ function variesByPoint(plot: SafeXmlNode, kind: ChartKind, serNodes: SafeXmlNode
   return bool(plot.child('varyColors'), fallback);
 }
 
-export function readChart(chartSpace: SafeXmlNode, ctx: RenderContext, chartPath?: string): ChartModel {
-  const chart = chartSpace.child('chart');
-  const plotArea = chart.child('plotArea');
-  const plots = plotNodes(plotArea);
-  const plot = plots.length === 1 ? plots[0] : plotArea.child('');
-  const kind = plots.length === 1 ? KIND_BY_ELEMENT[plot.localName] ?? 'unsupported' : 'unsupported';
+interface PlotContext {
+  ctx: RenderContext;
+  plotArea: SafeXmlNode;
+  palette: string[];
+  /** Series drawn by earlier plots; colours continue after them. */
+  offset: number;
+}
+
+/** One plot element (c:barChart, c:lineChart…) as a model of its own. */
+function readPlot(plot: SafeXmlNode, pc: PlotContext): Omit<ChartModel, 'title' | 'legend' | 'text'> {
+  const { ctx, plotArea } = pc;
+  const kind = KIND_BY_ELEMENT[plot.localName] ?? 'unsupported';
   const grouping = plot.child('grouping').attr('val') ?? (kind === 'bar' ? 'clustered' : 'standard');
   const stacked = grouping === 'stacked' || grouping === 'percentStacked';
-  const serNodes = (plots[0]?.children('ser') ?? [])
+  const serNodes = plot.children('ser')
     .map((ser, i) => ({ ser, order: ser.child('order').numAttr('val') ?? i }))
     .sort((a, b) => a.order - b.order)
     .map(({ ser }) => ser);
   const varyByPoint = variesByPoint(plot, kind, serNodes, stacked);
-  const sc: SeriesContext = { ctx, plot, kind, palette: buildPalette(ctx, chartPath), plotLabels: readLabels(plot) ?? {}, varyByPoint };
-  const series = serNodes.map((ser, i) => readSeries(ser, i, sc));
+  const sc: SeriesContext = { ctx, plot, kind, palette: pc.palette, plotLabels: readLabels(plot) ?? {}, varyByPoint };
+  const series = serNodes.map((ser, i) => readSeries(ser, pc.offset + i, sc));
   const axisIds = plot.children('axId').map((ax) => ax.attr('val'));
-  const text = readText(chartSpace, ctx);
-  const legend = chart.child('legend');
-  const legendPos = legend.child('legendPos').attr('val');
-  const position: LegendPosition = legendPos === 't' || legendPos === 'b' || legendPos === 'l' ? legendPos : 'r';
 
   return {
     kind,
-    title: readTitle(chart, series, text.size),
-    legend: legend.exists() ? { position } : undefined,
     series,
     categories: series.find((s) => s.categories.length > 0)?.categories ?? [],
     grouping,
@@ -377,6 +384,40 @@ export function readChart(chartSpace: SafeXmlNode, ctx: RenderContext, chartPath
     firstSliceAngle: plot.child('firstSliceAng').numAttr('val') ?? 0,
     categoryAxis: readAxis(findAxis(plotArea, kind === 'scatter' ? ['valAx'] : ['catAx', 'dateAx'], axisIds[0]), ctx),
     valueAxis: readAxis(findAxis(plotArea, ['valAx'], axisIds[1]), ctx),
+  };
+}
+
+export function readChart(chartSpace: SafeXmlNode, ctx: RenderContext, chartPath?: string): ChartModel {
+  const chart = chartSpace.child('chart');
+  const plotArea = chart.child('plotArea');
+  const plots = plotNodes(plotArea);
+  const palette = buildPalette(ctx, chartPath);
+  const text = readText(chartSpace, ctx);
+  const layers = plots.reduce<ChartModel[]>((acc, node) => {
+    const offset = acc.reduce((sum, l) => sum + l.series.length, 0);
+
+    return [...acc, { ...readPlot(node, { ctx, plotArea, palette, offset }), text }];
+  }, []);
+  const first = layers[0] ?? { ...readPlot(plotArea.child(''), { ctx, plotArea, palette, offset: 0 }), text };
+  const valueAxisIds = plots.map((node) => node.children('axId')[1]?.attr('val'));
+  const series = layers.flatMap((l) => l.series);
+  const legend = chart.child('legend');
+  const legendPos = legend.child('legendPos').attr('val');
+  const position: LegendPosition = legendPos === 't' || legendPos === 'b' || legendPos === 'l' ? legendPos : 'r';
+  const combo = layers.length > 1
+    ? {
+      kind: layers.every((l) => COMBO_KINDS.has(l.kind)) ? 'combo' as const : 'unsupported' as const,
+      series,
+      categories: series.find((s) => s.categories.length > 0)?.categories ?? [],
+      layers: layers.map((l, i) => ({ ...l, secondary: valueAxisIds[i] !== undefined && valueAxisIds[i] !== valueAxisIds[0] })),
+    }
+    : {};
+
+  return {
+    ...first,
+    ...combo,
+    title: readTitle(chart, series, text.size),
+    legend: legend.exists() ? { position } : undefined,
     text,
   };
 }

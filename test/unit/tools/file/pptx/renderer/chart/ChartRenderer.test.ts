@@ -4,6 +4,7 @@ import type { ChartNodeData } from '../../../../../../../src/tools/file/pptx/mod
 import { parseXml, SafeXmlNode } from '../../../../../../../src/tools/file/pptx/parser/XmlParser';
 import { createMockRenderContext } from '../../helpers/mockContext';
 import { chartXml, ser } from './chartXml';
+import { yOn } from './renderXml';
 
 const PATH = 'ppt/charts/chart1.xml';
 
@@ -79,7 +80,7 @@ describe('renderChart', () => {
 
     it('draws only the title for plot types it cannot draw', () => {
       const title = '<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Skills</a:t></a:r></a:p></c:rich></c:tx></c:title>';
-      const frame = render(chartXml(`<c:radarChart>${ser({ name: 'S', cats: ['a', 'b', 'c'], vals: [1, 2, 3] })}</c:radarChart>`, { head: title }));
+      const frame = render(chartXml(`<c:surfaceChart>${ser({ name: 'S', cats: ['a', 'b', 'c'], vals: [1, 2, 3] })}</c:surfaceChart>`, { head: title }));
 
       expect(texts(frame)).toEqual(['Skills']);
       expect(parts(frame, 'series')).toHaveLength(0);
@@ -334,6 +335,66 @@ describe('renderChart', () => {
       expect(series.querySelector('[data-pptx-chart="line"]')).toBeNull();
       expect(markers).toHaveLength(3);
       expect(xs[1] - xs[0]).toBeCloseTo(xs[2] - xs[1], 2);
+    });
+  });
+
+  describe('combo', () => {
+    const cats = ['Jan', 'Feb', 'Mar'];
+    const combo = (secondAxis: string): string => chartXml(`<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>
+      ${ser({ name: 'Revenue', order: 0, cats, vals: [120, 150, 190] })}
+      ${ser({ name: 'Cost', order: 1, cats, vals: [80, 95, 120] })}
+      <c:axId val="1"/><c:axId val="2"/></c:barChart>
+      <c:lineChart><c:grouping val="standard"/>${ser({ name: 'Margin', order: 2, cats, vals: [0.33, 0.41, 0.37] })}
+      <c:marker val="1"/><c:axId val="3"/><c:axId val="${secondAxis}"/></c:lineChart>
+      <c:catAx><c:axId val="1"/></c:catAx><c:valAx><c:axId val="2"/><c:majorGridlines/></c:valAx>
+      <c:catAx><c:axId val="3"/><c:delete val="1"/></c:catAx>
+      <c:valAx><c:axId val="4"/><c:axPos val="r"/><c:numFmt formatCode="0%" sourceLinked="0"/></c:valAx>`,
+    { tail: '<c:legend><c:legendPos val="b"/></c:legend>' });
+
+    it('draws a line on the secondary axis over bars on the primary one', () => {
+      const frame = render(combo('4'));
+      const secondaryAxis = part(frame, 'secondary-value-axis');
+      const primaryAxis = part(frame, 'value-axis');
+      const linePts = pathPoints(frame.querySelector('[data-pptx-chart="line"]')?.getAttribute('d') ?? null);
+      const [revenue] = seriesRects(frame);
+      const p = plot(frame);
+
+      expect(linePts).toHaveLength(3);
+      expect(linePts[1][1]).toBeCloseTo(yOn(secondaryAxis, 0.41), 1);
+      expect(n(revenue[2], 'y')).toBeCloseTo(yOn(primaryAxis, 190), 1);
+      expect(texts(secondaryAxis)[0]).toBe('0%');
+      expect(texts(primaryAxis)[0]).toBe('0');
+      expect([...secondaryAxis.querySelectorAll('text')].every((t) => n(t, 'x') > p.x + p.w)).toBe(true);
+    });
+
+    it('puts every layer on one axis when the plots share it', () => {
+      const frame = render(combo('2'));
+      const linePts = pathPoints(frame.querySelector('[data-pptx-chart="line"]')?.getAttribute('d') ?? null);
+
+      expect(parts(frame, 'secondary-value-axis')).toHaveLength(0);
+      expect(linePts[1][1]).toBeCloseTo(yOn(part(frame, 'value-axis'), 0.41), 1);
+    });
+
+    it('lists every series in plot order, a line key for the line', () => {
+      const legend = part(render(combo('4')), 'legend');
+
+      expect(texts(legend)).toEqual(['Revenue', 'Cost', 'Margin']);
+      expect(legend.querySelectorAll('rect')).toHaveLength(2);
+      expect(legend.querySelectorAll('line')).toHaveLength(1);
+    });
+
+    it('draws areas and bars against one shared axis', () => {
+      const frame = render(chartXml(`<c:areaChart>${ser({ name: 'Target', order: 0, cats, vals: [35, 40, 60] })}<c:axId val="1"/><c:axId val="2"/></c:areaChart>
+        <c:barChart><c:barDir val="col"/>${ser({ name: 'Units', order: 1, cats, vals: [30, 45, 38] })}<c:axId val="1"/><c:axId val="2"/></c:barChart>
+        <c:catAx><c:axId val="1"/></c:catAx><c:valAx><c:axId val="2"/></c:valAx>`));
+      const axis = part(frame, 'value-axis');
+      const [, bars] = parts(frame, 'series');
+      const rects = [...bars.querySelectorAll('rect')];
+
+      expect(parts(frame, 'area')).toHaveLength(1);
+      expect(rects).toHaveLength(3);
+      expect(n(rects[1], 'y')).toBeCloseTo(yOn(axis, 45), 1);
+      expect(Number(texts(axis).at(-1))).toBeGreaterThanOrEqual(60);
     });
   });
 

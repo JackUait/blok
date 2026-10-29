@@ -80,19 +80,30 @@ function stackBases(values: number[][], splitSigns: boolean): number[][] {
   }));
 }
 
-function valueScale(model: ChartModel, values: number[][], spanPx: number, style: TextStyle): AxisScale {
-  const axis = model.valueAxis;
+/** Plotted values the axis must reach: stack tops for stacked layers. */
+function axisValues(model: ChartModel): number[] {
+  const values = plotted(model);
 
-  if (model.grouping === 'percentStacked' && model.kind !== 'scatter') {
+  if (!isStacked(model)) {
+    return values.flat();
+  }
+  const bases = stackBases(values, model.kind === 'bar');
+
+  return values.flatMap((s, si) => s.map((v, i) => v + bases[si][i]));
+}
+
+/** One value axis shared by the given layers. */
+function valueScale(layers: ChartModel[], spanPx: number, style: TextStyle): AxisScale {
+  const axis = layers[0].valueAxis;
+
+  if (layers.some((l) => l.grouping === 'percentStacked')) {
     return { ...PERCENT_AXIS, min: axis.min ?? 0, max: axis.max ?? 1 };
   }
-  const stacked = isStacked(model);
-  const bases = stacked ? stackBases(values, model.kind === 'bar') : [];
-  const flat = stacked ? values.flatMap((s, si) => s.map((v, i) => v + bases[si][i])) : values.flat();
-  const desired = desiredTickCount(spanPx, style.size, model.kind === 'bar');
-  const input = { values: flat, desiredTicks: desired, stacked, min: axis.min, max: axis.max, major: axis.major };
+  const bars = layers.some((l) => l.kind === 'bar');
+  const desired = desiredTickCount(spanPx, style.size, bars);
+  const input = { values: layers.flatMap(axisValues), desiredTicks: desired, stacked: layers.some(isStacked), min: axis.min, max: axis.max, major: axis.major };
 
-  return model.kind === 'area' ? areaValueAxis(input) : autoValueAxis(input);
+  return layers.every((l) => l.kind === 'area') ? areaValueAxis(input) : autoValueAxis(input);
 }
 
 function scatterScale(values: number[], axis: ChartModel['valueAxis']): AxisScale {
@@ -123,6 +134,8 @@ interface AxisDraw {
   /** Position along the axis for a value. */
   at: (v: number) => number;
   horizontal: boolean;
+  /** A secondary value axis sits on the right edge, labels outside it. */
+  right?: boolean;
 }
 
 function drawValueAxis(root: Element, plot: Box, d: AxisDraw, style: TextStyle, part = 'value-axis'): void {
@@ -140,17 +153,21 @@ function drawValueAxis(root: Element, plot: Box, d: AxisDraw, style: TextStyle, 
   }
   const g = group(part, root);
 
+  const edge = d.right ? plot.x + plot.w : plot.x;
+
   if (d.horizontal) {
     line(g, plot.x, plot.y + plot.h, plot.x + plot.w, plot.y + plot.h, d.axis.lineColor);
   } else {
-    line(g, plot.x, plot.y, plot.x, plot.y + plot.h, d.axis.lineColor);
+    line(g, edge, plot.y, edge, plot.y + plot.h, d.axis.lineColor);
   }
   if (!d.axis.showLabels) {
     return;
   }
+  const labelX = d.right ? edge + style.size * 0.4 : edge - style.size * 0.4;
+
   values.forEach((v) => (d.horizontal
     ? text(g, d.at(v), plot.y + plot.h + style.size * 0.9, formatValue(v, d.format), style)
-    : text(g, plot.x - style.size * 0.4, d.at(v), formatValue(v, d.format), style, 'end')));
+    : text(g, labelX, d.at(v), formatValue(v, d.format), style, d.right ? 'start' : 'end')));
 }
 
 function drawCategoryAxis(root: Element, model: ChartModel, f: Frame, horizontal: boolean, style: TextStyle): void {
@@ -318,9 +335,8 @@ function drawScatter(model: ChartModel, f: Frame, xPx: (v: number) => number, ro
   });
 }
 
-function plotBox(area: Box, left: number, bottom: number, style: TextStyle): Box {
+function plotBox(area: Box, left: number, bottom: number, style: TextStyle, right = style.size): Box {
   const top = style.size * 0.5;
-  const right = style.size;
 
   return { x: area.x + left, y: area.y + top, w: Math.max(1, area.w - left - right), h: Math.max(1, area.h - top - bottom) };
 }
@@ -332,7 +348,7 @@ function labelWidth(scale: AxisScale, format: string | undefined, style: TextSty
 function categoryFrame(model: ChartModel, plot: Box, scale: AxisScale): Frame {
   const count = Math.max(1, pointCount(model));
   const horizontal = model.kind === 'bar' && model.horizontal;
-  const between = model.kind === 'bar' || model.valueAxis.betweenCategories;
+  const between = layersOf(model).some((l) => l.kind === 'bar') || model.valueAxis.betweenCategories;
   const len = horizontal ? plot.h : plot.w;
   const band = len / count;
   const offset = (i: number): number => (between || count === 1 ? (i + 0.5) * band : (i * len) / (count - 1));
@@ -376,6 +392,18 @@ function drawXY(model: ChartModel, area: Box, root: Element, style: TextStyle): 
   root.appendChild(labels);
 }
 
+function layersOf(model: ChartModel): ChartModel[] {
+  return model.layers ?? [model];
+}
+
+function drawLayer(layer: ChartModel, f: Frame, root: Element, labels: Element, style: TextStyle): void {
+  if (layer.kind === 'bar') {
+    drawBars(layer, f, root, labels, style);
+  } else {
+    drawLinesOrAreas(layer, f, root, labels, style);
+  }
+}
+
 export function drawCartesian(model: ChartModel, area: Box, root: Element, style: TextStyle): void {
   if (model.kind === 'scatter') {
     drawXY(model, area, root, style);
@@ -383,29 +411,38 @@ export function drawCartesian(model: ChartModel, area: Box, root: Element, style
     return;
   }
   const horizontal = model.kind === 'bar' && model.horizontal;
-  const values = plotted(model);
+  const layers = layersOf(model);
+  const primary = layers.filter((l) => !l.secondary);
+  const secondary = layers.filter((l) => l.secondary);
   const catShown = !model.categoryAxis.deleted && model.categoryAxis.showLabels;
   const valShown = !model.valueAxis.deleted && model.valueAxis.showLabels;
   const categories = Array.from({ length: pointCount(model) }, (_, i) => model.categories[i] ?? String(i + 1));
   const catWidth = Math.max(0, ...categories.map((c) => textWidth(c, style.size))) + style.size * 0.6;
   // Tick density follows the whole area, labels included, as the reference does.
-  const scale = valueScale(model, values, horizontal ? area.w : area.h, style);
+  const span = horizontal ? area.w : area.h;
+  const scale = valueScale(primary.length > 0 ? primary : layers, span, style);
   const format = tickFormat(model, model.valueAxis, model.series[0]);
   const valueRoom = valShown ? labelWidth(scale, format, style) : 0;
+  const second = secondary.length > 0 ? secondary[0] : undefined;
+  const secondScale = second ? valueScale(secondary, span, style) : undefined;
+  const secondFormat = second ? tickFormat(second, second.valueAxis, second.series[0]) : undefined;
+  const secondShown = second !== undefined && !second.valueAxis.deleted && second.valueAxis.showLabels;
+  const rightRoom = secondShown && secondScale ? labelWidth(secondScale, secondFormat, style) : undefined;
   const plot = horizontal
     ? plotBox(area, catShown ? catWidth : 0, valShown ? style.size * 1.6 : 0, style)
-    : plotBox(area, valueRoom, catShown ? style.size * 1.6 : 0, style);
+    : plotBox(area, valueRoom, catShown ? style.size * 1.6 : 0, style, rightRoom);
   const frame = categoryFrame(model, plot, scale);
 
   plotFrameRect(root, plot);
   drawValueAxis(root, plot, { scale, format, axis: model.valueAxis, at: frame.valuePx, horizontal }, style);
+  const secondFrame = second && secondScale ? categoryFrame(second, plot, secondScale) : frame;
+
+  if (second && secondScale) {
+    drawValueAxis(root, plot, { scale: secondScale, format: secondFormat, axis: second.valueAxis, at: secondFrame.valuePx, horizontal: false, right: true }, style, 'secondary-value-axis');
+  }
   const labels = group('data-labels', root);
 
-  if (model.kind === 'bar') {
-    drawBars(model, frame, root, labels, style);
-  } else {
-    drawLinesOrAreas(model, frame, root, labels, style);
-  }
+  layers.forEach((layer) => drawLayer(layer, layer.secondary ? { ...secondFrame, categoryPx: frame.categoryPx, band: frame.band } : frame, root, labels, style));
   drawCategoryAxis(root, model, frame, horizontal, style);
   root.appendChild(labels);
 }

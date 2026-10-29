@@ -15,24 +15,29 @@ interface Entry {
   label: string;
   color: string;
   series?: ChartSeries;
+  /** Kind of the plot the entry belongs to; picks a line or a swatch key. */
+  kind: string;
 }
 
 function entries(model: ChartModel): Entry[] {
+  if (model.layers) {
+    return model.layers.flatMap(entries);
+  }
   if (model.kind === 'pie' || model.kind === 'doughnut') {
     const first = model.series[0];
 
-    return (first?.categories ?? []).map((label, i) => ({ label, color: first.pointColors[i] ?? first.color }));
+    return (first?.categories ?? []).map((label, i) => ({ label, color: first.pointColors[i] ?? first.color, kind: model.kind }));
   }
 
-  const list = model.series.map((s) => ({ label: s.name, color: s.color, series: s }));
+  const list = model.series.map((s) => ({ label: s.name, color: s.color, series: s, kind: model.kind }));
   const stacked = model.grouping === 'stacked' || model.grouping === 'percentStacked';
 
   return stacked && (model.kind === 'line' || model.kind === 'area') ? list.reverse() : list;
 }
 
-function drawKey(g: Element, entry: Entry, x: number, y: number, size: number, kind: string): void {
+function drawKey(g: Element, entry: Entry, x: number, y: number, size: number): void {
   const s = entry.series;
-  const lineLike = (kind === 'line' || kind === 'scatter') && s !== undefined;
+  const lineLike = (entry.kind === 'line' || entry.kind === 'scatter') && s !== undefined;
 
   if (!lineLike) {
     svg('rect', { x: px(x + size * 0.2), y: px(y - size * 0.3), width: px(size * 0.6), height: px(size * 0.6), fill: entry.color }, g);
@@ -75,7 +80,7 @@ export function drawLegend(model: ChartModel, area: Box, root: Element, style: T
       const x = x0 + offset.value;
 
       offset.value = offset.value + widths[i] + pad;
-      drawKey(g, e, x, y, key, model.kind);
+      drawKey(g, e, x, y, key);
       text(g, x + key + gap, y, e.label, style, 'start');
     });
 
@@ -86,7 +91,7 @@ export function drawLegend(model: ChartModel, area: Box, root: Element, style: T
   const y0 = area.y + (area.h - rowH * items.length) / 2 + rowH / 2;
 
   items.forEach((e, i) => {
-    drawKey(g, e, x, y0 + i * rowH, key, model.kind);
+    drawKey(g, e, x, y0 + i * rowH, key);
     text(g, x + key + gap, y0 + i * rowH, e.label, style, 'start');
   });
 

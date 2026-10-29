@@ -22,7 +22,7 @@ import { BUILT_IN_INLINE_SANITIZE } from '../../../src/shared/tool-descriptions/
 import { blocksToHtml } from '../../../src/view/blocks-to-html';
 import type { BlocksToHtmlOptions } from '../../../src/view/blocks-to-html';
 import { blocksToMarkdownWithReport } from '../../../src/view/blocks-to-markdown';
-import { blocksToPlainTextWithReport } from '../../../src/view/blocks-to-plain-text';
+import { blocksToPlainTextWithReport, collectPageIndexBlocks } from '../../../src/view/blocks-to-plain-text';
 import { diffOutputData } from '../../../src/view/diff-output-data';
 import { extractTexts, injectTexts } from '../../../src/view/document-texts';
 import { htmlTextContent, proseTextContent } from '../../../src/view/html-text';
@@ -39,21 +39,25 @@ import { blocksToViewNodes } from '../../../src/view/view-nodes';
 import { fuzzHtml, realDocuments, storedFields, treeConstructionInputs } from './corpus';
 
 /**
- * Call sites that read the same inputs. Stored as one file, row by row, so the
- * near-identical outputs of sibling call sites sit next to each other and gzip
- * folds them.
+ * Call sites that read the same inputs. Stored as one file, inputs included,
+ * row by row, so sibling outputs sit next to each other and gzip folds them.
+ * The compare run reads the inputs back from the file: the corpus and the
+ * stored documents it is built from may change after the parser migration.
  */
 export interface GoldenGroup {
   name: string;
-  /** Names each input; the test stores only its hash. */
-  keys: string[];
-  suites: Array<{ name: string; run: (index: number) => unknown }>;
+  /** Builds the inputs from the corpus; only the recorder calls it. */
+  liveInputs: () => unknown[];
+  suites: Array<{ name: string; run: (input: unknown) => unknown }>;
 }
+
+/** A document row: the fields a built page holds, or a stored document as it is. */
+type DocumentInput = { fields: string[]; seq: number } | { stored: string; data: OutputData };
 
 const ROOT = join(__dirname, '..', '..', '..');
 const FUZZ_SEEDS = 3000;
 
-/** Inputs parse5 throws on (two low surrogates in a row), in every place a field can hold one. */
+/** Lone surrogates in every place a field can hold one; most hold two lows in a row, which parse5 throws on. */
 export const SURROGATE_CASES = [
   'a\uDC00\uDC00b',
   '<a href="x\uDC00\uDC00y">t</a>',
@@ -184,6 +188,14 @@ const INLINE_RENDERERS: Record<string, ViewInlineRenderer> = {
   p: (el) => `<p>${el.html}</p><p>`,
 };
 
+const rawField = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+/** Block renderers that print a field's stored markup unsanitized, as a host's own renderer may. */
+const RAW_RENDERERS: BlocksToHtmlOptions['renderers'] = {
+  paragraph: (data) => `<section data-raw="1">${rawField(data.text)}</section>`,
+  quote: (data) => rawField(data.text),
+};
+
 const PAGE_OPTIONS: BlocksToHtmlOptions = {
   pageHref: (pageId) => `/pages/${pageId}`,
   pageInfo: (pageId) => (pageId.endsWith('0') ? { access: 'none' } : { title: `Title of ${pageId}` }),
@@ -198,6 +210,7 @@ export const htmlOptionSets = (): Record<string, BlocksToHtmlOptions> => ({
   pages: PAGE_OPTIONS,
   'transform-url': { transformUrl: (url) => proxyUrl(url) },
   stamps: { toolAttributes: true, blockIds: true, classes: true, onUnknownBlock: 'comment', root: true, title: true },
+  renderers: { renderers: RAW_RENDERERS },
 });
 
 /** A realistic page whose rich fields hold `fields`, in every place a built-in tool keeps inline HTML. */
@@ -280,6 +293,9 @@ const DOCUMENT_FUNCTIONS: Record<string, (data: OutputData, shifted: OutputData)
   'blocksToViewNodes:default': (data) => blocksToViewNodes(data),
   'blocksToViewNodes:stamps': (data) => blocksToViewNodes(data, htmlOptionSets().stamps),
   blocksToPlainTextWithReport: (data) => blocksToPlainTextWithReport(data, { title: true }),
+  'blocksToViewNodes:renderers': (data) => blocksToViewNodes(data, { renderers: RAW_RENDERERS }),
+  'blocksToPlainTextWithReport:renderers': (data) => blocksToPlainTextWithReport(data, { renderers: RAW_RENDERERS }),
+  collectPageIndexBlocks: (data) => collectPageIndexBlocks(data),
   'blocksToMarkdownWithReport:default': (data) => blocksToMarkdownWithReport(data),
   'blocksToMarkdownWithReport:pages': (data) => blocksToMarkdownWithReport(data, { ...PAGE_OPTIONS, title: true }),
   outlineFromOutputData: (data) => outlineFromOutputData(data),
@@ -338,7 +354,7 @@ const storedDocuments = (): Array<{ name: string; data: OutputData }> => {
  * Documents: sliding windows over the safe fields, one document per risky field
  * (capped: the fragment suites already pin every one), and the stored documents.
  */
-export const documentInputs = (fields: readonly string[]): Array<{ name: string; data: OutputData; shifted: OutputData }> => {
+export const documentInputs = (fields: readonly string[]): DocumentInput[] => {
   const safe = fields.filter((html) => !RISKY.test(html));
   const handWritten = (html: string): number => Number(SURROGATE_CASES.includes(html));
   const risky = fields
@@ -346,19 +362,25 @@ export const documentInputs = (fields: readonly string[]): Array<{ name: string;
     .sort((a, b) => handWritten(b) - handWritten(a))
     .slice(0, RISKY_DOCUMENTS);
   const windows = Array.from({ length: Math.ceil(safe.length / SLOTS) }, (_, index) => safe.slice(index * SLOTS, (index + 1) * SLOTS));
-  const built = [
-    ...windows.map((window, index) => ({ name: `window ${index}`, fields: window })),
-    ...risky.map((html, index) => ({ name: `risky ${index}`, fields: [html] })),
-  ].map(({ name, fields: own }, seq) => ({
-    name,
-    data: documentFor(own, seq),
-    shifted: documentFor([...own.slice(1), own[0]], seq),
-  }));
 
   return [
-    ...built,
-    ...storedDocuments().map(({ name, data }) => ({ name, data, shifted: data })),
+    ...[...windows, ...risky.map((html) => [html])].map((own, seq) => ({ fields: own, seq })),
+    ...storedDocuments().map(({ name, data }) => ({ stored: name, data })),
   ];
+};
+
+/** The document a row stands for, and the one `diffOutputData` and `injectTexts` compare it with. */
+const documentPair = (input: unknown): { data: OutputData; shifted: OutputData } => {
+  const row = input as DocumentInput;
+
+  if ('stored' in row) {
+    return { data: row.data, shifted: row.data };
+  }
+
+  return {
+    data: documentFor(row.fields, row.seq),
+    shifted: documentFor([...row.fields.slice(1), row.fields[0]], row.seq),
+  };
 };
 
 const PAGE_TEXT = (pageId: string): string => `«${pageId}»`;
@@ -383,11 +405,10 @@ const FRAGMENT_FUNCTIONS: Record<string, (html: string) => unknown> = {
 /** What whole pages go through: the importer, and the readers that walk without the sanitizer. */
 const PAGE_SUITES = new Set(['htmlToBlocksWithReport', 'htmlToBlocksWithReport:title', 'htmlTextContent', 'proseTextContent', 'htmlToSegmentsNode']);
 
+const asText = (input: unknown): string => (typeof input === 'string' ? input : JSON.stringify(input));
+
 /** All groups. Built lazily: the corpus reads fixtures from disk. */
 export const goldenGroups = (): GoldenGroup[] => {
-  const inputs = fragmentInputs();
-  const pages = realDocuments().map((doc) => doc.html);
-  const documents = documentInputs(inputs);
   const sanitizers = Object.entries(sanitizerConfigs()).map(([name, config]) => ({
     name: `sanitizeHtmlFragment.${name}`,
     run: (html: string) => sanitizeHtmlFragment(html, config),
@@ -400,22 +421,26 @@ export const goldenGroups = (): GoldenGroup[] => {
     },
     ...Object.entries(FRAGMENT_FUNCTIONS).map(([name, run]) => ({ name, run })),
   ];
-  const overInputs = (list: readonly string[]) => (suite: { name: string; run: (html: string) => unknown }) =>
-    ({ name: suite.name, run: (index: number) => suite.run(list[index]) });
+  const onText = (suite: { name: string; run: (html: string) => unknown }): GoldenGroup['suites'][number] =>
+    ({ name: suite.name, run: (input) => suite.run(asText(input)) });
 
   return [
-    { name: 'fragments', keys: inputs, suites: fragmentSuites.map(overInputs(inputs)) },
+    { name: 'fragments', liveInputs: fragmentInputs, suites: fragmentSuites.map(onText) },
     {
       name: 'pages',
-      keys: pages,
-      suites: fragmentSuites.filter((suite) => PAGE_SUITES.has(suite.name)).map(overInputs(pages)),
+      liveInputs: () => realDocuments().map((doc) => doc.html),
+      suites: fragmentSuites.filter((suite) => PAGE_SUITES.has(suite.name)).map(onText),
     },
     {
       name: 'documents',
-      keys: documents.map((doc) => JSON.stringify(doc.data)),
+      liveInputs: () => documentInputs(fragmentInputs()),
       suites: Object.entries(DOCUMENT_FUNCTIONS).map(([name, run]) => ({
         name,
-        run: (index: number) => run(documents[index].data, documents[index].shifted),
+        run: (input: unknown) => {
+          const { data, shifted } = documentPair(input);
+
+          return run(data, shifted);
+        },
       })),
     },
   ];

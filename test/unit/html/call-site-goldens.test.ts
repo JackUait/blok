@@ -6,7 +6,6 @@
  * Re-record (only on purpose, on code that still runs parse5):
  *   RECORD_HTML_GOLDENS=1 yarn test test/unit/html/call-site-goldens.test.ts
  */
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -23,19 +22,22 @@ const MIN_INPUTS: Record<string, number> = { fragments: 6000, pages: 11, documen
 /** `rows[input][suite]` is the JSON of what that suite returned for that input. */
 interface GoldenFile {
   suites: string[];
-  keys: string[];
+  inputs: unknown[];
   rows: string[][];
 }
 
 const fileOf = (group: string): string => join(DIR, `${group}.json.gz`);
-const hashOf = (key: string): string => createHash('sha1').update(key).digest('base64').slice(0, 12);
-const preview = (text: string): string => JSON.stringify(text.length > 160 ? `${text.slice(0, 160)}…` : text);
+const preview = (input: unknown): string => {
+  const text = JSON.stringify(input);
+
+  return text.length > 160 ? `${text.slice(0, 160)}…` : text;
+};
 
 const readGolden = (group: string): GoldenFile =>
   JSON.parse(gunzipSync(readFileSync(fileOf(group))).toString('utf8')) as GoldenFile;
 
-const runGroup = (group: GoldenGroup): string[][] =>
-  group.keys.map((_, index) => group.suites.map((suite) => JSON.stringify(capture(() => suite.run(index)))));
+const runGroup = (group: GoldenGroup, inputs: unknown[]): string[][] =>
+  inputs.map((input) => group.suites.map((suite) => JSON.stringify(capture(() => suite.run(input)))));
 
 describe('call-site goldens', () => {
   beforeEach(() => {
@@ -48,18 +50,15 @@ describe('call-site goldens', () => {
     vi.restoreAllMocks();
   });
 
-  const groups = goldenGroups();
-
-  it.each(groups.map((group) => [group.name, group] as const))('%s', (name, group) => {
-    expect(group.keys.length).toBeGreaterThanOrEqual(MIN_INPUTS[name]);
-
-    const rows = runGroup(group);
+  it.each(goldenGroups().map((group) => [group.name, group] as const))('%s', (name, group) => {
     const suites = group.suites.map((suite) => suite.name);
-    const keys = group.keys.map(hashOf);
 
     if (RECORD) {
+      const inputs = group.liveInputs();
+
+      expect(inputs.length).toBeGreaterThanOrEqual(MIN_INPUTS[name]);
       mkdirSync(DIR, { recursive: true });
-      writeFileSync(fileOf(name), gzipSync(JSON.stringify({ suites, keys, rows } satisfies GoldenFile), { level: 9 }));
+      writeFileSync(fileOf(name), gzipSync(JSON.stringify({ suites, inputs, rows: runGroup(group, inputs) } satisfies GoldenFile), { level: 9 }));
 
       return;
     }
@@ -67,14 +66,14 @@ describe('call-site goldens', () => {
     expect(existsSync(fileOf(name)), `no golden for ${name}; record with RECORD_HTML_GOLDENS=1`).toBe(true);
 
     const golden = readGolden(name);
-    const changedInput = keys.findIndex((hash, index) => golden.keys[index] !== hash);
 
-    expect({ suites, inputs: keys.length, changedInput }, `${name}: the corpus or the call sites changed; re-record on parse5 code`)
-      .toEqual({ suites: golden.suites, inputs: golden.keys.length, changedInput: -1 });
+    expect(golden.inputs.length).toBeGreaterThanOrEqual(MIN_INPUTS[name]);
+    expect(suites, `${name}: the call sites changed; record the new ones on parse5 code`).toEqual(golden.suites);
 
+    const rows = runGroup(group, golden.inputs);
     const mismatches = rows.flatMap((row, index) => row.flatMap((actual, column) => (actual === golden.rows[index][column]
       ? []
-      : [{ suite: suites[column], input: preview(group.keys[index]), expected: golden.rows[index][column], actual }])));
+      : [{ suite: suites[column], input: preview(golden.inputs[index]), expected: golden.rows[index][column], actual }])));
     const bySuite = Object.fromEntries(suites
       .map((suite) => [suite, mismatches.filter((row) => row.suite === suite).length])
       .filter(([, count]) => count !== 0));

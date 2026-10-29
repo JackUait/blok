@@ -1367,7 +1367,9 @@ const tokenizerFor = (html: string, entry: Parse5Entry): (() => boolean) => {
 const DOCTYPE_OPEN = /<!doctype/i;
 
 /**
- * Whether parse5 8.0.1 throws a RangeError on this input.
+ * Whether parse5 8.0.1 throws a RangeError on this input. Exact when no pair of
+ * low surrogates comes after a `<!DOCTYPE`; past one, a few tree-builder corners
+ * still differ (pinned as expected failures in surrogate-rejection.test.ts).
  * @param html - markup
  * @param entry - which parse5 entry point reads it
  */

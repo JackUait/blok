@@ -5,7 +5,7 @@ import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
 import { MIXED_FORMULA, readPropertyValue } from './value-helpers';
 import { relationIdsOf } from './relation-values';
-import { computeRollup, isNumberList, rollupHasFormat, rollupResultType } from './rollup';
+import { computeRollup, isNumberList, isPageList, rollupHasFormat, rollupResultType } from './rollup';
 import type { DatabaseRow, NumberDisplay, PropertyDefinition, PropertyValue } from './types';
 
 /** A database in this document, as another database reads it. */
@@ -203,8 +203,9 @@ export class ComputedProperties {
       if (isNumberList(settings.function, target)) return { ...property, ...shape, number: property.number ?? {} };
       if (shape.type !== 'number') {
         const { number: _stale, ...rest } = property;
+        const via = isPageList(settings.function, target) ? this.schema.find((p) => p.id === settings.relationPropertyId)?.relation : undefined;
 
-        return { ...rest, ...shape, config: shape.config ?? property.config };
+        return { ...rest, ...shape, config: shape.config ?? property.config, ...(via !== undefined ? { relation: via } : {}) };
       }
       const number = rollupHasFormat(settings.function) ? property.number ?? shape.number : withoutFormat(property.number, shape.number);
       const { number: _own, ...rest } = property;
@@ -374,7 +375,10 @@ export class ComputedProperties {
     // Rollup of a rollup: H-rr says no, "this could create unintended loops".
     if (settings === undefined || relation === undefined || source === undefined || target === undefined || target.type === 'rollup') return null;
     const self = databaseId === this.ctx.databaseId;
-    const values = this.relatedIds(rowId, relation).map((id) => {
+    const ids = this.relatedIds(rowId, relation);
+
+    if (isPageList(settings.function, target)) return ids.map((id) => ({ id }));
+    const values = ids.map((id) => {
       if (self && COMPUTED.has(target.type)) return this.valueFor(id, target);
       const row = source.rows.find((r) => r.id === id);
 

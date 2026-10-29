@@ -219,6 +219,28 @@ describe('DatabaseTool — computed properties', () => {
     expect(cell(el, 'a', 'total')?.querySelector('[data-blok-database-cell]')?.textContent).toBe('7');
   });
 
+  // notion-spec-2 §21.7, §21.x: a rollup of the related pages' Name shows them as relation chips, not as text.
+  it('draws a Name rollup as relation chips of the related rows', () => {
+    const names: PropertyDefinition = { id: 'names', name: 'Names', type: 'rollup', position: 'a7', rollup: { relationPropertyId: 'related', targetPropertyId: 'title', function: 'show_original' } };
+    const doc = makeDoc([
+      fakeRow('a', 'db', { title: 'Alpha', related: [{ id: 'b' }, { id: 'c' }] }, 'a0'),
+      fakeRow('b', 'db', { title: 'Bravo, Jr' }, 'a1'),
+      fakeRow('c', 'db', { title: '' }, 'a2'),
+    ]);
+    const tool = new DatabaseTool({
+      data: { ...data, schema: [...schema, names], views: [{ ...data.views[0], visibleProperties: ['related', 'names'] }] },
+      config: {}, api: doc.api, readOnly: false, block: { id: 'db', dispatchChange: vi.fn() } as never,
+    });
+    const el = tool.render();
+
+    document.body.appendChild(el);
+    tool.rendered();
+    const chips = [...(cell(el, 'a', 'names')?.querySelectorAll('[data-blok-database-relation-chip]') ?? [])];
+
+    expect(chips.map((c) => c.getAttribute('data-row-id'))).toEqual(['b', 'c']);
+    expect(chips.map((c) => c.textContent)).toEqual(['Bravo, Jr', 'tools.database.relationUntitled']);
+  });
+
   it('takes a deleted row out of the relations that point at it, in the same step', () => {
     const doc = makeDoc([
       fakeRow('a', 'db', { title: 'Alpha', related: [{ id: 'b' }], next: [{ id: 'b' }] }, 'a0'),

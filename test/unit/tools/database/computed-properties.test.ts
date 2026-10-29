@@ -256,7 +256,8 @@ describe('ComputedProperties', () => {
     const hours: PropertyDefinition = { id: 'hours', name: 'Hours', type: 'number', position: 'a1' };
     const doubleHours = formula('double', '{{property:hours}} * 2');
     const otherEngine = new ComputedProperties('db-tasks');
-    const otherSchema = [title, hours, doubleHours];
+    const note: PropertyDefinition = { id: 'note', name: 'Note', type: 'text', position: 'a2' };
+    const otherSchema = [title, hours, doubleHours, note];
     const other: DatabaseSource = {
       schema: otherSchema,
       rows: otherEngine.apply(otherSchema, [row('t1', { hours: 2 }), row('t2', { hours: 5 })], { databaseId: 'db-tasks', now: NOW }),
@@ -307,13 +308,27 @@ describe('ComputedProperties', () => {
     });
 
     it('drops number settings left on a list rollup whose target is not a Number', () => {
-      const names = { ...rollup('names', 'tasks', 'title', 'show_original'), number: { format: 'dollar' as const } };
+      const notes = { ...rollup('notes', 'tasks', 'note', 'show_original'), number: { format: 'dollar' as const } };
       const engine = new ComputedProperties('db');
 
-      engine.apply([title, tasks, names], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
+      engine.apply([title, tasks, notes], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
 
-      expect(engine.valueProperty(names)).toMatchObject({ type: 'text' });
-      expect(engine.valueProperty(names).number).toBeUndefined();
+      expect(engine.valueProperty(notes)).toMatchObject({ type: 'text' });
+      expect(engine.valueProperty(notes).number).toBeUndefined();
+    });
+
+    // notion-spec-2 §21.7: a rollup of the Name shows the related pages, read through the rollup's own relation.
+    it('shows Show original and Show unique of the Name as the related pages', () => {
+      const names = rollup('names', 'tasks', 'title', 'show_original');
+      const unique = rollup('unique', 'tasks', 'title', 'show_unique');
+      const count = rollup('count', 'tasks', 'title', 'count');
+      const engine = new ComputedProperties('db');
+      const rows = engine.apply([title, tasks, names, unique, count], [row('p1', { tasks: [{ id: 't1' }, { id: 'gone' }, { id: 't2' }] })], ctx);
+
+      expect(valueOf(rows, 'p1', names)).toEqual([{ id: 't1' }, { id: 't2' }]);
+      expect(valueOf(rows, 'p1', unique)).toEqual([{ id: 't1' }, { id: 't2' }]);
+      expect(engine.valueProperty(names)).toMatchObject({ type: 'relation', relation: { targetDatabaseId: 'db-tasks' } });
+      expect(valueOf(rows, 'p1', count)).toBe(2);
     });
 
     // notion-spec-2 §14.5: Show unique values of a Number formats each value, as Show original does.

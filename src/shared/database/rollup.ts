@@ -84,6 +84,8 @@ const listShape = (target: PropertyDefinition): RollupShape => {
   if (isOptionType(target)) return { type: 'multiSelect', ...(target.config !== undefined ? { config: target.config } : {}) };
   if (target.type === 'person' || target.type === 'createdBy' || target.type === 'lastEditedBy') return { type: 'person' };
   if (target.type === 'relation') return { type: 'relation', ...(target.relation !== undefined ? { relation: target.relation } : {}) };
+  // The pages are the rollup's own related rows, so ComputedProperties fills in its relation settings.
+  if (target.type === 'title') return { type: 'relation' };
   if (target.type === 'files') return { type: 'files' };
 
   return { type: 'text' };
@@ -97,6 +99,10 @@ const listShape = (target: PropertyDefinition): RollupShape => {
  */
 export const isNumberList = (fn: RollupFunction, target: Pick<PropertyDefinition, 'type'>): boolean =>
   (fn === 'show_original' || fn === 'show_unique') && target.type === 'number';
+
+/** Show original or Show unique of the Name: the related pages themselves, drawn as relation chips (notion-spec-2 §21.7). */
+export const isPageList = (fn: RollupFunction, target: Pick<PropertyDefinition, 'type'>): boolean =>
+  (fn === 'show_original' || fn === 'show_unique') && target.type === 'title';
 
 export const rollupResultType = (fn: RollupFunction, target: PropertyDefinition): RollupShape => {
   if (fn === 'show_original' || fn === 'show_unique') return listShape(target);

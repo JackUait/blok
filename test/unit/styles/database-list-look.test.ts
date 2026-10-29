@@ -104,6 +104,8 @@ describe('list row widths (findings-listgallery L01)', () => {
     const slot = ruleBody(database, '[data-blok-database-list-row-property]');
 
     expect(slot).toContain('flex: none');
+    // notion-spec-2 §21.8: text-like values are 14/21 ink.
+    expect(slot).toContain('line-height: 21px');
     expect(slot).not.toContain('flex: 0 1 auto');
     expect(slot).toContain('overflow: hidden');
     expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-cell]')).toContain('flex-wrap: nowrap');

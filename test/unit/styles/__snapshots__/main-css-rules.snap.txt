@@ -6748,6 +6748,7 @@ button[data-blok-database-column-count]:hover {
   border-radius: var(--blok-radius-control);
   white-space: nowrap;
   font-size: 14px;
+  line-height: 21px;
   color: var(--blok-database-ink);
   outline: none;
 }

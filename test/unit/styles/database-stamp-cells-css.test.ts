@@ -63,3 +63,11 @@ describe('time and "by" cells', () => {
     expect(avatar).toMatch(/height:\s*18px/);
   });
 });
+
+describe('time and "by" values in the peek', () => {
+  it('set their text at 14/21 (notion-spec-2 §20.2)', () => {
+    const body = ruleBody(`[data-blok-database-drawer-prop-value] > :is(${['createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy'].map((type) => `[data-blok-database-cell="${type}"]`).join(', ')})`);
+
+    expect(body).toMatch(/line-height:\s*21px/);
+  });
+});

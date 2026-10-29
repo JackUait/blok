@@ -14172,6 +14172,12 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
+[data-blok-database-gallery-property] [data-blok-database-option-pill] {
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
 [data-blok-database-gallery-property] > [data-blok-database-cell="checkbox"] {
   gap: var(--blok-space-1-5);
 }

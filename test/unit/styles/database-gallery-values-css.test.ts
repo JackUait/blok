@@ -16,6 +16,14 @@ const ruleBody = (selector: string): string =>
     .join(';');
 
 describe('gallery card values', () => {
+  it('draws every option pill 18 tall with 12/18 text, status included', () => {
+    const body = ruleBody('[data-blok-database-gallery-property] [data-blok-database-option-pill]');
+
+    expect(body).toMatch(/height:\s*18px/);
+    expect(body).toMatch(/font-size:\s*12px/);
+    expect(body).toMatch(/line-height:\s*18px/);
+  });
+
   it('sets the checkbox name 6px after the box, 12/14', () => {
     expect(ruleBody('[data-blok-database-gallery-property] > [data-blok-database-cell="checkbox"]')).toMatch(/gap:\s*var\(--blok-space-1-5\)/);
     const name = ruleBody('[data-blok-database-checkbox-name]');

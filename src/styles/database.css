@@ -11402,6 +11402,13 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
+/* notion-spec-2 §19.17 and gallery-cards-top.png: on a card every pill, status too, is 18 tall with 12/18 text. */
+[data-blok-database-gallery-property] [data-blok-database-option-pill] {
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
 /* §19.17: a card's checkbox has its property name 6px after the box, 12/14. */
 [data-blok-database-gallery-property] > [data-blok-database-cell="checkbox"] {
   gap: var(--blok-space-1-5);

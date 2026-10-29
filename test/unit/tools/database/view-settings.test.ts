@@ -189,8 +189,9 @@ describe('view-settings', () => {
       expect(next).toEqual([
         { id: 'p-title', visible: true },
         { id: 'p-due', visible: true },
-        { id: 'p-status', visible: false, width: 200 },
+        // A list's hidden properties go by name (notion-spec-2 §21.8).
         { id: 'p-done', visible: false },
+        { id: 'p-status', visible: false, width: 200 },
       ]);
     });
 

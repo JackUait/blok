@@ -112,6 +112,32 @@ describe('a new list view', () => {
   });
 });
 
+// notion-spec-2 §21.7–21.8, notion-live-3 gallery-cards-top, notion-live-4 33/62/65/69/73: a new card or list
+// view lists its hidden properties by name, so "Show all" shows them A→Z after the ones already shown.
+describe('the property order of a new view', () => {
+  const schema = [
+    { id: 't', name: 'Name', type: 'title' as const, position: 'a0' },
+    { id: 'x', name: 'Text', type: 'text' as const, position: 'a1' },
+    { id: 'n', name: 'Number', type: 'number' as const, position: 'a2' },
+    { id: 's', name: 'Status', type: 'status' as const, position: 'a3' },
+    { id: 'c', name: 'Checkbox', type: 'checkbox' as const, position: 'a4' },
+  ];
+  const order = (type: 'table' | 'gallery' | 'board' | 'list' | 'calendar' | 'timeline'): string[] =>
+    (newView({ id: 'v', name: 'V', type, position: 'a0' }, schema).properties ?? []).map((p) => p.id);
+
+  it.each(['gallery', 'board', 'calendar', 'timeline'] as const)('a %s lists the title, then the rest by name', (type) => {
+    expect(order(type)).toEqual(['t', 'c', 'n', 's', 'x']);
+  });
+
+  it('a list puts its shown Status first, then the rest by name', () => {
+    expect(order('list')).toEqual(['t', 's', 'c', 'n', 'x']);
+  });
+
+  it('a table keeps the schema order', () => {
+    expect(order('table')).toEqual(['t', 'x', 'n', 's', 'c']);
+  });
+});
+
 // research/14 §1, §2a, §4: a taken name gets " N", the lowest free N from 1, on an exact match.
 describe('freePropertyName', () => {
   it.each<[string[], string, string]>([

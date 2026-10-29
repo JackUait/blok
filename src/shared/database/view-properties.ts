@@ -33,13 +33,27 @@ export const mergeDuplicates = (entries: ViewPropertySetting[]): ViewPropertySet
   return [...merged.values()];
 };
 
+/**
+ * Layouts whose hidden properties Notion lists by name, so "Show all" adds them A→Z
+ * (notion-spec-2 §21.7–21.9, notion-live-3 gallery-cards-top). Map, feed, chart and
+ * dashboard are unmeasured; table and form keep the schema order.
+ */
+const HIDDEN_BY_NAME: ReadonlySet<DatabaseViewConfig['type']> = new Set(['gallery', 'board', 'list', 'calendar', 'timeline']);
+
 /** `visibleProperties` as a v1.16.1 client wrote it, turned into entries. */
 export const legacyEntries = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ViewPropertySetting[] => {
   const ordered = bySchemaPosition(schema);
   const listed = view.visibleProperties ?? [];
+  const byName = (list: PropertyDefinition[]): PropertyDefinition[] =>
+    HIDDEN_BY_NAME.has(view.type) ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : list;
 
   if (listed.length === 0) {
-    return ordered.map((p) => ({ id: p.id, visible: defaultVisible(view, p) }));
+    const shown = ordered.filter((p) => defaultVisible(view, p));
+
+    return [
+      ...shown.map((p) => ({ id: p.id, visible: true })),
+      ...byName(ordered.filter((p) => !defaultVisible(view, p))).map((p) => ({ id: p.id, visible: false })),
+    ];
   }
 
   const known = new Set(ordered.map((p) => p.id));
@@ -50,7 +64,7 @@ export const legacyEntries = (view: DatabaseViewConfig, schema: PropertyDefiniti
   return [
     ...titles.map((p) => ({ id: p.id, visible: true })),
     ...shown.map((id) => ({ id, visible: true })),
-    ...rest.map((p) => ({ id: p.id, visible: false })),
+    ...byName(rest).map((p) => ({ id: p.id, visible: false })),
   ];
 };
 

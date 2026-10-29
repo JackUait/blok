@@ -17,7 +17,8 @@ import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { colorVarName } from '../../shared/color-presets';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
-import { safeImageSrc } from '../../utils/sanitize-url';
+import { makePreview } from '../../utils/media-empty-preview';
+import { isSafeRasterImageDataUrl, safeImageSrc, stripIgnoredUrlChars } from '../../utils/sanitize-url';
 import { findTextMatches } from '../../../shared/text-match';
 
 import { gapSize, holdGapChanges, releaseGap, reserveGap } from './gap';
@@ -94,7 +95,7 @@ interface LineSpec {
   url?: string;
 }
 
-/** A URL the preview may load: only a whole one, so no request goes out for a cut-off address. */
+/** A whole URL the importer keeps as an image. The image view decides what it loads. */
 const loadable = (value: unknown, whole: boolean): string | undefined =>
   (whole && typeof value === 'string' ? safeImageSrc(value) ?? undefined : undefined);
 
@@ -894,6 +895,7 @@ const makeImage = (): View => {
   const img = document.createElement('img');
   const row = document.createElement('div');
   const captionText = document.createElement('div');
+  const placeholder = makePreview('image');
 
   root.setAttribute('data-blok-tool', 'image');
   Object.entries({ 'data-state': 'rendered', 'data-size': 'full', 'data-align': 'center', 'data-frame': 'none', 'data-rounded': 'on', 'data-caption': 'on' })
@@ -907,7 +909,7 @@ const makeImage = (): View => {
   captionText.className = 'blok-image-caption';
   Object.assign(captionText.style, { outline: 'none', textAlign: 'start' });
   row.append(captionText);
-  figure.append(img, row);
+  figure.append(placeholder, row);
   root.append(figure);
 
   return {
@@ -917,10 +919,20 @@ const makeImage = (): View => {
       if (next.url === undefined) {
         return true;
       }
-      const src = safeImageSrc(next.url);
+      // Nothing the agent names loads before the call runs and the host's allowMediaUrl checks it.
+      // A data: raster reaches no server, so it draws; anything else shows the media drawing.
+      if (!isSafeRasterImageDataUrl(stripIgnoredUrlChars(next.url))) {
+        if (placeholder.parentElement === null) {
+          img.remove();
+          figure.prepend(placeholder);
+        }
 
-      if (src !== null && img.getAttribute('src') !== src) {
-        img.src = src;
+        return true;
+      }
+      if (img.getAttribute('src') !== next.url) {
+        placeholder.remove();
+        figure.prepend(img);
+        img.src = next.url;
       }
 
       return true;

@@ -1210,18 +1210,42 @@ describe('createLivePreview', () => {
     const IMAGE = '[data-blok-tool="image"]';
     const caption = (): string => state.layer.querySelector(`${IMAGE} .blok-image-caption`)?.textContent ?? '';
 
+    const PLACEHOLDER = `${IMAGE} [data-blok-media-preview="image"]`;
+    const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+
+    /** Every URL the preview handed an element, through the src property or an attribute. */
+    const watchLoads = (): string[] => {
+      const seen: string[] = [];
+      const src = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+      const setAttribute = Element.prototype.setAttribute;
+
+      vi.spyOn(HTMLImageElement.prototype, 'src', 'set').mockImplementation(function (this: HTMLImageElement, value: string) {
+        seen.push(value);
+        src?.set?.call(this, value);
+      });
+      vi.spyOn(Element.prototype, 'setAttribute').mockImplementation(function (this: Element, name: string, value: string) {
+        if (/src|href|poster/i.test(name)) {
+          seen.push(value);
+        }
+        setAttribute.call(this, name, value);
+      });
+
+      return seen;
+    };
+
     it('draws a lone Markdown image as the image block, its alt text as the caption', () => {
       const preview = make();
 
       preview.update('c1', markdown('![Red planet](https://example.com/mars.png)'));
       vi.advanceTimersByTime(35 * 10);
 
-      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/mars.png');
+      expect(state.layer.querySelector(PLACEHOLDER)).not.toBeNull();
       expect(caption()).toBe('Red planet');
       expect(layerText()).not.toContain('![');
     });
 
-    it('shows the image block while its URL streams, and loads nothing until the URL is whole', () => {
+    it('never loads a streamed image from the network, before or after its URL is whole', () => {
+      const seen = watchLoads();
       const preview = make();
       const json = markdown('![Red planet](https://example.com/mars.png)\n\nafter');
 
@@ -1229,14 +1253,37 @@ describe('createLivePreview', () => {
       vi.advanceTimersByTime(35 * 10);
 
       expect(state.layer.querySelector(IMAGE)).not.toBeNull();
-      expect(state.layer.querySelector(`${IMAGE} img`)?.hasAttribute('src') ?? false).toBe(false);
       expect(caption()).toBe('Red planet');
       expect(layerText()).not.toContain('example.com');
 
       preview.update('c1', json);
       vi.advanceTimersByTime(35 * 10);
 
-      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/mars.png');
+      expect(seen.filter((url) => url.includes('example.com'))).toEqual([]);
+      expect(state.layer.querySelector('[src*="example.com"]')).toBeNull();
+      expect(state.layer.querySelector(PLACEHOLDER)).not.toBeNull();
+    });
+
+    it('never loads a protocol-relative or relative image URL, which would reach a server too', () => {
+      const seen = watchLoads();
+      const preview = make();
+
+      preview.update('c1', markdown('![a](//attacker.example/a.png)\n\n![b](/b.png?d=1)'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(seen.filter((url) => !url.startsWith('data:') && /png/.test(url))).toEqual([]);
+      expect(state.layer.querySelector('img[src]')).toBeNull();
+      expect(state.layer.querySelectorAll(PLACEHOLDER)).toHaveLength(2);
+    });
+
+    it('draws a data: raster image, which loads nothing from the network', () => {
+      const preview = make();
+
+      preview.update('c1', markdown(`![Dot](${PNG})`));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe(PNG);
+      expect(state.layer.querySelector(PLACEHOLDER)).toBeNull();
     });
 
     it('never loads an image with an unsafe URL', () => {
@@ -1262,10 +1309,13 @@ describe('createLivePreview', () => {
       const preview = make();
       const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'image', data: { url: 'https://example.com/b.png', caption: 'Moon' } } });
 
+      const seen = watchLoads();
+
       preview.update('c1', json);
       vi.advanceTimersByTime(35 * 10);
 
-      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/b.png');
+      expect(seen.filter((url) => url.includes('example.com'))).toEqual([]);
+      expect(state.layer.querySelector(PLACEHOLDER)).not.toBeNull();
       expect(caption()).toBe('Moon');
     });
 

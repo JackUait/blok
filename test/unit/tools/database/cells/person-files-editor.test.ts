@@ -60,6 +60,27 @@ describe('person cell editor', () => {
     expect(first.textContent).toBe('Ada Lovelace');
   });
 
+  // notion-live-3/person-editor.png: a chip is a 20px avatar, the name, then ×.
+  it('draws each chip as an avatar, then the name', () => {
+    open([{ id: 'u1' }]);
+
+    const chip = q('[data-blok-database-person-chip="u1"]');
+
+    expect(chip.firstElementChild?.getAttribute('data-blok-database-person-initial')).toBe('A');
+    expect(chip.childNodes[1]?.textContent).toBe('Ada Lovelace');
+  });
+
+  // notion-spec-2 §19.1, person-editor.png: no prompt beside a chip, so a cut-off one never shows.
+  it('shows the search prompt only while nobody is chosen', () => {
+    open([{ id: 'u1' }]);
+
+    expect(q<HTMLInputElement>('[data-blok-database-person-search]').placeholder).toBe('');
+    q('[data-blok-database-person-remove]').click();
+    expect(q<HTMLInputElement>('[data-blok-database-person-search]').placeholder).toBe('tools.database.personSearchPlaceholder');
+    q('[data-blok-database-person-option="u2"]').click();
+    expect(q<HTMLInputElement>('[data-blok-database-person-search]').placeholder).toBe('');
+  });
+
   it('lists the current user first, then everyone else', () => {
     open([]);
 

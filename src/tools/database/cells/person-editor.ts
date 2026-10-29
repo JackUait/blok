@@ -48,7 +48,6 @@ class PersonEditor implements CellEditorHandle {
     this.search.setAttribute('aria-expanded', 'true');
     this.search.setAttribute('aria-controls', this.listId);
     this.search.setAttribute('aria-label', property.name);
-    this.search.placeholder = ctx.i18n.t('tools.database.personSearchPlaceholder');
     this.chips.appendChild(this.search);
 
     const hint = document.createElement('div');
@@ -172,12 +171,14 @@ class PersonEditor implements CellEditorHandle {
 
   private renderChips(): void {
     this.chips.querySelectorAll('[data-blok-database-person-chip]').forEach((chip) => chip.remove());
+    // notion-spec-2 §19.1: no prompt beside a chip.
+    this.search.placeholder = this.selected.length > 0 ? '' : this.ctx.i18n.t('tools.database.personSearchPlaceholder');
     for (const id of this.selected) {
       const chip = document.createElement('span');
       const remove = document.createElement('button');
 
       chip.setAttribute('data-blok-database-person-chip', id);
-      chip.append(this.nameOf(id));
+      chip.append(this.avatar({ ...this.people.find((p) => p.id === id), id, name: this.nameOf(id) }), this.nameOf(id));
       remove.type = 'button';
       remove.setAttribute('data-blok-database-person-remove', '');
       remove.setAttribute('aria-label', this.ctx.i18n.t('tools.database.removeOption').replace('{option}', this.nameOf(id)));

@@ -7079,7 +7079,10 @@ textarea[data-blok-database-cell-input] {
   align-items: center;
   justify-content: space-between;
   padding: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-1);
+  /* notion-spec-2 §24.8: 12/14.4 weight 500. Notion's ink fails AA at 12px, so it keeps the secondary ink. */
   font-size: 12px;
+  line-height: 14.4px;
+  font-weight: 500;
   color: var(--blok-database-ink-secondary);
 }
 

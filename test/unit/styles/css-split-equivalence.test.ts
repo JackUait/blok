@@ -1389,6 +1389,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_RELATION_CLEAR_BYTES = 601;
     // database.css + field.css: the formula box's property tokens, its placeholder and its contenteditable focus.
     const DATABASE_FORMULA_TOKENS_BYTES = 1_472;
+    // database.css: the Edit property "Options" heading's measured line and weight (notion-spec-2 §24.8).
+    const DATABASE_OPTIONS_HEADING_BYTES = 113;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1730,7 +1732,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PERSON_CARD_BYTES
       + DATABASE_FORMULA_EDITOR_PANES_BYTES
       + DATABASE_RELATION_CLEAR_BYTES
-      + DATABASE_FORMULA_TOKENS_BYTES;
+      + DATABASE_FORMULA_TOKENS_BYTES
+      + DATABASE_OPTIONS_HEADING_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

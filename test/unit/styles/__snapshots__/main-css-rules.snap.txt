@@ -10168,6 +10168,8 @@ textarea[data-blok-database-cell-input] {
   justify-content: space-between;
   padding: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-1);
   font-size: 12px;
+  line-height: 14.4px;
+  font-weight: 500;
   color: var(--blok-database-ink-secondary);
 }
 

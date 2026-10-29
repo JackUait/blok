@@ -158,3 +158,15 @@ describe('delete-last-view dialog × (research/26 §5a, research/30 B3)', () => 
     expect(ruleBody('[data-blok-database-confirm-close]:focus-visible')).toContain('outline: 2px solid var(--blok-focus-ring)');
   });
 });
+
+// notion-spec-2 §24.8: Notion's ink rgb(125,122,117) fails AA at 12px, so the heading keeps Blok's secondary ink.
+describe('Edit property "Options" heading and status group names (notion-spec-2 §24.8)', () => {
+  it('read 12/14.4, weight 500, in the secondary ink', () => {
+    const body = ruleBody('[data-blok-database-options-heading]');
+
+    expect(body).toContain('font-size: 12px');
+    expect(body).toContain('line-height: 14.4px');
+    expect(body).toContain('font-weight: 500');
+    expect(body).toContain('color: var(--blok-database-ink-secondary)');
+  });
+});

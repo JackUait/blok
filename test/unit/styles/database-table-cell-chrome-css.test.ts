@@ -30,10 +30,10 @@ describe('table file chip (§18.1)', () => {
 
 // notion-spec-2 §18.1: 8px padding around a 20px line keeps the 37px row (36 + 1).
 describe('8px-padded table cells (§18.1)', () => {
-  const TYPES = ':is([data-type="person"], [data-type="status"], [data-type="createdBy"], [data-type="lastEditedBy"])';
+  const TYPES = ':is([data-type="person"], [data-type="status"], [data-type="createdBy"], [data-type="lastEditedBy"], [data-type="relation"])';
   const PILL_LINE = `[data-blok-database-table-cell]${TYPES} > [data-blok-database-cell]`;
 
-  it('pad Status, Created by and Last edited by 8px like Person (§20.1)', () => {
+  it('pad Status, Created by, Last edited by and Relation 8px like Person (§20.1, §21.5)', () => {
     expect(ruleBody(`[data-blok-database-table-cell]${TYPES}`)).toContain('padding: var(--blok-space-2)');
   });
 

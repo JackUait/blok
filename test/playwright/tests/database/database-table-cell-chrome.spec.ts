@@ -32,6 +32,7 @@ const SCHEMA = [
   { id: 'p-cb', name: 'Created by', type: 'createdBy', position: 'a4' },
   { id: 'p-lb', name: 'Last edited by', type: 'lastEditedBy', position: 'a5' },
   { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a6' },
+  { id: 'p-rel', name: 'Related', type: 'relation', position: 'a7', relation: { targetDatabaseId: 'db-1' } },
 ];
 
 const META = { createdAt: Date.UTC(2026, 9, 28, 7, 39), createdBy: 'u-ada', lastEditedAt: Date.UTC(2026, 9, 28, 7, 39), lastEditedBy: 'u-ada' };
@@ -45,6 +46,7 @@ const ROWS: Array<{ id: string; properties: Record<string, unknown> }> = [
       'p-status': 'o-ip',
       'p-person': ['u-ada'],
       'p-done': true,
+      'p-rel': [{ id: 'r2' }],
     },
   },
   { id: 'r2', properties: { 'p-title': 'B' } },
@@ -172,14 +174,14 @@ test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl
   await popup.close();
 });
 
-test('rows stay 37px with Status, Person, Created by and Last edited by columns, filled or empty (§18, recon §0)', async ({ page }) => {
+test('rows stay 37px with Status, Person, Created by, Last edited by and Relation columns, filled or empty (§18, recon §0)', async ({ page }) => {
   for (const rowId of ['r1', 'r2']) {
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);
   }
 });
 
-test('Status, Created by and Last edited by cells pad 8px on every side (§18.1, §20.1)', async ({ page }) => {
-  for (const propertyId of ['p-status', 'p-cb', 'p-lb']) {
+test('Status, Created by, Last edited by and Relation cells pad 8px on every side (§18.1, §20.1, §21.5)', async ({ page }) => {
+  for (const propertyId of ['p-status', 'p-cb', 'p-lb', 'p-rel']) {
     expect(await style(cell(page, 'r1', propertyId), ['padding'])).toEqual({ padding: '8px' });
   }
 });

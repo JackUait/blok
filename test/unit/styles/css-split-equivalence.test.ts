@@ -1297,6 +1297,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GALLERY_CHECKBOX_NAME_BYTES = 273;
     // database.css: gallery card pills 18 tall, 12/18 (notion-spec-2 §19.17).
     const DATABASE_GALLERY_PILL_BYTES = 249;
+    // database.css: Relation cells pad 8px on a 20px line (notion-spec-2 §21.5).
+    const DATABASE_TABLE_RELATION_CELL_PADDING_BYTES = 80;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1592,7 +1594,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_STAMP_CELLS_BYTES
       + DATABASE_ROLLUP_SETUP_BYTES
       + DATABASE_GALLERY_CHECKBOX_NAME_BYTES
-      + DATABASE_GALLERY_PILL_BYTES;
+      + DATABASE_GALLERY_PILL_BYTES
+      + DATABASE_TABLE_RELATION_CELL_PADDING_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

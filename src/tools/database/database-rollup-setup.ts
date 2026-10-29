@@ -71,6 +71,14 @@ export const rollupSetupItems = (property: PropertyDefinition, host: RollupSetup
     closeOnActivate: true,
     onActivate: () => host.update(rollupFunctionPatch(property, fn)),
   });
+  // §18.3: an unset Property takes the related database's title. Changing a set one is unmeasured.
+  const pickRelation = (p: PropertyDefinition): Partial<PropertySettingsV2> => {
+    const picked = { ...property, rollup: { ...settings, relationPropertyId: p.id } };
+    const id = p.relation?.targetDatabaseId;
+    const title = settings.targetPropertyId === '' && id !== undefined ? host.targetSchema(id).find((t) => t.type === 'title') : undefined;
+
+    return title === undefined ? { rollup: picked.rollup } : rollupTargetPatch(picked, title);
+  };
   const groups = CALCULATE_GROUPS
     .map(([titleKey, members]) => [titleKey, fns.filter((fn) => members.includes(fn))] as const)
     .filter(([, members]) => members.length > 0);
@@ -89,7 +97,7 @@ export const rollupSetupItems = (property: PropertyDefinition, host: RollupSetup
           name: `rollupRelation-${p.id}`,
           title: p.name,
           closeOnActivate: true,
-          onActivate: () => host.update({ rollup: { ...settings, relationPropertyId: p.id } }),
+          onActivate: () => host.update(pickRelation(p)),
         })),
       },
     },

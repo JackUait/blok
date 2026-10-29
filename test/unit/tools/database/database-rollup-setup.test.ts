@@ -83,6 +83,17 @@ describe('rollup setup menu (notion-spec-2 §20.11, §18.3)', () => {
     expect(host.update).toHaveBeenCalledWith({ rollup: expect.objectContaining({ relationPropertyId: 'rel' }) });
   });
 
+  it('picking a relation on an unset rollup fills Property with the related title (§18.3)', () => {
+    const host = makeHost();
+    const bare: PropertyDefinition = { id: 'ru', name: 'Rollup', type: 'rollup', position: 'a2' };
+    const [rel] = rows(rollupSetupItems(bare, host));
+
+    childrenOf(rel).find((item) => item.title === 'Related')?.onActivate?.(rel);
+
+    expect(host.update).toHaveBeenCalledTimes(1);
+    expect(host.update).toHaveBeenCalledWith({ rollup: { relationPropertyId: 'rel', targetPropertyId: 't', function: 'show_original' } });
+  });
+
   it('never offers a rollup as the property, and a picked Number brings its format', () => {
     const host = makeHost();
     const unformatted: PropertyDefinition = { ...rollup, rollup: { relationPropertyId: 'rel', targetPropertyId: 't', function: 'show_original' } };

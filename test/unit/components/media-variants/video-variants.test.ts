@@ -199,6 +199,7 @@ describe('produceVideoVariant', () => {
     ['VP9 profile 1', 'vp09.01.10.08.03.01.13.00.01'],
     ['VP9 profile 2', 'vp09.02.10.10'],
     ['AV1 10-bit', 'av01.0.04M.10'],
+    ['AV1 profile 1 (4:4:4)', 'av01.1.04M.08'],
     ['an unknown codec', null],
   ])('re-encodes %s, which not every browser plays', async (_name, codec) => {
     mb.state.videoCodec = codec;

@@ -18,11 +18,11 @@ export const VIDEO_TARGETS: Record<VideoFormat, VideoTarget> = {
 };
 
 /**
- * Codecs every browser that has the family plays: H.264 Baseline/Main/High,
- * VP9 profile 0 and 8-bit AV1. Mediabunny copies on family alone, so without
- * this it would copy 10-bit or 4:4:4 video that e.g. Safari never loads.
+ * Codecs safe to copy: H.264 Baseline/Main/High, VP9 profile 0 and 8-bit
+ * 4:2:0 AV1. Mediabunny copies on family alone, so without this it would
+ * copy 10-bit or 4:4:4 video that some browsers never load.
  */
-const COPY_SAFE_CODEC = /^(avc1\.(42|4d|64)|vp09\.00\.|av01\.\d\.\d+[MH]\.08)/i;
+const COPY_SAFE_CODEC = /^(avc1\.(42|4d|64)|vp09\.00\.|av01\.0\.\d+[MH]\.08)/i;
 
 export interface VideoVariantOptions {
   /** Longer videos (seconds) are only remuxed, never re-encoded. */

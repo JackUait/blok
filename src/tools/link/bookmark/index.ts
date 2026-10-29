@@ -24,7 +24,7 @@ import {
   type BookmarkMeta,
 } from '../metadata-fetcher';
 import { renderBookmarkPreview } from './preview';
-import { RUNTIME_PARTS_OWNER } from '../../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../../components/utils/override-static';
 
 export interface BookmarkData extends BookmarkMeta, BlockToolData {}
 
@@ -42,12 +42,25 @@ const URL_PATTERN = /https?:\/\/\S+/;
  * that cannot be read renders the link itself.
  */
 export class Bookmark implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'bookmark';
   }
 
-  public static describe = describeBookmark;
-  public static actionHandlers = LINK_ACTION_HANDLERS.bookmark;
+  public static get describe(): typeof describeBookmark {
+    return describeBookmark;
+  }
+
+  public static set describe(value: typeof describeBookmark) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof LINK_ACTION_HANDLERS.bookmark {
+    return LINK_ACTION_HANDLERS.bookmark;
+  }
+
+  public static set actionHandlers(value: typeof LINK_ACTION_HANDLERS.bookmark) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

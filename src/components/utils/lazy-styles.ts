@@ -24,8 +24,10 @@ export type LazySheet = keyof typeof LOADERS;
  * getter. Subclasses inherit it. Core loads them before the first render.
  * Not versioned: a tool class built against one Blok copy must still be read
  * by another (tools.mjs and blok.mjs, or the CJS and ESM builds).
+ * Tools spell the key as a literal, `static get 'blok.toolSheets'()`: esbuild
+ * keeps a class whose computed key is an imported binding, and with it every tool.
  */
-export const TOOL_SHEETS = Symbol.for('blok.toolSheets');
+export const TOOL_SHEETS = 'blok.toolSheets';
 
 /**
  * How long boot waits for its sheets before it renders anyway. A stalled chunk
@@ -147,7 +149,7 @@ export const toolSheets = (toolClass: unknown): LazySheet[] => {
     return [];
   }
 
-  const declared: unknown = (toolClass as unknown as Record<symbol, unknown>)[TOOL_SHEETS];
+  const declared: unknown = Reflect.get(toolClass, TOOL_SHEETS);
 
   return Array.isArray(declared) ? declared.filter(isSheet) : [];
 };

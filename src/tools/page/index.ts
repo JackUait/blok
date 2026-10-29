@@ -55,6 +55,7 @@ import { outputBlocksToHtml } from '../../shared/rich-text/block-data';
 import { declaredRichTextFields } from '../../components/tools/base';
 import { richTextFieldsFor } from '../../shared/rich-text/fields';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
+import { overrideStatic } from '../../components/utils/override-static';
 
 const isOutputBlock = (value: unknown): value is OutputBlockData =>
   typeof value === 'object' && value !== null && typeof Reflect.get(value, 'type') === 'string'
@@ -123,8 +124,21 @@ const readIcon = (value: unknown): PageIcon | undefined => {
 
 /** A page block points to a host-owned page. Only its ID is saved. */
 export class PageTool implements BlockTool {
-  public static describe = describePage;
-  public static actionHandlers = PAGE_ACTION_HANDLERS;
+  public static get describe(): typeof describePage {
+    return describePage;
+  }
+
+  public static set describe(value: typeof describePage) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof PAGE_ACTION_HANDLERS {
+    return PAGE_ACTION_HANDLERS;
+  }
+
+  public static set actionHandlers(value: typeof PAGE_ACTION_HANDLERS) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

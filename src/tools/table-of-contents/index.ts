@@ -17,6 +17,7 @@ import { COLOR_PRESETS } from '../../components/shared/color-presets';
 import { outlineDepths } from '../../shared/outline-depths';
 import { collectHeadings, type TocHeading } from './headings';
 import { renderTableOfContentsPreview } from './preview';
+import { overrideStatic } from '../../components/utils/override-static';
 
 const COLOR_NAMES = new Set(COLOR_PRESETS.map((preset) => preset.name));
 
@@ -52,7 +53,13 @@ const targetOf = (link: Element): string => link.getAttribute(TARGET) ?? '';
  * a real `#<block id>` link, so copying or opening it in a new tab still works.
  */
 export class TableOfContentsTool implements BlockTool {
-  public static describe = describeTableOfContents;
+  public static get describe(): typeof describeTableOfContents {
+    return describeTableOfContents;
+  }
+
+  public static set describe(value: typeof describeTableOfContents) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI | undefined;

@@ -13,6 +13,7 @@ import { TABS_ATTR, TABS_TOOL } from '../tabs/constants';
 import { tabRegistry, type TabHandle } from '../tabs/registry';
 import type { TabData } from '../tabs/types';
 import { layoutDraftOf } from '../tabs/draft';
+import { overrideStatic } from '../../components/utils/override-static';
 
 const normalize = (data: Partial<TabData> | undefined): TabData => {
   const title = typeof data?.title === 'string' ? data.title : '';
@@ -29,7 +30,13 @@ const normalize = (data: Partial<TabData> | undefined): TabData => {
  * renders only its panel.
  */
 export class TabTool implements BlockTool, TabHandle {
-  public static describe = describeTab;
+  public static get describe(): typeof describeTab {
+    return describeTab;
+  }
+
+  public static set describe(value: typeof describeTab) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

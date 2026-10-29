@@ -35,9 +35,16 @@ import { renderTogglePreview } from './preview';
 import { createArrowTooltip, renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility, updateToggleEmptyState } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
+import { overrideStatic } from '../../components/utils/override-static';
 
 export class ToggleItem implements BlockTool {
-  public static describe = describeToggle;
+  public static get describe(): typeof describeToggle {
+    return describeToggle;
+  }
+
+  public static set describe(value: typeof describeToggle) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private api: API;
   private readOnly: boolean;

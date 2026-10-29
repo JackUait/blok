@@ -10,7 +10,7 @@ import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
 import type { ColumnData } from './types';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /**
  * Origins that mean "the author just made this block" — the only ones allowed to
@@ -31,11 +31,17 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
  * paragraph when created so it is never empty.
  */
 export class Column implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'column';
   }
 
-  public static describe = describeColumn;
+  public static get describe(): typeof describeColumn {
+    return describeColumn;
+  }
+
+  public static set describe(value: typeof describeColumn) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private readonly api: API;
   private _data: ColumnData;

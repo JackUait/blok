@@ -2,6 +2,7 @@ import { describeDatabaseComment } from '../../shared/tool-descriptions/database
 import { databaseCommentSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { BlockTool, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { DatabaseCommentData } from './types';
+import { overrideStatic } from '../../components/utils/override-static';
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 const time = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
@@ -29,7 +30,13 @@ const normalize = (data: Partial<DatabaseCommentData> | undefined): DatabaseComm
  * thread itself from {@link DatabaseCommentTool.readData}.
  */
 export class DatabaseCommentTool implements BlockTool {
-  public static describe = describeDatabaseComment;
+  public static get describe(): typeof describeDatabaseComment {
+    return describeDatabaseComment;
+  }
+
+  public static set describe(value: typeof describeDatabaseComment) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private data: DatabaseCommentData;
 

@@ -5,8 +5,10 @@ import type { ToolConstructable } from '../../../types/tools';
  * Core reads it instead of importing the classes (registry-snapshot.ts, api/agent-services.ts).
  * An import of a tool class there puts that tool's code back into `import { Blok }`.
  * Define it as a static getter: getters are not enumerable, so copying a class's statics does not copy it.
+ * Tools spell the key as a literal, `static get 'blok.runtimePartsOwner'()`: esbuild keeps a class whose
+ * computed key is an imported binding, and with it every tool in the chunk.
  */
-export const RUNTIME_PARTS_OWNER: unique symbol = Symbol('blok.runtimePartsOwner');
+export const RUNTIME_PARTS_OWNER = 'blok.runtimePartsOwner';
 
 /**
  * Own property only: an alias of the class has it, a subclass does not.

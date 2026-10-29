@@ -25,7 +25,7 @@ import { renderTabsPreview } from './preview';
 import { tabRegistry, type TabsHandle } from './registry';
 import type { TabData, TabsData } from './types';
 import { layoutDraftOf, type LayoutDraft } from './draft';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /** Origins that mean "the author just made this block". Only these seed tabs. */
 const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
@@ -46,12 +46,25 @@ interface SeedData {
  * Each tab is a `tab` child block. Which tab is open is UI state, not data.
  */
 export class TabsTool implements BlockTool, TabsHandle {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'tabs';
   }
 
-  public static describe = describeTabs;
-  public static actionHandlers = TABS_ACTION_HANDLERS;
+  public static get describe(): typeof describeTabs {
+    return describeTabs;
+  }
+
+  public static set describe(value: typeof describeTabs) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof TABS_ACTION_HANDLERS {
+    return TABS_ACTION_HANDLERS;
+  }
+
+  public static set actionHandlers(value: typeof TABS_ACTION_HANDLERS) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly blockId: string;

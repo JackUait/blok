@@ -27,6 +27,7 @@ import { pageIconNode } from '../page/hover-preview';
 import { PagePicker } from '../page/page-picker';
 import { searchVisiblePages } from '../page/search-pages';
 import type { PageConfig, PageInfo } from '../page/types';
+import { overrideStatic } from '../../components/utils/override-static';
 import { renderPageLinkPreview } from './preview';
 
 export interface PageLinkData extends BlockToolData {
@@ -37,7 +38,13 @@ type PageLinkState = 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-acce
 
 /** A non-owning reference to a host page. */
 export class PageLink implements BlockTool {
-  public static describe = describePageLink;
+  public static get describe(): typeof describePageLink {
+    return describePageLink;
+  }
+
+  public static set describe(value: typeof describePageLink) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private readonly api: API;
   private readonly config: PageConfig;

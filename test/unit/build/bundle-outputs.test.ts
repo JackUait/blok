@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
 import { resolve, join, dirname } from 'node:path'
@@ -972,4 +973,104 @@ describe('lazy stylesheets stay out of the startup closure', () => {
       expect(readFileSync(holders[0], 'utf-8').includes('/*! tailwindcss'), name).toBe(true)
     }
   })
+})
+
+describe('a consumer that imports one tool gets only that tool (tree shaking)', () => {
+  // A static class field compiles (es2017) to `Tool.x = …` after the class.
+  // Consumer bundlers keep that assignment as a side effect, and with it every
+  // tool class in the chunk. Tools declare such statics as accessors instead.
+  // An app entry: Vite drops an entry's own exports, so the import must be used.
+  const ENTRY = `import { Paragraph } from ${JSON.stringify(resolve(dist, 'tools.mjs'))}; console.log(Paragraph)`
+
+  const UNUSED_TOOL_FINGERPRINTS: Record<string, string> = {
+    DatabaseTool: 'data-blok-database-layout-pool',
+    ImageTool: 'image-fullscreen',
+    VideoTool: 'video-copy-url-at-time',
+    AudioTool: 'audio-cover-remove',
+    // The level menu's dataset key; the bare name also appears in core CSS selectors.
+    Header: '"blok-header-level":',
+  }
+
+  // Paragraph's own placeholder attribute; proves the bundle is not empty.
+  const PARAGRAPH_FINGERPRINT = 'data-blok-placeholder-active'
+
+  /** Static import closure of a rolldown output: every chunk the entry loads at once. */
+  // Vite 8 bundles with rolldown; rolldown itself is not a declared dependency.
+  const bundleWithVite = async (): Promise<string> => {
+    const { build } = await import('vite')
+    const result = await build({
+      configFile: false,
+      root: repoRoot,
+      logLevel: 'silent',
+      plugins: [{
+        name: 'consumer-entry',
+        resolveId: (id: string) => (id === 'consumer-entry' ? id : null),
+        load: (id: string) => (id === 'consumer-entry' ? ENTRY : null),
+      }],
+      build: { write: false, minify: true, copyPublicDir: false, rollupOptions: { input: 'consumer-entry' } },
+    })
+    const output = (Array.isArray(result) ? result : [result]).flatMap((item) => ('output' in item ? item.output : []))
+    const chunks = new Map(output.flatMap((item) => (item.type === 'chunk' ? [[item.fileName, item] as const] : [])))
+    const seen = new Set<string>()
+    const visit = (fileName: string): void => {
+      const chunk = chunks.get(fileName)
+      if (chunk === undefined || seen.has(fileName)) {
+        return
+      }
+      seen.add(fileName)
+      chunk.imports.forEach(visit)
+    }
+    output.forEach((item) => item.type === 'chunk' && item.isEntry && visit(item.fileName))
+    return [...seen].map((fileName) => chunks.get(fileName)?.code ?? '').join('\n')
+  }
+
+  // esbuild runs in its own process: under jsdom its TextEncoder check fails.
+  // Without splitting, esbuild would inline every `import()` target too.
+  const ESBUILD_SCRIPT = `
+    import { build } from 'esbuild'
+    import { resolve } from 'node:path'
+    const root = process.cwd()
+    const result = await build({
+      stdin: { contents: ${JSON.stringify(ENTRY)}, resolveDir: root, loader: 'js' },
+      absWorkingDir: root,
+      bundle: true,
+      splitting: true,
+      outdir: resolve(root, 'esbuild-consumer'),
+      metafile: true,
+      format: 'esm',
+      minify: true,
+      write: false,
+      logLevel: 'silent',
+      platform: 'browser',
+    })
+    const files = new Map(result.outputFiles.map((file) => [file.path, file.text]))
+    const outputs = result.metafile.outputs
+    const seen = new Set()
+    const visit = (file) => {
+      if (seen.has(file)) return
+      seen.add(file)
+      outputs[file].imports.filter((item) => item.kind === 'import-statement' && !item.external).forEach((item) => visit(item.path))
+    }
+    Object.entries(outputs).filter(([, output]) => output.entryPoint === '<stdin>').forEach(([file]) => visit(file))
+    process.stdout.write([...seen].map((file) => files.get(resolve(root, file))).join('\\n'))
+  `
+
+  const bundleWithEsbuild = async (): Promise<string> =>
+    execFileSync(process.execPath, ['--input-type=module', '-e', ESBUILD_SCRIPT], {
+      cwd: repoRoot,
+      encoding: 'utf-8',
+      maxBuffer: 256 * 1024 * 1024,
+    })
+
+  it.each([
+    ['vite (rolldown)', bundleWithVite],
+    ['esbuild', bundleWithEsbuild],
+  ])('%s drops the tools a Paragraph-only import never uses', async (_name, bundleConsumer) => {
+    const code = await bundleConsumer()
+    const kept = Object.entries(UNUSED_TOOL_FINGERPRINTS).filter(([, print]) => code.includes(print)).map(([tool]) => tool)
+    expect(kept).toEqual([])
+    expect(code.includes(PARAGRAPH_FINGERPRINT)).toBe(true)
+    // esbuild, the larger of the two, measured 944,035 bytes; ~10% headroom.
+    expect(Buffer.byteLength(code)).toBeLessThan(1024 * 1024)
+  }, 60_000)
 })

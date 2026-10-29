@@ -31,7 +31,7 @@ import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, writeDerived } from '../image/detached-upload';
 import { renderFilePreview } from './toolbox-preview';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -42,12 +42,25 @@ const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
 const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
 
 export class FileTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'file';
   }
 
-  public static describe = describeFile;
-  public static actionHandlers = MEDIA_ACTION_HANDLERS.file;
+  public static get describe(): typeof describeFile {
+    return describeFile;
+  }
+
+  public static set describe(value: typeof describeFile) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof MEDIA_ACTION_HANDLERS.file {
+    return MEDIA_ACTION_HANDLERS.file;
+  }
+
+  public static set actionHandlers(value: typeof MEDIA_ACTION_HANDLERS.file) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

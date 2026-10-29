@@ -35,7 +35,7 @@ import {
   EMOJI_JUMP_IN_ANIMATION,
   EMOJI_GHOST_STYLES,
 } from './constants';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /**
  * Resolve emoji from legacy callout data fields
@@ -103,11 +103,17 @@ function disposeSharedEmojiPicker(shared: SharedEmojiPicker): void {
 }
 
 export class CalloutTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'callout';
   }
 
-  public static describe = describeCallout;
+  public static get describe(): typeof describeCallout {
+    return describeCallout;
+  }
+
+  public static set describe(value: typeof describeCallout) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private readonly api: API;
   private readOnly: boolean;

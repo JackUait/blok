@@ -20,7 +20,7 @@ import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { quoteClasses } from '../../shared/tool-classes/quote';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 export interface QuoteData extends BlockToolData {
   text: string;
@@ -39,11 +39,17 @@ const DEFAULT_PLACEHOLDER = 'tools.quote.placeholder';
 const EDIT_CLASSES = ['outline-hidden'];
 
 export class Quote implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'quote';
   }
 
-  public static describe = describeQuote;
+  public static get describe(): typeof describeQuote {
+    return describeQuote;
+  }
+
+  public static set describe(value: typeof describeQuote) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private api: API;
   private readOnly: boolean;

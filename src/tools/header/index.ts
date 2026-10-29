@@ -35,7 +35,7 @@ import { buildArrow } from '../toggle/dom-builder';
 import { createArrowTooltip, updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
 import { renderHeadingPreview, renderToggleHeadingPreview } from './preview';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /**
  * Toggle-heading icon per level. Keyed 1-6 so toggle headings stay one-to-one
@@ -167,6 +167,37 @@ interface Level {
 }
 
 /**
+ * Base styles for all header levels. A function, not a static or a module
+ * constant: a top-level `.join()` is a call that consumer bundlers keep.
+ * Static presentational classes live in `src/shared/tool-classes/header.ts`
+ * so the view emitter stamps the exact same set (padding routes through the
+ * public --blok-block-padding-* tokens there). `outline-hidden` stays here: it
+ * suppresses the focus ring on a contenteditable host and has no static
+ * counterpart.
+ */
+const baseStyles = (): string => `${HEADER_BASE_CLASSES.join(' ')} outline-hidden`;
+
+/**
+ * Default level configurations using Tailwind CSS classes. A function for the
+ * same reason as {@link baseStyles}.
+ */
+const defaultLevels = (): Array<{
+  number: number;
+  tag: string;
+  nameKey: string;
+  name: string;
+  icon: string;
+  styles: string;
+}> => [
+  { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: `Heading ${1}`, icon: IconH1, styles: HEADER_LEVEL_CLASSES[1].join(' ') },
+  { number: 2, tag: 'H2', nameKey: 'tools.header.heading2', name: `Heading ${2}`, icon: IconH2, styles: HEADER_LEVEL_CLASSES[2].join(' ') },
+  { number: 3, tag: 'H3', nameKey: 'tools.header.heading3', name: `Heading ${3}`, icon: IconH3, styles: HEADER_LEVEL_CLASSES[3].join(' ') },
+  { number: 4, tag: 'H4', nameKey: 'tools.header.heading4', name: `Heading ${4}`, icon: IconH4, styles: HEADER_LEVEL_CLASSES[4].join(' ') },
+  { number: 5, tag: 'H5', nameKey: 'tools.header.heading5', name: `Heading ${5}`, icon: IconH5, styles: HEADER_LEVEL_CLASSES[5].join(' ') },
+  { number: 6, tag: 'H6', nameKey: 'tools.header.heading6', name: `Heading ${6}`, icon: IconH6, styles: HEADER_LEVEL_CLASSES[6].join(' ') },
+];
+
+/**
  * Header block for the Blok Editor.
  *
  * @author CodeX (team@ifmo.su)
@@ -175,11 +206,17 @@ interface Level {
  * @version 2.0.0
  */
 export class Header implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'header';
   }
 
-  public static describe = describeHeader;
+  public static get describe(): typeof describeHeader {
+    return describeHeader;
+  }
+
+  public static set describe(value: typeof describeHeader) {
+    overrideStatic(this, 'describe', value);
+  }
 
   /**
    * Editor API
@@ -292,18 +329,6 @@ export class Header implements BlockTool {
       this.api.events.on('block changed', this.handleBlockChanged);
     }
   }
-
-  /**
-   * Base styles for all header levels
-   */
-  /**
-   * Static presentational classes live in `src/shared/tool-classes/header.ts`
-   * so the view emitter stamps the exact same set (padding routes through the
-   * public --blok-block-padding-* tokens there). `outline-hidden` stays here: it
-   * suppresses the focus ring on a contenteditable host and has no static
-   * counterpart.
-   */
-  private static readonly BASE_STYLES = `${HEADER_BASE_CLASSES.join(' ')} outline-hidden`;
 
   /**
    * Styles
@@ -845,7 +870,7 @@ export class Header implements BlockTool {
       }
 
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'ps-8');
+      this._element.className = twMerge(baseStyles(), this.currentLevel.styles, getPlaceholderClasses('always'), 'ps-8');
 
       if (!this._wrapper) {
         /**
@@ -864,7 +889,7 @@ export class Header implements BlockTool {
       }
     } else {
       this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'));
+      this._element.className = twMerge(baseStyles(), this.currentLevel.styles, getPlaceholderClasses('always'));
       this._arrowElement = null;
 
       if (this._wrapper) {
@@ -927,7 +952,7 @@ export class Header implements BlockTool {
      * When isToggleable, add start padding to leave room for the arrow (which lives
      * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'ps-8' : '');
+    tag.className = twMerge(baseStyles(), this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'ps-8' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -1003,7 +1028,7 @@ export class Header implements BlockTool {
    * height is identical at every heading level. To sit on the FIRST line of a
    * (possibly multi-line) heading its CENTER is anchored there, not its box sized
    * to it: top-[calc(var(--blok-block-padding-top,7px)+0.65em)] = the heading's
-   * top padding (the same token BASE_STYLES uses, 7px default) plus half a
+   * top padding (the same token baseStyles() uses, 7px default) plus half a
    * line (the heading's rendered line-height is 1.3, set via the
    * --blok-heading-line-height token in src/styles/heading.css, not a Tailwind
    * class on this element), and -translate-y-1/2 pulls the fixed pill up so its own
@@ -1340,25 +1365,6 @@ export class Header implements BlockTool {
   }
 
   /**
-   * Default level configurations using Tailwind CSS classes
-   */
-  private static readonly DEFAULT_LEVELS: Array<{
-    number: number;
-    tag: string;
-    nameKey: string;
-    name: string;
-    icon: string;
-    styles: string;
-  }> = [
-    { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: `Heading ${1}`, icon: IconH1, styles: HEADER_LEVEL_CLASSES[1].join(' ') },
-    { number: 2, tag: 'H2', nameKey: 'tools.header.heading2', name: `Heading ${2}`, icon: IconH2, styles: HEADER_LEVEL_CLASSES[2].join(' ') },
-    { number: 3, tag: 'H3', nameKey: 'tools.header.heading3', name: `Heading ${3}`, icon: IconH3, styles: HEADER_LEVEL_CLASSES[3].join(' ') },
-    { number: 4, tag: 'H4', nameKey: 'tools.header.heading4', name: `Heading ${4}`, icon: IconH4, styles: HEADER_LEVEL_CLASSES[4].join(' ') },
-    { number: 5, tag: 'H5', nameKey: 'tools.header.heading5', name: `Heading ${5}`, icon: IconH5, styles: HEADER_LEVEL_CLASSES[5].join(' ') },
-    { number: 6, tag: 'H6', nameKey: 'tools.header.heading6', name: `Heading ${6}`, icon: IconH6, styles: HEADER_LEVEL_CLASSES[6].join(' ') },
-  ];
-
-  /**
    * Available header levels
    *
    * @returns Level array
@@ -1366,7 +1372,7 @@ export class Header implements BlockTool {
   private get levels(): Level[] {
     const overrides = this._settings.levelOverrides || {};
 
-    const availableLevels: Level[] = Header.DEFAULT_LEVELS.map(defaultLevel => {
+    const availableLevels: Level[] = defaultLevels().map(defaultLevel => {
       const override = overrides[defaultLevel.number] || {};
 
       // Build inline styles for custom overrides (dynamic values don't work with Tailwind)
@@ -1482,7 +1488,7 @@ export class Header implements BlockTool {
    * @returns ToolboxConfig array with entries for H1-H6
    */
   public static get toolbox(): ToolboxConfig {
-    const headingEntries = Header.DEFAULT_LEVELS.map(level => ({
+    const headingEntries = defaultLevels().map(level => ({
       icon: level.icon,
       title: level.name,
       titleKey: level.nameKey,
@@ -1498,7 +1504,7 @@ export class Header implements BlockTool {
       },
     }));
 
-    const toggleHeadingEntries = Header.DEFAULT_LEVELS
+    const toggleHeadingEntries = defaultLevels()
       .map(level => ({
         icon: TOGGLE_HEADING_ICONS[level.number],
         title: `Toggle heading ${level.number}`,

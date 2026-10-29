@@ -67,7 +67,7 @@ import { detectLanguage } from './language-detector';
 import { renderCodePreview } from './preview';
 import { normalizeFenceLang } from '../../markdown/fence-language';
 import { CODE_LANGUAGE_ATTR } from '../../components/modules/paste/constants';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -98,11 +98,17 @@ function findTextPosition(root: Node, targetOffset: number): { node: Node; offse
 }
 
 export class CodeTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'code';
   }
 
-  public static describe = describeCode;
+  public static get describe(): typeof describeCode {
+    return describeCode;
+  }
+
+  public static set describe(value: typeof describeCode) {
+    overrideStatic(this, 'describe', value);
+  }
 
   private api: API;
   private block: BlockAPI | undefined;

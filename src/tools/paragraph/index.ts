@@ -28,6 +28,7 @@ import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../c
 import { twMerge } from '../../components/utils/tw';
 import { PARAGRAPH_CLASSES } from '../../shared/tool-classes/paragraph';
 import { renderTextPreview } from './preview';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /**
  * Tool's input and output data format
@@ -97,6 +98,13 @@ const parseHtml = (html: string): DocumentFragment => {
 };
 
 /**
+ * Edit-only wrapper classes. The static presentational ones live in
+ * `src/shared/tool-classes/paragraph.ts` so the view emitter stamps the exact
+ * same set — see that module for why the split exists.
+ */
+const EDIT_CLASSES = ['outline-hidden'];
+
+/**
  * Paragraph block for the Blok Editor.
  * Represents a regular text block
  *
@@ -105,7 +113,13 @@ const parseHtml = (html: string): DocumentFragment => {
  * @license MIT
  */
 export class Paragraph implements BlockTool {
-  public static describe = describeParagraph;
+  public static get describe(): typeof describeParagraph {
+    return describeParagraph;
+  }
+
+  public static set describe(value: typeof describeParagraph) {
+    overrideStatic(this, 'describe', value);
+  }
 
   /**
    * Default placeholder for Paragraph Tool
@@ -213,12 +227,6 @@ export class Paragraph implements BlockTool {
    *
    * @returns HTMLDivElement
    */
-  /**
-   * Edit-only wrapper classes. The static presentational ones live in
-   * `src/shared/tool-classes/paragraph.ts` so the view emitter stamps the exact
-   * same set — see that module for why the split exists.
-   */
-  private static readonly EDIT_CLASSES = ['outline-hidden'];
 
 
 
@@ -251,7 +259,7 @@ export class Paragraph implements BlockTool {
 
     div.className = twMerge(
       PARAGRAPH_CLASSES,
-      Paragraph.EDIT_CLASSES,
+      EDIT_CLASSES,
       getPlaceholderClasses('focus')
     );
     div.setAttribute(DATA_ATTR.tool, 'paragraph');

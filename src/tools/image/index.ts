@@ -76,7 +76,7 @@ import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 import { renderImagePreview } from './preview';
 import { figureInsets } from './figure-insets';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -89,13 +89,35 @@ function prefersReducedMotion(): boolean {
     && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 }
 
+const mergeToolActionHandlers = () => ({ ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS });
+
+type ImageToolActionHandlers = ReturnType<typeof mergeToolActionHandlers>;
+
+// Merged on first read: es2017 lowers a module-level spread to Object.assign, a call bundlers keep.
+const merged: { actionHandlers?: ImageToolActionHandlers } = {};
+
 export class ImageTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'image';
   }
 
-  public static describe = describeImage;
-  public static actionHandlers = { ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS };
+  public static get describe(): typeof describeImage {
+    return describeImage;
+  }
+
+  public static set describe(value: typeof describeImage) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): ImageToolActionHandlers {
+    merged.actionHandlers ??= mergeToolActionHandlers();
+
+    return merged.actionHandlers;
+  }
+
+  public static set actionHandlers(value: ImageToolActionHandlers) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

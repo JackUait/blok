@@ -50,7 +50,7 @@ import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 import { renderVideoPreview } from './preview';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -60,12 +60,25 @@ const DEFAULT_MAX_TRANSCODE_SECONDS = 600;
 const CONVERSION_IDLE_MS = 10 * 60_000;
 
 export class VideoTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'video';
   }
 
-  public static describe = describeVideo;
-  public static actionHandlers = MEDIA_ACTION_HANDLERS.video;
+  public static get describe(): typeof describeVideo {
+    return describeVideo;
+  }
+
+  public static set describe(value: typeof describeVideo) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof MEDIA_ACTION_HANDLERS.video {
+    return MEDIA_ACTION_HANDLERS.video;
+  }
+
+  public static set actionHandlers(value: typeof MEDIA_ACTION_HANDLERS.video) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

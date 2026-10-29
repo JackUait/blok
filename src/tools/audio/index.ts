@@ -46,17 +46,30 @@ import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { logLabeled } from '../../components/utils/logger';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 import { renderAudioPreview } from './preview';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
 export class AudioTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'audio';
   }
 
-  public static describe = describeAudio;
-  public static actionHandlers = MEDIA_ACTION_HANDLERS.audio;
+  public static get describe(): typeof describeAudio {
+    return describeAudio;
+  }
+
+  public static set describe(value: typeof describeAudio) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof MEDIA_ACTION_HANDLERS.audio {
+    return MEDIA_ACTION_HANDLERS.audio;
+  }
+
+  public static set actionHandlers(value: typeof MEDIA_ACTION_HANDLERS.audio) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

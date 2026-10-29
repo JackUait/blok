@@ -194,9 +194,9 @@ import { scanBacklinkSources } from './backlinks';
 import type { BacklinkSource } from './backlinks';
 import { DatabaseRowTool } from '../database-row';
 import { DatabaseCommentTool } from '../database-comment';
-import { TOOL_SHEETS, type LazySheet } from '../../components/utils/lazy-styles';
+import type { LazySheet } from '../../components/utils/lazy-styles';
 import type { BaseToolConstructable } from '../../../types/tools';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 interface DrawerAuthority {
   writable(): boolean;
@@ -499,23 +499,54 @@ const consumeViewLink = (owns: (viewId: string) => boolean): string | null => {
   return viewId;
 };
 
+const mergeToolActionHandlers = () => ({ ...DATABASE_ACTION_HANDLERS, ...DATABASE_COMMENT_HANDLERS });
+
+type DatabaseToolActionHandlers = ReturnType<typeof mergeToolActionHandlers>;
+
+// Merged on first read: es2017 lowers a module-level spread to Object.assign, a call bundlers keep.
+const merged: { actionHandlers?: DatabaseToolActionHandlers } = {};
+
+const DATABASE_COMPANION_TOOLS: Record<string, BaseToolConstructable> = {
+  'database-row': DatabaseRowTool,
+  'database-comment': DatabaseCommentTool,
+};
+
 export class DatabaseTool implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'database';
   }
 
-  public static describe = describeDatabase;
+  public static get describe(): typeof describeDatabase {
+    return describeDatabase;
+  }
+
+  public static set describe(value: typeof describeDatabase) {
+    overrideStatic(this, 'describe', value);
+  }
 
   /** Core loads these before the first render. Subclasses inherit it. */
-  public static get [TOOL_SHEETS](): LazySheet[] {
+  public static get 'blok.toolSheets'(): LazySheet[] {
     return ['database'];
   }
-  public static actionHandlers = { ...DATABASE_ACTION_HANDLERS, ...DATABASE_COMMENT_HANDLERS };
+
+  public static get actionHandlers(): DatabaseToolActionHandlers {
+    merged.actionHandlers ??= mergeToolActionHandlers();
+
+    return merged.actionHandlers;
+  }
+
+  public static set actionHandlers(value: DatabaseToolActionHandlers) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
+
   /** Rows and comments are blocks of their own; registering `database` brings both. */
-  public static companionTools: Record<string, BaseToolConstructable> = {
-    'database-row': DatabaseRowTool,
-    'database-comment': DatabaseCommentTool,
-  };
+  public static get companionTools(): Record<string, BaseToolConstructable> {
+    return DATABASE_COMPANION_TOOLS;
+  }
+
+  public static set companionTools(value: Record<string, BaseToolConstructable>) {
+    overrideStatic(this, 'companionTools', value);
+  }
 
   /**
    * Rows, a second data source and the page layout's tabs block. Rows come

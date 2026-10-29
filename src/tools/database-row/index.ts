@@ -3,11 +3,12 @@ import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blo
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { TOOL_SHEETS, type LazySheet } from '../../components/utils/lazy-styles';
+import type { LazySheet } from '../../components/utils/lazy-styles';
 import { IconPage, IconPlus } from '../../components/icons';
 import { isAnnotationBlock, mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
 import { isReactionKey, reactionKey } from '../database/row-reactions';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /** What the parent database answers when an empty page asks what to offer. */
 interface RowPagePrompt {
@@ -86,10 +87,16 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
  * which invokes tool instance methods by name through the Block adapter.
  */
 export class DatabaseRowTool implements BlockTool {
-  public static describe = describeDatabaseRow;
+  public static get describe(): typeof describeDatabaseRow {
+    return describeDatabaseRow;
+  }
+
+  public static set describe(value: typeof describeDatabaseRow) {
+    overrideStatic(this, 'describe', value);
+  }
 
   /** Core loads these before the first render. Subclasses inherit it. */
-  public static get [TOOL_SHEETS](): LazySheet[] {
+  public static get 'blok.toolSheets'(): LazySheet[] {
     return ['database'];
   }
 

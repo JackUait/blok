@@ -14,13 +14,20 @@ import { IconMinus } from '../../components/icons';
 import { renderDividerPreview } from './preview';
 import { twMerge } from '../../components/utils/tw';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../shared/tool-classes/divider';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /**
  * Divider block tool — renders a thin horizontal line separator.
  * Contentless void block with no editable content or settings.
  */
 export class DividerTool implements BlockTool {
-  public static describe = describeDivider;
+  public static get describe(): typeof describeDivider {
+    return describeDivider;
+  }
+
+  public static set describe(value: typeof describeDivider) {
+    overrideStatic(this, 'describe', value);
+  }
 
   /**
    * Rendered wrapper element

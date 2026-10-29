@@ -20,7 +20,7 @@ import { twMerge } from '../../components/utils/tw';
 import { buildIconColumnsCount } from '../../components/icons';
 import type { ColumnListData } from './types';
 import { renderColumnsPreview } from './preview';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 /**
  * Origins that mean "the author just made this block" — the only ones allowed to
@@ -41,12 +41,25 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
  * Created via slash-menu presets carrying a transient `columnCount` seed.
  */
 export class ColumnList implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'column_list';
   }
 
-  public static describe = describeColumnList;
-  public static actionHandlers = COLUMN_LIST_ACTION_HANDLERS;
+  public static get describe(): typeof describeColumnList {
+    return describeColumnList;
+  }
+
+  public static set describe(value: typeof describeColumnList) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof COLUMN_LIST_ACTION_HANDLERS {
+    return COLUMN_LIST_ACTION_HANDLERS;
+  }
+
+  public static set actionHandlers(value: typeof COLUMN_LIST_ACTION_HANDLERS) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private _data: ColumnListData;

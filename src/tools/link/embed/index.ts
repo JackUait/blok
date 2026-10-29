@@ -36,7 +36,7 @@ import { createUrlMirror } from '../../../components/utils/url-mirror';
 import { createEmbedWindow } from './empty-window';
 import { isAllowedEmbedOrigin } from './allowed-origins';
 import { renderEmbedPreview } from './preview';
-import { RUNTIME_PARTS_OWNER } from '../../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../../components/utils/override-static';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -169,12 +169,25 @@ const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
  * a provider-sanctioned iframe URL. Only registry-matched URLs are ever embedded.
  */
 export class Embed implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'embed';
   }
 
-  public static describe = describeEmbed;
-  public static actionHandlers = LINK_ACTION_HANDLERS.embed;
+  public static get describe(): typeof describeEmbed {
+    return describeEmbed;
+  }
+
+  public static set describe(value: typeof describeEmbed) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof LINK_ACTION_HANDLERS.embed {
+    return LINK_ACTION_HANDLERS.embed;
+  }
+
+  public static set actionHandlers(value: typeof LINK_ACTION_HANDLERS.embed) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private readonly api: API;
   private readonly block: BlockAPI;

@@ -56,7 +56,7 @@ import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
 import type { LegacyCellContent, TableData, TableConfig, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
-import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
+import { overrideStatic } from '../../components/utils/override-static';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -85,12 +85,25 @@ const WRAPPER_EDIT_CLASSES = [
  * Renders a 2D grid of contentEditable cells.
  */
 export class Table implements BlockTool {
-  public static get [RUNTIME_PARTS_OWNER](): string {
+  public static get 'blok.runtimePartsOwner'(): string {
     return 'table';
   }
 
-  public static describe = describeTable;
-  public static actionHandlers = TABLE_ACTION_HANDLERS;
+  public static get describe(): typeof describeTable {
+    return describeTable;
+  }
+
+  public static set describe(value: typeof describeTable) {
+    overrideStatic(this, 'describe', value);
+  }
+
+  public static get actionHandlers(): typeof TABLE_ACTION_HANDLERS {
+    return TABLE_ACTION_HANDLERS;
+  }
+
+  public static set actionHandlers(value: typeof TABLE_ACTION_HANDLERS) {
+    overrideStatic(this, 'actionHandlers', value);
+  }
 
   private api: API;
   private readOnly: boolean;

@@ -45,3 +45,10 @@ describe('8px-padded table cells (§18.1)', () => {
     expect(ruleBody(`${PILL_LINE} > [data-blok-database-person-chip]`)).toContain('height: 20px');
   });
 });
+
+describe('table checkbox (§18.1)', () => {
+  it('draws a checked box with no border, keeping its 4px radius', () => {
+    expect(ruleBody('[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"]')).toContain('border-width: 0');
+    expect(ruleBody('[data-blok-database-checkbox]')).toContain('border-radius: var(--blok-radius-control-sm)');
+  });
+});

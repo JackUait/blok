@@ -176,3 +176,18 @@ test('Status, Created by and Last edited by cells pad 8px on every side (§18.1,
     expect(await style(cell(page, 'r1', propertyId), ['padding'])).toEqual({ padding: '8px' });
   }
 });
+
+test('a checked box is a 16px blue square with no border (§18.1)', async ({ page }) => {
+  const box = cell(page, 'r1', 'p-done').locator('[data-blok-database-checkbox]');
+
+  expect(await style(box, ['border-top-width', 'background-color', 'width', 'height'])).toEqual({
+    'border-top-width': '0px',
+    'background-color': 'rgb(39, 131, 222)',
+    'width': '16px',
+    'height': '16px',
+  });
+  const glyph = await box.locator('svg').boundingBox();
+  const outer = await box.boundingBox();
+
+  expect((glyph?.x ?? 0) - (outer?.x ?? 0)).toBe(1);
+});

@@ -1287,6 +1287,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABLE_PILL_LINE_BYTES = 364;
     // database.css: Status, Created by and Last edited by cells pad 8px (notion-spec-2 §18.1, §20.1).
     const DATABASE_TABLE_PILL_CELL_PADDING_BYTES = 327;
+    // database.css: a checked table checkbox has no border (notion-spec-2 §18.1).
+    const DATABASE_TABLE_CHECKBOX_NO_BORDER_BYTES = 229;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1577,7 +1579,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TABLE_FILE_NAME_LINE_BYTES
       + LINK_HOVER_CARD_FONT_BYTES
       + DATABASE_TABLE_PILL_LINE_BYTES
-      + DATABASE_TABLE_PILL_CELL_PADDING_BYTES;
+      + DATABASE_TABLE_PILL_CELL_PADDING_BYTES
+      + DATABASE_TABLE_CHECKBOX_NO_BORDER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

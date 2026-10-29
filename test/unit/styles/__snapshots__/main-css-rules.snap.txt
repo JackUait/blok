@@ -9319,6 +9319,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   border-color: var(--blok-database-checkbox-checked-bg);
 }
 
+[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"] {
+  border-width: 0;
+}
+
 [data-blok-database-checkbox] svg {
   width: 14px;
   height: 14px;

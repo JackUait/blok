@@ -6155,6 +6155,11 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   border-color: var(--blok-database-checkbox-checked-bg);
 }
 
+/* notion-spec-2 §18.1: no border when checked. The box stays 16px (border-box). Peek and card boxes are unmeasured. */
+[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"] {
+  border-width: 0;
+}
+
 [data-blok-database-checkbox] svg {
   width: 14px;
   height: 14px;

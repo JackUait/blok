@@ -77,6 +77,36 @@ export const skipWhitespace = (text: string, pos: number): number => {
   return cursor.index;
 };
 
+/**
+ * Index past the run of characters from `pos` that `inRun` accepts.
+ * @param text - source text
+ * @param pos - start index
+ * @param inRun - whether a character belongs to the run
+ */
+export const runEnd = (text: string, pos: number, inRun: (char: string) => boolean): number => {
+  const cursor = { index: pos };
+
+  while (cursor.index < text.length && inRun(text[cursor.index])) {
+    cursor.index++;
+  }
+
+  return cursor.index;
+};
+
+/**
+ * `pattern` matched at `start`, reading no further than `end`. The engine
+ * never uses sticky regexes: in Jint, which runs it on the server, a sticky
+ * exec that fails searches the rest of the string, so one probe per `<` or
+ * `@` turned a long document quadratic. The caller picks `end` where no
+ * match can reach past, so the slices add up to linear work.
+ * @param pattern - a regex anchored with `^`, without `g` or `y`
+ * @param text - source text
+ * @param start - where the match must begin
+ * @param end - where the slice ends
+ */
+export const matchAt = (pattern: RegExp, text: string, start: number, end: number): RegExpExecArray | null =>
+  pattern.exec(text.slice(start, end));
+
 const ASCII_PUNCTUATION = /[!-/:-@[-`{-~]/;
 const UNICODE_PUNCTUATION = /[\p{P}\p{S}]/u;
 const UNICODE_WHITESPACE = /\s/;
@@ -136,7 +166,10 @@ const REFERENCE_BODY = String.raw`#(?:\d{1,7}|[xX][\dA-Fa-f]{1,6})|[\dA-Za-z]{1,
 const ESCAPE_OR_REFERENCE = new RegExp(`\\\\([!-/:-@[-\`{-~])|&(${REFERENCE_BODY});`, 'g');
 
 /** A character reference from just after its `&`. */
-const REFERENCE = new RegExp(`(${REFERENCE_BODY});`, 'y');
+const REFERENCE = new RegExp(`^(${REFERENCE_BODY});`);
+
+/** Longest reference body plus its `;`. */
+const MAX_REFERENCE = 32;
 
 /**
  * Decode one character reference body (what sits between `&` and `;`), or
@@ -160,9 +193,7 @@ const decodeReference = (body: string): string | undefined => {
  * @param pos - index of the `&`
  */
 export const scanCharacterReference = (src: string, pos: number): { value: string; end: number } | null => {
-  REFERENCE.lastIndex = pos + 1;
-
-  const match = REFERENCE.exec(src);
+  const match = matchAt(REFERENCE, src, pos + 1, pos + 1 + MAX_REFERENCE);
   const value = match === null ? undefined : decodeReference(match[1]);
 
   return match === null || value === undefined ? null : { value, end: pos + 1 + match[0].length };

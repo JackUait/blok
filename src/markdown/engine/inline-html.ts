@@ -1,4 +1,4 @@
-import { isAsciiAlpha, skipWhitespace } from './text';
+import { isAsciiAlpha, runEnd, skipWhitespace } from './text';
 
 /**
  * Raw inline HTML: open and closing tags, comments, processing
@@ -35,10 +35,19 @@ export class NextIndex {
   }
 }
 
-const TAG_NAME = /[A-Za-z][-\dA-Za-z]*/y;
-const ATTRIBUTE_NAME = /[:A-Z_a-z][-.:\dA-Z_a-z]*/y;
+const isTagChar = (char: string): boolean => /^[-\dA-Za-z]$/.test(char);
+const isAttributeStart = (char: string | undefined): boolean => char !== undefined && /^[:A-Z_a-z]$/.test(char);
+const isAttributeChar = (char: string): boolean => /^[-.:\dA-Z_a-z]$/.test(char);
 /** A `/` may start an unquoted value but not continue one. */
-const UNQUOTED_VALUE = /[^\t\n\r "'<=>`][^\t\n\r "'/<=>`]*/y;
+const isUnquotedStart = (char: string | undefined): boolean => char !== undefined && !/^[\t\n\r "'<=>`]$/.test(char);
+const isUnquotedChar = (char: string): boolean => !/^[\t\n\r "'/<=>`]$/.test(char);
+
+/**
+ * Index past the tag name at `pos`, or -1.
+ * @param src - source text
+ * @param pos - where the name must start
+ */
+const scanTagName = (src: string, pos: number): number => (isAsciiAlpha(src[pos]) ? runEnd(src, pos + 1, isTagChar) : -1);
 
 /**
  * End index after `>` of the comment, instruction, CDATA or declaration
@@ -86,9 +95,7 @@ const scanAttributeValue = (src: string, pos: number, next: NextIndex): number =
     return close === -1 ? -1 : close + 1;
   }
 
-  UNQUOTED_VALUE.lastIndex = start;
-
-  return UNQUOTED_VALUE.exec(src) === null ? -1 : UNQUOTED_VALUE.lastIndex;
+  return isUnquotedStart(src[start]) ? runEnd(src, start + 1, isUnquotedChar) : -1;
 };
 
 /**
@@ -98,25 +105,24 @@ const scanAttributeValue = (src: string, pos: number, next: NextIndex): number =
  * @param next - shared needle finder
  */
 const scanOpenTag = (src: string, pos: number, next: NextIndex): number => {
-  TAG_NAME.lastIndex = pos + 1;
+  const name = scanTagName(src, pos + 1);
 
-  if (TAG_NAME.exec(src) === null) {
+  if (name === -1) {
     return -1;
   }
 
-  const cursor = { at: TAG_NAME.lastIndex };
+  const cursor = { at: name };
 
   for (;;) {
     const gap = skipWhitespace(src, cursor.at);
 
-    ATTRIBUTE_NAME.lastIndex = gap;
-
-    if (gap === cursor.at || ATTRIBUTE_NAME.exec(src) === null) {
+    if (gap === cursor.at || !isAttributeStart(src[gap])) {
       break;
     }
 
-    const afterName = skipWhitespace(src, ATTRIBUTE_NAME.lastIndex);
-    const value = src[afterName] === '=' ? scanAttributeValue(src, afterName + 1, next) : ATTRIBUTE_NAME.lastIndex;
+    const nameEnd = runEnd(src, gap + 1, isAttributeChar);
+    const afterName = skipWhitespace(src, nameEnd);
+    const value = src[afterName] === '=' ? scanAttributeValue(src, afterName + 1, next) : nameEnd;
 
     if (value === -1) {
       return -1;
@@ -148,13 +154,13 @@ export const scanHtml = (src: string, pos: number, next: NextIndex): number => {
   }
 
   if (second === '/') {
-    TAG_NAME.lastIndex = pos + 2;
+    const name = scanTagName(src, pos + 2);
 
-    if (TAG_NAME.exec(src) === null) {
+    if (name === -1) {
       return -1;
     }
 
-    const close = skipWhitespace(src, TAG_NAME.lastIndex);
+    const close = skipWhitespace(src, name);
 
     return src[close] === '>' ? close + 1 : -1;
   }

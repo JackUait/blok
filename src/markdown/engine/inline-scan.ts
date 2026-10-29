@@ -4,6 +4,8 @@
  * autolinks. Raw HTML is in inline-html.ts, references in text.ts.
  */
 
+import { matchAt, runEnd } from './text';
+
 /**
  * Length of the line ending at `index`: 2 for CRLF, 1 for LF or CR, else 0.
  * @param src - source text
@@ -86,11 +88,14 @@ interface Autolink {
   end: number;
 }
 
-const URI_AUTOLINK = /[A-Za-z][+\-.\dA-Za-z]{1,31}:[^\0- <>\x7F]*>/y;
+const URI_AUTOLINK = /^[A-Za-z][+\-.\dA-Za-z]{1,31}:[^\0- <>\x7F]*>/;
 
 const EMAIL_LABEL = '[\\dA-Za-z](?:[-\\dA-Za-z]{0,61}[\\dA-Za-z])?';
 
-const EMAIL_AUTOLINK = new RegExp(`[#-'*+\\--9=?A-Z^-~]+@${EMAIL_LABEL}(?:\\.${EMAIL_LABEL})*>`, 'y');
+const EMAIL_AUTOLINK = new RegExp(`^[#-'*+\\--9=?A-Z^-~]+@${EMAIL_LABEL}(?:\\.${EMAIL_LABEL})*>`);
+
+/** No autolink holds a control character, a space, `<` or `>` before its closing `>`. */
+const inAutolink = (char: string): boolean => char > ' ' && char !== '<' && char !== '>' && char !== '\x7F';
 
 /**
  * `<scheme:…>` or `<local@domain>` at `pos` (the `<`).
@@ -98,9 +103,9 @@ const EMAIL_AUTOLINK = new RegExp(`[#-'*+\\--9=?A-Z^-~]+@${EMAIL_LABEL}(?:\\.${E
  * @param pos - index of the `<`
  */
 export const scanAutolink = (src: string, pos: number): Autolink | null => {
-  URI_AUTOLINK.lastIndex = pos + 1;
-
-  const uri = URI_AUTOLINK.exec(src);
+  const stop = runEnd(src, pos + 1, inAutolink);
+  const end = src[stop] === '>' ? stop + 1 : stop;
+  const uri = matchAt(URI_AUTOLINK, src, pos + 1, end);
 
   if (uri !== null) {
     const value = uri[0].slice(0, -1);
@@ -108,9 +113,7 @@ export const scanAutolink = (src: string, pos: number): Autolink | null => {
     return { url: value, value, end: pos + 1 + uri[0].length };
   }
 
-  EMAIL_AUTOLINK.lastIndex = pos + 1;
-
-  const email = EMAIL_AUTOLINK.exec(src);
+  const email = matchAt(EMAIL_AUTOLINK, src, pos + 1, end);
 
   if (email === null) {
     return null;

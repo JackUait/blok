@@ -1,5 +1,5 @@
 import type { Link, PhrasingContent, Text } from '../../../types/data-formats/markdown-tree';
-import { isAsciiAlpha, isAsciiAlphanumeric, isAsciiControl, isSpaceOrLineEnding, isUnicodePunctuation, isUnicodeWhitespace } from './text';
+import { isAsciiAlpha, isAsciiAlphanumeric, isAsciiControl, isSpaceOrLineEnding, isUnicodePunctuation, isUnicodeWhitespace, matchAt, runEnd } from './text';
 
 /**
  * GFM autolink literals (`www.x.com`, `https://x.com`, `a@b.co`). Blok's old
@@ -12,8 +12,6 @@ import { isAsciiAlpha, isAsciiAlphanumeric, isAsciiControl, isSpaceOrLineEnding,
 /** Punctuation that may end a URL without being part of it. */
 const TRAIL = new Set(['!', '"', '\'', ')', '*', ',', '.', ':', ';', '?', '_', '~']);
 
-/** `&name;` inside a trail. */
-const TRAIL_REFERENCE = /&[A-Za-z]+;/y;
 
 /** Punctuation the path checks for a trail before taking it. */
 const PATH_PUNCTUATION = new Set([...TRAIL, '&', '<', ']']);
@@ -241,9 +239,10 @@ export class LiteralScanner {
     }
 
     if (char === '&') {
-      TRAIL_REFERENCE.lastIndex = at;
+      // `&name;` inside a trail.
+      const name = runEnd(src, at + 1, isAsciiAlpha);
 
-      return TRAIL_REFERENCE.exec(src) === null ? false : TRAIL_REFERENCE.lastIndex;
+      return name > at + 1 && src[name] === ';' ? name + 1 : false;
     }
 
     if (char !== ']') {
@@ -452,7 +451,8 @@ const urlMatches = (value: string): Match[] => {
 
 const EMAIL_LOCAL = /^[-.\w+]$/;
 
-const EMAIL_DOMAIN = /[-\w]+(?:\.[-\w]+)+/y;
+const EMAIL_DOMAIN = /^[-\w]+(?:\.[-\w]+)+/;
+const inEmailDomain = (char: string): boolean => /^[-.\w]$/.test(char);
 
 /** What may sit right before an email's local part. */
 const EMAIL_BOUNDARY = /[\s\p{P}\p{S}]$/u;
@@ -466,9 +466,7 @@ const EMAIL_BOUNDARY = /[\s\p{P}\p{S}]$/u;
  * @param from - earliest start
  */
 const emailAt = (value: string, at: number, from: number): Match | null => {
-  EMAIL_DOMAIN.lastIndex = at + 1;
-
-  const domain = EMAIL_DOMAIN.exec(value);
+  const domain = matchAt(EMAIL_DOMAIN, value, at + 1, runEnd(value, at + 1, inEmailDomain));
 
   if (domain === null || /[-\d_]$/.test(domain[0])) {
     return null;
@@ -484,7 +482,7 @@ const emailAt = (value: string, at: number, from: number): Match | null => {
     const lookbehind = cursor.start === 0 || EMAIL_BOUNDARY.test(value.slice(Math.max(0, cursor.start - 2), cursor.start));
 
     if (lookbehind && startsAfterBoundary(value, cursor.start) && value[cursor.start - 1] !== '/') {
-      const end = EMAIL_DOMAIN.lastIndex;
+      const end = at + 1 + domain[0].length;
       const address = value.slice(cursor.start, end);
 
       return { start: cursor.start, end, nodes: [link(`mailto:${address}`, address)] };

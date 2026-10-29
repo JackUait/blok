@@ -618,6 +618,8 @@ export class DatabaseTool implements BlockTool {
   private cardDrawer: DatabaseCardDrawer | null = null;
   private cardDrawerSession: { origin: DrawerAuthority | undefined; readOnly: boolean } | null = null;
   private propertyMenu: DatabasePropertyMenu | null = null;
+  /** The linked or dashboard view whose column header the property menu opened from. */
+  private propertyMenuContext: NativeWidgetContext | null = null;
   /** Unsaved AI Autofill setups by property: Close keeps them for this editor only. */
   private readonly autofillDrafts = new Map<string, AutofillDraft>();
   private autofillSetup: { close: () => void } | null = null;
@@ -6957,7 +6959,10 @@ export class DatabaseTool implements BlockTool {
         return state.cellEditor?.isOpen === true || renderer.interacting === true
           || (document.activeElement instanceof HTMLInputElement && native.root.contains(document.activeElement))
           || (source.titleIconMenu?.menu === source.propertyMenu && source.titleIconMenu?.context === context
-            && source.propertyMenu.isOpen && context.writable());
+            && source.propertyMenu.isOpen && context.writable())
+          // A redraw remounts this view, and its dispose destroys the header menu. Its onClose redraws.
+          || (source.propertyMenuContext === context && source.propertyMenu !== null
+            && (source.propertyMenu.isOpen || source.propertyMenu.isIconPickerOpen) && context.writable());
       },
       revoke: () => { lifetime.disposed = true; },
       destroy: () => {
@@ -11591,6 +11596,7 @@ export class DatabaseTool implements BlockTool {
 
     this.propertyMenu = menu;
     this.propertyMenuAnchor = anchor;
+    this.propertyMenuContext = rowPage === undefined ? context ?? null : null;
     context?.onDispose(() => {
       if (this.titleIconMenu?.menu === menu) this.titleIconMenu = null;
       if (this.propertyMenu === menu) this.propertyMenu = null;
@@ -11890,5 +11896,6 @@ export class DatabaseTool implements BlockTool {
     // rerender through here.
     this.wireView(newBoardWrapper);
     this.controls.refresh();
+    this.propertyMenu?.followLiveHeader();
   }
 }

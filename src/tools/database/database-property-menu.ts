@@ -330,10 +330,11 @@ export class DatabasePropertyMenu {
   }
 
   /**
-   * An options edit redraws the board but not this menu, so the header it sits on is replaced.
-   * Placed on the detached one, the popover closes on the next nested scroll, such as the board's own scroll restore.
+   * A redraw of the board replaces the header this menu sits on. Placed on the detached one,
+   * the popover closes on the next nested scroll, such as the board's own scroll restore.
+   * The host calls this after each redraw; an options edit calls it too.
    */
-  private followLiveHeader(): void {
+  followLiveHeader(): void {
     const live = this.options.liveAnchor?.();
 
     if (this.popover === null || live === null || live === undefined || live === this.anchor || this.anchor?.isConnected !== false) return;

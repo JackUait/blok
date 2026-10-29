@@ -149,4 +149,42 @@ describe('renderXlsxInto', () => {
     expect(cells[1].classList.contains(NUM)).toBe(false); // shared-string text
     expect(cells[2].classList.contains(NUM)).toBe(true); //  inline number 42
   });
+
+  const sheet = async (rows: string, strings = '<sst/>'): Promise<HTMLElement> => {
+    const container = document.createElement('div');
+    const buf = Uint8Array.from(createZip([
+      { name: 'xl/sharedStrings.xml', data: strings },
+      { name: 'xl/worksheets/sheet1.xml', data: `<worksheet><sheetData>${rows}</sheetData></worksheet>` },
+    ])).buffer;
+    await renderXlsxInto(buf, container);
+
+    return container;
+  };
+
+  it('stops at Excel\'s last column, XFD, however far a cell ref points', async () => {
+    const c = await sheet('<row><c r="AAAAA1"><v>1</v></c></row>');
+
+    expect(c.querySelectorAll('td')).toHaveLength(16_384);
+  }, 30_000);
+
+  it('reads cells and rows only where Excel puts them, so nesting cannot multiply them', async () => {
+    const d = 50;
+    const c = await sheet('<row><c><v>1</v></c>'.repeat(d) + '</row>'.repeat(d));
+
+    expect(c.querySelectorAll('td')).toHaveLength(1);
+  });
+
+  it('builds a shared string from its own runs, without phonetic hints or nested strings', async () => {
+    const strings = '<sst><si><r><t>Tok</t></r><r><t>yo</t></r><rPh><t>toukyou</t></rPh><si><t>inner</t></si></si><si><t>next</t></si></sst>';
+    const c = await sheet('<row><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>', strings);
+
+    expect(Array.from(c.querySelectorAll('td'), (td) => td.textContent)).toEqual(['Tokyo', 'next']);
+  });
+
+  it('stops adding rows once the preview holds its cell budget', async () => {
+    const row = '<row>' + '<c><v>1</v></c>'.repeat(1000) + '</row>';
+    const c = await sheet(row.repeat(60));
+
+    expect(c.querySelectorAll('td')).toHaveLength(50_000);
+  }, 60_000);
 });

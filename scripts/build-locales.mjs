@@ -31,6 +31,10 @@ async function buildLocales() {
       rollupOptions: {
         output: {
           minify: true,
+          // The main build already wrote these locale chunks into dist/chunks
+          // with the same names and bytes. Pointing here reuses them instead
+          // of shipping a second copy at the dist root.
+          chunkFileNames: 'chunks/[name]-[hash].mjs',
         },
       },
     },

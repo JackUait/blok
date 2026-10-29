@@ -675,18 +675,19 @@ describe('dist weight (consumer parse cost)', () => {
   )
 
   it('emits UI message locales as JSON.parse strings, not object literals', () => {
-    // The per-locale message data ships as lazy dynamic-import chunks at the dist
-    // root. They were named `messages-<locale>.mjs` until b0ff515b ("name files by
-    // locale") renamed the source JSON, so they are now `<locale>-<hash>.mjs`. The
-    // main build's own chunks live under chunks/, so an 8-char content-hash suffix
-    // on a dist-root .mjs uniquely identifies a locale message file.
-    const localeChunkRe = /-[A-Za-z0-9_-]{8}\.mjs$/
-    const messageFiles = readdirSync(dist).filter(
-      (name) => name.endsWith('.mjs') && localeChunkRe.test(name),
-    )
-    expect(messageFiles.length).toBeGreaterThan(0)
+    // Each lazy locale ships as `chunks/<locale>-<hash>.mjs`. The emoji data
+    // for the same locale shares that name, so the message key picks the UI file.
+    const codes = readdirSync(resolve(srcDir, 'components/i18n/locales'))
+      .filter((name) => name.endsWith('.json') && name !== 'en.json')
+      .map((name) => name.replace(/\.json$/, ''))
+    const localeChunkRe = new RegExp(`^(?:${codes.join('|')})-[A-Za-z0-9_-]{8}\\.mjs$`)
+    const messageFiles = esFiles.filter((file) => {
+      const name = file.slice(file.lastIndexOf('/') + 1)
+      return localeChunkRe.test(name) && readFileSync(file, 'utf-8').includes('"blockSettings.dragToMove"')
+    })
+    expect(messageFiles.length).toBe(codes.length)
     const objectLiteralLocales = messageFiles.filter(
-      (name) => !readFileSync(join(dist, name), 'utf-8').includes('JSON.parse('),
+      (file) => !readFileSync(file, 'utf-8').includes('JSON.parse('),
     )
     expect(objectLiteralLocales).toEqual([])
   })

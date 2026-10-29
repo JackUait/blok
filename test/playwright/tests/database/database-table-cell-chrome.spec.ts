@@ -6,7 +6,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputBlockData } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
@@ -149,29 +149,39 @@ test('hovering a file chip shows its full link in a hint, not the link card (§2
   await expect(page.getByTestId('link-hover-card')).toHaveCount(0);
 });
 
-test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl-click opens the file', async ({ page }) => {
-  const link = cell(page, 'r1', 'p-file').locator('[data-blok-database-cell-link]');
-  const popups: string[] = [];
-  const track = (p: Page): void => {
-    popups.push(p.url());
-  };
+// Own context: this test opens a tab, and the shared page's context is for specs that never do.
+test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl-click opens the file', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1512, height: 717 } });
 
-  page.context().on('page', track);
-  await link.click();
-  await expect(page.locator('[data-blok-database-files-editor]')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.locator('[data-blok-database-files-editor]')).toHaveCount(0);
-  expect(popups).toEqual([]);
-  page.context().off('page', track);
+  try {
+    // The new tab must not reach the real network.
+    await context.route('https://example.com/**', (route) => route.fulfill({ contentType: 'text/html', body: 'file' }));
+    const page = await context.newPage();
 
-  // noopener: the new page is no popup of this one, so watch the context. Its request is enough; no network needed.
-  const [popup] = await Promise.all([
-    page.context().waitForEvent('page'),
-    page.context().waitForEvent('request', (request) => request.url() === FILE_URL),
-    link.click({ modifiers: ['ControlOrMeta'] }),
-  ]);
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await mount(page);
+    const link = cell(page, 'r1', 'p-file').locator('[data-blok-database-cell-link]');
+    const opened: string[] = [];
 
-  await popup.close();
+    context.on('page', (p) => opened.push(p.url()));
+    await link.click();
+    await expect(page.locator('[data-blok-database-files-editor]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-database-files-editor]')).toHaveCount(0);
+    expect(opened).toEqual([]);
+
+    const [request] = await Promise.all([
+      context.waitForEvent('request', (r) => r.url() === FILE_URL),
+      link.click({ modifiers: ['ControlOrMeta'] }),
+    ]);
+
+    // The file loads in a new tab; this page stays put.
+    expect(request.isNavigationRequest()).toBe(true);
+    expect(page.url()).toBe(TEST_PAGE_URL);
+  } finally {
+    await context.close();
+  }
 });
 
 test('rows stay 37px with Status, Person, Created by, Last edited by and Relation columns, filled or empty (§18, recon §0)', async ({ page }) => {

@@ -8499,6 +8499,16 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* The row open in the side peek: Notion's 1px ring (62-close-hover.png), in primary ink, not blue. */
+[data-blok-database-table-row]:has(> [data-blok-database-table-cell] > [data-blok-database-table-open][data-peeked])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--blok-icon-active-text);
+}
+
 [data-blok-database-table-cell] {
   position: relative;
   flex: none;

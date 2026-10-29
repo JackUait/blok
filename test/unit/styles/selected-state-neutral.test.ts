@@ -105,6 +105,13 @@ describe('selected-state tokens are neutral', () => {
     expect(css.match(/\[data-blok-database-feed-reaction\]\s*\{([^}]*)\}/)?.[1]).toContain('color: var(--blok-database-ink)');
   });
 
+  it('the row open in the side peek is ringed in primary ink, not Notion\'s blue', () => {
+    const rule = css.match(/\[data-blok-database-table-row\]:has\([^{]*\[data-peeked\]\)::before\s*\{([^}]*)\}/);
+
+    expect(rule?.[1]).toContain('box-shadow: inset 0 0 0 1px var(--blok-icon-active-text)');
+    expect(rule?.[1]).not.toMatch(/rgb|#[0-9a-f]{3,6}/i);
+  });
+
   it('an on day chip in Edit cadence is gray with primary ink, not Notion\'s blue', () => {
     const rule = css.match(/\[data-blok-database-template-cadence-days\] button\[aria-pressed="true"\]\s*\{([^}]*)\}/);
 

@@ -164,3 +164,9 @@ test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl
   await link.click({ modifiers: ['ControlOrMeta'] });
   expect((await popup).url()).toContain('example.com/a.pdf');
 });
+
+test('rows stay 37px with Status, Person, Created by and Last edited by columns, filled or empty (§18, recon §0)', async ({ page }) => {
+  for (const rowId of ['r1', 'r2']) {
+    expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);
+  }
+});

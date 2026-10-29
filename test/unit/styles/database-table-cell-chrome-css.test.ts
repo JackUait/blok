@@ -27,3 +27,16 @@ describe('table file chip (§18.1)', () => {
     expect(body).toContain('text-overflow: ellipsis');
   });
 });
+
+// notion-spec-2 §18.1: 8px padding around a 20px line keeps the 37px row (36 + 1).
+describe('8px-padded table cells (§18.1)', () => {
+  const PILL_LINE = '[data-blok-database-table-cell]:is([data-type="person"]) > [data-blok-database-cell]';
+
+  it('give the value a 20px line, filled or empty', () => {
+    expect(ruleBody(PILL_LINE)).toContain('min-height: 20px');
+  });
+
+  it('draw a 20px person chip, as Notion\'s 85.9x20 chip box', () => {
+    expect(ruleBody(`${PILL_LINE} > [data-blok-database-person-chip]`)).toContain('height: 20px');
+  });
+});

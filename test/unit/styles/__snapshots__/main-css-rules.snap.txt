@@ -11282,6 +11282,14 @@ textarea[data-blok-database-cell-input] {
   min-height: 20px;
 }
 
+[data-blok-database-table-cell]:is([data-type="person"]) > [data-blok-database-cell] {
+  min-height: 20px;
+}
+
+[data-blok-database-table-cell]:is([data-type="person"]) > [data-blok-database-cell] > [data-blok-database-person-chip] {
+  height: 20px;
+}
+
 [data-blok-database-table-cell][data-type="multiSelect"] > [data-blok-database-cell] {
   gap: var(--blok-space-2);
 }

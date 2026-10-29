@@ -14209,17 +14209,17 @@ textarea[data-blok-database-cell-input] {
   line-height: 14px;
 }
 
-[data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"]) {
+[data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"]), [data-blok-database-card-property]:has(> [data-blok-database-cell="files"]) {
   padding: var(--blok-space-1);
 }
 
-[data-blok-database-gallery-property] [data-blok-database-file-chip] {
+[data-blok-database-gallery-property] [data-blok-database-file-chip], [data-blok-database-card-property] [data-blok-database-file-chip] {
   height: 20px;
   line-height: 20px;
   max-width: 200px;
 }
 
-[data-blok-database-gallery-property] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
+[data-blok-database-gallery-property] [data-blok-database-file-chip] > [data-blok-database-cell-link], [data-blok-database-card-property] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -107,6 +107,18 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).toMatch(/height:\s*18px/);
   });
 
+  // notion-spec-2 §21.7: a board card's file chip is 20 tall, at most 200 wide, its name cut with "…", in a row with 4px padding.
+  it('draws a card file chip 20 tall and at most 200 wide, in a 28px row', () => {
+    const chip = ruleBody('[data-blok-database-card-property] [data-blok-database-file-chip]');
+    const name = ruleBody('[data-blok-database-card-property] [data-blok-database-file-chip] > [data-blok-database-cell-link]');
+
+    expect(chip).toMatch(/height:\s*20px/);
+    expect(chip).toMatch(/max-width:\s*200px/);
+    expect(name).toMatch(/text-overflow:\s*ellipsis/);
+    expect(name).toMatch(/white-space:\s*nowrap/);
+    expect(ruleBody('[data-blok-database-card-property]:has(> [data-blok-database-cell="files"])')).toContain('padding: var(--blok-space-1)');
+  });
+
   // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.
   it('draws the "Add …" rows of an edited card in the secondary ink with a 16px glyph', () => {
     expect(ruleBody('[data-blok-database-card-property][data-ghost]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);

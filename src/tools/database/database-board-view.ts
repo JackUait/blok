@@ -1,4 +1,4 @@
-import { pageIconElement, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -888,6 +888,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       if (cell.hasAttribute('data-empty')) {
         continue;
       }
+      cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
       // notion-spec-2 §21.7: a card's checkbox has the property name beside it.
       if (property.type === 'checkbox') {
         const name = document.createElement('span');

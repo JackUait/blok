@@ -166,6 +166,15 @@ describe('DatabaseBoardView card parity', () => {
       }
     });
 
+    // notion-spec-2 §21.7: a board card's file chip has the page glyph before the name.
+    it('draws the file glyph in a card file chip', () => {
+      const board = mount({ view: boardView({ properties: [{ id: 'files', visible: true }] }) });
+      const chip = card(board, 'r3').querySelector('[data-blok-database-file-chip]');
+
+      expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
+      expect(chip?.textContent?.trim()).toBe('a.png');
+    });
+
     it('marks each property with its wrap setting', () => {
       const board = mount({ view: boardView({ properties: [{ id: 'notes', visible: true, wrap: true }] }) });
 

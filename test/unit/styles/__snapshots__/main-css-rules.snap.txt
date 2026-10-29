@@ -4048,6 +4048,7 @@ span[data-blok-slash-search] {
   --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
   --blok-database-map-pin-fill: rgb(35, 131, 226);
   --blok-database-checkbox-border: rgba(27, 21, 0, 0.19);
+  --blok-database-checkbox-hover-bg: rgba(66, 35, 3, 0.047);
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
   --blok-database-status-dot-green: rgb(70, 161, 113);
@@ -4320,6 +4321,7 @@ span[data-blok-slash-search] {
   --blok-database-option-red-ring: rgba(255, 104, 92, 0.24);
   --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
   --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+  --blok-database-checkbox-hover-bg: var(--blok-database-hover-bg);
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
   --blok-database-status-dot-green: rgb(70, 161, 113);
@@ -4588,6 +4590,7 @@ span[data-blok-slash-search] {
   --blok-database-option-red-ring: rgba(255, 104, 92, 0.24);
   --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
   --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+  --blok-database-checkbox-hover-bg: var(--blok-database-hover-bg);
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
   --blok-database-status-dot-green: rgb(70, 161, 113);
@@ -9301,6 +9304,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   border: 1px solid var(--blok-database-checkbox-border);
   color: var(--blok-database-checkbox-check);
   transition: background-color 0.2s ease-out;
+}
+
+[data-blok-database-table-cell][data-type="checkbox"]:hover [data-blok-database-checkbox]:not([data-state="checked"]) {
+  background-color: var(--blok-database-checkbox-hover-bg);
 }
 
 [data-blok-database-checkbox][data-state="checked"] {

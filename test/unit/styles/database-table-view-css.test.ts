@@ -212,3 +212,14 @@ describe('database table rollup hover box', () => {
     expect(body).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
   });
 });
+
+describe('database table checkbox hover', () => {
+  // notion-spec-2 §18.2, §19.5: an unchecked box fills on hover, the border stays; a checked box does not change.
+  it('an unchecked box in a hovered cell takes the measured fill', () => {
+    const body = ruleBody('[data-blok-database-table-cell][data-type="checkbox"]:hover [data-blok-database-checkbox]:not([data-state="checked"])');
+
+    expect(body).toMatch(/background-color:\s*var\(--blok-database-checkbox-hover-bg\)/);
+    expect(body).not.toMatch(/border/);
+    expect(css).toMatch(/--blok-database-checkbox-hover-bg:\s*rgba\(66, 35, 3, 0\.047\)/);
+  });
+});

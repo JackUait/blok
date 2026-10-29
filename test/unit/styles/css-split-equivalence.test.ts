@@ -1219,6 +1219,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROLLUP_CELL_ACTIONS_BYTES = 197;
     // main.css: Tailwind skips the pptx engine folder (cafd284d).
     const MAIN_PPTX_SOURCE_SKIP_BYTES = 119;
+    // database.css: an unchecked table checkbox fills on hover (notion-spec-2 §18.2).
+    const DATABASE_CHECKBOX_HOVER_BYTES = 750;
     // database.css: peek value editors open with no fade or scale too (notion-spec-2 §19.22).
     const DATABASE_VALUE_EDITOR_NO_MOTION_BYTES = 306;
     // database.css: the Place search's one highlighted row (research/36 §7); no ring on the focused place view.
@@ -1543,6 +1545,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CELL_PILL_START_BYTES
       + DATABASE_ROLLUP_CELL_ACTIONS_BYTES
       + MAIN_PPTX_SOURCE_SKIP_BYTES
+      + DATABASE_CHECKBOX_HOVER_BYTES
       + DATABASE_VALUE_EDITOR_NO_MOTION_BYTES
       + DATABASE_PLACE_VIEW_BAR_BYTES
       + DATABASE_GALLERY_FILE_CHIP_BYTES

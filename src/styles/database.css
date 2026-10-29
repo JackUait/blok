@@ -99,6 +99,8 @@
   --blok-database-map-pin-fill: rgb(35, 131, 226);
   /* Measured: Notion's table checkbox border (research/07). */
   --blok-database-checkbox-border: rgba(27, 21, 0, 0.19);
+  /* notion-spec-2 §18.2: an unchecked table checkbox on hover. */
+  --blok-database-checkbox-hover-bg: rgba(66, 35, 3, 0.047);
   /* Measured: status dots and person avatar ring (research/08). */
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
@@ -453,6 +455,8 @@
     --blok-database-option-red-ring: rgba(255, 104, 92, 0.24);
     --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
     --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+    /* Checkbox hover is unmeasured in dark: the shared hover fill stands in. */
+    --blok-database-checkbox-hover-bg: var(--blok-database-hover-bg);
     /* Status dots unmeasured in dark: kept from light. Avatar ring uses the measured dark cell border. */
     --blok-database-status-dot-gray: rgb(142, 139, 134);
     --blok-database-status-dot-blue: rgb(39, 131, 222);
@@ -759,6 +763,8 @@
   --blok-database-option-red-ring: rgba(255, 104, 92, 0.24);
   --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
   --blok-database-checkbox-border: rgba(255, 252, 235, 0.306);
+  /* Checkbox hover is unmeasured in dark: the shared hover fill stands in. */
+  --blok-database-checkbox-hover-bg: var(--blok-database-hover-bg);
   /* Status dots unmeasured in dark: kept from light. Avatar ring uses the measured dark cell border. */
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
@@ -6137,6 +6143,11 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   border: 1px solid var(--blok-database-checkbox-border);
   color: var(--blok-database-checkbox-check);
   transition: background-color 0.2s ease-out;
+}
+
+/* notion-spec-2 §18.2, §19.5: only an unchecked box fills; its border stays. Whether Notion fills on cell or box hover is unverified. */
+[data-blok-database-table-cell][data-type="checkbox"]:hover [data-blok-database-checkbox]:not([data-state="checked"]) {
+  background-color: var(--blok-database-checkbox-hover-bg);
 }
 
 [data-blok-database-checkbox][data-state="checked"] {

@@ -533,6 +533,20 @@ const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
  * `defaultBlockTools`. `list` never reaches this map — list runs are grouped
  * by the dispatcher and rendered via {@link renderListRun}.
  */
+/**
+ * Some registry id builders call `URLSearchParams`, which the Jint server
+ * runtime lacks. There the embed renders as a link instead of failing the
+ * whole document.
+ * @param source - stored embed source
+ */
+const matchEmbedServiceOrLink = (source: string): ReturnType<typeof matchEmbedService> | 'link' => {
+  try {
+    return matchEmbedService(source);
+  } catch {
+    return 'link';
+  }
+};
+
 export const builtinEmitters: Record<string, Emitter> = {
   paragraph: (block, env) => trail(`<p>${env.inline(block.data.text)}</p>`, block, env),
 
@@ -730,7 +744,11 @@ export const builtinEmitters: Record<string, Emitter> = {
       return link();
     }
 
-    const match = matchEmbedService(source);
+    const match = matchEmbedServiceOrLink(source);
+
+    if (match === 'link') {
+      return link();
+    }
 
     if (match?.service !== service) {
       return trail('', block, env);

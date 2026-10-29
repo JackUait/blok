@@ -533,6 +533,25 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<a href="https://youtu.be/x">youtube</a>');
     });
 
+    describe('without URL globals (the Jint server runtime has none)', () => {
+      beforeEach(() => {
+        vi.stubGlobal('URL', undefined);
+        vi.stubGlobal('URLSearchParams', undefined);
+      });
+
+      afterEach(() => {
+        vi.unstubAllGlobals();
+      });
+
+      it.each([
+        ['youtube', 'https://www.youtube.com/watch?v=abc&t=30'],
+        ['vkvideo', 'https://vk.com/video_ext.php?oid=-1&id=2&hash=h'],
+        ['facebookpost', 'https://www.facebook.com/permalink.php?story_fbid=1&id=2'],
+      ])('renders a %s embed without throwing', (service, source) => {
+        expect(() => blocksToHtml(doc([{ type: 'embed', data: { service, source, embed: '' } }]))).not.toThrow();
+      });
+    });
+
     it('degrades a non-https embed to a source anchor', () => {
       const html = blocksToHtml(doc([
         { type: 'embed', data: { service: 'evil', source: 'https://ok.example', embed: 'javascript:alert(1)' } },

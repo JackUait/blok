@@ -9,6 +9,8 @@
  * - a `null` rule acts as `{}` instead of throwing on the first attribute;
  * - a `<form>` whose controls shadow its DOM properties (`<input name="nodeName">`)
  *   is removed with its subtree;
+ * - processing instructions are removed (Chromium parses `<!a …>` as one;
+ *   html-janitor's walk skipped them and kept them in its output);
  * - removals no longer recurse, so a long run of removable siblings cannot
  *   overflow the stack.
  *

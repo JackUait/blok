@@ -12,6 +12,7 @@ import {
   isTextNode,
   type ChildNode,
   type Element,
+  type Node,
   type ParentNode,
 } from '../../../src/html/tree';
 import { serialize } from '../../../src/html/serializer';
@@ -34,10 +35,13 @@ const divContext = ((): DefaultTreeAdapterMap['element'] => {
   return div;
 })();
 
-const MODES: Array<[string, (html: string) => ParentNode]> = [
-  ['parse', (html) => parse(html)],
-  ['parseFragment', (html) => parseFragment(html)],
-  ['parseFragment(div)', (html) => parseFragment(divContext, html, {})],
+const SCRIPTING_OFF = { scriptingEnabled: false };
+
+/** Each mode: how the tree is built (scripting on, like the serializer assumes), and the same parse with scripting off. */
+const MODES: Array<[(html: string) => ParentNode, (html: string) => ParentNode]> = [
+  [(html) => parse(html), (html) => parse(html, SCRIPTING_OFF)],
+  [(html) => parseFragment(html), (html) => parseFragment(html, SCRIPTING_OFF)],
+  [(html) => parseFragment(divContext, html, {}), (html) => parseFragment(divContext, html, SCRIPTING_OFF)],
 ];
 
 const FORMATTING = new Set(['a', 'b', 'big', 'code', 'em', 'font', 'i', 'nobr', 's', 'small', 'strike', 'strong', 'tt', 'u']);
@@ -54,7 +58,7 @@ const childrenOf = (node: ParentNode): ChildNode[] => ('content' in node ? node.
 const allNodes = (root: ParentNode): ChildNode[] =>
   childrenOf(root).flatMap((child) => [child, ...('childNodes' in child ? allNodes(child) : [])]);
 
-const isHtml = (node: ParentNode | null, tagName?: string | RegExp): node is Element =>
+const isHtml = (node: Node | null, tagName?: string | RegExp): node is Element =>
   node !== null &&
   isElementNode(node) &&
   node.namespaceURI === NS.HTML &&
@@ -138,18 +142,20 @@ const tryParse = (build: (html: string) => ParentNode, html: string): ParentNode
 };
 
 describe('html serializer round trip through parse5', () => {
-  it('never adds an attribute, and adds only <p> and formatting elements, on the whole corpus', () => {
+  it('never adds an attribute, and adds only <p> and formatting elements, on the whole corpus (scripting on both times)', () => {
     const inputs = [
       ...realDocuments().map(({ html }) => html),
       ...treeConstructionInputs(),
       ...storedFields(),
       ...Array.from({ length: 20_000 }, (_, seed) => fuzzHtml(seed)),
     ];
-    const tally = { trees: 0, changed: 0, reparseThrew: 0, addedAttributes: [] as string[], addedElements: new Set<string>(), unexplained: [] as string[] };
+    const tally = { trees: 0, changed: 0, oneReason: 0, reparseThrew: 0, addedAttributes: [] as string[], addedElements: new Set<string>(), unexplained: [] as string[] };
+    // Re-parsed with scripting off, noscript content turns from text into markup.
+    const scriptingOff = { gainedWithNoscript: 0, gainedWithout: [] as string[] };
     const reasonCounts = new Map<string, number>();
 
     inputs.forEach((html) => {
-      MODES.forEach(([, build]) => {
+      MODES.forEach(([build, buildScriptingOff]) => {
         const tree = tryParse(build, html);
 
         if (tree === null) {
@@ -165,6 +171,14 @@ describe('html serializer round trip through parse5', () => {
 
           return;
         }
+        const off = tryParse(buildScriptingOff, output);
+        const offGained = off !== null && (added(elementKeys(tree), elementKeys(off)).length > 0 || added(attributeKeys(tree), attributeKeys(off)).length > 0);
+
+        if (offGained && allNodes(tree).some((node) => isHtml(node, 'noscript'))) {
+          scriptingOff.gainedWithNoscript += 1;
+        } else if (offGained) {
+          scriptingOff.gainedWithout.push(...added(elementKeys(tree), elementKeys(off)), ...added(attributeKeys(tree), attributeKeys(off)));
+        }
         tally.addedAttributes.push(...added(attributeKeys(tree), attributeKeys(again)));
         added(elementKeys(tree), elementKeys(again)).forEach((key) => tally.addedElements.add(key));
         if (serialize(again) === output) {
@@ -174,6 +188,7 @@ describe('html serializer round trip through parse5', () => {
         const why = reasons(tree);
 
         why.forEach((reason) => reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1));
+        tally.oneReason += why.size === 1 ? 1 : 0;
         if (why.size === 0) {
           tally.unexplained.push(html.slice(0, 200));
         }
@@ -184,11 +199,14 @@ describe('html serializer round trip through parse5', () => {
     expect(tally.addedAttributes.slice(0, 3)).toEqual([]);
     expect([...tally.addedElements].filter((key) => !key.startsWith(`${NS.HTML} `) || !(key.endsWith(' p') || FORMATTING.has(key.split(' ')[1])))).toEqual([]);
     expect(tally.trees).toBeGreaterThan(60_000);
-    console.log(JSON.stringify({ ...tally, addedElements: [...tally.addedElements], reasons: Object.fromEntries(reasonCounts) }));
+    // Without noscript, scripting off adds nothing beyond what scripting on adds.
+    expect(scriptingOff.gainedWithout.filter((key) => !tally.addedElements.has(key))).toEqual([]);
+    expect(scriptingOff.gainedWithNoscript).toBeGreaterThan(0);
+    console.log(JSON.stringify({ ...tally, addedElements: [...tally.addedElements], reasons: Object.fromEntries(reasonCounts), scriptingOff }));
   }, 600_000);
 
-  /** Trees parsing never builds, but code that edits a tree can. The serializer writes them as the spec says. */
-  describe('hand-built trees that change on re-parse', () => {
+  /** Mostly trees parsing never builds but code that edits a tree can. The serializer writes them as the spec says. */
+  describe('trees that change on re-parse', () => {
     const fragment = (...children: ChildNode[]): ParentNode => {
       const root = createDocumentFragment();
 
@@ -210,6 +228,16 @@ describe('html serializer round trip through parse5', () => {
 
       expect(html).toBe('<style></style><img src=x onerror=alert(1)></style>');
       expect(tags(html)).toEqual(['style', 'img']);
+    });
+
+    it('writes parsed noscript content raw, which a scripting-off parser reads as markup', () => {
+      const tree = parseFragment('<noscript><img src=x onerror=alert(1)></noscript>');
+
+      expect(allNodes(tree).filter(isElementNode).map((node) => node.tagName)).toEqual(['noscript']);
+      const html = serialize(tree);
+
+      expect(html).toBe('<noscript><img src=x onerror=alert(1)></noscript>');
+      expect(allNodes(parseFragment(html, SCRIPTING_OFF)).filter(isElementNode).map((node) => node.tagName)).toEqual(['noscript', 'img']);
     });
 
     it('escapes the same text inside an SVG style, which is not raw text', () => {

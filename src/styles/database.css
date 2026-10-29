@@ -6743,6 +6743,11 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   background-color: var(--blok-database-name-field-bg);
 }
 
+/* notion-spec-2 §24.10: the header menu is 220 wide. The input's own width (about 160) would widen it; flex fills the row. */
+[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input] {
+  width: 0;
+}
+
 /* notion-spec-2 §17.1: the Add related property dialog is 250x119 (4 + 28 Enable + 83 + 4), the input 218x28.
    The label and the gaps inside the 83 were not measured. */
 [data-blok-database-property-menu-mirror-name] {

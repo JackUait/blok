@@ -9889,6 +9889,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   background-color: var(--blok-database-name-field-bg);
 }
 
+[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input] {
+  width: 0;
+}
+
 [data-blok-database-property-menu-mirror-name] {
   display: flex;
   flex-direction: column;

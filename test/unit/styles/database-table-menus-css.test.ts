@@ -28,6 +28,11 @@ describe('column header menu (T11)', () => {
   it('is not capped at 400px: it grows to the viewport like Notion\'s 498px menu', () => {
     expect(declared(`${HEADER} [data-blok-popover-container]`, '--max-height')).toEqual(['calc(100dvh - 2 * var(--blok-space-3))']);
   });
+
+  // notion-spec-2 §24.10: 220 wide. The name input's own width (about 160) made the field row 231 wide.
+  it('keeps the name field from widening the menu past 220', () => {
+    expect(declared('[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input]', 'width').at(-1)).toBe('0');
+  });
 });
 
 describe('add property menu (T12)', () => {

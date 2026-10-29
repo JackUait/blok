@@ -9777,12 +9777,16 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 [data-blok-database-file-chip-icon] {
   display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   color: var(--blok-database-glyph);
 }
 
 [data-blok-database-file-chip-icon] svg {
-  width: 20px;
-  height: 20px;
+  width: 17.5px;
+  height: 17.5px;
 }
 
 [data-blok-database-property-menu-name], [data-blok-database-files-link], [data-blok-database-property-menu-field] {

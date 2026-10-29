@@ -6,6 +6,7 @@ import type { LambdaFunction, Scope } from './checker';
 import { propertyFormulaValue } from './properties';
 import { readPropertyValue } from '../value-helpers';
 import { checkValue, valueSize } from './limits';
+import { InvalidDate, isDateInRange } from './dates';
 import { isRef } from './types';
 import type { FormulaText, FormulaValue } from './types';
 import { compareValues, concatText, formulaValueToText, isText, num, truthy, valuesEqual } from './values';
@@ -179,7 +180,23 @@ const evaluateCall = (
   if (!def.keepEmpty && values.some((value) => value === null)) return null;
   env.budget.spend(argumentCost(name, values));
 
-  return def.run(values, env);
+  return inDateRange(runFunction(() => def.run(values, env)));
+};
+
+const runFunction = (call: () => FormulaValue): FormulaValue => {
+  try {
+    return call();
+  } catch (error) {
+    if (error instanceof InvalidDate) return null;
+    throw error;
+  }
+};
+
+/** Hosts format a date result outside the evaluation, so one JS cannot hold must not leave it. */
+const inDateRange = (value: FormulaValue): FormulaValue => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value) || value.kind !== 'date') return value;
+
+  return isDateInRange(value.start) && (value.end === undefined || isDateInRange(value.end)) ? value : null;
 };
 
 const relatedProp = (

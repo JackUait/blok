@@ -34,6 +34,17 @@ describe('formula limits', () => {
     vi.restoreAllMocks();
   });
 
+  it('reads empty, never throws, when a host callback throws', () => {
+    const compiled = compileFormula('prop("Owner").first().name()', schema);
+
+    if (!compiled.ok) throw new Error(compiled.error.message);
+    const people = (): never => {
+      throw new Error('host failed');
+    };
+
+    expect(evaluateFormula(compiled.formula, row({ owner: ['u1'] }), { now: new Date(DOC_NOW), timeZone: 'UTC', schema, people })).toBeNull();
+  });
+
   describe('text and list size', () => {
     it.each([
       'repeat("ab", 1000000000)',
@@ -232,12 +243,14 @@ describe('formula limits', () => {
       expect(onLimit).toHaveBeenCalledTimes(1);
     });
 
-    it('lets any other RangeError through, such as an invalid time zone', () => {
+    it('reads any other RangeError, such as an invalid time zone, as empty but not as a cap', () => {
       const badZone = (): never => {
         throw new RangeError('Invalid time zone specified: Mars/Base');
       };
+      const onLimit = vi.fn();
 
-      expect(() => evaluateFormula(compiledNext(), row(), { now: new Date(0), schema: chained, propValue: badZone })).toThrow(RangeError);
+      expect(evaluateFormula(compiledNext(), row(), { now: new Date(0), schema: chained, propValue: badZone, onLimit })).toBeNull();
+      expect(onLimit).not.toHaveBeenCalled();
     });
 
     it('lets any other RangeError out of compiling', () => {

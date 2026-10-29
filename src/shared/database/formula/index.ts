@@ -79,6 +79,7 @@ export const compileFormula = (source: string, schema: PropertyDefinition[], opt
 /**
  * A formula that passes a cap of `limits.ts`, or overflows the stack, reads
  * empty and calls `ctx.onLimit`: the host must not show that empty as a value.
+ * Any other error reads empty too: one bad cell must not stop the database rendering.
  */
 export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx: FormulaContext): FormulaValue => {
   try {
@@ -95,8 +96,7 @@ export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx
       budget: new EvaluationBudget(),
     }, { vars: new Map() });
   } catch (error) {
-    if (!(error instanceof FormulaLimitExceeded) && !isStackOverflow(error)) throw error;
-    ctx.onLimit?.();
+    if (error instanceof FormulaLimitExceeded || isStackOverflow(error)) ctx.onLimit?.();
 
     return null;
   }

@@ -35,7 +35,16 @@ const formatterFor = (timeZone: string | undefined): Intl.DateTimeFormat => {
   return created;
 };
 
+/** JS dates hold ±8.64e15 ms; Intl throws RangeError past that. */
+const MAX_DATE_MS = 8.64e15;
+
+/** A date the formula made but JS cannot hold. The call that made it reads empty. */
+export class InvalidDate extends Error {}
+
+export const isDateInRange = (ms: number): boolean => Math.abs(ms) <= MAX_DATE_MS;
+
 export const wallTime = (ms: number, timeZone: string | undefined): WallTime => {
+  if (!isDateInRange(ms)) throw new InvalidDate();
   const parts: Record<string, number> = {};
 
   for (const part of formatterFor(timeZone).formatToParts(ms)) {

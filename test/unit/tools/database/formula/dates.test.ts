@@ -200,4 +200,26 @@ describe('formula date functions', () => {
   it('accepts the empty() fix from the common errors page', () => {
     expect(compileError('if(prop("Due"), prop("Due").dateAdd(1, "day"), empty())')).toBe('compiled');
   });
+
+  describe('a date past the range JS dates can hold', () => {
+    it.each([
+      'dateAdd(now(), 1e15, "days")',
+      'dateSubtract(now(), 1e15, "days")',
+      'dateAdd(now(), 1e15, "years")',
+      'dateAdd(now(), 1e15, "hours")',
+      'fromTimestamp(1e300)',
+      'fromTimestamp(-1e300)',
+    ])('%s reads empty', (source) => {
+      expect(run(source)).toBeNull();
+    });
+
+    it.each([
+      'formatDate(fromTimestamp(1e300), "YYYY")',
+      'year(fromTimestamp(1e300))',
+      'dateBetween(fromTimestamp(1e300), now(), "months")',
+      'format(dateAdd(now(), 1e15, "minutes"))',
+    ])('%s does not throw', (source) => {
+      expect(() => run(source)).not.toThrow();
+    });
+  });
 });

@@ -136,9 +136,9 @@ export class Parser implements TokenHandler, StackHandler {
         //so we will parse in a "forgiving" manner
         fragmentContext ??= createElement(TN.TEMPLATE, NS.HTML, []);
 
-        //NOTE: parse5 uses a fake <documentmock> element as the `document` here; a fresh
-        //document behaves the same: fragment parsing never reads its mode or adds nodes to it
-        //besides the root <html>.
+        //NOTE: parse5 uses a fake <documentmock> element as the `document` here. A fresh
+        //document behaves the same: only the root <html> is added to it, and its mode
+        //(no-quirks) reads as "not quirks", like the mock's missing mode.
         const documentMock = createDocument();
 
         const parser = new this(documentMock, fragmentContext);

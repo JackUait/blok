@@ -92,7 +92,7 @@ const expectClean = (outcome: Outcome, inputs: readonly string[]): void => {
   expect(outcome.onlyOursThrew).toBe(0);
 
   expect(outcome.thrown.filter((html) => !/[\udc00-\udfff][\udc00-\udfff]/.test(html))).toEqual([]);
-  expect(outcome.compared + outcome.bothThrew).toBe(inputs.length * ENTRY_POINTS.length);
+  expect(outcome.compared + outcome.bothThrew + outcome.onlyParse5Threw).toBe(inputs.length * ENTRY_POINTS.length);
 };
 
 describe('tree builder matches parse5', () => {

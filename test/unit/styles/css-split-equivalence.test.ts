@@ -1361,6 +1361,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BOARD_RELATION_EMOJI_BYTES = 100;
     // database.css: the file chip glyph is 17px in a 20px box (side-by-side-2 #13).
     const DATABASE_FILE_CHIP_GLYPH_BYTES = 140;
+    // database.css: the table files box's ⋮⋮ grip, 4px padding and line (notion-spec-2 §19.17, §20.13).
+    const DATABASE_FILES_BOX_GRIP_BYTES = 1_150;
     // database.css: a calendar card relation draws at the board card's 14.4px (notion-spec-2 §21.9).
     const DATABASE_CALENDAR_RELATION_BYTES = 577;
     // database.css: a calendar card avatar is 18px, as on the board card (notion-spec-2 §21.9).
@@ -1705,6 +1707,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FILE_CHIP_NO_UNDERLINE_BYTES
       + DATABASE_BOARD_RELATION_EMOJI_BYTES
       + DATABASE_FILE_CHIP_GLYPH_BYTES
+      + DATABASE_FILES_BOX_GRIP_BYTES
       + DATABASE_CALENDAR_RELATION_BYTES
       + DATABASE_CALENDAR_AVATAR_BYTES
       + DATABASE_DARK_CELLS_BYTES

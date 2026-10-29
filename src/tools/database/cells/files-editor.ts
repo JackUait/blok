@@ -1,7 +1,8 @@
 import { nanoid } from 'nanoid';
-import { IconCross, IconDotsHorizontal, IconPlus } from '../../../components/icons';
+import { IconCross, IconDotsHorizontal, IconMenu, IconPlus } from '../../../components/icons';
 import { safeHref } from '../../../components/utils/sanitize-url';
 import { promoteToTopLayer, removeFromTopLayer } from '../../../components/utils/top-layer';
+import { startReorderDrag } from '../database-panel';
 import { fileChipIcon } from '../page-icon';
 import type { FileValue, PropertyDefinition, PropertyValue } from '../types';
 import { filesOf } from '../property-values';
@@ -429,6 +430,40 @@ class FilesEditor implements CellEditorHandle {
     if (focused && this.open) this.root.querySelector<HTMLElement>('[data-blok-database-files-add]')?.focus();
   }
 
+  /** notion-spec-2 §19.17, §22.3: drags the file to a new place, or Alt+Arrow moves it one place. */
+  private buildGrip(id: string): HTMLButtonElement {
+    const grip = document.createElement('button');
+    const moveTo = (beforeId: string | null): void => {
+      const moved = this.files.find((file) => file.id === id);
+      const rest = this.files.filter((file) => file.id !== id);
+      const at = beforeId === null ? rest.length : rest.findIndex((file) => file.id === beforeId);
+
+      if (moved === undefined) return;
+      this.setFiles([...rest.slice(0, at), moved, ...rest.slice(at)]);
+    };
+
+    grip.type = 'button';
+    grip.tabIndex = -1;
+    grip.setAttribute('data-blok-database-file-grip', '');
+    grip.setAttribute('aria-label', this.t('tools.database.dragOption'));
+    grip.innerHTML = IconMenu;
+    grip.addEventListener('pointerdown', (event) => {
+      startReorderDrag(event, this.list, id, (_, beforeId) => moveTo(beforeId), '[data-blok-database-file-row]');
+    });
+    grip.addEventListener('keydown', (event) => {
+      if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const ids = this.files.map((file) => file.id).filter((other) => other !== id);
+      const to = this.files.findIndex((file) => file.id === id) + (event.key === 'ArrowUp' ? -1 : 1);
+
+      if (to < 0 || to > ids.length) return;
+      moveTo(ids[to] ?? null);
+    });
+
+    return grip;
+  }
+
   private renderList(): void {
     this.addLabel.textContent = this.t(this.property.files?.limit === 1 && this.files.length > 0 ? 'tools.database.filesReplace' : 'tools.database.filesAdd');
     this.list.replaceChildren(...this.files.map((file) => {
@@ -446,8 +481,9 @@ class FilesEditor implements CellEditorHandle {
         remove.setAttribute('aria-haspopup', 'menu');
         remove.innerHTML = IconDotsHorizontal;
         remove.addEventListener('click', () => this.openFileMenu(file, remove));
-        // notion-spec-2 §19.17: the page glyph leads each file row in the table box.
-        row.append(fileChipIcon(), name, remove);
+        row.setAttribute('data-item-id', file.id);
+        // notion-spec-2 §19.17: the ⋮⋮ grip and the page glyph lead each file row in the table box.
+        row.append(this.buildGrip(file.id), fileChipIcon(), name, remove);
 
         return row;
       }

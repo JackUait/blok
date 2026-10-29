@@ -513,4 +513,32 @@ describe('cell editor CSS', () => {
     expect(declared('[data-blok-database-cell-input="title"]', 'font-weight')).toEqual(['500']);
     expect(declared('[data-blok-database-cell-input="title"]', 'min-height')).toEqual(['38px']);
   });
+
+  // notion-spec-2 §19.17, §20.13 (notion-live-3/files-editor.png): with a file the box is 4 + 28 + 9 + 28 + 4 = 73 tall.
+  // A 1px line sits 4px under the file rows, inset 12px from the box; the grip is a 20x24 box.
+  describe('Files box in a table', () => {
+    const BOX = '[data-blok-database-files-editor][data-layout="table"]';
+
+    // §20.13: the empty box is 34 tall (3 + 28 + 3); with a file the padding is 4.
+    it('pads the box 4px once it holds a file', () => {
+      expect(declared(`${BOX}:has([data-blok-database-file-row])`, 'padding')).toEqual(['var(--blok-space-1)']);
+    });
+
+    it('draws a 1px line between the files and "Add a file or image", 4px from each', () => {
+      const line = `${BOX} [data-blok-database-files-list]:not(:empty)::after`;
+
+      expect(declared(line, 'height')).toEqual(['1px']);
+      expect(declared(line, 'margin')).toEqual(['var(--blok-space-1) var(--blok-space-2)']);
+      expect(declared(line, 'background-color')).toEqual(['var(--blok-database-confirm-divider)']);
+    });
+
+    it('draws the grip as a 20x24 box with its ⋮⋮ in the add row\'s icon ink', () => {
+      const grip = '[data-blok-database-file-grip]';
+
+      expect(declared(grip, 'width')).toEqual(['20px']);
+      expect(declared(grip, 'height')).toEqual(['24px']);
+      expect(declared(grip, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+      expect(declared(grip, 'cursor')).toEqual(['grab']);
+    });
+  });
 });

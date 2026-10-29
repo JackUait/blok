@@ -15886,6 +15886,42 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-0-75) var(--blok-space-1);
 }
 
+[data-blok-database-files-editor][data-layout="table"]:has([data-blok-database-file-row]) {
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-list]:not(:empty)::after {
+  content: '';
+  display: block;
+  height: 1px;
+  margin: var(--blok-space-1) var(--blok-space-2);
+  background-color: var(--blok-database-confirm-divider);
+}
+
+[data-blok-database-file-grip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-database-file-grip] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-file-row][data-dragging] {
+  z-index: 1;
+}
+
 [data-blok-database-files-editor][data-layout="table"] [data-blok-database-file-row], [data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add] {
   gap: var(--blok-space-2);
   min-height: 28px;

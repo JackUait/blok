@@ -4,6 +4,7 @@ import { openCellEditor } from '../../../../../src/tools/database/cells';
 import type { CellEditorContext } from '../../../../../src/tools/database/cells/types';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import type { PropertyValue } from '../../../../../src/tools/database/types';
+import { filesOf } from '../../../../../src/tools/database/property-values';
 import { makeAnchor, makeEditorContext, makeProperty, press, pressOutside } from './helpers';
 
 const FILE = { id: 'f0', name: 'a-very-long-report-name-that-must-not-be-cut.pdf', url: 'https://x.io/a.pdf' };
@@ -221,6 +222,46 @@ describe('files editor in a table cell', () => {
       open([], { uploadFile: upload });
 
       expect(panel()?.style.left).toBe(`${window.innerWidth - 12 - 300}px`);
+    });
+  });
+
+  // notion-spec-2 §19.17, §22.3: each file row starts with a ⋮⋮ grip shown at rest that drags the file to a new place.
+  describe('file row grip', () => {
+    const TWO = [FILE, { id: 'f1', name: 'b.pdf', url: 'https://x.io/b.pdf' }];
+    const committedIds = (ctx: CellEditorContext): string[] => filesOf(vi.mocked(ctx.onCommit).mock.calls.at(-1)?.[0] ?? undefined).map((file) => file.id);
+    const grip = (id: string): HTMLElement => must(box()?.querySelector<HTMLElement>(`[data-blok-database-file-row="${id}"] > [data-blok-database-file-grip]`) ?? null, `grip ${id}`);
+
+    it('leads each row with the grip, then the page glyph, the name and the "⋯"', () => {
+      open(TWO);
+      const row = must(box()?.querySelector('[data-blok-database-file-row="f0"]') ?? null, 'row');
+
+      expect([...row.children].map((child) => [...child.attributes].map((a) => a.name).find((name) => name.startsWith('data-blok')) ?? child.tagName))
+        .toEqual(['data-blok-database-file-grip', 'data-blok-database-file-chip-icon', 'SPAN', 'data-blok-database-file-menu']);
+      expect(grip('f0').getAttribute('aria-label')).toBe('tools.database.dragOption');
+    });
+
+    it('drags the first file below the second and commits the new order', () => {
+      const ctx = open(TWO);
+
+      ['f0', 'f1'].forEach((id, index) => {
+        const row = must(box()?.querySelector<HTMLElement>(`[data-blok-database-file-row="${id}"]`) ?? null, id);
+
+        vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100 + index * 28, 260, 28));
+      });
+      grip('f0').dispatchEvent(new PointerEvent('pointerdown', { clientY: 110, button: 0, bubbles: true, cancelable: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientY: 140, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientY: 140, bubbles: true }));
+
+      expect(committedIds(ctx)).toEqual(['f1', 'f0']);
+      expect([...(box()?.querySelectorAll('[data-blok-database-file-row]') ?? [])].map((row) => row.getAttribute('data-blok-database-file-row'))).toEqual(['f1', 'f0']);
+    });
+
+    it('moves a file with Alt+Arrow on its grip', () => {
+      const ctx = open(TWO);
+
+      press(grip('f1'), 'ArrowUp', { altKey: true });
+
+      expect(committedIds(ctx)).toEqual(['f1', 'f0']);
     });
   });
 });

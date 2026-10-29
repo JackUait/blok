@@ -435,7 +435,7 @@ export const panelReorderList = (options: {
       event.stopPropagation();
       moveBy(id, event.key === 'ArrowUp' ? -1 : 1);
     });
-    handle.addEventListener('pointerdown', (event) => startDrag(event, list, id, options.onMove));
+    handle.addEventListener('pointerdown', (event) => startReorderDrag(event, list, id, options.onMove));
     row.append(handle, element);
     list.appendChild(row);
   }
@@ -450,17 +450,18 @@ const DRAG_THRESHOLD = 12;
  * Pointer drag inside one list, as Notion's sort list (r35:497-509): past the
  * threshold the row follows the pointer, clamped to the list ends. A neighbour
  * jumps one slot, with no motion, once the row's leading edge passes its middle.
- * Release commits the order shown.
+ * Release commits the order shown. Rows carry their id in `data-item-id`.
  */
-const startDrag = (
+export const startReorderDrag = (
   event: PointerEvent,
   list: HTMLElement,
   id: string,
-  onMove: (id: string, beforeId: string | null) => void
+  onMove: (id: string, beforeId: string | null) => void,
+  rowSelector = '[data-blok-database-panel-list-item]'
 ): void => {
   if (event.button !== 0) return;
   event.preventDefault();
-  const rows = [...list.querySelectorAll<HTMLElement>('[data-blok-database-panel-list-item]')];
+  const rows = [...list.querySelectorAll<HTMLElement>(rowSelector)];
   const from = rows.findIndex((row) => row.getAttribute('data-item-id') === id);
   const source = rows[from];
 

@@ -6841,6 +6841,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-place-clear],
 [data-blok-database-person-remove],
 [data-blok-database-file-remove],
+[data-blok-database-file-menu],
 [data-blok-database-select-option-handle],
 [data-blok-database-select-option-menu] {
   display: inline-flex;
@@ -13106,6 +13107,86 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add]:hover {
     background-color: var(--blok-database-hover-bg);
   }
+}
+
+/* notion-spec-2 §21.3 (E7-file-menu.png): each file row ends in a "⋯". Its size is not measured;
+   it takes the table picker option "⋯" (research/08). */
+[data-blok-database-file-menu] {
+  width: 24px;
+  height: 24px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-file-menu] svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-file-menu]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
+/* §21.3: View original, Rename, Delete under the "⋯", and the Rename field under the row.
+   Only the items and the selected name were read from the shots; the surface is the files panel's. */
+[data-blok-database-file-actions],
+[data-blok-database-file-actions][data-blok-top-layer][popover],
+[data-blok-database-file-rename-box],
+[data-blok-database-file-rename-box][data-blok-top-layer][popover] {
+  box-sizing: border-box;
+  margin: 0;
+  border: none;
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-popover-bg, var(--blok-popover-bg));
+  box-shadow: var(--blok-database-cell-editor-shadow);
+  color: var(--blok-database-ink);
+  font-size: 14px;
+}
+
+[data-blok-database-file-actions],
+[data-blok-database-file-actions][data-blok-top-layer][popover] {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-file-actions] > [role="menuitem"] {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 16.8px;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-file-actions] > [role="menuitem"]:focus-visible {
+  outline: none;
+  background-color: var(--blok-database-hover-bg);
+}
+
+@media (hover: hover) {
+  [data-blok-database-file-actions] > [role="menuitem"]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
+[data-blok-database-file-rename-box],
+[data-blok-database-file-rename-box][data-blok-top-layer][popover] {
+  width: 300px;
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-file-rename] {
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* §18.3: the Upload / Link panel, 300 wide, radius 10px, menu shadow, under the box.

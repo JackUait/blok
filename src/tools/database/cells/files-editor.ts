@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { IconCross, IconPlus } from '../../../components/icons';
+import { IconCross, IconDotsHorizontal, IconPlus } from '../../../components/icons';
 import { safeHref } from '../../../components/utils/sanitize-url';
 import { promoteToTopLayer, removeFromTopLayer } from '../../../components/utils/top-layer';
 import { fileChipIcon } from '../page-icon';
@@ -46,6 +46,8 @@ class FilesEditor implements CellEditorHandle {
   private open = true;
   /** The table's Upload / Link panel under the box; null when closed. */
   private panel: HTMLElement | null = null;
+  /** The table's per-file "⋯" menu, or its Rename field; null when closed. */
+  private fileMenu: HTMLElement | null = null;
 
   constructor(
     private readonly property: PropertyDefinition,
@@ -104,6 +106,7 @@ class FilesEditor implements CellEditorHandle {
     if (!this.open) return;
     this.open = false;
     this.dropPanel();
+    this.closeFileMenu();
     if (closePopover) this.popover.close();
     this.ctx.onClose?.();
   }
@@ -225,7 +228,8 @@ class FilesEditor implements CellEditorHandle {
       // notion-spec-2 §18.3: 240 wide over a 200 cell; it grows to fit a name (database.css).
       minWidth: coverMinWidth(anchor, true, 240),
       onEscape: () => {
-        if (this.panel !== null) this.fadePanel();
+        if (this.fileMenu !== null) this.closeFileMenu();
+        else if (this.panel !== null) this.fadePanel();
         else this.finish(true);
       },
       onDismiss: () => this.finish(false),
@@ -322,6 +326,109 @@ class FilesEditor implements CellEditorHandle {
     panel.remove();
   }
 
+  /** notion-spec-2 §21.3 (E7-file-menu.png): View original, Rename, Delete, under the "⋯". */
+  private openFileMenu(file: FileValue, trigger: HTMLElement): void {
+    this.closeFileMenu();
+    const menu = document.createElement('div');
+    const items: Array<[string, string, () => void]> = [
+      ['view', 'tools.database.filesViewOriginal', () => {
+        const href = safeHref(file.url);
+
+        this.closeFileMenu();
+        if (href !== null) window.open(href, '_blank', 'noopener');
+      }],
+      ['rename', 'tools.database.filesRename', () => this.openRename(file, trigger)],
+      ['delete', 'tools.database.filesDelete', () => {
+        this.closeFileMenu();
+        this.setFiles(this.files.filter((f) => f.id !== file.id));
+      }],
+    ];
+    const buttons = items.map(([action, key, run]) => {
+      const item = document.createElement('button');
+
+      item.type = 'button';
+      item.setAttribute('role', 'menuitem');
+      item.setAttribute('data-action', action);
+      item.tabIndex = -1;
+      item.textContent = this.t(key);
+      item.addEventListener('click', run);
+
+      return item;
+    });
+
+    menu.setAttribute('data-blok-database-file-actions', '');
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', file.name);
+    menu.append(...buttons);
+    menu.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      const index = buttons.findIndex((button) => button === document.activeElement);
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+
+      buttons[(index + step + buttons.length) % buttons.length].focus();
+    });
+    this.showFloating(menu, trigger.getBoundingClientRect());
+    buttons[0].focus();
+  }
+
+  /**
+   * notion-spec-2 §21.3 (E7-rename.png): a field under the row, the whole name
+   * selected. "Report" over "a.pdf" saved "Report.pdf", so the old extension
+   * comes back when the new name lacks it.
+   */
+  private openRename(file: FileValue, trigger: HTMLElement): void {
+    const row = trigger.closest<HTMLElement>('[data-blok-database-file-row]') ?? trigger;
+    const input = document.createElement('input');
+    const extension = /[^.]\.([^./\s]+)$/.exec(file.name)?.[1];
+
+    this.closeFileMenu();
+    input.type = 'text';
+    input.value = file.name;
+    input.setAttribute('data-blok-database-file-rename', '');
+    input.setAttribute('data-blok-field', 'text');
+    input.setAttribute('aria-label', this.t('tools.database.filesRename'));
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      const typed = input.value.trim();
+      const name = extension === undefined || typed === '' || typed.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ? typed : `${typed}.${extension}`;
+
+      this.closeFileMenu();
+      if (name !== '' && name !== file.name) {
+        this.setFiles(this.files.map((f) => (f.id === file.id ? { ...f, name } : f)));
+      }
+    });
+    const rect = row.getBoundingClientRect();
+    const box = document.createElement('div');
+
+    box.setAttribute('data-blok-database-file-rename-box', '');
+    box.appendChild(input);
+    this.showFloating(box, new DOMRect(rect.left, rect.top, 0, rect.height));
+    input.focus();
+    input.select();
+  }
+
+  /** Inside the root, so a press on it is not an outside press; in the top layer, over the popover. */
+  private showFloating(element: HTMLElement, below: DOMRect): void {
+    this.root.appendChild(element);
+    this.fileMenu = element;
+    promoteToTopLayer(element);
+    Object.assign(element.style, { position: 'fixed', left: `${below.left}px`, top: `${below.bottom}px` });
+  }
+
+  private closeFileMenu(): void {
+    const menu = this.fileMenu;
+
+    this.fileMenu = null;
+    if (menu === null) return;
+    const focused = menu.contains(document.activeElement);
+
+    removeFromTopLayer(menu);
+    menu.remove();
+    if (focused && this.open) this.root.querySelector<HTMLElement>('[data-blok-database-files-add]')?.focus();
+  }
+
   private renderList(): void {
     this.addLabel.textContent = this.t(this.property.files?.limit === 1 && this.files.length > 0 ? 'tools.database.filesReplace' : 'tools.database.filesAdd');
     this.list.replaceChildren(...this.files.map((file) => {
@@ -333,13 +440,22 @@ class FilesEditor implements CellEditorHandle {
       name.textContent = file.name;
 
       remove.type = 'button';
+      if (this.ctx.coverCell === true) {
+        remove.setAttribute('data-blok-database-file-menu', '');
+        remove.setAttribute('aria-label', this.t('tools.database.fileMoreActions'));
+        remove.setAttribute('aria-haspopup', 'menu');
+        remove.innerHTML = IconDotsHorizontal;
+        remove.addEventListener('click', () => this.openFileMenu(file, remove));
+        // notion-spec-2 §19.17: the page glyph leads each file row in the table box.
+        row.append(fileChipIcon(), name, remove);
+
+        return row;
+      }
       remove.setAttribute('data-blok-database-file-remove', '');
       remove.setAttribute('aria-label', this.t('tools.database.removeOption').replace('{option}', file.name));
       remove.innerHTML = IconCross;
       remove.addEventListener('click', () => this.setFiles(this.files.filter((f) => f.id !== file.id)));
       row.append(name, remove);
-      // notion-spec-2 §19.17: the page glyph leads each file row in the table box.
-      if (this.ctx.coverCell === true) row.prepend(fileChipIcon());
 
       return row;
     }));

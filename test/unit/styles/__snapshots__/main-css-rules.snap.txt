@@ -9979,7 +9979,7 @@ textarea[data-blok-database-cell-input] {
   padding-inline-end: 2px;
 }
 
-[data-blok-database-select-chip-remove], [data-blok-database-place-clear], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
+[data-blok-database-select-chip-remove], [data-blok-database-place-clear], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-file-menu], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -15711,6 +15711,73 @@ textarea[data-blok-database-cell-input] {
 
 [@media (hover: hover)] [data-blok-database-files-editor][data-layout="table"] [data-blok-database-files-add]:hover {
   background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-file-menu] {
+  width: 24px;
+  height: 24px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-file-menu] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[@media (hover: hover)] [data-blok-database-file-menu]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-file-actions], [data-blok-database-file-actions][data-blok-top-layer][popover], [data-blok-database-file-rename-box], [data-blok-database-file-rename-box][data-blok-top-layer][popover] {
+  box-sizing: border-box;
+  margin: 0;
+  border: none;
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-popover-bg, var(--blok-popover-bg));
+  box-shadow: var(--blok-database-cell-editor-shadow);
+  color: var(--blok-database-ink);
+  font-size: 14px;
+}
+
+[data-blok-database-file-actions], [data-blok-database-file-actions][data-blok-top-layer][popover] {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-file-actions] > [role="menuitem"] {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 16.8px;
+  text-align: start;
+  cursor: pointer;
+}
+
+[data-blok-database-file-actions] > [role="menuitem"]:focus-visible {
+  outline: none;
+  background-color: var(--blok-database-hover-bg);
+}
+
+[@media (hover: hover)] [data-blok-database-file-actions] > [role="menuitem"]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-file-rename-box], [data-blok-database-file-rename-box][data-blok-top-layer][popover] {
+  width: 300px;
+  padding: var(--blok-space-1);
+}
+
+[data-blok-database-file-rename] {
+  box-sizing: border-box;
+  width: 100%;
 }
 
 [data-blok-database-files-panel], [data-blok-database-files-panel][data-blok-top-layer][popover] {

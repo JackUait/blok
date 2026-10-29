@@ -1323,6 +1323,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PEEK_CARD_CHECKBOX_BYTES = 362;
     // database.css: a related page's own emoji in its chip, 18px, 14.4px on a card (notion-spec-2 §21.6).
     const DATABASE_RELATION_CHIP_EMOJI_BYTES = 412;
+    // database.css: a table file's "⋯", its View original / Rename / Delete menu and Rename field (notion-spec-2 §21.3).
+    const DATABASE_FILE_MENU_BYTES = 2_258;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1631,7 +1633,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BOARD_RELATION_CHIP_BYTES
       + DATABASE_BOARD_STATUS_PILL_BYTES
       + DATABASE_PEEK_CARD_CHECKBOX_BYTES
-      + DATABASE_RELATION_CHIP_EMOJI_BYTES;
+      + DATABASE_RELATION_CHIP_EMOJI_BYTES
+      + DATABASE_FILE_MENU_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

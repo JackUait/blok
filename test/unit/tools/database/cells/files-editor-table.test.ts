@@ -111,6 +111,94 @@ describe('files editor in a table cell', () => {
     expect(ctx.onClose).toHaveBeenCalledTimes(1);
   });
 
+  // notion-spec-2 §21.3 (E7-file-menu.png, E7-rename.png): each file's "⋯" opens View original, Rename, Delete.
+  describe('a file\'s menu', () => {
+    const PDF = { id: 'f1', name: 'a.pdf', url: 'https://example.com/a.pdf' };
+    const menuButton = (id: string): HTMLElement => must(box()?.querySelector<HTMLElement>(`[data-blok-database-file-row="${id}"] [data-blok-database-file-menu]`) ?? null, 'menu button');
+    const menu = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-file-actions]');
+    const item = (action: string): HTMLElement => must(menu()?.querySelector<HTMLElement>(`[data-action="${action}"]`) ?? null, action);
+    const commits = (ctx: CellEditorContext): unknown => vi.mocked(ctx.onCommit).mock.calls.at(-1)?.[0];
+    const renameTo = (text: string): void => {
+      const input = must(document.querySelector<HTMLInputElement>('[data-blok-database-file-rename]'), 'rename input');
+
+      input.value = text;
+      press(input, 'Enter');
+    };
+
+    it('lists View original, Rename and Delete', () => {
+      open([PDF]);
+      expect(menuButton('f1').getAttribute('aria-label')).toBe('tools.database.fileMoreActions');
+      menuButton('f1').click();
+
+      expect(menu()?.getAttribute('role')).toBe('menu');
+      expect([...(menu()?.querySelectorAll('[role="menuitem"]') ?? [])].map((el) => el.textContent)).toEqual([
+        'tools.database.filesViewOriginal', 'tools.database.filesRename', 'tools.database.filesDelete',
+      ]);
+      expect(item('view')).toHaveFocus();
+    });
+
+    it('View original opens the file in a new tab', () => {
+      const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+
+      open([PDF]);
+      menuButton('f1').click();
+      item('view').click();
+
+      expect(opened).toHaveBeenCalledWith('https://example.com/a.pdf', '_blank', 'noopener');
+      expect(menu()).toBeNull();
+    });
+
+    it('Delete removes the file', () => {
+      const ctx = open([FILE, PDF]);
+
+      menuButton('f1').click();
+      item('delete').click();
+
+      expect(commits(ctx)).toEqual([FILE]);
+      expect(menu()).toBeNull();
+    });
+
+    it('Rename opens a field with the whole name selected, and keeps the extension', () => {
+      const ctx = open([PDF]);
+
+      menuButton('f1').click();
+      item('rename').click();
+      const input = must(document.querySelector<HTMLInputElement>('[data-blok-database-file-rename]'), 'rename input');
+
+      expect(input).toHaveFocus();
+      expect([input.selectionStart, input.selectionEnd]).toEqual([0, 'a.pdf'.length]);
+      renameTo('Report');
+
+      expect(commits(ctx)).toEqual([{ ...PDF, name: 'Report.pdf' }]);
+      expect(document.querySelector('[data-blok-database-file-rename]')).toBeNull();
+      expect(box()?.querySelector('[data-blok-database-file-row="f1"]')?.textContent).toContain('Report.pdf');
+    });
+
+    it('Rename does not add the extension twice, and adds none to a name that had none', () => {
+      const ctx = open([PDF, { id: 'f2', name: 'notes', url: 'https://example.com/notes' }]);
+
+      menuButton('f1').click();
+      item('rename').click();
+      renameTo('Report.pdf');
+      menuButton('f2').click();
+      item('rename').click();
+      renameTo('Draft');
+
+      expect(commits(ctx)).toEqual([{ ...PDF, name: 'Report.pdf' }, { id: 'f2', name: 'Draft', url: 'https://example.com/notes' }]);
+    });
+
+    it('Escape closes the menu first and keeps the editor open', () => {
+      const ctx = open([PDF]);
+
+      menuButton('f1').click();
+      press(item('view'), 'Escape');
+
+      expect(menu()).toBeNull();
+      expect(box()).not.toBeNull();
+      expect(ctx.onClose).not.toHaveBeenCalled();
+    });
+  });
+
   describe('placement', () => {
     const at = (left: number, width: number, bottom: number): void => {
       vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {

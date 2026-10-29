@@ -10799,6 +10799,10 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
+[data-blok-database-calendar-event-property] [data-blok-database-cell-link] {
+  white-space: nowrap;
+}
+
 [data-blok-database-date-day] {
   width: 28px;
   height: 28px;
@@ -14628,8 +14632,14 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-calendar-event-property] {
-  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  flex: 1 0 calc(100% + 2 * var(--blok-space-1-5));
+  block-size: 24px;
   min-inline-size: 0;
+  margin-inline: calc(-1 * var(--blok-space-1-5));
+  padding-inline: var(--blok-space-1-5);
+  box-sizing: border-box;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: clip;

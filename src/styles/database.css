@@ -7788,6 +7788,10 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
+[data-blok-database-calendar-event-property] [data-blok-database-cell-link] {
+  white-space: nowrap;
+}
+
 /* The picked day is gray with primary ink (no blue selected states). */
 [data-blok-database-date-day] {
   width: 28px;
@@ -11925,9 +11929,16 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-calendar-muted-text);
 }
 
+/* notion-spec-2 §21.9: one 24px line each (the lane pitch counts on it), cut at the card's own edge. */
 [data-blok-database-calendar-event-property] {
-  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  flex: 1 0 calc(100% + 2 * var(--blok-space-1-5));
+  block-size: 24px;
   min-inline-size: 0;
+  margin-inline: calc(-1 * var(--blok-space-1-5));
+  padding-inline: var(--blok-space-1-5);
+  box-sizing: border-box;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: clip;

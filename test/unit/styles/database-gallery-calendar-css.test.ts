@@ -119,13 +119,21 @@ describe('database gallery and calendar styles', () => {
     expect(event).not.toMatch(/(?:^|;)\s*height:/);
     expect(event).toMatch(/flex-wrap:\s*wrap/);
     expect(ruleBody('[data-blok-database-calendar-event-title]')).toMatch(/block-size:\s*24px/);
-    expect(property).toMatch(/flex:\s*1 0 100%/);
     expect(property).toMatch(/line-height:\s*24px/);
     expect(property).toMatch(/white-space:\s*nowrap/);
     expect(property).toMatch(/text-overflow:\s*clip/);
     // The base cell wraps (pre-wrap flex): a plain date would take two lines and spill out of the card.
     expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
     expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell]')).toMatch(/flex-wrap:\s*nowrap/);
+    // notion-spec-2 §21.9: every value row is 24 tall, so the 34 + 24n lane pitch holds, and it is cut at the card's
+    // own edge (calendar-card-crop.png: "2:3" stops at the border), not 6px inside it.
+    expect(property).toMatch(/block-size:\s*24px/);
+    expect(property).toMatch(/align-items:\s*center/);
+    expect(property).toMatch(/flex:\s*1 0 calc\(100% \+ 2 \* var\(--blok-space-1-5\)\)/);
+    expect(property).toMatch(/margin-inline:\s*calc\(-1 \* var\(--blok-space-1-5\)\)/);
+    expect(property).toMatch(/padding-inline:\s*var\(--blok-space-1-5\)/);
+    // Links are pre-wrap elsewhere: a URL took four lines and pushed the card past the week row.
+    expect(ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-cell-link]')).toMatch(/white-space:\s*nowrap/);
     // findings C10: a 28px card and a 6px gap.
     expect(css).toMatch(/--blok-database-calendar-lane-pitch:\s*calc\(34px \+ var\(--blok-database-calendar-event-lines, 0\) \* 24px\)/);
   });

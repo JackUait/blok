@@ -1669,6 +1669,15 @@ export const IconPage = `
 </svg>
 `;
 
+// Notion's pageEmpty: a bare folded sheet, no text lines. Taller than
+// IconFile's sheet on purpose: Notion's glyph fills 14x17 of its 18px box.
+export const IconPageEmpty = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 3.5a2 2 0 0 1 2-2h5l6 6v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-13Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10.5 1.5v6h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 export const IconLock = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M7 8V6.5a3 3 0 0 1 6 0V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>

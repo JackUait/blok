@@ -1,4 +1,4 @@
-import { IconPage } from '../../components/icons';
+import { IconPageEmpty } from '../../components/icons';
 
 import type { DatabaseRow, DatabaseViewConfig } from './types';
 
@@ -26,18 +26,18 @@ export const pagePlaceholderIcon = (): HTMLElement => {
 
   icon.setAttribute('data-blok-database-page-icon-placeholder', '');
   icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = IconPage;
+  icon.innerHTML = IconPageEmpty;
 
   return icon;
 };
 
-/** The page glyph before a file name in a table's files cell (research/08:278). */
+/** The page glyph before a file name in a table's files cell (notion-spec-2 §18.1: pageEmpty). */
 export const fileChipIcon = (): HTMLElement => {
   const icon = document.createElement('span');
 
   icon.setAttribute('data-blok-database-file-chip-icon', '');
   icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = IconPage;
+  icon.innerHTML = IconPageEmpty;
 
   return icon;
 };

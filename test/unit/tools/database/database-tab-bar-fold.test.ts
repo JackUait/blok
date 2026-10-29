@@ -49,6 +49,7 @@ const mount = (views = threeViews(), active = 'v1'): Mounted => {
   const newButton = document.createElement('span');
 
   viewBar.setAttribute('data-blok-database-view-bar', '');
+  viewBar.style.columnGap = '4px';
   toolbar.setAttribute('data-blok-database-view-toolbar', '');
   filter.setAttribute('data-blok-database-toolbar-foldable', '');
   newButton.setAttribute('data-blok-database-new', '');
@@ -202,5 +203,23 @@ describe('DatabaseTabBar — the view bar folds like Notion (notion-spec-2 §26.
     fire();
 
     expect(mounted.viewBar.hasAttribute('data-blok-database-fold-icons')).toBe(false);
+  });
+
+  it('keeps the icons with 220 of room beside the toolbar, though the gap before it takes 4', () => {
+    const mounted = mount();
+
+    layOut(mounted, 463);
+    fire();
+
+    expect(mounted.viewBar.hasAttribute('data-blok-database-fold-icons')).toBe(false);
+  });
+
+  it('keeps New on a 304px bar', () => {
+    const mounted = mount();
+
+    layOut(mounted, 304);
+    fire();
+
+    expect(mounted.viewBar.hasAttribute('data-blok-database-fold-new')).toBe(false);
   });
 });

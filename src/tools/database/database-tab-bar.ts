@@ -303,7 +303,11 @@ export class DatabaseTabBar {
 
     viewBar?.removeAttribute('data-blok-database-fold-icons');
 
-    const width = viewBar === null ? bar.clientWidth - padding : this.viewBarRoom(viewBar, full) - padding;
+    const barStyle = viewBar === null ? null : getComputedStyle(viewBar);
+    const width = viewBar === null || barStyle === null
+      ? bar.clientWidth - padding
+      : viewBar.clientWidth - (Number.parseFloat(barStyle.paddingLeft) || 0) - (Number.parseFloat(barStyle.paddingRight) || 0) - padding;
+    const gap = full > 0 ? Number.parseFloat(barStyle?.columnGap ?? '') || 0 : 0;
     // The 28px "+", its 1px margin, and the 1px gaps before it and before "N more…";
     // each tab pays the 1px gap before it (database.css).
     const add = this.addBtnEl !== null && bar.contains(this.addBtnEl) ? 31 : 0;
@@ -316,6 +320,7 @@ export class DatabaseTabBar {
 
     const fold = planViewBarFold({
       width,
+      gap,
       tabs: tabs.map((tab) => tab.offsetWidth + 1),
       current: tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId),
       add,
@@ -337,15 +342,6 @@ export class DatabaseTabBar {
       return;
     }
     this.foldTabs(fold.tabs);
-  }
-
-  /** The view bar's width for the tabs and the toolbar, less the gap between them. */
-  private viewBarRoom(viewBar: HTMLElement, toolbarWidth: number): number {
-    const style = getComputedStyle(viewBar);
-    const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
-    const gap = toolbarWidth > 0 ? Number.parseFloat(style.columnGap) || 0 : 0;
-
-    return viewBar.clientWidth - padding - gap;
   }
 
   /** "Table ⌄": the current view's icon and name and a chevron; it opens the views list. */

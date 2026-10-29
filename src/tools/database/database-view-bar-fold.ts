@@ -18,8 +18,10 @@ export const NEW_FOLD_WIDTH = 304;
 
 /** Widths the fold is planned from, in px. Each tab's width includes the 1px gap before it. */
 export interface ViewBarParts {
-  /** Room for the tabs and the toolbar together. */
+  /** The bar from the first tab to the end of the toolbar: Notion's bar less its 8px insets. */
   width: number;
+  /** The gap between the tabs and the toolbar; it costs the tabs, not the switches. */
+  gap: number;
   tabs: readonly number[];
   /** The current view's index, or -1. */
   current: number;
@@ -48,7 +50,7 @@ export const planViewBarFold = (parts: ViewBarParts): ViewBarFold => {
   const newButton = icons || parts.width >= NEW_FOLD_WIDTH;
   // New's room is not handed to the tabs: Notion shows "Table ⌄" at every width
   // without New (§26.1, bars 178–318), though two tabs would fit at 318.
-  const room = parts.width - (icons ? parts.toolbar.full : parts.toolbar.noIcons);
+  const room = parts.width - parts.gap - (icons ? parts.toolbar.full : parts.toolbar.noIcons);
   const all = parts.tabs.reduce((sum, width) => sum + width, 0) + parts.add;
 
   if (all <= room) {

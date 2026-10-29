@@ -11,6 +11,7 @@ const notion = (bar: number): ViewBarParts => ({
   width: bar - 16,
   tabs: [86.4, 90.1, 97.5, 74.9, 110.3, 106.8],
   current: 0,
+  gap: 0,
   add: 31,
   more: 77.7,
   toolbar: { full: 243.3, noIcons: 103.3 },
@@ -74,5 +75,15 @@ describe('planViewBarFold: Notion order as the bar narrows (notion-spec-2 §26.1
     const fold = planViewBarFold({ ...notion(1050), tabs: [100, 100, 100], current: 2, toolbar: { full: 0, noIcons: 0 }, width: 320, more: 0 });
 
     expect(fold.tabs).toEqual([0, 2]);
+  });
+
+  it('measures both switches against the whole bar; the gap before the toolbar only costs the tabs', () => {
+    // tbp-1350-open: icons shown with 222.7 of room; tbp-1460-open: New shown at a 322 bar.
+    const icons = planViewBarFold({ ...notion(482), gap: 4 });
+    const withNew = planViewBarFold({ ...notion(322), gap: 4 });
+
+    expect(icons.icons).toBe(true);
+    expect(withNew.newButton).toBe(true);
+    expect(planViewBarFold({ ...notion(538), gap: 4 }).tabs).toEqual([0, 1]);
   });
 });

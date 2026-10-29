@@ -38,13 +38,10 @@ Verdict: **better than the original.** Every must-have is done, outputs match pa
   - the server runtime and MCP bundle shrink too;
   - `blok`, `full` and `markdown`: byte-identical size.
 
-## Open (pre-existing, also in parse5) — need a decision
+## Decided (pre-existing, also in parse5)
 
-1. **Spec-required blowups:**
-   - formatting reconstruction can make a 4 KB input into 90k nodes;
-   - deep nesting is quadratic in parse time.
-   - A node or depth cap would change output versus the spec.
-2. **Sanitizer configs that allow `svg` and `style`/`script` together allow mXSS.** No shipped config does this, but a custom tool config could. Option: never keep raw-text elements inside SVG/MathML.
-3. **Deep nesting in the sanitizer and in `htmlToBlocks`** still recurses once per level, as before.
-   - The parser and the serializer both handle 20k levels. The serializer was fixed in 462b3575.
-   - Jint turns a stack overflow into a catchable error.
+1. **Spec-required blowups:** no node or depth cap (user decision 2026-10-29).
+   - Formatting reconstruction can make a 4 KB input into 90k nodes.
+   - Deep nesting is quadratic in parse time: 20k nested lists take about a minute.
+2. **Sanitizer configs that allow `svg` and `style`/`script` together:** both sanitizers now drop `script`/`style` anywhere inside SVG or MathML (ab95c6d9, BREAKING).
+3. **Deep nesting in the sanitizer and in `htmlToBlocks`:** both are loops now. The sanitizer was fixed in 74156d7b; `htmlToBlocks` queues its steps instead of recursing, with byte-identical goldens and the same Jint speed.

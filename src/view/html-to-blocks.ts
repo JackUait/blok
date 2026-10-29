@@ -99,6 +99,15 @@ const INLINE_TAGS = new Set([
 
 const HEADING = /^h([1-6])$/;
 
+/** One step of a conversion; it may queue more steps with {@link later}. */
+type Step = () => void;
+
+/**
+ * The steps still to run, last first. Converting a child is queued rather than
+ * called, so deep nesting cannot overflow the call stack.
+ */
+type Steps = Step[];
+
 /** Everything one conversion shares. */
 interface Ctx {
   nextId: () => string;
@@ -106,7 +115,50 @@ interface Ctx {
   blocks: OutputBlockData[];
   /** Set while a table cell converts: a table met there is flattened. */
   inCell: boolean;
+  steps: Steps;
 }
+
+/**
+ * Queue steps to run, in order, once the current step returns. A converter
+ * does all its direct work before it queues anything, so a caller can tell
+ * from `ctx.steps.length` whether what follows has to wait too.
+ * @param ctx - conversion state
+ * @param steps - steps to queue
+ */
+const later = (ctx: Ctx, ...steps: Step[]): void => {
+  ctx.steps.push(...steps);
+};
+
+/**
+ * Run a step and everything it queues, depth first: what a step queues runs
+ * before the steps queued before it, so blocks come out in document order.
+ * @param ctx - conversion state
+ * @param first - the first step
+ */
+const runSteps = (ctx: Ctx, first: Step): void => {
+  const { steps } = ctx;
+
+  steps.push(first);
+
+  while (steps.length > 0) {
+    const step = steps.pop() as Step;
+    const queuedFrom = steps.length;
+
+    step();
+
+    // A step queues in document order; flip what it queued so the first runs next.
+    const span = { low: queuedFrom, high: steps.length - 1 };
+
+    while (span.low < span.high) {
+      const swap = steps[span.low];
+
+      steps[span.low] = steps[span.high];
+      steps[span.high] = swap;
+      span.low += 1;
+      span.high -= 1;
+    }
+  }
+};
 
 /**
  * Record one degradation.
@@ -154,16 +206,49 @@ const childrenOf = (node: HtmlChildNode): HtmlChildNode[] =>
   'childNodes' in node ? node.childNodes : [];
 
 /**
+ * Visit every node under `nodes` in document order. A stack, not recursion:
+ * deep nesting would overflow the call stack.
+ * @param nodes - nodes to walk
+ * @param visit - called on each node; return false to skip its children
+ */
+const walkTree = (nodes: HtmlChildNode[], visit: (node: HtmlChildNode) => boolean): void => {
+  const levels: Array<{ nodes: HtmlChildNode[]; next: number }> = [ { nodes, next: 0 } ];
+
+  while (levels.length > 0) {
+    const level = levels[levels.length - 1];
+
+    if (level.next === level.nodes.length) {
+      levels.pop();
+      continue;
+    }
+
+    const node = level.nodes[level.next];
+
+    level.next += 1;
+
+    if (visit(node) && 'childNodes' in node && node.childNodes.length > 0) {
+      levels.push({ nodes: node.childNodes, next: 0 });
+    }
+  }
+};
+
+/**
  * Raw text of a subtree, entities already decoded by the tokenizer.
  * @param nodes - nodes to read
  */
-const rawText = (nodes: HtmlChildNode[]): string => nodes.map((node) => {
-  if (isText(node)) {
-    return node.value;
-  }
+const rawText = (nodes: HtmlChildNode[]): string => {
+  const parts: string[] = [];
 
-  return 'childNodes' in node ? rawText(node.childNodes) : '';
-}).join('');
+  walkTree(nodes, (node) => {
+    if (isText(node)) {
+      parts.push(node.value);
+    }
+
+    return true;
+  });
+
+  return parts.join('');
+};
 
 /**
  * Serialize loose nodes by lending them a fragment to hang off. The serializer
@@ -182,17 +267,13 @@ const serializeNodes = (nodes: HtmlChildNode[]): string =>
  * @param nodes - the inline nodes about to be serialized
  */
 const reportLossyInline = (ctx: Ctx, nodes: HtmlChildNode[]): void => {
-  for (const node of nodes) {
-    if (!isElement(node)) {
-      continue;
-    }
-
-    if (LOSSY_INLINE.has(node.tagName)) {
+  walkTree(nodes, (node) => {
+    if (isElement(node) && LOSSY_INLINE.has(node.tagName)) {
       warn(ctx, node.tagName, 'degraded', `<${node.tagName}> is unwrapped; its text is kept but Blok has no inline mark for it`);
     }
 
-    reportLossyInline(ctx, node.childNodes);
-  }
+    return true;
+  });
 };
 
 /**
@@ -375,14 +456,15 @@ const emitImage = (ctx: Ctx, element: HtmlElement, caption?: string): void => {
  * @param nodes - nodes to search
  */
 const emitNestedImages = (ctx: Ctx, nodes: HtmlChildNode[]): void => {
-  for (const node of nodes) {
+  walkTree(nodes, (node) => {
     if (isElement(node) && node.tagName === 'img') {
       emitImage(ctx, node);
-      continue;
+
+      return false;
     }
 
-    emitNestedImages(ctx, childrenOf(node));
-  }
+    return true;
+  });
 };
 
 /**
@@ -391,8 +473,17 @@ const emitNestedImages = (ctx: Ctx, nodes: HtmlChildNode[]): void => {
  * because the inline sanitizer keeps the wrapper and strips the image.
  * @param node - node to search
  */
-const hasImage = (node: HtmlChildNode): boolean =>
-  childrenOf(node).some((child) => (isElement(child) && child.tagName === 'img') || hasImage(child));
+const hasImage = (node: HtmlChildNode): boolean => {
+  const found = { image: false };
+
+  walkTree(childrenOf(node), (child) => {
+    found.image ||= isElement(child) && child.tagName === 'img';
+
+    return !found.image;
+  });
+
+  return found.image;
+};
 
 /**
  * Report the link an image wrapper carries, which the image it wraps cannot
@@ -417,63 +508,88 @@ type InlineSegment = { image: HtmlElement } | { block: HtmlElement } | { inline:
  * @param nodes - inline nodes
  */
 const splitOnImages = (ctx: Ctx, nodes: HtmlChildNode[]): InlineSegment[] => {
-  const segments: InlineSegment[] = [];
-  const pending: { run: HtmlChildNode[] } = { run: [] };
+  /** One run being split: the top level, or the children of a wrapper that holds an image. */
+  interface SplitFrame {
+    wrapper: HtmlElement | undefined;
+    nodes: HtmlChildNode[];
+    next: number;
+    segments: InlineSegment[];
+    run: HtmlChildNode[];
+  }
 
-  /** Close the run of inline nodes collected so far. */
-  const flush = (): void => {
-    if (pending.run.length > 0) {
-      segments.push({ inline: pending.run });
-      pending.run = [];
+  /**
+   * Close the run of inline nodes collected so far.
+   * @param frame - run being split
+   */
+  const flush = (frame: SplitFrame): void => {
+    if (frame.run.length > 0) {
+      frame.segments.push({ inline: frame.run.splice(0) });
     }
   };
 
   /**
-   * Fold a wrapper's own parts into this run, re-wrapping the inline ones so
-   * `<b>text <img></b>` keeps its bold on the text. The clone borrows the
-   * wrapper's tag and attributes, which is all the serializer reads.
+   * Fold a wrapper's own parts into the enclosing run, re-wrapping the inline
+   * ones so `<b>text <img></b>` keeps its bold on the text. The clone borrows
+   * the wrapper's tag and attributes, which is all the serializer reads.
+   * @param frame - the enclosing run
    * @param wrapper - the inline element being taken apart
    * @param parts - what its children split into
    */
-  const absorb = (wrapper: HtmlElement, parts: InlineSegment[]): void => {
+  const absorb = (frame: SplitFrame, wrapper: HtmlElement, parts: InlineSegment[]): void => {
     for (const part of parts) {
       if ('inline' in part) {
-        pending.run.push({ ...wrapper, childNodes: part.inline });
+        frame.run.push({ ...wrapper, childNodes: part.inline });
         continue;
       }
 
-      flush();
-      segments.push(part);
+      flush(frame);
+      frame.segments.push(part);
     }
   };
 
-  for (const node of nodes) {
-    if (isElement(node) && node.tagName === 'img') {
-      flush();
-      segments.push({ image: node });
+  const top: SplitFrame = { wrapper: undefined, nodes, next: 0, segments: [], run: [] };
+  // A stack, not recursion: deep nesting would overflow the call stack.
+  const frames: SplitFrame[] = [ top ];
+
+  /** Close the innermost run and hand its parts to the run around it. */
+  const finish = (): void => {
+    const frame = frames.pop() as SplitFrame;
+
+    flush(frame);
+
+    if (frame.wrapper !== undefined) {
+      absorb(frames[frames.length - 1], frame.wrapper, frame.segments);
+    }
+  };
+
+  while (frames.length > 0) {
+    const frame = frames[frames.length - 1];
+    const node = frame.next < frame.nodes.length ? frame.nodes[frame.next] : undefined;
+
+    if (node === undefined) {
+      finish();
       continue;
     }
 
-    if (isElement(node) && !INLINE_TAGS.has(node.tagName)) {
+    frame.next += 1;
+
+    if (isElement(node) && node.tagName === 'img') {
+      flush(frame);
+      frame.segments.push({ image: node });
+    } else if (isElement(node) && !INLINE_TAGS.has(node.tagName)) {
       // Hoisted whole rather than walked: `convertElement` is the only place
       // that knows an element is dropped, so walking past it drops it silently.
-      flush();
-      segments.push({ block: node });
-      continue;
-    }
-
-    if (isElement(node) && hasImage(node)) {
+      flush(frame);
+      frame.segments.push({ block: node });
+    } else if (isElement(node) && hasImage(node)) {
       reportImageLink(ctx, node);
-      absorb(node, splitOnImages(ctx, node.childNodes));
-      continue;
+      frames.push({ wrapper: node, nodes: node.childNodes, next: 0, segments: [], run: [] });
+    } else {
+      frame.run.push(node);
     }
-
-    pending.run.push(node);
   }
 
-  flush();
-
-  return segments;
+  return top.segments;
 };
 
 /**
@@ -483,14 +599,15 @@ const splitOnImages = (ctx: Ctx, nodes: HtmlChildNode[]): InlineSegment[] => {
  * @param segments - what the run split into
  */
 const emitSegmentMedia = (ctx: Ctx, segments: InlineSegment[]): void => {
-  for (const segment of segments) {
-    if ('image' in segment) {
-      emitImage(ctx, segment.image);
-      continue;
-    }
+  const hoists = segments.some((segment) => 'block' in segment);
 
+  for (const segment of segments) {
     if ('block' in segment) {
       convertNodes(ctx, [segment.block]);
+    } else if ('image' in segment && hoists) {
+      later(ctx, () => emitImage(ctx, segment.image));
+    } else if ('image' in segment) {
+      emitImage(ctx, segment.image);
     }
   }
 };
@@ -509,21 +626,34 @@ const emitInlineRun = (
   type = 'paragraph',
   extra: Record<string, unknown> = {}
 ): void => {
-  for (const segment of splitOnImages(ctx, nodes)) {
-    if ('image' in segment) {
-      emitImage(ctx, segment.image);
-      continue;
-    }
+  const segments = splitOnImages(ctx, nodes);
+  // Once a hoisted block is queued, everything after it must wait too.
+  const hoists = segments.some((segment) => 'block' in segment);
 
+  for (const segment of segments) {
     if ('block' in segment) {
       convertNodes(ctx, [segment.block]);
       continue;
     }
 
-    const text = inlineHtml(ctx, segment.inline);
+    const emit = (): void => {
+      if ('image' in segment) {
+        emitImage(ctx, segment.image);
 
-    if (text !== '') {
-      push(ctx, type, { text, ...extra });
+        return;
+      }
+
+      const text = inlineHtml(ctx, segment.inline);
+
+      if (text !== '') {
+        push(ctx, type, { text, ...extra });
+      }
+    };
+
+    if (hoists) {
+      later(ctx, emit);
+    } else {
+      emit();
     }
   }
 };
@@ -652,7 +782,7 @@ const emitToggle = (ctx: Ctx, element: HtmlElement): void => {
 
   emitSegmentMedia(ctx, segments);
   convertNodes(ctx, body);
-  adoptSince(ctx, before, toggle);
+  later(ctx, () => adoptSince(ctx, before, toggle));
 };
 
 /**
@@ -684,7 +814,7 @@ const emitTab = (ctx: Ctx, section: HtmlElement, tabs: OutputBlockData): void =>
   const before = ctx.blocks.length;
 
   convertNodes(ctx, section.childNodes.filter((node) => node !== heading));
-  adoptSince(ctx, before, tab);
+  later(ctx, () => adoptSince(ctx, before, tab));
 };
 
 /**
@@ -709,15 +839,17 @@ const emitTabs = (ctx: Ctx, element: HtmlElement): void => {
   const tabs = push(ctx, 'tabs', {});
 
   for (const section of sections) {
-    emitTab(ctx, section, tabs);
+    later(ctx, () => emitTab(ctx, section, tabs));
   }
 
   const tabNodes = new Set<HtmlChildNode>(sections);
   const rest = element.childNodes.filter((node) => !tabNodes.has(node) && node.nodeName !== '#comment');
 
   if (rest.some((node) => isElement(node) || rawText([node]).trim() !== '')) {
-    warn(ctx, 'tabs', 'degraded', 'Content that is not a tab is moved out after the tabs block; a tabs block holds only tabs');
-    convertNodes(ctx, rest);
+    later(ctx, () => {
+      warn(ctx, 'tabs', 'degraded', 'Content that is not a tab is moved out after the tabs block; a tabs block holds only tabs');
+      convertNodes(ctx, rest);
+    });
   }
 };
 
@@ -785,11 +917,11 @@ const emitList = (ctx: Ctx, element: HtmlElement, depth: number): void => {
     (node): node is HtmlElement => isElement(node) && node.tagName === 'li'
   );
 
-  for (const node of element.childNodes) {
-    if (!isElement(node)) {
-      continue;
-    }
-
+  /**
+   * Convert one child of the list.
+   * @param node - an item, or a list nested beside the items
+   */
+  const emitChild = (node: HtmlElement): void => {
     /**
      * A `ul`/`ol` that is a SIBLING of the items rather than a child of one:
      * what HTML5 parsing makes of the unclosed-`li` nesting legacy editors
@@ -797,11 +929,12 @@ const emitList = (ctx: Ctx, element: HtmlElement, depth: number): void => {
      */
     if (node.tagName === 'ul' || node.tagName === 'ol') {
       emitList(ctx, node, depth + 1);
-      continue;
+
+      return;
     }
 
     if (node.tagName !== 'li') {
-      continue;
+      return;
     }
 
     const parts = splitListItem(node);
@@ -833,6 +966,12 @@ const emitList = (ctx: Ctx, element: HtmlElement, depth: number): void => {
 
     for (const nested of parts.nested) {
       emitList(ctx, nested, depth + 1);
+    }
+  };
+
+  for (const node of element.childNodes) {
+    if (isElement(node)) {
+      later(ctx, () => emitChild(node));
     }
   }
 };
@@ -933,19 +1072,20 @@ const readCellStyle = (cell: HtmlElement, rtl: boolean): CellStyle => {
  * @param table - the `table` element
  */
 const isRtlGrid = (table: HtmlElement): boolean => {
-  const direction = (node: HtmlParentNode | null): string | undefined => {
-    if (node === null || !('tagName' in node)) {
-      return undefined;
-    }
+  const cursor: { node: HtmlParentNode | null } = { node: table };
 
+  while (cursor.node !== null && 'tagName' in cursor.node) {
     // Lookbehind keeps flex-direction out.
-    const styled = /(?<![a-z-])direction\s*:\s*(rtl|ltr)\b/i.exec(attr(node, 'style') ?? '')?.[1];
-    const value = (styled ?? attr(node, 'dir'))?.trim().toLowerCase();
+    const styled = /(?<![a-z-])direction\s*:\s*(rtl|ltr)\b/i.exec(attr(cursor.node, 'style') ?? '')?.[1];
+    const value = (styled ?? attr(cursor.node, 'dir'))?.trim().toLowerCase();
 
-    return value === 'rtl' || value === 'ltr' ? value : direction(node.parentNode);
-  };
+    if (value === 'rtl' || value === 'ltr') {
+      return value === 'rtl';
+    }
+    cursor.node = cursor.node.parentNode;
+  }
 
-  return direction(table) === 'rtl';
+  return false;
 };
 
 /**
@@ -1034,6 +1174,16 @@ const emitTable = (ctx: Ctx, element: HtmlElement): void => {
     emitInlineRun(ctx, caption.childNodes);
   }
 
+  later(ctx, () => emitGrid(ctx, element, rows));
+};
+
+/**
+ * The table block itself: every cell converts in order, then the grid is filled in.
+ * @param ctx - conversion state
+ * @param element - the `table` element
+ * @param rows - its rows
+ */
+const emitGrid = (ctx: Ctx, element: HtmlElement, rows: HtmlElement[]): void => {
   const table = push(ctx, 'table', {});
   const rtl = isRtlGrid(element);
   const grid: Array<Array<GridCell | undefined>> = rows.map(() => []);
@@ -1068,15 +1218,10 @@ const emitTable = (ctx: Ctx, element: HtmlElement): void => {
   };
 
   /**
-   * Convert one cell into the blocks it owns and the grid entry referencing them.
-   * @param cell - the `td`/`th` element
-   * @returns ids of the blocks the cell owns
+   * The ids of the blocks a cell converted to, from block `before` on.
+   * @param before - block count when the cell started
    */
-  const cellBlockIds = (cell: HtmlElement): string[] => {
-    const before = ctx.blocks.length;
-
-    convertCell(ctx, cell);
-
+  const cellBlockIds = (before: number): string[] => {
     const owned = ctx.blocks.slice(before);
 
     for (const block of owned) {
@@ -1089,37 +1234,54 @@ const emitTable = (ctx: Ctx, element: HtmlElement): void => {
       .filter((id): id is string => id !== undefined);
   };
 
-  /**
-   * Place every cell of one row, skipping the columns a cell above already covers.
-   * @param row - the `tr` element
-   * @param rowIndex - its index among the table's rows
-   */
-  const placeRow = (row: HtmlElement, rowIndex: number): void => {
+  rows.forEach((row, rowIndex) => {
     const cursor = { column: 0 };
 
-    for (const cell of rowCells(row)) {
+    /**
+     * Convert one cell, then place it in the first column of its row that a
+     * cell above does not already cover.
+     * @param cell - the `td`/`th` element
+     */
+    const placeCell = (cell: HtmlElement): void => {
       while (rowAt(rowIndex)[cursor.column] !== undefined) {
         cursor.column += 1;
       }
 
       const colspan = spanOf(cell, 'colspan');
       const rowspan = spanOf(cell, 'rowspan');
-      const blocks = cellBlockIds(cell);
+      const before = ctx.blocks.length;
 
-      rowAt(rowIndex)[cursor.column] = {
-        blocks,
-        ...readCellStyle(cell, rtl),
-        ...(colspan > 1 ? { colspan } : {}),
-        ...(rowspan > 1 ? { rowspan } : {}),
-      };
+      convertCell(ctx, cell);
+      later(ctx, () => {
+        rowAt(rowIndex)[cursor.column] = {
+          blocks: cellBlockIds(before),
+          ...readCellStyle(cell, rtl),
+          ...(colspan > 1 ? { colspan } : {}),
+          ...(rowspan > 1 ? { rowspan } : {}),
+        };
 
-      cover([rowIndex, cursor.column], colspan, rowspan);
-      cursor.column += colspan;
+        cover([rowIndex, cursor.column], colspan, rowspan);
+        cursor.column += colspan;
+      });
+    };
+
+    for (const cell of rowCells(row)) {
+      later(ctx, () => placeCell(cell));
     }
-  };
+  });
 
-  rows.forEach(placeRow);
+  later(ctx, () => {
+    table.data = gridData(element, rows, grid);
+  });
+};
 
+/**
+ * The table block's data, once every cell is placed.
+ * @param element - the `table` element
+ * @param rows - its rows
+ * @param grid - the placed cells
+ */
+const gridData = (element: HtmlElement, rows: HtmlElement[], grid: Array<Array<GridCell | undefined>>): Record<string, unknown> => {
   const width = grid.reduce((widest, row) => Math.max(widest, row.length), 0);
   const content = grid.map((row) => Array.from({ length: width }, (_, index) => row[index] ?? { blocks: [] }));
   const headRow = element.childNodes.some((node) => isElement(node) && node.tagName === 'thead' && rowCells(node).length + tableRows(node).length > 0);
@@ -1135,7 +1297,7 @@ const emitTable = (ctx: Ctx, element: HtmlElement): void => {
   // column, or a full-width colspan), so only a thead marks it a heading row.
   const headingColumnExplainsFirstRow = withHeadingColumn && firstRow !== undefined && rowCells(firstRow).length === 1;
 
-  table.data = {
+  return {
     withHeadings: headRow || (rows.length > 1 && firstRow !== undefined && allTh(firstRow) && !headingColumnExplainsFirstRow),
     withHeadingColumn,
     content,
@@ -1154,10 +1316,11 @@ const convertCell = (ctx: Ctx, cell: HtmlElement): void => {
   const before = ctx.blocks.length;
 
   convertNodes({ ...ctx, inCell: true }, cell.childNodes);
-
-  if (ctx.blocks.length === before) {
-    push(ctx, 'paragraph', { text: '' });
-  }
+  later(ctx, () => {
+    if (ctx.blocks.length === before) {
+      push(ctx, 'paragraph', { text: '' });
+    }
+  });
 };
 
 /**
@@ -1171,7 +1334,7 @@ const emitNestedTable = (ctx: Ctx, table: HtmlElement): void => {
   warn(ctx, 'table', 'degraded', 'A nested table is flattened into the cell\'s paragraphs; a Blok cell holds blocks, not another grid');
 
   for (const innerCell of tableRows(table).flatMap(rowCells)) {
-    emitInlineRun(ctx, innerCell.childNodes);
+    later(ctx, () => emitInlineRun(ctx, innerCell.childNodes));
   }
 };
 
@@ -1195,26 +1358,25 @@ const emitFigure = (ctx: Ctx, element: HtmlElement): void => {
   const images: HtmlElement[] = [];
   const found: { caption: HtmlElement | undefined } = { caption: undefined };
 
-  /**
-   * @param nodes - nodes to walk
-   */
-  const walk = (nodes: HtmlChildNode[]): void => {
-    for (const node of nodes) {
-      if (!isElement(node)) {
-        continue;
-      }
-
-      if (node.tagName === 'img') {
-        images.push(node);
-      } else if (node.tagName === 'figcaption') {
-        found.caption ??= node;
-      } else {
-        walk(node.childNodes);
-      }
+  walkTree(element.childNodes, (node) => {
+    if (!isElement(node)) {
+      return false;
     }
-  };
 
-  walk(element.childNodes);
+    if (node.tagName === 'img') {
+      images.push(node);
+
+      return false;
+    }
+
+    if (node.tagName === 'figcaption') {
+      found.caption ??= node;
+
+      return false;
+    }
+
+    return true;
+  });
 
   if (images.length !== 1) {
     convertNodes(ctx, element.childNodes);
@@ -1348,40 +1510,75 @@ const convertElement = (ctx: Ctx, element: HtmlElement): void => {
 };
 
 /**
- * Convert a run of sibling nodes, gathering the inline ones between block
- * elements into paragraphs of their own.
+ * Convert sibling nodes from `start` on, gathering the inline ones between
+ * block elements into paragraphs of their own. Stops as soon as a node queues
+ * work, and queues the rest after it.
  * @param ctx - conversion state
  * @param nodes - the nodes to convert
+ * @param start - index of the first node
  */
-function convertNodes(ctx: Ctx, nodes: HtmlChildNode[]): void {
-  const pending: { run: HtmlChildNode[] } = { run: [] };
+const convertFrom = (ctx: Ctx, nodes: HtmlChildNode[], start: number): void => {
+  const queuedFrom = ctx.steps.length;
+  const run: HtmlChildNode[] = [];
 
-  /** Close the run of loose inline nodes collected so far. */
-  const flush = (): void => {
-    if (pending.run.length > 0) {
-      emitInlineRun(ctx, pending.run);
-      pending.run = [];
+  /**
+   * Whether the rest has to wait for queued work; if so, it is queued after it.
+   * @param next - index of the first node still to convert
+   */
+  const yields = (next: number): boolean => {
+    if (ctx.steps.length === queuedFrom) {
+      return false;
     }
+    later(ctx, () => convertFrom(ctx, nodes, next));
+
+    return true;
   };
 
-  for (const node of nodes) {
+  const cursor = { at: start };
+
+  while (cursor.at < nodes.length) {
+    const node = nodes[cursor.at];
+
+    cursor.at += 1;
+
     if (node.nodeName === '#comment') {
       continue;
     }
 
     if (isInline(node)) {
-      pending.run.push(node);
+      run.push(node);
       continue;
     }
 
-    flush();
+    if (run.length > 0) {
+      emitInlineRun(ctx, run.splice(0));
+    }
+
+    if (yields(cursor.at - 1)) {
+      return;
+    }
 
     if (isElement(node)) {
       convertElement(ctx, node);
     }
+
+    if (yields(cursor.at)) {
+      return;
+    }
   }
 
-  flush();
+  if (run.length > 0) {
+    emitInlineRun(ctx, run);
+  }
+};
+
+/**
+ * Queue the conversion of a run of sibling nodes.
+ * @param ctx - conversion state
+ * @param nodes - the nodes to convert
+ */
+function convertNodes(ctx: Ctx, nodes: HtmlChildNode[]): void {
+  later(ctx, () => convertFrom(ctx, nodes, 0));
 }
 
 /**
@@ -1470,7 +1667,7 @@ const currentRichTextFields = (type: string): string[] =>
  * @returns the blocks and their degradations
  */
 export const htmlToBlocksWithReport = (html: string, options: HtmlImportOptions = {}): HtmlImportResult => {
-  const ctx: Ctx = { nextId: createIdGenerator(), warnings: [], blocks: [], inCell: false };
+  const ctx: Ctx = { nextId: createIdGenerator(), warnings: [], blocks: [], inCell: false, steps: [] };
   const document = parse(html);
   const root = document.childNodes.find((node): node is HtmlElement => isElement(node) && node.tagName === 'html');
   const head = root?.childNodes.find((node) => isElement(node) && node.tagName === 'head');
@@ -1486,7 +1683,7 @@ export const htmlToBlocksWithReport = (html: string, options: HtmlImportOptions 
   }
 
   if (body !== undefined) {
-    convertNodes(ctx, body.childNodes);
+    runSteps(ctx, () => convertNodes(ctx, body.childNodes));
   }
 
   return { blocks: outputBlocksToSegments(ctx.blocks, currentRichTextFields, htmlToSegmentsNode), warnings: ctx.warnings, ...page };

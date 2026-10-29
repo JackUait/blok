@@ -228,7 +228,7 @@ describe('renderCellValue', () => {
 
     it.each([
       ['https://example.com', 'example.com'],
-      ['https://example.com/', 'example.com'],
+      ['https://example.com/', 'example.com/'],
       ['http://example.com', 'example.com'],
       ['https://example.com/a/b?q=1', 'example.com/a/b?q=1'],
     ])('shows %s as %s, and the href keeps the full address', (value, shown) => {

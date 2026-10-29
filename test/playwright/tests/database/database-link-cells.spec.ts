@@ -440,7 +440,8 @@ for (const type of ['board', 'gallery'] as const) {
       comments: false,
       view: { id: 'v1', name: type, type, position: 'a0', groupBy: 'p-stage', sorts: [], filters: [], visibleProperties: [], properties: [{ id: 'p-link', visible: true }] },
     });
-    const link = page.locator('[data-row-id="r1"]').getByRole('link', { name: 'https://example.com' });
+    // notion-spec-2 §21.7, §22.1: a card shows the address without its scheme.
+    const link = page.locator('[data-row-id="r1"]').getByRole('link', { name: 'example.com', exact: true });
 
     await link.click();
 

@@ -61,8 +61,11 @@ const renderCheckState = (cell: HTMLElement, checked: boolean, ctx: CellContext)
   cell.append(box, state);
 };
 
-/** `https://example.com/` shows as `example.com`; a deeper path keeps its slashes. */
-const shortUrl = (url: string): string => url.replace(/^https?:\/\//i, '').replace(/^([^/?#]+)\/$/, '$1');
+/** notion-spec-2 §22.1: the scheme and `www.` are hidden. */
+const shortUrl = (url: string): string => url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+
+/** notion-spec-2 §22.1: a path of 13+ characters shows its first 4, "…", its last 6, at any width. The threshold was read with an 11-character host only. */
+const cutPath = (path: string): string => (path.length < 13 ? path : `${path.slice(0, 4)}…${path.slice(-6)}`);
 
 /** research/22 §3: Notion links a typed "example.org" to http://example.org/. Without it the href resolves against the page. */
 const urlHref = (url: string): string | null =>
@@ -73,17 +76,23 @@ const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext, showFullUrl
   const href = urlHref(url);
   const short = href !== null && ctx.shortUrls === true;
   const text = short ? shortUrl(url) : url;
-
-  renderLink(cell, text, href, ctx, ctx.followLinks);
-  const link = cell.querySelector('a');
   const at = text.search(/[/?#]/);
+  const scheme = urlScheme(url);
+  // Another scheme keeps its own slashes, so it is never cut.
+  const cut = short && !showFullUrl && at > 0 && (scheme === null || /^https?:$/i.test(scheme));
 
-  if (!short || showFullUrl || link === null || at <= 0) return;
-  const path = document.createElement('span');
+  const host = text.slice(0, at);
+  const path = cutPath(text.slice(at));
 
-  path.setAttribute('data-blok-database-url-path', '');
-  path.textContent = text.slice(at);
-  link.replaceChildren(text.slice(0, at), path);
+  renderLink(cell, cut ? host + path : text, href, ctx, ctx.followLinks);
+  const link = cell.querySelector('a');
+
+  if (!cut || link === null) return;
+  const grey = document.createElement('span');
+
+  grey.setAttribute('data-blok-database-url-path', '');
+  grey.textContent = path;
+  link.replaceChildren(host, grey);
 };
 
 /** `?` and `&` are encoded, so an address cannot add `?bcc=` or other headers. */

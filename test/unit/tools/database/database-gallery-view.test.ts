@@ -359,6 +359,19 @@ describe('DatabaseGalleryView', () => {
     expect(handlers.openRow).toHaveBeenNthCalledWith(2, 'r1');
   });
 
+  // notion-spec-2 §22.1 (A-gallery.png): a card URL hides the scheme and cuts a long path, as the table does.
+  it('shows a card url as the table does', () => {
+    const properties = [{ id: 'p-title', visible: true }, { id: 'p-link', visible: true }];
+    const { root } = mount({
+      view: galleryView({ properties }),
+      groups: single([row('r1', 'Alpha', { 'p-link': 'https://example.com/abc/defghijk' })]),
+    });
+    const link = cards(root)[0].querySelector('a[data-blok-database-cell-link]');
+
+    expect(link?.textContent).toBe('example.com/abc…fghijk');
+    expect(link?.querySelector('[data-blok-database-url-path]')?.textContent).toBe('/abc…fghijk');
+  });
+
   // research/22 §3: a link on a card is followed; the card does not open.
   it('a click on a url link follows it and does not open the card', () => {
     const properties = [{ id: 'p-title', visible: true }, { id: 'p-link', visible: true }];

@@ -3413,6 +3413,7 @@ export class DatabaseCardDrawer {
       i18n: { t: (key, params) => this.t(key, params) },
       readOnly: this.readOnly,
       followLinks: true,
+      shortUrls: true,
       ...rowCellContext(this.currentRow ?? undefined, def.id),
     });
 

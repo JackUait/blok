@@ -1101,20 +1101,21 @@ describe('DatabaseCardDrawer', () => {
       expect(pill!.textContent).toBe('Done');
     });
 
-    it('renders a url value as its full address', () => {
+    // notion-spec-2 §22.1 (A-peek-grape.png): the peek shows a url as the table does, scheme hidden, long path cut.
+    it('renders a url value as the table does', () => {
       const schema: PropertyDefinition[] = [
         makePropertyDef({ id: 'prop-url', name: 'Website', type: 'url', position: 'a1' }),
       ];
       const options = createOptions({ schema });
       const drawer = new DatabaseCardDrawer(options);
-      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-url': 'https://example.com' } });
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-url': 'https://example.com/abc/defghijk' } });
 
       drawer.open(row);
 
       const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
 
       expect(propValue).not.toBeNull();
-      expect(propValue!.querySelector('[data-blok-database-cell]')?.textContent).toBe('https://example.com');
+      expect(propValue!.querySelector('[data-blok-database-cell]')?.textContent).toBe('example.com/abc…fghijk');
     });
 
     it('renders a date property value as a long date', () => {

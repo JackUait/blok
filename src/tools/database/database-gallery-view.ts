@@ -273,7 +273,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       }
 
       const cell = renderCellValue(property, readPropertyValue(row, property), {
-        ...this.options.cellContext, i18n: this.options.i18n, readOnly: true, locale: this.options.locale, ...rowCellContext(row, property.id),
+        ...this.options.cellContext, i18n: this.options.i18n, readOnly: true, locale: this.options.locale, shortUrls: true, ...rowCellContext(row, property.id),
       });
 
       if (cell.hasAttribute('data-empty')) {

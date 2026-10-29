@@ -31,7 +31,7 @@ export const parseMarkdown = (source: string, options: ParseOptions = {}): Root 
   for (const pending of inline) {
     const inTable = 'type' in pending.node && pending.node.type === 'tableCell';
 
-    pending.node.children = parseInline(pending.raw, { definitions, footnotes, gfm, math, inTable, lineColumns: pending.lineColumns });
+    pending.node.children = parseInline(pending.raw, { definitions, footnotes, gfm, math, inTable, lineColumns: pending.lineColumns, tabRest: pending.tabRest });
   }
 
   return root;

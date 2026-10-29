@@ -107,27 +107,37 @@ const columnAt = (block: Block, at: number): number => {
 };
 
 /**
- * The start columns the inline parser needs for a leaf's text that begins
- * at index `start` of the paragraph's joined lines: lines after the first,
- * keyed by index in that text. Tab stops are left out; they read as 0.
+ * What the inline parser needs about the lines after the first of a leaf's
+ * text that begins at index `start` of the paragraph's joined lines, keyed by
+ * index in that text: the start column when it is not a tab stop, and the
+ * leading columns that are the rest of a cut tab.
  * @param block - the paragraph
  * @param start - where the leaf's text starts
  */
-const lineColumns = (block: Block, start: number): ReadonlyMap<number, number> | undefined => {
+const lineStarts = (block: Block, start: number): { lineColumns?: ReadonlyMap<number, number>; tabRest?: ReadonlyMap<number, number> } => {
   const columns = new Map<number, number>();
+  const tabRest = new Map<number, number>();
   const cursor = { offset: 0 };
 
   block.lines.forEach((line, index) => {
     const column = block.columns[index] ?? 0;
+    const rest = block.tabRest[index] ?? 0;
 
     if (cursor.offset > start && column % TAB_STOP !== 0) {
       columns.set(cursor.offset - start, column);
     }
 
+    if (cursor.offset > start && rest > 0) {
+      tabRest.set(cursor.offset - start, rest);
+    }
+
     cursor.offset += line.length + block.endings[index].length;
   });
 
-  return columns.size === 0 ? undefined : columns;
+  return {
+    ...(columns.size === 0 ? {} : { lineColumns: columns }),
+    ...(tabRest.size === 0 ? {} : { tabRest }),
+  };
 };
 
 const DEPTHS: Array<Heading['depth']> = [1, 2, 3, 4, 5, 6];
@@ -346,7 +356,7 @@ class BlockTreeBuilder {
     const node: Paragraph = { type: 'paragraph', children: [] };
 
     into.push(node);
-    this.inline.push({ node, raw: trimEnd(text), lineColumns: lineColumns(block, start) });
+    this.inline.push({ node, raw: trimEnd(text), ...lineStarts(block, start) });
   }
 
   /**
@@ -368,7 +378,7 @@ class BlockTreeBuilder {
 
     this.addDefinitions(definitions, into);
     into.push(node);
-    this.inline.push({ node, raw: block.raw, lineColumns: lineColumns(block, joined.length - trimStart(rest).length) });
+    this.inline.push({ node, raw: block.raw, ...lineStarts(block, joined.length - trimStart(rest).length) });
   }
 
   /**

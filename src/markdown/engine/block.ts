@@ -15,6 +15,8 @@ export interface PendingInline {
   raw: string;
   /** Start column of each later line whose column is not a tab stop, by its index in `raw`. */
   lineColumns?: ReadonlyMap<number, number>;
+  /** Leading columns of later lines left over from a cut tab, by the line's index in `raw`. */
+  tabRest?: ReadonlyMap<number, number>;
 }
 
 export interface BlockResult {
@@ -149,6 +151,8 @@ class BlockParser {
   private content = '';
   /** The column `content` starts at. */
   private contentColumn = 0;
+  /** Leading columns of `content` that are the rest of a tab a container prefix cut. */
+  private contentTabRest = 0;
   /** A paragraph or indented code was open with every container matched: lists may not start empty or past 1. */
   private interrupt = false;
   /** A container started on this line. */
@@ -224,6 +228,7 @@ class BlockParser {
     this.lastMatched = container;
     this.content = this.restOfLine();
     this.contentColumn = this.column;
+    this.contentTabRest = this.partiallyConsumedTab ? TAB_STOP - (this.column % TAB_STOP) : 0;
     this.interrupt = container.kind === 'paragraph'
       || (this.oldTip.kind === 'code' && !this.oldTip.fenced && container === this.oldTip.parent);
 
@@ -792,6 +797,7 @@ class BlockParser {
     this.closeUnmatched();
     container.lines.pop();
     container.columns.pop();
+    container.tabRest.pop();
 
     const headEnding = container.endings.pop() ?? '';
 
@@ -927,6 +933,7 @@ class BlockParser {
     paragraph.lines.push(text);
     paragraph.endings.push(this.ending);
     paragraph.columns.push(column);
+    paragraph.tabRest.push(this.contentTabRest);
   }
 
   /**

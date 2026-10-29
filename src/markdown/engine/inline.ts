@@ -36,6 +36,8 @@ export interface InlineContext {
   inTable?: boolean;
   /** Start column of later lines, by index in the leaf's text; a missing line starts at a tab stop. */
   lineColumns?: ReadonlyMap<number, number>;
+  /** Leading columns of later lines left over from a cut tab, by the line's index in the leaf's text. */
+  tabRest?: ReadonlyMap<number, number>;
 }
 
 type CharClass = 'whitespace' | 'punctuation' | 'other';
@@ -308,10 +310,20 @@ class InlineScanner {
       return;
     }
 
-    const value = stripSpanPadding(this.src.slice(this.pos + size, close));
+    const value = stripSpanPadding(this.src.slice(this.pos + size, close), this.holdsTabRest(this.pos + size, close));
 
     this.node({ type: 'inlineCode', value: this.context.inTable === true ? value.replace(/\\([\\|])/g, (whole, char: string) => (char === '|' ? '|' : whole)) : value });
     this.pos = close + size;
+  }
+
+  /**
+   * Whether `[from, to)` holds columns left from a cut tab. They count as
+   * content, not as spaces, when a code span decides to drop its padding.
+   * @param from - start index in the leaf's text
+   * @param to - end index
+   */
+  private holdsTabRest(from: number, to: number): boolean {
+    return [...(this.context.tabRest ?? [])].some(([line, columns]) => line < to && line + columns > from);
   }
 
   /** A dollar run: inline math, with single-dollar prices kept as text. */

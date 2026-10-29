@@ -103,6 +103,22 @@ describe('block parser', () => {
     it('keeps the indentation of later lines for code spans, which keep it', () => {
       expect(firstOf(parseMarkdown('a `b\n\tc` d'), 'inlineCode')).toStrictEqual({ type: 'inlineCode', value: 'b\n\tc' });
     });
+
+    // The columns left of a tab an item's indent cut into read as content, not
+    // as spaces, so a span holding them still loses its padding.
+    it.each([
+      ['- a `\n\t `', '  '],
+      ['1. a `\n\t `', ' '],
+      ['1. ``\n\t ``', ' '],
+      ['- a `\r\n\t `', '  '],
+      ['- a `\n\t\t `', '  \t'],
+      ['- a `\n\t x`', '\n   x'],
+      ['- a `\n    `', '\n  '],
+      ['- a `b\n\t `', 'b\n   '],
+      ['a `\n\t  `', '\t '],
+    ])('reads the code span in %j as %j', (markdown, value) => {
+      expect(firstOf(parseMarkdown(markdown), 'inlineCode')).toStrictEqual({ type: 'inlineCode', value });
+    });
   });
 
   describe('lists', () => {

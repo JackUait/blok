@@ -21,6 +21,8 @@ export interface Block {
   endings: string[];
   /** Paragraph: the column each line in `lines` starts at, where its tabs are measured from. */
   columns: number[];
+  /** Paragraph: leading columns of each line left over from a tab its container prefix cut (read as spaces). */
+  tabRest: number[];
   /** Paragraph: link definitions end before this line; later lines began as a footnote refused at the nesting cap. */
   definitionLines: number;
   /** List and item: bullet character, or `.`/`)` for ordered. */
@@ -75,6 +77,7 @@ export const makeBlock = (kind: Kind, parent: Block | null): Block => ({
   lines: [],
   endings: [],
   columns: [],
+  tabRest: [],
   definitionLines: Number.POSITIVE_INFINITY,
   marker: '',
   ordered: false,

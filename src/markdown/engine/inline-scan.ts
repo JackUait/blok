@@ -65,14 +65,15 @@ export class RunIndex {
  * each side, when both sides have one and the content is not all padding.
  * A line ending counts as padding; a tab does not.
  * @param content - text between the sequences
+ * @param holdsTabRest - the content holds columns of a tab a container cut, which count as content
  */
-export const stripSpanPadding = (content: string): string => {
+export const stripSpanPadding = (content: string, holdsTabRest = false): string => {
   const head = content[0] === ' ' ? 1 : lineEndingLength(content, 0);
   const last = content.length - 1;
   const crlfTail = content.endsWith('\r\n') ? 2 : 0;
   const tail = content[last] === ' ' || content[last] === '\n' || content[last] === '\r' ? Math.max(1, crlfTail) : 0;
 
-  if (head === 0 || tail === 0 || !/[^ \r\n]/.test(content)) {
+  if (head === 0 || tail === 0 || (!holdsTabRest && !/[^ \r\n]/.test(content))) {
     return content;
   }
 

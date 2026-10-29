@@ -118,6 +118,27 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect((await editor.save()).blocks.map((block) => block.id)).toEqual(['pg', 'p']);
   });
 
+  it('a sub-page document is sanitized as it loads, as render sanitizes this one', async () => {
+    const unknownBlock = { id: 'u1', type: 'mystery', data: { html: '<img src=x onerror="alert(2)">' } };
+    const pages = new Map<string, OutputData>([['sub', { blocks: [
+      { id: 's1', type: 'paragraph', data: { text: 'secret <img src=x onerror="alert(1)">' } },
+      unknownBlock,
+    ] }]]);
+    const editor = await boot(host(pages));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const read = await turn.call('blok_read', { page: 'pg' });
+    const written = await turn.call('blok_execute', { page: 'pg', commands: [
+      { name: 'block.insert', args: { type: 'paragraph', data: { text: 'More' }, position: 'end' } },
+    ] });
+
+    turn.end();
+    expect(read.content).not.toContain('alert(1)');
+    expect(written.isError).toBe(false);
+    expect(JSON.stringify(sub(pages).blocks.find((block) => block.id === 's1'))).not.toContain('onerror');
+    // An unregistered tool's data is not ours to clean: the save would lose it on the host.
+    expect(sub(pages).blocks.find((block) => block.id === 'u1')).toEqual(unknownBlock);
+  });
+
   it('a sub-page follows the agent.overrides of this editor', async () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
     const editor = await boot(host(pages), undefined, { agent: { overrides: { header: { hidden: true } } } });

@@ -99,8 +99,13 @@ export const createPageDocuments = (
     }
     const base = { data: structuredClone(loaded) };
     const fieldsFor = editorRichTextFieldsFor(Blok);
-    // Stored text may still be HTML; the session works on segments.
-    const document: OutputData = { ...loaded, blocks: outputBlocksToSegments(loaded.blocks, fieldsFor, htmlToSegmentsDom) };
+    // Host data is untrusted, as on render. An unregistered tool's block is left alone, as render
+    // leaves a stub's: the next save writes it back to the host. Stored text may still be HTML;
+    // the session works on segments.
+    const sanitized = loaded.blocks.map((block) => Blok.Tools.blockTools.has(block.type) && typeof block.data === 'object' && block.data !== null
+      ? { ...block, data: Blok.BlocksAPI.hostDataForTool(block.type, block.data) }
+      : block);
+    const document: OutputData = { ...loaded, blocks: outputBlocksToSegments(sanitized, fieldsFor, htmlToSegmentsDom) };
     const source = options.contractSource?.() ?? liveContractSource(Blok);
     const contract = source.contract();
     // The main pageBackend looks blocks up in this editor. A sub-page renames its own page blocks

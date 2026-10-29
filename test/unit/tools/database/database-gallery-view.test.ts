@@ -298,6 +298,22 @@ describe('DatabaseGalleryView', () => {
     expect(locked?.disabled).toBe(true);
   });
 
+  it('notion-spec-2 §19.17: a checkbox on a card shows the property name beside the box, checked or not', () => {
+    const properties = [{ id: 'p-title', visible: true }, { id: 'p-done', visible: true }];
+    const { root } = mount({
+      view: galleryView({ properties }),
+      schema: [...schema, { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a4' }],
+      groups: single([row('r1', 'Alpha', { 'p-done': true }), row('r2', 'Bravo')]),
+    });
+
+    for (const card of cards(root)) {
+      const cell = card.querySelector('[data-blok-database-cell="checkbox"]');
+
+      expect(cell?.querySelector('[data-blok-database-checkbox]')).not.toBeNull();
+      expect(cell?.querySelector('[data-blok-database-checkbox-name]')?.textContent).toBe('Done');
+    }
+  });
+
   it('skips empty property values on a card', () => {
     const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];
     const { root } = mount({ view: galleryView({ properties }) });

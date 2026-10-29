@@ -283,6 +283,15 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       // notion-spec-2 §19.19: a card's Button presses as in the table; the card's other values stay read-only.
       cell.querySelectorAll('[data-blok-database-button]').forEach((button) => button.toggleAttribute('disabled', this.options.readOnly));
       cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
+      // notion-spec-2 §19.17: a card's checkbox has the property name beside it.
+      if (property.type === 'checkbox') {
+        const name = document.createElement('span');
+
+        name.setAttribute('data-blok-database-checkbox-name', '');
+        name.setAttribute('aria-hidden', 'true');
+        name.textContent = property.name;
+        cell.appendChild(name);
+      }
 
       const item = document.createElement('div');
 

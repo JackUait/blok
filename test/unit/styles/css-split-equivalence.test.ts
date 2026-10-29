@@ -1293,6 +1293,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_STAMP_CELLS_BYTES = 1_878;
     // database.css: the rollup setup menu's floor width, labels and rules (notion-spec-2 §20.11).
     const DATABASE_ROLLUP_SETUP_BYTES = 1_071;
+    // database.css: a gallery card's checkbox name beside the box (notion-spec-2 §19.17).
+    const DATABASE_GALLERY_CHECKBOX_NAME_BYTES = 273;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1586,7 +1588,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TABLE_PILL_CELL_PADDING_BYTES
       + DATABASE_TABLE_CHECKBOX_NO_BORDER_BYTES
       + DATABASE_STAMP_CELLS_BYTES
-      + DATABASE_ROLLUP_SETUP_BYTES;
+      + DATABASE_ROLLUP_SETUP_BYTES
+      + DATABASE_GALLERY_CHECKBOX_NAME_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

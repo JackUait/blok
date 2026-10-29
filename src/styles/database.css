@@ -11402,6 +11402,16 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
+/* §19.17: a card's checkbox has its property name 6px after the box, 12/14. */
+[data-blok-database-gallery-property] > [data-blok-database-cell="checkbox"] {
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-checkbox-name] {
+  font-size: 12px;
+  line-height: 14px;
+}
+
 /* notion-spec-2 §19.17: a 20px chip, at most 200 wide, 12/20, in a row with 4px padding. */
 [data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"]) {
   padding: var(--blok-space-1);

@@ -188,6 +188,10 @@ const uploadFile = (kind: AssetKind, delta: (uploaded: Uploaded) => Record<strin
     const fileName = cleanName(args.fileName ?? local?.name ?? '');
     const mimeType = mimeOf(fileName);
 
+    // A read file is typed by its own name, or a fileName could pass any file as an image.
+    if (local !== null && mimeOf(cleanName(local.name)) !== mimeType) {
+      invalid(`fileName "${fileName}" is not the same type as the file "${local.name}".`, '/fileName');
+    }
     if (args.mimeType !== undefined && args.mimeType.toLowerCase() !== mimeType) {
       invalid(`mimeType "${args.mimeType}" does not match the file name "${fileName}" (${mimeType === '' ? 'unknown type' : mimeType}).`, '/mimeType');
     }

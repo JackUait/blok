@@ -85,6 +85,30 @@ describe('blok-mcp uploads a file through the host uploader', () => {
     expect(uploadByFile).not.toHaveBeenCalled();
   });
 
+  it('refuses a hidden file, and never calls the uploader', async () => {
+    writeFileSync(join(state.files, '.env'), 'SECRET=1');
+    const mcp = start({ uploader: { uploadByFile }, root: state.files });
+    const outcome = await mcp.dispatch('blok_execute', {
+      handle: await open(mcp, true),
+      commands: [{ name: 'file.uploadFile', args: { path: '.env' } }],
+    }, caller);
+
+    expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'PRECONDITION_FAILED' } });
+    expect(uploadByFile).not.toHaveBeenCalled();
+  });
+
+  it('checks the type of the file on disk, not of the fileName the agent gives it', async () => {
+    writeFileSync(join(state.files, 'notes.txt'), 'not an image');
+    const mcp = start({ uploader: { uploadByFile }, root: state.files });
+    const outcome = await mcp.dispatch('blok_execute', {
+      handle: await open(mcp, true),
+      commands: [{ name: 'image.uploadFile', args: { path: 'notes.txt', fileName: 'cat.png' } }],
+    }, caller);
+
+    expect(outcome.structuredContent).toMatchObject({ ok: false });
+    expect(uploadByFile).not.toHaveBeenCalled();
+  });
+
   it('applies the host\'s limits', async () => {
     const mcp = start({ uploader: { uploadByFile }, root: state.files, limits: { image: { maxSize: 4 } } });
     const outcome = await mcp.dispatch('blok_execute', {

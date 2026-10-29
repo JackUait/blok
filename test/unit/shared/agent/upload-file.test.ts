@@ -128,6 +128,25 @@ describe('<tool>.uploadFile sends bytes through the host uploader, as a person\'
     expect(readLocal).toHaveBeenCalledWith('pics/cat.png', 30 * 1024 * 1024);
     expect(host.uploads[0]).toMatchObject({ name: 'cat.png', type: 'image/png' });
   });
+
+  it('types a path by the file it reads, so a fileName cannot pass a text file as an image', async () => {
+    const host = fakeUploader();
+    const readLocal = vi.fn(async () => ({ bytes: PNG, name: 'notes.txt' }));
+    const session = open(EMPTY, { ...host, readLocal });
+
+    expect(errorOf(await run(session, 'image.uploadFile', { path: 'notes.txt', fileName: 'cat.png', position: 'end' })))
+      .toMatchObject({ code: 'INVALID_ARGS', path: '/fileName' });
+    expect(host.uploadByFile).not.toHaveBeenCalled();
+  });
+
+  it('lets a fileName rename a path to a name of the same type', async () => {
+    const host = fakeUploader();
+    const readLocal = vi.fn(async () => ({ bytes: PNG, name: 'IMG_0001.png' }));
+    const session = open(EMPTY, { ...host, readLocal });
+
+    expect(errorOf(await run(session, 'image.uploadFile', { path: 'IMG_0001.png', fileName: 'cat.png', position: 'end' }))).toBeUndefined();
+    expect(host.uploads[0]).toMatchObject({ name: 'cat.png', type: 'image/png' });
+  });
 });
 
 describe('<tool>.uploadFile refuses what a person\'s upload refuses, before any upload', () => {

@@ -64,6 +64,19 @@ describe('createLocalFileReader keeps reads inside its root', () => {
     expect((await refusal(read('out/secret.png', 100)))?.error?.code).toBe('PRECONDITION_FAILED');
   });
 
+  it('refuses a hidden file or a file in a hidden folder, even through a symlink', async () => {
+    mkdirSync(join(state.root, '.git'));
+    writeFileSync(join(state.root, '.env'), 'SECRET=1');
+    writeFileSync(join(state.root, '.git', 'config'), 'token');
+    writeFileSync(join(state.root, 'pics', '.hidden.png'), 'hidden');
+    symlinkSync(join(state.root, '.env'), join(state.root, 'pics', 'env.png'));
+    const read = createLocalFileReader(state.root);
+
+    expect(await Promise.all(['.env', '.git/config', 'pics/.hidden.png', 'pics/env.png'].map(async (path) => (await refusal(read(path, 100)))?.error?.code)))
+      .toEqual(['PRECONDITION_FAILED', 'PRECONDITION_FAILED', 'PRECONDITION_FAILED', 'PRECONDITION_FAILED']);
+    expect((await read('./pics/cat.png', 100)).name).toBe('cat.png');
+  });
+
   it('refuses a device file, a FIFO and a folder', async () => {
     const fifo = join(state.root, 'pipe.png');
 

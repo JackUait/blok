@@ -1,7 +1,7 @@
 import { constants, realpathSync, statSync } from 'node:fs';
 import { lstat, open, realpath, stat } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
-import { basename, resolve, sep } from 'node:path';
+import { basename, relative, resolve, sep } from 'node:path';
 
 import { failure } from '../shared/agent/errors';
 
@@ -34,7 +34,7 @@ export interface LocalFileReaderHooks {
 /**
  * Reads files under one folder for uploads. A path that resolves (through `..`, a symlink or a
  * parent swapped during the read) outside it is refused, and so is a hard-linked file, whose
- * other name may be outside. Only regular files are read: a FIFO or a device could block or never end.
+ * other name may be outside, and a hidden file such as .env. Only regular files are read: a FIFO or a device could block or never end.
  */
 export const createLocalFileReader = (
   root: string,
@@ -59,7 +59,15 @@ export const createLocalFileReader = (
   const resolveInside = async (path: string): Promise<string> => {
     const real = await realpath(resolve(realRoot, path)).catch(() => notHere(path));
 
-    return inside(real) ? real : notHere(path);
+    if (!inside(real)) {
+      return notHere(path);
+    }
+    // Checked on the resolved path, so a symlink to .env is refused too. Above the root, a dot folder is the user's choice.
+    if (relative(realRoot, real).split(sep).some(part => part.startsWith('.'))) {
+      refuse(`"${path}" is a hidden file or in a hidden folder, and uploads never read those.`);
+    }
+
+    return real;
   };
 
   return async (path, maxBytes) => {

@@ -5238,7 +5238,7 @@ htmlTextContent('<b>Intro</b> &amp; more'); // → 'Intro & more'`,
         name: "sanitizeHtmlFragment(html, config)",
         returnType: "string",
         description:
-          "Sanitize an HTML fragment against a sanitizer config with no DOM. It is parse5-backed and matches the editor's html-janitor semantics. `config` is a tag → rule allowlist, or the `'plaintext'` sentinel to strip markup entirely. It is the DOM-free counterpart of `api.sanitizer.clean()`, so use it in Node, workers and RSC, where the editor's sanitizer cannot run.",
+          "Sanitize an HTML fragment against a sanitizer config with no DOM. It runs on Blok's own HTML parser and matches the editor's html-janitor semantics. `config` is a tag → rule allowlist, or the `'plaintext'` sentinel to strip markup entirely. It is the DOM-free counterpart of `api.sanitizer.clean()`, so use it in Node, workers and RSC, where the editor's sanitizer cannot run.",
         example: `import { sanitizeHtmlFragment } from '@bloklabs/core/view';
 
 sanitizeHtmlFragment('<b>bold</b><script>x()</script>', { b: {} });

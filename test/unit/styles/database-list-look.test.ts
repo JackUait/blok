@@ -133,6 +133,24 @@ describe('list row times', () => {
   });
 });
 
+// notion-spec-2 §21.8: a file chip's name in a list row is 13/20 and ends in an ellipsis.
+describe('list row file chip', () => {
+  it('draws the chip 20 tall with 13/20 text, cut with an ellipsis inside its slot', () => {
+    const chip = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-file-chip]');
+
+    expect(chip).toContain('height: 20px');
+    expect(chip).toContain('font-size: 13px');
+    expect(chip).toContain('line-height: 20px');
+    expect(chip).toContain('min-width: 0');
+
+    const name = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-file-chip] > [data-blok-database-cell-link]');
+
+    expect(name).toContain('overflow: hidden');
+    expect(name).toContain('text-overflow: ellipsis');
+    expect(name).toContain('white-space: nowrap');
+  });
+});
+
 describe('list row hover chrome (findings-listgallery L03, L04)', () => {
   it('draws the gutter "+" 24px square beside the 18x24 ⋮⋮', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('width: 24px');

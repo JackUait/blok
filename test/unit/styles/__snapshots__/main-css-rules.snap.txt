@@ -6791,6 +6791,27 @@ button[data-blok-database-column-count]:hover {
   flex-shrink: 1;
 }
 
+[data-blok-database-list-row-property][data-type="files"] > [data-blok-database-cell] {
+  min-width: 0;
+}
+
+[data-blok-database-list-row-property] [data-blok-database-file-chip] {
+  flex-shrink: 1;
+  min-width: 0;
+  height: 20px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+[data-blok-database-list-row-property] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
+}
+
 [data-blok-database-list-row-property] [data-blok-database-option-pill] {
   height: 18px;
   padding: 0 var(--blok-space-2);

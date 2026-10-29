@@ -1,4 +1,4 @@
-import { pageIconElement, pagePlaceholderIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, pagePlaceholderIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -751,6 +751,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     }
     if (propDef.type === 'files') {
       showImageThumbnails(cell, value);
+      cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
     }
     // Notion's list shows a person as the avatar alone; the name stays for screen readers.
     cell.querySelectorAll('[data-blok-database-person-chip]').forEach((chip) => {

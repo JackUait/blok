@@ -510,7 +510,23 @@ describe('DatabaseListView', () => {
       expect(thumb?.getAttribute('src')).toBe('https://example.com/photo.png');
       expect(thumb?.alt).toBe('photo.png');
       expect(list.querySelector('[data-property-id="fl"] [data-blok-database-file-chip][data-file-id="f1"]')).toBeNull();
-      expect(list.querySelector('[data-property-id="fl"] [data-blok-database-file-chip][data-file-id="f2"]')?.textContent).toBe('notes.pdf');
+      expect(list.querySelector('[data-property-id="fl"] [data-blok-database-file-chip][data-file-id="f2"]')?.textContent?.trim()).toBe('notes.pdf');
+    });
+
+    // notion-spec-2 §21.8 (list-row.png): a file chip in a list row starts with the page glyph.
+    it('starts a file chip with the page glyph', () => {
+      const filesSchema: PropertyDefinition[] = [
+        { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+        { id: 'fl', name: 'Files', type: 'files', position: 'a1' },
+      ];
+      const list = new DatabaseListView({
+        readOnly: false, i18n, titlePropertyId: 'title', schema: filesSchema, visiblePropertyIds: ['fl'],
+        rows: [makeRow({ properties: { title: 'Row', fl: [{ id: 'f2', name: 'notes.pdf', url: 'https://example.com/notes.pdf' }] } })],
+      }).createView();
+      const chip = list.querySelector('[data-property-id="fl"] [data-blok-database-file-chip][data-file-id="f2"]');
+
+      expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
+      expect(chip?.textContent?.trim()).toBe('notes.pdf');
     });
 
     it('leaves out a property with no value', () => {

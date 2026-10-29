@@ -1,4 +1,5 @@
 import { fileChipIcon, pageIconElement, pagePlaceholderIcon } from './page-icon';
+import { showAvatarsOnly } from './avatar-only';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -753,17 +754,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       showImageThumbnails(cell, value);
       cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
     }
-    // Notion's list shows a person as the avatar alone; the name stays for screen readers.
-    cell.querySelectorAll('[data-blok-database-person-chip]').forEach((chip) => {
-      chip.childNodes.forEach((node) => {
-        if (node.nodeType !== Node.TEXT_NODE) return;
-        const name = document.createElement('span');
-
-        name.setAttribute('data-blok-database-sr-only', '');
-        name.textContent = node.textContent;
-        node.replaceWith(name);
-      });
-    });
+    showAvatarsOnly(cell);
 
     const badge = document.createElement('span');
 

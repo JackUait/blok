@@ -191,6 +191,21 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r1').querySelector('[data-property-id="p-notes"]')).toBeNull();
     });
 
+    // notion-spec-2 §21.9 (timeline-bar.png): after a bar a person is the avatar alone, as in a list row.
+    it('shows a person after a bar as the avatar alone, the name kept for screen readers', () => {
+      const withOwner: PropertyDefinition[] = [...schema, { id: 'p-own', name: 'Owner', type: 'person', position: 'a4' }];
+      const { root } = mount({
+        schema: withOwner,
+        view: timelineView({ properties: [{ id: 'p-own', visible: true }] }),
+        groups: single([row('r1', 'Launch', '2026-10-09', { 'p-own': [{ id: 'u1' }] })]),
+        cellContext: { people: [{ id: 'u1', name: 'Ada' }] },
+      });
+      const chip = bar(root, 'r1').querySelector('[data-property-id="p-own"] [data-blok-database-person-chip]');
+
+      expect(chip?.querySelector('[data-blok-database-sr-only]')?.textContent).toBe('Ada');
+      expect([...(chip?.childNodes ?? [])].some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '')).toBe(false);
+    });
+
     it('labels today\'s dot with the locale\'s day number', () => {
       const { root } = mount({ locale: 'ar-EG' });
 

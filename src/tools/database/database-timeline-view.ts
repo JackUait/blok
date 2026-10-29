@@ -5,6 +5,7 @@ import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
 import { createOptionPill, renderCellValue } from './cells';
+import { showAvatarsOnly } from './avatar-only';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
@@ -888,6 +889,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         ...rowCellContext(row, property.id),
       });
 
+      showAvatarsOnly(cell);
       if (!cell.hasAttribute('data-empty')) {
         const item = document.createElement('span');
 

@@ -15880,6 +15880,15 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-relation-editor] [role="listbox"] > [data-blok-database-relation-heading] {
   padding-inline: var(--blok-space-2);
+  padding-block: 10.8px 8.8px;
+}
+
+[data-blok-database-relation-editor]:has([role="listbox"] > [data-blok-database-relation-heading]) [data-blok-database-relation-head] > [data-blok-database-relation-heading] {
+  padding-bottom: 9.6px;
+}
+
+[data-blok-database-relation-editor]:has([role="listbox"] > [data-blok-database-relation-heading]) [data-blok-database-relation-head] ~ [role="listbox"] {
+  padding-bottom: var(--blok-space-3);
 }
 
 [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] {

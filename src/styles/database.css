@@ -13317,9 +13317,20 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
-/* notion-spec-2 §19.2: "Select more" over the unlinked pages, its text level with the head's label. Its spacing is unmeasured. */
+/* notion-spec-2 §19.2: "Select more" over the unlinked pages, its text level with the head's label.
+   notion-live-3/relation-editor.png (B linked, 560x218): it is 34 tall, the first row 40 under the head and
+   the last 12 above the bottom. With none linked (C5-rel-open.png) the first row stays 43 under the head. */
 [data-blok-database-relation-editor] [role="listbox"] > [data-blok-database-relation-heading] {
   padding-inline: var(--blok-space-2);
+  padding-block: 10.8px 8.8px;
+}
+
+[data-blok-database-relation-editor]:has([role="listbox"] > [data-blok-database-relation-heading]) [data-blok-database-relation-head] > [data-blok-database-relation-heading] {
+  padding-bottom: 9.6px;
+}
+
+[data-blok-database-relation-editor]:has([role="listbox"] > [data-blok-database-relation-heading]) [data-blok-database-relation-head] ~ [role="listbox"] {
+  padding-bottom: var(--blok-space-3);
 }
 
 /* Rows 544x32, 8px in, 1px apart; the title 30px into the row, 14/16.8 weight 500. */

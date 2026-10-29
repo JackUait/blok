@@ -507,6 +507,16 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-relation-heading]', 'line-height')).toEqual(['14.4px']);
     });
 
+    // notion-live-3/relation-editor.png (B linked, 560x218): the first row 40 under the head, "Select more" 34 tall
+    // between rows, 12 under the last row. notion-live-5/C5-rel-open.png (none linked) keeps 43 under the head.
+    it('packs the linked layout to Notion\'s 218: 40 under the head, a 34px "Select more", 12 at the bottom', () => {
+      const LINKED = `${REL}:has([role="listbox"] > [data-blok-database-relation-heading])`;
+
+      expect(declared(`${LINKED} [data-blok-database-relation-head] > [data-blok-database-relation-heading]`, 'padding-bottom')).toEqual(['9.6px']);
+      expect(declared(`${REL} [role="listbox"] > [data-blok-database-relation-heading]`, 'padding-block')).toEqual(['10.8px 8.8px']);
+      expect(declared(`${LINKED} [data-blok-database-relation-head] ~ [role="listbox"]`, 'padding-bottom')).toEqual(['var(--blok-space-3)']);
+    });
+
     it('lists 32px rows 8px in, 1px apart, titles at weight 500', () => {
       const LIST = `${REL} [data-blok-database-relation-head] ~ [role="listbox"]`;
 

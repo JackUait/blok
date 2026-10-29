@@ -91,6 +91,19 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-formula-help-copy]', 'margin-block')).toEqual(['calc(-1 * var(--blok-space-0-75))']);
     });
 
+    // `32-formula-typed.png` (pixels): number (876,293) rgb(140,26,84), operator (863,290) rgb(147,112,67),
+    // function (1017,602) rgb(207,94,113), paren (1062,596) rgb(158,158,158).
+    it('paints each syntax kind from its token, in the box and in the examples', () => {
+      for (const kind of ['number', 'operator', 'function', 'punctuation']) {
+        expect(declared(`[data-blok-database-formula-input]::highlight(blok-formula-${kind})`, 'color')).toEqual([`var(--blok-database-formula-${kind})`]);
+        expect(declared(`[data-blok-database-formula-syntax="${kind}"]`, 'color')).toEqual([`var(--blok-database-formula-${kind})`]);
+      }
+      expect(database).toContain('--blok-database-formula-number: rgb(140, 26, 84);');
+      expect(database).toContain('--blok-database-formula-operator: rgb(147, 112, 67);');
+      expect(database).toContain('--blok-database-formula-function: rgb(207, 94, 113);');
+      expect(database).toContain('--blok-database-formula-punctuation: rgb(158, 158, 158);');
+    });
+
     it('highlights the active row gray, never blue', () => {
       expect(declared('[data-blok-database-formula-reference-item][aria-selected="true"]', 'background-color'))
         .toEqual(['var(--blok-database-hover-bg)']);

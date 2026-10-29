@@ -176,6 +176,72 @@ describe('formula editor', () => {
     });
   });
 
+  // `32-formula-typed.png`, `30-formula-empty.png`: numbers plum, operators brown, function names red,
+  // ( ) and , grey; a property stays a token.
+  describe('syntax colours', () => {
+    /** jsdom has no CSS Custom Highlight API: a Set-like Highlight and a Map registry stand in. */
+    class FakeHighlight extends Set<Range> {}
+    const registry = new Map<string, FakeHighlight>();
+
+    beforeEach(() => {
+      registry.clear();
+      vi.stubGlobal('Highlight', FakeHighlight);
+      vi.stubGlobal('CSS', { highlights: registry });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const painted = (kind: string): string[] => [...(registry.get(`blok-formula-${kind}`) ?? [])].map((range) => range.toString());
+
+    it('colours the formula box without adding elements to it', () => {
+      open();
+      type('round(prop("Amount") * 2, -1)');
+
+      expect(painted('function')).toEqual(['round']);
+      expect(painted('number')).toEqual(['2', '1']);
+      expect(painted('operator')).toEqual(['*', '-']);
+      expect(painted('punctuation')).toEqual(['(', ',', ')']);
+      expect(input().querySelectorAll('[data-blok-database-formula-syntax]')).toHaveLength(0);
+      expect(tokens()).toEqual(['Amount']);
+    });
+
+    it('colours the part before an unfinished string', () => {
+      open();
+      type('1 + "ab');
+
+      expect(painted('number')).toEqual(['1']);
+      expect(painted('operator')).toEqual(['+']);
+    });
+
+    it('recolours after undo, and clears its colours when the box closes', () => {
+      open();
+      type('1 + 2');
+      document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="*"]')?.click();
+      expect(painted('operator')).toEqual(['+', '*']);
+      input().dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true }));
+
+      expect(painted('number')).toEqual(['1', '2']);
+      document.querySelector<HTMLElement>('[data-blok-database-formula-close]')?.click();
+
+      expect(painted('number')).toEqual([]);
+    });
+
+    it('colours the help examples with the same kinds', () => {
+      open();
+      type('');
+      document.querySelector('[data-blok-database-formula-reference-item][data-name="prop:Amount"]')
+        ?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      const third = document.querySelectorAll('[data-blok-database-formula-help-code]')[2];
+      const kinds = [...third.querySelectorAll('[data-blok-database-formula-syntax]')]
+        .map((el) => `${el.getAttribute('data-blok-database-formula-syntax') ?? ''}:${el.textContent ?? ''}`);
+
+      expect(kinds).toEqual(['function:pi', 'punctuation:(', 'punctuation:)', 'operator:*', 'operator:^', 'number:2']);
+      expect(third.querySelector('[data-blok-database-formula-token]')?.getAttribute('data-property')).toBe('Amount');
+    });
+  });
+
   it('previews the result while typing', () => {
     open();
     type('prop("Amount") * 3');

@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { IconCheck, IconCheckbox, IconChevronDown, IconCopy, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
 import { propertyTypeMeta } from './database-property-types';
-import { FormulaField, renderFormulaInto } from './database-formula-field';
+import { FormulaField, paintFormulaInto, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
 import { FORMULA_FUNCTION_GROUPS, FORMULA_HELP, FORMULA_OPERATORS, FORMULA_VALUES, fitsAfter, propertyExamples, quote } from './database-formula-catalog';
 import { formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
@@ -178,6 +178,7 @@ class FormulaEditor implements FormulaEditorHandle {
   private finish(closePopover: boolean): void {
     if (!this.open) return;
     this.open = false;
+    this.field.dispose();
     if (closePopover) this.popover.close();
     this.options.onClose?.();
   }
@@ -532,6 +533,7 @@ class FormulaEditor implements FormulaEditorHandle {
     box.setAttribute('data-blok-database-formula-help-example', '');
     source.setAttribute('data-blok-database-formula-help-code', '');
     renderFormulaInto(source, code, this.options.schema);
+    paintFormulaInto(source);
     box.append(source);
     if (result !== undefined) {
       const line = document.createElement('div');

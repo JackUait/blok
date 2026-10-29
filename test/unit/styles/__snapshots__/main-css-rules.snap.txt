@@ -3998,6 +3998,10 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-formula-token-bg: rgb(224, 222, 218);
   --blok-database-formula-example-border: rgb(241, 240, 238);
+  --blok-database-formula-number: rgb(140, 26, 84);
+  --blok-database-formula-operator: rgb(147, 112, 67);
+  --blok-database-formula-function: rgb(207, 94, 113);
+  --blok-database-formula-punctuation: rgb(158, 158, 158);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-switch-off-bg: rgba(135, 131, 120, 0.92);
@@ -4287,6 +4291,7 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
   --blok-database-formula-example-border: #333331;
+  --blok-database-formula-number: rgb(205, 38, 123);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
   --blok-database-column-orange-accent: rgb(214, 129, 60);
@@ -4569,6 +4574,7 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
   --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
   --blok-database-formula-example-border: #333331;
+  --blok-database-formula-number: rgb(205, 38, 123);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
   --blok-database-column-orange-accent: rgb(214, 129, 60);
@@ -16352,6 +16358,22 @@ textarea[data-blok-database-cell-input] {
   white-space: pre-wrap;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   cursor: text;
+}
+
+[data-blok-database-formula-input]::highlight(blok-formula-number), [data-blok-database-formula-syntax="number"] {
+  color: var(--blok-database-formula-number);
+}
+
+[data-blok-database-formula-input]::highlight(blok-formula-operator), [data-blok-database-formula-syntax="operator"] {
+  color: var(--blok-database-formula-operator);
+}
+
+[data-blok-database-formula-input]::highlight(blok-formula-function), [data-blok-database-formula-syntax="function"] {
+  color: var(--blok-database-formula-function);
+}
+
+[data-blok-database-formula-input]::highlight(blok-formula-punctuation), [data-blok-database-formula-syntax="punctuation"] {
+  color: var(--blok-database-formula-punctuation);
 }
 
 [data-blok-database-formula-input]:empty::before {

@@ -1,5 +1,7 @@
 import type { PropertyDefinition } from './types';
 import { propertyTypeMeta } from './database-property-types';
+import { tokenize } from './formula/tokenizer';
+import type { Token } from './formula/tokenizer';
 
 const PROP_CALL = /(?<![\w.$])prop\("((?:[^"\\]|\\.)*)"\)/g;
 
@@ -69,6 +71,64 @@ const sourceOf = (node: Node): string => {
   return node.nodeName === 'DIV' || node.nodeName === 'P' ? `\n${inner}` : inner;
 };
 
+export type SyntaxKind = 'number' | 'operator' | 'function' | 'punctuation';
+
+/** Notion's shots show only these in grey; `[`, `]` and `.` are unmeasured, so they keep the ink. */
+const PUNCTUATION = new Set(['(', ')', ',']);
+
+const kindOf = (token: Token, next: Token | undefined): SyntaxKind | null => {
+  if (token.type === 'number') return 'number';
+  if (token.type === 'op') return 'operator';
+  if (token.type === 'ident' && next?.type === 'punct' && next.value === '(') return 'function';
+  if (token.type === 'punct' && PUNCTUATION.has(token.value)) return 'punctuation';
+
+  return null;
+};
+
+/** What to colour in `source`. A formula that stops tokenizing is coloured up to where it stops. */
+const syntaxOf = (source: string): Array<{ start: number; end: number; kind: SyntaxKind }> => {
+  const whole = tokenize(source);
+  const prefix = whole.ok ? whole : tokenize(source.slice(0, whole.error.start));
+  const tokens = prefix.ok ? prefix.tokens : [];
+
+  return tokens.flatMap((token, i) => {
+    const kind = kindOf(token, tokens[i + 1]);
+
+    return kind === null ? [] : [{ start: token.start, end: token.end, kind }];
+  });
+};
+
+/** The coloured stretches of `target`'s own text nodes. Text inside a property token is never coloured. */
+const syntaxSlices = (target: HTMLElement): Array<{ node: Text; from: number; to: number; kind: SyntaxKind }> => {
+  const children = [...target.childNodes];
+  const lengths = children.map((child) => sourceOf(child).length);
+  const runs = syntaxOf(children.map(sourceOf).join(''));
+
+  return children.flatMap((child, i) => {
+    const start = lengths.slice(0, i).reduce((sum, length) => sum + length, 0);
+    const length = lengths[i];
+
+    if (!(child instanceof Text)) return [];
+
+    return runs
+      .filter((run) => run.start >= start && run.end <= start + length)
+      .map((run) => ({ node: child, from: run.start - start, to: run.end - start, kind: run.kind }));
+  });
+};
+
+/** Wraps the coloured stretches of `target`'s text in spans, for text no one edits. */
+export const paintFormulaInto = (target: HTMLElement): void => {
+  for (const { node, from, to, kind } of syntaxSlices(target).reverse()) {
+    const span = document.createElement('span');
+    const tail = node.splitText(to);
+
+    span.setAttribute('data-blok-database-formula-syntax', kind);
+    span.textContent = node.data.slice(from);
+    node.data = node.data.slice(0, from);
+    tail.before(span);
+  }
+};
+
 /**
  * The formula box: a contenteditable that shows property references as
  * tokens and reads back as plain formula text. Offsets count that text.
@@ -91,11 +151,21 @@ export class FormulaField {
   private future: Snapshot[] = [];
   private current: Snapshot = { value: '', caret: 0 };
   private lastTyped = 0;
+  /**
+   * The colours, as CSS highlights: they paint the text without touching the DOM, so the caret,
+   * IME and the browser's own editing never meet a syntax span.
+   */
+  private painted: Array<[Highlight, Range]> = [];
+  private readonly onChange: () => void;
 
   constructor(
     private readonly schema: PropertyDefinition[],
-    private readonly onChange: () => void
+    onChange: () => void
   ) {
+    this.onChange = () => {
+      this.paint();
+      onChange();
+    };
     this.element.setAttribute('contenteditable', 'true');
     this.element.spellcheck = false;
     this.element.setAttribute('role', 'textbox');
@@ -128,6 +198,30 @@ export class FormulaField {
     this.past = [];
     this.future = [];
     this.current = { value: source, caret: source.length };
+    this.paint();
+  }
+
+  /** Takes the box's colours off the page. */
+  dispose(): void {
+    this.painted.forEach(([highlight, range]) => highlight.delete(range));
+    this.painted = [];
+  }
+
+  private paint(): void {
+    this.dispose();
+    // Older browsers lack the Highlight API: the box stays in plain ink there.
+    if (typeof CSS === 'undefined' || !('highlights' in CSS) || typeof Highlight === 'undefined') return;
+    for (const { node, from, to, kind } of syntaxSlices(this.element)) {
+      const name = `blok-formula-${kind}`;
+      const highlight = CSS.highlights.get(name) ?? new Highlight();
+      const range = this.element.ownerDocument.createRange();
+
+      CSS.highlights.set(name, highlight);
+      range.setStart(node, from);
+      range.setEnd(node, to);
+      highlight.add(range);
+      this.painted.push([highlight, range]);
+    }
   }
 
   /** The caret's offset in `value`; the end when the selection is elsewhere. */

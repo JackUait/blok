@@ -54,7 +54,7 @@ const type = (text: string): void => {
   input().dispatchEvent(new Event('input'));
 };
 
-const text = (selector: string): string => document.querySelector(selector)?.textContent ?? '';
+const text = (selector: string): string => document.querySelector(selector)?.textContent?.trim() ?? '';
 
 describe('formula editor', () => {
   beforeEach(() => {
@@ -121,6 +121,14 @@ describe('formula editor', () => {
       const popover = document.querySelector<HTMLElement>('[data-blok-popover]');
 
       expect(popover?.style.getPropertyValue('--width')).toBe('740px');
+    });
+
+    // §18.3: the 541-tall box sat above its row, bottom at window − 12: it is clamped like a cell editor.
+    it('is placed as a covering cell editor, kept inside the window', () => {
+      open();
+
+      expect(document.querySelector('[data-blok-popover]')?.getAttribute('data-blok-popover-custom-class'))
+        .toContain('blok-database-table-cell-editor');
     });
 
     it('heads the box with "Edit formula"', () => {
@@ -201,6 +209,123 @@ describe('formula editor', () => {
     document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="prop:Amount"]')?.click();
 
     expect(input().value).toBe('prop("Amount")');
+  });
+
+  // notion-spec-2 §18.3, `formula-editor.png`: with the caret after `* 2` the list still shows Built-ins.
+  it('keeps the list when the caret sits after a number', () => {
+    open();
+    type('prop("Amount") * 2');
+
+    expect(document.querySelectorAll('[data-blok-database-formula-reference-item]').length).toBeGreaterThan(0);
+  });
+
+  // `C8-formula-open.png`, `formula-editor.png`: a "Properties" section, then "Built-ins".
+  it('heads properties with "Properties" and built-ins with "Built-ins"', () => {
+    open();
+    type('');
+    const labels = [...document.querySelectorAll('[data-blok-database-formula-reference-label]')].map((el) => el.textContent);
+
+    expect(labels).toEqual(['tools.database.propertiesSection', 'tools.database.formulaBuiltIns']);
+  });
+
+  // `formula-editor.png`: Built-ins open with the operators * / + - > >= <, # for number and a checkbox for compare.
+  it('lists the operators first among built-ins, in Notion\'s order', () => {
+    open();
+    type('');
+    const builtIns = [...document.querySelectorAll('[data-blok-database-formula-reference-item="function"]')]
+      .map((el) => el.getAttribute('data-name'));
+
+    expect(builtIns.slice(0, 7)).toEqual(['*', '/', '+', '-', '>', '>=', '<']);
+  });
+
+  it('draws each row with its type glyph', () => {
+    open();
+    type('');
+    const glyph = (name: string): string | null | undefined =>
+      document.querySelector(`[data-blok-database-formula-reference-item][data-name="${name}"] [data-blok-database-formula-reference-icon]`)?.getAttribute('data-kind');
+
+    expect(glyph('prop:Amount')).toBe('number');
+    expect(glyph('prop:Name')).toBe('title');
+    expect(glyph('*')).toBe('number');
+    expect(glyph('>=')).toBe('boolean');
+  });
+
+  it('inserts an operator with a space on each side', () => {
+    open();
+    type('prop("Amount")');
+    document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="*"]')?.click();
+
+    expect(input().value).toBe('prop("Amount") * ');
+  });
+
+  // notion-spec-2 §18.3, §22.5: "Preview with <row>", the output or "No output", and "Type: <type>".
+  describe('preview', () => {
+    it('names the row it previews with', () => {
+      open({ previewRow: 'Banana' });
+
+      expect(text('[data-blok-database-formula-preview-label]')).toBe('tools.database.formulaPreviewWith');
+      expect(text('[data-blok-database-formula-preview-row]')).toBe('Banana');
+    });
+
+    it('shows "No output" and type unknown for an empty formula', () => {
+      open();
+      type('');
+
+      expect(text('[data-blok-database-formula-preview]')).toBe('tools.database.formulaNoOutput');
+      expect(document.querySelector('[data-blok-database-formula-preview]')?.hasAttribute('data-empty')).toBe(true);
+      expect(text('[data-blok-database-formula-type]')).toBe('tools.database.formulaType(type=unknown)');
+    });
+
+    it('shows the result and its type', () => {
+      open();
+      type('prop("Amount") * 3');
+
+      expect(text('[data-blok-database-formula-preview]')).toBe('6');
+      expect(text('[data-blok-database-formula-type]')).toBe('tools.database.formulaType(type=number)');
+    });
+
+    it('shows "No output" with the type when the row gives nothing', () => {
+      open({ preview: () => '' });
+      type('prop("Amount")');
+
+      expect(text('[data-blok-database-formula-preview]')).toBe('tools.database.formulaNoOutput');
+      expect(text('[data-blok-database-formula-type]')).toBe('tools.database.formulaType(type=number)');
+    });
+
+    // research/35 §R13: `if(prop("Num") > 40, prop("Num"), "low")` showed "Type: unknown".
+    it('calls a mixed result unknown', () => {
+      open();
+      type('if(prop("Amount") > 40, prop("Amount"), "low")');
+
+      expect(text('[data-blok-database-formula-type]')).toBe('tools.database.formulaType(type=unknown)');
+    });
+  });
+
+  // `C8-formula-open.png`, `formula-editor.png`: the help pane beside the list describes the highlighted row.
+  describe('help', () => {
+    it('highlights the first row and describes it', () => {
+      open();
+      type('');
+      const first = document.querySelector('[data-blok-database-formula-reference-item]');
+
+      expect(first?.getAttribute('aria-selected')).toBe('true');
+      expect(text('[data-blok-database-formula-help-name]')).toBe('Name');
+      expect(text('[data-blok-database-formula-help-description]'))
+        .toBe('tools.database.formulaPropertyHelp(type=tools.database.propertyTypeTitle)');
+      expect(text('[data-blok-database-formula-help-example]')).toBe('prop("Name")');
+    });
+
+    it('follows the row under the pointer', () => {
+      open();
+      type('');
+      const row = '[data-blok-database-formula-reference-item][data-name="*"]';
+
+      document.querySelector(row)?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+      expect(document.querySelector(row)?.getAttribute('aria-selected')).toBe('true');
+      expect(text('[data-blok-database-formula-help-name]')).toBe('*');
+      expect(document.querySelector('[data-blok-database-formula-help-description]')).toBeNull();
+    });
   });
 
   it('leaves the formula itself out of its own property list', () => {

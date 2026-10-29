@@ -1383,6 +1383,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PLACE_CARD_FIT_BYTES = 500;
     // database.css: the 280x84 person profile card with a 56px avatar (notion-spec-2 §18.2).
     const DATABASE_PERSON_CARD_BYTES = 1_300;
+    // database.css: the Edit formula box's preview with its type chip, the list with section labels, the help pane.
+    const DATABASE_FORMULA_EDITOR_PANES_BYTES = 3_125;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1721,7 +1723,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DARK_RELATION_TOGGLE_BYTES
       + DATABASE_DARK_MENU_VALUE_BYTES
       + DATABASE_PLACE_CARD_FIT_BYTES
-      + DATABASE_PERSON_CARD_BYTES;
+      + DATABASE_PERSON_CARD_BYTES
+      + DATABASE_FORMULA_EDITOR_PANES_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

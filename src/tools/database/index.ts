@@ -11471,7 +11471,12 @@ export class DatabaseTool implements BlockTool {
     this.formulaEditor?.close();
     const schema = this.model.getSchema();
     const draft = (source: string): PropertyDefinition => ({ ...property, formula: { expression: source } });
-    const sample = this.cardDrawer?.openRowId ?? this.model.getOrderedRows()[0]?.id;
+    // notion-spec-2 §22.5: the preview uses the row whose cell was clicked.
+    const clicked = anchor?.closest('[data-row-id]')?.getAttribute('data-row-id') ?? undefined;
+    const sample = [clicked, this.cardDrawer?.openRowId, this.model.getOrderedRows()[0]?.id]
+      .find((id): id is string => typeof id === 'string' && this.model.getRow(id) !== undefined);
+    const sampleRow = sample === undefined ? undefined : this.model.getRow(sample);
+    const sampleTitle = sampleRow === undefined ? undefined : DatabaseTool.titleOf({ schema, rows: [] }, sampleRow);
     const relatedSchema = schema
       .flatMap((p) => (p.type === 'relation' && p.relation !== undefined && p.relation.targetDatabaseId !== this.dataId
         ? this.readDatabaseSource(p.relation.targetDatabaseId)?.schema ?? []
@@ -11482,6 +11487,7 @@ export class DatabaseTool implements BlockTool {
       property,
       schema: localizeDatabaseSchema(schema, this.api.i18n),
       relatedSchema,
+      ...(sampleTitle === undefined ? {} : { previewRow: sampleTitle === '' ? this.api.i18n.t('tools.database.relationUntitled') : sampleTitle }),
       compile: (source) => this.computedValues.compile(draft(source), schema.map((p) => (p.id === propertyId ? draft(source) : p))),
       preview: (source) => {
         if (sample === undefined) return null;

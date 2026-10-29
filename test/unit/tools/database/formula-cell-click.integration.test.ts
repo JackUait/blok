@@ -84,6 +84,16 @@ describe('a click on a table formula cell', () => {
     expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-formula-input]')?.value).toBe('prop("Number") * 2');
   });
 
+  // notion-spec-2 §22.5: a click on Banana's cell previews "with Banana".
+  it('previews with the row that was clicked', async () => {
+    await make();
+    holder?.querySelector<HTMLElement>('[data-blok-database-table-row][data-row-id="r2"] [role="gridcell"][data-property-id="f"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-formula-preview-row]')?.textContent).toBe('C');
+  });
+
   it('opens nothing in a read-only editor', async () => {
     await make(true);
     formulaCell()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

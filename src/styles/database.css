@@ -13662,8 +13662,6 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-formula-editor] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-1);
-  padding: var(--blok-space-2);
 }
 
 /* notion-spec-2 §18.3: the Edit formula box is radius 12px. */
@@ -13674,13 +13672,15 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-dialog);
 }
 
-/* Title then close ×. Title type and button size are Blok values: unmeasured. */
+/* Title then close ×. `formula-editor.png`: the title starts 18px in. Title type is a Blok value: unmeasured. */
 [data-blok-database-formula-head] {
   display: flex;
   align-items: center;
+  padding: var(--blok-space-3) var(--blok-space-3) 0 18px;
   font-weight: 600;
 }
 
+/* `formula-editor.png` (pixels): a 24px gray circle. */
 [data-blok-database-formula-close] {
   display: inline-flex;
   align-items: center;
@@ -13690,8 +13690,8 @@ textarea[data-blok-database-cell-input] {
   margin-inline-start: auto;
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-control);
-  background: transparent;
+  border-radius: 50%;
+  background: var(--blok-database-hover-bg);
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
@@ -13701,30 +13701,81 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
-@media (hover: hover) {
-  [data-blok-database-formula-close]:hover {
-    background-color: var(--blok-database-hover-bg);
-  }
-}
-
+/* notion-spec-2 §18.3: the formula box is 716x96 in a 740 box, so 12px each side. */
 [data-blok-database-formula-input] {
-  width: 100%;
-  resize: vertical;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
-  border: 1px solid var(--blok-database-tpl-border);
-  border-radius: var(--blok-radius-control);
-  background: transparent;
+  width: auto;
+  min-height: 96px;
+  margin: var(--blok-space-3);
   font-family: var(--blok-font-mono, ui-monospace, monospace);
-  font-size: 13px;
-  color: inherit;
-  outline: none;
 }
 
-[data-blok-database-formula-preview],
-[data-blok-database-formula-error] {
-  min-height: 18px;
+/* `formula-editor.png` (pixels): 87 tall between two full-width lines; "Preview with" 17px in. */
+[data-blok-database-formula-preview-area] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  padding: var(--blok-space-3) var(--blok-space-4);
+  border-block: 1px solid var(--blok-database-page-divider);
+}
+
+[data-blok-database-formula-preview-head] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  min-height: 20px;
   font-size: 12px;
   color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-preview-icon] {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-formula-preview-icon] svg {
+  width: 100%;
+  height: 100%;
+}
+
+[data-blok-database-formula-result] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-2);
+}
+
+[data-blok-database-formula-preview] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-formula-preview][data-empty] {
+  color: var(--blok-database-ink-secondary);
+}
+
+/* `formula-editor.png` (pixels): 20 tall, fill rgb(240,239,237). */
+[data-blok-database-formula-type] {
+  flex: none;
+  height: 20px;
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-database-hover-bg);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-error] {
+  padding: 0 var(--blok-space-4);
+  font-size: 12px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-error]:empty {
+  display: none;
 }
 
 [data-blok-database-formula-error-message] {
@@ -13737,29 +13788,91 @@ textarea[data-blok-database-cell-input] {
   text-decoration: underline wavy;
 }
 
+/* `formula-editor.png` (pixels): list 228 wide, a line, then the help; the panes fill the box's last 238px. */
+[data-blok-database-formula-panes] {
+  display: grid;
+  grid-template-columns: 228px minmax(0, 1fr);
+  height: 238px;
+}
+
 [data-blok-database-formula-reference] {
-  max-height: 200px;
   overflow-y: auto;
+  padding: var(--blok-space-1);
+}
+
+/* "Properties" / "Built-ins": 12px secondary ink, as Notion's menu section labels. */
+[data-blok-database-formula-reference-label] {
+  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-formula-reference-item] {
-  padding: var(--blok-space-1) var(--blok-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
   border-radius: var(--blok-radius-control);
+  font-size: 14px;
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
-[data-blok-database-formula-reference-item="property"] {
-  font-weight: 500;
+[data-blok-database-formula-reference-item][aria-selected="true"] {
+  background-color: var(--blok-database-hover-bg);
 }
 
-@media (hover: hover) {
-  [data-blok-database-formula-reference-item]:hover {
-    background-color: var(--blok-database-hover-bg);
-  }
+[data-blok-database-formula-reference-icon] {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-reference-icon] svg {
+  width: 100%;
+  height: 100%;
+}
+
+[data-blok-database-formula-help] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-2);
+  overflow-y: auto;
+  padding: var(--blok-space-3) var(--blok-space-2-5);
+  border-inline-start: 1px solid var(--blok-database-tpl-border);
+}
+
+[data-blok-database-formula-help-name] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  font-weight: 600;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-formula-help-description] {
+  font-size: 12px;
+  color: var(--blok-database-ink-secondary);
+}
+
+/* `formula-editor.png` (pixels): example boxes 44 tall with a light border. */
+[data-blok-database-formula-help-example] {
+  min-height: 44px;
+  padding: var(--blok-space-2);
+  border: 1px solid var(--blok-database-tpl-border);
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  font-size: 12px;
 }
 
 [data-blok-database-formula-done] {
   align-self: flex-end;
+  margin: var(--blok-space-2) var(--blok-space-3) var(--blok-space-3);
   padding: var(--blok-space-1) var(--blok-space-2);
   border: 0;
   border-radius: var(--blok-radius-control);

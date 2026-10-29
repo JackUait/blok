@@ -1,8 +1,9 @@
 import type { I18n } from '../../../types';
-import { IconCross } from '../../components/icons';
+import { IconCheckbox, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
+import { propertyTypeMeta } from './database-property-types';
 import { CellPopover } from './cells/cell-popover';
 import { FORMULA_FUNCTION_NAMES, formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
-import type { CompileResult } from './formula';
+import type { CompileResult, FormulaType } from './formula';
 import type { PropertyDefinition } from './types';
 
 export interface FormulaEditorOptions {
@@ -17,6 +18,8 @@ export interface FormulaEditorOptions {
   compile: (source: string) => CompileResult;
   /** The result for one row, as text, or null when there is no row to show. */
   preview?: (source: string) => string | null;
+  /** The title of the row the preview uses. */
+  previewRow?: string;
   /** The stored form, property names replaced by ids. */
   onSave: (stored: string) => void;
   onClose?: () => void;
@@ -31,12 +34,36 @@ interface Reference {
   label: string;
   insert: string;
   kind: 'property' | 'function';
+  /** The glyph: a property's type, or an operator's result. */
+  icon?: { kind: string; svg: string };
+  /** The help pane's line under the name. Built-ins have none yet. */
+  description?: string;
 }
+
+/**
+ * notion-spec-2 §18.3 "Type: unknown" (empty), §22.5 "Type: number", research/35
+ * "unknown" for a mixed `if`. The other names are Blok's: Notion's are unmeasured.
+ */
+const typeLabel = (type: FormulaType | null): string => {
+  if (type === null || type.kind === 'empty' || type.kind === 'any') return 'unknown';
+
+  return type.kind;
+};
+
+/**
+ * `formula-editor.png`: Built-ins open with these, # for arithmetic and a
+ * checkbox for comparisons. Notion's order after `<` is unmeasured.
+ */
+const OPERATORS: ReadonlyArray<[string, 'number' | 'boolean']> = [
+  ['*', 'number'], ['/', 'number'], ['+', 'number'], ['-', 'number'],
+  ['>', 'boolean'], ['>=', 'boolean'], ['<', 'boolean'], ['<=', 'boolean'],
+  ['==', 'boolean'], ['!=', 'boolean'], ['%', 'number'], ['^', 'number'],
+];
 
 const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
-/** The word the caret sits at the end of, for filtering the reference list. */
-const wordBefore = (text: string, caret: number): string => /[\p{L}\p{N}_$]*$/u.exec(text.slice(0, caret))?.[0] ?? '';
+/** The word the caret sits at the end of. A number is not a word: after `* 2` the whole list stays. */
+const wordBefore = (text: string, caret: number): string => /[\p{L}_$][\p{L}\p{N}_$]*$/u.exec(text.slice(0, caret))?.[0] ?? '';
 
 /**
  * Notion's formula editor (H-fx): the expression at the top, a live preview,
@@ -49,7 +76,11 @@ class FormulaEditor implements FormulaEditorHandle {
   private readonly preview = document.createElement('div');
   private readonly error = document.createElement('div');
   private readonly list = document.createElement('div');
+  private readonly type = document.createElement('span');
+  private readonly help = document.createElement('div');
   private readonly popover: CellPopover;
+  /** The row the help pane describes, by `data-name`. */
+  private active: string | null = null;
   private open = true;
   /** The formula as it opened: Escape on it writes nothing. */
   private readonly initial: string;
@@ -59,6 +90,7 @@ class FormulaEditor implements FormulaEditorHandle {
 
     this.root.setAttribute('data-blok-database-formula-editor', '');
     this.input.setAttribute('data-blok-database-formula-input', '');
+    this.input.setAttribute('data-blok-field', 'text');
     this.input.setAttribute('aria-label', t('tools.database.formulaLabel'));
     this.input.placeholder = t('tools.database.formulaPlaceholder');
     this.input.rows = 3;
@@ -72,6 +104,8 @@ class FormulaEditor implements FormulaEditorHandle {
     this.list.setAttribute('data-blok-database-formula-reference', '');
     this.list.setAttribute('role', 'listbox');
     this.list.setAttribute('aria-label', t('tools.database.formulaReference'));
+    this.type.setAttribute('data-blok-database-formula-type', '');
+    this.help.setAttribute('data-blok-database-formula-help', '');
 
     const done = document.createElement('button');
 
@@ -93,7 +127,7 @@ class FormulaEditor implements FormulaEditorHandle {
     // What Notion's × does to a typed formula is unmeasured; it saves, as Escape does.
     close.addEventListener('click', () => this.escape());
     head.append(title, close);
-    this.root.append(head, this.input, this.preview, this.error, this.list, done);
+    this.root.append(head, this.input, this.renderPreviewArea(), this.error, this.renderPanes(), done);
 
     this.input.addEventListener('input', () => this.refresh());
     this.input.addEventListener('keydown', (event) => {
@@ -106,8 +140,9 @@ class FormulaEditor implements FormulaEditorHandle {
     this.popover = new CellPopover({
       anchor,
       content: this.root,
-      // notion-spec-2 §18.3: the Edit formula box is 740 wide.
+      // notion-spec-2 §18.3: the Edit formula box is 740 wide, and kept inside the window (bottom at window − 12).
       minWidth: '740px',
+      cover: true,
       onEscape: () => this.escape(),
       onDismiss: () => this.finish(false),
     });
@@ -137,6 +172,57 @@ class FormulaEditor implements FormulaEditorHandle {
     this.finish(true);
   }
 
+  /** "Preview with <row>" over the output and its "Type: …" badge. */
+  private renderPreviewArea(): HTMLElement {
+    const area = document.createElement('div');
+    const top = document.createElement('div');
+    const result = document.createElement('div');
+
+    area.setAttribute('data-blok-database-formula-preview-area', '');
+    top.setAttribute('data-blok-database-formula-preview-head', '');
+    result.setAttribute('data-blok-database-formula-result', '');
+    if (this.options.previewRow !== undefined) {
+      const label = document.createElement('span');
+      const row = document.createElement('span');
+      const icon = document.createElement('span');
+
+      label.setAttribute('data-blok-database-formula-preview-label', '');
+      label.textContent = this.options.i18n.t('tools.database.formulaPreviewWith');
+      icon.setAttribute('data-blok-database-formula-preview-icon', '');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.innerHTML = IconPageEmpty;
+      row.setAttribute('data-blok-database-formula-preview-row', '');
+      row.textContent = this.options.previewRow;
+      top.append(label, icon, row);
+    }
+    result.append(this.preview, this.type);
+    area.append(top, result);
+
+    return area;
+  }
+
+  /** The list on the left, its help on the right. */
+  private renderPanes(): HTMLElement {
+    const panes = document.createElement('div');
+
+    panes.setAttribute('data-blok-database-formula-panes', '');
+    this.list.addEventListener('mousemove', (event) => {
+      const item = event.target instanceof Element ? event.target.closest('[data-blok-database-formula-reference-item]') : null;
+      const name = item?.getAttribute('data-name') ?? null;
+
+      if (name === null || name === this.active) return;
+      this.active = name;
+      // In place: a rebuilt list would lose its scroll.
+      this.list.querySelectorAll('[data-blok-database-formula-reference-item]').forEach((el) => {
+        el.setAttribute('aria-selected', String(el === item));
+      });
+      this.renderHelp([...this.properties(), ...this.builtIns()].find((ref) => ref.name === name));
+    });
+    panes.append(this.list, this.help);
+
+    return panes;
+  }
+
   private save(): void {
     const compiled = this.options.compile(this.input.value);
 
@@ -154,16 +240,21 @@ class FormulaEditor implements FormulaEditorHandle {
     const compiled = this.options.compile(source);
 
     this.error.replaceChildren();
+    const output = compiled.ok && source.trim() !== '' ? this.options.preview?.(source) ?? '' : '';
+
+    this.preview.toggleAttribute('data-empty', output === '');
+    this.preview.textContent = output === '' ? this.options.i18n.t('tools.database.formulaNoOutput') : output;
+    this.type.textContent = this.options.i18n.t('tools.database.formulaType', {
+      type: typeLabel(compiled.ok && source.trim() !== '' ? compiled.resultType : null),
+    });
     if (compiled.ok) {
       this.input.removeAttribute('aria-invalid');
-      this.preview.textContent = this.options.preview?.(source) ?? '';
     } else {
       const { code, params, start, end } = compiled.error;
       const message = document.createElement('span');
       const range = document.createElement('code');
 
       this.input.setAttribute('aria-invalid', 'true');
-      this.preview.textContent = '';
       message.setAttribute('data-blok-database-formula-error-message', '');
       message.textContent = this.options.i18n.t(formulaErrorKey(code), params);
       range.setAttribute('data-blok-database-formula-error-range', '');
@@ -175,33 +266,109 @@ class FormulaEditor implements FormulaEditorHandle {
     this.renderReference();
   }
 
-  private references(): Reference[] {
-    const properties = this.options.schema
+  private properties(): Reference[] {
+    return this.options.schema
       .filter((p) => p.id !== this.options.property.id)
-      .map((p): Reference => ({ name: `prop:${p.name}`, label: p.name, insert: `prop(${quote(p.name)})`, kind: 'property' }));
+      .map((p): Reference => ({
+        name: `prop:${p.name}`,
+        label: p.name,
+        insert: `prop(${quote(p.name)})`,
+        kind: 'property',
+        icon: { kind: p.type, svg: propertyTypeMeta(p.type).icon },
+        // `C8-formula-open.png`: "URL property."
+        description: this.options.i18n.t('tools.database.formulaPropertyHelp', { type: this.options.i18n.t(propertyTypeMeta(p.type).labelKey) }),
+      }));
+  }
+
+  private builtIns(): Reference[] {
+    const operators = OPERATORS.map(([op, result]): Reference => ({
+      name: op,
+      label: op,
+      insert: ` ${op} `,
+      kind: 'function',
+      icon: { kind: result, svg: result === 'number' ? IconHash : IconCheckbox },
+    }));
     const functions = FORMULA_FUNCTION_NAMES
       .filter((name) => name !== 'prop')
       .map((name): Reference => ({ name, label: name, insert: `${name}(`, kind: 'function' }));
 
-    return [...properties, ...functions];
+    return [...operators, ...functions];
   }
 
   private renderReference(): void {
     const word = wordBefore(this.input.value, this.input.selectionEnd).toLowerCase();
-    const shown = this.references().filter((ref) => word === '' || ref.label.toLowerCase().startsWith(word));
+    const matches = (ref: Reference): boolean => word === '' || ref.label.toLowerCase().startsWith(word);
+    const section = (labelKey: string, refs: Reference[]): HTMLElement[] => {
+      const shown = refs.filter(matches);
 
-    this.list.replaceChildren(...shown.map((ref) => {
-      const item = document.createElement('div');
+      if (shown.length === 0) return [];
+      const label = document.createElement('div');
 
-      item.setAttribute('data-blok-database-formula-reference-item', ref.kind);
-      item.setAttribute('data-name', ref.name);
-      item.setAttribute('role', 'option');
-      item.textContent = ref.label;
-      item.addEventListener('mousedown', (event) => event.preventDefault());
-      item.addEventListener('click', () => this.insert(ref.insert));
+      label.setAttribute('data-blok-database-formula-reference-label', '');
+      label.setAttribute('role', 'presentation');
+      label.textContent = this.options.i18n.t(labelKey);
 
-      return item;
-    }));
+      return [label, ...shown.map((ref) => this.renderItem(ref))];
+    };
+
+    const shown = [...this.properties(), ...this.builtIns()].filter(matches);
+    const active = shown.find((ref) => ref.name === this.active) ?? shown.at(0);
+
+    this.active = active?.name ?? null;
+    this.list.replaceChildren(
+      ...section('tools.database.propertiesSection', this.properties()),
+      ...section('tools.database.formulaBuiltIns', this.builtIns())
+    );
+    this.renderHelp(active);
+  }
+
+  /** `C8-formula-open.png`: the name with its glyph, the description, then a bare example. */
+  private renderHelp(ref: Reference | undefined): void {
+    this.help.replaceChildren();
+    if (ref === undefined) return;
+    const name = document.createElement('div');
+    const icon = document.createElement('span');
+    const label = document.createElement('span');
+
+    name.setAttribute('data-blok-database-formula-help-name', '');
+    icon.setAttribute('data-blok-database-formula-reference-icon', '');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = ref.icon?.svg ?? '';
+    label.textContent = ref.label;
+    name.append(icon, label);
+    this.help.append(name);
+    if (ref.description === undefined) return;
+    const description = document.createElement('div');
+    const example = document.createElement('code');
+
+    description.setAttribute('data-blok-database-formula-help-description', '');
+    description.textContent = ref.description;
+    example.setAttribute('data-blok-database-formula-help-example', '');
+    example.textContent = ref.insert;
+    this.help.append(description, example);
+  }
+
+  private renderItem(ref: Reference): HTMLElement {
+    const item = document.createElement('div');
+    const icon = document.createElement('span');
+    const label = document.createElement('span');
+
+    item.setAttribute('data-blok-database-formula-reference-item', ref.kind);
+    item.setAttribute('data-name', ref.name);
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', String(ref.name === this.active));
+    icon.setAttribute('data-blok-database-formula-reference-icon', '');
+    icon.setAttribute('aria-hidden', 'true');
+    if (ref.icon !== undefined) {
+      icon.setAttribute('data-kind', ref.icon.kind);
+      icon.innerHTML = ref.icon.svg;
+    }
+    label.textContent = ref.label;
+    item.append(icon, label);
+    item.addEventListener('mousedown', (event) => event.preventDefault());
+    item.addEventListener('click', () => this.insert(ref.insert));
+
+    return item;
   }
 
   /** Replaces the word at the caret with `text`. */

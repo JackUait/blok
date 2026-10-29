@@ -539,7 +539,18 @@ const FILES_TAB_COGNATE_RETENTIONS: Record<string, string[]> = {
   ro: ['tools.database.filesTabLink'],
 };
 
-for (const [locale, keys] of [...Object.entries(AUDIO_COGNATE_RETENTIONS), ...Object.entries(FILES_TAB_COGNATE_RETENTIONS)]) {
+/** The formula editor's "Type: {type}" uses the native noun spelled as in English. */
+const FORMULA_TYPE_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.database.formulaType'],
+  nl: ['tools.database.formulaType'],
+  no: ['tools.database.formulaType'],
+};
+
+for (const [locale, keys] of [
+  ...Object.entries(AUDIO_COGNATE_RETENTIONS),
+  ...Object.entries(FILES_TAB_COGNATE_RETENTIONS),
+  ...Object.entries(FORMULA_TYPE_COGNATE_RETENTIONS),
+]) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);
 }

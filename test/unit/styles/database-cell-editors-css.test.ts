@@ -38,6 +38,24 @@ describe('cell editor CSS', () => {
         .toEqual(['0']);
     });
 
+    // `formula-editor.png` (pixels): list pane 228 wide, rows 28 tall, a rgb(230,229,227) line before the help.
+    it('splits the list and its help, 228px for the list', () => {
+      expect(declared('[data-blok-database-formula-panes]', 'grid-template-columns')).toEqual(['228px minmax(0, 1fr)']);
+      expect(declared('[data-blok-database-formula-help]', 'border-inline-start')).toEqual(['1px solid var(--blok-database-tpl-border)']);
+      expect(declared('[data-blok-database-formula-reference-item]', 'min-height')).toEqual(['28px']);
+    });
+
+    // `formula-editor.png` (pixels): "Type: number" is a 20-tall chip, the preview sits between two lines.
+    it('draws the type as a 20px chip and fences the preview with lines', () => {
+      expect(declared('[data-blok-database-formula-type]', 'height')).toEqual(['20px']);
+      expect(declared('[data-blok-database-formula-preview-area]', 'border-block')).toEqual(['1px solid var(--blok-database-page-divider)']);
+    });
+
+    it('highlights the active row gray, never blue', () => {
+      expect(declared('[data-blok-database-formula-reference-item][aria-selected="true"]', 'background-color'))
+        .toEqual(['var(--blok-database-hover-bg)']);
+    });
+
     it('puts the title first and the close × at the row end', () => {
       expect(declared('[data-blok-database-formula-head]', 'display')).toEqual(['flex']);
       expect(declared('[data-blok-database-formula-close]', 'margin-inline-start')).toEqual(['auto']);

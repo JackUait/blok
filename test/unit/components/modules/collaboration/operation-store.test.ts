@@ -10,7 +10,6 @@
  * swept or cleared by anything the cache does.
  */
 import { IDBDatabase, IDBFactory, IDBObjectStore } from 'fake-indexeddb';
-import * as idb from 'lib0/indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
@@ -20,6 +19,7 @@ import {
   type OperationStore,
   type OperationStoreOptions,
 } from '../../../../../src/components/modules/collaboration/operation-store';
+import * as idb from '../../../../../src/components/modules/collaboration/idb';
 import type { WorkingSetTag } from '../../../../../src/components/modules/collaboration/types';
 
 const LINEAGE_A = 'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
@@ -105,7 +105,7 @@ const plantUpdate = async (row: { lineage: string; bytes: Uint8Array }): Promise
   const db = await openDatabase();
   const [store] = idb.transact(db, ['updates']);
 
-  await idb.rtop(store.add(row));
+  await idb.read(store.add(row));
   db.close();
 };
 
@@ -263,7 +263,7 @@ const plantMeta = async (value: unknown): Promise<void> => {
   const db = await openDatabase();
   const [store] = idb.transact(db, ['meta']);
 
-  await idb.rtop(store.put(value, 'meta'));
+  await idb.read(store.put(value, 'meta'));
   db.close();
 };
 
@@ -426,7 +426,7 @@ describe('collaboration — operation store', () => {
       const db = await openDatabase();
       const [store] = idb.transact(db, ['outbox']);
 
-      await idb.rtop(store.add(row));
+      await idb.read(store.add(row));
       db.close();
     };
 
@@ -1630,13 +1630,14 @@ describe('collaboration — operation store', () => {
     it('a prepopulated legacy blok-collab-* database stays untouched', async () => {
       const legacyName = `blok-collab-${URL}`;
       const legacy = await idb.openDB(legacyName, (created) => {
-        idb.createStores(created, [ [ 'updates', { autoIncrement: true } ], [ 'meta' ] ]);
+        created.createObjectStore('updates', { autoIncrement: true });
+        created.createObjectStore('meta');
       });
       const [ legacyUpdates, legacyMeta ] = idb.transact(legacy, [ 'updates', 'meta' ]);
 
-      await idb.rtop(legacyUpdates.add({ lineage: LINEAGE_A,
+      await idb.read(legacyUpdates.add({ lineage: LINEAGE_A,
         bytes: updateWith('block-1', 'development era') }));
-      await idb.rtop(legacyMeta.put({ format: 1,
+      await idb.read(legacyMeta.put({ format: 1,
         epoch: 0,
         lineage: LINEAGE_A,
         writeDenied: false,
@@ -1654,7 +1655,7 @@ describe('collaboration — operation store', () => {
       const reopened = await idb.openDB(legacyName, () => undefined);
       const [ readUpdates, readMeta ] = idb.transact(reopened, [ 'updates', 'meta' ], 'readonly');
       const survivors: unknown[] = await idb.getAll(readUpdates);
-      const meta = await idb.get(readMeta, 'meta');
+      const meta = await idb.read(readMeta.get('meta'));
 
       reopened.close();
 

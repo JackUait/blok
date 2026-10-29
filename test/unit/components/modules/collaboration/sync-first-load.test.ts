@@ -8,7 +8,6 @@
  * `collaboration` absent, not one byte of that machinery may be allocated.
  */
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
-import * as encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../../../src/components/core';
@@ -17,6 +16,7 @@ import type { CollaborationConfig } from '../../../../../src/components/modules/
 import { ANONYMOUS_LABEL_KEYS } from '../../../../../src/components/modules/collaboration/anonymous-identity';
 import * as operationStore from '../../../../../src/components/modules/collaboration/operation-store';
 import { MAX_PEERS } from '../../../../../src/components/modules/collaboration/presence';
+import { Encoder } from '../../../../../src/components/modules/collaboration/wire-encoding';
 import * as collabProvider from '../../../../../src/components/modules/collaboration/provider';
 import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
 import type { CollabDocSeam, SyncWireFrame } from '../../../../../src/components/modules/collaboration/types';
@@ -2818,17 +2818,17 @@ describe('collaboration — sync-first load', () => {
 
       // Hand-encoded: y-protocols only encodes states an Awareness holds.
       const fabricated = 500;
-      const encoder = encoding.createEncoder();
+      const encoder = new Encoder();
 
-      encoding.writeVarUint(encoder, fabricated);
+      encoder.writeVarUint(fabricated);
 
       for (const index of Array.from({ length: fabricated }, (_, position) => position)) {
-        encoding.writeVarUint(encoder, 1_000_000 + index);
-        encoding.writeVarUint(encoder, 1);
-        encoding.writeVarString(encoder, JSON.stringify({ user: { name: `peer ${index}` } }));
+        encoder.writeVarUint(1_000_000 + index);
+        encoder.writeVarUint(1);
+        encoder.writeVarString(JSON.stringify({ user: { name: `peer ${index}` } }));
       }
 
-      socket.deliver({ type: 'awareness', update: encoding.toUint8Array(encoder) });
+      socket.deliver({ type: 'awareness', update: encoder.toUint8Array() });
 
       expect(harness.core.moduleInstances.YjsManager.getAwarenessStates().size).toBeGreaterThan(MAX_PEERS);
 

@@ -1,4 +1,4 @@
-import { simpleDiffString } from 'lib0/diff';
+import { simpleDiffString } from './simple-diff';
 
 /**
  * How far the minimal diff searches before giving up. Myers costs O(N·D) in the
@@ -878,7 +878,7 @@ const unitOffsets = (atoms: string[]): number[] => atoms.reduce<number[]>((offse
  * @param after - the saved span
  */
 const coarseOps = (before: string, after: string): TextEditOp[] => {
-  // Code units, and surrogate-safe: lib0 rolls its own ends back off a
+  // Code units, and surrogate-safe: simpleDiffString rolls its ends back off a
   // surrogate boundary, so the region never starts or ends inside a character.
   const { index, remove, insert } = simpleDiffString(before, after);
 
@@ -1018,7 +1018,7 @@ const anchors = (
  * one-region diff describes "wrap this phrase in a tag" as "delete the phrase,
  * insert the tagged phrase" — so two peers wrapping OVERLAPPING phrases each
  * delete what the other re-inserts, and the shared words land twice while the
- * rest is dropped. Measured, and it is why `lib0`'s `simpleDiffString` is the
+ * rest is dropped. Measured, and it is why `simpleDiffString` is the
  * last resort here rather than the answer.
  *
  * Three steps, each narrower than the next is wide:

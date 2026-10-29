@@ -1,21 +1,21 @@
-import * as decoding from 'lib0/decoding';
-import * as encoding from 'lib0/encoding';
-import type * as Lib0Time from 'lib0/time';
-import { getUnixTime } from 'lib0/time';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as Y from 'yjs';
 
+import { Encoder } from '../../../../../src/components/modules/collaboration/wire-encoding';
+import type * as Clock from '../../../../../src/components/modules/yjs/clock';
+import { getUnixTime } from '../../../../../src/components/modules/yjs/clock';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { GRID_ROWS_KEY, YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import type { YjsOutputBlockData } from '../../../../../src/components/modules/yjs/serializer';
 import type { AwarenessChange, LocalOriginTag } from '../../../../../src/components/modules/yjs/types';
+import { WireReader } from '../../../helpers/wire-reader';
 
-// lib0's `getUnixTime` IS `Date.now`, and y-protocols keeps its own binding to
+// `getUnixTime` IS `Date.now`, and y-protocols keeps its own binding to
 // it, so mocking the module only moves the SEAM's clock — the only lever that
 // can age a meta row from the outside. Re-primed in beforeEach because
 // restoreAllMocks() wipes the implementation of a vi.fn() made in the factory.
-vi.mock('lib0/time', async (importOriginal) => {
-  const actual = await importOriginal<typeof Lib0Time>();
+vi.mock('../../../../../src/components/modules/yjs/clock', async (importOriginal) => {
+  const actual = await importOriginal<typeof Clock>();
 
   return { ...actual, getUnixTime: vi.fn(actual.getUnixTime) };
 });
@@ -876,35 +876,35 @@ describe('DocumentStore — the binary seam', () => {
 describe('DocumentStore — awareness seam', () => {
   /** One awareness frame: a state per client id, exactly as y-protocols encodes it. */
   const frameFor = (entries: Array<{ clientId: number; clock: number; state: unknown }>): Uint8Array => {
-    const encoder = encoding.createEncoder();
+    const encoder = new Encoder();
 
-    encoding.writeVarUint(encoder, entries.length);
+    encoder.writeVarUint(entries.length);
 
     for (const entry of entries) {
-      encoding.writeVarUint(encoder, entry.clientId);
-      encoding.writeVarUint(encoder, entry.clock);
-      encoding.writeVarString(encoder, JSON.stringify(entry.state));
+      encoder.writeVarUint(entry.clientId);
+      encoder.writeVarUint(entry.clock);
+      encoder.writeVarString(JSON.stringify(entry.state));
     }
 
-    return encoding.toUint8Array(encoder);
+    return encoder.toUint8Array();
   };
 
   /** The client ids an encoded awareness frame carries. */
   const clientsInFrame = (frame: Uint8Array): number[] => {
-    const decoder = decoding.createDecoder(frame);
-    const count = decoding.readVarUint(decoder);
+    const decoder = new WireReader(frame);
+    const count = decoder.readVarUint();
     const ids: number[] = [];
 
     for (let index = 0; index < count; index += 1) {
-      ids.push(decoding.readVarUint(decoder));
-      decoding.readVarUint(decoder);
-      decoding.readVarString(decoder);
+      ids.push(decoder.readVarUint());
+      decoder.readVarUint();
+      decoder.readVarString();
     }
 
     return ids;
   };
 
-  // lib0's `getUnixTime` IS `Date.now`, and y-protocols stamps meta rows from
+  // `getUnixTime` IS `Date.now`, and y-protocols stamps meta rows from
   // the real clock, so a row is aged by moving the SEAM's clock past the real
   // one. y-protocols is an external module: vi.mock never reaches it.
   const TOMBSTONE_TTL_MS = 90_000;

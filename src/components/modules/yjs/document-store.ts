@@ -1,7 +1,7 @@
-import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
+import { getUnixTime } from './clock';
 import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isListSlotMapKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { writeRichText } from './rich-text-write';
 import { diffText } from './text-diff';
@@ -2752,7 +2752,7 @@ export class DocumentStore {
   private pruneAwarenessMeta(awareness: Awareness): void {
     // The same clock y-protocols stamps `lastUpdated` with. `Date.now` read
     // here instead would drift under fake timers, which replace the global
-    // but not the binding lib0 captured at import.
+    // but not a binding captured at import (see ./clock).
     const staleBefore = getUnixTime() - AWARENESS_TOMBSTONE_TTL_MS;
 
     for (const [clientId, row] of Array.from(awareness.meta)) {

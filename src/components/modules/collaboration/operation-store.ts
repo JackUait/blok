@@ -1,12 +1,6 @@
-// lib0's `put`/`del`/`add`/`addAutoKey` helpers accept only
-// `string | number | ArrayBuffer | Date` as an item and a narrower key union
-// than `IDBValidKey`, so an object row does not type-check through them. Only
-// `openDB`, `transact` and the read helpers are used from lib0 here; every
-// write goes straight to the native store, and every read through the typed
-// `read` wrapper below.
-import * as idb from 'lib0/indexeddb';
 import * as Y from 'yjs';
 
+import * as idb from './idb';
 import type { QuarantineFilter, SessionProtocol, WorkingSetTag } from './types';
 
 /**
@@ -327,7 +321,7 @@ const abortQuietly = (transaction: IDBTransaction): void => {
 };
 
 /**
- * One IndexedDB read as a typed promise. lib0's `rtop` returns `Promise<any>`.
+ * One IndexedDB read as a typed promise. Rejects with the request's own error.
  * @param request - the request to await
  */
 const read = <T>(request: IDBRequest<T>): Promise<T> => new Promise<T>((resolve, reject) => {
@@ -540,7 +534,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     const counter = { undecodable: 0 };
 
     for (const pair of await idb.getAllKeysValues(store)) {
-      const key = pair.k as IDBValidKey;
+      const key = pair.k;
       const row = pair.v as Partial<CachedRow> | null;
       const rowBytes = toBytes(row?.bytes);
 
@@ -705,7 +699,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     const rows: PendingOperation[] = [];
 
     for (const pair of pairs) {
-      const row = toPendingOperation(pair.k as IDBValidKey, pair.v);
+      const row = toPendingOperation(pair.k, pair.v);
 
       if (row !== null) {
         rows.push(row);

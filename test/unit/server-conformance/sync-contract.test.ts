@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import * as decoding from 'lib0/decoding';
 import { expect, it as baseIt } from 'vitest';
 import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
@@ -16,6 +15,7 @@ import { DocumentStore } from '../../../src/components/modules/yjs/document-stor
 import { readPageFields } from '../../../src/components/modules/yjs/page-fields';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
+import { WireReader } from '../helpers/wire-reader';
 import type { OutputBlockData } from '../../../types/data-formats/output-data';
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
 import { startServer, type RunningServer } from './run-against';
@@ -212,7 +212,7 @@ function connectClient(wsUrl: string, docId: string, options: ConnectOptions): S
   // The stock provider knows types 0-3 only and logs "Unable to compute
   // message" for anything else; this hook records the epoch frame instead.
   provider.messageHandlers[CONTROL_MESSAGE_TYPE] = (_encoder, decoder) => {
-    controlFrames.push(parseControlFrame(decoding.readVarString(decoder)));
+    controlFrames.push(parseControlFrame(new WireReader(decoder.arr, decoder.pos).readVarString()));
   };
 
   // Same trick for the v2 types, so "a v1 client was sent a frame it cannot

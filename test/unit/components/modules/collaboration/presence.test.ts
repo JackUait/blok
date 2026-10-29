@@ -5,7 +5,6 @@
  * how often, and how it learns which awareness client id is its own. The DOM
  * half lives in presence-renderer.test.ts.
  */
-import * as encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -22,6 +21,7 @@ import {
   type PresenceState,
 } from '../../../../../src/components/modules/collaboration/presence';
 import type { CaretPosition } from '../../../../../src/components/modules/collaboration/caret-position';
+import { Encoder } from '../../../../../src/components/modules/collaboration/wire-encoding';
 import type { PresenceRenderer } from '../../../../../src/components/modules/collaboration/presence-renderer';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
@@ -308,14 +308,14 @@ const moveCaret = (target: EventTarget): void => {
  * @param state - the state the frame plants
  */
 const forgedAwarenessFrame = (clientId: number, clock: number, state: Record<string, unknown>): Uint8Array => {
-  const encoder = encoding.createEncoder();
+  const encoder = new Encoder();
 
-  encoding.writeVarUint(encoder, 1);
-  encoding.writeVarUint(encoder, clientId);
-  encoding.writeVarUint(encoder, clock);
-  encoding.writeVarString(encoder, JSON.stringify(state));
+  encoder.writeVarUint(1);
+  encoder.writeVarUint(clientId);
+  encoder.writeVarUint(clock);
+  encoder.writeVarString(JSON.stringify(state));
 
-  return encoding.toUint8Array(encoder);
+  return encoder.toUint8Array();
 };
 
 describe('presence — local awareness upkeep', () => {

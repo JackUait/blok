@@ -225,6 +225,30 @@ function declaredFor(file: string): Set<string> {
   return declared;
 }
 
+/**
+ * Undeclared packages a few named files may still import. Each entry names the
+ * declared dependency that installs the package, and why the file needs it.
+ * The tests below fail once a listed file stops importing the package, or the
+ * supplier stops depending on it, so an entry cannot outlive its reason.
+ */
+const ALLOWED_UNDECLARED: Record<string, { suppliedBy: string; reason: string; files: string[] }> = {
+  lib0: {
+    suppliedBy: 'yjs',
+    reason: 'Blok writes lib0\'s wire format and runs its text diff with its own code. ' +
+      'These files use lib0 only as the reference that code and the server fixtures are checked against.',
+    files: [
+      'scripts/generate-sync-frames.mjs',
+      'scripts/generate-yjs-engine-fixtures.mjs',
+      'test/unit/server-conformance/lib0-parity.test.ts',
+      'test/unit/server-conformance/sync-frames.freshness.test.ts',
+      'test/unit/server-conformance/yjs-engine-fixtures.freshness.test.ts',
+    ],
+  },
+};
+
+const isAllowedUndeclared = (name: string, relative: string): boolean =>
+  ALLOWED_UNDECLARED[name]?.files.includes(relative) ?? false;
+
 describe('LAW: no phantom dependencies', () => {
   const files = SCANNED_DIRS
     .flatMap((dir) => collectFiles(path.join(REPO_ROOT, dir)))
@@ -247,11 +271,36 @@ describe('LAW: no phantom dependencies', () => {
         // A type-only import of `x` is satisfied by `@types/x`: the module
         // name comes from the types package, not a runtime one.
         .filter((name) => !declared.has(name) && !declared.has(`@types/${name}`))
+        .filter((name) => !isAllowedUndeclared(name, relative))
         .map((name) => `${relative}: imports undeclared "${name}"`);
     });
 
     expect(violations, `Phantom dependencies found:\n${violations.join('\n')}`).toEqual([]);
   }, 30_000);
+
+  it.each(Object.entries(ALLOWED_UNDECLARED))('%s is still undeclared and installed by the dependency named for it', (name, { suppliedBy }) => {
+    const declared = declaredIn(path.join(REPO_ROOT, 'package.json'));
+    const supplier = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, 'node_modules', suppliedBy, 'package.json'), 'utf-8')
+    ) as { dependencies?: Record<string, string> };
+
+    // Declared again, the entry is dead weight: drop it.
+    expect(declared.has(name)).toBe(false);
+    expect(declared.has(suppliedBy)).toBe(true);
+    expect(Object.keys(supplier.dependencies ?? {})).toContain(name);
+    // The listed files import it by bare name, so it must sit at the root.
+    expect(existsSync(path.join(REPO_ROOT, 'node_modules', name, 'package.json'))).toBe(true);
+  });
+
+  it.each(Object.entries(ALLOWED_UNDECLARED).flatMap(([name, { files }]) => files.map((file) => [name, file])))(
+    '%s is still imported by %s, the file allowed to import it',
+    (name, file) => {
+      const absolute = path.join(REPO_ROOT, file);
+
+      expect(existsSync(absolute)).toBe(true);
+      expect(importedPackages(readFileSync(absolute, 'utf-8'))).toContain(name);
+    }
+  );
 
   it('detects a phantom import when one exists', () => {
     // Mutation guard: proves the detector actually fires. Uses a synthetic

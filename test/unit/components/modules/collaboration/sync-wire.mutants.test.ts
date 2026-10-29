@@ -632,9 +632,17 @@ describe('sync-wire decode — v2 value (rule 12) reasons', () => {
 
 describe('sync-wire decode — payload ownership', () => {
   it('hands back an owned copy, not a view that the caller can still rewrite', () => {
-    // lib0's readUint8Array returns `new Uint8Array(decoder.arr.buffer, ...)`,
-    // so without the slice() the payload aliases the frame the socket owns.
+    // A view instead of a copy would alias the frame the socket owns.
     const raw = hex('00000101');
+    const decoded = decode(raw);
+
+    raw[3] = 0xff;
+
+    expect(decoded).toStrictEqual({ type: 'syncStep1', stateVector: new Uint8Array([0x01]) });
+  });
+
+  it('copies the payload out of a Node Buffer too, whose slice() is a view', () => {
+    const raw = Buffer.from('00000101', 'hex');
     const decoded = decode(raw);
 
     raw[3] = 0xff;

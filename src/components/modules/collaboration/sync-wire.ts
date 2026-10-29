@@ -1,11 +1,9 @@
-import * as decoding from 'lib0/decoding';
-import * as encoding from 'lib0/encoding';
-
 import type { SyncWireDecodeResult, SyncWireFrame, WorkingSetTag } from './types';
+import { Encoder } from './wire-encoding';
 
 /**
  * Client mirror of the server's Blok.Server.Collab.SyncWire. Hand-rolled on
- * lib0/encoding + lib0/decoding (NOT y-protocols/sync, which would bypass the
+ * lib0's wire format (NOT y-protocols/sync, which would bypass the
  * binary seam's flush barriers and echo-suppression registry). One message per
  * WebSocket frame; the wire layout is pinned byte-for-byte, together with the
  * C# codec, by test/unit/server-conformance/fixtures/sync-frames.json.
@@ -46,6 +44,30 @@ const AUTH_PERMISSION_DENIED = 0;
 // lib0 varuints are unbounded; a 64-bit value is at most ten LEB128 bytes.
 const MAX_VARUINT_BYTES = 10;
 
+/** A read cursor over one frame. Moves only by lengths already checked. */
+class Decoder {
+  public pos = 0;
+
+  public constructor(public readonly arr: Uint8Array) {}
+
+  public hasContent(): boolean {
+    return this.pos !== this.arr.length;
+  }
+
+  public skip(length: number): void {
+    this.pos += length;
+  }
+
+  /** An owned copy, not a view (matches server ToArray). Not `slice()`: on a Node Buffer that is a view. */
+  public take(length: number): Uint8Array {
+    const bytes = new Uint8Array(this.arr.subarray(this.pos, this.pos + length));
+
+    this.pos += length;
+
+    return bytes;
+  }
+}
+
 const LINEAGE_PATTERN = /^[0-9a-f]{32}$/;
 const CONTROL_KEYS = ['epoch', 'format', 'lineage'] as const;
 
@@ -79,7 +101,7 @@ const strictUtf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
  * payload, or a control tag that is not announceable) — never on wire input.
  */
 export function encode(frame: SyncWireFrame): Uint8Array {
-  const encoder = encoding.createEncoder();
+  const encoder = new Encoder();
 
   switch (frame.type) {
     case 'syncStep1':
@@ -92,51 +114,49 @@ export function encode(frame: SyncWireFrame): Uint8Array {
       writeSync(encoder, SYNC_UPDATE, frame.update);
       break;
     case 'awareness':
-      encoding.writeVarUint(encoder, MESSAGE_AWARENESS);
-      encoding.writeVarUint8Array(encoder, requirePayload(frame.update));
+      encoder.writeVarUint(MESSAGE_AWARENESS);
+      encoder.writeVarUint8Array(requirePayload(frame.update));
       break;
     case 'queryAwareness':
-      encoding.writeVarUint(encoder, MESSAGE_QUERY_AWARENESS);
+      encoder.writeVarUint(MESSAGE_QUERY_AWARENESS);
       break;
     case 'permissionDenied':
-      encoding.writeVarUint(encoder, MESSAGE_AUTH);
-      encoding.writeVarUint(encoder, AUTH_PERMISSION_DENIED);
-      encoding.writeVarString(encoder, frame.reason);
+      encoder.writeVarUint(MESSAGE_AUTH);
+      encoder.writeVarUint(AUTH_PERMISSION_DENIED);
+      encoder.writeVarString(frame.reason);
       break;
     case 'control':
-      encoding.writeVarUint(encoder, MESSAGE_BLOK_CONTROL);
-      encoding.writeVarString(encoder, encodeControl(frame.tag));
+      encoder.writeVarUint(MESSAGE_BLOK_CONTROL);
+      encoder.writeVarString(encodeControl(frame.tag));
       break;
     case 'limits':
-      encoding.writeVarUint(encoder, MESSAGE_BLOK_LIMITS);
-      encoding.writeVarString(encoder, encodeLimits(frame.maxMessageBytes));
+      encoder.writeVarUint(MESSAGE_BLOK_LIMITS);
+      encoder.writeVarString(encodeLimits(frame.maxMessageBytes));
       break;
     case 'operation':
-      encoding.writeVarUint(encoder, MESSAGE_OPERATION);
-      encoding.writeVarString(encoder, encodeOperationMetadata(frame.lineage, frame.operationId));
-      encoding.writeVarUint8Array(encoder, requirePayload(frame.update));
+      encoder.writeVarUint(MESSAGE_OPERATION);
+      encoder.writeVarString(encodeOperationMetadata(frame.lineage, frame.operationId));
+      encoder.writeVarUint8Array(requirePayload(frame.update));
       break;
     case 'acknowledgement':
-      encoding.writeVarUint(encoder, MESSAGE_ACKNOWLEDGEMENT);
-      encoding.writeVarString(
-        encoder,
-        encodeAcknowledgementMetadata(frame.lineage, frame.operationId, frame.serverSequence),
+      encoder.writeVarUint(MESSAGE_ACKNOWLEDGEMENT);
+      encoder.writeVarString(encodeAcknowledgementMetadata(frame.lineage, frame.operationId, frame.serverSequence),
       );
       break;
     case 'rejection':
-      encoding.writeVarUint(encoder, MESSAGE_REJECTION);
-      encoding.writeVarString(encoder, encodeRejectionMetadata(frame.lineage, frame.operationId, frame.code));
+      encoder.writeVarUint(MESSAGE_REJECTION);
+      encoder.writeVarString(encodeRejectionMetadata(frame.lineage, frame.operationId, frame.code));
       break;
     case 'activity':
-      encoding.writeVarUint(encoder, MESSAGE_ACTIVITY);
+      encoder.writeVarUint(MESSAGE_ACTIVITY);
       break;
     case 'identities':
-      encoding.writeVarUint(encoder, MESSAGE_IDENTITIES);
-      encoding.writeVarString(encoder, encodeIdentities(frame.identities));
+      encoder.writeVarUint(MESSAGE_IDENTITIES);
+      encoder.writeVarString(encodeIdentities(frame.identities));
       break;
   }
 
-  return encoding.toUint8Array(encoder);
+  return encoder.toUint8Array();
 }
 
 /**
@@ -145,7 +165,7 @@ export function encode(frame: SyncWireFrame): Uint8Array {
  * `unknown`. Strict like the server's TryDecode.
  */
 export function decode(bytes: Uint8Array): SyncWireDecodeResult {
-  const decoder = decoding.createDecoder(bytes);
+  const decoder = new Decoder(bytes);
   const type = readVarUint(decoder);
 
   if (type === null) {
@@ -228,7 +248,7 @@ export function decode(bytes: Uint8Array): SyncWireDecodeResult {
   }
 }
 
-function decodeSync(decoder: decoding.Decoder): SyncWireDecodeResult {
+function decodeSync(decoder: Decoder): SyncWireDecodeResult {
   const subType = readVarUint(decoder);
 
   if (subType === null) {
@@ -262,7 +282,7 @@ function decodeSync(decoder: decoding.Decoder): SyncWireDecodeResult {
   return { type: 'update', update: payload.bytes };
 }
 
-function decodeAuth(decoder: decoding.Decoder): SyncWireDecodeResult {
+function decodeAuth(decoder: Decoder): SyncWireDecodeResult {
   const subType = readVarUint(decoder);
 
   if (subType === null) {
@@ -515,8 +535,8 @@ type SectionResult = { ok: true; bytes: Uint8Array } | { ok: false; rule: 2 | 3 
  * separate code for a corrupt-format prefix, and `readVarBytes` already does
  * the exceeds-remaining bounds check before any allocation.
  */
-function readRequiredSection(decoder: decoding.Decoder): SectionResult {
-  if (!decoding.hasContent(decoder)) {
+function readRequiredSection(decoder: Decoder): SectionResult {
+  if (!decoder.hasContent()) {
     return { ok: false, rule: 3 };
   }
 
@@ -530,8 +550,8 @@ function readRequiredSection(decoder: decoding.Decoder): SectionResult {
 }
 
 /** Malformed unless the whole v2 frame was consumed — rule 5. */
-function requireEndV2(decoder: decoding.Decoder): { type: 'malformed'; reason: string; rule: number } | null {
-  return decoding.hasContent(decoder)
+function requireEndV2(decoder: Decoder): { type: 'malformed'; reason: string; rule: number } | null {
+  return decoder.hasContent()
     ? malformedV2(5, `${decoder.arr.length - decoder.pos} trailing byte(s) after the message`)
     : null;
 }
@@ -643,7 +663,7 @@ function validateServerSequence(value: unknown): { ok: true; value: string } | {
  * non-UTF-8 metadata section that also has trailing bytes) must report the
  * lower-numbered framing rule, not the metadata rule found by decoding first.
  */
-function decodeOperation(decoder: decoding.Decoder): SyncWireDecodeResult {
+function decodeOperation(decoder: Decoder): SyncWireDecodeResult {
   const metadataSection = readRequiredSection(decoder);
 
   if (!metadataSection.ok) {
@@ -692,7 +712,7 @@ function decodeOperation(decoder: decoding.Decoder): SyncWireDecodeResult {
   };
 }
 
-function decodeAcknowledgement(decoder: decoding.Decoder): SyncWireDecodeResult {
+function decodeAcknowledgement(decoder: Decoder): SyncWireDecodeResult {
   const metadataSection = readRequiredSection(decoder);
 
   if (!metadataSection.ok) {
@@ -737,7 +757,7 @@ function decodeAcknowledgement(decoder: decoding.Decoder): SyncWireDecodeResult 
   };
 }
 
-function decodeRejection(decoder: decoding.Decoder): SyncWireDecodeResult {
+function decodeRejection(decoder: Decoder): SyncWireDecodeResult {
   const metadataSection = readRequiredSection(decoder);
 
   if (!metadataSection.ok) {
@@ -785,7 +805,7 @@ function decodeRejection(decoder: decoding.Decoder): SyncWireDecodeResult {
 type PayloadResult = { type: 'bytes'; bytes: Uint8Array } | { type: 'error'; reason: string };
 
 /** Reads a length-prefixed payload, rejecting an empty one (sync + awareness). */
-function readPayload(decoder: decoding.Decoder): PayloadResult {
+function readPayload(decoder: Decoder): PayloadResult {
   const bytes = readVarBytes(decoder);
 
   if (bytes === null) {
@@ -812,18 +832,17 @@ interface VarUintPeek {
  *
  * lib0's own decoding.readVarUint is unusable here on both counts: it accepts
  * an 11-byte encoding of a small value (ten continuation bytes + a terminator)
- * and it THROWS on a truncated one. So the framing is peeked by hand; lib0 only
- * advances the cursor (readUint8Array) once the peek has proven the bytes good.
+ * and it THROWS on a truncated one. So the framing is peeked by hand, and the
+ * cursor moves only once the peek has proven the bytes good.
  */
-function readVarUint(decoder: decoding.Decoder): number | null {
+function readVarUint(decoder: Decoder): number | null {
   const peek = peekVarUint(decoder.arr, decoder.pos);
 
   if (peek === null) {
     return null;
   }
 
-  // Advance the cursor through lib0 rather than reassigning decoder.pos here.
-  decoding.readUint8Array(decoder, peek.byteLength);
+  decoder.skip(peek.byteLength);
 
   return peek.value;
 }
@@ -853,7 +872,7 @@ function peekVarUint(arr: Uint8Array, pos: number): VarUintPeek | null {
 }
 
 /** Reads a varuint length then that many bytes, bounds-checked before any copy. */
-function readVarBytes(decoder: decoding.Decoder): Uint8Array | null {
+function readVarBytes(decoder: Decoder): Uint8Array | null {
   const length = readVarUint(decoder);
 
   if (length === null) {
@@ -865,21 +884,20 @@ function readVarBytes(decoder: decoding.Decoder): Uint8Array | null {
     return null;
   }
 
-  // lib0 returns a view; slice() detaches an owned copy (matches server ToArray).
-  return decoding.readUint8Array(decoder, length).slice();
+  return decoder.take(length);
 }
 
 /** Malformed unless the whole frame was consumed (one message per frame). */
-function requireEnd(decoder: decoding.Decoder): { type: 'malformed'; reason: string } | null {
-  return decoding.hasContent(decoder)
+function requireEnd(decoder: Decoder): { type: 'malformed'; reason: string } | null {
+  return decoder.hasContent()
     ? malformed(`${decoder.arr.length - decoder.pos} trailing byte(s) after the message`)
     : null;
 }
 
-function writeSync(encoder: encoding.Encoder, subType: number, payload: Uint8Array): void {
-  encoding.writeVarUint(encoder, MESSAGE_SYNC);
-  encoding.writeVarUint(encoder, subType);
-  encoding.writeVarUint8Array(encoder, requirePayload(payload));
+function writeSync(encoder: Encoder, subType: number, payload: Uint8Array): void {
+  encoder.writeVarUint(MESSAGE_SYNC);
+  encoder.writeVarUint(subType);
+  encoder.writeVarUint8Array(requirePayload(payload));
 }
 
 function requirePayload(payload: Uint8Array): Uint8Array {

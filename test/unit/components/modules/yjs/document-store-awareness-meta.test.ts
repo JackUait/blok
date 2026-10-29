@@ -1,6 +1,6 @@
-import * as encoding from 'lib0/encoding';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { Encoder } from '../../../../../src/components/modules/collaboration/wire-encoding';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 
@@ -62,17 +62,17 @@ const outliveTombstone = (store: DocumentStore, clientIds: number[]): void => {
 
 /** One awareness frame carrying a state per client id, exactly as y-protocols encodes it. */
 const frameFor = (clientIds: number[], clock = 1): Uint8Array => {
-  const encoder = encoding.createEncoder();
+  const encoder = new Encoder();
 
-  encoding.writeVarUint(encoder, clientIds.length);
+  encoder.writeVarUint(clientIds.length);
 
   for (const clientId of clientIds) {
-    encoding.writeVarUint(encoder, clientId);
-    encoding.writeVarUint(encoder, clock);
-    encoding.writeVarString(encoder, JSON.stringify({ user: { name: `fake-${clientId}` } }));
+    encoder.writeVarUint(clientId);
+    encoder.writeVarUint(clock);
+    encoder.writeVarString(JSON.stringify({ user: { name: `fake-${clientId}` } }));
   }
 
-  return encoding.toUint8Array(encoder);
+  return encoder.toUint8Array();
 };
 
 describe('DocumentStore awareness — meta pruning', () => {

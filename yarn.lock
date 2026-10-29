@@ -1294,7 +1294,6 @@ __metadata:
     jscpd: "npm:5.4.2"
     jsdom: "npm:29.1.1"
     katex: "npm:0.18.10"
-    lib0: "npm:0.2.119"
     maplibre-gl: "npm:6.16.0"
     mediabunny: "npm:1.62.1"
     mermaid: "npm:12.2.0"
@@ -10551,7 +10550,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lib0@npm:0.2.119, lib0@npm:^0.2.102, lib0@npm:^0.2.85, lib0@npm:^0.2.99":
+"lib0@npm:^0.2.102, lib0@npm:^0.2.85, lib0@npm:^0.2.99":
   version: 0.2.119
   resolution: "lib0@npm:0.2.119"
   dependencies:

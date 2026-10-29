@@ -1,5 +1,4 @@
 import { IDBFactory } from 'fake-indexeddb';
-import * as idb from 'lib0/indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -11,6 +10,7 @@ import {
   forgetOfflineScope,
   inspectOfflineScope,
 } from '../../../../../src/components/modules/collaboration/offline-scope';
+import * as idb from '../../../../../src/components/modules/collaboration/idb';
 import type { WorkingSetTag } from '../../../../../src/components/modules/collaboration/types';
 
 const LINEAGE_A = 'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';

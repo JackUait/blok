@@ -294,8 +294,15 @@ const renderRelation = (cell: HTMLElement, property: PropertyDefinition, value: 
     chip.setAttribute('data-row-id', id);
     icon.setAttribute('data-blok-database-relation-chip-icon', '');
     icon.setAttribute('aria-hidden', 'true');
-    // Without the markup's whitespace, so the chip's textContent stays the bare title.
-    icon.innerHTML = IconPageEmpty.trim().replace(/>\s+</g, '><');
+    const emoji = ctx.relationIcon?.(property, id);
+
+    // notion-spec-2 §21.6: CSS draws the emoji, so the chip's textContent stays the bare title.
+    if (emoji !== undefined && emoji !== '') {
+      icon.setAttribute('data-emoji', emoji);
+    } else {
+      // Without the markup's whitespace, for the same reason.
+      icon.innerHTML = IconPageEmpty.trim().replace(/>\s+</g, '><');
+    }
     name.setAttribute('data-blok-database-relation-chip-title', '');
     name.textContent = title === undefined || title === '' ? ctx.i18n.t('tools.database.relationUntitled') : title;
     chip.append(icon, name);

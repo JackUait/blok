@@ -111,6 +111,16 @@ describe('renderCellValue — computed property types', () => {
     expect(title?.textContent).toBe('Alpha');
   });
 
+  // notion-spec-2 §21.6: a page with its own emoji shows it in the icon box, in place of the glyph.
+  it('draws a related page\'s emoji in the icon box and keeps the chip text the bare title', () => {
+    const cell = renderCellValue(relation, [{ id: 'r1' }], ctx({ relationTitle: () => 'Alpha', relationIcon: () => '🏏' }));
+    const icon = cell.querySelector('[data-blok-database-relation-chip-icon]');
+
+    expect(icon?.getAttribute('data-emoji')).toBe('🏏');
+    expect(icon?.querySelector('svg')).toBeNull();
+    expect(cell.querySelector('[data-blok-database-relation-chip]')?.textContent).toBe('Alpha');
+  });
+
   it('names an untitled related row', () => {
     const cell = renderCellValue(relation, [{ id: 'r1' }], ctx({ relationTitle: () => '' }));
 

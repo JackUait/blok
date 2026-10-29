@@ -62,6 +62,8 @@ export interface CellContext {
   formulaProblem?: (property: PropertyDefinition, rowId: string) => FormulaProblem | undefined;
   /** A related row's title, '' when untitled, undefined when unknown. */
   relationTitle?: (property: PropertyDefinition, rowId: string) => string | undefined;
+  /** A related row's own page icon (an emoji), undefined when it has none. */
+  relationIcon?: (property: PropertyDefinition, rowId: string) => string | undefined;
   /**
    * Opens a related row. Without it a relation chip is plain text. With `peek`
    * it opens in that mode and returns true when `peek.onClose` will run as the

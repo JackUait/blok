@@ -12866,6 +12866,13 @@ textarea[data-blok-database-cell-input] {
   height: 18px;
 }
 
+/* notion-spec-2 §21.6: a page's own emoji, 18x18 in the 20x20 box. */
+[data-blok-database-relation-chip-icon][data-emoji]::before {
+  content: attr(data-emoji);
+  font-size: 18px;
+  line-height: 18px;
+}
+
 [data-blok-database-relation-chip-title] {
   min-width: 0;
   overflow: hidden;
@@ -12883,6 +12890,12 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-gallery-property] [data-blok-database-relation-chip-icon] svg {
   width: 14.4px;
   height: 14.4px;
+}
+
+/* notion-spec-2 §21.6: on a card the emoji is 14.4px. */
+[data-blok-database-gallery-property] [data-blok-database-relation-chip-icon][data-emoji]::before {
+  font-size: 14.4px;
+  line-height: 14.4px;
 }
 
 [data-blok-database-gallery-property] [data-blok-database-relation-chip-title] {

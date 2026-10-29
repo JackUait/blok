@@ -1,7 +1,7 @@
 /**
  * Collects a tokenizer's output as plain arrays, so ours and parse5's can be
- * compared. Adjacent character tokens of one kind are merged: run boundaries
- * may differ, the text may not.
+ * compared token for token. Character runs are kept as emitted: the tree
+ * builder is ported from parse5 and assumes its run boundaries.
  */
 export type Collected = Array<Array<string | boolean | null | string[][]>>;
 
@@ -63,13 +63,6 @@ export class Collector {
   private chars(kind: string, chars: string, foreign: RegExp): void {
     if (this.checkKinds && (chars === '' || foreign.test(chars))) {
       this.mixed.push(`${kind} ${JSON.stringify(chars)}`);
-    }
-    const last = this.tokens[this.tokens.length - 1];
-
-    if (last !== undefined && last[0] === kind) {
-      last[1] = `${String(last[1])}${chars}`;
-
-      return;
     }
     this.tokens.push([kind, chars]);
   }

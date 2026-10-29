@@ -206,14 +206,6 @@ export class Parser implements TokenHandler, StackHandler {
     skipNextNewLine = false;
     /** @internal */
     fosterParentingEnabled = false;
-    /**
-     * The last token was a NUL run. parse5 turns a whole NUL run in foreign content into one
-     * U+FFFD and its tokenizer never splits a run; ours may, so a run split in two must still
-     * give one U+FFFD.
-     *
-     * @internal
-     */
-    afterNullCharacter = false;
 
     //Stack events
 
@@ -695,7 +687,6 @@ export class Parser implements TokenHandler, StackHandler {
     /** @internal */
     onCharacter(token: CharacterToken): void {
         this.skipNextNewLine = false;
-        this.afterNullCharacter = false;
 
         if (this.tokenizer.inForeignNode) {
             characterInForeignContent(this, token);
@@ -767,8 +758,7 @@ export class Parser implements TokenHandler, StackHandler {
         this.skipNextNewLine = false;
 
         if (this.tokenizer.inForeignNode) {
-            if (!this.afterNullCharacter) nullCharacterInForeignContent(this, token);
-            this.afterNullCharacter = true;
+            nullCharacterInForeignContent(this, token);
             return;
         }
 
@@ -822,7 +812,6 @@ export class Parser implements TokenHandler, StackHandler {
     /** @internal */
     onComment(token: CommentToken): void {
         this.skipNextNewLine = false;
-        this.afterNullCharacter = false;
 
         if (this.currentNotInHTML) {
             appendComment(this, token);
@@ -870,7 +859,6 @@ export class Parser implements TokenHandler, StackHandler {
     /** @internal */
     onDoctype(token: DoctypeToken): void {
         this.skipNextNewLine = false;
-        this.afterNullCharacter = false;
         switch (this.insertionMode) {
             case InsertionMode.INITIAL: {
                 doctypeInInitialMode(this, token);
@@ -887,7 +875,6 @@ export class Parser implements TokenHandler, StackHandler {
     /** @internal */
     onStartTag(token: TagToken): void {
         this.skipNextNewLine = false;
-        this.afterNullCharacter = false;
 
         this._processStartTag(token);
     }
@@ -1003,7 +990,6 @@ export class Parser implements TokenHandler, StackHandler {
     /** @internal */
     onEndTag(token: TagToken): void {
         this.skipNextNewLine = false;
-        this.afterNullCharacter = false;
 
         if (this.currentNotInHTML) {
             endTagInForeignContent(this, token);
@@ -1104,7 +1090,6 @@ export class Parser implements TokenHandler, StackHandler {
     }
     /** @internal */
     onEof(token: EOFToken): void {
-        this.afterNullCharacter = false;
 
         switch (this.insertionMode) {
             case InsertionMode.INITIAL: {
@@ -1165,7 +1150,6 @@ export class Parser implements TokenHandler, StackHandler {
     }
     /** @internal */
     onWhitespaceCharacter(token: CharacterToken): void {
-        this.afterNullCharacter = false;
 
         if (this.skipNextNewLine) {
             this.skipNextNewLine = false;

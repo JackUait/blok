@@ -8,10 +8,23 @@ export const define = (hl: Highlighter): void => {
 
   const string = /(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;
 
+  /*
+   * Not Prism: atrule and selector are not greedy, so every earlier start in
+   * the text was tried and failed before this one. If the text up to the end
+   * of this start's first step is a run of steps from an earlier start, this
+   * start's loop is that start's loop from here on and fails too, so skip it.
+   * Each start used to scan to the end of the line. At least one step keeps a
+   * start from matching itself. Do not use this on a greedy pattern: Prism
+   * runs those from mid-text, where the earlier start was never tried.
+   */
+  const notMidRun = (start: string, step: string): string => '(?<!' + start + '(?:' + step + ')+?)';
+  const atruleStep = /[^;{\s"']|\s+(?!\s)/.source + '|' + string.source;
+  const selectorStep = /[^{};"'\s]|\s+(?![\s{])/.source + '|' + string.source;
+
   languages.css = {
     'comment': /\/\*[\s\S]*?\*\//,
     'atrule': {
-      pattern: RegExp('@[\\w-](?:' + /[^;{\s"']|\s+(?!\s)/.source + '|' + string.source + ')*?' + /(?:;|(?=\s*\{))/.source),
+      pattern: RegExp('@[\\w-]' + notMidRun('@[\\w-]', atruleStep) + '(?:' + atruleStep + ')*?' + /(?:;|(?=\s*\{))/.source),
       inside: {
         'rule': /^@[\w-]+/,
         'selector-function-argument': {
@@ -40,7 +53,7 @@ export const define = (hl: Highlighter): void => {
       }
     },
     'selector': {
-      pattern: RegExp('(^|[{}\\s])[^{}\\s](?:[^{};"\'\\s]|\\s+(?![\\s{])|' + string.source + ')*(?=\\s*\\{)'),
+      pattern: RegExp('(^|[{}\\s])[^{}\\s]' + notMidRun('(?:^|[{}\\s])[^{}\\s]', selectorStep) + '(?:' + selectorStep + ')*(?=\\s*\\{)'),
       lookbehind: true
     },
     'string': {

@@ -95,6 +95,36 @@ const DEVIATIONS: Array<{ path: Array<string | number>; prism: string; blok: str
     blok: '4102fbbb7a6b8f31',
     reason: 'typeExpressionFromChainStart: a start inside a dotted name is skipped, so long names stay linear',
   },
+  {
+    path: ['markup', 'style', 'inside', 'included-cdata', 'inside', 'language-css', 'inside', 'atrule', 'pattern'],
+    prism: 'e0847a8df5a40e14',
+    blok: '826e64ad9cce9f90',
+    reason: 'css atrule, notMidRun: a start inside the failed run of an earlier start is skipped, so long runs stay linear',
+  },
+  {
+    path: ['markup', 'style', 'inside', 'included-cdata', 'inside', 'language-css', 'inside', 'selector', 'pattern'],
+    prism: '2ba7938cdcbfd635',
+    blok: '6505274318876194',
+    reason: 'css selector, notMidRun: a start inside the failed run of an earlier start is skipped, so long runs stay linear',
+  },
+  {
+    path: ['markdown', 'style', 'inside', 'included-cdata', 'inside', 'language-css', 'inside', 'atrule', 'pattern'],
+    prism: 'e0847a8df5a40e14',
+    blok: '826e64ad9cce9f90',
+    reason: 'css atrule, notMidRun: a start inside the failed run of an earlier start is skipped, so long runs stay linear',
+  },
+  {
+    path: ['markdown', 'style', 'inside', 'included-cdata', 'inside', 'language-css', 'inside', 'selector', 'pattern'],
+    prism: '2ba7938cdcbfd635',
+    blok: '6505274318876194',
+    reason: 'css selector, notMidRun: a start inside the failed run of an earlier start is skipped, so long runs stay linear',
+  },
+  {
+    path: ['yaml', 'key', 'pattern'],
+    prism: '1d98d85bf8cee933',
+    blok: '22a7159312f28588',
+    reason: 'a key start inside the failed run of an earlier start, or an anchor inside an earlier anchor, is skipped, so long runs stay linear',
+  },
 ];
 
 const hash = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);

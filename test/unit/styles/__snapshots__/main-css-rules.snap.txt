@@ -6812,6 +6812,11 @@ button[data-blok-database-column-count]:hover {
   text-decoration: none;
 }
 
+[data-blok-database-list-row-property] [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
+}
+
 [data-blok-database-list-row-property] [data-blok-database-option-pill] {
   height: 18px;
   padding: 0 var(--blok-space-2);

@@ -151,6 +151,16 @@ describe('list row file chip', () => {
   });
 });
 
+// notion-spec-2 §21.8: a checkbox in a list row is a 14x14 box with no label.
+describe('list row checkbox', () => {
+  it('draws the box 14x14', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-checkbox]');
+
+    expect(body).toContain('width: 14px');
+    expect(body).toContain('height: 14px');
+  });
+});
+
 describe('list row hover chrome (findings-listgallery L03, L04)', () => {
   it('draws the gutter "+" 24px square beside the 18x24 ⋮⋮', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('width: 24px');

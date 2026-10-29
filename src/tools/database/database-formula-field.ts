@@ -189,7 +189,12 @@ export class FormulaField {
   }
 
   get value(): string {
-    return [...this.element.childNodes].map(sourceOf).join('');
+    const nodes = [...this.element.childNodes].filter((node) => node.nodeType !== Node.TEXT_NODE || node.nodeValue !== '');
+
+    // A browser that deletes everything leaves one <br> to hold the line open: that is no text.
+    if (nodes.length === 1 && nodes[0].nodeName === 'BR' && !isLineEnd(nodes[0])) return '';
+
+    return nodes.map(sourceOf).join('');
   }
 
   /** Starts the box on `source`, with an empty undo history. */

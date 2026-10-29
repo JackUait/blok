@@ -531,6 +531,19 @@ describe('formula editor', () => {
     expect(options.onSave).toHaveBeenCalledWith('1 +\n2');
   });
 
+  // notion-spec-2 §26.6: Cmd+A then Backspace empties the field; the placeholder, the list and Discard reset.
+  it('reads the <br> a browser leaves after deleting everything as an empty formula', () => {
+    open({ property: { ...schema[2], formula: { expression: '' } } });
+    type('1 + 2');
+    input().innerHTML = '<br>';
+    caretAtEnd();
+    input().dispatchEvent(new Event('input'));
+
+    expect(input().childNodes).toHaveLength(0);
+    expect(document.querySelector('[data-blok-database-formula-discard]')).toBeNull();
+    expect(document.querySelector('[data-blok-database-formula-reference-label]')?.textContent).toBe('tools.database.propertiesSection');
+  });
+
   it('lists properties and functions, filtered by the word being typed', () => {
     open();
     type('dateA');

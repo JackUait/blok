@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "ఖాళీ పేజీతో కొనసాగడానికి Enter నొక్కండి, లేదా టెంప్లేట్‌ను ఎంచుకోండి (ఎంచుకోవడానికి ↑ మరియు ↓ ఉపయోగించండి)",
   "tools.database.cardTitle": "కార్డ్ శీర్షిక",
   "tools.database.close": "మూసివేయి",
+  "tools.database.closeSidePeek": "పక్క ప్రివ్యూను మూసివేయండి",
   "tools.database.peekBack": "వెనుకకు",
   "tools.database.addIcon": "చిహ్నాన్ని జోడించండి",
   "tools.database.addCover": "కవర్ జోడించండి",

@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Trykk Enter for å fortsette med en tom side, eller velg en mal (bruk ↑ og ↓ for å velge)",
   "tools.database.cardTitle": "Korttittel",
   "tools.database.close": "Lukk",
+  "tools.database.closeSidePeek": "Lukk sidevisning",
   "tools.database.peekBack": "Tilbake",
   "tools.database.addIcon": "Legg til ikon",
   "tools.database.addCover": "Legg til omslagsbilde",

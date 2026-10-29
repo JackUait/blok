@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Tryck på Enter för att fortsätta med en tom sida, eller välj en mall (använd ↑ och ↓ för att välja)",
   "tools.database.cardTitle": "Korttitel",
   "tools.database.close": "Stäng",
+  "tools.database.closeSidePeek": "Stäng sidovisning",
   "tools.database.peekBack": "Tillbaka",
   "tools.database.addIcon": "Lägg till ikon",
   "tools.database.addCover": "Lägg till omslagsbild",

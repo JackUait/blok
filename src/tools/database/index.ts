@@ -7092,6 +7092,10 @@ export class DatabaseTool implements BlockTool {
       state,
       cellContext: this.cellContext(),
       selectionBarSlot: () => context === undefined ? this.selectionBarSlot() : null,
+      ...(context === undefined ? { peek: {
+        rowId: () => (this.cardDrawer?.isOpen === true && this.cardDrawer.openMode === 'side' ? this.cardDrawer.openRowId : null),
+        close: () => this.cardDrawer?.close(),
+      } } : {}),
       ...(readOnly ? { openRow: (rowId: string) => (context === undefined ? this.handleRowClick(rowId) : context.openRow(rowId)) } : {
         handlers: this.tableHandlers(context, () => renderer),
       }),
@@ -10152,6 +10156,7 @@ export class DatabaseTool implements BlockTool {
     if (this.cardDrawer?.openRowId === rowId && !navigates) {
       if (explicit !== undefined && explicit !== this.cardDrawer.openMode) {
         this.cardDrawer.open(row, explicit);
+        this.view?.rowPageOpened?.();
       }
 
       return;
@@ -10171,6 +10176,7 @@ export class DatabaseTool implements BlockTool {
       this.cardDrawer?.setRowPageLookup(rowId, 'pending');
     }
     this.cardDrawer?.open(row, mode);
+    this.view?.rowPageOpened?.();
     this.cardDrawer?.setTemplateBanner(null);
     void this.resolveRowPage(rowId);
   }

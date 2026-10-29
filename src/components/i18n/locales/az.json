@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Boş səhifə ilə davam etmək üçün Enter düyməsini basın və ya şablon seçin (seçmək üçün ↑ və ↓ düymələrindən istifadə edin)",
   "tools.database.cardTitle": "Kart başlığı",
   "tools.database.close": "Bağla",
+  "tools.database.closeSidePeek": "Yan baxışı bağla",
   "tools.database.peekBack": "Geri",
   "tools.database.addIcon": "Simvol əlavə et",
   "tools.database.addCover": "Üz qabığı əlavə et",

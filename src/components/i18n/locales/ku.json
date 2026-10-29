@@ -675,6 +675,7 @@
   "tools.database.rowBodyPickTemplate": "Enter دابگرە بۆ بەردەوامبوون لەگەڵ پەڕەیەکی بەتاڵ، یان قاڵبێک هەڵبژێرە (↑ و ↓ بەکاربهێنە بۆ هەڵبژاردن)",
   "tools.database.cardTitle": "ناونیشانی کارت",
   "tools.database.close": "داخستن",
+  "tools.database.closeSidePeek": "Pêşdîtina kêlekê bigire",
   "tools.database.peekBack": "گەڕانەوە",
   "tools.database.addIcon": "ئایکۆن زیاد بکە",
   "tools.database.addCover": "بەرگ زیاد بکە",

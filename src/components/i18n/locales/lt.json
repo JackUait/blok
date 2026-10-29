@@ -675,6 +675,7 @@
   "tools.database.rowBodyPickTemplate": "Paspauskite Enter, kad tęstumėte su tuščiu puslapiu, arba pasirinkite šabloną (pasirinkimui naudokite ↑ ir ↓)",
   "tools.database.cardTitle": "Kortelės pavadinimas",
   "tools.database.close": "Uždaryti",
+  "tools.database.closeSidePeek": "Uždaryti šoninę peržiūrą",
   "tools.database.peekBack": "Atgal",
   "tools.database.addIcon": "Pridėti piktogramą",
   "tools.database.addCover": "Pridėti viršelį",

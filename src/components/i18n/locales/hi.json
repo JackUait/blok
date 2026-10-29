@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "खाली पृष्ठ के साथ जारी रखने के लिए Enter दबाएं, या टेम्पलेट चुनें (चुनने के लिए ↑ और ↓ का उपयोग करें)",
   "tools.database.cardTitle": "कार्ड शीर्षक",
   "tools.database.close": "बंद करें",
+  "tools.database.closeSidePeek": "साइड पीक बंद करें",
   "tools.database.peekBack": "वापस",
   "tools.database.addIcon": "आइकन जोड़ें",
   "tools.database.addCover": "कवर जोड़ें",

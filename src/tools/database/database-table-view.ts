@@ -37,7 +37,7 @@ import { DatabaseTableColumnResize } from './database-table-resize';
 import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
-import { onHover } from '../../components/utils/tooltip';
+import { offHover, onHover } from '../../components/utils/tooltip';
 import { propertyHint } from './property-hint';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
@@ -143,6 +143,8 @@ export interface TableNesting {
 export interface DatabaseTableViewOptions {
   /** Opens a row page without any write handler: what a read-only viewer gets. */
   openRow?: (rowId: string) => void;
+  /** The row shown in the side peek, if any, and how to close it: its OPEN reads CLOSE (notion-spec-2 §25.3). */
+  peek?: { rowId: () => string | null; close: () => void };
   readOnly: boolean;
   i18n: I18n;
   view: DatabaseViewConfig;
@@ -515,6 +517,47 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     if (cell !== null && cell !== undefined) {
       this.fillCell(cell, rowId);
+    }
+  }
+
+  /** notion-spec-2 §25.3: OPEN reads CLOSE, with the hint "Close side peek" above it (62-close-hover.png), while its row is in the side peek. */
+  private paintOpen(button: HTMLElement, rowId: string): void {
+    const peeked = this.options.peek?.rowId() === rowId;
+    const label = button.lastElementChild;
+
+    button.toggleAttribute('data-peeked', peeked);
+    if (label !== null) label.textContent = this.t(peeked ? 'tools.database.close' : 'tools.database.tableOpen');
+    if (peeked) {
+      onHover(button, this.t('tools.database.closeSidePeek'), { placement: 'top' });
+    } else {
+      offHover(button);
+    }
+  }
+
+  /** The tool calls it when a row page opens in a peek. */
+  rowPageOpened(): void {
+    this.repaintOpen();
+  }
+
+  /** The tool calls it when the row's peek closes. */
+  rowPageClosed(): void {
+    this.repaintOpen();
+  }
+
+  private repaintOpen(): void {
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-table-open]').forEach((button) => {
+      const rowId = button.closest('[data-row-id]')?.getAttribute('data-row-id');
+
+      if (typeof rowId === 'string') this.paintOpen(button, rowId);
+    });
+  }
+
+  /** CLOSE on the peeked row closes the peek; OPEN opens the row. */
+  private pressOpen(button: Element, rowId: string, open: (rowId: string) => void): void {
+    if (button.hasAttribute('data-peeked') && this.options.peek !== undefined) {
+      this.options.peek.close();
+    } else {
+      open(rowId);
     }
   }
 
@@ -997,10 +1040,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       icon.setAttribute('aria-hidden', 'true');
       icon.innerHTML = IconSplitView;
-      const label = document.createElement('span');
-
-      label.textContent = this.t('tools.database.tableOpen');
-      open.append(icon, label);
+      open.append(icon, document.createElement('span'));
+      this.paintOpen(open, rowId);
       cell.appendChild(open);
     }
     const run = this.createAutofillButton(cell, column.property, rowId, value);
@@ -1617,8 +1658,10 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const rowId = cellEl?.closest('[data-row-id]')?.getAttribute('data-row-id');
     const propertyId = cellEl?.getAttribute('data-property-id');
 
-    if (target.closest('[data-blok-database-table-open]') !== null && typeof rowId === 'string') {
-      (this.handlers?.openRow ?? this.options.openRow)?.(rowId);
+    const openButton = target.closest('[data-blok-database-table-open]');
+
+    if (openButton !== null && typeof rowId === 'string') {
+      this.pressOpen(openButton, rowId, (id) => (this.handlers?.openRow ?? this.options.openRow)?.(id));
 
       return;
     }
@@ -1696,7 +1739,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       return;
     }
     if (closest('[data-blok-database-table-open]') !== null) {
-      handlers.openRow(rowId);
+      this.pressOpen(closest('[data-blok-database-table-open]') as HTMLElement, rowId, (id) => handlers.openRow(id));
 
       return;
     }

@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "Nospiediet Enter, lai turpinātu ar tukšu lapu, vai izvēlieties veidni (izvēlei izmantojiet ↑ un ↓)",
   "tools.database.cardTitle": "Kartītes nosaukums",
   "tools.database.close": "Aizvērt",
+  "tools.database.closeSidePeek": "Aizvērt sānu priekšskatījumu",
   "tools.database.peekBack": "Atpakaļ",
   "tools.database.addIcon": "Pievienot ikonu",
   "tools.database.addCover": "Pievienot vāka attēlu",

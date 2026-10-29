@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Pulsa Intro para continuar con una página vacía o elige una plantilla (usa ↑ y ↓ para seleccionar)",
   "tools.database.cardTitle": "Título de la tarjeta",
   "tools.database.close": "Cerrar",
+  "tools.database.closeSidePeek": "Cerrar vista lateral",
   "tools.database.peekBack": "Atrás",
   "tools.database.addIcon": "Añadir icono",
   "tools.database.addCover": "Añadir portada",

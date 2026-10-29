@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "הקש Enter כדי להמשיך עם דף ריק, או בחר תבנית (השתמש ב-↑ וב-↓ לבחירה)",
   "tools.database.cardTitle": "כותרת כרטיס",
   "tools.database.close": "סגור",
+  "tools.database.closeSidePeek": "סגירת התצוגה הצדדית",
   "tools.database.peekBack": "חזרה",
   "tools.database.addIcon": "הוסף סמל",
   "tools.database.addCover": "הוסף תמונת כיסוי",

@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Stiskněte Enter a pokračujte s prázdnou stránkou, nebo vyberte šablonu (k výběru použijte ↑ a ↓)",
   "tools.database.cardTitle": "Název karty",
   "tools.database.close": "Zavřít",
+  "tools.database.closeSidePeek": "Zavřít boční náhled",
   "tools.database.peekBack": "Zpět",
   "tools.database.addIcon": "Přidat ikonu",
   "tools.database.addCover": "Přidat obálku",

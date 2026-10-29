@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "ចុច Enter ដើម្បីបន្តជាមួយទំព័រទទេ ឬ ជ្រើសរើសគំរូ (ប្រើ ↑ និង ↓ ដើម្បីជ្រើសរើស)",
   "tools.database.cardTitle": "ចំណងជើងកាត",
   "tools.database.close": "បិទ",
+  "tools.database.closeSidePeek": "បិទការមើលចំហៀង",
   "tools.database.peekBack": "ថយក្រោយ",
   "tools.database.addIcon": "បន្ថែមរូបតំណាង",
   "tools.database.addCover": "បន្ថែមរូបគម្រប",

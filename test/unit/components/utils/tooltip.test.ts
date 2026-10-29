@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
-import { destroy, hide, HINT_DELAY, MIN_HINT_DELAY, onHover, show, showReadout } from '../../../../src/components/utils/tooltip';
+import { destroy, hide, HINT_DELAY, MIN_HINT_DELAY, offHover, onHover, show, showReadout } from '../../../../src/components/utils/tooltip';
 import type { TooltipContent } from '../../../../src/components/utils/tooltip';
 import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 
@@ -634,6 +634,19 @@ describe('Tooltip utility', () => {
     target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     vi.advanceTimersByTime(HINT_DELAY - 100);
     target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('aria-hidden')).not.toBe('false');
+  });
+
+  it('offHover unbinds a hover hint', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'hover text');
+    offHover(target);
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     vi.advanceTimersByTime(HINT_DELAY);
 
     expect(getTooltipWrapper()?.getAttribute('aria-hidden')).not.toBe('false');

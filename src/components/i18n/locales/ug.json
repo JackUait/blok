@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "بوش بەت بىلەن داۋاملاشتۇرۇش ئۈچۈن Enter نى بېسىڭ ياكى قېلىپ تاللاڭ (تاللاش ئۈچۈن ↑ ۋە ↓ نى ئىشلىتىڭ)",
   "tools.database.cardTitle": "كارتا ماۋزۇسى",
   "tools.database.close": "تاقاش",
+  "tools.database.closeSidePeek": "يان كۆرۈنۈشنى تاقاش",
   "tools.database.peekBack": "قايتىش",
   "tools.database.addIcon": "سىنبەلگە قوشۇش",
   "tools.database.addCover": "مۇقاۋا قوشۇش",

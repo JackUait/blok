@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "စာမျက်နှာအလွတ်ဖြင့် ဆက်လုပ်ရန် Enter ကို နှိပ်ပါ၊ သို့မဟုတ် နမူနာပုံစံ ရွေးပါ (ရွေးရန် ↑ နှင့် ↓ ကို သုံးပါ)",
   "tools.database.cardTitle": "ကတ်ခေါင်းစဉ်",
   "tools.database.close": "ပိတ်",
+  "tools.database.closeSidePeek": "ဘေးဘက်ကြည့်ရှုမှုကို ပိတ်ရန်",
   "tools.database.peekBack": "နောက်သို့",
   "tools.database.addIcon": "အိုင်ကွန် ထည့်ရန်",
   "tools.database.addCover": "အဖုံးပုံ ထည့်ရန်",

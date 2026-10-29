@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "Tekan Enter untuk meneruskan dengan halaman kosong, atau pilih templat (gunakan ↑ dan ↓ untuk memilih)",
   "tools.database.cardTitle": "Tajuk kad",
   "tools.database.close": "Tutup",
+  "tools.database.closeSidePeek": "Tutup intaian sisi",
   "tools.database.peekBack": "Kembali",
   "tools.database.addIcon": "Tambah ikon",
   "tools.database.addCover": "Tambah muka depan",

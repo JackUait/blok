@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "דריק Enter צו גיין ווײַטער מיט אַ ליידיקן בלאַט, אָדער קלײַב אויס אַ מוסטער (ניץ ↑ און ↓ צו קלײַבן)",
   "tools.database.cardTitle": "קארטל טיטל",
   "tools.database.close": "פארמאכן",
+  "tools.database.closeSidePeek": "פֿאַרמאַכט די זייטן־בליק",
   "tools.database.peekBack": "צוריק",
   "tools.database.addIcon": "צולייגן בילדל",
   "tools.database.addCover": "צולייגן הילע",

@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "খালি পৃষ্ঠা নিয়ে চালিয়ে যেতে Enter চাপুন, অথবা একটি টেমপ্লেট বেছে নিন (নির্বাচন করতে ↑ ও ↓ ব্যবহার করুন)",
   "tools.database.cardTitle": "কার্ডের শিরোনাম",
   "tools.database.close": "বন্ধ",
+  "tools.database.closeSidePeek": "পাশের প্রিভিউ বন্ধ করুন",
   "tools.database.peekBack": "ফিরে যান",
   "tools.database.addIcon": "আইকন যোগ করুন",
   "tools.database.addCover": "প্রচ্ছদ যোগ করুন",

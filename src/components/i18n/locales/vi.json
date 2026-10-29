@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Nhấn Enter để tiếp tục với trang trống, hoặc chọn mẫu (dùng ↑ và ↓ để chọn)",
   "tools.database.cardTitle": "Tiêu đề thẻ",
   "tools.database.close": "Đóng",
+  "tools.database.closeSidePeek": "Đóng xem nhanh bên cạnh",
   "tools.database.peekBack": "Quay lại",
   "tools.database.addIcon": "Thêm biểu tượng",
   "tools.database.addCover": "Thêm ảnh bìa",

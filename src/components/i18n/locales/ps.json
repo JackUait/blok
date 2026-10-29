@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "د تشې پاڼې سره د دوام لپاره Enter فشار کړئ، یا یوه کينډۍ وټاکئ (د ټاکلو لپاره ↑ او ↓ وکاروئ)",
   "tools.database.cardTitle": "د کارت سرلیک",
   "tools.database.close": "وتړئ",
+  "tools.database.closeSidePeek": "اړخیزه کتنه وتړئ",
   "tools.database.peekBack": "شاته",
   "tools.database.addIcon": "آیکون اضافه کړئ",
   "tools.database.addCover": "پوښ اضافه کړئ",

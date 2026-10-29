@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "Хоосон хуудсаар үргэлжлүүлэхийн тулд Enter дарна уу, эсвэл загвар сонгоно уу (сонгохдоо ↑ болон ↓ ашиглана уу)",
   "tools.database.cardTitle": "Картын гарчиг",
   "tools.database.close": "Хаах",
+  "tools.database.closeSidePeek": "Хажуугийн харагдацыг хаах",
   "tools.database.peekBack": "Буцах",
   "tools.database.addIcon": "Дүрс нэмэх",
   "tools.database.addCover": "Хавтас нэмэх",

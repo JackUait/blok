@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Tryk på Enter for at fortsætte med en tom side, eller vælg en skabelon (brug ↑ og ↓ til at vælge)",
   "tools.database.cardTitle": "Korttitel",
   "tools.database.close": "Luk",
+  "tools.database.closeSidePeek": "Luk sidevisning",
   "tools.database.peekBack": "Tilbage",
   "tools.database.addIcon": "Tilføj ikon",
   "tools.database.addCover": "Tilføj coverbillede",

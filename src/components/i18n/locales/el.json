@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Πατήστε Enter για να συνεχίσετε με κενή σελίδα ή επιλέξτε ένα πρότυπο (χρησιμοποιήστε τα ↑ και ↓ για επιλογή)",
   "tools.database.cardTitle": "Τίτλος κάρτας",
   "tools.database.close": "Κλείσιμο",
+  "tools.database.closeSidePeek": "Κλείσιμο πλευρικής προβολής",
   "tools.database.peekBack": "Πίσω",
   "tools.database.addIcon": "Προσθήκη εικονιδίου",
   "tools.database.addCover": "Προσθήκη εξωφύλλου",

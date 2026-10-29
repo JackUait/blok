@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Սեղմեք Enter՝ դատարկ էջով շարունակելու համար, կամ ընտրեք ձևանմուշ (ընտրելու համար օգտագործեք ↑ և ↓)",
   "tools.database.cardTitle": "Քարտի վերնագիր",
   "tools.database.close": "Փակել",
+  "tools.database.closeSidePeek": "Փակել կողային դիտումը",
   "tools.database.peekBack": "Հետ",
   "tools.database.addIcon": "Ավելացնել պատկերակ",
   "tools.database.addCover": "Ավելացնել շապիկ",

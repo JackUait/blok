@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "اضغط Enter للمتابعة بصفحة فارغة، أو اختر قالبًا (استخدم ↑ و ↓ للتحديد)",
   "tools.database.cardTitle": "عنوان البطاقة",
   "tools.database.close": "إغلاق",
+  "tools.database.closeSidePeek": "إغلاق المعاينة الجانبية",
   "tools.database.peekBack": "رجوع",
   "tools.database.addIcon": "إضافة أيقونة",
   "tools.database.addCover": "إضافة غلاف",

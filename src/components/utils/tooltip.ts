@@ -659,6 +659,12 @@ class Tooltip {
     });
   }
 
+  /** Drops the hover binding {@link onHover} made on `element`. */
+  public offHover(element: HTMLElement): void {
+    this.hoverBindings.get(element)?.();
+    this.hoverBindings.delete(element);
+  }
+
   /**
    * Release DOM and event listeners
    */
@@ -1081,6 +1087,14 @@ export const hide = (): void => {
  */
 export const onHover = (element: HTMLElement, content: TooltipContent, options?: HintOptions): void => {
   getTooltip().onHover(element, content, options ?? {});
+};
+
+/**
+ * Remove a hover tooltip bound with {@link onHover}
+ * @param {HTMLElement} element - the trigger
+ */
+export const offHover = (element: HTMLElement): void => {
+  getTooltip().offHover(element);
 };
 
 /**

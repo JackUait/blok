@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Нажмите Enter, чтобы продолжить с пустой страницей, или выберите шаблон (используйте ↑ и ↓ для выбора)",
   "tools.database.cardTitle": "Заголовок карточки",
   "tools.database.close": "Закрыть",
+  "tools.database.closeSidePeek": "Закрыть боковой просмотр",
   "tools.database.peekBack": "Назад",
   "tools.database.addIcon": "Добавить значок",
   "tools.database.addCover": "Добавить обложку",

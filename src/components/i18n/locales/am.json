@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "ባዶ ገጽ ለመቀጠል Enter ይጫኑ፣ ወይም አብነት ይምረጡ (ለመምረጥ ↑ እና ↓ ይጠቀሙ)",
   "tools.database.cardTitle": "የካርድ ርዕስ",
   "tools.database.close": "ዝጋ",
+  "tools.database.closeSidePeek": "የጎን እይታን ዝጋ",
   "tools.database.peekBack": "ተመለስ",
   "tools.database.addIcon": "አዶ ጨምር",
   "tools.database.addCover": "ሽፋን ጨምር",

@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Bonyeza Enter ili kuendelea na ukurasa tupu, au chagua kiolezo (tumia ↑ na ↓ kuchagua)",
   "tools.database.cardTitle": "Kichwa cha kadi",
   "tools.database.close": "Funga",
+  "tools.database.closeSidePeek": "Funga onyesho la pembeni",
   "tools.database.peekBack": "Rudi",
   "tools.database.addIcon": "Ongeza ikoni",
   "tools.database.addCover": "Ongeza jalada",

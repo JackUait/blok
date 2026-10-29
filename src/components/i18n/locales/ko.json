@@ -675,6 +675,7 @@
   "tools.database.rowBodyPickTemplate": "Enter 키를 눌러 빈 페이지로 계속하거나 템플릿을 선택하세요(↑ 및 ↓ 키로 선택)",
   "tools.database.cardTitle": "카드 제목",
   "tools.database.close": "닫기",
+  "tools.database.closeSidePeek": "사이드 보기 닫기",
   "tools.database.peekBack": "뒤로",
   "tools.database.addIcon": "아이콘 추가",
   "tools.database.addCover": "커버 추가",

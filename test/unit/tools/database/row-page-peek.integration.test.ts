@@ -125,6 +125,44 @@ describe('row page peek modes', () => {
     expect(drawer()?.getAttribute('role')).toBe('complementary');
   });
 
+  // notion-spec-2 §25.3 (60-peek-open.png, 62-close-hover.png, 63-after-close.png).
+  describe('OPEN while the row is in the side peek', () => {
+    const button = (rowId: string): HTMLElement | null => q(`[data-row-id="${rowId}"] [data-blok-database-table-open]`);
+    const label = (rowId: string): string | undefined => button(rowId)?.querySelector('span:not([aria-hidden])')?.textContent ?? undefined;
+    const isOpen = (): boolean => q('[data-blok-database-drawer][data-open]') !== null;
+
+    it('reads CLOSE on that row only', async () => {
+      await make(doc());
+      await openRow('r1');
+
+      expect(label('r1')).toBe('Close');
+      expect(button('r1')?.hasAttribute('data-peeked')).toBe(true);
+      expect(label('r2')).toBe('Open');
+    });
+
+    it('closes the peek on a click and reads OPEN again', async () => {
+      await make(doc());
+      await openRow('r1');
+      await openRow('r1');
+
+      expect(isOpen()).toBe(false);
+      expect(label('r1')).toBe('Open');
+      expect(button('r1')?.hasAttribute('data-peeked')).toBe(false);
+    });
+
+    it('follows the peek to another row and back to OPEN when the peek closes another way', async () => {
+      await make(doc());
+      await openRow('r1');
+      await openRow('r2');
+
+      expect(label('r1')).toBe('Open');
+      expect(label('r2')).toBe('Close');
+      await key({ key: 'Escape' });
+      expect(isOpen()).toBe(false);
+      expect(label('r2')).toBe('Open');
+    });
+  });
+
   it('opens a center peek as a modal over a backdrop, and Escape closes it', async () => {
     await make(doc({ openPagesIn: 'center' }));
     await openRow('r1');

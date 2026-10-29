@@ -675,6 +675,7 @@
   "tools.database.rowBodyPickTemplate": "ກົດ Enter ເພື່ອສືບຕໍ່ດ້ວຍໜ້າເປົ່າ ຫຼື ເລືອກແມ່ແບບ (ໃຊ້ ↑ ແລະ ↓ ເພື່ອເລືອກ)",
   "tools.database.cardTitle": "ຫົວຂໍ້ບັດ",
   "tools.database.close": "ປິດ",
+  "tools.database.closeSidePeek": "ປິດການເບິ່ງດ້ານຂ້າງ",
   "tools.database.peekBack": "ກັບຄືນ",
   "tools.database.addIcon": "ເພີ່ມໄອຄອນ",
   "tools.database.addCover": "ເພີ່ມຮູບປົກ",

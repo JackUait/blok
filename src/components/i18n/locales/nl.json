@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Druk op Enter om verder te gaan met een lege pagina, of kies een sjabloon (gebruik ↑ en ↓ om te selecteren)",
   "tools.database.cardTitle": "Kaarttitel",
   "tools.database.close": "Sluiten",
+  "tools.database.closeSidePeek": "Zijweergave sluiten",
   "tools.database.peekBack": "Terug",
   "tools.database.addIcon": "Pictogram toevoegen",
   "tools.database.addCover": "Omslagafbeelding toevoegen",

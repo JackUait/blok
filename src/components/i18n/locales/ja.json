@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Enterキーを押して空のページで続行するか、 テンプレートを選択（↑ と ↓ で選択）",
   "tools.database.cardTitle": "カードタイトル",
   "tools.database.close": "閉じる",
+  "tools.database.closeSidePeek": "サイドピークを閉じる",
   "tools.database.peekBack": "戻る",
   "tools.database.addIcon": "アイコンを追加",
   "tools.database.addCover": "カバーを追加",

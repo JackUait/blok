@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "வெற்று பக்கத்துடன் தொடர Enter ஐ அழுத்தவும், அல்லது ஒரு வார்ப்புருவைத் தேர்ந்தெடுக்கவும் (தேர்ந்தெடுக்க ↑ மற்றும் ↓ ஐப் பயன்படுத்தவும்)",
   "tools.database.cardTitle": "அட்டை தலைப்பு",
   "tools.database.close": "மூடு",
+  "tools.database.closeSidePeek": "பக்க முன்னோட்டத்தை மூடு",
   "tools.database.peekBack": "பின்செல்",
   "tools.database.addIcon": "ஐகானைச் சேர்",
   "tools.database.addCover": "அட்டைப்படத்தைச் சேர்",

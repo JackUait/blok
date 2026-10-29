@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Nyomja meg az Entert az üres oldallal való folytatáshoz, vagy válasszon egy sablont (a kiválasztáshoz használja a ↑ és ↓ billentyűket)",
   "tools.database.cardTitle": "Kártya címe",
   "tools.database.close": "Bezárás",
+  "tools.database.closeSidePeek": "Oldalsó előnézet bezárása",
   "tools.database.peekBack": "Vissza",
   "tools.database.addIcon": "Ikon hozzáadása",
   "tools.database.addCover": "Borítókép hozzáadása",

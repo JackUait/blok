@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "خالي صفحي سان جاري رکڻ لاءِ Enter دٻايو، يا ٽيمپليٽ چونڊيو (چونڊڻ لاءِ ↑ ۽ ↓ استعمال ڪريو)",
   "tools.database.cardTitle": "ڪارڊ جو عنوان",
   "tools.database.close": "بند ڪريو",
+  "tools.database.closeSidePeek": "پاسي واري جھلڪ بند ڪريو",
   "tools.database.peekBack": "پوئتي",
   "tools.database.addIcon": "آئڪن شامل ڪريو",
   "tools.database.addCover": "ڪور شامل ڪريو",

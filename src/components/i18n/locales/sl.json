@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Pritisnite Enter za nadaljevanje s prazno stranjo ali izberite predlogo (za izbiro uporabite ↑ in ↓)",
   "tools.database.cardTitle": "Naslov kartice",
   "tools.database.close": "Zapri",
+  "tools.database.closeSidePeek": "Zapri stranski predogled",
   "tools.database.peekBack": "Nazaj",
   "tools.database.addIcon": "Dodaj ikono",
   "tools.database.addCover": "Dodaj naslovnico",

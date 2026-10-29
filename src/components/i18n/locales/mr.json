@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "रिक्त पृष्ठासह पुढे जाण्यासाठी Enter दाबा, किंवा टेम्पलेट निवडा (निवडण्यासाठी ↑ आणि ↓ वापरा)",
   "tools.database.cardTitle": "कार्ड शीर्षक",
   "tools.database.close": "बंद करा",
+  "tools.database.closeSidePeek": "बाजूचे पूर्वावलोकन बंद करा",
   "tools.database.peekBack": "मागे",
   "tools.database.addIcon": "चिन्ह जोडा",
   "tools.database.addCover": "कव्हर जोडा",

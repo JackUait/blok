@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "დააჭირეთ Enter-ს ცარიელი გვერდით გასაგრძელებლად, ან აირჩიეთ შაბლონი (ასარჩევად გამოიყენეთ ↑ და ↓)",
   "tools.database.cardTitle": "ბარათის სათაური",
   "tools.database.close": "დახურვა",
+  "tools.database.closeSidePeek": "გვერდითი ხედის დახურვა",
   "tools.database.peekBack": "უკან",
   "tools.database.addIcon": "ხატულის დამატება",
   "tools.database.addCover": "გარეკნის დამატება",

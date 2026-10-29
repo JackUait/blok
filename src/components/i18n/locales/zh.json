@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "按 Enter 以空白页面继续，或 选择模板（使用 ↑ 和 ↓ 选择）",
   "tools.database.cardTitle": "卡片标题",
   "tools.database.close": "关闭",
+  "tools.database.closeSidePeek": "关闭侧边预览",
   "tools.database.peekBack": "返回",
   "tools.database.addIcon": "添加图标",
   "tools.database.addCover": "添加封面",

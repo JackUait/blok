@@ -780,6 +780,7 @@
   "tools.database.rowBodyPickTemplate": "按 Enter 以空白頁面繼續，或 選擇範本（使用 ↑ 和 ↓ 選取）",
   "tools.database.cardTitle": "卡片標題",
   "tools.database.close": "關閉",
+  "tools.database.closeSidePeek": "關閉側邊預覽",
   "tools.database.peekBack": "返回",
   "tools.database.addIcon": "新增圖示",
   "tools.database.addCover": "新增封面",

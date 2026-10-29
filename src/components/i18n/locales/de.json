@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Eingabetaste drücken, um mit einer leeren Seite fortzufahren, oder eine Vorlage auswählen (zur Auswahl ↑ und ↓ verwenden)",
   "tools.database.cardTitle": "Kartentitel",
   "tools.database.close": "Schließen",
+  "tools.database.closeSidePeek": "Seitenvorschau schließen",
   "tools.database.peekBack": "Zurück",
   "tools.database.addIcon": "Symbol hinzufügen",
   "tools.database.addCover": "Titelbild hinzufügen",

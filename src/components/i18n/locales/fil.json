@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Pindutin ang Enter para magpatuloy sa walang laman na pahina, o pumili ng template (gamitin ang ↑ at ↓ para pumili)",
   "tools.database.cardTitle": "Pamagat ng card",
   "tools.database.close": "Isara",
+  "tools.database.closeSidePeek": "Isara ang side peek",
   "tools.database.peekBack": "Bumalik",
   "tools.database.addIcon": "Magdagdag ng icon",
   "tools.database.addCover": "Magdagdag ng cover",

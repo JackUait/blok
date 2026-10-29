@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Appuyez sur Entrée pour continuer avec une page vide, ou choisissez un modèle (utilisez ↑ et ↓ pour sélectionner)",
   "tools.database.cardTitle": "Titre de la carte",
   "tools.database.close": "Fermer",
+  "tools.database.closeSidePeek": "Fermer l’aperçu latéral",
   "tools.database.peekBack": "Retour",
   "tools.database.addIcon": "Ajouter une icône",
   "tools.database.addCover": "Ajouter une couverture",

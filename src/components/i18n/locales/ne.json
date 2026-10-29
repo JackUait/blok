@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "खाली पृष्ठसँग जारी राख्न Enter थिच्नुहोस्, वा टेम्प्लेट छान्नुहोस् (छान्न ↑ र ↓ प्रयोग गर्नुहोस्)",
   "tools.database.cardTitle": "कार्ड शीर्षक",
   "tools.database.close": "बन्द गर्नुहोस्",
+  "tools.database.closeSidePeek": "छेउको पूर्वावलोकन बन्द गर्नुहोस्",
   "tools.database.peekBack": "पछाडि",
   "tools.database.addIcon": "आइकन थप्नुहोस्",
   "tools.database.addCover": "कभर थप्नुहोस्",

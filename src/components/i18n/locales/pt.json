@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Pressione Enter para continuar com uma página vazia ou escolha um modelo (use ↑ e ↓ para selecionar)",
   "tools.database.cardTitle": "Título do cartão",
   "tools.database.close": "Fechar",
+  "tools.database.closeSidePeek": "Fechar pré-visualização lateral",
   "tools.database.peekBack": "Voltar",
   "tools.database.addIcon": "Adicionar ícone",
   "tools.database.addCover": "Adicionar capa",

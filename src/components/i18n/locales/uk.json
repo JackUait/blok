@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Натисніть Enter, щоб продовжити з порожньою сторінкою, або виберіть шаблон (використовуйте ↑ і ↓ для вибору)",
   "tools.database.cardTitle": "Назва картки",
   "tools.database.close": "Закрити",
+  "tools.database.closeSidePeek": "Закрити бічний перегляд",
   "tools.database.peekBack": "Назад",
   "tools.database.addIcon": "Додати іконку",
   "tools.database.addCover": "Додати обкладинку",

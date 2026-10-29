@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Apăsați Enter pentru a continua cu o pagină goală sau alegeți un șablon (folosiți ↑ și ↓ pentru a selecta)",
   "tools.database.cardTitle": "Titlul cardului",
   "tools.database.close": "Închide",
+  "tools.database.closeSidePeek": "Închide previzualizarea laterală",
   "tools.database.peekBack": "Înapoi",
   "tools.database.addIcon": "Adaugă o pictogramă",
   "tools.database.addCover": "Adaugă o copertă",

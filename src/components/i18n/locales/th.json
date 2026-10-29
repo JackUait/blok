@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "กด Enter เพื่อดำเนินการต่อด้วยหน้าเปล่า หรือ เลือกเทมเพลต (ใช้ ↑ และ ↓ เพื่อเลือก)",
   "tools.database.cardTitle": "ชื่อการ์ด",
   "tools.database.close": "ปิด",
+  "tools.database.closeSidePeek": "ปิดมุมมองด้านข้าง",
   "tools.database.peekBack": "ย้อนกลับ",
   "tools.database.addIcon": "เพิ่มไอคอน",
   "tools.database.addCover": "เพิ่มภาพปก",

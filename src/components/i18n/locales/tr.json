@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Boş sayfayla devam etmek için Enter'a basın veya şablon seçin (seçmek için ↑ ve ↓ tuşlarını kullanın)",
   "tools.database.cardTitle": "Kart başlığı",
   "tools.database.close": "Kapat",
+  "tools.database.closeSidePeek": "Yan önizlemeyi kapat",
   "tools.database.peekBack": "Geri",
   "tools.database.addIcon": "Simge ekle",
   "tools.database.addCover": "Kapak ekle",

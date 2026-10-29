@@ -675,6 +675,7 @@
   "tools.database.rowBodyPickTemplate": "ಖಾಲಿ ಪುಟದೊಂದಿಗೆ ಮುಂದುವರಿಯಲು Enter ಒತ್ತಿ, ಅಥವಾ ಟೆಂಪ್ಲೇಟ್ ಆಯ್ಕೆಮಾಡಿ (ಆಯ್ಕೆ ಮಾಡಲು ↑ ಮತ್ತು ↓ ಬಳಸಿ)",
   "tools.database.cardTitle": "ಕಾರ್ಡ್ ಶೀರ್ಷಿಕೆ",
   "tools.database.close": "ಮುಚ್ಚಿ",
+  "tools.database.closeSidePeek": "ಪಕ್ಕದ ಮುನ್ನೋಟ ಮುಚ್ಚಿ",
   "tools.database.peekBack": "ಹಿಂದೆ",
   "tools.database.addIcon": "ಐಕಾನ್ ಸೇರಿಸಿ",
   "tools.database.addCover": "ಕವರ್ ಸೇರಿಸಿ",

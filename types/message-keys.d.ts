@@ -694,6 +694,7 @@ export type BlokMessageKey =
   | 'tools.database.checkboxChecked'
   | 'tools.database.checkboxUnchecked'
   | 'tools.database.close'
+  | 'tools.database.closeSidePeek'
   | 'tools.database.colorAddAnother'
   | 'tools.database.colorApplyProperty'
   | 'tools.database.colorApplyRow'

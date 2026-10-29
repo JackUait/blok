@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Vajuta sisestusklahvi (Enter), et jätkata tühja lehega, või vali mall (kasuta valimiseks ↑ ja ↓)",
   "tools.database.cardTitle": "Kaardi pealkiri",
   "tools.database.close": "Sulge",
+  "tools.database.closeSidePeek": "Sulge külgvaade",
   "tools.database.peekBack": "Tagasi",
   "tools.database.addIcon": "Lisa ikoon",
   "tools.database.addCover": "Lisa kaanepilt",

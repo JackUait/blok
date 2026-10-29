@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "خالی صفحے کے ساتھ جاری رکھنے کے لیے Enter دبائیں، یا ٹیمپلیٹ منتخب کریں (منتخب کرنے کے لیے ↑ اور ↓ استعمال کریں)",
   "tools.database.cardTitle": "کارڈ کا عنوان",
   "tools.database.close": "بند کریں",
+  "tools.database.closeSidePeek": "سائیڈ پیک بند کریں",
   "tools.database.peekBack": "واپس",
   "tools.database.addIcon": "آئیکن شامل کریں",
   "tools.database.addCover": "کور شامل کریں",

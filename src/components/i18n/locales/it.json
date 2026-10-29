@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Premi Invio per continuare con una pagina vuota oppure scegli un modello (usa ↑ e ↓ per selezionare)",
   "tools.database.cardTitle": "Titolo della scheda",
   "tools.database.close": "Chiudi",
+  "tools.database.closeSidePeek": "Chiudi anteprima laterale",
   "tools.database.peekBack": "Indietro",
   "tools.database.addIcon": "Aggiungi icona",
   "tools.database.addCover": "Aggiungi copertina",

@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Shtyp Enter për të vazhduar me një faqe boshe ose zgjidh një shabllon (përdor ↑ dhe ↓ për të zgjedhur)",
   "tools.database.cardTitle": "Titulli i kartës",
   "tools.database.close": "Mbyll",
+  "tools.database.closeSidePeek": "Mbyll pamjen anësore",
   "tools.database.peekBack": "Prapa",
   "tools.database.addIcon": "Shto ikonë",
   "tools.database.addCover": "Shto kopertinë",

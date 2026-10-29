@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "හිස් පිටුවකින් ඉදිරියට යාමට Enter ඔබන්න, නැතහොත් සැකිල්ලක් තෝරන්න (තේරීමට ↑ සහ ↓ භාවිත කරන්න)",
   "tools.database.cardTitle": "කාඩ්පත් මාතෘකාව",
   "tools.database.close": "වසන්න",
+  "tools.database.closeSidePeek": "පැති පෙරදසුන වසන්න",
   "tools.database.peekBack": "ආපසු",
   "tools.database.addIcon": "නිරූපකයක් එක් කරන්න",
   "tools.database.addCover": "කවරයක් එක් කරන්න",

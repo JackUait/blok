@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "ખાલી પાના સાથે ચાલુ રાખવા માટે Enter દબાવો, અથવા નમૂનો પસંદ કરો (પસંદ કરવા માટે ↑ અને ↓ નો ઉપયોગ કરો)",
   "tools.database.cardTitle": "કાર્ડનું શીર્ષક",
   "tools.database.close": "બંધ કરો",
+  "tools.database.closeSidePeek": "બાજુનું પૂર્વાવલોકન બંધ કરો",
   "tools.database.peekBack": "પાછળ",
   "tools.database.addIcon": "આઇકન ઉમેરો",
   "tools.database.addCover": "કવર ઉમેરો",

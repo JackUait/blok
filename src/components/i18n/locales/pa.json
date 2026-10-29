@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "ਖਾਲੀ ਪੰਨੇ ਨਾਲ ਜਾਰੀ ਰੱਖਣ ਲਈ Enter ਦਬਾਓ, ਜਾਂ ਟੈਂਪਲੇਟ ਚੁਣੋ (ਚੁਣਨ ਲਈ ↑ ਅਤੇ ↓ ਵਰਤੋ)",
   "tools.database.cardTitle": "ਕਾਰਡ ਦਾ ਸਿਰਲੇਖ",
   "tools.database.close": "ਬੰਦ ਕਰੋ",
+  "tools.database.closeSidePeek": "ਪਾਸੇ ਦੀ ਝਲਕ ਬੰਦ ਕਰੋ",
   "tools.database.peekBack": "ਪਿੱਛੇ",
   "tools.database.addIcon": "ਆਈਕਨ ਜੋੜੋ",
   "tools.database.addCover": "ਕਵਰ ਜੋੜੋ",

@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "ശൂന്യ പേജുമായി തുടരാൻ Enter അമർത്തുക, അല്ലെങ്കിൽ ഒരു ടെംപ്ലേറ്റ് തിരഞ്ഞെടുക്കുക (തിരഞ്ഞെടുക്കാൻ ↑, ↓ എന്നിവ ഉപയോഗിക്കുക)",
   "tools.database.cardTitle": "കാർഡ് ശീർഷകം",
   "tools.database.close": "അടയ്ക്കുക",
+  "tools.database.closeSidePeek": "വശത്തെ പ്രിവ്യൂ അടയ്ക്കുക",
   "tools.database.peekBack": "പിന്നോട്ട്",
   "tools.database.addIcon": "ഐക്കൺ ചേർക്കുക",
   "tools.database.addCover": "കവർ ചേർക്കുക",

@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "ހުސް ޞަފްޙާއަކާއެކު ކުރިއަށް ދިއުމަށް Enter ފިތާލާ، ނުވަތަ ޓެމްޕްލޭޓެއް ޚިޔާރުކުރޭ (ޚިޔާރުކުރުމަށް ↑ އާއި ↓ ބޭނުންކުރޭ)",
   "tools.database.cardTitle": "ކާޑް ސުރުޚީ",
   "tools.database.close": "ބަންދު",
+  "tools.database.closeSidePeek": "ސައިޑް ޕީކް ބަންދުކުރޭ",
   "tools.database.peekBack": "ފަހަތަށް",
   "tools.database.addIcon": "އައިކަން އިތުރުކުރޭ",
   "tools.database.addCover": "ކަވަރު އިތުރުކުރޭ",

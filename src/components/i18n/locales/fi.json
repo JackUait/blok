@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "Jatka tyhjällä sivulla painamalla Enter tai valitse mallipohja (käytä valintaan ↑ ja ↓)",
   "tools.database.cardTitle": "Kortin otsikko",
   "tools.database.close": "Sulje",
+  "tools.database.closeSidePeek": "Sulje sivunäkymä",
   "tools.database.peekBack": "Takaisin",
   "tools.database.addIcon": "Lisää kuvake",
   "tools.database.addCover": "Lisää kansikuva",

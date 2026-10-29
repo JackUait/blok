@@ -662,6 +662,7 @@
   "tools.database.rowBodyPickTemplate": "برای ادامه با صفحه خالی، Enter را بزنید یا یک الگو انتخاب کنید (برای انتخاب از ↑ و ↓ استفاده کنید)",
   "tools.database.cardTitle": "عنوان کارت",
   "tools.database.close": "بستن",
+  "tools.database.closeSidePeek": "بستن پیش‌نمایش کناری",
   "tools.database.peekBack": "بازگشت",
   "tools.database.addIcon": "افزودن نماد",
   "tools.database.addCover": "افزودن جلدنگاره",

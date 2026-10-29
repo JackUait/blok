@@ -673,6 +673,7 @@
   "tools.database.rowBodyPickTemplate": "Притиснете Enter за да продолжите со празна страница или изберете шаблон (користете ↑ и ↓ за избор)",
   "tools.database.cardTitle": "Наслов на картичка",
   "tools.database.close": "Затвори",
+  "tools.database.closeSidePeek": "Затвори го страничниот преглед",
   "tools.database.peekBack": "Назад",
   "tools.database.addIcon": "Додај икона",
   "tools.database.addCover": "Додај насловна слика",

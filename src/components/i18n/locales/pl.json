@@ -664,6 +664,7 @@
   "tools.database.rowBodyPickTemplate": "Naciśnij Enter, aby kontynuować z pustą stroną, lub wybierz szablon (użyj ↑ i ↓, aby wybrać)",
   "tools.database.cardTitle": "Tytuł karty",
   "tools.database.close": "Zamknij",
+  "tools.database.closeSidePeek": "Zamknij podgląd boczny",
   "tools.database.peekBack": "Wstecz",
   "tools.database.addIcon": "Dodaj ikonę",
   "tools.database.addCover": "Dodaj okładkę",

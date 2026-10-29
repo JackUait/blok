@@ -780,6 +780,7 @@
   "tools.database.rowBodyPickTemplate": "Press ‘enter’ to continue with an empty page, or pick a template (use ↑ and ↓ to select)",
   "tools.database.cardTitle": "Card title",
   "tools.database.close": "Close",
+  "tools.database.closeSidePeek": "Close side peek",
   "tools.database.peekBack": "Back",
   "tools.database.addIcon": "Add icon",
   "tools.database.addCover": "Add cover",

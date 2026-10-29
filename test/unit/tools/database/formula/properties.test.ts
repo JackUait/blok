@@ -90,8 +90,13 @@ describe('formula properties', () => {
   describe('empty propagation', () => {
     it('propagates an empty number through arithmetic', () => {
       expect(run('prop("Price") + 1')).toBeNull();
-      expect(run('prop("Price") * 2')).toBeNull();
       expect(run('round(prop("Price"))')).toBeNull();
+    });
+
+    // notion-spec-2 §18.1: `prop("Number") * 2` on a row with no Number shows "0". Only `*` was measured.
+    it('multiplies an empty number as 0', () => {
+      expect(run('prop("Price") * 2')).toBe(0);
+      expect(run('2 * prop("Price")')).toBe(0);
     });
 
     it('treats empty as empty, false and blank text', () => {

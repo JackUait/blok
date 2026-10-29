@@ -26,7 +26,6 @@ const ordered = (a: FormulaValue, b: FormulaValue): boolean => a !== null && b !
 const arithmetic = (op: string, a: number, b: number): number => {
   switch (op) {
     case '-': return a - b;
-    case '*': return a * b;
     case '/': return a / b;
     case '%': return a % b;
     default: return a ** b;
@@ -120,8 +119,14 @@ const evaluateBinary = (
 
       return typeof a === 'number' && typeof b === 'number' ? num(a + b) : null;
     }
+    // notion-spec-2 §18.1: an empty side of `*` counts as 0. The other operators are unmeasured, so they keep empty.
+    case '*': {
+      const x = a ?? 0;
+      const y = b ?? 0;
+
+      return typeof x === 'number' && typeof y === 'number' ? num(x * y) : null;
+    }
     case '-':
-    case '*':
     case '/':
     case '%':
     case '^':

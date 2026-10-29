@@ -45,7 +45,8 @@ describe('ComputedProperties', () => {
       const rows = engine.apply(schema, [row('r1', { amount: 3 }), row('r2', {})], { databaseId: 'db', now: NOW });
 
       expect(valueOf(rows, 'r1', double)).toBe(6);
-      expect(valueOf(rows, 'r2', double)).toBeNull();
+      // notion-spec-2 §18.1: an empty Number times 2 is 0.
+      expect(valueOf(rows, 'r2', double)).toBe(0);
       expect(rows[0].properties).toEqual({ amount: 3 });
     });
 

@@ -61,6 +61,8 @@ describe('buildServerRuntime', () => {
     expect(readdirSync(outDir)).toEqual(['blok-server-runtime.js']);
     expect(source).toContain('blokServerInvoke');
     expect(source).not.toMatch(/\bimport\s*\(/);
+    // Only parse5's entity decoder needed atob; nothing in the runtime calls it now.
+    expect(source).not.toContain('atob');
   });
 
   /**
@@ -170,7 +172,7 @@ describe('buildServerRuntime', () => {
     expect(output).toBe('{"document":{"blocks":[{"id":"A","type":"page","data":{"pageId":"P","__proto__":{"keep":"me"}},"tunes":{"__proto__":{"t":1}}}]}}');
   });
 
-  /** parse5 decodes entities through `atob`, which the bare realm lacks. */
+  /** HTML fields are parsed, and their references decoded, with no host global to lean on. */
   it('converts HTML fields to segments in a realm with no host globals', async () => {
     const outputPath = await buildServerRuntime(outDir);
     const source = readFileSync(outputPath, 'utf8');

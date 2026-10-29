@@ -881,6 +881,51 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).not.toHaveBeenCalled();
     });
 
+    // notion-spec-2 §18.3: a click on a formula cell opens "Edit formula".
+    describe('a click on a formula cell', () => {
+      const formulaSchema: PropertyDefinition[] = [schema[0], { id: 'p-fx', name: 'Fx', type: 'formula', position: 'b0', formula: { expression: '1 + 1' } }];
+      const withEditFormula = (): TableHandlers => ({ ...makeHandlers(), editFormula: vi.fn() });
+
+      it('opens the formula editor at the cell', () => {
+        const { root, handlers } = mount({ schema: formulaSchema, rows: [row('r1', 'Alpha')], handlers: withEditFormula() });
+
+        cell(root, 'r1', 'p-fx').click();
+
+        expect(handlers.editFormula).toHaveBeenCalledTimes(1);
+        expect(handlers.editFormula).toHaveBeenCalledWith('p-fx', cell(root, 'r1', 'p-fx'));
+      });
+
+      it('opens nothing for a reader', () => {
+        const { root, handlers } = mount({ readOnly: true, schema: formulaSchema, rows: [row('r1', 'Alpha')], handlers: withEditFormula() });
+
+        cell(root, 'r1', 'p-fx').click();
+
+        expect(handlers.editFormula).not.toHaveBeenCalled();
+      });
+
+      it('leaves an ID cell opening nothing', () => {
+        const { root, handlers } = mount({
+          schema: [...formulaSchema, { id: 'p-id', name: 'ID', type: 'uniqueId', position: 'b1' }],
+          rows: [row('r1', 'Alpha', { 'p-id': 7 })],
+          handlers: withEditFormula(),
+        });
+
+        cell(root, 'r1', 'p-id').click();
+
+        expect(handlers.editFormula).not.toHaveBeenCalled();
+        expect(editor()).toBeNull();
+      });
+
+      it('copies, not edits, from the hover Copy button', () => {
+        const { root, handlers } = mount({ schema: formulaSchema, rows: [{ ...row('r1', 'Alpha'), computed: { 'p-fx': 2 } }], handlers: withEditFormula() });
+
+        cell(root, 'r1', 'p-fx').querySelector<HTMLElement>('[data-blok-database-table-cell-action="copy"]')?.click();
+
+        expect(cell(root, 'r1', 'p-fx').querySelector('[data-blok-database-table-cell-action="copy"]')).not.toBeNull();
+        expect(handlers.editFormula).not.toHaveBeenCalled();
+      });
+    });
+
     // notion-spec-2 §19.6: arrows select an ID cell; Enter and typing there do nothing.
     it.each(['Enter', 'a', '5'])('%s on an ID cell reached by the arrows opens nothing and leaves the table free to redraw', (key) => {
       const { root, handlers, view } = mount({

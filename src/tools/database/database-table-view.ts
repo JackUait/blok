@@ -124,6 +124,8 @@ export interface TableHandlers {
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property": open that column's property menu. */
   editProperty?: (propertyId: string) => void;
+  /** A click on a formula cell opens "Edit formula" at the cell. */
+  editFormula?: (propertyId: string, cell: HTMLElement) => void;
   /** A rollup cell's "Configure rollup" hover button. Without it the button is not shown. */
   configureRollup?: (propertyId: string, cell: HTMLElement) => void;
   /** The date picker's format rows. Returns undefined where the property may not change. Drawn on editEnded. */
@@ -435,6 +437,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
           : {}),
         ...(this.handlers?.editProperty !== undefined
           ? { editProperty: (propertyId: string) => this.handlers?.editProperty?.(propertyId) }
+          : {}),
+        ...(this.handlers?.editFormula !== undefined
+          ? { editFormula: (propertyId: string, cell: HTMLElement) => this.handlers?.editFormula?.(propertyId, cell) }
           : {}),
         dateDisplayChanger: (propertyId: string) => this.handlers?.dateDisplayChanger?.(propertyId),
       },

@@ -66,6 +66,8 @@ export interface GridCallbacks {
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property" footer. */
   editProperty?: (propertyId: string) => void;
+  /** A click on a formula cell: Notion opens "Edit formula" (notion-spec-2 §18.3). */
+  editFormula?: (propertyId: string, cell: HTMLElement) => void;
   /** The date picker's format rows write the property. Undefined (or none returned): the user may not edit it, no rows. */
   dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
   /** Selection changed: the view repaints checkboxes and the selection bar. */
@@ -233,6 +235,13 @@ export class DatabaseTableGrid {
     this.paint();
     if (this.readOnly) {
       this.root.focus({ preventScroll: true });
+
+      return;
+    }
+    const cell = this.cellEl(ref);
+
+    if (this.columns.find((p) => p.id === ref.propertyId)?.type === 'formula' && cell !== null && this.callbacks.editFormula !== undefined) {
+      this.callbacks.editFormula(ref.propertyId, cell);
 
       return;
     }

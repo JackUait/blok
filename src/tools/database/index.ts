@@ -7281,6 +7281,7 @@ export class DatabaseTool implements BlockTool {
       moveRowTo: (rowId, databaseId) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
       updateView: (changes) => { if (writable()) this.updateActiveView(changes, context); },
+      editFormula: (propertyId, cell) => { if (writable() && !this.structureLocked()) this.openFormulaEditor(propertyId, cell); },
       openPropertyMenu: (propertyId, anchor) => { if (writable()) this.openPropertyMenu(propertyId, anchor, table?.(), context); },
       addProperty: (anchor, placement) => { if (writable()) this.openAddProperty(anchor, placement, undefined, context); },
       viewAction: (action, propertyId, anchor) => { if (writable()) this.onTableViewAction(action, propertyId, anchor, context); },

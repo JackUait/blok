@@ -662,7 +662,64 @@ describe('formula editor', () => {
 
       expect(document.querySelector(row)?.getAttribute('aria-selected')).toBe('true');
       expect(text('[data-blok-database-formula-help-name]')).toBe('if()');
-      expect(document.querySelector('[data-blok-database-formula-help-description]')).toBeNull();
+      expect(text('[data-blok-database-formula-help-description]')).toBe('tools.database.formulaHelp.if');
+    });
+
+    const examples = (): Array<{ code: string; result: string | null }> =>
+      [...document.querySelectorAll('[data-blok-database-formula-help-example]')].map((box) => ({
+        code: box.querySelector('[data-blok-database-formula-help-code]')?.textContent ?? '',
+        result: box.querySelector('[data-blok-database-formula-help-result]')?.textContent ?? null,
+      }));
+
+    // notion-spec-2 §25.1 (`32-formula-typed.png`): "*" reads a one-line description, then two examples with their results.
+    it('describes an operator with a sentence and two worked examples', () => {
+      open();
+      type('prop("Amount") * 2');
+
+      expect(text('[data-blok-database-formula-help-name]')).toBe('*');
+      expect(text('[data-blok-database-formula-help-description]')).toBe('tools.database.formulaHelp.opMultiply');
+      expect(examples()).toEqual([{ code: '4 * 5', result: '= 20' }, { code: '1.5 * 4', result: '= 6' }]);
+    });
+
+    it('describes a function the pointer moves to', () => {
+      open();
+      type('');
+      document.querySelector('[data-blok-database-formula-reference-item][data-name="upper()"]')
+        ?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+      expect(text('[data-blok-database-formula-help-description]')).toBe('tools.database.formulaHelp.upper');
+      expect(document.querySelector('[data-blok-database-formula-help-name] [data-blok-database-formula-reference-icon]')).toBeNull();
+      expect(examples()).toEqual([
+        { code: 'upper("hello")', result: '= "HELLO"' },
+        { code: 'upper("Blok")', result: '= "BLOK"' },
+      ]);
+    });
+
+    it('leaves the result out of an example that depends on the clock', () => {
+      open();
+      type('now');
+
+      expect(examples().map((example) => example.result)).toEqual([null, null]);
+    });
+
+    // `32-formula-typed.png`: each example box has a copy button at its right.
+    it('copies an example without taking focus from the formula', async () => {
+      const writeText = vi.fn(() => Promise.resolve());
+
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      open();
+      type('prop("Amount") * 2');
+      const copy = document.querySelector<HTMLElement>('[data-blok-database-formula-help-copy]');
+      const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+
+      copy?.dispatchEvent(press);
+      copy?.click();
+      await Promise.resolve();
+
+      expect(press.defaultPrevented).toBe(true);
+      expect(copy?.getAttribute('aria-label')).toBe('tools.database.cellCopy');
+      expect(writeText).toHaveBeenCalledWith('4 * 5');
+      vi.unstubAllGlobals();
     });
   });
 

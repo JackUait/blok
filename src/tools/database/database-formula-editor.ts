@@ -1,10 +1,11 @@
 import type { I18n } from '../../../types';
-import { IconCheck, IconCheckbox, IconChevronDown, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
+import { IconCheck, IconCheckbox, IconChevronDown, IconCopy, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
 import { propertyTypeMeta } from './database-property-types';
 import { FormulaField, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
-import { FORMULA_FUNCTION_GROUPS, fitsAfter } from './database-formula-catalog';
+import { FORMULA_FUNCTION_GROUPS, FORMULA_HELP, FORMULA_OPERATORS, FORMULA_VALUES, fitsAfter } from './database-formula-catalog';
 import { formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
+import type { FormulaExample } from './database-formula-catalog';
 import type { CompileResult, FormulaType } from './formula';
 import type { PropertyDefinition } from './types';
 
@@ -40,8 +41,9 @@ interface Reference {
   kind: 'property' | 'function';
   /** The glyph: a property's type, or an operator's result. */
   icon?: { kind: string; svg: string };
-  /** The help pane's line under the name. Built-ins have none yet. */
+  /** The help pane's line under the name. */
   description?: string;
+  examples?: readonly FormulaExample[];
 }
 
 /**
@@ -53,19 +55,6 @@ const typeLabel = (type: FormulaType | null): string => {
 
   return type.kind;
 };
-
-/**
- * notion-spec-2 §25.1 (`32-formula-typed.png`): Built-ins open with these ten, # for
- * arithmetic and a checkbox for comparisons. `%` and `^` still parse; Notion lists neither.
- */
-const OPERATORS: ReadonlyArray<[string, 'number' | 'boolean']> = [
-  ['*', 'number'], ['/', 'number'], ['+', 'number'], ['-', 'number'],
-  ['>', 'boolean'], ['>=', 'boolean'], ['<', 'boolean'], ['<=', 'boolean'],
-  ['==', 'boolean'], ['!=', 'boolean'],
-];
-
-/** notion-spec-2 §25.1 (`formula-empty.txt`): Built-ins of an empty formula. */
-const VALUES: ReadonlyArray<[string, string]> = [['not', 'not '], ['true', 'true'], ['false', 'false']];
 
 const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
@@ -423,32 +412,47 @@ class FormulaEditor implements FormulaEditorHandle {
         icon: { kind: p.type, svg: propertyTypeMeta(p.type).icon },
         // `C8-formula-open.png`: "URL property."
         description: this.options.i18n.t('tools.database.formulaPropertyHelp', { type: this.options.i18n.t(propertyTypeMeta(p.type).labelKey) }),
+        examples: [{ code: `prop(${quote(p.name)})` }],
       }));
   }
 
   /** notion-spec-2 §25.1: the operators after an operand, else not, true and false. */
   private builtIns(afterOperand: boolean): Reference[] {
     if (afterOperand) {
-      return OPERATORS.map(([op, result]): Reference => ({
+      return FORMULA_OPERATORS.map(([op, result]): Reference => ({
         name: op,
         label: op,
         insert: ` ${op} `,
         kind: 'function',
         icon: { kind: result, svg: result === 'number' ? IconHash : IconCheckbox },
+        ...this.helpOf(op),
       }));
     }
 
-    return VALUES.map(([word, insert]): Reference => ({
+    return FORMULA_VALUES.map(([word, insert]): Reference => ({
       name: word,
       label: word,
       insert,
       kind: 'function',
       icon: { kind: 'boolean', svg: IconCheckbox },
+      ...this.helpOf(word),
     }));
   }
 
   private functions(names: readonly string[]): Reference[] {
-    return names.map((name): Reference => ({ name: `${name}()`, label: `${name}()`, insert: `${name}(`, kind: 'function' }));
+    return names.map((name): Reference => ({
+      name: `${name}()`,
+      label: `${name}()`,
+      insert: `${name}(`,
+      kind: 'function',
+      ...this.helpOf(`${name}()`),
+    }));
+  }
+
+  private helpOf(name: string): Pick<Reference, 'description' | 'examples'> {
+    const entry = FORMULA_HELP[name] as typeof FORMULA_HELP[string] | undefined;
+
+    return entry === undefined ? {} : { description: this.options.i18n.t(entry.key), examples: entry.examples };
   }
 
   /** The type of the text before the caret, when it compiles: only functions it fits follow it. */
@@ -507,17 +511,45 @@ class FormulaEditor implements FormulaEditorHandle {
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML = ref.icon?.svg ?? '';
     label.textContent = ref.label;
-    name.append(icon, label);
+    name.append(...(ref.icon === undefined ? [] : [icon]), label);
     this.help.append(name);
     if (ref.description === undefined) return;
     const description = document.createElement('div');
-    const example = document.createElement('code');
 
     description.setAttribute('data-blok-database-formula-help-description', '');
     description.textContent = ref.description;
-    example.setAttribute('data-blok-database-formula-help-example', '');
-    renderFormulaInto(example, ref.insert, this.options.schema);
-    this.help.append(description, example);
+    this.help.append(description, ...(ref.examples ?? []).map((example) => this.renderExample(example)));
+  }
+
+  /** notion-spec-2 §25.1 (`32-formula-typed.png`): the code, "= result" under it, a copy button at the right. */
+  private renderExample({ code, result }: FormulaExample): HTMLElement {
+    const box = document.createElement('div');
+    const source = document.createElement('div');
+    const copy = document.createElement('button');
+
+    box.setAttribute('data-blok-database-formula-help-example', '');
+    source.setAttribute('data-blok-database-formula-help-code', '');
+    renderFormulaInto(source, code, this.options.schema);
+    box.append(source);
+    if (result !== undefined) {
+      const line = document.createElement('div');
+
+      line.setAttribute('data-blok-database-formula-help-result', '');
+      line.textContent = `= ${result}`;
+      box.append(line);
+    }
+    copy.type = 'button';
+    copy.setAttribute('data-blok-database-formula-help-copy', '');
+    copy.setAttribute('aria-label', this.options.i18n.t('tools.database.cellCopy'));
+    copy.innerHTML = IconCopy;
+    // The formula field keeps the caret.
+    copy.addEventListener('mousedown', (event) => event.preventDefault());
+    copy.addEventListener('click', () => {
+      void navigator.clipboard?.writeText(code).catch(() => undefined);
+    });
+    box.append(copy);
+
+    return box;
   }
 
   private renderItem(ref: Reference): HTMLElement {

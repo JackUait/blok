@@ -1415,6 +1415,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // A lazy sheet's marker rule in main.css is longer than the @import it replaces.
     const LAZY_SHEET_MARKER_BYTES = ['fonts', 'database', 'block-preview', 'presence']
       .reduce((sum, name) => sum + `[data-blok-sheet='${name}'] { --blok-sheet: ${name}; }`.length - `@import './${name}.css';`.length, 0);
+    // database.css: Edit formula help examples with "= result" and a copy button (notion-spec-2 §25.1).
+    const DATABASE_FORMULA_HELP_EXAMPLES_BYTES = 851;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1767,7 +1769,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_RELATION_LINKED_PITCH_BYTES
       + DATABASE_FORMULA_PREVIEW_PICKER_BYTES
       + DATABASE_VIEW_CONTENT_INSET_BYTES
-      + LAZY_SHEET_MARKER_BYTES;
+      + LAZY_SHEET_MARKER_BYTES
+      + DATABASE_FORMULA_HELP_EXAMPLES_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

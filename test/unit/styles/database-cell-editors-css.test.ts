@@ -61,6 +61,14 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-formula-input]:empty::before', 'content')).toEqual(['attr(data-placeholder)']);
     });
 
+    // notion-spec-2 §25.1 (`32-formula-typed.png`): an example box holds its code, "= result" under it, and a copy button at the right.
+    it('puts an example\'s copy button at the right of its code and result', () => {
+      expect(declared('[data-blok-database-formula-help-example]', 'grid-template-columns')).toEqual(['minmax(0, 1fr) auto']);
+      expect(declared('[data-blok-database-formula-help-copy]', 'grid-column')).toEqual(['2']);
+      expect(declared('[data-blok-database-formula-help-copy]', 'grid-row')).toEqual(['1 / span 2']);
+      expect(declared('[data-blok-database-formula-help-copy]:hover', 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+    });
+
     it('highlights the active row gray, never blue', () => {
       expect(declared('[data-blok-database-formula-reference-item][aria-selected="true"]', 'background-color'))
         .toEqual(['var(--blok-database-hover-bg)']);

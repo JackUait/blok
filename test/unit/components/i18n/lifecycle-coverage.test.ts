@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1930 + 136 + 519 + 4 closure for all 2589 keys', () => {
+  it('rebuilds a disjoint 2035 + 136 + 519 + 4 closure for all 2694 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2589);
+    expect(lifecycle.size).toBe(2694);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -484,7 +484,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Edit formula lost its Done button (formulaDone) and gained "Discard all changes" and "Debug mode", by literal.
       // +1: the table's CLOSE hint "Close side peek" (tools.database.closeSidePeek), by literal.
       // +3: the Edit formula list's General, People and pages, and Lists group headings, by literal.
-      'executable-literal': 1930,
+      // +105: the Edit formula help pane's one-line description of every operator, value and function, by literal.
+      'executable-literal': 2035,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

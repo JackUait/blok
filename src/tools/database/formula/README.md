@@ -208,6 +208,10 @@ Formulas saved in a document also run on the server, when an agent reads the row
 
 Notion's pages do not quote their editor's error text, so every message here is Blok's own wording (**unverified**). Each error carries the `start`/`end` offsets of the offending source, an English `message`, and a `code` with `params`. Show `code` through i18n: the key is `tools.database.formula.error.<code>` (`formulaErrorKey`), and `params` fill its `{placeholders}`. `FORMULA_ERROR_CODES` lists every code; `errors.test.ts` fails when one has no English string.
 
+## Editor help
+
+The Edit formula box lists the functions in groups: General, Text, Number and Date in Notion's measured order (notion-spec-2 §25.1), then People and pages, and Lists, which are Blok's own. `../database-formula-catalog.ts` holds the groups and, for every row, a one-line description (`tools.database.formulaHelp.<name>`) and two examples. The descriptions and examples are Blok's own wording. Each example's result is written down there, and `database-formula-catalog.test.ts` checks it against this engine in three time zones. An example whose result depends on the clock, the row or styling shows no result. A new function fails that test until it gets a group, a description and two examples.
+
 ## Conflicts in the sources
 
 - H-fxs's examples share one clock: `timestamp(now())` = `1693443300000` (2023-08-31T00:55Z). They are true in America/Los_Angeles (`format(now())` = "August 30, 2023 17:55", `parseDate("2022-01-01T00:00Z")` = Dec 31, 2021 4:00 PM, `fromTimestamp(1689024900000)` = 2:35 PM), except `hour(parseDate("2023-07-10T17:35Z"))` = `17`, which only holds in UTC. Tests pin each example in the zone that makes it true.

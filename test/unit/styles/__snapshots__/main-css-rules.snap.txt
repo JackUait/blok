@@ -16640,6 +16640,10 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-formula-help-example] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--blok-space-2);
   min-height: 44px;
   padding: var(--blok-space-2);
   border: 1px solid var(--blok-database-tpl-border);
@@ -16647,6 +16651,37 @@ textarea[data-blok-database-cell-input] {
   background: transparent;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   font-size: 12px;
+}
+
+[data-blok-database-formula-help-code], [data-blok-database-formula-help-result] {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-formula-help-copy] {
+  display: inline-flex;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-formula-help-copy]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-formula-help-copy] svg {
+  width: 14px;
+  height: 14px;
 }
 
 [data-blok-database-cell="formula"], [data-blok-database-cell="rollup"] {

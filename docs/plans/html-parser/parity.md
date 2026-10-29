@@ -26,6 +26,7 @@ Verdict: **better than the original.** Every must-have is done, outputs match pa
 | A name that needs `;` but lacks it (`&Gdot `) | decodes it and eats the next character (bug in its `entities@8.0.0`) | leaves it as text, as the spec says | keep: bug fix, release-note line |
 | An attribute like `&centerdot` | decodes `&cent` | leaves it literal (attribute rule) | keep: bug fix |
 | 64k distinct attributes on one tag | 1,146 ms (quadratic dedupe) | 6 ms | keep |
+| A tree 20k levels deep | parses, then the serializer overflows | parses and serializes | keep |
 
 ## Speed and size (measured, see the session report)
 
@@ -44,4 +45,6 @@ Verdict: **better than the original.** Every must-have is done, outputs match pa
    - deep nesting is quadratic in parse time.
    - A node or depth cap would change output versus the spec.
 2. **Sanitizer configs that allow `svg` and `style`/`script` together allow mXSS.** No shipped config does this, but a custom tool config could. Option: never keep raw-text elements inside SVG/MathML.
-3. **The serializer recurses once per nesting level.** It overflows at about 2.5k–9k levels, about the same as parse5. The parser itself handles 20k.
+3. **Deep nesting in the sanitizer and in `htmlToBlocks`** still recurses once per level, as before.
+   - The parser and the serializer both handle 20k levels. The serializer was fixed in 462b3575.
+   - Jint turns a stack overflow into a catchable error.

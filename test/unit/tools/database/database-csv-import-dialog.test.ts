@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { openCsvImportDialog } from '../../../../src/tools/database/database-csv-import-dialog';
 import type { CsvColumnTarget, CsvImportSettings, CsvMergeTarget } from '../../../../src/tools/database/database-csv';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
-import { IconChevronUpDown } from '../../../../src/components/icons';
+import { IconChevronUpDown, IconPageEmpty } from '../../../../src/components/icons';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 
 /** An icon string as the DOM serializes it once it is set as innerHTML. */
@@ -246,6 +246,16 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
       expect(headerCells()).toEqual(['Name', 'Due', 'Amount', 'Site', 'Email', 'Done', 'Stage']);
       expect(column(0)).toEqual(['Alpha', 'Bravo', 'Charlie']);
       expect(column(1)).toEqual(['March 4, 2026', 'March 5, 2026', 'March 6, 2026']);
+    });
+
+    // notion-spec-2 §18.1: a title shows Notion's pageEmpty, a page with no text lines.
+    it('draws the empty page before each title', async () => {
+      open();
+      await choose(R27, 'blok-r27.csv');
+      byTestId('database-csv-map')?.click();
+      const titleIcons = [...(preview()?.querySelectorAll('tbody tr') ?? [])].map((tr) => tr.querySelector('td svg')?.outerHTML);
+
+      expect(titleIcons).toEqual(Array(3).fill(markup(IconPageEmpty).trim()));
     });
 
     it('follows the mapping: a skipped column leaves, a Person column empties', async () => {

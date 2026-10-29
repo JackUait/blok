@@ -4,6 +4,7 @@ import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card
 import type { CardDrawerOptions, DrawerBacklink } from '../../../../src/tools/database/database-card-drawer';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
+import { IconPageEmpty } from '../../../../src/components/icons';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: vi.fn(function stubBlok() {
@@ -120,6 +121,22 @@ describe('row page backlinks', () => {
 
     expect(bravo.open).toHaveBeenCalledTimes(1);
     expect(plans.open).not.toHaveBeenCalled();
+    drawer.destroy();
+  });
+
+  // notion-spec-2 §18.1: a page with no emoji shows Notion's pageEmpty, not a page with text lines.
+  it('draws the empty page before a linked page with no emoji', () => {
+    const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => [link('r2', 'Bravo')] }));
+    const holder = document.createElement('span');
+
+    holder.innerHTML = IconPageEmpty;
+    drawer.open(ROW);
+    button()?.click();
+
+    const paths = (root: ParentNode | null | undefined): Array<string | null> => [...root?.querySelectorAll('path') ?? []].map((path) => path.getAttribute('d'));
+    const page = document.querySelector('[data-blok-popover-item][data-blok-item-name^="backlink-"] [data-blok-database-backlink-icon] > :last-child');
+
+    expect(paths(page)).toEqual(paths(holder));
     drawer.destroy();
   });
 

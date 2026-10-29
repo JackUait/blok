@@ -11,7 +11,7 @@ import {
   IconEyeClosed,
   IconFile,
   IconMoveRight,
-  IconPage,
+  IconPageEmpty,
   IconPlus,
   IconTable,
 } from '../../components/icons';
@@ -121,7 +121,7 @@ const skeleton = (): HTMLElement => {
 const previewCell = (property: PropertyDefinition, value: PropertyValue | undefined, locale: string): HTMLTableCellElement => {
   const cell = el('td', 'data-blok-database-csv-preview-cell');
 
-  if (property.type === 'title') cell.appendChild(icon(IconPage));
+  if (property.type === 'title') cell.appendChild(icon(IconPageEmpty));
   if (OPTION_TYPES.has(property.type)) {
     const options = property.config?.options ?? [];
     const labels = personIdsOf(value ?? null).flatMap((id) => options.filter((option) => option.id === id).map((option) => option.label));

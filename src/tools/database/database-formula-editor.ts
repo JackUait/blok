@@ -52,19 +52,22 @@ const typeLabel = (type: FormulaType | null): string => {
 };
 
 /**
- * `formula-editor.png`: Built-ins open with these, # for arithmetic and a
- * checkbox for comparisons. Notion's order after `<` is unmeasured.
+ * notion-spec-2 §25.1 (`32-formula-typed.png`): Built-ins open with these ten, # for
+ * arithmetic and a checkbox for comparisons. `%` and `^` still parse; Notion lists neither.
  */
 const OPERATORS: ReadonlyArray<[string, 'number' | 'boolean']> = [
   ['*', 'number'], ['/', 'number'], ['+', 'number'], ['-', 'number'],
   ['>', 'boolean'], ['>=', 'boolean'], ['<', 'boolean'], ['<=', 'boolean'],
-  ['==', 'boolean'], ['!=', 'boolean'], ['%', 'number'], ['^', 'number'],
+  ['==', 'boolean'], ['!=', 'boolean'],
 ];
 
 const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 /** The word the caret sits at the end of. A number is not a word: after `* 2` the whole list stays. */
 const wordBefore = (text: string, caret: number): string => /[\p{L}_$][\p{L}\p{N}_$]*$/u.exec(text.slice(0, caret))?.[0] ?? '';
+
+/** notion-spec-2 §25.1: after a number, a closed call or a string the list offers only Built-ins. */
+const endsInOperand = (text: string, caret: number): boolean => /[\p{N})"\]]\s*$/u.test(text.slice(0, caret));
 
 /**
  * Notion's formula editor (H-fx): the expression at the top, a live preview,
@@ -83,6 +86,8 @@ class FormulaEditor implements FormulaEditorHandle {
   private readonly popover: CellPopover;
   /** The row the help pane describes, by `data-name`. */
   private active: string | null = null;
+  /** Whether the list showed only Built-ins last time: a switch highlights its first row again. */
+  private builtInsOnly = false;
   private open = true;
   /** The formula as it opened: Escape on it writes nothing. */
   private readonly initial: string;
@@ -126,8 +131,7 @@ class FormulaEditor implements FormulaEditorHandle {
     close.setAttribute('data-blok-database-formula-close', '');
     close.setAttribute('aria-label', t('tools.database.close'));
     close.innerHTML = IconCross;
-    // What Notion's × does to a typed formula is unmeasured; it saves, as Escape does.
-    close.addEventListener('click', () => this.escape());
+    close.addEventListener('click', () => this.leave(true));
     head.append(title, close);
     this.root.append(head, this.input, this.renderPreviewArea(), this.error, this.renderPanes(), done);
 
@@ -144,13 +148,16 @@ class FormulaEditor implements FormulaEditorHandle {
       // notion-spec-2 §18.3: the Edit formula box is 740 wide, and kept inside the window (bottom at window − 12).
       minWidth: '740px',
       cover: true,
-      onEscape: () => this.escape(),
-      onDismiss: () => this.finish(false),
+      onEscape: () => this.leave(true),
+      // §25.1 (39-after-outside.png): a click outside keeps the typed formula.
+      onDismiss: () => this.leave(false),
     });
     this.refresh();
     this.popover.show();
     this.input.focus();
     this.field.setCaret(this.initial.length);
+    // The list depends on the text before the caret, which was unset at the first render.
+    this.renderReference();
   }
 
   close(): void {
@@ -164,14 +171,17 @@ class FormulaEditor implements FormulaEditorHandle {
     this.options.onClose?.();
   }
 
-  /** notion-spec-2 §18.3: Escape saves the typed formula. One that does not compile closes unsaved (unmeasured). */
-  private escape(): void {
+  /**
+   * notion-spec-2 §18.3, §25.1: Escape, × and a click outside all save the typed formula.
+   * One that does not compile closes unsaved (unmeasured).
+   */
+  private leave(closePopover: boolean): void {
     const compiled = this.options.compile(this.field.value);
 
     if (this.field.value !== this.initial && compiled.ok) {
       this.options.onSave(serializeFormula(compiled.formula));
     }
-    this.finish(true);
+    this.finish(closePopover);
   }
 
   /** "Preview with <row>" over the output and its "Type: …" badge. */
@@ -298,7 +308,9 @@ class FormulaEditor implements FormulaEditorHandle {
   }
 
   private renderReference(): void {
-    const word = wordBefore(this.field.value, this.field.caret()).toLowerCase();
+    const caret = this.field.caret();
+    const word = wordBefore(this.field.value, caret).toLowerCase();
+    const afterOperand = word === '' && endsInOperand(this.field.value, caret);
     const matches = (ref: Reference): boolean => word === '' || ref.label.toLowerCase().startsWith(word);
     const section = (labelKey: string, refs: Reference[]): HTMLElement[] => {
       const shown = refs.filter(matches);
@@ -313,12 +325,15 @@ class FormulaEditor implements FormulaEditorHandle {
       return [label, ...shown.map((ref) => this.renderItem(ref))];
     };
 
-    const shown = [...this.properties(), ...this.builtIns()].filter(matches);
+    if (afterOperand !== this.builtInsOnly) this.active = null;
+    this.builtInsOnly = afterOperand;
+    const properties = afterOperand ? [] : this.properties();
+    const shown = [...properties, ...this.builtIns()].filter(matches);
     const active = shown.find((ref) => ref.name === this.active) ?? shown.at(0);
 
     this.active = active?.name ?? null;
     this.list.replaceChildren(
-      ...section('tools.database.propertiesSection', this.properties()),
+      ...section('tools.database.propertiesSection', properties),
       ...section('tools.database.formulaBuiltIns', this.builtIns())
     );
     this.renderHelp(active);

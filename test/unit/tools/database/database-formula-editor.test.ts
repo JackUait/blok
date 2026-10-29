@@ -3,6 +3,7 @@ import { openFormulaEditor } from '../../../../src/tools/database/database-formu
 import type { FormulaEditorOptions } from '../../../../src/tools/database/database-formula-editor';
 import { compileFormula } from '../../../../src/tools/database/formula';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
+import { pressOutside } from './cells/helpers';
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -288,6 +289,30 @@ describe('formula editor', () => {
     });
   });
 
+  // notion-spec-2 §25.1 (39-after-outside.png): a click outside keeps the typed formula.
+  describe('click outside', () => {
+    it('saves a changed formula and closes', async () => {
+      const options = open();
+
+      type('prop("Amount") + 1');
+      pressOutside();
+      await Promise.resolve();
+
+      expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
+      expect(document.querySelector('[data-blok-database-formula-editor]')).toBeNull();
+    });
+
+    it('closes without saving a formula that fails to compile', async () => {
+      const options = open();
+
+      type('1 +');
+      pressOutside();
+      await Promise.resolve();
+
+      expect(options.onSave).not.toHaveBeenCalled();
+    });
+  });
+
   it('puts a new line on Shift+Enter', () => {
     const options = open();
 
@@ -325,6 +350,32 @@ describe('formula editor', () => {
     type('prop("Amount") * 2');
 
     expect(document.querySelectorAll('[data-blok-database-formula-reference-item]').length).toBeGreaterThan(0);
+  });
+
+  const labels = (): Array<string | null> =>
+    [...document.querySelectorAll('[data-blok-database-formula-reference-label]')].map((el) => el.textContent);
+  const items = (): Array<string | null> =>
+    [...document.querySelectorAll('[data-blok-database-formula-reference-item]')].map((el) => el.getAttribute('data-name'));
+
+  // notion-spec-2 §25.1 (32-formula-typed.png): after an operand the list starts at Built-ins, with the operators that fit.
+  it('starts at Built-ins with the ten operators after a number', () => {
+    open();
+    type('prop("Amount") * 2');
+
+    expect(labels()[0]).toBe('tools.database.formulaBuiltIns');
+    expect(labels()).not.toContain('tools.database.propertiesSection');
+    expect(items().slice(0, 10)).toEqual(['*', '/', '+', '-', '>', '>=', '<', '<=', '==', '!=']);
+    expect(items()).not.toContain('%');
+    expect(items()).not.toContain('^');
+    expect(document.querySelector('[data-blok-database-formula-reference-item][aria-selected="true"]')?.getAttribute('data-name')).toBe('*');
+  });
+
+  // notion-spec-2 §25.1 (37-reopen-saved.png): a saved formula reopens at Built-ins.
+  it('reopens a saved formula at Built-ins', () => {
+    open();
+
+    expect(labels()).toEqual(['tools.database.formulaBuiltIns']);
+    expect(document.querySelector('[data-blok-database-formula-reference-item][aria-selected="true"]')?.getAttribute('data-name')).toBe('*');
   });
 
   // `C8-formula-open.png`, `formula-editor.png`: a "Properties" section, then "Built-ins".

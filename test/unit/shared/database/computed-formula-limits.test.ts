@@ -5,7 +5,7 @@ import { ComputedProperties } from '../../../../src/shared/database/computed-pro
 import { createComputedReader } from '../../../../src/shared/database/computed-read';
 
 import type { ComputedReadBlock } from '../../../../src/shared/database/computed-read';
-import type { PropertyDefinition } from '../../../../src/shared/database/types';
+import type { DatabaseRow, PropertyDefinition } from '../../../../src/shared/database/types';
 
 const schema: PropertyDefinition[] = [
   { id: 't', name: 'Name', type: 'title', position: 'a0' },
@@ -59,7 +59,7 @@ describe('a formula past a limit', () => {
 });
 
 describe('the work of one pass over the database', () => {
-  const formulaRows = (expression: string, count: number): { schema: PropertyDefinition[]; rows: typeof rows } => ({
+  const formulaRows = (expression: string, count: number): { schema: PropertyDefinition[]; rows: DatabaseRow[] } => ({
     schema: [
       { id: 't', name: 'Name', type: 'title', position: 'a0' },
       { id: 'f', name: 'F', type: 'formula', position: 'a1', formula: { expression } },

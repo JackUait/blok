@@ -45,6 +45,7 @@ import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
 import { refreshCommentBadges } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { DatabasePropertyMenu } from './database-property-menu';
+import { openRollupSetup } from './database-rollup-setup';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
@@ -11096,6 +11097,25 @@ export class DatabaseTool implements BlockTool {
     const others = (schema: PropertyDefinition[]): boolean => schema.some((p) => p.id !== propertyId && p.name === name);
 
     return others(this.model.getSchema()) || others(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
+  }
+
+  /**
+   * notion-spec-2 §20.11: a configured rollup's setup menu, laid over `cell`.
+   * The table's hover Configure button calls this; one object, so
+   * `block.call('openRollupSetup', …)` reaches it too. Does nothing when the
+   * property is not a rollup or its settings cannot change.
+   */
+  openRollupSetup({ cell, propertyId }: { cell: HTMLElement; propertyId: string }): void {
+    const property = this.model.getProperty(propertyId);
+
+    if (this.readOnly || this.destroyed || this.structureLocked() || property?.type !== 'rollup') return;
+    openRollupSetup(cell, property, {
+      i18n: this.api.i18n,
+      schema: () => this.model.getSchema(),
+      targetSchema: (databaseId) => (databaseId === this.dataId ? this.model.getSchema() : this.readDatabaseSource(databaseId)?.schema ?? []),
+      targetValueProperty: (databaseId, p) => (databaseId === this.dataId ? this.computedValues.valueProperty(p) : this.readDatabaseSource(databaseId)?.valueProperty?.(p) ?? p),
+      update: (patch) => this.updatePropertySettings(propertyId, patch),
+    });
   }
 
   /** Icon, description, page visibility, and the number, date, status and ID settings. */

@@ -2,7 +2,7 @@ import { parseDateValue } from './date-value';
 import { computeCalculation } from './database-calculations';
 import { filesOf, personIdsOf, statusGroupOf, statusGroupsOf } from './value-helpers';
 import { relationIdsOf } from './relation-values';
-import type { PropertyDefinition, PropertyValue, RollupFunction } from './types';
+import type { PropertyDefinition, PropertySettingsV2, PropertyValue, RollupFunction, RollupSettings } from './types';
 
 /** Every Notion API rollup function, in the help page's menu order. */
 export const ROLLUP_FUNCTIONS: readonly RollupFunction[] = [
@@ -23,6 +23,24 @@ export const inheritedRollupFormat = (rollup: Pick<PropertyDefinition, 'number'>
   const format = target?.type === 'number' ? target.number?.format : undefined;
 
   return format === undefined || rollup.number?.format !== undefined ? {} : { number: { ...rollup.number, format } };
+};
+
+/** A rollup's settings, or the blank ones of an unset rollup. */
+export const rollupSettingsOf = (rollup: Pick<PropertyDefinition, 'rollup'>): RollupSettings =>
+  rollup.rollup ?? { relationPropertyId: '', targetPropertyId: '', function: 'show_original' };
+
+/** The write for a new target: it brings a Number target's format (§14.10). */
+export const rollupTargetPatch = (rollup: Pick<PropertyDefinition, 'rollup' | 'number'>, target: PropertyDefinition): Partial<PropertySettingsV2> =>
+  ({ rollup: { ...rollupSettingsOf(rollup), targetPropertyId: target.id }, ...inheritedRollupFormat(rollup, target) });
+
+/** The write for a new calculation: it puts Show as back on Number (notion-spec-2 §15.3). */
+export const rollupFunctionPatch = (rollup: Pick<PropertyDefinition, 'rollup' | 'number'>, fn: RollupFunction): Partial<PropertySettingsV2> => {
+  const settings = rollupSettingsOf(rollup);
+
+  if (fn === settings.function || rollup.number?.showAs === undefined) return { rollup: { ...settings, function: fn } };
+  const { showAs: _showAs, ...number } = rollup.number;
+
+  return { rollup: { ...settings, function: fn }, number };
 };
 
 /** The property a rollup's value displays, sorts and filters as. */

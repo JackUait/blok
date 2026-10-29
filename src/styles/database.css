@@ -2788,6 +2788,27 @@ button[data-blok-database-column-count]:hover {
 
 /* Notion's row page property menu: 8px separators, 197px tall. */
 
+/* notion-spec-2 §20.11, §18.3 and notion-live-3/rollup-editor.png: 180x214 for Relation, Property and
+   Calculate. Labels 12px in, a rule inset 12px from each side and 8px under a row (which keeps its 1px
+   margin). 180 is a floor: the unset menu is 224.7. The list's own 4px pads the top and bottom. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-rollup-setup'] > [data-blok-popover-container] {
+  min-width: 180px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-rollup-setup'] > [data-blok-popover-container] [data-blok-database-rollup-setup-label] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) 10px;
+  color: var(--blok-database-ink-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14.4px;
+  cursor: default;
+  user-select: none;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-rollup-setup'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1-5);
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
 }

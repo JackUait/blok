@@ -6259,6 +6259,24 @@ button[data-blok-database-column-count]:hover {
   margin-inline: var(--blok-space-0-25);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-rollup-setup'] > [data-blok-popover-container] {
+  min-width: 180px;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-rollup-setup'] > [data-blok-popover-container] [data-blok-database-rollup-setup-label] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) 10px;
+  color: var(--blok-database-ink-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14.4px;
+  cursor: default;
+  user-select: none;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-rollup-setup'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+  padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1-5);
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
 }

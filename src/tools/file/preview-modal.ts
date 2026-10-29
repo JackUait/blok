@@ -252,7 +252,7 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 
   const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
 
-  // PDFs render in a sandboxed iframe with no browser chrome of their own — give
+  // The PDF iframe is not sandboxed and has no browser chrome of its own — give
   // readers a one-click escape into a full browser tab with native zoom/print.
   const openHref = kind === 'pdf' ? safePreviewSrc(opts.url) : null;
   if (openHref !== null) {

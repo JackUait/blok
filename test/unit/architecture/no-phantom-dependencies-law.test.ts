@@ -129,43 +129,26 @@ function tsconfigAliases(): string[] {
 
 const ALIASES = tsconfigAliases();
 
-const IMPORT_PATTERNS = [
-  /(?:^|[\s;}])import\s+[^'"]*?from\s*['"]([^'"]+)['"]/g,
-  /(?:^|[\s;}])import\s*['"]([^'"]+)['"]/g,
-  /(?:^|[\s;}])export\s+[^'"]*?from\s*['"]([^'"]+)['"]/g,
-  /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-];
-
 /**
- * Extracts bare package names imported by a source file.
+ * Extracts bare package names imported by a source file: static imports and
+ * re-exports, `require('x')`, and `import('x')` with a literal argument.
  *
- * Deliberately excludes dynamic `import()` with a non-literal argument — those
- * cannot be resolved statically, and a false positive here would be worse than
- * a miss.
+ * TypeScript's own scanner, not regexes: it knows where comments and strings
+ * end, so a `/*` inside a line comment (a glob like `src/yjs/*`) cannot hide
+ * the imports that follow it.
  *
  * @param source - file contents
  * @returns package names imported by the file
  */
 function importedPackages(source: string): string[] {
-  const withoutComments = source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    // Line comments, but never the `//` inside a URL (`https://…`), which would
-    // truncate the line and let a stray apostrophe swallow the rest of the file.
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
-  const found = new Set<string>();
-
   const isAlias = (name: string): boolean =>
     ALIASES.some((alias) => name === alias || name.startsWith(`${alias}/`));
 
-  for (const pattern of IMPORT_PATTERNS) {
-    const names = [...withoutComments.matchAll(pattern)]
-      .map((match) => toPackageName(match[1]))
-      .filter((name): name is string => name !== null && !isAlias(name));
+  const names = ts.preProcessFile(source, true, true).importedFiles
+    .map(({ fileName }) => toPackageName(fileName))
+    .filter((name): name is string => name !== null && !isAlias(name));
 
-    names.forEach((name) => found.add(name));
-  }
-
-  return [...found];
+  return [...new Set(names)];
 }
 
 /**
@@ -268,7 +251,7 @@ describe('LAW: no phantom dependencies', () => {
     });
 
     expect(violations, `Phantom dependencies found:\n${violations.join('\n')}`).toEqual([]);
-  });
+  }, 30_000);
 
   it('detects a phantom import when one exists', () => {
     // Mutation guard: proves the detector actually fires. Uses a synthetic
@@ -279,5 +262,16 @@ describe('LAW: no phantom dependencies', () => {
     const found = importedPackages(synthetic).filter((name) => !declared.has(name));
 
     expect(found).toEqual(['zz-blok-law-not-a-real-package']);
+  });
+
+  it('still sees imports after a line comment that contains a glob like a/*', () => {
+    const source = [
+      '// lives in src/modules/*',
+      `import { x } from 'zz-blok-law-not-a-real-package';`,
+      `const y = require('zz-blok-law-required');`,
+      '/** a real block comment */',
+    ].join('\n');
+
+    expect(importedPackages(source).sort()).toEqual(['zz-blok-law-not-a-real-package', 'zz-blok-law-required']);
   });
 });

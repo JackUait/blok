@@ -185,4 +185,15 @@ describe('getOrCreateBlobUrl', () => {
     expect(url1).not.toBe(url2);
     expect(cache.size).toBe(2);
   });
+
+  it('gives an SVG a data: URL, never a same-origin blob', () => {
+    const create = vi.spyOn(URL, 'createObjectURL');
+    const cache = new Map<string, string>();
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+    const url = getOrCreateBlobUrl('ppt/media/image1.svg', new TextEncoder().encode(svg), cache);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(url).toBe(`data:image/svg+xml;base64,${btoa(svg)}`);
+    expect(cache.get('ppt/media/image1.svg')).toBe(url);
+  });
 });

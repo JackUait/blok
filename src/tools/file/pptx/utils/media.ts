@@ -128,9 +128,22 @@ export function getOrCreateBlobUrl(
   let url = cache.get(mediaPath);
   if (!url) {
     const mime = getMimeType(mediaPath);
-    const blob = new Blob([data as unknown as BlobPart], { type: mime });
-    url = URL.createObjectURL(blob);
+    // A blob: URL has the page's origin, and an SVG opened in its own tab runs
+    // its scripts. A data: URL gets an opaque origin instead.
+    url = mime === 'image/svg+xml'
+      ? `data:${mime};base64,${toBase64(data instanceof Uint8Array ? data : new Uint8Array(data))}`
+      : URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: mime }));
     cache.set(mediaPath, url);
   }
   return url;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  // Spreading a whole large file into one call overflows the stack.
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }

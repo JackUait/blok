@@ -81,7 +81,10 @@ describe('a click on a table formula cell', () => {
     formulaCell()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await quiet();
 
-    expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-formula-input]')?.value).toBe('prop("Number") * 2');
+    const field = document.querySelector<HTMLElement>('[data-blok-database-formula-input]');
+
+    expect(field?.querySelector('[data-blok-database-formula-token]')?.getAttribute('data-property')).toBe('Number');
+    expect(field?.lastChild?.textContent).toBe(' * 2');
   });
 
   // notion-spec-2 §22.5: a click on Banana's cell previews "with Banana".

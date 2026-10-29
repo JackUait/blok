@@ -99,6 +99,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-form-view.ts': cmds(['database.submitForm', 'database.updateView'], 'Submit is database.submitForm: the form\'s checks, the row and forms.onSubmit. Question settings are the view\'s properties entries.'),
   'ui-file:src/tools/database/database-form-share.ts': cmds(['database.updateView'], 'Writes the form view\'s Share settings (form: closed, public, anonymous, submissionAccess), each only after a person approves it. Copying the host\'s link changes nothing.'),
   'ui-file:src/tools/database/database-formula-editor.ts': cmds(['database.updateProperty'], 'Edits a formula property: writes its formula settings.'),
+  'ui-file:src/tools/database/database-formula-field.ts': cmds(['database.updateProperty'], 'The text field of Edit formula; its text becomes the formula settings.'),
   'ui-file:src/tools/database/database-maplibre.ts': exempt('chrome', 'Draws Blok\'s map: a pin opens its row, and a map click goes to the map view\'s Add pin path, ledgered there.'),
   'ui-file:src/tools/database/database-map-view.ts': cmds(['database.addRow'], 'Add pin mode adds a row at a map point; the "No place" list only opens rows.'),
   'ui-file:src/tools/database/database-gallery-view.ts': cmds(['database.addRow', 'database.moveRow'], 'Add a card; drag a card to reorder.'),

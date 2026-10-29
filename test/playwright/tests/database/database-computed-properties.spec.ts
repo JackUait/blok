@@ -165,8 +165,11 @@ test.describe('formula', () => {
     await openFormulaEditor(page);
     const input = page.locator('[data-blok-database-formula-input]');
 
-    await expect(input).toHaveValue('prop("Amount") * 2');
+    // notion-spec-2 §22.5: the reference shows as a token.
+    await expect(input.locator('[data-blok-database-formula-token]')).toHaveAttribute('data-property', 'Amount');
+    await expect(input).toContainText('* 2');
     await input.fill('prop("Amount") + 100');
+    await expect(input.locator('[data-blok-database-formula-token]')).toHaveAttribute('data-property', 'Amount');
     await expect(page.locator('[data-blok-database-formula-preview]')).toHaveText('101');
     await input.press('Enter');
 
@@ -182,7 +185,8 @@ test.describe('formula', () => {
 
     await expect(cell(page, 'r3', 'p-double')).toHaveText('104');
     await openFormulaEditor(page);
-    await expect(page.locator('[data-blok-database-formula-input]')).toHaveValue('prop("Price") + 100');
+    await expect(page.locator('[data-blok-database-formula-input] [data-blok-database-formula-token]')).toHaveAttribute('data-property', 'Price');
+    await expect(page.locator('[data-blok-database-formula-input]')).toContainText('+ 100');
   });
 
   test('a compile error shows its message and keeps the saved formula', async ({ page }) => {

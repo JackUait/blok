@@ -26,6 +26,8 @@
   --blok-database-button-pressed-bg: rgba(33, 27, 23, 0.076);
   /* Line under a row page's properties (research/33 §4.1). */
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
+  /* `formula-editor.png` (pixels): the formula box's property token. Dark is unmeasured: the dark divider step. */
+  --blok-database-formula-token-bg: rgb(224, 222, 218);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   /* Notion's ink at 0.3 is 1.4:1 and the knob is white on a white menu, so the off state was invisible.
@@ -407,6 +409,7 @@
     --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
     --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
     --blok-database-page-divider: rgba(255, 255, 255, 0.094);
+    --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
     /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
     --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
     --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -731,6 +734,7 @@
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
   --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
+  --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
   /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -13725,12 +13729,51 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
-/* notion-spec-2 §18.3: the formula box is 716x96 in a 740 box, so 12px each side. */
-[data-blok-database-formula-input] {
-  width: auto;
+/* notion-spec-2 §18.3: the formula box is 716x96 in a 740 box, so 12px each side.
+   Doubled attribute: beats the field's flex row, so tokens flow with the text. */
+[data-blok-database-formula-input][data-blok-database-formula-input] {
+  display: block;
   min-height: 96px;
   margin: var(--blok-space-3);
+  padding: var(--blok-space-1-5) var(--blok-space-2-5);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
+  cursor: text;
+}
+
+[data-blok-database-formula-input]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--blok-search-input-placeholder);
+  pointer-events: none;
+}
+
+/* `formula-editor.png` (pixels): "# Number" is 18 tall, glyph then name, on rgb(224,222,218). */
+[data-blok-database-formula-token] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  height: 18px;
+  padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-formula-token-bg);
+  color: var(--blok-database-ink);
+  vertical-align: 1px;
+  line-height: 18px;
+  white-space: nowrap;
+  user-select: all;
+}
+
+[data-blok-database-formula-token-icon] {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-token-icon] svg {
+  width: 100%;
+  height: 100%;
 }
 
 /* `formula-editor.png` (pixels): 87 tall between two full-width lines; "Preview with" 17px in. */

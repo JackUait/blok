@@ -51,6 +51,16 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-formula-preview-area]', 'border-block')).toEqual(['1px solid var(--blok-database-page-divider)']);
     });
 
+    // `formula-editor.png` (pixels): the "# Number" token is 18 tall on rgb(224,222,218).
+    it('draws a property token as an 18px chip', () => {
+      expect(declared('[data-blok-database-formula-token]', 'height')).toEqual(['18px']);
+      expect(declared('[data-blok-database-formula-token]', 'background-color')).toEqual(['var(--blok-database-formula-token-bg)']);
+    });
+
+    it('shows "Your formula" style placeholder text while the box is empty', () => {
+      expect(declared('[data-blok-database-formula-input]:empty::before', 'content')).toEqual(['attr(data-placeholder)']);
+    });
+
     it('highlights the active row gray, never blue', () => {
       expect(declared('[data-blok-database-formula-reference-item][aria-selected="true"]', 'background-color'))
         .toEqual(['var(--blok-database-hover-bg)']);

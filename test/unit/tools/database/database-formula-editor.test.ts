@@ -41,17 +41,35 @@ const open = (overrides: Partial<FormulaEditorOptions> = {}): FormulaEditorOptio
   return options;
 };
 
-const input = (): HTMLTextAreaElement => {
-  const el = document.querySelector<HTMLTextAreaElement>('[data-blok-database-formula-input]');
+const input = (): HTMLElement => {
+  const el = document.querySelector<HTMLElement>('[data-blok-database-formula-input]');
 
   if (el === null) throw new Error('no input');
 
   return el;
 };
 
+/** Puts the caret at the end of the field, as after typing. */
+const caretAtEnd = (): void => {
+  const range = document.createRange();
+
+  range.selectNodeContents(input());
+  range.collapse(false);
+  document.getSelection()?.removeAllRanges();
+  document.getSelection()?.addRange(range);
+};
+
 const type = (text: string): void => {
-  input().value = text;
+  input().textContent = text;
+  caretAtEnd();
   input().dispatchEvent(new Event('input'));
+};
+
+const tokens = (): Array<string | null> =>
+  [...input().querySelectorAll('[data-blok-database-formula-token]')].map((el) => el.getAttribute('data-property'));
+
+const enter = (): void => {
+  input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 };
 
 const text = (selector: string): string => document.querySelector(selector)?.textContent?.trim() ?? '';
@@ -66,10 +84,70 @@ describe('formula editor', () => {
     document.body.innerHTML = '';
   });
 
-  it('shows the stored formula with property names', () => {
+  // notion-spec-2 §22.5, `formula-editor.png`: a property reference shows as a "# Number" token.
+  it('shows the stored formula with its property as a token', () => {
     open();
 
-    expect(input().value).toBe('prop("Amount") * 2');
+    expect(tokens()).toEqual(['Amount']);
+    expect(input().querySelector('[data-blok-database-formula-token]')?.getAttribute('contenteditable')).toBe('false');
+    expect(input().lastChild?.textContent).toBe(' * 2');
+  });
+
+  it('is a labelled multi-line text box', () => {
+    open();
+
+    expect(input().getAttribute('role')).toBe('textbox');
+    expect(input().getAttribute('aria-multiline')).toBe('true');
+    expect(input().getAttribute('aria-label')).toBe('tools.database.formulaLabel');
+  });
+
+  describe('tokens', () => {
+    it('turns a typed prop("Name") into a token and saves it by id', () => {
+      const options = open();
+
+      type('prop("Amount") + 1');
+      expect(tokens()).toEqual(['Amount']);
+      enter();
+
+      expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
+    });
+
+    it('leaves an unknown property as text', () => {
+      open();
+      type('prop("Nope") + 1');
+
+      expect(tokens()).toEqual([]);
+    });
+
+    it('Backspace right after a token removes it whole', () => {
+      const options = open();
+
+      type('1 + prop("Amount")');
+      caretAtEnd();
+      const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true });
+
+      input().dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(tokens()).toEqual([]);
+      expect(input().textContent).toBe('1 + ');
+      expect(options.onSave).not.toHaveBeenCalled();
+    });
+
+    it('pastes plain text, turning references into tokens', () => {
+      const options = open();
+
+      type('');
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(paste, 'clipboardData', { value: { getData: (kind: string) => (kind === 'text/plain' ? 'prop("Amount") - 1' : '<b>x</b>') } });
+      input().dispatchEvent(paste);
+
+      expect(paste.defaultPrevented).toBe(true);
+      expect(tokens()).toEqual(['Amount']);
+      enter();
+      expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} - 1');
+    });
   });
 
   it('previews the result while typing', () => {
@@ -100,7 +178,7 @@ describe('formula editor', () => {
     const options = open();
 
     type('prop("Amount") + 1');
-    input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    enter();
 
     expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
   });
@@ -109,7 +187,7 @@ describe('formula editor', () => {
     const options = open();
 
     type('1 +');
-    input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    enter();
 
     expect(options.onSave).not.toHaveBeenCalled();
   });
@@ -185,14 +263,17 @@ describe('formula editor', () => {
     });
   });
 
-  it('keeps a new line on Shift+Enter', () => {
+  it('puts a new line on Shift+Enter', () => {
     const options = open();
-    const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true });
 
-    input().dispatchEvent(event);
+    type('1 +');
+    input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
+    input().append('2');
+    input().dispatchEvent(new Event('input'));
 
-    expect(event.defaultPrevented).toBe(false);
     expect(options.onSave).not.toHaveBeenCalled();
+    enter();
+    expect(options.onSave).toHaveBeenCalledWith('1 +\n2');
   });
 
   it('lists properties and functions, filtered by the word being typed', () => {
@@ -208,7 +289,7 @@ describe('formula editor', () => {
     type('');
     document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="prop:Amount"]')?.click();
 
-    expect(input().value).toBe('prop("Amount")');
+    expect(tokens()).toEqual(['Amount']);
   });
 
   // notion-spec-2 §18.3, `formula-editor.png`: with the caret after `* 2` the list still shows Built-ins.
@@ -251,11 +332,15 @@ describe('formula editor', () => {
   });
 
   it('inserts an operator with a space on each side', () => {
-    open();
+    const options = open();
+
     type('prop("Amount")');
     document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="*"]')?.click();
+    input().append('2');
+    input().dispatchEvent(new Event('input'));
+    enter();
 
-    expect(input().value).toBe('prop("Amount") * ');
+    expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} * 2');
   });
 
   // notion-spec-2 §18.3, §22.5: "Preview with <row>", the output or "No output", and "Type: <type>".
@@ -312,7 +397,7 @@ describe('formula editor', () => {
       expect(text('[data-blok-database-formula-help-name]')).toBe('Name');
       expect(text('[data-blok-database-formula-help-description]'))
         .toBe('tools.database.formulaPropertyHelp(type=tools.database.propertyTypeTitle)');
-      expect(text('[data-blok-database-formula-help-example]')).toBe('prop("Name")');
+      expect(document.querySelector('[data-blok-database-formula-help-example] [data-blok-database-formula-token]')?.getAttribute('data-property')).toBe('Name');
     });
 
     it('follows the row under the pointer', () => {

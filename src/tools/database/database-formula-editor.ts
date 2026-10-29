@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import { IconCheckbox, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
 import { propertyTypeMeta } from './database-property-types';
+import { FormulaField, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
 import { FORMULA_FUNCTION_NAMES, formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
 import type { CompileResult, FormulaType } from './formula';
@@ -72,7 +73,8 @@ const wordBefore = (text: string, caret: number): string => /[\p{L}_$][\p{L}\p{N
  */
 class FormulaEditor implements FormulaEditorHandle {
   private readonly root = document.createElement('div');
-  private readonly input = document.createElement('textarea');
+  private readonly field: FormulaField;
+  private readonly input: HTMLElement;
   private readonly preview = document.createElement('div');
   private readonly error = document.createElement('div');
   private readonly list = document.createElement('div');
@@ -89,14 +91,14 @@ class FormulaEditor implements FormulaEditorHandle {
     const t = (key: string): string => options.i18n.t(key);
 
     this.root.setAttribute('data-blok-database-formula-editor', '');
+    this.field = new FormulaField(options.schema, () => this.refresh());
+    this.input = this.field.element;
     this.input.setAttribute('data-blok-database-formula-input', '');
     this.input.setAttribute('data-blok-field', 'text');
     this.input.setAttribute('aria-label', t('tools.database.formulaLabel'));
-    this.input.placeholder = t('tools.database.formulaPlaceholder');
-    this.input.rows = 3;
-    this.input.spellcheck = false;
-    this.input.value = formatFormulaForDisplay(options.property.formula?.expression ?? '', options.schema, options.relatedSchema ?? []);
-    this.initial = this.input.value;
+    this.input.setAttribute('data-placeholder', t('tools.database.formulaPlaceholder'));
+    this.field.value = formatFormulaForDisplay(options.property.formula?.expression ?? '', options.schema, options.relatedSchema ?? []);
+    this.initial = this.field.value;
     this.preview.setAttribute('data-blok-database-formula-preview', '');
     this.preview.setAttribute('aria-live', 'polite');
     this.error.setAttribute('data-blok-database-formula-error', '');
@@ -129,7 +131,6 @@ class FormulaEditor implements FormulaEditorHandle {
     head.append(title, close);
     this.root.append(head, this.input, this.renderPreviewArea(), this.error, this.renderPanes(), done);
 
-    this.input.addEventListener('input', () => this.refresh());
     this.input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
         event.preventDefault();
@@ -149,6 +150,7 @@ class FormulaEditor implements FormulaEditorHandle {
     this.refresh();
     this.popover.show();
     this.input.focus();
+    this.field.setCaret(this.initial.length);
   }
 
   close(): void {
@@ -164,9 +166,9 @@ class FormulaEditor implements FormulaEditorHandle {
 
   /** notion-spec-2 §18.3: Escape saves the typed formula. One that does not compile closes unsaved (unmeasured). */
   private escape(): void {
-    const compiled = this.options.compile(this.input.value);
+    const compiled = this.options.compile(this.field.value);
 
-    if (this.input.value !== this.initial && compiled.ok) {
+    if (this.field.value !== this.initial && compiled.ok) {
       this.options.onSave(serializeFormula(compiled.formula));
     }
     this.finish(true);
@@ -224,7 +226,7 @@ class FormulaEditor implements FormulaEditorHandle {
   }
 
   private save(): void {
-    const compiled = this.options.compile(this.input.value);
+    const compiled = this.options.compile(this.field.value);
 
     if (!compiled.ok) {
       this.refresh();
@@ -236,7 +238,7 @@ class FormulaEditor implements FormulaEditorHandle {
   }
 
   private refresh(): void {
-    const source = this.input.value;
+    const source = this.field.value;
     const compiled = this.options.compile(source);
 
     this.error.replaceChildren();
@@ -296,7 +298,7 @@ class FormulaEditor implements FormulaEditorHandle {
   }
 
   private renderReference(): void {
-    const word = wordBefore(this.input.value, this.input.selectionEnd).toLowerCase();
+    const word = wordBefore(this.field.value, this.field.caret()).toLowerCase();
     const matches = (ref: Reference): boolean => word === '' || ref.label.toLowerCase().startsWith(word);
     const section = (labelKey: string, refs: Reference[]): HTMLElement[] => {
       const shown = refs.filter(matches);
@@ -344,7 +346,7 @@ class FormulaEditor implements FormulaEditorHandle {
     description.setAttribute('data-blok-database-formula-help-description', '');
     description.textContent = ref.description;
     example.setAttribute('data-blok-database-formula-help-example', '');
-    example.textContent = ref.insert;
+    renderFormulaInto(example, ref.insert, this.options.schema);
     this.help.append(description, example);
   }
 
@@ -373,15 +375,10 @@ class FormulaEditor implements FormulaEditorHandle {
 
   /** Replaces the word at the caret with `text`. */
   private insert(text: string): void {
-    const value = this.input.value;
-    const caret = this.input.selectionEnd;
-    const start = caret - wordBefore(value, caret).length;
+    const caret = this.field.caret();
 
-    this.input.value = `${value.slice(0, start)}${text}${value.slice(caret)}`;
-    this.input.selectionStart = start + text.length;
-    this.input.selectionEnd = start + text.length;
     this.input.focus();
-    this.refresh();
+    this.field.replace(caret - wordBefore(this.field.value, caret).length, caret, text);
   }
 }
 

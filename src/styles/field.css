@@ -23,14 +23,14 @@
 
   /* Only the text input's focus counts: a button inside the box (submit,
      clear) must not flip it, or a mouse click empties the fill with no caret. */
-  &:is(input, textarea):focus,
+  &:is(input, textarea, [contenteditable='true']):focus,
   &:has(:is(input, textarea):focus) {
     border-color: var(--blok-popover-border);
     background-color: transparent;
   }
 
   /* After the focus rule, and as specific, so an error stays red while typing. */
-  &:is(input, textarea)[aria-invalid='true'],
+  &:is(input, textarea, [contenteditable='true'])[aria-invalid='true'],
   &:has(> :is(input, textarea)[aria-invalid='true']) {
     border-color: var(--blok-color-danger);
   }

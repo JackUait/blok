@@ -129,57 +129,63 @@ function tsconfigAliases(): string[] {
 
 const ALIASES = tsconfigAliases();
 
-/** Cheap gate: only files with `import`/`require` inside a backtick string get parsed. */
-const TEMPLATE_WITH_IMPORT = /`[^`]*\b(?:import|require)\b/;
+const IMPORT_PATTERNS = [
+  /(?:^|[\s;}`])import\s+[^'"]*?from\s*['"]([^'"]+)['"]/g,
+  /(?:^|[\s;}`])import\s*['"]([^'"]+)['"]/g,
+  /(?:^|[\s;}`])export\s+[^'"]*?from\s*['"]([^'"]+)['"]/g,
+  /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+  /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+];
+
+// One left-to-right pass over comments AND string literals, so whichever
+// starts first wins: a `/*` inside a `//` comment (a glob like `src/yjs/*`)
+// or inside a string cannot open a block comment and hide the code after it.
+const COMMENT_OR_STRING = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\[\s\S]|[^`\\])*`/g;
 
 /**
- * The text of every template literal in a file. Build scripts hand code to a
- * bundler this way (esbuild `stdin.contents`), and its imports resolve like
- * any other, so they must be declared too.
+ * Drops comments. Keeps template literals whole (bundler input), and keeps a
+ * quoted string only if it could be a specifier: one with a space or a
+ * bracket is prose or sample code, like `'import x from "y"'` in a test.
  *
- * @param source - file contents
- * @returns template texts, with `${…}` holes left empty
+ * @param token - one COMMENT_OR_STRING match
+ * @returns what the import patterns should see in its place
  */
-function templateTexts(source: string): string[] {
-  const texts: string[] = [];
-  const visit = (node: ts.Node): void => {
-    if (ts.isNoSubstitutionTemplateLiteral(node)) {
-      texts.push(node.text);
-    } else if (ts.isTemplateExpression(node)) {
-      texts.push([node.head.text, ...node.templateSpans.map((span) => span.literal.text)].join(''));
-    }
+const keepCodeAndSpecifiers = (token: string): string => {
+  if (token.startsWith('/')) {
+    return '';
+  }
 
-    ts.forEachChild(node, visit);
-  };
-
-  // Parsing is the slow part, so most files skip it.
-  return TEMPLATE_WITH_IMPORT.test(source)
-    ? (visit(ts.createSourceFile('scan.ts', source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS)), texts)
-    : texts;
-}
+  return token.startsWith('`') || !/[\s()]/.test(token) ? token : "''";
+};
 
 /**
  * Extracts bare package names imported by a source file: static imports and
- * re-exports, `require('x')`, `import('x')` with a literal argument, and the
- * same inside template literals (see templateTexts).
+ * re-exports, `require('x')` and `import('x')` with a literal argument.
  *
- * TypeScript's own scanner, not regexes: it knows where comments and strings
- * end, so a `/*` inside a line comment (a glob like `src/yjs/*`) cannot hide
- * the imports that follow it.
+ * Strings are kept, so the code build scripts hand to a bundler in a template
+ * literal (esbuild `stdin.contents`) is checked too. Regexes, not the
+ * TypeScript scanner: `ts.preProcessFile` over the whole repo is about ten
+ * times slower, and on CI it took 14s of this test's budget.
  *
  * @param source - file contents
  * @returns package names imported by the file
  */
 function importedPackages(source: string): string[] {
+  const withoutComments = source.replace(COMMENT_OR_STRING, keepCodeAndSpecifiers);
+  const found = new Set<string>();
+
   const isAlias = (name: string): boolean =>
     ALIASES.some((alias) => name === alias || name.startsWith(`${alias}/`));
 
-  const names = [source, ...templateTexts(source)]
-    .flatMap((text) => ts.preProcessFile(text, true, true).importedFiles)
-    .map(({ fileName }) => toPackageName(fileName))
-    .filter((name): name is string => name !== null && !isAlias(name));
+  for (const pattern of IMPORT_PATTERNS) {
+    const names = [...withoutComments.matchAll(pattern)]
+      .map((match) => toPackageName(match[1]))
+      .filter((name): name is string => name !== null && !isAlias(name));
 
-  return [...new Set(names)];
+    names.forEach((name) => found.add(name));
+  }
+
+  return [...found];
 }
 
 /**
@@ -357,8 +363,7 @@ describe('LAW: no phantom dependencies', () => {
 
   it('sees imports inside a template literal handed to a bundler', () => {
     const source = [
-      'await build({ stdin: { contents: `',
-      `import React from 'zz-blok-law-in-template';`,
+      'await build({ stdin: { contents: `import React from \'zz-blok-law-in-template\';',
       'export const x = ${value};',
       '` } });',
     ].join('\n');

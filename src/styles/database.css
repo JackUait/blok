@@ -6532,8 +6532,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   margin-inline-end: var(--blok-space-1-5);
 }
 
-/* §20.2: 18px on a gallery card. */
-[data-blok-database-gallery-property] :is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+/* §19.17, §20.2: 18px on a gallery card, Person included. */
+[data-blok-database-gallery-property] :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
   width: 18px;
   height: 18px;
 }

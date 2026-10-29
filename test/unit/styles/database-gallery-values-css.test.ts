@@ -47,6 +47,14 @@ describe('gallery card values', () => {
   });
 
   // notion-spec-2 §22.1 (A-gallery.png): an unwrapped card URL stays on one line; the card clips a long host.
+  // notion-spec-2 §19.16, §19.17, §20.2: every person avatar on a gallery card is 18x18, Person included.
+  it('draws every card person avatar 18x18', () => {
+    const body = ruleBody('[data-blok-database-gallery-property] :is([data-blok-database-person-avatar], [data-blok-database-person-initial])');
+
+    expect(body).toMatch(/width:\s*18px/);
+    expect(body).toMatch(/height:\s*18px/);
+  });
+
   it('keeps an unwrapped card URL on one line', () => {
     expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"]')).toMatch(/white-space:\s*nowrap/);
     expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link]')).toMatch(/white-space:\s*nowrap/);

@@ -50,6 +50,8 @@ new HTMLJanitor({ tags: GOLDEN_CONFIGS[config] ?? GOLDEN_ODD_CONFIGS[config], ..
   - There the tag name is lowercase `script`, so the engine's `SCRIPT` check misses it and keeps what is inside.
 - `clobbering-form`: the input has a `<form>` holding a control whose `name` or `id` is one of the form's own members (`nextSibling`, `attributes`…).
   - Browsers let that control shadow the member; jsdom does not. The new engine drops such a form whole.
+- `unsafe-url-attr`: a URL attribute other than `href`/`src` (`xlink:href`, `action`, `background`…) keeps a `javascript:`/`vbscript:`/`data:` value.
+  - The new engine removes it; Blok's URL pass only ever checked `href` and `src`.
 - `throws`: the engine threw.
 
 A hazard entry is not a target to copy. The new engine may differ there on purpose.

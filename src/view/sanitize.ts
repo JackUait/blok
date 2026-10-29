@@ -39,7 +39,7 @@ import {
 } from '../shared/inline-normalization-policy';
 import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
 import { repairSurrogates } from './html-text';
-import { hasUnsafeUrlProtocol } from '../shared/url-policy';
+import { hasUnsafeUrlProtocol, OTHER_URL_ATTRIBUTES } from '../shared/url-policy';
 
 /**
  * Block/inline tag lists copied from the DOM cleaner — they drive its
@@ -444,8 +444,13 @@ const resolveRule = (rule: SanitizerRule | undefined, node: HtmlElement): RuleRe
  * @param decision - attribute decision from {@link resolveRule}
  */
 const filterAttributes = (node: HtmlElement, decision: AttrDecision): void => {
-  // Event handlers never survive, whatever the rule says (as in html-cleaner.ts).
-  replaceAttrs(node, node.attrs.filter((attr) => !attr.name.toLowerCase().startsWith('on')));
+  // As in html-cleaner.ts: event handlers never survive, whatever the rule
+  // says, nor a script URL in a URL attribute other than href/src.
+  replaceAttrs(node, node.attrs.filter((attr) => {
+    const name = attr.name.toLowerCase();
+
+    return !name.startsWith('on') && !(OTHER_URL_ATTRIBUTES.has(name) && hasUnsafeUrlProtocol(attr.value, name));
+  }));
 
   if (decision.kind === 'all') {
     return;

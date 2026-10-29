@@ -299,6 +299,19 @@ describe('sanitizer', () => {
         expect(clean('<b onclick="alert(1)" class="c" ONMOUSEOVER="x()">b</b>', { b: true })).toBe('<b class="c">b</b>');
       });
 
+      it.each([
+        [ '<svg><a xlink:href="javascript:alert(1)">x</a></svg>', { svg: true, a: true } ],
+        [ '<table background="javascript:alert(1)"><tbody><tr><td>x</td></tr></tbody></table>', { table: true, tbody: true, tr: true, td: true } ],
+        [ '<form action="javascript:alert(1)"><button formaction=" JaVaScRiPt:alert(1)">x</button></form>', { form: true, button: true } ],
+        [ '<svg><a><animate attributeName="href" to="javascript:alert(1)"></animate>x</a></svg>', { svg: true, a: true, animate: true } ],
+      ] as const)('drops a script URL from any URL attribute: %s', (html, config) => {
+        expect(clean(html, config as unknown as SanitizerConfig)).not.toMatch(/javascript:/i);
+      });
+
+      it('keeps a safe URL in those attributes', () => {
+        expect(clean('<table background="https://example.com/bg.png"></table>', { table: true })).toBe('<table background="https://example.com/bg.png"></table>');
+      });
+
       it('drops on* attributes even when the config lists them', () => {
         expect(clean('<b onclick="alert(1)">b</b>', { b: { onclick: true } })).toBe('<b>b</b>');
       });

@@ -42,6 +42,11 @@ describe('view sanitizeHtmlFragment', () => {
       expect(sanitizeHtmlFragment('<b onclick="x()" class="c">b</b>', { b: () => true })).toBe('<b class="c">b</b>');
     });
 
+    it('drops a script URL from URL attributes other than href/src', () => {
+      expect(sanitizeHtmlFragment('<table background="javascript:alert(1)" title="t"></table>', { table: () => true }))
+        .toBe('<table title="t"></table>');
+    });
+
     it('drops attributes named like Object.prototype keys', () => {
       const result = sanitizeHtmlFragment('<b constructor="1" __proto__="2" tostring="3">b</b>', { b: {} });
 

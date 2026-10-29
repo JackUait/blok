@@ -3,7 +3,8 @@
  * which it replaced, on everything `test/fixtures/html-cleaner` records, except
  * for these deliberate fixes:
  * - rules are read by own key only (`<constructor>` used to get `Object` as its rule);
- * - `on*` attributes never survive, whatever the rule says;
+ * - `on*` attributes never survive, whatever the rule says, nor a script URL
+ *   in a URL attribute other than `href`/`src` (`xlink:href`, `action`, …);
  * - an allowed `<template>` has its content cleaned too (html-janitor never looked inside);
  * - script/style text is dropped in any namespace, not only HTML;
  * - a `null` rule acts as `{}` instead of throwing on the first attribute;
@@ -18,6 +19,8 @@
  * it: an element whose visit changed nothing is not visited again, so a rule
  * that reads its siblings or parent can see them stale.
  */
+
+import { hasUnsafeUrlProtocol, OTHER_URL_ATTRIBUTES } from '../../shared/url-policy';
 
 import { isClobbered } from './dom-clobbering';
 
@@ -60,7 +63,7 @@ const siblingAfter = (node: ChildNode): ChildNode | null => Reflect.get<Node, 'n
 const rejectsAttribute = (attribute: Attr, allowed: unknown, node: Element): boolean => {
   const name = attribute.name.toLowerCase();
 
-  if (name.startsWith('on')) {
+  if (name.startsWith('on') || (OTHER_URL_ATTRIBUTES.has(name) && hasUnsafeUrlProtocol(attribute.value, name))) {
     return true;
   }
 

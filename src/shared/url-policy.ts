@@ -18,6 +18,16 @@ export const DATA_SCHEME_PATTERN = /^data:/i;
 export const BLOB_SCHEME_PATTERN = /^blob:/i;
 
 /**
+ * Attributes a browser follows as a URL, besides `href`/`src`, which the URL
+ * passes check on their own. `to`/`from`/`values`/`by` are SVG animation
+ * values: `<animate attributeName="href" to="javascript:…">` rewrites a link.
+ */
+export const OTHER_URL_ATTRIBUTES: ReadonlySet<string> = new Set([
+  'xlink:href', 'action', 'formaction', 'background', 'poster', 'cite', 'data', 'codebase', 'longdesc',
+  'lowsrc', 'dynsrc', 'ping', 'to', 'from', 'values', 'by',
+]);
+
+/**
  * Check whether a URL resolves to a script-capable scheme once the characters
  * browsers ignore during scheme resolution are removed — closes the
  * whitespace-smuggling class ("java\nscript:", "v\tbscript:", …).

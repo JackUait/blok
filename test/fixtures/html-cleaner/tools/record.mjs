@@ -97,6 +97,10 @@ const hazardsOf = (input, result) => {
     .filter((el) => el.localName === 'svg' || el.localName === 'math')
     .some((el) => el.querySelector('script, style') !== null);
   if (hasForeignRawText) tags.push('foreign-script-text');
+  // A script or data URL in a URL attribute other than href/src (Blok's URL pass checks those two).
+  const OTHER_URL_ATTRIBUTES = ['xlink:href', 'action', 'formaction', 'background', 'poster', 'cite', 'data', 'codebase', 'longdesc', 'lowsrc', 'dynsrc', 'ping', 'to', 'from', 'values', 'by'];
+  const isScriptUrl = (value) => /^(javascript|vbscript|data):/i.test(value.replace(/[\u0000-\u0020]/g, ''));
+  if (outEls.some((el) => Array.from(el.attributes).some((a) => OTHER_URL_ATTRIBUTES.includes(a.name.toLowerCase()) && isScriptUrl(a.value)))) tags.push('unsafe-url-attr');
   // Input-based: a <form> whose controls (name or id) shadow one of its members.
   // jsdom does not shadow them, browsers do; the new engine drops such forms whole.
   const isClobberingForm = (form) => Array.from(form.querySelectorAll('[name], [id]'))

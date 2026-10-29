@@ -5,6 +5,7 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { cleanHtml, type CleanerTags } from '../../../../src/components/utils/html-cleaner';
+import { hasUnsafeUrlProtocol, OTHER_URL_ATTRIBUTES } from '../../../../src/shared/url-policy';
 import { GOLDEN_CONFIGS, GOLDEN_ODD_CONFIGS } from '../../../fixtures/html-cleaner/configs';
 
 interface GoldenEntry {
@@ -47,8 +48,8 @@ const run = (entry: GoldenEntry): Deviation => {
 };
 
 /**
- * Holes the old engine left in its output: an event handler (also inside
- * template content, which it never cleaned) or a `<constructor>` tag that got
+ * Holes the old engine left in its output: an event handler or a script URL
+ * outside href/src (also inside template content, which it never cleaned), or a `<constructor>` tag that got
  * `Object` as its rule. Attributes named `constructor` are not holes: a bare
  * `true` rule keeps every attribute.
  * @param html - engine output
@@ -65,7 +66,9 @@ const unsafeParts = (html: string): string[] => {
 
   return elementsOf(template.content).flatMap((element) => [
     ...element.localName === 'constructor' ? [ '<constructor>' ] : [],
-    ...Array.from(element.attributes).filter(({ name }) => name.startsWith('on')).map(({ name }) => name),
+    ...Array.from(element.attributes)
+      .filter(({ name, value }) => name.startsWith('on') || (OTHER_URL_ATTRIBUTES.has(name) && hasUnsafeUrlProtocol(value, name)))
+      .map(({ name }) => name),
   ]);
 };
 

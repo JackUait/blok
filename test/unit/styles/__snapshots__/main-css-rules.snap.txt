@@ -14384,7 +14384,7 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
-[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"], [data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link] {
+[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell], [data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell] [data-blok-database-cell-link] {
   white-space: nowrap;
 }
 

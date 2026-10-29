@@ -11668,9 +11668,9 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
-/* notion-spec-2 §22.1: an unwrapped card URL stays on one line and the card clips a long host. The cell and link set pre-wrap themselves. */
-[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"],
-[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link] {
+/* notion-spec-2 §21.1, §22.1: an unwrapped card value stays on one line and the card clips it. The cell and link set pre-wrap themselves. */
+[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell],
+[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell] [data-blok-database-cell-link] {
   white-space: nowrap;
 }
 

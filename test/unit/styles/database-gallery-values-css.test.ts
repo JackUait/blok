@@ -55,8 +55,9 @@ describe('gallery card values', () => {
     expect(body).toMatch(/height:\s*18px/);
   });
 
-  it('keeps an unwrapped card URL on one line', () => {
-    expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"]')).toMatch(/white-space:\s*nowrap/);
-    expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link]')).toMatch(/white-space:\s*nowrap/);
+  // notion-spec-2 §21.1 (E8-gallery.png): "Wrap all content" is OFF on a new gallery, so a long value stays on one line, cut at the card edge.
+  it('keeps every unwrapped card value on one line, links included', () => {
+    expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
+    expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell] [data-blok-database-cell-link]')).toMatch(/white-space:\s*nowrap/);
   });
 });

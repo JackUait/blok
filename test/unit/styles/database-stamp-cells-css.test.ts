@@ -56,8 +56,9 @@ describe('time and "by" cells', () => {
     expect(avatar).toMatch(/display:\s*inline-flex/);
   });
 
+  // The gallery rule covers every person avatar, Created by and Last edited by included.
   it('draws an 18px avatar on a gallery card', () => {
-    const avatar = ruleBody(`[data-blok-database-gallery-property] ${BY} :is([data-blok-database-person-avatar], [data-blok-database-person-initial])`);
+    const avatar = ruleBody('[data-blok-database-gallery-property] :is([data-blok-database-person-avatar], [data-blok-database-person-initial])');
 
     expect(avatar).toMatch(/width:\s*18px/);
     expect(avatar).toMatch(/height:\s*18px/);

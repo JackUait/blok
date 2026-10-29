@@ -81,6 +81,12 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §19.1: the option picker is 300 wide with chips in it. A search input's natural
+  // width (about 155px) went into the box's max-content measure and pushed it to 305.
+  it('gives the option search no natural width, so chips never widen the picker', () => {
+    expect(declared('[data-blok-database-select-search]', 'width')).toEqual(['0']);
+  });
+
   // notion-spec-2 §19.16: a person's avatar is a plain circle with no ring or shadow. Notion's 100% draws
   // the same circle on a square box; the radius law spells a circle 50%.
   it.each(['[data-blok-database-person-avatar]', '[data-blok-database-person-initial]'])('draws %s as a circle with no ring', (selector) => {

@@ -10439,7 +10439,7 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-border);
 }
 
-[data-blok-database-person-search] {
+[data-blok-database-person-search], [data-blok-database-select-search] {
   width: 0;
 }
 

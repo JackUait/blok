@@ -7403,8 +7403,10 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-border);
 }
 
-/* notion-spec-2 §18.3 (b2-person-dlg.txt): 240 wide, a 38.5px head, the hint and rows like the status picker. */
-[data-blok-database-person-search] {
+/* notion-spec-2 §18.3 (b2-person-dlg.txt): 240 wide, a 38.5px head, the hint and rows like the status picker.
+   No natural width: it would count in the box's measure and widen it past 240 / 300 (§19.1). flex: 1 fills the row. */
+[data-blok-database-person-search],
+[data-blok-database-select-search] {
   width: 0;
 }
 

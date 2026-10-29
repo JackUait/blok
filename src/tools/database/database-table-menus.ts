@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import type { PopoverItemDefaultBaseParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -226,7 +226,7 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
   // Personal edits can clone the view backing this menu.
   const state = { showPageIcon: ctx.showPageIcon };
   // `name` is a variable on purpose: the agent-coverage ledger covers these rows by file.
-  const item = (name: string, titleKey: string, onActivate: () => void, icon: string): PopoverItemParams => ({
+  const item = (name: string, titleKey: string, onActivate: () => void, icon: string): PopoverItemDefaultBaseParams => ({
     type: PopoverItemType.Default,
     name,
     title: i18n.t(titleKey),

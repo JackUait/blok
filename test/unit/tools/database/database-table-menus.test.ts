@@ -166,7 +166,11 @@ describe('column header menu glyphs', () => {
   // notion-live-7/80-menu-text.png, 81-menu-*.png: Sort carries a "›"; Filter and Group do not.
   it('draws a "›" on Sort only, since Sort opens its two choices', () => {
     const items = headerViewItems(ctx('text'));
-    const chevron = (name: string): unknown => items.find((item) => 'name' in item && item.name === name)?.chevron;
+    const chevron = (name: string): unknown => {
+      const found = items.find((item) => 'name' in item && item.name === name);
+
+      return found !== undefined && 'chevron' in found ? found.chevron : undefined;
+    };
 
     expect(chevron('database-header-sort')).toBe(true);
     expect(chevron('database-header-filter')).toBeUndefined();

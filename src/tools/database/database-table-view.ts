@@ -1710,6 +1710,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       return;
     }
+    // notion-spec-2 §18.3, §20.11: a click opens the setup menu. Whether Notion also selects the cell is unmeasured.
+    if (cellEl !== null && typeof propertyId === 'string' && cellEl.getAttribute('data-type') === 'rollup' && !event.shiftKey && handlers?.configureRollup !== undefined) {
+      this.grid?.clickCell({ rowId, propertyId }, false);
+      handlers.configureRollup(propertyId, cellEl);
+
+      return;
+    }
     if (typeof propertyId === 'string') {
       this.grid?.clickCell({ rowId, propertyId }, event.shiftKey);
     }

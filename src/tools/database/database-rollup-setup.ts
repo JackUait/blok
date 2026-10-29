@@ -143,12 +143,14 @@ export const rollupSetupItems = (property: PropertyDefinition, host: RollupSetup
 const SETUP_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-rollup-setup`;
 
 /**
- * Opens the rollup setup menu over `cell`: its corner at the cell's left,
- * 2px above the row (notion-spec-2 §20.11). Its width follows its rows.
+ * Opens the rollup setup menu over `cell`, 2px above the row: at the cell's
+ * left once a relation is picked (notion-spec-2 §20.11), 6px in before
+ * (§18.3). Its width follows its rows.
  * `host.update` should redraw the cell; the menu closes on a pick.
  */
 export const openRollupSetup = (cell: HTMLElement, property: PropertyDefinition, host: RollupSetupHost): PopoverDesktop => {
   const rect = cell.getBoundingClientRect();
+  const inset = rollupSettingsOf(property).relationPropertyId === '' ? 6 : 0;
   const popover = new PopoverDesktop({
     class: SETUP_CLASS,
     trigger: cell,
@@ -156,7 +158,7 @@ export const openRollupSetup = (cell: HTMLElement, property: PropertyDefinition,
     width: 'auto',
     cover: true,
     viewportMargin: 8,
-    position: DOMRect.fromRect({ x: rect.left, y: rect.top - 2, width: 0, height: 0 }),
+    position: DOMRect.fromRect({ x: rect.left + inset, y: rect.top - 2, width: 0, height: 0 }),
     positionContext: cell,
     autoFocusFirstItem: false,
     animateClose: true,

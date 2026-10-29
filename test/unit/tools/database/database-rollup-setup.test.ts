@@ -134,6 +134,7 @@ describe('DatabaseTool.openRollupSetup', () => {
     activeViewId: 'v',
   });
   const menu = (): HTMLElement | null => document.querySelector('[data-blok-popover-custom-class~="blok-database-rollup-setup"]');
+  const relationRow = (): Element | null => menu()?.querySelector('[data-blok-item-name="rollupSetupRelation"]') ?? null;
 
   afterEach(() => {
     document.body.innerHTML = '';
@@ -172,7 +173,38 @@ describe('DatabaseTool.openRollupSetup', () => {
     expect(configure).not.toBeNull();
     configure?.click();
 
-    expect(menu()?.querySelector('[data-blok-item-name="rollupSetupRelation"]')).not.toBeNull();
+    expect(relationRow()).not.toBeNull();
+  });
+
+  it('a plain click on a configured rollup cell opens the menu (§20.11)', () => {
+    const { el } = buildDatabase(filledDoc(), 'db', data());
+
+    rollupCell(el).click();
+
+    expect(relationRow()).not.toBeNull();
+  });
+
+  it('a plain click on an unconfigured rollup cell opens the menu 6px in from the cell (§18.3)', () => {
+    const bare = data();
+
+    bare.schema[3] = { id: 'ru', name: 'Rollup', type: 'rollup', position: 'a3' };
+    const { el } = buildDatabase(filledDoc(), 'db', bare);
+    const cell = rollupCell(el);
+
+    vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 300, y: 200, width: 200, height: 37 }));
+    cell.click();
+    const popover = menu();
+
+    expect(relationRow()).not.toBeNull();
+    expect(popover?.style.left).toBe('306px');
+  });
+
+  it('a shift-click on a rollup cell opens no menu', () => {
+    const { el } = buildDatabase(filledDoc(), 'db', data());
+
+    rollupCell(el).dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+
+    expect(menu()).toBeNull();
   });
 
   it('has no Configure rollup button while the database is locked', () => {

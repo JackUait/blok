@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Màu",
   "tools.database.divideBy": "Chia cho",
   "tools.database.showNumber": "Hiện số",
+  "tools.database.urlShowFullUrl": "Hiện URL đầy đủ",
   "tools.database.numberFormat.number": "Số",
   "tools.database.numberFormat.number_with_commas": "Số có dấu phân cách",
   "tools.database.numberFormat.percent": "Phần trăm",

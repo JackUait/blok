@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Χρώμα",
   "tools.database.divideBy": "Διαίρεση με",
   "tools.database.showNumber": "Εμφάνιση αριθμού",
+  "tools.database.urlShowFullUrl": "Εμφάνιση πλήρους URL",
   "tools.database.numberFormat.number": "Αριθμός",
   "tools.database.numberFormat.number_with_commas": "Αριθμός με διαχωριστικά χιλιάδων",
   "tools.database.numberFormat.percent": "Ποσοστό",

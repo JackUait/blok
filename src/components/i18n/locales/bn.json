@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "রঙ",
   "tools.database.divideBy": "দিয়ে ভাগ করুন",
   "tools.database.showNumber": "সংখ্যা দেখান",
+  "tools.database.urlShowFullUrl": "পুরো URL দেখান",
   "tools.database.numberFormat.number": "সংখ্যা",
   "tools.database.numberFormat.number_with_commas": "বিভাজকসহ সংখ্যা",
   "tools.database.numberFormat.percent": "শতাংশ",

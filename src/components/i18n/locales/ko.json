@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "색상",
   "tools.database.divideBy": "나눌 값",
   "tools.database.showNumber": "숫자 표시",
+  "tools.database.urlShowFullUrl": "전체 URL 표시",
   "tools.database.numberFormat.number": "숫자",
   "tools.database.numberFormat.number_with_commas": "천 단위 구분 기호 숫자",
   "tools.database.numberFormat.percent": "백분율",

@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "رەڭ",
   "tools.database.divideBy": "بۆلگۈچى",
   "tools.database.showNumber": "ساننى كۆرسىتىش",
+  "tools.database.urlShowFullUrl": "تولۇق URL نى كۆرسىتىش",
   "tools.database.numberFormat.number": "سان",
   "tools.database.numberFormat.number_with_commas": "ئايرىغۇچلۇق سان",
   "tools.database.numberFormat.percent": "پىرسەنت",

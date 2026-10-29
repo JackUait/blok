@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Боја",
   "tools.database.divideBy": "Подели со",
   "tools.database.showNumber": "Прикажи број",
+  "tools.database.urlShowFullUrl": "Прикажи целосен URL",
   "tools.database.numberFormat.number": "Број",
   "tools.database.numberFormat.number_with_commas": "Број со разделувачи",
   "tools.database.numberFormat.percent": "Процент",

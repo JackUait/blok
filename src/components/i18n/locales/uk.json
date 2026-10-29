@@ -1642,6 +1642,7 @@
   "tools.database.numberColor": "Колір",
   "tools.database.divideBy": "Ділити на",
   "tools.database.showNumber": "Показувати число",
+  "tools.database.urlShowFullUrl": "Показувати повну URL-адресу",
   "tools.database.numberFormat.number": "Число",
   "tools.database.numberFormat.number_with_commas": "Число з роздільниками",
   "tools.database.numberFormat.percent": "Відсоток",

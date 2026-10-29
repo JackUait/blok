@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Kulay",
   "tools.database.divideBy": "Hatiin sa",
   "tools.database.showNumber": "Ipakita ang numero",
+  "tools.database.urlShowFullUrl": "Ipakita ang buong URL",
   "tools.database.numberFormat.number": "Numero",
   "tools.database.numberFormat.number_with_commas": "Numero na may separator",
   "tools.database.numberFormat.percent": "Porsiyento",

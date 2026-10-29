@@ -1640,6 +1640,7 @@
   "tools.database.numberColor": "Boja",
   "tools.database.divideBy": "Podijeli sa",
   "tools.database.showNumber": "Prikaži broj",
+  "tools.database.urlShowFullUrl": "Prikaži cijeli URL",
   "tools.database.numberFormat.number": "Broj",
   "tools.database.numberFormat.number_with_commas": "Broj sa separatorima",
   "tools.database.numberFormat.percent": "Postotak",

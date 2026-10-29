@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "ቀለም",
   "tools.database.divideBy": "አካፋይ",
   "tools.database.showNumber": "ቁጥር አሳይ",
+  "tools.database.urlShowFullUrl": "ሙሉ URL አሳይ",
   "tools.database.numberFormat.number": "ቁጥር",
   "tools.database.numberFormat.number_with_commas": "መለያያ ያለው ቁጥር",
   "tools.database.numberFormat.percent": "መቶኛ",

@@ -6187,6 +6187,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   white-space: inherit;
 }
 
+/* notion-spec-2 §18.1: the path after the host is grey; Show full URL drops this span (§20.7).
+   Notion's rgb(161,158,153) fails AA on white: the nearest passing tertiary ink (parity.md). */
+[data-blok-database-cell-link] > [data-blok-database-url-path] {
+  color: var(--blok-database-ink-tertiary);
+}
+
 /* Status pill: 20px, padding 0 9px 0 7px, radius 10px, 8px dot 5px before the text (research/07:97, 08).
    The pill role draws 10px on a 20px box. */
 [data-blok-database-option-pill][data-status-group] {
@@ -6457,6 +6463,27 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
+}
+
+[data-blok-database-property-menu-switch-label] {
+  flex: 1 1 auto;
+}
+
+/* Show full URL sits among the header menu's own rows (notion-spec-2 §19.21): their icon box, title start and hover. */
+[data-blok-database-property-menu-switch]:has(> [data-blok-database-property-menu-switch-icon]) {
+  gap: 10px;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-property-menu-switch]:has(> [data-blok-database-property-menu-switch-icon]):hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-property-menu-switch-icon] {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  inline-size: 24px;
 }
 
 /* research/14 §3: the taken-name error sits on its own line under the name input. */

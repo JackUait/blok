@@ -134,8 +134,8 @@ describe('property menu entries (research/08 header menus, property-level items)
     // notion-spec-2 §19.21: Files has Edit property, holding only Limit.
     ['files', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
     ['createdTime', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
-    // notion-spec-2 §19.21: URL, Created by and Last edited by have no Edit property.
-    ['url', ['changeType', 'visibility', 'duplicate', 'delete']],
+    // notion-spec-2 §19.21: URL has Show full URL in place of Edit property; Created by and Last edited by have neither.
+    ['url', ['showFullUrl', 'changeType', 'visibility', 'duplicate', 'delete']],
     ['createdBy', ['changeType', 'visibility', 'duplicate', 'delete']],
     ['lastEditedBy', ['changeType', 'visibility', 'duplicate', 'delete']],
     ['uniqueId', ['editProperty', 'visibility', 'delete']],
@@ -690,6 +690,44 @@ describe('DatabasePropertyMenu', () => {
       pick('limit-none');
 
       expect(cb.onUpdate.mock.calls).toEqual([['p', { files: { limit: 1 } }], ['p', { files: undefined }]]);
+    });
+  });
+
+  // notion-spec-2 §19.21, §20.7: a "Show full URL" switch right in the header menu, where Edit property would be.
+  describe('Show full URL', () => {
+    const toggle = (): HTMLElement => {
+      const row = byName(lastItems(), 'showFullUrl').element;
+      const found = row?.matches('[role="switch"]') === true ? row : row?.querySelector<HTMLElement>('[role="switch"]');
+
+      if (found === null || found === undefined) throw new Error('no Show full URL switch');
+
+      return found;
+    };
+
+    it('is a switch, off by default, right after the name', () => {
+      open(prop('url'));
+      const names = lastItems().map((i) => i.name ?? i.type);
+
+      expect(names.indexOf('showFullUrl')).toBe(names.indexOf('name') + 2);
+      expect(toggle().getAttribute('aria-checked')).toBe('false');
+      expect(toggle().textContent?.trim()).toBe('tools.database.urlShowFullUrl');
+      expect(toggle().querySelector('[data-blok-database-switch-track]')).not.toBeNull();
+    });
+
+    it('a click saves showFullUrl true; a second click drops the setting', () => {
+      const cb = open(prop('url'));
+
+      toggle().click();
+      expect(toggle().getAttribute('aria-checked')).toBe('true');
+      toggle().click();
+
+      expect(cb.onUpdate.mock.calls).toEqual([['p', { url: { showFullUrl: true } }], ['p', { url: undefined }]]);
+    });
+
+    it('draws a saved on as on', () => {
+      open(prop('url', { url: { showFullUrl: true } }));
+
+      expect(toggle().getAttribute('aria-checked')).toBe('true');
     });
   });
 

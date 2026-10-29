@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Գույն",
   "tools.database.divideBy": "Բաժանարար",
   "tools.database.showNumber": "Ցուցադրել թիվը",
+  "tools.database.urlShowFullUrl": "Ցուցադրել ամբողջական URL-ը",
   "tools.database.numberFormat.number": "Թիվ",
   "tools.database.numberFormat.number_with_commas": "Թիվ բաժանիչներով",
   "tools.database.numberFormat.percent": "Տոկոս",

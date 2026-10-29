@@ -1640,6 +1640,7 @@
   "tools.database.numberColor": "Боја",
   "tools.database.divideBy": "Подели са",
   "tools.database.showNumber": "Прикажи број",
+  "tools.database.urlShowFullUrl": "Прикажи цео URL",
   "tools.database.numberFormat.number": "Број",
   "tools.database.numberFormat.number_with_commas": "Број са сепараторима",
   "tools.database.numberFormat.percent": "Проценат",

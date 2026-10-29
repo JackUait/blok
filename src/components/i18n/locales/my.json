@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "အရောင်",
   "tools.database.divideBy": "စားကိန်း",
   "tools.database.showNumber": "ကိန်းဂဏန်း ပြရန်",
+  "tools.database.urlShowFullUrl": "URL အပြည့်အစုံ ပြရန်",
   "tools.database.numberFormat.number": "ကိန်းဂဏန်း",
   "tools.database.numberFormat.number_with_commas": "ပိုင်းခြားသင်္ကေတပါ ကိန်းဂဏန်း",
   "tools.database.numberFormat.percent": "ရာခိုင်နှုန်း",

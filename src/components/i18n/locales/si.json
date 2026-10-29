@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "වර්ණය",
   "tools.database.divideBy": "මෙයින් බෙදන්න",
   "tools.database.showNumber": "අංකය පෙන්වන්න",
+  "tools.database.urlShowFullUrl": "සම්පූර්ණ URL පෙන්වන්න",
   "tools.database.numberFormat.number": "අංකය",
   "tools.database.numberFormat.number_with_commas": "බෙදුම්කරු සහිත අංකය",
   "tools.database.numberFormat.percent": "ප්‍රතිශතය",

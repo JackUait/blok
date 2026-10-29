@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Warna",
   "tools.database.divideBy": "Bagi dengan",
   "tools.database.showNumber": "Tampilkan angka",
+  "tools.database.urlShowFullUrl": "Tampilkan URL lengkap",
   "tools.database.numberFormat.number": "Angka",
   "tools.database.numberFormat.number_with_commas": "Angka dengan pemisah",
   "tools.database.numberFormat.percent": "Persen",

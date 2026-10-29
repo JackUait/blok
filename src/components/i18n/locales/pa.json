@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "ਰੰਗ",
   "tools.database.divideBy": "ਨਾਲ ਭਾਗ ਕਰੋ",
   "tools.database.showNumber": "ਨੰਬਰ ਦਿਖਾਓ",
+  "tools.database.urlShowFullUrl": "ਪੂਰਾ URL ਦਿਖਾਓ",
   "tools.database.numberFormat.number": "ਨੰਬਰ",
   "tools.database.numberFormat.number_with_commas": "ਵਿਭਾਜਕਾਂ ਨਾਲ ਨੰਬਰ",
   "tools.database.numberFormat.percent": "ਪ੍ਰਤੀਸ਼ਤ",

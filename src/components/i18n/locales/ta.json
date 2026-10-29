@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "நிறம்",
   "tools.database.divideBy": "இதால் வகு",
   "tools.database.showNumber": "எண்ணைக் காட்டு",
+  "tools.database.urlShowFullUrl": "முழு URL-ஐக் காட்டு",
   "tools.database.numberFormat.number": "எண்",
   "tools.database.numberFormat.number_with_commas": "பிரிப்பான்களுடன் எண்",
   "tools.database.numberFormat.percent": "சதவீதம்",

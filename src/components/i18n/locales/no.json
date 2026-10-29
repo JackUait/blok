@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Farge",
   "tools.database.divideBy": "Del på",
   "tools.database.showNumber": "Vis tall",
+  "tools.database.urlShowFullUrl": "Vis hele URL-en",
   "tools.database.numberFormat.number": "Tall",
   "tools.database.numberFormat.number_with_commas": "Tall med tusenskilletegn",
   "tools.database.numberFormat.percent": "Prosent",

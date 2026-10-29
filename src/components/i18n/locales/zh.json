@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "颜色",
   "tools.database.divideBy": "除以",
   "tools.database.showNumber": "显示数字",
+  "tools.database.urlShowFullUrl": "显示完整 URL",
   "tools.database.numberFormat.number": "数字",
   "tools.database.numberFormat.number_with_commas": "带千位分隔符的数字",
   "tools.database.numberFormat.percent": "百分比",

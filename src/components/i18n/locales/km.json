@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "ពណ៌",
   "tools.database.divideBy": "ចែកនឹង",
   "tools.database.showNumber": "បង្ហាញលេខ",
+  "tools.database.urlShowFullUrl": "បង្ហាញ URL ពេញ",
   "tools.database.numberFormat.number": "លេខ",
   "tools.database.numberFormat.number_with_commas": "លេខមានសញ្ញាបំបែក",
   "tools.database.numberFormat.percent": "ភាគរយ",

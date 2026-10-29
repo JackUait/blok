@@ -1642,6 +1642,7 @@
   "tools.database.numberColor": "Barva",
   "tools.database.divideBy": "Deli z",
   "tools.database.showNumber": "Prikaži število",
+  "tools.database.urlShowFullUrl": "Prikaži celoten URL",
   "tools.database.numberFormat.number": "Število",
   "tools.database.numberFormat.number_with_commas": "Število z ločili",
   "tools.database.numberFormat.percent": "Odstotek",

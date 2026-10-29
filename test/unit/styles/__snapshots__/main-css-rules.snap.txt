@@ -9344,6 +9344,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   white-space: inherit;
 }
 
+[data-blok-database-cell-link] > [data-blok-database-url-path] {
+  color: var(--blok-database-ink-tertiary);
+}
+
 [data-blok-database-option-pill][data-status-group] {
   gap: var(--blok-space-1-25);
   padding-block: 0;
@@ -9647,6 +9651,26 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
+}
+
+[data-blok-database-property-menu-switch-label] {
+  flex: 1 1 auto;
+}
+
+[data-blok-database-property-menu-switch]:has(> [data-blok-database-property-menu-switch-icon]) {
+  gap: 10px;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-property-menu-switch]:has(> [data-blok-database-property-menu-switch-icon]):hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-property-menu-switch-icon] {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  inline-size: 24px;
 }
 
 [data-blok-database-property-menu-name] {

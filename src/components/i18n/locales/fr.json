@@ -1640,6 +1640,7 @@
   "tools.database.numberColor": "Couleur",
   "tools.database.divideBy": "Diviser par",
   "tools.database.showNumber": "Afficher le nombre",
+  "tools.database.urlShowFullUrl": "Afficher l’URL complète",
   "tools.database.numberFormat.number": "Nombre",
   "tools.database.numberFormat.number_with_commas": "Nombre avec séparateurs",
   "tools.database.numberFormat.percent": "Pourcentage",

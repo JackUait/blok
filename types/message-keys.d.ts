@@ -2167,6 +2167,7 @@ export type BlokMessageKey =
   | 'tools.database.titlePlaceholder'
   | 'tools.database.toolbarLabel'
   | 'tools.database.toolbarNew'
+  | 'tools.database.urlShowFullUrl'
   | 'tools.database.verificationExpired'
   | 'tools.database.verificationUnverified'
   | 'tools.database.verificationVerified'

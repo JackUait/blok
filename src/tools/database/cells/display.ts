@@ -68,10 +68,22 @@ const shortUrl = (url: string): string => url.replace(/^https?:\/\//i, '').repla
 const urlHref = (url: string): string | null =>
   safeHref(urlScheme(url) === null && /^[^/#?.\s]+\.[^\s]/.test(url.trim()) ? `http://${url.trim()}` : url);
 
-const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
+/** notion-spec-2 §18.1, §20.7: a short address greys its path unless the property shows the full URL. */
+const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext, showFullUrl: boolean): void => {
   const href = urlHref(url);
+  const short = href !== null && ctx.shortUrls === true;
+  const text = short ? shortUrl(url) : url;
 
-  renderLink(cell, href !== null && ctx.shortUrls === true ? shortUrl(url) : url, href, ctx, ctx.followLinks);
+  renderLink(cell, text, href, ctx, ctx.followLinks);
+  const link = cell.querySelector('a');
+  const at = text.search(/[/?#]/);
+
+  if (!short || showFullUrl || link === null || at <= 0) return;
+  const path = document.createElement('span');
+
+  path.setAttribute('data-blok-database-url-path', '');
+  path.textContent = text.slice(at);
+  link.replaceChildren(text.slice(0, at), path);
 };
 
 /** `?` and `&` are encoded, so an address cannot add `?bcc=` or other headers. */
@@ -474,7 +486,7 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
       break;
     case 'url':
       if (typeof value === 'string' && value !== '') {
-        renderUrl(cell, value, ctx);
+        renderUrl(cell, value, ctx, property.url?.showFullUrl === true);
       }
       break;
     case 'email':

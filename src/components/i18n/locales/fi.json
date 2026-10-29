@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Väri",
   "tools.database.divideBy": "Jakaja",
   "tools.database.showNumber": "Näytä numero",
+  "tools.database.urlShowFullUrl": "Näytä koko URL",
   "tools.database.numberFormat.number": "Numero",
   "tools.database.numberFormat.number_with_commas": "Numero ja tuhaterottimet",
   "tools.database.numberFormat.percent": "Prosentti",

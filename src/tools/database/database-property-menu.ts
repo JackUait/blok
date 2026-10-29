@@ -37,10 +37,10 @@ import type {
   SelectOption,
 } from './types';
 
-export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'visibility' | 'duplicate' | 'delete';
+export type PropertyMenuEntry = 'editProperty' | 'showFullUrl' | 'displayAs' | 'changeType' | 'visibility' | 'duplicate' | 'delete';
 
 /** Rows that come before the view's own rows; the rest come after. */
-const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'displayAs', 'changeType']);
+const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'showFullUrl', 'displayAs', 'changeType']);
 
 /** Types whose "Edit property" panel holds settings Blok has. */
 const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
@@ -90,6 +90,8 @@ export const propertyMenuEntries = (property: PropertyDefinition): PropertyMenuE
 
   return [
     ...(EDITABLE_SETTINGS.has(property.type) ? ['editProperty' as const] : []),
+    // notion-spec-2 §19.21: URL has this switch in place of Edit property.
+    ...(property.type === 'url' ? ['showFullUrl' as const] : []),
     ...(property.type === 'status' ? ['displayAs' as const] : []),
     ...(isId ? [] : ['changeType' as const]),
     'visibility',
@@ -828,6 +830,10 @@ export class DatabasePropertyMenu {
           // The submenu's rows mount right after onOpen.
           children: { items: this.editItems(property, update), minWidth: '300px', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
         };
+      case 'showFullUrl': {
+        // notion-spec-2 §19.21: a click on the row toggles it. The row's icon was not measured: Blok draws URL's type icon.
+        return this.switchItem(entry, 'tools.database.urlShowFullUrl', property.url?.showFullUrl === true, (on) => update({ url: on ? { showFullUrl: true } : undefined }), propertyTypeMeta('url').icon);
+      }
       case 'displayAs': {
         const status = property.status;
         const current = status?.showAs ?? 'select';
@@ -1643,9 +1649,10 @@ export class DatabasePropertyMenu {
   }
 
   /** A label and the database switch in one button, saved without a redraw. */
-  private switchItem(name: string, labelKey: string, checked: boolean, onToggle: (on: boolean) => void): PopoverItemParams {
+  private switchItem(name: string, labelKey: string, checked: boolean, onToggle: (on: boolean) => void, icon?: string): PopoverItemParams {
     const button = document.createElement('button');
     const track = document.createElement('span');
+    const label = document.createElement('span');
 
     button.type = 'button';
     button.setAttribute('role', 'switch');
@@ -1653,7 +1660,17 @@ export class DatabasePropertyMenu {
     button.setAttribute('data-blok-database-property-menu-switch', name);
     track.setAttribute('data-blok-database-switch-track', '');
     track.appendChild(document.createElement('span'));
-    button.append(this.t(labelKey), track);
+    if (icon !== undefined) {
+      const glyph = document.createElement('span');
+
+      glyph.setAttribute('data-blok-database-property-menu-switch-icon', '');
+      glyph.innerHTML = icon;
+      button.appendChild(glyph);
+    }
+    label.textContent = this.t(labelKey);
+    // Takes the free space, so the switch sits at the row's end with or without an icon.
+    label.setAttribute('data-blok-database-property-menu-switch-label', '');
+    button.append(label, track);
     button.addEventListener('click', () => {
       const on = button.getAttribute('aria-checked') !== 'true';
 

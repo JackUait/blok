@@ -1638,6 +1638,7 @@
   "tools.database.numberColor": "Szín",
   "tools.database.divideBy": "Osztó",
   "tools.database.showNumber": "Szám megjelenítése",
+  "tools.database.urlShowFullUrl": "Teljes URL megjelenítése",
   "tools.database.numberFormat.number": "Szám",
   "tools.database.numberFormat.number_with_commas": "Szám ezres elválasztóval",
   "tools.database.numberFormat.percent": "Százalék",

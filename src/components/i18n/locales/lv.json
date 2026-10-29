@@ -1640,6 +1640,7 @@
   "tools.database.numberColor": "Krāsa",
   "tools.database.divideBy": "Dalīt ar",
   "tools.database.showNumber": "Rādīt skaitli",
+  "tools.database.urlShowFullUrl": "Rādīt pilnu URL",
   "tools.database.numberFormat.number": "Skaitlis",
   "tools.database.numberFormat.number_with_commas": "Skaitlis ar tūkstošu atdalītājiem",
   "tools.database.numberFormat.percent": "Procenti",

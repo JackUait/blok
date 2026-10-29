@@ -13,13 +13,13 @@ const VOID_ELEMENTS: ReadonlySet<string> = new Set([
   'meta', 'param', 'source', 'track', 'wbr',
 ]);
 
-const TEXT_SPECIAL = /[&<> ]/;
-const TEXT_SPECIAL_ALL = /[&<> ]/g;
+const TEXT_SPECIAL = /[&<>\u00A0]/;
+const TEXT_SPECIAL_ALL = /[&<>\u00A0]/g;
 // Attribute values keep < and >: the spec escapes only these three in attribute mode.
-const ATTR_SPECIAL = /["& ]/;
-const ATTR_SPECIAL_ALL = /["& ]/g;
+const ATTR_SPECIAL = /["&\u00A0]/;
+const ATTR_SPECIAL_ALL = /["&\u00A0]/g;
 
-const ESCAPES: Readonly<Record<string, string>> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', ' ': '&nbsp;' };
+const ESCAPES: Readonly<Record<string, string>> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\u00A0': '&nbsp;' };
 
 const toEntity = (char: string): string => ESCAPES[char];
 

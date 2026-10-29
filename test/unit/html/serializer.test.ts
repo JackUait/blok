@@ -103,14 +103,14 @@ describe('html serializer', () => {
 
   describe('hand-built trees', () => {
     it('escapes &, <, > and NBSP in text, and nothing else', () => {
-      const tree = fragmentOf(createTextNode('a & b < c > d   "e" \'f\' = `g`'));
+      const tree = fragmentOf(createTextNode('a & b < c > d \u00A0 "e" \'f\' = `g`'));
 
       expect(serialize(tree)).toBe('a &amp; b &lt; c &gt; d &nbsp; "e" \'f\' = `g`');
       expect(serialize(tree)).toBe(viaParse5(tree));
     });
 
     it('escapes ", & and NBSP in attribute values, and leaves < > \' alone', () => {
-      const tree = fragmentOf(element('a', [], [{ name: 'title', value: '"x" & <y> \'z\'  ' }]));
+      const tree = fragmentOf(element('a', [], [{ name: 'title', value: '"x" & <y> \'z\' \u00A0' }]));
 
       expect(serialize(tree)).toBe('<a title="&quot;x&quot; &amp; <y> \'z\' &nbsp;"></a>');
       expect(serialize(tree)).toBe(viaParse5(tree));
@@ -119,13 +119,13 @@ describe('html serializer', () => {
     it('writes raw text inside HTML raw-text elements only', () => {
       const raw = ['style', 'script', 'xmp', 'iframe', 'noembed', 'noframes', 'plaintext', 'noscript'];
       const tree = fragmentOf(
-        ...raw.map((tag) => element(tag, [createTextNode('<&> ')])),
+        ...raw.map((tag) => element(tag, [createTextNode('<&>\u00A0')])),
         element('style', [createTextNode('<&>')], [], NS.SVG),
         element('textarea', [createTextNode('<&>')]),
         element('title', [createTextNode('<&>')])
       );
       const expected = [
-        ...raw.map((tag) => `<${tag}><&> </${tag}>`),
+        ...raw.map((tag) => `<${tag}><&>\u00A0</${tag}>`),
         '<style>&lt;&amp;&gt;</style>',
         '<textarea>&lt;&amp;&gt;</textarea>',
         '<title>&lt;&amp;&gt;</title>',

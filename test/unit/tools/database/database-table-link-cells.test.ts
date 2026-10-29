@@ -291,6 +291,55 @@ describe('table URL, email and phone cells', () => {
         expect(labels(cell(mountMore({ readOnly: true }), 'r1', 'p-roll'))).toEqual(['tools.database.cellCopy']);
       });
 
+      // notion-spec-2 §18.3: a click on these opens nothing and selects the whole row, not the cell.
+      it.each(['p-id', 'p-made', 'p-by'])('a click on a %s cell selects its whole row', (propertyId) => {
+        const root = mountMore();
+        const target = cell(root, 'r1', propertyId);
+
+        target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        clickOn(target);
+
+        expect(root.querySelector('[data-blok-database-table-row][data-row-id="r1"]')?.getAttribute('aria-selected')).toBe('true');
+        expect(root.querySelector('[data-blok-database-table-row][data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('false');
+        expect(target.getAttribute('aria-selected')).toBe('false');
+        expect(root.querySelector('[data-blok-database-table-cell-anchor]')).toBeNull();
+        expect(editorField()).toBeNull();
+      });
+
+      it('a click on an ID cell replaces the rows already selected', () => {
+        const root = mountMore();
+
+        root.querySelector<HTMLElement>('[data-row-id="r2"] [data-blok-database-table-row-checkbox]')?.click();
+        clickOn(cell(root, 'r1', 'p-id'));
+
+        expect(root.querySelector('[data-blok-database-table-row][data-row-id="r1"]')?.getAttribute('aria-selected')).toBe('true');
+        expect(root.querySelector('[data-blok-database-table-row][data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('false');
+      });
+
+      it('Copy on an ID cell copies and leaves the row unselected', async () => {
+        const writeText = vi.fn(() => Promise.resolve());
+
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+        const root = mountMore();
+
+        clickOn(action(cell(root, 'r1', 'p-id'), 'tools.database.cellCopy') as HTMLButtonElement);
+        await Promise.resolve();
+
+        expect(writeText).toHaveBeenCalledWith('1');
+        expect(root.querySelector('[data-blok-database-table-row][data-row-id="r1"]')?.getAttribute('aria-selected')).toBe('false');
+        vi.unstubAllGlobals();
+      });
+
+      it('a click on a rollup cell still selects the cell', () => {
+        const root = mountMore();
+
+        clickOn(cell(root, 'r1', 'p-roll'));
+
+        expect(root.querySelector('[data-blok-database-table-row][data-row-id="r1"]')?.getAttribute('aria-selected')).toBe('false');
+        expect(cell(root, 'r1', 'p-roll').hasAttribute('data-blok-database-table-cell-anchor')).toBe(true);
+      });
+
       it('empty pill and relation cells carry none', () => {
         const root = mountMore();
 

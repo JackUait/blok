@@ -253,6 +253,9 @@ const COMMENT_ONLY_TYPES: ReadonlySet<string> = new Set(['select', 'multiSelect'
 /** notion-spec-2 §18.2: cells whose hover shows Copy alone. Last edited time is not measured. */
 const COPY_ONLY_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime']);
 
+/** notion-spec-2 §18.3: a click on these selects the whole row. Last edited time and by are not measured. */
+const ROW_SELECT_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime', 'createdBy']);
+
 type CellAction = [action: string, key: string, icon: string];
 
 const tableIds = { next: 0 };
@@ -1692,6 +1695,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const cellEl = closest('[role="gridcell"]');
     const propertyId = cellEl?.getAttribute('data-property-id');
 
+    if (ROW_SELECT_TYPES.has(cellEl?.getAttribute('data-type') ?? '') && !event.shiftKey) {
+      this.grid?.selectRows([rowId]);
+
+      return;
+    }
     if (typeof propertyId === 'string') {
       this.grid?.clickCell({ rowId, propertyId }, event.shiftKey);
     }

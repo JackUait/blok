@@ -44,6 +44,43 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §18.1: icon box 20x20 holding an 18px glyph in rgb(142,139,134); the title 4px
+  // after it, 14/16.8 weight 500, with a 1px underline line. No pill. §19.17: on a gallery card,
+  // a 14.4px glyph and 12/14.4 weight 500.
+  describe('relation chip', () => {
+    const CHIP = '[data-blok-database-relation-chip]';
+    const ICON = '[data-blok-database-relation-chip-icon]';
+    const TITLE = '[data-blok-database-relation-chip-title]';
+
+    it('has no text-decoration underline and a 4px gap', () => {
+      expect(declared(CHIP, 'text-decoration')).toEqual([]);
+      expect(declared(CHIP, 'gap')).toEqual(['var(--blok-space-1)']);
+    });
+
+    it('draws the icon box 20x20 with an 18px grey glyph', () => {
+      expect(declared(ICON, 'width')).toEqual(['20px']);
+      expect(declared(ICON, 'height')).toEqual(['20px']);
+      expect(declared(ICON, 'color')).toEqual(['var(--blok-database-table-header-icon)']);
+      expect(declared(`${ICON} svg`, 'width')).toEqual(['18px']);
+      expect(declared(`${ICON} svg`, 'height')).toEqual(['18px']);
+    });
+
+    it('sets the title 500 with a 1px underline line', () => {
+      expect(declared(TITLE, 'font-weight')).toEqual(['500']);
+      expect(declared(TITLE, 'line-height')).toEqual(['16.8px']);
+      expect(declared(TITLE, 'background-image')).toEqual(['linear-gradient(var(--blok-database-cell-link-underline), var(--blok-database-cell-link-underline))']);
+      expect(declared(TITLE, 'background-size')).toEqual(['100% 1px']);
+    });
+
+    it('shrinks to a 14.4px glyph and 14.4px line on a gallery card', () => {
+      const GALLERY = '[data-blok-database-gallery-property]';
+
+      expect(declared(`${GALLERY} ${ICON}`, 'width')).toEqual(['14.4px']);
+      expect(declared(`${GALLERY} ${ICON} svg`, 'width')).toEqual(['14.4px']);
+      expect(declared(`${GALLERY} ${TITLE}`, 'line-height')).toEqual(['14.4px']);
+    });
+  });
+
   // notion-spec-2 §19.16: a person's avatar is a plain circle with no ring or shadow. Notion's 100% draws
   // the same circle on a square box; the radius law spells a circle 50%.
   it.each(['[data-blok-database-person-avatar]', '[data-blok-database-person-initial]'])('draws %s as a circle with no ring', (selector) => {

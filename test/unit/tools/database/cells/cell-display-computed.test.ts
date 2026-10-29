@@ -98,6 +98,19 @@ describe('renderCellValue — computed property types', () => {
     expect(chips.map((chip) => chip.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
   });
 
+  // notion-spec-2 §18.1: a 20x20 page icon box, then the title, which carries the underline.
+  it('draws each related row as an empty page icon and its title', () => {
+    const cell = renderCellValue(relation, [{ id: 'r1' }], ctx({ relationTitle: () => 'Alpha' }));
+    const chip = cell.querySelector('[data-blok-database-relation-chip]');
+    const [icon, title] = [...(chip?.children ?? [])];
+
+    expect(icon?.hasAttribute('data-blok-database-relation-chip-icon')).toBe(true);
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon?.querySelectorAll('path')).toHaveLength(2);
+    expect(title?.hasAttribute('data-blok-database-relation-chip-title')).toBe(true);
+    expect(title?.textContent).toBe('Alpha');
+  });
+
   it('names an untitled related row', () => {
     const cell = renderCellValue(relation, [{ id: 'r1' }], ctx({ relationTitle: () => '' }));
 

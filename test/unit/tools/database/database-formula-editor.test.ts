@@ -219,6 +219,16 @@ describe('formula editor', () => {
       expect(tokens()).toEqual(['Amount']);
     });
 
+    // notion-spec-2 §26.5 (`dark-help-equal.txt`): strings have their own colour, and `.` is punctuation.
+    it('colours strings, and the dot of a method call as punctuation', () => {
+      open();
+      type('"ab".upper() + "c"');
+
+      expect(painted('string')).toEqual(['"ab"', '"c"']);
+      expect(painted('punctuation')).toEqual(['.', '(', ')']);
+      expect(painted('function')).toEqual(['upper']);
+    });
+
     it('colours the part before an unfinished string', () => {
       open();
       type('1 + "ab');

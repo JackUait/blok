@@ -85,7 +85,7 @@ describe('cell editor CSS', () => {
       expect(declared('[data-blok-database-formula-help-example]', 'border')).toEqual(['1px solid var(--blok-database-formula-example-border)']);
       expect(declared('[data-blok-database-formula-help-example] [data-blok-database-formula-token]', 'height')).toEqual(['16.5px']);
       expect(declared('[data-blok-database-formula-help-example] [data-blok-database-formula-token]', 'vertical-align')).toEqual(['top']);
-      expect(database).toContain('--blok-database-formula-example-border: rgb(241, 240, 238);');
+      expect(database).toContain('--blok-database-formula-example-border: rgb(240, 239, 237);');
       // Notion's copy button is 22x22 (formula-typed.txt) and does not make a one-line box taller than 30.5.
       expect(declared('[data-blok-database-formula-help-copy]', 'width')).toEqual(['22px']);
       expect(declared('[data-blok-database-formula-help-copy]', 'margin-block')).toEqual(['calc(-1 * var(--blok-space-0-75))']);
@@ -94,7 +94,7 @@ describe('cell editor CSS', () => {
     // `32-formula-typed.png` (pixels): number (876,293) rgb(140,26,84), operator (863,290) rgb(147,112,67),
     // function (1017,602) rgb(207,94,113), paren (1062,596) rgb(158,158,158).
     it('paints each syntax kind from its token, in the box and in the examples', () => {
-      for (const kind of ['number', 'operator', 'function', 'punctuation']) {
+      for (const kind of ['number', 'string', 'operator', 'function', 'punctuation']) {
         expect(declared(`[data-blok-database-formula-input]::highlight(blok-formula-${kind})`, 'color')).toEqual([`var(--blok-database-formula-${kind})`]);
         expect(declared(`[data-blok-database-formula-syntax="${kind}"]`, 'color')).toEqual([`var(--blok-database-formula-${kind})`]);
       }
@@ -102,6 +102,24 @@ describe('cell editor CSS', () => {
       expect(database).toContain('--blok-database-formula-operator: rgb(147, 112, 67);');
       expect(database).toContain('--blok-database-formula-function: rgb(207, 94, 113);');
       expect(database).toContain('--blok-database-formula-punctuation: rgb(158, 158, 158);');
+      // `40-help-Text.png` (pixels, glyph cores of "b" and "red").
+      expect(database).toContain('--blok-database-formula-string: rgb(120, 157, 55);');
+    });
+
+    /** The token's value in light, then in each of the two dark blocks (system dark, forced dark). */
+    const themed = (token: string): string[] =>
+      [...database.matchAll(new RegExp(`${escape(token)}: ([^;]+);`, 'g'))].map((m) => m[1].trim());
+
+    // notion-spec-2 §26.5 (`dark-formula.txt`, `dark-help-*.txt`).
+    it('takes Notion\'s dark syntax colours, example border, ↩ ink and a pill-less chip', () => {
+      expect(themed('--blok-database-formula-operator').slice(1)).toEqual(['rgb(245, 184, 61)', 'rgb(245, 184, 61)']);
+      expect(themed('--blok-database-formula-number').slice(1)).toEqual(['rgb(209, 148, 158)', 'rgb(209, 148, 158)']);
+      expect(themed('--blok-database-formula-function').slice(1)).toEqual(['rgb(236, 236, 147)', 'rgb(236, 236, 147)']);
+      expect(themed('--blok-database-formula-string').slice(1)).toEqual(['rgb(189, 224, 82)', 'rgb(189, 224, 82)']);
+      expect(themed('--blok-database-formula-punctuation').slice(1)).toEqual(['rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
+      expect(themed('--blok-database-formula-example-border')).toEqual(['rgb(240, 239, 237)', 'rgb(44, 44, 43)', 'rgb(44, 44, 43)']);
+      expect(themed('--blok-database-formula-return-ink').slice(1)).toEqual(['var(--blok-database-ink-secondary)', 'var(--blok-database-ink-secondary)']);
+      expect(themed('--blok-database-formula-token-bg').slice(1)).toEqual(['transparent', 'transparent']);
     });
 
     // `32-formula-typed.png` (pixels): the ↩ ink is 12x8 at x 963-974, darkest rgb(141,139,134) (964,517), only on the highlighted row.

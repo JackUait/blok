@@ -3997,12 +3997,13 @@ span[data-blok-slash-search] {
   --blok-database-button-pressed-bg: rgba(33, 27, 23, 0.076);
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-formula-token-bg: rgb(224, 222, 218);
-  --blok-database-formula-example-border: rgb(241, 240, 238);
+  --blok-database-formula-example-border: rgb(240, 239, 237);
   --blok-database-formula-return-ink: rgb(141, 139, 134);
   --blok-database-formula-number: rgb(140, 26, 84);
   --blok-database-formula-operator: rgb(147, 112, 67);
   --blok-database-formula-function: rgb(207, 94, 113);
   --blok-database-formula-punctuation: rgb(158, 158, 158);
+  --blok-database-formula-string: rgb(120, 157, 55);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-switch-off-bg: rgba(135, 131, 120, 0.92);
@@ -4290,10 +4291,14 @@ span[data-blok-slash-search] {
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
   --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
-  --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
-  --blok-database-formula-example-border: #333331;
-  --blok-database-formula-return-ink: var(--blok-database-ink-tertiary);
-  --blok-database-formula-number: rgb(205, 38, 123);
+  --blok-database-formula-token-bg: transparent;
+  --blok-database-formula-example-border: rgb(44, 44, 43);
+  --blok-database-formula-return-ink: var(--blok-database-ink-secondary);
+  --blok-database-formula-number: rgb(209, 148, 158);
+  --blok-database-formula-operator: rgb(245, 184, 61);
+  --blok-database-formula-function: rgb(236, 236, 147);
+  --blok-database-formula-string: rgb(189, 224, 82);
+  --blok-database-formula-punctuation: rgb(240, 239, 237);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
   --blok-database-column-orange-accent: rgb(214, 129, 60);
@@ -4574,10 +4579,14 @@ span[data-blok-slash-search] {
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
   --blok-database-button-pressed-bg: rgba(255, 255, 255, 0.082);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
-  --blok-database-formula-token-bg: rgba(255, 255, 255, 0.094);
-  --blok-database-formula-example-border: #333331;
-  --blok-database-formula-return-ink: var(--blok-database-ink-tertiary);
-  --blok-database-formula-number: rgb(205, 38, 123);
+  --blok-database-formula-token-bg: transparent;
+  --blok-database-formula-example-border: rgb(44, 44, 43);
+  --blok-database-formula-return-ink: var(--blok-database-ink-secondary);
+  --blok-database-formula-number: rgb(209, 148, 158);
+  --blok-database-formula-operator: rgb(245, 184, 61);
+  --blok-database-formula-function: rgb(236, 236, 147);
+  --blok-database-formula-string: rgb(189, 224, 82);
+  --blok-database-formula-punctuation: rgb(240, 239, 237);
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
   --blok-database-column-orange-accent: rgb(214, 129, 60);
@@ -16365,6 +16374,10 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-formula-input]::highlight(blok-formula-number), [data-blok-database-formula-syntax="number"] {
   color: var(--blok-database-formula-number);
+}
+
+[data-blok-database-formula-input]::highlight(blok-formula-string), [data-blok-database-formula-syntax="string"] {
+  color: var(--blok-database-formula-string);
 }
 
 [data-blok-database-formula-input]::highlight(blok-formula-operator), [data-blok-database-formula-syntax="operator"] {

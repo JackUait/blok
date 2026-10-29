@@ -71,13 +71,14 @@ const sourceOf = (node: Node): string => {
   return node.nodeName === 'DIV' || node.nodeName === 'P' ? `\n${inner}` : inner;
 };
 
-export type SyntaxKind = 'number' | 'operator' | 'function' | 'punctuation';
+export type SyntaxKind = 'number' | 'string' | 'operator' | 'function' | 'punctuation';
 
-/** Notion's shots show only these in grey; `[`, `]` and `.` are unmeasured, so they keep the ink. */
-const PUNCTUATION = new Set(['(', ')', ',']);
+/** notion-spec-2 §26.5: `( ) , .` are punctuation. `[` and `]` are unmeasured, so they keep the ink. */
+const PUNCTUATION = new Set(['(', ')', ',', '.']);
 
 const kindOf = (token: Token, next: Token | undefined): SyntaxKind | null => {
   if (token.type === 'number') return 'number';
+  if (token.type === 'string') return 'string';
   if (token.type === 'op') return 'operator';
   if (token.type === 'ident' && next?.type === 'punct' && next.value === '(') return 'function';
   if (token.type === 'punct' && PUNCTUATION.has(token.value)) return 'punctuation';

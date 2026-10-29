@@ -10,7 +10,7 @@
  * 0 differing outputs, with two deliberately behaviour-changing control
  * mutants separating at 96 and 1024 differences. The shapes:
  *
- * - `isTemplateNode`'s `node.nodeName === 'template'` half (parse5 gives no
+ * - `isTemplateNode`'s `node.nodeName === 'template'` half (the parser gives no
  *   node type outside a template element a `content` property, so the second
  *   half alone already answers the same for every node).
  * - The `?? ''` fallbacks feeding `parseStyleText` (the replacement literal
@@ -25,7 +25,7 @@
  *   boolean or a string, and a boolean can never strict-equal the string
  *   attribute value, so forcing the branch open changes no answer.
  * - The `!isElementNode(node)` guard in the child walk and both mutants inside
- *   it. Text and comment nodes are handled above it and parse5 puts nothing
+ *   it. Text and comment nodes are handled above it and the parser puts nothing
  *   else in a fragment parsed in a div context — a doctype token is ignored in
  *   the "in body" insertion mode and a CDATA section becomes a text node.
  *   A probe copy that threw on entering that guard never fired across the
@@ -33,7 +33,7 @@
  * - The `parentIsBlock` and `parentIsTop` arguments at the two call sites that
  *   pass a literal. Both feed one expression, `parentIsBlock && !parentIsTop`,
  *   and at each of those sites the other operand already settles it.
- * - The re-parent loop in the normalizer's `unwrapAt`. parse5 reads a text
+ * - The re-parent loop in the normalizer's `unwrapAt`. the parser reads a text
  *   node's parent only to decide whether that parent is one of style, script,
  *   xmp, iframe, noembed, noframes or plaintext; none of those is a mergeable
  *   inline tag, so a stale parent there cannot change the serialization.
@@ -51,29 +51,29 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import type * as Parse5 from 'parse5';
+import type * as Html from '../../../src/html';
 
-const parse5 = vi.hoisted(() => ({ throwNext: null as Error | null }));
+const parser = vi.hoisted(() => ({ throwNext: null as Error | null }));
 
-vi.mock('parse5', async (importOriginal) => {
-  const actual = await importOriginal<typeof Parse5>();
+vi.mock('../../../src/html', async (importOriginal) => {
+  const actual = await importOriginal<typeof Html>();
 
   return {
     ...actual,
     parseFragment: (
-      first: Parse5.DefaultTreeAdapterMap['parentNode'] | string,
+      first: Html.Element | string,
       html?: string
-    ): Parse5.DefaultTreeAdapterMap['documentFragment'] => {
-      if (parse5.throwNext !== null) {
-        const failure = parse5.throwNext;
+    ): Html.DocumentFragment => {
+      if (parser.throwNext !== null) {
+        const failure = parser.throwNext;
 
-        parse5.throwNext = null;
+        parser.throwNext = null;
         throw failure;
       }
 
       return typeof first === 'string'
         ? actual.parseFragment(first)
-        : actual.parseFragment(first, html ?? '', {});
+        : actual.parseFragment(first, html ?? '');
     },
   };
 });
@@ -113,11 +113,11 @@ const nestOverCap = (inner: string): string => {
 describe('view sanitizer mutants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    parse5.throwNext = null;
+    parser.throwNext = null;
   });
 
   afterEach(() => {
-    parse5.throwNext = null;
+    parser.throwNext = null;
     vi.restoreAllMocks();
   });
 
@@ -142,7 +142,7 @@ describe('view sanitizer mutants', () => {
   });
 
   // A template is recognised by its tag name AND its content fragment. An
-  // SVG-namespaced <template> is an ordinary foreign element: parse5 gives it
+  // SVG-namespaced <template> is an ordinary foreign element: the parser gives it
   // the tag name and no content, and treating it as a template reads a
   // fragment that is not there.
   it('leaves a foreign-namespace template to the ordinary child walk', () => {
@@ -173,7 +173,7 @@ describe('view sanitizer mutants', () => {
     expect(sanitizeHtmlFragment('<b>x</b>', config)).toBe('x');
   });
 
-  // parse5 records a foreign-content attribute as a name plus a namespace and
+  // the parser records a foreign-content attribute as a name plus a namespace and
   // serializes the pair back as `xlink:href`. The URL pass must hand back the
   // attribute it was given when nothing changed, not a fresh name/value pair,
   // or the prefix is dropped and the attribute means something else.
@@ -190,7 +190,7 @@ describe('view sanitizer mutants', () => {
     expect(sanitizeHtmlFragment('<b>t<p>x</p></b>', { b: {}, p: {} })).toBe('t<p>x</p>');
   });
 
-  // parse5 escapes a text node according to its parent, and the parent of an
+  // the parser escapes a text node according to its parent, and the parent of an
   // iframe's text is a raw-text element. Hoisting the text without re-parenting
   // it leaves the ampersand unescaped in the output.
   it('re-parents hoisted text so its new parent decides the escaping', () => {
@@ -268,7 +268,7 @@ describe('view sanitizer mutants', () => {
   // parser fault has to propagate, or a real defect is silently papered over by
   // a second parse of the same text.
   it('propagates a parse failure that is not a RangeError', () => {
-    parse5.throwNext = new TypeError('synthetic parse failure');
+    parser.throwNext = new TypeError('synthetic parse failure');
 
     expect(() => sanitizeHtmlFragment('<p>x</p>', { p: true })).toThrow(TypeError);
   });

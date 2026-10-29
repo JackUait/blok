@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import type * as Parse5 from 'parse5';
+import type * as Html from '../../../src/html';
 
-const parse5 = vi.hoisted(() => ({ throwNext: null as Error | null }));
+const parser = vi.hoisted(() => ({ throwNext: null as Error | null }));
 
-vi.mock('parse5', async (importOriginal) => {
-  const actual = await importOriginal<typeof Parse5>();
+vi.mock('../../../src/html', async (importOriginal) => {
+  const actual = await importOriginal<typeof Html>();
 
   return {
     ...actual,
     parseFragment: (html: string): ReturnType<typeof actual.parseFragment> => {
-      if (parse5.throwNext !== null) {
-        const failure = parse5.throwNext;
+      if (parser.throwNext !== null) {
+        const failure = parser.throwNext;
 
-        parse5.throwNext = null;
+        parser.throwNext = null;
         throw failure;
       }
 
@@ -38,11 +38,11 @@ import {
 describe('html text mutants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    parse5.throwNext = null;
+    parser.throwNext = null;
   });
 
   afterEach(() => {
-    parse5.throwNext = null;
+    parser.throwNext = null;
     vi.restoreAllMocks();
   });
 
@@ -78,13 +78,13 @@ describe('html text mutants', () => {
 
   describe('retrying a refused parse', () => {
     it('repairs and retries when the parser refuses the input outright', () => {
-      parse5.throwNext = new RangeError('bad input');
+      parser.throwNext = new RangeError('bad input');
 
       expect(parseInlineFragment('a\uD800b').childNodes).toHaveLength(1);
     });
 
     it('lets any other failure through', () => {
-      parse5.throwNext = new TypeError('something else');
+      parser.throwNext = new TypeError('something else');
 
       expect(() => parseInlineFragment('a&amp;b')).toThrow(TypeError);
     });

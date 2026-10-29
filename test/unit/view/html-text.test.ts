@@ -1,17 +1,17 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import type * as Parse5 from 'parse5';
+import type * as Html from '../../../src/html';
 
 /**
- * parse5 is spied on rather than replaced: the fast path is only worth having if
+ * The parser is spied on rather than replaced: the fast path is only worth having if
  * the tokenizer is genuinely never entered, and a real parse still has to run for
  * every case the fast path must not claim.
  */
 const parseFragmentCalls = vi.hoisted(() => ({ count: 0 }));
 
-vi.mock('parse5', async (importOriginal) => {
-  const actual = await importOriginal<typeof Parse5>();
+vi.mock('../../../src/html', async (importOriginal) => {
+  const actual = await importOriginal<typeof Html>();
 
   return {
     ...actual,
@@ -55,11 +55,11 @@ describe('htmlTextContent', () => {
   });
 
   /**
-   * The four characters parse5's input-stream preprocessing acts on. Anything
+   * The four characters the parser's input-stream preprocessing acts on. Anything
    * carrying one has to take the real parse, or the fast path would return a
-   * string parse5 would have changed.
+   * string the parser would have changed.
    */
-  describe('still tokenizes a field parse5 would rewrite', () => {
+  describe('still tokenizes a field the parser would rewrite', () => {
     it.each([
       ['a tag', 'a <b>bold</b> word', 'a bold word'],
       ['an entity', 'a &amp; b', 'a & b'],
@@ -74,13 +74,13 @@ describe('htmlTextContent', () => {
 });
 
 /**
- * parse5 throws `RangeError: Invalid code point` for two adjacent low
+ * the parser throws `RangeError: Invalid code point` for two adjacent low
  * surrogates — the shape a truncated UTF-16 paste leaves behind. One such field
  * must cost that field, not the whole document: the server runtime converts
  * stored articles, where an abort means an article that can never be read
  * again rather than a request someone can retry.
  */
-describe('a field parse5 cannot tokenize', () => {
+describe('a field the parser cannot tokenize', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     parseFragmentCalls.count = 0;

@@ -377,7 +377,15 @@ export class ComputedProperties {
     const self = databaseId === this.ctx.databaseId;
     const ids = this.relatedIds(rowId, relation);
 
-    if (isPageList(settings.function, target)) return ids.map((id) => ({ id }));
+    // Each page keeps its title, so a text filter or a search on the rollup still reads the names (database-query `pageTitles`).
+    if (isPageList(settings.function, target)) {
+      return ids.map((id) => {
+        const page = source.rows.find((r) => r.id === id);
+        const name = page === undefined ? undefined : readPropertyValue(page, target);
+
+        return { id, title: typeof name === 'string' ? name : '' };
+      });
+    }
     const values = ids.map((id) => {
       if (self && COMPUTED.has(target.type)) return this.valueFor(id, target);
       const row = source.rows.find((r) => r.id === id);

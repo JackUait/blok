@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import type { DatabaseSource } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
-import { FILTER_OPERATORS, sortRows } from '../../../../src/tools/database/database-query';
+import { FILTER_OPERATORS, rowMatchesFilters, rowMatchesSearch, sortRows } from '../../../../src/tools/database/database-query';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -325,8 +325,8 @@ describe('ComputedProperties', () => {
       const engine = new ComputedProperties('db');
       const rows = engine.apply([title, tasks, names, unique, count], [row('p1', { tasks: [{ id: 't1' }, { id: 'gone' }, { id: 't2' }] })], ctx);
 
-      expect(valueOf(rows, 'p1', names)).toEqual([{ id: 't1' }, { id: 't2' }]);
-      expect(valueOf(rows, 'p1', unique)).toEqual([{ id: 't1' }, { id: 't2' }]);
+      expect(valueOf(rows, 'p1', names)).toEqual([{ id: 't1', title: '' }, { id: 't2', title: '' }]);
+      expect(valueOf(rows, 'p1', unique)).toEqual([{ id: 't1', title: '' }, { id: 't2', title: '' }]);
       expect(engine.valueProperty(names)).toMatchObject({ type: 'relation', relation: { targetDatabaseId: 'db-tasks' } });
       expect(valueOf(rows, 'p1', count)).toBe(2);
     });
@@ -349,6 +349,33 @@ describe('ComputedProperties', () => {
 
       expect(valueOf(rows, 'p1', list)).toBe('4, 10');
       expect(engine.valueProperty(list)).toMatchObject({ type: 'text', number: { format: 'euro' } });
+    });
+
+    // A text filter or a search written when the Name rollup read as text keeps matching the related titles.
+    it('filters and searches a Name rollup by the related pages\' titles', () => {
+      const names = rollup('names', 'tasks', 'title', 'show_original');
+      const schema = [title, tasks, names];
+      const engine = new ComputedProperties('db');
+      const tasksSource: DatabaseSource = {
+        schema: otherSchema,
+        rows: [row('t1', { title: 'Design', hours: 2 }), row('t2', { title: 'Build', hours: 5 })],
+      };
+      const rows = engine.apply(schema, [
+        row('p1', { title: 'One', tasks: [{ id: 't1' }, { id: 't2' }] }),
+        row('p2', { title: 'Two', tasks: [{ id: 't2' }] }),
+        row('p3', { title: 'Three' }),
+      ], { databaseId: 'db', now: NOW, resolveDatabase: (id) => (id === 'db-tasks' ? tasksSource : undefined) });
+      const shown = schema.map((p) => engine.valueProperty(p));
+      const filtered = (operator: string, value: PropertyValue): string[] =>
+        rows.filter((r) => rowMatchesFilters(r, [{ propertyId: 'names', operator, value }], shown)).map((r) => r.id);
+      const searched = (query: string): string[] => rows.filter((r) => rowMatchesSearch(r, query, shown)).map((r) => r.id);
+
+      expect(filtered('contains', 'design')).toEqual(['p1']);
+      expect(filtered('does_not_contain', 'design')).toEqual(['p2', 'p3']);
+      expect(filtered('equals', 'Build')).toEqual(['p2']);
+      expect(filtered('starts_with', 'design')).toEqual(['p1']);
+      expect(filtered('is_empty', null)).toEqual(['p3']);
+      expect(searched('build')).toEqual(['p1', 'p2']);
     });
 
     it('rolls up a formula of the related database', () => {

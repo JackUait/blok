@@ -343,6 +343,16 @@ const MATCHERS: Record<PropertyType, Matcher> = {
 
 const LIST_SHAPES: readonly PropertyType[] = ['multiSelect', 'person', 'relation', 'files'];
 
+/** The titles a Name rollup's pages carry (ComputedProperties), or undefined for a list of bare ids. */
+const pageTitles = (value: PropertyValue | undefined): string[] | undefined => {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const titles = (value as unknown[]).map((item) => (typeof item === 'object' && item !== null && 'title' in item && typeof item.title === 'string' ? item.title : undefined));
+
+  return titles.every((t): t is string => t !== undefined) ? titles : undefined;
+};
+
+const TEXT_ONLY: readonly string[] = TEXT_OPERATORS.filter((op) => op !== 'is_empty' && op !== 'is_not_empty');
+
 const isRollupList = (property: PropertyDefinition): boolean => property.rollup !== undefined && LIST_SHAPES.includes(property.type);
 
 /**
@@ -415,8 +425,15 @@ export const matchCondition = (
   const property = schema.find((p) => p.id === condition.propertyId);
 
   if (property !== undefined && isRollupList(property)) {
+    const value = readPropertyValue(row, property);
+
+    // A text filter from when a Name rollup read as text: match the titles, as that text did (", "-joined, blank ones left out).
+    if (property.type === 'relation' && TEXT_ONLY.includes(condition.operator)) {
+      return matchText((pageTitles(value) ?? []).filter((t) => t !== '').join(', '), condition.operator, condition.value);
+    }
+
     return (QUANTIFIERS as readonly string[]).includes(condition.operator) || condition.operator === 'is_empty' || condition.operator === 'is_not_empty'
-      ? matchQuantified(readPropertyValue(row, property), condition.operator, condition.value)
+      ? matchQuantified(value, condition.operator, condition.value)
       : undefined;
   }
   // "This page" is a relation tab's only filter: with its property gone or no longer a relation it
@@ -611,13 +628,14 @@ const searchText = (property: PropertyDefinition, value: PropertyValue | undefin
     case 'createdTime':
     case 'lastEditedTime':
     case 'richText':
-    case 'relation':
     case 'formula':
     case 'rollup':
     case 'button':
     case 'verification':
       return '';
     case 'place': return placeText(value);
+    // A Name rollup's pages carry their titles; a relation's ids have no text here.
+    case 'relation': return (pageTitles(value) ?? []).join(' ');
   }
 };
 

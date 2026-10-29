@@ -1521,6 +1521,15 @@ describe('PLAINTEXT sanitizer rule', () => {
 
     expect(stripUnsafeUrlsDeep(data, { code: PLAINTEXT } as unknown as SanitizerConfig)).toEqual(data);
   });
+
+  it('gives a nested object under a constructor key the same rules as under any unknown key', () => {
+    const rules = { code: PLAINTEXT } as unknown as SanitizerConfig;
+
+    const result = stripUnsafeUrlsDeep({ constructor: { code: CODE },
+      other: { code: CODE } }, rules) as Record<string, unknown>;
+
+    expect(result.constructor).toEqual(result.other);
+  });
 });
 
 describe('URL scheme hardening (whitespace smuggling)', () => {

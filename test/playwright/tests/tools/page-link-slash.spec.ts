@@ -104,6 +104,30 @@ test.describe('Link to page from the "/" menu', () => {
     expect(saved.blocks.map((block) => block.type)).toEqual(['paragraph']);
   });
 
+  test('a "/link" typed mid-text removes only "/link" and keeps the text on both sides', async ({ page }) => {
+    const paragraph = page.locator('[data-blok-element-content] [contenteditable="true"]').first();
+
+    await paragraph.click();
+    await page.keyboard.type('Before after');
+    for (const _ of 'after') {
+      await page.keyboard.press('ArrowLeft');
+    }
+    await page.keyboard.type('/link');
+    await expect(page.getByRole('option', { name: 'Link to page' })).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('page-picker-search-input')).toBeFocused();
+    await page.keyboard.type('road');
+    await expect(page.getByTestId('page-picker-option')).toHaveCount(1);
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('page-picker-search-input')).toHaveCount(0);
+
+    const saved = await saveRaw(page);
+
+    expect(saved.blocks[0]?.type).toBe('paragraph');
+    expect(saved.blocks[0]?.data.text).toEqual([{ text: 'Before after' }]);
+    expect(saved.blocks[1]).toMatchObject({ type: 'page-link', data: { pageId: 'roadmap' } });
+  });
+
   test('a search with no match shows Nothing found', async ({ page }) => {
     await openLinkToPage(page);
     await page.keyboard.type('zzz');

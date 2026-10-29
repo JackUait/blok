@@ -929,10 +929,12 @@ const makeImage = (): View => {
 
         return true;
       }
-      if (img.getAttribute('src') !== next.url) {
+      const src = safeImageSrc(next.url);
+
+      if (src !== null && img.getAttribute('src') !== src) {
         placeholder.remove();
         figure.prepend(img);
-        img.src = next.url;
+        img.src = src;
       }
 
       return true;

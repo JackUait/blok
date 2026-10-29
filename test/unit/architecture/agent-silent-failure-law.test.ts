@@ -27,6 +27,8 @@ const EXEMPT: Record<string, { count: number; reason: string }> = {
   'components/modules/agent/editor-applier.ts': { count: 2, reason: 'pendingUnlocks and pendingShares: [] means no step or not this session\'s, which undo and redo then refuse before anything unlocks or shares' },
   'components/modules/agent/store-applier.ts': { count: 2, reason: 'pendingUnlocks and pendingShares: [] means no step, which undo and redo then refuse with NOTHING_TO_UNDO / NOTHING_TO_REDO' },
   'shared/agent/approval.ts': { count: 1, reason: 'shareSteps: [] means a block that is not a database changes no sharing; flatMap drops it' },
+  'shared/agent/media-gate.ts': { count: 3, reason: 'nestedUrls and mediaProblems: [] means no media URL to check (no hook, or an edit that writes no data); a refused URL throws DATA_REJECTED' },
+  'components/modules/agent/editor-ports.ts': { count: 1, reason: 'the media port\'s URL resolve: null means a blank or unparsable URL, which loads nothing, so the hook is not asked' },
   'components/modules/agent/page-documents.ts': { count: 1, reason: 'createPageDocuments: null means no page tool has loadDocument and saveDocument; the tools then offer no `page` and openPage refuses it' },
 };
 

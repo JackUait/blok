@@ -86,8 +86,13 @@ export const appendChild = (parentNode: ParentNode, newNode: ChildNode): void =>
   newNode.parentNode = parentNode;
 };
 
+/*
+ * lastIndexOf, not indexOf: a foster-parenting <table> sits at the end, so
+ * indexOf from the front made long foster-parented runs quadratic. A node
+ * sits in one array once, so both find the same index.
+ */
 export const insertBefore = (parentNode: ParentNode, newNode: ChildNode, referenceNode: ChildNode): void => {
-  parentNode.childNodes.splice(parentNode.childNodes.indexOf(referenceNode), 0, newNode);
+  parentNode.childNodes.splice(parentNode.childNodes.lastIndexOf(referenceNode), 0, newNode);
   // eslint-disable-next-line no-param-reassign -- the tree is built by mutation
   newNode.parentNode = parentNode;
 };
@@ -98,7 +103,7 @@ export const detachNode = (node: ChildNode): void => {
   if (parent === null) {
     return;
   }
-  parent.childNodes.splice(parent.childNodes.indexOf(node), 1);
+  parent.childNodes.splice(parent.childNodes.lastIndexOf(node), 1);
   // eslint-disable-next-line no-param-reassign -- the tree is built by mutation
   node.parentNode = null;
 };
@@ -117,7 +122,7 @@ export const insertText = (parentNode: ParentNode, text: string): void => {
 
 /** Inserts text before a node, merging it into a text node right before it. */
 export const insertTextBefore = (parentNode: ParentNode, text: string, referenceNode: ChildNode): void => {
-  const previous = parentNode.childNodes[parentNode.childNodes.indexOf(referenceNode) - 1];
+  const previous = parentNode.childNodes[parentNode.childNodes.lastIndexOf(referenceNode) - 1];
 
   if (previous !== undefined && isTextNode(previous)) {
     previous.value += text;

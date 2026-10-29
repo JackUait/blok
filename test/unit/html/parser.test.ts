@@ -90,3 +90,31 @@ describe('parser regressions', () => {
     expect(asElement(html.childNodes[1]).childNodes).toHaveLength(0);
   });
 });
+
+describe('elements made again for one token', () => {
+  const elementsOf = (root: { childNodes: ChildNode[] }): Element[] =>
+    root.childNodes.filter(isElementNode).flatMap((element) => [ element, ...elementsOf(element), ...('content' in element ? elementsOf(element.content as Element) : []) ]);
+
+  // Sanitizers edit attrs in place; a shared list or attribute edits both copies.
+  it.each([
+    [ 'reopened across paragraphs', '<p><a href="x">l<p>m</a>', 2 ],
+    [ 'split by a block (adoption agency)', '<a href="x"><div>y</a>', 2 ],
+    [ 'recreated between formatting element and block', '<a href="1"><b class="2"><div>x</a>y', 4 ],
+  ])('get their own attributes when %s', (_, html, copies) => {
+    const elements = elementsOf(parseFragment(html)).filter((element) => element.attrs.length > 0);
+    const attributes = elements.flatMap((element) => element.attrs);
+
+    expect(elements).toHaveLength(copies);
+    expect(new Set(elements.map((element) => element.attrs)).size).toBe(elements.length);
+    expect(new Set(attributes).size).toBe(attributes.length);
+  });
+
+  it('keeps the original when the reopened copy is edited', () => {
+    const [ first, second ] = parseFragment('<p><a href="x">l<p>m</a>').childNodes.map((p) => asElement(asElement(p).childNodes[0]));
+
+    second.attrs[0].value = 'y';
+    second.attrs.push({ name: 'title', value: 't' });
+
+    expect(first.attrs).toEqual([{ name: 'href', value: 'x' }]);
+  });
+});

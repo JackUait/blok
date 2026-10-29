@@ -497,9 +497,8 @@ export type FragmentUrlTransform = (url: string, attr: 'href' | 'src') => string
 type UrlRewrites = Map<'href' | 'src', { from: string; to: string }>;
 
 /**
- * Keyed by attribute list, not element: the parser gives an element it reopens
- * (`<a>` split across paragraphs) the same list as the original, and
- * replaceAttrs edits it in place, so both see the first rewrite.
+ * Keyed by attribute list. Each element has its own list (the parser copies it
+ * for an element it reopens), and replaceAttrs edits it in place, never swaps it.
  */
 type RewriteMemo = Map<HtmlElement['attrs'], UrlRewrites>;
 

@@ -15,6 +15,11 @@ const BLOCKS: SanitizerConfig = { p: true, div: true, b: {}, i: {} };
  */
 const PATHOLOGICAL: Array<{ name: string; build: (n: number) => string; config: SanitizerConfig }> = [
   { name: 'comments between text', build: (n) => '<!--c-->x'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'comments only', build: (n) => '<!--c-->'.repeat(n), config: INLINE_TEXT_SANITIZE },
+  { name: 'foster-parented marks', build: (n) => `<table>${'<i>x</i>'.repeat(n)}`, config: INLINE_TEXT_SANITIZE },
+  { name: 'foster-parented text', build: (n) => `<table><tr>${'<i></i>x'.repeat(n)}`, config: INLINE_TEXT_SANITIZE },
+  { name: 'bold across paragraphs', build: (n) => `<b>${'<p>x</b>'.repeat(n)}`, config: BLOCKS },
+  { name: 'links reopened across paragraphs', build: (n) => '<a href="u">x<p>y</a>'.repeat(n), config: { a: { href: true }, p: true } },
   { name: 'disallowed tags', build: (n) => '<foo>x</foo>'.repeat(n), config: INLINE_TEXT_SANITIZE },
   { name: 'bare spans', build: (n) => '<span>x</span>'.repeat(n), config: INLINE_TEXT_SANITIZE },
   { name: 'paragraphs unwrapped', build: (n) => '<p>x</p>\n'.repeat(n), config: INLINE_TEXT_SANITIZE },
@@ -40,9 +45,13 @@ const best = (html: string, testCase: Case, times: number): number =>
     })
   );
 
-/** The smallest n (from 250, doubling) whose input takes at least 0.5 ms, so timer noise stays small next to it. */
+/**
+ * The smallest n (from 2000, doubling) whose input takes at least 2 ms, so
+ * timer noise stays small next to it. An array splice per child is cheap
+ * until arrays get long: below about 2000 children it hides in the noise.
+ */
 const calibrate = (testCase: Case): number =>
-  [250, 500, 1000, 2000].find((n) => best(testCase.build(n), testCase, 1) >= 0.5) ?? 4000;
+  [2000, 4000].find((n) => best(testCase.build(n), testCase, 1) >= 2) ?? 8000;
 
 describe('sanitizeHtmlFragment time', SLOW, () => {
   // One run over 8n must cost about eight runs over n; a quadratic path costs

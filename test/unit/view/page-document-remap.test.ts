@@ -69,6 +69,16 @@ describe('remapPageDocument', () => {
     expect(original.blocks[1]?.data.text).toContain('href="#section%2F1"');
   });
 
+  // The parser reopens the <a> in the second <p>. When a new id is also an old
+  // one, a copy that shared the first one's attributes was remapped twice.
+  it('remaps a link the parser splits across paragraphs once per copy', () => {
+    const original = doc([ { id: 'old-block', type: 'paragraph', data: { text: '<p><a data-blok-page-id="p1">l<p>m</a>' } } ]);
+
+    const copied = remapPageDocument(original, { blockIds: new Map([ [ 'old-block', 'new-block' ] ]), pageIds: new Map([ [ 'p1', 'p2' ], [ 'p2', 'p3' ] ]) });
+
+    expect(copied.blocks[0]?.data.text).toBe('<p><a data-blok-page-id="p2">l</a></p><p><a data-blok-page-id="p2">m</a></p>');
+  });
+
   it('rewrites a page reference despite malformed UTF-16 in the same field', () => {
     const original = doc([{
       id: 'old-block',

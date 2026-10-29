@@ -22,6 +22,7 @@ import {
     type TagToken,
     type DoctypeToken,
     type EOFToken,
+    type Attribute,
 } from './token';
 import {
     adoptAttributes,
@@ -63,6 +64,13 @@ const TN = {
 const ATTRS = {
     TYPE: 'type',
 } as const;
+
+/**
+ * Attributes for an element made again from a token the formatting list kept.
+ * Equal to the first element's, but its own: sanitizers edit attrs in place,
+ * and a shared list or attribute would change both elements.
+ */
+const copyAttrs = (token: TagToken): Attribute[] => token.attrs.map((attr) => ({ ...attr }));
 
 const REPLACEMENT_CHARACTER = '�';
 const LINE_FEED = 0x0a;
@@ -406,8 +414,8 @@ export class Parser implements TokenHandler, StackHandler {
 
     /** @protected */
     _adoptNodes(donor: ParentNode, recipient: ParentNode): void {
-        for (let child = donor.childNodes[0]; child; child = donor.childNodes[0]) {
-            detachNode(child);
+        // One splice for all: detaching the first child each time moves the rest, quadratic.
+        for (const child of donor.childNodes.splice(0)) {
             appendChild(recipient, child);
         }
     }
@@ -509,7 +517,7 @@ export class Parser implements TokenHandler, StackHandler {
 
             for (let i = unopenIdx; i >= 0; i--) {
                 const entry = this.activeFormattingElements.entries[i] as ElementEntry;
-                this._insertElement(entry.token, entry.element.namespaceURI);
+                this._insertElement({ ...entry.token, attrs: copyAttrs(entry.token) }, entry.element.namespaceURI);
                 entry.element = this.openElements.current;
             }
         }
@@ -1304,7 +1312,7 @@ function aaRecreateElementFromEntry(
     elementEntry: ElementEntry,
 ): Element {
     const ns = elementEntry.element.namespaceURI;
-    const newElement = createElement(elementEntry.token.tagName, ns, elementEntry.token.attrs);
+    const newElement = createElement(elementEntry.token.tagName, ns, copyAttrs(elementEntry.token));
 
     p.openElements.replace(elementEntry.element, newElement);
     elementEntry.element = newElement;
@@ -1342,7 +1350,7 @@ function aaReplaceFormattingElement(
 ): void {
     const ns = formattingElementEntry.element.namespaceURI;
     const { token } = formattingElementEntry;
-    const newElement = createElement(token.tagName, ns, token.attrs);
+    const newElement = createElement(token.tagName, ns, copyAttrs(token));
 
     p._adoptNodes(furthestBlock, newElement);
     appendChild(furthestBlock, newElement);

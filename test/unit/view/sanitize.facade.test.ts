@@ -197,6 +197,15 @@ describe('view sanitizer element facade', () => {
 
       expect(sanitizeHtmlFragment('<p>a<b>bold</b>c</p>', config)).toBe('<p>flat</p>');
     });
+
+    // The parser reopens <a> and <b> in the second <p>. A rule's edit to one copy must not reach the other.
+    it.each([
+      { name: 'a forced value', html: '<p><a href="x">l<p>m</a>', config: { p: true, a: (el: FacadeElement) => (el.textContent === 'l' ? { href: 'forced' } : { href: true }) }, out: '<p><a href="forced">l</a></p><p><a href="x">m</a></p>' },
+      { name: 'a dropped attribute', html: '<p><a href="x">l<p>m</a>', config: { p: true, a: (el: FacadeElement) => (el.textContent === 'l' ? {} : { href: true }) }, out: '<p><a>l</a></p><p><a href="x">m</a></p>' },
+      { name: 'a style write', html: '<p><b style="color: blue">l<p>m</b>', config: { p: true, b: (el: FacadeElement) => { if (el.textContent === 'l') { el.style.setProperty('color', 'red'); } return { style: true }; } }, out: '<p><b style="color: red;">l</b></p><p><b style="color: blue">m</b></p>' },
+    ])('keeps $name on the copy it was made for', ({ html, config, out }) => {
+      expect(sanitizeHtmlFragment(html, config as unknown as SanitizerConfig)).toBe(out);
+    });
   });
 });
 
@@ -307,8 +316,8 @@ describe('view sanitizer entry paths', () => {
         { name: 'an image before a removed comment', html: '<img src="x.png"><!--c-->', config: { img: { src: true } }, out: '<img src="cdn/x.png">', calls: ['src:x.png'] },
         { name: 'a link in a template with a comment inside', html: '<template><a href="x">l</a><!--c--></template>', config: { template: true, a: { href: true } }, out: '<template><a href="cdn/x">l</a></template>', calls: ['href:x'] },
         { name: 'a link in a template with a comment after it', html: '<template><a href="x">l</a></template><!--c-->', config: { template: true, a: { href: true } }, out: '<template><a href="cdn/x">l</a></template>', calls: ['href:x'] },
-        // The parser reopens the <a> in the second <p>; both copies share one attribute list.
-        { name: 'a link the parser splits across paragraphs', html: '<p><a href="x">l<p>m</a>', config: { p: true, a: { href: true } }, out: '<p><a href="cdn/x">l</a></p><p><a href="cdn/x">m</a></p>', calls: ['href:x'] },
+        // The parser reopens the <a> in the second <p>: two links, so one call each.
+        { name: 'a link the parser splits across paragraphs', html: '<p><a href="x">l<p>m</a>', config: { p: true, a: { href: true } }, out: '<p><a href="cdn/x">l</a></p><p><a href="cdn/x">m</a></p>', calls: ['href:x', 'href:x'] },
       ])('$name', ({ html, config, out, calls }) => {
         const hook = prefixing();
 

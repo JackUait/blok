@@ -1,0 +1,24 @@
+feature,area,priority,original,clone,notes
+parse(html) full document,api,must,yes,no,htmlToBlocks reads external HTML
+parseFragment(html) template context,api,must,yes,no,html-text / rich-text / heading anchors
+parseFragment(context element; html),api,must,yes,no,sanitize / view-nodes / inline-renderers use a div context
+serialize(node) inner HTML,api,must,yes,no,sanitize / remap / renderers
+serializeOuter(element),api,should,yes,no,replaces the parseFragment('') holder hack in rich-text-parse5
+default tree shape (nodeName tagName attrs namespaceURI childNodes parentNode value data content mode),tree,must,yes,no,call sites walk it directly
+all tokenizer states incl. comments doctype CDATA script-data escapes,tokenizer,must,yes,no,any stored or pasted input must tokenize as a browser would
+named + numeric char refs incl. 106 legacy names and attribute rule,tokenizer,must,yes,no,reuse src/markdown/engine/entities.ts table
+CRLF / CR normalisation and NUL handling,tokenizer,must,yes,no,
+all insertion modes + adoption agency + foster parenting + templates,tree,must,yes,no,external HTML and sanitizer parity
+foreign content (svg / math) incl. attribute and tag-name adjustment,tree,must,yes,no,breakout rules decide where HTML lands; security
+quirks mode from doctype,tree,must,yes,no,changes <p> closing by <table> in full documents
+scripting flag,tree,must,yes,no,fixed ON like parse5's default; no option
+throw on two adjacent low surrogates,compat,must,yes,no,keep byte-identical via repairSurrogates at call sites; bug fix is a separate decision
+source code location info,api,skip,yes,skip,no call site reads it
+parse error codes / onParseError,api,skip,yes,skip,no call site reads them; html5lib run without errors like parse5 upstream run
+pluggable tree adapters / htmlparser2 adapter,api,skip,yes,skip,one tree shape
+onItemPush / onItemPop hooks,api,skip,yes,skip,unused
+scriptingEnabled option,api,skip,yes,skip,always on
+tokenizer pause / resume / chunked write / insertHtmlAtCurrentPos,tokenizer,skip,yes,skip,document.write only; we parse whole strings
+SAX parser / parser stream / rewriting stream / plain-text stream,packages,skip,yes,skip,separate parse5 packages; unused
+open-element-stack / formatting-list unit tests,tests,skip,yes,skip,internal API; covered through tree-construction tests
+#script-off and scripted/ html5lib cases,tests,skip,yes,skip,scripting fixed on; no script execution

@@ -3427,6 +3427,8 @@ export class DatabaseCardDrawer {
     // R29: the page glyph before a file name, as the table draws it.
     cell.querySelectorAll<HTMLElement>('[data-blok-database-file-chip]').forEach((chip) => {
       chip.prepend(fileChipIcon());
+      // Owned, as in the table: core shows no link card and opens nothing on a plain click; Cmd/Ctrl-click follows target=_blank.
+      chip.querySelector('[data-blok-database-cell-link]')?.setAttribute(DATA_ATTR.linkOwner, '');
       bindFileNameHint(chip);
     });
     if (cell.hasAttribute('data-empty')) {
@@ -3747,7 +3749,10 @@ export class DatabaseCardDrawer {
         // research/22 §3: a click on a url, email or phone link follows it; beside it, edits. Cmd/Ctrl follows any link.
         const anchor = event.target instanceof Element ? event.target.closest('a') : null;
 
-        if (anchor !== null && (anchor.hasAttribute('data-blok-database-cell-link') || event.metaKey || event.ctrlKey)) {
+        // A file chip's plain click opens the box, as in the table.
+        const followed = anchor !== null && anchor.hasAttribute('data-blok-database-cell-link') && anchor.closest('[data-blok-database-file-chip]') === null;
+
+        if (anchor !== null && (followed || event.metaKey || event.ctrlKey)) {
           return;
         }
         this.openValueEditor(valueEl, def.id);

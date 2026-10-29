@@ -405,6 +405,48 @@ describe('DatabaseCardDrawer — page header and body start', () => {
     }
   });
 
+  // notion-spec-2 §21.4: the side peek shows only the name hint on a file chip, not Blok's white link card.
+  describe('file chip link in the side peek', () => {
+    const files: PropertyDefinition = { id: 'prop-files', name: 'Files', type: 'files', position: 'a9' };
+    const openWithFile = (): { options: CardDrawerOptions; link: HTMLAnchorElement } => {
+      const options = createOptions({ schema: [...SCHEMA, files] });
+
+      new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] } });
+      const link = valueOf(options, 'prop-files')?.querySelector<HTMLAnchorElement>('[data-blok-database-file-chip] a[data-blok-database-cell-link]');
+
+      if (link === null || link === undefined) throw new Error('no file link');
+
+      return { options, link };
+    };
+    const filesEditor = (): Element | null => document.querySelector('[data-blok-database-cell-editor]');
+
+    it('the link sits in a link owner, so core shows no link card and opens nothing on a click', () => {
+      // Core's link hover card and link click skip a link inside a link owner.
+      expect(openWithFile().link.closest('[data-blok-link-owner]')).not.toBeNull();
+    });
+
+    // As in the table (d06fe949): a plain click opens the box, not the file.
+    it('a plain click on the chip link opens the files box and does not follow the link', () => {
+      const { link } = openWithFile();
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(click);
+
+      expect(filesEditor()).not.toBeNull();
+      expect(click.defaultPrevented).toBe(true);
+    });
+
+    it('a Cmd-click on the chip link follows it and opens no box', () => {
+      const { link } = openWithFile();
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true });
+
+      link.dispatchEvent(click);
+
+      expect(filesEditor()).toBeNull();
+      expect(click.defaultPrevented).toBe(false);
+    });
+  });
+
   // feel/findings-rowpage R25: the empty title reads "New page".
   it('the title placeholder is New page', () => {
     const options = createOptions({ i18n: { t: (key: string) => (key === 'tools.database.layoutNewPage' ? 'New page' : key) } as never });

@@ -1327,6 +1327,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FILE_MENU_BYTES = 2_258;
     // database.css: the table relation picker's divider and "+ New <query> in <database>" row (notion-spec-2 §21.2).
     const DATABASE_RELATION_CREATE_ROW_BYTES = 1_751;
+    // database.css: the table relation picker's page-row highlight fill (notion-spec-2 §22.2).
+    const DATABASE_RELATION_HIGHLIGHT_BYTES = 369;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1637,7 +1639,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PEEK_CARD_CHECKBOX_BYTES
       + DATABASE_RELATION_CHIP_EMOJI_BYTES
       + DATABASE_FILE_MENU_BYTES
-      + DATABASE_RELATION_CREATE_ROW_BYTES;
+      + DATABASE_RELATION_CREATE_ROW_BYTES
+      + DATABASE_RELATION_HIGHLIGHT_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

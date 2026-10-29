@@ -15620,6 +15620,10 @@ textarea[data-blok-database-cell-input] {
   line-height: 16.8px;
 }
 
+[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option][data-active] {
+  background-color: var(--blok-database-add-hover-bg);
+}
+
 [data-blok-database-relation-editor] [role="listbox"] > [data-blok-database-relation-divider] {
   flex: none;
   height: 1px;
@@ -15635,7 +15639,7 @@ textarea[data-blok-database-cell-input] {
   min-height: 32px;
   margin-inline: calc(-1 * var(--blok-space-1));
   padding: 0 var(--blok-space-2);
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-control);
   color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 16.8px;

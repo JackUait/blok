@@ -434,6 +434,17 @@ describe('cell editor CSS', () => {
       expect(declared(`${LIST} [data-blok-database-relation-option]`, 'min-height')).toEqual(['32px']);
       expect(declared(`${LIST} [data-blok-database-relation-option]`, 'font-weight')).toEqual(['500']);
     });
+
+    // notion-spec-2 §22.2: a page row highlights rgba(55,53,47,0.06) at radius 4; the create row rgba(33,27,23,0.051) at radius 6.
+    it('highlights a page row and the create row with Notion\'s two fills and radii', () => {
+      const LIST = `${REL} [data-blok-database-relation-head] ~ [role="listbox"]`;
+
+      expect(declared(`${LIST} [data-blok-database-relation-option][data-active]`, 'background-color')).toEqual(['var(--blok-database-add-hover-bg)']);
+      expect(colors).toContain('--blok-database-add-hover-bg: rgba(55, 53, 47, 0.06)');
+      expect(declared(`${LIST} [data-blok-database-relation-option]`, 'border-radius')).toEqual(['var(--blok-radius-control-sm)']);
+      expect(declared('[data-blok-database-relation-create][data-active]', 'background-color')).toEqual(['var(--blok-database-hover-bg)']);
+      expect(declared('[data-blok-database-relation-create]', 'border-radius')).toEqual(['var(--blok-radius-control)']);
+    });
   });
 
   // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.

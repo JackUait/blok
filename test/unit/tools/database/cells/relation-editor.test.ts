@@ -194,9 +194,8 @@ describe('relation editor', () => {
           const { closePeek, onClose } = openPeek();
 
           closePeek();
-
-          expect(search()).toHaveFocus();
-          press(search(), 'Escape');
+          // notion-spec-2 §20.12: focus stays where the peek left it; the picker still owns Escape.
+          press(document.body, 'Escape');
           expect(onClose).toHaveBeenCalledTimes(1);
         });
 

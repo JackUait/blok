@@ -207,10 +207,8 @@ class RelationEditor implements CellEditorHandle {
     const release = this.popover.hold();
     const opened = this.ctx.openRelated?.(this.property, rowId, {
       mode: 'center',
-      onClose: () => {
-        release();
-        if (this.open) this.search.focus();
-      },
+      // notion-spec-2 §20.12: focus stays on the page; the picker's Escape works from there.
+      onClose: release,
     });
 
     if (opened !== true) release();

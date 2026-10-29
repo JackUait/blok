@@ -24,7 +24,7 @@ const press = (target: EventTarget, key: string): void => {
 const search = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('[data-blok-database-relation-search]');
 const peek = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-drawer]');
 
-// notion-spec-2 §19.2 (02-rel-enter-linked.png, 02-after-peek-esc.png).
+// notion-spec-2 §19.2 (02-rel-enter-linked.png, 02-after-peek-esc.png), §20.12.
 describe('table relation picker over a linked page', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -80,7 +80,8 @@ describe('table relation picker over a linked page', () => {
 
     expect(peek()).toBeNull();
     expect(search()?.isConnected).toBe(true);
-    expect(search()).toHaveFocus();
+    // notion-spec-2 §20.12: focus goes to the page body, not the search.
+    expect(search()).not.toHaveFocus();
     expect(document.querySelector('[data-blok-database-relation-option="r2"]')?.getAttribute('aria-selected')).toBe('true');
   });
 });

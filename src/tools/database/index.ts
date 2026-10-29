@@ -9275,7 +9275,7 @@ export class DatabaseTool implements BlockTool {
           // The next open asks the host again.
           this.hostBacklinks = null;
           this.view?.rowPageClosed?.();
-          // Last: the picker under the peek takes focus back.
+          // Last: the picker held under the peek takes its keys back.
           this.endRelatedPeek();
         },
         onCopyViewLink: (rowId, tabId) => this.copyRowLink(rowId, tabId),

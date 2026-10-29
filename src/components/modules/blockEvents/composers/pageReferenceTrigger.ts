@@ -1,5 +1,6 @@
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import { PagePicker } from '../../../../tools/page/page-picker';
+import { searchVisiblePages } from '../../../../tools/page/search-pages';
 import type { PageConfig, PageSearchResult } from '../../../../tools/page/types';
 import type { Block } from '../../../block';
 import { Dom } from '../../../dom';
@@ -118,22 +119,7 @@ export class PageReferenceTrigger extends BlockEventComposer {
     const token = ++this.searchToken;
 
     try {
-      const results = await page.search(query.query);
-      const candidates = results.filter((hit) => typeof hit.pageId === 'string' &&
-        hit.pageId.trim() !== '' && hit.access !== 'none');
-      const visible: readonly PageSearchResult[] = page.resolve === undefined
-        ? candidates
-        : (await Promise.all(candidates.map(async (hit) => {
-          try {
-            const info = await page.resolve?.(hit.pageId);
-
-            return info !== null && info !== undefined && info.access !== 'none'
-              ? { ...hit, title: info.title, path: info.path ?? hit.path, status: info.status ?? hit.status }
-              : null;
-          } catch {
-            return null;
-          }
-        }))).filter((hit): hit is NonNullable<typeof hit> => hit !== null);
+      const visible = await searchVisiblePages(page, query.query);
 
       if (token !== this.searchToken || !this.opened) {
         return false;

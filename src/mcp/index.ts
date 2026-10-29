@@ -52,6 +52,7 @@ export const createBlokMcpServer = (options: BlokMcpOptions): { start(): Promise
       auth: options.auth,
       principal,
       version: getBlokVersion(),
+      ...(options.transport.kind === 'http' && options.transport.public === true && { public: true }),
     });
 
     state.serving = http;

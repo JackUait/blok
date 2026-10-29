@@ -21,11 +21,15 @@ export interface HttpServerInput {
   version: string;
   /** JWKS fetch; tests inject it. */
   fetchImpl?: typeof fetch;
+  /** --public: a proxy in front sets Host, so only a loopback bind checks it. */
+  public?: boolean;
 }
 
 const METADATA_PATH = '/.well-known/oauth-protected-resource';
 // MCP clients are not browsers: only a loopback page may drive this server (spec §3.7 "validate Origin").
 const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+// A DNS-rebound page sends no Origin on a same-origin call, but its Host still names the attacker's domain.
+const LOOPBACK_HOST_NAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 // Matches the SDK's own default body bound (CreateMcpHandlerOptions.maxRequestBodySize).
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -126,11 +130,21 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
     });
   });
 
+  // Set once listening; port 0 picks the real one then.
+  const bound = { port: 0 };
+  const isLoopbackHost = (host: string | undefined): boolean => {
+    const at = host?.lastIndexOf(':') ?? -1;
+
+    return host !== undefined && at > 0
+      && LOOPBACK_HOST_NAMES.has(host.slice(0, at).toLowerCase())
+      && host.slice(at + 1) === String(bound.port);
+  };
+
   const serve = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
     const origin = req.headers.origin;
 
-    if (origin !== undefined && !LOOPBACK_ORIGIN.test(origin)) {
+    if ((origin !== undefined && !LOOPBACK_ORIGIN.test(origin)) || (input.public !== true && !isLoopbackHost(req.headers.host))) {
       res.writeHead(403).end();
 
       return;
@@ -202,6 +216,8 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
     throw new Error('blok-mcp: the HTTP server has no TCP address');
   }
   const shownHost = address.family === 'IPv6' ? `[${address.address}]` : address.address;
+
+  bound.port = address.port;
 
   return {
     url: `http://${shownHost}:${address.port}`,

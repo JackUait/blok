@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { EventEmitter } from 'node:events';
 import * as fs from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import { setImmediate as dispatchCheckpoint } from 'node:timers/promises';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
@@ -165,6 +166,34 @@ describe('createBlokMcpServer', () => {
       expect(serveStdio).not.toHaveBeenCalled();
       await within(server.stop());
       await expect(fetch(url ?? '')).rejects.toThrow();
+    } finally {
+      await within(server.stop());
+    }
+  });
+
+  it('leaves Host to the proxy when --public, so a proxied request reaches the OAuth gate', async () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const server = createBlokMcpServer({
+      transport: { kind: 'http', listen: '127.0.0.1:0', public: true },
+      auth: { kind: 'oauth', issuer: 'https://id.test', audience: 'https://mcp.test', jwksUrl: 'https://id.test/jwks' },
+      authorize: async () => true,
+    });
+
+    try {
+      await within(server.start());
+      const line = stderr.mock.calls.map((call) => String(call[0])).find((text) => text.includes('listening on'));
+      const url = new URL(line?.match(/http:\/\/\S+/)?.[0] ?? '');
+      const status = await within(new Promise<number | undefined>((resolve, reject) => {
+        const client = httpRequest(url, { method: 'POST', headers: { Host: 'mcp.test' } }, (response) => {
+          resolve(response.statusCode);
+          response.resume();
+        });
+
+        client.on('error', reject);
+        client.end();
+      }));
+
+      expect(status).toBe(401);
     } finally {
       await within(server.stop());
     }

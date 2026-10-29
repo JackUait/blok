@@ -69,6 +69,43 @@ describe('startHttpServer', () => {
     expect((await post(`${url}/mcp`, { Origin: 'http://localhost:5173' })).status).toBe(200);
   });
 
+  // fetch cannot set Host, so these speak raw HTTP.
+  const postWithHost = (url: string, host: string): Promise<number | undefined> => new Promise((resolve, reject) => {
+    const client = httpRequest(`${url}/mcp`, {
+      method: 'POST',
+      headers: { Host: host, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+    }, (response) => {
+      resolve(response.statusCode);
+      response.resume();
+    });
+
+    client.on('error', reject);
+    client.end(JSON.stringify(listCall));
+  });
+
+  it('refuses a foreign Host on a loopback bind, so a DNS-rebound page cannot call tools', async () => {
+    const url = await start({ auth: { kind: 'none' }, principal: 'local' });
+    const port = new URL(url).port;
+
+    expect({
+      rebound: await postWithHost(url, `rebind.evil.com:${port}`),
+      otherPort: await postWithHost(url, `127.0.0.1:${Number(port) + 1}`),
+      dispatched: dispatch.mock.calls.length,
+    }).toEqual({ rebound: 403, otherPort: 403, dispatched: 0 });
+  });
+
+  it.each(['127.0.0.1', 'localhost', '[::1]', 'LOCALHOST'])('accepts Host %s with the bound port on a loopback bind', async (name) => {
+    const url = await start({ auth: { kind: 'none' }, principal: 'local' });
+
+    expect(await postWithHost(url, `${name}:${new URL(url).port}`)).toBe(200);
+  });
+
+  it('leaves Host to the proxy in public mode', async () => {
+    const url = await start({ auth: { kind: 'none' }, principal: 'local', public: true });
+
+    expect(await postWithHost(url, 'mcp.example.com')).toBe(200);
+  });
+
   it('404s other paths', async () => {
     const url = await start({ auth: { kind: 'none' }, principal: 'local' });
 

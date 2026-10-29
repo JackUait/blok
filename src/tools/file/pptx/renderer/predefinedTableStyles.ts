@@ -776,6 +776,10 @@ const styleGenerators: Record<string, (accent: string, styleId: string) => strin
 
 const cache = new Map<string, SafeXmlNode>();
 
+const knownStyles = new Map(
+  Array.from(styleIdMap, ([id, [styleName, accent]]) => [id, { id, styleName, accent }])
+);
+
 /**
  * Get a predefined table style by its UUID.
  * Returns the parsed SafeXmlNode (a:tblStyle element) or undefined if not a known predefined style.
@@ -785,14 +789,15 @@ export function getPredefinedTableStyle(styleId: string): SafeXmlNode | undefine
   const cached = cache.get(styleId);
   if (cached) return cached;
 
-  const entry = styleIdMap.get(styleId);
+  const entry = knownStyles.get(styleId);
   if (!entry) return undefined;
 
-  const [styleName, accent] = entry;
+  const { id, styleName, accent } = entry;
   const generator = styleGenerators[styleName];
   if (!generator) return undefined;
 
-  const xml = generator(accent, styleId);
+  // The XML is built from the table's own id, never from deck text.
+  const xml = generator(accent, id);
   const node = parseXml(xml);
   if (!node.exists()) return undefined;
 

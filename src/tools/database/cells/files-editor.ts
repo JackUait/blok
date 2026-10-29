@@ -49,6 +49,8 @@ class FilesEditor implements CellEditorHandle {
   private panel: HTMLElement | null = null;
   /** The table's per-file "⋯" menu, or its Rename field; null when closed. */
   private fileMenu: HTMLElement | null = null;
+  /** notion-spec-2 §24.2: the table cell and the side peek value share one box. */
+  private readonly boxed: boolean;
 
   constructor(
     private readonly property: PropertyDefinition,
@@ -57,9 +59,10 @@ class FilesEditor implements CellEditorHandle {
     private readonly ctx: CellEditorContext
   ) {
     this.files = filesOf(value);
+    this.boxed = ctx.coverCell === true || ctx.coverCell === 'value';
     this.root.setAttribute('data-blok-database-files-editor', '');
     this.list.setAttribute('data-blok-database-files-list', '');
-    if (ctx.coverCell === true) {
+    if (this.boxed) {
       this.popover = this.buildTable(anchor);
       this.renderList();
       this.popover.show();
@@ -166,11 +169,11 @@ class FilesEditor implements CellEditorHandle {
     input.setAttribute('data-blok-database-files-link-input', '');
     input.setAttribute('aria-label', this.t('tools.database.filesLinkLabel'));
     input.placeholder = this.t('tools.database.filesLinkPlaceholder');
-    if (this.ctx.coverCell === true) input.setAttribute('data-blok-field', 'text');
+    if (this.boxed) input.setAttribute('data-blok-field', 'text');
     submit.type = 'button';
     submit.setAttribute('data-blok-database-files-link-submit', '');
     // notion-spec-2 §18.3: the table panel's button reads "Link".
-    submit.textContent = this.t(this.ctx.coverCell === true ? 'tools.database.filesTabLink' : 'tools.database.filesEmbed');
+    submit.textContent = this.t(this.boxed ? 'tools.database.filesTabLink' : 'tools.database.filesEmbed');
 
     const add = (): void => {
       const raw = input.value.trim();
@@ -224,10 +227,10 @@ class FilesEditor implements CellEditorHandle {
 
     return new CellPopover({
       anchor,
-      cover: true,
+      cover: this.ctx.coverCell,
       content: this.root,
       // notion-spec-2 §18.3: 240 wide over a 200 cell; it grows to fit a name (database.css).
-      minWidth: coverMinWidth(anchor, true, 240),
+      minWidth: coverMinWidth(anchor, this.ctx.coverCell, 240),
       onEscape: () => {
         if (this.fileMenu !== null) this.closeFileMenu();
         else if (this.panel !== null) this.fadePanel();
@@ -475,7 +478,7 @@ class FilesEditor implements CellEditorHandle {
       name.textContent = file.name;
 
       remove.type = 'button';
-      if (this.ctx.coverCell === true) {
+      if (this.boxed) {
         remove.setAttribute('data-blok-database-file-menu', '');
         remove.setAttribute('aria-label', this.t('tools.database.fileMoreActions'));
         remove.setAttribute('aria-haspopup', 'menu');

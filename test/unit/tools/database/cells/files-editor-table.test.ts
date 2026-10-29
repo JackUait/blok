@@ -265,3 +265,35 @@ describe('files editor in a table cell', () => {
     });
   });
 });
+
+// notion-spec-2 §24.2: the side peek's files box is the table's: each file row has a ⋮⋮ grip and a "⋯", then "Add a file or image".
+describe('files editor over a side peek value', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('draws the grip, glyph, name and "⋯" in each file row, then the add row', () => {
+    open([FILE], { coverCell: 'value' });
+    const row = must(box()?.querySelector<HTMLElement>('[data-blok-database-file-row="f0"]') ?? null, 'file row');
+
+    expect(box()?.getAttribute('data-layout')).toBe('table');
+    expect([...row.children].map((child) => [...child.attributes].map((a) => a.name).find((name) => name.startsWith('data-blok')) ?? child.tagName))
+      .toEqual(['data-blok-database-file-grip', 'data-blok-database-file-chip-icon', 'SPAN', 'data-blok-database-file-menu']);
+    expect(box()?.querySelector('[data-blok-database-files-add]')?.textContent?.trim()).toBe('tools.database.filesAdd');
+    expect(box()?.querySelector('[data-blok-database-file-remove]')).toBeNull();
+  });
+
+  it('keeps the row page value look, not the table cell box', () => {
+    open([FILE], { coverCell: 'value' });
+    const classes = box()?.closest('[data-blok-popover]')?.getAttribute('data-blok-popover-custom-class') ?? '';
+
+    expect(classes.split(' ')).toContain('blok-database-value-editor');
+    expect(classes.split(' ')).not.toContain('blok-database-table-cell-editor');
+  });
+});

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Հետարկել",
   "tools.database.relationTwoWay": "Ավելացնել կապված հատկություն",
   "tools.database.rollupSelect": "Ընտրել",
+  "tools.database.rollupSelectRelation": "Ընտրեք առկա կապ…",
+  "tools.database.rollupSelectProperty": "Ընտրեք հատկություն…",
   "tools.database.relationThisDatabase": "Այս տվյալների բազան",
   "tools.database.relationRelatedToHint": "Կապված տվյալների բազան ստեղծելուց հետո հնարավոր չէ փոխել",
   "tools.database.relationTwoWayEnable": "Միացնել",

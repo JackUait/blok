@@ -1758,6 +1758,8 @@
   "tools.database.undo": "בטל",
   "tools.database.relationTwoWay": "הוספת מאפיין מקושר",
   "tools.database.rollupSelect": "בחירה",
+  "tools.database.rollupSelectRelation": "בחירת קשר קיים…",
+  "tools.database.rollupSelectProperty": "בחירת מאפיין…",
   "tools.database.relationThisDatabase": "מסד נתונים זה",
   "tools.database.relationRelatedToHint": "לא ניתן לשנות את מסד הנתונים המקושר לאחר היצירה",
   "tools.database.relationTwoWayEnable": "הפעלה",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Visszavonás",
   "tools.database.relationTwoWay": "Kapcsolódó tulajdonság hozzáadása",
   "tools.database.rollupSelect": "Kiválasztás",
+  "tools.database.rollupSelectRelation": "Válasszon egy meglévő kapcsolatot…",
+  "tools.database.rollupSelectProperty": "Válasszon egy tulajdonságot…",
   "tools.database.relationThisDatabase": "Ez az adatbázis",
   "tools.database.relationRelatedToHint": "A kapcsolódó adatbázis létrehozás után nem módosítható",
   "tools.database.relationTwoWayEnable": "Bekapcsolás",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "પૂર્વવત્ કરો",
   "tools.database.relationTwoWay": "સંબંધિત ગુણધર્મ ઉમેરો",
   "tools.database.rollupSelect": "પસંદ કરો",
+  "tools.database.rollupSelectRelation": "હાલનો સંબંધ પસંદ કરો…",
+  "tools.database.rollupSelectProperty": "ગુણધર્મ પસંદ કરો…",
   "tools.database.relationThisDatabase": "આ ડેટાબેઝ",
   "tools.database.relationRelatedToHint": "બનાવ્યા પછી સંબંધિત ડેટાબેઝ બદલી શકાતું નથી",
   "tools.database.relationTwoWayEnable": "ચાલુ કરો",

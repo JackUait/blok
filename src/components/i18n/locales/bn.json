@@ -1756,6 +1756,8 @@
   "tools.database.undo": "পূর্বাবস্থায় ফেরান",
   "tools.database.relationTwoWay": "সম্পর্কিত বৈশিষ্ট্য যোগ করুন",
   "tools.database.rollupSelect": "নির্বাচন করুন",
+  "tools.database.rollupSelectRelation": "একটি বিদ্যমান সম্পর্ক নির্বাচন করুন…",
+  "tools.database.rollupSelectProperty": "একটি বৈশিষ্ট্য নির্বাচন করুন…",
   "tools.database.relationThisDatabase": "এই ডেটাবেস",
   "tools.database.relationRelatedToHint": "তৈরির পরে সম্পর্কিত ডেটাবেস পরিবর্তন করা যায় না",
   "tools.database.relationTwoWayEnable": "চালু করুন",

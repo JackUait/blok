@@ -1756,6 +1756,8 @@
   "tools.database.undo": "செயல்தவிர்",
   "tools.database.relationTwoWay": "தொடர்புடைய பண்பைச் சேர்",
   "tools.database.rollupSelect": "தேர்ந்தெடு",
+  "tools.database.rollupSelectRelation": "ஏற்கெனவே உள்ள தொடர்பைத் தேர்ந்தெடு…",
+  "tools.database.rollupSelectProperty": "பண்பைத் தேர்ந்தெடு…",
   "tools.database.relationThisDatabase": "இந்தத் தரவுத்தளம்",
   "tools.database.relationRelatedToHint": "உருவாக்கிய பிறகு தொடர்புடைய தரவுத்தளத்தை மாற்ற முடியாது",
   "tools.database.relationTwoWayEnable": "இயக்கு",

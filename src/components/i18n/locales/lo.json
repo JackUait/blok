@@ -1756,6 +1756,8 @@
   "tools.database.undo": "ຍ້ອນກັບ",
   "tools.database.relationTwoWay": "ເພີ່ມຄຸນສົມບັດທີ່ກ່ຽວຂ້ອງ",
   "tools.database.rollupSelect": "ເລືອກ",
+  "tools.database.rollupSelectRelation": "ເລືອກຄວາມສຳພັນທີ່ມີຢູ່…",
+  "tools.database.rollupSelectProperty": "ເລືອກຄຸນສົມບັດ…",
   "tools.database.relationThisDatabase": "ຖານຂໍ້ມູນນີ້",
   "tools.database.relationRelatedToHint": "ບໍ່ສາມາດປ່ຽນຖານຂໍ້ມູນທີ່ກ່ຽວຂ້ອງໄດ້ຫຼັງຈາກສ້າງແລ້ວ",
   "tools.database.relationTwoWayEnable": "ເປີດໃຊ້",

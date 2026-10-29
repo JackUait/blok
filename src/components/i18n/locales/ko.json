@@ -1756,6 +1756,8 @@
   "tools.database.undo": "실행 취소",
   "tools.database.relationTwoWay": "관련 속성 추가",
   "tools.database.rollupSelect": "선택",
+  "tools.database.rollupSelectRelation": "기존 관계형 선택…",
+  "tools.database.rollupSelectProperty": "속성 선택…",
   "tools.database.relationThisDatabase": "이 데이터베이스",
   "tools.database.relationRelatedToHint": "관계 대상 데이터베이스는 생성 후 변경할 수 없습니다",
   "tools.database.relationTwoWayEnable": "사용",

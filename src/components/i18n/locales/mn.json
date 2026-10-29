@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Буцаах",
   "tools.database.relationTwoWay": "Холбоотой шинж нэмэх",
   "tools.database.rollupSelect": "Сонгох",
+  "tools.database.rollupSelectRelation": "Байгаа холбоосыг сонгох…",
+  "tools.database.rollupSelectProperty": "Шинж сонгох…",
   "tools.database.relationThisDatabase": "Энэ мэдээллийн сан",
   "tools.database.relationRelatedToHint": "Холбогдсон мэдээллийн санг үүсгэсний дараа өөрчлөх боломжгүй",
   "tools.database.relationTwoWayEnable": "Идэвхжүүлэх",

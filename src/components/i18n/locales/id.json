@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Urungkan",
   "tools.database.relationTwoWay": "Tambahkan properti terkait",
   "tools.database.rollupSelect": "Pilih",
+  "tools.database.rollupSelectRelation": "Pilih relasi yang ada…",
+  "tools.database.rollupSelectProperty": "Pilih properti…",
   "tools.database.relationThisDatabase": "Basis data ini",
   "tools.database.relationRelatedToHint": "Basis data terkait tidak dapat diubah setelah dibuat",
   "tools.database.relationTwoWayEnable": "Aktifkan",

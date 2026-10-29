@@ -113,6 +113,14 @@ describe('rollup setup menu (notion-spec-2 §20.11, §18.3)', () => {
     expect(host.update).toHaveBeenCalledWith({ rollup: expect.objectContaining({ function: 'checked' }), number: {} });
   });
 
+  it('asks for a relation and a property while none is picked (§18.3)', () => {
+    const bare: PropertyDefinition = { id: 'ru', name: 'Rollup', type: 'rollup', position: 'a2' };
+    const [rel, prop] = rows(rollupSetupItems(bare, makeHost()));
+
+    expect(rel.title).toBe('tools.database.rollupSelectRelation');
+    expect(prop.title).toBe('tools.database.rollupSelectProperty');
+  });
+
   it('marks the current calculation', () => {
     const [, , calc] = rows(rollupSetupItems(rollup, makeHost()));
     const current = flatLeaves(childrenOf(calc)).filter((item) => item.isActive === true);

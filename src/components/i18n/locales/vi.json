@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Hoàn tác",
   "tools.database.relationTwoWay": "Thêm thuộc tính liên quan",
   "tools.database.rollupSelect": "Chọn",
+  "tools.database.rollupSelectRelation": "Chọn một quan hệ có sẵn…",
+  "tools.database.rollupSelectProperty": "Chọn một thuộc tính…",
   "tools.database.relationThisDatabase": "Cơ sở dữ liệu này",
   "tools.database.relationRelatedToHint": "Không thể thay đổi cơ sở dữ liệu liên quan sau khi tạo",
   "tools.database.relationTwoWayEnable": "Bật",

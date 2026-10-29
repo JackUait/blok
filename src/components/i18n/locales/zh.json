@@ -1756,6 +1756,8 @@
   "tools.database.undo": "撤销",
   "tools.database.relationTwoWay": "添加关联属性",
   "tools.database.rollupSelect": "选择",
+  "tools.database.rollupSelectRelation": "选择现有关联…",
+  "tools.database.rollupSelectProperty": "选择属性…",
   "tools.database.relationThisDatabase": "此数据库",
   "tools.database.relationRelatedToHint": "创建后无法更改关联的数据库",
   "tools.database.relationTwoWayEnable": "启用",

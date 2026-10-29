@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Angre",
   "tools.database.relationTwoWay": "Legg til relatert egenskap",
   "tools.database.rollupSelect": "Velg",
+  "tools.database.rollupSelectRelation": "Velg en eksisterende relasjon…",
+  "tools.database.rollupSelectProperty": "Velg en egenskap…",
   "tools.database.relationThisDatabase": "Denne databasen",
   "tools.database.relationRelatedToHint": "Den relaterte databasen kan ikke endres etter at den er opprettet",
   "tools.database.relationTwoWayEnable": "Aktiver",

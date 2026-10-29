@@ -1756,6 +1756,8 @@
   "tools.database.undo": "واپس ڪريو",
   "tools.database.relationTwoWay": "لاڳاپيل پراپرٽي شامل ڪريو",
   "tools.database.rollupSelect": "چونڊيو",
+  "tools.database.rollupSelectRelation": "موجود لاڳاپو چونڊيو…",
+  "tools.database.rollupSelectProperty": "پراپرٽي چونڊيو…",
   "tools.database.relationThisDatabase": "هي ڊيٽابيس",
   "tools.database.relationRelatedToHint": "ٺاهڻ کان پوءِ لاڳاپيل ڊيٽابيس تبديل نٿو ڪري سگهجي",
   "tools.database.relationTwoWayEnable": "فعال ڪريو",

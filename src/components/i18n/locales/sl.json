@@ -1760,6 +1760,8 @@
   "tools.database.undo": "Razveljavi",
   "tools.database.relationTwoWay": "Dodaj povezano lastnost",
   "tools.database.rollupSelect": "Izberi",
+  "tools.database.rollupSelectRelation": "Izberite obstoječo povezavo…",
+  "tools.database.rollupSelectProperty": "Izberite lastnost…",
   "tools.database.relationThisDatabase": "Ta zbirka podatkov",
   "tools.database.relationRelatedToHint": "Povezane zbirke podatkov po ustvarjanju ni mogoče spremeniti",
   "tools.database.relationTwoWayEnable": "Omogoči",

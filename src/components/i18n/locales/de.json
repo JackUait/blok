@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Widerrufen",
   "tools.database.relationTwoWay": "Verknüpfte Eigenschaft hinzufügen",
   "tools.database.rollupSelect": "Auswählen",
+  "tools.database.rollupSelectRelation": "Vorhandene Verknüpfung auswählen…",
+  "tools.database.rollupSelectProperty": "Eigenschaft auswählen…",
   "tools.database.relationThisDatabase": "Diese Datenbank",
   "tools.database.relationRelatedToHint": "Die verknüpfte Datenbank kann nach dem Erstellen nicht geändert werden",
   "tools.database.relationTwoWayEnable": "Aktivieren",

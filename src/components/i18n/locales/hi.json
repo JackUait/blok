@@ -1756,6 +1756,8 @@
   "tools.database.undo": "पूर्ववत करें",
   "tools.database.relationTwoWay": "संबंधित प्रॉपर्टी जोड़ें",
   "tools.database.rollupSelect": "चुनें",
+  "tools.database.rollupSelectRelation": "कोई मौजूदा संबंध चुनें…",
+  "tools.database.rollupSelectProperty": "कोई प्रॉपर्टी चुनें…",
   "tools.database.relationThisDatabase": "यह डेटाबेस",
   "tools.database.relationRelatedToHint": "बनाने के बाद संबंधित डेटाबेस बदला नहीं जा सकता",
   "tools.database.relationTwoWayEnable": "चालू करें",

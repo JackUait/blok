@@ -1756,6 +1756,8 @@
   "tools.database.undo": "يېنىۋېلىش",
   "tools.database.relationTwoWay": "مۇناسىۋەتلىك خاسلىق قوشۇش",
   "tools.database.rollupSelect": "تاللاڭ",
+  "tools.database.rollupSelectRelation": "بار مۇناسىۋەتنى تاللاڭ…",
+  "tools.database.rollupSelectProperty": "خاسلىق تاللاڭ…",
   "tools.database.relationThisDatabase": "بۇ ساندان",
   "tools.database.relationRelatedToHint": "مۇناسىۋەتلىك ساندان قۇرۇلغاندىن كېيىن ئۆزگەرتىلمەيدۇ",
   "tools.database.relationTwoWayEnable": "قوزغىتىش",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Geri al",
   "tools.database.relationTwoWay": "İlişkili özellik ekle",
   "tools.database.rollupSelect": "Seç",
+  "tools.database.rollupSelectRelation": "Mevcut bir ilişki seçin…",
+  "tools.database.rollupSelectProperty": "Bir özellik seçin…",
   "tools.database.relationThisDatabase": "Bu veritabanı",
   "tools.database.relationRelatedToHint": "İlişkili veritabanı oluşturulduktan sonra değiştirilemez",
   "tools.database.relationTwoWayEnable": "Etkinleştir",

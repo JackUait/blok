@@ -1756,6 +1756,8 @@
   "tools.database.undo": "နောက်ပြန်",
   "tools.database.relationTwoWay": "ဆက်နွယ်သော ဂုဏ်သတ္တိ ထည့်ရန်",
   "tools.database.rollupSelect": "ရွေးရန်",
+  "tools.database.rollupSelectRelation": "ရှိပြီးသား ဆက်နွယ်မှုကို ရွေးပါ…",
+  "tools.database.rollupSelectProperty": "ဂုဏ်သတ္တိကို ရွေးပါ…",
   "tools.database.relationThisDatabase": "ဤဒေတာဘေ့စ်",
   "tools.database.relationRelatedToHint": "ဖန်တီးပြီးနောက် ဆက်နွယ်သော ဒေတာဘေ့စ်ကို ပြောင်း၍မရပါ",
   "tools.database.relationTwoWayEnable": "ဖွင့်ရန်",

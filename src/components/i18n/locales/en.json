@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Undo",
   "tools.database.relationTwoWay": "Add related property",
   "tools.database.rollupSelect": "Select",
+  "tools.database.rollupSelectRelation": "Select an existing relation…",
+  "tools.database.rollupSelectProperty": "Select a property…",
   "tools.database.relationThisDatabase": "This database",
   "tools.database.relationRelatedToHint": "The related database cannot be changed after creation",
   "tools.database.relationTwoWayEnable": "Enable",

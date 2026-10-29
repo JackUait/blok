@@ -1756,6 +1756,8 @@
   "tools.database.undo": "بېرته یې کړئ",
   "tools.database.relationTwoWay": "تړلې ځانګړتیا زیاته کړئ",
   "tools.database.rollupSelect": "وټاکئ",
+  "tools.database.rollupSelectRelation": "موجوده اړیکه وټاکئ…",
+  "tools.database.rollupSelectProperty": "ځانګړتیا وټاکئ…",
   "tools.database.relationThisDatabase": "دا ډیټابیس",
   "tools.database.relationRelatedToHint": "تړلی ډیټابیس له جوړېدو وروسته نشي بدلېدای",
   "tools.database.relationTwoWayEnable": "فعال کړئ",

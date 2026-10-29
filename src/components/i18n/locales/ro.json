@@ -1758,6 +1758,8 @@
   "tools.database.undo": "Anulează",
   "tools.database.relationTwoWay": "Adăugați proprietatea asociată",
   "tools.database.rollupSelect": "Selectați",
+  "tools.database.rollupSelectRelation": "Selectați o relație existentă…",
+  "tools.database.rollupSelectProperty": "Selectați o proprietate…",
   "tools.database.relationThisDatabase": "Această bază de date",
   "tools.database.relationRelatedToHint": "Baza de date asociată nu poate fi schimbată după creare",
   "tools.database.relationTwoWayEnable": "Activează",

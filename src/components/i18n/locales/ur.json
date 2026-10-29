@@ -1756,6 +1756,8 @@
   "tools.database.undo": "کالعدم کریں",
   "tools.database.relationTwoWay": "متعلقہ پراپرٹی شامل کریں",
   "tools.database.rollupSelect": "منتخب کریں",
+  "tools.database.rollupSelectRelation": "موجودہ تعلق منتخب کریں…",
+  "tools.database.rollupSelectProperty": "پراپرٹی منتخب کریں…",
   "tools.database.relationThisDatabase": "یہ ڈیٹابیس",
   "tools.database.relationRelatedToHint": "بنانے کے بعد متعلقہ ڈیٹابیس تبدیل نہیں کیا جا سکتا",
   "tools.database.relationTwoWayEnable": "فعال کریں",

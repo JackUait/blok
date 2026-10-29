@@ -1756,6 +1756,8 @@
   "tools.database.undo": "ರದ್ದುಗೊಳಿಸಿ",
   "tools.database.relationTwoWay": "ಸಂಬಂಧಿತ ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
   "tools.database.rollupSelect": "ಆಯ್ಕೆಮಾಡಿ",
+  "tools.database.rollupSelectRelation": "ಅಸ್ತಿತ್ವದಲ್ಲಿರುವ ಸಂಬಂಧವನ್ನು ಆಯ್ಕೆಮಾಡಿ…",
+  "tools.database.rollupSelectProperty": "ಗುಣಲಕ್ಷಣವನ್ನು ಆಯ್ಕೆಮಾಡಿ…",
   "tools.database.relationThisDatabase": "ಈ ಡೇಟಾಬೇಸ್",
   "tools.database.relationRelatedToHint": "ರಚಿಸಿದ ನಂತರ ಸಂಬಂಧಿತ ಡೇಟಾಬೇಸ್ ಬದಲಾಯಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ",
   "tools.database.relationTwoWayEnable": "ಸಕ್ರಿಯಗೊಳಿಸಿ",

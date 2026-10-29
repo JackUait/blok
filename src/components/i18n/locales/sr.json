@@ -1758,6 +1758,8 @@
   "tools.database.undo": "Опозови",
   "tools.database.relationTwoWay": "Додај повезано својство",
   "tools.database.rollupSelect": "Изабери",
+  "tools.database.rollupSelectRelation": "Изаберите постојећу везу…",
+  "tools.database.rollupSelectProperty": "Изаберите својство…",
   "tools.database.relationThisDatabase": "Ова база података",
   "tools.database.relationRelatedToHint": "Повезана база података не може се променити након креирања",
   "tools.database.relationTwoWayEnable": "Омогући",

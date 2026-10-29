@@ -1758,6 +1758,8 @@
   "tools.database.undo": "Deshacer",
   "tools.database.relationTwoWay": "Añadir propiedad relacionada",
   "tools.database.rollupSelect": "Seleccionar",
+  "tools.database.rollupSelectRelation": "Selecciona una relación existente…",
+  "tools.database.rollupSelectProperty": "Selecciona una propiedad…",
   "tools.database.relationThisDatabase": "Esta base de datos",
   "tools.database.relationRelatedToHint": "La base de datos relacionada no se puede cambiar después de crearla",
   "tools.database.relationTwoWayEnable": "Activar",

@@ -1760,6 +1760,8 @@
   "tools.database.undo": "Отменить",
   "tools.database.relationTwoWay": "Добавить связанное свойство",
   "tools.database.rollupSelect": "Выбрать",
+  "tools.database.rollupSelectRelation": "Выберите существующую связь…",
+  "tools.database.rollupSelectProperty": "Выберите свойство…",
   "tools.database.relationThisDatabase": "Эта база данных",
   "tools.database.relationRelatedToHint": "Связанную базу данных нельзя изменить после создания",
   "tools.database.relationTwoWayEnable": "Включить",

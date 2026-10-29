@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Tendua",
   "tools.database.relationTwoWay": "Ongeza sifa inayohusiana",
   "tools.database.rollupSelect": "Chagua",
+  "tools.database.rollupSelectRelation": "Chagua uhusiano uliopo…",
+  "tools.database.rollupSelectProperty": "Chagua sifa…",
   "tools.database.relationThisDatabase": "Hifadhidata hii",
   "tools.database.relationRelatedToHint": "Hifadhidata inayohusiana haiwezi kubadilishwa baada ya kuundwa",
   "tools.database.relationTwoWayEnable": "Washa",

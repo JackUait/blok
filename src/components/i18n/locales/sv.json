@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Ångra",
   "tools.database.relationTwoWay": "Lägg till kopplad egenskap",
   "tools.database.rollupSelect": "Välj",
+  "tools.database.rollupSelectRelation": "Välj en befintlig koppling…",
+  "tools.database.rollupSelectProperty": "Välj en egenskap…",
   "tools.database.relationThisDatabase": "Den här databasen",
   "tools.database.relationRelatedToHint": "Den kopplade databasen kan inte ändras efter att den har skapats",
   "tools.database.relationTwoWayEnable": "Aktivera",

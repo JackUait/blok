@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Geri qaytar",
   "tools.database.relationTwoWay": "Əlaqəli xüsusiyyət əlavə et",
   "tools.database.rollupSelect": "Seçin",
+  "tools.database.rollupSelectRelation": "Mövcud əlaqəni seçin…",
+  "tools.database.rollupSelectProperty": "Xüsusiyyət seçin…",
   "tools.database.relationThisDatabase": "Bu verilənlər bazası",
   "tools.database.relationRelatedToHint": "Əlaqəli verilənlər bazası yaradıldıqdan sonra dəyişdirilə bilməz",
   "tools.database.relationTwoWayEnable": "Aktiv et",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Zhbëj",
   "tools.database.relationTwoWay": "Shto veti të lidhur",
   "tools.database.rollupSelect": "Zgjidh",
+  "tools.database.rollupSelectRelation": "Zgjidhni një lidhje ekzistuese…",
+  "tools.database.rollupSelectProperty": "Zgjidhni një veti…",
   "tools.database.relationThisDatabase": "Kjo bazë të dhënash",
   "tools.database.relationRelatedToHint": "Baza e të dhënave e lidhur nuk mund të ndryshohet pas krijimit",
   "tools.database.relationTwoWayEnable": "Aktivizo",

@@ -1760,6 +1760,8 @@
   "tools.database.undo": "Cofnij",
   "tools.database.relationTwoWay": "Dodaj powiązaną właściwość",
   "tools.database.rollupSelect": "Wybierz",
+  "tools.database.rollupSelectRelation": "Wybierz istniejącą relację…",
+  "tools.database.rollupSelectProperty": "Wybierz właściwość…",
   "tools.database.relationThisDatabase": "Ta baza danych",
   "tools.database.relationRelatedToHint": "Powiązanej bazy danych nie można zmienić po utworzeniu",
   "tools.database.relationTwoWayEnable": "Włącz",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "ਅਣਕੀਤਾ ਕਰੋ",
   "tools.database.relationTwoWay": "ਸੰਬੰਧਿਤ ਵਿਸ਼ੇਸ਼ਤਾ ਜੋੜੋ",
   "tools.database.rollupSelect": "ਚੁਣੋ",
+  "tools.database.rollupSelectRelation": "ਕੋਈ ਮੌਜੂਦਾ ਸੰਬੰਧ ਚੁਣੋ…",
+  "tools.database.rollupSelectProperty": "ਕੋਈ ਵਿਸ਼ੇਸ਼ਤਾ ਚੁਣੋ…",
   "tools.database.relationThisDatabase": "ਇਹ ਡਾਟਾਬੇਸ",
   "tools.database.relationRelatedToHint": "ਬਣਾਉਣ ਤੋਂ ਬਾਅਦ ਸੰਬੰਧਿਤ ਡਾਟਾਬੇਸ ਬਦਲਿਆ ਨਹੀਂ ਜਾ ਸਕਦਾ",
   "tools.database.relationTwoWayEnable": "ਯੋਗ ਕਰੋ",

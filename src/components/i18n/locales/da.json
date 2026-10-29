@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Fortryd",
   "tools.database.relationTwoWay": "Tilføj relateret egenskab",
   "tools.database.rollupSelect": "Vælg",
+  "tools.database.rollupSelectRelation": "Vælg en eksisterende relation…",
+  "tools.database.rollupSelectProperty": "Vælg en egenskab…",
   "tools.database.relationThisDatabase": "Denne database",
   "tools.database.relationRelatedToHint": "Den relaterede database kan ikke ændres efter oprettelse",
   "tools.database.relationTwoWayEnable": "Aktivér",

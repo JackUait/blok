@@ -1756,6 +1756,8 @@
   "tools.database.undo": "އަންޑޫ",
   "tools.database.relationTwoWay": "ގުޅިފައިވާ ޕްރޮޕަރޓީއެއް އިތުރުކުރޭ",
   "tools.database.rollupSelect": "ހޮވާ",
+  "tools.database.rollupSelectRelation": "މިހާރު ހުރި ގުޅުމެއް ހޮވާ…",
+  "tools.database.rollupSelectProperty": "ޕްރޮޕަރޓީއެއް ހޮވާ…",
   "tools.database.relationThisDatabase": "މި ޑޭޓާބޭސް",
   "tools.database.relationRelatedToHint": "ގުޅިފައިވާ ޑޭޓާބޭސް ހެދުމަށްފަހު ބަދަލުކުރެވެން ނެތް",
   "tools.database.relationTwoWayEnable": "އޮންކުރޭ",

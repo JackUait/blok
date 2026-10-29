@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Buat asal",
   "tools.database.relationTwoWay": "Tambah sifat berkaitan",
   "tools.database.rollupSelect": "Pilih",
+  "tools.database.rollupSelectRelation": "Pilih hubungan sedia ada…",
+  "tools.database.rollupSelectProperty": "Pilih sifat…",
   "tools.database.relationThisDatabase": "Pangkalan data ini",
   "tools.database.relationRelatedToHint": "Pangkalan data berkaitan tidak boleh diubah selepas dicipta",
   "tools.database.relationTwoWayEnable": "Dayakan",

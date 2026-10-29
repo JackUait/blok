@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Отмяна",
   "tools.database.relationTwoWay": "Добавяне на свързано свойство",
   "tools.database.rollupSelect": "Изберете",
+  "tools.database.rollupSelectRelation": "Изберете съществуваща връзка…",
+  "tools.database.rollupSelectProperty": "Изберете свойство…",
   "tools.database.relationThisDatabase": "Тази база данни",
   "tools.database.relationRelatedToHint": "Свързаната база данни не може да се промени след създаването",
   "tools.database.relationTwoWayEnable": "Включване",

@@ -1758,6 +1758,8 @@
   "tools.database.undo": "Annuler",
   "tools.database.relationTwoWay": "Ajouter une propriété liée",
   "tools.database.rollupSelect": "Sélectionner",
+  "tools.database.rollupSelectRelation": "Sélectionnez une relation existante…",
+  "tools.database.rollupSelectProperty": "Sélectionnez une propriété…",
   "tools.database.relationThisDatabase": "Cette base de données",
   "tools.database.relationRelatedToHint": "La base de données liée ne peut plus être modifiée après sa création",
   "tools.database.relationTwoWayEnable": "Activer",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "අහෝසි කරන්න",
   "tools.database.relationTwoWay": "සම්බන්ධිත ගුණාංගය එක් කරන්න",
   "tools.database.rollupSelect": "තෝරන්න",
+  "tools.database.rollupSelectRelation": "පවතින සම්බන්ධතාවක් තෝරන්න…",
+  "tools.database.rollupSelectProperty": "ගුණාංගයක් තෝරන්න…",
   "tools.database.relationThisDatabase": "මෙම දත්ත ගබඩාව",
   "tools.database.relationRelatedToHint": "නිර්මාණය කළ පසු සම්බන්ධිත දත්ත ගබඩාව වෙනස් කළ නොහැක",
   "tools.database.relationTwoWayEnable": "සබල කරන්න",

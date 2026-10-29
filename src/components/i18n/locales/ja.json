@@ -1756,6 +1756,8 @@
   "tools.database.undo": "取り消す",
   "tools.database.relationTwoWay": "関連プロパティを追加",
   "tools.database.rollupSelect": "選択",
+  "tools.database.rollupSelectRelation": "既存のリレーションを選択…",
+  "tools.database.rollupSelectProperty": "プロパティを選択…",
   "tools.database.relationThisDatabase": "このデータベース",
   "tools.database.relationRelatedToHint": "リレーション先のデータベースは作成後に変更できません",
   "tools.database.relationTwoWayEnable": "有効にする",

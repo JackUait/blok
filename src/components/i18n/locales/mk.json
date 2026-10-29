@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Врати",
   "tools.database.relationTwoWay": "Додај поврзано својство",
   "tools.database.rollupSelect": "Избери",
+  "tools.database.rollupSelectRelation": "Изберете постојна релација…",
+  "tools.database.rollupSelectProperty": "Изберете својство…",
   "tools.database.relationThisDatabase": "Оваа база на податоци",
   "tools.database.relationRelatedToHint": "Поврзаната база на податоци не може да се промени по создавањето",
   "tools.database.relationTwoWayEnable": "Вклучи",

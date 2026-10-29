@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Võta tagasi",
   "tools.database.relationTwoWay": "Lisa seotud omadus",
   "tools.database.rollupSelect": "Vali",
+  "tools.database.rollupSelectRelation": "Vali olemasolev seos…",
+  "tools.database.rollupSelectProperty": "Vali omadus…",
   "tools.database.relationThisDatabase": "See andmebaas",
   "tools.database.relationRelatedToHint": "Seotud andmebaasi ei saa pärast loomist muuta",
   "tools.database.relationTwoWayEnable": "Lülita sisse",

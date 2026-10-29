@@ -1756,6 +1756,8 @@
   "tools.database.undo": "واگرد",
   "tools.database.relationTwoWay": "افزودن ویژگی مرتبط",
   "tools.database.rollupSelect": "انتخاب کنید",
+  "tools.database.rollupSelectRelation": "یک رابطه موجود را انتخاب کنید…",
+  "tools.database.rollupSelectProperty": "یک ویژگی انتخاب کنید…",
   "tools.database.relationThisDatabase": "این پایگاه داده",
   "tools.database.relationRelatedToHint": "پایگاه داده مرتبط پس از ایجاد قابل تغییر نیست",
   "tools.database.relationTwoWayEnable": "فعال کردن",

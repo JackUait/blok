@@ -1756,6 +1756,8 @@
   "tools.database.undo": "還原",
   "tools.database.relationTwoWay": "新增關聯屬性",
   "tools.database.rollupSelect": "選取",
+  "tools.database.rollupSelectRelation": "選取現有的關聯…",
+  "tools.database.rollupSelectProperty": "選取屬性…",
   "tools.database.relationThisDatabase": "此資料庫",
   "tools.database.relationRelatedToHint": "建立後無法變更關聯的資料庫",
   "tools.database.relationTwoWayEnable": "啟用",

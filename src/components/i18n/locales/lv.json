@@ -1758,6 +1758,8 @@
   "tools.database.undo": "Atsaukt",
   "tools.database.relationTwoWay": "Pievienot saistīto rekvizītu",
   "tools.database.rollupSelect": "Atlasīt",
+  "tools.database.rollupSelectRelation": "Atlasiet esošu relāciju…",
+  "tools.database.rollupSelectProperty": "Atlasiet rekvizītu…",
   "tools.database.relationThisDatabase": "Šī datubāze",
   "tools.database.relationRelatedToHint": "Saistīto datubāzi pēc izveides nevar mainīt",
   "tools.database.relationTwoWayEnable": "Ieslēgt",

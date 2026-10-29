@@ -1760,6 +1760,8 @@
   "tools.database.undo": "Скасувати",
   "tools.database.relationTwoWay": "Додати пов’язану властивість",
   "tools.database.rollupSelect": "Вибрати",
+  "tools.database.rollupSelectRelation": "Виберіть наявний зв’язок…",
+  "tools.database.rollupSelectProperty": "Виберіть властивість…",
   "tools.database.relationThisDatabase": "Ця база даних",
   "tools.database.relationRelatedToHint": "Пов’язану базу даних не можна змінити після створення",
   "tools.database.relationTwoWayEnable": "Увімкнути",

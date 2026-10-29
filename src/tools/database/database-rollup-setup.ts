@@ -79,7 +79,7 @@ export const rollupSetupItems = (property: PropertyDefinition, host: RollupSetup
     label(t('tools.database.rollupRelation')),
     {
       name: 'rollupSetupRelation',
-      title: relation?.name ?? t('tools.database.rollupSelect'),
+      title: relation?.name ?? t('tools.database.rollupSelectRelation'),
       ...(relation === undefined ? {} : { icon: propertyTypeMeta(relation.type).icon }),
       ...DROPDOWN,
       children: {
@@ -97,7 +97,7 @@ export const rollupSetupItems = (property: PropertyDefinition, host: RollupSetup
     label(t('tools.database.rollupProperty')),
     {
       name: 'rollupSetupProperty',
-      title: picked?.name ?? t('tools.database.rollupSelect'),
+      title: picked?.name ?? t('tools.database.rollupSelectProperty'),
       ...(picked === undefined ? {} : { icon: propertyTypeMeta(picked.type).icon }),
       ...DROPDOWN,
       children: {

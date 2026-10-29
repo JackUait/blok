@@ -1756,6 +1756,8 @@
   "tools.database.undo": "เลิกทำ",
   "tools.database.relationTwoWay": "เพิ่มคุณสมบัติที่เกี่ยวข้อง",
   "tools.database.rollupSelect": "เลือก",
+  "tools.database.rollupSelectRelation": "เลือกความสัมพันธ์ที่มีอยู่…",
+  "tools.database.rollupSelectProperty": "เลือกคุณสมบัติ…",
   "tools.database.relationThisDatabase": "ฐานข้อมูลนี้",
   "tools.database.relationRelatedToHint": "ไม่สามารถเปลี่ยนฐานข้อมูลที่เกี่ยวข้องได้หลังจากสร้างแล้ว",
   "tools.database.relationTwoWayEnable": "เปิดใช้งาน",

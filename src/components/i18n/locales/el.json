@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Αναίρεση",
   "tools.database.relationTwoWay": "Προσθήκη συσχετισμένης ιδιότητας",
   "tools.database.rollupSelect": "Επιλογή",
+  "tools.database.rollupSelectRelation": "Επιλέξτε υπάρχουσα συσχέτιση…",
+  "tools.database.rollupSelectProperty": "Επιλέξτε ιδιότητα…",
   "tools.database.relationThisDatabase": "Αυτή η βάση δεδομένων",
   "tools.database.relationRelatedToHint": "Η συσχετισμένη βάση δεδομένων δεν μπορεί να αλλάξει μετά τη δημιουργία",
   "tools.database.relationTwoWayEnable": "Ενεργοποίηση",

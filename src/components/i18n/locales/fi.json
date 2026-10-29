@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Kumoa",
   "tools.database.relationTwoWay": "Lisää liittyvä ominaisuus",
   "tools.database.rollupSelect": "Valitse",
+  "tools.database.rollupSelectRelation": "Valitse olemassa oleva relaatio…",
+  "tools.database.rollupSelectProperty": "Valitse ominaisuus…",
   "tools.database.relationThisDatabase": "Tämä tietokanta",
   "tools.database.relationRelatedToHint": "Liittyvää tietokantaa ei voi muuttaa luomisen jälkeen",
   "tools.database.relationTwoWayEnable": "Ota käyttöön",

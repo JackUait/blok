@@ -1764,6 +1764,8 @@
   "tools.database.undo": "تراجع",
   "tools.database.relationTwoWay": "إضافة خاصية مرتبطة",
   "tools.database.rollupSelect": "اختيار",
+  "tools.database.rollupSelectRelation": "اختر علاقة موجودة…",
+  "tools.database.rollupSelectProperty": "اختر خاصية…",
   "tools.database.relationThisDatabase": "قاعدة البيانات هذه",
   "tools.database.relationRelatedToHint": "لا يمكن تغيير قاعدة البيانات المرتبطة بعد إنشائها",
   "tools.database.relationTwoWayEnable": "تفعيل",

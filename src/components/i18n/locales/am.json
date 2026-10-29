@@ -1756,6 +1756,8 @@
   "tools.database.undo": "ቀልብስ",
   "tools.database.relationTwoWay": "የተዛመደ ንብረት አክል",
   "tools.database.rollupSelect": "ይምረጡ",
+  "tools.database.rollupSelectRelation": "ያለ ግንኙነት ይምረጡ…",
+  "tools.database.rollupSelectProperty": "ንብረት ይምረጡ…",
   "tools.database.relationThisDatabase": "ይህ የውሂብ ጎታ",
   "tools.database.relationRelatedToHint": "የተዛመደው የውሂብ ጎታ ከተፈጠረ በኋላ ሊቀየር አይችልም",
   "tools.database.relationTwoWayEnable": "አንቃ",

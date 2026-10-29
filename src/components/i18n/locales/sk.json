@@ -1760,6 +1760,8 @@
   "tools.database.undo": "Späť",
   "tools.database.relationTwoWay": "Pridať prepojenú vlastnosť",
   "tools.database.rollupSelect": "Vybrať",
+  "tools.database.rollupSelectRelation": "Vyberte existujúce prepojenie…",
+  "tools.database.rollupSelectProperty": "Vyberte vlastnosť…",
   "tools.database.relationThisDatabase": "Táto databáza",
   "tools.database.relationRelatedToHint": "Prepojenú databázu nemožno po vytvorení zmeniť",
   "tools.database.relationTwoWayEnable": "Zapnúť",

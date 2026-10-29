@@ -1756,6 +1756,8 @@
   "tools.database.undo": "پاشگەزبوونەوە",
   "tools.database.relationTwoWay": "زیادکردنی تایبەتمەندیی پەیوەندیدار",
   "tools.database.rollupSelect": "هەڵبژێرە",
+  "tools.database.rollupSelectRelation": "پەیوەندییەکی هەبوو هەڵبژێرە…",
+  "tools.database.rollupSelectProperty": "تایبەتمەندییەک هەڵبژێرە…",
   "tools.database.relationThisDatabase": "ئەم داتابەیسە",
   "tools.database.relationRelatedToHint": "داتابەیسی پەیوەندیدار دوای دروستکردن ناگۆڕدرێت",
   "tools.database.relationTwoWayEnable": "کاراکردن",

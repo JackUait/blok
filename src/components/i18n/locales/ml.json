@@ -1756,6 +1756,8 @@
   "tools.database.undo": "പഴയപടിയാക്കുക",
   "tools.database.relationTwoWay": "ബന്ധപ്പെട്ട പ്രോപ്പർട്ടി ചേർക്കുക",
   "tools.database.rollupSelect": "തിരഞ്ഞെടുക്കുക",
+  "tools.database.rollupSelectRelation": "നിലവിലുള്ള ഒരു ബന്ധം തിരഞ്ഞെടുക്കുക…",
+  "tools.database.rollupSelectProperty": "ഒരു പ്രോപ്പർട്ടി തിരഞ്ഞെടുക്കുക…",
   "tools.database.relationThisDatabase": "ഈ ഡാറ്റാബേസ്",
   "tools.database.relationRelatedToHint": "സൃഷ്ടിച്ചതിന് ശേഷം ബന്ധപ്പെട്ട ഡാറ്റാബേസ് മാറ്റാൻ കഴിയില്ല",
   "tools.database.relationTwoWayEnable": "പ്രവർത്തനക്ഷമമാക്കുക",

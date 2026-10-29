@@ -1756,6 +1756,8 @@
   "tools.database.undo": "אָפּטאָן",
   "tools.database.relationTwoWay": "צוגעבן אַ פֿאַרבונדענע אייגנשאפט",
   "tools.database.rollupSelect": "קלײַבט אויס",
+  "tools.database.rollupSelectRelation": "קלײַבט אויס אַן עקזיסטירנדיקע פֿאַרבינדונג…",
+  "tools.database.rollupSelectProperty": "קלײַבט אויס אַן אייגנשאַפֿט…",
   "tools.database.relationThisDatabase": "די דאטאבאנק",
   "tools.database.relationRelatedToHint": "די פֿאַרבונדענע דאטאבאנק קען מען נישט ענדערן נאָכן שאַפֿן",
   "tools.database.relationTwoWayEnable": "אַקטיווירן",

@@ -1756,6 +1756,8 @@
   "tools.database.undo": "დაბრუნება",
   "tools.database.relationTwoWay": "დაკავშირებული თვისების დამატება",
   "tools.database.rollupSelect": "აირჩიეთ",
+  "tools.database.rollupSelectRelation": "აირჩიეთ არსებული კავშირი…",
+  "tools.database.rollupSelectProperty": "აირჩიეთ თვისება…",
   "tools.database.relationThisDatabase": "ეს მონაცემთა ბაზა",
   "tools.database.relationRelatedToHint": "დაკავშირებული მონაცემთა ბაზის შეცვლა შექმნის შემდეგ შეუძლებელია",
   "tools.database.relationTwoWayEnable": "ჩართვა",

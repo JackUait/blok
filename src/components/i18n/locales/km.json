@@ -1756,6 +1756,8 @@
   "tools.database.undo": "មិនធ្វើវិញ",
   "tools.database.relationTwoWay": "បន្ថែមលក្ខណៈពាក់ព័ន្ធ",
   "tools.database.rollupSelect": "ជ្រើសរើស",
+  "tools.database.rollupSelectRelation": "ជ្រើសរើសទំនាក់ទំនងដែលមានស្រាប់…",
+  "tools.database.rollupSelectProperty": "ជ្រើសរើសលក្ខណៈ…",
   "tools.database.relationThisDatabase": "មូលដ្ឋានទិន្នន័យនេះ",
   "tools.database.relationRelatedToHint": "មិនអាចប្ដូរមូលដ្ឋានទិន្នន័យពាក់ព័ន្ធបានទេបន្ទាប់ពីបង្កើត",
   "tools.database.relationTwoWayEnable": "បើក",

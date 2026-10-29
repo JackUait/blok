@@ -1420,6 +1420,8 @@ export type BlokMessageKey =
   | 'tools.database.rollupProperty'
   | 'tools.database.rollupRelation'
   | 'tools.database.rollupSelect'
+  | 'tools.database.rollupSelectProperty'
+  | 'tools.database.rollupSelectRelation'
   | 'tools.database.rollupShowUniqueHint'
   | 'tools.database.rollupTargetProperty'
   | 'tools.database.rowAddToFavorites'

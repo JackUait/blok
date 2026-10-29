@@ -1756,6 +1756,8 @@
   "tools.database.undo": "Ongedaan maken",
   "tools.database.relationTwoWay": "Gekoppelde eigenschap toevoegen",
   "tools.database.rollupSelect": "Selecteren",
+  "tools.database.rollupSelectRelation": "Selecteer een bestaande relatie…",
+  "tools.database.rollupSelectProperty": "Selecteer een eigenschap…",
   "tools.database.relationThisDatabase": "Deze database",
   "tools.database.relationRelatedToHint": "De gekoppelde database kan na het aanmaken niet meer worden gewijzigd",
   "tools.database.relationTwoWayEnable": "Inschakelen",

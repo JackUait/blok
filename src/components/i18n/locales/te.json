@@ -1756,6 +1756,8 @@
   "tools.database.undo": "చర్య రద్దు చేయి",
   "tools.database.relationTwoWay": "సంబంధిత ప్రాపర్టీని జోడించండి",
   "tools.database.rollupSelect": "ఎంచుకోండి",
+  "tools.database.rollupSelectRelation": "ఇప్పటికే ఉన్న సంబంధాన్ని ఎంచుకోండి…",
+  "tools.database.rollupSelectProperty": "ప్రాపర్టీని ఎంచుకోండి…",
   "tools.database.relationThisDatabase": "ఈ డేటాబేస్",
   "tools.database.relationRelatedToHint": "సృష్టించిన తర్వాత సంబంధిత డేటాబేస్‌ను మార్చలేరు",
   "tools.database.relationTwoWayEnable": "ప్రారంభించండి",

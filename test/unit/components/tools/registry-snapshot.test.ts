@@ -29,7 +29,7 @@ import { destroy as destroyTooltip } from '../../../../src/components/utils/tool
 import { BUILT_IN_RUNTIME_PARTS } from '../../../../src/shared/tool-actions';
 import { describeTable } from '../../../../src/shared/tool-descriptions/table';
 import { buildToolManifest } from '../../../../src/shared/tool-manifest';
-import { Callout, Embed, Header, List, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
+import { Callout, Embed, Header, List, PageLink, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
 
 const hasMarkDestroyed = (value: unknown): value is { markDestroyed(): void } =>
   typeof value === 'object' && value !== null &&
@@ -284,6 +284,22 @@ describe('browser tool registry snapshot', () => {
       level: 'described',
     });
     expect(runtimesFromTools(instance.moduleInstances.Tools).has('header')).toBe(true);
+  });
+
+  it.each([
+    ['without search', {}, []],
+    ['with search', { search: () => Promise.resolve([]) }, [{ name: 'page-link-0', title: 'Link to page', previewCaption: 'Link to a page that already exists' }]],
+  ])('keeps page-link insertable everywhere %s: Link to page asks nothing of a headless runtime', async (_label, config, toolbox) => {
+    const instance = await boot({ tools: { paragraph: Paragraph, 'page-link': { class: PageLink, config } } });
+    const snapshot = snapshotOf(instance);
+    const link = blockNamed(snapshot, 'page-link');
+    const entry = buildToolManifest(snapshot).blocks.find(block => block.name === 'page-link');
+
+    expect(link.statics.hasPrepareInsert).toBe(false);
+    expect(link.insertable).toBe(true);
+    expect(link.statics.toolbox).toEqual(toolbox);
+    expect(entry?.insertable).toBe(true);
+    expect(entry).not.toHaveProperty('insertRequires');
   });
 
   it('does not treat a tool without a toolbox declaration as host-hidden', async () => {

@@ -6255,6 +6255,26 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect(notes()?.hasAttribute('data-wrap')).toBe(false);
   });
 
+  it.each(['table', 'list'] as const)('widget Calculate shows at once while the source active view is %s', async (sourceLayout) => {
+    await make(dashboardNativeHeaderDoc(sourceLayout));
+    const pick = async (label: string): Promise<void> => {
+      const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover] [role="menuitem"], [data-blok-popover] [role="menuitemcheckbox"]')]
+        .reverse()
+        .find((entry) => entry.querySelector('[data-blok-testid="popover-item-title"]')?.textContent === label);
+
+      if (item === undefined) throw new Error(`missing ${label}`);
+      item.click();
+      await quiet();
+    };
+
+    await dashboardNativeHeaderAction('Calculate');
+    await pick('Count');
+    await pick('Count all');
+
+    expect(dashboardWidget('foreign').querySelector('[data-blok-database-table-calc][data-property-id="n2"] [data-blok-database-table-calc-value]'))
+      .not.toBeNull();
+  });
+
   it.each(['table', 'list'] as const)('widget Freeze saves on its definition owner while the source active view is %s', async (sourceLayout) => {
     const blocks = dashboardNativeHeaderDoc(sourceLayout);
     const current = await make(blocks);

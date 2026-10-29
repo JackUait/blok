@@ -371,6 +371,16 @@ const WIDGET_CLOSING_HEADER_ITEMS: ReadonlySet<string> = new Set([
   'database-header-unfreeze',
 ]);
 
+/** Every leaf of a submenu closes the whole menu when picked. */
+const closingLeaves = (items: PopoverItemParams[]): PopoverItemParams[] => items.map((item) => {
+  if (item.type !== PopoverItemType.Default || 'confirmation' in item) return item;
+  if ('children' in item && item.children !== undefined) {
+    return { ...item, children: { ...item.children, items: closingLeaves(item.children.items ?? []) } };
+  }
+
+  return { ...item, closeOnActivate: true };
+});
+
 /**
  * Insert-time hint from the "Linked view of data source" toolbox entry: show
  * the source picker. Never saved: a linked view left unpicked saves as an
@@ -11697,6 +11707,10 @@ export class DatabaseTool implements BlockTool {
       // A widget holds its redraw while this menu is open, so these writes close it; onClose redraws.
       if (context !== undefined && item.type === PopoverItemType.Default && WIDGET_CLOSING_HEADER_ITEMS.has(item.name ?? '')
         && !('children' in item) && !('confirmation' in item)) return { ...item, closeOnActivate: true };
+      // Calculate is the only view row with a submenu.
+      if (context !== undefined && item.type === PopoverItemType.Default && 'children' in item && item.children !== undefined) {
+        return { ...item, children: { ...item.children, items: closingLeaves(item.children.items ?? []) } };
+      }
       if (context === undefined || item.type !== PopoverItemType.Default || item.name !== 'database-show-page-icon'
         || 'children' in item || 'confirmation' in item) return item;
 

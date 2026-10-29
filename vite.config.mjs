@@ -29,10 +29,11 @@ export default defineConfig(({ mode }) => {
       // JS and CSS share one browser floor: what the CSS already needs (`:has()`,
       // container queries). An older CSS target makes lightningcss lower logical
       // properties into rules keyed on the page's `lang`, so an RTL editor on a
-      // `lang="en"` page lays out as LTR. A newer JS target such as es2022 emits
-      // regex lookbehind and class static blocks, which Safari 16.0 cannot parse.
-      // test/unit/build/syntax-floor.test.ts checks the output.
-      target: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
+      // `lang="en"` page lays out as LTR. `es2020` caps the JS syntax, because
+      // consumers' bundlers and test runners parse dist with their own parser;
+      // oxc lowers to the oldest entry. test/unit/build/syntax-floor.test.ts
+      // checks the output.
+      target: [ 'es2020', 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       cssTarget: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       lib: {
         entry: {

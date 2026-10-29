@@ -31,9 +31,9 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       copyPublicDir: false,
-      // Same browser floor as vite.config.mjs. Without cssTarget the CSS falls
+      // Same targets as vite.config.mjs. Without cssTarget the CSS falls
       // back to es2017 and logical properties turn into `:lang()` rules that break RTL.
-      target: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
+      target: [ 'es2020', 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       cssTarget: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       emptyOutDir: false, // CRITICAL: Do NOT wipe the ESM/CJS/IIFE output from earlier passes
       lib: {

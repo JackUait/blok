@@ -888,6 +888,15 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       if (cell.hasAttribute('data-empty')) {
         continue;
       }
+      // notion-spec-2 §21.7: a card's checkbox has the property name beside it.
+      if (property.type === 'checkbox') {
+        const name = document.createElement('span');
+
+        name.setAttribute('data-blok-database-checkbox-name', '');
+        name.setAttribute('aria-hidden', 'true');
+        name.textContent = property.name;
+        cell.appendChild(name);
+      }
 
       const item = document.createElement('div');
 

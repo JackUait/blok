@@ -11424,6 +11424,16 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1-5);
 }
 
+/* §21.7: on a board card the box is 14x14 and its name starts 19px after the box's left edge. */
+[data-blok-database-card-property] > [data-blok-database-cell="checkbox"] {
+  gap: var(--blok-space-1-25);
+}
+
+[data-blok-database-card-property] [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
+}
+
 [data-blok-database-checkbox-name] {
   font-size: 12px;
   line-height: 14px;

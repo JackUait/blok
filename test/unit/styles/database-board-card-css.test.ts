@@ -90,6 +90,15 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-property]:has(> [data-blok-database-cell="button"])')).toContain('padding: var(--blok-space-1)');
   });
 
+  // notion-spec-2 §21.7: a board card's checkbox is 14x14, its name at box x + 19 (5px after).
+  it('draws a card checkbox 14x14 with its name 5px after', () => {
+    const box = ruleBody('[data-blok-database-card-property] [data-blok-database-checkbox]');
+
+    expect(box).toMatch(/width:\s*14px/);
+    expect(box).toMatch(/height:\s*14px/);
+    expect(ruleBody('[data-blok-database-card-property] > [data-blok-database-cell="checkbox"]')).toContain('gap: var(--blok-space-1-25)');
+  });
+
   // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.
   it('draws the "Add …" rows of an edited card in the secondary ink with a 16px glyph', () => {
     expect(ruleBody('[data-blok-database-card-property][data-ghost]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);

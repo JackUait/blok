@@ -150,6 +150,22 @@ describe('DatabaseBoardView card parity', () => {
       }
     });
 
+    // notion-spec-2 §21.7: a board card's checkbox shows the property name beside the box, checked or not.
+    it('shows the property name beside a card checkbox', () => {
+      const board = mount({
+        view: boardView({ properties: [{ id: 'done', visible: true }] }),
+        schema: [...schema, { id: 'done', name: 'Done', type: 'checkbox', position: 'a5' }],
+        getRows: () => [{ id: 'r1', position: 'a0', properties: { title: 'One', done: true } }, { id: 'r2', position: 'a1', properties: { title: 'Two' } }],
+      });
+
+      for (const id of ['r1', 'r2']) {
+        const cell = card(board, id).querySelector('[data-blok-database-cell="checkbox"]');
+
+        expect(cell?.querySelector('[data-blok-database-checkbox-name]')?.textContent).toBe('Done');
+        expect(cell?.querySelector('[data-blok-database-checkbox]')).not.toBeNull();
+      }
+    });
+
     it('marks each property with its wrap setting', () => {
       const board = mount({ view: boardView({ properties: [{ id: 'notes', visible: true, wrap: true }] }) });
 

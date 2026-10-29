@@ -237,7 +237,12 @@ export function sanitizeBlockHtml(raw: string, baseUrl?: string): string {
   const doc = new DOMParser().parseFromString(raw, 'text/html');
   // Read through Document.prototype: `<img name="body">` shadows `doc.body` (and
   // any other document member) in Firefox and WebKit.
-  const body = Reflect.get<Document, 'body'>(Document.prototype, 'body', doc);
+  const body = Reflect.get<Document, 'body'>(Document.prototype, 'body', doc) as HTMLElement | null;
+
+  // WebKit gives an input that is only a bogus comment (`<!d>`) no root, so no body.
+  if (body === null) {
+    return '';
+  }
   const leadingWhitespace = /^[\r\n\t ]+/.exec(raw);
 
   // The parser drops whitespace before the first tag; DOMPurify kept it.

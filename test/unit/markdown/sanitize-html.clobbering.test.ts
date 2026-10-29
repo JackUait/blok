@@ -20,6 +20,25 @@ const shadowParsedDocument = (name: string): void => {
   });
 };
 
+describe('sanitizeBlockHtml when the parser returns no body', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // WebKit parses an input that is only a bogus comment (`<!d>`) into a document with no root.
+  it('returns an empty string instead of throwing', () => {
+    vi.spyOn(DOMParser.prototype, 'parseFromString').mockImplementation(() => {
+      const doc = document.implementation.createHTMLDocument('');
+
+      doc.documentElement.remove();
+
+      return doc;
+    });
+
+    expect(sanitizeBlockHtml('<!d>')).toBe('');
+  });
+});
+
 describe('sanitizeBlockHtml when the parsed document is clobbered', () => {
   beforeEach(() => {
     vi.clearAllMocks();

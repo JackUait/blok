@@ -58,14 +58,16 @@ const bodyOf = (bytes: Uint8Array, id: number[]): number => {
   return at === -1 ? -1 : at + id.length + 8;
 };
 
+/** The 8-byte size form at `offset`: 0x01, then 7 big-endian bytes. */
+const sizeAt = (bytes: Uint8Array, offset: number): number =>
+  bytes.slice(offset + 1, offset + 8).reduce((n, byte) => n * 256 + byte, 0);
+
 /** Number of CuePoints in the Cues element. Every child is a 0xBB id plus an 8-byte size. */
 const cuePointCount = (bytes: Uint8Array): number => {
   const start = bodyOf(bytes, [0x1c, 0x53, 0xbb, 0x6b]);
-  const view = new DataView(bytes.buffer, bytes.byteOffset);
-  const sizeAt = (offset: number): number => Number(view.getBigUint64(offset) & 0xffffffffffffffn);
-  const end = start + sizeAt(start - 8);
+  const end = start + sizeAt(bytes, start - 8);
   const walk = (offset: number, count: number): number =>
-    offset >= end ? count : walk(offset + 1 + 8 + sizeAt(offset + 1), count + 1);
+    offset >= end ? count : walk(offset + 1 + 8 + sizeAt(bytes, offset + 1), count + 1);
 
   return walk(start, 0);
 };
@@ -149,7 +151,7 @@ describe('writeWebm', () => {
   it('points a delta last frame back at the frame before, however long its delay', () => {
     const bytes = writeWebm({ codec: 'V_VP9', width: 4, height: 4 }, framesOf([40_000, 1000], [0]));
     const start = bodyOf(bytes, [0xfb]);
-    const end = start + Number(new DataView(bytes.buffer, bytes.byteOffset).getBigUint64(start - 8) & 0xffffffffffffffn);
+    const end = start + sizeAt(bytes, start - 8);
     const reference = bytes.slice(start, end).reduce((n, byte) => n * 256 + byte, 0);
     const signed = reference >= 2 ** (8 * (end - start) - 1) ? reference - 2 ** (8 * (end - start)) : reference;
 

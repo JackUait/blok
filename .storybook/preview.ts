@@ -2,6 +2,8 @@ import type { Preview } from "@storybook/html-vite";
 
 // Import global editor styles
 import "../src/styles/main.css";
+// Blok loads the font faces lazily; stories rendered without an editor still need them.
+import "../src/styles/fonts.css";
 
 const preview: Preview = {
   parameters: {

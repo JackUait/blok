@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
@@ -10,19 +10,17 @@ const manifest = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'))
 };
 const lockfile = readFileSync(resolve(ROOT, 'yarn.lock'), 'utf8');
 
-// pptx-renderer depends on jszip itself; without the resolution
-// the real jszip (and pako) would quietly come back into the bundle.
-describe('jszip is replaced by the in-house shim', () => {
-  it('points every jszip import at the shim package', () => {
-    expect(manifest.resolutions?.jszip).toBe('portal:./shims/jszip');
-  });
-
-  it('does not depend on jszip directly', () => {
+// Blok reads zips with src/tools/file/zip; nothing in the tree imports jszip any more.
+describe('jszip is gone', () => {
+  it('has no jszip dependency, resolution or stand-in package', () => {
     expect(manifest.dependencies?.jszip).toBeUndefined();
     expect(manifest.devDependencies?.jszip).toBeUndefined();
+    expect(manifest.resolutions?.jszip).toBeUndefined();
+    expect(existsSync(resolve(ROOT, 'shims/jszip'))).toBe(false);
+    expect(existsSync(resolve(ROOT, 'src/tools/file/zip/jszip-shim.ts'))).toBe(false);
   });
 
-  it.each(['jszip@npm:', 'pako@npm:', 'lie@npm:', 'setimmediate@npm:'])('locks no %s package', (descriptor) => {
+  it.each(['jszip@', 'pako@npm:', 'lie@npm:', 'setimmediate@npm:'])('locks no %s package', (descriptor) => {
     expect(lockfile).not.toContain(`"${descriptor}`);
   });
 });

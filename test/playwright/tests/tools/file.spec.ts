@@ -340,7 +340,7 @@ test('pptx file renders an inline slide preview', async ({ page }) => {
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   // The pptx container mounts (proves fetch + renderer dispatch, not the error
-  // fallback). pptx-renderer paints slides asynchronously into this container.
+  // fallback). The pptx viewer paints slides asynchronously into this container.
   const preview = dialog.locator('[data-role="file-preview-pptx"]');
   await expect(preview).toBeVisible();
   await expect(preview).toContainText('Blok pptx preview fixture');

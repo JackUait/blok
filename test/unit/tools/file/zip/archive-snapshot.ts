@@ -2,9 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import JSZipShim from '../../../../../src/tools/file/zip/jszip-shim';
-
-/** What JSZip (or the shim) reads from one archive, in the shape of fixtures/golden/jszip-archives.json. */
+/** What JSZip read from one archive, in the shape of fixtures/golden/jszip-archives.json. */
 export type ArchiveSnapshot =
   | { error: true }
   | {
@@ -18,7 +16,7 @@ export const sha256 = (bytes: Uint8Array): string => createHash('sha256').update
 
 export const textSha256 = (text: string): string => sha256(Buffer.from(text, 'utf16le'));
 
-/** Text is compared only for valid UTF-8: on invalid bytes JSZip emitted NULs and lone surrogates, the shim emits U+FFFD. */
+/** Text is compared only for valid UTF-8: on invalid bytes JSZip emitted NULs and lone surrogates, TextDecoder emits U+FFFD. */
 export const isUtf8 = (bytes: Uint8Array): boolean => {
   try {
     new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -33,7 +31,7 @@ export const readGolden = (): Record<string, ArchiveSnapshot & { stage?: string 
   JSON.parse(readFileSync(resolve(__dirname, 'fixtures/golden/jszip-archives.json'), 'utf8')) as Record<string, ArchiveSnapshot>;
 
 /**
- * What the shim should match: the JSZip snapshot without its stage note (JSZip fails
+ * What readZip should match: the JSZip snapshot without its stage note (JSZip fails
  * some archives at read time that the reader refuses at load), and with the one
  * known gap applied: the reader ignores the WinRAR Unicode Path extra field (0x7075).
  */
@@ -59,28 +57,3 @@ export const expectedFor = (rel: string, snapshot: ArchiveSnapshot & { stage?: s
 
   return snapshot;
 };
-
-/** Snapshots an archive through the shim. JSZip has no _data.uncompressedSize on empty files and dirs, so 0 maps to null. */
-export async function snapshotShim(bytes: Uint8Array): Promise<ArchiveSnapshot> {
-  try {
-    const zip = await JSZipShim.loadAsync(bytes);
-    const entries = [];
-
-    for (const [name, file] of Object.entries(zip.files)) {
-      const size = file._data.uncompressedSize;
-      const bytes = await file.async('uint8array');
-
-      entries.push({
-        name,
-        dir: file.dir,
-        size: size === 0 ? null : size,
-        sha256: sha256(bytes),
-        text: isUtf8(bytes) ? textSha256(await file.async('string')) : 'not-utf8',
-      });
-    }
-
-    return { entries, fileNull: Object.entries(zip.files).filter(([, f]) => f.dir).map(([n]) => n) };
-  } catch {
-    return { error: true };
-  }
-}

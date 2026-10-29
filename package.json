@@ -318,7 +318,6 @@
     "qs": "^6.15.2",
     "@angular/build/vite": "8.3.5",
     "mermaid/katex": "0.18.10",
-    "serve/compression": "1.8.2",
-    "jszip": "portal:./shims/jszip"
+    "serve/compression": "1.8.2"
   }
 }

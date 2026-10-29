@@ -25,26 +25,3 @@ export const OFFICE_CASES = {
   xlsx: 'fixtures/jszip/complex_files/AntarcticaTemps.xlsx',
   pptxImage: 'fixtures/office-deflated/pitch-deck-image.pptx',
 } as const;
-
-interface ListedFile {
-  dir: boolean;
-  _data?: unknown;
-  async(type: 'uint8array'): Promise<Uint8Array>;
-}
-
-/**
- * The listing pptx-renderer builds: non-dir files, the private uncompressed size it
- * checks limits with, and the bytes. JSZip leaves the size out on empty files where
- * the shim says 0, which the renderer treats the same, so both map to null.
- */
-export async function listLikePptxRenderer(zip: { files: Record<string, ListedFile> }): Promise<unknown> {
-  const listed = [];
-
-  for (const [name, file] of Object.entries(zip.files).filter(([, f]) => !f.dir)) {
-    const size: unknown = typeof file._data === 'object' && file._data !== null ? Reflect.get(file._data, 'uncompressedSize') : undefined;
-
-    listed.push({ name, size: typeof size === 'number' && size > 0 ? size : null, bytes: normalize(await file.async('uint8array')) });
-  }
-
-  return listed;
-}

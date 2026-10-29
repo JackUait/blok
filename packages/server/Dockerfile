@@ -13,8 +13,6 @@ COPY packages/presets/package.json packages/presets/package.json
 COPY packages/react/package.json packages/react/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/vue/package.json packages/vue/package.json
-# The root package.json resolves jszip to this local portal; yarn reads its manifest.
-COPY shims/jszip/ shims/jszip/
 # node:26 ships neither Corepack (Node stopped distributing it in 25,
 # nodejs/node#57617) nor Yarn Classic (the node:24 image installed that
 # separately; node:26 does not), so installing Corepack is the only route to

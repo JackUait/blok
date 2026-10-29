@@ -39,9 +39,6 @@ export default defineConfig({
     __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
   },
   test: {
-    // It imports `jszip`, which a yarn resolution points at TypeScript source
-    // (shims/jszip). Node cannot load that; inlined, Vite transforms it.
-    server: { deps: { inline: ['@aiden0z/pptx-renderer'] } },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

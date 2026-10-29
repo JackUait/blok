@@ -634,7 +634,6 @@ describe('server release wiring', () => {
       .filter((target): target is string => target !== undefined);
 
     // yarn resolves a portal by reading its manifest; without it --immutable fails with "Manifest not found".
-    expect(localTargets.length).toBeGreaterThan(0);
     expect(localTargets.filter((target) => !beforeInstall.includes(`COPY ${target}/ ${target}/`))).toEqual([]);
   });
 

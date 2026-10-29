@@ -10809,6 +10809,10 @@ textarea[data-blok-database-cell-input] {
   height: 14px;
 }
 
+[data-blok-database-calendar-event-property] [data-blok-database-button], [data-blok-database-timeline-bar-property] [data-blok-database-button] {
+  height: 20px;
+}
+
 [data-blok-database-date-day] {
   width: 28px;
   height: 28px;

@@ -7797,6 +7797,12 @@ textarea[data-blok-database-cell-input] {
   height: 14px;
 }
 
+/* notion-spec-2 §21.9: the Button pill is 20 tall here, 24 on board, gallery and table. */
+[data-blok-database-calendar-event-property] [data-blok-database-button],
+[data-blok-database-timeline-bar-property] [data-blok-database-button] {
+  height: 20px;
+}
+
 /* The picked day is gray with primary ink (no blue selected states). */
 [data-blok-database-date-day] {
   width: 28px;

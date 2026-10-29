@@ -154,6 +154,12 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell="checkbox"]')).toMatch(/gap:\s*var\(--blok-space-1-25\)/);
   });
 
+  // notion-spec-2 §21.9: the Button pill is 58.2x20 on a calendar card and after a timeline bar (24 on board, gallery, table).
+  it('draws the Button pill 20 tall on a calendar card and a timeline bar', () => {
+    expect(ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-button]')).toMatch(/height:\s*20px/);
+    expect(ruleBody('[data-blok-database-timeline-bar-property] [data-blok-database-button]')).toMatch(/height:\s*20px/);
+  });
+
   it('makes a week-range row 372px tall (findings C08)', () => {
     expect(ruleBody('[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day]')).toMatch(/max\(372px,/);
   });

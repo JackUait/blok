@@ -212,8 +212,8 @@
     "date": "2026-09-08"
   },
   "/docs/sanitizer-api": {
-    "hash": "e11c5257fc5373fa",
-    "date": "2026-09-08"
+    "hash": "2c6615849a5982da",
+    "date": "2026-10-29"
   },
   "/docs/saver-api": {
     "hash": "9a806b082d8fc28f",
@@ -312,7 +312,7 @@
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "7213e1080b0c29ed",
+    "hash": "d427b7644053fee8",
     "date": "2026-10-29"
   },
   "/docs/view-state-api": {
@@ -544,8 +544,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/sanitizer-api": {
-    "hash": "700aa19488690c88",
-    "date": "2026-09-08"
+    "hash": "ae76895be672e566",
+    "date": "2026-10-29"
   },
   "/ru/docs/saver-api": {
     "hash": "a6fa8a35556a97b6",
@@ -644,7 +644,7 @@
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "b02c51a46175e717",
+    "hash": "4cf0c8d4d24a6492",
     "date": "2026-10-29"
   },
   "/ru/docs/view-state-api": {

@@ -204,6 +204,21 @@ describe('DatabaseCalendarView', () => {
       expect(events(root, 'r2')[0].querySelector('[data-blok-database-calendar-event-property]')).toBeNull();
     });
 
+    // notion-spec-2 §21.9 (calendar-card.png): a card's checkbox has the property name beside it, as on the board.
+    it('shows a checkbox with its property name beside it', () => {
+      const withDone: PropertyDefinition[] = [...schema, { id: 'p-done', name: 'Done', type: 'checkbox', position: 'a3' }];
+      const { root } = mount({
+        schema: withDone,
+        view: calendarView({ properties: [{ id: 'p-title', visible: true }, { id: 'p-done', visible: true }] }),
+        rows: [row('r1', 'Launch', '2026-10-09', { 'p-done': true })],
+      });
+      const name = events(root, 'r1')[0].querySelector('[data-blok-database-calendar-event-property] [data-blok-database-checkbox-name]');
+
+      expect(name?.textContent).toBe('Done');
+      expect(name?.parentElement?.querySelector('[data-blok-database-checkbox]')).not.toBeNull();
+      expect(name?.parentElement?.lastElementChild).toBe(name);
+    });
+
     // Each shown property is its own card line, so lanes must grow by that many lines.
     it('tells the grid how many property lines a card can have', () => {
       const properties = [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true }];

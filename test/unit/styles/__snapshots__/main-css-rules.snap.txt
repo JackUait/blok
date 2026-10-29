@@ -10800,6 +10800,15 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
+[data-blok-database-calendar-event-property] > [data-blok-database-cell="checkbox"] {
+  gap: var(--blok-space-1-25);
+}
+
+[data-blok-database-calendar-event-property] [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
+}
+
 [data-blok-database-date-day] {
   width: 28px;
   height: 28px;

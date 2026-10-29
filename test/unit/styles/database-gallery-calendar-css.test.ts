@@ -147,6 +147,13 @@ describe('database gallery and calendar styles', () => {
     expect(body).toMatch(/line-height:\s*18px/);
   });
 
+  // notion-spec-2 §21.9, calendar-card.png: a 14x14 box (x 977-991), its name starting 19px after the box's left edge, as on the board.
+  it('draws a calendar card checkbox 14x14 with its name 5px after it', () => {
+    expect(ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-checkbox]')).toMatch(/width:\s*14px/);
+    expect(ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-checkbox]')).toMatch(/height:\s*14px/);
+    expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell="checkbox"]')).toMatch(/gap:\s*var\(--blok-space-1-25\)/);
+  });
+
   it('makes a week-range row 372px tall (findings C08)', () => {
     expect(ruleBody('[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day]')).toMatch(/max\(372px,/);
   });

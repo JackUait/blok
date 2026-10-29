@@ -441,6 +441,15 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
         ...rowCellContext(row, property.id),
       });
 
+      // notion-spec-2 §21.9: a card's checkbox has the property name beside it, as on the board.
+      if (property.type === 'checkbox' && !cell.hasAttribute('data-empty')) {
+        const name = document.createElement('span');
+
+        name.setAttribute('data-blok-database-checkbox-name', '');
+        name.setAttribute('aria-hidden', 'true');
+        name.textContent = property.name;
+        cell.appendChild(name);
+      }
       if (!cell.hasAttribute('data-empty')) {
         const item = document.createElement('span');
 

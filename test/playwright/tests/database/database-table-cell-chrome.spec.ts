@@ -157,11 +157,10 @@ test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl
   page.context().on('page', track);
   await link.click();
   await expect(page.locator('[data-blok-database-files-editor]')).toBeVisible();
-  await page.waitForTimeout(300);
-  expect(popups).toEqual([]);
-  page.context().off('page', track);
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-blok-database-files-editor]')).toHaveCount(0);
+  expect(popups).toEqual([]);
+  page.context().off('page', track);
 
   // noopener: the new page is no popup of this one, so watch the context. Its request is enough; no network needed.
   const [popup] = await Promise.all([
@@ -194,8 +193,11 @@ test('a checked box is a 16px blue square with no border (§18.1)', async ({ pag
     'width': '16px',
     'height': '16px',
   });
-  const glyph = await box.locator('svg').boundingBox();
-  const outer = await box.boundingBox();
+  const inset = await box.evaluate((el) => {
+    const glyph = el.querySelector('svg')?.getBoundingClientRect();
 
-  expect((glyph?.x ?? 0) - (outer?.x ?? 0)).toBe(1);
+    return glyph === undefined ? null : glyph.x - el.getBoundingClientRect().x;
+  });
+
+  expect(inset).toBe(1);
 });

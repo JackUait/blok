@@ -86,7 +86,7 @@ describe('AI Autofill in the column header menu (research/08)', () => {
     if (holder === undefined) throw new Error('Missing editor holder');
     fireEvent.click(await findByRole(holder, 'columnheader', { name: 'Name' }));
     await findAllByRole(document.body, 'menuitem');
-    const titles = Array.from(document.body.querySelectorAll('[role="menuitem"], [role="menuitemcheckbox"]'))
+    const titles = Array.from(document.body.querySelectorAll('[role="menuitem"], [role="menuitemcheckbox"], [role="switch"]'))
       .map((item) => (item.textContent ?? '').trim());
 
     expect(titles.slice(0, 3)).toEqual(['Show page icon', 'AI Autofill', 'Filter']);

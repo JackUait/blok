@@ -88,5 +88,13 @@ describe('html text mutants', () => {
 
       expect(() => parseInlineFragment('a&amp;b')).toThrow(TypeError);
     });
+
+    // A stack overflow is a RangeError too. Parsing the same text again only
+    // doubles the cost of a parse that will overflow again.
+    it('does not retry a RangeError on input with nothing to repair', () => {
+      parser.throwNext = new RangeError('Maximum call stack size exceeded');
+
+      expect(() => parseInlineFragment('a&amp;b')).toThrow('Maximum call stack size exceeded');
+    });
   });
 });

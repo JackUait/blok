@@ -13,7 +13,6 @@ import type { ChildNode as HtmlChildNode, DocumentFragment as HtmlDocumentFragme
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import { PAGE_REFERENCE_ATTR } from '../shared/page-reference';
 
-
 /**
  * Collect the concatenated text of child nodes.
  * @param nodes - nodes to walk
@@ -108,11 +107,14 @@ export const parseInlineFragment = (html: string): HtmlDocumentFragment => {
   try {
     return parseFragment(html);
   } catch (error) {
-    if (!(error instanceof RangeError)) {
+    const repaired = repairSurrogates(html);
+
+    // Same text again would fail again: a stack overflow is a RangeError too.
+    if (!(error instanceof RangeError) || repaired === html) {
       throw error;
     }
 
-    return parseFragment(repairSurrogates(html));
+    return parseFragment(repaired);
   }
 };
 
@@ -140,4 +142,3 @@ export const proseTextContent = (html: string): string => {
 
   return collect(parseInlineFragment(html).childNodes, 'skip');
 };
-

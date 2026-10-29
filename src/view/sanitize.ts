@@ -40,7 +40,6 @@ import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
 import { repairSurrogates } from './html-text';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
-
 /**
  * Block/inline tag lists copied from html-janitor — they drive its
  * whitespace-trimming and invalid-nesting heuristics, which must match.
@@ -796,11 +795,14 @@ export const sanitizeHtmlFragment = (
     try {
       return parseFragment(contextElement, source);
     } catch (error) {
-      if (!(error instanceof RangeError)) {
+      const repaired = repairSurrogates(source);
+
+      // Same text again would fail again: a stack overflow is a RangeError too.
+      if (!(error instanceof RangeError) || repaired === source) {
         throw error;
       }
 
-      return parseFragment(contextElement, repairSurrogates(source));
+      return parseFragment(contextElement, repaired);
     }
   };
 

@@ -272,4 +272,12 @@ describe('view sanitizer mutants', () => {
 
     expect(() => sanitizeHtmlFragment('<p>x</p>', { p: true })).toThrow(TypeError);
   });
+
+  // A stack overflow is a RangeError too; a second parse of unchanged text
+  // would only overflow again at twice the cost.
+  it('does not retry a RangeError on input with nothing to repair', () => {
+    parser.throwNext = new RangeError('Maximum call stack size exceeded');
+
+    expect(() => sanitizeHtmlFragment('<p>x</p>', { p: true })).toThrow('Maximum call stack size exceeded');
+  });
 });

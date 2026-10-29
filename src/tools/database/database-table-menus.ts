@@ -247,7 +247,8 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
   const queries: PopoverItemParams[] = queryable
     ? [
       item('database-header-filter', 'tools.database.tableFilter', ctx.onFilter, IconFilter),
-      item('database-header-sort', 'tools.database.tableSort', ctx.onSort, IconSort),
+      // notion-live-7/80-menu-text.png: Sort shows a "›"; it opens the two sort choices.
+      { ...item('database-header-sort', 'tools.database.tableSort', ctx.onSort, IconSort), chevron: true },
       ...(groupable ? [item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconList)] : []),
       calculate,
     ]

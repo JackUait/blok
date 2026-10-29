@@ -152,4 +152,14 @@ describe('column header menu glyphs', () => {
   ] as const)('gives every %s row an icon', (type, over) => {
     expect(untitled(headerViewItems(ctx(type, over)))).toEqual([]);
   });
+
+  // notion-live-7/80-menu-text.png, 81-menu-*.png: Sort carries a "›"; Filter and Group do not.
+  it('draws a "›" on Sort only, since Sort opens its two choices', () => {
+    const items = headerViewItems(ctx('text'));
+    const chevron = (name: string): unknown => items.find((item) => 'name' in item && item.name === name)?.chevron;
+
+    expect(chevron('database-header-sort')).toBe(true);
+    expect(chevron('database-header-filter')).toBeUndefined();
+    expect(chevron('database-header-group')).toBeUndefined();
+  });
 });

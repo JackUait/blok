@@ -488,4 +488,29 @@ describe('table hover box side and Place buttons', () => {
   it('a text rollup keeps its box at the end edge', () => {
     expect(atStart(actions(cell(mountExtra(), 'r1', 'p-names')))).toBe(false);
   });
+
+  // notion-spec-2 §20.11: Place shows Comment + Copy on the right. Its third (up/down) button is unmeasured, so it is left out.
+  it('a filled place cell carries Comment and Copy at the end edge, and Copy writes the place', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    const notify = vi.fn();
+    const target = cell(mountExtra({ notify }), 'r1', 'p-place');
+
+    expect([...(actions(target)?.querySelectorAll('button') ?? [])].map((b) => b.getAttribute('aria-label')))
+      .toEqual(['tools.database.tableComment', 'tools.database.cellCopy']);
+    expect(atStart(actions(target))).toBe(false);
+
+    clickOn(action(target, 'tools.database.cellCopy') as HTMLButtonElement);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Eiffel Tower Ln'));
+    expect(notify).toHaveBeenCalledWith('tools.database.cellCopied');
+    vi.unstubAllGlobals();
+  });
+
+  it('an empty place cell carries no box', () => {
+    expect(actions(cell(mountExtra(), 'r2', 'p-place'))).toBeNull();
+  });
 });

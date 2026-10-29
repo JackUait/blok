@@ -251,7 +251,7 @@ const MAX_SHOWN_COUNT = 99;
 /** Cells whose value is a link: a click on it follows it, and a hover shows the action pill. */
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
 /** notion-spec-2 §18.2, §19.6, §19.20, §20.11: filled cells whose hover shows Comment + Copy. */
-const COPY_PILL_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number', 'formula', 'date']);
+const COPY_PILL_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number', 'formula', 'date', 'place']);
 /** notion-spec-2 §18.2: filled cells whose hover shows Comment alone. */
 const COMMENT_ONLY_TYPES: ReadonlySet<string> = new Set(['select', 'multiSelect', 'status', 'person', 'files', 'relation']);
 /** notion-spec-2 §18.2, §20.1: cells whose hover shows Copy alone. */

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 
-import { IconDotsHorizontal, IconMenu, IconPlus } from '../../../components/icons';
+import { IconChevronRight, IconMenu, IconPlus } from '../../../components/icons';
 import type { I18n } from '../../../../types';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, statusGroupOf, statusGroupsOf } from '../property-values';
@@ -36,7 +36,7 @@ const button = (attribute: string, icon: string, label: string): HTMLButtonEleme
 
 /**
  * Notion's options list under "Edit property" (research/04, H-create "Add an
- * option"; research/08 option rows with ⋮⋮ and ⋯). Status shows its groups,
+ * option"; notion-spec-2 §25.6 option rows with ⋮⋮ and ›). Status shows its groups,
  * each with its own "+". The list owns its keys, so the menu around it does
  * not take arrows, Enter or Escape typed in its fields.
  */
@@ -201,7 +201,7 @@ class OptionsEditor {
     const row = document.createElement('div');
     const handle = button('data-blok-database-select-option-handle', IconMenu, this.t('tools.database.dragOption'));
     const label = document.createElement('span');
-    const menu = button('data-blok-database-select-option-menu', IconDotsHorizontal, this.t('tools.database.optionMenu'));
+    const menu = button('data-blok-database-select-option-menu', IconChevronRight, this.t('tools.database.optionMenu'));
 
     row.setAttribute('data-blok-database-select-option', option.id);
     // A sorted list puts a dropped option straight back, so only Manual drags.

@@ -1,4 +1,4 @@
-import { IconCalendar, IconCheck, IconHelp, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCheck, IconHelp, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconSort, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -69,8 +69,11 @@ const headerMenuPosition = (anchor: HTMLElement): PlaceOver => {
 /** Types whose Edit property is the options list. */
 const OPTION_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['select', 'multiSelect', 'status']);
 
-/** Types whose Edit property ends with research/08's "Changes apply to all views showing this property." */
-const ALL_VIEWS_NOTE: ReadonlySet<PropertyType> = new Set<PropertyType>(['number', 'select', 'multiSelect', 'status']);
+/**
+ * Types whose Edit property ends with research/08's "Changes apply to all views showing this property."
+ * notion-spec-2 §24.8, §25.6: Select and Status show no note under their options.
+ */
+const ALL_VIEWS_NOTE: ReadonlySet<PropertyType> = new Set<PropertyType>(['number']);
 
 /**
  * The property-level rows of a column header menu, per type, in Notion's
@@ -1328,6 +1331,7 @@ export class DatabasePropertyMenu {
     return {
       name: 'optionSort',
       title: this.t('tools.database.groupSort'),
+      icon: IconSort,
       valueLabel: this.t(current[1]),
       children: {
         ...VALUE_LIST,

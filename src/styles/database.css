@@ -7079,13 +7079,12 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
-/* Edit property › options list. Layout unmeasured: Blok tokens. */
+/* Edit property › options list: it fills the 300 submenu, so its rows sit 4px in like Notion's (notion-spec-2 §25.6). */
 [data-blok-database-options-editor] {
   display: flex;
   flex-direction: column;
-  width: 260px;
   max-height: 360px;
-  padding: 0 var(--blok-space-1) var(--blok-space-1);
+  padding: 0 0 var(--blok-space-1);
   overflow-y: auto;
 }
 
@@ -7565,6 +7564,29 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-option]:hover [data-blok-database-select-option-menu],
 [data-blok-database-select-option][data-active] [data-blok-database-select-option-menu] {
   opacity: 1;
+}
+
+/* notion-spec-2 §25.6: in Edit property every option row shows ⋮⋮ and "›" at rest, Status too.
+   ⋮⋮ at row x + 6, the pill at + 36, the "›" 8px from the row's right; "+" 6px from the list's right. */
+[data-blok-database-options-editor] [data-blok-database-select-option-handle],
+[data-blok-database-options-editor] [data-blok-database-select-option-menu] {
+  opacity: 1;
+}
+
+[data-blok-database-options-editor] [data-blok-database-select-option-label] {
+  margin-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-options-editor] [data-blok-database-select-option] {
+  padding-inline-end: var(--blok-space-1-5);
+}
+
+[dir="rtl"] [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-options-editor] [data-blok-database-options-heading] {
+  padding-inline: var(--blok-space-2) var(--blok-space-1-5);
 }
 
 /* Select and Multi-select show every handle at rest (feel/findings-table T18, notion-spec-2 §19.14). Status shows none. */

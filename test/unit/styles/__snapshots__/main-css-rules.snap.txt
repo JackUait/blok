@@ -10170,9 +10170,8 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-options-editor] {
   display: flex;
   flex-direction: column;
-  width: 260px;
   max-height: 360px;
-  padding: 0 var(--blok-space-1) var(--blok-space-1);
+  padding: 0 0 var(--blok-space-1);
   overflow-y: auto;
 }
 
@@ -10570,6 +10569,26 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-select-option]:hover [data-blok-database-select-option-handle], [data-blok-database-select-option]:hover [data-blok-database-select-option-menu], [data-blok-database-select-option][data-active] [data-blok-database-select-option-menu] {
   opacity: 1;
+}
+
+[data-blok-database-options-editor] [data-blok-database-select-option-handle], [data-blok-database-options-editor] [data-blok-database-select-option-menu] {
+  opacity: 1;
+}
+
+[data-blok-database-options-editor] [data-blok-database-select-option-label] {
+  margin-inline-start: var(--blok-space-2);
+}
+
+[data-blok-database-options-editor] [data-blok-database-select-option] {
+  padding-inline-end: var(--blok-space-1-5);
+}
+
+[dir="rtl"] [data-blok-database-options-editor] [data-blok-database-select-option-menu] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-options-editor] [data-blok-database-options-heading] {
+  padding-inline: var(--blok-space-2) var(--blok-space-1-5);
 }
 
 [data-blok-database-select-editor="select"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {

@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
-import { IconCheck, IconInfo, IconPageLayout, IconReplace } from '../../../../src/components/icons';
+import { IconCheck, IconInfo, IconPageLayout, IconReplace, IconSort } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
@@ -1055,11 +1055,19 @@ describe('DatabasePropertyMenu', () => {
   });
 
   describe('Edit property: Notion\'s note under the settings', () => {
-    it.each<PropertyType>(['number', 'select', 'multiSelect', 'status'])('%s ends with "Changes apply to all views"', (type) => {
-      open(prop(type, type === 'status' ? { status: createDefaultStatusSettings() } : {}));
+    it('number ends with "Changes apply to all views"', () => {
+      open(prop('number'));
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
 
       expect(items[items.length - 1]?.element?.textContent).toBe('tools.database.changesApplyToAllViews');
+    });
+
+    // notion-spec-2 §24.8, §25.6 (90-editprop-Select.png, 90-editprop-Status.png): no note under the options.
+    it.each<PropertyType>(['select', 'multiSelect', 'status'])('%s has no note under its options', (type) => {
+      open(prop(type, type === 'status' ? { status: createDefaultStatusSettings() } : {}));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(items.map((item) => item.name)).not.toContain('all-views-note');
     });
   });
 
@@ -1130,6 +1138,8 @@ describe('DatabasePropertyMenu', () => {
 
       expect(items[0]?.name).toBe('optionSort');
       expect(sort.title).toBe('tools.database.groupSort');
+      // notion-spec-2 §25.6: the Sort row has the arrowUpDown glyph.
+      expect(sort.icon).toBe(IconSort);
       expect(sort.valueLabel).toBe('tools.database.groupSortManual');
       expect(sort.children).toMatchObject({ clickOnly: true, placement: 'under', width: '250px', class: 'blok-database-panel-list' });
       expect(sort.children?.items.map((item) => [item.name, item.title, item.trailingIcon === IconCheck])).toEqual([

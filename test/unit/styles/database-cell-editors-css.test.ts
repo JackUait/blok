@@ -468,6 +468,29 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §25.6: option rows 292 wide at box x + 4; ⋮⋮ at row x + 6, the pill at + 36, "›" ends 8 from the right;
+  // both show at rest. The "+" ends 10 from the box's right.
+  describe('Edit property options list', () => {
+    const LIST = '[data-blok-database-options-editor]';
+
+    it('fills the submenu\'s width, its rows 4px in from the box', () => {
+      expect(declared(LIST, 'width')).toEqual([]);
+      expect(declared(LIST, 'padding')).toEqual(['0 0 var(--blok-space-1)']);
+    });
+
+    it('shows the ⋮⋮ and "›" at rest and places the pill and "›" as Notion', () => {
+      expect(declared(`${LIST} [data-blok-database-select-option-handle]`, 'opacity')).toEqual(['1']);
+      expect(declared(`${LIST} [data-blok-database-select-option-menu]`, 'opacity')).toEqual(['1']);
+      expect(declared(`${LIST} [data-blok-database-select-option-label]`, 'margin-inline-start')).toEqual(['var(--blok-space-2)']);
+      expect(declared(`${LIST} [data-blok-database-select-option]`, 'padding-inline-end')).toEqual(['var(--blok-space-1-5)']);
+      expect(declared(`[dir="rtl"] ${LIST} [data-blok-database-select-option-menu] svg`, 'transform')).toEqual(['scaleX(-1)']);
+    });
+
+    it('starts "Options" 8px in and ends its "+" 6px from the list edge', () => {
+      expect(declared(`${LIST} [data-blok-database-options-heading]`, 'padding-inline')).toEqual(['var(--blok-space-2) var(--blok-space-1-5)']);
+    });
+  });
+
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.
   describe('relation picker in a table cell', () => {
     const REL = '[data-blok-database-relation-editor]';

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { IconChevronRight } from '../../../../../src/components/icons';
 import { createOptionsEditor } from '../../../../../src/tools/database/cells/options-editor';
 import { createDefaultStatusSettings } from '../../../../../src/tools/database/property-values';
 import type { PropertyDefinition, SelectOption } from '../../../../../src/tools/database/types';
@@ -92,6 +93,17 @@ describe('options editor (Edit property for select, multi-select and status)', (
     press(input, 'Enter');
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // notion-spec-2 §25.6: each option row in Edit property ends with a "›", not "⋯".
+  it.each([['select', selectProp], ['status', statusProp]] as const)('ends every %s option row with a "›"', (_type, make) => {
+    const { root } = mount(make());
+    const menus = [...root.querySelectorAll('[data-blok-database-select-option-menu]')];
+    const chevron = document.createElement('div');
+
+    chevron.innerHTML = IconChevronRight;
+    expect(menus.length).toBeGreaterThan(0);
+    expect(menus.every((menu) => menu.innerHTML === chevron.innerHTML)).toBe(true);
   });
 
   it('renames, recolours and deletes an option from its ⋯ panel', () => {

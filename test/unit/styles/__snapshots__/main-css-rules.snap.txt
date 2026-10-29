@@ -4063,6 +4063,7 @@ span[data-blok-slash-search] {
   --blok-database-status-dot-red: rgb(229, 100, 88);
   --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
   --blok-database-glyph: currentColor;
+  --blok-database-chip-remove-ink: currentColor;
   --blok-database-person-initial-bg: var(--blok-database-option-default-bg);
   --blok-database-person-initial-shadow: none;
   --blok-database-number-track: rgba(42, 28, 0, 0.07);
@@ -4335,6 +4336,7 @@ span[data-blok-slash-search] {
   --blok-database-status-dot-green: rgb(70, 161, 113);
   --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
   --blok-database-glyph: rgb(230, 229, 227);
+  --blok-database-chip-remove-ink: rgb(173, 169, 163);
   --blok-database-person-initial-bg: rgb(37, 37, 37);
   --blok-database-person-initial-shadow: inset 0 0 0 1px rgba(255, 255, 243, 0.082);
   --blok-database-number-track: rgba(255, 255, 235, 0.1);
@@ -4609,6 +4611,7 @@ span[data-blok-slash-search] {
   --blok-database-status-dot-green: rgb(70, 161, 113);
   --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
   --blok-database-glyph: rgb(230, 229, 227);
+  --blok-database-chip-remove-ink: rgb(173, 169, 163);
   --blok-database-person-initial-bg: rgb(37, 37, 37);
   --blok-database-person-initial-shadow: inset 0 0 0 1px rgba(255, 255, 243, 0.082);
   --blok-database-number-track: rgba(255, 255, 235, 0.1);
@@ -10057,6 +10060,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-chip-remove] svg, [data-blok-database-place-clear] svg, [data-blok-database-person-remove] svg, [data-blok-database-file-remove] svg {
   width: 12px;
   height: 12px;
+}
+
+[data-blok-database-select-chip-remove] {
+  color: var(--blok-database-chip-remove-ink);
 }
 
 [data-blok-database-select-search], [data-blok-database-person-search], [data-blok-database-files-link-input], [data-blok-database-property-name-input], [data-blok-database-property-menu-field] input, [data-blok-database-option-name], [data-blok-database-date-input], [data-blok-database-date-time] {

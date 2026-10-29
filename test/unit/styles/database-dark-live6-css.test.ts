@@ -81,3 +81,14 @@ describe('OPEN button on a hovered title in dark (§23.2)', () => {
     expect(ruleBody('[data-blok-database-table-cell-actions]')).toContain('box-shadow: var(--blok-database-table-open-shadow)');
   });
 });
+
+describe('select and multi-select chips in the editor\'s top field in dark (§23.3)', () => {
+  it('draw their × in rgb(173, 169, 163); light keeps the pill ink', () => {
+    expect(tokenValues('--blok-database-chip-remove-ink')).toEqual(['currentColor', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+    expect(ruleBody('[data-blok-database-select-chip-remove]')).toContain('color: var(--blok-database-chip-remove-ink)');
+  });
+
+  it('leave a person chip\'s × on the ink, as Notion\'s is rgb(240, 239, 237)', () => {
+    expect(ruleBody('[data-blok-database-person-remove]')).not.toContain('--blok-database-chip-remove-ink');
+  });
+});

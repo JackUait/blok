@@ -238,7 +238,7 @@ describe('DatabaseCardDrawer shell', () => {
       first.destroy();
     });
 
-    it('keeps the new peek\'s scrollbar when the old one finishes sliding out', () => {
+    it('keeps the page narrowed for the new peek when the old one finishes sliding out', () => {
       const { host, options } = shareHost();
       const firstOptions = options();
       const first = new DatabaseCardDrawer(firstOptions);
@@ -249,7 +249,7 @@ describe('DatabaseCardDrawer shell', () => {
       firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(document.querySelector<HTMLElement>('[data-blok-database-peek-scrollbar]')?.style.getPropertyValue('--_blok-peek-travel')).toBe('656px');
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
       second.destroy();
       first.destroy();
     });

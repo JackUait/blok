@@ -34,7 +34,6 @@ import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { ScrollLocker } from '../../components/utils/scroll-locker';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isPromotedToTopLayer, overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
-import { PeekPagePan } from './peek-page-pan';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import { propertyTypeMeta } from './database-property-types';
 import { rowDescription } from './row-body';
@@ -92,6 +91,8 @@ const PEEK_MODE_ICONS: Record<OpenPagesIn, string> = { side: IconPeekSide, cente
 const openPeek: { drawer: DatabaseCardDrawer | null } = { drawer: null };
 /** The drawer whose inset a page shows; a peek still sliding out must not undo a newer one's. */
 const peekHostOwners = new WeakMap<HTMLElement, DatabaseCardDrawer>();
+/** Notion's New ends 24px before the side peek: last blue px at x 731, peek at 756 (notion-live-8/62-close-hover.png). */
+const PEEK_TOOLBAR_GAP = 24;
 
 /**
  * Runs `done` once, when the drawer's slide ends. Reduced motion turns that
@@ -318,8 +319,8 @@ export interface CardDrawerOptions {
   /** The expand button. True when the host took the page (its full page); else the drawer goes full. */
   onExpand?: (rowId: string) => boolean;
   /**
-   * The page beside the side peek (the editor wrapper). It keeps its width,
-   * moves into the free space at its start, and pans the rest out from under the drawer.
+   * The page beside the side peek (the editor wrapper). It narrows to the part
+   * the drawer leaves uncovered, as Notion's page does.
    */
   peekHost?: () => HTMLElement | null;
   /**
@@ -456,7 +457,6 @@ export class DatabaseCardDrawer {
   /** The page the open drawer moved, so close and destroy undo that one. */
   private peekHost: HTMLElement | null = null;
   private readonly takeover: RowPageTakeover;
-  private readonly pagePan = new PeekPagePan();
   /** Held while a side or center peek shows: the page under it does not scroll. */
   private readonly pageScroll = new ScrollLocker();
   private readonly readOnly: boolean;
@@ -1004,7 +1004,8 @@ export class DatabaseCardDrawer {
 
       this.drawer = null;
       drawer.removeAttribute('data-open');
-      this.pagePan.leave();
+      this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
+      this.peekHost?.style.setProperty('--_blok-peek-gap', '0px');
       afterSlide(drawer, () => {
         this.releaseLeavingBody();
         drawer.remove();
@@ -1218,16 +1219,24 @@ export class DatabaseCardDrawer {
     this.setPeekWidth(this.peekWidth + (widen ? PEEK_DETAILS_WIDTH : -PEEK_DETAILS_WIDTH), !widen);
   }
 
-  /** Fits the page beside the side peek to the part the drawer leaves uncovered (peek-page-pan.ts). */
+  /** Ends the page beside the side peek at the drawer's inner edge; database.css turns the inset into padding. */
   private narrowPeekHost(): void {
     const host = this.findPeekHost?.() ?? null;
 
     if (host === null) {
       return;
     }
+    const width = Math.min(this.peekWidth, window.innerWidth);
+    // Padding leaves the border box alone, so a resize drag re-measures the same rect.
+    const rect = host.getBoundingClientRect();
+    const covered = getElementDirection(this.wrapper) === 'rtl' ? width - rect.left : rect.right - (window.innerWidth - width);
+    const inset = Math.max(0, Math.round(covered));
+
     this.peekHost = host;
     peekHostOwners.set(host, this);
-    this.pagePan.fit(host, this.wrapper, Math.min(this.peekWidth, window.innerWidth), getElementDirection(this.wrapper) === 'rtl');
+    host.setAttribute('data-blok-database-peek', '');
+    host.style.setProperty('--_blok-peek-inset', `${inset}px`);
+    host.style.setProperty('--_blok-peek-gap', `${inset > 0 ? PEEK_TOOLBAR_GAP : 0}px`);
   }
 
   private releasePeekHost(): void {
@@ -1236,8 +1245,10 @@ export class DatabaseCardDrawer {
 
       return;
     }
+    this.peekHost?.removeAttribute('data-blok-database-peek');
     this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
-    this.pagePan.release();
+    this.peekHost?.style.removeProperty('--_blok-peek-inset');
+    this.peekHost?.style.removeProperty('--_blok-peek-gap');
     this.peekHost = null;
   }
 
@@ -2001,7 +2012,7 @@ export class DatabaseCardDrawer {
     } else if (!isPromotedToTopLayer(drawer)) {
       promoteToTopLayer(drawer);
     }
-    // Before narrowPeekHost: the page pan measures the page without its scrollbar.
+    // Before narrowPeekHost: it measures the page without its scrollbar.
     if (mode === 'full') {
       this.pageScroll.unlock();
     } else {

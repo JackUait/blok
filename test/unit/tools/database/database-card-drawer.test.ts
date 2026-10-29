@@ -213,7 +213,7 @@ describe('DatabaseCardDrawer', () => {
     });
   });
 
-  describe('side peek keeps the page beside it and makes it scrollable', () => {
+  describe('side peek narrows the page beside it', () => {
     const openWithHost = (hostRect: { left: number; right: number }): { host: HTMLElement; drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
         cb(0);
@@ -236,57 +236,61 @@ describe('DatabaseCardDrawer', () => {
       return { host, drawer, options };
     };
 
-    const travel = (): string | undefined => document.querySelector<HTMLElement>('[data-blok-database-peek-scrollbar]')?.style.getPropertyValue('--_blok-peek-travel');
+    const inset = (host: HTMLElement): string => host.style.getPropertyValue('--_blok-peek-inset');
+    const gap = (host: HTMLElement): string => host.style.getPropertyValue('--_blok-peek-gap');
 
     afterEach(() => {
       document.body.innerHTML = '';
     });
 
-    it('gives the part under the 756px drawer a scrollbar', () => {
+    it('ends the page at the 756px drawer and keeps the toolbar 24px clear of it', () => {
       const { host, drawer } = openWithHost({ left: 100, right: 900 });
 
-      // The drawer covers x 244..1000; the page reaches 900, so 656px is under it.
+      // The drawer covers x 244..1000; the page reaches 900, so it gives up its last 656px.
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('0px');
-      expect(travel()).toBe('656px');
+      expect(inset(host)).toBe('656px');
+      expect(gap(host)).toBe('24px');
+      expect(document.querySelector('[data-blok-database-peek-scrollbar]')).toBeNull();
 
       drawer.destroy();
     });
 
-    it('shows no scrollbar when the page ends before the drawer starts', () => {
-      const { drawer } = openWithHost({ left: 0, right: 200 });
+    it('leaves a page that ends before the drawer as it is', () => {
+      const { host, drawer } = openWithHost({ left: 0, right: 200 });
 
-      expect(travel()).toBeUndefined();
+      expect(inset(host)).toBe('0px');
+      expect(gap(host)).toBe('0px');
 
       drawer.destroy();
     });
 
     it('measures from the left edge in RTL, where the drawer sits on the left', () => {
-      const { drawer, options } = openWithHost({ left: 100, right: 900 });
+      const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
 
       drawer.close();
       options.wrapper.setAttribute('dir', 'rtl');
       drawer.open(makeRow());
 
       // The drawer covers x 0..756; the page starts at 100, so 656px is under it.
-      expect(travel()).toBe('656px');
+      expect(inset(host)).toBe('656px');
 
       drawer.destroy();
     });
 
-    it('puts the page back as the drawer slides out, then drops its marks', () => {
+    it('widens the page back as the drawer slides out, then drops its marks', () => {
       const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
 
       drawer.close();
 
-      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('0px');
+      expect(inset(host)).toBe('0px');
+      expect(gap(host)).toBe('0px');
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(travel()).toBeUndefined();
 
       options.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
-      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('');
+      expect(inset(host)).toBe('');
+      expect(gap(host)).toBe('');
     });
 
     it('drops its marks at once on destroy', () => {
@@ -295,8 +299,8 @@ describe('DatabaseCardDrawer', () => {
       drawer.destroy();
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
-      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('');
-      expect(travel()).toBeUndefined();
+      expect(inset(host)).toBe('');
+      expect(gap(host)).toBe('');
     });
   });
 

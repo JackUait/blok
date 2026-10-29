@@ -42,7 +42,6 @@ const SCROLLABLE_SELECTORS = [
  * webkit styling. Each one needs the reason.
  */
 const STANDARD_SCROLLBAR_EXEMPT: Record<string, string> = {
-  '[data-blok-database-peek-scrollbar]': 'The peek pan bar has no ::-webkit-scrollbar rules of its own; the shared ones leave no visible thumb, so it takes the native thin bar.',
 };
 
 const escapeForRegex = (selector: string): string =>

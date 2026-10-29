@@ -95,38 +95,36 @@ describe('side peek', () => {
     expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
   });
 
-  it('moves the page beside it over the same 200ms, keeping its width', () => {
+  it('narrows the page beside it over the same 200ms', () => {
     // The host is the editor wrapper; its `all: initial !important` reset beats anything weaker.
     const host = body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek]');
 
-    expect(host).toContain('inset-inline-start: calc(-1 * var(--_blok-peek-offset, 0px)) !important');
-    expect(host).toContain('transition: inset-inline-start 200ms ease !important');
-    expect(host).not.toContain('padding-inline-end');
+    expect(host).toContain('padding-inline-end: var(--_blok-peek-inset, 0px) !important');
+    expect(host).toContain('transition: padding-inline-end 200ms ease !important');
+    expect(host).not.toContain('inset-inline-start');
   });
 
-  it('lets the page follow a resize drag or a pan at once', () => {
+  it('keeps the database toolbar of the narrowed page clear of the peek, but not one inside the peek', () => {
+    const bar = body(outsideReducedMotion, '[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *)');
+
+    expect(bar).toContain('margin-inline-end: var(--_blok-peek-gap, 0px)');
+    expect(bar).toContain('transition: margin-inline-end 200ms ease');
+  });
+
+  it('lets the page follow a resize drag at once', () => {
     expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing]'))
       .toContain('transition: none !important');
-    expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-panning]'))
-      .toContain('transition: none !important');
   });
 
-  it('runs the pan scrollbar only under the part the peek leaves uncovered', () => {
-    const bar = body(outsideReducedMotion, '[data-blok-database-peek-scrollbar][data-blok-top-layer][popover]');
-
-    expect(bar).toContain('position: fixed');
-    expect(bar).toContain('inset-block-end: 0');
-    expect(bar).toContain('inset-inline-start: 0');
-    expect(bar).toContain('width: calc(100vw - min(var(--_blok-peek-width, 756px), 100vw))');
-    expect(bar).toContain('overflow-x: auto');
-    expect(bar).toContain('min-height: 15px');
-    expect(bar).toContain('scrollbar-width: thin');
-    expect(body(outsideReducedMotion, '[data-blok-database-peek-scrollbar] > div')).toContain('width: calc(100% + var(--_blok-peek-travel, 0px))');
+  it('has no pan scrollbar', () => {
+    expect(database).not.toContain('data-blok-database-peek-scrollbar');
+    expect(database).not.toContain('--_blok-peek-offset');
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {
     expect(body(reducedMotion, '[data-blok-database-drawer]')).toContain('transition: none');
     expect(body(reducedMotion, '[data-blok-interface=blok][data-blok-database-peek]')).toContain('transition: none !important');
+    expect(body(reducedMotion, '[data-blok-database-peek] [data-blok-database-view-bar]:not([data-blok-database-drawer] *)')).toContain('transition: none');
   });
 });
 

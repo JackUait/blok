@@ -31,4 +31,18 @@ describe('gallery card values', () => {
     expect(name).toMatch(/font-size:\s*12px/);
     expect(name).toMatch(/line-height:\s*14px/);
   });
+
+  // notion-spec-2 §21.4 (E8-gallery.png): 14x14, and no border once checked.
+  it('draws the card checkbox 14x14 with no border once checked', () => {
+    const box = ruleBody('[data-blok-database-gallery-property] [data-blok-database-checkbox]');
+
+    expect(box).toMatch(/width:\s*14px/);
+    expect(box).toMatch(/height:\s*14px/);
+    expect(ruleBody('[data-blok-database-gallery-property] [data-blok-database-checkbox][data-state="checked"]')).toMatch(/border-width:\s*0/);
+  });
+
+  // notion-spec-2 §21.4 (E8-peek-A.png): the side peek's checked box has no border either.
+  it('draws the side peek checkbox with no border once checked', () => {
+    expect(ruleBody('[data-blok-database-drawer-prop-value] [data-blok-database-checkbox][data-state="checked"]')).toMatch(/border-width:\s*0/);
+  });
 });

@@ -6181,8 +6181,10 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   border-color: var(--blok-database-checkbox-checked-bg);
 }
 
-/* notion-spec-2 §18.1: no border when checked. The box stays 16px (border-box). Peek and card boxes are unmeasured. */
-[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"] {
+/* notion-spec-2 §18.1, §21.4: no border when checked, in the table, the side peek and on a card. The box keeps its size (border-box). */
+[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"],
+[data-blok-database-drawer-prop-value] [data-blok-database-checkbox][data-state="checked"],
+[data-blok-database-gallery-property] [data-blok-database-checkbox][data-state="checked"] {
   border-width: 0;
 }
 
@@ -11443,6 +11445,12 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-checkbox-name] {
   font-size: 12px;
   line-height: 14px;
+}
+
+/* notion-spec-2 §21.4: a card's checkbox is 14x14. */
+[data-blok-database-gallery-property] [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
 }
 
 /* notion-spec-2 §19.17, §21.7: on a gallery or board card, a 20px chip, at most 200 wide, 12/20, in a row with 4px padding. */

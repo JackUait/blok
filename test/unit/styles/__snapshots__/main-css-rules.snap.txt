@@ -9341,7 +9341,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   border-color: var(--blok-database-checkbox-checked-bg);
 }
 
-[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"] {
+[data-blok-database-table-cell] [data-blok-database-checkbox][data-state="checked"], [data-blok-database-drawer-prop-value] [data-blok-database-checkbox][data-state="checked"], [data-blok-database-gallery-property] [data-blok-database-checkbox][data-state="checked"] {
   border-width: 0;
 }
 
@@ -14207,6 +14207,11 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-checkbox-name] {
   font-size: 12px;
   line-height: 14px;
+}
+
+[data-blok-database-gallery-property] [data-blok-database-checkbox] {
+  width: 14px;
+  height: 14px;
 }
 
 [data-blok-database-gallery-property]:has(> [data-blok-database-cell="files"]), [data-blok-database-card-property]:has(> [data-blok-database-cell="files"]) {

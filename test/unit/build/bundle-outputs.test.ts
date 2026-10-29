@@ -492,6 +492,56 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
   })
 })
 
+describe('opt-in subsystems load behind import()', () => {
+  // Each string lives only in that subsystem's lazy body. Strings that the CSS also uses do not work: the CSS ships inside the eager JS.
+  const SUBSYSTEMS: Record<string, string[]> = {
+    'Ask AI': ['Continue where you stopped.', 'data-blok-assistant-continue'],
+  }
+
+  /** Files an entry loads at import time, and the ones its first-level import() calls load. */
+  const closures = (entry: string): { eager: Set<string>; lazy: Set<string> } => {
+    const walk = (start: string[], seen: Set<string>, dynamic: Set<string>): void => {
+      const stack = [...start]
+      while (stack.length > 0) {
+        const file = stack.pop() as string
+        if (seen.has(file)) {
+          continue
+        }
+        seen.add(file)
+        const [imports] = parseModule(readFileSync(file, 'utf-8'))
+        const relative = imports.filter(({ n: spec }) => spec?.startsWith('.') === true)
+        // d === -1 marks a static import; import() has d >= 0.
+        relative.filter(({ d }) => d === -1).forEach(({ n: spec }) => stack.push(join(dirname(file), spec as string)))
+        relative.filter(({ d }) => d !== -1).forEach(({ n: spec }) => dynamic.add(join(dirname(file), spec as string)))
+      }
+    }
+    const eager = new Set<string>()
+    const dynamic = new Set<string>()
+    walk([join(dist, entry)], eager, dynamic)
+    const lazy = new Set<string>()
+    walk([...dynamic].filter((file) => !eager.has(file)), lazy, new Set())
+    for (const file of eager) {
+      lazy.delete(file)
+    }
+    return { eager, lazy }
+  }
+
+  for (const entry of ['blok.mjs', 'full.mjs']) {
+    for (const [name, fingerprints] of Object.entries(SUBSYSTEMS)) {
+      it(`${entry} loads ${name} only through import()`, async () => {
+        await initLexer()
+        const { eager, lazy } = closures(entry)
+        const eagerHits = [...eager].flatMap((file) =>
+          fingerprints.filter((print) => readFileSync(file, 'utf-8').includes(print)).map((print) => `${file.slice(dist.length + 1)}: ${print}`))
+        expect(eagerHits).toEqual([])
+        for (const print of fingerprints) {
+          expect([...lazy].some((file) => readFileSync(file, 'utf-8').includes(print)), print).toBe(true)
+        }
+      })
+    }
+  }
+})
+
 describe('ESM outputs still present', () => {
   it('still produces blok.mjs', () => {
     expect(existsSync(resolve(dist, 'blok.mjs'))).toBe(true)

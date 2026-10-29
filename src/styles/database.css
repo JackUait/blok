@@ -13806,6 +13806,30 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
+/* notion-spec-2 §25.1 (discard-style.txt): 28 tall, 8px sides, radius 6, 14px regular ink, no fill until hover. */
+[data-blok-database-formula-discard] {
+  height: 28px;
+  margin-inline: auto var(--blok-space-2);
+  padding: 0 var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--blok-database-ink);
+  cursor: pointer;
+  transition: background 0.1s ease-in-out;
+}
+
+[data-blok-database-formula-discard]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-formula-discard] + [data-blok-database-formula-close] {
+  margin-inline-start: 0;
+}
+
 [data-blok-database-formula-close] svg {
   width: 16px;
   height: 16px;
@@ -13876,8 +13900,90 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-formula-preview-head] {
+  position: relative;
+}
+
+/* notion-spec-2 §25.1: "A ⌄" is a 24-tall button: page glyph, the row's name, a chevron. */
+[data-blok-database-formula-preview-row] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  height: 24px;
+  padding: 0 var(--blok-space-1);
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-formula-preview-row]:hover,
+[data-blok-database-formula-preview-row][aria-expanded="true"] {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-formula-preview-chevron] {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+}
+
+[data-blok-database-formula-preview-chevron] svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* notion-spec-2 §25.1 (preview-picker.txt): 260 wide under the button; Search 232 wide 12px down, rows 252x28 4px in. */
+[data-blok-database-formula-preview-picker] {
+  position: absolute;
+  top: 100%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-database-popover-bg);
+  box-shadow: var(--blok-database-popover-shadow);
+  font-size: 14px;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-formula-preview-picker] > input {
+  margin: var(--blok-space-2) var(--blok-space-2-5) var(--blok-space-2);
+}
+
+[data-blok-database-formula-preview-option] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+  cursor: pointer;
+}
+
+[data-blok-database-formula-preview-option]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-formula-preview-check] {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  margin-inline-start: auto;
+}
+
+[data-blok-database-formula-preview-check] svg {
+  width: 100%;
+  height: 100%;
+}
+
 [data-blok-database-formula-preview-icon] {
   display: inline-flex;
+  flex: none;
   width: 16px;
   height: 16px;
 }
@@ -13899,6 +14005,34 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
   font-size: 14px;
   color: var(--blok-database-ink);
+}
+
+/* notion-spec-2 §25.1: Debug mode at the line's end; "Debug mode" 12px regular after the switch. */
+[data-blok-database-formula-debug] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 400;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* debug-on.txt: the output turns 12px monospace and an 8px type tag follows it. */
+[data-blok-database-formula-result][data-debug] > [data-blok-database-formula-preview] {
+  font-family: var(--blok-font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-debug-type] {
+  margin-inline-start: var(--blok-space-1);
+  font-size: 8px;
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-formula-preview][data-empty] {
@@ -14017,18 +14151,6 @@ textarea[data-blok-database-cell-input] {
   background: transparent;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
   font-size: 12px;
-}
-
-[data-blok-database-formula-done] {
-  align-self: flex-end;
-  margin: var(--blok-space-2) var(--blok-space-3) var(--blok-space-3);
-  padding: var(--blok-space-1) var(--blok-space-2);
-  border: 0;
-  border-radius: var(--blok-radius-control);
-  background: var(--blok-database-hover-bg);
-  font: inherit;
-  color: var(--blok-database-ink);
-  cursor: pointer;
 }
 
 [data-blok-database-cell="formula"],

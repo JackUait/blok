@@ -253,6 +253,79 @@ describe('formula editor', () => {
     });
   });
 
+  // notion-spec-2 §25.1: no Done or Save button in any state.
+  it('has no Done button', () => {
+    open();
+    type('prop("Amount") + 1');
+
+    expect(document.querySelector('[data-blok-database-formula-done]')).toBeNull();
+  });
+
+  // notion-spec-2 §25.1 (40-discard-hover.png, 41-after-discard.png).
+  describe('Discard all changes', () => {
+    const discard = (): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>('[data-blok-database-formula-discard]');
+
+    it('shows in the title row only while a change is unsaved', () => {
+      open();
+      expect(discard()).toBeNull();
+
+      type('prop("Amount") + 1');
+      expect(discard()?.textContent).toBe('tools.database.formulaDiscard');
+      expect(discard()?.parentElement?.hasAttribute('data-blok-database-formula-head')).toBe(true);
+
+      type('prop("Amount") * 2');
+      expect(discard()).toBeNull();
+    });
+
+    it('restores the saved formula and keeps the box open', () => {
+      const options = open();
+
+      type('prop("Amount") + 1');
+      discard()?.click();
+
+      expect(tokens()).toEqual(['Amount']);
+      expect(input().lastChild?.textContent).toBe(' * 2');
+      expect(discard()).toBeNull();
+      expect(document.querySelector('[data-blok-database-formula-editor]')).not.toBeNull();
+      input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect(options.onSave).not.toHaveBeenCalled();
+    });
+  });
+
+  // notion-spec-2 §25.1 (34-debug-on.png, debug-on.txt): a switch at the end of the preview line.
+  describe('Debug mode', () => {
+    const debug = (): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>('[data-blok-database-formula-debug]');
+
+    it('is an off switch labelled "Debug mode"', () => {
+      open();
+
+      expect(debug()?.getAttribute('role')).toBe('switch');
+      expect(debug()?.getAttribute('aria-checked')).toBe('false');
+      expect(debug()?.textContent).toBe('tools.database.formulaDebugMode');
+    });
+
+    it('on, it tags a number result "num"', () => {
+      open();
+      type('prop("Amount") * 3');
+      debug()?.click();
+
+      expect(debug()?.getAttribute('aria-checked')).toBe('true');
+      expect(document.querySelector('[data-blok-database-formula-result]')?.hasAttribute('data-debug')).toBe(true);
+      expect(text('[data-blok-database-formula-debug-type]')).toBe('num');
+    });
+
+    // Only Notion's number tag is measured.
+    it('draws no tag for other results, and none while off', () => {
+      open();
+      type('prop("Amount") * 3');
+      expect(document.querySelector('[data-blok-database-formula-debug-type]')).toBeNull();
+
+      debug()?.click();
+      type('prop("Amount") > 3');
+      expect(document.querySelector('[data-blok-database-formula-debug-type]')).toBeNull();
+    });
+  });
+
   // notion-spec-2 §18.3: Escape saves the typed formula and closes.
   describe('Escape', () => {
     const escape = (): void => {
@@ -423,11 +496,69 @@ describe('formula editor', () => {
 
   // notion-spec-2 §18.3, §22.5: "Preview with <row>", the output or "No output", and "Type: <type>".
   describe('preview', () => {
+    const ROWS = [{ id: 'a', title: 'Apple' }, { id: 'b', title: 'Banana' }, { id: 'c', title: 'Cherry' }];
+    const rowButton = (): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>('[data-blok-database-formula-preview-row]');
+    const picker = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-formula-preview-picker]');
+    const options = (): Element[] => [...document.querySelectorAll('[data-blok-database-formula-preview-option]')];
+
     it('names the row it previews with', () => {
-      open({ previewRow: 'Banana' });
+      open({ previewRows: ROWS, previewRowId: 'b' });
 
       expect(text('[data-blok-database-formula-preview-label]')).toBe('tools.database.formulaPreviewWith');
       expect(text('[data-blok-database-formula-preview-row]')).toBe('Banana');
+    });
+
+    // notion-spec-2 §25.1 (31-preview-picker.png): the row is a button that opens a searchable list of rows.
+    describe('row picker', () => {
+      it('opens with a focused Search field, one row per database row and a check on the current one', () => {
+        open({ previewRows: ROWS, previewRowId: 'b' });
+        rowButton()?.click();
+
+        const search = picker()?.querySelector('input');
+
+        expect(rowButton()?.getAttribute('aria-expanded')).toBe('true');
+        expect(search).toHaveFocus();
+        expect(search?.placeholder).toBe('tools.database.searchLabel');
+        expect(options().map((el) => el.textContent?.trim())).toEqual(['Apple', 'Banana', 'Cherry']);
+        expect(options().map((el) => el.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
+      });
+
+      it('previews with the row picked and closes only the picker', () => {
+        const preview = vi.fn((_source: string, rowId?: string) => (rowId === 'c' ? '30' : '6'));
+
+        open({ previewRows: ROWS, previewRowId: 'a', preview });
+        rowButton()?.click();
+        (options()[2] as HTMLElement).click();
+
+        expect(picker()).toBeNull();
+        expect(text('[data-blok-database-formula-preview-row]')).toBe('Cherry');
+        expect(text('[data-blok-database-formula-preview]')).toBe('30');
+        expect(document.querySelector('[data-blok-database-formula-editor]')).not.toBeNull();
+      });
+
+      it('filters the rows by the search', () => {
+        open({ previewRows: ROWS, previewRowId: 'a' });
+        rowButton()?.click();
+        const search = picker()?.querySelector('input');
+
+        if (search == null) throw new Error('no search');
+        search.value = 'ban';
+        search.dispatchEvent(new Event('input'));
+
+        expect(options().map((el) => el.textContent?.trim())).toEqual(['Banana']);
+      });
+
+      it('Escape closes only the picker', () => {
+        const opts = open({ previewRows: ROWS, previewRowId: 'a' });
+
+        type('prop("Amount") + 1');
+        rowButton()?.click();
+        picker()?.querySelector('input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+        expect(picker()).toBeNull();
+        expect(document.querySelector('[data-blok-database-formula-editor]')).not.toBeNull();
+        expect(opts.onSave).not.toHaveBeenCalled();
+      });
     });
 
     it('shows "No output" and type unknown for an empty formula', () => {

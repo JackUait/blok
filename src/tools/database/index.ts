@@ -11480,8 +11480,7 @@ export class DatabaseTool implements BlockTool {
     const clicked = anchor?.closest('[data-row-id]')?.getAttribute('data-row-id') ?? undefined;
     const sample = [clicked, this.cardDrawer?.openRowId, this.model.getOrderedRows()[0]?.id]
       .find((id): id is string => typeof id === 'string' && this.model.getRow(id) !== undefined);
-    const sampleRow = sample === undefined ? undefined : this.model.getRow(sample);
-    const sampleTitle = sampleRow === undefined ? undefined : DatabaseTool.titleOf({ schema, rows: [] }, sampleRow);
+    const titled = (title: string): string => (title === '' ? this.api.i18n.t('tools.database.relationUntitled') : title);
     const relatedSchema = schema
       .flatMap((p) => (p.type === 'relation' && p.relation !== undefined && p.relation.targetDatabaseId !== this.dataId
         ? this.readDatabaseSource(p.relation.targetDatabaseId)?.schema ?? []
@@ -11492,10 +11491,12 @@ export class DatabaseTool implements BlockTool {
       property,
       schema: localizeDatabaseSchema(schema, this.api.i18n),
       relatedSchema,
-      ...(sampleTitle === undefined ? {} : { previewRow: sampleTitle === '' ? this.api.i18n.t('tools.database.relationUntitled') : sampleTitle }),
+      // notion-spec-2 §25.1 (31-preview-picker.png): "Preview with" picks any row of the database.
+      previewRows: this.model.getOrderedRows().map((row) => ({ id: row.id, title: titled(DatabaseTool.titleOf({ schema, rows: [] }, row)) })),
+      ...(sample === undefined ? {} : { previewRowId: sample }),
       compile: (source) => this.computedValues.compile(draft(source), schema.map((p) => (p.id === propertyId ? draft(source) : p))),
-      preview: (source) => {
-        if (sample === undefined) return null;
+      preview: (source, rowId = sample) => {
+        if (rowId === undefined) return null;
         const trial = new ComputedProperties(this.dataId);
         const trialSchema = schema.map((p) => (p.id === propertyId ? draft(source) : p));
         const rows = trial.apply(trialSchema, this.model.getOrderedRows(), {
@@ -11504,7 +11505,7 @@ export class DatabaseTool implements BlockTool {
           resolveDatabase: (databaseId) => this.readDatabaseSource(databaseId),
           ...(this.people === undefined ? {} : { people: this.people }),
         });
-        const value = rows.find((row) => row.id === sample)?.computed?.[propertyId];
+        const value = rows.find((row) => row.id === rowId)?.computed?.[propertyId];
 
         return value === undefined || value === null ? '' : formatPreview(value);
       },

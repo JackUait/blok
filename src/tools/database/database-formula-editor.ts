@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { IconCheckbox, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
+import { IconCheck, IconCheckbox, IconChevronDown, IconCross, IconHash, IconPageEmpty } from '../../components/icons';
 import { propertyTypeMeta } from './database-property-types';
 import { FormulaField, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
@@ -18,9 +18,11 @@ export interface FormulaEditorOptions {
   /** Compiles against the database, cycles and depth included. */
   compile: (source: string) => CompileResult;
   /** The result for one row, as text, or null when there is no row to show. */
-  preview?: (source: string) => string | null;
-  /** The title of the row the preview uses. */
-  previewRow?: string;
+  preview?: (source: string, rowId?: string) => string | null;
+  /** The rows "Preview with" can pick, in the view's order. */
+  previewRows?: ReadonlyArray<{ id: string; title: string }>;
+  /** The row the preview starts with. Defaults to the first. */
+  previewRowId?: string;
   /** The stored form, property names replaced by ids. */
   onSave: (stored: string) => void;
   onClose?: () => void;
@@ -91,6 +93,13 @@ class FormulaEditor implements FormulaEditorHandle {
   private open = true;
   /** The formula as it opened: Escape on it writes nothing. */
   private readonly initial: string;
+  private readonly rowButton = document.createElement('button');
+  private rowId: string | undefined;
+  private picker: HTMLElement | null = null;
+  /** notion-spec-2 §25.1: shown left of the × only while the formula differs from the saved one. */
+  private readonly discard = document.createElement('button');
+  private readonly result = document.createElement('div');
+  private debug = false;
 
   constructor(anchor: HTMLElement, private readonly options: FormulaEditorOptions) {
     const t = (key: string): string => options.i18n.t(key);
@@ -114,12 +123,6 @@ class FormulaEditor implements FormulaEditorHandle {
     this.type.setAttribute('data-blok-database-formula-type', '');
     this.help.setAttribute('data-blok-database-formula-help', '');
 
-    const done = document.createElement('button');
-
-    done.type = 'button';
-    done.setAttribute('data-blok-database-formula-done', '');
-    done.textContent = t('tools.database.formulaDone');
-    done.addEventListener('click', () => this.save());
     const head = document.createElement('div');
     const title = document.createElement('span');
     const close = document.createElement('button');
@@ -132,9 +135,23 @@ class FormulaEditor implements FormulaEditorHandle {
     close.setAttribute('aria-label', t('tools.database.close'));
     close.innerHTML = IconCross;
     close.addEventListener('click', () => this.leave(true));
+    this.discard.type = 'button';
+    this.discard.setAttribute('data-blok-database-formula-discard', '');
+    this.discard.textContent = t('tools.database.formulaDiscard');
+    this.discard.addEventListener('click', () => {
+      this.field.reset(this.initial);
+      this.input.focus();
+      this.field.setCaret(this.initial.length);
+      this.refresh();
+    });
     head.append(title, close);
-    this.root.append(head, this.input, this.renderPreviewArea(), this.error, this.renderPanes(), done);
+    this.root.append(head, this.input, this.renderPreviewArea(), this.error, this.renderPanes());
 
+    this.root.addEventListener('pointerdown', (event) => {
+      const target = event.target instanceof Node ? event.target : null;
+
+      if (this.picker !== null && !this.picker.contains(target) && !this.rowButton.contains(target)) this.closePicker();
+    });
     this.input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
         event.preventDefault();
@@ -148,7 +165,8 @@ class FormulaEditor implements FormulaEditorHandle {
       // notion-spec-2 §18.3: the Edit formula box is 740 wide, and kept inside the window (bottom at window − 12).
       minWidth: '740px',
       cover: true,
-      onEscape: () => this.leave(true),
+      // §25.1: Escape in the row picker closes only the picker.
+      onEscape: () => (this.picker === null ? this.leave(true) : this.closePicker()),
       // §25.1 (39-after-outside.png): a click outside keeps the typed formula.
       onDismiss: () => this.leave(false),
     });
@@ -188,29 +206,126 @@ class FormulaEditor implements FormulaEditorHandle {
   private renderPreviewArea(): HTMLElement {
     const area = document.createElement('div');
     const top = document.createElement('div');
-    const result = document.createElement('div');
+    const result = this.result;
 
     area.setAttribute('data-blok-database-formula-preview-area', '');
     top.setAttribute('data-blok-database-formula-preview-head', '');
     result.setAttribute('data-blok-database-formula-result', '');
-    if (this.options.previewRow !== undefined) {
+    const rows = this.options.previewRows ?? [];
+
+    this.rowId = rows.find((row) => row.id === this.options.previewRowId)?.id ?? rows.at(0)?.id;
+    if (this.rowId !== undefined) {
       const label = document.createElement('span');
-      const row = document.createElement('span');
-      const icon = document.createElement('span');
 
       label.setAttribute('data-blok-database-formula-preview-label', '');
       label.textContent = this.options.i18n.t('tools.database.formulaPreviewWith');
-      icon.setAttribute('data-blok-database-formula-preview-icon', '');
-      icon.setAttribute('aria-hidden', 'true');
-      icon.innerHTML = IconPageEmpty;
-      row.setAttribute('data-blok-database-formula-preview-row', '');
-      row.textContent = this.options.previewRow;
-      top.append(label, icon, row);
+      this.rowButton.type = 'button';
+      this.rowButton.setAttribute('data-blok-database-formula-preview-row', '');
+      this.rowButton.setAttribute('aria-haspopup', 'listbox');
+      this.rowButton.setAttribute('aria-expanded', 'false');
+      this.rowButton.addEventListener('click', () => (this.picker === null ? this.openPicker() : this.closePicker()));
+      this.renderRowButton();
+      top.append(label, this.rowButton);
     }
+    top.append(this.renderDebugSwitch());
     result.append(this.preview, this.type);
     area.append(top, result);
 
     return area;
+  }
+
+  /** notion-spec-2 §25.1 (debug-on.txt): a 30x18 switch at the end of the preview line, "Debug mode" after it. */
+  private renderDebugSwitch(): HTMLElement {
+    const button = document.createElement('button');
+    const track = document.createElement('span');
+    const label = document.createElement('span');
+
+    button.type = 'button';
+    button.setAttribute('role', 'switch');
+    button.setAttribute('aria-checked', 'false');
+    button.setAttribute('data-blok-database-formula-debug', '');
+    track.setAttribute('data-blok-database-switch-track', '');
+    track.append(document.createElement('span'));
+    label.textContent = this.options.i18n.t('tools.database.formulaDebugMode');
+    button.append(track, label);
+    button.addEventListener('click', () => {
+      this.debug = !this.debug;
+      button.setAttribute('aria-checked', String(this.debug));
+      this.result.toggleAttribute('data-debug', this.debug);
+      this.refresh();
+    });
+
+    return button;
+  }
+
+  private renderRowButton(): void {
+    const title = document.createElement('span');
+
+    title.textContent = this.options.previewRows?.find((row) => row.id === this.rowId)?.title ?? '';
+    this.rowButton.replaceChildren(glyph('data-blok-database-formula-preview-icon', IconPageEmpty), title, glyph('data-blok-database-formula-preview-chevron', IconChevronDown));
+  }
+
+  /** notion-spec-2 §25.1 (31-preview-picker.png): a Search field, then one row per database row, ✓ on the current one. */
+  private openPicker(): void {
+    const picker = document.createElement('div');
+    const search = document.createElement('input');
+    const list = document.createElement('div');
+    const label = this.options.i18n.t('tools.database.searchLabel');
+    const fill = (): void => {
+      const query = search.value.trim().toLowerCase();
+
+      list.replaceChildren(...(this.options.previewRows ?? [])
+        .filter((row) => row.title.toLowerCase().includes(query))
+        .map((row) => this.renderPickerOption(row)));
+    };
+
+    picker.setAttribute('data-blok-database-formula-preview-picker', '');
+    search.type = 'text';
+    search.placeholder = label;
+    search.setAttribute('aria-label', label);
+    search.setAttribute('data-blok-field', 'text');
+    search.addEventListener('input', fill);
+    search.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      list.querySelector<HTMLElement>('[data-blok-database-formula-preview-option]')?.click();
+    });
+    list.setAttribute('role', 'listbox');
+    picker.append(search, list);
+    fill();
+    this.picker = picker;
+    this.rowButton.setAttribute('aria-expanded', 'true');
+    this.rowButton.after(picker);
+    picker.style.left = `${this.rowButton.offsetLeft}px`;
+    search.focus();
+  }
+
+  private renderPickerOption(row: { id: string; title: string }): HTMLElement {
+    const option = document.createElement('div');
+    const title = document.createElement('span');
+    const selected = row.id === this.rowId;
+
+    option.setAttribute('data-blok-database-formula-preview-option', '');
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', String(selected));
+    title.textContent = row.title;
+    option.append(glyph('data-blok-database-formula-preview-icon', IconPageEmpty), title);
+    if (selected) option.append(glyph('data-blok-database-formula-preview-check', IconCheck));
+    option.addEventListener('click', () => {
+      this.rowId = row.id;
+      this.renderRowButton();
+      this.closePicker();
+      this.refresh();
+    });
+
+    return option;
+  }
+
+  private closePicker(): void {
+    this.picker?.remove();
+    this.picker = null;
+    this.rowButton.setAttribute('aria-expanded', 'false');
+    this.input.focus();
   }
 
   /** The list on the left, its help on the right. */
@@ -252,10 +367,23 @@ class FormulaEditor implements FormulaEditorHandle {
     const compiled = this.options.compile(source);
 
     this.error.replaceChildren();
-    const output = compiled.ok && source.trim() !== '' ? this.options.preview?.(source) ?? '' : '';
+    const output = compiled.ok && source.trim() !== '' ? this.options.preview?.(source, this.rowId) ?? '' : '';
 
     this.preview.toggleAttribute('data-empty', output === '');
     this.preview.textContent = output === '' ? this.options.i18n.t('tools.database.formulaNoOutput') : output;
+    // Only Notion's number tag is measured ("10 num").
+    if (this.debug && output !== '' && compiled.ok && compiled.resultType.kind === 'number') {
+      const tag = document.createElement('span');
+
+      tag.setAttribute('data-blok-database-formula-debug-type', '');
+      tag.textContent = 'num';
+      this.preview.append(tag);
+    }
+    if (source === this.initial) {
+      this.discard.remove();
+    } else if (!this.discard.isConnected) {
+      this.root.querySelector('[data-blok-database-formula-close]')?.before(this.discard);
+    }
     this.type.textContent = this.options.i18n.t('tools.database.formulaType', {
       type: typeLabel(compiled.ok && source.trim() !== '' ? compiled.resultType : null),
     });
@@ -396,6 +524,16 @@ class FormulaEditor implements FormulaEditorHandle {
     this.field.replace(caret - wordBefore(this.field.value, caret).length, caret, text);
   }
 }
+
+const glyph = (attribute: string, svg: string): HTMLElement => {
+  const holder = document.createElement('span');
+
+  holder.setAttribute(attribute, '');
+  holder.setAttribute('aria-hidden', 'true');
+  holder.innerHTML = svg;
+
+  return holder;
+};
 
 export const openFormulaEditor = (anchor: HTMLElement, options: FormulaEditorOptions): FormulaEditorHandle =>
   new FormulaEditor(anchor, options);

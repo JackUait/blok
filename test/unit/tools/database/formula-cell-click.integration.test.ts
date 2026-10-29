@@ -94,7 +94,22 @@ describe('a click on a table formula cell', () => {
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await quiet();
 
-    expect(document.querySelector('[data-blok-database-formula-preview-row]')?.textContent).toBe('C');
+    expect(document.querySelector('[data-blok-database-formula-preview-row]')?.textContent?.trim()).toBe('C');
+  });
+
+  // notion-spec-2 §25.1 (31-preview-picker.png): "Preview with" lists every row and previews with the one picked.
+  it('previews with a row picked in "Preview with"', async () => {
+    await make();
+    holder?.querySelector<HTMLElement>('[data-blok-database-table-row][data-row-id="r2"] [role="gridcell"][data-property-id="f"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await quiet();
+    document.querySelector<HTMLElement>('[data-blok-database-formula-preview-row]')?.click();
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-formula-preview-option]')];
+
+    expect(rows.map((row) => row.textContent?.trim())).toEqual(['A', 'C']);
+    rows[0].click();
+
+    expect(document.querySelector('[data-blok-database-formula-preview]')?.textContent).toBe('84');
   });
 
   it('opens nothing in a read-only editor', async () => {

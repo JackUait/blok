@@ -3749,10 +3749,11 @@ export class DatabaseCardDrawer {
         // research/22 §3: a click on a url, email or phone link follows it; beside it, edits. Cmd/Ctrl follows any link.
         const anchor = event.target instanceof Element ? event.target.closest('a') : null;
 
-        // A file chip's plain click opens the box, as in the table.
-        const followed = anchor !== null && anchor.hasAttribute('data-blok-database-cell-link') && anchor.closest('[data-blok-database-file-chip]') === null;
+        // notion-spec-2 §24.2: a file chip's plain click does nothing; Cmd/Ctrl-click follows its link.
+        const onFile = event.target instanceof Element && event.target.closest('[data-blok-database-file-chip]') !== null;
+        const followed = anchor !== null && anchor.hasAttribute('data-blok-database-cell-link');
 
-        if (anchor !== null && (followed || event.metaKey || event.ctrlKey)) {
+        if (onFile || (anchor !== null && (followed || event.metaKey || event.ctrlKey))) {
           return;
         }
         this.openValueEditor(valueEl, def.id);

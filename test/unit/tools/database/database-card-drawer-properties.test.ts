@@ -425,15 +425,33 @@ describe('DatabaseCardDrawer — page header and body start', () => {
       expect(openWithFile().link.closest('[data-blok-link-owner]')).not.toBeNull();
     });
 
-    // As in the table (d06fe949): a plain click opens the box, not the file.
-    it('a plain click on the chip link opens the files box and does not follow the link', () => {
+    // notion-spec-2 §24.2: a plain click on a peek file chip does nothing visible.
+    it('a plain click on the chip link opens no box and does not follow the link', () => {
       const { link } = openWithFile();
       const click = new MouseEvent('click', { bubbles: true, cancelable: true });
 
       link.dispatchEvent(click);
 
-      expect(filesEditor()).not.toBeNull();
+      expect(filesEditor()).toBeNull();
       expect(click.defaultPrevented).toBe(true);
+    });
+
+    it('a plain click on the chip glyph opens no box', () => {
+      const { link } = openWithFile();
+      const glyph = link.closest('[data-blok-database-file-chip]')?.querySelector('[data-blok-database-file-chip-icon]');
+
+      if (glyph === null || glyph === undefined) throw new Error('no chip glyph');
+      glyph.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(filesEditor()).toBeNull();
+    });
+
+    it('a click beside the chips opens the files box', () => {
+      const { options } = openWithFile();
+
+      valueOf(options, 'prop-files')?.click();
+
+      expect(filesEditor()).not.toBeNull();
     });
 
     it('a Cmd-click on the chip link follows it and opens no box', () => {

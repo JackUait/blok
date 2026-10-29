@@ -62,6 +62,19 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // `C5-rel-ban.png` (pixels): the clear × is a 16px filled circle, 16px before "In <database>".
+  describe('table relation picker clear ×', () => {
+    it('draws a 16px round glyph and leaves 16px before the scope', () => {
+      expect(declared('[data-blok-database-relation-clear] svg', 'width')).toEqual(['16px']);
+      expect(declared('[data-blok-database-relation-clear] svg', 'border-radius')).toEqual(['var(--blok-radius-pill)']);
+      expect(declared('[data-blok-database-relation-clear]', 'margin-inline-end')).toEqual(['var(--blok-space-3)']);
+    });
+
+    it('takes no room while hidden', () => {
+      expect(declared('[data-blok-database-relation-clear][hidden]', 'display')).toEqual(['none']);
+    });
+  });
+
   // notion-spec-2 §19.15: table relation rows are radius 4px; a 24x24 white button, radius 4px, 6px from the row's right.
   describe('table relation picker row', () => {
     const PICKER = '[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"]';

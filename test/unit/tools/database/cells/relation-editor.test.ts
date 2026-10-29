@@ -363,6 +363,38 @@ describe('relation editor', () => {
 
         expect(titles()).toEqual(['Bravo']);
       });
+
+      // notion-spec-2 §21.2, `C5-rel-ban.png`: a × shows at the input's end once something is typed.
+      describe('clear ×', () => {
+        const clear = (): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>('[data-blok-database-relation-clear]');
+
+        it('is hidden while the field is empty', () => {
+          openInTable();
+
+          expect(clear()?.hidden).toBe(true);
+        });
+
+        it('shows once something is typed, labelled "Clear search", between the field and "In <database>"', () => {
+          openInTable();
+          type('vo');
+
+          expect(clear()?.hidden).toBe(false);
+          expect(clear()?.getAttribute('aria-label')).toBe('tools.database.searchClear');
+          expect(clear()?.previousElementSibling).toBe(search());
+          expect(clear()?.nextElementSibling?.hasAttribute('data-blok-database-relation-scope')).toBe(true);
+        });
+
+        it('empties the field, brings every page back and keeps the focus', () => {
+          openInTable();
+          type('vo');
+          clear()?.click();
+
+          expect(search().value).toBe('');
+          expect(titles()).toEqual(['Alpha', 'Bravo', 'tools.database.relationUntitled']);
+          expect(clear()?.hidden).toBe(true);
+          expect(search()).toHaveFocus();
+        });
+      });
     });
 
     it('draws a page glyph before each title', () => {

@@ -54,9 +54,9 @@ export const legacyEntries = (view: DatabaseViewConfig, schema: PropertyDefiniti
   ];
 };
 
-/** A table wraps unless told not to, like Notion's ("Unwrap content"); other views do not. */
+/** A new Notion board has "Wrap all content" on; a new table or gallery has it off (notion-spec-2 §21.1, §21.7). */
 export const resolveWrapCells = (view: DatabaseViewConfig): boolean =>
-  typeof view.wrapCells === 'boolean' ? view.wrapCells : view.type === 'table';
+  typeof view.wrapCells === 'boolean' ? view.wrapCells : view.type === 'board';
 
 const validWidth = (width: unknown): number | undefined =>
   typeof width === 'number' && Number.isFinite(width) && width > 0 ? width : undefined;

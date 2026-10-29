@@ -1,6 +1,6 @@
 /**
  * Table cell chrome against Notion's measured values (notion-spec-2 §18.1, §20.1, §20.11).
- * The table wraps (the default), unlike database-look-parity.spec.ts.
+ * The table wraps (set on the view), unlike database-look-parity.spec.ts.
  */
 
 import type { Locator, Page } from '@playwright/test';
@@ -58,7 +58,7 @@ const blocks = (): OutputBlockData[] => [
     type: 'database',
     data: {
       schema: SCHEMA,
-      views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], wrapCells: true }],
       activeViewId: 'v1',
     },
     content: ROWS.map((r) => r.id),

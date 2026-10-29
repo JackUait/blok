@@ -678,7 +678,7 @@ export const DATABASE_DATA = {
             enum: ['alphabetical'],
             description: 'alphabetical: a property properties does not list goes after the title, by name (a row page relation tab). Absent: unlisted properties go last.',
           },
-          wrapCells: { type: 'boolean', description: 'Wrap every cell. Default true for a table, false otherwise.' },
+          wrapCells: { type: 'boolean', description: 'Wrap every cell. Default true for a board, false otherwise.' },
           frozenColumnCount: { type: 'integer', minimum: 0, description: 'Columns from the start that stay put on horizontal scroll. Default 0.' },
           showVerticalLines: { type: 'boolean', description: 'Default true.' },
           loadLimit: { type: 'integer', enum: [10, 25, 50, 100], description: 'Rows shown before "Load more".' },

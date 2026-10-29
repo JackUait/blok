@@ -6232,13 +6232,13 @@ describe('row ⋮⋮ menu with a real editor', () => {
     const sourceBefore = (await current.save()).blocks.find((block) => block.id === 'db2')?.data;
     const ownerBefore = (await current.save()).blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
 
-    // A table column wraps by default, so the action is Unwrap.
-    await dashboardNativeHeaderAction('Unwrap content');
+    // A new table column does not wrap, so the action is Wrap.
+    await dashboardNativeHeaderAction('Wrap content');
     const output = await editor?.save();
     const owner = output?.blocks.find((block) => block.id === 'db')?.data as DatabaseData | undefined;
 
     expect(owner?.views.find((entry) => entry.id === 'source-v')?.properties)
-      .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'n2', wrap: false })]));
+      .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'n2', wrap: true })]));
     expect(output?.blocks.find((block) => block.id === 'db2')?.data).toEqual(sourceBefore);
     expect(owner?.views.find((entry) => entry.id === 'local-list')?.properties)
       .toEqual(ownerBefore?.views.find((entry) => entry.id === 'local-list')?.properties);

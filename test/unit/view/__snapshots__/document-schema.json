@@ -3170,7 +3170,7 @@
               },
               "wrapCells": {
                 "type": "boolean",
-                "description": "Wrap every cell. Default true for a table, false otherwise."
+                "description": "Wrap every cell. Default true for a board, false otherwise."
               },
               "frozenColumnCount": {
                 "type": "integer",

@@ -237,17 +237,22 @@ describe('view-settings', () => {
   });
 
   describe('view-wide settings', () => {
-    it('defaults wrap on, vertical lines on and no frozen columns', () => {
-      expect(resolveWrapCells(view())).toBe(true);
+    it('defaults wrap off, vertical lines on and no frozen columns', () => {
+      expect(resolveWrapCells(view())).toBe(false);
       expect(resolveShowVerticalLines(view())).toBe(true);
       expect(resolveFrozenColumnCount(view())).toBe(0);
     });
 
-    it('wraps a table by default (research/08:188, "Unwrap content"), but not a board or gallery', () => {
-      expect(resolveWrapCells(view({ type: 'board' }))).toBe(false);
+    it('wraps a new board, but not a new table or gallery (notion-spec-2 §21.1, §21.7)', () => {
+      expect(resolveWrapCells(view({ type: 'board' }))).toBe(true);
       expect(resolveWrapCells(view({ type: 'gallery' }))).toBe(false);
-      expect(resolveWrapCells(view({ wrapCells: false }))).toBe(false);
-      expect(resolveViewProperties(view(), schema).every((p) => p.wrap)).toBe(true);
+      expect(resolveViewProperties(view(), schema).some((p) => p.wrap)).toBe(false);
+    });
+
+    it('keeps a saved wrap setting over the default', () => {
+      expect(resolveWrapCells(view({ wrapCells: true }))).toBe(true);
+      expect(resolveWrapCells(view({ type: 'board', wrapCells: false }))).toBe(false);
+      expect(resolveViewProperties(view({ properties: [{ id: 'p-due', wrap: true }] }), schema).find((p) => p.id === 'p-due')?.wrap).toBe(true);
     });
 
     it('reads stored values', () => {

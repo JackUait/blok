@@ -149,20 +149,28 @@ test('hovering a file chip shows its full link in a hint, not the link card (§2
 
 test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl-click opens the file', async ({ page }) => {
   const link = cell(page, 'r1', 'p-file').locator('[data-blok-database-cell-link]');
-  const opened: string[] = [];
+  const popups: string[] = [];
+  const track = (p: Page): void => {
+    popups.push(p.url());
+  };
 
-  page.context().on('page', (p) => opened.push(p.url()));
+  page.context().on('page', track);
   await link.click();
   await expect(page.locator('[data-blok-database-files-editor]')).toBeVisible();
   await page.waitForTimeout(300);
-  expect(opened).toEqual([]);
+  expect(popups).toEqual([]);
+  page.context().off('page', track);
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-blok-database-files-editor]')).toHaveCount(0);
 
-  const popup = page.context().waitForEvent('page');
+  // noopener: the new page is no popup of this one, so watch the context. Its request is enough; no network needed.
+  const [popup] = await Promise.all([
+    page.context().waitForEvent('page'),
+    page.context().waitForEvent('request', (request) => request.url() === FILE_URL),
+    link.click({ modifiers: ['ControlOrMeta'] }),
+  ]);
 
-  await link.click({ modifiers: ['ControlOrMeta'] });
-  expect((await popup).url()).toContain('example.com/a.pdf');
+  await popup.close();
 });
 
 test('rows stay 37px with Status, Person, Created by and Last edited by columns, filled or empty (§18, recon §0)', async ({ page }) => {

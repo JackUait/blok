@@ -439,6 +439,13 @@ describe('table hover box side and Place buttons', () => {
     .filter((match) => (match[1] ?? '').includes('[data-blok-database-table-cell-actions') && /inset-inline-start:\s*4px/.test(match[2] ?? ''))
     .map((match) => (match[1] ?? '').trim());
   const atStart = (el: Element | null): boolean => el !== null && startEdgeSelectors.some((selector) => el.matches(selector));
+  /** Selectors of every rule that hides a hover box. */
+  const hiddenSelectors = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+    .filter((match) => (match[1] ?? '').includes('[data-blok-database-table-cell-actions') && /display:\s*none/.test(match[2] ?? ''))
+    .flatMap((match) => (match[1] ?? '').split(',').map((part) => part.trim()));
+  // The base rule hides every box at rest; only rules past :hover's show rule count here.
+  const hiddenWhileHovered = (el: Element | null): boolean =>
+    el !== null && hiddenSelectors.filter((selector) => selector !== '[data-blok-database-table-cell-actions]').some((selector) => el.matches(selector));
 
   const extra: PropertyDefinition[] = [
     ...schema,
@@ -446,11 +453,12 @@ describe('table hover box side and Place buttons', () => {
     { id: 'p-list', name: 'List', type: 'rollup', position: 'b2', rollup: { relationPropertyId: 'p-rel', targetPropertyId: 'x', function: 'show_original' } },
     { id: 'p-names', name: 'Names', type: 'rollup', position: 'b3', rollup: { relationPropertyId: 'p-rel', targetPropertyId: 'y', function: 'show_original' } },
     { id: 'p-place', name: 'Where', type: 'place', position: 'b4' },
+    { id: 'p-due', name: 'Due', type: 'date', position: 'b5' },
   ];
   const extraRows = (): DatabaseRow[] => [
     {
       ...rows()[0],
-      properties: { ...rows()[0].properties, 'p-place': { name: 'Eiffel Tower Ln', address: 'Paris, TN 38242, United States', lat: 36.3, lng: -88.3 } },
+      properties: { ...rows()[0].properties, 'p-due': '2026-10-28', 'p-place': { name: 'Eiffel Tower Ln', address: 'Paris, TN 38242, United States', lat: 36.3, lng: -88.3 } },
       computed: { 'p-rel': [{ id: 'r2' }], 'p-list': '7', 'p-names': 'Beta' },
     },
     rows()[1],
@@ -508,6 +516,22 @@ describe('table hover box side and Place buttons', () => {
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Eiffel Tower Ln'));
     expect(notify).toHaveBeenCalledWith('tools.database.cellCopied');
     vi.unstubAllGlobals();
+  });
+
+  // side-by-side-2 Top 20: the Date picker opens below the cell, so the cell's Comment + Copy stayed in view under it.
+  it.each(['p-due', 'p-link'])('while the %s cell editor is open its hover box stays hidden, and comes back on close', (propertyId) => {
+    const root = mountExtra();
+    const target = cell(root, 'r1', propertyId);
+
+    expect(hiddenWhileHovered(actions(target))).toBe(false);
+    clickOn(target);
+    expect(document.querySelector('[data-blok-database-cell-editor]')).not.toBeNull();
+
+    expect(hiddenWhileHovered(actions(target))).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
+    expect(hiddenWhileHovered(actions(target))).toBe(false);
   });
 
   it('an empty place cell carries no box', () => {

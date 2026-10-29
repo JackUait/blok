@@ -25,6 +25,8 @@ const CELL_EDITOR_CLASS = 'blok-database-cell-editor';
 const VALUE_EDITOR_CLASS = 'blok-database-value-editor';
 /** research/08 Motion: a table cell editor mounts at its final size, with no fade (database.css). */
 const TABLE_EDITOR_CLASS = 'blok-database-table-cell-editor';
+/** On the anchor while its editor is open. */
+const EDITOR_OPEN_ATTR = 'data-blok-database-editor-open';
 
 /**
  * research/22 §4: the box's corner sits 1px past the cell's, so its 1px ring
@@ -131,6 +133,8 @@ export class CellPopover {
     // Escape and before the row drawer's document Escape, so one press
     // reaches only this editor.
     window.addEventListener('keydown', this.handleEscape, true);
+    // database.css hides the anchor cell's hover box while this is set.
+    anchor.setAttribute(EDITOR_OPEN_ATTR, '');
     popover.show();
   }
 
@@ -167,6 +171,7 @@ export class CellPopover {
   }
 
   private teardown(): void {
+    this.options.anchor.removeAttribute(EDITOR_OPEN_ATTR);
     this.popover = null;
     this.held = false;
     window.removeEventListener('keydown', this.handleEscape, true);

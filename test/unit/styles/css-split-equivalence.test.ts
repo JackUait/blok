@@ -1217,6 +1217,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CELL_PILL_START_BYTES = 460;
     // database.css: a number rollup's box (a Show original list of numbers too) hugs the start edge; Configure rollup is 20 wide (notion-spec-2 §18.2, §20.11).
     const DATABASE_ROLLUP_CELL_ACTIONS_BYTES = 382;
+    // database.css: an open cell editor hides its cell's hover box (side-by-side-2 Top 20).
+    const DATABASE_EDITOR_OPEN_HIDES_ACTIONS_BYTES = 297;
     // main.css: Tailwind skips the pptx engine folder (cafd284d).
     const MAIN_PPTX_SOURCE_SKIP_BYTES = 119;
     // database.css: an unchecked table checkbox fills on hover (notion-spec-2 §18.2).
@@ -1632,6 +1634,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FORMULA_NUMBER_END_BYTES
       + DATABASE_CELL_PILL_START_BYTES
       + DATABASE_ROLLUP_CELL_ACTIONS_BYTES
+      + DATABASE_EDITOR_OPEN_HIDES_ACTIONS_BYTES
       + MAIN_PPTX_SOURCE_SKIP_BYTES
       + DATABASE_CHECKBOX_HOVER_BYTES
       + DATABASE_VALUE_EDITOR_NO_MOTION_BYTES

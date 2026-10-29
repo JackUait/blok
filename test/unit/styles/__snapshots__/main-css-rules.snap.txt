@@ -11839,6 +11839,10 @@ textarea[data-blok-database-cell-input] {
   display: flex;
 }
 
+[data-blok-database-table-cell][data-blok-database-editor-open] > [data-blok-database-table-cell-actions] {
+  display: none;
+}
+
 [data-blok-database-table-autofill-open] {
   display: inline-flex;
   flex: none;

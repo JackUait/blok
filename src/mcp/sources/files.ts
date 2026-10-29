@@ -12,6 +12,9 @@ import { assertDocumentShape, isRecord } from './types';
 // Never starts with ".", so ".", ".." and dotfiles never match; no "/" or "\" can appear.
 // "-" and "_" may lead: nanoid page and document ids use them.
 const SAFE_ID = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,199}$/;
+// Windows opens a device for these names whatever the extension, so "nul.json" would drop every save.
+const WINDOWS_DEVICE = /^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i;
+const isSafeId = (id: string): boolean => SAFE_ID.test(id) && !WINDOWS_DEVICE.test(id);
 
 // Only the native realpath reports the on-disk case of a name.
 const nativeRealpath = promisify(realpath.native);
@@ -111,8 +114,8 @@ export const createFilesSource = (dir: string): DocumentSource => {
   };
 
   const pathOf = (documentId: string): string => {
-    if (!SAFE_ID.test(documentId)) {
-      throw surfaceError('INVALID_ARGS', 'With the files source, a document id uses letters, digits, ".", "_" and "-" only (max 200).');
+    if (!isSafeId(documentId)) {
+      throw surfaceError('INVALID_ARGS', 'With the files source, a document id uses letters, digits, ".", "_" and "-" only (max 200), and is not a Windows device name such as CON or NUL.');
     }
 
     return join(dir, `${documentId}.json`);
@@ -313,7 +316,7 @@ export const createFilesSource = (dir: string): DocumentSource => {
       const ids = names
         .filter((name) => name.endsWith('.json'))
         .map((name) => name.slice(0, -'.json'.length))
-        .filter((id) => SAFE_ID.test(id))
+        .filter(isSafeId)
         .sort();
       const titled = await Promise.all(ids.map(async (id) => ({ id, title: await titleOf(id) })));
       const needle = query?.toLowerCase();

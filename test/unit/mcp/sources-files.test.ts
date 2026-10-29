@@ -196,6 +196,25 @@ describe('files source', () => {
     expect(await codeOf(() => list({ limit: 2 }))).toBe('SOURCE_UNAVAILABLE');
   });
 
+  // Windows opens a device, not a file, for these names with any extension.
+  it.each(['CON', 'con', 'nul', 'Aux', 'PRN', 'COM1', 'lpt9', 'nul.backup', 'CON.x'])(
+    'rejects Windows device name %j with INVALID_ARGS',
+    async (id: string) => {
+      const source = createFilesSource(dir);
+
+      expect(await codeOf(() => source.load(id))).toBe('INVALID_ARGS');
+      expect(await codeOf(() => source.save(id, { blocks: [] }, { ifVersion: null }))).toBe('INVALID_ARGS');
+      expect(readdirSync(dir)).toEqual([]);
+    },
+  );
+
+  it.each(['console', 'nully', 'com10', 'lpt', 'acon'])('stores id %j, which only looks like a device name', async (id: string) => {
+    const source = createFilesSource(dir);
+
+    await source.save(id, { blocks: [] }, { ifVersion: null });
+    expect(readdirSync(dir)).toEqual([`${id}.json`]);
+  });
+
   it('lists documents with titles, filtered and paged', async () => {
     writeFileSync(join(dir, 'a.json'), JSON.stringify({ blocks: [], title: 'Alpha plan' }));
     writeFileSync(join(dir, 'b.json'), JSON.stringify({ blocks: [] }));

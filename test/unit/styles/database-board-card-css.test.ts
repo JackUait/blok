@@ -119,6 +119,16 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-property]:has(> [data-blok-database-cell="files"])')).toContain('padding: var(--blok-space-1)');
   });
 
+  // notion-spec-2 §21.7: a relation on a board card is a 14.4px icon and a 12/18 title, weight 500, in a 28px row.
+  it('draws a card relation chip with a 14.4px glyph and a 12/18 title', () => {
+    const icon = ruleBody('[data-blok-database-card-property] [data-blok-database-relation-chip-icon]');
+
+    expect(icon).toMatch(/width:\s*14\.4px/);
+    expect(icon).toMatch(/height:\s*14\.4px/);
+    expect(ruleBody('[data-blok-database-card-property] [data-blok-database-relation-chip-icon] svg')).toMatch(/width:\s*14\.4px/);
+    expect(ruleBody('[data-blok-database-card-property] [data-blok-database-relation-chip-title]')).toMatch(/line-height:\s*18px/);
+  });
+
   // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.
   it('draws the "Add …" rows of an edited card in the secondary ink with a 16px glyph', () => {
     expect(ruleBody('[data-blok-database-card-property][data-ghost]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);

@@ -12881,6 +12881,17 @@ textarea[data-blok-database-cell-input] {
   line-height: 14.4px;
 }
 
+/* notion-spec-2 §21.7: a board card draws the related page's emoji at 14.4px and a 12/18 title. The glyph takes the emoji's size, as on a gallery card. */
+[data-blok-database-card-property] [data-blok-database-relation-chip-icon],
+[data-blok-database-card-property] [data-blok-database-relation-chip-icon] svg {
+  width: 14.4px;
+  height: 14.4px;
+}
+
+[data-blok-database-card-property] [data-blok-database-relation-chip-title] {
+  line-height: 18px;
+}
+
 [data-blok-database-relation-chip][role="link"] {
   cursor: pointer;
 }

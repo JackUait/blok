@@ -1315,6 +1315,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BOARD_AVATAR_BYTES = 201;
     // database.css: a board card's file chip, 20 tall, at most 200 wide (notion-spec-2 §21.7).
     const DATABASE_BOARD_FILE_CHIP_BYTES = 280;
+    // database.css: a board card's relation chip, 14.4px glyph and 12/18 title (notion-spec-2 §21.7).
+    const DATABASE_BOARD_RELATION_CHIP_BYTES = 454;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1619,7 +1621,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BOARD_BUTTON_ROW_BYTES
       + DATABASE_BOARD_CHECKBOX_BYTES
       + DATABASE_BOARD_AVATAR_BYTES
-      + DATABASE_BOARD_FILE_CHIP_BYTES;
+      + DATABASE_BOARD_FILE_CHIP_BYTES
+      + DATABASE_BOARD_RELATION_CHIP_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

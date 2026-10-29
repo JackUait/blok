@@ -117,6 +117,22 @@ describe('list row widths (findings-listgallery L01)', () => {
   });
 });
 
+// notion-spec-2 §21.8: times are cut with an ellipsis. list-row.png row A: the time slot runs 756→906, 150 wide, "…" at 883–891.
+describe('list row times', () => {
+  it('caps a created or edited time at the date slot\'s 150px and ends it with an ellipsis', () => {
+    for (const type of ['createdTime', 'lastEditedTime']) {
+      expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(150px, 14%)');
+
+      const cell = ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"] > [data-blok-database-cell]`);
+
+      expect(cell).toContain('display: block');
+      expect(cell).toContain('min-width: 0');
+      expect(cell).toContain('overflow: hidden');
+      expect(cell).toContain('text-overflow: ellipsis');
+    }
+  });
+});
+
 describe('list row hover chrome (findings-listgallery L03, L04)', () => {
   it('draws the gutter "+" 24px square beside the 18x24 ⋮⋮', () => {
     expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('width: 24px');

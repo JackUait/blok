@@ -6756,8 +6756,15 @@ button[data-blok-database-column-count]:hover {
   max-width: max(200px, 14%);
 }
 
-[data-blok-database-list-row-property][data-type="date"], [data-blok-database-list-row-property][data-type="number"] {
+[data-blok-database-list-row-property][data-type="date"], [data-blok-database-list-row-property][data-type="number"], [data-blok-database-list-row-property][data-type="createdTime"], [data-blok-database-list-row-property][data-type="lastEditedTime"] {
   max-width: max(150px, 14%);
+}
+
+[data-blok-database-list-row-property][data-type="createdTime"] > [data-blok-database-cell], [data-blok-database-list-row-property][data-type="lastEditedTime"] > [data-blok-database-cell] {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 [data-blok-database-list-row-property] [data-blok-database-cell] {

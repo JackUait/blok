@@ -119,6 +119,23 @@ describe('DatabaseBoardView', () => {
     });
   });
 
+  // notion-live-4/board-cards-top.png: a status pill always has its dot, also in a band header.
+  it('a band of a status sub-group draws the status pill with its dot', () => {
+    const status = { id: 's', name: 'Status', type: 'status' as const, position: 'a1',
+      status: { groups: [{ id: 'todo', kind: 'todo' as const, name: 'To-do', color: 'gray', position: 'a0' }] },
+      config: { options: [{ id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' }] } };
+    const board = new DatabaseBoardView({
+      readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+      schema: [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }, status],
+      view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'x', subGroupBy: 's' },
+      subGroups: [{ key: 'ns', label: 'Not started', option: status.config.options[0] }],
+    }).createView();
+    const pill = board.querySelector<HTMLElement>('[data-blok-database-board-lane-header] [data-blok-database-option-pill]');
+
+    expect(pill?.getAttribute('data-status-group')).toBe('todo');
+    expect(pill?.getAttribute('data-color')).toBe('gray');
+  });
+
   describe('a Status board\'s column header (findings-board B01)', () => {
     const statusView = (options: SelectOption[], extra: Partial<DatabaseViewConfig> = {}): HTMLElement => new DatabaseBoardView({
       readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title',

@@ -5,8 +5,7 @@ import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } fro
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { filesOf, readPropertyValue } from './property-values';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
-import { createOptionPill, renderCellValue } from './cells';
-import { shownStatusOption } from './cells/option-colors';
+import { createGroupPill, renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPencil, IconPlus, IconSidebarRight } from '../../components/icons';
@@ -551,16 +550,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private groupValue(option: SelectOption): HTMLElement {
     const property = this.schema.find((p) => p.config?.options.some((o) => o.id === option.id) === true);
 
-    if (property?.type === 'status') {
-      const pill = createOptionPill(shownStatusOption(option));
-      const kind = property.status?.groups.find((group) => group.id === option.groupId)?.kind;
-
-      pill.setAttribute('data-status-group', kind ?? 'todo');
-
-      return pill;
-    }
     if (property !== undefined) {
-      return createOptionPill(option);
+      return createGroupPill(option, property);
     }
     const title = document.createElement('span');
 

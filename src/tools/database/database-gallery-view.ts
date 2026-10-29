@@ -2,7 +2,7 @@ import { fileChipIcon, pageIconElement, showsPageIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from './types';
-import { bindFileNameHint, createOptionPill, renderCellValue } from './cells';
+import { bindFileNameHint, createGroupPill, renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { createCardPreview } from './database-card-preview';
@@ -173,7 +173,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
     header.setAttribute('data-blok-database-gallery-group-header', '');
     if (group.option !== undefined) {
-      header.appendChild(createOptionPill(group.option));
+      header.appendChild(createGroupPill(group.option, this.options.schema.find((p) => p.id === this.options.view.groupBy)));
     } else {
       const label = document.createElement('span');
 

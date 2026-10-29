@@ -77,6 +77,24 @@ const pointer = (type: string, target: EventTarget, x: number, y: number): void 
 };
 
 describe('DatabaseGalleryView', () => {
+  // notion-live-4/board-cards-top.png: a status pill always has its dot, also in a group header.
+  it('a group of a status property draws the status pill with its dot', () => {
+    const status: PropertyDefinition = { id: 'p-status', name: 'Status', type: 'status', position: 'a4',
+      status: { groups: [{ id: 'todo', kind: 'todo', name: 'To-do', color: 'gray', position: 'a0' }] },
+      config: { options: [{ id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' }] } };
+    const { root } = mount({
+      schema: [...schema, status],
+      view: galleryView({ groupBy: 'p-status' }),
+      groups: [{ key: 'ns', label: 'Not started', option: { id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' }, rows: [], total: 0 }],
+      grouped: true,
+    });
+    const pill = root.querySelector<HTMLElement>('[data-blok-database-gallery-group-header] [data-blok-database-option-pill]');
+
+    expect(pill?.getAttribute('data-status-group')).toBe('todo');
+    expect(pill?.getAttribute('data-color')).toBe('gray');
+    root.remove();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

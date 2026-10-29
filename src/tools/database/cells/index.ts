@@ -10,7 +10,7 @@ import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
 import { safeHref } from '../../../components/utils/sanitize-url';
 import { IconCross, IconMap } from '../../../components/icons';
 
-export { bindFileNameHint, renderCellValue, createOptionPill } from './display';
+export { bindFileNameHint, renderCellValue, createOptionPill, createGroupPill } from './display';
 export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer, RelatedPeek } from './types';
 export { DATE_VALUE_FORMAT, formatDateValue, parseDateValue } from './date-value';
 export type { ParsedDateValue } from './date-value';

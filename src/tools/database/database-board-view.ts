@@ -3,7 +3,7 @@ import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition, CardSize } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
-import { createOptionPill, renderCellValue } from './cells';
+import { createGroupPill, renderCellValue } from './cells';
 import { shownStatusOption } from './cells/option-colors';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
@@ -369,7 +369,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.setAttribute('data-blok-database-board-lane-header', '');
     header.appendChild(this.createLaneToggle(section, lane));
     if (lane.option !== undefined) {
-      header.appendChild(createOptionPill(lane.option));
+      header.appendChild(createGroupPill(lane.option, this.settings.schema?.find((p) => p.id === this.settings.view?.subGroupBy)));
     } else {
       const label = document.createElement('span');
 

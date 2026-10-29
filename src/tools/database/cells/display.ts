@@ -40,6 +40,18 @@ export const createOptionPill = (option: Pick<SelectOption, 'label' | 'color'>):
   return pill;
 };
 
+/** A group header's pill: a status option looks as its cell draws it, dot and all. */
+export const createGroupPill = (option: SelectOption, property: PropertyDefinition | undefined): HTMLSpanElement => {
+  if (property?.type !== 'status') {
+    return createOptionPill(option);
+  }
+  const pill = createOptionPill(shownStatusOption(option));
+
+  pill.setAttribute('data-status-group', statusGroupOf(property, option.id)?.kind ?? 'todo');
+
+  return pill;
+};
+
 const renderCheckbox = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {
   renderCheckState(cell, value === true, ctx);
 };

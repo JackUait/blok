@@ -10132,9 +10132,19 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control-sm);
 }
 
-[data-blok-database-select-chip-remove] svg, [data-blok-database-place-clear] svg, [data-blok-database-person-remove] svg, [data-blok-database-file-remove] svg {
+[data-blok-database-place-clear] svg, [data-blok-database-file-remove] svg {
   width: 12px;
   height: 12px;
+}
+
+[data-blok-database-select-chip-remove] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-person-remove] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-select-chip-remove] {

@@ -7031,12 +7031,22 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control-sm);
 }
 
-[data-blok-database-select-chip-remove] svg,
 [data-blok-database-place-clear] svg,
-[data-blok-database-person-remove] svg,
 [data-blok-database-file-remove] svg {
   width: 12px;
   height: 12px;
+}
+
+/* notion-live-3: the × inks 9x9 on a Select or Multi-select chip, about 7x7 on a person chip.
+   IconCross inks 9.25 of its 20 units, so these sizes draw those boxes. */
+[data-blok-database-select-chip-remove] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-person-remove] svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* notion-spec-2 §23.3: a select chip's × is gray in dark. A person chip's × stays ink. */

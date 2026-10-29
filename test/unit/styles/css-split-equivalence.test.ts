@@ -1399,6 +1399,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PLACE_CHIP_NAME_SIZE_BYTES = 128;
     // database.css: the header menu's name input takes no width of its own, so the menu stays 220 (notion-spec-2 §24.10).
     const DATABASE_HEADER_MENU_NAME_FIT_BYTES = 233;
+    // database.css: the chip × drawn at Notion's ink size, 20px on Select and Multi-select, 16px on a person (notion-live-3).
+    const DATABASE_CHIP_REMOVE_SIZE_BYTES = 242;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1745,7 +1747,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROW_CHECKBOX_GUTTER_BYTES
       + DATABASE_OPEN_BUTTON_SPACING_BYTES
       + DATABASE_PLACE_CHIP_NAME_SIZE_BYTES
-      + DATABASE_HEADER_MENU_NAME_FIT_BYTES;
+      + DATABASE_HEADER_MENU_NAME_FIT_BYTES
+      + DATABASE_CHIP_REMOVE_SIZE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

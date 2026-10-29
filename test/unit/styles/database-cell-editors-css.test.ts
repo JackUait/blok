@@ -457,6 +457,17 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-live-3 select-editor.png and multi-select-editor.png: the chip × inks 9x9; person-editor.png: about 7x7.
+  // IconCross spans 9.25 of its 20 units with the stroke, so 20px draws 9 and 16px draws 7.
+  describe('chip × in the pickers', () => {
+    it('draws the Select and Multi-select chip × 20px, the person chip × 16px', () => {
+      expect(declared('[data-blok-database-select-chip-remove] svg', 'width')).toEqual(['20px']);
+      expect(declared('[data-blok-database-select-chip-remove] svg', 'height')).toEqual(['20px']);
+      expect(declared('[data-blok-database-person-remove] svg', 'width')).toEqual(['16px']);
+      expect(declared('[data-blok-database-person-remove] svg', 'height')).toEqual(['16px']);
+    });
+  });
+
   // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.
   describe('relation picker in a table cell', () => {
     const REL = '[data-blok-database-relation-editor]';

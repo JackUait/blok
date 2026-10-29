@@ -141,6 +141,3 @@ export const proseTextContent = (html: string): string => {
   return collect(parseInlineFragment(html).childNodes, 'skip');
 };
 
-/** When parse5 throws on lone surrogates; unused until the parser migration needs it. */
-export { parse5RejectsSurrogates } from './parse5-surrogates';
-export type { Parse5Entry } from './parse5-surrogates';

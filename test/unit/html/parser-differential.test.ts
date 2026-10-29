@@ -84,12 +84,13 @@ const differ = (inputs: readonly string[]): Outcome => {
 };
 
 /**
- * parse5 throws a RangeError on two adjacent lone low surrogates; only those
- * inputs may throw, and never ours alone. Whether ours throws there is the tokenizer's call.
+ * parse5 throws a RangeError on two adjacent lone low surrogates, and ours
+ * throws on exactly the same inputs: Blok's callers repair and retry on it.
  */
 const expectClean = (outcome: Outcome, inputs: readonly string[]): void => {
   expect(outcome.mismatches).toEqual([]);
   expect(outcome.onlyOursThrew).toBe(0);
+  expect(outcome.onlyParse5Threw).toBe(0);
 
   expect(outcome.thrown.filter((html) => !/[\udc00-\udfff][\udc00-\udfff]/.test(html))).toEqual([]);
   expect(outcome.compared + outcome.bothThrew + outcome.onlyParse5Threw).toBe(inputs.length * ENTRY_POINTS.length);

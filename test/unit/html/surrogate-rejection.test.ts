@@ -1,29 +1,37 @@
 // @vitest-environment node
 /**
- * parse5 8.0.1 throws a RangeError on some lone-surrogate input. The parser
- * that replaces it does not, so `parse5RejectsSurrogates` has to say exactly
- * when parse5 would, for the repair path to stay byte-identical. parse5 is the
- * oracle here, for all three ways Blok calls it.
+ * parse5 8.0.1 throws a RangeError on some lone-surrogate input, and Blok's
+ * call sites repair the field and parse again when it does. The own parser
+ * throws on exactly the same input, so that path stays byte-identical. parse5
+ * is the oracle here, for all three ways Blok calls it.
  */
 import { parse, parseFragment } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 import { describe, expect, it } from 'vitest';
 
-import { parse5RejectsSurrogates } from '../../../src/view/html-text';
-import type { Parse5Entry } from '../../../src/view/html-text';
+import * as own from '../../../src/html';
 import { fuzzHtml } from './corpus';
 
-const DIV = parseFragment('<div></div>').childNodes[0] as DefaultTreeAdapterMap['element'];
+type Entry = 'fragment' | 'div' | 'document';
 
-const ORACLE: Record<Parse5Entry, (html: string) => unknown> = {
+const DIV = parseFragment('<div></div>').childNodes[0] as DefaultTreeAdapterMap['element'];
+const OWN_DIV = own.parseFragment('<div></div>').childNodes[0] as own.Element;
+
+const ORACLE: Record<Entry, (html: string) => unknown> = {
   fragment: (html) => parseFragment(html),
   div: (html) => parseFragment(DIV, html, {}),
   document: (html) => parse(html),
 };
 
-const throwsOn = (entry: Parse5Entry, html: string): boolean => {
+const OWN: Record<Entry, (html: string) => unknown> = {
+  fragment: (html) => own.parseFragment(html),
+  div: (html) => own.parseFragment(OWN_DIV, html),
+  document: (html) => own.parse(html),
+};
+
+const runThrows = (run: (html: string) => unknown, html: string): boolean => {
   try {
-    ORACLE[entry](html);
+    run(html);
 
     return false;
   } catch (error) {
@@ -34,7 +42,11 @@ const throwsOn = (entry: Parse5Entry, html: string): boolean => {
   }
 };
 
-const ENTRIES = Object.keys(ORACLE) as Parse5Entry[];
+const throwsOn = (entry: Entry, html: string): boolean => runThrows(ORACLE[entry], html);
+
+const ownThrows = (entry: Entry, html: string): boolean => runThrows(OWN[entry], html);
+
+const ENTRIES = Object.keys(ORACLE) as Entry[];
 const L = '\uDC00';
 const H = '\uD800';
 const LL = `${L}${L}`;
@@ -232,8 +244,8 @@ const soupHtml = (seed: number): string => {
 
 const GENERATORS = [surrogateHtml, doctypeHtml, soupHtml];
 
-/** Found by out-of-sample soup fuzz: tree-builder corners the model does not follow (see parse5-surrogates.ts). */
-const KNOWN_RESIDUALS = [
+/** Found by soup fuzz: the tree builder decides here whether the tokenizer reads a DOCTYPE at all. */
+const TREE_BUILDER_CORNERS = [
   `<svg encoding="application/xhtml+xml"></option><object encoding="application/xhtml+xml"><optgroup color=red><noembed encoding="application/xhtml+xml"><foreignObject><nobr face=x></foreignObject><mo><script><!DOCTYPE x ${LL}>`,
   `<colgroup></span></font><svg></colgroup><script><!DOCTYPE x ${LL}>`,
   `<colgroup><math encoding="text/html"><option encoding="application/xhtml+xml"></xmp></colgroup><textarea color=red/><th size=2><frame encoding="application/xhtml+xml"><plaintext><!DOCTYPE x ${LL}>`,
@@ -241,24 +253,14 @@ const KNOWN_RESIDUALS = [
 
 const FUZZ_INPUTS = 120_000;
 
-describe('parse5RejectsSurrogates', () => {
-  it.each(HAND_CASES.map((html) => [JSON.stringify(html), html]))('matches parse5 on %s', (_, html) => {
-    expect(ENTRIES.map((entry) => parse5RejectsSurrogates(html, entry))).toEqual(ENTRIES.map((entry) => throwsOn(entry, html)));
-  });
-
-  it.fails.each(KNOWN_RESIDUALS.map((html) => [JSON.stringify(html), html]))('known to differ from parse5 on %s', (_, html) => {
-    expect(ENTRIES.map((entry) => parse5RejectsSurrogates(html, entry))).toEqual(ENTRIES.map((entry) => throwsOn(entry, html)));
-  });
-
-  it('defaults to the fragment entry', () => {
-    const html = `<frameset><style><!DOCTYPE x ${LL}>`;
-
-    expect(parse5RejectsSurrogates(html)).toBe(parse5RejectsSurrogates(html, 'fragment'));
+describe('the own parser throws on lone surrogates exactly where parse5 does', () => {
+  it.each([...HAND_CASES, ...TREE_BUILDER_CORNERS].map((html) => [JSON.stringify(html), html]))('matches parse5 on %s', (_, html) => {
+    expect(ENTRIES.map((entry) => ownThrows(entry, html))).toEqual(ENTRIES.map((entry) => throwsOn(entry, html)));
   });
 
   it(`matches parse5 on ${FUZZ_INPUTS} surrogate-heavy inputs`, () => {
     const tally = { throws: 0, lowRunsRead: 0, entriesDisagree: 0 };
-    const mismatches: Array<{ html: string; entry: Parse5Entry; parse5: boolean }> = [];
+    const mismatches: Array<{ html: string; entry: Entry; parse5: boolean }> = [];
 
     Array.from({ length: FUZZ_INPUTS }, (_, seed) => GENERATORS[seed % GENERATORS.length](seed)).forEach((html) => {
       const verdicts = ENTRIES.map((entry) => throwsOn(entry, html));
@@ -268,7 +270,7 @@ describe('parse5RejectsSurrogates', () => {
       // Two lows in a row parse5 still reads: paired after a high, or skipped inside a doctype.
       tally.lowRunsRead += Number(/[\uDC00-\uDFFF]{2}/.test(html) && !verdicts[0]);
       ENTRIES.forEach((entry, index) => {
-        if (parse5RejectsSurrogates(html, entry) !== verdicts[index]) {
+        if (ownThrows(entry, html) !== verdicts[index]) {
           mismatches.push({ html: JSON.stringify(html), entry, parse5: verdicts[index] });
         }
       });

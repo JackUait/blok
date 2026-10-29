@@ -171,8 +171,14 @@ describe('Tokenizer contract with the tree builder', SLOW, () => {
     ]);
   });
 
-  it('does not throw on lone or doubled surrogates anywhere', () => {
-    const odd = ['\udc00\udc00', '\ud800', '\udc00', '\ud800\ud800', '\ud83d\ude00'];
+  it('throws only on two low surrogates it keeps, like parse5', () => {
+    expect(() => record('a\udc00\udc00b')).toThrow(RangeError);
+    expect(() => record('<!DOCTYPE html \udc00\udc00>')).not.toThrow();
+    expect(() => record('\ud800\udc00\udc00')).not.toThrow();
+  });
+
+  it('does not throw on any other lone or paired surrogate', () => {
+    const odd = ['\ud800', '\udc00', '\ud800\ud800', '\ud83d\ude00', '\udc00\ud800'];
     const places = (text: string): string[] => [
       text, `<${text}>`, `<a${text}>`, `<a ${text}=${text}>`, `<a b="${text}">`, `<!--${text}-->`, `<!DOCTYPE ${text}>`,
       `<!${text}>`, `</${text}>`, `&${text};`, `<?${text}>`,

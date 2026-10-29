@@ -89,7 +89,8 @@ interface Start {
 
 const DATA: Start = { mode: TokenizerMode.DATA, lastStartTagName: '', foreign: false };
 
-const ours = (html: string, start: Start): { tokens: Collected; mixed: string[] } => {
+/** Our tokens, or null when ours throws like parse5 (see `rejectLikeParse5`). */
+const ours = (html: string, start: Start): { tokens: Collected; mixed: string[] } | null => {
   const simulator = new FeedbackSimulator(MODES, true);
   const tokenizer = new Tokenizer(simulator);
 
@@ -97,7 +98,14 @@ const ours = (html: string, start: Start): { tokens: Collected; mixed: string[] 
   tokenizer.state = start.mode;
   tokenizer.lastStartTagName = start.lastStartTagName;
   tokenizer.inForeignNode = start.foreign;
-  tokenizer.write(html);
+  try {
+    tokenizer.write(html);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return null;
+    }
+    throw error;
+  }
 
   return { tokens: simulator.tokens, mixed: simulator.mixed };
 };
@@ -134,12 +142,16 @@ const compare = (inputs: string[], start: Start): Tally => {
   const tally: Tally = { compared: 0, parse5Throws: 0, entitiesBug: 0, diffs: [] };
 
   inputs.forEach((html) => {
-    // Ours runs first and on every input: it must not throw where parse5 does.
     const actual = ours(html, start);
     const expected = theirs(html, start);
 
-    if (expected === null) {
-      tally.parse5Throws += 1;
+    if (actual === null || expected === null) {
+      if (actual === null && expected === null) {
+        tally.parse5Throws += 1;
+      } else {
+        tally.diffs.push(`${actual === null ? 'only ours' : 'only parse5'} throws ${JSON.stringify(html.slice(0, 200))}`);
+        tally.compared += 1;
+      }
 
       return;
     }
@@ -162,7 +174,7 @@ const compare = (inputs: string[], start: Start): Tally => {
 
 /** Printed so a run shows how much was compared and what was skipped. */
 const report = (name: string, tally: Tally): void => {
-  console.info(`${name}: ${tally.compared} compared, ${tally.parse5Throws} skipped (parse5 throws), ${tally.entitiesBug} skipped (entities 8.0.0 bug), ${tally.diffs.length} diffs`);
+  console.info(`${name}: ${tally.compared} compared, ${tally.parse5Throws} skipped (both throw), ${tally.entitiesBug} skipped (entities 8.0.0 bug), ${tally.diffs.length} diffs`);
 };
 
 const FUZZ_SEEDS = 20_000;

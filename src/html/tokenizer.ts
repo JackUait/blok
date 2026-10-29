@@ -163,6 +163,37 @@ const isWhitespace = (cp: number): boolean => cp === SPACE || cp === LF || cp ==
 
 const isAsciiLetter = (cp: number): boolean => (cp | 0x20) >= 0x61 && (cp | 0x20) <= 0x7a;
 
+const LOW_SURROGATE_PAIR = /[\uDC00-\uDFFF]{2}/;
+
+/**
+ * Where parse5 8.0.1 reads two low surrogates as one code point: it pairs any
+ * surrogate with a following low one, left to right, and a low-low "pair" is
+ * past U+10FFFF. Positions are of the first of the two.
+ */
+const parse5BadPairs = (html: string): Set<number> | null => {
+  if (!LOW_SURROGATE_PAIR.test(html)) {
+    return null;
+  }
+  const found = new Set<number>();
+  const cursor = { pos: 0 };
+
+  while (cursor.pos < html.length - 1) {
+    const unit = html.charCodeAt(cursor.pos);
+    const next = html.charCodeAt(cursor.pos + 1);
+
+    if (unit < 0xd800 || unit > 0xdfff || next < 0xdc00 || next > 0xdfff) {
+      cursor.pos++;
+      continue;
+    }
+    if (unit >= 0xdc00) {
+      found.add(cursor.pos);
+    }
+    cursor.pos += 2;
+  }
+
+  return found.size > 0 ? found : null;
+};
+
 const lowerAscii = (text: string): string => (UPPER.test(text) ? text.replace(UPPER_RUNS, (run) => run.toLowerCase()) : text);
 
 export class Tokenizer implements TokenizerControl {
@@ -183,6 +214,8 @@ export class Tokenizer implements TokenizerControl {
   private comment: CommentToken = { type: TokenType.COMMENT, data: '' };
   private doctype: DoctypeToken = { type: TokenType.DOCTYPE, name: null, forceQuirks: false, publicId: null, systemId: null };
   private readonly charRef = new CharRefReader();
+  /** parse5's bad low-low pairs not yet dropped by a DOCTYPE; see `write`. */
+  private badPairs: Set<number> | null = null;
 
   constructor(private readonly handler: TokenHandler) {}
 
@@ -195,6 +228,7 @@ export class Tokenizer implements TokenizerControl {
     this.html = html.indexOf('\r') < 0 ? html : html.replace(/\r\n?/g, '\n');
     this.pos = 0;
     this.current = this.state;
+    this.badPairs = parse5BadPairs(this.html);
     while (this.current !== 67 /* ENDED */) {
       const cp = this.pos < this.html.length ? this.html.charCodeAt(this.pos) : -1;
 
@@ -205,6 +239,26 @@ export class Tokenizer implements TokenizerControl {
         this.call(cp);
       }
     }
+    this.rejectLikeParse5();
+  }
+
+  /**
+   * Throws the RangeError parse5 throws on a low-low pair it keeps. Blok's
+   * callers catch it, repair the field and parse again, so throwing on exactly
+   * the same input keeps their output byte-identical. parse5 drops the pair
+   * without throwing only where a DOCTYPE ignores characters.
+   */
+  private rejectLikeParse5(): void {
+    const pairs = this.badPairs;
+
+    this.badPairs = null;
+    if (pairs === null || pairs.size === 0) {
+      return;
+    }
+    const [first] = pairs;
+    const codePoint = (this.html.charCodeAt(first) - 0xd800) * 0x400 + 0x2400 + this.html.charCodeAt(first + 1);
+
+    String.fromCodePoint(codePoint);
   }
 
   // Emitting
@@ -1401,6 +1455,8 @@ export class Tokenizer implements TokenizerControl {
     } else if (cp === EOF) {
       this.emitDoctype();
       this.emitEof();
+    } else {
+      this.badPairs?.delete(this.pos - 1);
     }
   }
 

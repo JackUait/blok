@@ -6,6 +6,7 @@
  * `insertBefore` rewriting references), and the upstream test cases pin them.
  * What is left out on purpose: globals, auto-highlighting of the page, the
  * web worker, plugins, and every hook Blok's grammars do not use.
+ * One deviation: rematch work per tokenize is capped (see `rematchBudget`).
  *
  * Prism is MIT-licensed; its notice ships in NOTICE.
  */
@@ -99,6 +100,27 @@ interface Rematch {
   cause: string;
   reach: number;
 }
+
+/** Greedy searches are memoized per pattern; see `searchText`. */
+interface Search {
+  from: number;
+  match: RegExpExecArray | null;
+}
+
+/** State shared by one `tokenize` call, across all its rematches. */
+interface Pass {
+  searches: Map<RegExp, Search>;
+  /** Rematch steps left. */
+  budget: number;
+}
+
+/**
+ * Real code stayed at or under 2 rematch steps per char (measured on ~3.5k
+ * files and upstream test cases). Hostile runs like `"'"'…` in Rust make every wrap
+ * re-tokenize the rest of the line, which is quadratic. Once the budget is
+ * spent, rematches stop early: highlighting changes, the text never does.
+ */
+const rematchBudget = (text: string): number => 10 * text.length + 1000;
 
 const hasOwn = (o: Record<string, unknown>, key: string): boolean => Object.prototype.hasOwnProperty.call(o, key);
 
@@ -248,21 +270,29 @@ const toArray = (list: LinkedList): TokenStream => {
 
 const valueLength = (node: ListNode): number => (node.value as string | Token).length;
 
-const matchPattern = (pattern: RegExp, pos: number, text: string, lookbehind: boolean): RegExpExecArray | null => {
-  // eslint-disable-next-line no-param-reassign -- exec reads lastIndex
-  pattern.lastIndex = pos;
-
-  const match = pattern.exec(text);
-
+const cutLookbehind = (match: RegExpExecArray | null, lookbehind: boolean): RegExpExecArray | null => {
   if (match && lookbehind && match[1]) {
     const lookbehindLength = match[1].length;
 
+    // eslint-disable-next-line no-param-reassign -- the match is cut in place, as Prism does
     match.index += lookbehindLength;
+    // eslint-disable-next-line no-param-reassign -- see above
     match[0] = match[0].slice(lookbehindLength);
   }
 
   return match;
 };
+
+const matchPattern = (pattern: RegExp, pos: number, text: string, lookbehind: boolean): RegExpExecArray | null => {
+  // eslint-disable-next-line no-param-reassign -- exec reads lastIndex
+  pattern.lastIndex = pos;
+
+  return cutLookbehind(pattern.exec(text), lookbehind);
+};
+
+/** Callers rewrite `index` and `[0]`, so the memo hands out copies. */
+const copyMatch = (match: RegExpExecArray): RegExpExecArray =>
+  Object.assign(match.slice() as RegExpExecArray, { index: match.index, input: match.input, groups: match.groups });
 
 interface Cursor {
   node: ListNode;
@@ -282,6 +312,7 @@ interface PatternRun {
   lookbehind: boolean;
   greedy: boolean;
   alias: string | string[] | undefined;
+  pass: Pass;
 }
 
 type Step = { kind: 'next'; cursor: Cursor } | { kind: 'break' } | { kind: 'stop' };
@@ -311,14 +342,40 @@ const tokenize = (text: string, grammar: Grammar): TokenStream => {
   const tokenList = createList();
 
   addAfter(tokenList, tokenList.head, text);
-  matchGrammar(text, tokenList, grammar, tokenList.head, 0);
+  matchGrammar(text, tokenList, grammar, tokenList.head, 0, { searches: new Map(), budget: rematchBudget(text) });
 
   return toArray(tokenList);
 };
 
+/**
+ * A greedy pattern's search over the whole text from `pos`. The text never
+ * changes within a pass, so a search from `from` that found a match at `index`
+ * gives the same match from any pos in between, and one that failed fails
+ * from any later pos. Rematches repeat such searches many times. Sticky and
+ * unicode patterns do not try every position the same way, so they skip the memo.
+ */
+const searchText = (run: PatternRun, pos: number): RegExpExecArray | null => {
+  const { pattern, pass } = run;
+  const last = pass.searches.get(pattern);
+
+  if (last && pos >= last.from && (last.match === null || pos <= last.match.index)) {
+    return last.match && copyMatch(last.match);
+  }
+
+  pattern.lastIndex = pos;
+
+  const match = pattern.exec(run.text);
+
+  if (!pattern.sticky && !pattern.unicode) {
+    pass.searches.set(pattern, { from: pos, match: match && copyMatch(match) });
+  }
+
+  return match;
+};
+
 /** A greedy pattern matches against the whole text, then finds the list nodes its match covers. */
 const greedySpan = (run: PatternRun, start: Cursor): GreedySpan => {
-  const match = matchPattern(run.pattern, start.pos, run.text, run.lookbehind);
+  const match = cutLookbehind(searchText(run, start.pos), run.lookbehind);
 
   if (!match || match.index >= run.text.length) {
     return { kind: 'break' };
@@ -398,7 +455,7 @@ const wrapMatch = (
   if (removeCount > 1) {
     const nestedRematch: Rematch = { cause: `${run.token},${run.index}`, reach };
 
-    matchGrammar(run.text, run.list, run.grammar, node.prev as ListNode, pos, nestedRematch);
+    matchGrammar(run.text, run.list, run.grammar, node.prev as ListNode, pos, run.pass, nestedRematch);
 
     if (rematch && nestedRematch.reach > rematch.reach) {
       // eslint-disable-next-line no-param-reassign -- rematch reach is shared up the recursion
@@ -413,6 +470,15 @@ const wrapMatch = (
 const matchAt = (run: PatternRun, cursor: Cursor, rematch: Rematch | undefined): Step => {
   if (rematch && cursor.pos >= rematch.reach) {
     return { kind: 'break' };
+  }
+
+  if (rematch) {
+    if (run.pass.budget <= 0) {
+      return { kind: 'break' };
+    }
+
+    // eslint-disable-next-line no-param-reassign -- the budget is shared by the whole pass
+    run.pass.budget--;
   }
 
   const value = cursor.node.value as string | Token;
@@ -465,7 +531,8 @@ const toPatternRun = (
   grammar: Grammar,
   token: string,
   index: number,
-  patternObj: RegExp | GrammarToken
+  patternObj: RegExp | GrammarToken,
+  pass: Pass
 ): PatternRun => {
   const tokenObj = isGrammarToken(patternObj) ? patternObj : undefined;
   const greedy = Boolean(tokenObj?.greedy);
@@ -490,6 +557,7 @@ const toPatternRun = (
     lookbehind: Boolean(tokenObj?.lookbehind),
     greedy,
     alias: tokenObj?.alias,
+    pass,
   };
 };
 
@@ -501,6 +569,7 @@ const matchToken = (
   token: string,
   startNode: ListNode,
   startPos: number,
+  pass: Pass,
   rematch: Rematch | undefined
 ): boolean => {
   const entry = grammar[token] as GrammarValue;
@@ -511,7 +580,7 @@ const matchToken = (
       return false;
     }
 
-    return runPattern(toPatternRun(text, list, grammar, token, j, patternObj), startNode, startPos, rematch);
+    return runPattern(toPatternRun(text, list, grammar, token, j, patternObj, pass), startNode, startPos, rematch);
   });
 };
 
@@ -521,6 +590,7 @@ const matchGrammar = (
   grammar: Grammar,
   startNode: ListNode,
   startPos: number,
+  pass: Pass,
   rematch?: Rematch
 ): void => {
   for (const token in grammar) {
@@ -528,7 +598,7 @@ const matchGrammar = (
       continue;
     }
 
-    if (!matchToken(text, tokenList, grammar, token, startNode, startPos, rematch)) {
+    if (!matchToken(text, tokenList, grammar, token, startNode, startPos, pass, rematch)) {
       return;
     }
   }

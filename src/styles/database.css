@@ -1934,6 +1934,11 @@
   padding-inline-start: var(--blok-space-1-5);
 }
 
+/* notion-live-3/raw/peek-1.png: with the title ink at the same y, Notion's first label sits 5px lower. */
+[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title] {
+  margin-bottom: 17px;
+}
+
 /* feel/findings-rowpage R25: warm, as the database title's placeholder (T09). */
 [data-blok-database-drawer-title]::placeholder {
   color: var(--blok-database-title-placeholder);

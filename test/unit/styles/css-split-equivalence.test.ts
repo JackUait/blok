@@ -1301,6 +1301,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TABLE_RELATION_CELL_PADDING_BYTES = 80;
     // database.css: the Edit formula box's 12px radius and its title row with a close × (notion-spec-2 §18.3).
     const DATABASE_FORMULA_BOX_BYTES = 970;
+    // database.css: the side peek's first property sits 17px under the title (notion-live-3/raw/peek-1.png).
+    const DATABASE_PEEK_FIRST_ROW_BYTES = 220;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1598,7 +1600,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_GALLERY_CHECKBOX_NAME_BYTES
       + DATABASE_GALLERY_PILL_BYTES
       + DATABASE_TABLE_RELATION_CELL_PADDING_BYTES
-      + DATABASE_FORMULA_BOX_BYTES;
+      + DATABASE_FORMULA_BOX_BYTES
+      + DATABASE_PEEK_FIRST_ROW_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -5541,6 +5541,10 @@ span[data-blok-slash-search] {
   padding-inline-start: var(--blok-space-1-5);
 }
 
+[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title] {
+  margin-bottom: 17px;
+}
+
 [data-blok-database-drawer-title]::placeholder {
   color: var(--blok-database-title-placeholder);
 }

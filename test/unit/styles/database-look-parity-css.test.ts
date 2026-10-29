@@ -203,6 +203,11 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(tokenValues('--blok-database-peek-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
   });
 
+  // side-by-side #30, notion-live-3/raw/peek-1.png: same title ink (y 88-110), first label ink at y 147, not 142.
+  it('puts the side peek\'s first property 17px under the title', () => {
+    expect(ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title]')).toContain('margin-bottom: 17px');
+  });
+
   it('inks the title in the database ink: rgb(44, 44, 43) light (research/26 §1e), rgb(240, 239, 237) dark', () => {
     expect(ruleBody('[data-blok-database-drawer-title]')).toContain('color: var(--blok-database-peek-title)');
     expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-database-ink)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);

@@ -1215,8 +1215,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FORMULA_NUMBER_END_BYTES = 129;
     // database.css: a Number or number formula cell's Comment + Copy box hugs the start edge (notion-spec-2 §19.20).
     const DATABASE_CELL_PILL_START_BYTES = 460;
-    // database.css: a number rollup's box hugs the start edge; Configure rollup is 20 wide (notion-spec-2 §18.2).
-    const DATABASE_ROLLUP_CELL_ACTIONS_BYTES = 197;
+    // database.css: a number rollup's box (a Show original list of numbers too) hugs the start edge; Configure rollup is 20 wide (notion-spec-2 §18.2, §20.11).
+    const DATABASE_ROLLUP_CELL_ACTIONS_BYTES = 382;
     // main.css: Tailwind skips the pptx engine folder (cafd284d).
     const MAIN_PPTX_SOURCE_SKIP_BYTES = 119;
     // database.css: an unchecked table checkbox fills on hover (notion-spec-2 §18.2).

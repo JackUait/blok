@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { DatabaseTableView, createTableState } from '../../../../src/tools/database/database-table-view';
@@ -426,5 +429,63 @@ describe('table URL, email and phone cells', () => {
       expect(notify).not.toHaveBeenCalled();
       vi.unstubAllGlobals();
     });
+  });
+});
+
+describe('table hover box side and Place buttons', () => {
+  const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  /** Selectors of every rule that moves a hover box to the cell's start edge. */
+  const startEdgeSelectors = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+    .filter((match) => (match[1] ?? '').includes('[data-blok-database-table-cell-actions') && /inset-inline-start:\s*4px/.test(match[2] ?? ''))
+    .map((match) => (match[1] ?? '').trim());
+  const atStart = (el: Element | null): boolean => el !== null && startEdgeSelectors.some((selector) => el.matches(selector));
+
+  const extra: PropertyDefinition[] = [
+    ...schema,
+    { id: 'p-rel', name: 'Rel', type: 'relation', position: 'b1', relation: { targetDatabaseId: 'db' } },
+    { id: 'p-list', name: 'List', type: 'rollup', position: 'b2', rollup: { relationPropertyId: 'p-rel', targetPropertyId: 'x', function: 'show_original' } },
+    { id: 'p-names', name: 'Names', type: 'rollup', position: 'b3', rollup: { relationPropertyId: 'p-rel', targetPropertyId: 'y', function: 'show_original' } },
+    { id: 'p-place', name: 'Where', type: 'place', position: 'b4' },
+  ];
+  const extraRows = (): DatabaseRow[] => [
+    {
+      ...rows()[0],
+      properties: { ...rows()[0].properties, 'p-place': { name: 'Eiffel Tower Ln', address: 'Paris, TN 38242, United States', lat: 36.3, lng: -88.3 } },
+      computed: { 'p-rel': [{ id: 'r2' }], 'p-list': '7', 'p-names': 'Beta' },
+    },
+    rows()[1],
+  ];
+  // A Show original of a Number renders as a text list of numbers; of a title, as plain text.
+  const valueProperty = (property: PropertyDefinition): PropertyDefinition => {
+    if (property.id === 'p-list') return { ...property, type: 'text', number: {} };
+    if (property.id === 'p-names') return { ...property, type: 'text' };
+
+    return property;
+  };
+  const mountExtra = (overrides: Partial<DatabaseTableViewOptions> = {}): HTMLElement =>
+    mount({ comment: vi.fn(), schema: extra, rows: extraRows(), cellContext: { valueProperty }, handlers: { ...makeHandlers(), configureRollup: vi.fn() }, ...overrides }).root;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  // notion-spec-2 §20.11: Rollup = Relation › Number, Show original: Configure at cell + 6, Copy at + 26, the value "7" stays visible.
+  it('a Show original rollup of numbers puts Configure + Copy at the start edge', () => {
+    const target = cell(mountExtra(), 'r1', 'p-list');
+
+    expect(atStart(actions(target))).toBe(true);
+    expect([...(actions(target)?.querySelectorAll('button') ?? [])].map((b) => b.getAttribute('aria-label')))
+      .toEqual(['tools.database.rollupConfigure', 'tools.database.cellCopy']);
+  });
+
+  // notion-spec-2 §18.2: only right-aligned values move the box; a left-aligned rollup keeps it at the end.
+  it('a text rollup keeps its box at the end edge', () => {
+    expect(atStart(actions(cell(mountExtra(), 'r1', 'p-names')))).toBe(false);
   });
 });

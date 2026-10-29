@@ -11536,7 +11536,7 @@ textarea[data-blok-database-cell-input] {
   display: flex;
 }
 
-[data-blok-database-table-cell][data-type="number"] > [data-blok-database-table-cell-actions=""], [data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""], [data-blok-database-table-cell][data-type="rollup"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""] {
+[data-blok-database-table-cell][data-type="number"] > [data-blok-database-table-cell-actions=""], [data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""], [data-blok-database-table-cell][data-type="rollup"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""], [data-blok-database-table-cell][data-type="rollup"]:has(> [data-blok-database-number-list]) > [data-blok-database-table-cell-actions=""] {
   inset-inline-start: 4px;
   inset-inline-end: auto;
 }

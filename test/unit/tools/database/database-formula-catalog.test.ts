@@ -79,6 +79,32 @@ describe('formula function catalogue', () => {
     }
   });
 
+  // notion-spec-2 §26.4 (`40-help-Text.png`, `40-help-Checkbox.png`, `40-help-Date.png`).
+  const typed: PropertyDefinition[] = [
+    { id: 'tx', name: 'Text', type: 'text', position: 'a0' },
+    { id: 'rt', name: 'Notes', type: 'richText', position: 'a1' },
+    { id: 'cb', name: 'Checkbox', type: 'checkbox', position: 'a2' },
+    { id: 'dt', name: 'Date', type: 'date', position: 'a3' },
+  ];
+  const filled: DatabaseRow = { id: 'row', position: 'a0', properties: { tx: 'hello', rt: 'note', cb: true, dt: '2026-03-14' } };
+
+  it.each([
+    ['text', typed[0], ['prop("Text")', 'upper(prop("Text"))', 'prop("Text").style("b", "red")']],
+    ['richText', typed[1], ['prop("Notes")', 'upper(prop("Notes"))', 'prop("Notes").style("b", "red")']],
+    ['checkbox', typed[2], ['prop("Checkbox")', 'not prop("Checkbox")']],
+    ['date', typed[3], ['prop("Date")', 'prop("Date") > now()', 'prop("Date").dateAdd(1, "weeks")', 'dateBetween(prop("Date"), now(), "days")']],
+  ])('gives a %s property Notion\'s examples, each of which runs', (_type, property, codes) => {
+    const examples = propertyExamples(property);
+
+    expect(examples.map((example) => example.code)).toEqual(codes);
+    for (const { code } of examples) {
+      const compiled = compileFormula(code, typed);
+
+      if (!compiled.ok) throw new Error(`${code}: ${compiled.error.code}`);
+      expect(evaluateFormula(compiled.formula, filled, { now: new Date('2026-10-30T12:00:00Z'), timeZone: 'UTC', schema: typed }), code).not.toBeNull();
+    }
+  });
+
   it('gives any other property one example: the property itself', () => {
     expect(propertyExamples(schema[0])).toEqual([{ code: 'prop("Owner")' }]);
   });

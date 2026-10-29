@@ -1,6 +1,6 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
@@ -890,6 +890,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       });
 
       showAvatarsOnly(cell);
+      cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
       if (!cell.hasAttribute('data-empty')) {
         const item = document.createElement('span');
 

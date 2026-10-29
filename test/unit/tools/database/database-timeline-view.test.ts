@@ -206,6 +206,19 @@ describe('DatabaseTimelineView', () => {
       expect([...(chip?.childNodes ?? [])].some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '')).toBe(false);
     });
 
+    // notion-spec-2 §21.9 (timeline-bar.png): a file chip after a bar starts with the page glyph.
+    it('starts a file chip after a bar with the page glyph', () => {
+      const withFiles: PropertyDefinition[] = [...schema, { id: 'p-files', name: 'Files', type: 'files', position: 'a4' }];
+      const { root } = mount({
+        schema: withFiles,
+        view: timelineView({ properties: [{ id: 'p-files', visible: true }] }),
+        groups: single([row('r1', 'Launch', '2026-10-09', { 'p-files': [{ id: 'f1', name: 'notes.pdf', url: 'https://example.com/notes.pdf' }] })]),
+      });
+      const chip = bar(root, 'r1').querySelector('[data-property-id="p-files"] [data-blok-database-file-chip]');
+
+      expect(chip?.firstElementChild?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
+    });
+
     it('labels today\'s dot with the locale\'s day number', () => {
       const { root } = mount({ locale: 'ar-EG' });
 

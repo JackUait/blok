@@ -115,7 +115,14 @@ export const define = (hl: Highlighter): void => {
 
         // title 2
         // -------
-        pattern: /\S.*(?:\n|\r\n?)(?:==+|--+)(?=[ \t]*$)/m,
+        /*
+         * Not Prism: the lookbehind skips a start with an earlier \S on the same
+         * line. Every start on a line runs `.*` to the same line end, so a later
+         * one can't match where the first failed, and a line with no title no
+         * longer costs its length squared. Safe only while this is not greedy:
+         * a non-greedy pattern runs from 0 on its own string.
+         */
+        pattern: /(?=\S)(?<!\S.*?)\S.*(?:\n|\r\n?)(?:==+|--+)(?=[ \t]*$)/m,
         alias: 'important',
         inside: {
           punctuation: /==+$|--+$/
@@ -155,7 +162,10 @@ export const define = (hl: Highlighter): void => {
       // [id]: http://example.com 'Optional title'
       // [id]: http://example.com (Optional title)
       // [id]: <http://example.com> "Optional title"
-      pattern: /!?\[[^\]]+\]:[\t ]+(?:\S+|<(?:\\.|[^>\\])+>)(?:[\t ]+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\)))?/,
+      // Not Prism: the lookbehind skips a [ with an earlier [ and no ] between.
+      // Both run [^\]]+ to the same ], so only the first can match. Safe only
+      // while this is not greedy, like title above.
+      pattern: /!?(?=\[)(?<!\[[^\]]*?)\[[^\]]+\]:[\t ]+(?:\S+|<(?:\\.|[^>\\])+>)(?:[\t ]+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\)))?/,
       inside: {
         'variable': {
           pattern: /^(!?\[)[^\]]+/,

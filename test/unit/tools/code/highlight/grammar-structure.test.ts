@@ -78,6 +78,18 @@ const DEVIATIONS: Array<{ path: Array<string | number>; prism: string; blok: str
     reason: 'typeExpressionFromChainStart: a start inside a dotted name is skipped, so long names stay linear',
   },
   {
+    path: ['markdown', 'title', 0, 'pattern'],
+    prism: '2ef9d7853e46f671',
+    blok: 'e75c64c6711f6998',
+    reason: 'a start with an earlier \\S on the same line is skipped, so a line with no title stays linear',
+  },
+  {
+    path: ['markdown', 'url-reference', 'pattern'],
+    prism: '575bda7857a0f0c6',
+    blok: '7ce872499393825b',
+    reason: 'a [ with an earlier [ and no ] between is skipped, so runs of [ stay linear',
+  },
+  {
     path: ['csharp', 'class-name', 7, 'pattern'],
     prism: 'aa66d7eea3741b07',
     blok: '4102fbbb7a6b8f31',

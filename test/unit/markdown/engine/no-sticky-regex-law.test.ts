@@ -4,13 +4,15 @@ import path from 'node:path';
 import ts from 'typescript';
 
 /**
- * The Markdown engine also runs on the server, inside Jint. There a sticky
+ * The Markdown engine and the HTML parser also run on the server, inside Jint. There a sticky
  * regex (`/…/y`) that fails at `lastIndex` searches the rest of the string for
  * a later match, so one failed probe per `<` or `@` made a 16 000-tag document
  * quadratic: 12.5 s where V8 takes milliseconds. Scanners match at a position
  * by hand, or run an anchored regex on a slice that ends where no match can.
  */
 const ENGINE = path.resolve(__dirname, '../../../../src/markdown/engine');
+// The HTML tokenizer probed one sticky regex per `&` and `<!`: 80 000 `&` took 8 s in Jint.
+const HTML = path.resolve(__dirname, '../../../../src/html');
 
 const nodesOf = (root: ts.Node): ts.Node[] => {
   const all: ts.Node[] = [];
@@ -46,8 +48,22 @@ const stickyIn = (file: string, text = readFileSync(file, 'utf8')): string[] => 
   ];
 };
 
+const sourcesIn = (dir: string): string[] => readdirSync(dir).filter((name) => name.endsWith('.ts')).map((name) => path.join(dir, name));
+
+describe('HTML parser: no sticky regexes', () => {
+  const files = sourcesIn(HTML);
+
+  it('scans the parser sources', () => {
+    expect(files.length).toBeGreaterThan(10);
+  });
+
+  it('matches at a position without the y flag', () => {
+    expect(files.flatMap((file) => stickyIn(file))).toStrictEqual([]);
+  });
+});
+
 describe('markdown engine: no sticky regexes', () => {
-  const files = readdirSync(ENGINE).filter((name) => name.endsWith('.ts')).map((name) => path.join(ENGINE, name));
+  const files = sourcesIn(ENGINE);
 
   it('scans the engine sources', () => {
     expect(files.length).toBeGreaterThan(10);

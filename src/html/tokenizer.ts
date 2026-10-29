@@ -111,51 +111,44 @@ const WHITESPACE_CHARACTER = TokenType.WHITESPACE_CHARACTER;
 
 const REPLACEMENT = '�';
 
-/** A sticky regex that reports where its match from a given index ends. */
-class Sticky {
-  constructor(private readonly pattern: RegExp) {}
+/**
+ * A run of characters, found by searching for the first character that ends it.
+ * No sticky regexes here: in Jint, which runs this parser on the server, a
+ * sticky probe that fails searches the rest of the string, and one per `&` or
+ * `<!` made a long document quadratic. A search for the stop costs the run.
+ */
+class Run {
+  /** `stop` is one character class with the `g` flag and no quantifier. */
+  constructor(private readonly stop: RegExp) {}
 
-  /** The end of the match at `from`, or `from` when there is none. */
+  /** Where the run that starts at `from` ends: `from` itself when it is empty. */
   public end(html: string, from: number): number {
-    this.pattern.lastIndex = from;
+    this.stop.lastIndex = from;
 
-    return this.pattern.test(html) ? this.pattern.lastIndex : from;
-  }
-
-  public matches(html: string, at: number): boolean {
-    this.pattern.lastIndex = at;
-
-    return this.pattern.test(html);
+    return this.stop.test(html) ? this.stop.lastIndex - 1 : html.length;
   }
 }
 
-const WHITESPACE_RUN = new Sticky(/[\t\n\f ]+/y);
-const NUL_RUN = new Sticky(/\0+/y);
-const DATA_RUN = new Sticky(/[^\t\n\f <&\0]+/y);
-const DATA_TEXT = /[^\t\n\f <&\0]+/y;
-const RAWTEXT_RUN = new Sticky(/[^\t\n\f <\0]+/y);
-const PLAINTEXT_RUN = new Sticky(/[^\t\n\f \0]+/y);
-const TAG_NAME_RUN = new Sticky(/[^\t\n\f />\0]+/y);
-const ATTRIBUTE_NAME_RUN = new Sticky(/[^\t\n\f />=\0]+/y);
-const DOUBLE_QUOTED_RUN = new Sticky(/[^"&\0]+/y);
-const SINGLE_QUOTED_RUN = new Sticky(/[^'&\0]+/y);
-const UNQUOTED_RUN = new Sticky(/[^\t\n\f &>\0]+/y);
-const COMMENT_RUN = new Sticky(/[^\-<\0]+/y);
-const BOGUS_COMMENT_RUN = new Sticky(/[^>\0]+/y);
-const SCRIPT_ESCAPED_RUN = new Sticky(/[^\-<\t\n\f \0]+/y);
-const CDATA_RUN = new Sticky(/[^\]\t\n\f \0]+/y);
+const WHITESPACE_RUN = new Run(/[^\t\n\f ]/g);
+const NUL_RUN = new Run(/[^\0]/g);
+const DATA_RUN = new Run(/[\t\n\f <&\0]/g);
+const RAWTEXT_RUN = new Run(/[\t\n\f <\0]/g);
+const PLAINTEXT_RUN = new Run(/[\t\n\f \0]/g);
+const TAG_NAME_RUN = new Run(/[\t\n\f />\0]/g);
+const ATTRIBUTE_NAME_RUN = new Run(/[\t\n\f />=\0]/g);
+const DOUBLE_QUOTED_RUN = new Run(/["&\0]/g);
+const SINGLE_QUOTED_RUN = new Run(/['&\0]/g);
+const UNQUOTED_RUN = new Run(/[\t\n\f &>\0]/g);
+const COMMENT_RUN = new Run(/[\-<\0]/g);
+const BOGUS_COMMENT_RUN = new Run(/[>\0]/g);
+const SCRIPT_ESCAPED_RUN = new Run(/[\-<\t\n\f \0]/g);
+const CDATA_RUN = new Run(/[\]\t\n\f \0]/g);
 // Fast paths for the common shapes: a lowercase name, `name="value"` without
 // references. Anything else falls back to the state machine where it stands.
-const LOWER_TAG_NAME_RUN = new Sticky(/[a-z][^\t\n\f />\0A-Z]*/y);
-const LOWER_END_TAG = new Sticky(/[a-z][^\t\n\f />\0A-Z]*>/y);
-const SIMPLE_ATTRIBUTE = /[\t\n\f ]+([a-z][^\t\n\f />=\0"'<A-Z]*)(?:="([^"&\0]*)")?/y;
+const LOWER_TAG_NAME_RUN = new Run(/[\t\n\f />\0A-Z]/g);
+const SIMPLE_ATTRIBUTE_NAME_RUN = new Run(/[\t\n\f />=\0"'<A-Z]/g);
 const UPPER = /[A-Z]/;
 const UPPER_RUNS = /[A-Z]+/g;
-// No `i` flag: some engines fold non-ASCII letters (like the Kelvin sign) onto ASCII ones.
-const DOCTYPE_WORD = new Sticky(/[Dd][Oo][Cc][Tt][Yy][Pp][Ee]/y);
-const PUBLIC_WORD = new Sticky(/[Pp][Uu][Bb][Ll][Ii][Cc]/y);
-const SYSTEM_WORD = new Sticky(/[Ss][Yy][Ss][Tt][Ee][Mm]/y);
-const SCRIPT_WORD = new Sticky(/[Ss][Cc][Rr][Ii][Pp][Tt]/y);
 // Past this many attributes a tag checks repeated names with a set, not a scan.
 const ATTRIBUTE_SCAN_LIMIT = 16;
 
@@ -172,6 +165,20 @@ const hasAttribute = (attrs: Attribute[], name: string): boolean => {
 const isWhitespace = (cp: number): boolean => cp === SPACE || cp === LF || cp === TAB || cp === FF;
 
 const isAsciiLetter = (cp: number): boolean => (cp | 0x20) >= 0x61 && (cp | 0x20) <= 0x7a;
+
+/**
+ * `word`, in lowercase ASCII, starts at `at` in any ASCII case. Not
+ * `toLowerCase`: it folds non-ASCII letters (like the Kelvin sign) onto ASCII ones.
+ */
+const startsWithAsciiWord = (html: string, at: number, word: string): boolean => {
+  for (let i = 0; i < word.length; i++) {
+    if ((html.charCodeAt(at + i) | 0x20) !== word.charCodeAt(i)) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 const LOW_SURROGATE_PAIR = /[\uDC00-\uDFFF]{2}/;
 const CARRIAGE_RETURNS = /\r\n?/g;
@@ -306,10 +313,10 @@ export class Tokenizer implements TokenizerControl {
     this.emitChars(text.length === 1 && isWhitespace(text.charCodeAt(0)) ? WHITESPACE_CHARACTER : CHARACTER, text);
   }
 
-  /** Emits the run of `pattern` that starts at the character just consumed. */
-  private emitRun(type: CharacterToken['type'], pattern: Sticky): void {
+  /** Emits the run that starts at the character just consumed. */
+  private emitRun(type: CharacterToken['type'], run: Run): void {
     const start = this.pos - 1;
-    const end = pattern.end(this.html, start);
+    const end = run.end(this.html, start);
 
     this.emitChars(type, this.html.slice(start, end));
     this.pos = end;
@@ -388,8 +395,8 @@ export class Tokenizer implements TokenizerControl {
     }
   }
 
-  private startsWithWord(word: Sticky): boolean {
-    return word.matches(this.html, this.pos - 1);
+  private startsWithWord(word: string): boolean {
+    return startsWithAsciiWord(this.html, this.pos - 1, word);
   }
 
   // Character references
@@ -500,9 +507,7 @@ export class Tokenizer implements TokenizerControl {
         // cp is text here, so the run is at least one character long.
         const start = this.pos - 1;
 
-        DATA_TEXT.lastIndex = start;
-        DATA_TEXT.test(this.html);
-        this.pos = DATA_TEXT.lastIndex;
+        this.pos = DATA_RUN.end(this.html, start);
         this.emitChars(CHARACTER, this.html.slice(start, this.pos));
       }
     }
@@ -527,23 +532,24 @@ export class Tokenizer implements TokenizerControl {
 
     if (next >= 0x61 && next <= 0x7a) {
       this.startTag(TokenType.START_TAG);
-      this.pos = LOWER_TAG_NAME_RUN.end(html, at);
+      this.pos = LOWER_TAG_NAME_RUN.end(html, at + 1);
       this.tag.tagName = html.slice(at, this.pos);
       this.current = TAG_NAME;
       this.fastAttributes();
 
       return;
     }
-    const end = next === 0x2f ? LOWER_END_TAG.end(html, at + 1) : at;
+    const nameStart = html.charCodeAt(at + 1);
+    const nameEnd = next === 0x2f && nameStart >= 0x61 && nameStart <= 0x7a ? LOWER_TAG_NAME_RUN.end(html, at + 2) : at;
 
-    if (end === at || end === at + 1) {
+    if (html.charCodeAt(nameEnd) !== 0x3e || nameEnd === at) {
       this.current = TAG_OPEN;
 
       return;
     }
     this.startTag(TokenType.END_TAG);
-    this.tag.tagName = html.slice(at + 1, end - 1);
-    this.pos = end;
+    this.tag.tagName = html.slice(at + 1, nameEnd);
+    this.pos = nameEnd + 1;
     this.emitTag();
   }
 
@@ -579,20 +585,27 @@ export class Tokenizer implements TokenizerControl {
 
   /** Reads one `name="value"`; a bare name is left in the attribute name state. */
   private simpleAttribute(): boolean {
-    SIMPLE_ATTRIBUTE.lastIndex = this.pos;
-    const match = SIMPLE_ATTRIBUTE.exec(this.html);
+    const html = this.html;
+    const nameStart = WHITESPACE_RUN.end(html, this.pos);
+    const first = html.charCodeAt(nameStart);
 
-    if (match === null) {
+    if (nameStart === this.pos || first < 0x61 || first > 0x7a) {
       return false;
     }
-    this.pos = SIMPLE_ATTRIBUTE.lastIndex;
-    this.startAttr(match[1]);
-    if (match[2] === undefined) {
+    const nameEnd = SIMPLE_ATTRIBUTE_NAME_RUN.end(html, nameStart + 1);
+    const quoted = html.charCodeAt(nameEnd) === 0x3d && html.charCodeAt(nameEnd + 1) === 0x22;
+    const valueEnd = quoted ? DOUBLE_QUOTED_RUN.end(html, nameEnd + 2) : nameEnd;
+
+    this.startAttr(html.slice(nameStart, nameEnd));
+    // No closing quote right after the value (an `&`, a NUL or the end): only the name is read.
+    if (!quoted || html.charCodeAt(valueEnd) !== 0x22) {
+      this.pos = nameEnd;
       this.current = ATTRIBUTE_NAME;
 
       return false;
     }
-    this.attr.value = match[2];
+    this.pos = valueEnd + 1;
+    this.attr.value = html.slice(nameEnd + 2, valueEnd);
     this.leaveAttrName();
     this.current = AFTER_ATTRIBUTE_VALUE_QUOTED;
 
@@ -639,7 +652,7 @@ export class Tokenizer implements TokenizerControl {
   }
 
   /** Text or whitespace just consumed, emitted as is with the rest of its run. */
-  private emitTextRun(cp: number, text: Sticky): void {
+  private emitTextRun(cp: number, text: Run): void {
     if (isWhitespace(cp)) {
       this.emitWhitespace();
     } else {
@@ -869,7 +882,7 @@ export class Tokenizer implements TokenizerControl {
     const start = this.pos - 1;
     const next = start + 6 < this.html.length ? this.html.charCodeAt(start + 6) : EOF;
 
-    if (this.startsWithWord(SCRIPT_WORD) && (isWhitespace(next) || next === SOLIDUS || next === GREATER_THAN)) {
+    if (this.startsWithWord('script') && (isWhitespace(next) || next === SOLIDUS || next === GREATER_THAN)) {
       this.emitChars(CHARACTER, this.html.slice(start, start + 6));
       this.emitCodePoint(next);
       this.pos = start + 7;
@@ -1018,7 +1031,7 @@ export class Tokenizer implements TokenizerControl {
     }
   }
 
-  private attributeValueQuoted(cp: number, quote: number, run: Sticky, ownState: number): void {
+  private attributeValueQuoted(cp: number, quote: number, run: Run, ownState: number): void {
     switch (cp) {
       case quote: this.current = AFTER_ATTRIBUTE_VALUE_QUOTED; break;
       case 0x26 /* AMPERSAND */: this.startCharRef(ownState); break;
@@ -1104,7 +1117,7 @@ export class Tokenizer implements TokenizerControl {
       this.pos = start + 2;
       this.startComment('');
       this.current = COMMENT_START;
-    } else if (this.startsWithWord(DOCTYPE_WORD)) {
+    } else if (this.startsWithWord('doctype')) {
       this.pos = start + 7;
       this.current = DOCTYPE;
     } else if (html.startsWith('[CDATA[', start)) {
@@ -1341,10 +1354,10 @@ export class Tokenizer implements TokenizerControl {
   private doctypeKeyword(cp: number): void {
     const start = this.pos - 1;
 
-    if (this.startsWithWord(PUBLIC_WORD)) {
+    if (this.startsWithWord('public')) {
       this.pos = start + 6;
       this.current = AFTER_DOCTYPE_PUBLIC_KEYWORD;
-    } else if (this.startsWithWord(SYSTEM_WORD)) {
+    } else if (this.startsWithWord('system')) {
       this.pos = start + 6;
       this.current = AFTER_DOCTYPE_SYSTEM_KEYWORD;
     } else {

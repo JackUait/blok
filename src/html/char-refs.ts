@@ -12,10 +12,7 @@ const C1 = [
 ];
 
 // Longer than any name (the longest has 31 characters), so a capped run never ends in `;`.
-const NAME_RUN = /[a-zA-Z0-9]{1,32}/y;
-const ZEROS = /0*/y;
-const DECIMAL = /[0-9]*/y;
-const HEX = /[0-9a-fA-F]*/y;
+const MAX_NAME_RUN = 32;
 const ALPHANUMERIC = /[a-zA-Z0-9]/;
 // Any value with more significant digits than this is past 0x10FFFF in either
 // base, so it is not parsed: that keeps parseInt exact on very long runs.
@@ -54,6 +51,25 @@ const legacyPrefixLength = (run: string): number => {
   }
 
   return 0;
+};
+
+const isDigit = (code: number): boolean => code >= 0x30 && code <= 0x39;
+const isHexDigit = (code: number): boolean => isDigit(code) || ((code | 0x20) >= 0x61 && (code | 0x20) <= 0x66);
+const isAlphanumeric = (code: number): boolean => isDigit(code) || ((code | 0x20) >= 0x61 && (code | 0x20) <= 0x7a);
+
+/**
+ * Where the run of characters that pass `test` from `start` ends, at most `max` long.
+ * By hand, not a sticky regex: in Jint a sticky regex that fails searches the
+ * rest of the string, so one per `&` made a long document quadratic.
+ */
+const runEnd = (html: string, start: number, test: (code: number) => boolean, max = Infinity): number => {
+  const cursor = { end: start };
+
+  while (cursor.end - start < max && test(html.charCodeAt(cursor.end))) {
+    cursor.end++;
+  }
+
+  return cursor.end;
 };
 
 /** The text a numeric reference stands for. */
@@ -95,15 +111,8 @@ export class CharRefReader {
   private readNumeric(html: string, start: number): boolean {
     const hex = (html.charCodeAt(start + 1) | 0x20) === 0x78;
     const digitsStart = start + (hex ? 2 : 1);
-    const digits = hex ? HEX : DECIMAL;
-
-    ZEROS.lastIndex = digitsStart;
-    ZEROS.test(html);
-    const significantStart = ZEROS.lastIndex;
-
-    digits.lastIndex = significantStart;
-    digits.test(html);
-    const end = digits.lastIndex;
+    const significantStart = runEnd(html, digitsStart, (code) => code === 0x30);
+    const end = runEnd(html, significantStart, hex ? isHexDigit : isDigit);
 
     if (end === digitsStart) {
       return false;
@@ -115,17 +124,17 @@ export class CharRefReader {
   }
 
   private readNamed(html: string, start: number, inAttribute: boolean): boolean {
-    NAME_RUN.lastIndex = start;
-    if (!NAME_RUN.test(html)) {
+    const nameEnd = runEnd(html, start, isAlphanumeric, MAX_NAME_RUN);
+
+    if (nameEnd === start) {
       return false;
     }
-    const runEnd = NAME_RUN.lastIndex;
-    const run = html.slice(start, runEnd);
-    const value = html.charCodeAt(runEnd) === 0x3b ? decodeNamedEntity(run) : undefined;
+    const run = html.slice(start, nameEnd);
+    const value = html.charCodeAt(nameEnd) === 0x3b ? decodeNamedEntity(run) : undefined;
 
     if (value !== undefined) {
       this.value = value;
-      this.end = runEnd + 1;
+      this.end = nameEnd + 1;
 
       return true;
     }

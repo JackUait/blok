@@ -11430,6 +11430,12 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
+/* notion-spec-2 §22.1: an unwrapped card URL stays on one line and the card clips a long host. The cell and link set pre-wrap themselves. */
+[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"],
+[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link] {
+  white-space: nowrap;
+}
+
 /* notion-spec-2 §19.17 and gallery-cards-top.png: on a card every pill, status too, is 18 tall with 12/18 text. */
 [data-blok-database-gallery-property] [data-blok-database-option-pill] {
   height: 18px;

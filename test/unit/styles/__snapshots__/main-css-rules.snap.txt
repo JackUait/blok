@@ -14188,6 +14188,10 @@ textarea[data-blok-database-cell-input] {
   overflow-wrap: anywhere;
 }
 
+[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"], [data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link] {
+  white-space: nowrap;
+}
+
 [data-blok-database-gallery-property] [data-blok-database-option-pill] {
   height: 18px;
   font-size: 12px;

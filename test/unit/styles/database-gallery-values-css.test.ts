@@ -45,4 +45,10 @@ describe('gallery card values', () => {
   it('draws the side peek checkbox with no border once checked', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-value] [data-blok-database-checkbox][data-state="checked"]')).toMatch(/border-width:\s*0/);
   });
+
+  // notion-spec-2 §22.1 (A-gallery.png): an unwrapped card URL stays on one line; the card clips a long host.
+  it('keeps an unwrapped card URL on one line', () => {
+    expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"]')).toMatch(/white-space:\s*nowrap/);
+    expect(ruleBody('[data-blok-database-gallery-property]:not([data-wrap="true"]) > [data-blok-database-cell="url"] > [data-blok-database-cell-link]')).toMatch(/white-space:\s*nowrap/);
+  });
 });

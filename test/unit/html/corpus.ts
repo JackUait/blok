@@ -102,8 +102,20 @@ export const fuzzHtml = (seed: number): string => {
     const quote = pick(['"', "'", '']);
     const value = Array.from({ length: Math.floor(next() * 3) }, () => pick(TEXT)).join('');
 
-    return next() < 0.2 ? ` ${pick(ATTRS)}` : ` ${pick(ATTRS)}=${quote}${quote === '' ? value.replace(/[\s>]/g, '') : value.replaceAll(quote, '')}${quote}`;
+    const name = next() < 0.15 ? pick(ATTRS).toUpperCase() : pick(ATTRS);
+
+    return next() < 0.2 ? ` ${name}` : ` ${name}=${quote}${quote === '' ? value.replace(/[\s>]/g, '') : value.replaceAll(quote, '')}${quote}`;
   };
+  // Mostly none or one; sometimes past the tokenizer's 16-attribute dedupe threshold, with repeats.
+  const attrs = (): string => {
+    const roll = next();
+    const many = roll < 0.85 ? 1 : Math.floor(next() * 20);
+    const count = roll < 0.5 ? 0 : many;
+
+    return Array.from({ length: count }, attr).join('');
+  };
+  const endTag = (tag: string): string =>
+    `</${next() < 0.2 ? tag.toUpperCase() : tag}${pick(['', '', '', ' ', '\n', '\t', ' x=1', '/'])}>`;
   const node = (depth: number): string => {
     const roll = next();
 
@@ -111,9 +123,9 @@ export const fuzzHtml = (seed: number): string => {
       return pick(TEXT);
     }
     const tag = pick(TAGS);
-    const open = `<${next() < 0.1 ? tag.toUpperCase() : tag}${next() < 0.5 ? attr() : ''}${next() < 0.05 ? '/' : ''}>`;
+    const open = `<${next() < 0.1 ? tag.toUpperCase() : tag}${attrs()}${next() < 0.05 ? '/' : ''}>`;
     const children = Array.from({ length: Math.floor(next() * 4) }, () => node(depth + 1)).join('');
-    const close = next() < 0.75 ? `</${tag}>` : '';
+    const close = next() < 0.75 ? endTag(tag) : '';
 
     return open + children + close;
   };

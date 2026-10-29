@@ -31,7 +31,6 @@ import { viewBlocksToHtml } from './rich-text-input';
 
 import type { OutputBlockData, OutputData } from '../../types';
 
-
 /** Why a referenced fragment was left as it was. */
 export type HeadingAnchorSkipReason = 'no-match' | 'ambiguous';
 

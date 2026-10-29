@@ -17,7 +17,6 @@
 import { parseFragment, serialize } from '../html';
 import type { ChildNode as HtmlChildNode, Element as HtmlElement, ParentNode as HtmlParentNode } from '../html';
 
-
 /**
  * One sanitized inline element, as handed to a {@link ViewInlineRenderer}.
  */
@@ -62,16 +61,15 @@ const textOf = (node: HtmlElement): string => {
   }).join('');
 };
 
+/** The parser only reads the context element, so one is built once and shared. */
+const DIV_CONTEXT = parseFragment('<div></div>').childNodes[0] as HtmlElement;
+
 /**
  * Parse a fragment in a `<div>` context — the context the sanitizer uses, so
  * the same markup produces the same tree.
  * @param html - fragment markup
  */
-const parseInDivContext = (html: string): HtmlParentNode => {
-  const contextElement = parseFragment('<div></div>').childNodes[0] as HtmlElement;
-
-  return parseFragment(contextElement, html);
-};
+const parseInDivContext = (html: string): HtmlParentNode => parseFragment(DIV_CONTEXT, html);
 
 /**
  * Apply per-tag inline renderers to a SANITIZED fragment.

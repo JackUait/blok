@@ -93,7 +93,7 @@ const FIXTURE_BLOCKS = [
 const importTs = async (entry) => {
   /**
    * Under `node_modules/.cache`, not the OS temp dir: the bundle keeps its
-   * third-party imports bare (parse5), and Node resolves those relative to the
+   * third-party imports bare (`packages: 'external'`), and Node resolves those relative to the
    * importing FILE. From /tmp there is no node_modules to walk up to.
    */
   const dir = mkdtempSync(join(CACHE_DIR, 'view-css-'));

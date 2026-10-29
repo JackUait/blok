@@ -78,11 +78,7 @@ export const isElementNode = (node: Node): node is Element => Object.prototype.h
 
 export const isTextNode = (node: Node): node is TextNode => node.nodeName === '#text';
 
-export const isCommentNode = (node: Node): node is CommentNode => node.nodeName === '#comment';
-
 export const isDocumentTypeNode = (node: Node): node is DocumentType => node.nodeName === '#documentType';
-
-export const isTemplate = (node: Node): node is Template => isElementNode(node) && node.tagName === 'template' && 'content' in node;
 
 export const appendChild = (parentNode: ParentNode, newNode: ChildNode): void => {
   parentNode.childNodes.push(newNode);

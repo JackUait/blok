@@ -37,7 +37,6 @@ import { splitPageTitle } from '../shared/page-title-icon';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
-
 /** Blocks parsed out of HTML, plus everything the HTML could not carry into them. */
 export interface HtmlImportResult {
   /** Blocks ready for `blok.blocks.render()`, `insertMany()`, or storage. */

@@ -41,7 +41,6 @@ export interface MarkdownSerializationResult {
   warnings: MarkdownDegradation[];
 }
 
-
 /** Receives the name of every inline construct the walk had to unwrap. */
 type LossReporter = (construct: string) => void;
 

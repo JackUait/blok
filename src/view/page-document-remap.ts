@@ -5,7 +5,6 @@ import { parseInlineFragment } from './html-text';
 import { cloneJson } from './json-clone';
 import { databaseBlockRefs } from '../shared/database/linked-source';
 
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 

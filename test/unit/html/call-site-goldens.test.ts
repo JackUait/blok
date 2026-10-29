@@ -1,9 +1,9 @@
 // @vitest-environment node
 /**
- * What every parse5 call site in Blok returns today, over the parser corpus.
- * The move to src/html must keep every row byte-identical.
+ * What every HTML-parsing call site in Blok returned on parse5 8.0.1, over
+ * the parser corpus. src/html must keep every row byte-identical.
  *
- * Re-record (only on purpose, on code that still runs parse5):
+ * Re-record only on purpose, after reading why a row changed:
  *   RECORD_HTML_GOLDENS=1 yarn test test/unit/html/call-site-goldens.test.ts
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

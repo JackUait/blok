@@ -100,7 +100,7 @@ const XML_ATTRS_ADJUSTMENT_MAP = new Map([
 ]);
 
 //SVG tag names adjustment map
-export const SVG_TAG_NAMES_ADJUSTMENT_MAP = new Map(
+const SVG_TAG_NAMES_ADJUSTMENT_MAP = new Map(
     [
         'altGlyph',
         'altGlyphDef',

@@ -159,11 +159,22 @@ const SCRIPT_WORD = new Sticky(/[Ss][Cc][Rr][Ii][Pp][Tt]/y);
 // Past this many attributes a tag checks repeated names with a set, not a scan.
 const ATTRIBUTE_SCAN_LIMIT = 16;
 
+const hasAttribute = (attrs: Attribute[], name: string): boolean => {
+  for (const attr of attrs) {
+    if (attr.name === name) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const isWhitespace = (cp: number): boolean => cp === SPACE || cp === LF || cp === TAB || cp === FF;
 
 const isAsciiLetter = (cp: number): boolean => (cp | 0x20) >= 0x61 && (cp | 0x20) <= 0x7a;
 
 const LOW_SURROGATE_PAIR = /[\uDC00-\uDFFF]{2}/;
+const CARRIAGE_RETURNS = /\r\n?/g;
 
 /**
  * Where parse5 8.0.1 reads two low surrogates as one code point: it pairs any
@@ -225,7 +236,7 @@ export class Tokenizer implements TokenizerControl {
 
   /** Tokenizes the whole string, ending with one EOF token. */
   public write(html: string): void {
-    this.html = html.indexOf('\r') < 0 ? html : html.replace(/\r\n?/g, '\n');
+    this.html = html.indexOf('\r') < 0 ? html : html.replace(CARRIAGE_RETURNS, '\n');
     this.pos = 0;
     this.current = this.state;
     this.badPairs = parse5BadPairs(this.html);
@@ -364,7 +375,7 @@ export class Tokenizer implements TokenizerControl {
     const name = this.attr.name;
 
     if (attrs.length < ATTRIBUTE_SCAN_LIMIT) {
-      if (!attrs.some((attr) => attr.name === name)) {
+      if (!hasAttribute(attrs, name)) {
         attrs.push(this.attr);
       }
 

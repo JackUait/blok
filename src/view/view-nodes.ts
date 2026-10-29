@@ -20,7 +20,6 @@ import type { LooseOutputData, OutputData } from '../../types';
 import { blocksToHtml } from './blocks-to-html';
 import type { BlocksToHtmlOptions } from './blocks-to-html';
 
-
 /**
  * An element in the view tree: lowercase tag name, sanitized attributes as a
  * plain string record, ordered children.
@@ -90,6 +89,9 @@ const mapChildren = (nodes: HtmlChildNode[]): ViewNode[] => {
   });
 };
 
+/** Parse in a <div> context to match the sanitizer's; the parser only reads it, so it is shared. */
+const DIV_CONTEXT = parseFragment('<div></div>').childNodes[0] as HtmlElement;
+
 /**
  * Render a saved Blok document to a framework-agnostic JSON tree,
  * synchronously and DOM-free. Same options and sanitization pipeline as
@@ -111,9 +113,7 @@ export const blocksToViewNodes = (
     return [];
   }
 
-  /** Parse in a <div> context to match the sanitizer's parsing context. */
-  const contextElement = parseFragment('<div></div>').childNodes[0] as HtmlElement;
-  const fragment = parseFragment(contextElement, html);
+  const fragment = parseFragment(DIV_CONTEXT, html);
 
   return mapChildren(fragment.childNodes);
 };

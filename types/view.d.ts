@@ -646,7 +646,7 @@ export declare function blocksToViewNodes(
 
 /**
  * Sanitize an HTML fragment against a sanitizer config without a DOM
- * (parse5-backed; matches the editor's html-janitor semantics).
+ * (built on Blok's own HTML parser; matches the editor's html-janitor semantics).
  *
  * @param html - HTML fragment
  * @param config - tag → rule allowlist, or the `'plaintext'` sentinel

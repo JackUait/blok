@@ -472,8 +472,9 @@ test.describe('W4D board actions that write many rows', () => {
     expect(await viewSorts(page)).toEqual([]);
     // Card one was dropped above Card two, so it now comes first.
     expect(await position(page, 'row-1') < await position(page, 'row-2')).toBe(true);
-    // Manual order is per view: the list pins the moved card at its old key.
-    expect(await listOrder(page)).toEqual({ 'row-2': before.two });
+    // Manual order is per view: the list pins every card the drop re-keyed at its old key.
+    // Every new key has a random tail, so no new key equals a stored one and both cards are re-keyed.
+    expect(await listOrder(page)).toEqual({ 'row-1': before.one, 'row-2': before.two });
 
     await park(page);
     await undo(page);

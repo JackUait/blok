@@ -6,6 +6,7 @@
  *
  * The fixture was serialized from the real Prism before it was removed.
  */
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +65,32 @@ const serialize = (root: unknown): unknown => {
   return walk(root, '$');
 };
 
+/**
+ * Patterns Blok changed on purpose. Each holds a hash of Prism's serialized
+ * value, so a Prism bump that touches the pattern fails here and needs a new
+ * review, and a hash of Blok's value, so it cannot drift unnoticed.
+ */
+const DEVIATIONS: Array<{ path: Array<string | number>; prism: string; blok: string; reason: string }> = [
+  {
+    path: ['csharp', 'return-type', 'pattern'],
+    prism: '5bb72b67bb039ff4',
+    blok: 'f17b1440026e72ae',
+    reason: 'typeExpressionFromChainStart: a start inside a dotted name is skipped, so long names stay linear',
+  },
+  {
+    path: ['csharp', 'class-name', 7, 'pattern'],
+    prism: 'aa66d7eea3741b07',
+    blok: '4102fbbb7a6b8f31',
+    reason: 'typeExpressionFromChainStart: a start inside a dotted name is skipped, so long names stay linear',
+  },
+];
+
+const hash = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
+
+const at = (root: unknown, path: Array<string | number>): Record<string | number, unknown> => {
+  return path.slice(0, -1).reduce<unknown>((node, key) => (node as Record<string | number, unknown>)[key], root) as Record<string | number, unknown>;
+};
+
 describe('grammar structure matches Prism 1.30.0', () => {
   it('builds the same grammars with every language loaded', async () => {
     const hl = createHighlighter();
@@ -77,6 +104,15 @@ describe('grammar structure matches Prism 1.30.0', () => {
     const actual = serialize({ ...hl.languages }) as Record<string, unknown>;
 
     expect(Object.keys(actual)).toEqual(Object.keys(expected));
+
+    for (const { path, prism, blok, reason } of DEVIATIONS) {
+      const key = path[path.length - 1];
+      const expectedParent = at(expected, path);
+
+      expect(hash(expectedParent[key]), `Prism side of ${path.join('.')}`).toBe(prism);
+      expect(hash(at(actual, path)[key]), `${path.join('.')}: ${reason}`).toBe(blok);
+      expectedParent[key] = at(actual, path)[key];
+    }
 
     for (const name of Object.keys(expected)) {
       expect(JSON.stringify(actual[name], null, 1), name).toBe(JSON.stringify(expected[name], null, 1));

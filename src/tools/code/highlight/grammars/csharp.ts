@@ -83,6 +83,22 @@ export const define = (hl: Highlighter): void => {
   const tuple = replace(/\(<<0>>+(?:,<<0>>+)+\)/.source, [tupleElement]);
   const typeExpression = replace(/(?:<<0>>|<<1>>)(?:\s*(?:\?\s*)?<<2>>)*(?:\s*\?)?/.source, [tuple, identifier, array]);
 
+  /*
+   * Not Prism: a typeExpression for unanchored patterns. A start inside a dotted
+   * name re-scans the rest of it, so a long name went quadratic. Such a start
+   * can only match what an earlier, non-keyword name in the same chain already
+   * tried, so the lookbehind skips it and the output stays the same. `start`
+   * must be the pattern's own start check (`\b` or nothing), or `@this.Foo bar`
+   * changes. The trailing `@?` also skips a start just after the @ of `@name`.
+   * The first-char lookahead keeps the lookbehind off whitespace runs.
+   */
+  const typeExpressionFromChainStart = (start: string): string => {
+    const notMidChain = replace(/(?=[@A-Za-z_])(?<!<<0>>(?!<<1>>)<<2>>\s*\.\s*(?:<<2>>\s*\.\s*)*?@?)/.source, [start, nonTypeKeywords, genericName]);
+    const chainIdentifier = replace(/(?!<<0>>)<<1>><<2>>(?:\s*\.\s*<<2>>)*/.source, [nonTypeKeywords, notMidChain, genericName]);
+
+    return replace(/(?:<<0>>|<<1>>)(?:\s*(?:\?\s*)?<<2>>)*(?:\s*\?)?/.source, [tuple, chainIdentifier, array]);
+  };
+
   const typeInside = {
     'keyword': keywords,
     'punctuation': /[<>()?,.:[\]]/
@@ -163,7 +179,7 @@ export const define = (hl: Highlighter): void => {
       {
         // Variable, field and parameter declaration
         // (Foo bar, Bar baz, Foo[,,] bay, Foo<Bar, FooBar<Bar>> bax)
-        pattern: re(/\b<<0>>(?=\s+(?!<<1>>|with\s*\{)<<2>>(?:\s*[=,;:{)\]]|\s+(?:in|when)\b))/.source, [typeExpression, nonContextualKeywords, name]),
+        pattern: re(/\b<<0>>(?=\s+(?!<<1>>|with\s*\{)<<2>>(?:\s*[=,;:{)\]]|\s+(?:in|when)\b))/.source, [typeExpressionFromChainStart(/\b/.source), nonContextualKeywords, name]),
         inside: typeInside
       }
     ],
@@ -210,7 +226,7 @@ export const define = (hl: Highlighter): void => {
       // Foo<Bar> ForBar(); Foo IFoo.Bar() => 0
       // int this[int index] => 0; T IReadOnlyList<T>.this[int index] => this[index];
       // int Foo => 0; int Foo { get; set } = 0;
-      pattern: re(/<<0>>(?=\s+(?:<<1>>\s*(?:=>|[({]|\.\s*this\s*\[)|this\s*\[))/.source, [typeExpression, identifier]),
+      pattern: re(/<<0>>(?=\s+(?:<<1>>\s*(?:=>|[({]|\.\s*this\s*\[)|this\s*\[))/.source, [typeExpressionFromChainStart(''), identifier]),
       inside: typeInside,
       alias: 'class-name'
     },

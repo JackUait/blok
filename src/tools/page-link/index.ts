@@ -6,9 +6,12 @@ import type {
   BlockToolConstructorOptions,
   BlockToolData,
   SanitizerConfig,
+  ToolboxConfig,
+  ToolboxConfigEntry,
+  ToolboxPickContext,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconLock } from '../../components/icons';
+import { IconArrowDiagonal, IconLock } from '../../components/icons';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
   PAGE_ICON_CLASSES,
@@ -21,7 +24,10 @@ import {
 } from '../page/constants';
 import { appendDraftBadge } from '../page/draft-badge';
 import { pageIconNode } from '../page/hover-preview';
+import { PagePicker } from '../page/page-picker';
+import { searchVisiblePages } from '../page/search-pages';
 import type { PageConfig, PageInfo } from '../page/types';
+import { renderPageLinkPreview } from './preview';
 
 export interface PageLinkData extends BlockToolData {
   pageId: string;
@@ -49,6 +55,64 @@ export class PageLink implements BlockTool {
     this.config = options.config ?? {};
     this.data = { pageId: typeof options.data?.pageId === 'string' ? options.data.pageId : '' };
     this.isProbe = options.origin === 'probe';
+  }
+
+  /** "Link to page" in the "/" menu. It reads this tool's own config; "@" reads the page tool's. */
+  public static get toolbox(): ToolboxConfig {
+    return [
+      {
+        icon: IconArrowDiagonal,
+        titleKey: 'pageLink',
+        searchTerms: ['link to page', 'link', 'page', 'reference', 'mention'],
+        section: 'basic',
+        preview: { render: renderPageLinkPreview, descriptionKey: 'toolbox.preview.pageLink' },
+      },
+    ];
+  }
+
+  /** Without `search` there is nothing to pick from, so the entry stays hidden. */
+  public static filterToolbox(entries: ToolboxConfigEntry[], config: PageConfig): ToolboxConfigEntry[] {
+    return config.search === undefined ? [] : entries;
+  }
+
+  /**
+   * Asks which page to link after "/" Link to page. Resolves with the picked
+   * page; rejects on every other close, so the toolbox inserts nothing.
+   */
+  public static pickInsert(config: PageConfig, { api, anchor, signal }: ToolboxPickContext): Promise<PageLinkData> {
+    return new Promise<PageLinkData>((resolve, reject) => {
+      if (config.search === undefined || signal.aborted) {
+        reject(new Error('Link to page was cancelled'));
+
+        return;
+      }
+
+      const t = (key: string): string => api.i18n.t(key);
+      const picker = new PagePicker(t('toolNames.pageLink'), t('tools.page.unresolved'), t('tools.page.draft'), t('popover.nothingFound'));
+      const search = { token: 0 };
+      const onAbort = (): void => picker.close();
+      const show = async (query: string): Promise<void> => {
+        const token = ++search.token;
+        const results = await searchVisiblePages(config, query).catch((): [] => []);
+
+        if (token === search.token && picker.opened) {
+          picker.setResults(results);
+        }
+      };
+
+      signal.addEventListener('abort', onAbort, { once: true });
+      picker.open('', anchor, (pageId) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve({ pageId });
+      }, {
+        searchField: { placeholder: t('tools.page.search'), onQuery: (query) => void show(query) },
+        onClose: () => {
+          signal.removeEventListener('abort', onAbort);
+          reject(new Error('Link to page was cancelled'));
+        },
+      });
+      void show('');
+    });
   }
 
   public static get sanitize(): SanitizerConfig {

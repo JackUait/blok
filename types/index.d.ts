@@ -79,6 +79,7 @@ export {
   ToolboxConfig,
   ToolboxConfigEntry,
   ToolboxPreviewConfig,
+  ToolboxPickContext,
   ToolSettings,
   ToolConfig,
   BlockToolDescription,

@@ -42,12 +42,15 @@ export const createOptionPill = (option: Pick<SelectOption, 'label' | 'color'>):
 
 /** A group header's pill: a status option looks as its cell draws it, dot and all. */
 export const createGroupPill = (option: SelectOption, property: PropertyDefinition | undefined): HTMLSpanElement => {
-  if (property?.type !== 'status') {
+  // Grouped by status group, the "option" is a group: its header look is unmeasured, so it stays plain.
+  const group = property?.type === 'status' ? statusGroupOf(property, option.id) : undefined;
+
+  if (group === undefined) {
     return createOptionPill(option);
   }
   const pill = createOptionPill(shownStatusOption(option));
 
-  pill.setAttribute('data-status-group', statusGroupOf(property, option.id)?.kind ?? 'todo');
+  pill.setAttribute('data-status-group', group.kind);
 
   return pill;
 };

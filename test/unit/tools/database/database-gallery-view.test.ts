@@ -77,6 +77,24 @@ const pointer = (type: string, target: EventTarget, x: number, y: number): void 
 };
 
 describe('DatabaseGalleryView', () => {
+  // Grouped by status group, a header is a group, not an option. Notion's look for it is unmeasured, so it stays a plain pill.
+  it('a group of a status property grouped by group keeps the plain pill', () => {
+    const status: PropertyDefinition = { id: 'p-status', name: 'Status', type: 'status', position: 'a4',
+      status: { groups: [{ id: 'inProgress', kind: 'inProgress', name: 'In progress', color: 'blue', position: 'a1' }] },
+      config: { options: [{ id: 'ip', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' }] } };
+    const { root } = mount({
+      schema: [...schema, status],
+      view: galleryView({ groupBy: 'p-status', groupByStatus: 'group' }),
+      groups: [{ key: 'inProgress', label: 'In progress', option: { id: 'inProgress', label: 'In progress', color: 'blue', position: 'a1' }, rows: [], total: 0 }],
+      grouped: true,
+    });
+    const pill = root.querySelector<HTMLElement>('[data-blok-database-gallery-group-header] [data-blok-database-option-pill]');
+
+    expect(pill?.hasAttribute('data-status-group')).toBe(false);
+    expect(pill?.getAttribute('data-color')).toBe('blue');
+    root.remove();
+  });
+
   // notion-live-4/board-cards-top.png: a status pill always has its dot, also in a group header.
   it('a group of a status property draws the status pill with its dot', () => {
     const status: PropertyDefinition = { id: 'p-status', name: 'Status', type: 'status', position: 'a4',

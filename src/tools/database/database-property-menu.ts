@@ -325,7 +325,7 @@ export class DatabasePropertyMenu {
       ...tail.map((entry) => this.entry(entry, property)),
       ...this.customizeItem(),
     ];
-    this.show(items, anchor, '240px', DATABASE_HEADER_MENU_CLASS, typed !== undefined);
+    this.show(items, anchor, '220px', DATABASE_HEADER_MENU_CLASS, typed !== undefined);
     const input = name.querySelector('input');
 
     if (typed !== undefined && input !== null) input.value = typed;

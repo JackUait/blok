@@ -976,6 +976,15 @@ describe('DatabasePropertyMenu', () => {
       menu.destroy();
     });
 
+    // notion-spec-2 §24.10: 220 wide for Text, Number, Select and Status; Text has no Edit property.
+    it.each(['text', 'number', 'select', 'status'] as const)('opens the %s header menu at least 220 wide', (type) => {
+      const { menu } = headerMenu(prop(type));
+
+      expect(captured.popovers.at(-1)?.params.minWidth).toBe('220px');
+      expect(lastItems().some((item) => item.name === 'editProperty')).toBe(type !== 'text');
+      menu.destroy();
+    });
+
     it('picking a format on the row page panel keeps the panel open with the new format', () => {
       const cb = callbacks();
       const onClose = vi.fn();

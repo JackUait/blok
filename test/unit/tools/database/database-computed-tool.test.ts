@@ -216,7 +216,7 @@ describe('DatabaseTool — computed properties', () => {
     ]);
     const { el } = build(doc);
 
-    expect(cell(el, 'a', 'total')?.textContent).toBe('7');
+    expect(cell(el, 'a', 'total')?.querySelector('[data-blok-database-cell]')?.textContent).toBe('7');
   });
 
   it('takes a deleted row out of the relations that point at it, in the same step', () => {
@@ -287,7 +287,7 @@ describe('DatabaseTool — computed properties', () => {
     vi.mocked(doc.api.blocks.getById).mockImplementation(((id: string) => (id === 'tasks-db' ? tasksBlock : null)) as never);
     doc.api.events.emit('database rendered', { databaseId: 'tasks-db' });
 
-    expect(cell(el, 'p1', 'effort')?.textContent).toBe('6');
+    expect(cell(el, 'p1', 'effort')?.querySelector('[data-blok-database-cell]')?.textContent).toBe('6');
   });
 
   it('answers another database with its schema and computed rows', () => {

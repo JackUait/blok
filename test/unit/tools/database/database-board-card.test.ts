@@ -175,6 +175,19 @@ describe('DatabaseBoardView card parity', () => {
       expect(chip?.textContent?.trim()).toBe('a.png');
     });
 
+    // notion-spec-2 §21.7: a board card's URL hides the scheme and greys the path, as the table does.
+    it('shows a card URL without its scheme, the path in its own span', () => {
+      const board = mount({
+        view: boardView({ properties: [{ id: 'link', visible: true }] }),
+        getRows: () => [{ id: 'r1', position: 'a0', properties: { title: 'One', link: 'https://example.com/a/b' } }],
+      });
+      const link = card(board, 'r1').querySelector('[data-property-id="link"] [data-blok-database-cell-link]');
+
+      expect(link?.textContent).toBe('example.com/a/b');
+      expect(link?.querySelector('[data-blok-database-url-path]')?.textContent).toBe('/a/b');
+      expect(link?.getAttribute('href')).toBe('https://example.com/a/b');
+    });
+
     it('marks each property with its wrap setting', () => {
       const board = mount({ view: boardView({ properties: [{ id: 'notes', visible: true, wrap: true }] }) });
 

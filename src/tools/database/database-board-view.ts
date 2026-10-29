@@ -881,8 +881,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
         continue;
       }
 
+      // notion-spec-2 §21.7: a card URL drops its scheme and greys its path, as in the table.
       const cell = renderCellValue(property, readPropertyValue(row, property), {
-        ...this.settings.cellContext, i18n: this.i18n, readOnly: true, locale: this.settings.locale, ...rowCellContext(row, property.id),
+        ...this.settings.cellContext, i18n: this.i18n, readOnly: true, locale: this.settings.locale, shortUrls: true, ...rowCellContext(row, property.id),
       });
 
       if (cell.hasAttribute('data-empty')) {

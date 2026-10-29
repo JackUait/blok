@@ -5208,7 +5208,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   justify-content: center;
   width: 20px;
   height: 20px;
-  color: var(--blok-database-tab-text-active);
+  color: var(--blok-database-glyph);
   flex-shrink: 0;
   transition: color 100ms ease;
 }

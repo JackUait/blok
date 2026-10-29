@@ -150,3 +150,9 @@ describe('header menu values in dark (§23.4)', () => {
       .toContain('color: var(--blok-database-value-chevron)');
   });
 });
+
+describe('"Add a property" type list in dark (§23.4)', () => {
+  it('draws the type icons in the glyph ink, rgb(230, 229, 227) in dark; light follows the row ink', () => {
+    expect(ruleBody('[data-blok-database-property-type-option-icon]')).toContain('color: var(--blok-database-glyph)');
+  });
+});

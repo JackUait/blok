@@ -8407,7 +8407,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   justify-content: center;
   width: 20px;
   height: 20px;
-  color: var(--blok-database-tab-text-active);
+  color: var(--blok-database-glyph);
   flex-shrink: 0;
   transition: color 100ms ease;
 }

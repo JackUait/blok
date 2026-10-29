@@ -102,6 +102,16 @@ const leaveIsGuarded = (page: Page): Promise<boolean> =>
     return event.defaultPrevented;
   });
 
+/** Whether this browser build can encode the MP4 target, H.264 and AAC. */
+const canEncodeMp4 = (page: Page): Promise<boolean> =>
+  page.evaluate(async () => {
+    if (typeof VideoEncoder === 'undefined' || typeof AudioEncoder === 'undefined') return false;
+    const video = await VideoEncoder.isConfigSupported({ codec: 'avc1.42001f', width: 320, height: 240 });
+    const audio = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 48_000, numberOfChannels: 2 });
+
+    return video.supported === true && audio.supported === true;
+  });
+
 const converting = (page: Page): ReturnType<Page['getByTestId']> =>
   page.locator(VIDEO_BLOCK_SELECTOR).getByTestId('video-converting');
 
@@ -131,9 +141,9 @@ test('the original plays at once, then the video gains every format this browser
 
 test('asks before the page is left while it converts, and not after', async ({ page }) => {
   test.setTimeout(60_000);
-  // MP4 re-encodes the VP9 clip; a WebM copy can finish before the guard is read.
-  await createBlok(page, ['mp4']);
-  await upload(page);
+  // VP9 profile 1 is never copied, so this always re-encodes; a copy can finish before the guard is read.
+  await createBlok(page, ['webm']);
+  await upload(page, ODD_PATH);
 
   await expect(converting(page)).toBeVisible();
   expect(await leaveIsGuarded(page)).toBe(true);
@@ -191,6 +201,7 @@ test('a video longer than the cap still gains WebM, copied as it is', async ({ p
 
 test('an odd-size video still gains an MP4', async ({ page }) => {
   test.setTimeout(60_000);
+  test.skip(!(await canEncodeMp4(page)), 'This browser build has no H.264 or AAC encoder');
   await createBlok(page, ['mp4']);
   await upload(page, ODD_PATH);
   await expect(page.locator(VIDEO_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');

@@ -164,6 +164,11 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-file-chip-icon] svg')).toMatch(/width:\s*20px/);
   });
 
+  // notion-spec-2 §21.3, §22.6: the name starts at glyph + 24, a 4px gap, wherever a file chip shows.
+  it('leaves 4px between every file chip\'s glyph and its name', () => {
+    expect(ruleBody('[data-blok-database-file-chip]')).toMatch(/gap:\s*var\(--blok-space-1\)/);
+  });
+
   it('floats the sub-item toggle too, so a nested title stays on the toggle\'s line', () => {
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-subitem-toggle]')).toMatch(/float:\s*inline-start/);
   });

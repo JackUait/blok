@@ -6560,10 +6560,11 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   line-height: 21px;
 }
 
-/* File chip: 24px, padding 0 6px, radius 4px (research/08). */
+/* File chip: 24px, padding 0 6px, radius 4px (research/08). The name starts 4px after the glyph (notion-spec-2 §21.3, §22.6). */
 [data-blok-database-file-chip] {
   display: inline-flex;
   align-items: center;
+  gap: var(--blok-space-1);
   height: 24px;
   padding: 0 var(--blok-space-1-5);
   border-radius: var(--blok-radius-control-sm);
@@ -11625,11 +11626,6 @@ textarea[data-blok-database-cell-input] {
   height: 20px;
   line-height: 20px;
   max-width: 200px;
-}
-
-/* notion-spec-2 §22.6: on a board card the name starts 4px after the glyph. */
-[data-blok-database-card-property] [data-blok-database-file-chip] {
-  gap: var(--blok-space-1);
 }
 
 [data-blok-database-gallery-property] [data-blok-database-file-chip] > [data-blok-database-cell-link],

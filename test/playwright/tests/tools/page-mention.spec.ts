@@ -164,6 +164,40 @@ test.describe('Page mention', () => {
     expect(saved).toEqual([{ text: 'See' }, { embed: { page: { id: 'roadmap' } } }, { text: '\u00a0next' }]);
   });
 
+  test('a mention of a draft page shows a Draft mark in its name, not in its text', async ({ page }) => {
+    await resetBlok(page);
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder,
+        data: { blocks: [{ id: 'target', type: 'paragraph', data: { text: 'See <a data-blok-page-id="roadmap">Page</a>' } }] },
+        tools: {
+          page: {
+            class: window.defaultBlockTools.page.class,
+            config: {
+              href: (pageId: string) => `https://workspace.test/pages/${pageId}`,
+              resolve: () => ({ title: 'Roadmap', status: 'draft' }),
+            },
+          },
+        },
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const mention = page.getByRole('link', { name: 'Roadmap Draft' });
+    const mark = mention.getByTestId('page-reference-draft');
+
+    await expect(mention).toBeVisible();
+    await expect(mention.getByTestId('page-reference-title')).toHaveText('Roadmap');
+    expect(await mark.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('"Draft"');
+    await expect(mark).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
+    const saved: unknown = (await saveRaw(page)).blocks[0]?.data.text;
+
+    expect(saved).toEqual([{ text: 'See ' }, { embed: { page: { id: 'roadmap' } } }]);
+  });
+
   test('a link that is not a page offers no mention', async ({ page }) => {
     const editable = page.locator('[data-blok-element-content] [contenteditable="true"]').first();
 

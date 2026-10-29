@@ -1809,6 +1809,10 @@
   color: var(--blok-text-primary) !important;
 }
 
+[data-blok-interface=link-hover-card] {
+  font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
+}
+
 [data-blok-popover]:not([data-blok-popover-inline]), [data-blok-interface=tooltip] {
   color: initial !important;
   font-family: var(--blok-font-family, var(--blok-font-sans)) !important;

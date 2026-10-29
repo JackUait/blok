@@ -140,6 +140,11 @@
   color: var(--blok-text-primary) !important;
 }
 
+/* Body-mounted, so it would take the host page's font. Its parts set their own ink. */
+[data-blok-interface=link-hover-card] {
+  font-family: var(--blok-font-family, var(--blok-font-sans)) !important;
+}
+
 /*
   Reset inherited CSS properties on body-level popover and tooltip roots.
   Only inherited properties can cascade in from host-page styles;

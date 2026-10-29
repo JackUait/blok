@@ -114,3 +114,27 @@ test('a file name in a wrapping table stays on one line in its 24px chip, cut wi
   expect(await style(link, ['white-space', 'text-overflow'])).toEqual({ 'white-space': 'nowrap', 'text-overflow': 'ellipsis' });
   expect(await link.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
 });
+
+test('the link hover card uses Blok\'s sans font on a page that sets none', async ({ page }) => {
+  await page.evaluate(async () => {
+    await window.blokInstance?.destroy?.();
+    window.blokInstance = undefined;
+    document.getElementById('blok')?.remove();
+    const holder = document.createElement('div');
+
+    holder.id = 'blok';
+    document.body.appendChild(holder);
+    window.blokInstance = new window.Blok({
+      holder,
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'see <a href="https://example.com/">this link</a> now' } }] },
+    });
+    await window.blokInstance.isReady;
+  });
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).not.toMatch(/sans/);
+
+  await page.getByText('this link').hover();
+  const card = page.getByTestId('link-hover-card');
+
+  await expect(card).toBeVisible();
+  expect((await style(card, ['font-family']))['font-family']).toMatch(/^ui-sans-serif/);
+});

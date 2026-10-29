@@ -25,4 +25,12 @@ describe('default sans font', () => {
 
     expect(family?.[1].trim()).toBe(NOTION_STACK.replace(/"/g, '\''));
   });
+
+  // The card is body-mounted, so without its own rule it takes the host page's font (Times on a bare page).
+  it('gives the body-mounted link hover card the Blok sans font', () => {
+    const css = readFileSync(ISOLATION_PATH, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /\[data-blok-interface=link-hover-card\][^{]*\{([^}]*)\}/.exec(css);
+
+    expect(rule?.[1]).toMatch(/font-family:\s*var\(--blok-font-family, var\(--blok-font-sans\)\)/);
+  });
 });

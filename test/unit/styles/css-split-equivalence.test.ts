@@ -1281,6 +1281,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_RELATION_SCOPE_ICON_BYTES = 456;
     // database.css: a table file name stays on one line in a wrapping cell (notion-spec-2 §18.1).
     const DATABASE_TABLE_FILE_NAME_LINE_BYTES = 99;
+    // isolation.css: the body-mounted link hover card gets Blok's font, not the host page's.
+    const LINK_HOVER_CARD_FONT_BYTES = 205;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1568,7 +1570,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_RELATION_CHIP_BYTES
       + DATABASE_SELECT_SEARCH_WIDTH_BYTES
       + DATABASE_RELATION_SCOPE_ICON_BYTES
-      + DATABASE_TABLE_FILE_NAME_LINE_BYTES;
+      + DATABASE_TABLE_FILE_NAME_LINE_BYTES
+      + LINK_HOVER_CARD_FONT_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

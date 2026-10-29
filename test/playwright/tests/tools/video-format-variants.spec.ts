@@ -131,7 +131,8 @@ test('the original plays at once, then the video gains every format this browser
 
 test('asks before the page is left while it converts, and not after', async ({ page }) => {
   test.setTimeout(60_000);
-  await createBlok(page, ['webm']);
+  // MP4 re-encodes the VP9 clip; a WebM copy can finish before the guard is read.
+  await createBlok(page, ['mp4']);
   await upload(page);
 
   await expect(converting(page)).toBeVisible();
@@ -194,12 +195,6 @@ test('an odd-size video still gains an MP4', async ({ page }) => {
   await upload(page, ODD_PATH);
   await expect(page.locator(VIDEO_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');
 
-  const original = (await saved(page)).url;
-
-  await expect(converting(page)).toBeHidden({ timeout: 45_000 });
-
-  const after = await saved(page);
-
-  expect(after.mimeType).toBe('video/mp4');
-  expect(after.url).not.toBe(original);
+  // A small clip can finish before the first save is read, so wait on the result itself.
+  await expect.poll(async () => (await saved(page)).mimeType, { timeout: 45_000 }).toBe('video/mp4');
 });

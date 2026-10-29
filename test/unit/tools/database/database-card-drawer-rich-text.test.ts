@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
+import { Blok } from '../../../../src/blok';
+import { EDITOR_CONSTRUCTOR, registerEditorConstructor } from '../../../../src/components/utils/editor-constructor';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import type { OutputData } from '../../../../types';
@@ -71,9 +73,12 @@ const openDrawer = async (
 describe('DatabaseCardDrawer — the body is stored as HTML', { timeout: 60_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // On a real page the host editor exists before a card opens.
+    registerEditorConstructor(Blok);
   });
 
   afterEach(() => {
+    Reflect.deleteProperty(globalThis, EDITOR_CONSTRUCTOR);
     document.body.innerHTML = '';
     vi.restoreAllMocks();
   });

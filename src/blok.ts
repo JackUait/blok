@@ -8,6 +8,7 @@ import { SettingChanged } from './components/events/SettingChanged';
 import type { SettingChangedPayload } from './components/events/SettingChanged';
 import { getBlokVersion, isObject, isFunction, logLabeled } from './components/utils';
 import { announce } from './components/utils/announcer';
+import { registerEditorConstructor } from './components/utils/editor-constructor';
 import { prefersReducedMotion } from './components/utils/reduced-motion';
 import {
   readyState,
@@ -246,6 +247,8 @@ class Blok {
    * @param {BlokConfig|string|undefined} [configuration] - user configuration
    */
   constructor(configuration?: BlokConfig|string) {
+    // The base class, not new.target: a host subclass must not become a card body editor.
+    registerEditorConstructor(Blok);
     this.initialConfiguration = isObject(configuration)
       ? { ...configuration }
       : configuration;

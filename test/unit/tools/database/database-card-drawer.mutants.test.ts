@@ -32,12 +32,12 @@ const nested = vi.hoisted((): NestedEditorState => ({
 }));
 
 /**
- * The drawer builds its description editor through a dynamic `import('../../blok')`,
+ * The drawer builds its description editor with the page's editor constructor,
  * so the constructor arguments and the save/destroy calls are the only place the
  * editor lifecycle is observable from the outside.
  */
-vi.mock('../../../../src/blok', () => ({
-  Blok: class MockBlok {
+vi.mock('../../../../src/components/utils/editor-constructor', () => ({
+  loadEditorConstructor: async () => class MockBlok {
     public readonly isReady = Promise.resolve();
 
     private readonly probe: NestedEditorProbe;

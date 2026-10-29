@@ -1070,7 +1070,8 @@ describe('a consumer that imports one tool gets only that tool (tree shaking)', 
     const kept = Object.entries(UNUSED_TOOL_FINGERPRINTS).filter(([, print]) => code.includes(print)).map(([tool]) => tool)
     expect(kept).toEqual([])
     expect(code.includes(PARAGRAPH_FINGERPRINT)).toBe(true)
-    // esbuild, the larger of the two, measured 944,035 bytes; ~10% headroom.
-    expect(Buffer.byteLength(code)).toBeLessThan(1024 * 1024)
+    // Measured 368,366 (rolldown) and 477,761 (esbuild) bytes. ~10% headroom over esbuild.
+    // A tool that imports src/blok (even with import()) keeps the whole core here: ~500 KB more.
+    expect(Buffer.byteLength(code)).toBeLessThan(0.5 * 1024 * 1024)
   }, 60_000)
 })

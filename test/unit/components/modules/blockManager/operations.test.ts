@@ -3604,7 +3604,7 @@ describe('BlockOperations', () => {
      *
      * `paste()` calls the tool's `onPaste` hook inside a *second*
      * `withAtomicOperation` call — see `operations.ts:~1309`. Some tools
-     * (database card drawer → dynamic `import('../../blok')`, code tool →
+     * (database card drawer → async body editor, code tool →
      * async highlighter/mermaid/katex imports) perform async DOM mutation
      * from inside `onPaste`. If that RAF is dropped, the async work runs
      * after `isSyncingFromYjs` flips back to false and any

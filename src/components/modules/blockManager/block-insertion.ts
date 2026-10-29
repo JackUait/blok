@@ -1374,8 +1374,8 @@ export class BlockInsertion {
     // during cell initialization also skip Yjs sync.
     //
     // `extendThroughRAF: true` is critical for tools whose `onPaste()`
-    // performs async DOM mutation — e.g. database card drawer dynamic
-    // `import('../../blok')`, code tool shiki/mermaid/katex imports.
+    // performs async DOM mutation — e.g. the database card drawer's async
+    // body editor, code tool shiki/mermaid/katex imports.
     // Without it, the atomic-op cleanup fires synchronously on return
     // and the async work lands after `isSyncingFromYjs` flips back to
     // false, letting MutationObserver-triggered `syncBlockDataToYjs`

@@ -9,7 +9,7 @@ import { hover, shownHint } from './hint-harness';
 
 const { stubBlokModule } = vi.hoisted(() => ({
   stubBlokModule: () => ({
-    Blok: vi.fn(function stubBlok() {
+    loadEditorConstructor: async () => vi.fn(function stubBlok() {
       return {
         isReady: Promise.resolve(),
         save: vi.fn().mockResolvedValue({ blocks: [] }),
@@ -19,7 +19,7 @@ const { stubBlokModule } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock('../../../../src/blok', stubBlokModule);
+vi.mock('../../../../src/components/utils/editor-constructor', stubBlokModule);
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1',
@@ -66,17 +66,17 @@ describe('DatabaseCardDrawer', () => {
     // Tests that swap the editor module must put the stub back. Most drawers are
     // never destroyed, so a real editor would outlive jsdom and its debounced
     // selectionchange timer would throw "window is not defined".
-    const { Blok } = await import('../../../../src/blok');
+    const { loadEditorConstructor } = await import('../../../../src/components/utils/editor-constructor');
 
-    expect(vi.isMockFunction(Blok)).toBe(true);
+    expect(vi.isMockFunction(await loadEditorConstructor())).toBe(true);
   });
 
-  // drawer.open() boots the nested editor through a dynamic import no test awaits,
+  // drawer.open() boots the nested editor asynchronously and no test awaits it,
   // so a real one would construct inside whichever test runs next.
   it('never loads the real editor for the nested description', async () => {
-    const { Blok } = await import('../../../../src/blok');
+    const { loadEditorConstructor } = await import('../../../../src/components/utils/editor-constructor');
 
-    expect(vi.isMockFunction(Blok)).toBe(true);
+    expect(vi.isMockFunction(await loadEditorConstructor())).toBe(true);
   });
 
   it('creates a drawer element ([data-blok-database-drawer]) when opened', () => {
@@ -1712,8 +1712,8 @@ describe('DatabaseCardDrawer', () => {
       });
 
       vi.resetModules();
-      vi.doMock('../../../../src/blok', () => ({
-        Blok: mockBlokConstructor,
+      vi.doMock('../../../../src/components/utils/editor-constructor', () => ({
+        loadEditorConstructor: async () => mockBlokConstructor,
       }));
 
       const { DatabaseCardDrawer: DrawerWithMock } = await import(
@@ -1760,7 +1760,7 @@ describe('DatabaseCardDrawer', () => {
       expect(blokConfig.inlineToolbar).toEqual(['bold', 'italic']);
 
       drawer.destroy();
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
     });
 
     it('creates nested Blok without tools when toolsConfig is not provided', async () => {
@@ -1771,8 +1771,8 @@ describe('DatabaseCardDrawer', () => {
       });
 
       vi.resetModules();
-      vi.doMock('../../../../src/blok', () => ({
-        Blok: mockBlokConstructor,
+      vi.doMock('../../../../src/components/utils/editor-constructor', () => ({
+        loadEditorConstructor: async () => mockBlokConstructor,
       }));
 
       const { DatabaseCardDrawer: DrawerWithMock } = await import(
@@ -1805,7 +1805,7 @@ describe('DatabaseCardDrawer', () => {
       expect(blokConfig.tools).toBeUndefined();
 
       drawer.destroy();
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
     });
   });
 
@@ -1822,11 +1822,11 @@ describe('DatabaseCardDrawer', () => {
     const importFactory = vi.fn(async () => {
       await blockedImport;
 
-      return { Blok: mockBlokConstructor };
+      return mockBlokConstructor;
     });
 
     vi.resetModules();
-    vi.doMock('../../../../src/blok', importFactory);
+    vi.doMock('../../../../src/components/utils/editor-constructor', () => ({ loadEditorConstructor: importFactory }));
 
     const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
     const rowPages = {
@@ -1862,7 +1862,7 @@ describe('DatabaseCardDrawer', () => {
       gate.release();
       await vi.dynamicImportSettled();
       drawer.destroy();
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
     }
   }, 20000);
 
@@ -1882,7 +1882,7 @@ describe('DatabaseCardDrawer', () => {
     });
 
     vi.resetModules();
-    vi.doMock('../../../../src/blok', () => ({ Blok: mockBlokConstructor }));
+    vi.doMock('../../../../src/components/utils/editor-constructor', () => ({ loadEditorConstructor: async () => mockBlokConstructor }));
 
     const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
     const options = createOptions();
@@ -1901,7 +1901,7 @@ describe('DatabaseCardDrawer', () => {
     } finally {
       await vi.dynamicImportSettled();
       drawer.destroy();
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
     }
   }, 20000);
 
@@ -1926,7 +1926,7 @@ describe('DatabaseCardDrawer', () => {
     });
 
     vi.resetModules();
-    vi.doMock('../../../../src/blok', () => ({ Blok: mockBlokConstructor }));
+    vi.doMock('../../../../src/components/utils/editor-constructor', () => ({ loadEditorConstructor: async () => mockBlokConstructor }));
 
     const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
     const rowPages = {
@@ -1984,7 +1984,7 @@ describe('DatabaseCardDrawer', () => {
       await pendingSave;
       drawer.destroy();
       options.wrapper.remove();
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
     }
   }, 20000);
 
@@ -2012,7 +2012,7 @@ describe('DatabaseCardDrawer', () => {
       });
 
       vi.resetModules();
-      vi.doMock('../../../../src/blok', () => ({ Blok: mockBlokConstructor }));
+      vi.doMock('../../../../src/components/utils/editor-constructor', () => ({ loadEditorConstructor: async () => mockBlokConstructor }));
 
       const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
       const options = createOptions({ descriptionPropertyId: 'prop-desc' });
@@ -2032,7 +2032,7 @@ describe('DatabaseCardDrawer', () => {
         throw new Error('nested editor was not constructed');
       }
 
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
 
       return { drawer, options, config };
     };
@@ -2526,8 +2526,12 @@ describe('DatabaseCardDrawer', () => {
     // An earlier test's drawer can still be importing the editor. Without this wait, this test's import stalled when run in-file.
     await vi.dynamicImportSettled();
     vi.resetModules();
-    vi.doUnmock('../../../../src/blok');
+    vi.doUnmock('../../../../src/components/utils/editor-constructor');
 
+    const { Blok } = await import('../../../../src/blok');
+    const { registerEditorConstructor, EDITOR_CONSTRUCTOR } = await import('../../../../src/components/utils/editor-constructor');
+
+    registerEditorConstructor(Blok);
     const { Paragraph } = await import('../../../../src/tools/paragraph');
     const { DatabaseCardDrawer: DrawerWithRealBlok } = await import('../../../../src/tools/database/database-card-drawer');
     const { readyState } = await import('../../../../src/components/utils/ready-registry');
@@ -2565,7 +2569,8 @@ describe('DatabaseCardDrawer', () => {
       // The drawer destroys the editor only after its last save settles. A live
       // editor's debounced selectionchange timer fires after jsdom is gone.
       await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).toBeNull(); }, { timeout: 10000 });
-      vi.doMock('../../../../src/blok', stubBlokModule);
+      Reflect.deleteProperty(globalThis, EDITOR_CONSTRUCTOR);
+      vi.doMock('../../../../src/components/utils/editor-constructor', stubBlokModule);
     }
 
     // Catches a drawer from an earlier test whose late import booted a real editor here.

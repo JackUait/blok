@@ -24,9 +24,9 @@ const nestedEditor = vi.hoisted((): { configs: NestedEditorConfig[]; savePayload
   savePayload: { blocks: [] },
 }));
 
-// The drawer imports Blok when it opens, so the test captures that editor's callbacks.
-vi.mock('../../../../src/blok', () => ({
-  Blok: class MockBlok {
+// The drawer builds its nested editor when it opens, so the test captures that editor's callbacks.
+vi.mock('../../../../src/components/utils/editor-constructor', () => ({
+  loadEditorConstructor: async () => class MockBlok {
     readonly isReady = Promise.resolve();
 
     constructor(config: NestedEditorConfig) {

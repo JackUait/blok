@@ -3,14 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
 import { browserTabPlatform } from '../../../../src/components/modules/tabSync/platform';
 import { SETTINGS_CHANNEL } from '../../../../src/components/modules/tabSync/settings-channel';
+import { Blok } from '../../../../src/blok';
+import { EDITOR_CONSTRUCTOR, registerEditorConstructor } from '../../../../src/components/utils/editor-constructor';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 
 describe('DatabaseCardDrawer — nested editor and tab sync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // On a real page the host editor exists before a card opens.
+    registerEditorConstructor(Blok);
   });
 
   afterEach(() => {
+    Reflect.deleteProperty(globalThis, EDITOR_CONSTRUCTOR);
     document.body.innerHTML = '';
     vi.restoreAllMocks();
   });

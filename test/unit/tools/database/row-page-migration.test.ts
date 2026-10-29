@@ -23,8 +23,8 @@ const nestedEditor = vi.hoisted((): {
   saveResults: [],
 }));
 
-vi.mock('../../../../src/blok', () => ({
-  Blok: class MockBlok {
+vi.mock('../../../../src/components/utils/editor-constructor', () => ({
+  loadEditorConstructor: async () => class MockBlok {
     readonly isReady = Promise.resolve();
     readonly i18n = { update: vi.fn(async () => {}) };
 

@@ -60,6 +60,8 @@ import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
 import { RowPageTakeover } from './row-page-takeover';
 import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
+import { NoEditorConstructorError, loadEditorConstructor } from '../../components/utils/editor-constructor';
+import { logLabeled } from '../../components/utils/logger';
 import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
@@ -560,6 +562,7 @@ export class DatabaseCardDrawer {
   private templateRepeatOpen: ((anchor: HTMLElement) => void) | null = null;
   private currentRow: DatabaseRow | null = null;
   private editorInitVersion = 0;
+  private warnedNoEditor = false;
   private blokInstance: BlokInstance | null = null;
   private pageMount: { destroy(): void } | null = null;
   /** The page the holder shows or failed to mount. Kept while a peer's save drops `pageId`. */
@@ -3992,7 +3995,7 @@ export class DatabaseCardDrawer {
       this.attachedBodyRowId = null;
     }
 
-    import('../../blok').then(({ Blok }) => {
+    loadEditorConstructor().then((Blok) => {
       const rowId = row.id;
 
       if (this.currentRowId !== rowId || this.editorInitVersion !== initVersion) {
@@ -4053,8 +4056,13 @@ export class DatabaseCardDrawer {
 
       this.blokInstance = instance;
       this.isBodyChanged = isBodyChanged;
-    }).catch(() => {
-      // Blok import may fail in unit tests (jsdom), drawer still works for title
+    }).catch((error: unknown) => {
+      // The title still works either way. A missing editor is worth a warning: with
+      // tools and core from two Blok versions the body would just stay empty.
+      if (error instanceof NoEditorConstructorError && !this.warnedNoEditor) {
+        this.warnedNoEditor = true;
+        logLabeled('The database page body is not shown: there is no Blok editor on the page of this version', 'warn');
+      }
     });
   }
 

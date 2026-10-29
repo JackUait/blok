@@ -152,6 +152,7 @@ vi.mock('../../src/components/polyfills', () => ({}));
 import { Blok, EditorJS } from '../../src/blok';
 import DefaultExport from '../../src/blok';
 import { expandPersistenceConfig } from '../../src/components/utils/persistence';
+import { EDITOR_CONSTRUCTOR, loadEditorConstructor } from '../../src/components/utils/editor-constructor';
 import type { API } from '../../types';
 
 describe('Blok', () => {
@@ -264,6 +265,17 @@ describe('Blok', () => {
   });
 
   describe('constructor', () => {
+    it('lets tools load the base editor class, even from a subclass', async () => {
+      class HostBlok extends Blok {}
+
+      Reflect.deleteProperty(globalThis, EDITOR_CONSTRUCTOR);
+      const blok = new HostBlok();
+
+      await expect(loadEditorConstructor()).resolves.toBe(Blok);
+
+      await blok.isReady;
+    });
+
     it('should initialize with no configuration', async () => {
       const blok = new Blok();
 

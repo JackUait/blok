@@ -26,8 +26,8 @@ interface NestedEditor {
 
 const nestedEditors = vi.hoisted((): NestedEditor[] => []);
 
-vi.mock('../../../../src/blok', () => ({
-  Blok: class MockBlok {
+vi.mock('../../../../src/components/utils/editor-constructor', () => ({
+  loadEditorConstructor: async () => class MockBlok {
     readonly isReady = Promise.resolve();
     readonly i18n = { update: async () => undefined };
     private readonly entry: NestedEditor;

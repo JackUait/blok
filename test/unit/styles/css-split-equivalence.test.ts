@@ -1355,6 +1355,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BOARD_FILE_CHIP_GAP_BYTES = 180;
     // database.css: a calendar card relation draws at the board card's 14.4px (notion-spec-2 §21.9).
     const DATABASE_CALENDAR_RELATION_BYTES = 577;
+    // database.css: a calendar card avatar is 18px, as on the board card (notion-spec-2 §21.9).
+    const DATABASE_CALENDAR_AVATAR_BYTES = 225;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1679,7 +1681,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CALENDAR_FILE_CHIP_BYTES
       + DATABASE_LIST_PERSON_CAP_BYTES
       + DATABASE_BOARD_FILE_CHIP_GAP_BYTES
-      + DATABASE_CALENDAR_RELATION_BYTES;
+      + DATABASE_CALENDAR_RELATION_BYTES
+      + DATABASE_CALENDAR_AVATAR_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

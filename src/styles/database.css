@@ -6491,6 +6491,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   height: 18px;
 }
 
+/* §21.9: a calendar card shows people as the board card does. */
+[data-blok-database-calendar-event-property] :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+  width: 18px;
+  height: 18px;
+}
+
 [data-blok-database-gallery-property] > [data-blok-database-cell]:is([data-blok-database-cell="createdTime"], [data-blok-database-cell="lastEditedTime"]) {
   flex-wrap: nowrap;
   white-space: nowrap;

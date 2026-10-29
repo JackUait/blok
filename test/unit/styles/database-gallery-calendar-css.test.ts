@@ -14,7 +14,7 @@ const colors = readFileSync(resolve(__dirname, '../../../src/styles/colors.css')
 /** Body of every rule whose selector list holds `selector`, joined. */
 const ruleBody = (selector: string): string =>
   Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
-    .filter((match) => (match[1] ?? '').split(',').map((part) => part.trim()).includes(selector))
+    .filter((match) => (match[1] ?? '').split(/,(?![^(]*\))/).map((part) => part.trim()).includes(selector))
     .map((match) => match[2] ?? '')
     .join(';');
 
@@ -171,6 +171,15 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody(`${icon}[data-emoji]::before`)).toMatch(/font-size:\s*14\.4px/);
     expect(ruleBody(`${icon}[data-emoji]::before`)).toMatch(/line-height:\s*14\.4px/);
     expect(ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-relation-chip-title]')).toMatch(/line-height:\s*18px/);
+  });
+
+  // notion-spec-2 §21.9: avatar + name as on the board card, whose avatar is 18x18 (§21.7).
+  // calendar-card-crop.png reads 17-18px, board-person.png 18px, at the same threshold.
+  it('draws a calendar card avatar or initial 18x18', () => {
+    const avatar = ruleBody('[data-blok-database-calendar-event-property] :is([data-blok-database-person-avatar], [data-blok-database-person-initial])');
+
+    expect(avatar).toMatch(/width:\s*18px/);
+    expect(avatar).toMatch(/height:\s*18px/);
   });
 
   // notion-spec-2 §21.9: the file chip keeps its 200 width and the card cuts it (calendar-card.png: the chip runs to the card edge).

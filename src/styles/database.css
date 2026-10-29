@@ -6391,6 +6391,35 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   content: attr(data-blok-database-person-initial);
 }
 
+/* notion-spec-2 §20.1: a long "by" name ends in "…". text-overflow needs a block box: an inline-flex chip ignores it. */
+:is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) {
+  max-width: 100%;
+}
+
+:is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) > [data-blok-database-person-chip] {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) > [data-blok-database-person-chip] > :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+  display: inline-flex;
+  vertical-align: top;
+  margin-inline-end: var(--blok-space-1-5);
+}
+
+/* §20.2: 18px on a gallery card. */
+[data-blok-database-gallery-property] :is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+  width: 18px;
+  height: 18px;
+}
+
+[data-blok-database-gallery-property] > [data-blok-database-cell]:is([data-blok-database-cell="createdTime"], [data-blok-database-cell="lastEditedTime"]) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 /* File chip: 24px, padding 0 6px, radius 4px (research/08). */
 [data-blok-database-file-chip] {
   display: inline-flex;
@@ -8344,6 +8373,12 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-cell][data-wrap] > [data-blok-database-cell] {
   flex-wrap: wrap;
   white-space: pre-wrap;
+}
+
+/* notion-spec-2 §20.1: a time never wraps and is cut with no "…", in a wrapped column too. Same weight as the rule above, so it comes after it. */
+[data-blok-database-table-cell] > [data-blok-database-cell]:is([data-blok-database-cell="createdTime"], [data-blok-database-cell="lastEditedTime"]) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 /* Ties the block-level and wrap rules above, so it comes after them. Number, then the gauge, at the cell's end. */

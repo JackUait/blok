@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vites
 
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
+import { cellText } from '../../../../src/tools/database/database-table-clipboard';
+import { readPropertyValue } from '../../../../src/tools/database/property-values';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 
@@ -435,6 +437,67 @@ describe('DatabaseCardDrawer — link values', () => {
     expect(writeText).toHaveBeenCalledWith('+1 555 0100');
     expect(notify).toHaveBeenCalledWith('tools.database.cellCopied');
     expect(editor()).toBeNull();
+  });
+
+  // notion-spec-2 §20.1: a time row offers Copy to Clipboard alone; a "by" row offers nothing; a click opens nothing.
+  describe('created and last edited values', () => {
+    const STAMP_SCHEMA: PropertyDefinition[] = [
+      { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+      { id: 'prop-ct', name: 'Created time', type: 'createdTime', position: 'a1' },
+      { id: 'prop-lt', name: 'Last edited time', type: 'lastEditedTime', position: 'a2' },
+      { id: 'prop-cb', name: 'Created by', type: 'createdBy', position: 'a3' },
+      { id: 'prop-lb', name: 'Last edited by', type: 'lastEditedBy', position: 'a4' },
+    ];
+    const stamped = (): DatabaseRow => ({
+      ...makeRow(),
+      meta: { createdAt: Date.UTC(2026, 9, 28, 10, 39), lastEditedAt: Date.UTC(2026, 9, 28, 10, 40), createdBy: 'u1', lastEditedBy: 'u1' },
+    });
+
+    it.each(['prop-ct', 'prop-lt'])('%s shows Copy to Clipboard only', (propertyId) => {
+      const options = createOptions({ schema: STAMP_SCHEMA, onCommentProperty: vi.fn() });
+
+      new DatabaseCardDrawer(options).open(stamped());
+
+      expect(valueOf(options, propertyId).querySelectorAll('[data-blok-database-drawer-prop-actions] button')).toHaveLength(1);
+      expect(actionIn(options, propertyId, 'tools.database.cellCopy')).not.toBeNull();
+    });
+
+    it.each(['prop-cb', 'prop-lb'])('%s shows no buttons', (propertyId) => {
+      const options = createOptions({ schema: STAMP_SCHEMA, onCommentProperty: vi.fn() });
+
+      new DatabaseCardDrawer(options).open(stamped());
+
+      expect(valueOf(options, propertyId).querySelector('[data-blok-database-drawer-prop-actions]')).toBeNull();
+    });
+
+    it.each(['prop-ct', 'prop-lt', 'prop-cb', 'prop-lb'])('a click on %s opens nothing', (propertyId) => {
+      const options = createOptions({ schema: STAMP_SCHEMA });
+
+      new DatabaseCardDrawer(options).open(stamped());
+      clickOn(valueOf(options, propertyId));
+
+      expect(editor()).toBeNull();
+      expect(document.querySelector('[data-blok-popover-opened], [role="dialog"]')).toBeNull();
+      expect(options.onPropertyValueChange).not.toHaveBeenCalled();
+    });
+
+    // What Notion copies here is unmeasured: the peek copies what the table's copy writes.
+    it('Copy writes the same text as the table copy', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      const options = createOptions({ schema: STAMP_SCHEMA });
+      const row = stamped();
+
+      new DatabaseCardDrawer(options).open(row);
+      const copy = actionIn(options, 'prop-ct', 'tools.database.cellCopy');
+
+      if (copy === null) throw new Error('no copy button');
+      clickOn(copy);
+      await Promise.resolve();
+
+      expect(writeText).toHaveBeenCalledWith(cellText(STAMP_SCHEMA[1], readPropertyValue(row, STAMP_SCHEMA[1])));
+    });
   });
 
   it('Comment hands the row, the property and the value to the host', () => {

@@ -204,6 +204,8 @@ export interface LayoutTabsHost {
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
 /** feel/findings-rowpage R16: Notion's Comment and Copy pill shows on every filled value it copies, not only links. */
 const COPY_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number']);
+/** notion-spec-2 §20.1: a time row shows Copy to Clipboard and no Comment. */
+const COPY_ONLY_TYPES: ReadonlySet<string> = new Set(['createdTime', 'lastEditedTime']);
 
 /** View tab edits of the open draft. `made` are the blocks Discard deletes; `fresh` every tab made now. */
 class PageLayoutTabEdits {
@@ -3439,7 +3441,7 @@ export class DatabaseCardDrawer {
     const filled = !cell.hasAttribute('data-empty');
 
     slot.toggleAttribute('data-link', LINK_TYPES.has(def.type) && filled);
-    if (COPY_TYPES.has(def.type) && filled) {
+    if ((COPY_TYPES.has(def.type) || COPY_ONLY_TYPES.has(def.type)) && filled) {
       slot.appendChild(this.createLinkActions(def));
     }
   }
@@ -3449,7 +3451,7 @@ export class DatabaseCardDrawer {
     const actions = document.createElement('span');
     const entries: Array<[action: string, key: string, icon: string]> = [['copy', 'tools.database.cellCopy', IconCopy]];
 
-    if (this.onCommentProperty !== undefined) {
+    if (this.onCommentProperty !== undefined && !COPY_ONLY_TYPES.has(def.type)) {
       entries.unshift(['comment', 'tools.database.tableComment', IconMessage]);
     }
     actions.setAttribute('data-blok-database-drawer-prop-actions', '');

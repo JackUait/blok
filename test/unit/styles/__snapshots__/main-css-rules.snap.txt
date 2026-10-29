@@ -9590,6 +9590,33 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   content: attr(data-blok-database-person-initial);
 }
 
+:is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) {
+  max-width: 100%;
+}
+
+:is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) > [data-blok-database-person-chip] {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) > [data-blok-database-person-chip] > :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+  display: inline-flex;
+  vertical-align: top;
+  margin-inline-end: var(--blok-space-1-5);
+}
+
+[data-blok-database-gallery-property] :is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) :is([data-blok-database-person-avatar], [data-blok-database-person-initial]) {
+  width: 18px;
+  height: 18px;
+}
+
+[data-blok-database-gallery-property] > [data-blok-database-cell]:is([data-blok-database-cell="createdTime"], [data-blok-database-cell="lastEditedTime"]) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 [data-blok-database-file-chip] {
   display: inline-flex;
   align-items: center;
@@ -11309,6 +11336,11 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-cell][data-wrap] > [data-blok-database-cell] {
   flex-wrap: wrap;
   white-space: pre-wrap;
+}
+
+[data-blok-database-table-cell] > [data-blok-database-cell]:is([data-blok-database-cell="createdTime"], [data-blok-database-cell="lastEditedTime"]) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 [data-blok-database-table-cell] > [data-blok-database-cell]:has(> [data-blok-database-number-bar], > [data-blok-database-number-ring]) {

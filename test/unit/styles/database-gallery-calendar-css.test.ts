@@ -160,6 +160,19 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-timeline-bar-property] [data-blok-database-button]')).toMatch(/height:\s*20px/);
   });
 
+  // notion-spec-2 §21.9: a calendar card's relation looks as on the board (§21.7: emoji 14.4px, title 12/18).
+  // calendar-card-crop.png and board-relation.png: the 🏏 covers the same 16x13 pixels in both, the table's 18px one 18x15.
+  it('draws a calendar card relation emoji and page glyph at 14.4px, its title 18px tall', () => {
+    const icon = '[data-blok-database-calendar-event-property] [data-blok-database-relation-chip-icon]';
+
+    expect(ruleBody(icon)).toMatch(/width:\s*14\.4px/);
+    expect(ruleBody(icon)).toMatch(/height:\s*14\.4px/);
+    expect(ruleBody(`${icon} svg`)).toMatch(/width:\s*14\.4px/);
+    expect(ruleBody(`${icon}[data-emoji]::before`)).toMatch(/font-size:\s*14\.4px/);
+    expect(ruleBody(`${icon}[data-emoji]::before`)).toMatch(/line-height:\s*14\.4px/);
+    expect(ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-relation-chip-title]')).toMatch(/line-height:\s*18px/);
+  });
+
   // notion-spec-2 §21.9: the file chip keeps its 200 width and the card cuts it (calendar-card.png: the chip runs to the card edge).
   it('keeps a calendar card file chip up to 200 wide, 20 tall, so the card cuts it', () => {
     const chip = ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-file-chip]');

@@ -15609,6 +15609,20 @@ textarea[data-blok-database-cell-input] {
   line-height: 18px;
 }
 
+[data-blok-database-calendar-event-property] [data-blok-database-relation-chip-icon], [data-blok-database-calendar-event-property] [data-blok-database-relation-chip-icon] svg {
+  width: 14.4px;
+  height: 14.4px;
+}
+
+[data-blok-database-calendar-event-property] [data-blok-database-relation-chip-icon][data-emoji]::before {
+  font-size: 14.4px;
+  line-height: 14.4px;
+}
+
+[data-blok-database-calendar-event-property] [data-blok-database-relation-chip-title] {
+  line-height: 18px;
+}
+
 [data-blok-database-relation-chip][role="link"] {
   cursor: pointer;
 }

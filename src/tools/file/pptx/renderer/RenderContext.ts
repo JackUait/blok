@@ -54,6 +54,8 @@ export interface RenderContext {
    * or with a URL string for external links.
    */
   onNavigate?: (target: { slideIndex?: number; url?: string }) => void;
+  /** Shared by reference: group and template contexts are spread copies. */
+  shapeBudget?: { remaining: number };
 }
 
 export function createRenderContext(

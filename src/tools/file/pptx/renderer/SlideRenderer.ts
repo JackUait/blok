@@ -40,6 +40,8 @@ export interface SlideRendererOptions {
   onNavigate?: (target: { slideIndex?: number; url?: string }) => void;
   /** Shared media URL cache for blob URL reuse across slides. */
   mediaUrlCache?: Map<string, string>;
+  /** Shapes left to draw; share one across slides to cap a whole deck. */
+  shapeBudget?: { remaining: number };
 }
 
 /**
@@ -66,6 +68,10 @@ export interface SlideHandle {
  */
 function renderNode(node: BaseNodeData, ctx: RenderContext): HTMLElement | null {
   if (node.hidden) return null;
+  if (ctx.shapeBudget) {
+    if (ctx.shapeBudget.remaining <= 0) return null;
+    ctx.shapeBudget.remaining -= 1;
+  }
   switch (node.nodeType) {
     case 'shape':
       return renderShape(node as ShapeNodeData, ctx);
@@ -193,6 +199,7 @@ export function renderSlide(
     abortController.signal,
   );
   ctx.asyncTasks = asyncTasks;
+  ctx.shapeBudget = options?.shapeBudget;
   if (options?.onNavigate) {
     ctx.onNavigate = options.onNavigate;
   }

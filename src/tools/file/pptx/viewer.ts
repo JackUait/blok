@@ -11,6 +11,12 @@ export interface DeckView {
 /** Slides drawn before yielding a frame, so a long deck does not freeze the page. */
 const BATCH_SIZE = 12;
 
+/**
+ * Most shapes drawn for a whole deck. Master and layout shapes are drawn again
+ * on every slide, so a small file can otherwise ask for millions of nodes.
+ */
+export const DECK_SHAPE_BUDGET = 10_000;
+
 const nextFrame = (): Promise<void> => new Promise((resolve) => {
   requestAnimationFrame(() => resolve());
 });
@@ -33,6 +39,7 @@ export async function openDeck(
   }
   const presentation = buildPresentation(files);
   const mediaUrlCache = new Map<string, string>();
+  const shapeBudget = { remaining: DECK_SHAPE_BUDGET };
   const handles: SlideHandle[] = [];
   const cards: HTMLElement[] = [];
   const state = { destroyed: false };
@@ -70,7 +77,7 @@ export async function openDeck(
     card.style.background = '#fff';
     cards.push(card);
     try {
-      const handle = renderSlide(presentation, presentation.slides[index], { mediaUrlCache, onNavigate: goTo });
+      const handle = renderSlide(presentation, presentation.slides[index], { mediaUrlCache, shapeBudget, onNavigate: goTo });
 
       handle.element.style.transformOrigin = 'top left';
       handles.push(handle);

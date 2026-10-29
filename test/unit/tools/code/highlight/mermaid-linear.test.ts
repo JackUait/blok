@@ -26,6 +26,19 @@ describe('mermaid grammar stays linear', () => {
     expect(html).not.toBeNull();
   });
 
+  it('handles a long run of unclosed > nodes', async () => {
+    const { ms, html } = await timed('>'.repeat(40_000));
+
+    expect(ms).toBeLessThan(BUDGET_MS);
+    expect(html).not.toBeNull();
+  });
+
+  it('handles > nodes split by label text', async () => {
+    const { ms } = await timed('>a'.repeat(10_000));
+
+    expect(ms).toBeLessThan(BUDGET_MS);
+  });
+
   it('handles many blank lines', async () => {
     const { ms } = await timed(`${'\n'.repeat(40_000)}graph TD`);
 
@@ -42,6 +55,12 @@ describe('mermaid grammar stays linear', () => {
 
   it('still finds a [( node that opens mid-run', async () => {
     expect(await tokenizePrism('(([x])', 'mermaid')).toContain('<span class="token node-bracket">([</span>');
+  });
+
+  it('still finds a > node right after an edge label that ends in >', async () => {
+    expect(await tokenizePrism('|a>|>x]', 'mermaid')).toContain(
+      '<span class="token node-definition"><span class="token node-bracket">></span>'
+    );
   });
 
   it('keeps leading spaces in the diagram name and leaves blank lines out of it', async () => {

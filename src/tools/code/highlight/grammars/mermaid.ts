@@ -53,7 +53,11 @@ export const define = (hl: Highlighter): void => {
       // `(?<!\()` starts a paren run only at its first paren. Starting mid-run can
       // never match where the run's start did not, and retrying every position
       // made an unclosed run of `(` quadratic.
-      pattern: /(?:\(\[|\[\[|\[\(|\[|(?<!\()\(+|>|\{|\(\()(?:[^\[\]{}()\n])*(?:\]\)|\]\]|\)\]|\]|\)+|\}|\)\))/,
+      // `>` is also a label character, so a `>` after an earlier `>` in the same
+      // label run can only match where that one did. The lookbehind skips it; it
+      // stops at `|` because an edge label may own the earlier `>`, and it must
+      // stay lazy, or it scans back over the whole run.
+      pattern: /(?:\(\[|\[\[|\[\(|\[|(?<!\()\(+|(?<!>[^\[\]{}()\n|]*?)>|\{|\(\()(?:[^\[\]{}()\n])*(?:\]\)|\]\]|\)\]|\]|\)+|\}|\)\))/,
       greedy: true,
       inside: {
         'node-bracket': /^\(?[\[{(>]|[\]})]\)?$/,

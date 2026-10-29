@@ -1,5 +1,5 @@
 import type { PhrasingContent } from '../../../types/data-formats/markdown-tree';
-import type { BracketItem, DelimItem, Item, LinkTarget } from './inline-items';
+import type { BracketItem, DelimItem, Item, LinkTarget, SpanType } from './inline-items';
 
 /**
  * Builds the phrasing tree from resolved items, without recursion: nesting
@@ -15,7 +15,18 @@ interface Frame {
   depth: number;
   /** Set for an image, whose children become its `alt`. */
   image?: LinkTarget;
+  /** Set for a span dropped at the depth cap: its delimiters, kept as text. */
+  marker?: string;
 }
+
+/**
+ * The delimiters a span of `type` took from `run`: strikethrough takes the
+ * whole run, strong two characters, emphasis one.
+ * @param type - the span
+ * @param run - the run that opened it
+ */
+const spanMarker = (type: SpanType, run: DelimItem): string =>
+  run.char.repeat({ delete: run.size, strong: 2, emphasis: 1 }[type]);
 
 /**
  * Append text, merging with a text node just before it.
@@ -126,24 +137,32 @@ class PhrasingBuilder {
    * @param run - the run
    */
   private delim(run: DelimItem): void {
-    this.frames.length -= run.closes.length;
+    for (const _closed of run.closes) {
+      const frame = this.frames.pop();
+
+      appendText(this.top.children, frame?.marker ?? '');
+    }
+
     appendText(this.top.children, run.char.repeat(run.rest));
 
     for (const type of [...run.opens].reverse()) {
-      this.open({ type, children: [] });
+      this.open({ type, children: [] }, spanMarker(type, run));
     }
   }
 
   /**
    * Append a span or link and make it the open frame. Past the depth cap
-   * the node is left out and its content goes to the frame around it.
+   * the node is left out, its content goes to the frame around it, and a
+   * span's delimiters stay as text, as container markers do past theirs.
    * @param node - the new wrapper, still empty
+   * @param marker - a span's delimiters
    */
-  private open(node: PhrasingContent & { children: PhrasingContent[] }): void {
+  private open(node: PhrasingContent & { children: PhrasingContent[] }, marker = ''): void {
     const top = this.top;
 
     if (top.depth >= MAX_INLINE_DEPTH) {
-      this.frames.push({ children: top.children, depth: top.depth });
+      appendText(top.children, marker);
+      this.frames.push({ children: top.children, depth: top.depth, marker });
 
       return;
     }

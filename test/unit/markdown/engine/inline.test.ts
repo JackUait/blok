@@ -317,6 +317,13 @@ describe('parseInline', () => {
       expect([count(text, 'a'), count(text, 'b'), count(text, 'c')]).toStrictEqual([size, 1, size]);
     });
 
+    // Like a container marker past the block cap, a dropped span's delimiters stay as text.
+    it.each(['**', '*', '~~'].flatMap((marker) => [[marker, MAX_INLINE_DEPTH + 1], [marker, N]] as const))('keeps the delimiters of %j spans past the cap as text (%i levels)', (marker, size) => {
+      const { text } = measure(`${`${marker}a `.repeat(size)}b${` c${marker}`.repeat(size)}`);
+
+      expect(count(text, marker)).toBe(2 * (size - MAX_INLINE_DEPTH));
+    });
+
     it('keeps nested link brackets shallow', () => {
       const { depth, text } = measure(`${'['.repeat(N)}a${'](u)'.repeat(N)}`);
 

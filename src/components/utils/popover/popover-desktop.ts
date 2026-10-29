@@ -2348,15 +2348,32 @@ export class PopoverDesktop extends PopoverAbstract {
       });
     });
 
-    const searchElement = this.search.getElement();
+    this.mountSearchField(this.search.getElement());
+  }
 
+  /**
+   * Puts a search field at the top of the popover, above the empty state and
+   * outside the items list. For a caller that owns its own field and results.
+   * @param field - the field's wrapper
+   */
+  public mountSearchField(field: HTMLElement): void {
     // The popover container no longer pads its top, so the search input owns its own
     // top gap from the container edge (mt). Its gap from the results below is supplied by
     // the items list's before-first-element padding (css.items pt), so no mb here —
     // otherwise the search-to-results gap would double.
-    searchElement.classList.add('mt-(--blok-space-1)');
+    field.classList.add('mt-(--blok-space-1)');
 
-    this.nodes.popoverContainer.insertBefore(searchElement, this.nodes.popoverContainer.firstChild);
+    this.nodes.popoverContainer.insertBefore(field, this.nodes.popoverContainer.firstChild);
+  }
+
+  /**
+   * Shows or hides the "Nothing found" state for a caller that renders its own
+   * results in an HTML item, and announces it.
+   * @param isDisplayed - true when the caller's search found nothing
+   */
+  public setNothingFound(isDisplayed: boolean): void {
+    this.toggleNothingFoundMessage(isDisplayed);
+    this.nodes.resultsAnnouncer.textContent = isDisplayed ? this.messages.nothingFound ?? 'Nothing found' : '';
   }
 
   /**

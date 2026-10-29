@@ -341,6 +341,30 @@ describe('relation editor', () => {
       });
     });
 
+    // notion-spec-2 §22.2: one letter keeps every page, the match first; two letters keep only matches.
+    describe('search', () => {
+      const type = (text: string): void => {
+        search().value = text;
+        search().dispatchEvent(new Event('input'));
+      };
+      const titles = (): Array<string | undefined> => options().map((o) => o.textContent?.trim());
+
+      it('keeps every page for one letter, the match first and highlighted', () => {
+        openInTable();
+        type('v');
+
+        expect(titles()).toEqual(['Bravo', 'Alpha', 'tools.database.relationUntitled']);
+        expect(options()[0].hasAttribute('data-active')).toBe(true);
+      });
+
+      it('keeps only the matching pages for two letters', () => {
+        openInTable();
+        type(' vo ');
+
+        expect(titles()).toEqual(['Bravo']);
+      });
+    });
+
     it('draws a page glyph before each title', () => {
       openInTable();
 

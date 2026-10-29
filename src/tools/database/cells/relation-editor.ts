@@ -171,7 +171,15 @@ class RelationEditor implements CellEditorHandle {
   private filtered(): Candidate[] {
     const needle = this.query.trim().toLowerCase();
 
-    return needle === '' ? this.candidates : this.candidates.filter((c) => this.titleOf(c).toLowerCase().includes(needle));
+    if (needle === '') return this.candidates;
+    const matches = this.candidates.filter((c) => this.titleOf(c).toLowerCase().includes(needle));
+
+    // notion-spec-2 §22.2: in the table picker one letter keeps every page, the matches first.
+    if (this.heading !== null && [...needle].length === 1) {
+      return [...matches, ...this.candidates.filter((c) => !matches.includes(c))];
+    }
+
+    return matches;
   }
 
   /** notion-spec-2 §19.2: the table picker lists the linked pages first. */

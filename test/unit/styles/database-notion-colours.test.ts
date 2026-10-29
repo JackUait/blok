@@ -239,17 +239,10 @@ describe('text tokens that held a failing Notion value take the AA step', () => 
     expect(attr).toBe('var(--blok-database-ink-tertiary)');
   });
 
-  it('calendar event text passes on the hovered card too, which is darker in light and lighter in dark', () => {
-    const { light, dark, attr } = themed('--blok-database-calendar-event-muted-text');
-    const lightHover = over([84, 72, 49, 0.08], WHITE);
-
-    expect(contrast('rgb(114, 111, 106)', lightHover)).toBeLessThan(4.5);
-    expect(light).toBe('rgb(112, 109, 104)');
-    expect(dark).toBe('rgb(162, 159, 154)');
-    expect(attr).toBe('rgb(162, 159, 154)');
-    expect(contrast('rgb(112, 109, 104)', lightHover)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast('rgb(162, 159, 154)', [55, 55, 55])).toBeGreaterThanOrEqual(4.5);
-    expect(ruleBody('[data-blok-database-calendar-event-property]')).toContain('color: var(--blok-database-calendar-event-muted-text)');
+  // notion-spec-2 §21.9: calendar card values are 12/18 ink. calendar-card.png: the email, date and phone glyphs are rgb(44, 44, 43).
+  it('calendar event values take the database ink', () => {
+    expect(ruleBody('[data-blok-database-calendar-event-property]')).toContain('color: var(--blok-database-ink)');
+    expect(themed('--blok-database-calendar-event-muted-text')).toEqual({ light: undefined, dark: undefined, attr: undefined });
   });
 
   it('the form respondent chip takes Notion\'s dark fill (research/36 §13); light is unmeasured', () => {

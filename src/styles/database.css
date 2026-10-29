@@ -37,8 +37,6 @@
   --blok-database-name-field-ring: transparent;
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
   --blok-database-tpl-border: rgb(230, 229, 227);
-  /* Event cards: the hover fill rgba(84, 72, 49, 0.08) puts the light step at 4.41:1; one step darker passes. */
-  --blok-database-calendar-event-muted-text: rgb(112, 109, 104);
   /* Default column = the plain column (research/08:72); blue and green measured light (research/21 §1f).
      Notion's blue and green counts fail AA on their tint (3.67, 3.01): its hue darkened to the
      nearest step that passes under the hover fills too (findings-board B21). */
@@ -419,8 +417,6 @@
     /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
     --blok-database-calendar-day-today-text: rgb(0, 0, 0);
     --blok-database-tpl-border: #333331;
-    /* An event card is 47 and 55 hovered: the tertiary step is 4.0:1 there, 162,159,154 is 4.51:1 on 55. */
-    --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
     /* Option pills: dark values measured in research/07; gray, purple, pink and red in research/08:288-296. */
     --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
     --blok-database-option-default-text: rgb(240, 239, 237);
@@ -728,8 +724,6 @@
   /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
   --blok-database-calendar-day-today-text: rgb(0, 0, 0);
   --blok-database-tpl-border: #333331;
-  /* An event card is 47 and 55 hovered: the tertiary step is 4.0:1 there, 162,159,154 is 4.51:1 on 55. */
-  --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -11944,7 +11938,7 @@ textarea[data-blok-database-cell-input] {
   text-overflow: clip;
   font-size: 12px;
   line-height: 24px;
-  color: var(--blok-database-calendar-event-muted-text);
+  color: var(--blok-database-ink);
 }
 
 /* findings C01: 12px, centred on the edge. */

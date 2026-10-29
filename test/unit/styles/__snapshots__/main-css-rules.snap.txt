@@ -4003,7 +4003,6 @@ span[data-blok-slash-search] {
   --blok-database-name-field-bg: var(--blok-database-hover-bg);
   --blok-database-name-field-ring: transparent;
   --blok-database-tpl-border: rgb(230, 229, 227);
-  --blok-database-calendar-event-muted-text: rgb(112, 109, 104);
   --blok-database-column-default-bg: var(--blok-database-column-bg);
   --blok-database-column-default-ring: var(--blok-database-card-ring);
   --blok-database-column-default-accent: var(--blok-database-column-accent);
@@ -4292,7 +4291,6 @@ span[data-blok-slash-search] {
   --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
   --blok-database-calendar-day-today-text: rgb(0, 0, 0);
   --blok-database-tpl-border: #333331;
-  --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -4561,7 +4559,6 @@ span[data-blok-slash-search] {
   --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
   --blok-database-calendar-day-today-text: rgb(0, 0, 0);
   --blok-database-tpl-border: #333331;
-  --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -14645,7 +14642,7 @@ textarea[data-blok-database-cell-input] {
   text-overflow: clip;
   font-size: 12px;
   line-height: 24px;
-  color: var(--blok-database-calendar-event-muted-text);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-calendar-resize] {

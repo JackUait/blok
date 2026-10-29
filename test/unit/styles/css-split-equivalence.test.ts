@@ -1395,6 +1395,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROW_CHECKBOX_GUTTER_BYTES = 835;
     // database.css: the OPEN button's 6px gap, 0.5px tracking and 15.25px icon slot (notion-spec-2 §24.7).
     const DATABASE_OPEN_BUTTON_SPACING_BYTES = 256;
+    // database.css: the Place chip's address at 14px (side-by-side-3 #11).
+    const DATABASE_PLACE_CHIP_NAME_SIZE_BYTES = 128;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1739,7 +1741,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FORMULA_TOKENS_BYTES
       + DATABASE_OPTIONS_HEADING_BYTES
       + DATABASE_ROW_CHECKBOX_GUTTER_BYTES
-      + DATABASE_OPEN_BUTTON_SPACING_BYTES;
+      + DATABASE_OPEN_BUTTON_SPACING_BYTES
+      + DATABASE_PLACE_CHIP_NAME_SIZE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

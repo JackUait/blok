@@ -660,6 +660,11 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-name]')).toContain('text-overflow: ellipsis');
   });
 
+  // side-by-side-3 #11: in notion-live-3/place-editor.png the chip's "Eiffel Tower Ln, Paris, TN 3…" inks 182px, the width of that text at 14px (12px gives 161).
+  it('draws the address in the chip at 14px, though the chip box reads 12/14.4', () => {
+    expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-name]')).toContain('font-size: 14px');
+  });
+
   it('notion-spec-2 §19.18: the hover card is a white menu surface with 6px corners and the menu shadow', () => {
     const CARD = '[data-blok-database-place-card]';
 

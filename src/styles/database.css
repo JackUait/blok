@@ -15773,8 +15773,10 @@ button[data-blok-database-feed-reaction]:hover,
   line-height: 14.4px;
 }
 
+/* side-by-side-3 #11: the address inks at 14px in place-editor.png, inside the 12/14.4 chip. */
 [data-blok-database-place-view] [data-blok-database-place-name] {
   min-inline-size: 0;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -669,6 +669,22 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(themed('--blok-database-popover-shadow').light).toBe('rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px');
   });
 
+  it('notion-live-3 hover-16, research/20 35-place-cell-hovercard: the card hugs its text with 12px sides (216 at least), the name 14/20 bold over a 12/16 grey address, and a 168-tall map with 6px corners', () => {
+    const CARD = '[data-blok-database-place-card]';
+
+    expect(ruleBody(CARD)).toContain('inline-size: max-content');
+    expect(ruleBody(CARD)).toContain('min-inline-size: 216px');
+    expect(ruleBody(CARD)).toContain('padding: var(--blok-space-2-5) var(--blok-space-3) var(--blok-space-2)');
+    expect(ruleBody(CARD)).not.toContain('inline-size: 284px');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-name]`)).toContain('font-size: 14px');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-name]`)).toContain('line-height: 20px');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-name]`)).toContain('font-weight: 600');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-address]`)).toContain('color: var(--blok-database-ink-secondary)');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-map]`)).toContain('block-size: 168px');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-map]`)).toContain('margin-block-start: var(--blok-space-2)');
+    expect(ruleBody(`${CARD} [data-blok-database-place-card-map]`)).toContain('border-radius: var(--blok-radius-control)');
+  });
+
   it('the × takes Notion\'s icon grey: 142,139,134 light, 173,169,163 dark', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-table-header-icon)');
     expect(themed('--blok-database-table-header-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });

@@ -1376,7 +1376,7 @@ export interface DatabaseMap {
   reverseGeocode?(lngLat: DatabaseMapLngLat): Promise<PlaceValue | null | undefined> | PlaceValue | null | undefined;
   /**
    * Draws one place as a small map in the Place cell's hover card. Called each time the
-   * card shows, into an attached 150px-high box; `destroy` runs when the card closes.
+   * card shows, into an attached 168px-high box; `destroy` runs when the card closes.
    * Without it Blok draws the place with `styleUrl`; without both the card shows the
    * name and address only.
    */

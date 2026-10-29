@@ -15396,34 +15396,43 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 /*
- * Measured (research/20 §1d): a 284px card, the name in bold over the address.
- * notion-spec-2 §19.18: a white menu surface. Its padding and type are unmeasured: the hint's.
+ * Measured from notion-live-3 hover-16 (216 wide) and research/20 35-place-cell-hovercard (284 wide):
+ * the card hugs its text with 12px sides and is 216 at least; 10px above the name, 8px under the map.
+ * notion-spec-2 §19.18: a white menu surface. The 360 cap is Blok's: Notion's widest card is unmeasured.
  */
 [data-blok-database-place-card] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-space-1);
   box-sizing: border-box;
-  inline-size: 284px;
-  max-inline-size: 100%;
-  padding: var(--blok-space-1-25) var(--blok-space-2);
+  inline-size: max-content;
+  min-inline-size: 216px;
+  max-inline-size: min(360px, 100vw);
+  padding: var(--blok-space-2-5) var(--blok-space-3) var(--blok-space-2);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-popover-bg);
   box-shadow: var(--blok-database-popover-shadow);
   color: var(--blok-database-ink);
   font-size: 12px;
-  line-height: 16.8px;
+  line-height: 16px;
   text-align: start;
+  overflow-wrap: anywhere;
 }
 
-[data-blok-database-place-card-name] {
+[data-blok-database-place-card] [data-blok-database-place-card-name] {
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
 }
 
-[data-blok-database-place-card-map] {
+[data-blok-database-place-card] [data-blok-database-place-card-address] {
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-place-card] [data-blok-database-place-card-map] {
   /* MapLibre's own position rule is scoped to descendants; the map root is this box. */
   position: relative;
-  block-size: 150px;
+  block-size: 168px;
+  margin-block-start: var(--blok-space-2);
   border-radius: var(--blok-radius-control);
   overflow: hidden;
 }

@@ -138,3 +138,29 @@ test('the link hover card uses Blok\'s sans font on a page that sets none', asyn
   await expect(card).toBeVisible();
   expect((await style(card, ['font-family']))['font-family']).toMatch(/^ui-sans-serif/);
 });
+
+test('hovering a file chip shows its full link in a hint, not the link card (§20.11, files-hover.png)', async ({ page }) => {
+  const link = cell(page, 'r1', 'p-file').locator('[data-blok-database-cell-link]');
+
+  await link.hover();
+  await expect(page.getByRole('tooltip')).toHaveText(FILE_URL);
+  await expect(page.getByTestId('link-hover-card')).toHaveCount(0);
+});
+
+test('a plain click on a file chip opens the files box and no new page; Cmd/Ctrl-click opens the file', async ({ page }) => {
+  const link = cell(page, 'r1', 'p-file').locator('[data-blok-database-cell-link]');
+  const opened: string[] = [];
+
+  page.context().on('page', (p) => opened.push(p.url()));
+  await link.click();
+  await expect(page.locator('[data-blok-database-files-editor]')).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(opened).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-blok-database-files-editor]')).toHaveCount(0);
+
+  const popup = page.context().waitForEvent('page');
+
+  await link.click({ modifiers: ['ControlOrMeta'] });
+  expect((await popup).url()).toContain('example.com/a.pdf');
+});

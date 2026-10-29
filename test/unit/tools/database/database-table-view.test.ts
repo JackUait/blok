@@ -408,6 +408,38 @@ describe('DatabaseTableView', () => {
       expect(chips[0].textContent?.trim()).toBe('report.pdf');
     });
 
+    // notion-spec-2 §20.11, files-hover.png: the chip shows a dark hint with the full link, not Blok's link card.
+    it('hovering a file chip shows its full link in a hint after the hint delay, and keeps the link card away', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const files: PropertyDefinition = { id: 'p-files', name: 'Files', type: 'files', position: 'a1' };
+        const { root } = mount({
+          schema: [schema[0], files],
+          rows: [row('r1', 'Alpha', { 'p-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] })],
+        });
+        const chip = cell(root, 'r1', 'p-files').querySelector<HTMLElement>('[data-blok-database-file-chip]');
+        const link = chip?.querySelector<HTMLElement>('[data-blok-database-cell-link]');
+
+        if (chip === null || chip === undefined || link === null || link === undefined) throw new Error('no file chip');
+        // Core's link hover card and link click skip a link inside a link owner.
+        expect(link.closest('[data-blok-link-owner]')).not.toBeNull();
+
+        vi.spyOn(chip, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 184, height: 24 }));
+        chip.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        const wrapper = (): Element | null => document.querySelector('[data-blok-testid="tooltip"]');
+
+        expect(wrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
+        vi.advanceTimersByTime(1);
+        expect(wrapper()?.getAttribute('data-blok-shown')).toBe('true');
+        expect(document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent).toBe('https://example.com/report.pdf');
+      } finally {
+        destroyTooltip();
+        vi.useRealTimers();
+      }
+    });
+
     it('wraps every column of a view saved with no wrap fields (the v1.16.1 shape)', () => {
       const { root } = mount({ view: tableView({ visibleProperties: ['p-title', 'p-notes', 'p-amount'] }) });
 

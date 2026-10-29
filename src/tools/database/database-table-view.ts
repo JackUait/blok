@@ -954,7 +954,16 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     cell.replaceChildren(value);
     if (column.property.type === 'files') {
-      value.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
+      value.querySelectorAll<HTMLElement>('[data-blok-database-file-chip]').forEach((chip) => {
+        chip.prepend(fileChipIcon());
+        const link = chip.querySelector<HTMLAnchorElement>('[data-blok-database-cell-link]');
+
+        if (link !== null) {
+          // Owned: core shows no link card and opens nothing on a plain click; Cmd/Ctrl-click follows target=_blank.
+          link.setAttribute(DATA_ATTR.linkOwner, '');
+          onHover(chip, link.href);
+        }
+      });
     }
 
     const icon = column.property.type === 'title' && showsPageIcon(this.options.view) ? pageIconElement(row) ?? pagePlaceholderIcon() : null;

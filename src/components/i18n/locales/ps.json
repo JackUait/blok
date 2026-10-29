@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "حد",
   "tools.database.relationLimitNone": "بې حده",
   "tools.database.relationLimitOne": "1 پاڼه",
+  "tools.database.buttonEditedPage": "1 پاڼه سمه شوه",
+  "tools.database.undo": "بېرته یې کړئ",
   "tools.database.relationTwoWay": "تړلې ځانګړتیا زیاته کړئ",
   "tools.database.rollupSelect": "وټاکئ",
   "tools.database.relationThisDatabase": "دا ډیټابیس",

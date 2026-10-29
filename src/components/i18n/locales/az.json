@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Məhdudiyyət",
   "tools.database.relationLimitNone": "Məhdudiyyətsiz",
   "tools.database.relationLimitOne": "1 səhifə",
+  "tools.database.buttonEditedPage": "1 səhifə redaktə edildi",
+  "tools.database.undo": "Geri qaytar",
   "tools.database.relationTwoWay": "Əlaqəli xüsusiyyət əlavə et",
   "tools.database.rollupSelect": "Seçin",
   "tools.database.relationThisDatabase": "Bu verilənlər bazası",

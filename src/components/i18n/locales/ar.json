@@ -1760,6 +1760,8 @@
   "tools.database.relationLimit": "الحد",
   "tools.database.relationLimitNone": "بلا حد",
   "tools.database.relationLimitOne": "1 صفحة",
+  "tools.database.buttonEditedPage": "تم تعديل صفحة واحدة",
+  "tools.database.undo": "تراجع",
   "tools.database.relationTwoWay": "إضافة خاصية مرتبطة",
   "tools.database.rollupSelect": "اختيار",
   "tools.database.relationThisDatabase": "قاعدة البيانات هذه",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ገደብ",
   "tools.database.relationLimitNone": "ገደብ የለም",
   "tools.database.relationLimitOne": "1 ገጽ",
+  "tools.database.buttonEditedPage": "1 ገጽ ተስተካክሏል",
+  "tools.database.undo": "ቀልብስ",
   "tools.database.relationTwoWay": "የተዛመደ ንብረት አክል",
   "tools.database.rollupSelect": "ይምረጡ",
   "tools.database.relationThisDatabase": "ይህ የውሂብ ጎታ",

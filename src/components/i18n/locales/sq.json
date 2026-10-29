@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Kufiri",
   "tools.database.relationLimitNone": "Pa kufi",
   "tools.database.relationLimitOne": "1 faqe",
+  "tools.database.buttonEditedPage": "U redaktua 1 faqe",
+  "tools.database.undo": "Zhbëj",
   "tools.database.relationTwoWay": "Shto veti të lidhur",
   "tools.database.rollupSelect": "Zgjidh",
   "tools.database.relationThisDatabase": "Kjo bazë të dhënash",

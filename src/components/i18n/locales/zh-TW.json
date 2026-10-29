@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "限制",
   "tools.database.relationLimitNone": "無限制",
   "tools.database.relationLimitOne": "1 個頁面",
+  "tools.database.buttonEditedPage": "已編輯 1 個頁面",
+  "tools.database.undo": "還原",
   "tools.database.relationTwoWay": "新增關聯屬性",
   "tools.database.rollupSelect": "選取",
   "tools.database.relationThisDatabase": "此資料庫",

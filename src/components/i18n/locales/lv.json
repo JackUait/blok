@@ -1754,6 +1754,8 @@
   "tools.database.relationLimit": "Ierobežojums",
   "tools.database.relationLimitNone": "Bez ierobežojuma",
   "tools.database.relationLimitOne": "1 lapa",
+  "tools.database.buttonEditedPage": "Rediģēta 1 lapa",
+  "tools.database.undo": "Atsaukt",
   "tools.database.relationTwoWay": "Pievienot saistīto rekvizītu",
   "tools.database.rollupSelect": "Atlasīt",
   "tools.database.relationThisDatabase": "Šī datubāze",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Giới hạn",
   "tools.database.relationLimitNone": "Không giới hạn",
   "tools.database.relationLimitOne": "1 trang",
+  "tools.database.buttonEditedPage": "Đã chỉnh sửa 1 trang",
+  "tools.database.undo": "Hoàn tác",
   "tools.database.relationTwoWay": "Thêm thuộc tính liên quan",
   "tools.database.rollupSelect": "Chọn",
   "tools.database.relationThisDatabase": "Cơ sở dữ liệu này",

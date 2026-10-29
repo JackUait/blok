@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "പരിധി",
   "tools.database.relationLimitNone": "പരിധിയില്ല",
   "tools.database.relationLimitOne": "1 പേജ്",
+  "tools.database.buttonEditedPage": "1 പേജ് എഡിറ്റ് ചെയ്തു",
+  "tools.database.undo": "പഴയപടിയാക്കുക",
   "tools.database.relationTwoWay": "ബന്ധപ്പെട്ട പ്രോപ്പർട്ടി ചേർക്കുക",
   "tools.database.rollupSelect": "തിരഞ്ഞെടുക്കുക",
   "tools.database.relationThisDatabase": "ഈ ഡാറ്റാബേസ്",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Gräns",
   "tools.database.relationLimitNone": "Ingen gräns",
   "tools.database.relationLimitOne": "1 sida",
+  "tools.database.buttonEditedPage": "1 sida redigerad",
+  "tools.database.undo": "Ångra",
   "tools.database.relationTwoWay": "Lägg till kopplad egenskap",
   "tools.database.rollupSelect": "Välj",
   "tools.database.relationThisDatabase": "Den här databasen",

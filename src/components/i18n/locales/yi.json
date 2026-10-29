@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "גרענעץ",
   "tools.database.relationLimitNone": "אָן גרענעץ",
   "tools.database.relationLimitOne": "1 בלאַט",
+  "tools.database.buttonEditedPage": "1 בלאַט רעדאַגירט",
+  "tools.database.undo": "אָפּטאָן",
   "tools.database.relationTwoWay": "צוגעבן אַ פֿאַרבונדענע אייגנשאפט",
   "tools.database.rollupSelect": "קלײַבט אויס",
   "tools.database.relationThisDatabase": "די דאטאבאנק",

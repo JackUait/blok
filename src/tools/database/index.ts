@@ -7687,7 +7687,7 @@ export class DatabaseTool implements BlockTool {
     const toAgent = agentMessageOf(actions);
 
     if (toAgent === null && !needsConfirmation(actions)) {
-      run(actions);
+      this.runWithEditedToast(actions, rowId, run);
       this.rerenderView({ keepDrawer: true });
 
       return;
@@ -7718,11 +7718,39 @@ export class DatabaseTool implements BlockTool {
       // The dialog took time: the row, the block, write access or the agent may be gone.
       if (!sends || this.readOnly || this.destroyed || this.model.getRow(rowId) === undefined) return;
       if (message !== null && !this.agentCanRun()) return;
-      run(kept);
+      this.runWithEditedToast(kept, rowId, run);
       this.rerenderView({ keepDrawer: true });
     }).finally(() => {
       this.agentPressOpen = false;
     });
+  }
+
+  /**
+   * notion-spec-2 §20.9: a press that edits a property of this page toasts
+   * "Edited 1 page" with Open and Undo. Only that case was measured, so a press
+   * that edits or adds other pages shows no toast. Undo takes back only the
+   * press's own step: the toast stays open while later edits land.
+   */
+  private runWithEditedToast(actions: ButtonAction[], rowId: string, run: (kept: ButtonAction[]) => void): void {
+    const toasts = actions.some((action) => action.type === 'editProperty')
+      && !actions.some((action) => action.type === 'editPages' || action.type === 'addPage');
+    const before = this.api.history.latestStep();
+
+    run(actions);
+    if (!toasts) return;
+    // The row writes reach the undo history after the row blocks save, a few microtasks later.
+    setTimeout(() => {
+      const after = this.api.history.latestStep();
+
+      if (this.destroyed || after === undefined || after === before) return;
+      this.api.notifier.show({
+        message: this.api.i18n.t('tools.database.buttonEditedPage'),
+        actions: [
+          { label: this.api.i18n.t('tools.database.tableOpen'), onClick: () => this.handleRowClick(rowId) },
+          { label: this.api.i18n.t('tools.database.undo'), onClick: () => this.api.history.undoStep(after) },
+        ],
+      });
+    }, 0);
   }
 
   /** The agent can take a button's message now. If not, says why in a toast. */

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ಮಿತಿ",
   "tools.database.relationLimitNone": "ಮಿತಿ ಇಲ್ಲ",
   "tools.database.relationLimitOne": "1 ಪುಟ",
+  "tools.database.buttonEditedPage": "1 ಪುಟವನ್ನು ಸಂಪಾದಿಸಲಾಗಿದೆ",
+  "tools.database.undo": "ರದ್ದುಗೊಳಿಸಿ",
   "tools.database.relationTwoWay": "ಸಂಬಂಧಿತ ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
   "tools.database.rollupSelect": "ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.relationThisDatabase": "ಈ ಡೇಟಾಬೇಸ್",

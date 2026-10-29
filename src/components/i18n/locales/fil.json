@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Limitasyon",
   "tools.database.relationLimitNone": "Walang limitasyon",
   "tools.database.relationLimitOne": "1 pahina",
+  "tools.database.buttonEditedPage": "Na-edit ang 1 pahina",
+  "tools.database.undo": "I-undo",
   "tools.database.relationTwoWay": "Magdagdag ng kaugnay na property",
   "tools.database.rollupSelect": "Pumili",
   "tools.database.relationThisDatabase": "Ang database na ito",

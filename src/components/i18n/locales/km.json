@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ដែនកំណត់",
   "tools.database.relationLimitNone": "គ្មានដែនកំណត់",
   "tools.database.relationLimitOne": "1 ទំព័រ",
+  "tools.database.buttonEditedPage": "បានកែសម្រួល 1 ទំព័រ",
+  "tools.database.undo": "មិនធ្វើវិញ",
   "tools.database.relationTwoWay": "បន្ថែមលក្ខណៈពាក់ព័ន្ធ",
   "tools.database.rollupSelect": "ជ្រើសរើស",
   "tools.database.relationThisDatabase": "មូលដ្ឋានទិន្នន័យនេះ",

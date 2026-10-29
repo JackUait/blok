@@ -115,6 +115,65 @@ describe('DatabaseTool — button property', () => {
 
     expect(doc.row('r1').properties.btn).toBeUndefined();
   });
+
+  describe('notion-spec-2 §20.9: the "Edited 1 page" toast', () => {
+    type Toast = { message: string; actions?: Array<{ label: string; onClick: () => void }> };
+
+    const press = async (buttonActions: ButtonAction[]): Promise<{ doc: Doc; toast: () => Toast | undefined; undoStep: ReturnType<typeof vi.fn>; el: HTMLElement }> => {
+      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, rowSeed('r1', 'db', { properties: { title: 'One' } })]);
+      const steps: Array<Record<string, never>> = [];
+      const undoStep = vi.fn(() => true);
+
+      // Each transact is one undo step. As in the editor, it reaches the history after the row blocks save.
+      const transact = doc.transact.getMockImplementation();
+
+      doc.transact.mockImplementation((fn: () => void) => {
+        transact?.(fn);
+        void Promise.resolve().then(() => Promise.resolve()).then(() => steps.push({}));
+      });
+      Object.assign(doc.api, { history: { latestStep: () => steps.at(-1), undoStep } });
+      const { el } = buildDatabase(doc, 'db', withActions(buttonActions));
+
+      buttonOf(el, 'r1')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const show = doc.api.notifier.show as ReturnType<typeof vi.fn>;
+      const toast = (): Toast | undefined =>
+        show.mock.calls.map(([options]) => options as Toast).find((options) => options.message === 'tools.database.buttonEditedPage');
+
+      return { doc, toast, undoStep, el };
+    };
+
+    it('shows the toast with Open and Undo after an Edit property action, and no dialog', async () => {
+      const { doc, toast } = await press([{ id: 'x1', type: 'editProperty', propertyId: 'status', value: 'done' }]);
+
+      expect(toast()?.actions?.map((action) => action.label)).toEqual(['tools.database.tableOpen', 'tools.database.undo']);
+      expect(doc.row('r1').properties.status).toBe('done');
+      expect(document.querySelector('[role="dialog"], [role="alertdialog"]')).toBeNull();
+    });
+
+    it('Undo takes back the press\'s own step', async () => {
+      const { toast, undoStep } = await press([{ id: 'x1', type: 'editProperty', propertyId: 'status', value: 'done' }]);
+
+      toast()?.actions?.[1]?.onClick();
+
+      expect(undoStep).toHaveBeenCalledTimes(1);
+      expect(undoStep.mock.calls[0]?.[0]).toBeDefined();
+    });
+
+    it('Open opens the edited page', async () => {
+      const { toast } = await press([{ id: 'x1', type: 'editProperty', propertyId: 'status', value: 'done' }]);
+
+      toast()?.actions?.[0]?.onClick();
+
+      expect(document.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+    });
+
+    it('shows no toast for a press that edits nothing', async () => {
+      const { toast } = await press([{ id: 'x3', type: 'callback', name: 'notify' }]);
+
+      expect(toast()).toBeUndefined();
+    });
+  });
 });
 
 const withActions = (buttonActions: ButtonAction[], extra: PropertyDefinition[] = []): DatabaseData => ({

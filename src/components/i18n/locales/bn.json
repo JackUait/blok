@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "সীমা",
   "tools.database.relationLimitNone": "কোনো সীমা নেই",
   "tools.database.relationLimitOne": "1টি পৃষ্ঠা",
+  "tools.database.buttonEditedPage": "1টি পৃষ্ঠা সম্পাদনা করা হয়েছে",
+  "tools.database.undo": "পূর্বাবস্থায় ফেরান",
   "tools.database.relationTwoWay": "সম্পর্কিত বৈশিষ্ট্য যোগ করুন",
   "tools.database.rollupSelect": "নির্বাচন করুন",
   "tools.database.relationThisDatabase": "এই ডেটাবেস",

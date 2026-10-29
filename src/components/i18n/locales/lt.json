@@ -1756,6 +1756,8 @@
   "tools.database.relationLimit": "Apribojimas",
   "tools.database.relationLimitNone": "Be apribojimų",
   "tools.database.relationLimitOne": "1 puslapis",
+  "tools.database.buttonEditedPage": "Redaguotas 1 puslapis",
+  "tools.database.undo": "Anuliuoti",
   "tools.database.relationTwoWay": "Pridėti susietą savybę",
   "tools.database.rollupSelect": "Pasirinkti",
   "tools.database.relationThisDatabase": "Ši duomenų bazė",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ကန့်သတ်ချက်",
   "tools.database.relationLimitNone": "ကန့်သတ်ချက်မရှိ",
   "tools.database.relationLimitOne": "1 စာမျက်နှာ",
+  "tools.database.buttonEditedPage": "စာမျက်နှာ 1 ခု တည်းဖြတ်ပြီး",
+  "tools.database.undo": "နောက်ပြန်",
   "tools.database.relationTwoWay": "ဆက်နွယ်သော ဂုဏ်သတ္တိ ထည့်ရန်",
   "tools.database.rollupSelect": "ရွေးရန်",
   "tools.database.relationThisDatabase": "ဤဒေတာဘေ့စ်",

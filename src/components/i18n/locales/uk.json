@@ -1756,6 +1756,8 @@
   "tools.database.relationLimit": "Обмеження",
   "tools.database.relationLimitNone": "Без обмежень",
   "tools.database.relationLimitOne": "1 сторінка",
+  "tools.database.buttonEditedPage": "Змінено 1 сторінку",
+  "tools.database.undo": "Скасувати",
   "tools.database.relationTwoWay": "Додати пов’язану властивість",
   "tools.database.rollupSelect": "Вибрати",
   "tools.database.relationThisDatabase": "Ця база даних",

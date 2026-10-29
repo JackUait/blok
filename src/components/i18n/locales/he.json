@@ -1754,6 +1754,8 @@
   "tools.database.relationLimit": "הגבלה",
   "tools.database.relationLimitNone": "ללא הגבלה",
   "tools.database.relationLimitOne": "1 דף",
+  "tools.database.buttonEditedPage": "דף 1 נערך",
+  "tools.database.undo": "בטל",
   "tools.database.relationTwoWay": "הוספת מאפיין מקושר",
   "tools.database.rollupSelect": "בחירה",
   "tools.database.relationThisDatabase": "מסד נתונים זה",

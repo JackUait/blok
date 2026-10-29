@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "મર્યાદા",
   "tools.database.relationLimitNone": "કોઈ મર્યાદા નહીં",
   "tools.database.relationLimitOne": "1 પૃષ્ઠ",
+  "tools.database.buttonEditedPage": "1 પૃષ્ઠ સંપાદિત કર્યું",
+  "tools.database.undo": "પૂર્વવત્ કરો",
   "tools.database.relationTwoWay": "સંબંધિત ગુણધર્મ ઉમેરો",
   "tools.database.rollupSelect": "પસંદ કરો",
   "tools.database.relationThisDatabase": "આ ડેટાબેઝ",

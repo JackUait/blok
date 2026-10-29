@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "حد",
   "tools.database.relationLimitNone": "ڪا حد ناهي",
   "tools.database.relationLimitOne": "1 صفحو",
+  "tools.database.buttonEditedPage": "1 صفحو ايڊٽ ڪيو ويو",
+  "tools.database.undo": "واپس ڪريو",
   "tools.database.relationTwoWay": "لاڳاپيل پراپرٽي شامل ڪريو",
   "tools.database.rollupSelect": "چونڊيو",
   "tools.database.relationThisDatabase": "هي ڊيٽابيس",

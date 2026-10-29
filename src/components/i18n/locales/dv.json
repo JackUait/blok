@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ލިމިޓް",
   "tools.database.relationLimitNone": "ލިމިޓެއް ނެތް",
   "tools.database.relationLimitOne": "1 ޞަފްޙާ",
+  "tools.database.buttonEditedPage": "1 ޞަފްޙާ އެޑިޓްކުރެވިއްޖެ",
+  "tools.database.undo": "އަންޑޫ",
   "tools.database.relationTwoWay": "ގުޅިފައިވާ ޕްރޮޕަރޓީއެއް އިތުރުކުރޭ",
   "tools.database.rollupSelect": "ހޮވާ",
   "tools.database.relationThisDatabase": "މި ޑޭޓާބޭސް",

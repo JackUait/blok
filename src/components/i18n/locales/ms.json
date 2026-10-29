@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Had",
   "tools.database.relationLimitNone": "Tiada had",
   "tools.database.relationLimitOne": "1 halaman",
+  "tools.database.buttonEditedPage": "1 halaman disunting",
+  "tools.database.undo": "Buat asal",
   "tools.database.relationTwoWay": "Tambah sifat berkaitan",
   "tools.database.rollupSelect": "Pilih",
   "tools.database.relationThisDatabase": "Pangkalan data ini",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Սահմանափակում",
   "tools.database.relationLimitNone": "Առանց սահմանափակման",
   "tools.database.relationLimitOne": "1 էջ",
+  "tools.database.buttonEditedPage": "Խմբագրվեց 1 էջ",
+  "tools.database.undo": "Հետարկել",
   "tools.database.relationTwoWay": "Ավելացնել կապված հատկություն",
   "tools.database.rollupSelect": "Ընտրել",
   "tools.database.relationThisDatabase": "Այս տվյալների բազան",

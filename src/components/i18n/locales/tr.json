@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Sınır",
   "tools.database.relationLimitNone": "Sınır yok",
   "tools.database.relationLimitOne": "1 sayfa",
+  "tools.database.buttonEditedPage": "1 sayfa düzenlendi",
+  "tools.database.undo": "Geri al",
   "tools.database.relationTwoWay": "İlişkili özellik ekle",
   "tools.database.rollupSelect": "Seç",
   "tools.database.relationThisDatabase": "Bu veritabanı",

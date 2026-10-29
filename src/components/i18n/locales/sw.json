@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Kikomo",
   "tools.database.relationLimitNone": "Hakuna kikomo",
   "tools.database.relationLimitOne": "Ukurasa 1",
+  "tools.database.buttonEditedPage": "Ukurasa 1 umehaririwa",
+  "tools.database.undo": "Tendua",
   "tools.database.relationTwoWay": "Ongeza sifa inayohusiana",
   "tools.database.rollupSelect": "Chagua",
   "tools.database.relationThisDatabase": "Hifadhidata hii",

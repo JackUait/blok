@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Rajoitus",
   "tools.database.relationLimitNone": "Ei rajoitusta",
   "tools.database.relationLimitOne": "1 sivu",
+  "tools.database.buttonEditedPage": "1 sivua muokattu",
+  "tools.database.undo": "Kumoa",
   "tools.database.relationTwoWay": "Lisää liittyvä ominaisuus",
   "tools.database.rollupSelect": "Valitse",
   "tools.database.relationThisDatabase": "Tämä tietokanta",

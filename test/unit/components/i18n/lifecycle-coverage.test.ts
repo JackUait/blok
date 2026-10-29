@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1908 + 136 + 520 + 4 closure for all 2568 keys', () => {
+  it('rebuilds a disjoint 1910 + 136 + 520 + 4 closure for all 2570 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2568);
+    expect(lifecycle.size).toBe(2570);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -476,7 +476,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the table files panel's Upload and Link tabs, tools.database.filesTabUpload/filesTabLink, by literal.
       // +2: the Files Limit choice and its Replace row, tools.database.filesLimitOne/filesReplace, by literal.
       // +1: the URL header menu's Show full URL switch, by literal.
-      'executable-literal': 1908,
+      'executable-literal': 1910,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

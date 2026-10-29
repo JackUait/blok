@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "සීමාව",
   "tools.database.relationLimitNone": "සීමාවක් නැත",
   "tools.database.relationLimitOne": "පිටු 1",
+  "tools.database.buttonEditedPage": "පිටු 1 ක් සංස්කරණය කළා",
+  "tools.database.undo": "අහෝසි කරන්න",
   "tools.database.relationTwoWay": "සම්බන්ධිත ගුණාංගය එක් කරන්න",
   "tools.database.rollupSelect": "තෝරන්න",
   "tools.database.relationThisDatabase": "මෙම දත්ත ගබඩාව",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Grense",
   "tools.database.relationLimitNone": "Ingen grense",
   "tools.database.relationLimitOne": "1 side",
+  "tools.database.buttonEditedPage": "1 side redigert",
+  "tools.database.undo": "Angre",
   "tools.database.relationTwoWay": "Legg til relatert egenskap",
   "tools.database.rollupSelect": "Velg",
   "tools.database.relationThisDatabase": "Denne databasen",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Όριο",
   "tools.database.relationLimitNone": "Χωρίς όριο",
   "tools.database.relationLimitOne": "1 σελίδα",
+  "tools.database.buttonEditedPage": "Επεξεργάστηκε 1 σελίδα",
+  "tools.database.undo": "Αναίρεση",
   "tools.database.relationTwoWay": "Προσθήκη συσχετισμένης ιδιότητας",
   "tools.database.rollupSelect": "Επιλογή",
   "tools.database.relationThisDatabase": "Αυτή η βάση δεδομένων",

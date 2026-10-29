@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ლიმიტი",
   "tools.database.relationLimitNone": "ლიმიტის გარეშე",
   "tools.database.relationLimitOne": "1 გვერდი",
+  "tools.database.buttonEditedPage": "1 გვერდი რედაქტირდა",
+  "tools.database.undo": "დაბრუნება",
   "tools.database.relationTwoWay": "დაკავშირებული თვისების დამატება",
   "tools.database.rollupSelect": "აირჩიეთ",
   "tools.database.relationThisDatabase": "ეს მონაცემთა ბაზა",

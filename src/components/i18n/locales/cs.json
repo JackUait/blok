@@ -1756,6 +1756,8 @@
   "tools.database.relationLimit": "Omezení",
   "tools.database.relationLimitNone": "Bez omezení",
   "tools.database.relationLimitOne": "1 stránka",
+  "tools.database.buttonEditedPage": "Upravena 1 stránka",
+  "tools.database.undo": "Zpět",
   "tools.database.relationTwoWay": "Přidat propojenou vlastnost",
   "tools.database.rollupSelect": "Vybrat",
   "tools.database.relationThisDatabase": "Tato databáze",

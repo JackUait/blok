@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ਸੀਮਾ",
   "tools.database.relationLimitNone": "ਕੋਈ ਸੀਮਾ ਨਹੀਂ",
   "tools.database.relationLimitOne": "1 ਪੰਨਾ",
+  "tools.database.buttonEditedPage": "1 ਪੰਨਾ ਸੰਪਾਦਿਤ ਕੀਤਾ",
+  "tools.database.undo": "ਅਣਕੀਤਾ ਕਰੋ",
   "tools.database.relationTwoWay": "ਸੰਬੰਧਿਤ ਵਿਸ਼ੇਸ਼ਤਾ ਜੋੜੋ",
   "tools.database.rollupSelect": "ਚੁਣੋ",
   "tools.database.relationThisDatabase": "ਇਹ ਡਾਟਾਬੇਸ",

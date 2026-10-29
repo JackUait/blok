@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Хязгаар",
   "tools.database.relationLimitNone": "Хязгааргүй",
   "tools.database.relationLimitOne": "1 хуудас",
+  "tools.database.buttonEditedPage": "1 хуудсыг засварласан",
+  "tools.database.undo": "Буцаах",
   "tools.database.relationTwoWay": "Холбоотой шинж нэмэх",
   "tools.database.rollupSelect": "Сонгох",
   "tools.database.relationThisDatabase": "Энэ мэдээллийн сан",

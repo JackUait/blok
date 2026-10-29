@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "限制",
   "tools.database.relationLimitNone": "无限制",
   "tools.database.relationLimitOne": "1 个页面",
+  "tools.database.buttonEditedPage": "已编辑 1 个页面",
+  "tools.database.undo": "撤销",
   "tools.database.relationTwoWay": "添加关联属性",
   "tools.database.rollupSelect": "选择",
   "tools.database.relationThisDatabase": "此数据库",

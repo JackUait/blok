@@ -1756,6 +1756,8 @@
   "tools.database.relationLimit": "Ograniczenie",
   "tools.database.relationLimitNone": "Bez ograniczeń",
   "tools.database.relationLimitOne": "1 strona",
+  "tools.database.buttonEditedPage": "Edytowano 1 stronę",
+  "tools.database.undo": "Cofnij",
   "tools.database.relationTwoWay": "Dodaj powiązaną właściwość",
   "tools.database.rollupSelect": "Wybierz",
   "tools.database.relationThisDatabase": "Ta baza danych",

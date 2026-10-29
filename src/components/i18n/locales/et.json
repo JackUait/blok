@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Piirang",
   "tools.database.relationLimitNone": "Piiranguta",
   "tools.database.relationLimitOne": "1 leht",
+  "tools.database.buttonEditedPage": "Muudeti 1 lehte",
+  "tools.database.undo": "Võta tagasi",
   "tools.database.relationTwoWay": "Lisa seotud omadus",
   "tools.database.rollupSelect": "Vali",
   "tools.database.relationThisDatabase": "See andmebaas",

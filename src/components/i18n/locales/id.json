@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Batas",
   "tools.database.relationLimitNone": "Tanpa batas",
   "tools.database.relationLimitOne": "1 halaman",
+  "tools.database.buttonEditedPage": "1 halaman diedit",
+  "tools.database.undo": "Urungkan",
   "tools.database.relationTwoWay": "Tambahkan properti terkait",
   "tools.database.rollupSelect": "Pilih",
   "tools.database.relationThisDatabase": "Basis data ini",

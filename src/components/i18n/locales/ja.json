@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "上限",
   "tools.database.relationLimitNone": "上限なし",
   "tools.database.relationLimitOne": "1 ページ",
+  "tools.database.buttonEditedPage": "1 ページを編集しました",
+  "tools.database.undo": "取り消す",
   "tools.database.relationTwoWay": "関連プロパティを追加",
   "tools.database.rollupSelect": "選択",
   "tools.database.relationThisDatabase": "このデータベース",

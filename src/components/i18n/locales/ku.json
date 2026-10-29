@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "سنوور",
   "tools.database.relationLimitNone": "بێ سنوور",
   "tools.database.relationLimitOne": "1 پەڕە",
+  "tools.database.buttonEditedPage": "1 پەڕە دەستکاری کرا",
+  "tools.database.undo": "پاشگەزبوونەوە",
   "tools.database.relationTwoWay": "زیادکردنی تایبەتمەندیی پەیوەندیدار",
   "tools.database.rollupSelect": "هەڵبژێرە",
   "tools.database.relationThisDatabase": "ئەم داتابەیسە",

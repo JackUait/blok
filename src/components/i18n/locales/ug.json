@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "چەك",
   "tools.database.relationLimitNone": "چەكسىز",
   "tools.database.relationLimitOne": "1 بەت",
+  "tools.database.buttonEditedPage": "1 بەت تەھرىرلەندى",
+  "tools.database.undo": "يېنىۋېلىش",
   "tools.database.relationTwoWay": "مۇناسىۋەتلىك خاسلىق قوشۇش",
   "tools.database.rollupSelect": "تاللاڭ",
   "tools.database.relationThisDatabase": "بۇ ساندان",

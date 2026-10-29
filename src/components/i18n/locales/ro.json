@@ -1754,6 +1754,8 @@
   "tools.database.relationLimit": "Limită",
   "tools.database.relationLimitNone": "Fără limită",
   "tools.database.relationLimitOne": "1 pagină",
+  "tools.database.buttonEditedPage": "1 pagină editată",
+  "tools.database.undo": "Anulează",
   "tools.database.relationTwoWay": "Adăugați proprietatea asociată",
   "tools.database.rollupSelect": "Selectați",
   "tools.database.relationThisDatabase": "Această bază de date",

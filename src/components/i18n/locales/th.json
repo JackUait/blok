@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ขีดจำกัด",
   "tools.database.relationLimitNone": "ไม่จำกัด",
   "tools.database.relationLimitOne": "1 หน้า",
+  "tools.database.buttonEditedPage": "แก้ไข 1 หน้าแล้ว",
+  "tools.database.undo": "เลิกทำ",
   "tools.database.relationTwoWay": "เพิ่มคุณสมบัติที่เกี่ยวข้อง",
   "tools.database.rollupSelect": "เลือก",
   "tools.database.relationThisDatabase": "ฐานข้อมูลนี้",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Begrenzung",
   "tools.database.relationLimitNone": "Keine Begrenzung",
   "tools.database.relationLimitOne": "1 Seite",
+  "tools.database.buttonEditedPage": "1 Seite bearbeitet",
+  "tools.database.undo": "Widerrufen",
   "tools.database.relationTwoWay": "Verknüpfte Eigenschaft hinzufügen",
   "tools.database.rollupSelect": "Auswählen",
   "tools.database.relationThisDatabase": "Diese Datenbank",

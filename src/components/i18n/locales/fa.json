@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "محدودیت",
   "tools.database.relationLimitNone": "بدون محدودیت",
   "tools.database.relationLimitOne": "1 صفحه",
+  "tools.database.buttonEditedPage": "1 صفحه ویرایش شد",
+  "tools.database.undo": "واگرد",
   "tools.database.relationTwoWay": "افزودن ویژگی مرتبط",
   "tools.database.rollupSelect": "انتخاب کنید",
   "tools.database.relationThisDatabase": "این پایگاه داده",

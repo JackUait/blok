@@ -1754,6 +1754,8 @@
   "tools.database.relationLimit": "Limite",
   "tools.database.relationLimitNone": "Aucune limite",
   "tools.database.relationLimitOne": "1 page",
+  "tools.database.buttonEditedPage": "1 page modifiée",
+  "tools.database.undo": "Annuler",
   "tools.database.relationTwoWay": "Ajouter une propriété liée",
   "tools.database.rollupSelect": "Sélectionner",
   "tools.database.relationThisDatabase": "Cette base de données",

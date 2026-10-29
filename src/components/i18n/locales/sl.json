@@ -1756,6 +1756,8 @@
   "tools.database.relationLimit": "Omejitev",
   "tools.database.relationLimitNone": "Brez omejitve",
   "tools.database.relationLimitOne": "1 stran",
+  "tools.database.buttonEditedPage": "Urejena 1 stran",
+  "tools.database.undo": "Razveljavi",
   "tools.database.relationTwoWay": "Dodaj povezano lastnost",
   "tools.database.rollupSelect": "Izberi",
   "tools.database.relationThisDatabase": "Ta zbirka podatkov",

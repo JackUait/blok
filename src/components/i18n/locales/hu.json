@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Korlát",
   "tools.database.relationLimitNone": "Nincs korlát",
   "tools.database.relationLimitOne": "1 oldal",
+  "tools.database.buttonEditedPage": "1 oldal szerkesztve",
+  "tools.database.undo": "Visszavonás",
   "tools.database.relationTwoWay": "Kapcsolódó tulajdonság hozzáadása",
   "tools.database.rollupSelect": "Kiválasztás",
   "tools.database.relationThisDatabase": "Ez az adatbázis",

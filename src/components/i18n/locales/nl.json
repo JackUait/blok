@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Limiet",
   "tools.database.relationLimitNone": "Geen limiet",
   "tools.database.relationLimitOne": "1 pagina",
+  "tools.database.buttonEditedPage": "1 pagina bewerkt",
+  "tools.database.undo": "Ongedaan maken",
   "tools.database.relationTwoWay": "Gekoppelde eigenschap toevoegen",
   "tools.database.rollupSelect": "Selecteren",
   "tools.database.relationThisDatabase": "Deze database",

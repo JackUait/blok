@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "పరిమితి",
   "tools.database.relationLimitNone": "పరిమితి లేదు",
   "tools.database.relationLimitOne": "1 పేజీ",
+  "tools.database.buttonEditedPage": "1 పేజీ సవరించబడింది",
+  "tools.database.undo": "చర్య రద్దు చేయి",
   "tools.database.relationTwoWay": "సంబంధిత ప్రాపర్టీని జోడించండి",
   "tools.database.rollupSelect": "ఎంచుకోండి",
   "tools.database.relationThisDatabase": "ఈ డేటాబేస్",

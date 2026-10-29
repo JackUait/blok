@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "حد",
   "tools.database.relationLimitNone": "کوئی حد نہیں",
   "tools.database.relationLimitOne": "1 صفحہ",
+  "tools.database.buttonEditedPage": "1 صفحہ ترمیم کیا گیا",
+  "tools.database.undo": "کالعدم کریں",
   "tools.database.relationTwoWay": "متعلقہ پراپرٹی شامل کریں",
   "tools.database.rollupSelect": "منتخب کریں",
   "tools.database.relationThisDatabase": "یہ ڈیٹابیس",

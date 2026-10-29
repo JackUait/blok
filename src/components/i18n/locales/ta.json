@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "வரம்பு",
   "tools.database.relationLimitNone": "வரம்பு இல்லை",
   "tools.database.relationLimitOne": "1 பக்கம்",
+  "tools.database.buttonEditedPage": "1 பக்கம் திருத்தப்பட்டது",
+  "tools.database.undo": "செயல்தவிர்",
   "tools.database.relationTwoWay": "தொடர்புடைய பண்பைச் சேர்",
   "tools.database.rollupSelect": "தேர்ந்தெடு",
   "tools.database.relationThisDatabase": "இந்தத் தரவுத்தளம்",

@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "ຂີດຈຳກັດ",
   "tools.database.relationLimitNone": "ບໍ່ມີຂີດຈຳກັດ",
   "tools.database.relationLimitOne": "1 ໜ້າ",
+  "tools.database.buttonEditedPage": "ແກ້ໄຂ 1 ໜ້າແລ້ວ",
+  "tools.database.undo": "ຍ້ອນກັບ",
   "tools.database.relationTwoWay": "ເພີ່ມຄຸນສົມບັດທີ່ກ່ຽວຂ້ອງ",
   "tools.database.rollupSelect": "ເລືອກ",
   "tools.database.relationThisDatabase": "ຖານຂໍ້ມູນນີ້",

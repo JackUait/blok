@@ -147,6 +147,7 @@ export const makeDoc = (seed: Array<{ id: string; name: string; parentId: string
       transact,
     },
     notifier: { show: vi.fn() },
+    history: { latestStep: vi.fn(() => undefined), undoStep: vi.fn(() => false) },
     viewState: { get: vi.fn(), set: vi.fn() },
     tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
   } as unknown as API;

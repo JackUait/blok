@@ -1752,6 +1752,8 @@
   "tools.database.relationLimit": "Ограничение",
   "tools.database.relationLimitNone": "Без ограничение",
   "tools.database.relationLimitOne": "1 страница",
+  "tools.database.buttonEditedPage": "Редактирана е 1 страница",
+  "tools.database.undo": "Отмяна",
   "tools.database.relationTwoWay": "Добавяне на свързано свойство",
   "tools.database.rollupSelect": "Изберете",
   "tools.database.relationThisDatabase": "Тази база данни",

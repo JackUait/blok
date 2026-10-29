@@ -5,10 +5,16 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
-import type { OutputBlockData } from '../../../../types';
+import type { OutputBlockData, OutputData } from '../../../../types';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
-let editor: Blok | undefined;
+interface TestEditor {
+  isReady: Promise<unknown>;
+  save: () => Promise<OutputData>;
+  destroy: () => void;
+}
+
+let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
 const quiet = async (): Promise<void> => {
@@ -55,7 +61,7 @@ const make = async (blocks: OutputBlockData[]): Promise<void> => {
     holder, dataModel: 'hierarchical',
     tools: { paragraph: Paragraph, database: { class: DatabaseTool }, 'database-row': DatabaseRowTool },
     data: { blocks },
-  });
+  } as never) as unknown as TestEditor;
   await editor.isReady;
   await quiet();
 };

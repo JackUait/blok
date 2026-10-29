@@ -225,7 +225,7 @@ describe('table URL, email and phone cells', () => {
         { id: 'p-stat', name: 'Stat', type: 'status', position: 'b3', config: { options: [{ id: 'o1', label: 'Done', position: 'a0' }] } },
         { id: 'p-who', name: 'Who', type: 'person', position: 'b4' },
         { id: 'p-file', name: 'File', type: 'files', position: 'b5' },
-        { id: 'p-rel', name: 'Rel', type: 'relation', position: 'b6', relation: { databaseId: 'db' } },
+        { id: 'p-rel', name: 'Rel', type: 'relation', position: 'b6', relation: { targetDatabaseId: 'db' } },
         { id: 'p-roll', name: 'Roll', type: 'rollup', position: 'b7', rollup: { relationPropertyId: 'p-rel', targetPropertyId: 'x', function: 'sum' } },
         { id: 'p-id', name: 'ID', type: 'uniqueId', position: 'b8' },
         { id: 'p-made', name: 'Made', type: 'createdTime', position: 'b9' },

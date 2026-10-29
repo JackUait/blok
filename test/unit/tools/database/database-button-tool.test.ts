@@ -125,7 +125,7 @@ describe('DatabaseTool — button property', () => {
       const undoStep = vi.fn(() => true);
 
       // Each transact is one undo step. As in the editor, it reaches the history after the row blocks save.
-      const transact = doc.transact.getMockImplementation();
+      const transact = doc.transact.getMockImplementation() as ((fn: () => void) => void) | undefined;
 
       doc.transact.mockImplementation((fn: () => void) => {
         transact?.(fn);

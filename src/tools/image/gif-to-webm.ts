@@ -1,3 +1,6 @@
+import { writeWebm } from './webm-writer';
+import type { WebmFrame, WebmTrack } from './webm-writer';
+
 // Minimal structural types for the WebCodecs surface we use (avoids relying on
 // lib.dom types that may not be present in the project's TS target).
 interface DecodedFrame {
@@ -8,13 +11,21 @@ interface DecodedFrame {
   close(): void;
 }
 
+type VideoFrameCtor = new (source: DecodedFrame, init: { timestamp: number; duration: number }) => DecodedFrame;
+
 interface ImageDecoderLike {
   tracks: { ready: Promise<void>; selectedTrack?: { frameCount: number } };
   decode(opts: { frameIndex: number }): Promise<{ image: DecodedFrame; complete: boolean }>;
   close(): void;
 }
 
-interface EncodedChunk { type: string; }
+interface EncodedChunk {
+  type: string;
+  timestamp: number;
+  duration: number | null;
+  byteLength: number;
+  copyTo(destination: Uint8Array): void;
+}
 
 interface VideoEncoderLike {
   configure(config: Record<string, unknown>): void;
@@ -25,7 +36,7 @@ interface VideoEncoderLike {
 
 interface VideoEncoderCtor {
   new (init: {
-    output: (chunk: EncodedChunk, meta: unknown) => void;
+    output: (chunk: EncodedChunk) => void;
     error: (err: unknown) => void;
   }): VideoEncoderLike;
   isConfigSupported(config: Record<string, unknown>): Promise<{ supported?: boolean }>;
@@ -42,8 +53,8 @@ async function pickCodec(
   Encoder: VideoEncoderCtor,
   width: number,
   height: number,
-): Promise<{ encoderCodec: string; muxerCodec: 'V_VP9' | 'V_VP8' } | null> {
-  const candidates: Array<{ encoderCodec: string; muxerCodec: 'V_VP9' | 'V_VP8' }> = [
+): Promise<{ encoderCodec: string; muxerCodec: WebmTrack['codec'] } | null> {
+  const candidates: Array<{ encoderCodec: string; muxerCodec: WebmTrack['codec'] }> = [
     { encoderCodec: 'vp09.00.10.08', muxerCodec: 'V_VP9' },
     { encoderCodec: 'vp8', muxerCodec: 'V_VP8' },
   ];
@@ -87,16 +98,9 @@ export async function convertGifToWebm(
     const codec = await pickCodec(EncoderCtor, width, height);
     if (!codec) return null;
 
-    const { Muxer, ArrayBufferTarget } = await import('webm-muxer');
-    const target = new ArrayBufferTarget();
-    const muxer = new Muxer({
-      target,
-      video: { codec: codec.muxerCodec, width, height },
-      firstTimestampBehavior: 'offset',
-    });
-
+    const chunks: WebmFrame[] = [];
     const encoder = new EncoderCtor({
-      output: (chunk, meta) => muxer.addVideoChunk(chunk as never, meta as never),
+      output: (chunk) => chunks.push(toWebmFrame(chunk)),
       error: () => undefined,
     });
     resources.encoder = encoder;
@@ -119,8 +123,8 @@ export async function convertGifToWebm(
     }
 
     await encoder.flush();
-    muxer.finalize();
-    return new Blob([target.buffer], { type: 'video/webm' });
+    const webm = writeWebm({ codec: codec.muxerCodec, width, height }, chunks);
+    return new Blob([webm], { type: 'video/webm' });
   } catch {
     return null;
   } finally {
@@ -130,6 +134,13 @@ export async function convertGifToWebm(
     try { resources.encoder?.close(); } catch { /* noop */ }
     try { resources.decoder?.close(); } catch { /* noop */ }
   }
+}
+
+function toWebmFrame(chunk: EncodedChunk): WebmFrame {
+  const data = new Uint8Array(chunk.byteLength);
+
+  chunk.copyTo(data);
+  return { data, key: chunk.type === 'key', timestamp: chunk.timestamp, duration: chunk.duration ?? 0 };
 }
 
 /**
@@ -155,10 +166,17 @@ function encodeFrame(
   index: number,
   timestamp: number,
 ): number {
-  const stamped = frame as DecodedFrame & { timestamp: number };
-  stamped.timestamp = timestamp;
-  encoder.encode(frame, { keyFrame: index % KEYFRAME_INTERVAL === 0 });
-  return timestamp + (frame.duration ?? 100_000);
+  const duration = frame.duration ?? 100_000;
+  // VideoFrame.timestamp is getter-only, so a re-stamped copy is encoded instead.
+  const Frame = (globalThis as Record<string, unknown>).VideoFrame as VideoFrameCtor;
+  const stamped = new Frame(frame, { timestamp, duration });
+
+  try {
+    encoder.encode(stamped, { keyFrame: index % KEYFRAME_INTERVAL === 0 });
+  } finally {
+    stamped.close();
+  }
+  return timestamp + duration;
 }
 
 /**

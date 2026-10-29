@@ -42,7 +42,7 @@ const bytesOf = (n: number, width = 1): number[] => {
   return Array.from({ length }, (_unused, i) => Math.floor(n / 256 ** (length - 1 - i)) % 256);
 };
 
-const concat = (parts: Uint8Array[]): Uint8Array => {
+const concat = (parts: Uint8Array[]): Uint8Array<ArrayBuffer> => {
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
 
   parts.reduce((offset, part) => {
@@ -128,7 +128,7 @@ const seekHead = (infoPos: number, tracksPos: number, cuesPos: number): Uint8Arr
  * Build a WebM file holding one VP8/VP9 video track. Frames must be in decode
  * order with the first one a key frame.
  */
-export const writeWebm = (track: WebmTrack, frames: WebmFrame[]): Uint8Array => {
+export const writeWebm = (track: WebmTrack, frames: WebmFrame[]): Uint8Array<ArrayBuffer> => {
   const last = frames.at(-1);
   const durationMs = last ? ms(last.timestamp + last.duration) : 0;
 

@@ -16448,7 +16448,8 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
 }
 
-[data-blok-database-formula-preview-picker] > input {
+[data-blok-database-formula-preview-picker] > input[data-blok-field] {
+  width: auto;
   margin: var(--blok-space-2) var(--blok-space-2-5) var(--blok-space-2);
 }
 

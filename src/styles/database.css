@@ -8693,7 +8693,7 @@ textarea[data-blok-database-cell-input] {
   z-index: 1;
   display: none;
   align-items: center;
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-1-5);
   height: 24px;
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
   border: none;
@@ -8704,9 +8704,17 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 18px;
   font-weight: 500;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   cursor: pointer;
   transition: background-color 20ms ease-in;
+}
+
+/* notion-spec-2 §24.7: Notion's icon box is 15.25 wide; the 14px glyph sits centered in it. */
+[data-blok-database-table-open] > span[aria-hidden="true"] {
+  display: inline-flex;
+  justify-content: center;
+  width: 15.25px;
 }
 
 [data-blok-database-table-open] svg {
@@ -9105,14 +9113,17 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: center;
   height: 36px;
-  padding-inline-end: var(--blok-space-1);
-  opacity: 0;
 }
 
-[data-blok-database-table-row]:hover > [data-blok-database-table-gutter],
-[data-blok-database-table-header]:hover > [data-blok-database-table-gutter],
-[data-blok-database-table-row][aria-selected="true"] > [data-blok-database-table-gutter],
-[data-blok-database-table-header] > [data-blok-database-table-gutter]:has([aria-checked="true"], [aria-checked="mixed"]) {
+/* notion-spec-2 §24.3: + and ⋮⋮ show on row hover only; a selected row keeps just its checkbox. */
+[data-blok-database-table-row-add],
+[data-blok-database-table-row-handle] {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+[data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-add],
+[data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-handle] {
   opacity: 1;
 }
 
@@ -9157,11 +9168,28 @@ textarea[data-blok-database-cell-input] {
   box-sizing: border-box;
   width: 16px;
   height: 16px;
-  margin-inline: var(--blok-space-1);
+  /* notion-spec-2 §24.3: 10px from the table edge, so the slot is 36 wide. */
+  margin-inline: var(--blok-space-2-5);
   border: 1px solid var(--blok-database-checkbox-border);
   border-radius: var(--blok-radius-control-sm);
+  opacity: 0;
   cursor: pointer;
-  transition: background-color 200ms ease-out;
+  transition: background-color 200ms ease-out, opacity 200ms;
+}
+
+/* notion-spec-2 §24.3: 0.7 on row hover, 1 under the pointer or once picked. Header hover is unmeasured and keeps 1. */
+[data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-checkbox]:not(:hover, [aria-checked="true"]) {
+  opacity: 0.7;
+}
+
+[data-blok-database-table-row-checkbox]:hover,
+[data-blok-database-table-select-all]:hover {
+  opacity: 1;
+  background-color: var(--blok-database-checkbox-hover-bg);
+}
+
+[data-blok-database-table-header]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-select-all] {
+  opacity: 1;
 }
 
 [data-blok-database-table-row-checkbox][aria-checked="true"],
@@ -9169,6 +9197,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-select-all][aria-checked="mixed"] {
   border-color: var(--blok-icon-active-text);
   background-color: var(--blok-icon-active-bg);
+  opacity: 1;
 }
 
 /* A check drawn in primary ink. */
@@ -9570,6 +9599,8 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-table-resize],
   [data-blok-database-table-row-checkbox],
   [data-blok-database-table-select-all],
+  [data-blok-database-table-row-add],
+  [data-blok-database-table-row-handle],
   [data-blok-database-table-group-toggle] svg,
   [data-blok-database-board-lane-toggle] svg,
   [data-blok-database-table-drop-line],

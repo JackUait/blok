@@ -103,6 +103,55 @@ describe('database table view styles', () => {
     expect(checked).not.toMatch(/rgb\(39,\s*131,\s*222\)|#2783de|focus-ring/i);
   });
 
+  // notion-spec-2 §24.3 (cb-hover.txt, cb-onbox.txt, cb-selected.txt, 30-select-rest.png).
+  describe('row checkbox gutter', () => {
+    const BOX = '[data-blok-database-table-row-checkbox]';
+    const ROW_HOVER = '[data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-checkbox]:not(:hover, [aria-checked="true"])';
+
+    it('keeps the gutter itself drawn, so each control fades on its own', () => {
+      expect(ruleBody('[data-blok-database-table-gutter]')).not.toMatch(/opacity/);
+    });
+
+    it('hides the checkbox at rest, shows it at 0.7 on row hover and 1 on the box, fading 200ms', () => {
+      const box = ruleBody(BOX);
+
+      expect(box).toMatch(/opacity:\s*0;/);
+      expect(box).toMatch(/transition:[^;]*opacity 200ms/);
+      expect(box).toMatch(/transition:[^;]*background-color 200ms ease-out/);
+      expect(exactRule(ROW_HOVER)).toMatch(/opacity:\s*0\.7/);
+      expect(ruleBody(`${BOX}:hover`)).toMatch(/opacity:\s*1/);
+      expect(ruleBody(`${BOX}:hover`)).toContain('background-color: var(--blok-database-checkbox-hover-bg)');
+    });
+
+    it('keeps a checked box, and the header box while some rows are picked, fully shown', () => {
+      const shown = ruleBody(`${BOX}[aria-checked="true"]`);
+
+      expect(shown).toMatch(/opacity:\s*1/);
+      expect(ruleBody('[data-blok-database-table-select-all][aria-checked="mixed"]')).toMatch(/opacity:\s*1/);
+    });
+
+    it('shows + and ⋮⋮ on row hover only: a selected row keeps just its checkbox', () => {
+      expect(ruleBody('[data-blok-database-table-row-add]')).toMatch(/opacity:\s*0;/);
+      expect(ruleBody('[data-blok-database-table-row]:hover > [data-blok-database-table-gutter] > [data-blok-database-table-row-add]')).toMatch(/opacity:\s*1/);
+      expect(css).not.toContain('[data-blok-database-table-row][aria-selected="true"] > [data-blok-database-table-gutter]');
+    });
+
+    it('sits the 16px box 10px in from the table edge, in a 36px tall gutter', () => {
+      expect(ruleBody(BOX)).toContain('margin-inline: var(--blok-space-2-5)');
+      expect(ruleBody('[data-blok-database-table-gutter]')).not.toMatch(/padding-inline-end/);
+      expect(ruleBody('[data-blok-database-table-gutter]')).toMatch(/height:\s*36px/);
+    });
+  });
+
+  // notion-spec-2 §24.7 (open-light.txt): gap 6, 0.5px tracking, a 15.25 wide icon slot, so the box is 68.6 wide.
+  it('spaces the OPEN button as Notion: 6px gap, 0.5px letter-spacing, 15.25px icon slot', () => {
+    const open = ruleBody('[data-blok-database-table-open]');
+
+    expect(open).toContain('gap: var(--blok-space-1-5)');
+    expect(open).toMatch(/letter-spacing:\s*0\.5px/);
+    expect(ruleBody('[data-blok-database-table-open] > span[aria-hidden="true"]')).toMatch(/width:\s*15\.25px/);
+  });
+
   it('uses logical properties only, so RTL mirrors the grid', () => {
     expect(tableCss.length).toBeGreaterThan(1000);
     expect(tableCss).not.toMatch(/(?:^|[\s;{])(?:left|right|margin-left|margin-right|padding-left|padding-right|border-left|border-right)\s*:/m);

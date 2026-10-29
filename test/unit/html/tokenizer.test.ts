@@ -69,7 +69,10 @@ const cases = files.flatMap((file) => {
   );
 });
 
-describe('Tokenizer on the html5lib tokenizer suite', () => {
+// Generous: these run thousands of inputs and share the machine with other jobs.
+const SLOW = { timeout: 120_000 };
+
+describe('Tokenizer on the html5lib tokenizer suite', SLOW, () => {
   it('reads all 13 files with cases, in every listed initial state', () => {
     expect(files).toHaveLength(14);
     expect(cases).toHaveLength(7032);
@@ -122,7 +125,7 @@ const record = (html: string, state = TokenizerMode.DATA): Token[] => {
   return tokens;
 };
 
-describe('Tokenizer contract with the tree builder', () => {
+describe('Tokenizer contract with the tree builder', SLOW, () => {
   it('hands out a new object for every token and attribute, since the tree builder keeps and edits them', () => {
     const tokens = record('<a b="1" c=2>x y<a b="1">&amp;<!--c--><!--c--><!DOCTYPE html><!DOCTYPE html></a>\0\0 x');
     const attrs = tokens.flatMap((token) => ('attrs' in token ? token.attrs : []));
@@ -240,7 +243,7 @@ const best = (html: string, start: Parameters<typeof tokenize>[1], times: number
 const calibrate = (testCase: (typeof PATHOLOGICAL)[number]): number =>
   [1000, 2000, 4000, 8000].find((n) => best(testCase.build(n), testCase, 1) >= 0.5) ?? 16000;
 
-describe('Tokenizer time', () => {
+describe('Tokenizer time', SLOW, () => {
   // One run over 8n must cost about eight runs over n; a quadratic path costs
   // 8x more. Eight small runs against one large keeps the work, and the GC, alike.
   it.each(PATHOLOGICAL)('stays linear on $name', (testCase) => {

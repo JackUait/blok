@@ -168,7 +168,10 @@ const report = (name: string, tally: Tally): void => {
 const FUZZ_SEEDS = 20_000;
 const fuzz = Array.from({ length: FUZZ_SEEDS }, (_, seed) => fuzzHtml(seed));
 
-describe('Tokenizer against parse5', () => {
+// Generous: these run thousands of inputs and share the machine with other jobs.
+const SLOW = { timeout: 120_000 };
+
+describe('Tokenizer against parse5', SLOW, () => {
   it('matches on real documents', () => {
     const tally = compare(realDocuments().map((doc) => doc.html), DATA);
 

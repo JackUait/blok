@@ -104,6 +104,11 @@ const SOLIDUS = 0x2f;
 const GREATER_THAN = 0x3e;
 const RIGHT_BRACKET = 0x5d;
 
+// Module constants: an interpreter reads them faster than enum members.
+const CHARACTER = TokenType.CHARACTER;
+const NULL_CHARACTER = TokenType.NULL_CHARACTER;
+const WHITESPACE_CHARACTER = TokenType.WHITESPACE_CHARACTER;
+
 const REPLACEMENT = '�';
 
 /** A sticky regex that reports where its match from a given index ends. */
@@ -127,6 +132,7 @@ class Sticky {
 const WHITESPACE_RUN = new Sticky(/[\t\n\f ]+/y);
 const NUL_RUN = new Sticky(/\0+/y);
 const DATA_RUN = new Sticky(/[^\t\n\f <&\0]+/y);
+const DATA_TEXT = /[^\t\n\f <&\0]+/y;
 const RAWTEXT_RUN = new Sticky(/[^\t\n\f <\0]+/y);
 const PLAINTEXT_RUN = new Sticky(/[^\t\n\f \0]+/y);
 const TAG_NAME_RUN = new Sticky(/[^\t\n\f />\0]+/y);
@@ -189,11 +195,15 @@ export class Tokenizer implements TokenizerControl {
     this.html = html.indexOf('\r') < 0 ? html : html.replace(/\r\n?/g, '\n');
     this.pos = 0;
     this.current = this.state;
-    while (this.current !== ENDED) {
-      const cp = this.pos < this.html.length ? this.html.charCodeAt(this.pos) : EOF;
+    while (this.current !== 67 /* ENDED */) {
+      const cp = this.pos < this.html.length ? this.html.charCodeAt(this.pos) : -1;
 
       this.pos++;
-      this.call(cp);
+      if (this.current === 0 /* DATA */) {
+        this.data(cp);
+      } else {
+        this.call(cp);
+      }
     }
   }
 
@@ -217,9 +227,9 @@ export class Tokenizer implements TokenizerControl {
       return;
     }
     this.pendingType = null;
-    if (type === TokenType.CHARACTER) {
+    if (type === CHARACTER) {
       this.handler.onCharacter({ type, chars: this.pendingChars });
-    } else if (type === TokenType.WHITESPACE_CHARACTER) {
+    } else if (type === WHITESPACE_CHARACTER) {
       this.handler.onWhitespaceCharacter({ type, chars: this.pendingChars });
     } else {
       this.handler.onNullCharacter({ type, chars: this.pendingChars });
@@ -228,7 +238,7 @@ export class Tokenizer implements TokenizerControl {
 
   /** Emits a decoded reference: a lone whitespace character is whitespace, all else is text. */
   private emitRefText(text: string): void {
-    this.emitChars(text.length === 1 && isWhitespace(text.charCodeAt(0)) ? TokenType.WHITESPACE_CHARACTER : TokenType.CHARACTER, text);
+    this.emitChars(text.length === 1 && isWhitespace(text.charCodeAt(0)) ? WHITESPACE_CHARACTER : CHARACTER, text);
   }
 
   /** Emits the run of `pattern` that starts at the character just consumed. */
@@ -418,10 +428,18 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x3c /* LESS_THAN */: this.dataLessThan(); break;
       case 0x26 /* AMPERSAND */: this.startCharRef(DATA); break;
-      case 0x00 /* NUL */: this.emitRun(TokenType.NULL_CHARACTER, NUL_RUN); break;
+      case 0x00 /* NUL */: this.emitRun(NULL_CHARACTER, NUL_RUN); break;
       case -1 /* EOF */: this.emitEof(); break;
       case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitWhitespace(); break;
-      default: this.emitRun(TokenType.CHARACTER, DATA_RUN);
+      default: {
+        // cp is text here, so the run is at least one character long.
+        const start = this.pos - 1;
+
+        DATA_TEXT.lastIndex = start;
+        DATA_TEXT.test(this.html);
+        this.pos = DATA_TEXT.lastIndex;
+        this.emitChars(CHARACTER, this.html.slice(start, this.pos));
+      }
     }
   }
 
@@ -430,9 +448,9 @@ export class Tokenizer implements TokenizerControl {
     const next = this.html.charCodeAt(this.pos);
 
     if (next === 0x20 || next === 0x0a || next === 0x09 || next === 0x0c) {
-      this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN);
+      this.emitRun(WHITESPACE_CHARACTER, WHITESPACE_RUN);
     } else {
-      this.emitChars(TokenType.WHITESPACE_CHARACTER, this.html.charAt(this.pos - 1));
+      this.emitChars(WHITESPACE_CHARACTER, this.html.charAt(this.pos - 1));
     }
   }
 
@@ -520,7 +538,7 @@ export class Tokenizer implements TokenizerControl {
   private emitReplacementRun(): void {
     const end = NUL_RUN.end(this.html, this.pos - 1);
 
-    this.emitChars(TokenType.CHARACTER, REPLACEMENT.repeat(end - this.pos + 1));
+    this.emitChars(CHARACTER, REPLACEMENT.repeat(end - this.pos + 1));
     this.pos = end;
   }
 
@@ -530,8 +548,8 @@ export class Tokenizer implements TokenizerControl {
       case 0x3c /* LESS_THAN */: this.current = RCDATA_LESS_THAN_SIGN; break;
       case 0x00 /* NUL */: this.emitReplacementRun(); break;
       case -1 /* EOF */: this.emitEof(); break;
-      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
-      default: this.emitRun(TokenType.CHARACTER, DATA_RUN);
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      default: this.emitRun(CHARACTER, DATA_RUN);
     }
   }
 
@@ -541,8 +559,8 @@ export class Tokenizer implements TokenizerControl {
       case 0x3c /* LESS_THAN */: this.current = lessThanState; break;
       case 0x00 /* NUL */: this.emitReplacementRun(); break;
       case -1 /* EOF */: this.emitEof(); break;
-      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
-      default: this.emitRun(TokenType.CHARACTER, RAWTEXT_RUN);
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      default: this.emitRun(CHARACTER, RAWTEXT_RUN);
     }
   }
 
@@ -550,8 +568,8 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x00 /* NUL */: this.emitReplacementRun(); break;
       case -1 /* EOF */: this.emitEof(); break;
-      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
-      default: this.emitRun(TokenType.CHARACTER, PLAINTEXT_RUN);
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      default: this.emitRun(CHARACTER, PLAINTEXT_RUN);
     }
   }
 
@@ -560,16 +578,16 @@ export class Tokenizer implements TokenizerControl {
     if (isWhitespace(cp)) {
       this.emitWhitespace();
     } else {
-      this.emitRun(TokenType.CHARACTER, text);
+      this.emitRun(CHARACTER, text);
     }
   }
 
   /** One code point emitted as is, in the kind its value calls for. */
   private emitCodePoint(cp: number): void {
     if (isWhitespace(cp)) {
-      this.emitChars(TokenType.WHITESPACE_CHARACTER, String.fromCharCode(cp));
+      this.emitChars(WHITESPACE_CHARACTER, String.fromCharCode(cp));
     } else {
-      this.emitChars(cp === NUL ? TokenType.NULL_CHARACTER : TokenType.CHARACTER, String.fromCharCode(cp));
+      this.emitChars(cp === NUL ? NULL_CHARACTER : CHARACTER, String.fromCharCode(cp));
     }
   }
 
@@ -592,11 +610,11 @@ export class Tokenizer implements TokenizerControl {
         this.bogusComment(cp);
         break;
       case -1 /* EOF */:
-        this.emitChars(TokenType.CHARACTER, '<');
+        this.emitChars(CHARACTER, '<');
         this.emitEof();
         break;
       default:
-        this.emitChars(TokenType.CHARACTER, '<');
+        this.emitChars(CHARACTER, '<');
         this.current = DATA;
         this.data(cp);
     }
@@ -613,7 +631,7 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x3e /* GREATER_THAN */: this.current = DATA; break;
       case -1 /* EOF */:
-        this.emitChars(TokenType.CHARACTER, '</');
+        this.emitChars(CHARACTER, '</');
         this.emitEof();
         break;
       default:
@@ -645,7 +663,7 @@ export class Tokenizer implements TokenizerControl {
 
       return;
     }
-    this.emitChars(TokenType.CHARACTER, '<');
+    this.emitChars(CHARACTER, '<');
     this.current = textState;
     this.call(cp);
   }
@@ -655,7 +673,7 @@ export class Tokenizer implements TokenizerControl {
     if (isAsciiLetter(cp) && this.specialEndTag()) {
       return;
     }
-    this.emitChars(TokenType.CHARACTER, '</');
+    this.emitChars(CHARACTER, '</');
     this.current = textState;
     this.call(cp);
   }
@@ -700,10 +718,10 @@ export class Tokenizer implements TokenizerControl {
       case 0x2f /* SOLIDUS */: this.current = SCRIPT_DATA_END_TAG_OPEN; break;
       case 0x21 /* BANG */:
         this.current = SCRIPT_DATA_ESCAPE_START;
-        this.emitChars(TokenType.CHARACTER, '<!');
+        this.emitChars(CHARACTER, '<!');
         break;
       default:
-        this.emitChars(TokenType.CHARACTER, '<');
+        this.emitChars(CHARACTER, '<');
         this.current = SCRIPT_DATA;
         this.call(cp);
     }
@@ -712,7 +730,7 @@ export class Tokenizer implements TokenizerControl {
   private scriptDataEscapeStart(cp: number, dashState: number): void {
     if (cp === HYPHEN) {
       this.current = dashState;
-      this.emitChars(TokenType.CHARACTER, '-');
+      this.emitChars(CHARACTER, '-');
 
       return;
     }
@@ -724,10 +742,10 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_ESCAPED_DASH;
-        this.emitChars(TokenType.CHARACTER, '-');
+        this.emitChars(CHARACTER, '-');
         break;
       case 0x3c /* LESS_THAN */: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
-      case 0x00 /* NUL */: this.emitChars(TokenType.CHARACTER, REPLACEMENT); break;
+      case 0x00 /* NUL */: this.emitChars(CHARACTER, REPLACEMENT); break;
       case -1 /* EOF */: this.emitEof(); break;
       default: this.emitTextRun(cp, SCRIPT_ESCAPED_RUN);
     }
@@ -737,12 +755,12 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_ESCAPED_DASH_DASH;
-        this.emitChars(TokenType.CHARACTER, '-');
+        this.emitChars(CHARACTER, '-');
         break;
       case 0x3c /* LESS_THAN */: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
       case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_ESCAPED;
-        this.emitChars(TokenType.CHARACTER, REPLACEMENT);
+        this.emitChars(CHARACTER, REPLACEMENT);
         break;
       case -1 /* EOF */: this.emitEof(); break;
       default:
@@ -753,15 +771,15 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataEscapedDashDash(cp: number): void {
     switch (cp) {
-      case 0x2d /* HYPHEN */: this.emitChars(TokenType.CHARACTER, '-'); break;
+      case 0x2d /* HYPHEN */: this.emitChars(CHARACTER, '-'); break;
       case 0x3c /* LESS_THAN */: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
       case 0x3e /* GREATER_THAN */:
         this.current = SCRIPT_DATA;
-        this.emitChars(TokenType.CHARACTER, '>');
+        this.emitChars(CHARACTER, '>');
         break;
       case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_ESCAPED;
-        this.emitChars(TokenType.CHARACTER, REPLACEMENT);
+        this.emitChars(CHARACTER, REPLACEMENT);
         break;
       case -1 /* EOF */: this.emitEof(); break;
       default:
@@ -776,7 +794,7 @@ export class Tokenizer implements TokenizerControl {
 
       return;
     }
-    this.emitChars(TokenType.CHARACTER, '<');
+    this.emitChars(CHARACTER, '<');
     this.current = isAsciiLetter(cp) ? SCRIPT_DATA_DOUBLE_ESCAPE_START : SCRIPT_DATA_ESCAPED;
     this.call(cp);
   }
@@ -787,7 +805,7 @@ export class Tokenizer implements TokenizerControl {
     const next = start + 6 < this.html.length ? this.html.charCodeAt(start + 6) : EOF;
 
     if (this.startsWithWord(SCRIPT_WORD) && (isWhitespace(next) || next === SOLIDUS || next === GREATER_THAN)) {
-      this.emitChars(TokenType.CHARACTER, this.html.slice(start, start + 6));
+      this.emitChars(CHARACTER, this.html.slice(start, start + 6));
       this.emitCodePoint(next);
       this.pos = start + 7;
       this.current = matchState;
@@ -802,13 +820,13 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_DASH;
-        this.emitChars(TokenType.CHARACTER, '-');
+        this.emitChars(CHARACTER, '-');
         break;
       case 0x3c /* LESS_THAN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN;
-        this.emitChars(TokenType.CHARACTER, '<');
+        this.emitChars(CHARACTER, '<');
         break;
-      case 0x00 /* NUL */: this.emitChars(TokenType.CHARACTER, REPLACEMENT); break;
+      case 0x00 /* NUL */: this.emitChars(CHARACTER, REPLACEMENT); break;
       case -1 /* EOF */: this.emitEof(); break;
       default: this.emitTextRun(cp, SCRIPT_ESCAPED_RUN);
     }
@@ -818,15 +836,15 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_DASH_DASH;
-        this.emitChars(TokenType.CHARACTER, '-');
+        this.emitChars(CHARACTER, '-');
         break;
       case 0x3c /* LESS_THAN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN;
-        this.emitChars(TokenType.CHARACTER, '<');
+        this.emitChars(CHARACTER, '<');
         break;
       case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED;
-        this.emitChars(TokenType.CHARACTER, REPLACEMENT);
+        this.emitChars(CHARACTER, REPLACEMENT);
         break;
       case -1 /* EOF */: this.emitEof(); break;
       default:
@@ -837,18 +855,18 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataDoubleEscapedDashDash(cp: number): void {
     switch (cp) {
-      case 0x2d /* HYPHEN */: this.emitChars(TokenType.CHARACTER, '-'); break;
+      case 0x2d /* HYPHEN */: this.emitChars(CHARACTER, '-'); break;
       case 0x3c /* LESS_THAN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN;
-        this.emitChars(TokenType.CHARACTER, '<');
+        this.emitChars(CHARACTER, '<');
         break;
       case 0x3e /* GREATER_THAN */:
         this.current = SCRIPT_DATA;
-        this.emitChars(TokenType.CHARACTER, '>');
+        this.emitChars(CHARACTER, '>');
         break;
       case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED;
-        this.emitChars(TokenType.CHARACTER, REPLACEMENT);
+        this.emitChars(CHARACTER, REPLACEMENT);
         break;
       case -1 /* EOF */: this.emitEof(); break;
       default:
@@ -860,7 +878,7 @@ export class Tokenizer implements TokenizerControl {
   private scriptDataDoubleEscapedLessThanSign(cp: number): void {
     if (cp === SOLIDUS) {
       this.current = SCRIPT_DATA_DOUBLE_ESCAPE_END;
-      this.emitChars(TokenType.CHARACTER, '/');
+      this.emitChars(CHARACTER, '/');
 
       return;
     }
@@ -1393,7 +1411,7 @@ export class Tokenizer implements TokenizerControl {
     switch (cp) {
       case 0x5d /* RIGHT_BRACKET */: this.current = CDATA_SECTION_BRACKET; break;
       case -1 /* EOF */: this.emitEof(); break;
-      case 0x00 /* NUL */: this.emitRun(TokenType.NULL_CHARACTER, NUL_RUN); break;
+      case 0x00 /* NUL */: this.emitRun(NULL_CHARACTER, NUL_RUN); break;
       default: this.emitTextRun(cp, CDATA_RUN);
     }
   }
@@ -1404,7 +1422,7 @@ export class Tokenizer implements TokenizerControl {
 
       return;
     }
-    this.emitChars(TokenType.CHARACTER, ']');
+    this.emitChars(CHARACTER, ']');
     this.current = CDATA_SECTION;
     this.cdataSection(cp);
   }
@@ -1412,9 +1430,9 @@ export class Tokenizer implements TokenizerControl {
   private cdataSectionEnd(cp: number): void {
     switch (cp) {
       case 0x3e /* GREATER_THAN */: this.current = DATA; break;
-      case 0x5d /* RIGHT_BRACKET */: this.emitChars(TokenType.CHARACTER, ']'); break;
+      case 0x5d /* RIGHT_BRACKET */: this.emitChars(CHARACTER, ']'); break;
       default:
-        this.emitChars(TokenType.CHARACTER, ']]');
+        this.emitChars(CHARACTER, ']]');
         this.current = CDATA_SECTION;
         this.cdataSection(cp);
     }

@@ -130,6 +130,18 @@ describe('sanitizer', () => {
       });
     });
 
+    describe('field names inherited from Object.prototype', () => {
+      it.each(['constructor', 'toString', 'hasOwnProperty', 'valueOf'])('cleans a %s field with the tool rules', (field) => {
+        const [block] = sanitizeBlocks(
+          [{ tool: 'paragraph',
+            data: { [field]: '<img src=x onerror=alert(1)>ok' } }],
+          { text: { b: true } }
+        );
+
+        expect(block.data[field]).toBe('ok');
+      });
+    });
+
     describe('deep sanitization', () => {
       it('should sanitize nested objects with field-specific rules', () => {
         const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [

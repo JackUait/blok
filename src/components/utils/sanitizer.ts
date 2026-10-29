@@ -239,7 +239,7 @@ const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule, de
     const rulesRecord = isObject(rules) ? (rules as Record<string, DeepSanitizerRule>) : undefined;
 
     Object.entries(value).forEach(([key, item]) => {
-      const ruleCandidate = rulesRecord?.[key];
+      const ruleCandidate = rulesRecord !== undefined && Object.hasOwn(rulesRecord, key) ? rulesRecord[key] : undefined;
       const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate) ? ruleCandidate : rules;
 
       result[key] = stripUnsafeUrlsDeepValue(item as DeepData, ruleForItem, depth + 1);

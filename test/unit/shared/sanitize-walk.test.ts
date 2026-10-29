@@ -73,7 +73,7 @@ describe('walkSanitize', () => {
     expect(output.items).not.toBe(input.items);
   });
 
-  it('omits inherited fields but uses inherited field rules', () => {
+  it('omits inherited fields and ignores inherited field rules', () => {
     const input: Record<string, unknown> = { own: 'a' };
     const rules: SanitizerConfig = {};
 
@@ -89,7 +89,7 @@ describe('walkSanitize', () => {
       Reflect.deleteProperty(Object.prototype, 'own');
     }
     expect(output).toEqual({ own: 'a' });
-    expect(clean.mock.calls).toEqual([['a', false, {}]]);
+    expect(clean.mock.calls).toEqual([['a', {}, {}]]);
   });
 
   it('cleans null-prototype objects', () => {

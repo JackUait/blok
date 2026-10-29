@@ -59,7 +59,8 @@ const cleanObject = (
 
     const currentIterationItem = objectRecord[fieldName];
     const rulesRecord = isObject(rules) ? (rules as Record<string, DeepSanitizerRule>) : undefined;
-    const ruleCandidate = rulesRecord?.[fieldName];
+    // Own keys only: `constructor` and friends would read Object.prototype.
+    const ruleCandidate = rulesRecord !== undefined && Object.hasOwn(rulesRecord, fieldName) ? rulesRecord[fieldName] : undefined;
     const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate)
       ? ruleCandidate
       : rules;

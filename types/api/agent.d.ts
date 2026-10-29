@@ -184,8 +184,8 @@ export interface AgentAssistantConfig {
    * to another server. It applies to every agent edit in this editor, Ask AI and
    * `editor.agent.begin()` turns alike, including sub-pages they open.
    *
-   * Your uploader's `uploadByUrl`, which copies a URL an agent passes to
-   * `image.setSource` and similar commands, runs before this check. Filter there too.
+   * It is also asked before your uploader's `uploadByUrl` copies a URL an agent
+   * passes to `image.setSource` and similar commands, so a refused URL is never fetched.
    * @example allowMediaUrl: (url) => new URL(url).hostname === 'cdn.example.com'
    */
   allowMediaUrl?: (url: string) => boolean;

@@ -1,4 +1,4 @@
-import { failure } from './errors';
+import { AgentFailure, failure } from './errors';
 
 import type { AgentError, Edit } from '../../../types/agent';
 import type { AgentPorts } from './types';
@@ -58,10 +58,41 @@ const dataUrls = (type: string | undefined, data: Record<string, unknown>, media
 };
 
 const refused = (url: string, commandIndex: number, blockId: string | undefined): AgentError =>
-  failure('DATA_REJECTED', `${blockId === undefined ? 'The page' : `Block "${blockId}"`} would load ${url}, and this host does not let agents load media from there. Leave it out, or use a URL the host allows.`, {
+  failure('DATA_REJECTED', `${blockId === undefined ? 'This command' : `Block "${blockId}"`} would load ${url}, and this host does not let agents load media from there. Leave it out, or use a URL the host allows.`, {
     commandIndex, path: `/commands/${commandIndex}`,
     details: { ...(blockId !== undefined && { blockId }), reason: 'media-url', url },
   }).error;
+
+/**
+ * The services a tool action's prepare step gets. With a hook, the uploader checks a URL before
+ * it fetches it: copying a URL is loading it, on the host's server.
+ */
+export const guardedServices = (
+  services: Partial<Record<string, unknown>>,
+  media: MediaPort | undefined,
+  commandIndex: number
+): Partial<Record<string, unknown>> => {
+  const uploader = services.uploader;
+
+  if (media === undefined || !isRecord(uploader) || typeof uploader.uploadByUrl !== 'function') {
+    return services;
+  }
+  const uploadByUrl = uploader.uploadByUrl;
+
+  return {
+    ...services,
+    uploader: {
+      ...uploader,
+      uploadByUrl: (url: unknown, ...rest: unknown[]): unknown => {
+        if (typeof url === 'string' && !media.allows(url)) {
+          throw new AgentFailure(refused(url, commandIndex, undefined));
+        }
+
+        return Reflect.apply(uploadByUrl, uploader, [url, ...rest]);
+      },
+    },
+  };
+};
 
 /**
  * The refusals for media URLs an edit writes that the host's hook refuses. Without a hook

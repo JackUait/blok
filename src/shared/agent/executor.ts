@@ -8,6 +8,7 @@ import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { preflightProblems } from './batch-preflight';
 import { AgentFailure, failure, insertUnavailableReason, notPreparedHere, withOthers } from './errors';
+import { guardedServices } from './media-gate';
 import { isVersionRead, splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
@@ -156,7 +157,7 @@ const preparationsFor = (
 
     if (prepare !== undefined) {
       preparations.set(index, async () => {
-        const prepared = await prepare.call(impl, { services: input.ctx.services }, command.args);
+        const prepared = await prepare.call(impl, { services: guardedServices(input.ctx.services, input.ctx.ports.media, index) }, command.args);
 
         if (input.ctx.commands.get(command.name)?.effects === 'host') {
           orphaned.push({ command: command.name, prepared });

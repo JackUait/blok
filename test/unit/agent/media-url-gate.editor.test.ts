@@ -23,7 +23,10 @@ const settle = (): Promise<void> => new Promise(resolve => {
   setTimeout(resolve, 0);
 });
 
-const boot = async (allowMediaUrl?: (url: string) => boolean): Promise<{ editor: TestEditor; holder: HTMLElement }> => {
+const boot = async (
+  allowMediaUrl?: (url: string) => boolean,
+  extra: Partial<BlokConfig> = {}
+): Promise<{ editor: TestEditor; holder: HTMLElement }> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -38,6 +41,7 @@ const boot = async (allowMediaUrl?: (url: string) => boolean): Promise<{ editor:
         ...(allowMediaUrl !== undefined && { allowMediaUrl }),
       },
     },
+    ...extra,
   };
   const editor = new Blok(config) as unknown as TestEditor;
 
@@ -156,6 +160,31 @@ describe('agent.assistant.allowMediaUrl', () => {
 
     expect(loads(holder, 'attacker.example')).toEqual([]);
     expect(result).toMatchObject({ ok: false, error: { code: 'DATA_REJECTED', details: { reason: 'media-url' } } });
+  });
+
+  describe('a source the host uploader copies', () => {
+    const withUploader = (uploadByUrl: (url: string) => Promise<{ url: string }>): Partial<BlokConfig> => ({
+      uploader: { uploadByUrl },
+      data: { blocks: [{ id: 'i1', type: 'image', data: { url: GOOD } }] },
+    });
+
+    it('is checked before the uploader fetches it, so a refused URL never reaches the host', async () => {
+      const uploadByUrl = vi.fn((_url: string) => Promise.resolve({ url: 'https://cdn.example/copied.png' }));
+      const { editor } = await boot(onlyCdn, withUploader(uploadByUrl));
+      const result = await run(editor, { name: 'image.setSource', args: { id: 'i1', url: BAD } });
+
+      expect(uploadByUrl).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ ok: false, error: { code: 'DATA_REJECTED', commandIndex: 0, details: { reason: 'media-url', url: BAD } } });
+    });
+
+    it('still reaches the uploader for an allowed URL', async () => {
+      const uploadByUrl = vi.fn((_url: string) => Promise.resolve({ url: 'https://cdn.example/copied.png' }));
+      const { editor } = await boot(onlyCdn, withUploader(uploadByUrl));
+      const result = await run(editor, { name: 'image.setSource', args: { id: 'i1', url: 'https://cdn.example/source.png' } });
+
+      expect(uploadByUrl).toHaveBeenCalledWith('https://cdn.example/source.png', expect.anything());
+      expect(result.ok).toBe(true);
+    });
   });
 
   it('loads any agent image when the host sets no hook', async () => {

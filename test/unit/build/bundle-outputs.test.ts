@@ -307,13 +307,14 @@ describe('CDN bundles ship compiled Tailwind CSS', () => {
   }
 })
 
-describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
-  // parse5 is bundled ONLY into the ./view entry (see the source-level law in
-  // test/unit/architecture/view-entry-law.test.ts). This is the dist-level
-  // half of that contract: a vite entry/chunk change that splices the view
-  // graph into an editor bundle would ship parse5 to every editor consumer.
-  // Fingerprint: parse5's tokenizer error codes are stable string literals
-  // that survive minification.
+describe('view bundle isolation (the HTML parser stays out of editor bundles)', () => {
+  // The DOM-free HTML parser (src/html) is bundled ONLY into the ./view entry
+  // (see the source-level law in test/unit/architecture/view-entry-law.test.ts).
+  // This is the dist-level half of that contract: a vite entry/chunk change
+  // that splices the view graph into an editor bundle would ship the parser to
+  // every editor consumer. Fingerprints are string literals that survive
+  // minification: the tokenizer's state guard, and a parse5 error code.
+  const PARSER_FINGERPRINT = 'Unknown tokenizer state'
   const PARSE5_FINGERPRINT = 'control-character-in-input-stream'
 
   // Published entries are now thin override wrappers (scripts/override/generate-override-entries.mjs)
@@ -325,7 +326,7 @@ describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
     return existsSync(implPath) ? implPath : resolve(dist, bundle)
   }
 
-  // parse5 sits in a shared chunk when ./view and ./migrate both use it, so
+  // The parser sits in a shared chunk when ./view and ./migrate both use it, so
   // read every relative file the bundle loads, lazy import() and require included.
   const RELATIVE_IMPORT_RE = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["'`](\.{1,2}\/[^"'`]+)["'`]/g
   const shippedCode = (bundle: string): string => {
@@ -347,13 +348,20 @@ describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
     return [...seen].map((file) => readFileSync(file, 'utf-8')).join('\n')
   }
 
-  it('view.mjs actually contains parse5 (fingerprint non-vacuity)', () => {
-    expect(shippedCode('view.mjs').includes(PARSE5_FINGERPRINT)).toBe(true)
+  it('view.mjs actually contains the HTML parser (fingerprint non-vacuity)', () => {
+    expect(shippedCode('view.mjs').includes(PARSER_FINGERPRINT)).toBe(true)
+  })
+
+  it('view.mjs ships no parse5', () => {
+    expect(shippedCode('view.mjs').includes(PARSE5_FINGERPRINT)).toBe(false)
   })
 
   for (const bundle of ['blok.mjs', 'full.mjs', 'tools.mjs', 'adapters.mjs', 'blok.cjs', 'blok.iife.js', 'blok.umd.js']) {
-    it(`${bundle} ships no parse5`, () => {
-      expect(shippedCode(bundle).includes(PARSE5_FINGERPRINT)).toBe(false)
+    it(`${bundle} ships neither the HTML parser nor parse5`, () => {
+      const code = shippedCode(bundle)
+
+      expect(code.includes(PARSER_FINGERPRINT)).toBe(false)
+      expect(code.includes(PARSE5_FINGERPRINT)).toBe(false)
     })
   }
 })

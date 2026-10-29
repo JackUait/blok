@@ -506,7 +506,8 @@ test.describe('property and row menus', () => {
     const list = page.locator('[data-blok-database-options-editor]');
 
     await expect(list.locator('[data-blok-database-select-option]')).toHaveCount(2);
-    await expect(page.getByText('Changes apply to all views showing this property.')).toBeVisible();
+    // notion-spec-2 §24.8, §25.6: a select shows no note under its options.
+    await expect(page.getByText('Changes apply to all views showing this property.')).toHaveCount(0);
     await list.locator('[data-blok-database-select-option="o-build"]').hover();
     await list.locator('[data-blok-database-select-option="o-build"] [data-blok-database-select-option-menu]').click();
     await list.locator('[data-blok-database-option-color="red"]').click();

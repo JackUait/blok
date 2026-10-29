@@ -244,6 +244,21 @@ describe('MarkdownHandler — inline fragment pasted mid-text (Notion parity)', 
     expect(insertMany).not.toHaveBeenCalled();
   });
 
+  it('parses the converted fragment in an inert document, never the live one', async () => {
+    const blok = createInlineFragmentBlok();
+    const inlineHandler = new MarkdownHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+    const setter = vi.spyOn(Element.prototype, 'innerHTML', 'set');
+
+    await inlineHandler.handle('**bold** <img src=x onerror="alert(1)">', { canReplaceCurrentBlock: false });
+
+    // The built-in converter escapes raw HTML today; the parse must not rely on that.
+    const liveFragmentParses = setter.mock.calls.filter(([html], index) =>
+      (setter.mock.contexts[index] as Element).ownerDocument === document && String(html).includes('bold'));
+
+    expect(liveFragmentParses).toEqual([]);
+    expect(insertContentAtCaretPosition).toHaveBeenCalledTimes(1);
+  });
+
   it('still converts a single-line heading into a block (block-level markdown)', async () => {
     const blok = createInlineFragmentBlok();
     const blockHandler = new MarkdownHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);

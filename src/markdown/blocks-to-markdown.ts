@@ -13,6 +13,7 @@
  * here — it would land in the editor bundle.
  */
 
+import { parseUntrustedHtml } from '../components/utils/inert-html';
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import {
   HARD_BREAK,
@@ -117,9 +118,7 @@ const domInlineBackend: InlineBackend = {
    * @param onLoss - receives every unwrapped inline construct
    */
   inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
-    const container = document.createElement('div');
-
-    container.innerHTML = html ?? '';
+    const container = parseUntrustedHtml(html ?? '');
 
     return serializeChildren(container, onLoss, markdownTextEscaper(html ?? ''));
   },

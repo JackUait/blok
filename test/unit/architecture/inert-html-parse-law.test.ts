@@ -27,6 +27,9 @@ const SCOPE = [
   'src/components/dom.ts',
   'src/components/utils/inline-normalization.ts',
   'src/components/utils/inert-html.ts',
+  // Markdown export reads stored block HTML, and the Markdown paste merges
+  // converted HTML into a block: both are untrusted until sanitized.
+  'src/markdown',
   // A directory: parseCellContentToBlocks (table-cell-paste.ts) live-parsed
   // every cell's HTML while only table-cell-clipboard.ts was listed here.
   'src/tools/table',

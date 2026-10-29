@@ -1,4 +1,5 @@
 import { isClobbered } from '../components/utils/dom-clobbering';
+import { parseUntrustedDocument } from '../components/utils/inert-html';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 
 /**
@@ -227,7 +228,7 @@ export function sanitizeBlockHtml(raw: string, baseUrl?: string): string {
   }
 
   // Parsed into an inert document: nothing loads or runs while it is cleaned.
-  const doc = new DOMParser().parseFromString(raw, 'text/html');
+  const doc = parseUntrustedDocument(raw);
   // Read through Document.prototype: `<img name="body">` shadows `doc.body` (and
   // any other document member) in Firefox and WebKit.
   const body = Reflect.get<Document, 'body'>(Document.prototype, 'body', doc) as HTMLElement | null;

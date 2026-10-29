@@ -10,6 +10,7 @@ import { normalizeTableChildParents } from '../components/utils/data-model-trans
 import { getRestrictedTools } from '../tools/table/table-restrictions';
 import { enclosingCellTable } from '../components/utils/enclosing-cell-table';
 import { subtreeEndIndex } from '../components/utils/blocks-tree';
+import { parseUntrustedHtml } from '../components/utils/inert-html';
 import type { InternalMarkdownImportConfig } from './types';
 
 /**
@@ -104,9 +105,7 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
       currentBlock.currentInput != null
     ) {
       const text = (rawOutputBlocks[0].data as { text?: string }).text ?? '';
-      const content = document.createElement('div');
-
-      content.innerHTML = text;
+      const content = parseUntrustedHtml(text);
 
       const event = this.composePasteEvent('tag', { data: content });
 

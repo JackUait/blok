@@ -418,6 +418,22 @@ test.describe('read-only', () => {
     await expect(peekTitle(page)).toHaveAttribute('readonly', '');
     await expect(peek(page).locator('[data-blok-database-drawer-add-prop]')).toHaveCount(0);
   });
+
+  // A read-only viewer cannot convert a legacy body, so the peek shows it in its own nested editor.
+  test('a read-only viewer reads a legacy body in the nested editor', async ({ page }) => {
+    const legacy = blocks({}, []);
+    const db = legacy[1];
+
+    db.data = { ...db.data, schema: [...SCHEMA, { id: 'p-body', name: 'Card details', type: 'richText', position: 'a2' }] };
+    legacy[4] = {
+      ...legacy[4],
+      data: { position: 'a1', properties: { 'p-title': 'Bravo', 'p-body': { blocks: [{ type: 'paragraph', data: { text: 'Old body' } }] } } },
+    };
+    await mount(page, legacy, true);
+    await openRow(page, 'r2');
+
+    await expect(body(page).locator('[data-blok-editor]').getByText('Old body')).toBeVisible();
+  });
 });
 
 // research/22 §3: the value row is 34px, level with the 160x34 label cell; Escape saves a text.

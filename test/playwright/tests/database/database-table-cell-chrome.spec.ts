@@ -170,3 +170,9 @@ test('rows stay 37px with Status, Person, Created by and Last edited by columns,
     expect((await page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`).boundingBox())?.height).toBe(37);
   }
 });
+
+test('Status, Created by and Last edited by cells pad 8px on every side (§18.1, §20.1)', async ({ page }) => {
+  for (const propertyId of ['p-status', 'p-cb', 'p-lb']) {
+    expect(await style(cell(page, 'r1', propertyId), ['padding'])).toEqual({ padding: '8px' });
+  }
+});

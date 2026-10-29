@@ -11282,11 +11282,15 @@ textarea[data-blok-database-cell-input] {
   min-height: 20px;
 }
 
-[data-blok-database-table-cell]:is([data-type="person"]) > [data-blok-database-cell] {
+[data-blok-database-table-cell]:is([data-type="person"], [data-type="status"], [data-type="createdBy"], [data-type="lastEditedBy"]) {
+  padding: var(--blok-space-2);
+}
+
+[data-blok-database-table-cell]:is([data-type="person"], [data-type="status"], [data-type="createdBy"], [data-type="lastEditedBy"]) > [data-blok-database-cell] {
   min-height: 20px;
 }
 
-[data-blok-database-table-cell]:is([data-type="person"]) > [data-blok-database-cell] > [data-blok-database-person-chip] {
+[data-blok-database-table-cell]:is([data-type="person"], [data-type="status"], [data-type="createdBy"], [data-type="lastEditedBy"]) > [data-blok-database-cell] > [data-blok-database-person-chip] {
   height: 20px;
 }
 

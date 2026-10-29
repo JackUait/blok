@@ -1772,13 +1772,15 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FORMULA_PREVIEW_PICKER_BYTES
       + DATABASE_VIEW_CONTENT_INSET_BYTES
       + LAZY_SHEET_MARKER_BYTES
-      + DATABASE_FORMULA_HELP_EXAMPLES_BYTES;
+      + DATABASE_FORMULA_HELP_EXAMPLES_BYTES
+      + DATABASE_ROUND15_MENUS_BYTES;
     const counted = new Set<string>();
+    // A lazy entry holds no rules of its own, only the import of the sheet it loads.
+    const actual = lazyEntries().reduce(
       (sum, entry) => sum + localImportedByteBudget(entry, counted) - statSync(entry).size,
       localImportedByteBudget(ENTRY, counted),
     );
-      + DATABASE_ROUND15_MENUS_BYTES;
-    const actual = localImportedByteBudget(ENTRY);
+
 
     expect(actual).toBeLessThanOrEqual(CEILING);
   });

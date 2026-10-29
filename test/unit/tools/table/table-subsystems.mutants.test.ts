@@ -2004,10 +2004,13 @@ describe('add-controls wiring', () => {
   it('opens one undo group and parks the other affordances on drag start', () => {
     const harness = createHarness();
 
+    const resize = resizeMock();
+
     addControlsOptions().onDragStart();
 
     expect(harness.api.blocks.beginTransaction).toHaveBeenCalledTimes(1);
-    expect(resizeMock().enabled).toBe(false);
+    // Torn down, not just disabled: a removed column's handle would hold the scroll width.
+    expect(resize.destroy).toHaveBeenCalledTimes(1);
     expect(rowColMock().hideAllGrips).toHaveBeenCalledTimes(1);
     expect(rowColMock().setGripsDisplay).toHaveBeenCalledWith(false);
   });
@@ -4218,14 +4221,14 @@ describe('gaps a first mutation pass found', () => {
 });
 
 describe('gaps a second mutation pass found', () => {
-  it('re-creates the resize handles on each drag column add', () => {
+  it('leaves the resize handles to the drag end when a drag adds a column', () => {
     const harness = createHarness({ colWidths: [40, 60] });
 
     captured.resize.length = 0;
     addControlsOptions().onDragAddCol();
 
-    expect(captured.resize).toHaveLength(1);
     expect(harness.model.cols).toBe(3);
+    expect(captured.resize).toHaveLength(0);
   });
 
   it('pins the widths of a percent table when the corner adds a column', () => {
@@ -4507,14 +4510,15 @@ describe('add-controls — the statements a repaint repeated elsewhere', () => {
     expect(harness.model.colWidths).toBeUndefined();
   });
 
-  it('re-creates the resize handles when a drag removes a column', () => {
-    createHarness({ colWidths: [40, 60], seed: false });
+  it('leaves the resize handles to the drag end when a drag removes a column', () => {
+    const harness = createHarness({ colWidths: [40, 60], seed: false });
 
     const before = captured.resizeSelf.length;
 
     addControlsOptions().onDragRemoveCol();
 
-    expect(captured.resizeSelf.length).toBe(before + 1);
+    expect(harness.model.cols).toBe(1);
+    expect(captured.resizeSelf.length).toBe(before);
   });
 
   it('re-creates the resize handles when a drag ends', () => {

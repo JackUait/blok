@@ -609,12 +609,13 @@ export class TableCellBlocks {
       return this.indexAfterTableSubtree();
     }
 
-    const lastBefore = cells.slice(0, at).reverse()
-      .map(candidate => Array.from(candidate.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.children ?? [])
+    // Nearest earlier cell first, stopping at the first that holds a block: a
+    // drag fills a whole new row or column, one cell at a time.
+    const lastBefore = cells.slice(0, at).reverse().reduce<string | undefined>((found, candidate) => found
+      ?? Array.from(candidate.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.children ?? [])
         .map(child => child.getAttribute('data-blok-id'))
         .filter(id => id !== null)
-        .pop())
-      .find(id => id !== undefined);
+        .pop(), undefined);
 
     if (lastBefore !== undefined) {
       return this.indexAfterSubtreeOf(lastBefore);

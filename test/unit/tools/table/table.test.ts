@@ -6,6 +6,7 @@ import { updateHeadingStyles } from '../../../../src/tools/table/table-operation
 import { clearAdditionalRestrictedTools, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
 import type { TableData, TableConfig, TableCellsClipboard } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
+import { stubTableLayout } from './table-layout-stub';
 import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
@@ -2401,6 +2402,10 @@ describe('Table Tool', () => {
   });
 
   describe('drag-to-remove skips rows/columns with content', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     /**
      * Simulate a pointer drag on an element:
      * pointerdown at startPos, pointermove to endPos, pointerup at endPos.
@@ -2470,6 +2475,7 @@ describe('Table Tool', () => {
 
       document.body.appendChild(element);
       table.rendered();
+      stubTableLayout();
 
       return { table, element };
     };
@@ -2588,6 +2594,10 @@ describe('Table Tool', () => {
   });
 
   describe('grid width updates during drag-to-add/remove columns', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     const createDragWidthTable = (
       content: string[][],
       colWidths: number[]
@@ -2628,6 +2638,7 @@ describe('Table Tool', () => {
 
       document.body.appendChild(element);
       table.rendered();
+      stubTableLayout();
 
       return { table, element };
     };
@@ -2674,7 +2685,6 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      // Drag right by enough to add one column (unitSize is ~200px for last cell)
       simulateDragStart(addColBtn, 'col', 0, 250);
 
       // Grid width should have grown immediately during the drag
@@ -2760,78 +2770,24 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
-    it('resize handles match column count during drag-to-add column', () => {
+    it('takes the resize handles away during a column drag and rebuilds them for the final columns', () => {
       const { element } = createDragWidthTable(
         [['A', 'B'], ['C', 'D']],
         [200, 200]
       );
 
-      const handlesBefore = element.querySelectorAll('[data-blok-table-resize]');
-
-      expect(handlesBefore).toHaveLength(2);
+      expect(element.querySelectorAll('[data-blok-table-resize]')).toHaveLength(2);
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      // jsdom offsetWidth returns 0 → measureUnitSize defaults to 100px.
-      // Drag right by 110px to add exactly 1 column (floor(110/100) = 1).
       simulateDragStart(addColBtn, 'col', 0, 110);
 
-      // Resize handles should be rebuilt to match the new 3-column layout
-      const handlesAfter = element.querySelectorAll('[data-blok-table-resize]');
+      expect(element.querySelectorAll('[data-blok-table-resize]')).toHaveLength(0);
 
-      expect(handlesAfter).toHaveLength(3);
+      addColBtn.dispatchEvent(new PointerEvent('pointerup', { clientX: 110, pointerId: 1, bubbles: true }));
 
-      document.body.removeChild(element);
-    });
-
-    it('resize handles match column count during drag-to-remove column', () => {
-      const { element } = createDragWidthTable(
-        [['A', 'B', ''], ['C', 'D', '']],
-        [200, 200, 200]
-      );
-
-      // Put real text in columns 0 and 1 so only column 2 can be removed.
-      // Clear column 2 to ensure it is empty.
-      const rows = element.querySelectorAll('[data-blok-table-row]');
-
-      rows.forEach(row => {
-        const cells = row.querySelectorAll('[data-blok-table-cell]');
-
-        // Set visible text in first two columns
-        const container0 = cells[0].querySelector('[data-blok-table-cell-blocks]');
-
-        if (container0) {
-          container0.textContent = 'content';
-        }
-
-        const container1 = cells[1].querySelector('[data-blok-table-cell-blocks]');
-
-        if (container1) {
-          container1.textContent = 'content';
-        }
-
-        // Clear last column
-        const container2 = cells[2].querySelector('[data-blok-table-cell-blocks]');
-
-        if (container2) {
-          container2.textContent = '';
-        }
-      });
-
-      const handlesBefore = element.querySelectorAll('[data-blok-table-resize]');
-
-      expect(handlesBefore).toHaveLength(3);
-
-      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
-
-      // jsdom offsetWidth returns 0 → measureUnitSize defaults to 100px.
-      // Drag left by 110px to remove 1 column (floor(-110/100) = -2, but only 1 empty).
-      simulateDragStart(addColBtn, 'col', 200, 90);
-
-      // Resize handles should be rebuilt to match the new 2-column layout
-      const handlesAfter = element.querySelectorAll('[data-blok-table-resize]');
-
-      expect(handlesAfter).toHaveLength(2);
+      expect(element.querySelectorAll('[data-blok-table-cell]')).toHaveLength(6);
+      expect(element.querySelectorAll('[data-blok-table-resize]')).toHaveLength(3);
 
       document.body.removeChild(element);
     });
@@ -2847,12 +2803,7 @@ describe('Table Tool', () => {
       // Drag downward past threshold to trigger onDragStart
       simulateDragStart(addRowBtn, 'row', 0, 10);
 
-      const handles = element.querySelectorAll('[data-blok-table-resize]');
-
-      // All resize handles should have pointer-events disabled during drag
-      handles.forEach(handle => {
-        expect((handle as HTMLElement).style.pointerEvents).toBe('none');
-      });
+      expect(element.querySelectorAll('[data-blok-table-resize]')).toHaveLength(0);
 
       document.body.removeChild(element);
     });
@@ -3056,7 +3007,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      // Drag right by enough to add one column (unitSize defaults to 100px in jsdom)
+      // Half the new column (100px) is enough to add one
       simulateDragStart(addColBtn, 'col', 0, 110);
 
       expect(scrollContainer.scrollLeft).toBeGreaterThan(0);

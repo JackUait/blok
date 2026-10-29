@@ -7,7 +7,7 @@ import { twMerge } from '../../components/utils/tw';
 import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 
-import { inlineAxis } from './table-direction';
+import { inlineAxis, measureLastColumnWidth, measureLastRowHeight } from './table-direction';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
@@ -40,11 +40,18 @@ const VISUAL_CLASSES = [
 
 const ICON_SIZE = '12';
 
+/** A runaway guard: a grid that cannot change size would loop forever. */
+const MAX_STEPS_PER_MOVE = 200;
+
 interface DragState {
   axis: 'row' | 'col';
   startPos: number;
-  unitSize: number;
-  addedCount: number;
+  /**
+   * Grid height (row drag) or width (column drag) at pointerdown. A size, not
+   * an edge: adding a column scrolls the table to its end, which pins the
+   * right edge while the width keeps growing.
+   */
+  startSize: number;
   pointerId: number;
   didDrag: boolean;
   /** Pointer positions are mirrored in RTL, so outward is always positive. */
@@ -366,15 +373,12 @@ export class TableAddControls {
 
     target.setPointerCapture(e.pointerId);
 
-    const unitSize = this.measureUnitSize(axis);
-
     const direction = getElementDirection(this.grid);
 
     this.dragState = {
       axis,
       startPos: axis === 'row' ? e.clientY : inlineAxis(direction).x(e.clientX),
-      unitSize,
-      addedCount: 0,
+      startSize: this.measureGridSize(axis),
       pointerId: e.pointerId,
       didDrag: false,
       direction,
@@ -390,51 +394,97 @@ export class TableAddControls {
       return;
     }
 
-    const { axis, startPos, unitSize, direction } = this.dragState;
+    const { axis, startPos, startSize, direction } = this.dragState;
     const currentPos = axis === 'row' ? e.clientY : inlineAxis(direction).x(e.clientX);
     const delta = currentPos - startPos;
-    const targetCount = Math.floor(delta / unitSize);
 
-    // Only adjust the counter when the operation ACTUALLY happened. A remove
-    // can be a guarded no-op (e.g. the last column is non-empty); decrementing
-    // regardless desyncs the counter and re-adds phantom rows/cols on the next
-    // drag. When the op is refused, stop — nothing further will succeed.
-    while (this.dragState.addedCount < targetCount) {
-      const added = axis === 'row' ? this.onDragAddRow() : this.onDragAddCol();
-
-      if (!added) {
-        break;
+    if (!this.dragState.didDrag) {
+      if (Math.abs(delta) <= DRAG_THRESHOLD) {
+        return;
       }
 
-      this.dragState.addedCount++;
-    }
-
-    while (this.dragState.addedCount > targetCount) {
-      const removed = axis === 'row' ? this.onDragRemoveRow() : this.onDragRemoveCol();
-
-      if (!removed) {
-        break;
-      }
-
-      this.dragState.addedCount--;
-    }
-
-    if (Math.abs(delta) > DRAG_THRESHOLD && !this.dragState.didDrag) {
+      // Before the first add, so it joins the drag's undo step.
       this.dragState.didDrag = true;
       document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
-      this.showDimensionTooltip();
       this.onDragStart();
-
-      return;
     }
 
-    if (this.dragState.didDrag) {
-      this.showDimensionTooltip();
+    this.resizeTo(axis, startSize + delta, direction);
+    this.showDimensionTooltip();
+  }
+
+  /**
+   * Add or remove rows/columns until the grid's size is the closest whole
+   * row/column to `target`. Units are measured live: the last column may be
+   * one the user widened, the next one gets the new-column width.
+   */
+  private resizeTo(axis: 'row' | 'col', target: number, direction: TextDirection): void {
+    // `some` stops at the first step that returns true.
+    Array.from({ length: MAX_STEPS_PER_MOVE }).some(() => {
+      const size = this.measureGridSize(axis);
+
+      // No layout yet: nothing to measure the pointer against.
+      if (size === 0) {
+        return true;
+      }
+
+      const addUnit = this.measureAddUnit(axis);
+      const lastUnit = this.measureLastUnit(axis, direction);
+
+      // Nearest whole unit: the edge stays within half a row/column of the pointer.
+      const changed = addUnit > 0 && target - size >= addUnit / 2
+        ? this.stepSize(axis, 'add', size)
+        : lastUnit > 0 && size - target > lastUnit / 2 && this.stepSize(axis, 'remove', size);
+
+      if (!changed) {
+        return true;
+      }
+
+      this.syncRowButtonWidth();
+
+      return false;
+    });
+  }
+
+  /**
+   * One add or remove. A refused one (the last row/column has content) or one
+   * that does not change the size ends the loop.
+   */
+  private stepSize(axis: 'row' | 'col', kind: 'add' | 'remove', size: number): boolean {
+    const [add, remove] = axis === 'row'
+      ? [this.onDragAddRow, this.onDragRemoveRow]
+      : [this.onDragAddCol, this.onDragRemoveCol];
+    const callback = kind === 'add' ? add : remove;
+
+    if (!callback()) {
+      return false;
     }
 
-    if (this.dragState.didDrag) {
-      this.showDimensionTooltip();
+    const next = this.measureGridSize(axis);
+
+    return kind === 'add' ? next > size : next < size;
+  }
+
+  private measureGridSize(axis: 'row' | 'col'): number {
+    const rect = this.grid.getBoundingClientRect();
+
+    return axis === 'row' ? rect.height : rect.width;
+  }
+
+  private measureAddUnit(axis: 'row' | 'col'): number {
+    if (axis === 'row') {
+      return measureLastRowHeight(this.grid);
     }
+
+    return this.getNewColumnWidth?.() || measureLastColumnWidth(this.grid, this.grid.getBoundingClientRect(), inlineAxis(getElementDirection(this.grid)));
+  }
+
+  private measureLastUnit(axis: 'row' | 'col', direction: TextDirection): number {
+    if (axis === 'row') {
+      return measureLastRowHeight(this.grid);
+    }
+
+    return measureLastColumnWidth(this.grid, this.grid.getBoundingClientRect(), inlineAxis(direction));
   }
 
   private handlePointerUp(_e: PointerEvent): void {
@@ -490,30 +540,6 @@ export class TableAddControls {
     if (didDrag) {
       this.onDragEnd();
     }
-  }
-
-  private measureUnitSize(axis: 'row' | 'col'): number {
-    if (axis === 'row') {
-      const rows = this.grid.querySelectorAll('[data-blok-table-row]');
-      const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
-
-      return lastRow?.offsetHeight || 30;
-    }
-
-    if (this.getNewColumnWidth) {
-      return this.getNewColumnWidth() || 100;
-    }
-
-    const firstRow = this.grid.querySelector('[data-blok-table-row]');
-
-    if (!firstRow) {
-      return 100;
-    }
-
-    const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
-    const lastCell = cells[cells.length - 1] as HTMLElement | undefined;
-
-    return lastCell?.offsetWidth || 100;
   }
 
   private handleMouseMove(e: MouseEvent): void {

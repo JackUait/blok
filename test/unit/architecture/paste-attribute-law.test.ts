@@ -215,14 +215,23 @@ const EXPECTED_DYNAMIC_READS: ExpectedDynamicReads[] = [
   },
   {
     file: 'src/tools/table/table-operations.ts',
-    count: 4,
+    count: 5,
     pastedAttrs: ['colspan', 'rowspan'],
     reason:
-      'getCellPosition reads CELL_COL_ATTR from the rendered grid (own DOM); ' +
+      'getCellPosition reads CELL_COL_ATTR from the rendered grid (own DOM), ' +
+      'and ownRowIndex checks ROW_ATTR on the grid\'s own rows; ' +
       'parseSpan reads colspan/rowspan from pasted cells via parsePastedTable; ' +
       'applyHeaderCellRoles reads HEADING_COL_ATTR/HEADING_ROW_ATTR to derive ' +
       'columnheader/rowheader roles — both are stamped by the tool on its own ' +
       'rendered grid, never read off pasted DOM',
+  },
+  {
+    file: 'src/tools/table/index.ts',
+    count: 2,
+    pastedAttrs: [],
+    reason:
+      'save() reads CELL_ROW_ATTR/CELL_COL_ATTR off the rendered grid to map ' +
+      'each cell once per save — stamped by the tool on its own grid, never read off pasted DOM',
   },
   {
     file: 'src/components/modules/paste/handlers/html-handler.ts',

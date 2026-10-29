@@ -447,6 +447,59 @@ describe('table-operations — surviving-mutant coverage', () => {
 
       expect(getCellPosition(gridEl, orphan)).toBeNull();
     });
+
+    it('numbers rows the way ownRows does, across a div grid and table bodies', () => {
+      const row = (parent: Element): HTMLElement => {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+
+        tr.setAttribute(ROW_ATTR, '');
+        td.setAttribute(CELL_ATTR, '');
+        td.setAttribute(CELL_COL_ATTR, '0');
+        tr.appendChild(td);
+        parent.appendChild(tr);
+
+        return tr;
+      };
+      const table = document.createElement('table');
+
+      table.appendChild(document.createElement('colgroup'));
+      const first = table.appendChild(document.createElement('tbody'));
+      const second = table.appendChild(document.createElement('tbody'));
+
+      row(first);
+      row(first);
+      row(second);
+      row(second).querySelector('td')?.appendChild(buildDomGrid(2, 1));
+
+      const div = buildDomGrid(3, 2);
+      const own = (grid: HTMLElement): HTMLElement[] =>
+        Array.from(grid.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`));
+
+      [table, div].forEach((grid) => {
+        own(grid).forEach((tr, index) => {
+          const cell = tr.querySelector<HTMLElement>(`:scope > [${CELL_ATTR}]`);
+
+          expect(cell === null ? null : getCellPosition(grid, cell)?.row).toBe(index);
+        });
+      });
+
+      const nestedCell = table.querySelector<HTMLElement>(`[${CELL_ATTR}] [${CELL_ATTR}]`);
+
+      expect(nestedCell === null ? 'missing' : getCellPosition(table, nestedCell)).toBeNull();
+    });
+
+    it('finds a cell row without querying the whole grid', () => {
+      const gridEl = buildDomGrid(40, 10);
+      const cell = cellAtCoord(gridEl, 39, 9);
+      const spy = vi.spyOn(Element.prototype, 'querySelectorAll');
+
+      const position = cell === null ? null : getCellPosition(gridEl, cell);
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(position).toEqual({ row: 39, col: 9 });
+      spy.mockRestore();
+    });
   });
 
   describe('isCellEmpty', () => {

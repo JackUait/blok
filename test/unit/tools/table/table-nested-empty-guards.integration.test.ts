@@ -4,6 +4,7 @@ import Blok from '../../../../src/blok';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import type { OutputBlockData, OutputData } from '../../../../types';
+import { stubTableLayout } from './table-layout-stub';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -112,10 +113,11 @@ describe('outer table add controls beside a nested table in row 0', () => {
   });
 
   it('takes back the empty row a drag added when the pointer returns', async () => {
+    // Before boot: the table measures its column width when it renders.
+    stubTableLayout({ rowHeight: 30 });
     await boot(nestedFixture(INNER_IDS));
     const button = outerButton('row');
 
-    // jsdom has no layout, so a row step is the 30px fallback.
     button.dispatchEvent(pointer('pointerdown', 0, 0));
     button.dispatchEvent(pointer('pointermove', 0, 30));
 
@@ -129,12 +131,14 @@ describe('outer table add controls beside a nested table in row 0', () => {
   });
 
   it('takes back the empty column a drag added when the pointer returns', async () => {
+    // Before boot: the table measures its column width when it renders.
+    stubTableLayout({ colWidth: 100 });
     await boot(nestedFixture(INNER_IDS));
     const button = outerButton('col');
 
-    // jsdom widths are 0, so a column step is the 100px fallback.
+    // A new column is half the 100px column.
     button.dispatchEvent(pointer('pointerdown', 0, 0));
-    button.dispatchEvent(pointer('pointermove', 100, 0));
+    button.dispatchEvent(pointer('pointermove', 50, 0));
 
     expect(outerColCount()).toBe(3);
 

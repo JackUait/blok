@@ -1064,6 +1064,17 @@ export class Table implements BlockTool {
     // node stealing and data loss on subsequent renders.
     const tableId = this.blockId ?? '';
     const gridEl = this.gridElement;
+    // One pass over the grid instead of a search per cell: a drag saves the
+    // table on every step. The first cell at a coordinate wins, as querySelector did.
+    const cellsByCoordinate = new Map<string, HTMLElement>();
+
+    gridEl?.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}]`).forEach((cellEl) => {
+      const key = `${cellEl.getAttribute(CELL_ROW_ATTR)}:${cellEl.getAttribute(CELL_COL_ATTR)}`;
+
+      if (!cellsByCoordinate.has(key)) {
+        cellsByCoordinate.set(key, cellEl);
+      }
+    });
 
     data.content = data.content.map((row, rowIndex) =>
       row.map((cell, colIndex) => {
@@ -1071,9 +1082,7 @@ export class Table implements BlockTool {
           return cell;
         }
 
-        const cellEl = gridEl?.querySelector<HTMLElement>(
-          `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}][${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
-        );
+        const cellEl = cellsByCoordinate.get(`${rowIndex}:${colIndex}`);
         const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`) ?? null;
 
         const filtered = cell.blocks.filter(blockId => {

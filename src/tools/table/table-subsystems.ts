@@ -379,9 +379,11 @@ export class TableSubsystems {
         // or column becomes its own undo entry.
         this.openDragTransaction();
 
-        if (this.resize) {
-          this.resize.enabled = false;
-        }
+        // Torn down, as in the corner drag: a removed column's handle would hold
+        // the scroll width, and rebuilding every handle per column made each
+        // step cost more the wider the table. onDragEnd rebuilds them.
+        this.resize?.destroy();
+        this.resize = null;
         this.rowColControls?.hideAllGrips();
         this.rowColControls?.setGripsDisplay(false);
       },
@@ -432,7 +434,6 @@ export class TableSubsystems {
           applyPixelWidths(gridEl, newWidths);
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
-          this.initResize(gridEl);
 
           dragState.addedCols++;
 
@@ -464,8 +465,6 @@ export class TableSubsystems {
           if (updatedWidths) {
             applyPixelWidths(gridEl, updatedWidths);
           }
-
-          this.initResize(gridEl);
 
           dragState.addedCols--;
 

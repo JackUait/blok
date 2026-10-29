@@ -80,6 +80,37 @@ export const applyPixelWidths = (gridEl: HTMLElement, widths: number[]): void =>
   });
 };
 
+/**
+ * The row's index among `ownRows(gridEl)`, or -1 when it is not one of them.
+ * Counts siblings instead of querying the grid: a query walks every cell
+ * block, and a drag asks once for each cell it adds.
+ */
+const ownRowIndex = (gridEl: HTMLElement, rowEl: HTMLElement): number => {
+  const container = rowEl.parentElement;
+  const inBody = container?.tagName === 'TBODY' && container.parentElement === gridEl;
+
+  if (container === null || (container !== gridEl && !inBody)) {
+    return -1;
+  }
+
+  const isRow = (el: Element): boolean => el.hasAttribute(ROW_ATTR);
+  const before = (parent: Element, child: Element): Element[] => {
+    const children = Array.from(parent.children);
+
+    return children.slice(0, children.indexOf(child));
+  };
+  const rowsIn = (el: Element): number => {
+    if (isRow(el)) {
+      return 1;
+    }
+
+    return el.tagName === 'TBODY' ? Array.from(el.children).filter(isRow).length : 0;
+  };
+  const earlierTopLevel = before(gridEl, inBody ? container : rowEl).reduce((count, el) => count + rowsIn(el), 0);
+
+  return inBody ? earlierTopLevel + before(container, rowEl).filter(isRow).length : earlierTopLevel;
+};
+
 export const getCellPosition = (gridEl: HTMLElement, cell: HTMLElement): { row: number; col: number } | null => {
   const rowEl = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
 
@@ -91,7 +122,7 @@ export const getCellPosition = (gridEl: HTMLElement, cell: HTMLElement): { row: 
   // index equals the logical row. Columns DIVERGE: merged cells are not
   // rendered as <td>, so a physical NodeList index would be wrong in any
   // merge-touched row. Read the LOGICAL column the cell carries instead.
-  const row = Array.from(ownRows(gridEl)).indexOf(rowEl);
+  const row = ownRowIndex(gridEl, rowEl);
   const colAttr = cell.getAttribute(CELL_COL_ATTR);
 
   if (row < 0 || colAttr === null) {

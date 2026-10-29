@@ -759,6 +759,37 @@ describe('TableCellBlocks — surviving-mutant coverage', () => {
 
       expect(fixture.store.insertCalls).toEqual([]);
     });
+
+    it('places a new last cell block after the nearest filled cell without reading every earlier cell', () => {
+      const containerReads = (rows: number): { reads: number; index: number | undefined } => {
+        const fixture = setup({ rows, cols: 4 });
+
+        Array.from({ length: rows * 4 - 1 }, (_, i) => {
+          const id = `b-${rows}-${i}`;
+
+          fixture.store.add(id, 'paragraph', {}, 'table-1');
+          mountStoredBlock(fixture, Math.floor(i / 4), i % 4, id);
+
+          return id;
+        });
+
+        const spy = vi.spyOn(Element.prototype, 'querySelector');
+
+        fixture.instance.ensureCellHasBlock(fixture.grid.cell(rows - 1, 3));
+
+        const reads = spy.mock.calls.filter(([selector]) => selector === `[${CELL_BLOCKS_ATTR}]`).length;
+
+        spy.mockRestore();
+
+        return { reads, index: fixture.store.insertCalls[0]?.index };
+      };
+
+      const small = containerReads(2);
+      const big = containerReads(30);
+
+      expect(big.reads).toBe(small.reads);
+      expect(big.index).toBe(30 * 4);
+    });
   });
 });
 

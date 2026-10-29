@@ -400,6 +400,62 @@ test.describe('Add Row and Column Controls', () => {
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(2);
   });
 
+  test('The add-column button stays on the grid edge and the grid follows the pointer while dragging', async ({ page }) => {
+    // Explicit widths keep the table inside its container, so nothing scrolls.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: { withHeadings: false, colWidths: [120, 120], content: [['A', 'B'], ['C', 'D']] },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await hoverNearRightEdge(page, table);
+
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    await expect(addColBtn).toBeVisible();
+
+    const box = assertBoundingBox(await addColBtn.boundingBox(), 'Add-col button');
+    const startX = box.x + box.width / 2;
+    const startY = box.y + box.height / 2;
+    const measure = (): Promise<{ gridWidth: number; gridRight: number; buttonLeft: number }> => page.evaluate(() => {
+      const grid = document.querySelector('[data-blok-tool="table"] table');
+      const button = document.querySelector('[data-blok-table-add-col]');
+      const gridRect = grid?.getBoundingClientRect();
+      const buttonRect = button?.getBoundingClientRect();
+
+      return { gridWidth: gridRect?.width ?? 0, gridRight: gridRect?.right ?? 0, buttonLeft: buttonRect?.left ?? 0 };
+    });
+    const start = await measure();
+    const positions: Array<{ travel: number; growth: number; gap: number }> = [];
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+
+    for (const travel of [70, 150, 230, 160, 90, 20]) {
+      await page.mouse.move(startX + travel, startY, { steps: 4 });
+
+      const now = await measure();
+
+      positions.push({ travel, growth: now.gridWidth - start.gridWidth, gap: now.buttonLeft - now.gridRight });
+    }
+
+    await page.mouse.up();
+
+    // A new column is half the 120px column, so the edge stays within 30px of the pointer.
+    positions.forEach(({ travel, growth, gap }) => {
+      expect(Math.abs(growth - travel), `growth after ${travel}px`).toBeLessThanOrEqual(31);
+      expect(Math.abs(gap - (start.buttonLeft - start.gridRight)), `button gap after ${travel}px`).toBeLessThanOrEqual(1);
+    });
+  });
+
   test('Add controls are absent in read-only mode', async ({ page }) => {
     // 1. Initialize editor with a 2x2 table
     await createTable2x2(page);

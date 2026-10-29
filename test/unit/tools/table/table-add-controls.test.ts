@@ -1041,54 +1041,6 @@ describe('TableAddControls', () => {
       }));
     };
 
-    it('calls onDragRemoveRow when dragging add-row button upwards', () => {
-      ({ wrapper, grid } = createGridAndWrapper(3, 2));
-
-      const callbacks = defaultDragCallbacks();
-
-      new TableAddControls({
-        wrapper,
-        grid,
-        i18n: mockI18n,
-        onAddRow: vi.fn(),
-        onAddColumn: vi.fn(),
-        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
-        ...callbacks,
-      });
-
-      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-
-      // Drag upward by 100px (negative direction) — should trigger removal
-      simulateDrag(addRowBtn, 'row', 200, 100);
-
-      expect(callbacks.onDragRemoveRow).toHaveBeenCalled();
-      expect(addRowBtn).toBeInTheDocument();
-    });
-
-    it('calls onDragRemoveCol when dragging add-col button leftwards', () => {
-      ({ wrapper, grid } = createGridAndWrapper(2, 3));
-
-      const callbacks = defaultDragCallbacks();
-
-      new TableAddControls({
-        wrapper,
-        grid,
-        i18n: mockI18n,
-        onAddRow: vi.fn(),
-        onAddColumn: vi.fn(),
-        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
-        ...callbacks,
-      });
-
-      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
-
-      // Drag leftward by 200px (negative direction) — should trigger removal
-      simulateDrag(addColBtn, 'col', 300, 100);
-
-      expect(callbacks.onDragRemoveCol).toHaveBeenCalled();
-      expect(addColBtn).toBeInTheDocument();
-    });
-
     it('calls onDragEnd after drag-to-remove completes', () => {
       ({ wrapper, grid } = createGridAndWrapper(3, 2));
 
@@ -1448,63 +1400,6 @@ describe('TableAddControls', () => {
       );
     });
 
-    it('updates dimension tooltip as rows are added during drag', () => {
-      ({ wrapper, grid } = createGridAndWrapper(2, 3));
-
-      let currentSize = { rows: 2, cols: 3 };
-      const getTableSize = vi.fn(() => currentSize);
-      const onDragAddRow = vi.fn(() => {
-        currentSize = { rows: currentSize.rows + 1, cols: currentSize.cols };
-
-        return true;
-      });
-
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
-
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
-
-      new TableAddControls({
-        wrapper,
-        grid,
-        i18n: mockI18n,
-        onAddRow: vi.fn(),
-        onAddColumn: vi.fn(),
-        getTableSize,
-        ...defaultDragCallbacks(),
-        onDragAddRow,
-      });
-
-      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-
-      addRowBtn.setPointerCapture = vi.fn();
-
-      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
-        clientY: 0,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
-        clientY: 40,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      mockShow.mockClear();
-
-      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
-        clientY: 60,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      expect(mockShow).toHaveBeenCalledWith(
-        addRowBtn,
-        '3\u00D74',
-        expect.objectContaining({ placement: 'bottom', marginTop: -16 }),
-      );
-    });
-
     it('hides dimension tooltip on pointer up after drag', () => {
       ({ wrapper, grid } = createGridAndWrapper(3, 2));
 
@@ -1776,57 +1671,6 @@ describe('TableAddControls', () => {
 
       // Should not trigger the click-add since the pointer was cancelled, not released
       expect(onAddRow).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('column drag unit size', () => {
-    it('uses getNewColumnWidth as drag unit size instead of existing cell width', () => {
-      ({ wrapper, grid } = createGridAndWrapper(2, 3));
-
-      const callbacks = defaultDragCallbacks();
-      const NEW_COL_WIDTH = 80;
-
-      new TableAddControls({
-        wrapper,
-        grid,
-        i18n: mockI18n,
-        onAddRow: vi.fn(),
-        onAddColumn: vi.fn(),
-        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
-        getNewColumnWidth: () => NEW_COL_WIDTH,
-        ...callbacks,
-      });
-
-      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
-
-      addColBtn.setPointerCapture = vi.fn();
-      addColBtn.releasePointerCapture = vi.fn();
-
-      addColBtn.dispatchEvent(new PointerEvent('pointerdown', {
-        clientX: 0,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      // Drag exactly NEW_COL_WIDTH pixels — should add exactly one column
-      addColBtn.dispatchEvent(new PointerEvent('pointermove', {
-        clientX: NEW_COL_WIDTH,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      addColBtn.dispatchEvent(new PointerEvent('pointerup', {
-        clientX: NEW_COL_WIDTH,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(1);
-      expect(callbacks.onDragRemoveCol).not.toHaveBeenCalled();
-
-      // Verify the drag completed: cursor is reset and pointer capture was released
-      expect(document.body.style.cursor).toBe('');
-      expect(addColBtn.releasePointerCapture).toHaveBeenCalledWith(1);
     });
   });
 

@@ -51,10 +51,6 @@ const GRID_HEIGHT = GRID_BOX.bottom - GRID_BOX.top;
 /** Distinct per row/column so a wrong index is a different number, not the same one. */
 const ROW_HEIGHTS = [22, 31, 44];
 const CELL_WIDTHS = [70, 85, 60];
-const LAST_ROW_HEIGHT = 44;
-const LAST_CELL_WIDTH = 60;
-const NO_ROW_FALLBACK_HEIGHT = 30;
-const NO_CELL_FALLBACK_WIDTH = 100;
 
 const POINTER_ID = 7;
 
@@ -585,73 +581,6 @@ describe('TableAddControls — surviving-mutant coverage', () => {
     });
   });
 
-  describe('drag unit size', () => {
-    const dragBy = (button: HTMLElement, axis: 'x' | 'y', distance: number): void => {
-      stubPointerCapture(button);
-      button.dispatchEvent(pointerEvent('pointerdown', 0, 0));
-      button.dispatchEvent(pointerEvent(
-        'pointermove',
-        axis === 'x' ? distance : 0,
-        axis === 'y' ? distance : 0
-      ));
-    };
-
-    it('uses the last row height as the row drag unit', () => {
-      build();
-
-      dragBy(rowButton(), 'y', LAST_ROW_HEIGHT * 2);
-
-      expect(callbacks.onDragAddRow).toHaveBeenCalledTimes(2);
-    });
-
-    it('falls back to a 30px row unit when the grid has no rows', () => {
-      grid.replaceChildren();
-      build();
-
-      dragBy(rowButton(), 'y', NO_ROW_FALLBACK_HEIGHT * 2);
-
-      expect(callbacks.onDragAddRow).toHaveBeenCalledTimes(2);
-    });
-
-    it('uses the last cell width as the column drag unit', () => {
-      build();
-
-      dragBy(colButton(), 'x', LAST_CELL_WIDTH);
-
-      expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(1);
-    });
-
-    it('falls back to a 100px column unit when the grid has no rows', () => {
-      grid.replaceChildren();
-      build();
-
-      dragBy(colButton(), 'x', NO_CELL_FALLBACK_WIDTH);
-
-      expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(1);
-    });
-
-    it('falls back to a 100px column unit when the first row has no cells', () => {
-      grid.replaceChildren();
-      const emptyRow = document.createElement('div');
-
-      emptyRow.setAttribute('data-blok-table-row', '');
-      grid.appendChild(emptyRow);
-      build();
-
-      dragBy(colButton(), 'x', NO_CELL_FALLBACK_WIDTH);
-
-      expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(1);
-    });
-
-    it('prefers the explicit new-column width over the measured cell width', () => {
-      build({ getNewColumnWidth: (): number => 25 });
-
-      dragBy(colButton(), 'x', 75);
-
-      expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(3);
-    });
-  });
-
   describe('drag add and remove loops', () => {
     const startRowDrag = (): HTMLElement => {
       const button = rowButton();
@@ -664,35 +593,6 @@ describe('TableAddControls — surviving-mutant coverage', () => {
 
     beforeEach(() => {
       grid.replaceChildren();
-    });
-
-    it('stops adding rows as soon as the add is refused', () => {
-      callbacks.onDragAddRow
-        .mockImplementationOnce((): boolean => true)
-        .mockImplementation((): boolean => false);
-      build();
-
-      const button = startRowDrag();
-
-      button.dispatchEvent(pointerEvent('pointermove', 0, NO_ROW_FALLBACK_HEIGHT * 3));
-
-      expect(callbacks.onDragAddRow).toHaveBeenCalledTimes(2);
-    });
-
-    it('stops removing rows as soon as the remove is refused', () => {
-      callbacks.onDragRemoveRow
-        .mockImplementationOnce((): boolean => true)
-        .mockImplementation((): boolean => false);
-      build();
-
-      const button = startRowDrag();
-
-      button.dispatchEvent(pointerEvent('pointermove', 0, NO_ROW_FALLBACK_HEIGHT * 3));
-      expect(callbacks.onDragAddRow).toHaveBeenCalledTimes(3);
-
-      button.dispatchEvent(pointerEvent('pointermove', 0, 0));
-
-      expect(callbacks.onDragRemoveRow).toHaveBeenCalledTimes(2);
     });
 
     it('does not start a drag at exactly the threshold distance', () => {
@@ -766,8 +666,6 @@ describe('TableAddControls — surviving-mutant coverage', () => {
     });
 
     it('refreshes the dimension tooltip on every move once the drag has started', () => {
-      // The move handler carries two identical didDrag guards, so a post-threshold
-      // move refreshes twice. Pinning the count catches either guard being dropped.
       build();
       const button = rowButton();
 
@@ -778,7 +676,7 @@ describe('TableAddControls — surviving-mutant coverage', () => {
 
       button.dispatchEvent(pointerEvent('pointermove', 0, DRAG_THRESHOLD + 20));
 
-      expect(mockShow).toHaveBeenCalledTimes(3);
+      expect(mockShow).toHaveBeenCalledTimes(2);
     });
 
     it('anchors the column dimension tooltip without a top margin', () => {

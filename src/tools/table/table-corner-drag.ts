@@ -4,7 +4,7 @@ import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { show as showTooltip, showReadout, hide as hideTooltip } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
 
-import { inlineAxis, scrollToInlineEnd } from './table-direction';
+import { inlineAxis, measureLastColumnWidth, measureLastRowHeight, scrollToInlineEnd } from './table-direction';
 import type { InlineAxis } from './table-direction';
 
 const CORNER_DRAG_ATTR = 'data-blok-table-corner-drag';
@@ -282,36 +282,12 @@ export class TableCornerDrag {
     hideTooltip();
   }
 
-  /**
-   * Height of the bottom row, measured live. Rows are not uniform — one with
-   * wrapped text is several times taller than an empty one — so a frozen step
-   * would detach the grid's edge from the pointer after the first removal.
-   */
   private measureLastRowHeight(): number {
-    const rows = this.gridEl.querySelectorAll('[data-blok-table-row]');
-    const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
-
-    return lastRow?.getBoundingClientRect().height ?? 0;
+    return measureLastRowHeight(this.gridEl);
   }
 
-  /**
-   * Width of the rightmost column, measured live: columns carry whatever width
-   * the user resized them to.
-   *
-   * Taken as the innermost cell that ends at the grid's right edge, so a cell
-   * merged across the last two columns does not report the pair as one column
-   * whenever some other row still splits them.
-   */
   private measureLastColumnWidth(gridRect: DOMRect, axis: InlineAxis): number {
-    const gridEnd = axis.end(gridRect);
-    const cells = Array.from(this.gridEl.querySelectorAll<HTMLElement>('[data-blok-table-cell]'));
-    const start = cells.reduce((innermost, cell) => {
-      const rect = cell.getBoundingClientRect();
-
-      return Math.abs(axis.end(rect) - gridEnd) <= 1 && axis.start(rect) > innermost ? axis.start(rect) : innermost;
-    }, -Infinity);
-
-    return start === -Infinity ? 0 : gridEnd - start;
+    return measureLastColumnWidth(this.gridEl, gridRect, axis);
   }
 
   private handlePointerDown(e: PointerEvent): void {

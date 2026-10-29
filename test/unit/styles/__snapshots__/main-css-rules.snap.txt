@@ -4262,6 +4262,7 @@ span[data-blok-slash-search] {
   --blok-database-date-outside-text: var(--blok-database-ink-tertiary);
   --blok-database-date-arrow: var(--blok-database-ink-secondary);
   --blok-database-value-chevron: var(--blok-database-ink-secondary);
+  --blok-database-menu-value-text: var(--blok-database-ink-secondary);
   --blok-database-date-today-text: var(--blok-database-ink-tertiary);
   --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-date-setting-value-text: var(--blok-database-ink-secondary);
@@ -4540,6 +4541,7 @@ span[data-blok-slash-search] {
   --blok-database-date-outside-text: rgb(139, 152, 152);
   --blok-database-date-arrow: rgb(165, 165, 165);
   --blok-database-value-chevron: rgb(125, 122, 117);
+  --blok-database-menu-value-text: rgb(155, 152, 147);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -4819,6 +4821,7 @@ span[data-blok-slash-search] {
   --blok-database-date-outside-text: rgb(139, 152, 152);
   --blok-database-date-arrow: rgb(165, 165, 165);
   --blok-database-value-chevron: rgb(125, 122, 117);
+  --blok-database-menu-value-text: rgb(155, 152, 147);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -6268,6 +6271,11 @@ button[data-blok-database-column-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] {
   font-size: 14px;
   line-height: 1.2;
+  color: var(--blok-database-menu-value-text);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
+  color: var(--blok-database-value-chevron);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested]:has(> [data-blok-popover-container] [data-blok-item-name='color-default']) [data-blok-popover-container] {

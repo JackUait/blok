@@ -1369,6 +1369,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DARK_DATE_PICKER_BYTES = 854;
     // database.css: the relation picker's lifted +/− button in dark (notion-spec-2 §23.3).
     const DATABASE_DARK_RELATION_TOGGLE_BYTES = 327;
+    // database.css: header menu values and their chevrons in dark (notion-spec-2 §23.4).
+    const DATABASE_DARK_MENU_VALUE_BYTES = 689;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1700,7 +1702,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DARK_OPEN_BYTES
       + DATABASE_DARK_CHIP_REMOVE_BYTES
       + DATABASE_DARK_DATE_PICKER_BYTES
-      + DATABASE_DARK_RELATION_TOGGLE_BYTES;
+      + DATABASE_DARK_RELATION_TOGGLE_BYTES
+      + DATABASE_DARK_MENU_VALUE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

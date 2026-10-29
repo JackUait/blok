@@ -379,6 +379,7 @@
   --blok-database-date-outside-text: var(--blok-database-ink-tertiary);
   --blok-database-date-arrow: var(--blok-database-ink-secondary);
   --blok-database-value-chevron: var(--blok-database-ink-secondary);
+  --blok-database-menu-value-text: var(--blok-database-ink-secondary);
   --blok-database-date-today-text: var(--blok-database-ink-tertiary);
   /* research/27 §6: "Today" and "Now" hover. */
   --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
@@ -702,6 +703,8 @@
     --blok-database-date-outside-text: rgb(139, 152, 152);
     --blok-database-date-arrow: rgb(165, 165, 165);
     --blok-database-value-chevron: rgb(125, 122, 117);
+    /* notion-spec-2 §23.4: Notion's value ink 125,122,117 is 3.0:1 on a hovered row; the first AA step there. */
+    --blok-database-menu-value-text: rgb(155, 152, 147);
     --blok-database-date-today-text: rgb(142, 139, 134);
     --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -1022,6 +1025,8 @@
   --blok-database-date-outside-text: rgb(139, 152, 152);
   --blok-database-date-arrow: rgb(165, 165, 165);
   --blok-database-value-chevron: rgb(125, 122, 117);
+  /* notion-spec-2 §23.4: Notion's value ink 125,122,117 is 3.0:1 on a hovered row; the first AA step there. */
+  --blok-database-menu-value-text: rgb(155, 152, 147);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
@@ -2789,7 +2794,7 @@ button[data-blok-database-column-count]:hover {
 
 /* notion-spec-2 §11, §12: every menu with the header look (the column header menu and its submenus,
    the row page menus, the peek's "•••" and peek mode menus) reads 14px regular, values 14/16.8.
-   Notion's value ink fails AA, so the value keeps Blok's secondary ink. */
+   Notion's value ink fails AA, so a value takes the nearest step that passes on a hovered row. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-title] {
   font-size: 14px;
   font-weight: 400;
@@ -2798,6 +2803,11 @@ button[data-blok-database-column-count]:hover {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] {
   font-size: 14px;
   line-height: 1.2;
+  color: var(--blok-database-menu-value-text);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
+  color: var(--blok-database-value-chevron);
 }
 
 /* notion-spec-2 §12: the Color list is 296 tall, rows full width with no gap. A row pads 8px and holds

@@ -132,3 +132,21 @@ describe('relation picker in dark (§23.3)', () => {
       .toContain('box-shadow: var(--blok-database-relation-toggle-shadow)');
   });
 });
+
+describe('header menu values in dark (§23.4)', () => {
+  const MENU = '[data-blok-popover][data-blok-popover-custom-class~=\'blok-database-header-menu\']';
+
+  it('grey a row value ("Manual") with the nearest AA step to Notion\'s rgb(125, 122, 117)', () => {
+    expect(tokenValues('--blok-database-menu-value-text')).toEqual([
+      'var(--blok-database-ink-secondary)',
+      'rgb(155, 152, 147)',
+      'rgb(155, 152, 147)',
+    ]);
+    expect(ruleBody(`${MENU} [data-blok-popover-item-value]`)).toContain('color: var(--blok-database-menu-value-text)');
+  });
+
+  it('draw the chevron after a value in Notion\'s rgb(125, 122, 117)', () => {
+    expect(ruleBody(`${MENU} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`))
+      .toContain('color: var(--blok-database-value-chevron)');
+  });
+});

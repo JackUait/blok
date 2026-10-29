@@ -571,7 +571,7 @@ export const enumeratePaste = (): Capability[] => [
 export const HAND_FEATURES: Record<string, string> = {
   'feature:database/button-press': 'src/shared/database/button-actions.ts#runButtonActions',
   'feature:database/csv-export': 'src/tools/database/database-csv.ts#serializeCsv',
-  'feature:database/csv-paste': 'src/tools/database/database-csv.ts#pastedTable',
+  'feature:database/csv-paste': 'src/tools/database/csv-parse.ts#pastedTable',
   'feature:database/csv-import': 'src/tools/database/database-csv.ts#csvDatabaseBlocks',
   'feature:database/csv-merge': 'src/tools/database/database-csv.ts#planCsvMerge',
   'feature:database/ai-setup': 'src/tools/database/database-ai-setup.ts#planAiSetup',

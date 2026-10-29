@@ -1,6 +1,6 @@
 import type { Blocks } from '../../../../types/api/blocks';
 import type { NotifierOptions } from '../../../../types/configs/notifier';
-import { csvDatabaseBlocks, pastedTable } from '../../../tools/database/database-csv';
+import { pastedTable } from '../../../tools/database/csv-parse';
 
 export interface CsvOfferDeps {
   blocks: Pick<Blocks, 'getById' | 'getBlockIndex' | 'insertAt' | 'delete' | 'beginTransaction' | 'endTransaction'>;
@@ -17,6 +17,7 @@ const deleteById = async (blocks: CsvOfferDeps['blocks'], id: string): Promise<v
 };
 
 const convert = async (table: string[][], addedIds: string[], deps: CsvOfferDeps): Promise<void> => {
+  const { csvDatabaseBlocks } = await import('../../../tools/database/database-csv');
   const { blocks } = deps;
   const [first, ...rest] = addedIds.filter((id) => blocks.getById(id) !== null);
 

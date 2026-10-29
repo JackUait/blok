@@ -432,8 +432,8 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
   it('keeps the blok.mjs import-time code under its byte budget', async () => {
     await initLexer()
     const bytes = [...staticClosure(['blok'])].reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    // Measured 3,746,538 bytes once core stopped importing the tool classes.
-    expect(bytes).toBeLessThan(3.9 * 1024 * 1024)
+    // Measured 3,732,038 bytes (yarn build) once core stopped importing tool and database code; ~5% headroom.
+    expect(bytes).toBeLessThan(3.75 * 1024 * 1024)
   })
 
   // The markdown parser's entity table; the parser ships in markdown.mjs.

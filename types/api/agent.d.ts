@@ -167,6 +167,28 @@ export interface AgentAssistantConfig {
    * This list replaces the built-in one. An empty list shows no buttons.
    */
   actions?: AgentAssistantAction[];
+  /**
+   * Decides whether an agent may write a media URL the editor would load at once:
+   * an image, video, audio or file source, an audio cover, a bookmark's image or
+   * favicon, a database row cover or file, a page icon picture, or an image inside
+   * inline HTML (such as a Markdown image in a sentence).
+   *
+   * It gets the absolute URL the browser would fetch. Return `true` to allow it.
+   * On `false`, or if it throws, the agent's command is refused with
+   * `DATA_REJECTED` (`details.reason: "media-url"`) and nothing is written, so
+   * nothing loads. `data:` and `blob:` URLs reach no server and are never asked about.
+   *
+   * Without it, every URL is allowed. Set it when the document can hold text you do
+   * not trust (pasted pages, shared documents, web results): a prompt in that text can
+   * make the agent put document text into an image URL, and loading it sends that text
+   * to another server. It applies to every agent edit in this editor, Ask AI and
+   * `editor.agent.begin()` turns alike, including sub-pages they open.
+   *
+   * Your uploader's `uploadByUrl`, which copies a URL an agent passes to
+   * `image.setSource` and similar commands, runs before this check. Filter there too.
+   * @example allowMediaUrl: (url) => new URL(url).hostname === 'cdn.example.com'
+   */
+  allowMediaUrl?: (url: string) => boolean;
   /** Levels the user may pick in the Ask AI bar. The picker shows only with two or more. */
   thinking?: {
     levels: AgentThinkingLevel[];

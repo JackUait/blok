@@ -1,5 +1,6 @@
 import { AgentFailure, failure, problemOf } from './errors';
 import { applyEdits } from './json-applier';
+import { mediaProblems } from './media-gate';
 import { PREPARE_PENDING } from './plan-state';
 import { fieldRules } from './variant-hint';
 
@@ -125,6 +126,7 @@ export const validateWrites = (state: PlanState, snapshot: DocSnapshot): void =>
       case 'setTunes':
         break;
     }
+    mediaProblems(state.ctx.ports.media, edit, commandIndex, id => replay.get(id)?.type).forEach(add);
     applyEdits(replay, [edit], null);
   }
 

@@ -67,6 +67,11 @@ export interface AgentPorts {
   /** The blocks a person's paste of `html` gives. Only the editor has it: it runs the paste pipeline. */
   htmlToBlocks?(html: string): Promise<{ blocks: OutputBlockData[]; warnings: AgentWarning[] }>;
   newId(): string;
+  /**
+   * The host's filter for media URLs agents write (agent.assistant.allowMediaUrl). Absent: every URL loads.
+   * `allows` gets the URL as written; `urlsInHtml` lists the URLs an HTML string would load.
+   */
+  media?: { allows(url: string): boolean; urlsInHtml(html: string): string[] };
   /** The editor's `link` config; without it a link gets the Link tool defaults. */
   resolveLink?(link: RichTextLink): RichTextLink;
   openPageDocument?(pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }>;

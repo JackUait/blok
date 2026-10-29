@@ -1,4 +1,5 @@
 import type { I18n } from '../../../types';
+import { IconCross } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
 import { FORMULA_FUNCTION_NAMES, formatFormulaForDisplay, formulaErrorKey, serializeFormula } from './formula';
 import type { CompileResult } from './formula';
@@ -78,7 +79,21 @@ class FormulaEditor implements FormulaEditorHandle {
     done.setAttribute('data-blok-database-formula-done', '');
     done.textContent = t('tools.database.formulaDone');
     done.addEventListener('click', () => this.save());
-    this.root.append(this.input, this.preview, this.error, this.list, done);
+    const head = document.createElement('div');
+    const title = document.createElement('span');
+    const close = document.createElement('button');
+
+    head.setAttribute('data-blok-database-formula-head', '');
+    title.setAttribute('data-blok-database-formula-title', '');
+    title.textContent = t('tools.database.editFormula');
+    close.type = 'button';
+    close.setAttribute('data-blok-database-formula-close', '');
+    close.setAttribute('aria-label', t('tools.database.close'));
+    close.innerHTML = IconCross;
+    // What Notion's × does to a typed formula is unmeasured; it saves, as Escape does.
+    close.addEventListener('click', () => this.escape());
+    head.append(title, close);
+    this.root.append(head, this.input, this.preview, this.error, this.list, done);
 
     this.input.addEventListener('input', () => this.refresh());
     this.input.addEventListener('keydown', (event) => {
@@ -91,7 +106,8 @@ class FormulaEditor implements FormulaEditorHandle {
     this.popover = new CellPopover({
       anchor,
       content: this.root,
-      minWidth: '400px',
+      // notion-spec-2 §18.3: the Edit formula box is 740 wide.
+      minWidth: '740px',
       onEscape: () => this.escape(),
       onDismiss: () => this.finish(false),
     });

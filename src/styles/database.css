@@ -13174,6 +13174,44 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-2);
 }
 
+/* notion-spec-2 §18.3: the Edit formula box is radius 12px. */
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-formula-editor]) {
+  border-radius: var(--blok-radius-dialog);
+}
+
+/* Title then close ×. Title type and button size are Blok values: unmeasured. */
+[data-blok-database-formula-head] {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+[data-blok-database-formula-close] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-formula-close] svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-formula-close]:hover {
+    background-color: var(--blok-database-hover-bg);
+  }
+}
+
 [data-blok-database-formula-input] {
   width: 100%;
   resize: vertical;

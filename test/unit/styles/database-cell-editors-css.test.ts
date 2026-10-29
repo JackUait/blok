@@ -22,6 +22,20 @@ const declared = (selector: string, name: string): string[] =>
     .flatMap((rule) => [...rule[2].matchAll(new RegExp(`(?:^|[;\\s])${escape(name)} ?: ?([^;]+);`, 'g'))].map((m) => m[1].trim()));
 
 describe('cell editor CSS', () => {
+  // notion-spec-2 §18.3: the Edit formula box is radius 12px, its title row has the close × at the end.
+  describe('Edit formula box', () => {
+    it('rounds the box 12px', () => {
+      expect(declared("[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-formula-editor])", 'border-radius'))
+        .toEqual(['var(--blok-radius-dialog)']);
+      expect(colors).toContain('--blok-radius-dialog: var(--blok-radius-12)');
+    });
+
+    it('puts the title first and the close × at the row end', () => {
+      expect(declared('[data-blok-database-formula-head]', 'display')).toEqual(['flex']);
+      expect(declared('[data-blok-database-formula-close]', 'margin-inline-start')).toEqual(['auto']);
+    });
+  });
+
   // notion-spec-2 §19.15: table relation rows are radius 4px; a 24x24 white button, radius 4px, 6px from the row's right.
   describe('table relation picker row', () => {
     const PICKER = '[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"]';

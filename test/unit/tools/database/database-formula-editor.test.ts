@@ -114,6 +114,33 @@ describe('formula editor', () => {
     expect(options.onSave).not.toHaveBeenCalled();
   });
 
+  // notion-spec-2 §18.3: the box is 740 wide and opens with the title "Edit formula" and a close ×.
+  describe('box', () => {
+    it('is 740 wide', () => {
+      open();
+      const popover = document.querySelector<HTMLElement>('[data-blok-popover]');
+
+      expect(popover?.style.getPropertyValue('--width')).toBe('740px');
+    });
+
+    it('heads the box with "Edit formula"', () => {
+      open();
+
+      expect(text('[data-blok-database-formula-title]')).toBe('tools.database.editFormula');
+    });
+
+    it('closes from the ×, saving a changed formula as Escape does', () => {
+      const options = open();
+
+      type('prop("Amount") + 1');
+      expect(document.querySelector('[data-blok-database-formula-close]')?.getAttribute('aria-label')).toBe('tools.database.close');
+      document.querySelector<HTMLButtonElement>('[data-blok-database-formula-close]')?.click();
+
+      expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
+      expect(document.querySelector('[data-blok-database-formula-editor]')).toBeNull();
+    });
+  });
+
   // notion-spec-2 §18.3: Escape saves the typed formula and closes.
   describe('Escape', () => {
     const escape = (): void => {

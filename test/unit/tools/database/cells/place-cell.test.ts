@@ -41,6 +41,24 @@ describe('place cell (research/20 §1d)', () => {
     expect(card?.querySelector('[data-blok-database-place-card-map]')).toBeNull();
   });
 
+  it('an address-only place shows in full, and its card titles the first part over the rest (research/20 §1d, notion-live-3 hover-16)', () => {
+    const street = { address: 'Eiffel Tower Ln, Paris, TN 38242, United States' };
+    const cell = renderCellValue(makeProperty('place'), street, makeEditorContext());
+    const card = hoverCard(cell);
+
+    expect(card?.querySelector('[data-blok-database-place-card-name]')?.textContent).toBe('Eiffel Tower Ln');
+    expect(card?.querySelector('[data-blok-database-place-card-address]')?.textContent).toBe('Paris, TN 38242, United States');
+    expect(cell.textContent).toBe(street.address);
+  });
+
+  it('an address with no comma is the card title alone', () => {
+    const cell = renderCellValue(makeProperty('place'), { address: 'Atlantis' }, makeEditorContext());
+    const card = hoverCard(cell);
+
+    expect(card?.querySelector('[data-blok-database-place-card-name]')?.textContent).toBe('Atlantis');
+    expect(card?.querySelector('[data-blok-database-place-card-address]')).toBeNull();
+  });
+
   it('notion-spec-2 §19.18: the card is its own surface, its left edge on the cell, 6px below the row, after the hint delay', () => {
     const tableCell = document.createElement('div');
     const cell = renderCellValue(makeProperty('place'), EIFFEL, makeEditorContext());

@@ -1334,8 +1334,10 @@ export interface DatabaseMap {
   render?(container: HTMLElement, items: DatabaseMapItem[], ctx: DatabaseMapContext): { destroy(): void } | void;
   /**
    * Places that match the text typed in the Place editor, best first. Each needs a
-   * `name` or `address`; a picked one is stored as it is. Without it the editor is a
-   * plain address field.
+   * `name` or `address`; a picked one is stored as it is. Give `name` only to a named
+   * place (a landmark, a shop): the cell shows the name. A street, a city or any plain
+   * address goes in `address` alone, and the cell shows all of it. Without it the
+   * editor is a plain address field.
    */
   geocode?(query: string): Promise<PlaceValue[]> | PlaceValue[];
   /** The user's current place, for the Place editor's "Current Location" row. Without it the row is hidden. */

@@ -381,17 +381,23 @@ const VERIFICATION_LABEL_KEYS = {
 const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext): void => {
   const card = document.createElement('div');
   const name = document.createElement('div');
-  const title = placeText(place);
+  const text = placeText(place);
+  const named = place.name !== undefined && place.name !== '';
+  // notion-live-3 hover-16 (one street sample): a place with no name titles its address's first part over the rest.
+  const comma = named ? -1 : text.indexOf(', ');
+  const title = comma === -1 ? text : text.slice(0, comma);
+  const tail = comma === -1 ? undefined : text.slice(comma + 2);
+  const rest = named ? place.address : tail;
 
   card.setAttribute('data-blok-database-place-card', '');
   name.setAttribute('data-blok-database-place-card-name', '');
   name.textContent = title;
   card.appendChild(name);
-  if (place.address !== undefined && place.address !== '' && place.address !== title) {
+  if (rest !== undefined && rest !== '' && rest !== title) {
     const address = document.createElement('div');
 
     address.setAttribute('data-blok-database-place-card-address', '');
-    address.textContent = place.address;
+    address.textContent = rest;
     card.appendChild(address);
   }
   const renderPlace = ctx.renderPlace;

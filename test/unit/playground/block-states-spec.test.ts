@@ -489,8 +489,10 @@ describe('block states gallery covers every state a block can show', () => {
     ) as Array<{ tool: string; states: MapState[] }>;
     const map = states.find((e) => e.tool === 'database')?.states.find((s) => s.label === 'Table view · every stored property type')?.toolConfig?.database?.map;
 
-    expect(await map?.geocode?.('berl')).toEqual([expect.objectContaining({ name: 'Berlin', lat: expect.any(Number), lon: expect.any(Number) })]);
-    expect(map?.currentLocation?.()).toEqual(expect.objectContaining({ name: expect.any(String) }));
+    // research/31 §4a: Notion's city chip reads "Berlin, Germany", so a city is an address with no name.
+    expect(await map?.geocode?.('berl')).toEqual([{ address: 'Berlin, Germany', lat: expect.any(Number), lon: expect.any(Number) }]);
+    expect(await map?.geocode?.('undefined')).toEqual([]);
+    expect(map?.currentLocation?.()).toEqual(expect.objectContaining({ address: expect.any(String) }));
   });
 
   test('the file uploading demo draws the file preview, like the real upload path', () => {

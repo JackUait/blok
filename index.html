@@ -3270,10 +3270,10 @@
     }
 
     const PLAYGROUND_PLACES = [
-      { name: 'Berlin', address: 'Berlin, Germany', lat: 52.52, lon: 13.405 },
-      { name: 'Paris', address: 'Paris, Ile-de-France, France', lat: 48.8566, lon: 2.3522 },
+      { address: 'Berlin, Germany', lat: 52.52, lon: 13.405 },
+      { address: 'Paris, Ile-de-France, France', lat: 48.8566, lon: 2.3522 },
       { name: 'Eiffel Tower', address: '5 Avenue Anatole France, 75007 Paris, France', lat: 48.8584, lon: 2.2945 },
-      { name: 'London', address: 'London, England, United Kingdom', lat: 51.5072, lon: -0.1276 },
+      { address: 'London, England, United Kingdom', lat: 51.5072, lon: -0.1276 },
       { name: 'Statue of Liberty', address: 'Liberty Island, New York, NY 10004, United States', lat: 40.6892, lon: -74.0445 },
     ];
 
@@ -3757,7 +3757,7 @@
               people: { list: async () => [{ id: 'u-ada', name: 'Ada Lovelace' }, { id: 'u-alan', name: 'Alan Turing' }] },
               // A host's place search, offline: the Place editor searches only when a host passes one.
               map: {
-                geocode: (query) => PLAYGROUND_PLACES.filter((place) => `${place.name} ${place.address}`.toLowerCase().includes(query.toLowerCase())),
+                geocode: (query) => PLAYGROUND_PLACES.filter((place) => `${place.name ?? ''} ${place.address}`.toLowerCase().includes(query.toLowerCase())),
                 currentLocation: () => PLAYGROUND_PLACES[0],
               },
             } },

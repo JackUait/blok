@@ -12,7 +12,7 @@ const css = readFileSync(resolve(__dirname, '../../../src/styles/database.css'),
 
 const ruleBody = (selector: string): string =>
   Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
-    .filter((match) => (match[1] ?? '').split(',').map((part) => part.trim()).includes(selector))
+    .filter((match) => (match[1] ?? '').split(/,(?![^(]*\))/).map((part) => part.trim()).includes(selector))
     .map((match) => match[2] ?? '')
     .join(';');
 
@@ -97,6 +97,14 @@ describe('database board card and calendar "No date" styles', () => {
     expect(box).toMatch(/width:\s*14px/);
     expect(box).toMatch(/height:\s*14px/);
     expect(ruleBody('[data-blok-database-card-property] > [data-blok-database-cell="checkbox"]')).toContain('gap: var(--blok-space-1-25)');
+  });
+
+  // notion-spec-2 §21.7: Person, Created by and Last edited by show an 18x18 avatar on a board card.
+  it('draws card avatars 18x18', () => {
+    const body = ruleBody('[data-blok-database-card-property] :is([data-blok-database-person-avatar], [data-blok-database-person-initial])');
+
+    expect(body).toMatch(/width:\s*18px/);
+    expect(body).toMatch(/height:\s*18px/);
   });
 
   // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.

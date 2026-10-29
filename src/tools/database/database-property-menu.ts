@@ -66,6 +66,9 @@ const headerMenuPosition = (anchor: HTMLElement): PlaceOver => {
   return { cover: true, viewportMargin: HEADER_MENU_BOTTOM_MARGIN, position: DOMRect.fromRect({ x: left, y: bottom, width, height: 0 }), positionContext: anchor };
 };
 
+const ruleAfterSort = (items: PopoverItemParams[]): PopoverItemParams[] =>
+  items.flatMap((item) => 'name' in item && item.name === 'optionSort' ? [item, { type: PopoverItemType.Separator } as const] : [item]);
+
 /** Types whose Edit property is the options list. */
 const OPTION_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['select', 'multiSelect', 'status']);
 
@@ -831,7 +834,8 @@ export class DatabasePropertyMenu {
           icon: IconPencil,
           // research/27 §7: 300 wide. The all-views note wraps rather than widening it.
           // The submenu's rows mount right after onOpen.
-          children: { items: this.editItems(property, update), minWidth: '300px', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
+          // notion-spec-2 §25.6: the submenu's top is the row's top; a divider follows Sort.
+          children: { items: ruleAfterSort(this.editItems(property, update)), align: 'start', minWidth: '300px', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
         };
       case 'showFullUrl': {
         // notion-spec-2 §19.21: a click on the row toggles it. The row's icon was not measured: Blok draws URL's type icon.

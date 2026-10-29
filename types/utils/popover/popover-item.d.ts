@@ -71,6 +71,12 @@ export interface PopoverItemChildren {
   placement?: 'beside' | 'below' | 'dropdown' | 'under';
 
   /**
+   * Where a 'beside' popover sits on the vertical axis: 'center' (default)
+   * centres it on the trigger item; 'start' puts its top edge on the item's top.
+   */
+  align?: 'center' | 'start';
+
+  /**
    * True if the children open on a click or a key only, never on hover.
    * While they are open a transparent layer covers the parent popover, so
    * hovering its other items does nothing, and a click on it closes them.

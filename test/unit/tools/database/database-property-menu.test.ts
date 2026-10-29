@@ -20,7 +20,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
+  children?: { items: CapturedItem[]; align?: string; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string; moves: Array<{ position: DOMRect; positionContext?: HTMLElement }> }
@@ -1147,6 +1147,21 @@ describe('DatabasePropertyMenu', () => {
         ['optionSort-alphabetical', 'tools.database.groupSortAlphabetical', false],
         ['optionSort-reverseAlphabetical', 'tools.database.groupSortReverse', false],
       ]);
+    });
+
+    // notion-spec-2 §25.6 (editprop-select.txt): a divider at box x + 12, 276 wide, sits between Sort and "Options".
+    it.each(['select', 'multiSelect'] as const)('%s: a divider follows Sort in the header Edit property', (type) => {
+      open(prop(type, { config: { options } }));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(items.slice(0, 3).map((item) => item.name ?? item.type)).toEqual(['optionSort', 'separator', 'options']);
+    });
+
+    // notion-spec-2 §25.6: the submenu's top is the Edit property row's top (246.4), not centred on it.
+    it.each(['select', 'status', 'number'] as const)('%s: the header Edit property opens level with its row', (type) => {
+      open(prop(type, { config: { options }, ...(type === 'status' ? { status: createDefaultStatusSettings() } : {}) }));
+
+      expect(byName(lastItems(), 'editProperty').children).toMatchObject({ align: 'start' });
     });
 
     it('Sort saves the pick; Manual leaves the key out', () => {

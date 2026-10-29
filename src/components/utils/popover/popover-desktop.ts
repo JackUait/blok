@@ -1959,7 +1959,7 @@ export class PopoverDesktop extends PopoverAbstract {
     actualPopoverEl.setAttribute('data-side', isRtl !== flips ? 'left' : 'right');
     actualPopoverEl.setAttribute('data-align', 'center');
 
-    // Center nested popover vertically on the trigger item, then clamp
+    // Center nested popover vertically on the trigger item (or put it on the item's top), then clamp
     // so the submenu never overflows the viewport top or bottom.
     const triggerItemEl = triggerItem.getElement();
     const triggerItemRect = triggerItemEl?.getBoundingClientRect();
@@ -1968,7 +1968,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (triggerItemRect && nestedHeight > 0) {
       const triggerCenterY = triggerItemRect.top + triggerItemRect.height / 2;
-      const desiredTop = moreTop ?? triggerCenterY - nestedHeight / 2;
+      const rowTop = triggerItem.childrenAlign === 'start' ? triggerItemRect.top : triggerCenterY - nestedHeight / 2;
+      const desiredTop = moreTop ?? rowTop;
       const { top: clampedTop } = clampNestedPopoverTop({
         desiredTop,
         nestedHeight,

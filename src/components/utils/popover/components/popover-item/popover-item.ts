@@ -243,6 +243,15 @@ export abstract class PopoverItem {
     return this.params.children?.placement ?? 'beside';
   }
 
+  /** Where a 'beside' children popover sits on the vertical axis. */
+  public get childrenAlign(): 'center' | 'start' {
+    if (this.params === undefined || !('children' in this.params)) {
+      return 'center';
+    }
+
+    return this.params.children?.align ?? 'center';
+  }
+
   /**
    * True if popover should close once item is activated
    */

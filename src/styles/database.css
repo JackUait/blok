@@ -6421,10 +6421,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   min-width: 0;
 }
 
-[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child > [data-blok-database-cell-link] {
+/* nowrap: the cell-link pre-wrap rule would break the name inside a wrapping cell. */
+[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* research/08:278: a 20px page glyph in the chip ink, as Notion's 20px box. */

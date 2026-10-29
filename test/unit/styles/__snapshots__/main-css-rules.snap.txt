@@ -9614,10 +9614,11 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   min-width: 0;
 }
 
-[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child > [data-blok-database-cell-link] {
+[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 [data-blok-database-file-chip-icon] {

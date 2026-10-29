@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import en from '../../../../src/components/i18n/locales/en.json';
 import { DATABASE_DEFAULT_TEXT } from '../../../../src/shared/database/default-text';
-import { createDefaultSchema, createDefaultView, freePropertyName } from '../../../../src/shared/database/schema-ops';
+import { createDefaultSchema, createDefaultView, freePropertyName, newView } from '../../../../src/shared/database/schema-ops';
 import { positionBetween } from '../../../../src/shared/database/positions';
 import { DATABASE_DEFAULT_TEXT as EDITOR_DEFAULT_TEXT } from '../../../../src/tools/database/database-localization';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
@@ -85,6 +85,30 @@ describe('shared database building blocks', () => {
 
     expect(schema).toEqual(model.getSchema());
     expect([createDefaultView('board', schema, mint)]).toEqual(model.getViews());
+  });
+});
+
+// notion-spec-2 §21.8 (list-row-default.png): a new List view shows the title and Status, the rest hidden.
+describe('a new list view', () => {
+  const schema = [
+    { id: 't', name: 'Name', type: 'title' as const, position: 'a0' },
+    { id: 'x', name: 'Text', type: 'text' as const, position: 'a1' },
+    { id: 's', name: 'Status', type: 'status' as const, position: 'a2' },
+  ];
+  const visible = (view: ReturnType<typeof newView>): string[] =>
+    (view.properties ?? []).filter((p) => p.visible === true).map((p) => p.id);
+
+  it('shows the title and the status property only', () => {
+    expect(visible(newView({ id: 'v', name: 'List', type: 'list', position: 'a0' }, schema))).toEqual(['t', 's']);
+  });
+
+  it('keeps the shown list it is given', () => {
+    expect(visible(newView({ id: 'v', name: 'List', type: 'list', position: 'a0', visibleProperties: ['x'] }, schema))).toEqual(['t', 'x']);
+  });
+
+  it('leaves the status hidden in a new calendar or gallery', () => {
+    expect(visible(newView({ id: 'v', name: 'Calendar', type: 'calendar', position: 'a0' }, schema))).toEqual(['t']);
+    expect(visible(newView({ id: 'v', name: 'Gallery', type: 'gallery', position: 'a0' }, schema))).toEqual(['t']);
   });
 });
 

@@ -74,7 +74,12 @@ export const newView = (
     subGroupSettings: seed.subGroupSettings ?? {},
     ...(seed.type === 'timeline' ? { tableProperties: seed.tableProperties ?? [] } : {}),
   };
-  const properties = seed.properties ?? resolveViewProperties(base, schema).map(({ id, visible }) => ({ id, visible }));
+  // A new List view also shows Status (notion-spec-2 §21.8). Read-time defaults stay title-only, so saved lists keep their look.
+  const showsStatus = seed.type === 'list' && base.visibleProperties?.length === 0;
+  const properties = seed.properties ?? resolveViewProperties(base, schema).map(({ id, visible }) => ({
+    id,
+    visible: visible || (showsStatus && schema.find((p) => p.id === id)?.type === 'status'),
+  }));
 
   return { ...base, properties, visibleProperties: visibleRowPropertyIds({ ...base, properties }, schema) };
 };

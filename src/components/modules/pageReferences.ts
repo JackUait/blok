@@ -9,7 +9,7 @@ import {
   PAGE_REFERENCE_MUTED_CLASSES,
   PAGE_REFERENCE_TITLE_CLASSES,
 } from '../../shared/tool-classes/page';
-import { PAGE_REFERENCE_HOVER_CLASSES } from '../../tools/page/constants';
+import { PAGE_REFERENCE_DRAFT_CLASSES, PAGE_REFERENCE_HOVER_CLASSES } from '../../tools/page/constants';
 import { IconArrowDiagonal } from '../icons';
 import { Module } from '../__module';
 import { DATA_ATTR } from '../constants/data-attributes';
@@ -17,7 +17,10 @@ import { safeHref } from '../utils/sanitize-url';
 
 const ICON_TESTID = 'page-reference-icon';
 const TITLE_TESTID = 'page-reference-title';
+const DRAFT_TESTID = 'page-reference-draft';
 const EMOJI_ATTR = 'data-blok-emoji';
+const STATUS_ATTR = 'data-blok-page-status';
+const LABEL_ATTR = 'data-blok-label';
 
 /** Which icon an anchor shows, so a repaint rebuilds it only on change. */
 const iconKeys = new WeakMap<HTMLElement, string>();
@@ -248,6 +251,8 @@ export class PageReferences extends Module {
     if (label.textContent !== title) {
       label.textContent = title;
     }
+    // A denied or missing page must not reveal its status.
+    this.paintDraft(anchor, allowed && info.status === 'draft');
     anchor.className = [
       ...PAGE_REFERENCE_CLASSES,
       ...(allowed ? PAGE_REFERENCE_INK_CLASSES : PAGE_REFERENCE_MUTED_CLASSES),
@@ -269,6 +274,31 @@ export class PageReferences extends Module {
       anchor.setAttribute('href', href);
     } else {
       anchor.setAttribute('role', 'link');
+    }
+  }
+
+  /** Derived like the title: saving keeps only the page id, so the mark never reaches saved data. */
+  private paintDraft(anchor: HTMLAnchorElement, draft: boolean): void {
+    const existing = anchor.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.testid}="${DRAFT_TESTID}"]`);
+
+    if (!draft) {
+      anchor.removeAttribute(STATUS_ATTR);
+      existing?.remove();
+
+      return;
+    }
+
+    const mark = existing ?? document.createElement('span');
+    const text = this.Blok.I18n.t('tools.page.draft');
+
+    anchor.setAttribute(STATUS_ATTR, 'draft');
+    if (existing === null) {
+      mark.className = PAGE_REFERENCE_DRAFT_CLASSES;
+      mark.setAttribute(DATA_ATTR.testid, DRAFT_TESTID);
+      anchor.append(mark);
+    }
+    if (mark.getAttribute(LABEL_ATTR) !== text) {
+      mark.setAttribute(LABEL_ATTR, text);
     }
   }
 

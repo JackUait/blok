@@ -57,6 +57,23 @@ export const PAGE_DRAFT_BADGE_CLASSES = [
 ].join(' ');
 
 /**
+ * The draft mark on an inline page reference: the badge's look, sized in em to
+ * sit in a line of text. The label comes from `data-blok-label` through CSS, so
+ * it never joins the reference's text, which caret offsets and find read.
+ */
+export const PAGE_REFERENCE_DRAFT_CLASSES = [
+  'inline-block',
+  'ms-[0.375em]',
+  'px-[0.375em]',
+  'rounded-(--blok-radius-mark)',
+  'text-[0.75em]',
+  'font-normal',
+  'bg-(--blok-color-gray-bg)',
+  'text-(--blok-color-gray-text)',
+  'before:content-[attr(data-blok-label)]',
+].join(' ');
+
+/**
  * Edit-only hover fill for an inline page reference. The anchor stays inline,
  * so the fill hugs the icon and title instead of the whole line.
  */

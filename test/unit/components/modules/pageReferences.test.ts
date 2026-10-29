@@ -5,7 +5,7 @@ import type { Block } from '../../../../src/components/block';
 import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
 import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
-import { PageTool, type PageConfig } from '../../../../src/tools/page';
+import { PageTool, type PageConfig, type PageInfo } from '../../../../src/tools/page';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { Table } from '../../../../src/tools/table';
 import { ToggleItem } from '../../../../src/tools/toggle';
@@ -591,5 +591,195 @@ describe('live inline page references', () => {
     await settleFrame();
     expect(stop).toHaveBeenCalledTimes(1);
     expect(anchor?.textContent).toBe('Page');
+  });
+});
+
+describe('a draft page mention', () => {
+  type Status = 'draft' | 'published';
+
+  const mentionText = 'See <a data-blok-page-id="p1">Page</a> soon';
+
+  interface CopyRuntime {
+    module: {
+      blockManager: { getBlockById: (id: string) => Block | undefined };
+      blockSelection: {
+        selectBlock: (block: Block) => void;
+        clearSelection: () => void;
+        copySelectedBlocks: (event: ClipboardEvent) => Promise<void>;
+      };
+    };
+  }
+
+  const statusEditor = (state: { status: Status }, info: () => PageInfo | null = () => ({ title: 'Plans', status: state.status })): { instance: Runtime; notify: () => void } => {
+    const listeners: Array<() => void> = [];
+    const instance = createEditor({
+      resolve: info,
+      subscribe: (_id, onChange) => { listeners.push(onChange); },
+    }, mentionText);
+
+    return { instance, notify: () => listeners.forEach(listener => listener()) };
+  };
+
+  const copied = async (instance: Runtime): Promise<Record<string, string>> => {
+    const { blockManager, blockSelection } = (instance as unknown as CopyRuntime).module;
+    const block = blockManager.getBlockById('paragraph-1');
+
+    if (block === undefined) {
+      throw new Error('no paragraph block');
+    }
+    const written: Record<string, string> = {};
+
+    blockSelection.selectBlock(block);
+    await blockSelection.copySelectedBlocks({
+      preventDefault: () => undefined,
+      clipboardData: { setData: (flavor: string, value: string): void => { written[flavor] = value; } },
+    } as unknown as ClipboardEvent);
+    blockSelection.clearSelection();
+
+    return written;
+  };
+
+  const snapshot = async (instance: Runtime): Promise<{ saved: string; shared: string; clipboard: Record<string, string> }> => ({
+    saved: JSON.stringify(savedAsHtml(await instance.save()).blocks.map(({ id, type, data }) => ({ id, type, data }))),
+    shared: JSON.stringify(instance.module.yjsManager.toJSON()),
+    clipboard: await copied(instance),
+  });
+
+  const badge = (anchor: HTMLAnchorElement | undefined): HTMLElement | null =>
+    anchor?.querySelector<HTMLElement>(':scope > [data-blok-testid="page-reference-draft"]') ?? null;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(async () => {
+    editor?.destroy();
+    await settle();
+    holder?.remove();
+    window.getSelection()?.removeAllRanges();
+    editor = undefined;
+    holder = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it('saves, syncs and copies the same bytes as a published mention', async () => {
+    const state: { status: Status } = { status: 'published' };
+    const { instance, notify } = statusEditor(state);
+
+    await instance.isReady;
+    await settleFrame();
+    await vi.waitFor(() => expect(anchors()[0]?.textContent).toBe('Plans'));
+    const published = await snapshot(instance);
+    const outbound = vi.fn();
+    const unsubscribe = instance.module.yjsManager.onDocUpdate(outbound);
+
+    instance.history.clear();
+    state.status = 'draft';
+    notify();
+    await vi.waitFor(() => expect(anchors()[0]?.getAttribute('data-blok-page-status')).toBe('draft'));
+    await settleFrame();
+
+    expect(outbound).not.toHaveBeenCalled();
+    expect(instance.history.canUndo()).toBe(false);
+    expect(await snapshot(instance)).toEqual(published);
+    expect(JSON.parse(published.saved)).toEqual([{ id: 'paragraph-1', type: 'paragraph', data: { text: mentionText } }]);
+    unsubscribe();
+  }, 30_000);
+
+  it('keeps the mention neutral in saved and shared data when the user types next to it', async () => {
+    const typeAfter = async (status: Status): Promise<{ saved: unknown; shared: unknown }> => {
+      const state = { status };
+      const { instance } = statusEditor(state);
+
+      await instance.isReady;
+      await settleFrame();
+      await vi.waitFor(() => expect(anchors()[0]?.textContent).toBe('Plans'));
+      if (status === 'draft') {
+        expect(anchors()[0]?.getAttribute('data-blok-page-status')).toBe('draft');
+      }
+      const paragraph = holder?.querySelector<HTMLElement>('[data-blok-tool="paragraph"]');
+
+      if (paragraph === null || paragraph === undefined) {
+        throw new Error('no editable paragraph');
+      }
+      paragraph.append('!');
+      paragraph.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '!' }));
+      await vi.waitFor(() => expect(JSON.stringify(instance.module.yjsManager.toJSON())).toContain('soon!'));
+
+      const result = {
+        saved: savedAsHtml(await instance.save()).blocks[0]?.data,
+        shared: instance.module.yjsManager.toJSON()[0]?.data,
+      };
+
+      editor?.destroy();
+      editor = undefined;
+      await settle();
+      holder?.replaceChildren();
+
+      return result;
+    };
+
+    const published = await typeAfter('published');
+    const draft = await typeAfter('draft');
+
+    expect(draft).toEqual(published);
+    expect(draft.saved).toEqual({ text: `${mentionText}!` });
+  }, 30_000);
+
+  it('marks the mention with the localized draft label, outside its text', async () => {
+    const { instance } = statusEditor({ status: 'draft' });
+
+    await instance.isReady;
+    await settleFrame();
+    await vi.waitFor(() => expect(anchors()[0]?.getAttribute('data-blok-page-status')).toBe('draft'));
+    const anchor = anchors()[0];
+
+    expect(badge(anchor)?.getAttribute('data-blok-label')).toBe('Draft');
+    expect(badge(anchor)?.hasAttribute('aria-hidden')).toBe(false);
+    // The label is drawn by CSS, so find and caret offsets read the title alone.
+    expect(anchor?.textContent).toBe('Plans');
+  });
+
+  it.each([
+    ['a published page', { title: 'Plans', status: 'published' }],
+    ['a page with no status', { title: 'Plans' }],
+    ['a denied draft', { access: 'none', title: 'Plans', status: 'draft' }],
+    ['a missing page', null],
+  ])('shows no draft mark for %s', async (_name, info) => {
+    const { instance } = statusEditor({ status: 'draft' }, () => info as PageInfo | null);
+
+    await instance.isReady;
+    await settleFrame();
+    await settleFrame();
+    const anchor = anchors()[0];
+
+    expect(anchor?.hasAttribute('data-blok-page-status')).toBe(false);
+    expect(badge(anchor)).toBeNull();
+  });
+
+  it('shows no draft mark while the page is still resolving', async () => {
+    const instance = createEditor({ resolve: () => new Promise(() => undefined) }, mentionText);
+
+    await instance.isReady;
+    await settleFrame();
+
+    expect(anchors()[0]?.hasAttribute('data-blok-page-status')).toBe(false);
+    expect(badge(anchors()[0])).toBeNull();
+  });
+
+  it('drops the draft mark when the host publishes the page', async () => {
+    const state: { status: Status } = { status: 'draft' };
+    const { instance, notify } = statusEditor(state);
+
+    await instance.isReady;
+    await vi.waitFor(() => expect(badge(anchors()[0])).not.toBeNull());
+    state.status = 'published';
+    notify();
+    await vi.waitFor(() => expect(anchors()[0]?.textContent).toBe('Plans'));
+
+    expect(anchors()[0]?.hasAttribute('data-blok-page-status')).toBe(false);
+    expect(badge(anchors()[0])).toBeNull();
   });
 });

@@ -13,6 +13,9 @@ const mb = vi.hoisted(() => {
     formats: [] as string[],
     disposed: 0,
     cancelled: 0,
+    videoCodec: 'vp09.00.10.08' as string | null,
+    width: 320,
+    height: 240,
   };
 
   class BufferTarget {
@@ -50,9 +53,19 @@ const mb = vi.hoisted(() => {
   class Quality {
     constructor(public level: string) {}
   }
+  const videoTrack = {
+    getCodecParameterString: async (): Promise<string | null> => state.videoCodec,
+    getDisplayWidth: async (): Promise<number> => state.width,
+    getDisplayHeight: async (): Promise<number> => state.height,
+  };
   const Conversion = {
     init: async (options: Record<string, unknown> & { output: Output }) => {
-      state.initOptions.push(options);
+      // Mediabunny calls a per-track function with each input track.
+      const video = typeof options.video === 'function'
+        ? await (options.video as (track: typeof videoTrack) => unknown)(videoTrack)
+        : options.video;
+
+      state.initOptions.push({ ...options, video });
       const conversion = {
         isValid: state.isValid,
         discardedTracks: state.discarded,
@@ -100,21 +113,28 @@ describe('produceVideoVariant', () => {
       formats: [],
       disposed: 0,
       cancelled: 0,
+      videoCodec: 'vp09.00.10.08',
+      width: 320,
+      height: 240,
     });
   });
 
   afterEach(() => vi.restoreAllMocks());
 
-  it('makes an MP4 with H.264 and AAC at high quality, copying when it can', async () => {
+  it('makes an MP4 with H.264 and AAC, leaving quality unset so a fitting track is copied', async () => {
     mb.state.mime = 'video/mp4; codecs="avc1.64001f, mp4a.40.2"';
 
     const out = await produceVideoVariant(clip(), 'mp4', opts);
 
     expect(mb.state.formats).toEqual(['mp4']);
     expect(mb.state.initOptions[0]).toMatchObject({
-      video: { codec: 'avc', quality: { level: 'high' } },
-      audio: { codec: 'aac', quality: { level: 'high' } },
+      video: { codec: 'avc' },
+      audio: { codec: 'aac' },
     });
+    // Any quality makes Mediabunny re-encode a track it could copy.
+    expect(mb.state.initOptions[0].video).not.toHaveProperty('quality');
+    expect(mb.state.initOptions[0].audio).not.toHaveProperty('quality');
+    expect(mb.state.initOptions[0].video).not.toHaveProperty('forceTranscode');
     expect(mb.state.initOptions[0]).not.toHaveProperty('copy');
     expect(out?.mimeType).toBe('video/mp4; codecs="avc1.64001f, mp4a.40.2"');
     expect(out?.file.type).toBe(out?.mimeType);
@@ -149,12 +169,70 @@ describe('produceVideoVariant', () => {
     expect(await produceVideoVariant(clip(), 'mp4', opts)).toBeNull();
   });
 
-  it('only remuxes a video longer than the cap', async () => {
+  it('only copies a video longer than the cap, without a quality that would force a re-encode', async () => {
     mb.state.duration = 601;
 
     await produceVideoVariant(clip(), 'webm', opts);
 
     expect(mb.state.initOptions[0]).toMatchObject({ copy: { mode: 'forced' } });
+    expect(mb.state.initOptions[0].video).not.toHaveProperty('quality');
+    expect(mb.state.initOptions[0].audio).not.toHaveProperty('quality');
+  });
+
+  it.each([
+    ['H.264 Baseline', 'avc1.42e01e'],
+    ['H.264 Main', 'avc1.4d401f'],
+    ['H.264 High', 'avc1.64000d'],
+    ['VP9 profile 0', 'vp09.00.20.08.01.02.02.02.00'],
+    ['AV1 8-bit', 'av01.0.04M.08'],
+  ])('lets %s be copied', async (_name, codec) => {
+    mb.state.videoCodec = codec;
+
+    await produceVideoVariant(clip(), 'webm', opts);
+
+    expect(mb.state.initOptions[0].video).not.toHaveProperty('forceTranscode');
+  });
+
+  it.each([
+    ['H.264 High 10', 'avc1.6e000d'],
+    ['H.264 High 4:4:4', 'avc1.f4000d'],
+    ['VP9 profile 1', 'vp09.01.10.08.03.01.13.00.01'],
+    ['VP9 profile 2', 'vp09.02.10.10'],
+    ['AV1 10-bit', 'av01.0.04M.10'],
+    ['an unknown codec', null],
+  ])('re-encodes %s, which not every browser plays', async (_name, codec) => {
+    mb.state.videoCodec = codec;
+
+    await produceVideoVariant(clip(), 'webm', opts);
+
+    expect(mb.state.initOptions[0].video).toMatchObject({ codec: 'vp9', forceTranscode: true });
+  });
+
+  it('asks for an even size when H.264 must be encoded from an odd-size video', async () => {
+    Object.assign(mb.state, { videoCodec: 'vp09.01.10.08', width: 321, height: 241 });
+
+    await produceVideoVariant(clip(), 'mp4', opts);
+    expect(mb.state.initOptions[0].video).toMatchObject({ codec: 'avc', width: 321 });
+
+    Object.assign(mb.state, { videoCodec: 'vp09.00.10.08', width: 320, height: 241 });
+    await produceVideoVariant(clip(), 'mp4', opts);
+    expect(mb.state.initOptions[1].video).toMatchObject({ codec: 'avc', width: 320 });
+  });
+
+  it('keeps the size when it is even, when the target is not H.264, or when H.264 can be copied', async () => {
+    await produceVideoVariant(clip(), 'mp4', opts);
+
+    Object.assign(mb.state, { videoCodec: 'vp09.01.10.08', width: 321, height: 241 });
+    await produceVideoVariant(clip(), 'webm', opts);
+
+    Object.assign(mb.state, { videoCodec: 'avc1.64000d', width: 321, height: 241 });
+    await produceVideoVariant(clip(), 'mp4', opts);
+
+    expect(mb.state.initOptions.map((o) => o.video)).toEqual([
+      expect.not.objectContaining({ width: expect.anything() }),
+      expect.not.objectContaining({ width: expect.anything() }),
+      expect.not.objectContaining({ width: expect.anything() }),
+    ]);
   });
 
   it('reports progress and frees the input every time', async () => {

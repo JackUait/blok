@@ -17,6 +17,13 @@ export const VIDEO_TARGETS: Record<VideoFormat, VideoTarget> = {
   av1: { container: 'webm', video: 'av1', audio: 'opus' },
 };
 
+/**
+ * Codecs every browser that has the family plays: H.264 Baseline/Main/High,
+ * VP9 profile 0 and 8-bit AV1. Mediabunny copies on family alone, so without
+ * this it would copy 10-bit or 4:4:4 video that e.g. Safari never loads.
+ */
+const COPY_SAFE_CODEC = /^(avc1\.(42|4d|64)|vp09\.00\.|av01\.\d\.\d+[MH]\.08)/i;
+
 export interface VideoVariantOptions {
   /** Longer videos (seconds) are only remuxed, never re-encoded. */
   maxTranscodeDuration: number;
@@ -28,8 +35,8 @@ export interface VideoVariantOptions {
 }
 
 /**
- * Convert `file` into one format. Mediabunny copies a track whose codec
- * already fits the container, so that case is lossless.
+ * Convert `file` into one format. A track whose codec already fits is copied,
+ * so that case is lossless; any other track is re-encoded at high quality.
  * @param file - the uploaded video
  * @param format - the format to make
  * @param opts - duration cap, progress and cancellation
@@ -58,12 +65,26 @@ export const produceVideoVariant = async (
       format: target.container === 'mp4' ? new mb.Mp4OutputFormat() : new mb.WebMOutputFormat(),
       target: new mb.BufferTarget(),
     });
-    const quality = new mb.Quality('high');
+    // No quality: any quality forces a re-encode. Mediabunny encodes at 'high' by default.
     const conversion = await mb.Conversion.init({
       input,
       output,
-      video: { codec: target.video, quality },
-      audio: { codec: target.audio, quality },
+      video: async (track) => {
+        const codec = (await track.getCodecParameterString()) ?? '';
+        const copySafe = COPY_SAFE_CODEC.test(codec);
+        const width = await track.getDisplayWidth();
+        const oddSize = width % 2 === 1 || (await track.getDisplayHeight()) % 2 === 1;
+        // H.264 encoders need even sizes; Mediabunny rounds both sides up only when given a width.
+        // A copyable H.264 track keeps its size, since a width forces a re-encode.
+        const evenSize = target.video === 'avc' && oddSize && !(copySafe && codec.startsWith('avc1'));
+
+        return {
+          codec: target.video,
+          ...(copySafe ? {} : { forceTranscode: true }),
+          ...(evenSize ? { width } : {}),
+        };
+      },
+      audio: { codec: target.audio },
       ...(copyOnly ? { copy: { mode: 'forced' as const } } : {}),
     });
 

@@ -13,6 +13,8 @@ const HOLDER_ID = 'blok';
 const VIDEO_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="video"]`;
 /** 2 s, 320×240, VP9 + Opus. */
 const CLIP_PATH = join(process.cwd(), 'test/playwright/fixtures/video/clip.webm');
+/** 2 s, 321×241, VP9 profile 1 + Opus. */
+const ODD_PATH = join(process.cwd(), 'test/playwright/fixtures/video/odd.webm');
 /** Served the way a host would ship it: the host installs Mediabunny, Blok never bundles it. */
 const MEDIABUNNY_URL = 'https://media.test/mediabunny.mjs';
 const MEDIABUNNY_BUNDLE = join(process.cwd(), 'node_modules/mediabunny/dist/bundles/mediabunny.min.mjs');
@@ -45,8 +47,13 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-const createBlok = async (page: Page, formats: VideoFormat[], withMediabunny = true): Promise<void> => {
-  await page.evaluate(async ({ holder, videoFormats, loaderUrl }) => {
+const createBlok = async (
+  page: Page,
+  formats: VideoFormat[],
+  withMediabunny = true,
+  maxTranscodeDuration?: number
+): Promise<void> => {
+  await page.evaluate(async ({ holder, videoFormats, loaderUrl, cap }) => {
     await window.blokInstance?.destroy?.();
     window.blokInstance = undefined;
     document.getElementById(holder)?.remove();
@@ -60,17 +67,23 @@ const createBlok = async (page: Page, formats: VideoFormat[], withMediabunny = t
       data: { blocks: [{ type: 'video', data: {} }] },
       media: {
         formats: { video: videoFormats },
+        ...(cap === null ? {} : { maxTranscodeDuration: cap }),
         ...(loaderUrl === null ? {} : { mediabunny: () => import(/* @vite-ignore */ loaderUrl) }),
       },
     });
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, videoFormats: formats, loaderUrl: withMediabunny ? MEDIABUNNY_URL : null });
+  }, {
+    holder: HOLDER_ID,
+    videoFormats: formats,
+    loaderUrl: withMediabunny ? MEDIABUNNY_URL : null,
+    cap: maxTranscodeDuration ?? null,
+  });
 };
 
-const upload = (page: Page): Promise<void> =>
-  page.locator(VIDEO_BLOCK_SELECTOR).getByTestId('file-input').setInputFiles(CLIP_PATH);
+const upload = (page: Page, path = CLIP_PATH): Promise<void> =>
+  page.locator(VIDEO_BLOCK_SELECTOR).getByTestId('file-input').setInputFiles(path);
 
 const saved = (page: Page): Promise<SavedVideo> =>
   page.evaluate(async () => {
@@ -161,4 +174,32 @@ test('saved variants render as sources after a reload', async ({ page }) => {
 
   await expect(player).not.toHaveAttribute('src', /.+/);
   await expect.poll(() => player.evaluate((el: HTMLVideoElement) => el.readyState)).toBeGreaterThan(0);
+});
+
+test('a video longer than the cap still gains WebM, copied as it is', async ({ page }) => {
+  test.setTimeout(60_000);
+  await createBlok(page, ['webm'], true, 0);
+  await upload(page);
+  await expect(converting(page)).toBeHidden({ timeout: 45_000 });
+
+  const variants = (await saved(page)).variants ?? [];
+
+  // The copy keeps VP9 profile 0; a re-encode would not be allowed past the cap.
+  expect(variants.some((variant) => /^video\/webm; codecs="vp09\.00\.20\.08/.test(variant.mimeType))).toBe(true);
+});
+
+test('an odd-size video still gains an MP4', async ({ page }) => {
+  test.setTimeout(60_000);
+  await createBlok(page, ['mp4']);
+  await upload(page, ODD_PATH);
+  await expect(page.locator(VIDEO_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');
+
+  const original = (await saved(page)).url;
+
+  await expect(converting(page)).toBeHidden({ timeout: 45_000 });
+
+  const after = await saved(page);
+
+  expect(after.mimeType).toBe('video/mp4');
+  expect(after.url).not.toBe(original);
 });

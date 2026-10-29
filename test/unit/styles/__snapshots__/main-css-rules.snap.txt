@@ -9838,6 +9838,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   padding: var(--blok-space-1) var(--blok-space-2);
 }
 
+[data-blok-item-name="optionSort"] + [data-blok-popover-item-separator] {
+  padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-2-5);
+}
+
 [data-blok-database-property-menu-switch] {
   display: flex;
   align-items: center;

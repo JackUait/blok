@@ -66,6 +66,12 @@ describe('add property menu (T12)', () => {
     expect(declared(`${GRID} [data-blok-database-property-type-option]`, 'min-height')).toEqual(['32px']);
   });
 
+  // notion-spec-2 §25.6 (editprop-select.txt): the line under Sort is 4px below it, at box x + 12, 276 wide; the first option 42 below it.
+  it('insets the Edit property line under Sort as Notion does', () => {
+    expect(declared('[data-blok-item-name="optionSort"] + [data-blok-popover-item-separator]', 'padding'))
+      .toEqual(['var(--blok-space-1) var(--blok-space-2) var(--blok-space-2-5)']);
+  });
+
   // notion-spec-2 §19.11: the type cells are 32 tall at a 34px pitch, so 2px apart.
   it('sets the header "+" type cells 2px apart', () => {
     expect(declared("[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid]", 'row-gap')).toEqual(['var(--blok-space-0-5)']);

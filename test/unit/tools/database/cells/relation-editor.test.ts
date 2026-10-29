@@ -121,6 +121,14 @@ describe('relation editor', () => {
       expect(search().placeholder).toBe('tools.database.relationSearchPlaceholder');
     });
 
+    // notion-live-8/51-rel-picker.png: the page title carries its own underline, so it sits in its own element.
+    it('puts each page title in its own element', () => {
+      openInTable();
+
+      expect(options().map((o) => o.querySelector('[data-blok-database-relation-option-title]')?.textContent))
+        .toEqual(['Alpha', 'Bravo', 'tools.database.relationUntitled']);
+    });
+
     // notion-live-3/relation-editor.png: "In", a database icon, then the name.
     it('puts a database icon right before the database name', () => {
       openInTable();

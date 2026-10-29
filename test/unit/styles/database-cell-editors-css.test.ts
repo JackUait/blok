@@ -93,6 +93,16 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-live-8/51-rel-picker.png: the title's line is rgb(230,229,227), the cell chip's rgba(28,19,1,0.11) on white (§24.9).
+  it('underlines a page title in the table relation picker like the cell chip', () => {
+    const TITLE = '[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option-title]';
+
+    expect(declared(TITLE, 'background-image')).toEqual(['linear-gradient(var(--blok-database-cell-link-underline), var(--blok-database-cell-link-underline))']);
+    expect(declared(TITLE, 'background-size')).toEqual(['100% 1px']);
+    expect(declared(TITLE, 'background-position')).toEqual(['0 100%']);
+    expect(declared(TITLE, 'background-repeat')).toEqual(['no-repeat']);
+  });
+
   // notion-spec-2 §19.15: table relation rows are radius 4px; a 24x24 white button, radius 4px, 6px from the row's right.
   describe('table relation picker row', () => {
     const PICKER = '[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"]';

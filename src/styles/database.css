@@ -13184,6 +13184,11 @@ textarea[data-blok-database-cell-input] {
   text-overflow: ellipsis;
   font-weight: 500;
   line-height: 16.8px;
+}
+
+/* Picker titles too (notion-live-8/51-rel-picker.png). */
+[data-blok-database-relation-chip-title],
+[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-option-title] {
   background-image: linear-gradient(var(--blok-database-cell-link-underline), var(--blok-database-cell-link-underline));
   background-size: 100% 1px;
   background-position: 0 100%;

@@ -350,7 +350,11 @@ class RelationEditor implements CellEditorHandle {
       row.setAttribute('data-blok-database-relation-option', candidate.id);
       row.setAttribute('role', 'option');
       row.setAttribute('aria-selected', chosen ? 'true' : 'false');
-      row.append(pagePlaceholderIcon(), this.titleOf(candidate));
+      const title = document.createElement('span');
+
+      title.setAttribute('data-blok-database-relation-option-title', '');
+      title.textContent = this.titleOf(candidate);
+      row.append(pagePlaceholderIcon(), title);
       if (this.heading !== null) {
         // notion-spec-2 §19.15: "+" links, "−" unlinks; a click on it is the row's click.
         const toggle = document.createElement('span');

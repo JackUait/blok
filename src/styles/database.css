@@ -3434,8 +3434,9 @@ button[data-blok-database-column-count]:hover {
   flex: none;
 }
 
-/* A board card's select pill keeps the 0 6px padding (research/07:95). Status is 18 tall with 12/18 text too (notion-spec-2 §21.7). */
-[data-blok-database-card-property] [data-blok-database-option-pill] {
+/* A board card's select pill keeps the 0 6px padding (research/07:95). Status is 18 tall with 12/18 text too (notion-spec-2 §21.7). A calendar card's too (§21.9). */
+[data-blok-database-card-property] [data-blok-database-option-pill],
+[data-blok-database-calendar-event-property] [data-blok-database-option-pill] {
   height: 18px;
   font-size: 12px;
   line-height: 18px;

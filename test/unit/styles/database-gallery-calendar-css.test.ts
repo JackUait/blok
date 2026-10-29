@@ -138,6 +138,15 @@ describe('database gallery and calendar styles', () => {
     expect(css).toMatch(/--blok-database-calendar-lane-pitch:\s*calc\(34px \+ var\(--blok-database-calendar-event-lines, 0\) \* 24px\)/);
   });
 
+  // notion-spec-2 §21.9: card values look as on the board card. calendar-card.png: the Alpha and Gamma pills span 18-19 pixel rows.
+  it('draws every pill on a calendar card, status included, 18 tall with 12/18 text', () => {
+    const body = ruleBody('[data-blok-database-calendar-event-property] [data-blok-database-option-pill]');
+
+    expect(body).toMatch(/height:\s*18px/);
+    expect(body).toMatch(/font-size:\s*12px/);
+    expect(body).toMatch(/line-height:\s*18px/);
+  });
+
   it('makes a week-range row 372px tall (findings C08)', () => {
     expect(ruleBody('[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day]')).toMatch(/max\(372px,/);
   });

@@ -6836,7 +6836,7 @@ button[data-blok-database-column-count]:hover {
   flex: none;
 }
 
-[data-blok-database-card-property] [data-blok-database-option-pill] {
+[data-blok-database-card-property] [data-blok-database-option-pill], [data-blok-database-calendar-event-property] [data-blok-database-option-pill] {
   height: 18px;
   font-size: 12px;
   line-height: 18px;

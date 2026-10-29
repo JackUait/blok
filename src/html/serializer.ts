@@ -75,44 +75,71 @@ const serializeText = (node: TextNode): string => {
   return isElement(parent) && parent.namespaceURI === NS.HTML && UNESCAPED_TEXT.has(parent.tagName) ? node.value : escapeText(node.value);
 };
 
-const serializeElement = (node: Element): string => {
-  const tagName = node.tagName;
-  const open = '<' + tagName + serializeAttributes(node.attrs) + '>';
+/** The children a node writes: a template writes its content. */
+const childrenOf = (node: ParentNode): ChildNode[] =>
+  isElement(node) && node.tagName === 'template' && node.namespaceURI === NS.HTML && 'content' in node ? node.content.childNodes : node.childNodes;
 
-  return isVoidElement(node) ? open : open + serializeChildNodes(node) + '</' + tagName + '>';
-};
-
-const serializeNode = (node: ChildNode): string => {
-  if (isElement(node)) {
-    return serializeElement(node);
-  }
+/** A node that is not an element: text, comment or doctype. */
+const serializeLeaf = (node: ChildNode): string => {
   switch (node.nodeName) {
     case '#text':
-      return serializeText(node);
+      return 'value' in node ? serializeText(node) : '';
     case '#comment':
-      return `<!--${node.data}-->`;
+      return 'data' in node ? `<!--${node.data}-->` : '';
     case '#documentType':
-      return `<!DOCTYPE ${node.name}>`;
+      return 'name' in node ? `<!DOCTYPE ${node.name}>` : '';
     default:
       return '';
   }
 };
 
-function serializeChildNodes(parent: ParentNode): string {
-  const container = isElement(parent) && parent.tagName === 'template' && parent.namespaceURI === NS.HTML && 'content' in parent ? parent.content : parent;
+interface Frame {
+  children: ChildNode[];
+  index: number;
+  /** End tag written once every child is out. */
+  close: string;
+}
 
-  const children = container.childNodes;
+/**
+ * Writes the nodes in order. An explicit stack, not recursion: the parser
+ * builds trees far deeper than the call stack, and they must still serialize.
+ */
+const serializeNodes = (nodes: ChildNode[]): string => {
+  const stack: Frame[] = [{ children: nodes, index: 0, close: '' }];
   let html = '';
 
-  for (let i = 0; i < children.length; i++) {
-    html += serializeNode(children[i]);
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1];
+
+    if (frame.index === frame.children.length) {
+      html += frame.close;
+      stack.pop();
+      continue;
+    }
+    const node = frame.children[frame.index++];
+
+    if (!isElement(node)) {
+      html += serializeLeaf(node);
+      continue;
+    }
+    html += '<' + node.tagName + serializeAttributes(node.attrs) + '>';
+    if (isVoidElement(node)) {
+      continue;
+    }
+    const children = childrenOf(node);
+
+    if (children.length === 0) {
+      html += '</' + node.tagName + '>';
+    } else {
+      stack.push({ children, index: 0, close: '</' + node.tagName + '>' });
+    }
   }
 
   return html;
-}
+};
 
 /** Inner HTML of a document, fragment or element. A template writes its content. */
-export const serialize = (node: ParentNode): string => (isVoidElement(node) ? '' : serializeChildNodes(node));
+export const serialize = (node: ParentNode): string => (isVoidElement(node) ? '' : serializeNodes(childrenOf(node)));
 
 /** Outer HTML: the node itself, with its tag for an element. */
-export const serializeOuter = (node: ChildNode): string => serializeNode(node);
+export const serializeOuter = (node: ChildNode): string => serializeNodes([node]);

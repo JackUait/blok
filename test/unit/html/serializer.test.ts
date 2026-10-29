@@ -17,6 +17,7 @@ import {
   type ParentNode,
 } from '../../../src/html/tree';
 import { serialize, serializeOuter } from '../../../src/html/serializer';
+import { parseFragment as ownParseFragment } from '../../../src/html';
 
 /** parse5's default tree is our tree plus source locations; its enums are just nominally different. */
 const asOurs = (node: unknown): ParentNode => node as ParentNode;
@@ -193,5 +194,24 @@ describe('html serializer', () => {
 
       expect(serialize(tree)).toBe(serialize(tree));
     });
+  });
+});
+
+describe('serializer depth', () => {
+  // The parser builds 20,000 levels without trouble; writing them out must not overflow the stack.
+  const DEPTH = 20_000;
+
+  it('writes a tree nested deeper than the call stack', () => {
+    const fragment = ownParseFragment('<div>'.repeat(DEPTH));
+    const expected = `${'<div>'.repeat(DEPTH)}${'</div>'.repeat(DEPTH)}`;
+
+    expect(serialize(fragment)).toBe(expected);
+    expect(serializeOuter(fragment.childNodes[0])).toBe(expected);
+  });
+
+  it('writes deep template content and void elements in place', () => {
+    const fragment = ownParseFragment(`${'<template><b>'.repeat(2000)}x<br>`);
+
+    expect(serialize(fragment)).toBe(`${'<template><b>'.repeat(2000)}x<br>${'</b></template>'.repeat(2000)}`);
   });
 });

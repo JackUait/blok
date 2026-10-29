@@ -493,6 +493,18 @@ describe('caret layer — the name flag', () => {
     }) as PointerEvent;
   };
 
+  it('keeps caret, flag and shade out of the block\'s text flow even before presence.css loads', () => {
+    const harness = setup();
+
+    vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue(toDOMRectList([new DOMRect(140, 210, 60, 18)]));
+    harness.layer.render([peer(1, { name: 'Ada Lovelace', caret: spanning('block-1', 2, 7) })]);
+
+    const drawn = [...harness.caretsIn('block-1'), ...harness.labelsIn('block-1'), ...harness.shadesIn('block-1')];
+
+    expect(drawn).toHaveLength(3);
+    expect(drawn.map((element) => element.style.position)).toEqual(['absolute', 'absolute', 'absolute']);
+  });
+
   it('flags the peer by name when they arrive', () => {
     const harness = setup();
 

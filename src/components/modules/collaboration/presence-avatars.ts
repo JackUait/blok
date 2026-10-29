@@ -166,7 +166,7 @@ const stripSignature = (group: AvatarPeer[], maxFaces: number): string =>
  * @param options - how to find a block's holder, and how many faces it shows
  */
 export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
-  // Started when the layer is made, before anyone is drawn.
+  // Drawing waits for nothing: until the sheet lands, the elements are empty absolute boxes.
   void loadSheet('presence');
   const { resolveHolder } = options;
   const maxFaces = options.maxFaces ?? DEFAULT_MAX_FACES;
@@ -253,6 +253,8 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
     const strip = document.createElement('div');
 
     strip.setAttribute(GUTTER_ATTR, '');
+    // Out of the block's text flow even while presence.css is still loading.
+    strip.style.position = 'absolute';
     // Inert on purpose: out of caret traversal, out of a copied selection, and
     // out of the accessibility tree. Blok ships `participants` data, not
     // presence UI, so nothing here announces who else is in the document — a

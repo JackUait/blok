@@ -125,6 +125,14 @@ afterEach(() => {
 });
 
 describe('avatar layer — what it draws', () => {
+  it('keeps the gutter out of the block\'s text flow even before presence.css loads', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+
+    expect(harness.gutterOf('block-1')?.style.position).toBe('absolute');
+  });
+
   it('parks a face on the holder of the block the peer is in', () => {
     const harness = setup();
 

@@ -150,7 +150,7 @@ const positionKey = (peer: CaretPeer): string => {
  * @param options - how to find a block's holder and inputs, and the flag timing
  */
 export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
-  // Started when the layer is made, before anyone is drawn.
+  // Drawing waits for nothing: until the sheet lands, the elements are empty absolute boxes.
   void loadSheet('presence');
   const { resolveHolder, resolveInputs } = options;
   const lingerMs = options.restAfterMs ?? DEFAULT_REST_AFTER_MS;
@@ -188,6 +188,8 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
   const inert = (element: HTMLElement): HTMLElement => {
     element.setAttribute('contenteditable', 'false');
     element.setAttribute('aria-hidden', 'true');
+    // Out of the block's text flow even while presence.css is still loading.
+    element.style.setProperty('position', 'absolute');
 
     return element;
   };

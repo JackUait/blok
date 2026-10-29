@@ -30,6 +30,8 @@ interface Drawn {
 const inert = (element: HTMLElement): HTMLElement => {
   element.setAttribute('contenteditable', 'false');
   element.setAttribute('aria-hidden', 'true');
+  // Out of the block's text flow even while presence.css is still loading.
+  element.style.setProperty('position', 'absolute');
 
   return element;
 };
@@ -38,7 +40,7 @@ export function createAgentMarkerLayer(options: {
   resolveHolder(blockId: string): HTMLElement | null;
   greetForMs?: number;
 }): AgentMarkerLayer {
-  // Started when the layer is made, before anyone is drawn.
+  // Drawing waits for nothing: until the sheet lands, the elements are empty absolute boxes.
   void loadSheet('presence');
   const greetMs = options.greetForMs ?? DEFAULT_GREET_FOR_MS;
   const drawn = new Map<number, Drawn>();

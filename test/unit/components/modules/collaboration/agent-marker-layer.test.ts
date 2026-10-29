@@ -95,6 +95,16 @@ describe('agent marker layer', () => {
     expect(holder.querySelector('svg')).toBeNull();
   });
 
+  it('keeps outline and flag out of the block\'s text flow even before presence.css loads', () => {
+    const holder = holderFor('b1');
+    const layer = layerFor((id) => (id === 'b1' ? holder : null));
+
+    layer.render([markerFor('b1')]);
+
+    expect([query(holder, '[data-blok-agent-marker]'), query(holder, '[data-blok-agent-marker-label]')].map((element) => element.style.position))
+      .toEqual(['absolute', 'absolute']);
+  });
+
   it('greets on arrival, then hides the flag after the configured duration', () => {
     const holder = holderFor('b1');
     const layer = layerFor(() => holder, 1000);

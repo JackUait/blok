@@ -447,6 +447,22 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §22.3: a 24x24 "⋯" at radius 6, a 200x94 menu with 28px rows 29px apart, a 364px Rename field.
+  describe('table file menu', () => {
+    it('rounds the "⋯" 6px and tints it in 0.02s', () => {
+      expect(declared('[data-blok-database-file-menu]', 'border-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared('[data-blok-database-file-menu]', 'transition')).toEqual(['background-color 0.02s ease-in']);
+    });
+
+    it('spaces the menu rows 1px apart', () => {
+      expect(declared('[data-blok-database-file-actions]', 'gap')).toEqual(['var(--blok-space-0-25)']);
+    });
+
+    it('draws the Rename field 364px wide', () => {
+      expect(declared('[data-blok-database-file-rename-box] > [data-blok-database-file-rename]', 'width')).toEqual(['364px']);
+    });
+  });
+
   // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.
   describe('select and status pickers over a row page value', () => {
     const VALUE = "[data-blok-popover-custom-class~='blok-database-value-editor']";

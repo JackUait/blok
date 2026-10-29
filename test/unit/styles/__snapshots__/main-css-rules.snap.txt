@@ -9989,6 +9989,9 @@ textarea[data-blok-database-cell-input] {
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+[data-blok-database-select-chip-remove], [data-blok-database-place-clear], [data-blok-database-person-remove], [data-blok-database-file-remove], [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
   border-radius: var(--blok-radius-control-sm);
 }
 
@@ -15781,7 +15784,9 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-file-menu] {
   width: 24px;
   height: 24px;
+  border-radius: var(--blok-radius-control);
   color: var(--blok-database-ink-secondary);
+  transition: background-color 0.02s ease-in;
 }
 
 [data-blok-database-file-menu] svg {
@@ -15807,6 +15812,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-file-actions], [data-blok-database-file-actions][data-blok-top-layer][popover] {
   display: flex;
   flex-direction: column;
+  gap: var(--blok-space-0-25);
   min-width: 200px;
   padding: var(--blok-space-1);
 }
@@ -15836,13 +15842,17 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-file-rename-box], [data-blok-database-file-rename-box][data-blok-top-layer][popover] {
-  width: 300px;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--blok-space-3));
   padding: var(--blok-space-1);
 }
 
 [data-blok-database-file-rename] {
   box-sizing: border-box;
-  width: 100%;
+}
+
+[data-blok-database-file-rename-box] > [data-blok-database-file-rename] {
+  width: 364px;
 }
 
 [data-blok-database-files-panel], [data-blok-database-files-panel][data-blok-top-layer][popover] {

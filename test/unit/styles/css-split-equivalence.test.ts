@@ -1329,6 +1329,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_RELATION_CREATE_ROW_BYTES = 1_751;
     // database.css: the table relation picker's page-row highlight fill (notion-spec-2 §22.2).
     const DATABASE_RELATION_HIGHLIGHT_BYTES = 369;
+    // database.css: the table file "⋯" radius, menu row gap and 364px Rename field (notion-spec-2 §22.3).
+    const DATABASE_FILE_MENU_MEASURED_BYTES = 587;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1640,7 +1642,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_RELATION_CHIP_EMOJI_BYTES
       + DATABASE_FILE_MENU_BYTES
       + DATABASE_RELATION_CREATE_ROW_BYTES
-      + DATABASE_RELATION_HIGHLIGHT_BYTES;
+      + DATABASE_RELATION_HIGHLIGHT_BYTES
+      + DATABASE_FILE_MENU_MEASURED_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

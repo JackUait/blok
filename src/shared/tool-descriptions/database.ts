@@ -96,6 +96,22 @@ const PROPERTY_SETTINGS = {
       notifications: { type: 'string', enum: ['usersAndGroups', 'none'], description: 'Absent means users only.' },
     },
   },
+  files: {
+    type: 'object',
+    description: 'Files property: Edit property\'s Limit.',
+    additionalProperties: false,
+    properties: {
+      limit: { anyOf: [{ type: 'integer', enum: [1] }, { type: 'null' }], description: '1 keeps one file: adding one replaces it. Absent or null means no limit.' },
+    },
+  },
+  url: {
+    type: 'object',
+    description: 'URL property: the header menu\'s Show full URL.',
+    additionalProperties: false,
+    properties: {
+      showFullUrl: { type: 'boolean', description: 'true draws the path in the cell\'s ink instead of grey. Default false.' },
+    },
+  },
   formula: {
     type: 'object',
     required: ['expression'],
@@ -1104,7 +1120,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'updateProperty',
-    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, option sort, ID, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property.',
+    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, option sort, ID, person, files limit, URL show full URL, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property.',
     guidance: 'settings keys follow schema; null removes one. The type cannot change here. relation with twoWay true and no syncedPropertyId does what the Two-way toggle does: it adds the other side on the target database (named by syncedPropertyName when given), links the pair and fills it from this side; rename that side later with updateProperty name on the target database; twoWay false leaves that side as a one-way relation. The pageLayout* keys go on the title property only; pageLayoutTabsId names a tabs child block of this database that you make with block.insert.',
     target: 'block',
     preconditions: ['The new name is not the name of another property (exact match, case-sensitive).'],

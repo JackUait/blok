@@ -2752,6 +2752,52 @@
                               }
                             ]
                           },
+                          "files": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Files property: Edit property's Limit.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "limit": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "enum": [
+                                          1
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "1 keeps one file: adding one replaces it. Absent or null means no limit."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "url": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "URL property: the header menu's Show full URL.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "showFullUrl": {
+                                    "type": "boolean",
+                                    "description": "true draws the path in the cell's ink instead of grey. Default false."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "formula": {
                             "anyOf": [
                               {

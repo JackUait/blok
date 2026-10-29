@@ -82,6 +82,8 @@
 @source not "../../.claude";
 @source not "../../scripts";
 @source not "../../.storybook";
+/* The pptx engine uses inline styles only; its CSS words would become utilities. */
+@source not "../tools/file/pptx";
 
 @custom-variant mobile (@media (max-width: 650px));
 @custom-variant not-mobile (@media (min-width: 651px));

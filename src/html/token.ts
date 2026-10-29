@@ -87,3 +87,17 @@ export const getTokenAttr = (token: TagToken, attrName: string): string | null =
 
   return attr === undefined ? null : attr.value;
 };
+
+/**
+ * What the tree builder may read and set on the tokenizer between tokens.
+ * `new Tokenizer(handler)` then `write(html)` tokenizes the whole string and
+ * ends with one EOF token. The tokenizer sets `state` back to DATA before it
+ * emits a start tag, so the handler can switch it for that tag's content.
+ */
+export interface TokenizerControl {
+  state: TokenizerMode;
+  /** True while the adjusted current node is foreign: only then is `<![CDATA[` a CDATA section. */
+  inForeignNode: boolean;
+  /** Name of the last start tag emitted; an end tag closes RCDATA/RAWTEXT/script data only if it matches. */
+  lastStartTagName: string;
+}

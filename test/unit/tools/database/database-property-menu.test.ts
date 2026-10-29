@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
-import { IconCheck, IconInfo, IconPageLayout, IconReplace, IconSort } from '../../../../src/components/icons';
+import { IconChangeType, IconCheck, IconInfo, IconPageLayout, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
@@ -406,6 +406,19 @@ describe('DatabasePropertyMenu', () => {
         'name', 'editProperty', 'changeType', '--', 'database-header-filter', 'database-header-wrap', 'displayAs', '--',
         'database-header-insert-left', 'database-header-insert-right', 'duplicate', 'delete',
       ]);
+    });
+
+    // notion-live-8/80-menu-number.png, 82-menu-status.png: sliders, a square arrow loop, an eye.
+    it('draws Notion\'s Edit property, Change type and Display as glyphs', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.open(prop('status', { status: createDefaultStatusSettings() }), document.createElement('button'), []);
+      const items = lastItems();
+
+      expect(byName(items, 'editProperty').icon).toBe(IconSliders);
+      expect(byName(items, 'changeType').icon).toBe(IconChangeType);
+      expect(byName(items, 'displayAs').icon).toBe(IconPreview);
+      menu.destroy();
     });
 
     // notion-live-8/83-menu-name.png: the Name menu ends with Insert left and right after a divider.

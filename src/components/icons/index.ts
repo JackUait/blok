@@ -1169,6 +1169,47 @@ export const IconPeekFull = `
 </svg>
 `;
 
+// Notion's database Change type: a square loop of two arrows (notion-live-8/80-menu-number.png).
+export const IconChangeType = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M9 5h4a1.5 1.5 0 0 1 1.5 1.5V13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 10.5l2.5 2.5 2.5-2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 15H7a1.5 1.5 0 0 1-1.5-1.5V7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 9.5l2.5-2.5L8 9.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Notion's database Group: two rules, each over a row of three dots (notion-live-8/80-menu-number.png).
+export const IconGroup = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 3.5h13M3.5 11h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.75" y="6" width="2.5" height="2.5" rx="0.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="8.75" y="6" width="2.5" height="2.5" rx="0.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="13.75" y="6" width="2.5" height="2.5" rx="0.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.75" y="13.5" width="2.5" height="2.5" rx="0.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="8.75" y="13.5" width="2.5" height="2.5" rx="0.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="13.75" y="13.5" width="2.5" height="2.5" rx="0.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Notion's database Insert left / right: an arrow into a column bar. IconInsertLeft / Right point away from it (table tool).
+export const IconColumnInsertLeft = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M16.5 10H8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.5 6 8.5 10 12.5 14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.5" y="4" width="2.5" height="12" rx="1.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Mirror of IconColumnInsertLeft.
+export const IconColumnInsertRight = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 10H11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 6 11.5 10 7.5 14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="14" y="4" width="2.5" height="12" rx="1.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Open in full page (Notion's arrowExpandDiagonalSmall): a two-way diagonal arrow.
 export const IconExpandDiagonal = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

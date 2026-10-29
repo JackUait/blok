@@ -1,4 +1,4 @@
-import { IconCalendar, IconCheck, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconSort, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconChangeType, IconCheck, IconHelp, IconCopy, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconPreview, IconReplace, IconSliders, IconSort, IconTrash, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -850,7 +850,8 @@ export class DatabasePropertyMenu {
         return {
           name: entry,
           title: this.t(property.type === 'button' ? 'tools.database.editAutomation' : 'tools.database.editProperty'),
-          icon: IconPencil,
+          // notion-live-8/80-menu-number.png: sliders.
+          icon: IconSliders,
           // research/27 §7: 300 wide. The all-views note wraps rather than widening it.
           // The submenu's rows mount right after onOpen.
           // notion-spec-2 §25.6: the submenu's top is the row's top; a divider follows Sort.
@@ -867,7 +868,8 @@ export class DatabasePropertyMenu {
         return {
           name: entry,
           title: this.t('tools.database.statusDisplayAs'),
-          icon: IconEmojiSparkles,
+          // notion-live-8/82-menu-status.png: an eye.
+          icon: IconPreview,
           valueLabel: this.t(`tools.database.statusDisplayAs.${current}`),
           children: {
             ...VALUE_LIST,
@@ -886,7 +888,7 @@ export class DatabasePropertyMenu {
         return {
           name: entry,
           title: this.t('tools.database.changeType'),
-          icon: propertyTypeMeta(property.type).icon,
+          icon: IconChangeType,
           children: { items: this.typeChoices(property) },
         };
       case 'duplicate':

@@ -12,10 +12,10 @@ import {
   IconEmojiStar,
   IconEyeSlash,
   IconFilter,
-  IconInsertLeft,
-  IconInsertRight,
+  IconGroup,
+  IconColumnInsertLeft,
+  IconColumnInsertRight,
   IconLink,
-  IconList,
   IconListBulleted,
   IconMessage,
   IconPageLayout,
@@ -248,7 +248,7 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
       item('database-header-filter', 'tools.database.tableFilter', ctx.onFilter, IconFilter),
       // notion-live-7/80-menu-text.png: Sort shows a "›"; it opens the two sort choices.
       { ...item('database-header-sort', 'tools.database.tableSort', ctx.onSort, IconSort), chevron: true },
-      ...(groupable ? [item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconList)] : []),
+      ...(groupable ? [item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconGroup)] : []),
       calculate,
     ]
     : [];
@@ -287,8 +287,8 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
       : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconReturn));
   }
   items.push(
-    item('database-header-insert-left', 'tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconInsertLeft),
-    item('database-header-insert-right', 'tools.database.tableInsertRight', () => ctx.onInsert('right'), IconInsertRight)
+    item('database-header-insert-left', 'tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconColumnInsertLeft),
+    item('database-header-insert-right', 'tools.database.tableInsertRight', () => ctx.onInsert('right'), IconColumnInsertRight)
   );
 
   return items;

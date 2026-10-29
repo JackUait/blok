@@ -23,6 +23,7 @@ import type { HeaderMenuContext } from '../../../../src/tools/database/database-
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 import en from '../../../../src/components/i18n/locales/en.json';
+import { IconColumnInsertLeft, IconColumnInsertRight, IconGroup } from '../../../../src/components/icons';
 
 describe('table view menus', () => {
   beforeEach(() => {
@@ -175,5 +176,19 @@ describe('column header menu glyphs', () => {
     expect(chevron('database-header-sort')).toBe(true);
     expect(chevron('database-header-filter')).toBeUndefined();
     expect(chevron('database-header-group')).toBeUndefined();
+  });
+
+  // notion-live-8/80-menu-number.png: Group is a dot grid; Insert left and right push an arrow into a bar.
+  it('draws Notion\'s Group and Insert glyphs', () => {
+    const items = headerViewItems(ctx('text'));
+    const icon = (name: string): unknown => {
+      const found = items.find((item) => 'name' in item && item.name === name);
+
+      return found !== undefined && 'icon' in found ? found.icon : undefined;
+    };
+
+    expect(icon('database-header-group')).toBe(IconGroup);
+    expect(icon('database-header-insert-left')).toBe(IconColumnInsertLeft);
+    expect(icon('database-header-insert-right')).toBe(IconColumnInsertRight);
   });
 });

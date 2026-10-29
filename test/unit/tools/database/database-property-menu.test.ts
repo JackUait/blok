@@ -379,6 +379,7 @@ describe('DatabasePropertyMenu', () => {
   });
 
   // notion-live-7/80-menu-text.png, 90-editprop-Status.png (§24.10): … Wrap content (Display as) │ Insert left, Insert right, Duplicate, Delete.
+  // notion-live-8/80-menu-number.png, 83-menu-name.png: no divider under the name field.
   describe('header menu groups', () => {
     const view = (name: string): CapturedItem => ({ type: 'default', name, title: name });
     const rows = (property: PropertyDefinition, viewRows: string[]): string[] => {
@@ -395,14 +396,14 @@ describe('DatabasePropertyMenu', () => {
 
     it('puts Insert left and right with Duplicate and Delete, after a divider', () => {
       expect(rows(prop('text'), VIEW)).toEqual([
-        'name', '--', 'changeType', '--', 'database-header-filter', 'database-header-wrap', '--',
+        'name', 'changeType', '--', 'database-header-filter', 'database-header-wrap', '--',
         'database-header-insert-left', 'database-header-insert-right', 'duplicate', 'delete',
       ]);
     });
 
     it('puts Status\'s Display as after the view rows, before the divider', () => {
       expect(rows(prop('status', { status: createDefaultStatusSettings() }), VIEW)).toEqual([
-        'name', '--', 'editProperty', 'changeType', '--', 'database-header-filter', 'database-header-wrap', 'displayAs', '--',
+        'name', 'editProperty', 'changeType', '--', 'database-header-filter', 'database-header-wrap', 'displayAs', '--',
         'database-header-insert-left', 'database-header-insert-right', 'duplicate', 'delete',
       ]);
     });
@@ -410,7 +411,7 @@ describe('DatabasePropertyMenu', () => {
     // notion-live-8/83-menu-name.png: the Name menu ends with Insert left and right after a divider.
     it('sets the title\'s Insert rows apart too', () => {
       expect(rows(prop('title'), VIEW)).toEqual([
-        'name', '--', 'database-header-filter', 'database-header-wrap', '--', 'database-header-insert-left', 'database-header-insert-right',
+        'name', 'database-header-filter', 'database-header-wrap', '--', 'database-header-insert-left', 'database-header-insert-right',
       ]);
     });
   });
@@ -787,7 +788,7 @@ describe('DatabasePropertyMenu', () => {
       open(prop('url'));
       const names = lastItems().map((i) => i.name ?? i.type);
 
-      expect(names.indexOf('showFullUrl')).toBe(names.indexOf('name') + 2);
+      expect(names.indexOf('showFullUrl')).toBe(names.indexOf('name') + 1);
       expect(toggle().getAttribute('aria-checked')).toBe('false');
       expect(toggle().textContent?.trim()).toBe('tools.database.urlShowFullUrl');
       expect(toggle().querySelector('[data-blok-database-switch-track]')).not.toBeNull();

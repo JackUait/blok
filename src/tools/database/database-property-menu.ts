@@ -344,8 +344,8 @@ export class DatabasePropertyMenu {
     const groups = [top, middle, end].filter((group) => group.length > 0);
     const items: PopoverItemParams[] = [
       // research/08: the title has no description.
+      // notion-live-8/80-menu-number.png, 83-menu-name.png: no divider under the name field.
       { type: PopoverItemType.Html, element: name, name: 'name' },
-      separator,
       ...groups.flatMap((group, index) => (index === 0 ? group : [separator, ...group])),
       ...this.customizeItem(),
     ];

@@ -97,7 +97,7 @@ class FormulaEditor implements FormulaEditorHandle {
     this.input.setAttribute('data-blok-field', 'text');
     this.input.setAttribute('aria-label', t('tools.database.formulaLabel'));
     this.input.setAttribute('data-placeholder', t('tools.database.formulaPlaceholder'));
-    this.field.value = formatFormulaForDisplay(options.property.formula?.expression ?? '', options.schema, options.relatedSchema ?? []);
+    this.field.reset(formatFormulaForDisplay(options.property.formula?.expression ?? '', options.schema, options.relatedSchema ?? []));
     this.initial = this.field.value;
     this.preview.setAttribute('data-blok-database-formula-preview', '');
     this.preview.setAttribute('aria-live', 'polite');

@@ -1,7 +1,7 @@
 import type { PropertyDefinition } from './types';
 import { propertyTypeMeta } from './database-property-types';
 
-const PROP_CALL = /prop\("((?:[^"\\]|\\.)*)"\)/g;
+const PROP_CALL = /(?<![\w.$])prop\("((?:[^"\\]|\\.)*)"\)/g;
 
 const unescape = (name: string): string => name.replace(/\\(.)/g, '$1');
 
@@ -21,7 +21,10 @@ export const renderFormulaInto = (target: HTMLElement, source: string, schema: P
   ]);
   const tail = ends[ends.length - 1];
 
-  target.replaceChildren(...nodes, ...(tail < source.length ? [document.createTextNode(source.slice(tail))] : []));
+  // A trailing newline draws no line, and the caret falls back before it, unless a <br> follows.
+  const end = source.endsWith('\n') ? [lineEnd()] : [];
+
+  target.replaceChildren(...nodes, ...(tail < source.length ? [document.createTextNode(source.slice(tail))] : []), ...end);
 };
 
 const formulaToken = (source: string, property: PropertyDefinition): HTMLElement => {
@@ -40,6 +43,16 @@ const formulaToken = (source: string, property: PropertyDefinition): HTMLElement
   return token;
 };
 
+const lineEnd = (): HTMLElement => {
+  const br = document.createElement('br');
+
+  br.setAttribute('data-blok-database-formula-line-end', '');
+
+  return br;
+};
+
+const isLineEnd = (node: Node): boolean => node instanceof HTMLElement && node.hasAttribute('data-blok-database-formula-line-end');
+
 const isToken = (node: Node): node is HTMLElement =>
   node instanceof HTMLElement && node.hasAttribute('data-blok-database-formula-token');
 
@@ -47,6 +60,7 @@ const isToken = (node: Node): node is HTMLElement =>
 const sourceOf = (node: Node): string => {
   if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? '';
   if (isToken(node)) return node.getAttribute('data-source') ?? '';
+  if (isLineEnd(node)) return '';
   if (node.nodeName === 'BR') return '\n';
 
   // A block the browser wrapped a line in starts a new line.
@@ -59,8 +73,24 @@ const sourceOf = (node: Node): string => {
  * The formula box: a contenteditable that shows property references as
  * tokens and reads back as plain formula text. Offsets count that text.
  */
+interface Snapshot {
+  value: string;
+  caret: number;
+}
+
+/** Typing this soon after the last keystroke joins its undo step. */
+const TYPING_STEP_MS = 1000;
+
 export class FormulaField {
   readonly element = document.createElement('div');
+  /**
+   * Its own undo: re-rendering tokens wipes the browser's history, and
+   * Cmd+Z must not reach the document's.
+   */
+  private past: Snapshot[] = [];
+  private future: Snapshot[] = [];
+  private current: Snapshot = { value: '', caret: 0 };
+  private lastTyped = 0;
 
   constructor(
     private readonly schema: PropertyDefinition[],
@@ -73,10 +103,12 @@ export class FormulaField {
     this.element.addEventListener('input', (event) => {
       if (event instanceof InputEvent && event.isComposing) return;
       this.normalize();
+      this.record(true);
       this.onChange();
     });
     this.element.addEventListener('compositionend', () => {
       this.normalize();
+      this.record(true);
       this.onChange();
     });
     this.element.addEventListener('keydown', (event) => this.handleKey(event));
@@ -90,8 +122,12 @@ export class FormulaField {
     return [...this.element.childNodes].map(sourceOf).join('');
   }
 
-  set value(source: string) {
+  /** Starts the box on `source`, with an empty undo history. */
+  reset(source: string): void {
     renderFormulaInto(this.element, source, this.schema);
+    this.past = [];
+    this.future = [];
+    this.current = { value: source, caret: source.length };
   }
 
   /** The caret's offset in `value`; the end when the selection is elsewhere. */
@@ -130,8 +166,33 @@ export class FormulaField {
   replace(start: number, end: number, text: string): void {
     const value = this.value;
 
-    this.value = `${value.slice(0, start)}${text}${value.slice(end)}`;
+    renderFormulaInto(this.element, `${value.slice(0, start)}${text}${value.slice(end)}`, this.schema);
     this.setCaret(start + text.length);
+    this.record(false);
+    this.onChange();
+  }
+
+  /** Makes the box's state the newest undo step; typing in a run shares one. */
+  private record(typing: boolean): void {
+    const now = Date.now();
+    const next = { value: this.value, caret: this.caret() };
+
+    if (next.value === this.current.value) return;
+    if (!typing || now - this.lastTyped > TYPING_STEP_MS || this.past.length === 0) this.past.push(this.current);
+    this.current = next;
+    this.future = [];
+    this.lastTyped = typing ? now : 0;
+  }
+
+  private step(from: Snapshot[], to: Snapshot[]): void {
+    const target = from.pop();
+
+    if (target === undefined) return;
+    to.push(this.current);
+    this.current = target;
+    this.lastTyped = 0;
+    renderFormulaInto(this.element, target.value, this.schema);
+    this.setCaret(target.caret);
     this.onChange();
   }
 
@@ -143,6 +204,16 @@ export class FormulaField {
 
   private handleKey(event: KeyboardEvent): void {
     if (event.isComposing) return;
+    const key = event.key.toLowerCase();
+    const mod = event.metaKey || event.ctrlKey;
+
+    if (mod && (key === 'z' || (key === 'y' && event.ctrlKey && !event.metaKey))) {
+      event.preventDefault();
+      if (key === 'z' && !event.shiftKey) this.step(this.past, this.future);
+      else this.step(this.future, this.past);
+
+      return;
+    }
     if (event.key === 'Enter' && event.shiftKey) {
       event.preventDefault();
       this.replaceSelection('\n');
@@ -159,6 +230,7 @@ export class FormulaField {
 
         before.remove();
         this.setCaret(caret);
+        this.record(false);
         this.onChange();
       }
     }
@@ -186,12 +258,13 @@ export class FormulaField {
       .some((node) => node.nodeType === Node.TEXT_NODE && [...(node.nodeValue ?? '').matchAll(PROP_CALL)]
         .some((match) => this.schema.some((p) => p.name === unescape(match[1]))));
     const needsRender = hasLooseReference || (value === '' && this.element.childNodes.length > 0)
-      || [...this.element.childNodes].some((node) => node.nodeType !== Node.TEXT_NODE && !isToken(node));
+      || value.endsWith('\n') !== (this.element.lastChild !== null && isLineEnd(this.element.lastChild))
+      || [...this.element.childNodes].some((node) => node.nodeType !== Node.TEXT_NODE && !isToken(node) && !isLineEnd(node));
 
     if (!needsRender) return;
     const caret = this.caret();
 
-    this.value = value;
+    renderFormulaInto(this.element, value, this.schema);
     if (this.element.ownerDocument.activeElement === this.element) this.setCaret(Math.min(caret, value.length));
   }
 

@@ -119,6 +119,13 @@ describe('formula editor', () => {
       expect(tokens()).toEqual([]);
     });
 
+    it('leaves current.prop("Name") of a related page as text', () => {
+      open();
+      type('current.prop("Amount")');
+
+      expect(tokens()).toEqual([]);
+    });
+
     it('Backspace right after a token removes it whole', () => {
       const options = open();
 
@@ -132,6 +139,24 @@ describe('formula editor', () => {
       expect(tokens()).toEqual([]);
       expect(input().textContent).toBe('1 + ');
       expect(options.onSave).not.toHaveBeenCalled();
+    });
+
+    // The box rewrites its own DOM, so the browser's undo has nothing to go back to: it keeps its own.
+    it('undoes and redoes its own edits with Cmd+Z and Cmd+Shift+Z, not the document undo', () => {
+      open();
+      type('prop("Amount")');
+      document.querySelector<HTMLElement>('[data-blok-database-formula-reference-item][data-name="*"]')?.click();
+      expect(input().lastChild?.textContent).toBe(' * ');
+
+      const undo = new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true });
+
+      input().dispatchEvent(undo);
+      expect(undo.defaultPrevented).toBe(true);
+      expect(tokens()).toEqual(['Amount']);
+      expect(input().childNodes).toHaveLength(1);
+
+      input().dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+      expect(input().lastChild?.textContent).toBe(' * ');
     });
 
     it('pastes plain text, turning references into tokens', () => {
@@ -268,6 +293,8 @@ describe('formula editor', () => {
 
     type('1 +');
     input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
+    // A trailing newline needs a <br> after it, or the browser draws no line and the caret falls back.
+    expect(input().lastElementChild?.hasAttribute('data-blok-database-formula-line-end')).toBe(true);
     input().append('2');
     input().dispatchEvent(new Event('input'));
 

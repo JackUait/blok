@@ -1,0 +1,3415 @@
+/* eslint-disable no-restricted-syntax, max-depth, no-param-reassign, @typescript-eslint/switch-exhaustiveness-check -- ported line by line from parse5; restyling it risks behaviour the conformance suite would have to catch */
+/**
+ * The HTML tree builder. Ported from parse5 8.0.1 (MIT, see NOTICE) with its
+ * structure, names and order kept, so upstream fixes stay portable. Dropped:
+ * source locations, parse errors, tree adapters, the scripting option (always
+ * on) and streaming.
+ */
+import { Tokenizer } from './tokenizer';
+import { OpenElementStack, type StackHandler } from './open-element-stack';
+import { FormattingElementList, EntryType, type ElementEntry } from './formatting-element-list';
+import * as doctype from './doctype';
+import * as foreignContent from './foreign-content';
+import { TAG_ID as $, NS, SPECIAL_ELEMENTS, DOCUMENT_MODE, NUMBERED_HEADERS, getTagID } from './tags';
+import {
+    TokenType,
+    TokenizerMode,
+    getTokenAttr,
+    type TokenHandler,
+    type Token,
+    type CommentToken,
+    type CharacterToken,
+    type TagToken,
+    type DoctypeToken,
+    type EOFToken,
+} from './token';
+import {
+    adoptAttributes,
+    appendChild,
+    createCommentNode,
+    createDocument,
+    createDocumentFragment,
+    createElement,
+    detachNode,
+    insertBefore,
+    insertText,
+    insertTextBefore,
+    setDocumentMode,
+    setDocumentType,
+    setTemplateContent,
+    type Document,
+    type DocumentFragment,
+    type Element,
+    type ParentNode,
+    type Template,
+} from './tree';
+
+const TN = {
+    A: 'a',
+    BODY: 'body',
+    BR: 'br',
+    COLGROUP: 'colgroup',
+    FORM: 'form',
+    HEAD: 'head',
+    HTML: 'html',
+    IMG: 'img',
+    P: 'p',
+    TBODY: 'tbody',
+    TEMPLATE: 'template',
+    TR: 'tr',
+    ANNOTATION_XML: 'annotation-xml',
+} as const;
+
+const ATTRS = {
+    TYPE: 'type',
+} as const;
+
+const REPLACEMENT_CHARACTER = '�';
+const LINE_FEED = 0x0a;
+
+//Misc constants
+const HIDDEN_INPUT_TYPE = 'hidden';
+
+//Adoption agency loops iteration count
+const AA_OUTER_LOOP_ITER = 8;
+const AA_INNER_LOOP_ITER = 3;
+
+//Insertion modes
+enum InsertionMode {
+    INITIAL,
+    BEFORE_HTML,
+    BEFORE_HEAD,
+    IN_HEAD,
+    AFTER_HEAD,
+    IN_BODY,
+    TEXT,
+    IN_TABLE,
+    IN_TABLE_TEXT,
+    IN_CAPTION,
+    IN_COLUMN_GROUP,
+    IN_TABLE_BODY,
+    IN_ROW,
+    IN_CELL,
+    IN_SELECT,
+    IN_SELECT_IN_TABLE,
+    IN_TEMPLATE,
+    AFTER_BODY,
+    IN_FRAMESET,
+    AFTER_FRAMESET,
+    AFTER_AFTER_BODY,
+    AFTER_AFTER_FRAMESET,
+}
+
+const TABLE_STRUCTURE_TAGS = new Set([$.TABLE, $.TBODY, $.TFOOT, $.THEAD, $.TR]);
+
+//Parser
+export class Parser implements TokenHandler, StackHandler {
+    public document: Document;
+
+    public constructor(
+        document?: Document,
+        /** @internal */
+        public fragmentContext: Element | null = null,
+    ) {
+        this.document = document ?? createDocument();
+
+        this.tokenizer = new Tokenizer(this);
+        this.activeFormattingElements = new FormattingElementList();
+
+        this.fragmentContextID = fragmentContext ? getTagID(fragmentContext.tagName) : $.UNKNOWN;
+        this._setContextModes(fragmentContext ?? this.document, this.fragmentContextID);
+
+        this.openElements = new OpenElementStack(this.document, this);
+    }
+
+    // API
+    public static parse(html: string): Document {
+        const parser = new this();
+
+        parser.tokenizer.write(html);
+
+        return parser.document;
+    }
+
+    public static getFragmentParser(fragmentContext?: Element | null): Parser {
+        //NOTE: use a <template> element as the fragment context if no context element was provided,
+        //so we will parse in a "forgiving" manner
+        fragmentContext ??= createElement(TN.TEMPLATE, NS.HTML, []);
+
+        //NOTE: parse5 uses a fake <documentmock> element as the `document` here; a fresh
+        //document behaves the same: fragment parsing never reads its mode or adds nodes to it
+        //besides the root <html>.
+        const documentMock = createDocument();
+
+        const parser = new this(documentMock, fragmentContext);
+
+        if (parser.fragmentContextID === $.TEMPLATE) {
+            parser.tmplInsertionModeStack.unshift(InsertionMode.IN_TEMPLATE);
+        }
+
+        parser._initTokenizerForFragmentParsing();
+        parser._insertFakeRootElement();
+        parser._resetInsertionMode();
+        parser._findFormInFragmentContext();
+
+        return parser;
+    }
+
+    public getFragment(): DocumentFragment {
+        const rootElement = this.document.childNodes[0] as Element;
+        const fragment = createDocumentFragment();
+
+        this._adoptNodes(rootElement, fragment);
+
+        return fragment;
+    }
+
+    tokenizer: Tokenizer;
+
+    public stopped = false;
+    /** @internal */
+    insertionMode = InsertionMode.INITIAL;
+    /** @internal */
+    originalInsertionMode = InsertionMode.INITIAL;
+
+    /** @internal */
+    fragmentContextID: $;
+
+    /** @internal */
+    headElement: null | Element = null;
+    /** @internal */
+    formElement: null | Element = null;
+
+    /** @internal */
+    openElements: OpenElementStack;
+    /** @internal */
+    activeFormattingElements: FormattingElementList;
+    /** Indicates that the current node is not an element in the HTML namespace */
+    protected currentNotInHTML = false;
+
+    /**
+     * The template insertion mode stack is maintained from the left.
+     * Ie. the topmost element will always have index 0.
+     *
+     * @internal
+     */
+    tmplInsertionModeStack: InsertionMode[] = [];
+
+    /** @internal */
+    pendingCharacterTokens: CharacterToken[] = [];
+    /** @internal */
+    hasNonWhitespacePendingCharacterToken = false;
+
+    /** @internal */
+    framesetOk = true;
+    /** @internal */
+    skipNextNewLine = false;
+    /** @internal */
+    fosterParentingEnabled = false;
+    /**
+     * The last token was a NUL run. parse5 turns a whole NUL run in foreign content into one
+     * U+FFFD and its tokenizer never splits a run; ours may, so a run split in two must still
+     * give one U+FFFD.
+     *
+     * @internal
+     */
+    afterNullCharacter = false;
+
+    //Stack events
+
+    /** @internal */
+    onItemPush(node: Element, tid: number, isTop: boolean): void {
+        if (isTop && this.openElements.stackTop > 0) this._setContextModes(node, tid);
+    }
+
+    /** @internal */
+    onItemPop(_node: Element, isTop: boolean): void {
+        if (isTop) {
+            let current;
+            let currentTagId;
+
+            if (this.openElements.stackTop === 0 && this.fragmentContext) {
+                current = this.fragmentContext;
+                currentTagId = this.fragmentContextID;
+            } else {
+                ({ current, currentTagId } = this.openElements);
+            }
+
+            this._setContextModes(current, currentTagId);
+        }
+    }
+
+    protected _setContextModes(current: ParentNode | undefined, tid: number | undefined): void {
+        const isHTML = current === this.document || (current && (current as Element).namespaceURI === NS.HTML);
+
+        this.currentNotInHTML = !isHTML;
+        this.tokenizer.inForeignNode =
+            !isHTML && current !== undefined && tid !== undefined && !this._isIntegrationPoint(tid, current as Element);
+    }
+
+    /** @protected */
+    _switchToTextParsing(currentToken: TagToken, nextTokenizerState: TokenizerMode): void {
+        this._insertElement(currentToken, NS.HTML);
+        this.tokenizer.state = nextTokenizerState;
+        this.originalInsertionMode = this.insertionMode;
+        this.insertionMode = InsertionMode.TEXT;
+    }
+
+    switchToPlaintextParsing(): void {
+        this.insertionMode = InsertionMode.TEXT;
+        this.originalInsertionMode = InsertionMode.IN_BODY;
+        this.tokenizer.state = TokenizerMode.PLAINTEXT;
+    }
+
+    //Fragment parsing
+
+    /** @protected */
+    _getAdjustedCurrentElement(): Element {
+        return this.openElements.stackTop === 0 && this.fragmentContext
+            ? this.fragmentContext
+            : this.openElements.current;
+    }
+
+    /** @protected */
+    _findFormInFragmentContext(): void {
+        let node: ParentNode | null = this.fragmentContext;
+
+        while (node) {
+            if ((node as Element).tagName === TN.FORM) {
+                this.formElement = node as Element;
+                break;
+            }
+
+            node = 'parentNode' in node ? node.parentNode : null;
+        }
+    }
+
+    protected _initTokenizerForFragmentParsing(): void {
+        if (!this.fragmentContext || this.fragmentContext.namespaceURI !== NS.HTML) {
+            return;
+        }
+
+        switch (this.fragmentContextID) {
+            case $.TITLE:
+            case $.TEXTAREA: {
+                this.tokenizer.state = TokenizerMode.RCDATA;
+                break;
+            }
+            case $.STYLE:
+            case $.XMP:
+            case $.IFRAME:
+            case $.NOEMBED:
+            case $.NOFRAMES:
+            case $.NOSCRIPT: {
+                this.tokenizer.state = TokenizerMode.RAWTEXT;
+                break;
+            }
+            case $.SCRIPT: {
+                this.tokenizer.state = TokenizerMode.SCRIPT_DATA;
+                break;
+            }
+            case $.PLAINTEXT: {
+                this.tokenizer.state = TokenizerMode.PLAINTEXT;
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+
+    //Tree mutation
+
+    /** @protected */
+    _setDocumentType(token: DoctypeToken): void {
+        const name = token.name || '';
+        const publicId = token.publicId || '';
+        const systemId = token.systemId || '';
+
+        setDocumentType(this.document, name, publicId, systemId);
+    }
+
+    /** @protected */
+    _attachElementToTree(element: Element): void {
+        if (this._shouldFosterParentOnInsertion()) {
+            this._fosterParentElement(element);
+        } else {
+            const parent = this.openElements.currentTmplContentOrNode;
+
+            appendChild(parent ?? this.document, element);
+        }
+    }
+
+    /**
+     * For self-closing tags. Add an element to the tree, but skip adding it
+     * to the stack.
+     */
+
+    /** @protected */
+    _appendElement(token: TagToken, namespaceURI: NS): void {
+        const element = createElement(token.tagName, namespaceURI, token.attrs);
+
+        this._attachElementToTree(element);
+    }
+
+    /** @protected */
+    _insertElement(token: TagToken, namespaceURI: NS): void {
+        const element = createElement(token.tagName, namespaceURI, token.attrs);
+
+        this._attachElementToTree(element);
+        this.openElements.push(element, token.tagID);
+    }
+
+    /** @protected */
+    _insertFakeElement(tagName: string, tagID: $): void {
+        const element = createElement(tagName, NS.HTML, []);
+
+        this._attachElementToTree(element);
+        this.openElements.push(element, tagID);
+    }
+
+    /** @protected */
+    _insertTemplate(token: TagToken): void {
+        const tmpl = createElement(token.tagName, NS.HTML, token.attrs);
+        const content = createDocumentFragment();
+
+        setTemplateContent(tmpl, content);
+        this._attachElementToTree(tmpl);
+        this.openElements.push(tmpl, token.tagID);
+    }
+
+    /** @protected */
+    _insertFakeRootElement(): void {
+        const element = createElement(TN.HTML, NS.HTML, []);
+
+        appendChild(this.openElements.current, element);
+        this.openElements.push(element, $.HTML);
+    }
+
+    /** @protected */
+    _appendCommentNode(token: CommentToken, parent: ParentNode): void {
+        const commentNode = createCommentNode(token.data);
+
+        appendChild(parent, commentNode);
+    }
+
+    /** @protected */
+    _insertCharacters(token: CharacterToken): void {
+        let parent;
+        let beforeElement;
+
+        if (this._shouldFosterParentOnInsertion()) {
+            ({ parent, beforeElement } = this._findFosterParentingLocation());
+
+            if (beforeElement) {
+                insertTextBefore(parent, token.chars, beforeElement);
+            } else {
+                insertText(parent, token.chars);
+            }
+        } else {
+            parent = this.openElements.currentTmplContentOrNode;
+
+            insertText(parent, token.chars);
+        }
+    }
+
+    /** @protected */
+    _adoptNodes(donor: ParentNode, recipient: ParentNode): void {
+        for (let child = donor.childNodes[0]; child; child = donor.childNodes[0]) {
+            detachNode(child);
+            appendChild(recipient, child);
+        }
+    }
+
+    //Token processing
+    protected shouldProcessStartTagTokenInForeignContent(token: TagToken): boolean {
+        // Check that neither current === document, or ns === NS.HTML
+        if (!this.currentNotInHTML) return false;
+
+        let current: ParentNode | undefined;
+        let currentTagId: number | undefined;
+
+        if (this.openElements.stackTop === 0 && this.fragmentContext) {
+            current = this.fragmentContext;
+            currentTagId = this.fragmentContextID;
+        } else {
+            ({ current, currentTagId } = this.openElements);
+        }
+
+        if (
+            token.tagID === $.SVG &&
+            current.tagName === TN.ANNOTATION_XML &&
+            current.namespaceURI === NS.MATHML
+        ) {
+            return false;
+        }
+
+        return (
+            // Check that `current` is not an integration point for HTML or MathML elements.
+            this.tokenizer.inForeignNode ||
+            // If it _is_ an integration point, then we might have to check that it is not an HTML
+            // integration point.
+            ((token.tagID === $.MGLYPH || token.tagID === $.MALIGNMARK) &&
+                currentTagId !== undefined &&
+                !this._isIntegrationPoint(currentTagId, current, NS.HTML))
+        );
+    }
+
+    /** @protected */
+    _processToken(token: Token): void {
+        switch (token.type) {
+            case TokenType.CHARACTER: {
+                this.onCharacter(token);
+                break;
+            }
+            case TokenType.NULL_CHARACTER: {
+                this.onNullCharacter(token);
+                break;
+            }
+            case TokenType.COMMENT: {
+                this.onComment(token);
+                break;
+            }
+            case TokenType.DOCTYPE: {
+                this.onDoctype(token);
+                break;
+            }
+            case TokenType.START_TAG: {
+                this._processStartTag(token);
+                break;
+            }
+            case TokenType.END_TAG: {
+                this.onEndTag(token);
+                break;
+            }
+            case TokenType.EOF: {
+                this.onEof(token);
+                break;
+            }
+            case TokenType.WHITESPACE_CHARACTER: {
+                this.onWhitespaceCharacter(token);
+                break;
+            }
+        }
+    }
+
+    //Integration points
+
+    /** @protected */
+    _isIntegrationPoint(tid: $, element: Element, foreignNS?: NS): boolean {
+        const ns = element.namespaceURI;
+        const attrs = element.attrs;
+
+        return foreignContent.isIntegrationPoint(tid, ns, attrs, foreignNS);
+    }
+
+    //Active formatting elements reconstruction
+
+    /** @protected */
+    _reconstructActiveFormattingElements(): void {
+        const listLength = this.activeFormattingElements.entries.length;
+
+        if (listLength) {
+            const endIndex = this.activeFormattingElements.entries.findIndex(
+                (entry) => entry.type === EntryType.Marker || this.openElements.contains(entry.element),
+            );
+
+            const unopenIdx = endIndex === -1 ? listLength - 1 : endIndex - 1;
+
+            for (let i = unopenIdx; i >= 0; i--) {
+                const entry = this.activeFormattingElements.entries[i] as ElementEntry;
+                this._insertElement(entry.token, entry.element.namespaceURI);
+                entry.element = this.openElements.current;
+            }
+        }
+    }
+
+    //Close elements
+
+    /** @protected */
+    _closeTableCell(): void {
+        this.openElements.generateImpliedEndTags();
+        this.openElements.popUntilTableCellPopped();
+        this.activeFormattingElements.clearToLastMarker();
+        this.insertionMode = InsertionMode.IN_ROW;
+    }
+
+    /** @protected */
+    _closePElement(): void {
+        this.openElements.generateImpliedEndTagsWithExclusion($.P);
+        this.openElements.popUntilTagNamePopped($.P);
+    }
+
+    //Insertion modes
+
+    /** @protected */
+    _resetInsertionMode(): void {
+        for (let i = this.openElements.stackTop; i >= 0; i--) {
+            //Insertion mode reset map
+            switch (i === 0 && this.fragmentContext ? this.fragmentContextID : this.openElements.tagIDs[i]) {
+                case $.TR: {
+                    this.insertionMode = InsertionMode.IN_ROW;
+                    return;
+                }
+                case $.TBODY:
+                case $.THEAD:
+                case $.TFOOT: {
+                    this.insertionMode = InsertionMode.IN_TABLE_BODY;
+                    return;
+                }
+                case $.CAPTION: {
+                    this.insertionMode = InsertionMode.IN_CAPTION;
+                    return;
+                }
+                case $.COLGROUP: {
+                    this.insertionMode = InsertionMode.IN_COLUMN_GROUP;
+                    return;
+                }
+                case $.TABLE: {
+                    this.insertionMode = InsertionMode.IN_TABLE;
+                    return;
+                }
+                case $.BODY: {
+                    this.insertionMode = InsertionMode.IN_BODY;
+                    return;
+                }
+                case $.FRAMESET: {
+                    this.insertionMode = InsertionMode.IN_FRAMESET;
+                    return;
+                }
+                case $.SELECT: {
+                    this._resetInsertionModeForSelect(i);
+                    return;
+                }
+                case $.TEMPLATE: {
+                    this.insertionMode = this.tmplInsertionModeStack[0];
+                    return;
+                }
+                case $.HTML: {
+                    this.insertionMode = this.headElement ? InsertionMode.AFTER_HEAD : InsertionMode.BEFORE_HEAD;
+                    return;
+                }
+                case $.TD:
+                case $.TH: {
+                    if (i > 0) {
+                        this.insertionMode = InsertionMode.IN_CELL;
+                        return;
+                    }
+                    break;
+                }
+                case $.HEAD: {
+                    if (i > 0) {
+                        this.insertionMode = InsertionMode.IN_HEAD;
+                        return;
+                    }
+                    break;
+                }
+            }
+        }
+
+        this.insertionMode = InsertionMode.IN_BODY;
+    }
+
+    /** @protected */
+    _resetInsertionModeForSelect(selectIdx: number): void {
+        if (selectIdx > 0) {
+            for (let i = selectIdx - 1; i > 0; i--) {
+                const tn = this.openElements.tagIDs[i];
+
+                if (tn === $.TEMPLATE) {
+                    break;
+                } else if (tn === $.TABLE) {
+                    this.insertionMode = InsertionMode.IN_SELECT_IN_TABLE;
+                    return;
+                }
+            }
+        }
+
+        this.insertionMode = InsertionMode.IN_SELECT;
+    }
+
+    //Foster parenting
+
+    /** @protected */
+    _isElementCausesFosterParenting(tn: $): boolean {
+        return TABLE_STRUCTURE_TAGS.has(tn);
+    }
+
+    /** @protected */
+    _shouldFosterParentOnInsertion(): boolean {
+        return (
+            this.fosterParentingEnabled &&
+            this.openElements.currentTagId !== undefined &&
+            this._isElementCausesFosterParenting(this.openElements.currentTagId)
+        );
+    }
+
+    /** @protected */
+    _findFosterParentingLocation(): { parent: ParentNode; beforeElement: Element | null } {
+        for (let i = this.openElements.stackTop; i >= 0; i--) {
+            const openElement = this.openElements.items[i];
+
+            switch (this.openElements.tagIDs[i]) {
+                case $.TEMPLATE: {
+                    if (openElement.namespaceURI === NS.HTML) {
+                        return { parent: (openElement as Template).content, beforeElement: null };
+                    }
+                    break;
+                }
+                case $.TABLE: {
+                    const parent = openElement.parentNode;
+
+                    if (parent) {
+                        return { parent, beforeElement: openElement };
+                    }
+
+                    return { parent: this.openElements.items[i - 1], beforeElement: null };
+                }
+                default:
+                // Do nothing
+            }
+        }
+
+        return { parent: this.openElements.items[0], beforeElement: null };
+    }
+
+    /** @protected */
+    _fosterParentElement(element: Element): void {
+        const location = this._findFosterParentingLocation();
+
+        if (location.beforeElement) {
+            insertBefore(location.parent, element, location.beforeElement);
+        } else {
+            appendChild(location.parent, element);
+        }
+    }
+
+    //Special elements
+
+    /** @protected */
+    _isSpecialElement(element: Element, id: $): boolean {
+        const ns = element.namespaceURI;
+
+        return SPECIAL_ELEMENTS[ns].has(id);
+    }
+
+    /** @internal */
+    onCharacter(token: CharacterToken): void {
+        this.skipNextNewLine = false;
+        this.afterNullCharacter = false;
+
+        if (this.tokenizer.inForeignNode) {
+            characterInForeignContent(this, token);
+            return;
+        }
+
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL: {
+                tokenInInitialMode(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HTML: {
+                tokenBeforeHtml(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HEAD: {
+                tokenBeforeHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_HEAD: {
+                tokenInHead(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_HEAD: {
+                tokenAfterHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_BODY:
+            case InsertionMode.IN_CAPTION:
+            case InsertionMode.IN_CELL:
+            case InsertionMode.IN_TEMPLATE: {
+                characterInBody(this, token);
+                break;
+            }
+            case InsertionMode.TEXT:
+            case InsertionMode.IN_SELECT:
+            case InsertionMode.IN_SELECT_IN_TABLE: {
+                this._insertCharacters(token);
+                break;
+            }
+            case InsertionMode.IN_TABLE:
+            case InsertionMode.IN_TABLE_BODY:
+            case InsertionMode.IN_ROW: {
+                characterInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                characterInTableText(this, token);
+                break;
+            }
+            case InsertionMode.IN_COLUMN_GROUP: {
+                tokenInColumnGroup(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_BODY: {
+                tokenAfterBody(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_AFTER_BODY: {
+                tokenAfterAfterBody(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onNullCharacter(token: CharacterToken): void {
+        this.skipNextNewLine = false;
+
+        if (this.tokenizer.inForeignNode) {
+            if (!this.afterNullCharacter) nullCharacterInForeignContent(this, token);
+            this.afterNullCharacter = true;
+            return;
+        }
+
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL: {
+                tokenInInitialMode(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HTML: {
+                tokenBeforeHtml(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HEAD: {
+                tokenBeforeHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_HEAD: {
+                tokenInHead(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_HEAD: {
+                tokenAfterHead(this, token);
+                break;
+            }
+            case InsertionMode.TEXT: {
+                this._insertCharacters(token);
+                break;
+            }
+            case InsertionMode.IN_TABLE:
+            case InsertionMode.IN_TABLE_BODY:
+            case InsertionMode.IN_ROW: {
+                characterInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_COLUMN_GROUP: {
+                tokenInColumnGroup(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_BODY: {
+                tokenAfterBody(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_AFTER_BODY: {
+                tokenAfterAfterBody(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onComment(token: CommentToken): void {
+        this.skipNextNewLine = false;
+        this.afterNullCharacter = false;
+
+        if (this.currentNotInHTML) {
+            appendComment(this, token);
+            return;
+        }
+
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL:
+            case InsertionMode.BEFORE_HTML:
+            case InsertionMode.BEFORE_HEAD:
+            case InsertionMode.IN_HEAD:
+            case InsertionMode.AFTER_HEAD:
+            case InsertionMode.IN_BODY:
+            case InsertionMode.IN_TABLE:
+            case InsertionMode.IN_CAPTION:
+            case InsertionMode.IN_COLUMN_GROUP:
+            case InsertionMode.IN_TABLE_BODY:
+            case InsertionMode.IN_ROW:
+            case InsertionMode.IN_CELL:
+            case InsertionMode.IN_SELECT:
+            case InsertionMode.IN_SELECT_IN_TABLE:
+            case InsertionMode.IN_TEMPLATE:
+            case InsertionMode.IN_FRAMESET:
+            case InsertionMode.AFTER_FRAMESET: {
+                appendComment(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                tokenInTableText(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_BODY: {
+                appendCommentToRootHtmlElement(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_AFTER_BODY:
+            case InsertionMode.AFTER_AFTER_FRAMESET: {
+                appendCommentToDocument(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onDoctype(token: DoctypeToken): void {
+        this.skipNextNewLine = false;
+        this.afterNullCharacter = false;
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL: {
+                doctypeInInitialMode(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                tokenInTableText(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onStartTag(token: TagToken): void {
+        this.skipNextNewLine = false;
+        this.afterNullCharacter = false;
+
+        this._processStartTag(token);
+    }
+    /**
+     * Processes a given start tag.
+     *
+     * `onStartTag` checks if a self-closing tag was recognized. When a token
+     * is moved inbetween multiple insertion modes, this check for self-closing
+     * could lead to false positives. To avoid this, `_processStartTag` is used
+     * for nested calls.
+     *
+     * @param token The token to process.
+     * @protected
+     */
+    _processStartTag(token: TagToken): void {
+        if (this.shouldProcessStartTagTokenInForeignContent(token)) {
+            startTagInForeignContent(this, token);
+        } else {
+            this._startTagOutsideForeignContent(token);
+        }
+    }
+    /** @protected */
+    _startTagOutsideForeignContent(token: TagToken): void {
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL: {
+                tokenInInitialMode(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HTML: {
+                startTagBeforeHtml(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HEAD: {
+                startTagBeforeHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_HEAD: {
+                startTagInHead(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_HEAD: {
+                startTagAfterHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_BODY: {
+                startTagInBody(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE: {
+                startTagInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                tokenInTableText(this, token);
+                break;
+            }
+            case InsertionMode.IN_CAPTION: {
+                startTagInCaption(this, token);
+                break;
+            }
+            case InsertionMode.IN_COLUMN_GROUP: {
+                startTagInColumnGroup(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_BODY: {
+                startTagInTableBody(this, token);
+                break;
+            }
+            case InsertionMode.IN_ROW: {
+                startTagInRow(this, token);
+                break;
+            }
+            case InsertionMode.IN_CELL: {
+                startTagInCell(this, token);
+                break;
+            }
+            case InsertionMode.IN_SELECT: {
+                startTagInSelect(this, token);
+                break;
+            }
+            case InsertionMode.IN_SELECT_IN_TABLE: {
+                startTagInSelectInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_TEMPLATE: {
+                startTagInTemplate(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_BODY: {
+                startTagAfterBody(this, token);
+                break;
+            }
+            case InsertionMode.IN_FRAMESET: {
+                startTagInFrameset(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_FRAMESET: {
+                startTagAfterFrameset(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_AFTER_BODY: {
+                startTagAfterAfterBody(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_AFTER_FRAMESET: {
+                startTagAfterAfterFrameset(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onEndTag(token: TagToken): void {
+        this.skipNextNewLine = false;
+        this.afterNullCharacter = false;
+
+        if (this.currentNotInHTML) {
+            endTagInForeignContent(this, token);
+        } else {
+            this._endTagOutsideForeignContent(token);
+        }
+    }
+    /** @protected */
+    _endTagOutsideForeignContent(token: TagToken): void {
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL: {
+                tokenInInitialMode(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HTML: {
+                endTagBeforeHtml(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HEAD: {
+                endTagBeforeHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_HEAD: {
+                endTagInHead(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_HEAD: {
+                endTagAfterHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_BODY: {
+                endTagInBody(this, token);
+                break;
+            }
+            case InsertionMode.TEXT: {
+                endTagInText(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE: {
+                endTagInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                tokenInTableText(this, token);
+                break;
+            }
+            case InsertionMode.IN_CAPTION: {
+                endTagInCaption(this, token);
+                break;
+            }
+            case InsertionMode.IN_COLUMN_GROUP: {
+                endTagInColumnGroup(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_BODY: {
+                endTagInTableBody(this, token);
+                break;
+            }
+            case InsertionMode.IN_ROW: {
+                endTagInRow(this, token);
+                break;
+            }
+            case InsertionMode.IN_CELL: {
+                endTagInCell(this, token);
+                break;
+            }
+            case InsertionMode.IN_SELECT: {
+                endTagInSelect(this, token);
+                break;
+            }
+            case InsertionMode.IN_SELECT_IN_TABLE: {
+                endTagInSelectInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_TEMPLATE: {
+                endTagInTemplate(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_BODY: {
+                endTagAfterBody(this, token);
+                break;
+            }
+            case InsertionMode.IN_FRAMESET: {
+                endTagInFrameset(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_FRAMESET: {
+                endTagAfterFrameset(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_AFTER_BODY: {
+                tokenAfterAfterBody(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onEof(token: EOFToken): void {
+        this.afterNullCharacter = false;
+
+        switch (this.insertionMode) {
+            case InsertionMode.INITIAL: {
+                tokenInInitialMode(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HTML: {
+                tokenBeforeHtml(this, token);
+                break;
+            }
+            case InsertionMode.BEFORE_HEAD: {
+                tokenBeforeHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_HEAD: {
+                tokenInHead(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_HEAD: {
+                tokenAfterHead(this, token);
+                break;
+            }
+            case InsertionMode.IN_BODY:
+            case InsertionMode.IN_TABLE:
+            case InsertionMode.IN_CAPTION:
+            case InsertionMode.IN_COLUMN_GROUP:
+            case InsertionMode.IN_TABLE_BODY:
+            case InsertionMode.IN_ROW:
+            case InsertionMode.IN_CELL:
+            case InsertionMode.IN_SELECT:
+            case InsertionMode.IN_SELECT_IN_TABLE: {
+                eofInBody(this, token);
+                break;
+            }
+            case InsertionMode.TEXT: {
+                eofInText(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                tokenInTableText(this, token);
+                break;
+            }
+            case InsertionMode.IN_TEMPLATE: {
+                eofInTemplate(this, token);
+                break;
+            }
+            case InsertionMode.AFTER_BODY:
+            case InsertionMode.IN_FRAMESET:
+            case InsertionMode.AFTER_FRAMESET:
+            case InsertionMode.AFTER_AFTER_BODY:
+            case InsertionMode.AFTER_AFTER_FRAMESET: {
+                stopParsing(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+    /** @internal */
+    onWhitespaceCharacter(token: CharacterToken): void {
+        this.afterNullCharacter = false;
+
+        if (this.skipNextNewLine) {
+            this.skipNextNewLine = false;
+
+            if (token.chars.charCodeAt(0) === LINE_FEED) {
+                if (token.chars.length === 1) {
+                    return;
+                }
+
+                token.chars = token.chars.slice(1);
+            }
+        }
+
+        if (this.tokenizer.inForeignNode) {
+            this._insertCharacters(token);
+            return;
+        }
+
+        switch (this.insertionMode) {
+            case InsertionMode.IN_HEAD:
+            case InsertionMode.AFTER_HEAD:
+            case InsertionMode.TEXT:
+            case InsertionMode.IN_COLUMN_GROUP:
+            case InsertionMode.IN_SELECT:
+            case InsertionMode.IN_SELECT_IN_TABLE:
+            case InsertionMode.IN_FRAMESET:
+            case InsertionMode.AFTER_FRAMESET: {
+                this._insertCharacters(token);
+                break;
+            }
+            case InsertionMode.IN_BODY:
+            case InsertionMode.IN_CAPTION:
+            case InsertionMode.IN_CELL:
+            case InsertionMode.IN_TEMPLATE:
+            case InsertionMode.AFTER_BODY:
+            case InsertionMode.AFTER_AFTER_BODY:
+            case InsertionMode.AFTER_AFTER_FRAMESET: {
+                whitespaceCharacterInBody(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE:
+            case InsertionMode.IN_TABLE_BODY:
+            case InsertionMode.IN_ROW: {
+                characterInTable(this, token);
+                break;
+            }
+            case InsertionMode.IN_TABLE_TEXT: {
+                whitespaceCharacterInTableText(this, token);
+                break;
+            }
+            default:
+            // Do nothing
+        }
+    }
+}
+
+//Adoption agency algorithm
+//(see: http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#adoptionAgency)
+//------------------------------------------------------------------
+
+//Steps 5-8 of the algorithm
+function aaObtainFormattingElementEntry(
+    p: Parser,
+    token: TagToken,
+): ElementEntry | null {
+    let formattingElementEntry = p.activeFormattingElements.getElementEntryInScopeWithTagName(token.tagName);
+
+    if (formattingElementEntry) {
+        if (!p.openElements.contains(formattingElementEntry.element)) {
+            p.activeFormattingElements.removeEntry(formattingElementEntry);
+            formattingElementEntry = null;
+        } else if (!p.openElements.hasInScope(token.tagID)) {
+            formattingElementEntry = null;
+        }
+    } else {
+        genericEndTagInBody(p, token);
+    }
+
+    return formattingElementEntry;
+}
+
+//Steps 9 and 10 of the algorithm
+function aaObtainFurthestBlock(
+    p: Parser,
+    formattingElementEntry: ElementEntry,
+): Element | null {
+    let furthestBlock = null;
+    let idx = p.openElements.stackTop;
+
+    for (; idx >= 0; idx--) {
+        const element = p.openElements.items[idx];
+
+        if (element === formattingElementEntry.element) {
+            break;
+        }
+
+        if (p._isSpecialElement(element, p.openElements.tagIDs[idx])) {
+            furthestBlock = element;
+        }
+    }
+
+    if (!furthestBlock) {
+        p.openElements.shortenToLength(Math.max(idx, 0));
+        p.activeFormattingElements.removeEntry(formattingElementEntry);
+    }
+
+    return furthestBlock;
+}
+
+//Step 13 of the algorithm
+function aaInnerLoop(
+    p: Parser,
+    furthestBlock: Element,
+    formattingElement: Element,
+): Element {
+    let lastElement = furthestBlock;
+    let nextElement = p.openElements.getCommonAncestor(furthestBlock) as Element;
+
+    for (let i = 0, element = nextElement; element !== formattingElement; i++, element = nextElement) {
+        //NOTE: store the next element for the next loop iteration (it may be deleted from the stack by step 9.5)
+        nextElement = p.openElements.getCommonAncestor(element) as Element;
+
+        const elementEntry = p.activeFormattingElements.getElementEntry(element);
+        const counterOverflow = elementEntry && i >= AA_INNER_LOOP_ITER;
+        const shouldRemoveFromOpenElements = !elementEntry || counterOverflow;
+
+        if (shouldRemoveFromOpenElements) {
+            if (counterOverflow) {
+                p.activeFormattingElements.removeEntry(elementEntry);
+            }
+
+            p.openElements.remove(element);
+        } else {
+            element = aaRecreateElementFromEntry(p, elementEntry);
+
+            if (lastElement === furthestBlock) {
+                p.activeFormattingElements.bookmark = elementEntry;
+            }
+
+            detachNode(lastElement);
+            appendChild(element, lastElement);
+            lastElement = element;
+        }
+    }
+
+    return lastElement;
+}
+
+//Step 13.7 of the algorithm
+function aaRecreateElementFromEntry(
+    p: Parser,
+    elementEntry: ElementEntry,
+): Element {
+    const ns = elementEntry.element.namespaceURI;
+    const newElement = createElement(elementEntry.token.tagName, ns, elementEntry.token.attrs);
+
+    p.openElements.replace(elementEntry.element, newElement);
+    elementEntry.element = newElement;
+
+    return newElement;
+}
+
+//Step 14 of the algorithm
+function aaInsertLastNodeInCommonAncestor(
+    p: Parser,
+    commonAncestor: ParentNode,
+    lastElement: Element,
+): void {
+    const tn = (commonAncestor as Element).tagName;
+    const tid = getTagID(tn);
+
+    if (p._isElementCausesFosterParenting(tid)) {
+        p._fosterParentElement(lastElement);
+    } else {
+        const ns = (commonAncestor as Element).namespaceURI;
+
+        if (tid === $.TEMPLATE && ns === NS.HTML) {
+            commonAncestor = (commonAncestor as Template).content;
+        }
+
+        appendChild(commonAncestor, lastElement);
+    }
+}
+
+//Steps 15-19 of the algorithm
+function aaReplaceFormattingElement(
+    p: Parser,
+    furthestBlock: Element,
+    formattingElementEntry: ElementEntry,
+): void {
+    const ns = formattingElementEntry.element.namespaceURI;
+    const { token } = formattingElementEntry;
+    const newElement = createElement(token.tagName, ns, token.attrs);
+
+    p._adoptNodes(furthestBlock, newElement);
+    appendChild(furthestBlock, newElement);
+
+    p.activeFormattingElements.insertElementAfterBookmark(newElement, token);
+    p.activeFormattingElements.removeEntry(formattingElementEntry);
+
+    p.openElements.remove(formattingElementEntry.element);
+    p.openElements.insertAfter(furthestBlock, newElement, token.tagID);
+}
+
+//Algorithm entry point
+function callAdoptionAgency(p: Parser, token: TagToken): void {
+    for (let i = 0; i < AA_OUTER_LOOP_ITER; i++) {
+        const formattingElementEntry = aaObtainFormattingElementEntry(p, token);
+
+        if (!formattingElementEntry) {
+            break;
+        }
+
+        const furthestBlock = aaObtainFurthestBlock(p, formattingElementEntry);
+
+        if (!furthestBlock) {
+            break;
+        }
+
+        p.activeFormattingElements.bookmark = formattingElementEntry;
+
+        const lastElement = aaInnerLoop(p, furthestBlock, formattingElementEntry.element);
+        const commonAncestor = p.openElements.getCommonAncestor(formattingElementEntry.element);
+
+        detachNode(lastElement);
+        if (commonAncestor) aaInsertLastNodeInCommonAncestor(p, commonAncestor, lastElement);
+        aaReplaceFormattingElement(p, furthestBlock, formattingElementEntry);
+    }
+}
+
+//Generic token handlers
+//------------------------------------------------------------------
+function appendComment(p: Parser, token: CommentToken): void {
+    p._appendCommentNode(token, p.openElements.currentTmplContentOrNode);
+}
+
+function appendCommentToRootHtmlElement(p: Parser, token: CommentToken): void {
+    p._appendCommentNode(token, p.openElements.items[0]);
+}
+
+function appendCommentToDocument(p: Parser, token: CommentToken): void {
+    p._appendCommentNode(token, p.document);
+}
+
+function stopParsing(p: Parser, _token: EOFToken): void {
+    p.stopped = true;
+}
+
+// The "initial" insertion mode
+//------------------------------------------------------------------
+function doctypeInInitialMode(p: Parser, token: DoctypeToken): void {
+    p._setDocumentType(token);
+
+    const mode = token.forceQuirks ? DOCUMENT_MODE.QUIRKS : doctype.getDocumentMode(token);
+
+    setDocumentMode(p.document, mode);
+
+    p.insertionMode = InsertionMode.BEFORE_HTML;
+}
+
+function tokenInInitialMode(p: Parser, token: Token): void {
+    setDocumentMode(p.document, DOCUMENT_MODE.QUIRKS);
+    p.insertionMode = InsertionMode.BEFORE_HTML;
+    p._processToken(token);
+}
+
+// The "before html" insertion mode
+//------------------------------------------------------------------
+function startTagBeforeHtml(p: Parser, token: TagToken): void {
+    if (token.tagID === $.HTML) {
+        p._insertElement(token, NS.HTML);
+        p.insertionMode = InsertionMode.BEFORE_HEAD;
+    } else {
+        tokenBeforeHtml(p, token);
+    }
+}
+
+function endTagBeforeHtml(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (tn === $.HTML || tn === $.HEAD || tn === $.BODY || tn === $.BR) {
+        tokenBeforeHtml(p, token);
+    }
+}
+
+function tokenBeforeHtml(p: Parser, token: Token): void {
+    p._insertFakeRootElement();
+    p.insertionMode = InsertionMode.BEFORE_HEAD;
+    p._processToken(token);
+}
+
+// The "before head" insertion mode
+//------------------------------------------------------------------
+function startTagBeforeHead(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.HEAD: {
+            p._insertElement(token, NS.HTML);
+            p.headElement = p.openElements.current;
+            p.insertionMode = InsertionMode.IN_HEAD;
+            break;
+        }
+        default: {
+            tokenBeforeHead(p, token);
+        }
+    }
+}
+
+function endTagBeforeHead(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (tn === $.HEAD || tn === $.BODY || tn === $.HTML || tn === $.BR) {
+        tokenBeforeHead(p, token);
+    }
+}
+
+function tokenBeforeHead(p: Parser, token: Token): void {
+    p._insertFakeElement(TN.HEAD, $.HEAD);
+    p.headElement = p.openElements.current;
+    p.insertionMode = InsertionMode.IN_HEAD;
+    p._processToken(token);
+}
+
+// The "in head" insertion mode
+//------------------------------------------------------------------
+function startTagInHead(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.BASE:
+        case $.BASEFONT:
+        case $.BGSOUND:
+        case $.LINK:
+        case $.META: {
+            p._appendElement(token, NS.HTML);
+            token.ackSelfClosing = true;
+            break;
+        }
+        case $.TITLE: {
+            p._switchToTextParsing(token, TokenizerMode.RCDATA);
+            break;
+        }
+        case $.NOSCRIPT: {
+            p._switchToTextParsing(token, TokenizerMode.RAWTEXT);
+            break;
+        }
+        case $.NOFRAMES:
+        case $.STYLE: {
+            p._switchToTextParsing(token, TokenizerMode.RAWTEXT);
+            break;
+        }
+        case $.SCRIPT: {
+            p._switchToTextParsing(token, TokenizerMode.SCRIPT_DATA);
+            break;
+        }
+        case $.TEMPLATE: {
+            p._insertTemplate(token);
+            p.activeFormattingElements.insertMarker();
+            p.framesetOk = false;
+            p.insertionMode = InsertionMode.IN_TEMPLATE;
+            p.tmplInsertionModeStack.unshift(InsertionMode.IN_TEMPLATE);
+            break;
+        }
+        case $.HEAD: {
+            // Ignore token
+            break;
+        }
+        default: {
+            tokenInHead(p, token);
+        }
+    }
+}
+
+function endTagInHead(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HEAD: {
+            p.openElements.pop();
+            p.insertionMode = InsertionMode.AFTER_HEAD;
+            break;
+        }
+        case $.BODY:
+        case $.BR:
+        case $.HTML: {
+            tokenInHead(p, token);
+            break;
+        }
+        case $.TEMPLATE: {
+            templateEndTagInHead(p, token);
+            break;
+        }
+        default:
+        // Ignore token
+    }
+}
+
+function templateEndTagInHead(p: Parser, _token: TagToken): void {
+    if (p.openElements.tmplCount > 0) {
+        p.openElements.generateImpliedEndTagsThoroughly();
+
+        p.openElements.popUntilTagNamePopped($.TEMPLATE);
+        p.activeFormattingElements.clearToLastMarker();
+        p.tmplInsertionModeStack.shift();
+        p._resetInsertionMode();
+    }
+}
+
+function tokenInHead(p: Parser, token: Token): void {
+    p.openElements.pop();
+    p.insertionMode = InsertionMode.AFTER_HEAD;
+    p._processToken(token);
+}
+
+// The "after head" insertion mode
+//------------------------------------------------------------------
+function startTagAfterHead(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.BODY: {
+            p._insertElement(token, NS.HTML);
+            p.framesetOk = false;
+            p.insertionMode = InsertionMode.IN_BODY;
+            break;
+        }
+        case $.FRAMESET: {
+            p._insertElement(token, NS.HTML);
+            p.insertionMode = InsertionMode.IN_FRAMESET;
+            break;
+        }
+        case $.BASE:
+        case $.BASEFONT:
+        case $.BGSOUND:
+        case $.LINK:
+        case $.META:
+        case $.NOFRAMES:
+        case $.SCRIPT:
+        case $.STYLE:
+        case $.TEMPLATE:
+        case $.TITLE: {
+            p.openElements.push(p.headElement as Element, $.HEAD);
+            startTagInHead(p, token);
+            p.openElements.remove(p.headElement as Element);
+            break;
+        }
+        case $.HEAD: {
+            // Ignore token
+            break;
+        }
+        default: {
+            tokenAfterHead(p, token);
+        }
+    }
+}
+
+function endTagAfterHead(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.BODY:
+        case $.HTML:
+        case $.BR: {
+            tokenAfterHead(p, token);
+            break;
+        }
+        case $.TEMPLATE: {
+            templateEndTagInHead(p, token);
+            break;
+        }
+        default:
+        // Ignore token
+    }
+}
+
+function tokenAfterHead(p: Parser, token: Token): void {
+    p._insertFakeElement(TN.BODY, $.BODY);
+    p.insertionMode = InsertionMode.IN_BODY;
+    modeInBody(p, token);
+}
+
+// The "in body" insertion mode
+//------------------------------------------------------------------
+function modeInBody(p: Parser, token: Token): void {
+    switch (token.type) {
+        case TokenType.CHARACTER: {
+            characterInBody(p, token);
+            break;
+        }
+        case TokenType.WHITESPACE_CHARACTER: {
+            whitespaceCharacterInBody(p, token);
+            break;
+        }
+        case TokenType.COMMENT: {
+            appendComment(p, token);
+            break;
+        }
+        case TokenType.START_TAG: {
+            startTagInBody(p, token);
+            break;
+        }
+        case TokenType.END_TAG: {
+            endTagInBody(p, token);
+            break;
+        }
+        case TokenType.EOF: {
+            eofInBody(p, token);
+            break;
+        }
+        default:
+        // Do nothing
+    }
+}
+
+function whitespaceCharacterInBody(p: Parser, token: CharacterToken): void {
+    p._reconstructActiveFormattingElements();
+    p._insertCharacters(token);
+}
+
+function characterInBody(p: Parser, token: CharacterToken): void {
+    p._reconstructActiveFormattingElements();
+    p._insertCharacters(token);
+    p.framesetOk = false;
+}
+
+function htmlStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.tmplCount === 0) {
+        adoptAttributes(p.openElements.items[0], token.attrs);
+    }
+}
+
+function bodyStartTagInBody(p: Parser, token: TagToken): void {
+    const bodyElement = p.openElements.tryPeekProperlyNestedBodyElement();
+
+    if (bodyElement && p.openElements.tmplCount === 0) {
+        p.framesetOk = false;
+        adoptAttributes(bodyElement, token.attrs);
+    }
+}
+
+function framesetStartTagInBody(p: Parser, token: TagToken): void {
+    const bodyElement = p.openElements.tryPeekProperlyNestedBodyElement();
+
+    if (p.framesetOk && bodyElement) {
+        detachNode(bodyElement);
+        p.openElements.popAllUpToHtmlElement();
+        p._insertElement(token, NS.HTML);
+        p.insertionMode = InsertionMode.IN_FRAMESET;
+    }
+}
+
+function addressStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._insertElement(token, NS.HTML);
+}
+
+function numberedHeaderStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    if (p.openElements.currentTagId !== undefined && NUMBERED_HEADERS.has(p.openElements.currentTagId)) {
+        p.openElements.pop();
+    }
+
+    p._insertElement(token, NS.HTML);
+}
+
+function preStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._insertElement(token, NS.HTML);
+    //NOTE: If the next token is a U+000A LINE FEED (LF) character token, then ignore that token and move
+    //on to the next one. (Newlines at the start of pre blocks are ignored as an authoring convenience.)
+    p.skipNextNewLine = true;
+    p.framesetOk = false;
+}
+
+function formStartTagInBody(p: Parser, token: TagToken): void {
+    const inTemplate = p.openElements.tmplCount > 0;
+
+    if (!p.formElement || inTemplate) {
+        if (p.openElements.hasInButtonScope($.P)) {
+            p._closePElement();
+        }
+
+        p._insertElement(token, NS.HTML);
+
+        if (!inTemplate) {
+            p.formElement = p.openElements.current;
+        }
+    }
+}
+
+function listItemStartTagInBody(p: Parser, token: TagToken): void {
+    p.framesetOk = false;
+
+    const tn = token.tagID;
+
+    for (let i = p.openElements.stackTop; i >= 0; i--) {
+        const elementId = p.openElements.tagIDs[i];
+
+        if (
+            (tn === $.LI && elementId === $.LI) ||
+            ((tn === $.DD || tn === $.DT) && (elementId === $.DD || elementId === $.DT))
+        ) {
+            p.openElements.generateImpliedEndTagsWithExclusion(elementId);
+            p.openElements.popUntilTagNamePopped(elementId);
+            break;
+        }
+
+        if (
+            elementId !== $.ADDRESS &&
+            elementId !== $.DIV &&
+            elementId !== $.P &&
+            p._isSpecialElement(p.openElements.items[i], elementId)
+        ) {
+            break;
+        }
+    }
+
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._insertElement(token, NS.HTML);
+}
+
+function plaintextStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._insertElement(token, NS.HTML);
+    p.tokenizer.state = TokenizerMode.PLAINTEXT;
+}
+
+function buttonStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInScope($.BUTTON)) {
+        p.openElements.generateImpliedEndTags();
+        p.openElements.popUntilTagNamePopped($.BUTTON);
+    }
+
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+    p.framesetOk = false;
+}
+
+function aStartTagInBody(p: Parser, token: TagToken): void {
+    const activeElementEntry = p.activeFormattingElements.getElementEntryInScopeWithTagName(TN.A);
+
+    if (activeElementEntry) {
+        callAdoptionAgency(p, token);
+        p.openElements.remove(activeElementEntry.element);
+        p.activeFormattingElements.removeEntry(activeElementEntry);
+    }
+
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+    p.activeFormattingElements.pushElement(p.openElements.current, token);
+}
+
+function bStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+    p.activeFormattingElements.pushElement(p.openElements.current, token);
+}
+
+function nobrStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+
+    if (p.openElements.hasInScope($.NOBR)) {
+        callAdoptionAgency(p, token);
+        p._reconstructActiveFormattingElements();
+    }
+
+    p._insertElement(token, NS.HTML);
+    p.activeFormattingElements.pushElement(p.openElements.current, token);
+}
+
+function appletStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+    p.activeFormattingElements.insertMarker();
+    p.framesetOk = false;
+}
+
+function tableStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.document.mode !== DOCUMENT_MODE.QUIRKS && p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._insertElement(token, NS.HTML);
+    p.framesetOk = false;
+    p.insertionMode = InsertionMode.IN_TABLE;
+}
+
+function areaStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+    p._appendElement(token, NS.HTML);
+    p.framesetOk = false;
+    token.ackSelfClosing = true;
+}
+
+function isHiddenInput(token: TagToken): boolean {
+    const inputType = getTokenAttr(token, ATTRS.TYPE);
+
+    return inputType != null && inputType.toLowerCase() === HIDDEN_INPUT_TYPE;
+}
+
+function inputStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+    p._appendElement(token, NS.HTML);
+
+    if (!isHiddenInput(token)) {
+        p.framesetOk = false;
+    }
+
+    token.ackSelfClosing = true;
+}
+
+function paramStartTagInBody(p: Parser, token: TagToken): void {
+    p._appendElement(token, NS.HTML);
+    token.ackSelfClosing = true;
+}
+
+function hrStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._appendElement(token, NS.HTML);
+    p.framesetOk = false;
+    token.ackSelfClosing = true;
+}
+
+function imageStartTagInBody(p: Parser, token: TagToken): void {
+    token.tagName = TN.IMG;
+    token.tagID = $.IMG;
+    areaStartTagInBody(p, token);
+}
+
+function textareaStartTagInBody(p: Parser, token: TagToken): void {
+    p._insertElement(token, NS.HTML);
+    //NOTE: If the next token is a U+000A LINE FEED (LF) character token, then ignore that token and move
+    //on to the next one. (Newlines at the start of textarea elements are ignored as an authoring convenience.)
+    p.skipNextNewLine = true;
+    p.tokenizer.state = TokenizerMode.RCDATA;
+    p.originalInsertionMode = p.insertionMode;
+    p.framesetOk = false;
+    p.insertionMode = InsertionMode.TEXT;
+}
+
+function xmpStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInButtonScope($.P)) {
+        p._closePElement();
+    }
+
+    p._reconstructActiveFormattingElements();
+    p.framesetOk = false;
+    p._switchToTextParsing(token, TokenizerMode.RAWTEXT);
+}
+
+function iframeStartTagInBody(p: Parser, token: TagToken): void {
+    p.framesetOk = false;
+    p._switchToTextParsing(token, TokenizerMode.RAWTEXT);
+}
+
+//NOTE: here we assume that we always act as a user agent with enabled plugins/frames, so we parse
+//<noembed>/<noframes> as rawtext.
+function rawTextStartTagInBody(p: Parser, token: TagToken): void {
+    p._switchToTextParsing(token, TokenizerMode.RAWTEXT);
+}
+
+function selectStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+    p.framesetOk = false;
+
+    p.insertionMode =
+        p.insertionMode === InsertionMode.IN_TABLE ||
+        p.insertionMode === InsertionMode.IN_CAPTION ||
+        p.insertionMode === InsertionMode.IN_TABLE_BODY ||
+        p.insertionMode === InsertionMode.IN_ROW ||
+        p.insertionMode === InsertionMode.IN_CELL
+            ? InsertionMode.IN_SELECT_IN_TABLE
+            : InsertionMode.IN_SELECT;
+}
+
+function optgroupStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.currentTagId === $.OPTION) {
+        p.openElements.pop();
+    }
+
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+}
+
+function rbStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInScope($.RUBY)) {
+        p.openElements.generateImpliedEndTags();
+    }
+
+    p._insertElement(token, NS.HTML);
+}
+
+function rtStartTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInScope($.RUBY)) {
+        p.openElements.generateImpliedEndTagsWithExclusion($.RTC);
+    }
+
+    p._insertElement(token, NS.HTML);
+}
+
+function mathStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+
+    foreignContent.adjustTokenMathMLAttrs(token);
+    foreignContent.adjustTokenXMLAttrs(token);
+
+    if (token.selfClosing) {
+        p._appendElement(token, NS.MATHML);
+    } else {
+        p._insertElement(token, NS.MATHML);
+    }
+
+    token.ackSelfClosing = true;
+}
+
+function svgStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+
+    foreignContent.adjustTokenSVGAttrs(token);
+    foreignContent.adjustTokenXMLAttrs(token);
+
+    if (token.selfClosing) {
+        p._appendElement(token, NS.SVG);
+    } else {
+        p._insertElement(token, NS.SVG);
+    }
+
+    token.ackSelfClosing = true;
+}
+
+function genericStartTagInBody(p: Parser, token: TagToken): void {
+    p._reconstructActiveFormattingElements();
+    p._insertElement(token, NS.HTML);
+}
+
+function startTagInBody(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.I:
+        case $.S:
+        case $.B:
+        case $.U:
+        case $.EM:
+        case $.TT:
+        case $.BIG:
+        case $.CODE:
+        case $.FONT:
+        case $.SMALL:
+        case $.STRIKE:
+        case $.STRONG: {
+            bStartTagInBody(p, token);
+            break;
+        }
+        case $.A: {
+            aStartTagInBody(p, token);
+            break;
+        }
+        case $.H1:
+        case $.H2:
+        case $.H3:
+        case $.H4:
+        case $.H5:
+        case $.H6: {
+            numberedHeaderStartTagInBody(p, token);
+            break;
+        }
+        case $.P:
+        case $.DL:
+        case $.OL:
+        case $.UL:
+        case $.DIV:
+        case $.DIR:
+        case $.NAV:
+        case $.MAIN:
+        case $.MENU:
+        case $.ASIDE:
+        case $.CENTER:
+        case $.FIGURE:
+        case $.FOOTER:
+        case $.HEADER:
+        case $.HGROUP:
+        case $.DIALOG:
+        case $.DETAILS:
+        case $.ADDRESS:
+        case $.ARTICLE:
+        case $.SEARCH:
+        case $.SECTION:
+        case $.SUMMARY:
+        case $.FIELDSET:
+        case $.BLOCKQUOTE:
+        case $.FIGCAPTION: {
+            addressStartTagInBody(p, token);
+            break;
+        }
+        case $.LI:
+        case $.DD:
+        case $.DT: {
+            listItemStartTagInBody(p, token);
+            break;
+        }
+        case $.BR:
+        case $.IMG:
+        case $.WBR:
+        case $.AREA:
+        case $.EMBED:
+        case $.KEYGEN: {
+            areaStartTagInBody(p, token);
+            break;
+        }
+        case $.HR: {
+            hrStartTagInBody(p, token);
+            break;
+        }
+        case $.RB:
+        case $.RTC: {
+            rbStartTagInBody(p, token);
+            break;
+        }
+        case $.RT:
+        case $.RP: {
+            rtStartTagInBody(p, token);
+            break;
+        }
+        case $.PRE:
+        case $.LISTING: {
+            preStartTagInBody(p, token);
+            break;
+        }
+        case $.XMP: {
+            xmpStartTagInBody(p, token);
+            break;
+        }
+        case $.SVG: {
+            svgStartTagInBody(p, token);
+            break;
+        }
+        case $.HTML: {
+            htmlStartTagInBody(p, token);
+            break;
+        }
+        case $.BASE:
+        case $.LINK:
+        case $.META:
+        case $.STYLE:
+        case $.TITLE:
+        case $.SCRIPT:
+        case $.BGSOUND:
+        case $.BASEFONT:
+        case $.TEMPLATE: {
+            startTagInHead(p, token);
+            break;
+        }
+        case $.BODY: {
+            bodyStartTagInBody(p, token);
+            break;
+        }
+        case $.FORM: {
+            formStartTagInBody(p, token);
+            break;
+        }
+        case $.NOBR: {
+            nobrStartTagInBody(p, token);
+            break;
+        }
+        case $.MATH: {
+            mathStartTagInBody(p, token);
+            break;
+        }
+        case $.TABLE: {
+            tableStartTagInBody(p, token);
+            break;
+        }
+        case $.INPUT: {
+            inputStartTagInBody(p, token);
+            break;
+        }
+        case $.PARAM:
+        case $.TRACK:
+        case $.SOURCE: {
+            paramStartTagInBody(p, token);
+            break;
+        }
+        case $.IMAGE: {
+            imageStartTagInBody(p, token);
+            break;
+        }
+        case $.BUTTON: {
+            buttonStartTagInBody(p, token);
+            break;
+        }
+        case $.APPLET:
+        case $.OBJECT:
+        case $.MARQUEE: {
+            appletStartTagInBody(p, token);
+            break;
+        }
+        case $.IFRAME: {
+            iframeStartTagInBody(p, token);
+            break;
+        }
+        case $.SELECT: {
+            selectStartTagInBody(p, token);
+            break;
+        }
+        case $.OPTION:
+        case $.OPTGROUP: {
+            optgroupStartTagInBody(p, token);
+            break;
+        }
+        case $.NOEMBED:
+        case $.NOFRAMES: {
+            rawTextStartTagInBody(p, token);
+            break;
+        }
+        case $.FRAMESET: {
+            framesetStartTagInBody(p, token);
+            break;
+        }
+        case $.TEXTAREA: {
+            textareaStartTagInBody(p, token);
+            break;
+        }
+        case $.NOSCRIPT: {
+            rawTextStartTagInBody(p, token);
+            break;
+        }
+        case $.PLAINTEXT: {
+            plaintextStartTagInBody(p, token);
+            break;
+        }
+
+        case $.COL:
+        case $.TH:
+        case $.TD:
+        case $.TR:
+        case $.HEAD:
+        case $.FRAME:
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD:
+        case $.CAPTION:
+        case $.COLGROUP: {
+            // Ignore token
+            break;
+        }
+        default: {
+            genericStartTagInBody(p, token);
+        }
+    }
+}
+
+function bodyEndTagInBody(p: Parser, _token: TagToken): void {
+    if (p.openElements.hasInScope($.BODY)) {
+        p.insertionMode = InsertionMode.AFTER_BODY;
+    }
+}
+
+function htmlEndTagInBody(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInScope($.BODY)) {
+        p.insertionMode = InsertionMode.AFTER_BODY;
+        endTagAfterBody(p, token);
+    }
+}
+
+function addressEndTagInBody(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (p.openElements.hasInScope(tn)) {
+        p.openElements.generateImpliedEndTags();
+        p.openElements.popUntilTagNamePopped(tn);
+    }
+}
+
+function formEndTagInBody(p: Parser): void {
+    const inTemplate = p.openElements.tmplCount > 0;
+    const { formElement } = p;
+
+    if (!inTemplate) {
+        p.formElement = null;
+    }
+
+    if ((formElement || inTemplate) && p.openElements.hasInScope($.FORM)) {
+        p.openElements.generateImpliedEndTags();
+
+        if (inTemplate) {
+            p.openElements.popUntilTagNamePopped($.FORM);
+        } else if (formElement) {
+            p.openElements.remove(formElement);
+        }
+    }
+}
+
+function pEndTagInBody(p: Parser): void {
+    if (!p.openElements.hasInButtonScope($.P)) {
+        p._insertFakeElement(TN.P, $.P);
+    }
+
+    p._closePElement();
+}
+
+function liEndTagInBody(p: Parser): void {
+    if (p.openElements.hasInListItemScope($.LI)) {
+        p.openElements.generateImpliedEndTagsWithExclusion($.LI);
+        p.openElements.popUntilTagNamePopped($.LI);
+    }
+}
+
+function ddEndTagInBody(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (p.openElements.hasInScope(tn)) {
+        p.openElements.generateImpliedEndTagsWithExclusion(tn);
+        p.openElements.popUntilTagNamePopped(tn);
+    }
+}
+
+function numberedHeaderEndTagInBody(p: Parser): void {
+    if (p.openElements.hasNumberedHeaderInScope()) {
+        p.openElements.generateImpliedEndTags();
+        p.openElements.popUntilNumberedHeaderPopped();
+    }
+}
+
+function appletEndTagInBody(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (p.openElements.hasInScope(tn)) {
+        p.openElements.generateImpliedEndTags();
+        p.openElements.popUntilTagNamePopped(tn);
+        p.activeFormattingElements.clearToLastMarker();
+    }
+}
+
+function brEndTagInBody(p: Parser): void {
+    p._reconstructActiveFormattingElements();
+    p._insertFakeElement(TN.BR, $.BR);
+    p.openElements.pop();
+    p.framesetOk = false;
+}
+
+function genericEndTagInBody(p: Parser, token: TagToken): void {
+    const tn = token.tagName;
+    const tid = token.tagID;
+
+    for (let i = p.openElements.stackTop; i > 0; i--) {
+        const element = p.openElements.items[i];
+        const elementId = p.openElements.tagIDs[i];
+
+        // Compare the tag name here, as the tag might not be a known tag with an ID.
+        if (tid === elementId && (tid !== $.UNKNOWN || element.tagName === tn)) {
+            p.openElements.generateImpliedEndTagsWithExclusion(tid);
+            if (p.openElements.stackTop >= i) p.openElements.shortenToLength(i);
+            break;
+        }
+
+        if (p._isSpecialElement(element, elementId)) {
+            break;
+        }
+    }
+}
+
+function endTagInBody(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.A:
+        case $.B:
+        case $.I:
+        case $.S:
+        case $.U:
+        case $.EM:
+        case $.TT:
+        case $.BIG:
+        case $.CODE:
+        case $.FONT:
+        case $.NOBR:
+        case $.SMALL:
+        case $.STRIKE:
+        case $.STRONG: {
+            callAdoptionAgency(p, token);
+            break;
+        }
+        case $.P: {
+            pEndTagInBody(p);
+            break;
+        }
+        case $.DL:
+        case $.UL:
+        case $.OL:
+        case $.DIR:
+        case $.DIV:
+        case $.NAV:
+        case $.PRE:
+        case $.MAIN:
+        case $.MENU:
+        case $.ASIDE:
+        case $.BUTTON:
+        case $.CENTER:
+        case $.FIGURE:
+        case $.FOOTER:
+        case $.HEADER:
+        case $.HGROUP:
+        case $.DIALOG:
+        case $.ADDRESS:
+        case $.ARTICLE:
+        case $.DETAILS:
+        case $.SEARCH:
+        case $.SECTION:
+        case $.SUMMARY:
+        case $.LISTING:
+        case $.FIELDSET:
+        case $.BLOCKQUOTE:
+        case $.FIGCAPTION: {
+            addressEndTagInBody(p, token);
+            break;
+        }
+        case $.LI: {
+            liEndTagInBody(p);
+            break;
+        }
+        case $.DD:
+        case $.DT: {
+            ddEndTagInBody(p, token);
+            break;
+        }
+        case $.H1:
+        case $.H2:
+        case $.H3:
+        case $.H4:
+        case $.H5:
+        case $.H6: {
+            numberedHeaderEndTagInBody(p);
+            break;
+        }
+        case $.BR: {
+            brEndTagInBody(p);
+            break;
+        }
+        case $.BODY: {
+            bodyEndTagInBody(p, token);
+            break;
+        }
+        case $.HTML: {
+            htmlEndTagInBody(p, token);
+            break;
+        }
+        case $.FORM: {
+            formEndTagInBody(p);
+            break;
+        }
+        case $.APPLET:
+        case $.OBJECT:
+        case $.MARQUEE: {
+            appletEndTagInBody(p, token);
+            break;
+        }
+        case $.TEMPLATE: {
+            templateEndTagInHead(p, token);
+            break;
+        }
+        default: {
+            genericEndTagInBody(p, token);
+        }
+    }
+}
+
+function eofInBody(p: Parser, token: EOFToken): void {
+    if (p.tmplInsertionModeStack.length > 0) {
+        eofInTemplate(p, token);
+    } else {
+        stopParsing(p, token);
+    }
+}
+
+// The "text" insertion mode
+//------------------------------------------------------------------
+function endTagInText(p: Parser, _token: TagToken): void {
+    p.openElements.pop();
+    p.insertionMode = p.originalInsertionMode;
+}
+
+function eofInText(p: Parser, token: EOFToken): void {
+    p.openElements.pop();
+    p.insertionMode = p.originalInsertionMode;
+    p.onEof(token);
+}
+
+// The "in table" insertion mode
+//------------------------------------------------------------------
+function characterInTable(p: Parser, token: CharacterToken): void {
+    if (p.openElements.currentTagId !== undefined && TABLE_STRUCTURE_TAGS.has(p.openElements.currentTagId)) {
+        p.pendingCharacterTokens.length = 0;
+        p.hasNonWhitespacePendingCharacterToken = false;
+        p.originalInsertionMode = p.insertionMode;
+        p.insertionMode = InsertionMode.IN_TABLE_TEXT;
+
+        switch (token.type) {
+            case TokenType.CHARACTER: {
+                characterInTableText(p, token);
+                break;
+            }
+            case TokenType.WHITESPACE_CHARACTER: {
+                whitespaceCharacterInTableText(p, token);
+                break;
+            }
+            // Ignore null
+        }
+    } else {
+        tokenInTable(p, token);
+    }
+}
+
+function captionStartTagInTable(p: Parser, token: TagToken): void {
+    p.openElements.clearBackToTableContext();
+    p.activeFormattingElements.insertMarker();
+    p._insertElement(token, NS.HTML);
+    p.insertionMode = InsertionMode.IN_CAPTION;
+}
+
+function colgroupStartTagInTable(p: Parser, token: TagToken): void {
+    p.openElements.clearBackToTableContext();
+    p._insertElement(token, NS.HTML);
+    p.insertionMode = InsertionMode.IN_COLUMN_GROUP;
+}
+
+function colStartTagInTable(p: Parser, token: TagToken): void {
+    p.openElements.clearBackToTableContext();
+    p._insertFakeElement(TN.COLGROUP, $.COLGROUP);
+    p.insertionMode = InsertionMode.IN_COLUMN_GROUP;
+    startTagInColumnGroup(p, token);
+}
+
+function tbodyStartTagInTable(p: Parser, token: TagToken): void {
+    p.openElements.clearBackToTableContext();
+    p._insertElement(token, NS.HTML);
+    p.insertionMode = InsertionMode.IN_TABLE_BODY;
+}
+
+function tdStartTagInTable(p: Parser, token: TagToken): void {
+    p.openElements.clearBackToTableContext();
+    p._insertFakeElement(TN.TBODY, $.TBODY);
+    p.insertionMode = InsertionMode.IN_TABLE_BODY;
+    startTagInTableBody(p, token);
+}
+
+function tableStartTagInTable(p: Parser, token: TagToken): void {
+    if (p.openElements.hasInTableScope($.TABLE)) {
+        p.openElements.popUntilTagNamePopped($.TABLE);
+        p._resetInsertionMode();
+        p._processStartTag(token);
+    }
+}
+
+function inputStartTagInTable(p: Parser, token: TagToken): void {
+    if (isHiddenInput(token)) {
+        p._appendElement(token, NS.HTML);
+    } else {
+        tokenInTable(p, token);
+    }
+
+    token.ackSelfClosing = true;
+}
+
+function formStartTagInTable(p: Parser, token: TagToken): void {
+    if (!p.formElement && p.openElements.tmplCount === 0) {
+        p._insertElement(token, NS.HTML);
+        p.formElement = p.openElements.current;
+        p.openElements.pop();
+    }
+}
+
+function startTagInTable(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.TD:
+        case $.TH:
+        case $.TR: {
+            tdStartTagInTable(p, token);
+            break;
+        }
+        case $.STYLE:
+        case $.SCRIPT:
+        case $.TEMPLATE: {
+            startTagInHead(p, token);
+            break;
+        }
+        case $.COL: {
+            colStartTagInTable(p, token);
+            break;
+        }
+        case $.FORM: {
+            formStartTagInTable(p, token);
+            break;
+        }
+        case $.TABLE: {
+            tableStartTagInTable(p, token);
+            break;
+        }
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD: {
+            tbodyStartTagInTable(p, token);
+            break;
+        }
+        case $.INPUT: {
+            inputStartTagInTable(p, token);
+            break;
+        }
+        case $.CAPTION: {
+            captionStartTagInTable(p, token);
+            break;
+        }
+        case $.COLGROUP: {
+            colgroupStartTagInTable(p, token);
+            break;
+        }
+        default: {
+            tokenInTable(p, token);
+        }
+    }
+}
+
+function endTagInTable(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.TABLE: {
+            if (p.openElements.hasInTableScope($.TABLE)) {
+                p.openElements.popUntilTagNamePopped($.TABLE);
+                p._resetInsertionMode();
+            }
+            break;
+        }
+        case $.TEMPLATE: {
+            templateEndTagInHead(p, token);
+            break;
+        }
+        case $.BODY:
+        case $.CAPTION:
+        case $.COL:
+        case $.COLGROUP:
+        case $.HTML:
+        case $.TBODY:
+        case $.TD:
+        case $.TFOOT:
+        case $.TH:
+        case $.THEAD:
+        case $.TR: {
+            // Ignore token
+            break;
+        }
+        default: {
+            tokenInTable(p, token);
+        }
+    }
+}
+
+function tokenInTable(p: Parser, token: Token): void {
+    const savedFosterParentingState = p.fosterParentingEnabled;
+
+    p.fosterParentingEnabled = true;
+    // Process token in `In Body` mode
+    modeInBody(p, token);
+    p.fosterParentingEnabled = savedFosterParentingState;
+}
+
+// The "in table text" insertion mode
+//------------------------------------------------------------------
+function whitespaceCharacterInTableText(p: Parser, token: CharacterToken): void {
+    p.pendingCharacterTokens.push(token);
+}
+
+function characterInTableText(p: Parser, token: CharacterToken): void {
+    p.pendingCharacterTokens.push(token);
+    p.hasNonWhitespacePendingCharacterToken = true;
+}
+
+function tokenInTableText(p: Parser, token: Token): void {
+    let i = 0;
+
+    if (p.hasNonWhitespacePendingCharacterToken) {
+        for (; i < p.pendingCharacterTokens.length; i++) {
+            tokenInTable(p, p.pendingCharacterTokens[i]);
+        }
+    } else {
+        for (; i < p.pendingCharacterTokens.length; i++) {
+            p._insertCharacters(p.pendingCharacterTokens[i]);
+        }
+    }
+
+    p.insertionMode = p.originalInsertionMode;
+    p._processToken(token);
+}
+
+// The "in caption" insertion mode
+//------------------------------------------------------------------
+const TABLE_VOID_ELEMENTS = new Set([$.CAPTION, $.COL, $.COLGROUP, $.TBODY, $.TD, $.TFOOT, $.TH, $.THEAD, $.TR]);
+
+function startTagInCaption(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (TABLE_VOID_ELEMENTS.has(tn)) {
+        if (p.openElements.hasInTableScope($.CAPTION)) {
+            p.openElements.generateImpliedEndTags();
+            p.openElements.popUntilTagNamePopped($.CAPTION);
+            p.activeFormattingElements.clearToLastMarker();
+            p.insertionMode = InsertionMode.IN_TABLE;
+            startTagInTable(p, token);
+        }
+    } else {
+        startTagInBody(p, token);
+    }
+}
+
+function endTagInCaption(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    switch (tn) {
+        case $.CAPTION:
+        case $.TABLE: {
+            if (p.openElements.hasInTableScope($.CAPTION)) {
+                p.openElements.generateImpliedEndTags();
+                p.openElements.popUntilTagNamePopped($.CAPTION);
+                p.activeFormattingElements.clearToLastMarker();
+                p.insertionMode = InsertionMode.IN_TABLE;
+
+                if (tn === $.TABLE) {
+                    endTagInTable(p, token);
+                }
+            }
+            break;
+        }
+        case $.BODY:
+        case $.COL:
+        case $.COLGROUP:
+        case $.HTML:
+        case $.TBODY:
+        case $.TD:
+        case $.TFOOT:
+        case $.TH:
+        case $.THEAD:
+        case $.TR: {
+            // Ignore token
+            break;
+        }
+        default: {
+            endTagInBody(p, token);
+        }
+    }
+}
+
+// The "in column group" insertion mode
+//------------------------------------------------------------------
+function startTagInColumnGroup(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.COL: {
+            p._appendElement(token, NS.HTML);
+            token.ackSelfClosing = true;
+            break;
+        }
+        case $.TEMPLATE: {
+            startTagInHead(p, token);
+            break;
+        }
+        default: {
+            tokenInColumnGroup(p, token);
+        }
+    }
+}
+
+function endTagInColumnGroup(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.COLGROUP: {
+            if (p.openElements.currentTagId === $.COLGROUP) {
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE;
+            }
+            break;
+        }
+        case $.TEMPLATE: {
+            templateEndTagInHead(p, token);
+            break;
+        }
+        case $.COL: {
+            // Ignore token
+            break;
+        }
+        default: {
+            tokenInColumnGroup(p, token);
+        }
+    }
+}
+
+function tokenInColumnGroup(p: Parser, token: Token): void {
+    if (p.openElements.currentTagId === $.COLGROUP) {
+        p.openElements.pop();
+        p.insertionMode = InsertionMode.IN_TABLE;
+        p._processToken(token);
+    }
+}
+
+// The "in table body" insertion mode
+//------------------------------------------------------------------
+function startTagInTableBody(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.TR: {
+            p.openElements.clearBackToTableBodyContext();
+            p._insertElement(token, NS.HTML);
+            p.insertionMode = InsertionMode.IN_ROW;
+            break;
+        }
+        case $.TH:
+        case $.TD: {
+            p.openElements.clearBackToTableBodyContext();
+            p._insertFakeElement(TN.TR, $.TR);
+            p.insertionMode = InsertionMode.IN_ROW;
+            startTagInRow(p, token);
+            break;
+        }
+        case $.CAPTION:
+        case $.COL:
+        case $.COLGROUP:
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD: {
+            if (p.openElements.hasTableBodyContextInTableScope()) {
+                p.openElements.clearBackToTableBodyContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE;
+                startTagInTable(p, token);
+            }
+            break;
+        }
+        default: {
+            startTagInTable(p, token);
+        }
+    }
+}
+
+function endTagInTableBody(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    switch (token.tagID) {
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD: {
+            if (p.openElements.hasInTableScope(tn)) {
+                p.openElements.clearBackToTableBodyContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE;
+            }
+            break;
+        }
+        case $.TABLE: {
+            if (p.openElements.hasTableBodyContextInTableScope()) {
+                p.openElements.clearBackToTableBodyContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE;
+                endTagInTable(p, token);
+            }
+            break;
+        }
+        case $.BODY:
+        case $.CAPTION:
+        case $.COL:
+        case $.COLGROUP:
+        case $.HTML:
+        case $.TD:
+        case $.TH:
+        case $.TR: {
+            // Ignore token
+            break;
+        }
+        default: {
+            endTagInTable(p, token);
+        }
+    }
+}
+
+// The "in row" insertion mode
+//------------------------------------------------------------------
+function startTagInRow(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.TH:
+        case $.TD: {
+            p.openElements.clearBackToTableRowContext();
+            p._insertElement(token, NS.HTML);
+            p.insertionMode = InsertionMode.IN_CELL;
+            p.activeFormattingElements.insertMarker();
+            break;
+        }
+        case $.CAPTION:
+        case $.COL:
+        case $.COLGROUP:
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD:
+        case $.TR: {
+            if (p.openElements.hasInTableScope($.TR)) {
+                p.openElements.clearBackToTableRowContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE_BODY;
+                startTagInTableBody(p, token);
+            }
+            break;
+        }
+        default: {
+            startTagInTable(p, token);
+        }
+    }
+}
+
+function endTagInRow(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.TR: {
+            if (p.openElements.hasInTableScope($.TR)) {
+                p.openElements.clearBackToTableRowContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE_BODY;
+            }
+            break;
+        }
+        case $.TABLE: {
+            if (p.openElements.hasInTableScope($.TR)) {
+                p.openElements.clearBackToTableRowContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE_BODY;
+                endTagInTableBody(p, token);
+            }
+            break;
+        }
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD: {
+            if (p.openElements.hasInTableScope(token.tagID) || p.openElements.hasInTableScope($.TR)) {
+                p.openElements.clearBackToTableRowContext();
+                p.openElements.pop();
+                p.insertionMode = InsertionMode.IN_TABLE_BODY;
+                endTagInTableBody(p, token);
+            }
+            break;
+        }
+        case $.BODY:
+        case $.CAPTION:
+        case $.COL:
+        case $.COLGROUP:
+        case $.HTML:
+        case $.TD:
+        case $.TH: {
+            // Ignore end tag
+            break;
+        }
+        default: {
+            endTagInTable(p, token);
+        }
+    }
+}
+
+// The "in cell" insertion mode
+//------------------------------------------------------------------
+function startTagInCell(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (TABLE_VOID_ELEMENTS.has(tn)) {
+        if (p.openElements.hasInTableScope($.TD) || p.openElements.hasInTableScope($.TH)) {
+            p._closeTableCell();
+            startTagInRow(p, token);
+        }
+    } else {
+        startTagInBody(p, token);
+    }
+}
+
+function endTagInCell(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    switch (tn) {
+        case $.TD:
+        case $.TH: {
+            if (p.openElements.hasInTableScope(tn)) {
+                p.openElements.generateImpliedEndTags();
+                p.openElements.popUntilTagNamePopped(tn);
+                p.activeFormattingElements.clearToLastMarker();
+                p.insertionMode = InsertionMode.IN_ROW;
+            }
+            break;
+        }
+        case $.TABLE:
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD:
+        case $.TR: {
+            if (p.openElements.hasInTableScope(tn)) {
+                p._closeTableCell();
+                endTagInRow(p, token);
+            }
+            break;
+        }
+        case $.BODY:
+        case $.CAPTION:
+        case $.COL:
+        case $.COLGROUP:
+        case $.HTML: {
+            // Ignore token
+            break;
+        }
+        default: {
+            endTagInBody(p, token);
+        }
+    }
+}
+
+// The "in select" insertion mode
+//------------------------------------------------------------------
+function startTagInSelect(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.OPTION: {
+            if (p.openElements.currentTagId === $.OPTION) {
+                p.openElements.pop();
+            }
+
+            p._insertElement(token, NS.HTML);
+            break;
+        }
+        case $.OPTGROUP: {
+            if (p.openElements.currentTagId === $.OPTION) {
+                p.openElements.pop();
+            }
+
+            if (p.openElements.currentTagId === $.OPTGROUP) {
+                p.openElements.pop();
+            }
+
+            p._insertElement(token, NS.HTML);
+            break;
+        }
+        case $.HR: {
+            if (p.openElements.currentTagId === $.OPTION) {
+                p.openElements.pop();
+            }
+
+            if (p.openElements.currentTagId === $.OPTGROUP) {
+                p.openElements.pop();
+            }
+
+            p._appendElement(token, NS.HTML);
+            token.ackSelfClosing = true;
+            break;
+        }
+        case $.INPUT:
+        case $.KEYGEN:
+        case $.TEXTAREA:
+        case $.SELECT: {
+            if (p.openElements.hasInSelectScope($.SELECT)) {
+                p.openElements.popUntilTagNamePopped($.SELECT);
+                p._resetInsertionMode();
+
+                if (token.tagID !== $.SELECT) {
+                    p._processStartTag(token);
+                }
+            }
+            break;
+        }
+        case $.SCRIPT:
+        case $.TEMPLATE: {
+            startTagInHead(p, token);
+            break;
+        }
+        default:
+        // Do nothing
+    }
+}
+
+function endTagInSelect(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.OPTGROUP: {
+            if (
+                p.openElements.stackTop > 0 &&
+                p.openElements.currentTagId === $.OPTION &&
+                p.openElements.tagIDs[p.openElements.stackTop - 1] === $.OPTGROUP
+            ) {
+                p.openElements.pop();
+            }
+
+            if (p.openElements.currentTagId === $.OPTGROUP) {
+                p.openElements.pop();
+            }
+            break;
+        }
+        case $.OPTION: {
+            if (p.openElements.currentTagId === $.OPTION) {
+                p.openElements.pop();
+            }
+            break;
+        }
+        case $.SELECT: {
+            if (p.openElements.hasInSelectScope($.SELECT)) {
+                p.openElements.popUntilTagNamePopped($.SELECT);
+                p._resetInsertionMode();
+            }
+            break;
+        }
+        case $.TEMPLATE: {
+            templateEndTagInHead(p, token);
+            break;
+        }
+        default:
+        // Do nothing
+    }
+}
+
+// The "in select in table" insertion mode
+//------------------------------------------------------------------
+function startTagInSelectInTable(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (
+        tn === $.CAPTION ||
+        tn === $.TABLE ||
+        tn === $.TBODY ||
+        tn === $.TFOOT ||
+        tn === $.THEAD ||
+        tn === $.TR ||
+        tn === $.TD ||
+        tn === $.TH
+    ) {
+        p.openElements.popUntilTagNamePopped($.SELECT);
+        p._resetInsertionMode();
+        p._processStartTag(token);
+    } else {
+        startTagInSelect(p, token);
+    }
+}
+
+function endTagInSelectInTable(p: Parser, token: TagToken): void {
+    const tn = token.tagID;
+
+    if (
+        tn === $.CAPTION ||
+        tn === $.TABLE ||
+        tn === $.TBODY ||
+        tn === $.TFOOT ||
+        tn === $.THEAD ||
+        tn === $.TR ||
+        tn === $.TD ||
+        tn === $.TH
+    ) {
+        if (p.openElements.hasInTableScope(tn)) {
+            p.openElements.popUntilTagNamePopped($.SELECT);
+            p._resetInsertionMode();
+            p.onEndTag(token);
+        }
+    } else {
+        endTagInSelect(p, token);
+    }
+}
+
+// The "in template" insertion mode
+//------------------------------------------------------------------
+function startTagInTemplate(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        // First, handle tags that can start without a mode change
+        case $.BASE:
+        case $.BASEFONT:
+        case $.BGSOUND:
+        case $.LINK:
+        case $.META:
+        case $.NOFRAMES:
+        case $.SCRIPT:
+        case $.STYLE:
+        case $.TEMPLATE:
+        case $.TITLE: {
+            startTagInHead(p, token);
+            break;
+        }
+
+        // Re-process the token in the appropriate mode
+        case $.CAPTION:
+        case $.COLGROUP:
+        case $.TBODY:
+        case $.TFOOT:
+        case $.THEAD: {
+            p.tmplInsertionModeStack[0] = InsertionMode.IN_TABLE;
+            p.insertionMode = InsertionMode.IN_TABLE;
+            startTagInTable(p, token);
+            break;
+        }
+        case $.COL: {
+            p.tmplInsertionModeStack[0] = InsertionMode.IN_COLUMN_GROUP;
+            p.insertionMode = InsertionMode.IN_COLUMN_GROUP;
+            startTagInColumnGroup(p, token);
+            break;
+        }
+        case $.TR: {
+            p.tmplInsertionModeStack[0] = InsertionMode.IN_TABLE_BODY;
+            p.insertionMode = InsertionMode.IN_TABLE_BODY;
+            startTagInTableBody(p, token);
+            break;
+        }
+        case $.TD:
+        case $.TH: {
+            p.tmplInsertionModeStack[0] = InsertionMode.IN_ROW;
+            p.insertionMode = InsertionMode.IN_ROW;
+            startTagInRow(p, token);
+            break;
+        }
+        default: {
+            p.tmplInsertionModeStack[0] = InsertionMode.IN_BODY;
+            p.insertionMode = InsertionMode.IN_BODY;
+            startTagInBody(p, token);
+        }
+    }
+}
+
+function endTagInTemplate(p: Parser, token: TagToken): void {
+    if (token.tagID === $.TEMPLATE) {
+        templateEndTagInHead(p, token);
+    }
+}
+
+function eofInTemplate(p: Parser, token: EOFToken): void {
+    if (p.openElements.tmplCount > 0) {
+        p.openElements.popUntilTagNamePopped($.TEMPLATE);
+        p.activeFormattingElements.clearToLastMarker();
+        p.tmplInsertionModeStack.shift();
+        p._resetInsertionMode();
+        p.onEof(token);
+    } else {
+        stopParsing(p, token);
+    }
+}
+
+// The "after body" insertion mode
+//------------------------------------------------------------------
+function startTagAfterBody(p: Parser, token: TagToken): void {
+    if (token.tagID === $.HTML) {
+        startTagInBody(p, token);
+    } else {
+        tokenAfterBody(p, token);
+    }
+}
+
+function endTagAfterBody(p: Parser, token: TagToken): void {
+    if (token.tagID === $.HTML) {
+        if (!p.fragmentContext) {
+            p.insertionMode = InsertionMode.AFTER_AFTER_BODY;
+        }
+    } else {
+        tokenAfterBody(p, token);
+    }
+}
+
+function tokenAfterBody(p: Parser, token: Token): void {
+    p.insertionMode = InsertionMode.IN_BODY;
+    modeInBody(p, token);
+}
+
+// The "in frameset" insertion mode
+//------------------------------------------------------------------
+function startTagInFrameset(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.FRAMESET: {
+            p._insertElement(token, NS.HTML);
+            break;
+        }
+        case $.FRAME: {
+            p._appendElement(token, NS.HTML);
+            token.ackSelfClosing = true;
+            break;
+        }
+        case $.NOFRAMES: {
+            startTagInHead(p, token);
+            break;
+        }
+        default:
+        // Do nothing
+    }
+}
+
+function endTagInFrameset(p: Parser, token: TagToken): void {
+    if (token.tagID === $.FRAMESET && !p.openElements.isRootHtmlElementCurrent()) {
+        p.openElements.pop();
+
+        if (!p.fragmentContext && p.openElements.currentTagId !== $.FRAMESET) {
+            p.insertionMode = InsertionMode.AFTER_FRAMESET;
+        }
+    }
+}
+
+// The "after frameset" insertion mode
+//------------------------------------------------------------------
+function startTagAfterFrameset(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.NOFRAMES: {
+            startTagInHead(p, token);
+            break;
+        }
+        default:
+        // Do nothing
+    }
+}
+
+function endTagAfterFrameset(p: Parser, token: TagToken): void {
+    if (token.tagID === $.HTML) {
+        p.insertionMode = InsertionMode.AFTER_AFTER_FRAMESET;
+    }
+}
+
+// The "after after body" insertion mode
+//------------------------------------------------------------------
+function startTagAfterAfterBody(p: Parser, token: TagToken): void {
+    if (token.tagID === $.HTML) {
+        startTagInBody(p, token);
+    } else {
+        tokenAfterAfterBody(p, token);
+    }
+}
+
+function tokenAfterAfterBody(p: Parser, token: Token): void {
+    p.insertionMode = InsertionMode.IN_BODY;
+    modeInBody(p, token);
+}
+
+// The "after after frameset" insertion mode
+//------------------------------------------------------------------
+// eslint-disable-next-line sonarjs/no-identical-functions -- upstream keeps one function per insertion mode
+function startTagAfterAfterFrameset(p: Parser, token: TagToken): void {
+    switch (token.tagID) {
+        case $.HTML: {
+            startTagInBody(p, token);
+            break;
+        }
+        case $.NOFRAMES: {
+            startTagInHead(p, token);
+            break;
+        }
+        default:
+        // Do nothing
+    }
+}
+
+// The rules for parsing tokens in foreign content
+//------------------------------------------------------------------
+function nullCharacterInForeignContent(p: Parser, token: CharacterToken): void {
+    token.chars = REPLACEMENT_CHARACTER;
+    p._insertCharacters(token);
+}
+
+function characterInForeignContent(p: Parser, token: CharacterToken): void {
+    p._insertCharacters(token);
+    p.framesetOk = false;
+}
+
+function popUntilHtmlOrIntegrationPoint(p: Parser): void {
+    while (
+        p.openElements.current.namespaceURI !== NS.HTML &&
+        p.openElements.currentTagId !== undefined &&
+        !p._isIntegrationPoint(p.openElements.currentTagId, p.openElements.current)
+    ) {
+        p.openElements.pop();
+    }
+}
+
+function startTagInForeignContent(p: Parser, token: TagToken): void {
+    if (foreignContent.causesExit(token)) {
+        popUntilHtmlOrIntegrationPoint(p);
+
+        p._startTagOutsideForeignContent(token);
+    } else {
+        const current = p._getAdjustedCurrentElement();
+        const currentNs = current.namespaceURI;
+
+        if (currentNs === NS.MATHML) {
+            foreignContent.adjustTokenMathMLAttrs(token);
+        } else if (currentNs === NS.SVG) {
+            foreignContent.adjustTokenSVGTagName(token);
+            foreignContent.adjustTokenSVGAttrs(token);
+        }
+
+        foreignContent.adjustTokenXMLAttrs(token);
+
+        if (token.selfClosing) {
+            p._appendElement(token, currentNs);
+        } else {
+            p._insertElement(token, currentNs);
+        }
+
+        token.ackSelfClosing = true;
+    }
+}
+
+function endTagInForeignContent(p: Parser, token: TagToken): void {
+    if (token.tagID === $.P || token.tagID === $.BR) {
+        popUntilHtmlOrIntegrationPoint(p);
+
+        p._endTagOutsideForeignContent(token);
+
+        return;
+    }
+    for (let i = p.openElements.stackTop; i > 0; i--) {
+        const element = p.openElements.items[i];
+
+        if (element.namespaceURI === NS.HTML) {
+            p._endTagOutsideForeignContent(token);
+            break;
+        }
+
+        const tagName = element.tagName;
+
+        if (tagName.toLowerCase() === token.tagName) {
+            p.openElements.shortenToLength(i);
+            break;
+        }
+    }
+}

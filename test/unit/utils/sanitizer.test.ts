@@ -305,7 +305,53 @@ describe('sanitizer', () => {
         [ '<form action="javascript:alert(1)"><button formaction=" JaVaScRiPt:alert(1)">x</button></form>', { form: true, button: true } ],
         [ '<svg><a><animate attributeName="href" to="javascript:alert(1)"></animate>x</a></svg>', { svg: true, a: true, animate: true } ],
       ] as const)('drops a script URL from any URL attribute: %s', (html, config) => {
-        expect(clean(html, config as unknown as SanitizerConfig)).not.toMatch(/javascript:/i);
+        const output = clean(html, config);
+
+        expect(output).not.toMatch(/javascript:/i);
+        expect(output).toContain('x');
+      });
+
+      it('drops a script URL hidden in a later entry of an SVG values list', () => {
+        const html = '<svg><a><animate attributeName="href" values="https://a.invalid/;javascript:alert(1)"></animate>x</a></svg>';
+
+        expect(clean(html, { svg: true, a: true, animate: true })).toBe('<svg><a><animate attributeName="href"></animate>x</a></svg>');
+      });
+
+      it('drops a script URL after a leading <col> on the URL-only path', () => {
+        const [ block ] = sanitizeBlocks([ { tool: 'raw', data: { text: '<col><a href="javascript:alert(1)">x</a>' } } ], {});
+
+        expect(block.data.text).not.toMatch(/javascript:/i);
+      });
+
+      it('does not force a script-carrying value that a function rule returns', () => {
+        const [ block ] = sanitizeBlocks(
+          [ { tool: 'paragraph', data: { text: '<b>x</b><a href="https://ok.example">y</a>' } } ],
+          { text: { b: () => ({ onclick: 'alert(1)', title: 't' }), a: () => ({ href: 'javascript:alert(2)' }) } }
+        );
+
+        expect(block.data.text).toBe('<b title="t">x</b><a>y</a>');
+      });
+
+      it('drops srcdoc even when the tag rule keeps every attribute', () => {
+        expect(clean('<iframe srcdoc="<script>alert(1)</script>" title="t"></iframe>', { iframe: true })).toBe('<iframe title="t"></iframe>');
+      });
+
+      // A leading <col> sends a <template> parse into column-group mode, which drops every later tag.
+      it('drops a script URL after a leading <col>', () => {
+        expect(clean('<table><col></table><a href="javascript:alert(1)">x</a>', { col: {}, a: { href: true } })).toBe('<col><a>x</a>');
+      });
+
+      it.each([
+        [ '<svg><foreignObject><iframe><img src=x onerror=alert(1)></iframe></foreignObject></svg>', { svg: true, iframe: { src: true } } ],
+        [ '<math><annotation-xml encoding="text/html"><style><img src=x onerror=alert(1)></style></annotation-xml></math>', { math: true, style: true } ],
+        [ '<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>', { math: true, mtext: true, mglyph: true, style: true } ],
+      ] as const)('keeps no HTML element moved into SVG or MathML by an unwrap: %s', (html, config) => {
+        const template = document.createElement('template');
+
+        template.innerHTML = clean(html, config);
+        template.innerHTML = template.innerHTML;
+
+        expect(template.content.querySelector('[onerror]')).toBeNull();
       });
 
       it('keeps a safe URL in those attributes', () => {

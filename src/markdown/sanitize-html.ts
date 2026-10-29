@@ -33,14 +33,13 @@ const TEXT_ATTRIBUTES = new Set([ 'alt', 'title' ]);
 /**
  * A disallowed tag is unwrapped and keeps its children, except these, which go
  * with everything inside: script, style, foreign (svg/math) or never-shown content.
+ * Dropping svg and math whole also means no element outside HTML is ever kept.
  */
 const DROPPED_WITH_CONTENT = new Set([
   'annotation-xml', 'audio', 'colgroup', 'desc', 'foreignobject', 'head', 'iframe', 'math', 'mi', 'mn', 'mo',
   'ms', 'mtext', 'noembed', 'noframes', 'noscript', 'plaintext', 'script', 'selectedcontent', 'style', 'svg',
-  'template', 'thead', 'title', 'video', 'xmp',
+  'template', 'title', 'video', 'xmp',
 ]);
-
-const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 
 /** A value is a safe URL when its scheme is one of these, or when it has no scheme. */
 const SAFE_URL = /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i;
@@ -190,12 +189,6 @@ const cleanNode = (node: Node, base: string | undefined): void => {
     const children = DROPPED_WITH_CONTENT.has(tagName) ? [] : Array.from(node.childNodes);
 
     node.replaceWith(...children);
-
-    return;
-  }
-
-  if (node.namespaceURI !== HTML_NAMESPACE) {
-    node.remove();
 
     return;
   }

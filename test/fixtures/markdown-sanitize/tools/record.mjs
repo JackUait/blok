@@ -1,5 +1,5 @@
-// Records golden.json.gz: every input of inputs.json.gz run through Blok's
-// CURRENT sanitizeBlockHtml (src/markdown/sanitize-html.ts, DOMPurify-based),
+// Records golden.json.gz: every input of inputs.json.gz run through the
+// DOMPurify-based sanitizeBlockHtml (src/markdown/sanitize-html.ts before 7c47c966),
 // once with no base URL (Ask AI) and once with a README base URL (file preview).
 //
 // Re-recording needs the DOMPurify-based sanitize-html.ts and dompurify 3.4.17

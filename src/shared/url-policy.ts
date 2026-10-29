@@ -60,3 +60,29 @@ export const hasUnsafeUrlProtocol = (value: string | null, attribute: string): b
  * @param url - image source
  */
 export const isSafeImageUrl = (url: string): boolean => safeImageSrc(url) !== null;
+
+/**
+ * Whether every sanitizer drops this attribute, whatever its rule says: an
+ * event handler, an iframe's inline document, or a URL attribute holding a
+ * script-capable URL. `values` is a `;`-separated list, so each entry counts;
+ * `poster` is an image, so it takes `src`'s data: rule.
+ * @param name - attribute name
+ * @param value - attribute value
+ */
+export const isScriptCarryingAttribute = (name: string, value: string): boolean => {
+  const lower = name.toLowerCase();
+
+  if (lower.startsWith('on') || lower === 'srcdoc') {
+    return true;
+  }
+
+  if (lower === 'values') {
+    return value.split(';').some((entry) => hasUnsafeUrlProtocol(entry.trim(), lower));
+  }
+
+  if (lower !== 'href' && lower !== 'src' && !OTHER_URL_ATTRIBUTES.has(lower)) {
+    return false;
+  }
+
+  return hasUnsafeUrlProtocol(value, lower === 'poster' ? 'src' : lower);
+};

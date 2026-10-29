@@ -8,12 +8,14 @@
  *
  * Semantics matched against the DOM cleaner (`src/components/utils/html-cleaner.ts`):
  * - non-allowlisted (or `false`) tag → unwrapped, children survive;
- *   `script`/`style` are the exception — dropped with their contents;
+ *   `script`/`style` are the exception — dropped with their contents, and so
+ *   is any element unwrapped inside SVG or MathML;
+ * - an HTML `mglyph`/`malignmark` is removed with its contents;
  * - comments are removed;
  * - whitespace-only text nodes adjacent to block-element siblings are removed;
  * - inline elements containing block elements are unwrapped (invalid markup);
  * - nested block elements are unwrapped;
- * - `on*` attributes never survive;
+ * - `on*`, `srcdoc` and script URLs in URL attributes never survive;
  * - attr-map string values keep the attribute only when the value matches;
  *   FUNCTION-rule string values are forced onto the element afterwards
  *   (mirrors `applyAttributeOverrides`);
@@ -23,7 +25,7 @@
  * src/html imports are confined to `src/view/` — never import this module from
  * the editor bundle graph.
  */
-import { parseFragment, serialize } from '../html';
+import { NS, parseFragment, serialize } from '../html';
 import type { ChildNode as HtmlChildNode, DocumentFragment as HtmlDocumentFragment, Element as HtmlElement, ParentNode as HtmlParentNode, Template as HtmlTemplate, TextNode as HtmlTextNode } from '../html';
 
 import type { SanitizerConfig, SanitizerRule } from '../../types';
@@ -39,7 +41,7 @@ import {
 } from '../shared/inline-normalization-policy';
 import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
 import { repairSurrogates } from './html-text';
-import { hasUnsafeUrlProtocol, OTHER_URL_ATTRIBUTES } from '../shared/url-policy';
+import { hasUnsafeUrlProtocol, isScriptCarryingAttribute } from '../shared/url-policy';
 
 /**
  * Block/inline tag lists copied from the DOM cleaner — they drive its
@@ -47,6 +49,12 @@ import { hasUnsafeUrlProtocol, OTHER_URL_ATTRIBUTES } from '../shared/url-policy
  */
 const BLOCK_ELEMENT_NAMES = new Set(['p', 'li', 'td', 'th', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre']);
 const INLINE_ELEMENT_NAMES = new Set(['a', 'b', 'strong', 'i', 'em', 'sub', 'sup', 'u', 'strike']);
+
+/**
+ * As in html-cleaner.ts: an HTML element of these names reparses as MathML
+ * inside MathML text, so whatever it holds turns into live markup.
+ */
+const REPARSE_AS_MATHML = new Set(['mglyph', 'malignmark']);
 
 const ESCAPE_HTML_MAP: Record<string, string> = {
   '&': '&amp;',
@@ -177,13 +185,21 @@ const removeAttr = (node: HtmlElement, name: string): void => {
  * @param node - element
  */
 const collectText = (node: HtmlElement): string => {
-  return node.childNodes.map((child) => {
-    if (isTextNode(child)) {
-      return child.value;
-    }
+  // A stack, not recursion: deep nesting would overflow the call stack.
+  const pending: HtmlChildNode[] = [ ...node.childNodes ].reverse();
+  const parts: string[] = [];
 
-    return isElementNode(child) ? collectText(child) : '';
-  }).join('');
+  while (pending.length > 0) {
+    const child = pending.pop() as HtmlChildNode;
+
+    if (isTextNode(child)) {
+      parts.push(child.value);
+    } else if (isElementNode(child)) {
+      pending.push(...[ ...child.childNodes ].reverse());
+    }
+  }
+
+  return parts.join('');
 };
 
 interface StyleProperty {
@@ -444,12 +460,12 @@ const resolveRule = (rule: SanitizerRule | undefined, node: HtmlElement): RuleRe
  * @param decision - attribute decision from {@link resolveRule}
  */
 const filterAttributes = (node: HtmlElement, decision: AttrDecision): void => {
-  // As in html-cleaner.ts: event handlers never survive, whatever the rule
-  // says, nor a script URL in a URL attribute other than href/src.
+  // Same check as html-cleaner.ts, so both sanitizers drop the same attributes.
+  // href/src are left to applyUrlPolicy, which runs the URL rewrite first.
   replaceAttrs(node, node.attrs.filter((attr) => {
     const name = attr.name.toLowerCase();
 
-    return !name.startsWith('on') && !(OTHER_URL_ATTRIBUTES.has(name) && hasUnsafeUrlProtocol(attr.value, name));
+    return name === 'href' || name === 'src' || !isScriptCarryingAttribute(name, attr.value);
   }));
 
   if (decision.kind === 'all') {
@@ -484,7 +500,8 @@ const filterAttributes = (node: HtmlElement, decision: AttrDecision): void => {
   }
 
   for (const [name, attrRule] of Object.entries(map)) {
-    if (typeof attrRule === 'string') {
+    // A forced value is written after the filter above, so it gets the same check.
+    if (typeof attrRule === 'string' && !isScriptCarryingAttribute(name, attrRule)) {
       setAttr(node, name.toLowerCase(), attrRule);
     }
   }
@@ -520,91 +537,130 @@ const applyUrlPolicy = (node: HtmlElement, transform: FragmentUrlTransform | und
   }));
 };
 
+/** One parent whose children the walk is cleaning. */
+interface WalkLevel {
+  parent: HtmlParentNode;
+  /** Whether the parent counts as a block element. */
+  parentIsBlock: boolean;
+  /** Whether the parent is a top container: nested-block unwrapping is off there, as the DOM cleaner's root <div> has no parent. */
+  parentIsTop: boolean;
+  /** Next child to visit; back to 0 after any structural change, as the DOM cleaner restarts the walk. */
+  index: number;
+}
+
+/** What one child visit decided: the child to visit next, and the levels to clean before that. */
+interface WalkStep {
+  /** Next child; 0 restarts the walk. */
+  next: number;
+  /** A kept element's children, then its template content (cleaned first, as the last entry). */
+  descend: WalkLevel[];
+}
+
 /**
- * Sanitize a parent's children in place — a direct port of the DOM cleaner's
- * `_sanitize` walk (including its restart-after-mutation behavior, which
- * re-evaluates hoisted children in their new parent context).
- * @param parent - node whose children are sanitized
- * @param config - tag allowlist
- * @param parentIsBlock - whether the parent counts as a block element
- * @param parentIsTop - whether the parent is the top container (nested-block
- * unwrapping is suppressed there, as the DOM cleaner's root <div> has no parent)
+ * A step that goes on among the same children.
+ * @param next - next child to visit
  */
-const sanitizeChildren = (
-  parent: HtmlParentNode,
-  config: SanitizerConfig,
-  parentIsBlock: boolean,
-  parentIsTop: boolean,
-  transform: FragmentUrlTransform | undefined
-): void => {
-  /**
-   * Handle one child; returns the index to continue scanning from
-   * (0 after any structural mutation — the DOM cleaner restarts the parent walk).
-   * @param index - position of the child in parent.childNodes
-   */
-  const sanitizeChildAt = (index: number): number => {
-    const node = parent.childNodes[index];
+const moveTo = (next: number): WalkStep => ({ next, descend: [] });
 
-    if (isTextNode(node)) {
-      const strippable = node.value.trim() === ''
-        && (isBlockElement(elementSibling(parent, index, -1)) || isBlockElement(elementSibling(parent, index, 1)));
+/**
+ * Handle the child at `level.index`.
+ * @param level - parent being cleaned
+ * @param config - tag allowlist
+ * @param transform - optional URL rewrite hook
+ */
+const sanitizeChildAt = (level: WalkLevel, config: SanitizerConfig, transform: FragmentUrlTransform | undefined): WalkStep => {
+  const { parent, parentIsBlock, parentIsTop, index } = level;
+  const node = parent.childNodes[index];
 
-      if (!strippable) {
-        return index + 1;
-      }
+  if (isTextNode(node)) {
+    const strippable = node.value.trim() === ''
+      && (isBlockElement(elementSibling(parent, index, -1)) || isBlockElement(elementSibling(parent, index, 1)));
 
-      parent.childNodes.splice(index, 1);
-
-      return 0;
+    if (!strippable) {
+      return moveTo(index + 1);
     }
 
-    if (node.nodeName === '#comment') {
-      parent.childNodes.splice(index, 1);
+    parent.childNodes.splice(index, 1);
 
-      return 0;
+    return moveTo(0);
+  }
+
+  if (node.nodeName === '#comment') {
+    parent.childNodes.splice(index, 1);
+
+    return moveTo(0);
+  }
+
+  if (!isElementNode(node)) {
+    return moveTo(index + 1);
+  }
+
+  const tagName = node.tagName.toLowerCase();
+  const resolution = resolveRule(Object.hasOwn(config, tagName) ? config[tagName] : undefined, node);
+  const isInvalidInline = INLINE_ELEMENT_NAMES.has(tagName) && node.childNodes.some(isBlockElement);
+  const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
+
+  if (resolution.action === 'unwrap' || isInvalidInline || isNestedBlock) {
+    // Children hoisted into SVG or MathML change namespace on a reparse, so
+    // an HTML <iframe> or <style> there turns its text into live markup.
+    const intoForeign = 'tagName' in parent && parent.namespaceURI !== NS.HTML;
+    // the DOM cleaner drops SCRIPT/STYLE contents instead of hoisting them
+    const hoisted = tagName === 'script' || tagName === 'style' || intoForeign ? [] : node.childNodes;
+
+    for (const child of hoisted) {
+      child.parentNode = parent;
     }
+    parent.childNodes.splice(index, 1, ...hoisted);
 
-    if (!isElementNode(node)) {
-      return index + 1;
-    }
+    return moveTo(0);
+  }
 
-    const tagName = node.tagName.toLowerCase();
-    const resolution = resolveRule(Object.hasOwn(config, tagName) ? config[tagName] : undefined, node);
-    const isInvalidInline = INLINE_ELEMENT_NAMES.has(tagName) && node.childNodes.some(isBlockElement);
-    const isNestedBlock = parentIsBlock && !parentIsTop && BLOCK_ELEMENT_NAMES.has(tagName);
+  if (node.namespaceURI === NS.HTML && REPARSE_AS_MATHML.has(tagName)) {
+    parent.childNodes.splice(index, 1);
 
-    if (resolution.action === 'unwrap' || isInvalidInline || isNestedBlock) {
-      // the DOM cleaner drops SCRIPT/STYLE contents instead of hoisting them
-      const hoisted = tagName === 'script' || tagName === 'style' ? [] : node.childNodes;
+    return moveTo(0);
+  }
 
-      for (const child of hoisted) {
-        child.parentNode = parent;
-      }
-      parent.childNodes.splice(index, 1, ...hoisted);
+  filterAttributes(node, resolution.attrs);
+  applyUrlPolicy(node, transform);
 
-      return 0;
-    }
+  const children: WalkLevel = { parent: node, parentIsBlock: BLOCK_ELEMENT_NAMES.has(tagName), parentIsTop: false, index: 0 };
 
-    filterAttributes(node, resolution.attrs);
-    applyUrlPolicy(node, transform);
-
-    if (isTemplateNode(node)) {
-      // As in the DOM cleaner: the serializer writes template.content, so it must
-      // be sanitized or an allowed <template> would leak arbitrary markup.
-      sanitizeChildren(node.content, config, false, true, transform);
-    }
-
-    sanitizeChildren(node, config, BLOCK_ELEMENT_NAMES.has(tagName), false, transform);
-
-    return index + 1;
+  // As in the DOM cleaner: the serializer writes template.content, so it must
+  // be sanitized or an allowed <template> would leak arbitrary markup.
+  return {
+    next: index + 1,
+    descend: isTemplateNode(node)
+      ? [children, { parent: node.content, parentIsBlock: false, parentIsTop: true, index: 0 }]
+      : [children],
   };
+};
 
-  // A loop, not recursion: an unwrap or removal rescans from 0, and a frame per
-  // step overflowed the stack on about 156 sibling tags.
-  const cursor = { index: 0 };
+/**
+ * Sanitize a fragment in place with html-janitor's walk: after any removal it
+ * restarts from the parent's first child, so hoisted children are judged again
+ * in their new parent. The DOM cleaner gives the same output with fewer visits.
+ *
+ * Depth and restarts both go through an explicit stack, not recursion:
+ * deep nesting or a long run of removable siblings would overflow the call stack.
+ * @param root - fragment whose children are sanitized
+ * @param config - tag allowlist
+ * @param transform - optional URL rewrite hook
+ */
+const sanitizeTree = (root: HtmlParentNode, config: SanitizerConfig, transform: FragmentUrlTransform | undefined): void => {
+  const levels: WalkLevel[] = [ { parent: root, parentIsBlock: true, parentIsTop: true, index: 0 } ];
 
-  while (cursor.index < parent.childNodes.length) {
-    cursor.index = sanitizeChildAt(cursor.index);
+  while (levels.length > 0) {
+    const level = levels[levels.length - 1];
+
+    if (level.index >= level.parent.childNodes.length) {
+      levels.pop();
+    } else {
+      const step = sanitizeChildAt(level, config, transform);
+
+      level.index = step.next;
+      levels.push(...step.descend);
+    }
   }
 };
 
@@ -613,12 +669,21 @@ const sanitizeChildren = (
  * @param node - element to describe
  */
 const inlineViewOf = (node: HtmlElement): InlineElementView => {
-  const hasVoidContentDescendant = (candidate: HtmlElement): boolean =>
-    candidate.childNodes.some(
-      (child) =>
-        isElementNode(child) &&
-        (VOID_CONTENT_TAGS.has(child.tagName.toUpperCase()) || hasVoidContentDescendant(child))
-    );
+  const hasVoidContentDescendant = (candidate: HtmlElement): boolean => {
+    // A stack, not recursion: deep nesting would overflow the call stack.
+    const pending: HtmlElement[] = [ candidate ];
+
+    while (pending.length > 0) {
+      const elements = (pending.pop() as HtmlElement).childNodes.filter(isElementNode);
+
+      if (elements.some((child) => VOID_CONTENT_TAGS.has(child.tagName.toUpperCase()))) {
+        return true;
+      }
+      pending.push(...elements);
+    }
+
+    return false;
+  };
 
   return {
     tagName: node.tagName.toUpperCase(),
@@ -630,18 +695,12 @@ const inlineViewOf = (node: HtmlElement): InlineElementView => {
 };
 
 /**
- * One normalization sweep over a subtree. Mirrors the DOM
- * implementation in `src/components/utils/inline-normalization.ts` — the two
- * share every decision via the policy module, and differ only in tree
- * mechanics. Returns whether anything changed so the caller can run to a
- * fixpoint.
- *
- * `<template>` content is deliberately left alone: the DOM twin normalizes via
- * `querySelectorAll`, which does not descend into template content either.
- * @param parent - subtree to normalize in place
- * @param ancestors - views of the enclosing wrappers, innermost first
+ * Unwrap the children of `parent` that decorate nothing or repeat an ancestor.
+ * @param parent - element whose children are checked
+ * @param ancestors - views of the enclosing wrappers
+ * @returns whether anything was unwrapped
  */
-const normalizeInlineSweep = (parent: HtmlParentNode, ancestors: InlineElementView[]): boolean => {
+const unwrapRedundantChildren = (parent: HtmlParentNode, ancestors: InlineElementView[]): boolean => {
   /**
    * Hoist a redundant wrapper's children into its place.
    * @param node - wrapper to unwrap
@@ -668,18 +727,6 @@ const normalizeInlineSweep = (parent: HtmlParentNode, ancestors: InlineElementVi
   };
 
   /**
-   * Move every child of `right` to the end of `left`.
-   * @param left - element that keeps the children
-   * @param right - element that gives them up
-   */
-  const moveChildren = (left: HtmlElement, right: HtmlElement): void => {
-    for (const child of right.childNodes) {
-      child.parentNode = left;
-      left.childNodes.push(child);
-    }
-  };
-
-  /**
    * Walk the children once, unwrapping wrappers that decorate nothing or
    * repeat an ancestor. Rescans from the same index after a mutation.
    * @param start - child position to start from
@@ -700,6 +747,27 @@ const normalizeInlineSweep = (parent: HtmlParentNode, ancestors: InlineElementVi
     }
 
     return walk.changed;
+  };
+
+  return unwrapFrom(0);
+};
+
+/**
+ * Merge adjacent children of `parent` that express the same formatting.
+ * @param parent - element whose children are merged
+ * @returns whether anything was merged
+ */
+const mergeAdjacentChildren = (parent: HtmlParentNode): boolean => {
+  /**
+   * Move every child of `right` to the end of `left`.
+   * @param left - element that keeps the children
+   * @param right - element that gives them up
+   */
+  const moveChildren = (left: HtmlElement, right: HtmlElement): void => {
+    for (const child of right.childNodes) {
+      child.parentNode = left;
+      left.childNodes.push(child);
+    }
   };
 
   /**
@@ -727,13 +795,74 @@ const normalizeInlineSweep = (parent: HtmlParentNode, ancestors: InlineElementVi
     return walk.changed;
   };
 
-  const unwrapped = unwrapFrom(0);
-  const descended = [...parent.childNodes]
-    .map((node) => isElementNode(node) && normalizeInlineSweep(node, [inlineViewOf(node), ...ancestors]))
-    .some(Boolean);
-  const merged = mergeFrom(0);
+  return mergeFrom(0);
+};
 
-  return unwrapped || descended || merged;
+/** One element the sweep is inside: its children were unwrapped, and are visited one by one. */
+interface SweepFrame {
+  parent: HtmlParentNode;
+  /** The children after the unwrap pass; a child's sweep never changes this list. */
+  children: HtmlChildNode[];
+  next: number;
+  changed: boolean;
+}
+
+/**
+ * One normalization sweep over a subtree. Mirrors the DOM
+ * implementation in `src/components/utils/inline-normalization.ts` — the two
+ * share every decision via the policy module, and differ only in tree
+ * mechanics. Returns whether anything changed so the caller can run to a
+ * fixpoint.
+ *
+ * Each element: unwrap its children, sweep each child, then merge its
+ * children. An explicit stack, not recursion: deep nesting would overflow the
+ * call stack.
+ *
+ * `<template>` content is deliberately left alone: the DOM twin normalizes via
+ * `querySelectorAll`, which does not descend into template content either.
+ * @param root - subtree to normalize in place
+ */
+const normalizeInlineSweep = (root: HtmlParentNode): boolean => {
+  // Outermost first. duplicatesAncestor only asks whether any one matches, so the order does not matter.
+  const ancestors: InlineElementView[] = [];
+  const open = (parent: HtmlParentNode): SweepFrame => {
+    const changed = unwrapRedundantChildren(parent, ancestors);
+
+    return { parent, children: [ ...parent.childNodes ], next: 0, changed };
+  };
+  const frames: SweepFrame[] = [ open(root) ];
+  const result = { changed: false };
+
+  while (frames.length > 0) {
+    const frame = frames[frames.length - 1];
+
+    const child = frame.next < frame.children.length ? frame.children[frame.next] : undefined;
+
+    frame.next += 1;
+
+    if (child !== undefined && isElementNode(child)) {
+      ancestors.push(inlineViewOf(child));
+      frames.push(open(child));
+    }
+
+    if (child !== undefined) {
+      continue;
+    }
+
+    // Merge runs even when something already changed.
+    const changed = mergeAdjacentChildren(frame.parent) || frame.changed;
+
+    frames.pop();
+
+    if (frames.length === 0) {
+      result.changed = changed;
+    } else {
+      ancestors.pop();
+      frames[frames.length - 1].changed ||= changed;
+    }
+  }
+
+  return result.changed;
 };
 
 /**
@@ -745,7 +874,7 @@ const normalizeInlineMarkupFragment = (fragment: HtmlParentNode): void => {
    * @param remaining - sweeps left before the safety valve trips
    */
   const runSweeps = (remaining: number): void => {
-    if (remaining === 0 || !normalizeInlineSweep(fragment, [])) {
+    if (remaining === 0 || !normalizeInlineSweep(fragment)) {
       return;
     }
 
@@ -825,7 +954,7 @@ export const sanitizeHtmlFragment = (
 
   const fragment = parseInContext(html);
 
-  sanitizeChildren(fragment, config, true, true, transform);
+  sanitizeTree(fragment, config, transform);
   normalizeInlineMarkupFragment(fragment);
 
   return serialize(fragment);

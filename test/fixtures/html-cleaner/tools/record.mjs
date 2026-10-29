@@ -97,10 +97,13 @@ const hazardsOf = (input, result) => {
     .filter((el) => el.localName === 'svg' || el.localName === 'math')
     .some((el) => el.querySelector('script, style') !== null);
   if (hasForeignRawText) tags.push('foreign-script-text');
-  // A script or data URL in a URL attribute other than href/src (Blok's URL pass checks those two).
-  const OTHER_URL_ATTRIBUTES = ['xlink:href', 'action', 'formaction', 'background', 'poster', 'cite', 'data', 'codebase', 'longdesc', 'lowsrc', 'dynsrc', 'ping', 'to', 'from', 'values', 'by'];
-  const isScriptUrl = (value) => /^(javascript|vbscript|data):/i.test(value.replace(/[\u0000-\u0020]/g, ''));
-  if (outEls.some((el) => Array.from(el.attributes).some((a) => OTHER_URL_ATTRIBUTES.includes(a.name.toLowerCase()) && isScriptUrl(a.value)))) tags.push('unsafe-url-attr');
+  // A script or data URL in any URL attribute; `values` is a `;`-separated list.
+  // The stripped characters mirror IGNORED_URL_CHARS in src/shared/sanitize-url.ts.
+  const URL_ATTRIBUTES = ['href', 'src', 'xlink:href', 'action', 'formaction', 'background', 'poster', 'cite', 'data', 'codebase', 'longdesc', 'lowsrc', 'dynsrc', 'ping', 'to', 'from', 'values', 'by'];
+  const isScriptUrl = (value) => value.split(';').some((entry) => /^(javascript|vbscript|data|blob):/i.test(entry.replace(/[\u0000-\u0020\u00a0\u2028\u2029\ufeff]/g, '')));
+  if (outEls.some((el) => Array.from(el.attributes).some((a) => (URL_ATTRIBUTES.includes(a.name.toLowerCase()) && isScriptUrl(a.value)) || a.name.toLowerCase() === 'srcdoc'))) tags.push('unsafe-url-attr');
+  // Input-based: unwrapping inside SVG or MathML now drops the children too.
+  if (elementsOf(parse(input)).some((el) => el.localName === 'svg' || el.localName === 'math')) tags.push('foreign-content');
   // Input-based: a <form> whose controls (name or id) shadow one of its members.
   // jsdom does not shadow them, browsers do; the new engine drops such forms whole.
   const isClobberingForm = (form) => Array.from(form.querySelectorAll('[name], [id]'))

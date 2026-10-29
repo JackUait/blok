@@ -3,13 +3,15 @@
  * which it replaced, on everything `test/fixtures/html-cleaner` records, except
  * for these deliberate fixes:
  * - rules are read by own key only (`<constructor>` used to get `Object` as its rule);
- * - `on*` attributes never survive, whatever the rule says, nor a script URL
- *   in a URL attribute other than `href`/`src` (`xlink:href`, `action`, …);
+ * - `on*` and `srcdoc` never survive, whatever the rule says, nor a script
+ *   URL in any URL attribute (`href`, `src`, `xlink:href`, `action`, …);
  * - an allowed `<template>` has its content cleaned too (html-janitor never looked inside);
  * - script/style text is dropped in any namespace, not only HTML;
  * - a `null` rule acts as `{}` instead of throwing on the first attribute;
  * - a `<form>` whose controls shadow its DOM properties (`<input name="nodeName">`)
  *   is removed with its subtree;
+ * - an element unwrapped inside SVG or MathML goes with its children, and an
+ *   HTML `mglyph`/`malignmark` is removed (both re-parse as live markup);
  * - processing instructions are removed (Chromium parses `<!a …>` as one;
  *   html-janitor's walk skipped them and kept them in its output);
  * - removals no longer recurse, so a long run of removable siblings cannot
@@ -20,7 +22,7 @@
  * that reads its siblings or parent can see them stale.
  */
 
-import { hasUnsafeUrlProtocol, OTHER_URL_ATTRIBUTES } from '../../shared/url-policy';
+import { isScriptCarryingAttribute } from '../../shared/url-policy';
 
 import { isClobbered } from './dom-clobbering';
 
@@ -35,6 +37,15 @@ export type CleanerTagRule =
   | ((node: Element) => unknown);
 
 export type CleanerTags = Record<string, CleanerTagRule>;
+
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
+
+/**
+ * In MathML text, these two stay MathML on a reparse while every other tag
+ * becomes HTML. An HTML element of that name can only come from a parse that
+ * will not round-trip (`<math><mtext><table><mglyph><style>`): mutation XSS.
+ */
+const REPARSE_AS_MATHML = new Set([ 'MGLYPH', 'MALIGNMARK' ]);
 
 const BLOCK_ELEMENT_NAMES = ['P', 'LI', 'TD', 'TH', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'PRE'];
 const INLINE_ELEMENT_NAMES = ['A', 'B', 'STRONG', 'I', 'EM', 'SUB', 'SUP', 'U', 'STRIKE'];
@@ -63,7 +74,7 @@ const siblingAfter = (node: ChildNode): ChildNode | null => Reflect.get<Node, 'n
 const rejectsAttribute = (attribute: Attr, allowed: unknown, node: Element): boolean => {
   const name = attribute.name.toLowerCase();
 
-  if (name.startsWith('on') || (OTHER_URL_ATTRIBUTES.has(name) && hasUnsafeUrlProtocol(attribute.value, name))) {
+  if (isScriptCarryingAttribute(name, attribute.value)) {
     return true;
   }
 
@@ -153,6 +164,10 @@ class CleanerRun {
       return this.unwrap(element, parent);
     }
 
+    if (element.namespaceURI === HTML_NAMESPACE && REPARSE_AS_MATHML.has(element.nodeName.toUpperCase())) {
+      return this.remove(parent, element);
+    }
+
     for (const attribute of Array.from(element.attributes)) {
       if (rejectsAttribute(attribute, allowed, element)) {
         element.removeAttribute(attribute.name);
@@ -193,7 +208,10 @@ class CleanerRun {
    */
   private unwrap(element: Element, parent: Element | DocumentFragment): true {
     const tagName = element.nodeName.toUpperCase();
-    const children = tagName === 'SCRIPT' || tagName === 'STYLE' ? [] : Array.from(element.childNodes);
+    // Children moved into SVG or MathML change namespace on a reparse, so an
+    // HTML <iframe> or <style> there turns its text into live markup.
+    const intoForeign = parent instanceof Element && parent.namespaceURI !== HTML_NAMESPACE;
+    const children = tagName === 'SCRIPT' || tagName === 'STYLE' || intoForeign ? [] : Array.from(element.childNodes);
 
     for (const child of children) {
       // A moved child gets a new parent, and the nested-block check depends on it.
@@ -333,8 +351,11 @@ class ChildWalk {
     }
 
     // Every blank in the run has the same neighbours. The one before is not a
-    // block (they would be gone), so only the new one after decides.
-    this.nextElement = elementFrom(resume);
+    // block (they would be gone), so only the one after decides. Only an
+    // element removal can change it, and that clears the cache.
+    if (this.nextElement === undefined) {
+      this.nextElement = elementFrom(resume);
+    }
 
     if (!isBlockElement(this.nextElement)) {
       return true;

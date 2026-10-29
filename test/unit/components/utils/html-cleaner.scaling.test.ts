@@ -37,4 +37,13 @@ describe('cleanHtml on long runs of text nodes', () => {
 
     expect(large).toBeLessThanOrEqual(small * 8 + 8);
   });
+
+  // Each removed comment leaves the run's next element as it was, so one lookup serves the whole run.
+  it('looks up the next element once per run while comments in it are removed', () => {
+    const next = vi.spyOn(CharacterData.prototype, 'nextElementSibling', 'get');
+
+    cleanHtml(`<p>${' <!---->'.repeat(500)}x</p><p>end</p>`, { p: {} });
+
+    expect(next.mock.calls.length).toBeLessThanOrEqual(5);
+  });
 });

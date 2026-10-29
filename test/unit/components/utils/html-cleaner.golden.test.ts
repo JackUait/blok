@@ -81,14 +81,8 @@ describe('cleanHtml parity with html-janitor 2.0.4', { timeout: 300_000 }, () =>
 
   beforeAll(() => {
     results = parityEntries.map(run);
-  }, 300_000);
 
-  it('runs the whole recorded corpus', () => {
-    expect(parityEntries.length).toBeGreaterThan(26000);
-  });
-
-  it('matches html-janitor except where a recorded hazard is fixed on purpose', () => {
-
+    // Re-record: store what the engine gives wherever it differs, then check against that.
     if (process.env.HTML_CLEANER_DEVIATIONS_REWRITE === '1') {
       const changed = results.filter((result, index) => {
         const entry = parityEntries[index];
@@ -97,8 +91,16 @@ describe('cleanHtml parity with html-janitor 2.0.4', { timeout: 300_000 }, () =>
       });
 
       writeFileSync(DEVIATIONS_FILE, gzipSync(`[\n${changed.map((row) => JSON.stringify(row)).join(',\n')}\n]\n`, { level: 9 }));
+      deviations.clear();
+      changed.forEach((row) => deviations.set(row.id, row));
     }
+  }, 300_000);
 
+  it('runs the whole recorded corpus', () => {
+    expect(parityEntries.length).toBeGreaterThan(26000);
+  });
+
+  it('matches html-janitor except where a recorded hazard is fixed on purpose', () => {
     const unexpected = results.flatMap((result, index) => {
       const entry = parityEntries[index];
       const expected = deviations.get(entry.id) ?? { output: entry.output, throws: entry.throws };

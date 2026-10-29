@@ -39,6 +39,31 @@ describe('sanitizeBlockHtml when the parser returns no body', () => {
   });
 });
 
+describe('sanitizeBlockHtml when a form is clobbered', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // A browser lets `<input form="f" name="nodeName">` shadow the form's nodeName,
+  // even from outside the form; jsdom does not, so the test shadows it itself.
+  it('drops the form whole instead of throwing', () => {
+    const parse = DOMParser.prototype.parseFromString;
+
+    vi.spyOn(DOMParser.prototype, 'parseFromString').mockImplementation(function (this: DOMParser, html, type) {
+      const doc = parse.call(this, html, type);
+      const form = doc.querySelector('form');
+
+      if (form !== null) {
+        Object.defineProperty(form, 'nodeName', { value: doc.querySelector('input') });
+      }
+
+      return doc;
+    });
+
+    expect(sanitizeBlockHtml('<form id=f><p>a</p></form><input form=f name=nodeName><p>b</p>')).toBe('<p>b</p>');
+  });
+});
+
 describe('sanitizeBlockHtml when the parsed document is clobbered', () => {
   beforeEach(() => {
     vi.clearAllMocks();

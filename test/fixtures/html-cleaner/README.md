@@ -7,6 +7,7 @@ known hazard that the new engine fixes on purpose.
 ## Files
 
 - `golden.json.gz`: the goldens (gzip, because a plain JSON file this size has run `tsc` out of memory).
+- `deviations.json.gz`: what the new engine gives on the hazard entries where it differs from html-janitor on purpose. `html-cleaner.golden.test.ts` checks every other entry against `golden.json.gz` and these against this file.
 - `configs.ts`: frozen copies of the tag maps. Nothing imports `src/`, so a tool can change its `sanitize` without moving the goldens.
 - `tools/record.mjs`: the recorder.
 - `tools/sources.json.gz`: the frozen inputs the recorder reads.
@@ -44,17 +45,28 @@ new HTMLJanitor({ tags: GOLDEN_CONFIGS[config] ?? GOLDEN_ODD_CONFIGS[config], ..
 - `on-handler`: an attribute starting with `on` survives.
 - `proto-key`: a `<constructor>` tag, or a `constructor` / `__proto__` attribute, survives.
   - The engine looks rules up without an own-property check, and these maps inherit `Object.prototype`.
-  - Blok's `clean()` now passes a prototype-free `tags` object, so it no longer hits this. These entries describe the raw engine only.
+  - The new engine looks rules up by own key only.
 - `template-content`: a `<template>` with content survives. The engine never walks template content.
 - `foreign-script-text`: the input has `<script>` or `<style>` inside `<svg>`/`<math>`.
   - There the tag name is lowercase `script`, so the engine's `SCRIPT` check misses it and keeps what is inside.
 - `clobbering-form`: the input has a `<form>` holding a control whose `name` or `id` is one of the form's own members (`nextSibling`, `attributes`…).
   - Browsers let that control shadow the member; jsdom does not. The new engine drops such a form whole.
-- `unsafe-url-attr`: a URL attribute other than `href`/`src` (`xlink:href`, `action`, `background`…) keeps a `javascript:`/`vbscript:`/`data:` value.
-  - The new engine removes it; Blok's URL pass only ever checked `href` and `src`.
+- `unsafe-url-attr`: a URL attribute (`href`, `src`, `xlink:href`, `action`, `background`, an SVG `values` entry…) keeps a script or `data:` URL, or a `srcdoc` survives.
+  - html-janitor never looked at values; the new engine removes them.
+- `foreign-content`: the input has `<svg>` or `<math>`. The new engine drops the children of a tag it unwraps inside them, and an HTML `mglyph`/`malignmark`.
 - `throws`: the engine threw.
 
 A hazard entry is not a target to copy. The new engine may differ there on purpose.
+
+## Re-record the deviations
+
+After a deliberate engine change, read the new differences, then run:
+
+```sh
+HTML_CLEANER_DEVIATIONS_REWRITE=1 npx vitest run --project unit test/unit/components/utils/html-cleaner.golden.test.ts
+```
+
+It rewrites `deviations.json.gz` and still fails if a difference lands on an entry with no hazard, or leaves an event handler or script URL behind.
 
 ## Re-record
 

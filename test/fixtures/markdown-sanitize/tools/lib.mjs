@@ -26,7 +26,7 @@ export const installDom = () => {
   const { JSDOM } = requireFromRoot('jsdom');
   const { window } = new JSDOM('<!doctype html><html><body></body></html>');
 
-  for (const key of ['window', 'document', 'Node', 'Element', 'HTMLElement', 'DOMParser', 'NodeFilter', 'navigator']) {
+  for (const key of ['window', 'document', 'Document', 'Node', 'Element', 'HTMLElement', 'DOMParser', 'NodeFilter', 'navigator']) {
     Object.defineProperty(globalThis, key, { value: window[key === 'window' ? 'self' : key], configurable: true, writable: true });
   }
 

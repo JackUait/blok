@@ -5,7 +5,8 @@
  * - An object keeps the tag and lists its attributes. `true` keeps one, `false` or a missing key drops it,
  *   and a string keeps it only when the value is exactly that string.
  *
- * `on*` event handler attributes are always dropped.
+ * `on*` event handler attributes and `srcdoc` are always dropped, and so is a `javascript:` or
+ * `data:` URL in any URL attribute (`href`, `src`, `xlink:href`, `action`…).
  *
  * A function rule must depend only on the element and what is inside it, not on its siblings or parent.
  */

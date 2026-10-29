@@ -44,7 +44,7 @@ import {
   type DeepData,
   type DeepSanitizerRule,
 } from '../../shared/sanitize-walk';
-import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
+import { hasUnsafeUrlProtocol, isScriptCarryingAttribute } from '../../shared/url-policy';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 import { normalizeInlineMarkupHtml, renameLegacyBoldHtml } from './inline-normalization';
 
@@ -184,11 +184,14 @@ export const stripUnsafeUrls = (value: string): string => {
   }
 
   if (typeof document !== 'undefined') {
-    const template = document.createElement('template');
+    // A detached <div> of an inert document: the same context the cleaner and
+    // a block's innerHTML parse in. A <template> parses a leading <col> in
+    // column-group mode and drops every later tag, so it would miss them.
+    const root = document.implementation.createHTMLDocument('').createElement('div');
 
-    template.innerHTML = value;
+    root.innerHTML = value;
 
-    const unsafe = Array.from(template.content.querySelectorAll('[href],[src]'))
+    const unsafe = Array.from(root.querySelectorAll('[href],[src]'))
       .flatMap((element) => ['href', 'src']
         .filter((attribute) => hasUnsafeUrlProtocol(element.getAttribute(attribute), attribute))
         .map((attribute) => ({ element,
@@ -207,7 +210,7 @@ export const stripUnsafeUrls = (value: string): string => {
 
     unsafe.forEach(({ element, attribute }) => element.removeAttribute(attribute));
 
-    return template.innerHTML;
+    return root.innerHTML;
   }
 
   return value.replace(
@@ -374,7 +377,8 @@ const applyAttributeOverrides = (html: string, rules: SanitizerConfig): string =
           continue;
         }
 
-        if (isString(attrRule)) {
+        // A forced value is written after every check, so it gets the same one.
+        if (isString(attrRule) && !isScriptCarryingAttribute(attr, attrRule)) {
           element.setAttribute(attr, attrRule);
         }
       }

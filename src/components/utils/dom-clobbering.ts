@@ -5,22 +5,22 @@
  * (as real forms do) does not. Add a member here when either walk starts
  * reading it.
  */
-const WALKED_MEMBERS = new Set([
+const WALKED_MEMBERS = [
   'nodeType', 'nodeName', 'tagName', 'localName', 'namespaceURI', 'ownerDocument',
   'attributes', 'childNodes', 'children', 'firstChild', 'lastChild', 'previousSibling', 'nextSibling',
-  'parentNode', 'parentElement', 'textContent', 'innerHTML', 'outerHTML',
+  'parentNode', 'parentElement',
   'insertBefore', 'appendChild', 'removeChild', 'replaceChild', 'remove', 'replaceWith', 'before', 'after',
   'getAttribute', 'setAttribute', 'hasAttribute', 'removeAttribute', 'compareDocumentPosition', 'contains', 'cloneNode',
-]);
+];
 
 /**
- * A `<form>` exposes each named control (by `name` or `id`) as a property, and
- * those shadow the form's own DOM members: with `<input name="nextSibling">`
- * inside, `form.nextSibling` is that input. A sanitizer that reads such a
- * member walks the wrong nodes, so it must drop the form whole instead.
+ * A `<form>` exposes each named control as a property, and those shadow the
+ * form's own DOM members: with `<input name="nextSibling">` (inside it, or
+ * outside with `form="id"`), `form.nextSibling` is that input. A sanitizer
+ * that reads such a member walks the wrong nodes, so it drops the form whole.
  *
- * The check reads only through prototypes, which the controls cannot shadow.
- * Browsers do not list named controls in `Object.getOwnPropertyNames`.
+ * Each member is compared with what the prototype gives for this form, which
+ * a control cannot shadow.
  * @param element - element to check
  */
 export const isClobbered = (element: Element): boolean => {
@@ -28,10 +28,7 @@ export const isClobbered = (element: Element): boolean => {
     return false;
   }
 
-  // Only the form's own members can be shadowed; its descendants are read as usual.
-  const children = Array.from(Reflect.get<Element, 'children'>(Element.prototype, 'children', element));
-  const named = children.flatMap((child) => [ child, ...Array.from(child.querySelectorAll('[name], [id]')) ]);
+  const prototype = Object.getPrototypeOf(element) as Record<string, unknown>;
 
-  return named.some((control) => [ control.getAttribute('name'), control.getAttribute('id') ]
-    .some((name) => name !== null && WALKED_MEMBERS.has(name)));
+  return WALKED_MEMBERS.some((member) => Reflect.get(element, member) !== Reflect.get(prototype, member, element));
 };

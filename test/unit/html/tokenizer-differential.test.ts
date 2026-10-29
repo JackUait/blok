@@ -134,6 +134,8 @@ const compare = (inputs: string[], start: Start): Tally => {
   const tally: Tally = { compared: 0, parse5Throws: 0, entitiesBug: 0, diffs: [] };
 
   inputs.forEach((html) => {
+    // Ours runs first and on every input: it must not throw where parse5 does.
+    const actual = ours(html, start);
     const expected = theirs(html, start);
 
     if (expected === null) {
@@ -141,7 +143,6 @@ const compare = (inputs: string[], start: Start): Tally => {
 
       return;
     }
-    const actual = ours(html, start);
 
     if (actual.mixed.length > 0) {
       tally.diffs.push(`mixed kinds ${JSON.stringify(html.slice(0, 200))}: ${actual.mixed.join(', ')}`);

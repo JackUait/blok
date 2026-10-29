@@ -26,7 +26,7 @@ const DATA = 0;
 const RCDATA = 1;
 const RAWTEXT = 2;
 const SCRIPT_DATA = 3;
-const PLAINTEXT = 4;
+// 4 is PLAINTEXT, reached only from `state`.
 const TAG_OPEN = 5;
 const END_TAG_OPEN = 6;
 const TAG_NAME = 7;
@@ -97,16 +97,11 @@ const LF = 0x0a;
 const FF = 0x0c;
 const SPACE = 0x20;
 const NUL = 0x00;
-const BANG = 0x21;
 const QUOTE = 0x22;
-const AMPERSAND = 0x26;
 const APOSTROPHE = 0x27;
 const HYPHEN = 0x2d;
 const SOLIDUS = 0x2f;
-const LESS_THAN = 0x3c;
-const EQUALS = 0x3d;
 const GREATER_THAN = 0x3e;
-const QUESTION = 0x3f;
 const RIGHT_BRACKET = 0x5d;
 
 const REPLACEMENT = '�';
@@ -141,6 +136,13 @@ const SINGLE_QUOTED_RUN = new Sticky(/[^'&\0]+/y);
 const UNQUOTED_RUN = new Sticky(/[^\t\n\f &>\0]+/y);
 const COMMENT_RUN = new Sticky(/[^\-<\0]+/y);
 const BOGUS_COMMENT_RUN = new Sticky(/[^>\0]+/y);
+const SCRIPT_ESCAPED_RUN = new Sticky(/[^\-<\t\n\f \0]+/y);
+const CDATA_RUN = new Sticky(/[^\]\t\n\f \0]+/y);
+// Fast paths for the common shapes: a lowercase name, `name="value"` without
+// references. Anything else falls back to the state machine where it stands.
+const LOWER_TAG_NAME_RUN = new Sticky(/[a-z][^\t\n\f />\0A-Z]*/y);
+const LOWER_END_TAG = new Sticky(/[a-z][^\t\n\f />\0A-Z]*>/y);
+const SIMPLE_ATTRIBUTE = /[\t\n\f ]+([a-z][^\t\n\f />=\0"'<A-Z]*)(?:="([^"&\0]*)")?/y;
 const UPPER = /[A-Z]/;
 const UPPER_RUNS = /[A-Z]+/g;
 // No `i` flag: some engines fold non-ASCII letters (like the Kelvin sign) onto ASCII ones.
@@ -335,75 +337,77 @@ export class Tokenizer implements TokenizerControl {
 
   // Dispatch
 
+  // Cases are number literals, hot states first: an interpreter tests them in
+  // order, and a named constant costs a lookup per case.
   private call(cp: number): void {
     switch (this.current) {
-      case DATA: return this.data(cp);
-      case RCDATA: return this.rcdata(cp);
-      case RAWTEXT: return this.rawtext(cp, RAWTEXT_LESS_THAN_SIGN);
-      case SCRIPT_DATA: return this.rawtext(cp, SCRIPT_DATA_LESS_THAN_SIGN);
-      case PLAINTEXT: return this.plaintext(cp);
-      case TAG_OPEN: return this.tagOpen(cp);
-      case END_TAG_OPEN: return this.endTagOpen(cp);
-      case TAG_NAME: return this.tagName(cp);
-      case RCDATA_LESS_THAN_SIGN: return this.textLessThanSign(cp, RCDATA_END_TAG_OPEN, RCDATA);
-      case RCDATA_END_TAG_OPEN: return this.textEndTagOpen(cp, RCDATA);
-      case RAWTEXT_LESS_THAN_SIGN: return this.textLessThanSign(cp, RAWTEXT_END_TAG_OPEN, RAWTEXT);
-      case RAWTEXT_END_TAG_OPEN: return this.textEndTagOpen(cp, RAWTEXT);
-      case SCRIPT_DATA_LESS_THAN_SIGN: return this.scriptDataLessThanSign(cp);
-      case SCRIPT_DATA_END_TAG_OPEN: return this.textEndTagOpen(cp, SCRIPT_DATA);
-      case SCRIPT_DATA_ESCAPE_START: return this.scriptDataEscapeStart(cp, SCRIPT_DATA_ESCAPE_START_DASH);
-      case SCRIPT_DATA_ESCAPE_START_DASH: return this.scriptDataEscapeStart(cp, SCRIPT_DATA_ESCAPED_DASH_DASH);
-      case SCRIPT_DATA_ESCAPED: return this.scriptDataEscaped(cp);
-      case SCRIPT_DATA_ESCAPED_DASH: return this.scriptDataEscapedDash(cp);
-      case SCRIPT_DATA_ESCAPED_DASH_DASH: return this.scriptDataEscapedDashDash(cp);
-      case SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN: return this.scriptDataEscapedLessThanSign(cp);
-      case SCRIPT_DATA_ESCAPED_END_TAG_OPEN: return this.textEndTagOpen(cp, SCRIPT_DATA_ESCAPED);
-      case SCRIPT_DATA_DOUBLE_ESCAPE_START: return this.scriptDataDoubleEscapeSwitch(cp, SCRIPT_DATA_DOUBLE_ESCAPED, SCRIPT_DATA_ESCAPED);
-      case SCRIPT_DATA_DOUBLE_ESCAPED: return this.scriptDataDoubleEscaped(cp);
-      case SCRIPT_DATA_DOUBLE_ESCAPED_DASH: return this.scriptDataDoubleEscapedDash(cp);
-      case SCRIPT_DATA_DOUBLE_ESCAPED_DASH_DASH: return this.scriptDataDoubleEscapedDashDash(cp);
-      case SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN: return this.scriptDataDoubleEscapedLessThanSign(cp);
-      case SCRIPT_DATA_DOUBLE_ESCAPE_END: return this.scriptDataDoubleEscapeSwitch(cp, SCRIPT_DATA_ESCAPED, SCRIPT_DATA_DOUBLE_ESCAPED);
-      case BEFORE_ATTRIBUTE_NAME: return this.beforeAttributeName(cp);
-      case ATTRIBUTE_NAME: return this.attributeName(cp);
-      case AFTER_ATTRIBUTE_NAME: return this.afterAttributeName(cp);
-      case BEFORE_ATTRIBUTE_VALUE: return this.beforeAttributeValue(cp);
-      case ATTRIBUTE_VALUE_DOUBLE_QUOTED: return this.attributeValueQuoted(cp, QUOTE, DOUBLE_QUOTED_RUN, ATTRIBUTE_VALUE_DOUBLE_QUOTED);
-      case ATTRIBUTE_VALUE_SINGLE_QUOTED: return this.attributeValueQuoted(cp, APOSTROPHE, SINGLE_QUOTED_RUN, ATTRIBUTE_VALUE_SINGLE_QUOTED);
-      case ATTRIBUTE_VALUE_UNQUOTED: return this.attributeValueUnquoted(cp);
-      case AFTER_ATTRIBUTE_VALUE_QUOTED: return this.afterAttributeValueQuoted(cp);
-      case SELF_CLOSING_START_TAG: return this.selfClosingStartTag(cp);
-      case BOGUS_COMMENT: return this.bogusComment(cp);
-      case MARKUP_DECLARATION_OPEN: return this.markupDeclarationOpen(cp);
-      case COMMENT_START: return this.commentStart(cp);
-      case COMMENT_START_DASH: return this.commentStartDash(cp);
-      case COMMENT: return this.commentState(cp);
-      case COMMENT_LESS_THAN_SIGN: return this.commentLessThanSign(cp);
-      case COMMENT_LESS_THAN_SIGN_BANG: return this.commentLessThanSignBang(cp);
-      case COMMENT_LESS_THAN_SIGN_BANG_DASH: return this.commentLessThanSignBangDash(cp);
-      case COMMENT_LESS_THAN_SIGN_BANG_DASH_DASH: return this.commentLessThanSignBangDashDash(cp);
-      case COMMENT_END_DASH: return this.commentEndDash(cp);
-      case COMMENT_END: return this.commentEnd(cp);
-      case COMMENT_END_BANG: return this.commentEndBang(cp);
-      case DOCTYPE: return this.doctypeState(cp);
-      case BEFORE_DOCTYPE_NAME: return this.beforeDoctypeName(cp);
-      case DOCTYPE_NAME: return this.doctypeName(cp);
-      case AFTER_DOCTYPE_NAME: return this.afterDoctypeName(cp);
-      case AFTER_DOCTYPE_PUBLIC_KEYWORD: return this.afterDoctypeKeyword(cp, true);
-      case BEFORE_DOCTYPE_PUBLIC_IDENTIFIER: return this.beforeDoctypeIdentifier(cp, true);
-      case DOCTYPE_PUBLIC_IDENTIFIER_DOUBLE_QUOTED: return this.doctypeIdentifier(cp, QUOTE, true);
-      case DOCTYPE_PUBLIC_IDENTIFIER_SINGLE_QUOTED: return this.doctypeIdentifier(cp, APOSTROPHE, true);
-      case AFTER_DOCTYPE_PUBLIC_IDENTIFIER: return this.afterDoctypePublicIdentifier(cp);
-      case BETWEEN_DOCTYPE_PUBLIC_AND_SYSTEM_IDENTIFIERS: return this.betweenDoctypePublicAndSystemIdentifiers(cp);
-      case AFTER_DOCTYPE_SYSTEM_KEYWORD: return this.afterDoctypeKeyword(cp, false);
-      case BEFORE_DOCTYPE_SYSTEM_IDENTIFIER: return this.beforeDoctypeIdentifier(cp, false);
-      case DOCTYPE_SYSTEM_IDENTIFIER_DOUBLE_QUOTED: return this.doctypeIdentifier(cp, QUOTE, false);
-      case DOCTYPE_SYSTEM_IDENTIFIER_SINGLE_QUOTED: return this.doctypeIdentifier(cp, APOSTROPHE, false);
-      case AFTER_DOCTYPE_SYSTEM_IDENTIFIER: return this.afterDoctypeSystemIdentifier(cp);
-      case BOGUS_DOCTYPE: return this.bogusDoctype(cp);
-      case CDATA_SECTION: return this.cdataSection(cp);
-      case CDATA_SECTION_BRACKET: return this.cdataSectionBracket(cp);
-      case CDATA_SECTION_END: return this.cdataSectionEnd(cp);
+      case 0 /* DATA */: return this.data(cp);
+      case 5 /* TAG_OPEN */: return this.tagOpen(cp);
+      case 7 /* TAG_NAME */: return this.tagName(cp);
+      case 6 /* END_TAG_OPEN */: return this.endTagOpen(cp);
+      case 27 /* BEFORE_ATTRIBUTE_NAME */: return this.beforeAttributeName(cp);
+      case 28 /* ATTRIBUTE_NAME */: return this.attributeName(cp);
+      case 30 /* BEFORE_ATTRIBUTE_VALUE */: return this.beforeAttributeValue(cp);
+      case 31 /* ATTRIBUTE_VALUE_DOUBLE_QUOTED */: return this.attributeValueQuoted(cp, QUOTE, DOUBLE_QUOTED_RUN, ATTRIBUTE_VALUE_DOUBLE_QUOTED);
+      case 34 /* AFTER_ATTRIBUTE_VALUE_QUOTED */: return this.afterAttributeValueQuoted(cp);
+      case 32 /* ATTRIBUTE_VALUE_SINGLE_QUOTED */: return this.attributeValueQuoted(cp, APOSTROPHE, SINGLE_QUOTED_RUN, ATTRIBUTE_VALUE_SINGLE_QUOTED);
+      case 33 /* ATTRIBUTE_VALUE_UNQUOTED */: return this.attributeValueUnquoted(cp);
+      case 29 /* AFTER_ATTRIBUTE_NAME */: return this.afterAttributeName(cp);
+      case 35 /* SELF_CLOSING_START_TAG */: return this.selfClosingStartTag(cp);
+      case 1 /* RCDATA */: return this.rcdata(cp);
+      case 2 /* RAWTEXT */: return this.rawtext(cp, RAWTEXT_LESS_THAN_SIGN);
+      case 3 /* SCRIPT_DATA */: return this.rawtext(cp, SCRIPT_DATA_LESS_THAN_SIGN);
+      case 4 /* PLAINTEXT */: return this.plaintext(cp);
+      case 40 /* COMMENT */: return this.commentState(cp);
+      case 38 /* COMMENT_START */: return this.commentStart(cp);
+      case 45 /* COMMENT_END_DASH */: return this.commentEndDash(cp);
+      case 46 /* COMMENT_END */: return this.commentEnd(cp);
+      case 37 /* MARKUP_DECLARATION_OPEN */: return this.markupDeclarationOpen(cp);
+      case 36 /* BOGUS_COMMENT */: return this.bogusComment(cp);
+      case 8 /* RCDATA_LESS_THAN_SIGN */: return this.textLessThanSign(cp, RCDATA_END_TAG_OPEN, RCDATA);
+      case 9 /* RCDATA_END_TAG_OPEN */: return this.textEndTagOpen(cp, RCDATA);
+      case 10 /* RAWTEXT_LESS_THAN_SIGN */: return this.textLessThanSign(cp, RAWTEXT_END_TAG_OPEN, RAWTEXT);
+      case 11 /* RAWTEXT_END_TAG_OPEN */: return this.textEndTagOpen(cp, RAWTEXT);
+      case 12 /* SCRIPT_DATA_LESS_THAN_SIGN */: return this.scriptDataLessThanSign(cp);
+      case 13 /* SCRIPT_DATA_END_TAG_OPEN */: return this.textEndTagOpen(cp, SCRIPT_DATA);
+      case 14 /* SCRIPT_DATA_ESCAPE_START */: return this.scriptDataEscapeStart(cp, SCRIPT_DATA_ESCAPE_START_DASH);
+      case 15 /* SCRIPT_DATA_ESCAPE_START_DASH */: return this.scriptDataEscapeStart(cp, SCRIPT_DATA_ESCAPED_DASH_DASH);
+      case 16 /* SCRIPT_DATA_ESCAPED */: return this.scriptDataEscaped(cp);
+      case 17 /* SCRIPT_DATA_ESCAPED_DASH */: return this.scriptDataEscapedDash(cp);
+      case 18 /* SCRIPT_DATA_ESCAPED_DASH_DASH */: return this.scriptDataEscapedDashDash(cp);
+      case 19 /* SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN */: return this.scriptDataEscapedLessThanSign(cp);
+      case 20 /* SCRIPT_DATA_ESCAPED_END_TAG_OPEN */: return this.textEndTagOpen(cp, SCRIPT_DATA_ESCAPED);
+      case 21 /* SCRIPT_DATA_DOUBLE_ESCAPE_START */: return this.scriptDataDoubleEscapeSwitch(cp, SCRIPT_DATA_DOUBLE_ESCAPED, SCRIPT_DATA_ESCAPED);
+      case 22 /* SCRIPT_DATA_DOUBLE_ESCAPED */: return this.scriptDataDoubleEscaped(cp);
+      case 23 /* SCRIPT_DATA_DOUBLE_ESCAPED_DASH */: return this.scriptDataDoubleEscapedDash(cp);
+      case 24 /* SCRIPT_DATA_DOUBLE_ESCAPED_DASH_DASH */: return this.scriptDataDoubleEscapedDashDash(cp);
+      case 25 /* SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN */: return this.scriptDataDoubleEscapedLessThanSign(cp);
+      case 26 /* SCRIPT_DATA_DOUBLE_ESCAPE_END */: return this.scriptDataDoubleEscapeSwitch(cp, SCRIPT_DATA_ESCAPED, SCRIPT_DATA_DOUBLE_ESCAPED);
+      case 39 /* COMMENT_START_DASH */: return this.commentStartDash(cp);
+      case 41 /* COMMENT_LESS_THAN_SIGN */: return this.commentLessThanSign(cp);
+      case 42 /* COMMENT_LESS_THAN_SIGN_BANG */: return this.commentLessThanSignBang(cp);
+      case 43 /* COMMENT_LESS_THAN_SIGN_BANG_DASH */: return this.commentLessThanSignBangDash(cp);
+      case 44 /* COMMENT_LESS_THAN_SIGN_BANG_DASH_DASH */: return this.commentLessThanSignBangDashDash(cp);
+      case 47 /* COMMENT_END_BANG */: return this.commentEndBang(cp);
+      case 48 /* DOCTYPE */: return this.doctypeState(cp);
+      case 49 /* BEFORE_DOCTYPE_NAME */: return this.beforeDoctypeName(cp);
+      case 50 /* DOCTYPE_NAME */: return this.doctypeName(cp);
+      case 51 /* AFTER_DOCTYPE_NAME */: return this.afterDoctypeName(cp);
+      case 52 /* AFTER_DOCTYPE_PUBLIC_KEYWORD */: return this.afterDoctypeKeyword(cp, true);
+      case 53 /* BEFORE_DOCTYPE_PUBLIC_IDENTIFIER */: return this.beforeDoctypeIdentifier(cp, true);
+      case 54 /* DOCTYPE_PUBLIC_IDENTIFIER_DOUBLE_QUOTED */: return this.doctypeIdentifier(cp, QUOTE, true);
+      case 55 /* DOCTYPE_PUBLIC_IDENTIFIER_SINGLE_QUOTED */: return this.doctypeIdentifier(cp, APOSTROPHE, true);
+      case 56 /* AFTER_DOCTYPE_PUBLIC_IDENTIFIER */: return this.afterDoctypePublicIdentifier(cp);
+      case 57 /* BETWEEN_DOCTYPE_PUBLIC_AND_SYSTEM_IDENTIFIERS */: return this.betweenDoctypePublicAndSystemIdentifiers(cp);
+      case 58 /* AFTER_DOCTYPE_SYSTEM_KEYWORD */: return this.afterDoctypeKeyword(cp, false);
+      case 59 /* BEFORE_DOCTYPE_SYSTEM_IDENTIFIER */: return this.beforeDoctypeIdentifier(cp, false);
+      case 60 /* DOCTYPE_SYSTEM_IDENTIFIER_DOUBLE_QUOTED */: return this.doctypeIdentifier(cp, QUOTE, false);
+      case 61 /* DOCTYPE_SYSTEM_IDENTIFIER_SINGLE_QUOTED */: return this.doctypeIdentifier(cp, APOSTROPHE, false);
+      case 62 /* AFTER_DOCTYPE_SYSTEM_IDENTIFIER */: return this.afterDoctypeSystemIdentifier(cp);
+      case 63 /* BOGUS_DOCTYPE */: return this.bogusDoctype(cp);
+      case 64 /* CDATA_SECTION */: return this.cdataSection(cp);
+      case 65 /* CDATA_SECTION_BRACKET */: return this.cdataSectionBracket(cp);
+      case 66 /* CDATA_SECTION_END */: return this.cdataSectionEnd(cp);
       default: throw new Error(`Unknown tokenizer state ${this.current}`);
     }
   }
@@ -412,13 +416,104 @@ export class Tokenizer implements TokenizerControl {
 
   private data(cp: number): void {
     switch (cp) {
-      case LESS_THAN: this.current = TAG_OPEN; break;
-      case AMPERSAND: this.startCharRef(DATA); break;
-      case NUL: this.emitRun(TokenType.NULL_CHARACTER, NUL_RUN); break;
-      case EOF: this.emitEof(); break;
-      case SPACE: case LF: case TAB: case FF: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      case 0x3c /* LESS_THAN */: this.dataLessThan(); break;
+      case 0x26 /* AMPERSAND */: this.startCharRef(DATA); break;
+      case 0x00 /* NUL */: this.emitRun(TokenType.NULL_CHARACTER, NUL_RUN); break;
+      case -1 /* EOF */: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitWhitespace(); break;
       default: this.emitRun(TokenType.CHARACTER, DATA_RUN);
     }
+  }
+
+  /** Whitespace just consumed: one character needs no regex, and one space between words is the common case. */
+  private emitWhitespace(): void {
+    const next = this.html.charCodeAt(this.pos);
+
+    if (next === 0x20 || next === 0x0a || next === 0x09 || next === 0x0c) {
+      this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN);
+    } else {
+      this.emitChars(TokenType.WHITESPACE_CHARACTER, this.html.charAt(this.pos - 1));
+    }
+  }
+
+  /** `<` in data: read a plain start or end tag at once, else go on in the tag open state. */
+  private dataLessThan(): void {
+    const html = this.html;
+    const at = this.pos;
+    const next = html.charCodeAt(at);
+
+    if (next >= 0x61 && next <= 0x7a) {
+      this.startTag(TokenType.START_TAG);
+      this.pos = LOWER_TAG_NAME_RUN.end(html, at);
+      this.tag.tagName = html.slice(at, this.pos);
+      this.current = TAG_NAME;
+      this.fastAttributes();
+
+      return;
+    }
+    const end = next === 0x2f ? LOWER_END_TAG.end(html, at + 1) : at;
+
+    if (end === at || end === at + 1) {
+      this.current = TAG_OPEN;
+
+      return;
+    }
+    this.startTag(TokenType.END_TAG);
+    this.tag.tagName = html.slice(at + 1, end - 1);
+    this.pos = end;
+    this.emitTag();
+  }
+
+  /**
+   * After a tag name or a quoted value, with `pos` on the next unread
+   * character: reads `name="value"` pairs and the closing `>` or `/>`.
+   * Stops where the input takes another shape, in a state that goes on from there.
+   */
+  private fastAttributes(): void {
+    const html = this.html;
+
+    for (;;) {
+      const next = html.charCodeAt(this.pos);
+
+      if (next === 0x3e) {
+        this.pos++;
+        this.emitTag();
+
+        return;
+      }
+      if (next === 0x2f && html.charCodeAt(this.pos + 1) === 0x3e) {
+        this.pos += 2;
+        this.tag.selfClosing = true;
+        this.emitTag();
+
+        return;
+      }
+      if (!this.simpleAttribute()) {
+        return;
+      }
+    }
+  }
+
+  /** Reads one `name="value"`; a bare name is left in the attribute name state. */
+  private simpleAttribute(): boolean {
+    SIMPLE_ATTRIBUTE.lastIndex = this.pos;
+    const match = SIMPLE_ATTRIBUTE.exec(this.html);
+
+    if (match === null) {
+      return false;
+    }
+    this.pos = SIMPLE_ATTRIBUTE.lastIndex;
+    this.startAttr(match[1]);
+    if (match[2] === undefined) {
+      this.current = ATTRIBUTE_NAME;
+
+      return false;
+    }
+    this.attr.value = match[2];
+    this.leaveAttrName();
+    this.current = AFTER_ATTRIBUTE_VALUE_QUOTED;
+
+    return true;
   }
 
   /** A NUL in RCDATA, RAWTEXT, script data or PLAINTEXT reads as U+FFFD. */
@@ -431,11 +526,11 @@ export class Tokenizer implements TokenizerControl {
 
   private rcdata(cp: number): void {
     switch (cp) {
-      case AMPERSAND: this.startCharRef(RCDATA); break;
-      case LESS_THAN: this.current = RCDATA_LESS_THAN_SIGN; break;
-      case NUL: this.emitReplacementRun(); break;
-      case EOF: this.emitEof(); break;
-      case SPACE: case LF: case TAB: case FF: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      case 0x26 /* AMPERSAND */: this.startCharRef(RCDATA); break;
+      case 0x3c /* LESS_THAN */: this.current = RCDATA_LESS_THAN_SIGN; break;
+      case 0x00 /* NUL */: this.emitReplacementRun(); break;
+      case -1 /* EOF */: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
       default: this.emitRun(TokenType.CHARACTER, DATA_RUN);
     }
   }
@@ -443,20 +538,29 @@ export class Tokenizer implements TokenizerControl {
   /** RAWTEXT and script data: no references, `<` may start the end tag. */
   private rawtext(cp: number, lessThanState: number): void {
     switch (cp) {
-      case LESS_THAN: this.current = lessThanState; break;
-      case NUL: this.emitReplacementRun(); break;
-      case EOF: this.emitEof(); break;
-      case SPACE: case LF: case TAB: case FF: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      case 0x3c /* LESS_THAN */: this.current = lessThanState; break;
+      case 0x00 /* NUL */: this.emitReplacementRun(); break;
+      case -1 /* EOF */: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
       default: this.emitRun(TokenType.CHARACTER, RAWTEXT_RUN);
     }
   }
 
   private plaintext(cp: number): void {
     switch (cp) {
-      case NUL: this.emitReplacementRun(); break;
-      case EOF: this.emitEof(); break;
-      case SPACE: case LF: case TAB: case FF: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
+      case 0x00 /* NUL */: this.emitReplacementRun(); break;
+      case -1 /* EOF */: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.emitRun(TokenType.WHITESPACE_CHARACTER, WHITESPACE_RUN); break;
       default: this.emitRun(TokenType.CHARACTER, PLAINTEXT_RUN);
+    }
+  }
+
+  /** Text or whitespace just consumed, emitted as is with the rest of its run. */
+  private emitTextRun(cp: number, text: Sticky): void {
+    if (isWhitespace(cp)) {
+      this.emitWhitespace();
+    } else {
+      this.emitRun(TokenType.CHARACTER, text);
     }
   }
 
@@ -480,14 +584,14 @@ export class Tokenizer implements TokenizerControl {
       return;
     }
     switch (cp) {
-      case BANG: this.current = MARKUP_DECLARATION_OPEN; break;
-      case SOLIDUS: this.current = END_TAG_OPEN; break;
-      case QUESTION:
+      case 0x21 /* BANG */: this.current = MARKUP_DECLARATION_OPEN; break;
+      case 0x2f /* SOLIDUS */: this.current = END_TAG_OPEN; break;
+      case 0x3f /* QUESTION */:
         this.startComment('');
         this.current = BOGUS_COMMENT;
         this.bogusComment(cp);
         break;
-      case EOF:
+      case -1 /* EOF */:
         this.emitChars(TokenType.CHARACTER, '<');
         this.emitEof();
         break;
@@ -507,8 +611,8 @@ export class Tokenizer implements TokenizerControl {
       return;
     }
     switch (cp) {
-      case GREATER_THAN: this.current = DATA; break;
-      case EOF:
+      case 0x3e /* GREATER_THAN */: this.current = DATA; break;
+      case -1 /* EOF */:
         this.emitChars(TokenType.CHARACTER, '</');
         this.emitEof();
         break;
@@ -521,11 +625,11 @@ export class Tokenizer implements TokenizerControl {
 
   private tagName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: this.current = BEFORE_ATTRIBUTE_NAME; break;
-      case SOLIDUS: this.current = SELF_CLOSING_START_TAG; break;
-      case GREATER_THAN: this.emitTag(); break;
-      case NUL: this.tag.tagName += REPLACEMENT; break;
-      case EOF: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.current = BEFORE_ATTRIBUTE_NAME; break;
+      case 0x2f /* SOLIDUS */: this.current = SELF_CLOSING_START_TAG; break;
+      case 0x3e /* GREATER_THAN */: this.emitTag(); break;
+      case 0x00 /* NUL */: this.tag.tagName += REPLACEMENT; break;
+      case -1 /* EOF */: this.emitEof(); break;
       default: {
         const start = this.pos - 1;
 
@@ -593,8 +697,8 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataLessThanSign(cp: number): void {
     switch (cp) {
-      case SOLIDUS: this.current = SCRIPT_DATA_END_TAG_OPEN; break;
-      case BANG:
+      case 0x2f /* SOLIDUS */: this.current = SCRIPT_DATA_END_TAG_OPEN; break;
+      case 0x21 /* BANG */:
         this.current = SCRIPT_DATA_ESCAPE_START;
         this.emitChars(TokenType.CHARACTER, '<!');
         break;
@@ -618,29 +722,29 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataEscaped(cp: number): void {
     switch (cp) {
-      case HYPHEN:
+      case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_ESCAPED_DASH;
         this.emitChars(TokenType.CHARACTER, '-');
         break;
-      case LESS_THAN: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
-      case NUL: this.emitChars(TokenType.CHARACTER, REPLACEMENT); break;
-      case EOF: this.emitEof(); break;
-      default: this.emitCodePoint(cp);
+      case 0x3c /* LESS_THAN */: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
+      case 0x00 /* NUL */: this.emitChars(TokenType.CHARACTER, REPLACEMENT); break;
+      case -1 /* EOF */: this.emitEof(); break;
+      default: this.emitTextRun(cp, SCRIPT_ESCAPED_RUN);
     }
   }
 
   private scriptDataEscapedDash(cp: number): void {
     switch (cp) {
-      case HYPHEN:
+      case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_ESCAPED_DASH_DASH;
         this.emitChars(TokenType.CHARACTER, '-');
         break;
-      case LESS_THAN: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
-      case NUL:
+      case 0x3c /* LESS_THAN */: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
+      case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_ESCAPED;
         this.emitChars(TokenType.CHARACTER, REPLACEMENT);
         break;
-      case EOF: this.emitEof(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.current = SCRIPT_DATA_ESCAPED;
         this.emitCodePoint(cp);
@@ -649,17 +753,17 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataEscapedDashDash(cp: number): void {
     switch (cp) {
-      case HYPHEN: this.emitChars(TokenType.CHARACTER, '-'); break;
-      case LESS_THAN: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
-      case GREATER_THAN:
+      case 0x2d /* HYPHEN */: this.emitChars(TokenType.CHARACTER, '-'); break;
+      case 0x3c /* LESS_THAN */: this.current = SCRIPT_DATA_ESCAPED_LESS_THAN_SIGN; break;
+      case 0x3e /* GREATER_THAN */:
         this.current = SCRIPT_DATA;
         this.emitChars(TokenType.CHARACTER, '>');
         break;
-      case NUL:
+      case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_ESCAPED;
         this.emitChars(TokenType.CHARACTER, REPLACEMENT);
         break;
-      case EOF: this.emitEof(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.current = SCRIPT_DATA_ESCAPED;
         this.emitCodePoint(cp);
@@ -696,35 +800,35 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataDoubleEscaped(cp: number): void {
     switch (cp) {
-      case HYPHEN:
+      case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_DASH;
         this.emitChars(TokenType.CHARACTER, '-');
         break;
-      case LESS_THAN:
+      case 0x3c /* LESS_THAN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN;
         this.emitChars(TokenType.CHARACTER, '<');
         break;
-      case NUL: this.emitChars(TokenType.CHARACTER, REPLACEMENT); break;
-      case EOF: this.emitEof(); break;
-      default: this.emitCodePoint(cp);
+      case 0x00 /* NUL */: this.emitChars(TokenType.CHARACTER, REPLACEMENT); break;
+      case -1 /* EOF */: this.emitEof(); break;
+      default: this.emitTextRun(cp, SCRIPT_ESCAPED_RUN);
     }
   }
 
   private scriptDataDoubleEscapedDash(cp: number): void {
     switch (cp) {
-      case HYPHEN:
+      case 0x2d /* HYPHEN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_DASH_DASH;
         this.emitChars(TokenType.CHARACTER, '-');
         break;
-      case LESS_THAN:
+      case 0x3c /* LESS_THAN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN;
         this.emitChars(TokenType.CHARACTER, '<');
         break;
-      case NUL:
+      case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED;
         this.emitChars(TokenType.CHARACTER, REPLACEMENT);
         break;
-      case EOF: this.emitEof(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED;
         this.emitCodePoint(cp);
@@ -733,20 +837,20 @@ export class Tokenizer implements TokenizerControl {
 
   private scriptDataDoubleEscapedDashDash(cp: number): void {
     switch (cp) {
-      case HYPHEN: this.emitChars(TokenType.CHARACTER, '-'); break;
-      case LESS_THAN:
+      case 0x2d /* HYPHEN */: this.emitChars(TokenType.CHARACTER, '-'); break;
+      case 0x3c /* LESS_THAN */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED_LESS_THAN_SIGN;
         this.emitChars(TokenType.CHARACTER, '<');
         break;
-      case GREATER_THAN:
+      case 0x3e /* GREATER_THAN */:
         this.current = SCRIPT_DATA;
         this.emitChars(TokenType.CHARACTER, '>');
         break;
-      case NUL:
+      case 0x00 /* NUL */:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED;
         this.emitChars(TokenType.CHARACTER, REPLACEMENT);
         break;
-      case EOF: this.emitEof(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.current = SCRIPT_DATA_DOUBLE_ESCAPED;
         this.emitCodePoint(cp);
@@ -768,12 +872,12 @@ export class Tokenizer implements TokenizerControl {
 
   private beforeAttributeName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case SOLIDUS: case GREATER_THAN: case EOF:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x2f /* SOLIDUS */: case 0x3e /* GREATER_THAN */: case -1 /* EOF */:
         this.current = AFTER_ATTRIBUTE_NAME;
         this.afterAttributeName(cp);
         break;
-      case EQUALS:
+      case 0x3d /* EQUALS */:
         this.startAttr('=');
         this.current = ATTRIBUTE_NAME;
         break;
@@ -786,16 +890,16 @@ export class Tokenizer implements TokenizerControl {
 
   private attributeName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: case SOLIDUS: case GREATER_THAN: case EOF:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: case 0x2f /* SOLIDUS */: case 0x3e /* GREATER_THAN */: case -1 /* EOF */:
         this.leaveAttrName();
         this.current = AFTER_ATTRIBUTE_NAME;
         this.afterAttributeName(cp);
         break;
-      case EQUALS:
+      case 0x3d /* EQUALS */:
         this.leaveAttrName();
         this.current = BEFORE_ATTRIBUTE_VALUE;
         break;
-      case NUL: this.attr.name += REPLACEMENT; break;
+      case 0x00 /* NUL */: this.attr.name += REPLACEMENT; break;
       default: {
         const start = this.pos - 1;
 
@@ -807,11 +911,11 @@ export class Tokenizer implements TokenizerControl {
 
   private afterAttributeName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case SOLIDUS: this.current = SELF_CLOSING_START_TAG; break;
-      case EQUALS: this.current = BEFORE_ATTRIBUTE_VALUE; break;
-      case GREATER_THAN: this.emitTag(); break;
-      case EOF: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x2f /* SOLIDUS */: this.current = SELF_CLOSING_START_TAG; break;
+      case 0x3d /* EQUALS */: this.current = BEFORE_ATTRIBUTE_VALUE; break;
+      case 0x3e /* GREATER_THAN */: this.emitTag(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.startAttr('');
         this.current = ATTRIBUTE_NAME;
@@ -821,10 +925,10 @@ export class Tokenizer implements TokenizerControl {
 
   private beforeAttributeValue(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case QUOTE: this.current = ATTRIBUTE_VALUE_DOUBLE_QUOTED; break;
-      case APOSTROPHE: this.current = ATTRIBUTE_VALUE_SINGLE_QUOTED; break;
-      case GREATER_THAN: this.emitTag(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x22 /* QUOTE */: this.current = ATTRIBUTE_VALUE_DOUBLE_QUOTED; break;
+      case 0x27 /* APOSTROPHE */: this.current = ATTRIBUTE_VALUE_SINGLE_QUOTED; break;
+      case 0x3e /* GREATER_THAN */: this.emitTag(); break;
       default:
         this.current = ATTRIBUTE_VALUE_UNQUOTED;
         this.attributeValueUnquoted(cp);
@@ -834,9 +938,9 @@ export class Tokenizer implements TokenizerControl {
   private attributeValueQuoted(cp: number, quote: number, run: Sticky, ownState: number): void {
     switch (cp) {
       case quote: this.current = AFTER_ATTRIBUTE_VALUE_QUOTED; break;
-      case AMPERSAND: this.startCharRef(ownState); break;
-      case NUL: this.attr.value += REPLACEMENT; break;
-      case EOF: this.emitEof(); break;
+      case 0x26 /* AMPERSAND */: this.startCharRef(ownState); break;
+      case 0x00 /* NUL */: this.attr.value += REPLACEMENT; break;
+      case -1 /* EOF */: this.emitEof(); break;
       default: {
         const start = this.pos - 1;
 
@@ -848,11 +952,11 @@ export class Tokenizer implements TokenizerControl {
 
   private attributeValueUnquoted(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: this.current = BEFORE_ATTRIBUTE_NAME; break;
-      case AMPERSAND: this.startCharRef(ATTRIBUTE_VALUE_UNQUOTED); break;
-      case GREATER_THAN: this.emitTag(); break;
-      case NUL: this.attr.value += REPLACEMENT; break;
-      case EOF: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.current = BEFORE_ATTRIBUTE_NAME; break;
+      case 0x26 /* AMPERSAND */: this.startCharRef(ATTRIBUTE_VALUE_UNQUOTED); break;
+      case 0x3e /* GREATER_THAN */: this.emitTag(); break;
+      case 0x00 /* NUL */: this.attr.value += REPLACEMENT; break;
+      case -1 /* EOF */: this.emitEof(); break;
       default: {
         const start = this.pos - 1;
 
@@ -864,10 +968,10 @@ export class Tokenizer implements TokenizerControl {
 
   private afterAttributeValueQuoted(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: this.current = BEFORE_ATTRIBUTE_NAME; break;
-      case SOLIDUS: this.current = SELF_CLOSING_START_TAG; break;
-      case GREATER_THAN: this.emitTag(); break;
-      case EOF: this.emitEof(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.current = BEFORE_ATTRIBUTE_NAME; break;
+      case 0x2f /* SOLIDUS */: this.current = SELF_CLOSING_START_TAG; break;
+      case 0x3e /* GREATER_THAN */: this.emitTag(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.current = BEFORE_ATTRIBUTE_NAME;
         this.beforeAttributeName(cp);
@@ -876,11 +980,11 @@ export class Tokenizer implements TokenizerControl {
 
   private selfClosingStartTag(cp: number): void {
     switch (cp) {
-      case GREATER_THAN:
+      case 0x3e /* GREATER_THAN */:
         this.tag.selfClosing = true;
         this.emitTag();
         break;
-      case EOF: this.emitEof(); break;
+      case -1 /* EOF */: this.emitEof(); break;
       default:
         this.current = BEFORE_ATTRIBUTE_NAME;
         this.beforeAttributeName(cp);
@@ -891,15 +995,15 @@ export class Tokenizer implements TokenizerControl {
 
   private bogusComment(cp: number): void {
     switch (cp) {
-      case GREATER_THAN:
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitComment();
         break;
-      case EOF:
+      case -1 /* EOF */:
         this.emitComment();
         this.emitEof();
         break;
-      case NUL: this.comment.data += REPLACEMENT; break;
+      case 0x00 /* NUL */: this.comment.data += REPLACEMENT; break;
       default: {
         const start = this.pos - 1;
 
@@ -943,8 +1047,8 @@ export class Tokenizer implements TokenizerControl {
 
   private commentStart(cp: number): void {
     switch (cp) {
-      case HYPHEN: this.current = COMMENT_START_DASH; break;
-      case GREATER_THAN:
+      case 0x2d /* HYPHEN */: this.current = COMMENT_START_DASH; break;
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitComment();
         break;
@@ -956,12 +1060,12 @@ export class Tokenizer implements TokenizerControl {
 
   private commentStartDash(cp: number): void {
     switch (cp) {
-      case HYPHEN: this.current = COMMENT_END; break;
-      case GREATER_THAN:
+      case 0x2d /* HYPHEN */: this.current = COMMENT_END; break;
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitComment();
         break;
-      case EOF:
+      case -1 /* EOF */:
         this.emitComment();
         this.emitEof();
         break;
@@ -974,13 +1078,13 @@ export class Tokenizer implements TokenizerControl {
 
   private commentState(cp: number): void {
     switch (cp) {
-      case HYPHEN: this.current = COMMENT_END_DASH; break;
-      case LESS_THAN:
+      case 0x2d /* HYPHEN */: this.current = COMMENT_END_DASH; break;
+      case 0x3c /* LESS_THAN */:
         this.comment.data += '<';
         this.current = COMMENT_LESS_THAN_SIGN;
         break;
-      case NUL: this.comment.data += REPLACEMENT; break;
-      case EOF:
+      case 0x00 /* NUL */: this.comment.data += REPLACEMENT; break;
+      case -1 /* EOF */:
         this.emitComment();
         this.emitEof();
         break;
@@ -995,11 +1099,11 @@ export class Tokenizer implements TokenizerControl {
 
   private commentLessThanSign(cp: number): void {
     switch (cp) {
-      case BANG:
+      case 0x21 /* BANG */:
         this.comment.data += '!';
         this.current = COMMENT_LESS_THAN_SIGN_BANG;
         break;
-      case LESS_THAN: this.comment.data += '<'; break;
+      case 0x3c /* LESS_THAN */: this.comment.data += '<'; break;
       default:
         this.current = COMMENT;
         this.commentState(cp);
@@ -1027,8 +1131,8 @@ export class Tokenizer implements TokenizerControl {
 
   private commentEndDash(cp: number): void {
     switch (cp) {
-      case HYPHEN: this.current = COMMENT_END; break;
-      case EOF:
+      case 0x2d /* HYPHEN */: this.current = COMMENT_END; break;
+      case -1 /* EOF */:
         this.emitComment();
         this.emitEof();
         break;
@@ -1041,13 +1145,13 @@ export class Tokenizer implements TokenizerControl {
 
   private commentEnd(cp: number): void {
     switch (cp) {
-      case GREATER_THAN:
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitComment();
         break;
-      case BANG: this.current = COMMENT_END_BANG; break;
-      case HYPHEN: this.comment.data += '-'; break;
-      case EOF:
+      case 0x21 /* BANG */: this.current = COMMENT_END_BANG; break;
+      case 0x2d /* HYPHEN */: this.comment.data += '-'; break;
+      case -1 /* EOF */:
         this.emitComment();
         this.emitEof();
         break;
@@ -1060,15 +1164,15 @@ export class Tokenizer implements TokenizerControl {
 
   private commentEndBang(cp: number): void {
     switch (cp) {
-      case HYPHEN:
+      case 0x2d /* HYPHEN */:
         this.comment.data += '--!';
         this.current = COMMENT_END_DASH;
         break;
-      case GREATER_THAN:
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitComment();
         break;
-      case EOF:
+      case -1 /* EOF */:
         this.emitComment();
         this.emitEof();
         break;
@@ -1098,8 +1202,8 @@ export class Tokenizer implements TokenizerControl {
 
   private doctypeState(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: this.current = BEFORE_DOCTYPE_NAME; break;
-      case EOF: this.emitEofDoctype(); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.current = BEFORE_DOCTYPE_NAME; break;
+      case -1 /* EOF */: this.emitEofDoctype(); break;
       default:
         this.current = BEFORE_DOCTYPE_NAME;
         this.beforeDoctypeName(cp);
@@ -1108,18 +1212,18 @@ export class Tokenizer implements TokenizerControl {
 
   private beforeDoctypeName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case NUL:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x00 /* NUL */:
         this.startDoctype(REPLACEMENT);
         this.current = DOCTYPE_NAME;
         break;
-      case GREATER_THAN:
+      case 0x3e /* GREATER_THAN */:
         this.startDoctype(null);
         this.doctype.forceQuirks = true;
         this.emitDoctype();
         this.current = DATA;
         break;
-      case EOF: this.emitEofDoctype(); break;
+      case -1 /* EOF */: this.emitEofDoctype(); break;
       default:
         this.startDoctype(lowerAscii(String.fromCharCode(cp)));
         this.current = DOCTYPE_NAME;
@@ -1128,25 +1232,25 @@ export class Tokenizer implements TokenizerControl {
 
   private doctypeName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: this.current = AFTER_DOCTYPE_NAME; break;
-      case GREATER_THAN:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.current = AFTER_DOCTYPE_NAME; break;
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitDoctype();
         break;
-      case NUL: this.doctype.name += REPLACEMENT; break;
-      case EOF: this.eofInDoctype(); break;
+      case 0x00 /* NUL */: this.doctype.name += REPLACEMENT; break;
+      case -1 /* EOF */: this.eofInDoctype(); break;
       default: this.doctype.name += lowerAscii(String.fromCharCode(cp));
     }
   }
 
   private afterDoctypeName(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case GREATER_THAN:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitDoctype();
         break;
-      case EOF: this.eofInDoctype(); break;
+      case -1 /* EOF */: this.eofInDoctype(); break;
       default: this.doctypeKeyword(cp);
     }
   }
@@ -1193,18 +1297,18 @@ export class Tokenizer implements TokenizerControl {
 
   private afterDoctypeKeyword(cp: number, isPublic: boolean): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */:
         this.current = isPublic ? BEFORE_DOCTYPE_PUBLIC_IDENTIFIER : BEFORE_DOCTYPE_SYSTEM_IDENTIFIER;
         break;
-      case QUOTE: case APOSTROPHE: this.openDoctypeIdentifier(cp, isPublic); break;
+      case 0x22 /* QUOTE */: case 0x27 /* APOSTROPHE */: this.openDoctypeIdentifier(cp, isPublic); break;
       default: this.quirkyDoctypeEnd(cp);
     }
   }
 
   private beforeDoctypeIdentifier(cp: number, isPublic: boolean): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case QUOTE: case APOSTROPHE: this.openDoctypeIdentifier(cp, isPublic); break;
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x22 /* QUOTE */: case 0x27 /* APOSTROPHE */: this.openDoctypeIdentifier(cp, isPublic); break;
       default: this.quirkyDoctypeEnd(cp);
     }
   }
@@ -1236,36 +1340,36 @@ export class Tokenizer implements TokenizerControl {
 
   private afterDoctypePublicIdentifier(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: this.current = BETWEEN_DOCTYPE_PUBLIC_AND_SYSTEM_IDENTIFIERS; break;
-      case GREATER_THAN:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: this.current = BETWEEN_DOCTYPE_PUBLIC_AND_SYSTEM_IDENTIFIERS; break;
+      case 0x3e /* GREATER_THAN */:
         this.current = DATA;
         this.emitDoctype();
         break;
-      case QUOTE: case APOSTROPHE: this.openDoctypeIdentifier(cp, false); break;
+      case 0x22 /* QUOTE */: case 0x27 /* APOSTROPHE */: this.openDoctypeIdentifier(cp, false); break;
       default: this.quirkyDoctypeEnd(cp);
     }
   }
 
   private betweenDoctypePublicAndSystemIdentifiers(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case GREATER_THAN:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x3e /* GREATER_THAN */:
         this.emitDoctype();
         this.current = DATA;
         break;
-      case QUOTE: case APOSTROPHE: this.openDoctypeIdentifier(cp, false); break;
+      case 0x22 /* QUOTE */: case 0x27 /* APOSTROPHE */: this.openDoctypeIdentifier(cp, false); break;
       default: this.quirkyDoctypeEnd(cp);
     }
   }
 
   private afterDoctypeSystemIdentifier(cp: number): void {
     switch (cp) {
-      case SPACE: case LF: case TAB: case FF: break;
-      case GREATER_THAN:
+      case 0x20 /* SPACE */: case 0x0a /* LF */: case 0x09 /* TAB */: case 0x0c /* FF */: break;
+      case 0x3e /* GREATER_THAN */:
         this.emitDoctype();
         this.current = DATA;
         break;
-      case EOF: this.eofInDoctype(); break;
+      case -1 /* EOF */: this.eofInDoctype(); break;
       default:
         this.current = BOGUS_DOCTYPE;
         this.bogusDoctype(cp);
@@ -1284,11 +1388,13 @@ export class Tokenizer implements TokenizerControl {
 
   // CDATA
 
+  /** CDATA keeps a NUL as is, unlike every other text state. */
   private cdataSection(cp: number): void {
     switch (cp) {
-      case RIGHT_BRACKET: this.current = CDATA_SECTION_BRACKET; break;
-      case EOF: this.emitEof(); break;
-      default: this.emitCodePoint(cp);
+      case 0x5d /* RIGHT_BRACKET */: this.current = CDATA_SECTION_BRACKET; break;
+      case -1 /* EOF */: this.emitEof(); break;
+      case 0x00 /* NUL */: this.emitRun(TokenType.NULL_CHARACTER, NUL_RUN); break;
+      default: this.emitTextRun(cp, CDATA_RUN);
     }
   }
 
@@ -1305,8 +1411,8 @@ export class Tokenizer implements TokenizerControl {
 
   private cdataSectionEnd(cp: number): void {
     switch (cp) {
-      case GREATER_THAN: this.current = DATA; break;
-      case RIGHT_BRACKET: this.emitChars(TokenType.CHARACTER, ']'); break;
+      case 0x3e /* GREATER_THAN */: this.current = DATA; break;
+      case 0x5d /* RIGHT_BRACKET */: this.emitChars(TokenType.CHARACTER, ']'); break;
       default:
         this.emitChars(TokenType.CHARACTER, ']]');
         this.current = CDATA_SECTION;

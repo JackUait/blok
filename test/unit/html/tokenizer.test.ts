@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Tokenizer } from '../../../src/html/tokenizer';
-import { TokenizerMode } from '../../../src/html/token';
+import { TokenType, TokenizerMode, type Token } from '../../../src/html/token';
 import { Collector, type Collected } from './token-collector';
 
 const SUITE = join(__dirname, '..', '..', 'fixtures', 'html5lib', 'tokenizer');
@@ -105,6 +105,81 @@ const NOOP_HANDLER = {
   onEndTag: noop, onComment: noop, onDoctype: noop, onEof: noop,
 };
 
+/** Every token object the tokenizer hands out, in order. */
+const record = (html: string, state = TokenizerMode.DATA): Token[] => {
+  const tokens: Token[] = [];
+  const push = (token: Token): void => {
+    tokens.push(token);
+  };
+  const tokenizer = new Tokenizer({
+    onCharacter: push, onNullCharacter: push, onWhitespaceCharacter: push, onStartTag: push,
+    onEndTag: push, onComment: push, onDoctype: push, onEof: push,
+  });
+
+  tokenizer.state = state;
+  tokenizer.write(html);
+
+  return tokens;
+};
+
+describe('Tokenizer contract with the tree builder', () => {
+  it('hands out a new object for every token and attribute, since the tree builder keeps and edits them', () => {
+    const tokens = record('<a b="1" c=2>x y<a b="1">&amp;<!--c--><!--c--><!DOCTYPE html><!DOCTYPE html></a>\0\0 x');
+    const attrs = tokens.flatMap((token) => ('attrs' in token ? token.attrs : []));
+
+    expect(new Set(tokens).size).toBe(tokens.length);
+    expect(new Set(tokens.flatMap((token) => ('attrs' in token ? [token.attrs] : []))).size).toBe(tokens.filter((token) => 'attrs' in token).length);
+    expect(new Set(attrs).size).toBe(attrs.length);
+  });
+
+  it('emits a NUL run as one token', () => {
+    expect(record('a\0\0\0b').map((token) => ('chars' in token ? token.chars : token.type))).toEqual(['a', '\0\0\0', 'b', TokenType.EOF]);
+  });
+
+  it('never closes text with an end tag when no start tag was seen', () => {
+    const tokens = record('</textarea>x</title >', TokenizerMode.RCDATA);
+
+    expect(tokens.map((token) => token.type)).toEqual([TokenType.CHARACTER, TokenType.WHITESPACE_CHARACTER, TokenType.CHARACTER, TokenType.EOF]);
+  });
+
+  it('sets state to DATA before a start tag, keeps a switch made for it and remembers its name', () => {
+    const seen: Array<[string, TokenizerMode, string]> = [];
+    const tokenizer: Tokenizer = new Tokenizer({
+      ...NOOP_HANDLER,
+      onStartTag: (token) => {
+        seen.push([token.tagName, tokenizer.state, tokenizer.lastStartTagName]);
+        if (token.tagName === 'textarea') {
+          tokenizer.state = TokenizerMode.RCDATA;
+        }
+      },
+      onCharacter: (token) => {
+        seen.push([token.chars, -1, tokenizer.lastStartTagName]);
+      },
+    });
+
+    tokenizer.write('<x>a<textarea><b></textarea><i>');
+
+    expect(seen).toEqual([
+      ['x', TokenizerMode.DATA, 'x'],
+      ['a', -1, 'x'],
+      ['textarea', TokenizerMode.DATA, 'textarea'],
+      ['<b>', -1, 'textarea'],
+      ['i', TokenizerMode.DATA, 'i'],
+    ]);
+  });
+
+  it('does not throw on lone or doubled surrogates anywhere', () => {
+    const odd = ['\udc00\udc00', '\ud800', '\udc00', '\ud800\ud800', '\ud83d\ude00'];
+    const places = (text: string): string[] => [
+      text, `<${text}>`, `<a${text}>`, `<a ${text}=${text}>`, `<a b="${text}">`, `<!--${text}-->`, `<!DOCTYPE ${text}>`,
+      `<!${text}>`, `</${text}>`, `&${text};`, `<?${text}>`,
+    ];
+
+    expect(() => odd.flatMap(places).forEach((html) => record(html))).not.toThrow();
+  });
+});
+
+
 const PATHOLOGICAL: Array<{ name: string; build: (n: number) => string; state?: TokenizerMode; lastStartTagName?: string; foreign?: boolean }> = [
   { name: '<a repeated', build: (n) => '<a'.repeat(n) },
   { name: '& repeated', build: (n) => '&'.repeat(n) },
@@ -140,26 +215,36 @@ const PATHOLOGICAL: Array<{ name: string; build: (n: number) => string; state?: 
   { name: 'script escape dashes', build: (n) => `<!--<script>${'-'.repeat(n)}`, state: TokenizerMode.SCRIPT_DATA, lastStartTagName: 'script' },
 ];
 
-const timeOnce = (html: string, start: { state?: TokenizerMode; lastStartTagName?: string; foreign?: boolean }): number => {
+const tokenize = (html: string, start: { state?: TokenizerMode; lastStartTagName?: string; foreign?: boolean }): void => {
   const tokenizer = new Tokenizer(NOOP_HANDLER);
 
   tokenizer.state = start.state ?? TokenizerMode.DATA;
   tokenizer.lastStartTagName = start.lastStartTagName ?? '';
   tokenizer.inForeignNode = start.foreign ?? false;
-  const begin = performance.now();
-
   tokenizer.write(html);
-
-  return performance.now() - begin;
 };
 
-const best = (html: string, start: Parameters<typeof timeOnce>[1]): number =>
-  Math.min(...Array.from({ length: 3 }, () => timeOnce(html, start)));
+/** Best of five: the time of `times` runs over `html`. */
+const best = (html: string, start: Parameters<typeof tokenize>[1], times: number): number =>
+  Math.min(
+    ...Array.from({ length: 5 }, () => {
+      const begin = performance.now();
+
+      Array.from({ length: times }).forEach(() => tokenize(html, start));
+
+      return performance.now() - begin;
+    })
+  );
+
+/** The smallest n (from 1000, doubling) whose input takes at least 0.5 ms, so timer noise stays small next to it. */
+const calibrate = (testCase: (typeof PATHOLOGICAL)[number]): number =>
+  [1000, 2000, 4000, 8000].find((n) => best(testCase.build(n), testCase, 1) >= 0.5) ?? 16000;
 
 describe('Tokenizer time', () => {
-  // 8x the input must cost about 8x the time; a quadratic path costs 64x.
+  // One run over 8n must cost about eight runs over n; a quadratic path costs
+  // 8x more. Eight small runs against one large keeps the work, and the GC, alike.
   it.each(PATHOLOGICAL)('stays linear on $name', (testCase) => {
-    const n = 4000;
+    const n = calibrate(testCase);
     const small = testCase.build(n);
     const large = testCase.build(8 * n);
     const ratios = Array.from({ length: 3 }).reduce<number[]>((seen) => {
@@ -167,9 +252,9 @@ describe('Tokenizer time', () => {
         return seen;
       }
 
-      return [...seen, best(large, testCase) / Math.max(best(small, testCase), 0.05)];
+      return [...seen, (8 * best(large, testCase, 1)) / best(small, testCase, 8)];
     }, []);
 
-    expect(ratios[ratios.length - 1]).toBeLessThan(24);
+    expect(ratios[ratios.length - 1], `n ${n}, ratios ${ratios.map((r) => r.toFixed(1)).join(', ')}`).toBeLessThan(24);
   });
 });

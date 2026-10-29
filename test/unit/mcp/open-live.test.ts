@@ -250,7 +250,7 @@ describe('createOpenLive', () => {
     expect(syncUrlFor('wss://h/sync', 'x')).toBe('wss://h/sync/x');
   });
 
-  it.each(['.', '..'])('refuses document id %j, which a URL resolves as a path step', (documentId) => {
+  it.each(['', '.', '..'])('refuses document id %j, which a URL resolves as a path step or the bare route', (documentId) => {
     expect(() => syncUrlFor('wss://h/sync', documentId)).toThrow(expect.objectContaining({ agentError: expect.objectContaining({ code: 'INVALID_ARGS' }) }));
   });
 });

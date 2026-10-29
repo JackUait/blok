@@ -36,9 +36,15 @@ const versionsOf = (body: unknown): AgentVersion[] => {
 /** "lineage:sequence" as its route path, or null when it is not one. */
 const pointPath = (version: string): string | null => {
   const colon = version.lastIndexOf(':');
+  const lineage = version.slice(0, colon);
   const sequence = version.slice(colon + 1);
 
-  return colon <= 0 || !/^\d+$/.test(sequence) ? null : `${encodeURIComponent(version.slice(0, colon))}/${sequence}`;
+  // encodeURIComponent keeps "." and "..", which the URL parser resolves as path steps out of /history.
+  if (colon <= 0 || lineage === '.' || lineage === '..' || !/^\d+$/.test(sequence)) {
+    return null;
+  }
+
+  return `${encodeURIComponent(lineage)}/${sequence}`;
 };
 
 /**

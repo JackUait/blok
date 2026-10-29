@@ -37,8 +37,9 @@ export interface OpenLiveDeps {
 }
 
 // encodeURIComponent keeps "." and "..", which the URL parser resolves as path steps to another route.
+// An empty id names the sync route itself; page.rename can bring one from a page block's pageId.
 export const syncUrlFor = (base: string, documentId: string): string => {
-  if (documentId === '.' || documentId === '..') {
+  if (documentId === '' || documentId === '.' || documentId === '..') {
     throw surfaceError('INVALID_ARGS', `"${documentId}" is not a document id.`);
   }
 

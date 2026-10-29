@@ -128,19 +128,21 @@ describe('assembleMcp with a sync URL', () => {
 
 describe('assembleMcp with a sync URL and page-map', () => {
   let sockets: AckSocket[];
+  let urls: string[];
   let mcp: AssembledMcp;
   // Inserting a page block needs the page backend, so the room starts with one that points at itself.
   const seeded = (): Uint8Array => {
     const store = new DocumentStore(new YBlockSerializer());
 
-    store.fromJSON([{ id: 'pb', type: 'page', data: { pageId: 'doc' } }]);
+    store.fromJSON([{ id: 'pb', type: 'page', data: { pageId: 'doc' } }, { id: 'pe', type: 'page', data: { pageId: '' } }]);
 
     return store.encodeStateAsUpdate();
   };
 
-  const factory: CollabSocketFactory = () => {
+  const factory: CollabSocketFactory = (url) => {
     const socket = new AckSocket();
 
+    urls.push(url);
     sockets.push(socket);
     queueMicrotask(() => {
       socket.readyState = 1;
@@ -156,6 +158,7 @@ describe('assembleMcp with a sync URL and page-map', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sockets = [];
+    urls = [];
     mcp = assembleMcp(
       { transport: { kind: 'stdio' }, auth: { kind: 'none' }, sync: { url: 'wss://sync.test/sync' }, pageTitles: 'page-map' },
       { liveSocketFactory: factory, liveSyncTimeoutMs: 1000 },
@@ -173,6 +176,16 @@ describe('assembleMcp with a sync URL and page-map', () => {
 
     expect(renamed.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', details: { pageId: 'doc' } } });
     expect(sockets).toHaveLength(1);
+  }, 5_000);
+
+  it('refuses page.rename on a page block with an empty pageId, and joins no room for it', async () => {
+    const handle = (await mcp.dispatch('blok_open', { documentId: 'doc', write: true }, caller)).structuredContent.handle;
+    const renamed = await mcp.dispatch('blok_execute', { handle, commands: [{ name: 'page.rename', args: { id: 'pe', title: 'x' } }] }, caller);
+
+    expect({ renamed: renamed.structuredContent, urls }).toMatchObject({
+      renamed: { ok: false, error: { code: 'INVALID_ARGS' } },
+      urls: ['wss://sync.test/sync/doc'],
+    });
   }, 5_000);
 });
 

@@ -8,6 +8,7 @@ import { readTicketClaims } from '../../../src/components/utils/access-pass';
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import type { Caller } from '../../../src/mcp/dispatcher';
+import { createHttpVersionHistory } from '../../../src/mcp/live/version-history';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
 
 const TAG: WorkingSetTag = { format: 2, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' };
@@ -316,5 +317,34 @@ describe('blok-mcp live handles read the sync server version history', () => {
 
     expect(JSON.stringify(execute?.inputSchema)).toContain('history.changes');
     expect(JSON.stringify(execute?.inputSchema)).toContain('history.restore');
+  });
+});
+
+describe('the sync server version history routes', () => {
+  const urls: string[] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    urls.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      urls.push(url);
+
+      return new Response('{}', { status: 404 });
+    }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it.each(['.', '..'])('never sends a request for lineage %j, which a URL resolves as a path step out of /history', async (lineage) => {
+    const history = createHttpVersionHistory({ roomUrl: 'wss://sync.test/sync/doc-1' });
+
+    expect({
+      read: await history.read(`${lineage}:5`),
+      restore: await history.restore?.(`${lineage}:5`),
+      urls,
+    }).toEqual({ read: null, restore: false, urls: [] });
   });
 });

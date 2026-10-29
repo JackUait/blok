@@ -99,13 +99,20 @@ const inOrder = (keys: Array<string | null>): boolean =>
   keys.every((key, i) => i === 0 || key === null || keys[i - 1] === null || (keys[i - 1] ?? '') < key);
 
 /**
+ * The longest prefix of `key` the library reads. Every key below a prefix is
+ * below the key, so keys under an odd stored key stay ones 4.0.0 reads.
+ */
+const readablePrefix = (key: string): string | null =>
+  key === '' ? null : readable(key) ?? readablePrefix(key.slice(0, -1));
+
+/**
  * `n` tailed keys the library mints for the gap, or null when they do not land
- * strictly inside it. An end the library cannot read is left open, so a key
- * next to an odd stored key is still short when one fits.
+ * strictly inside it. An unreadable `low` is left open, so a key next to an
+ * odd stored key is still short when one fits.
  */
 const libraryKeys = (low: string | null, high: string | null, n: number): string[] | null => {
   const bottom = low === null ? null : readable(low);
-  const top = high === null ? null : readable(high);
+  const top = high === null ? null : readablePrefix(high);
 
   try {
     const keys = generateNKeysBetween(bottom, top, n);

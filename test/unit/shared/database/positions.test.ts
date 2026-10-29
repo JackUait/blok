@@ -125,6 +125,18 @@ describe('positions next to keys the library misreads', () => {
     expect(inside(low, positionsBetween(low, high, 3), high)).toBe(true);
   });
 
+  // 4.0.0 reads these as valid keys, so a shipped client inserts next to whatever is minted here.
+  it.each<[string | null, string]>([
+    [null, 'a0~'],
+    [null, 'a0é'],
+    ['Zz', 'a0~'],
+  ])('mints keys 4.0.0 can read after %j and before %j', (low, high) => {
+    const keys = positionsBetween(low, high, 3);
+
+    expect(keys.every(readableBy400)).toBe(true);
+    expect(inside(low, keys, high)).toBe(true);
+  });
+
   it.each<[string, string]>([
     ['a0', 'a00'],
     ['a', 'aa'],

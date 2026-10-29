@@ -29,7 +29,9 @@ function entries(model: ChartModel): Entry[] {
     return (first?.categories ?? []).map((label, i) => ({ label, color: first.pointColors[i] ?? first.color, kind: model.kind }));
   }
 
-  const list = model.series.map((s) => ({ label: s.name, color: s.color, series: s, kind: model.kind }));
+  // A filled radar keys its series with swatches, as areas do.
+  const kind = model.radarStyle === 'filled' ? 'area' : model.kind;
+  const list = model.series.map((s) => ({ label: s.name, color: s.color, series: s, kind }));
   const stacked = model.grouping === 'stacked' || model.grouping === 'percentStacked';
 
   return stacked && (model.kind === 'line' || model.kind === 'area') ? list.reverse() : list;
@@ -37,7 +39,7 @@ function entries(model: ChartModel): Entry[] {
 
 function drawKey(g: Element, entry: Entry, x: number, y: number, size: number): void {
   const s = entry.series;
-  const lineLike = (entry.kind === 'line' || entry.kind === 'scatter') && s !== undefined;
+  const lineLike = (entry.kind === 'line' || entry.kind === 'scatter' || entry.kind === 'radar') && s !== undefined;
 
   if (!lineLike) {
     svg('rect', { x: px(x + size * 0.2), y: px(y - size * 0.3), width: px(size * 0.6), height: px(size * 0.6), fill: entry.color }, g);

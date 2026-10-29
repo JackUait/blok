@@ -7,7 +7,7 @@ import { cssFontFamilyStack, resolveThemeFontStack } from '../fontResolver';
 import { resolveColorToCss } from '../StyleResolver';
 import { extractFormatCode, extractNumericValuesWithBlanks, extractStringValues } from './format';
 
-export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'combo' | 'unsupported';
+export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'radar' | 'combo' | 'unsupported';
 export type LegendPosition = 't' | 'b' | 'l' | 'r';
 
 const KIND_BY_ELEMENT: Record<string, ChartKind> = {
@@ -21,6 +21,7 @@ const KIND_BY_ELEMENT: Record<string, ChartKind> = {
   pie3DChart: 'pie',
   doughnutChart: 'doughnut',
   scatterChart: 'scatter',
+  radarChart: 'radar',
 };
 
 /** Plots that can share a category axis with another plot. */
@@ -93,6 +94,8 @@ export interface ChartModel {
   layers?: ChartModel[];
   /** The layer's values follow the secondary value axis, drawn on the right. */
   secondary?: boolean;
+  /** c:radarStyle: standard, marker or filled. */
+  radarStyle?: string;
 }
 
 function bool(node: SafeXmlNode, fallback: boolean): boolean {
@@ -243,9 +246,10 @@ function readTitle(chart: SafeXmlNode, series: ChartSeries[], baseSize: number):
 function readMarker(ser: SafeXmlNode, index: number, plot: SafeXmlNode, kind: ChartKind): ChartSeries['marker'] {
   const marker = ser.child('marker');
   const symbol = marker.child('symbol').attr('val');
-  const plotShowsMarkers = bool(plot.child('marker'), true);
+  // A radar shows automatic markers only in its marker style.
+  const plotShowsMarkers = kind === 'radar' ? plot.child('radarStyle').attr('val') === 'marker' : bool(plot.child('marker'), true);
 
-  if ((kind !== 'line' && kind !== 'scatter') || plot.localName === 'line3DChart' || symbol === 'none') {
+  if ((kind !== 'line' && kind !== 'scatter' && kind !== 'radar') || plot.localName === 'line3DChart' || symbol === 'none') {
     return undefined;
   }
   if (!plotShowsMarkers && symbol === undefined) {
@@ -382,6 +386,7 @@ function readPlot(plot: SafeXmlNode, pc: PlotContext): Omit<ChartModel, 'title' 
     overlap: plot.child('overlap').numAttr('val') ?? (stacked ? 100 : 0),
     holeSize: plot.child('holeSize').numAttr('val') ?? 50,
     firstSliceAngle: plot.child('firstSliceAng').numAttr('val') ?? 0,
+    ...(kind === 'radar' ? { radarStyle: plot.child('radarStyle').attr('val') ?? 'standard' } : {}),
     categoryAxis: readAxis(findAxis(plotArea, kind === 'scatter' ? ['valAx'] : ['catAx', 'dateAx'], axisIds[0]), ctx),
     valueAxis: readAxis(findAxis(plotArea, ['valAx'], axisIds[1]), ctx),
   };

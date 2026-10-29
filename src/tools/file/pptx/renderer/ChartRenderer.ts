@@ -6,6 +6,7 @@ import { drawCartesian } from './chart/cartesian';
 import { drawLegend } from './chart/legend';
 import { readChart } from './chart/model';
 import { drawPie } from './chart/pie';
+import { drawRadar } from './chart/radar';
 import { group, svg, text } from './chart/svg';
 
 function frameFor(node: ChartNodeData): HTMLElement {
@@ -48,6 +49,8 @@ function draw(node: ChartNodeData, ctx: RenderContext, frame: HTMLElement): void
 
   if (model.kind === 'pie' || model.kind === 'doughnut') {
     drawPie(model, plotArea, root, style);
+  } else if (model.kind === 'radar') {
+    drawRadar(model, plotArea, root, style);
   } else {
     drawCartesian(model, plotArea, root, style);
   }

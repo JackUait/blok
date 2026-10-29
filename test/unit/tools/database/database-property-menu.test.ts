@@ -273,7 +273,8 @@ describe('DatabasePropertyMenu', () => {
 
     const params = captured.popovers[captured.popovers.length - 1]?.params;
 
-    expect(String(params?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-header-menu']);
+    // blok-database-column-menu: the divider rules the peek, card and rollup menus must not get.
+    expect(String(params?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-header-menu', 'blok-database-column-menu']);
     expect(params?.animateClose).toBe(true);
   });
 

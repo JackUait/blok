@@ -6254,12 +6254,12 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu']:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
   padding-inline: var(--blok-space-2);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu']:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name='name'] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name='name'] {
   margin-block-end: var(--blok-space-1);
 }
 

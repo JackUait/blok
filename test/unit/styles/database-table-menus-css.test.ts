@@ -36,9 +36,9 @@ describe('column header menu (T11)', () => {
 });
 
 // notion-live-8/80-menu-number.png, 83-menu-name.png: the column header menu's own list, not its submenus
-// and not the row page menu that shares its class.
+// and not the row page, peek, card or rollup menus that share the header class.
 describe('column header menu dividers and name row', () => {
-  const LIST = `${HEADER}:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items]`;
+  const LIST = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items]";
 
   // Notion: x 390-585 in a 378-597 box, 12px in from each side; the list pads 4, the divider 8.
   it('insets each divider 12px from the box sides', () => {

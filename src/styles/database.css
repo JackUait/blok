@@ -2772,13 +2772,13 @@ button[data-blok-database-column-count]:hover {
 
 /* notion-live-8/80-menu-number.png, 83-menu-name.png: dividers 12px in from the box sides and 8px
    tall in all, and the first row 44 under the box top. The ">" steps keep the submenus (the line
-   under Sort) and the row page menu, which shares this class, out. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu']:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
+   under Sort) out. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-popover-item-separator] {
   padding-block: var(--blok-space-0-75) var(--blok-space-1);
   padding-inline: var(--blok-space-2);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu']:not([data-blok-popover-custom-class~='blok-database-row-page-menu']) > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name='name'] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-column-menu'] > [data-blok-popover-container] > [data-blok-popover-items] > [data-blok-item-name='name'] {
   margin-block-end: var(--blok-space-1);
 }
 

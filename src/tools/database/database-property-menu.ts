@@ -182,6 +182,8 @@ const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
 const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidden'];
 
 /** The row page's menu and Edit property panel: the header menu's rows, in Notion's row page look. */
+// The column header menu alone: its divider rules must not reach the peek, card, rollup or row page menus.
+const COLUMN_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-column-menu`;
 const ROW_PAGE_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-row-page-menu`;
 /** The row page's Edit property panel: Notion pads it 8px, its menus 4 (notion-spec-2 §1). */
 const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-panel`;
@@ -350,7 +352,7 @@ export class DatabasePropertyMenu {
       ...this.customizeItem(),
     ];
     // notion-spec-2 §25.5: the Name menu is 243.3 wide.
-    this.show(items, anchor, property.type === 'title' ? '243.3px' : '220px', DATABASE_HEADER_MENU_CLASS, typed !== undefined);
+    this.show(items, anchor, property.type === 'title' ? '243.3px' : '220px', COLUMN_MENU_CLASS, typed !== undefined);
     const input = name.querySelector('input');
 
     if (typed !== undefined && input !== null) input.value = typed;
@@ -598,7 +600,7 @@ export class DatabasePropertyMenu {
     items: PopoverItemParams[],
     anchor: HTMLElement,
     minWidth: string,
-    className = DATABASE_HEADER_MENU_CLASS,
+    className = COLUMN_MENU_CLASS,
     redraw = false,
     place?: PlaceOver,
   ): void {
@@ -608,7 +610,7 @@ export class DatabasePropertyMenu {
       // Notion opens the row page menu 1px under the label.
       ...(rowPage ? { offset: 1 } : {}),
     };
-    const header = className === DATABASE_HEADER_MENU_CLASS;
+    const header = className === COLUMN_MENU_CLASS;
     const at = place ?? (header ? headerMenuPosition(anchor) : undefined);
     const popover = new PopoverDesktop(at === undefined ? params : { ...params, ...at });
 

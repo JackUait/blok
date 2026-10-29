@@ -1420,7 +1420,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: round 15: the header "+" grid row gap (§19.11), the light chip × grey, the relation picker title line.
     const DATABASE_ROUND15_MENUS_BYTES = 30 + 117 + 240;
     // database.css: round 16: the column header menu's divider inset and height, and the gap under its name field.
-    const DATABASE_ROUND16_HEADER_MENU_BYTES = 907;
+    const DATABASE_ROUND16_HEADER_MENU_BYTES = 721;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

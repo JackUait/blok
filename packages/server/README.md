@@ -409,7 +409,8 @@ The changes read lists the edits inside one version. Pass `since` as the sequenc
 - `changed` means the `type`, `data` or `tunes` differ. It wins over `moved`.
 - `moved` means a new parent, or a place outside the largest set of its siblings that kept their relative order. It is the same move test `diffOutputData` uses. A changed block still counts toward that order.
 - `page` lists the changed keys of the `page` map, such as `title` and `icon`. Then it lists changed tracked values as `values.<key>`. It is left out when nothing there changed.
-- One answer holds at most 200 rows. Past that, it holds the newest 200 and adds `"truncated": true`. The key is left out otherwise.
+- One answer holds at most 200 rows and at most 4 MiB of rows. Past that, it holds the newest rows that fit and adds `"truncated": true`. The key is left out otherwise. The newest row always comes, even when it alone is larger.
+- To read older rows, ask again with the oldest row's `sequence` minus 1 in the path and the same `since`.
 - Sequence 0, or a `since` equal to the sequence, answers `{"changes":[]}`.
 
 Restore is a forward edit, not a rewind. It runs inside the room, through the same path as `edit`, so every open tab sees it and the old versions stay listed.

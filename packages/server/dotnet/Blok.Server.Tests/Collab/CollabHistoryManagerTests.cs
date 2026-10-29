@@ -176,6 +176,24 @@ public sealed class CollabHistoryManagerTests
   }
 
   [Fact]
+  public async Task ChangesPastTheByteBudgetAreTheNewestAndSaySo()
+  {
+    var manager = CreateManager();
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "two"));
+    await EditAsync(manager, Insert("b", "three", after: "a"));
+    await EditAsync(manager, Remove("a"));
+
+    var result = await manager.ChangesAsync(DocId, Lineage(), 3, 0, maxBytes: 1);
+
+    Assert.Equal(CollabHistoryStatus.Ready, result.Status);
+    Assert.True(result.Truncated);
+    // The newest record stays even past the budget, so a reader can always page.
+    Assert.Equal([3UL], result.Changes.Select(record => record.Sequence));
+    Assert.Equal("""[{"text":"two"}]""", result.Changes[0].Blocks[0].Before!["data"]!["text"]!.ToJsonString());
+  }
+
+  [Fact]
   public async Task ChangesOfAnUnknownPointAreNotFound()
   {
     var manager = CreateManager();

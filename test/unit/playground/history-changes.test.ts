@@ -283,7 +283,7 @@ describe('mountVersionChanges', () => {
 
     await panel.ready;
 
-    expect(host.querySelector('[data-pg-changes-status]')?.textContent).toBe('Showing the newest 200 edits.');
+    expect(host.querySelector('[data-pg-changes-status]')?.textContent).toBe('Older edits in this version are not shown.');
   });
 
   it('says when the version has no edits', async () => {
@@ -333,7 +333,7 @@ describe('mountVersionChanges', () => {
 
     expect(entries()).toHaveLength(1);
     expect(entries()[0].querySelector('.pg-hp-entry__line')?.textContent).toBe('Someone edited the page title and data');
-    expect(host.querySelector('[data-pg-changes-status]')?.textContent).toBe('Showing the newest 200 edits.');
+    expect(host.querySelector('[data-pg-changes-status]')?.textContent).toBe('Older edits in this version are not shown.');
     entries()[0].click();
     expect(onSelectRecord).toHaveBeenCalledWith(expect.objectContaining({ sequence: 7, page: ['title', 'values.k'] }), null);
   });

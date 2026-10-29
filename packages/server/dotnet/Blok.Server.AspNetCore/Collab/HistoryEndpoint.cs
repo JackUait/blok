@@ -1,6 +1,8 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Http;
@@ -26,6 +28,9 @@ internal static class HistoryEndpoint
   private const string LineageHeader = "Blok-History-Lineage";
   private const string SequenceHeader = "Blok-History-Sequence";
   private const string NoSuchVersion = "no such version\n";
+
+  /// <summary>{"changes":[ and ],"truncated":true}.</summary>
+  private const int ChangesEnvelopeBytes = 32;
 
   // The standalone host forwards only this category to stderr.
   private const string LogCategory = "Blok.Server.Collab";
@@ -150,36 +155,48 @@ internal static class HistoryEndpoint
       return;
     }
 
-    var body = new JsonObject
+    // Rows are measured newest first; the newest always goes out, so a reader can page.
+    var rows = new List<byte[]>();
+    long size = ChangesEnvelopeBytes;
+    var truncated = result.Truncated;
+
+    for (var index = result.Changes.Count - 1; index >= 0; index--)
     {
-      ["changes"] = new JsonArray([.. result.Changes.Select(record =>
+      var row = ChangeRow(result.Changes[index]);
+
+      if (rows.Count > 0 && size + row.Length + 1 > CollabRoomManager.MaxChangeBytes)
       {
-        var entry = new JsonObject
-        {
-          ["sequence"] = record.Sequence,
-          ["committedAt"] = record.CommittedAt.ToUnixTimeMilliseconds(),
-          ["actor"] = record.ActorId,
-          ["blocks"] = new JsonArray([.. record.Blocks.Select(BlockChange)]),
-        };
+        truncated = true;
 
-        if (record.Page.Count > 0)
-        {
-          entry["page"] = new JsonArray([.. record.Page.Select(key => (JsonNode)key)]);
-        }
+        break;
+      }
 
-        return (JsonNode)entry;
-      })]),
-    };
-
-    if (result.Truncated)
-    {
-      body["truncated"] = true;
+      rows.Add(row);
+      size += row.Length + 1;
     }
+
+    rows.Reverse();
 
     WriteHistoryHead(context, point.Lineage, point.Sequence);
     context.Response.StatusCode = StatusCodes.Status200OK;
     context.Response.ContentType = "application/json";
-    await context.Response.WriteAsync(body.ToJsonString(), context.RequestAborted);
+
+    var body = context.Response.Body;
+    var cancel = context.RequestAborted;
+
+    await body.WriteAsync("{\"changes\":["u8.ToArray(), cancel);
+
+    for (var index = 0; index < rows.Count; index++)
+    {
+      if (index > 0)
+      {
+        await body.WriteAsync(","u8.ToArray(), cancel);
+      }
+
+      await body.WriteAsync(rows[index], cancel);
+    }
+
+    await body.WriteAsync((truncated ? "],\"truncated\":true}"u8 : "]}"u8).ToArray(), cancel);
   }
 
   public static async Task DeleteAsync(HttpContext context)
@@ -411,41 +428,65 @@ internal static class HistoryEndpoint
     EditEndpoint.Expose(context, LineageHeader, SequenceHeader);
   }
 
-  private static JsonNode BlockChange(CollabBlockChange change)
+  /// <summary>One changes row as UTF-8 JSON.</summary>
+  private static byte[] ChangeRow(CollabRecordChanges record)
   {
-    var entry = new JsonObject
+    var buffer = new ArrayBufferWriter<byte>();
+
+    using (var writer = new Utf8JsonWriter(buffer))
     {
-      ["id"] = change.Id,
-      ["type"] = change.Type,
-      ["kind"] = change.Kind switch
+      writer.WriteStartObject();
+      writer.WriteNumber("sequence", record.Sequence);
+      writer.WriteNumber("committedAt", record.CommittedAt.ToUnixTimeMilliseconds());
+      writer.WriteString("actor", record.ActorId);
+      writer.WriteStartArray("blocks");
+
+      foreach (var change in record.Blocks)
       {
-        CollabBlockChangeKind.Added => "added",
-        CollabBlockChangeKind.Removed => "removed",
-        CollabBlockChangeKind.Changed => "changed",
-        _ => "moved",
-      },
-    };
+        writer.WriteStartObject();
+        writer.WriteString("id", change.Id);
+        writer.WriteString("type", change.Type);
+        writer.WriteString("kind", change.Kind switch
+        {
+          CollabBlockChangeKind.Added => "added",
+          CollabBlockChangeKind.Removed => "removed",
+          CollabBlockChangeKind.Changed => "changed",
+          _ => "moved",
+        });
 
-    if (change.Before is { } before)
-    {
-      entry["before"] = Unparented(before);
+        if (change.Before is { } before)
+        {
+          writer.WritePropertyName("before");
+          before.WriteTo(writer);
+        }
+
+        if (change.After is { } after)
+        {
+          writer.WritePropertyName("after");
+          after.WriteTo(writer);
+        }
+
+        writer.WriteEndObject();
+      }
+
+      writer.WriteEndArray();
+
+      if (record.Page.Count > 0)
+      {
+        writer.WriteStartArray("page");
+
+        foreach (var key in record.Page)
+        {
+          writer.WriteStringValue(key);
+        }
+
+        writer.WriteEndArray();
+      }
+
+      writer.WriteEndObject();
     }
 
-    if (change.After is { } after)
-    {
-      entry["after"] = Unparented(after);
-    }
-
-    return entry;
-  }
-
-  /// <summary>
-  /// A block can be one record's after and the next one's before. Its first
-  /// use takes the detached node; only the second needs a copy.
-  /// </summary>
-  private static JsonObject Unparented(JsonObject block)
-  {
-    return block.Parent is null ? block : (JsonObject)block.DeepClone();
+    return buffer.WrittenSpan.ToArray();
   }
 
   private static JsonValue? UnixMilliseconds(DateTimeOffset? at)

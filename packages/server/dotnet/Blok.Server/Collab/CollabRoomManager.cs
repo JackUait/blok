@@ -576,6 +576,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   internal const int MaxChangeRecords = 200;
 
   /// <summary>
+  /// The most bytes of rows one changes answer carries. Each row holds whole
+  /// blocks, so 200 rows of large blocks ran to hundreds of MB.
+  /// </summary>
+  internal const int MaxChangeBytes = 4 * 1024 * 1024;
+
+  /// <summary>
   /// The edits of each record in (<paramref name="since"/>, <paramref name="sequence"/>]
   /// of one lineage, read without the room. The replay always starts at the
   /// baseline; the cap only limits which records are diffed.
@@ -586,12 +592,14 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       ulong sequence,
       ulong since,
       int maxRecords = MaxChangeRecords,
+      int maxBytes = MaxChangeBytes,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
     ArgumentException.ThrowIfNullOrEmpty(lineage);
     ArgumentOutOfRangeException.ThrowIfGreaterThan(since, sequence);
     ArgumentOutOfRangeException.ThrowIfLessThan(maxRecords, 1);
+    ArgumentOutOfRangeException.ThrowIfLessThan(maxBytes, 1);
 
     if (operationStore is not ICollabOperationHistoryStore history)
     {
@@ -679,12 +687,17 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
             history.ReadRecordsAsync(docId, lineage, sequence, cancellationToken),
             firstBefore,
             converter,
-            cancellationToken);
+            cancellationToken,
+            maxBytes);
 
-        if (!changes.Select(record => record.Sequence).SequenceEqual(window))
+        // The replay drops the oldest records past the byte budget; what is left is the window's tail.
+        if (changes.Count == 0 ||
+            !changes.Select(record => record.Sequence).SequenceEqual(window.Skip(window.Count - changes.Count)))
         {
           throw new InvalidDataException("collab: the records do not match their headers.");
         }
+
+        truncated |= changes.Count < window.Count;
       }
     }
     catch (Exception error) when (error is InvalidDataException or CollabHistoryReplayException)

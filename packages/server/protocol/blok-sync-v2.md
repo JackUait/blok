@@ -1032,9 +1032,13 @@ answers `{"changes":[]}`.
 - `page` lists the changed keys of the `page` map, then the changed keys of
   the `values` map as `values.<key>`, each group in ordinal order. It is
   absent when none changed.
-- One answer holds at most 200 rows. When the window has more records, the
-  answer holds the newest 200 and `"truncated": true`. `truncated` is absent
-  otherwise.
+- One answer holds at most 200 rows and at most 4 MiB of rows. When the
+  window has more, the answer holds the newest rows that fit and
+  `"truncated": true`. `truncated` is absent otherwise. The newest row is
+  always sent, even when it alone is larger than 4 MiB.
+- Records in a lineage have no gaps. To read the older rows, ask again with
+  the oldest row's `sequence` minus 1 as the path's sequence and the same
+  `since`.
 
 A restore is a forward edit against the live document. It is not a rewind, and
 it does not remove history.

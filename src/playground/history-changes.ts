@@ -355,7 +355,7 @@ export const mountVersionChanges = (host: HTMLElement, options: VersionChangesOp
     if (entries.length === 0) {
       status.textContent = 'No edits recorded in this version.';
     } else {
-      status.textContent = changes.truncated ? 'Showing the newest 200 edits.' : '';
+      status.textContent = changes.truncated ? 'Older edits in this version are not shown.' : '';
     }
     draw(entries);
   }, (error: unknown) => {

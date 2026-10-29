@@ -483,7 +483,7 @@ describe('mountUpdatesFeed', () => {
     await feed.ready;
 
     expect(cards()[0].querySelector('[data-pg-update-note]')).toBeNull();
-    expect(cards()[1].querySelector('[data-pg-update-note]')?.textContent).toBe('Showing the newest 200 edits.');
+    expect(cards()[1].querySelector('[data-pg-update-note]')?.textContent).toBe('Older edits in this version are not shown.');
   });
 
   it('shows the cards that loaded and a line for a version that failed', async () => {

@@ -367,6 +367,42 @@ public sealed class CollabVersionChangesTests
     Assert.Equal(["<b>x</b>", "<b>z</b>"], reader.Read.Order(StringComparer.Ordinal));
   }
 
+  /// <summary>A record dropped by the byte budget never sends its HTML to the runtime.</summary>
+  [Fact]
+  public async Task RecordsPastTheByteBudgetAreDroppedOldestFirstBeforeAnyHtmlIsRead()
+  {
+    var source = new YDoc(1);
+    var blocks = source.GetMap("blocks");
+    var baseline = source.Transact(transaction =>
+    {
+      blocks.Set(transaction, "a", HtmlBlock("a", "<b>x</b>"));
+      source.GetArray("root").Insert(transaction, 0, ["a"]);
+    })!;
+    var aText = (YText)Value((YMap)Value((YMap)Value(blocks, "a")!, "data")!, "text")!;
+    var toY = source.Transact(transaction =>
+    {
+      aText.Delete(transaction, 3, 1);
+      aText.Insert(transaction, 3, "y");
+    })!;
+    var toZ = source.Transact(transaction =>
+    {
+      aText.Delete(transaction, 3, 1);
+      aText.Insert(transaction, 3, "z");
+    })!;
+    var reader = new CountingReader(RichTextRuntime.Reader);
+
+    var changes = await CollabVersionChanges.ReplayAsync(
+        [baseline],
+        Records([toY, toZ]),
+        0,
+        new CollabDocConverter(TimeProvider.System, reader),
+        CancellationToken.None,
+        maxBytes: 1);
+
+    Assert.Equal(["<b>y</b>", "<b>z</b>"], reader.Read.Order(StringComparer.Ordinal));
+    Assert.Equal([2UL], changes.Select(record => record.Sequence));
+  }
+
   private static YMap HtmlBlock(string id, string html)
   {
     return new YMap(

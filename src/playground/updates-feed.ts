@@ -26,7 +26,7 @@ export interface UpdateSource {
 export interface UpdateItem {
   lineage: string;
   sequence: number;
-  /** Set on the oldest record of a version the server cut to its newest 200. */
+  /** Set on the oldest record of a version the server cut to its newest records. */
   truncated: boolean;
   record: ChangeRecord;
 }
@@ -506,7 +506,7 @@ export const mountUpdatesFeed = (host: HTMLElement, options: UpdatesFeedOptions)
     }
 
     if (card.truncated) {
-      const note = element('p', 'pg-hp-update__note', 'Showing the newest 200 edits.');
+      const note = element('p', 'pg-hp-update__note', 'Older edits in this version are not shown.');
 
       note.setAttribute('data-pg-update-note', '');
       snippets.append(note);

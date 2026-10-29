@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Yjs;
@@ -45,16 +46,22 @@ internal static class CollabVersionChanges
   /// a format-1 lineage would otherwise send every field through the runtime
   /// on every step. A converter failure other than a transient one is thrown
   /// as <see cref="CollabChangesExportException"/>.
+  /// Past <paramref name="maxBytes"/> of block JSON the oldest records are
+  /// dropped, before any HTML is read; the newest record always stays.
   /// </summary>
   internal static async ValueTask<IReadOnlyList<CollabRecordChanges>> ReplayAsync(
       IReadOnlyList<ReadOnlyMemory<byte>> baseline,
       IAsyncEnumerable<CollabOperationRecord> records,
       ulong firstBefore,
       ICollabDocConverter converter,
-      CancellationToken ct)
+      CancellationToken ct,
+      long maxBytes = long.MaxValue)
   {
     var changes = new List<CollabRecordChanges>();
-    var kept = new HashSet<RichTextHtmlSlot>(ReferenceEqualityComparer.Instance);
+    var slotsByRecord = new List<List<RichTextHtmlSlot>>();
+    var sizes = new List<long>();
+    long total = 0;
+    var measure = new ArrayBufferWriter<byte>();
     var warned = new HashSet<string>(StringComparer.Ordinal);
     StepExport? previous = null;
 
@@ -70,11 +77,14 @@ internal static class CollabVersionChanges
       if (record is not null && record.ServerSequence > firstBefore && previous is not null)
       {
         var blocks = Blocks(previous.Blocks, current.Blocks);
+        var slots = new List<RichTextHtmlSlot>();
+        long size = 0;
 
         foreach (var change in blocks)
         {
-          previous.Keep(change.Before, kept);
-          current.Keep(change.After, kept);
+          previous.Keep(change.Before, slots);
+          current.Keep(change.After, slots);
+          size += JsonBytes(change.Before, measure) + JsonBytes(change.After, measure);
         }
 
         changes.Add(new CollabRecordChanges(
@@ -83,6 +93,17 @@ internal static class CollabVersionChanges
             record.ActorId,
             blocks,
             Page(previous.Page, current.Page)));
+        slotsByRecord.Add(slots);
+        sizes.Add(size);
+        total += size;
+
+        while (total > maxBytes && changes.Count > 1)
+        {
+          total -= sizes[0];
+          changes.RemoveAt(0);
+          slotsByRecord.RemoveAt(0);
+          sizes.RemoveAt(0);
+        }
       }
 
       previous?.DetachKept();
@@ -90,6 +111,9 @@ internal static class CollabVersionChanges
     }
 
     previous?.DetachKept();
+
+    // Only the slots of records still kept: a dropped record's HTML is never read.
+    var kept = new HashSet<RichTextHtmlSlot>(slotsByRecord.SelectMany(slots => slots), ReferenceEqualityComparer.Instance);
 
     try
     {
@@ -101,6 +125,23 @@ internal static class CollabVersionChanges
     }
 
     return changes;
+  }
+
+  private static long JsonBytes(JsonObject? block, ArrayBufferWriter<byte> buffer)
+  {
+    if (block is null)
+    {
+      return 0;
+    }
+
+    buffer.ResetWrittenCount();
+
+    using (var writer = new Utf8JsonWriter(buffer))
+    {
+      block.WriteTo(writer);
+    }
+
+    return buffer.WrittenCount;
   }
 
   /// <summary>
@@ -365,7 +406,7 @@ internal sealed class StepExport
     return new StepExport(blocks, CollabVersionChanges.PageFields(doc), slotsByBlock);
   }
 
-  internal void Keep(JsonObject? block, HashSet<RichTextHtmlSlot> kept)
+  internal void Keep(JsonObject? block, List<RichTextHtmlSlot> kept)
   {
     if (block is null)
     {
@@ -376,7 +417,7 @@ internal sealed class StepExport
 
     if (slotsByBlock.TryGetValue(block, out var owned))
     {
-      kept.UnionWith(owned);
+      kept.AddRange(owned);
     }
   }
 

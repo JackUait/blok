@@ -388,6 +388,68 @@ public sealed class HistoryEndpointTests
   }
 
   [Fact]
+  public async Task ChangesPastTheByteBudgetAreTheNewestAndTheRestComeByPaging()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditAsync("insert", """{ "ops": [ { "op": "insert", "id": "b", "block": { "type": "rawblob", "data": { "blob": "x" } } } ] }""");
+
+    for (var edit = 0; edit < 6; edit++)
+    {
+      var blob = new string((char)('a' + edit), 600_000);
+
+      await history.EditAsync($"blob-{edit}", $$"""{ "ops": [ { "op": "update", "id": "b", "data": { "blob": "{{blob}}" } } ] }""");
+    }
+
+    using var first = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/7/changes?since=0");
+    var bytes = await first.Content.ReadAsByteArrayAsync();
+
+    Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+    Assert.True(bytes.Length <= CollabRoomManager.MaxChangeBytes, $"{bytes.Length} bytes");
+    var body = JsonNode.Parse(bytes)!.AsObject();
+    Assert.True(body["truncated"]!.GetValue<bool>());
+    var sequences = body["changes"]!.AsArray().Select(row => row!["sequence"]!.GetValue<ulong>()).ToList();
+    Assert.Equal(7UL, sequences[^1]);
+
+    // Records have no gaps, so the next page ends just below the oldest row.
+    while (body.ContainsKey("truncated"))
+    {
+      using var next = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/{sequences[0] - 1}/changes?since=0");
+
+      Assert.Equal(HttpStatusCode.OK, next.StatusCode);
+      body = JsonNode.Parse(await next.Content.ReadAsStringAsync())!.AsObject();
+      sequences.InsertRange(0, body["changes"]!.AsArray().Select(row => row!["sequence"]!.GetValue<ulong>()));
+    }
+
+    Assert.Equal([1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL], sequences);
+  }
+
+  /// <summary>Reading a row's HTML can make it larger than the replay measured; the answer still keeps to the budget.</summary>
+  [Fact]
+  public async Task RowsThatGrowWhenTheirHtmlIsReadStillKeepToTheByteBudget()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditAsync("insert", """{ "ops": [ { "op": "insert", "id": "b", "block": { "type": "rawblob", "data": { "blob": "0" } } } ] }""");
+
+    for (var edit = 1; edit <= 4; edit++)
+    {
+      await history.EditAsync($"blob-{edit}", $$"""{ "ops": [ { "op": "update", "id": "b", "data": { "blob": "{{edit}}" } } ] }""");
+    }
+
+    history.Converter.ResolvedBlob = new string('z', 1_000_000);
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/5/changes?since=0");
+    var bytes = await response.Content.ReadAsByteArrayAsync();
+
+    Assert.True(bytes.Length <= CollabRoomManager.MaxChangeBytes, $"{bytes.Length} bytes");
+    var body = JsonNode.Parse(bytes)!.AsObject();
+    Assert.True(body["truncated"]!.GetValue<bool>());
+    Assert.Equal(
+        [4UL, 5UL],
+        body["changes"]!.AsArray().Select(row => row!["sequence"]!.GetValue<ulong>()));
+  }
+
+  [Fact]
   public async Task ChangesOfTheBaselineAreEmptyAndAnUnknownPointIsNotFound()
   {
     await using var history = await HistoryApp.StartAsync();
@@ -1158,6 +1220,12 @@ public sealed class HistoryEndpointTests
   {
     internal Exception? ExportFailure { get; set; }
 
+    /// <summary>
+    /// While set, every rawblob's blob reads as HTML and resolves to this:
+    /// a row that grows only after its HTML is read.
+    /// </summary>
+    internal string? ResolvedBlob { get; set; }
+
     public ValueTask SeedAsync(YDoc doc, JsonNode outputData, CancellationToken cancellationToken = default)
     {
       return inner.SeedAsync(doc, outputData, cancellationToken);
@@ -1180,11 +1248,36 @@ public sealed class HistoryEndpointTests
 
     public JsonArray ExportBlocks(YDoc doc, ISet<string> warned, out IReadOnlyList<RichTextHtmlSlot> slots)
     {
-      return ExportFailure is { } failure ? throw failure : inner.ExportBlocks(doc, warned, out slots);
+      if (ExportFailure is { } failure)
+      {
+        throw failure;
+      }
+
+      var blocks = inner.ExportBlocks(doc, warned, out slots);
+
+      if (ResolvedBlob is not null)
+      {
+        slots = [.. blocks.OfType<JsonObject>()
+            .Where(block => block["type"]?.GetValue<string>() == "rawblob")
+            .Select(block => new RichTextHtmlSlot(
+                block["data"]!.AsObject(), "blob", new RichTextHtml("rawblob", "blob", block["data"]!["blob"]!.GetValue<string>())))];
+      }
+
+      return blocks;
     }
 
     public ValueTask ResolveAsync(IReadOnlyList<RichTextHtmlSlot> slots, CancellationToken cancellationToken = default)
     {
+      if (ResolvedBlob is { } blob)
+      {
+        foreach (var slot in slots)
+        {
+          slot.Target[slot.Key] = blob;
+        }
+
+        return ValueTask.CompletedTask;
+      }
+
       return inner.ResolveAsync(slots, cancellationToken);
     }
   }

@@ -96,4 +96,18 @@ describe('offerCsvDatabase', () => {
 
     expect(d.blocks.insertAt).toHaveBeenNthCalledWith(2, 'database-row', expect.objectContaining({ title: '<b>bold</b> & co' }), expect.anything());
   });
+
+  it('builds one database when Convert is clicked twice before the first click lands', async () => {
+    const d = deps();
+
+    offerCsvDatabase('Task,Points\nWrite,3\nShip,5', ['b1', 'b2', 'b3'], d);
+    const action = vi.mocked(d.notify).mock.calls[0][0].actions?.[0];
+
+    action?.onClick();
+    action?.onClick();
+    await vi.waitFor(() => expect(d.order).toContain('end'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(d.order.filter((step) => step === 'insert:database')).toHaveLength(1);
+  });
 });

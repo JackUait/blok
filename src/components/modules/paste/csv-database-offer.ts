@@ -1,6 +1,7 @@
 import type { Blocks } from '../../../../types/api/blocks';
 import type { NotifierOptions } from '../../../../types/configs/notifier';
 import { pastedTable } from '../../../tools/database/csv-parse';
+import { log } from '../../utils/logger';
 
 export interface CsvOfferDeps {
   blocks: Pick<Blocks, 'getById' | 'getBlockIndex' | 'insertAt' | 'delete' | 'beginTransaction' | 'endTransaction'>;
@@ -54,13 +55,21 @@ export const offerCsvDatabase = (text: string, addedIds: string[], deps: CsvOffe
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '').length;
 
   if (table === null || addedIds.length !== lines) return false;
+  // The toast button does not disable itself, and the first click waits for a chunk.
+  const state = { converting: false };
+
   deps.notify({
     message: deps.t('tools.database.csvPasteOffer'),
     actions: [{
       label: deps.t('tools.database.csvPasteConvert'),
       primary: true,
       onClick: () => {
-        void convert(table, addedIds, deps);
+        if (state.converting) return;
+        state.converting = true;
+        convert(table, addedIds, deps).catch((error: unknown) => {
+          state.converting = false;
+          log('CSV paste: converting to a database failed.', 'warn', error);
+        });
       },
     }],
   });

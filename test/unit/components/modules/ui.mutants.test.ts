@@ -1902,12 +1902,11 @@ describe('UI module — mutants', () => {
       return harness;
     };
 
-    it('opens block settings at the cursor for a plain-content right click', () => {
+    it('opens block settings at the cursor for a right click off the text', () => {
       const { blok, redactor } = setupContextMenu();
 
       const content = document.createElement('div');
 
-      content.textContent = 'ctx-target-content';
       redactor.appendChild(content);
 
       const event = new MouseEvent('contextmenu', {

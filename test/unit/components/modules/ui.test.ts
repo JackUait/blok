@@ -487,12 +487,64 @@ describe("UI module", () => {
       return { redactor: ui.nodes.redactor, open, moveAndOpen, block };
     };
 
+    it.each([
+      { mode: "editing", contentEditable: "true", readOnly: false },
+      { mode: "read-only", contentEditable: "false", readOnly: true },
+    ])("keeps the native menu on block text while $mode", async ({ contentEditable, readOnly }) => {
+      const { redactor, open, moveAndOpen } = await setupContextMenu({ readOnly });
+      const text = document.createElement("div");
+      const bold = document.createElement("b");
+
+      text.setAttribute("contenteditable", contentEditable);
+      bold.textContent = "bold";
+      text.append("Plain ", bold);
+      redactor.appendChild(text);
+
+      for (const target of [text, bold]) {
+        const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+        target.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+      }
+      expect(moveAndOpen).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it("keeps the native menu in an empty editable block, so Paste stays reachable", async () => {
+      const { redactor, open } = await setupContextMenu();
+      const text = document.createElement("div");
+
+      text.setAttribute("contenteditable", "true");
+      redactor.appendChild(text);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      text.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it("opens block actions on a marked link that carries text", async () => {
+      const { redactor, open } = await setupContextMenu({ blockName: "page" });
+      const link = document.createElement("a");
+
+      link.setAttribute("data-blok-block-context-menu", "");
+      link.textContent = "Test";
+      redactor.appendChild(link);
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
     it("opens Block Settings anchored at the cursor and suppresses the native menu", async () => {
       const { redactor, open, moveAndOpen, block } = await setupContextMenu();
 
       const content = document.createElement("div");
 
-      content.setAttribute("contenteditable", "true");
       redactor.appendChild(content);
 
       const event = new MouseEvent("contextmenu", {

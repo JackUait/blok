@@ -141,7 +141,10 @@ for (const width of [1280, 390]) {
             if (!headingBox) {
               throw new Error('Heading is missing');
             }
-            await heading.click({ button: 'right', position: { x: headingBox.width - 30, y: 10 } });
+            // Text keeps the browser menu, so right-click the heading's holder at the same point.
+            await page.getByTestId('block-wrapper').filter({ has: heading }).evaluate((wrapper, point) => {
+              wrapper.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, ...point }));
+            }, { clientX: headingBox.x + headingBox.width - 30, clientY: headingBox.y + 10 });
             await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Convert to', exact: true }).click();
             const conversion = page.getByTestId('popover-container').filter({
               has: page.locator('[data-blok-convert-item]'),
@@ -158,6 +161,17 @@ for (const width of [1280, 390]) {
             await expect(page.getByRole('heading', { name: 'A better way to work' })).toHaveCount(0);
           });
         }
+
+        test('right-clicking heading text leaves the browser menu alone', async ({ page }) => {
+          await page.keyboard.press('Escape');
+          const contextMenuPrevented = page.evaluate(() => new Promise<boolean>(resolve => {
+            window.addEventListener('contextmenu', event => resolve(event.defaultPrevented), { once: true });
+          }));
+
+          await page.getByText('A better way to work', { exact: true }).click({ button: 'right' });
+          expect(await contextMenuPrevented).toBe(false);
+          await expect(page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Convert to', exact: true })).toBeHidden();
+        });
 
         test('search narrows the conversion list without adding dividers and clearing restores it', async ({ page }) => {
           const settings = page.getByTestId('block-tunes-popover');

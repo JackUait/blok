@@ -717,6 +717,10 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    if (target.closest(`[${DATA_ATTR.blockContextMenu}]`) === null && this.isTextTarget(target)) {
+      return;
+    }
+
     const nativeTarget = target.closest('a, input, textarea, select, img, video, audio');
 
     if (nativeTarget !== null && (
@@ -746,6 +750,23 @@ export class UI extends Module<UINodes> {
 
     void BlockSettings.open(block, new DOMRect(event.clientX, event.clientY, 0, 0));
   };
+
+  /**
+   * Text keeps the browser menu (copy, paste, spelling). Read-only text is not
+   * contenteditable, so an element that holds text itself counts too.
+   * @param target - the right-clicked element
+   */
+  private isTextTarget(target: Element): boolean {
+    const editable = target.closest('[contenteditable]');
+
+    if (editable !== null && editable.getAttribute('contenteditable') !== 'false') {
+      return true;
+    }
+
+    return Array.from(target.childNodes).some(
+      (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== ''
+    );
+  }
 
   /**
    * Check for mobile mode and save the result

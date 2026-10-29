@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Properti",
   "tools.database.rollupTargetProperty": "Properti target",
   "tools.database.rollupFunction": "Hitung",
+  "tools.database.rollupConfigure": "Atur rangkuman",
   "tools.database.rollupFn.show_original": "Tampilkan asli",
   "tools.database.rollupFn.show_unique": "Tampilkan nilai unik",
   "tools.database.rollupFn.count": "Hitung semua",

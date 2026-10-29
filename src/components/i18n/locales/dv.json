@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ޕްރޮޕަރޓީ",
   "tools.database.rollupTargetProperty": "އަމާޒު ޕްރޮޕަރޓީ",
   "tools.database.rollupFunction": "ހިސާބުކުރޭ",
+  "tools.database.rollupConfigure": "ޖުމްލަ ތައްޔާރުކުރޭ",
   "tools.database.rollupFn.show_original": "އަސްލު ދައްކާ",
   "tools.database.rollupFn.show_unique": "ތަފާތު އަގުތައް ދައްކާ",
   "tools.database.rollupFn.count": "ހުރިހާ އެއްޗެއް ގުނާ",

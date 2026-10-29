@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "속성",
   "tools.database.rollupTargetProperty": "대상 속성",
   "tools.database.rollupFunction": "계산",
+  "tools.database.rollupConfigure": "롤업 구성",
   "tools.database.rollupFn.show_original": "원본 표시",
   "tools.database.rollupFn.show_unique": "고유 값 표시",
   "tools.database.rollupFn.count": "모두 세기",

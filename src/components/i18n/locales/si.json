@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ගුණාංගය",
   "tools.database.rollupTargetProperty": "ඉලක්ක ගුණාංගය",
   "tools.database.rollupFunction": "ගණනය කරන්න",
+  "tools.database.rollupConfigure": "සාරාංශය වින්‍යාස කරන්න",
   "tools.database.rollupFn.show_original": "මුල් අගයන් පෙන්වන්න",
   "tools.database.rollupFn.show_unique": "අනන්‍ය අගයන් පෙන්වන්න",
   "tools.database.rollupFn.count": "සියල්ලේ ගණන",

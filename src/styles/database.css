@@ -8394,7 +8394,8 @@ textarea[data-blok-database-cell-input] {
 
 /* notion-spec-2 §18.2, §19.20: on a right-aligned value the box hugs the start edge. An autofill pill keeps its side (unmeasured). */
 [data-blok-database-table-cell][data-type="number"] > [data-blok-database-table-cell-actions=""],
-[data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""] {
+[data-blok-database-table-cell][data-type="formula"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""],
+[data-blok-database-table-cell][data-type="rollup"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""] {
   inset-inline-start: 4px;
   inset-inline-end: auto;
 }
@@ -8411,6 +8412,12 @@ textarea[data-blok-database-cell-input] {
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
+}
+
+/* notion-spec-2 §18.2: Configure rollup is 20x20 with 6px corners, so its box with Copy is 48 wide. */
+[data-blok-database-table-cell-action="configure"] {
+  width: 20px;
+  border-radius: var(--blok-radius-control);
 }
 
 [data-blok-database-table-cell-action]:hover {

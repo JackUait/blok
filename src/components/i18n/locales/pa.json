@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ਵਿਸ਼ੇਸ਼ਤਾ",
   "tools.database.rollupTargetProperty": "ਟੀਚਾ ਵਿਸ਼ੇਸ਼ਤਾ",
   "tools.database.rollupFunction": "ਗਣਨਾ ਕਰੋ",
+  "tools.database.rollupConfigure": "ਸੰਖੇਪ ਕੌਂਫਿਗਰ ਕਰੋ",
   "tools.database.rollupFn.show_original": "ਮੂਲ ਦਿਖਾਓ",
   "tools.database.rollupFn.show_unique": "ਵਿਲੱਖਣ ਮੁੱਲ ਦਿਖਾਓ",
   "tools.database.rollupFn.count": "ਸਾਰਿਆਂ ਦੀ ਗਿਣਤੀ",

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ಗುಣಲಕ್ಷಣ",
   "tools.database.rollupTargetProperty": "ಗುರಿ ಗುಣಲಕ್ಷಣ",
   "tools.database.rollupFunction": "ಲೆಕ್ಕಾಚಾರ ಮಾಡಿ",
+  "tools.database.rollupConfigure": "ಸಂಗ್ರಹವನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ",
   "tools.database.rollupFn.show_original": "ಮೂಲವನ್ನು ತೋರಿಸಿ",
   "tools.database.rollupFn.show_unique": "ಅನನ್ಯ ಮೌಲ್ಯಗಳನ್ನು ತೋರಿಸಿ",
   "tools.database.rollupFn.count": "ಎಲ್ಲದರ ಎಣಿಕೆ",

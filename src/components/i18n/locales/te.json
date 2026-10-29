@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ప్రాపర్టీ",
   "tools.database.rollupTargetProperty": "లక్ష్య ప్రాపర్టీ",
   "tools.database.rollupFunction": "లెక్కించు",
+  "tools.database.rollupConfigure": "సంకలనాన్ని కాన్ఫిగర్ చేయండి",
   "tools.database.rollupFn.show_original": "అసలును చూపు",
   "tools.database.rollupFn.show_unique": "ప్రత్యేక విలువలను చూపు",
   "tools.database.rollupFn.count": "అన్నింటి గణన",

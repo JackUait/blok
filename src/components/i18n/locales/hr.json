@@ -1761,6 +1761,7 @@
   "tools.database.rollupProperty": "Svojstvo",
   "tools.database.rollupTargetProperty": "Ciljno svojstvo",
   "tools.database.rollupFunction": "Izračunaj",
+  "tools.database.rollupConfigure": "Konfiguriraj sažimanje",
   "tools.database.rollupFn.show_original": "Prikaži izvorno",
   "tools.database.rollupFn.show_unique": "Prikaži jedinstvene vrijednosti",
   "tools.database.rollupFn.count": "Broj svih",

@@ -194,3 +194,21 @@ describe('database table hover pill at the end edge', () => {
     expect(ruleBody('[data-blok-database-table-cell-actions]')).toMatch(/inset-inline-end:\s*4px/);
   });
 });
+
+describe('database table rollup hover box', () => {
+  // notion-spec-2 §18.2: a numeric rollup's Configure + Copy box sits on the left, like Number.
+  it('a number rollup box sits at the start edge', () => {
+    const body = ruleBody('[data-blok-database-table-cell][data-type="rollup"]:has(> [data-result-type="number"]) > [data-blok-database-table-cell-actions=""]');
+
+    expect(body).toMatch(/inset-inline-start:\s*4px/);
+    expect(body).toMatch(/inset-inline-end:\s*auto/);
+  });
+
+  // notion-spec-2 §18.2: Configure rollup is 20x20 with radius 6px, so the box is 48 wide.
+  it('Configure rollup is a 20px square with 6px corners', () => {
+    const body = ruleBody('[data-blok-database-table-cell-action="configure"]');
+
+    expect(body).toMatch(/width:\s*20px/);
+    expect(body).toMatch(/border-radius:\s*var\(--blok-radius-control\)/);
+  });
+});

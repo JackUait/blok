@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Հատկություն",
   "tools.database.rollupTargetProperty": "Թիրախային հատկություն",
   "tools.database.rollupFunction": "Հաշվարկել",
+  "tools.database.rollupConfigure": "Կարգավորել ամփոփումը",
   "tools.database.rollupFn.show_original": "Ցույց տալ բնօրինակը",
   "tools.database.rollupFn.show_unique": "Ցույց տալ եզակի արժեքները",
   "tools.database.rollupFn.count": "Հաշվել բոլորը",

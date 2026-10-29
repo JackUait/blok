@@ -1763,6 +1763,7 @@
   "tools.database.rollupProperty": "Властивість",
   "tools.database.rollupTargetProperty": "Цільова властивість",
   "tools.database.rollupFunction": "Обчислити",
+  "tools.database.rollupConfigure": "Налаштувати зведення",
   "tools.database.rollupFn.show_original": "Показати оригінал",
   "tools.database.rollupFn.show_unique": "Показати унікальні значення",
   "tools.database.rollupFn.count": "Кількість усіх",

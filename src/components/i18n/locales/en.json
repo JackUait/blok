@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Property",
   "tools.database.rollupTargetProperty": "Target property",
   "tools.database.rollupFunction": "Calculate",
+  "tools.database.rollupConfigure": "Configure rollup",
   "tools.database.rollupFn.show_original": "Show original",
   "tools.database.rollupFn.show_unique": "Show unique values",
   "tools.database.rollupFn.count": "Count all",

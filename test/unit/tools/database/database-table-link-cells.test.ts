@@ -216,6 +216,89 @@ describe('table URL, email and phone cells', () => {
       });
     });
 
+    // notion-spec-2 §18.2: what the box holds on the other filled types.
+    describe('pill, people, files, relation, rollup and read-only cells', () => {
+      const more: PropertyDefinition[] = [
+        ...schema,
+        { id: 'p-sel', name: 'Sel', type: 'select', position: 'b1', config: { options: [{ id: 'o1', label: 'Alpha', position: 'a0' }] } },
+        { id: 'p-multi', name: 'Multi', type: 'multiSelect', position: 'b2', config: { options: [{ id: 'o1', label: 'Alpha', position: 'a0' }] } },
+        { id: 'p-stat', name: 'Stat', type: 'status', position: 'b3', config: { options: [{ id: 'o1', label: 'Done', position: 'a0' }] } },
+        { id: 'p-who', name: 'Who', type: 'person', position: 'b4' },
+        { id: 'p-file', name: 'File', type: 'files', position: 'b5' },
+        { id: 'p-rel', name: 'Rel', type: 'relation', position: 'b6', relation: { databaseId: 'db' } },
+        { id: 'p-roll', name: 'Roll', type: 'rollup', position: 'b7', rollup: { relationPropertyId: 'p-rel', targetPropertyId: 'x', function: 'sum' } },
+        { id: 'p-id', name: 'ID', type: 'uniqueId', position: 'b8' },
+        { id: 'p-made', name: 'Made', type: 'createdTime', position: 'b9' },
+        { id: 'p-by', name: 'By', type: 'createdBy', position: 'c1' },
+        { id: 'p-done', name: 'Done', type: 'checkbox', position: 'c2' },
+      ];
+      const moreRows = (): DatabaseRow[] => [
+        {
+          ...rows()[0],
+          properties: {
+            ...rows()[0].properties,
+            'p-sel': 'o1',
+            'p-multi': ['o1'],
+            'p-stat': 'o1',
+            'p-who': [{ id: 'u1' }],
+            'p-file': [{ id: 'f1', url: 'https://example.com/a.pdf', name: 'a.pdf' }],
+            'p-id': 1,
+            'p-done': true,
+          },
+          computed: { 'p-rel': [{ id: 'r2' }], 'p-roll': 42 },
+          meta: { createdAt: Date.UTC(2026, 9, 28), createdBy: 'u1' },
+        },
+        rows()[1],
+      ];
+      const valueProperty = (property: PropertyDefinition): PropertyDefinition =>
+        property.id === 'p-roll' ? { ...property, type: 'number' } : property;
+      const mountMore = (overrides: Partial<DatabaseTableViewOptions> = {}): HTMLElement =>
+        mount({ comment: vi.fn(), schema: more, rows: moreRows(), cellContext: { valueProperty, relationTitle: () => 'Beta' }, ...overrides }).root;
+      const labels = (el: HTMLElement): string[] =>
+        [...(actions(el)?.querySelectorAll('button') ?? [])].map((button) => button.getAttribute('aria-label') ?? '');
+
+      it.each(['p-sel', 'p-multi', 'p-stat', 'p-who', 'p-file', 'p-rel'])('a filled %s cell carries Comment only', (propertyId) => {
+        expect(labels(cell(mountMore(), 'r1', propertyId))).toEqual(['tools.database.tableComment']);
+      });
+
+      it.each(['p-sel', 'p-who', 'p-rel'])('without host comments a filled %s cell carries no box', (propertyId) => {
+        expect(actions(cell(mountMore({ comment: undefined }), 'r1', propertyId))).toBeNull();
+      });
+
+      it.each(['p-id', 'p-made'])('a %s cell carries Copy only', (propertyId) => {
+        expect(labels(cell(mountMore(), 'r1', propertyId))).toEqual(['tools.database.cellCopy']);
+      });
+
+      it.each(['p-by', 'p-done'])('a %s cell carries no box', (propertyId) => {
+        expect(actions(cell(mountMore(), 'r1', propertyId))).toBeNull();
+      });
+
+      it('a filled rollup cell carries Configure rollup and Copy, and Configure opens its property settings', () => {
+        const handlers = { ...makeHandlers(), editProperty: vi.fn() };
+        const root = mountMore({ handlers });
+        const target = cell(root, 'r1', 'p-roll');
+
+        expect(labels(target)).toEqual(['tools.database.rollupConfigure', 'tools.database.cellCopy']);
+        expect(actions(target)?.getAttribute('data-blok-database-table-cell-actions')).toBe('');
+
+        clickOn(action(target, 'tools.database.rollupConfigure') as HTMLButtonElement);
+
+        expect(handlers.editProperty).toHaveBeenCalledWith('p-roll');
+        expect(editorField()).toBeNull();
+      });
+
+      it('read-only: a rollup cell carries Copy only', () => {
+        expect(labels(cell(mountMore({ readOnly: true }), 'r1', 'p-roll'))).toEqual(['tools.database.cellCopy']);
+      });
+
+      it('empty pill and relation cells carry none', () => {
+        const root = mountMore();
+
+        expect(actions(cell(root, 'r2', 'p-sel'))).toBeNull();
+        expect(actions(cell(root, 'r2', 'p-rel'))).toBeNull();
+      });
+    });
+
     it('without host comments there is no Comment button, Copy stays', () => {
       const { root } = mount();
 

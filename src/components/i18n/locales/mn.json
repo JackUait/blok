@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Шинж",
   "tools.database.rollupTargetProperty": "Зорилтот шинж",
   "tools.database.rollupFunction": "Тооцоолох",
+  "tools.database.rollupConfigure": "Нэгтгэлийг тохируулах",
   "tools.database.rollupFn.show_original": "Эхийг харуулах",
   "tools.database.rollupFn.show_unique": "Давтагдашгүй утгуудыг харуулах",
   "tools.database.rollupFn.count": "Бүгдийг тоолох",

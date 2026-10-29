@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Eigenschap",
   "tools.database.rollupTargetProperty": "Doeleigenschap",
   "tools.database.rollupFunction": "Berekenen",
+  "tools.database.rollupConfigure": "Samenvatting instellen",
   "tools.database.rollupFn.show_original": "Origineel tonen",
   "tools.database.rollupFn.show_unique": "Unieke waarden tonen",
   "tools.database.rollupFn.count": "Alles tellen",

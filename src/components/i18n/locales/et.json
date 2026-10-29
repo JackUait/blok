@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Omadus",
   "tools.database.rollupTargetProperty": "Sihtomadus",
   "tools.database.rollupFunction": "Arvuta",
+  "tools.database.rollupConfigure": "Seadista koond",
   "tools.database.rollupFn.show_original": "Näita algset",
   "tools.database.rollupFn.show_unique": "Näita unikaalseid väärtusi",
   "tools.database.rollupFn.count": "Loenda kõik",

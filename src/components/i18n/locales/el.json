@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Ιδιότητα",
   "tools.database.rollupTargetProperty": "Ιδιότητα-στόχος",
   "tools.database.rollupFunction": "Υπολογισμός",
+  "tools.database.rollupConfigure": "Ρύθμιση συγκεντρωτικού",
   "tools.database.rollupFn.show_original": "Εμφάνιση αρχικών",
   "tools.database.rollupFn.show_unique": "Εμφάνιση μοναδικών τιμών",
   "tools.database.rollupFn.count": "Πλήθος όλων",

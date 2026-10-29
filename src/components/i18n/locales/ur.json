@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "پراپرٹی",
   "tools.database.rollupTargetProperty": "ہدف پراپرٹی",
   "tools.database.rollupFunction": "حساب لگائیں",
+  "tools.database.rollupConfigure": "خلاصہ ترتیب دیں",
   "tools.database.rollupFn.show_original": "اصل دکھائیں",
   "tools.database.rollupFn.show_unique": "منفرد اقدار دکھائیں",
   "tools.database.rollupFn.count": "سب گنیں",

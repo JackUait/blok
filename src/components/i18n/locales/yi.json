@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "אייגנשאפט",
   "tools.database.rollupTargetProperty": "ציל־אייגנשאפט",
   "tools.database.rollupFunction": "אויסרעכענען",
+  "tools.database.rollupConfigure": "קאָנפֿיגורירן צונויפֿרעכענונג",
   "tools.database.rollupFn.show_original": "ווײַזן דעם אָריגינאַל",
   "tools.database.rollupFn.show_unique": "ווײַזן יחידישע ווערטן",
   "tools.database.rollupFn.count": "ציילן אַלץ",

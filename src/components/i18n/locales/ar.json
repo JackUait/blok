@@ -1767,6 +1767,7 @@
   "tools.database.rollupProperty": "خاصية",
   "tools.database.rollupTargetProperty": "الخاصية المستهدفة",
   "tools.database.rollupFunction": "حساب",
+  "tools.database.rollupConfigure": "إعداد التجميع",
   "tools.database.rollupFn.show_original": "عرض الأصل",
   "tools.database.rollupFn.show_unique": "عرض القيم الفريدة",
   "tools.database.rollupFn.count": "عدّ الكل",

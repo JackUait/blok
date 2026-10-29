@@ -1761,6 +1761,7 @@
   "tools.database.rollupProperty": "Својство",
   "tools.database.rollupTargetProperty": "Циљно својство",
   "tools.database.rollupFunction": "Израчунај",
+  "tools.database.rollupConfigure": "Подеси сажетак",
   "tools.database.rollupFn.show_original": "Прикажи оригинал",
   "tools.database.rollupFn.show_unique": "Прикажи јединствене вредности",
   "tools.database.rollupFn.count": "Број свих",

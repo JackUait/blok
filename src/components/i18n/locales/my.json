@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ဂုဏ်သတ္တိ",
   "tools.database.rollupTargetProperty": "ပစ်မှတ် ဂုဏ်သတ္တိ",
   "tools.database.rollupFunction": "တွက်ချက်ရန်",
+  "tools.database.rollupConfigure": "စုစည်းတွက်ချက်မှုကို ပြင်ဆင်သတ်မှတ်ရန်",
   "tools.database.rollupFn.show_original": "မူရင်းကို ပြရန်",
   "tools.database.rollupFn.show_unique": "ထူးခြားသော တန်ဖိုးများ ပြရန်",
   "tools.database.rollupFn.count": "အားလုံး ရေတွက်",

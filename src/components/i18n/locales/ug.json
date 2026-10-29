@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "خاسلىق",
   "tools.database.rollupTargetProperty": "نىشان خاسلىق",
   "tools.database.rollupFunction": "ھېسابلاش",
+  "tools.database.rollupConfigure": "يىغىپ ھېسابلاشنى سەپلەش",
   "tools.database.rollupFn.show_original": "ئەسلىنى كۆرسىتىش",
   "tools.database.rollupFn.show_unique": "ئۆزگىچە قىممەتلەرنى كۆرسىتىش",
   "tools.database.rollupFn.count": "ھەممىسىنى ساناش",

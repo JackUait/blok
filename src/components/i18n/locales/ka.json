@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "თვისება",
   "tools.database.rollupTargetProperty": "სამიზნე თვისება",
   "tools.database.rollupFunction": "გამოთვლა",
+  "tools.database.rollupConfigure": "შეჯამების კონფიგურაცია",
   "tools.database.rollupFn.show_original": "ორიგინალის ჩვენება",
   "tools.database.rollupFn.show_unique": "უნიკალური მნიშვნელობების ჩვენება",
   "tools.database.rollupFn.count": "ყველას დათვლა",

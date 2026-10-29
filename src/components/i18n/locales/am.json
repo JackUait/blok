@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ንብረት",
   "tools.database.rollupTargetProperty": "ዒላማ ንብረት",
   "tools.database.rollupFunction": "አስላ",
+  "tools.database.rollupConfigure": "ማጠቃለያን አዋቅር",
   "tools.database.rollupFn.show_original": "የመጀመሪያውን አሳይ",
   "tools.database.rollupFn.show_unique": "ልዩ እሴቶችን አሳይ",
   "tools.database.rollupFn.count": "የሁሉም ቆጠራ",

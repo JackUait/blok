@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Egenskap",
   "tools.database.rollupTargetProperty": "Målegenskap",
   "tools.database.rollupFunction": "Beräkna",
+  "tools.database.rollupConfigure": "Konfigurera sammanställning",
   "tools.database.rollupFn.show_original": "Visa original",
   "tools.database.rollupFn.show_unique": "Visa unika värden",
   "tools.database.rollupFn.count": "Räkna alla",

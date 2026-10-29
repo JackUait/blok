@@ -54,6 +54,7 @@ import {
   IconDotsHorizontal,
   IconCopy,
   IconMessage,
+  IconPencilLine,
   IconWand,
   IconWarning,
   IconInfo,
@@ -247,6 +248,12 @@ const MAX_SHOWN_COUNT = 99;
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
 /** notion-spec-2 §18.2, §19.6, §19.20: filled cells whose hover shows Comment + Copy. */
 const COPY_PILL_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number', 'formula']);
+/** notion-spec-2 §18.2: filled cells whose hover shows Comment alone. */
+const COMMENT_ONLY_TYPES: ReadonlySet<string> = new Set(['select', 'multiSelect', 'status', 'person', 'files', 'relation']);
+/** notion-spec-2 §18.2: cells whose hover shows Copy alone. Last edited time is not measured. */
+const COPY_ONLY_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime']);
+
+type CellAction = [action: string, key: string, icon: string];
 
 const tableIds = { next: 0 };
 
@@ -984,26 +991,37 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     // A title cell's corner belongs to OPEN, so its Autofill stays alone.
     if (run !== null && filled && column.property.type !== 'title') {
-      cell.appendChild(this.createCellActions(run));
+      cell.appendChild(this.createCellActions(this.hoverActions('text'), run));
     } else if (run !== null) {
       cell.appendChild(run);
-    } else if (COPY_PILL_TYPES.has(column.property.type) && filled && !value.hasAttribute('data-formula-error')) {
-      cell.appendChild(this.createCellActions());
+    } else if (filled && !value.hasAttribute('data-formula-error')) {
+      const entries = this.hoverActions(column.property.type);
+
+      if (entries.length > 0) cell.appendChild(this.createCellActions(entries));
     }
     if (fillHandle !== null) cell.appendChild(fillHandle);
   }
 
-  /**
-   * research/16 §4, notion-spec-2 §18.2: a filled url, email, phone, text, number or formula cell's hover pill, "Comment" and "Copy to Clipboard".
-   * research/12 §2: a filled autofill cell puts its Autofill button first.
-   */
-  private createCellActions(autofill?: HTMLElement): HTMLElement {
-    const pill = document.createElement('span');
-    const entries: Array<[action: string, key: string, icon: string]> = [['copy', 'tools.database.cellCopy', IconCopy]];
+  /** research/16 §4, notion-spec-2 §18.2: the buttons a filled cell's hover box holds, by type. */
+  private hoverActions(type: string): CellAction[] {
+    const comment: CellAction[] = this.options.comment === undefined ? [] : [['comment', 'tools.database.tableComment', IconMessage]];
+    const copy: CellAction[] = [['copy', 'tools.database.cellCopy', IconCopy]];
 
-    if (this.options.comment !== undefined) {
-      entries.unshift(['comment', 'tools.database.tableComment', IconMessage]);
-    }
+    if (COPY_PILL_TYPES.has(type)) return [...comment, ...copy];
+    if (COMMENT_ONLY_TYPES.has(type)) return comment;
+    if (COPY_ONLY_TYPES.has(type)) return copy;
+    if (type !== 'rollup') return [];
+    // What Notion's Configure rollup opens is not measured; it opens the property's settings.
+    const configure: CellAction[] = this.options.readOnly || this.handlers?.editProperty === undefined
+      ? []
+      : [['configure', 'tools.database.rollupConfigure', IconPencilLine]];
+
+    return [...configure, ...copy];
+  }
+
+  /** research/12 §2: a filled autofill cell puts its Autofill button first. */
+  private createCellActions(entries: CellAction[], autofill?: HTMLElement): HTMLElement {
+    const pill = document.createElement('span');
 
     pill.setAttribute('data-blok-database-table-cell-actions', autofill === undefined ? '' : 'autofill');
     if (autofill !== undefined) pill.appendChild(autofill);
@@ -1037,6 +1055,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       this.options.comment?.(rowId, propertyId, cellEl);
     } else if (action === 'copy') {
       this.copyCellValue(rowId, propertyId);
+    } else if (action === 'configure') {
+      this.handlers?.editProperty?.(propertyId);
     }
 
     return action !== undefined

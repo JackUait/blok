@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "คุณสมบัติ",
   "tools.database.rollupTargetProperty": "คุณสมบัติเป้าหมาย",
   "tools.database.rollupFunction": "คำนวณ",
+  "tools.database.rollupConfigure": "กำหนดค่าสรุปรวม",
   "tools.database.rollupFn.show_original": "แสดงค่าเดิม",
   "tools.database.rollupFn.show_unique": "แสดงค่าที่ไม่ซ้ำ",
   "tools.database.rollupFn.count": "นับทั้งหมด",

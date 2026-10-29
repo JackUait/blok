@@ -1386,6 +1386,7 @@ export type BlokMessageKey =
   | 'tools.database.renameColumn'
   | 'tools.database.renameView'
   | 'tools.database.restore'
+  | 'tools.database.rollupConfigure'
   | 'tools.database.rollupFn.average'
   | 'tools.database.rollupFn.checked'
   | 'tools.database.rollupFn.count'

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Egenskap",
   "tools.database.rollupTargetProperty": "Målegenskap",
   "tools.database.rollupFunction": "Beregn",
+  "tools.database.rollupConfigure": "Konfigurer sammendrag",
   "tools.database.rollupFn.show_original": "Vis original",
   "tools.database.rollupFn.show_unique": "Vis unike verdier",
   "tools.database.rollupFn.count": "Tell alle",

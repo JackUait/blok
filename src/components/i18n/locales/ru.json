@@ -1763,6 +1763,7 @@
   "tools.database.rollupProperty": "Свойство",
   "tools.database.rollupTargetProperty": "Целевое свойство",
   "tools.database.rollupFunction": "Вычислить",
+  "tools.database.rollupConfigure": "Настроить сводку",
   "tools.database.rollupFn.show_original": "Показать исходные",
   "tools.database.rollupFn.show_unique": "Показать уникальные значения",
   "tools.database.rollupFn.count": "Количество всех",

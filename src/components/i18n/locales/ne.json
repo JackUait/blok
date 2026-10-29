@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "गुण",
   "tools.database.rollupTargetProperty": "लक्षित गुण",
   "tools.database.rollupFunction": "गणना गर्नुहोस्",
+  "tools.database.rollupConfigure": "संकलन कन्फिगर गर्नुहोस्",
   "tools.database.rollupFn.show_original": "मूल देखाउनुहोस्",
   "tools.database.rollupFn.show_unique": "अद्वितीय मानहरू देखाउनुहोस्",
   "tools.database.rollupFn.count": "सबैको गणना",

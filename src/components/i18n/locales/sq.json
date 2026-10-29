@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Veti",
   "tools.database.rollupTargetProperty": "Vetia e synuar",
   "tools.database.rollupFunction": "Llogarit",
+  "tools.database.rollupConfigure": "Konfiguro përmbledhjen",
   "tools.database.rollupFn.show_original": "Shfaq origjinalin",
   "tools.database.rollupFn.show_unique": "Shfaq vlerat unike",
   "tools.database.rollupFn.count": "Numëro të gjitha",

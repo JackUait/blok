@@ -1215,6 +1215,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FORMULA_NUMBER_END_BYTES = 129;
     // database.css: a Number or number formula cell's Comment + Copy box hugs the start edge (notion-spec-2 §19.20).
     const DATABASE_CELL_PILL_START_BYTES = 460;
+    // database.css: a number rollup's box hugs the start edge; Configure rollup is 20 wide (notion-spec-2 §18.2).
+    const DATABASE_ROLLUP_CELL_ACTIONS_BYTES = 197;
     // database.css: peek value editors open with no fade or scale too (notion-spec-2 §19.22).
     const DATABASE_VALUE_EDITOR_NO_MOTION_BYTES = 306;
     // database.css: the Place search's one highlighted row (research/36 §7); no ring on the focused place view.
@@ -1537,6 +1539,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_HEADER_PLUS_NAME_BOX_BYTES
       + DATABASE_FORMULA_NUMBER_END_BYTES
       + DATABASE_CELL_PILL_START_BYTES
+      + DATABASE_ROLLUP_CELL_ACTIONS_BYTES
       + DATABASE_VALUE_EDITOR_NO_MOTION_BYTES
       + DATABASE_PLACE_VIEW_BAR_BYTES
       + DATABASE_GALLERY_FILE_CHIP_BYTES

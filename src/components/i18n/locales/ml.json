@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "പ്രോപ്പർട്ടി",
   "tools.database.rollupTargetProperty": "ലക്ഷ്യ പ്രോപ്പർട്ടി",
   "tools.database.rollupFunction": "കണക്കാക്കുക",
+  "tools.database.rollupConfigure": "സമാഹാരം കോൺഫിഗർ ചെയ്യുക",
   "tools.database.rollupFn.show_original": "യഥാർത്ഥമായത് കാണിക്കുക",
   "tools.database.rollupFn.show_unique": "അദ്വിതീയ മൂല്യങ്ങൾ കാണിക്കുക",
   "tools.database.rollupFn.count": "എല്ലാറ്റിന്റെയും എണ്ണം",

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Sifa",
   "tools.database.rollupTargetProperty": "Sifa lengwa",
   "tools.database.rollupFunction": "Kokotoa",
+  "tools.database.rollupConfigure": "Sanidi mjumuisho",
   "tools.database.rollupFn.show_original": "Onyesha asili",
   "tools.database.rollupFn.show_unique": "Onyesha thamani za kipekee",
   "tools.database.rollupFn.count": "Hesabu zote",

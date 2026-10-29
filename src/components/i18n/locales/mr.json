@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "गुणधर्म",
   "tools.database.rollupTargetProperty": "लक्ष्य गुणधर्म",
   "tools.database.rollupFunction": "गणना करा",
+  "tools.database.rollupConfigure": "एकत्रीकरण कॉन्फिगर करा",
   "tools.database.rollupFn.show_original": "मूळ दाखवा",
   "tools.database.rollupFn.show_unique": "अद्वितीय मूल्ये दाखवा",
   "tools.database.rollupFn.count": "सर्वांची गणना",

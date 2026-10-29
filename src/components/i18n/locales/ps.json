@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ځانګړتیا",
   "tools.database.rollupTargetProperty": "موخه ځانګړتیا",
   "tools.database.rollupFunction": "محاسبه",
+  "tools.database.rollupConfigure": "لنډیز تنظیم کړئ",
   "tools.database.rollupFn.show_original": "اصلي وښایئ",
   "tools.database.rollupFn.show_unique": "بې‌ساري ارزښتونه وښایئ",
   "tools.database.rollupFn.count": "ټول وشمېرئ",

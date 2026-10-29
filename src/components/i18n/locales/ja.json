@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "プロパティ",
   "tools.database.rollupTargetProperty": "対象のプロパティ",
   "tools.database.rollupFunction": "計算",
+  "tools.database.rollupConfigure": "ロールアップを設定",
   "tools.database.rollupFn.show_original": "元の値を表示",
   "tools.database.rollupFn.show_unique": "一意の値を表示",
   "tools.database.rollupFn.count": "すべてカウント",

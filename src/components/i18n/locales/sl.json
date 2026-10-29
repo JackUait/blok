@@ -1763,6 +1763,7 @@
   "tools.database.rollupProperty": "Lastnost",
   "tools.database.rollupTargetProperty": "Ciljna lastnost",
   "tools.database.rollupFunction": "Izračunaj",
+  "tools.database.rollupConfigure": "Nastavi povzetek",
   "tools.database.rollupFn.show_original": "Prikaži izvirnik",
   "tools.database.rollupFn.show_unique": "Prikaži edinstvene vrednosti",
   "tools.database.rollupFn.count": "Število vseh",

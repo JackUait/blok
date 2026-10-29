@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "屬性",
   "tools.database.rollupTargetProperty": "目標屬性",
   "tools.database.rollupFunction": "計算",
+  "tools.database.rollupConfigure": "設定彙整",
   "tools.database.rollupFn.show_original": "顯示原始值",
   "tools.database.rollupFn.show_unique": "顯示唯一值",
   "tools.database.rollupFn.count": "全部計數",

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Ominaisuus",
   "tools.database.rollupTargetProperty": "Kohdeominaisuus",
   "tools.database.rollupFunction": "Laske",
+  "tools.database.rollupConfigure": "Määritä kooste",
   "tools.database.rollupFn.show_original": "Näytä alkuperäinen",
   "tools.database.rollupFn.show_unique": "Näytä yksilölliset arvot",
   "tools.database.rollupFn.count": "Laske kaikki",

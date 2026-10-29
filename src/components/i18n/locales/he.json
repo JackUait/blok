@@ -1761,6 +1761,7 @@
   "tools.database.rollupProperty": "מאפיין",
   "tools.database.rollupTargetProperty": "מאפיין יעד",
   "tools.database.rollupFunction": "חישוב",
+  "tools.database.rollupConfigure": "הגדר סיכום",
   "tools.database.rollupFn.show_original": "הצג את המקור",
   "tools.database.rollupFn.show_unique": "הצג ערכים ייחודיים",
   "tools.database.rollupFn.count": "ספור הכול",

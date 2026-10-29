@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Thuộc tính",
   "tools.database.rollupTargetProperty": "Thuộc tính đích",
   "tools.database.rollupFunction": "Tính toán",
+  "tools.database.rollupConfigure": "Cấu hình tổng hợp",
   "tools.database.rollupFn.show_original": "Hiển thị bản gốc",
   "tools.database.rollupFn.show_unique": "Hiển thị giá trị duy nhất",
   "tools.database.rollupFn.count": "Đếm tất cả",

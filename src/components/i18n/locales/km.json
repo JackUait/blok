@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "លក្ខណៈ",
   "tools.database.rollupTargetProperty": "លក្ខណៈគោលដៅ",
   "tools.database.rollupFunction": "គណនា",
+  "tools.database.rollupConfigure": "កំណត់រចនាសម្ព័ន្ធការសរុប",
   "tools.database.rollupFn.show_original": "បង្ហាញដើម",
   "tools.database.rollupFn.show_unique": "បង្ហាញតម្លៃមិនស្ទួន",
   "tools.database.rollupFn.count": "រាប់ទាំងអស់",

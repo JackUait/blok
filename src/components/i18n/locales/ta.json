@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "பண்பு",
   "tools.database.rollupTargetProperty": "இலக்கு பண்பு",
   "tools.database.rollupFunction": "கணக்கிடு",
+  "tools.database.rollupConfigure": "திரட்டை உள்ளமை",
   "tools.database.rollupFn.show_original": "அசலைக் காட்டு",
   "tools.database.rollupFn.show_unique": "தனித்த மதிப்புகளைக் காட்டு",
   "tools.database.rollupFn.count": "அனைத்தின் எண்ணிக்கை",

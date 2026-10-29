@@ -1763,6 +1763,7 @@
   "tools.database.rollupProperty": "Vlastnost",
   "tools.database.rollupTargetProperty": "Cílová vlastnost",
   "tools.database.rollupFunction": "Vypočítat",
+  "tools.database.rollupConfigure": "Nastavit souhrn",
   "tools.database.rollupFn.show_original": "Zobrazit původní",
   "tools.database.rollupFn.show_unique": "Zobrazit jedinečné hodnoty",
   "tools.database.rollupFn.count": "Počet všech",

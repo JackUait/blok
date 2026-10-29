@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "پراپرٽي",
   "tools.database.rollupTargetProperty": "ھدف پراپرٽي",
   "tools.database.rollupFunction": "حساب ڪريو",
+  "tools.database.rollupConfigure": "خلاصو ترتيب ڏيو",
   "tools.database.rollupFn.show_original": "اصل ڏيکاريو",
   "tools.database.rollupFn.show_unique": "منفرد قدر ڏيکاريو",
   "tools.database.rollupFn.count": "سڀ ڳڻيو",

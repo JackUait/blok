@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ویژگی",
   "tools.database.rollupTargetProperty": "ویژگی هدف",
   "tools.database.rollupFunction": "محاسبه",
+  "tools.database.rollupConfigure": "پیکربندی تجمیع",
   "tools.database.rollupFn.show_original": "نمایش مقادیر اصلی",
   "tools.database.rollupFn.show_unique": "نمایش مقادیر یکتا",
   "tools.database.rollupFn.count": "شمارش همه",

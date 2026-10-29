@@ -1763,6 +1763,7 @@
   "tools.database.rollupProperty": "Savybė",
   "tools.database.rollupTargetProperty": "Tikslinė savybė",
   "tools.database.rollupFunction": "Skaičiuoti",
+  "tools.database.rollupConfigure": "Konfigūruoti suvestinę",
   "tools.database.rollupFn.show_original": "Rodyti originalą",
   "tools.database.rollupFn.show_unique": "Rodyti unikalias reikšmes",
   "tools.database.rollupFn.count": "Skaičiuoti visus",

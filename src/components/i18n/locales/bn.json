@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "বৈশিষ্ট্য",
   "tools.database.rollupTargetProperty": "লক্ষ্য বৈশিষ্ট্য",
   "tools.database.rollupFunction": "গণনা করুন",
+  "tools.database.rollupConfigure": "সমষ্টি কনফিগার করুন",
   "tools.database.rollupFn.show_original": "মূল মান দেখান",
   "tools.database.rollupFn.show_unique": "অনন্য মান দেখান",
   "tools.database.rollupFn.count": "সবের গণনা",

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Özellik",
   "tools.database.rollupTargetProperty": "Hedef özellik",
   "tools.database.rollupFunction": "Hesapla",
+  "tools.database.rollupConfigure": "Özeti yapılandır",
   "tools.database.rollupFn.show_original": "Orijinali göster",
   "tools.database.rollupFn.show_unique": "Benzersiz değerleri göster",
   "tools.database.rollupFn.count": "Tümünü say",

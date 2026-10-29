@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Sifat",
   "tools.database.rollupTargetProperty": "Sifat sasaran",
   "tools.database.rollupFunction": "Kira",
+  "tools.database.rollupConfigure": "Konfigurasikan himpunan",
   "tools.database.rollupFn.show_original": "Tunjukkan asal",
   "tools.database.rollupFn.show_unique": "Tunjukkan nilai unik",
   "tools.database.rollupFn.count": "Kira semua",

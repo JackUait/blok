@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Tulajdonság",
   "tools.database.rollupTargetProperty": "Céltulajdonság",
   "tools.database.rollupFunction": "Számítás",
+  "tools.database.rollupConfigure": "Összesítés beállítása",
   "tools.database.rollupFn.show_original": "Eredeti megjelenítése",
   "tools.database.rollupFn.show_unique": "Egyedi értékek megjelenítése",
   "tools.database.rollupFn.count": "Összes megszámlálása",

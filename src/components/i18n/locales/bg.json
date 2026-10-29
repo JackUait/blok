@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Свойство",
   "tools.database.rollupTargetProperty": "Целево свойство",
   "tools.database.rollupFunction": "Изчисли",
+  "tools.database.rollupConfigure": "Настрой обобщението",
   "tools.database.rollupFn.show_original": "Показване на оригинала",
   "tools.database.rollupFn.show_unique": "Показване на уникалните стойности",
   "tools.database.rollupFn.count": "Брой на всички",

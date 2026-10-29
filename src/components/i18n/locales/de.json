@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Eigenschaft",
   "tools.database.rollupTargetProperty": "Zieleigenschaft",
   "tools.database.rollupFunction": "Berechnen",
+  "tools.database.rollupConfigure": "Aggregation konfigurieren",
   "tools.database.rollupFn.show_original": "Original anzeigen",
   "tools.database.rollupFn.show_unique": "Eindeutige Werte anzeigen",
   "tools.database.rollupFn.count": "Alle zählen",

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Pinagmulang property",
   "tools.database.rollupTargetProperty": "Target na property",
   "tools.database.rollupFunction": "Kalkulahin",
+  "tools.database.rollupConfigure": "I-configure ang pagsasama-sama",
   "tools.database.rollupFn.show_original": "Ipakita ang orihinal",
   "tools.database.rollupFn.show_unique": "Ipakita ang mga natatanging halaga",
   "tools.database.rollupFn.count": "Bilangin lahat",

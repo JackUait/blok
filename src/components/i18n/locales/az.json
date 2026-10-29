@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "Xüsusiyyət",
   "tools.database.rollupTargetProperty": "Hədəf xüsusiyyət",
   "tools.database.rollupFunction": "Hesabla",
+  "tools.database.rollupConfigure": "Toplamanı qur",
   "tools.database.rollupFn.show_original": "Orijinalı göstər",
   "tools.database.rollupFn.show_unique": "Unikal dəyərləri göstər",
   "tools.database.rollupFn.count": "Hamısını say",

@@ -1759,6 +1759,7 @@
   "tools.database.rollupProperty": "ຄຸນສົມບັດ",
   "tools.database.rollupTargetProperty": "ຄຸນສົມບັດເປົ້າໝາຍ",
   "tools.database.rollupFunction": "ຄຳນວນ",
+  "tools.database.rollupConfigure": "ຕັ້ງຄ່າການສະຫຼຸບ",
   "tools.database.rollupFn.show_original": "ສະແດງຕົ້ນສະບັບ",
   "tools.database.rollupFn.show_unique": "ສະແດງຄ່າທີ່ບໍ່ຊ້ຳ",
   "tools.database.rollupFn.count": "ນັບທັງໝົດ",

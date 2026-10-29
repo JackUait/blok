@@ -1763,6 +1763,7 @@
   "tools.database.rollupProperty": "Właściwość",
   "tools.database.rollupTargetProperty": "Właściwość docelowa",
   "tools.database.rollupFunction": "Oblicz",
+  "tools.database.rollupConfigure": "Konfiguruj zestawienie",
   "tools.database.rollupFn.show_original": "Pokaż oryginał",
   "tools.database.rollupFn.show_unique": "Pokaż unikalne wartości",
   "tools.database.rollupFn.count": "Policz wszystko",

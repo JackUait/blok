@@ -1761,6 +1761,7 @@
   "tools.database.rollupProperty": "Proprietate",
   "tools.database.rollupTargetProperty": "Proprietate țintă",
   "tools.database.rollupFunction": "Calculează",
+  "tools.database.rollupConfigure": "Configurează agregarea",
   "tools.database.rollupFn.show_original": "Afișează originalul",
   "tools.database.rollupFn.show_unique": "Afișează valorile unice",
   "tools.database.rollupFn.count": "Număr total",

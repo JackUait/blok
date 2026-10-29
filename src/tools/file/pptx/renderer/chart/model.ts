@@ -7,7 +7,7 @@ import { cssFontFamilyStack, resolveThemeFontStack } from '../fontResolver';
 import { resolveColorToCss } from '../StyleResolver';
 import { extractFormatCode, extractNumericValuesWithBlanks, extractStringValues } from './format';
 
-export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'bubble' | 'radar' | 'combo' | 'unsupported';
+export type ChartKind = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'scatter' | 'bubble' | 'radar' | 'stock' | 'combo' | 'unsupported';
 export type LegendPosition = 't' | 'b' | 'l' | 'r';
 
 const KIND_BY_ELEMENT: Record<string, ChartKind> = {
@@ -23,10 +23,11 @@ const KIND_BY_ELEMENT: Record<string, ChartKind> = {
   scatterChart: 'scatter',
   radarChart: 'radar',
   bubbleChart: 'bubble',
+  stockChart: 'stock',
 };
 
 /** Plots that can share a category axis with another plot. */
-const COMBO_KINDS = new Set<ChartKind>(['bar', 'line', 'area']);
+const COMBO_KINDS = new Set<ChartKind>(['bar', 'line', 'area', 'stock']);
 
 const AUTO_MARKERS = ['diamond', 'square', 'triangle', 'circle'];
 // Unverified Office default; python-pptx decks never set c:size.
@@ -101,6 +102,8 @@ export interface ChartModel {
   radarStyle?: string;
   /** c:bubbleScale as a percentage, and whether c:sizeRepresents is w (width, not area). */
   bubble?: { scale: number; byWidth: boolean };
+  /** Stock plot extras: the c:hiLowLines colour, and c:upDownBars fills. */
+  stock?: { hiLowColor?: string; upDown?: { up: string; down: string; gapWidth: number } };
 }
 
 function bool(node: SafeXmlNode, fallback: boolean): boolean {
@@ -251,10 +254,11 @@ function readTitle(chart: SafeXmlNode, series: ChartSeries[], baseSize: number):
 function readMarker(ser: SafeXmlNode, index: number, plot: SafeXmlNode, kind: ChartKind): ChartSeries['marker'] {
   const marker = ser.child('marker');
   const symbol = marker.child('symbol').attr('val');
-  // A radar shows automatic markers only in its marker style.
-  const plotShowsMarkers = kind === 'radar' ? plot.child('radarStyle').attr('val') === 'marker' : bool(plot.child('marker'), true);
+  // A radar shows automatic markers only in its marker style; a stock series only the one it names.
+  const auto: Partial<Record<ChartKind, boolean>> = { radar: plot.child('radarStyle').attr('val') === 'marker', stock: false };
+  const plotShowsMarkers = auto[kind] ?? bool(plot.child('marker'), true);
 
-  if ((kind !== 'line' && kind !== 'scatter' && kind !== 'radar') || plot.localName === 'line3DChart' || symbol === 'none') {
+  if (!['line', 'scatter', 'radar', 'stock'].includes(kind) || plot.localName === 'line3DChart' || symbol === 'none') {
     return undefined;
   }
   if (!plotShowsMarkers && symbol === undefined) {
@@ -337,6 +341,23 @@ function readSeries(ser: SafeXmlNode, index: number, sc: SeriesContext): ChartSe
   };
 }
 
+function readStock(plot: SafeXmlNode, ctx: RenderContext): ChartModel['stock'] {
+  const hiLow = plot.child('hiLowLines');
+  const upDown = plot.child('upDownBars');
+
+  return {
+    hiLowColor: hiLow.exists() ? solidFillColor(hiLow.child('spPr').child('ln'), ctx) ?? implicitAxisColor(ctx) : undefined,
+    // Unverified fallbacks: white up bars and black down bars, the classic Office look.
+    upDown: upDown.exists()
+      ? {
+        up: solidFillColor(upDown.child('upBars').child('spPr'), ctx) ?? '#FFFFFF',
+        down: solidFillColor(upDown.child('downBars').child('spPr'), ctx) ?? '#000000',
+        gapWidth: upDown.child('gapWidth').numAttr('val') ?? 150,
+      }
+      : undefined,
+  };
+}
+
 function plotNodes(plotArea: SafeXmlNode): SafeXmlNode[] {
   return plotArea.allChildren().filter((child) => child.localName.endsWith('Chart'));
 }
@@ -393,6 +414,7 @@ function readPlot(plot: SafeXmlNode, pc: PlotContext): Omit<ChartModel, 'title' 
     holeSize: plot.child('holeSize').numAttr('val') ?? 50,
     firstSliceAngle: plot.child('firstSliceAng').numAttr('val') ?? 0,
     ...(kind === 'radar' ? { radarStyle: plot.child('radarStyle').attr('val') ?? 'standard' } : {}),
+    ...(kind === 'stock' ? { stock: readStock(plot, ctx) } : {}),
     ...(kind === 'bubble' ? { bubble: { scale: plot.child('bubbleScale').numAttr('val') ?? 100, byWidth: plot.child('sizeRepresents').attr('val') === 'w' } } : {}),
     categoryAxis: readAxis(findAxis(plotArea, kind === 'scatter' || kind === 'bubble' ? ['valAx'] : ['catAx', 'dateAx'], axisIds[0]), ctx),
     valueAxis: readAxis(findAxis(plotArea, ['valAx'], axisIds[1]), ctx),

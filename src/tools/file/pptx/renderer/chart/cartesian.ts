@@ -6,13 +6,14 @@ import type { TextStyle } from './svg';
 import { formatValue } from './format';
 import { drawBubbles } from './bubble';
 import { drawMarker } from './marker';
+import { drawStock } from './stock';
 import { areaValueAxis, autoValueAxis, desiredTickCount, niceAxisInterval } from './scale';
 import { group, px, svg, text, textWidth } from './svg';
 
 const PERCENT_AXIS: AxisScale = { min: 0, max: 1, major: 0.1 };
 const MAX_TICKS = 200;
 
-interface Frame {
+export interface Frame {
   plot: Box;
   /** Value axis runs along x (horizontal bars, scatter x) or y. */
   valuePx: (v: number) => number;
@@ -404,6 +405,9 @@ function layersOf(model: ChartModel): ChartModel[] {
 function drawLayer(layer: ChartModel, f: Frame, root: Element, labels: Element, style: TextStyle): void {
   if (layer.kind === 'bar') {
     drawBars(layer, f, root, labels, style);
+  } else if (layer.kind === 'stock') {
+    drawStock(layer, f, root);
+    layer.series.forEach((s) => drawSeriesLine(group('series', root), s, s.values.map((v, i) => (s.blanks.has(i) ? undefined : [f.categoryPx(i), f.valuePx(v)]))));
   } else {
     drawLinesOrAreas(layer, f, root, labels, style);
   }

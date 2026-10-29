@@ -39,7 +39,7 @@ function entries(model: ChartModel): Entry[] {
 
 function drawKey(g: Element, entry: Entry, x: number, y: number, size: number): void {
   const s = entry.series;
-  const lineLike = (entry.kind === 'line' || entry.kind === 'scatter' || entry.kind === 'radar') && s !== undefined;
+  const lineLike = (entry.kind === 'line' || entry.kind === 'scatter' || entry.kind === 'radar' || entry.kind === 'stock') && s !== undefined;
 
   if (!lineLike) {
     svg('rect', { x: px(x + size * 0.2), y: px(y - size * 0.3), width: px(size * 0.6), height: px(size * 0.6), fill: entry.color }, g);

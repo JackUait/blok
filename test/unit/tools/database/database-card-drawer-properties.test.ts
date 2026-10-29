@@ -54,6 +54,21 @@ const createOptions = (overrides: Partial<CardDrawerOptions> = {}): CardDrawerOp
   };
 };
 
+// A peek left open is closed by the next test's open, and that close's slide
+// fallback timer can fire after the file's window is gone. Destroy each one.
+const drawers: DatabaseCardDrawer[] = [];
+const createDrawer = (options: CardDrawerOptions): DatabaseCardDrawer => {
+  const drawer = new DatabaseCardDrawer(options);
+
+  drawers.push(drawer);
+
+  return drawer;
+};
+
+afterEach(() => {
+  drawers.splice(0).forEach((drawer) => drawer.destroy());
+});
+
 const valueOf = (options: CardDrawerOptions, propertyId: string): HTMLElement | null =>
   options.wrapper.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-value][data-property-id="${propertyId}"]`);
 
@@ -71,7 +86,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('shows people by name from the host directory', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
 
     expect(valueOf(options, 'prop-owner')?.textContent).toBe('Ada Lovelace');
   });
@@ -79,7 +94,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('shows the created time from row metadata in the property date format', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
 
     expect(valueOf(options, 'prop-created')?.textContent).toBe('2026/10/09');
   });
@@ -87,7 +102,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('hides an always-hidden property, and a hide-when-empty one while it is empty', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
 
     expect(valueOf(options, 'prop-secret')).toBeNull();
     expect(valueOf(options, 'prop-maybe')).toBeNull();
@@ -97,7 +112,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('reads 1 more property, then Hide 1 property', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
+    createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
     const reveal = (): HTMLElement | null => options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-hidden-props]');
 
     expect(reveal()?.textContent).toBe('1 more property');
@@ -109,7 +124,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('shows a hide-when-empty property once it has a value', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
+    createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-maybe': 'x' } });
 
     expect(valueOf(options, 'prop-maybe')?.textContent).toBe('x');
   });
@@ -117,7 +132,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('does not offer to edit a read-only property', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
 
     expect(valueOf(options, 'prop-created')?.getAttribute('role')).toBeNull();
     expect(valueOf(options, 'prop-id')?.getAttribute('role')).toBeNull();
@@ -127,7 +142,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     const onOpenPropertyMenu = vi.fn();
     const options = createOptions({ onOpenPropertyMenu });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     const label = options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]');
 
     label?.click();
@@ -143,7 +158,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     const added: PropertyDefinition = { id: 'prop-new', name: 'Score', type: 'number', position: 'z9' };
     const onOpenAddProperty = vi.fn();
     const options = createOptions({ onOpenPropertyMenu, onOpenAddProperty });
-    const drawer = new DatabaseCardDrawer(options);
+    const drawer = createDrawer(options);
 
     onOpenAddProperty.mockImplementation((_anchor: HTMLElement, onAdded?: (id: string, ownSetup?: boolean) => void) => {
       drawer.refreshSchema([...SCHEMA, added]);
@@ -162,7 +177,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     const added: PropertyDefinition = { id: 'prop-new', name: 'Summary', type: 'text', position: 'z9' };
     const onOpenAddProperty = vi.fn();
     const options = createOptions({ onOpenPropertyMenu, onOpenAddProperty });
-    const drawer = new DatabaseCardDrawer(options);
+    const drawer = createDrawer(options);
 
     onOpenAddProperty.mockImplementation((_anchor: HTMLElement, onAdded?: (id: string, ownSetup?: boolean) => void) => {
       drawer.refreshSchema([...SCHEMA, added]);
@@ -180,7 +195,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     const onCommentProperty = vi.fn();
     const options = createOptions({ onOpenPropertyMenu, onCommentProperty });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     const labelOf = (id: string): HTMLElement | null => options.wrapper.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-label][data-property-id="${id}"]`);
 
     labelOf('prop-owner')?.click();
@@ -197,7 +212,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   // A rename from the row page menu shows on its label at once.
   it('a new schema renames the open page labels in place', () => {
     const options = createOptions();
-    const drawer = new DatabaseCardDrawer(options);
+    const drawer = createDrawer(options);
 
     drawer.open(ROW);
     drawer.setSchema(SCHEMA.map((p) => (p.id === 'prop-owner' ? { ...p, name: 'Lead' } : p)));
@@ -209,7 +224,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('a new schema redraws a value whose display changed, keeping its slot', () => {
     const schema: PropertyDefinition[] = [...SCHEMA, { id: 'prop-score', name: 'Score', type: 'number', position: 'a6' }];
     const options = createOptions({ schema });
-    const drawer = new DatabaseCardDrawer(options);
+    const drawer = createDrawer(options);
 
     drawer.open({ ...ROW, properties: { ...ROW.properties, 'prop-score': 40 } });
     const slot = valueOf(options, 'prop-score');
@@ -225,7 +240,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     const onOpenPropertyMenu = vi.fn();
     const options = createOptions({ onOpenPropertyMenu, onCommentProperty: vi.fn() });
 
-    new DatabaseCardDrawer(options).open({ ...ROW, properties: { 'prop-title': 'Card' } });
+    createDrawer(options).open({ ...ROW, properties: { 'prop-title': 'Card' } });
     options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]')?.click();
 
     expect(onOpenPropertyMenu.mock.calls.at(-1)?.[3]).toEqual({});
@@ -235,7 +250,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
   it('draws Add a property as a plus glyph and the words', () => {
     const options = createOptions({ i18n: { t: (key: string) => (key === 'tools.database.addProperty' ? '+ Add a property' : key) } as never });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     const add = options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-add-prop]');
 
     expect(add?.querySelector('svg')).not.toBeNull();
@@ -246,7 +261,7 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     const onAddProperty = vi.fn();
     const options = createOptions({ onAddProperty, hasPeople: true });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     const add = options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-add-prop]');
 
     expect(add?.textContent?.trim()).toBe('tools.database.addProperty');
@@ -285,7 +300,7 @@ describe('DatabaseCardDrawer — property drag handle', () => {
     const onPageLayoutChange = vi.fn();
     const options = createOptions({ onPageLayoutChange });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     ['prop-id', 'prop-created', 'prop-owner'].forEach((id, i) => {
       vi.spyOn(rowOf(options, id), 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100 + i * 38, 600, 34));
     });
@@ -307,7 +322,7 @@ describe('DatabaseCardDrawer — property drag handle', () => {
     const onOpenPropertyMenu = vi.fn();
     const options = createOptions({ onOpenPropertyMenu, onPageLayoutChange: vi.fn() });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     const handle = rowOf(options, 'prop-owner').querySelector<HTMLElement>('[data-blok-database-drawer-prop-handle]');
 
     handle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 190 }));
@@ -320,7 +335,7 @@ describe('DatabaseCardDrawer — property drag handle', () => {
   it('has no handle when the page layout cannot change', () => {
     const options = createOptions();
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
 
     expect(rowOf(options, 'prop-owner').querySelector('[data-blok-database-drawer-prop-handle]')).toBeNull();
   });
@@ -346,7 +361,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
   it('orders the hover row Add icon, Add cover, Customize layout, each with a glyph', () => {
     const options = createOptions({ onIconChange: vi.fn(), onCoverChange: vi.fn(), onPageLayoutChange: vi.fn() });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     const buttons = [...(head(options)?.querySelectorAll<HTMLElement>(':scope > button') ?? [])];
 
     expect(buttons.map((b) => [...b.attributes].map((a) => a.name).find((n) => n.startsWith('data-blok-database-drawer-')))).toEqual([
@@ -360,7 +375,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
     const onIconChange = vi.fn();
     const options = createOptions({ onIconChange, i18n: { t: (key: string) => key, getLocale: () => 'en' } as never });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     head(options)?.querySelector<HTMLElement>('[data-blok-database-drawer-add-icon]')?.click();
     await vi.waitFor(() => expect(onIconChange).toHaveBeenCalled());
 
@@ -375,7 +390,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
     const files: PropertyDefinition = { id: 'prop-files', name: 'Files', type: 'files', position: 'a9' };
     const options = createOptions({ schema: [...SCHEMA, files] });
 
-    new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] } });
+    createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] } });
 
     expect(valueOf(options, 'prop-files')?.querySelector('[data-blok-database-file-chip] > [data-blok-database-file-chip-icon]:first-child')).not.toBeNull();
   });
@@ -388,7 +403,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
       const files: PropertyDefinition = { id: 'prop-files', name: 'Files', type: 'files', position: 'a9' };
       const options = createOptions({ schema: [...SCHEMA, files] });
 
-      new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'Quarterly report for the whole team.pdf', url: 'https://example.com/a.pdf' }] } });
+      createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'Quarterly report for the whole team.pdf', url: 'https://example.com/a.pdf' }] } });
       const chip = valueOf(options, 'prop-files')?.querySelector<HTMLElement>('[data-blok-database-file-chip]');
       const link = chip?.querySelector<HTMLElement>('[data-blok-database-cell-link]');
 
@@ -411,7 +426,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
     const openWithFile = (): { options: CardDrawerOptions; link: HTMLAnchorElement } => {
       const options = createOptions({ schema: [...SCHEMA, files] });
 
-      new DatabaseCardDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] } });
+      createDrawer(options).open({ ...ROW, properties: { ...ROW.properties, 'prop-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }] } });
       const link = valueOf(options, 'prop-files')?.querySelector<HTMLAnchorElement>('[data-blok-database-file-chip] a[data-blok-database-cell-link]');
 
       if (link === null || link === undefined) throw new Error('no file link');
@@ -469,7 +484,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
   it('the title placeholder is New page', () => {
     const options = createOptions({ i18n: { t: (key: string) => (key === 'tools.database.layoutNewPage' ? 'New page' : key) } as never });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
 
     expect(options.wrapper.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]')?.placeholder).toBe('New page');
   });
@@ -493,7 +508,7 @@ describe('DatabaseCardDrawer — page header and body start', () => {
       },
     });
 
-    new DatabaseCardDrawer(options).open(ROW);
+    createDrawer(options).open(ROW);
     options.wrapper.querySelector('[data-blok-database-drawer-title]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await new Promise((resolve) => {
       requestAnimationFrame(() => resolve(undefined));
@@ -558,7 +573,7 @@ describe('DatabaseCardDrawer — option pill hints', () => {
   ])('hovering a %s pill shows its option name 6px above it, after the hint delay', (propertyId, index, name) => {
     const options = createOptions({ schema: PILL_SCHEMA });
 
-    new DatabaseCardDrawer(options).open(PILL_ROW);
+    createDrawer(options).open(PILL_ROW);
     const pill = pillsOf(options, propertyId)[index];
 
     hover(pill);
@@ -571,7 +586,7 @@ describe('DatabaseCardDrawer — option pill hints', () => {
   it('focus alone shows no pill hint', () => {
     const options = createOptions({ schema: PILL_SCHEMA });
 
-    new DatabaseCardDrawer(options).open(PILL_ROW);
+    createDrawer(options).open(PILL_ROW);
     const pill = pillsOf(options, 'prop-select')[0];
 
     pill.dispatchEvent(new FocusEvent('focus'));
@@ -583,7 +598,7 @@ describe('DatabaseCardDrawer — option pill hints', () => {
   it('a status pill has no hint', () => {
     const options = createOptions({ schema: PILL_SCHEMA });
 
-    new DatabaseCardDrawer(options).open(PILL_ROW);
+    createDrawer(options).open(PILL_ROW);
     const [pill] = pillsOf(options, 'prop-status');
 
     expect(pill).toBeDefined();

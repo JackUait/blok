@@ -839,9 +839,59 @@ describe('DatabaseListView', () => {
       expect(onTitleEdit.mock.invocationCallOrder[0]).toBeLessThan(onOpenRow.mock.invocationCallOrder[0]);
       expect(opened).not.toHaveBeenCalled();
       expect(list.querySelector('[data-blok-database-list-row]')?.hasAttribute('data-editing')).toBe(false);
-      expect(list.querySelector('[data-blok-database-page-icon-placeholder]')).toBeNull();
+      expect(list.querySelectorAll('[data-blok-database-page-icon-placeholder]')).toHaveLength(1);
       expect(list.querySelector('[data-blok-database-list-row-edit]')?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
       list.remove();
+    });
+  });
+
+  // notion-spec-2 §21.8 (notion-live-4/list-row.png): with Show page icon on, a row with no emoji shows the empty-page glyph.
+  describe('page icon', () => {
+    const make = (showPageIcon?: boolean): { view: DatabaseListView; list: HTMLElement } => {
+      const view = new DatabaseListView({
+        readOnly: false,
+        i18n,
+        rows: [makeRow(), makeRow({ id: 'row-2', position: 'a1', icon: '🏏', properties: { title: 'B' } })],
+        titlePropertyId: 'title',
+        schema: makeSchema(),
+        visiblePropertyIds: [],
+        showPageIcon,
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+
+      return { view, list };
+    };
+    const rowEl = (list: HTMLElement, id: string): HTMLElement | null => list.querySelector<HTMLElement>(`[data-blok-database-list-row][data-row-id="${id}"]`);
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('shows the page glyph before a title with no emoji, and the emoji otherwise', () => {
+      const { list } = make();
+
+      expect(rowEl(list, 'row-1')?.querySelectorAll('[data-blok-database-page-icon-placeholder]')).toHaveLength(1);
+      expect(rowEl(list, 'row-2')?.querySelector('[data-blok-database-page-icon-placeholder]')).toBeNull();
+      expect(rowEl(list, 'row-2')?.querySelector('[data-blok-database-page-icon]')?.textContent).toBe('🏏');
+    });
+
+    it('keeps one glyph while the title is edited', () => {
+      const { view, list } = make();
+
+      view.editTitle('row-1');
+
+      expect(rowEl(list, 'row-1')?.querySelectorAll('[data-blok-database-page-icon-placeholder]')).toHaveLength(1);
+    });
+
+    it('shows no glyph at rest with Show page icon off', () => {
+      const { view, list } = make(false);
+
+      expect(list.querySelector('[data-blok-database-page-icon-placeholder]')).toBeNull();
+      expect(list.querySelector('[data-blok-database-page-icon]')).toBeNull();
+      view.editTitle('row-1');
+      expect(rowEl(list, 'row-1')?.querySelectorAll('[data-blok-database-page-icon-placeholder]')).toHaveLength(1);
     });
   });
 

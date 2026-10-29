@@ -207,6 +207,11 @@ describe('list title edit (findings-listgallery L05)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row][data-editing] [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
     expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]')).toContain('width: 18px');
   });
+
+  // notion-spec-2 §21.8 (list-row.png): a title after the page glyph starts where one after an emoji does.
+  it('spaces the page glyph from the title as the emoji is', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]')).toContain('margin-inline-end: var(--blok-space-1)');
+  });
 });
 
 describe('grouped list (findings-listgallery L08, L10)', () => {

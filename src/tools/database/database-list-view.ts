@@ -201,7 +201,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     }
     const original = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
     const edit = rowEl.querySelector<HTMLElement>('[data-blok-database-list-row-edit]');
-    const glyph = rowEl.querySelector('[data-blok-database-page-icon]') === null ? pagePlaceholderIcon() : null;
+    const glyph = rowEl.querySelector(':scope > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder])') === null ? pagePlaceholderIcon() : null;
     const endEditing = (): void => {
       rowEl.removeAttribute('data-editing');
       glyph?.remove();
@@ -622,7 +622,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
       rowEl.appendChild(this.createGutter(row.id));
     }
 
-    const icon = this.showPageIcon ? pageIconElement(row) : null;
+    // notion-spec-2 §21.8: a row with no emoji shows the empty-page glyph.
+    const icon = this.showPageIcon ? pageIconElement(row) ?? pagePlaceholderIcon() : null;
 
     if (icon !== null) {
       rowEl.appendChild(icon);

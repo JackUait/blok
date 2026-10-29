@@ -3347,10 +3347,12 @@ button[data-blok-database-column-count]:hover {
   display: inline-flex;
 }
 
+/* §21.8: the title starts where it does after an emoji. */
 [data-blok-database-list-row] > [data-blok-database-page-icon-placeholder] {
   display: inline-flex;
   flex-shrink: 0;
   width: 18px;
+  margin-inline-end: var(--blok-space-1);
   color: var(--blok-database-card-actions-icon);
 }
 

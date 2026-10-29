@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPencil, IconPlus } from '../../../../src/components/icons';
+import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPageEmpty, IconPencil, IconPlus } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -60,6 +60,7 @@ const EDIT_HTML = `<button type="button" data-blok-database-list-row-edit="" ari
 const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
   `<div data-blok-database-list-row="" data-row-id="${rowId}" role="listitem" tabindex="${tabindex}">`
   + gutterHtml(rowId)
+  + `<span data-blok-database-page-icon-placeholder="" aria-hidden="true">${serialized(IconPageEmpty)}</span>`
   + `<div data-blok-database-list-row-main=""><div data-blok-database-list-row-title="">${title}</div>${EDIT_HTML}</div>`
   + rowPropsHtml(rowId)
   + '</div>';

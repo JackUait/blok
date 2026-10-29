@@ -189,6 +189,36 @@ describe('select cell editor', () => {
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
+  // notion-spec-2 §19.1, §19.14: in the table the current value is a pill with ×, and the field has no prompt beside it.
+  describe('in a table cell', () => {
+    it('has no search prompt beside a pill, and the prompt on an empty cell', () => {
+      openSelect('o1', { coverCell: true });
+      expect(search().placeholder).toBe('');
+      document.body.innerHTML = '';
+      PopoverRegistry.resetForTests();
+
+      openSelect(null, { coverCell: true });
+      expect(search().placeholder).toBe('tools.database.selectSearchPlaceholder');
+    });
+
+    it('clears the value with the pill\'s ×, stays open and shows the prompt again', () => {
+      const ctx = openSelect('o1', { coverCell: true });
+
+      q('[data-blok-database-select-chip="o1"] [data-blok-database-select-chip-remove]').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith(null);
+      expect(editorRoot()?.querySelector('[data-blok-database-select-chip]')).toBeNull();
+      expect(search().placeholder).toBe('tools.database.selectSearchPlaceholder');
+      expect(ctx.onClose).not.toHaveBeenCalled();
+    });
+
+    it('multi-select: no prompt once a pill is in the field', () => {
+      openSelect(['o1'], { coverCell: true }, true);
+
+      expect(search().placeholder).toBe('');
+    });
+  });
+
   describe('multi-select', () => {
     it('toggles options, commits each change and stays open', () => {
       const ctx = openSelect(['o1'], {}, true);

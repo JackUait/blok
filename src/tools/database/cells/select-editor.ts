@@ -330,7 +330,8 @@ class SelectEditor {
       const chip = this.pill(option);
 
       chip.setAttribute('data-blok-database-select-chip', id);
-      if (this.multi) {
+      // notion-spec-2 §19.14: the table's Select pill carries × too.
+      if (this.multi || (this.ctx.coverCell === true && this.property.type === 'select')) {
         const remove = iconButton(
           'data-blok-database-select-chip-remove',
           IconCross,
@@ -345,6 +346,10 @@ class SelectEditor {
         chip.appendChild(remove);
       }
       this.chips.insertBefore(chip, this.search);
+    }
+    // notion-spec-2 §19.1: in the table the prompt shows only while the field has no pill.
+    if (this.ctx.coverCell === true && this.property.type !== 'status') {
+      this.search.placeholder = this.selected.length > 0 ? '' : this.t('tools.database.selectSearchPlaceholder');
     }
   }
 

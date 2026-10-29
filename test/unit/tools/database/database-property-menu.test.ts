@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
-import { IconChangeType, IconCheck, IconInfo, IconPageLayout, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
+import { IconChangeType, IconCheck, IconInfo, IconPageLayout, IconPencil, IconPreview, IconReplace, IconSliders, IconSort } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
@@ -419,6 +419,16 @@ describe('DatabasePropertyMenu', () => {
       expect(byName(items, 'editProperty').icon).toBe(IconSliders);
       expect(byName(items, 'changeType').icon).toBe(IconChangeType);
       expect(byName(items, 'displayAs').icon).toBe(IconPreview);
+      menu.destroy();
+    });
+
+    // Unmeasured in Notion: a formula's Edit property row takes the same sliders as every other
+    // column; a button's "Edit automation" keeps the pencil.
+    it.each([['formula', IconSliders], ['button', IconPencil]] as const)('draws the %s Edit row glyph', (type, icon) => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.open(prop(type), document.createElement('button'), []);
+      expect(byName(lastItems(), 'editProperty').icon).toBe(icon);
       menu.destroy();
     });
 

@@ -852,8 +852,8 @@ export class DatabasePropertyMenu {
         return {
           name: entry,
           title: this.t(property.type === 'button' ? 'tools.database.editAutomation' : 'tools.database.editProperty'),
-          // notion-live-8/80-menu-number.png: sliders.
-          icon: IconSliders,
+          // notion-live-8/80-menu-number.png: sliders. Edit automation's glyph is unmeasured: it keeps the pencil.
+          icon: property.type === 'button' ? IconPencil : IconSliders,
           // research/27 §7: 300 wide. The all-views note wraps rather than widening it.
           // The submenu's rows mount right after onOpen.
           // notion-spec-2 §25.6: the submenu's top is the row's top; a divider follows Sort.
@@ -1305,13 +1305,13 @@ export class DatabasePropertyMenu {
 
   /** notion-spec-2 §6: inside Edit property the row reads "Edit formula". */
   private editFormulaItem(propertyId: string, name: string, titleKey = 'tools.database.editFormula'): PopoverItemParams {
-    // notion-spec-2 §9: Notion's Edit formula row has pencilLine and a chevron; the header's own Edit property keeps the pencil.
+    // notion-spec-2 §9: Notion's Edit formula row has pencilLine and a chevron; the header's own Edit property draws its sliders.
     const own = name === 'editFormula';
 
     return {
       name,
       title: this.t(titleKey),
-      icon: own ? IconPencilLine : IconPencil,
+      icon: own ? IconPencilLine : IconSliders,
       ...(own ? { chevron: true } : {}),
       closeOnActivate: true,
       onActivate: () => this.options.computed?.onEditFormula(propertyId),

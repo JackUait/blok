@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { loadSheet } from '../../utils/lazy-styles';
 import { onHover } from '../../utils/tooltip';
 
 import { measureLine } from './caret-position';
@@ -165,6 +166,8 @@ const stripSignature = (group: AvatarPeer[], maxFaces: number): string =>
  * @param options - how to find a block's holder, and how many faces it shows
  */
 export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
+  // Started when the layer is made, before anyone is drawn.
+  void loadSheet('presence');
   const { resolveHolder } = options;
   const maxFaces = options.maxFaces ?? DEFAULT_MAX_FACES;
 

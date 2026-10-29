@@ -1,3 +1,5 @@
+import { loadSheet } from '../../utils/lazy-styles';
+
 import { PRESENCE_COLOR_PROPERTY } from './presence';
 
 const MARKER_ATTR = 'data-blok-agent-marker';
@@ -36,6 +38,8 @@ export function createAgentMarkerLayer(options: {
   resolveHolder(blockId: string): HTMLElement | null;
   greetForMs?: number;
 }): AgentMarkerLayer {
+  // Started when the layer is made, before anyone is drawn.
+  void loadSheet('presence');
   const greetMs = options.greetForMs ?? DEFAULT_GREET_FOR_MS;
   const drawn = new Map<number, Drawn>();
   // Moving to another holder must not repeat the arrival greeting.

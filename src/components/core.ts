@@ -10,6 +10,7 @@ import type { Collaboration } from './modules/collaboration';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
+import { BOOT_SHEET_WAIT_MS, loadSheet, sheetsOfTools, waitAtMost, whenIdle } from './utils/lazy-styles';
 import { expandPersistenceConfig, unwrapPersistedDocument } from './utils/persistence';
 import { expandServerConfig } from './utils/server-config';
 import { normalizeOutputBlocks } from '../shared/output-data';
@@ -84,6 +85,9 @@ export class Core {
             isEmpty: BlockManager.blocks.every((block) => block.isEmpty),
           });
           ModificationsObserver.enable();
+
+          // Adding a sheet makes the browser restyle the whole page; do it before the first toolbox hover.
+          whenIdle(() => void loadSheet('block-preview'));
 
           /**
            * A collaboration session is still empty at this point — its blocks
@@ -434,6 +438,9 @@ export class Core {
    * @returns {Promise<void>}
    */
   public async start(): Promise<void> {
+    // Fetched beside module setup; awaited below, so no block renders before them.
+    const sheets = Promise.all((['fonts', ...sheetsOfTools(this.config.tools)] as const).map(loadSheet));
+
     const modulesToPrepare = [
       'I18n',
       'Tools',
@@ -473,6 +480,8 @@ export class Core {
       }),
       Promise.resolve()
     );
+
+    await waitAtMost(sheets, BOOT_SHEET_WAIT_MS);
   }
 
   /**

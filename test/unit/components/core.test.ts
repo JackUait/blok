@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import { CriticalError } from '../../../src/components/errors/critical';
+import { BOOT_SHEET_WAIT_MS, TOOL_SHEETS } from '../../../src/components/utils/lazy-styles';
+import type * as LazyStyles from '../../../src/components/utils/lazy-styles';
 
 const mockRegistry = vi.hoisted(() => ({
   dom: {
@@ -34,6 +36,13 @@ const mockRegistry = vi.hoisted(() => ({
     caretPrepare: vi.fn(),
     caretSetToBlock: vi.fn(),
   },
+}));
+
+const mockLoadSheet = vi.hoisted(() => vi.fn((_name: string) => Promise.resolve()));
+
+vi.mock('../../../src/components/utils/lazy-styles', async (importOriginal) => ({
+  ...(await importOriginal<typeof LazyStyles>()),
+  loadSheet: mockLoadSheet,
 }));
 
 vi.mock('../../../src/components/dom', () => ({
@@ -384,6 +393,98 @@ describe('Core', () => {
       expect(core.moduleInstances.RectangleSelection).toBeDefined();
       expect(core.moduleInstances.CrossBlockSelection).toBeDefined();
       expect(core.moduleInstances.ReadOnly).toBeDefined();
+    });
+
+    it('fetches the font sheet and the configured tools\' sheets before any module prepares', async () => {
+      class Sheeted {
+        public static get [TOOL_SHEETS](): string[] {
+          return ['database'];
+        }
+      }
+      class Inherited extends Sheeted {}
+      const core = await createReadyCore({ holder: 'blok', tools: { a: Inherited, b: { class: Sheeted } } } as unknown as BlokConfig);
+      const order: string[] = [];
+
+      mockLoadSheet.mockClear();
+      mockLoadSheet.mockImplementation((name) => {
+        order.push(`load ${name}`);
+
+        return Promise.resolve();
+      });
+      mockRegistry.modules.i18nPrepare.mockImplementationOnce(() => {
+        order.push('i18n');
+
+        return Promise.resolve();
+      });
+
+      await core.start();
+      mockLoadSheet.mockImplementation(() => Promise.resolve());
+
+      expect(order.slice(0, 3)).toEqual(['load fonts', 'load database', 'i18n']);
+    });
+
+    it('becomes ready when a boot sheet stalls, after a short wait', async () => {
+      vi.useFakeTimers();
+      try {
+        mockLoadSheet.mockImplementation(() => new Promise<void>(() => undefined));
+        const core = new Core();
+        const settled = { ready: false };
+
+        void core.isReady.then(() => {
+          settled.ready = true;
+        });
+        await vi.advanceTimersByTimeAsync(BOOT_SHEET_WAIT_MS - 1);
+        expect(settled.ready).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect(settled.ready).toBe(true);
+      } finally {
+        mockLoadSheet.mockImplementation(() => Promise.resolve());
+        vi.useRealTimers();
+      }
+    });
+
+    it('warms the toolbox preview sheet when the page is idle after ready', async () => {
+      const idle: Array<() => void> = [];
+
+      vi.stubGlobal('requestIdleCallback', (callback: () => void) => {
+        idle.push(callback);
+
+        return idle.length;
+      });
+      try {
+        await createReadyCore();
+        expect(mockLoadSheet).not.toHaveBeenCalledWith('block-preview');
+
+        idle.forEach((callback) => callback());
+        expect(mockLoadSheet).toHaveBeenCalledWith('block-preview');
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('finishes start only once the sheets are in, so no block renders before them', async () => {
+      const core = await createReadyCore();
+      const settled = { start: false };
+      const release = { fonts: (): void => undefined };
+
+      mockLoadSheet.mockImplementation((name) => (name === 'fonts'
+        ? new Promise<void>((resolve) => {
+          release.fonts = resolve;
+        })
+        : Promise.resolve()));
+
+      const started = core.start().then(() => {
+        settled.start = true;
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(settled.start).toBe(false);
+
+      release.fonts();
+      await started;
+      mockLoadSheet.mockImplementation(() => Promise.resolve());
+      expect(settled.start).toBe(true);
     });
 
     it('logs warning when non-critical module fails to prepare', async () => {

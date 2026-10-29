@@ -1,7 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PREVIEW_CARD_WIDTH, PREVIEW_OPEN_DELAY, ToolboxPreview } from '../../../../src/components/ui/toolbox-preview';
+import { DATABASE_DRAWINGS, PREVIEW_CARD_WIDTH, PREVIEW_OPEN_DELAY, ToolboxPreview } from '../../../../src/components/ui/toolbox-preview';
 import type { ToolboxPreviewConfig } from '../../../../types';
+
+const sheets = vi.hoisted(() => {
+  const waiting: Array<() => void> = [];
+
+  return {
+    loaded: true,
+    requested: [] as string[],
+    waiting,
+    release: (): void => {
+      sheets.loaded = true;
+      waiting.splice(0).forEach((resolve) => resolve());
+    },
+    /** A failed chunk: loadSheet resolves, the sheet stays missing. */
+    fail: (): void => {
+      waiting.splice(0).forEach((resolve) => resolve());
+    },
+  };
+});
+
+vi.mock('../../../../src/components/utils/lazy-styles', () => ({
+  loadSheet: (name: string): Promise<void> => {
+    sheets.requested.push(name);
+
+    return sheets.loaded ? Promise.resolve() : new Promise<void>((resolve) => sheets.waiting.push(resolve));
+  },
+  isSheetLoaded: (): boolean => sheets.loaded,
+}));
 
 const rect = (left: number, top: number, width: number, height: number): DOMRect => ({
   left,
@@ -52,6 +79,8 @@ describe('ToolboxPreview', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sheets.loaded = true;
+    sheets.requested = [];
     vi.useFakeTimers();
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1200);
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
@@ -75,6 +104,89 @@ describe('ToolboxPreview', () => {
     vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
 
     expect(cardRoot()?.hidden).toBe(false);
+  });
+
+  const drawingNamed = (name: string): ToolboxPreviewConfig => ({
+    render: () => {
+      const el = document.createElement('div');
+
+      el.setAttribute('data-blok-preview', name);
+      el.setAttribute('data-testid', 'drawing');
+      el.textContent = name;
+
+      return el;
+    },
+    description: name,
+  });
+
+  it('asks for its own sheet when the pointer first rests, and not the database sheet', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config() });
+
+    expect(sheets.requested).toEqual(['block-preview']);
+  });
+
+  it('keeps the first card closed until its sheet has loaded', async () => {
+    sheets.loaded = false;
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config('first') });
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
+
+    expect(cardRoot()?.hidden ?? true).toBe(true);
+
+    preview.show({ item, surface, config: config('second') });
+    sheets.release();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(cardRoot()?.hidden).toBe(false);
+    expect(drawingText()).toBe('second');
+  });
+
+  it.each(DATABASE_DRAWINGS)('waits for the database sheet before the first card shows the %s drawing: it reads that sheet\'s tokens', async (name) => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: drawingNamed(name) });
+    sheets.loaded = false;
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
+
+    expect(sheets.requested).toContain('database');
+    expect(cardRoot()?.hidden ?? true).toBe(true);
+
+    sheets.release();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(drawingText()).toBe(name);
+  });
+
+  it('opens the card unstyled after one failed load instead of trying forever', async () => {
+    sheets.loaded = false;
+    const { surface, item } = makeAnchors();
+    const render = vi.fn(() => document.createElement('div'));
+
+    preview.show({ item, surface, config: { render, description: 'x' } });
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
+    sheets.fail();
+    await vi.advanceTimersByTimeAsync(0);
+    sheets.fail();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(cardRoot()?.hidden).toBe(false);
+    expect(render.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  it('opens nothing when the menu hides while its sheets load', async () => {
+    sheets.loaded = false;
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config() });
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
+    preview.hide();
+    sheets.release();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(cardRoot()?.hidden ?? true).toBe(true);
   });
 
   const openNow = (params: Parameters<ToolboxPreview['show']>[0]): void => {

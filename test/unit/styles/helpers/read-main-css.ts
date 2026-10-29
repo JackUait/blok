@@ -12,10 +12,40 @@
  * slash-search, css-vars) grep the flattened source; using this helper
  * keeps them oblivious to the file layout.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 
 const STYLES_ENTRY = resolve(__dirname, '../../../../src/styles/main.css');
+
+/** Entries of the sheets src/components/utils/lazy-styles.ts loads on first use. */
+export const LAZY_STYLES_DIR = resolve(__dirname, '../../../../src/styles/lazy');
+
+export const lazyEntries = (): string[] =>
+  readdirSync(LAZY_STYLES_DIR).filter((name) => name.endsWith('.css')).sort().map((name) => join(LAZY_STYLES_DIR, name));
+
+/**
+ * The authored stylesheet the browser ends up with: main.css, each lazy entry
+ * put back where its `[data-blok-sheet='<name>']` marker rule sits (or at the end
+ * when it has none), with only the entries' local imports kept.
+ */
+export const withLazySheets = (
+  mainSource: string,
+  inlineFile: (filePath: string) => string,
+): string => {
+  const localImports = (entry: string): string =>
+    [...readFileSync(entry, 'utf-8').matchAll(/@import\s+['"](\.[^'"]+)['"]/g)]
+      .map(([, spec]) => inlineFile(resolve(dirname(entry), spec)))
+      .join('\n');
+
+  return lazyEntries().reduce((source, entry) => {
+    const name = basename(entry, '.css');
+    const marker = `[data-blok-sheet='${name}'] { --blok-sheet: ${name}; }`;
+
+    return source.includes(marker)
+      ? source.replace(marker, () => localImports(entry))
+      : `${source}\n${localImports(entry)}`;
+  }, mainSource);
+};
 
 function inline(filePath: string, seen: Set<string>): string {
   if (seen.has(filePath)) return '';
@@ -33,13 +63,15 @@ function inline(filePath: string, seen: Set<string>): string {
 }
 
 /**
- * Returns main.css with every local @import inlined. Result is cached per
+ * Returns main.css with every local @import and lazy sheet inlined. Result is cached per
  * process to avoid repeated disk reads across test files.
  */
 let cached: string | null = null;
 
 export function readMainCss(): string {
   if (cached !== null) return cached;
-  cached = inline(STYLES_ENTRY, new Set());
+  const seen = new Set<string>();
+
+  cached = withLazySheets(inline(STYLES_ENTRY, seen), (filePath) => inline(filePath, seen));
   return cached;
 }

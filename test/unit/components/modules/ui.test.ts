@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { loadSheet } from "../../../../src/components/utils/lazy-styles";
 import { UI } from "../../../../src/components/modules/ui";
 import { Flipper } from "../../../../src/components/flipper";
 import {
@@ -66,6 +68,14 @@ vi.mock(
   "../../../../src/components/styles/main.css?inline",
   () => fakeCssContent,
 );
+
+vi.mock("../../../../src/styles/lazy/fonts.css?inline", () => ({
+  default: "@font-face{font-family:Probe}",
+}));
+
+vi.mock("../../../../src/styles/main.css?inline", () => ({
+  default: ".a{}[data-blok-sheet=fonts]{--blok-sheet:fonts}.b{}",
+}));
 
 const mockRegister = vi.fn();
 const mockUnregister = vi.fn();
@@ -399,6 +409,18 @@ describe("UI module", () => {
       (ui as unknown as { loadStyles: () => void }).loadStyles();
 
       expect(document.querySelectorAll("#blok-styles")).toHaveLength(1);
+    });
+
+    it("keeps one #blok-styles, and splices a loaded lazy sheet in at its marker", async () => {
+      const { ui } = createUI();
+
+      await loadSheet("fonts");
+      (ui as unknown as { loadStyles: () => void }).loadStyles();
+
+      expect(document.querySelectorAll('style[id^="blok-styles"]')).toHaveLength(1);
+      expect(document.getElementById("blok-styles")?.textContent).toContain(
+        ".a{}@font-face{font-family:Probe}.b{}",
+      );
     });
 
     it("leads injected styles with the canonical Tailwind layer order so a host app's utilities layer is not demoted below base", () => {

@@ -1,4 +1,5 @@
-import { createPreviewCard } from '../components/ui/toolbox-preview';
+import { createPreviewCard, PREVIEW_SHEETS } from '../components/ui/toolbox-preview';
+import { loadSheet } from '../components/utils/lazy-styles';
 
 import type { ToolboxConfigEntry } from '@/types';
 
@@ -31,6 +32,8 @@ const entriesOf = (tool: unknown): ToolboxConfigEntry[] => {
 export const renderPreviewGallery = ({ container, tools, translate }: PreviewGalleryOptions): void => {
   const grid = document.createElement('div');
 
+  // The gallery shows the database drawings too.
+  [...PREVIEW_SHEETS, 'database' as const].forEach((name) => void loadSheet(name));
   grid.className = 'preview-gallery-grid';
 
   Object.entries(tools).forEach(([exportName, tool]) => {

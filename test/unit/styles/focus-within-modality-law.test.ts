@@ -17,7 +17,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { readMainCss } from './helpers/read-main-css';
+import { lazyEntries, readMainCss } from './helpers/read-main-css';
 
 const stripComments = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, '');
 
@@ -54,7 +54,7 @@ const STANDALONE_CSS_ENTRIES = [
   },
 ];
 
-/** Every local .css file main.css pulls in, transitively. */
+/** Every local .css file main.css and the lazy sheets pull in, transitively. */
 function reachableFromMainCss(): Set<string> {
   const seen = new Set<string>();
 
@@ -73,6 +73,7 @@ function reachableFromMainCss(): Set<string> {
   };
 
   walk(MAIN_CSS);
+  lazyEntries().forEach(walk);
 
   return seen;
 }

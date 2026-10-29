@@ -19,6 +19,8 @@ import { dirname, resolve } from 'node:path';
 import type { Declaration } from 'postcss';
 import postcss from 'postcss';
 
+import { lazyEntries, withLazySheets } from './helpers/read-main-css';
+
 const STYLES_ROOT = resolve(__dirname, '../../../src/styles');
 const ENTRY = resolve(STYLES_ROOT, 'main.css');
 
@@ -186,7 +188,8 @@ function localImportedByteBudget(filePath: string, seen = new Set<string>()): nu
 }
 
 describe('main.css split — cascade-preserving equivalence', () => {
-  const inlined = inlineLocalImports(ENTRY);
+  const seen = new Set<string>();
+  const inlined = withLazySheets(inlineLocalImports(ENTRY, seen), (filePath) => inlineLocalImports(filePath, seen));
 
   it('rule set + source order matches the golden snapshot', async () => {
     const records = buildRuleIndex(inlined);
@@ -1409,6 +1412,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FORMULA_PREVIEW_PICKER_BYTES = 3_213;
     // database.css: gallery, calendar and timeline start at the text column like the table (side-by-side-4 #2).
     const DATABASE_VIEW_CONTENT_INSET_BYTES = 842;
+    // A lazy sheet's marker rule in main.css is longer than the @import it replaces.
+    const LAZY_SHEET_MARKER_BYTES = ['fonts', 'database', 'block-preview', 'presence']
+      .reduce((sum, name) => sum + `[data-blok-sheet='${name}'] { --blok-sheet: ${name}; }`.length - `@import './${name}.css';`.length, 0);
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1760,8 +1766,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_OPTIONS_ROW_REST_BYTES
       + DATABASE_RELATION_LINKED_PITCH_BYTES
       + DATABASE_FORMULA_PREVIEW_PICKER_BYTES
-      + DATABASE_VIEW_CONTENT_INSET_BYTES;
-    const actual = localImportedByteBudget(ENTRY);
+      + DATABASE_VIEW_CONTENT_INSET_BYTES
+      + LAZY_SHEET_MARKER_BYTES;
+    const counted = new Set<string>();
+    // A lazy entry holds no rules of its own, only the import of the sheet it loads.
+    const actual = lazyEntries().reduce(
+      (sum, entry) => sum + localImportedByteBudget(entry, counted) - statSync(entry).size,
+      localImportedByteBudget(ENTRY, counted),
+    );
 
     expect(actual).toBeLessThanOrEqual(CEILING);
   });

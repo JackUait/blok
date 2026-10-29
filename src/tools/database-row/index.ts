@@ -3,6 +3,7 @@ import { databaseRowSanitize } from '../../shared/tool-descriptions/sanitize/blo
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { TOOL_SHEETS, type LazySheet } from '../../components/utils/lazy-styles';
 import { IconPage, IconPlus } from '../../components/icons';
 import { isAnnotationBlock, mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
@@ -86,6 +87,11 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
  */
 export class DatabaseRowTool implements BlockTool {
   public static describe = describeDatabaseRow;
+
+  /** Core loads these before the first render. Subclasses inherit it. */
+  public static get [TOOL_SHEETS](): LazySheet[] {
+    return ['database'];
+  }
 
   private _data: DatabaseRowData;
   private unknown: Record<string, unknown>;

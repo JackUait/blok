@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
 import { resolve, join, dirname } from 'node:path'
 import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
+import postcss from 'postcss'
 import ts from 'typescript'
 import { describe, it, expect } from 'vitest'
 
@@ -904,5 +905,71 @@ describe('runtime reachability of hand-copied public surfaces', () => {
 
   it.each(['index.mjs', 'index.cjs'])('@bloklabs/react %s exports USE_BLOK_CONFIG_KEYS', (bundle) => {
     expect(exportsName(resolve(reactDist, bundle), 'USE_BLOK_CONFIG_KEYS')).toBe(true)
+  })
+})
+
+describe('lazy stylesheets stay out of the startup closure', () => {
+  // src/components/utils/lazy-styles.ts loads these sheets with import(). A static
+  // import would put them back into every consumer's startup bundle.
+  const staticClosure = (entry: string): string[] => {
+    const seen = new Set<string>()
+    const queue = [entry]
+
+    while (queue.length > 0) {
+      const file = queue.pop()
+      if (file === undefined || seen.has(file)) continue
+      seen.add(file)
+      const [imports] = parseModule(readFileSync(file, 'utf-8'))
+      // d === -1 marks a static import; dynamic import() has d >= 0.
+      const statics = imports.filter((record) => record.d === -1 && record.n?.startsWith('.') === true)
+      queue.push(...statics.map((record) => resolve(dirname(file), record.n ?? '')))
+    }
+
+    return [...seen]
+  }
+
+  const LAZY_FINGERPRINTS = {
+    fonts: '@font-face{font-family:JetBrains Mono',
+    database: '[data-blok-database-wrapper]{color:',
+    'block-preview': '[data-blok-interface=block-preview]{',
+    presence: '[data-blok-presence-caret]{',
+  }
+
+  for (const entry of ['blok.mjs', 'full.mjs']) {
+    it(`${entry} reaches no lazy sheet through static imports`, async () => {
+      await initLexer()
+      const closure = staticClosure(resolve(dist, entry))
+      for (const [name, fingerprint] of Object.entries(LAZY_FINGERPRINTS)) {
+        const holders = closure.filter((file) => readFileSync(file, 'utf-8').includes(fingerprint))
+        expect(holders, name).toEqual([])
+      }
+    })
+  }
+
+  // A lazy sheet's CSS replaces its marker rule in #blok-styles. A marker inside
+  // @media or @layer would put the whole sheet under that condition.
+  it('keeps every lazy sheet marker a top-level rule of the built main sheet', () => {
+    const chunks = listJsFiles(join(dist, 'chunks')).filter((file) => file.endsWith('.mjs'))
+    const main = chunks.map((file) => readFileSync(file, 'utf-8')).find((code) => code.includes('[data-blok-sheet=fonts]'))
+    expect(main, 'no chunk holds the main sheet').toBeDefined()
+    const start = (main ?? '').indexOf('/*! tailwindcss')
+    const end = (main ?? '').indexOf('`', start)
+    const root = postcss.parse((main ?? '').slice(start, end))
+    const markers: Array<{ name: string; topLevel: boolean }> = []
+    root.walkRules((rule) => {
+      const match = /^\[data-blok-sheet=([a-z-]+)\]$/.exec(rule.selector)
+      if (match !== null) markers.push({ name: match[1], topLevel: rule.parent?.type === 'root' })
+    })
+    expect(markers.map((marker) => marker.name).sort()).toEqual(Object.keys(LAZY_FINGERPRINTS).sort())
+    expect(markers.filter((marker) => !marker.topLevel)).toEqual([])
+  })
+
+  it('ships each lazy sheet in a chunk that Tailwind compiled', () => {
+    const chunks = listJsFiles(join(dist, 'chunks')).filter((file) => file.endsWith('.mjs'))
+    for (const [name, fingerprint] of Object.entries(LAZY_FINGERPRINTS)) {
+      const holders = chunks.filter((file) => readFileSync(file, 'utf-8').includes(fingerprint))
+      expect(holders, name).toHaveLength(1)
+      expect(readFileSync(holders[0], 'utf-8').includes('/*! tailwindcss'), name).toBe(true)
+    }
   })
 })

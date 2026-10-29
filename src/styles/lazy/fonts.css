@@ -1,0 +1,3 @@
+/* Loaded by src/components/utils/lazy-styles.ts. The @tailwind line makes Tailwind compile and optimize this file as it does main.css. */
+@import '../fonts.css';
+@tailwind utilities source(none);

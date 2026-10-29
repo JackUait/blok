@@ -1,3 +1,4 @@
+import { isSheetLoaded, loadSheet, type LazySheet } from '../utils/lazy-styles';
 import { syncPortalDirection } from '../utils/portal-direction';
 import { promoteToTopLayer, removeFromTopLayer } from '../utils/top-layer';
 
@@ -8,6 +9,14 @@ export const PREVIEW_CARD_WIDTH = 248;
 
 /** How long the pointer rests on a row before the first card opens (see CLAUDE.md). */
 export const PREVIEW_OPEN_DELAY = 320;
+
+export const PREVIEW_SHEETS: LazySheet[] = ['block-preview'];
+
+/** Drawings that read the database sheet's tokens (block-preview/database.css). */
+export const DATABASE_DRAWINGS = ['database', 'board'];
+
+const sheetsFor = (drawing: HTMLElement): LazySheet[] =>
+  DATABASE_DRAWINGS.includes(drawing.getAttribute('data-blok-preview') ?? '') ? [...PREVIEW_SHEETS, 'database'] : PREVIEW_SHEETS;
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;
@@ -49,6 +58,7 @@ export class ToolboxPreview {
   private paper: HTMLElement | null = null;
   private caption: HTMLElement | null = null;
   private openTimer: ReturnType<typeof setTimeout> | null = null;
+  private waitingForSheets = false;
   private visible = false;
   private current: ToolboxPreviewShowParams | null = null;
   private pending: ToolboxPreviewShowParams | null = null;
@@ -70,20 +80,48 @@ export class ToolboxPreview {
     // The delay runs once per hover: moving to the next row swaps the card it will open.
     this.pending = params;
 
-    if (this.openTimer !== null) {
+    if (this.openTimer !== null || this.waitingForSheets) {
       return;
     }
 
+    PREVIEW_SHEETS.forEach((name) => void loadSheet(name));
+
     this.openTimer = setTimeout(() => {
-      const pending = this.pending;
-
       this.openTimer = null;
-      this.pending = null;
-
-      if (pending !== null) {
-        this.open(pending);
-      }
+      this.openPending();
     }, PREVIEW_OPEN_DELAY);
+  }
+
+  /** The first card opens only once the sheets its drawing needs are in. */
+  private openPending(): void {
+    const pending = this.pending;
+
+    if (pending === null) {
+      return;
+    }
+
+    const drawing = pending.config.render();
+    const sheets = sheetsFor(drawing);
+
+    if (sheets.every(isSheetLoaded)) {
+      this.pending = null;
+      this.open(pending, drawing);
+
+      return;
+    }
+
+    this.waitingForSheets = true;
+    // One wait only: a failed load resolves too, and the card then opens unstyled.
+    void Promise.all(sheets.map(loadSheet)).then(() => {
+      const latest = this.pending;
+
+      if (!this.waitingForSheets || latest === null) {
+        return;
+      }
+      this.waitingForSheets = false;
+      this.pending = null;
+      this.open(latest, latest === pending ? drawing : undefined);
+    });
   }
 
   public hide(): void {
@@ -110,9 +148,11 @@ export class ToolboxPreview {
     this.caption = null;
   }
 
-  private open(params: ToolboxPreviewShowParams): void {
+  private open(params: ToolboxPreviewShowParams, drawing = params.config.render()): void {
     const { root, paper, caption } = this.ensureRoot();
-    const drawing = params.config.render();
+
+    // An open card swaps at once; a sheet still missing here paints when it lands.
+    sheetsFor(drawing).forEach((name) => void loadSheet(name));
 
     paper.replaceChildren(drawing);
     caption.textContent = this.describe(params.config);
@@ -205,6 +245,7 @@ export class ToolboxPreview {
 
   private cancelOpen(): void {
     this.pending = null;
+    this.waitingForSheets = false;
 
     if (this.openTimer !== null) {
       clearTimeout(this.openTimer);

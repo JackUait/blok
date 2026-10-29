@@ -194,6 +194,7 @@ import { scanBacklinkSources } from './backlinks';
 import type { BacklinkSource } from './backlinks';
 import { DatabaseRowTool } from '../database-row';
 import { DatabaseCommentTool } from '../database-comment';
+import { TOOL_SHEETS, type LazySheet } from '../../components/utils/lazy-styles';
 import type { BaseToolConstructable } from '../../../types/tools';
 import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
@@ -504,6 +505,11 @@ export class DatabaseTool implements BlockTool {
   }
 
   public static describe = describeDatabase;
+
+  /** Core loads these before the first render. Subclasses inherit it. */
+  public static get [TOOL_SHEETS](): LazySheet[] {
+    return ['database'];
+  }
   public static actionHandlers = { ...DATABASE_ACTION_HANDLERS, ...DATABASE_COMMENT_HANDLERS };
   /** Rows and comments are blocks of their own; registering `database` brings both. */
   public static companionTools: Record<string, BaseToolConstructable> = {

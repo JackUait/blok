@@ -1,3 +1,4 @@
+import { loadSheet } from '../../utils/lazy-styles';
 import { describeTextEdit } from '../blockManager/remote-edit-caret';
 
 import { measureLine, measureSelection, type CaretPosition, type LineBox } from './caret-position';
@@ -149,6 +150,8 @@ const positionKey = (peer: CaretPeer): string => {
  * @param options - how to find a block's holder and inputs, and the flag timing
  */
 export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
+  // Started when the layer is made, before anyone is drawn.
+  void loadSheet('presence');
   const { resolveHolder, resolveInputs } = options;
   const lingerMs = options.restAfterMs ?? DEFAULT_REST_AFTER_MS;
   const greetMs = options.greetForMs ?? DEFAULT_GREET_FOR_MS;

@@ -17,6 +17,7 @@ import { SelectionUtils as Selection } from '../selection/index';
 import { debounce, getBlokVersion, getValidUrl, isEmpty, openSameWindow, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
+import { mountStyles } from '../utils/lazy-styles';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { resolveLoaderConfig } from '../utils/loader-config';
 import { LoadingController } from '../utils/loading-controller';
@@ -890,25 +891,15 @@ export class UI extends Module<UINodes> {
       '@layer properties;\n@layer theme, base, components, utilities;\n';
 
     /**
-     * Make tag
-     */
-    const tag = $.make('style', null, {
-      id: styleTagId,
-      textContent: layerOrder + styles.toString(),
-    });
-
-    /**
      * If user enabled Content Security Policy, he can pass nonce through the config
      * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
      */
-    if (this.config.style && !isEmpty(this.config.style) && this.config.style.nonce) {
-      tag.setAttribute('nonce', this.config.style.nonce);
-    }
+    const nonce = this.config.style && !isEmpty(this.config.style) ? this.config.style.nonce : undefined;
 
     /**
      * Append styles at the top of HEAD tag
      */
-    $.prepend(document.head, tag);
+    mountStyles(layerOrder + styles.toString(), nonce);
   }
 
   /**

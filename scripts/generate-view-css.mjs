@@ -525,28 +525,17 @@ const main = async () => {
   const root = window.document.documentElement;
 
   /**
-   * `fonts.css` is stripped from the entry rather than pruned out of the
-   * result: `@font-face` has no selector, so the pruner cannot judge it.
+   * `fonts.css`, `presence.css`, `block-preview.css` and `database.css` are
+   * not in main.css at all: they load lazily (src/components/utils/lazy-styles.ts),
+   * and main.css holds only a marker rule for each. The markers are stripped:
+   * they only set a custom property, so the pruner would keep them as carriers.
    *
-   * `presence.css` is stripped for the opposite reason — the pruner judges it
-   * WRONG. Its rules are attribute-keyed and several declare custom properties
-   * alone, so they read as theme token carriers and are kept wholesale. A
-   * rendered view has no awareness, no peers and no silhouettes, so all of it
-   * is dead weight in a budgeted sheet.
-   *
-   * `block-preview.css` likewise: its drawings declare custom properties per
-   * block, and the toolbox hover card they live in never exists in a view.
-   *
-   * `loading.css` too: its token block reads as a carrier, and a view never
-   * shows the loading skeleton.
+   * `loading.css` is stripped from the entry: its token block reads as a
+   * carrier, and a view never shows the loading skeleton.
    *
    * `page-title.css` too: the page header is editor UI that blocksToHtml never
    * emits. Its gutter rule lives in main.css itself, so dropPageTitleRules
    * removes that one after the prune.
-   *
-   * `database.css` too: the view renders database and database-row blocks
-   * bare (`childrenOnly` in src/view/emitters.ts), so none of its rules can
-   * match, and its cell tokens (pills, checkbox, date picker) read as carriers.
    *
    * `assistant.css` too: the Ask AI bar is editor UI, and its thinking menu
    * rules only set custom properties, so they read as carriers.
@@ -555,12 +544,9 @@ const main = async () => {
    * label token reads as a carrier.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
-    .replace(/^@import '\.\/fonts\.css';$/m, '')
-    .replace(/^@import '\.\/presence\.css';$/m, '')
-    .replace(/^@import '\.\/block-preview\.css';$/m, '')
+    .replace(/^\[data-blok-sheet='[a-z-]+'\] \{ --blok-sheet: [a-z-]+; \}$/gm, '')
     .replace(/^@import '\.\/loading\.css';$/m, '')
     .replace(/^@import '\.\/page-title\.css';$/m, '')
-    .replace(/^@import '\.\/database\.css';$/m, '')
     .replace(/^@import '\.\/assistant\.css';$/m, '')
     .replace(/^@import '\.\/popover-animation\.css';$/m, '');
 

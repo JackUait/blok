@@ -12631,20 +12631,16 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-timeline-muted-text);
 }
 
+/* notion-spec-2 §21.9: values after the bar are 12/18. */
 [data-blok-database-timeline-bar-property] {
   flex: none;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 18px;
 }
 
 /* Measured: the first property sits about 11px after the title (6px gap + 4px). */
 [data-blok-database-timeline-bar-title] + [data-blok-database-timeline-bar-property] {
   margin-inline-start: var(--blok-space-1);
-}
-
-/* Measured: 12px date text. Other property text is unmeasured. */
-[data-blok-database-timeline-bar-property] > [data-blok-database-cell="date"] {
-  font-size: 12px;
 }
 
 [data-blok-database-timeline-bar-property] > [data-blok-database-cell] {

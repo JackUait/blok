@@ -15276,16 +15276,12 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline-bar-property] {
   flex: none;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 18px;
 }
 
 [data-blok-database-timeline-bar-title] + [data-blok-database-timeline-bar-property] {
   margin-inline-start: var(--blok-space-1);
-}
-
-[data-blok-database-timeline-bar-property] > [data-blok-database-cell="date"] {
-  font-size: 12px;
 }
 
 [data-blok-database-timeline-bar-property] > [data-blok-database-cell] {

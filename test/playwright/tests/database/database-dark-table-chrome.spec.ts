@@ -196,13 +196,13 @@ for (const path of paths) {
       await expect(bar).toHaveCSS('box-shadow', 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
     });
 
-    test('OPEN button: Notion\'s dark fill (findings K06), the measured dark shadow, secondary ink and the dark hover (research/22 §12)', async ({ page }) => {
+    test('OPEN button: Notion\'s rgb(37, 37, 37) box in a 2px rgb(32, 32, 32) frame (notion-spec-2 §23.2), the measured dark shadow, secondary ink and the dark hover (research/22 §12)', async ({ page }) => {
       await row(page).hover();
       const open = row(page).locator('[data-blok-database-table-open]');
 
       await expect(open).toBeVisible();
-      await expect(open).toHaveCSS('background-color', 'rgb(32, 32, 32)');
-      await expect(open).toHaveCSS('box-shadow', 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
+      await expect(open).toHaveCSS('background-color', 'rgb(37, 37, 37)');
+      await expect(open).toHaveCSS('box-shadow', 'rgb(32, 32, 32) 0px 0px 0px 2px inset, rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 4px 12px -2px');
       await expect(open).toHaveCSS('color', 'rgb(173, 169, 163)');
       await open.hover();
       await expect(open).toHaveCSS('background-image', `linear-gradient(${HOVER_FILL}, ${HOVER_FILL})`);

@@ -1361,6 +1361,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALENDAR_AVATAR_BYTES = 225;
     // database.css: dark title icon, glyph and letter avatar tokens (notion-spec-2 §23.1).
     const DATABASE_DARK_CELLS_BYTES = 1_292;
+    // database.css: the dark OPEN button's inner box (notion-spec-2 §23.2).
+    const DATABASE_DARK_OPEN_BYTES = 802;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1688,7 +1690,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BOARD_FILE_CHIP_GAP_BYTES
       + DATABASE_CALENDAR_RELATION_BYTES
       + DATABASE_CALENDAR_AVATAR_BYTES
-      + DATABASE_DARK_CELLS_BYTES;
+      + DATABASE_DARK_CELLS_BYTES
+      + DATABASE_DARK_OPEN_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

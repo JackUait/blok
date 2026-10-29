@@ -4103,6 +4103,8 @@ span[data-blok-slash-search] {
   --blok-database-ai-prompt-placeholder: rgba(21, 14, 0, 0.286);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-table-open-button-bg: var(--blok-database-table-open-bg);
+  --blok-database-table-open-button-shadow: var(--blok-database-table-open-shadow);
   --blok-database-table-selection-shadow: var(--blok-database-table-open-shadow);
   --blok-database-table-cell-ring: rgba(55, 53, 47, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
@@ -4377,6 +4379,8 @@ span[data-blok-slash-search] {
   --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
   --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-table-open-button-bg: rgb(37, 37, 37);
+  --blok-database-table-open-button-shadow: inset 0 0 0 2px rgb(32, 32, 32), rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
   --blok-database-popover-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
@@ -4649,6 +4653,8 @@ span[data-blok-slash-search] {
   --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
   --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-table-open-button-bg: rgb(37, 37, 37);
+  --blok-database-table-open-button-shadow: inset 0 0 0 2px rgb(32, 32, 32), rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
   --blok-database-popover-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
@@ -11510,8 +11516,8 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-table-open-bg);
-  box-shadow: var(--blok-database-table-open-shadow);
+  background-color: var(--blok-database-table-open-button-bg);
+  box-shadow: var(--blok-database-table-open-button-shadow);
   color: var(--blok-database-table-header-text);
   font-size: 12px;
   line-height: 18px;

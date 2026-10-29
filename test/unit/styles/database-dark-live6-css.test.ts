@@ -56,3 +56,28 @@ describe('table cells at rest in dark (§23.1)', () => {
     expect(initial).toContain('box-shadow: var(--blok-database-person-initial-shadow)');
   });
 });
+
+describe('OPEN button on a hovered title in dark (§23.2)', () => {
+  const darkShadow = 'inset 0 0 0 2px rgb(32, 32, 32), rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px';
+
+  it('shows Notion\'s inner 4px-round rgb(37, 37, 37) box inside the rgb(32, 32, 32) frame', () => {
+    expect(tokenValues('--blok-database-table-open-button-bg')).toEqual([
+      'var(--blok-database-table-open-bg)',
+      'rgb(37, 37, 37)',
+      'rgb(37, 37, 37)',
+    ]);
+    expect(tokenValues('--blok-database-table-open-button-shadow')).toEqual([
+      'var(--blok-database-table-open-shadow)',
+      darkShadow,
+      darkShadow,
+    ]);
+    const open = ruleBody('[data-blok-database-table-open]');
+
+    expect(open).toContain('background-color: var(--blok-database-table-open-button-bg)');
+    expect(open).toContain('box-shadow: var(--blok-database-table-open-button-shadow)');
+  });
+
+  it('leaves the cell hover buttons\' box on the plain frame, as Notion has no inner box there', () => {
+    expect(ruleBody('[data-blok-database-table-cell-actions]')).toContain('box-shadow: var(--blok-database-table-open-shadow)');
+  });
+});

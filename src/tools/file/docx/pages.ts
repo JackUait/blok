@@ -31,6 +31,8 @@ const HALF_INCH = 720;
  * breaks would otherwise multiply it without bound.
  */
 const HEADER_COPY_BUDGET = 30_000;
+/** Most characters all header and footer copies may add; a long header text costs few elements. */
+const HEADER_TEXT_BUDGET = 1_000_000;
 
 const pt = (twipValue: number): string => `${round(twipValue / 20)}pt`;
 
@@ -238,17 +240,18 @@ export class Pages implements BlockSink {
    * of pages. Call it after the pictures load, or the copies would miss them.
    */
   fillHeaders(): void {
-    const sizes = new Map<string, number>();
-    const spent = { elements: 0 };
+    const sizes = new Map<string, { elements: number; text: number }>();
+    const spent = { elements: 0, text: 0 };
     for (const slot of this.slots.splice(0)) {
       const template = this.templates.get(slot.path);
       if (template === undefined) {
         continue;
       }
-      const size = sizes.get(slot.path) ?? template.querySelectorAll('*').length;
+      const size = sizes.get(slot.path) ?? { elements: template.querySelectorAll('*').length, text: template.textContent?.length ?? 0 };
       sizes.set(slot.path, size);
-      spent.elements += size;
-      if (spent.elements > HEADER_COPY_BUDGET) {
+      spent.elements += size.elements;
+      spent.text += size.text;
+      if (spent.elements > HEADER_COPY_BUDGET || spent.text > HEADER_TEXT_BUDGET) {
         return;
       }
       slot.el.appendChild(template.cloneNode(true));

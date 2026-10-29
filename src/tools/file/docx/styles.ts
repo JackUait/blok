@@ -39,6 +39,9 @@ export function parseThemeFonts(doc: Document | null): ThemeFonts {
 /** Resolved styles of `styles.xml`. */
 export class StyleSheet {
   private readonly defs = new Map<string, StyleDef>();
+  // Resolved once per id: every paragraph and run asks again, and callers only read the result.
+  private readonly paragraphs = new Map<string, { para: ParaProps; run: Css }>();
+  private readonly characters = new Map<string, Css>();
   private readonly defaultParagraph: string | null;
   private readonly defaultTable: string | null;
   readonly defaultPara: ParaProps;
@@ -84,6 +87,18 @@ export class StyleSheet {
 
   /** A paragraph style's paragraph and run layers (the default style when id is absent). */
   paragraph(id: string | null | undefined): { para: ParaProps; run: Css } {
+    const key = id ?? '';
+    const known = this.paragraphs.get(key);
+    if (known !== undefined) {
+      return known;
+    }
+    const resolved = this.resolveParagraph(id);
+    this.paragraphs.set(key, resolved);
+
+    return resolved;
+  }
+
+  private resolveParagraph(id: string | null | undefined): { para: ParaProps; run: Css } {
     const named = id === null || id === undefined ? [] : this.chain('paragraph', id);
     // An unknown style id falls back to the default style, as Word does.
     const chain = named.length > 0 ? named : this.chain('paragraph', this.defaultParagraph);
@@ -96,7 +111,15 @@ export class StyleSheet {
 
   /** A character style's run layer. */
   character(id: string | null | undefined): Css {
-    return mergeCss(...this.chain('character', id).map((def) => parseRunProps(kid(def.el, 'rPr'), this.theme)));
+    const key = id ?? '';
+    const known = this.characters.get(key);
+    if (known !== undefined) {
+      return known;
+    }
+    const resolved = mergeCss(...this.chain('character', id).map((def) => parseRunProps(kid(def.el, 'rPr'), this.theme)));
+    this.characters.set(key, resolved);
+
+    return resolved;
   }
 
   /** A table style chain, root first, raw for the table renderer (the default style when id is absent). */

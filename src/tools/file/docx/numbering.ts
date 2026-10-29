@@ -6,6 +6,11 @@ import { visibleGlyph } from './glyphs';
 import { listFormat } from './list-formats';
 import { attr, kid, kids, num, onOff, val } from './xml';
 
+/** Longest `w:lvlText` we expand; the rest is cut, so a repeated `%1` cannot grow every paragraph. */
+const MAX_LVL_TEXT = 32;
+/** Longest marker we draw, whatever the levels expand to. */
+const MAX_MARKER = 100;
+
 interface Level {
   start: number;
   format: string;
@@ -82,7 +87,7 @@ function parseLevel(lvl: Element, styles: StyleSheet): Level {
   return {
     start: num(val(lvl, 'start')) ?? 0,
     format: val(lvl, 'numFmt') ?? 'decimal',
-    text: val(lvl, 'lvlText') ?? '',
+    text: (val(lvl, 'lvlText') ?? '').slice(0, MAX_LVL_TEXT),
     suffix: suffixOf(lvl),
     restart: num(val(lvl, 'lvlRestart')),
     legal: onOff(lvl, 'isLgl') === true,
@@ -213,7 +218,7 @@ class Numbering implements NumberingApi {
       return formatValue(value, level.legal ? 'decimal' : own?.format ?? 'decimal');
     });
     const font = level.run['font-family'] ?? '';
-    const text = Array.from(raw).map((char) => visibleGlyph(char, font)).join('');
+    const text = Array.from(raw).slice(0, MAX_MARKER).map((char) => visibleGlyph(char, font)).join('');
     const run = { ...level.run };
     if (text !== raw) {
       // The symbol font would draw the mapped glyph as a box.

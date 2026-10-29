@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderDocxInto } from '../../../../../src/tools/file/docx';
 import { MAX_DEPTH } from '../../../../../src/tools/file/docx/context';
 import { ZipLimitError } from '../../../../../src/tools/file/zip-parts';
-import { buildDocx, editZip, p, part, PNG_1X1, zipToBuffer } from './build-docx';
+import { StyleSheet } from '../../../../../src/tools/file/docx/styles';
+import { buildDocx, editZip, p, part, PNG_1X1, W_NS, zipToBuffer } from './build-docx';
 import { ZipError } from '../../../../../src/tools/file/zip/zip-error';
 import type { DocxParts } from './build-docx';
 
@@ -482,6 +483,41 @@ describe('renderDocxInto — untrusted documents', () => {
       expectRendered(c);
       expect(c.querySelectorAll('*').length).toBeLessThan(50_000);
     }, 60_000);
+
+    it('does not multiply a header that is short in elements but long in text', async () => {
+      const { c } = await render({
+        body: p(MARK) + run('<w:br w:type="page"/>'.repeat(1_000)) + '<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/></w:sectPr>',
+        rels: [{ id: 'rIdH', type: 'header', target: 'header1.xml' }],
+        files: { 'word/header1.xml': part('hdr', p('h'.repeat(100_000))) },
+      });
+
+      expectRendered(c);
+      expect(c.textContent?.length ?? 0).toBeLessThan(2_000_000);
+    }, 60_000);
+
+    it('keeps a list marker short whatever w:lvlText repeats', async () => {
+      const numbering = `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="3999"/><w:numFmt w:val="upperRoman"/><w:lvlText w:val="${'%1'.repeat(500)}"/></w:lvl></w:abstractNum>`
+        + '<w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>';
+      const { c } = await render({ numbering, body: p(MARK, '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>') });
+      const marker = c.querySelector('.blok-docx-marker');
+
+      expect(marker).not.toBeNull();
+      expect(marker?.textContent?.length ?? 0).toBeLessThan(200);
+    });
+
+    it('resolves each paragraph and character style once, however many paragraphs use it', () => {
+      const doc = new DOMParser().parseFromString(
+        `<w:styles xmlns:w="${W_NS}"><w:style w:type="paragraph" w:default="1" w:styleId="N"><w:pPr><w:jc w:val="center"/></w:pPr></w:style>`
+        + '<w:style w:type="character" w:styleId="C"><w:rPr><w:b/></w:rPr></w:style></w:styles>',
+        'application/xml',
+      );
+      const sheet = new StyleSheet(doc, { major: null, minor: null });
+
+      expect(sheet.paragraph('N')).toBe(sheet.paragraph('N'));
+      expect(sheet.paragraph(null)).toBe(sheet.paragraph(undefined));
+      expect(sheet.character('C')).toBe(sheet.character('C'));
+      expect(sheet.paragraph('N').para.css['text-align']).toBe('center');
+    });
 
     it('does not multiply one footnote body across thousands of references', async () => {
       const body = Array.from({ length: 50 }, (_, i) => p(`n${i}`)).join('');

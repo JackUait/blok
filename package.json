@@ -255,7 +255,6 @@
     "@vue/test-utils": "^2.5.1",
     "chromatic": "18.13.3",
     "cldr-annotations-full": "^49.0.0",
-    "dompurify": "^3.4.17",
     "es-module-lexer": "^3.0.4",
     "esbuild": "0.28.2",
     "eslint": "10.13.0",

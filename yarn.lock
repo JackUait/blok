@@ -1272,7 +1272,6 @@ __metadata:
     "@vue/test-utils": "npm:^2.5.1"
     chromatic: "npm:18.13.3"
     cldr-annotations-full: "npm:^49.0.0"
-    dompurify: "npm:^3.4.17"
     es-module-lexer: "npm:^3.0.4"
     esbuild: "npm:0.28.2"
     eslint: "npm:10.13.0"
@@ -7968,7 +7967,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.4.12, dompurify@npm:^3.4.17":
+"dompurify@npm:^3.4.12":
   version: 3.4.17
   resolution: "dompurify@npm:3.4.17"
   dependencies:

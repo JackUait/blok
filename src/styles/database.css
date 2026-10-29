@@ -6644,9 +6644,9 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   text-decoration: none;
 }
 
-/* notion-spec-2 §18.1: in a table, one file chip fills the cell and its name ends in "…". */
+/* notion-spec-2 §21.3: a table file chip hugs a short name; a long one shrinks to the cell and ends in "…" (§18.1). */
 [data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
 }
 

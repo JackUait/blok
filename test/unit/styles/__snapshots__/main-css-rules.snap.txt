@@ -9804,7 +9804,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 }
 
 [data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
 }
 

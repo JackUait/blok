@@ -355,13 +355,14 @@ describe('cell editor CSS', () => {
     });
   });
 
-  // notion-spec-2 §18.1: a table cell's one file chip fills the cell (184 of 200) and its name ends in "…".
-  it('stretches a lone file chip across a table cell and cuts its name with an ellipsis', () => {
+  // notion-spec-2 §21.3: a short file name's chip hugs its text; §18.1's long name filled the cell (184 of 200) and ends in "…".
+  it('lets a lone file chip in a table cell hug a short name and shrink a long one to an ellipsis', () => {
     const CHIP = '[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child';
 
     const LINK = '[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip] > [data-blok-database-cell-link]';
 
-    expect(declared(CHIP, 'flex')).toEqual(['1 1 auto']);
+    expect(declared(CHIP, 'flex')).toEqual(['0 1 auto']);
+    expect(declared(CHIP, 'min-width')).toEqual(['0']);
     expect(declared(LINK, 'text-overflow')).toEqual(['ellipsis']);
     expect(declared(LINK, 'min-width')).toEqual(['0']);
   });

@@ -146,7 +146,7 @@ describe('Tokenizer contract with the tree builder', SLOW, () => {
   });
 
   it('sets state to DATA before a start tag, keeps a switch made for it and remembers its name', () => {
-    const seen: Array<[string, TokenizerMode, string]> = [];
+    const seen: Array<[string, number, string]> = [];
     const tokenizer: Tokenizer = new Tokenizer({
       ...NOOP_HANDLER,
       onStartTag: (token) => {

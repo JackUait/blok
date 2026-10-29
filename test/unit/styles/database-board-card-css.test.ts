@@ -85,6 +85,11 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).not.toMatch(/padding/);
   });
 
+  // notion-spec-2 §21.7: a board card's Button keeps its 24px pill in a 32px row, so the row padding is 4px.
+  it('gives the Button row 4px padding, so it is 32 tall', () => {
+    expect(ruleBody('[data-blok-database-card-property]:has(> [data-blok-database-cell="button"])')).toContain('padding: var(--blok-space-1)');
+  });
+
   // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.
   it('draws the "Add …" rows of an edited card in the secondary ink with a 16px glyph', () => {
     expect(ruleBody('[data-blok-database-card-property][data-ghost]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);

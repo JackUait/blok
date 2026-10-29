@@ -16445,7 +16445,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background-color: var(--blok-database-button-pressed-bg);
 }
 
-[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"]) {
+[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"]), [data-blok-database-card-property]:has(> [data-blok-database-cell="button"]) {
   padding: var(--blok-space-1);
 }
 

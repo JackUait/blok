@@ -13878,8 +13878,9 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-database-button-pressed-bg);
 }
 
-/* notion-spec-2 §19.19: on a card the button keeps the table's size, in a 32px row. */
-[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"]) {
+/* notion-spec-2 §19.19, §21.7: on a gallery or board card the button keeps the table's size, in a 32px row. */
+[data-blok-database-gallery-property]:has(> [data-blok-database-cell="button"]),
+[data-blok-database-card-property]:has(> [data-blok-database-cell="button"]) {
   padding: var(--blok-space-1);
 }
 

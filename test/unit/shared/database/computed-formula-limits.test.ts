@@ -57,3 +57,34 @@ describe('a formula past a limit', () => {
     });
   });
 });
+
+describe('the work of one pass over the database', () => {
+  const formulaRows = (expression: string, count: number): { schema: PropertyDefinition[]; rows: typeof rows } => ({
+    schema: [
+      { id: 't', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'f', name: 'F', type: 'formula', position: 'a1', formula: { expression } },
+    ],
+    rows: Array.from({ length: count }, (_, i) => ({ id: `r${i}`, position: `a${i}`, properties: { t: `Row ${i}` } })),
+  });
+
+  it('is capped for all rows together: rows past the cap read as a limit hit', () => {
+    // Each row costs just under one evaluation's regex cap.
+    const db = formulaRows('test(repeat("a", 106), "a*a*a*b")', 40);
+    const engine = new ComputedProperties('db');
+    const out = engine.apply(db.schema, db.rows, { databaseId: 'db', now: new Date(0) });
+
+    expect(engine.limited('r39', 'f')).toBe(true);
+    expect(out[39].computed?.f).toBeNull();
+    expect(engine.limited('r0', 'f')).toBe(false);
+    expect(out[0].computed?.f).toBe(false);
+  });
+
+  it('never caps a cheap formula on many rows', () => {
+    const db = formulaRows('length(prop("Name")) + 1', 2000);
+    const engine = new ComputedProperties('db');
+
+    engine.apply(db.schema, db.rows, { databaseId: 'db', now: new Date(0) });
+
+    expect(db.rows.filter((row) => engine.limited(row.id, 'f'))).toEqual([]);
+  });
+});

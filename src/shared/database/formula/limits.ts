@@ -47,20 +47,39 @@ export class FormulaLimitExceeded extends Error {}
 export const isStackOverflow = (error: unknown): boolean =>
   error instanceof RangeError && /call stack/i.test(error.message);
 
+/**
+ * Work all formulas of one pass over a database may spend together. The caps
+ * above are per evaluation, and rows multiply them: 100 rows of a formula just
+ * under the regex cap ran for seconds. About 1.7 s of steps and 0.6 s of regex in V8.
+ */
+export const MAX_PASS_STEPS = 20 * MAX_EVALUATION_STEPS;
+export const MAX_PASS_REGEX_COST = 10 * MAX_REGEX_COST;
+
 export class EvaluationBudget {
-  private steps = MAX_EVALUATION_STEPS;
-  private regex = MAX_REGEX_COST;
+  private steps: number;
+  private regex: number;
+
+  /** `pass` is charged too, so one pass over many rows stays bounded. */
+  constructor(private readonly pass?: EvaluationBudget, steps = MAX_EVALUATION_STEPS, regex = MAX_REGEX_COST) {
+    this.steps = steps;
+    this.regex = regex;
+  }
 
   spend(units: number): void {
     this.steps -= units;
     if (this.steps < 0) throw new FormulaLimitExceeded();
+    this.pass?.spend(units);
   }
 
   spendRegex(cost: number): void {
     this.regex -= cost;
     if (this.regex < 0) throw new FormulaLimitExceeded();
+    this.pass?.spendRegex(cost);
   }
 }
+
+/** One per pass over a database: give it to every `evaluateFormula` of that pass. */
+export const passBudget = (): EvaluationBudget => new EvaluationBudget(undefined, MAX_PASS_STEPS, MAX_PASS_REGEX_COST);
 
 /** Text length, or a list's items plus their sizes. Other values count 1. */
 export const valueSize = (value: FormulaValue): number => {

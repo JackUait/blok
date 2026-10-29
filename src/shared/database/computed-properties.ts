@@ -1,5 +1,5 @@
-import { compileFormula, evaluateFormula, formulaDateToStored, formulaValueToText } from './formula';
-import type { CompileResult, FormulaErrorCode, FormulaErrorParams, FormulaType, FormulaValue } from './formula';
+import { compileFormula, evaluateFormula, formulaDateToStored, formulaValueToText, passBudget } from './formula';
+import type { CompileResult, EvaluationBudget, FormulaErrorCode, FormulaErrorParams, FormulaType, FormulaValue } from './formula';
 import { propertyFormulaValue } from './formula/properties';
 import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
@@ -112,6 +112,8 @@ export class ComputedProperties {
   private raw = new Map<string, FormulaValue>();
   /** `rowId\0propertyId` of formulas that hit a cap of formula/limits.ts, or read one that did. */
   private limits = new Set<string>();
+  /** Per apply: the formula work all rows may spend together. */
+  private pass: EvaluationBudget = passBudget();
   private readonly busy = new Set<string>();
   private rows = new Map<string, DatabaseRow>();
   private reverse = new Map<string, Map<string, string[]>>();
@@ -138,6 +140,7 @@ export class ComputedProperties {
     this.values = new Map();
     this.raw = new Map();
     this.limits = new Set();
+    this.pass = passBudget();
     this.rows = new Map(rows.map((r) => [r.id, r]));
     this.reverse = this.buildReverse(schema, rows);
     const schemaKey = signatureOf(schema);
@@ -425,6 +428,7 @@ export class ComputedProperties {
       },
       related: (databaseId) => this.source(databaseId)?.schema,
       onLimit: () => this.limits.add(key),
+      pass: this.pass,
       relatedValue: (databaseId, relatedRowId, ref) => {
         const source = this.source(databaseId);
 

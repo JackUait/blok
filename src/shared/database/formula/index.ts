@@ -13,9 +13,11 @@ import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../types';
 
 export type { FormulaError, FormulaErrorCode, FormulaErrorParams } from './errors';
 export { FORMULA_ERROR_CODES, formulaErrorKey } from './errors';
+export type { EvaluationBudget } from './limits';
 export type { FormulaDate, FormulaRef, FormulaRichText, FormulaType, FormulaValue, StyledRun } from './types';
 export { formulaValueToText } from './values';
 export { formulaDateToStored } from './dates';
+export { passBudget } from './limits';
 
 export interface CompiledFormula {
   readonly source: string;
@@ -46,6 +48,8 @@ export interface FormulaContext {
   relatedValue?: (databaseId: string, rowId: string, property: PropertyDefinition) => PropertyValue | undefined;
   /** Called when the evaluation hits a cap of `limits.ts`; the result is then null. */
   onLimit?: () => void;
+  /** Shared by every evaluation of one pass, from `passBudget()`. */
+  pass?: EvaluationBudget;
 }
 
 /** Every name a formula can call, for the README drift test and an editor's autocomplete. */
@@ -93,7 +97,7 @@ export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx
       propValue: ctx.propValue,
       related: ctx.related,
       relatedValue: ctx.relatedValue,
-      budget: new EvaluationBudget(),
+      budget: new EvaluationBudget(ctx.pass),
     }, { vars: new Map() });
   } catch (error) {
     if (error instanceof FormulaLimitExceeded || isStackOverflow(error)) ctx.onLimit?.();

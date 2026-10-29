@@ -122,3 +122,13 @@ describe('date picker in dark (§23.3)', () => {
     expect(ruleBody('[data-blok-database-date-remind-check]')).toContain('color: var(--blok-database-ink-secondary)');
   });
 });
+
+describe('relation picker in dark (§23.3)', () => {
+  it('lifts a row\'s "+" / "−" button with Notion\'s small dark shadow; light stays flat', () => {
+    const shadow = 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px';
+
+    expect(tokenValues('--blok-database-relation-toggle-shadow')).toEqual(['none', shadow, shadow]);
+    expect(ruleBody('[data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] [data-blok-database-relation-toggle]'))
+      .toContain('box-shadow: var(--blok-database-relation-toggle-shadow)');
+  });
+});

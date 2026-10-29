@@ -145,6 +145,9 @@
   ],
   "sideEffects": [
     "./src/components/polyfills.ts",
+    "./dist/chunks/*",
+    "./dist/blok.iife.js",
+    "./dist/blok.umd.js",
     "*.css"
   ],
   "scripts": {

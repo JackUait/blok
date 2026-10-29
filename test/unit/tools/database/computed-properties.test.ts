@@ -378,6 +378,25 @@ describe('ComputedProperties', () => {
       expect(searched('build')).toEqual(['p1', 'p2']);
     });
 
+    // Ids "t1" < "t2" run the other way from the titles, so an id sort would put One first.
+    it('sorts a Name rollup by its joined titles, empty last', () => {
+      const names = rollup('names', 'tasks', 'title', 'show_original');
+      const schema = [title, tasks, names];
+      const engine = new ComputedProperties('db');
+      const tasksSource: DatabaseSource = {
+        schema: otherSchema,
+        rows: [row('t1', { title: 'Zebra' }), row('t2', { title: 'Apple' })],
+      };
+      const rows = engine.apply(schema, [
+        row('p1', { title: 'One', tasks: [{ id: 't1' }] }),
+        row('p2', { title: 'Two' }),
+        row('p3', { title: 'Three', tasks: [{ id: 't2' }, { id: 't1' }] }),
+      ], { databaseId: 'db', now: NOW, resolveDatabase: (id) => (id === 'db-tasks' ? tasksSource : undefined) });
+      const shown = schema.map((p) => engine.valueProperty(p));
+
+      expect(sortRows(rows, [{ propertyId: 'names', direction: 'asc' }], shown).map((r) => r.id)).toEqual(['p3', 'p1', 'p2']);
+    });
+
     it('rolls up a formula of the related database', () => {
       const total = rollup('total', 'tasks', 'double', 'max');
       const engine = new ComputedProperties('db');

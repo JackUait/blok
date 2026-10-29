@@ -351,6 +351,9 @@ const pageTitles = (value: PropertyValue | undefined): string[] | undefined => {
   return titles.every((t): t is string => t !== undefined) ? titles : undefined;
 };
 
+/** A Name rollup's text as it used to read: its titles ", "-joined, blank ones left out. */
+const pageText = (value: PropertyValue | undefined): string => (pageTitles(value) ?? []).filter((t) => t !== '').join(', ');
+
 const TEXT_ONLY: readonly string[] = TEXT_OPERATORS.filter((op) => op !== 'is_empty' && op !== 'is_not_empty');
 
 const isRollupList = (property: PropertyDefinition): boolean => property.rollup !== undefined && LIST_SHAPES.includes(property.type);
@@ -427,9 +430,9 @@ export const matchCondition = (
   if (property !== undefined && isRollupList(property)) {
     const value = readPropertyValue(row, property);
 
-    // A text filter from when a Name rollup read as text: match the titles, as that text did (", "-joined, blank ones left out).
+    // A text filter from when a Name rollup read as text matches that text.
     if (property.type === 'relation' && TEXT_ONLY.includes(condition.operator)) {
-      return matchText((pageTitles(value) ?? []).filter((t) => t !== '').join(', '), condition.operator, condition.value);
+      return matchText(pageText(value), condition.operator, condition.value);
     }
 
     return (QUANTIFIERS as readonly string[]).includes(condition.operator) || condition.operator === 'is_empty' || condition.operator === 'is_not_empty'
@@ -529,6 +532,8 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
     case 'createdBy':
     case 'lastEditedBy':
     case 'relation': {
+      // A Name rollup sorts by its text, as it did when it read as text.
+      if (pageTitles(value) !== undefined) return pageText(value) === '' ? undefined : pageText(value);
       const keys = personIdsOf(value);
 
       return keys.length > 0 ? keys : undefined;

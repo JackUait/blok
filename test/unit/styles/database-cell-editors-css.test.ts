@@ -291,9 +291,11 @@ describe('cell editor CSS', () => {
   it('stretches a lone file chip across a table cell and cuts its name with an ellipsis', () => {
     const CHIP = '[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child';
 
+    const LINK = '[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip] > [data-blok-database-cell-link]';
+
     expect(declared(CHIP, 'flex')).toEqual(['1 1 auto']);
-    expect(declared(`${CHIP} > [data-blok-database-cell-link]`, 'text-overflow')).toEqual(['ellipsis']);
-    expect(declared(`${CHIP} > [data-blok-database-cell-link]`, 'min-width')).toEqual(['0']);
+    expect(declared(LINK, 'text-overflow')).toEqual(['ellipsis']);
+    expect(declared(LINK, 'min-width')).toEqual(['0']);
   });
 
   // research/08 (cell editor popovers) and research/22 §4: the select head is 39 tall, its hint 12/14.4 weight 500,

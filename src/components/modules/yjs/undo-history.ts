@@ -324,6 +324,12 @@ export class UndoHistory {
   /** Nesting depth of {@link holdCapture}. */
   private captureHolds = 0;
 
+  /**
+   * A held step whose caret-after is taken at the end of the task instead of
+   * on every write; see {@link deferHeldAfter}.
+   */
+  private heldAfterEntry: CaretHistoryEntry | null = null;
+
   /** Where the step the last gesture start closed ends; see {@link landLateWrite}. */
   private lastClosedStep: ClosedStep | null = null;
 
@@ -1300,7 +1306,11 @@ export class UndoHistory {
         }
 
         // Update the 'after' position of the most recent undo entry
-        lastEntry.after = this.captureCaretSnapshot();
+        if (this.captureHolds > 0) {
+          this.deferHeldAfter(lastEntry);
+        } else {
+          lastEntry.after = this.captureCaretSnapshot();
+        }
         this.openEntry = lastEntry;
       }
 
@@ -1534,6 +1544,38 @@ export class UndoHistory {
   }
 
   /**
+   * Take a held step's caret-after once, when the task's writes are done.
+   * Reading the selection right after a DOM change makes the browser lay out
+   * the page again, so per-write reads made a "+" drag add each row of cells
+   * dozens of layouts deep.
+   * @param entry - the held step's entry
+   */
+  private deferHeldAfter(entry: CaretHistoryEntry): void {
+    if (this.heldAfterEntry === entry) {
+      return;
+    }
+
+    this.applyHeldAfter();
+    this.heldAfterEntry = entry;
+    queueMicrotask(() => this.applyHeldAfter());
+  }
+
+  /** Write the deferred caret-after now, before anything reads or replaces it. */
+  private applyHeldAfter(): void {
+    const entry = this.heldAfterEntry;
+
+    if (entry === null) {
+      return;
+    }
+
+    this.heldAfterEntry = null;
+
+    if (!this.isPerformingUndoRedo) {
+      entry.after = this.captureCaretSnapshot();
+    }
+  }
+
+  /**
    * Run `fn` without leaving a caret mark behind. Writes mark the caret lazily
    * and only a new undo entry clears the mark, so a mark taken by an untracked
    * write would become the caret-before of the user's next, unrelated edit.
@@ -1626,6 +1668,7 @@ export class UndoHistory {
 
     olderItem.insertions = insertions;
     olderItem.deletions = deletions;
+    this.applyHeldAfter();
     olderEntry.after = current.after;
     this.deletedPlacements.set(olderItem, placements);
     // Clearing the retired item would free deletions the survivor still needs.
@@ -1689,6 +1732,7 @@ export class UndoHistory {
   public undo(expectedToken?: CaretHistoryEntry): void {
     // Land buffered typing writes first so they are part of the group we pop.
     this.flushPendingWritesHook();
+    this.applyHeldAfter();
     if (expectedToken !== undefined && !this.isTopStep('undo', expectedToken)) {
       return;
     }
@@ -2038,6 +2082,7 @@ export class UndoHistory {
   public redo(expectedToken?: CaretHistoryEntry): void {
     // Same barrier as undo: buffered writes must not outlive the replay.
     this.flushPendingWritesHook();
+    this.applyHeldAfter();
     if (expectedToken !== undefined && !this.isTopStep('redo', expectedToken)) {
       return;
     }
@@ -2541,6 +2586,8 @@ export class UndoHistory {
     this.gestures++;
     this.gesturesDriveSteps = true;
     this.openGestureTask();
+    // The finished step's caret-after is where its own writes left the caret.
+    this.applyHeldAfter();
 
     const live = this.liveCaretSnapshot();
 
@@ -3193,12 +3240,23 @@ export class UndoHistory {
    *   stale position (e.g. the start of the wrong block) on undo.
    */
   public markCaretBeforeChange(force = false): void {
-    if (this.hasPendingCaret && !force) {
+    if ((this.hasPendingCaret || this.nextWriteJoinsHeldStep()) && !force) {
       return;
     }
 
     this.pendingCaretBefore = this.captureCaretSnapshot();
     this.hasPendingCaret = true;
+  }
+
+  /**
+   * Under a hold, yjs merges every write into the open step until a split
+   * zeroes `lastChange`, so that step already has its caret-before.
+   */
+  private nextWriteJoinsHeldStep(): boolean {
+    return this.captureHolds > 0
+      && this.undoManager.lastChange !== 0
+      && this.openEntry !== null
+      && this.openEntry === this.caretUndoStack.at(-1);
   }
 
   /**

@@ -8,8 +8,12 @@ const ALLOWED_STYLE_PROPS = new Set(['color', 'background-color']);
 export const markerSanitize = (): SanitizerConfig => {
   return {
     mark: (node: Element): { [attr: string]: boolean | string } => {
-      const el = node as HTMLElement;
-      const style = el.style;
+      // A MathML or SVG copy has no CSSStyleDeclaration; drop its style.
+      const style = (node as Partial<HTMLElement>).style;
+
+      if (style === undefined) {
+        return {};
+      }
 
       /**
        * Collect property names first, then remove disallowed ones.

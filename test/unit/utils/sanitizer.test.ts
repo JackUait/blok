@@ -1269,6 +1269,13 @@ describe('sanitizer', () => {
       expect(result).not.toContain('z-index');
     });
 
+    it('drops the style of a mark inside MathML, which has no style object', () => {
+      const result = clean('<br><math><mark style="color:red">x</mark></math>', getMarkerSanitize());
+
+      expect(result).not.toContain('style');
+      expect(result).toContain('x');
+    });
+
     it('should keep both color and background-color on mark while stripping others', () => {
       const markerSanitize = getMarkerSanitize();
       const taintString = '<mark style="color: red; background-color: yellow; width: 100vw;">text</mark>';

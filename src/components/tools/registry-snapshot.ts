@@ -1,27 +1,11 @@
 import type { CustomInlineSanitizeRule, HostService, SanitizerConfig, SnapshotBlock, ToolConfig, ToolRegistrySnapshot } from '../../../types';
 import { BUILT_IN_RUNTIME_PARTS } from '../../shared/tool-actions';
 import type { ToolRuntime, ToolRuntimeRegistry } from '../../shared/tool-actions/runtime';
-import { AudioTool } from '../../tools/audio';
-import { CalloutTool } from '../../tools/callout';
-import { CodeTool } from '../../tools/code';
-import { Column } from '../../tools/column';
-import { ColumnList } from '../../tools/column-list';
-import { DatabaseTool } from '../../tools/database';
-import { FileTool } from '../../tools/file';
-import { Header } from '../../tools/header';
-import { ImageTool } from '../../tools/image';
-import { Bookmark } from '../../tools/link/bookmark';
-import { Embed } from '../../tools/link/embed';
-import { ListItem } from '../../tools/list';
-import { Quote } from '../../tools/quote';
-import { SpacerTool } from '../../tools/spacer';
-import { TabsTool } from '../../tools/tabs';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
-import { Table } from '../../tools/table';
-import { VideoTool } from '../../tools/video';
 import { isRestrictedInTableCell } from '../../tools/table/table-restrictions';
 import { log } from '../utils/logger';
 import { translateToolTitle } from '../utils/tools';
+import { runtimePartsOwnerOf } from './runtime-parts-owner';
 import type { I18nInstance } from '../utils/tools';
 import type { BlockToolAdapter } from './block';
 import type { InlineToolAdapter } from './inline';
@@ -147,39 +131,15 @@ export const snapshotFromTools = (
   })),
 });
 
-/**
- * Built-in classes whose BUILT_IN_RUNTIME_PARTS entry the editor uses. Keyed by class, not by
- * registration name: an alias gets the parts, a custom class under a built-in name does not.
- * test/unit/architecture/agent-runtime-parts-editor-parity-law.test.ts fails for a missing entry.
- */
-const PART_OWNERS = new Map<unknown, string>([
-  [Table, 'table'],
-  [ColumnList, 'column_list'],
-  [Column, 'column'],
-  [TabsTool, 'tabs'],
-  [CalloutTool, 'callout'],
-  [CodeTool, 'code'],
-  [Quote, 'quote'],
-  [SpacerTool, 'spacer'],
-  [DatabaseTool, 'database'],
-  [Embed, 'embed'],
-  [Bookmark, 'bookmark'],
-  [ImageTool, 'image'],
-  [VideoTool, 'video'],
-  [AudioTool, 'audio'],
-  [FileTool, 'file'],
-  [Header, 'header'],
-  // Feeds only the agent planner; in-editor conversion still runs the list's conversionConfig functions.
-  [ListItem, 'list'],
-]);
-
 export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new Map(
   [...tools.blockTools.values()]
     .filter(tool => !tool.isInternal)
     .map((tool): [string, ToolRuntime] => {
       const toolClass = tool.toolClass;
-      const owner = PART_OWNERS.get(toolClass);
-      const parts = owner === undefined ? undefined : BUILT_IN_RUNTIME_PARTS[owner];
+      // Branded by class, not by registration name: an alias gets the parts, a custom class or a subclass does not.
+      // test/unit/architecture/agent-runtime-parts-editor-parity-law.test.ts fails for a missing brand.
+      const owner = runtimePartsOwnerOf(toolClass);
+      const parts = owner !== undefined && Object.hasOwn(BUILT_IN_RUNTIME_PARTS, owner) ? BUILT_IN_RUNTIME_PARTS[owner] : undefined;
 
       return [tool.name, {
         name: tool.name,

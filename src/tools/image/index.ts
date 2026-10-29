@@ -76,6 +76,7 @@ import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 import { renderImagePreview } from './preview';
 import { figureInsets } from './figure-insets';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -89,6 +90,10 @@ function prefersReducedMotion(): boolean {
 }
 
 export class ImageTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'image';
+  }
+
   public static describe = describeImage;
   public static actionHandlers = { ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS };
 

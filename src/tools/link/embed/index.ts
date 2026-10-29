@@ -36,6 +36,7 @@ import { createUrlMirror } from '../../../components/utils/url-mirror';
 import { createEmbedWindow } from './empty-window';
 import { isAllowedEmbedOrigin } from './allowed-origins';
 import { renderEmbedPreview } from './preview';
+import { RUNTIME_PARTS_OWNER } from '../../../components/tools/runtime-parts-owner';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -168,6 +169,10 @@ const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
  * a provider-sanctioned iframe URL. Only registry-matched URLs are ever embedded.
  */
 export class Embed implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'embed';
+  }
+
   public static describe = describeEmbed;
   public static actionHandlers = LINK_ACTION_HANDLERS.embed;
 

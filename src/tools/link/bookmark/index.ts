@@ -24,6 +24,7 @@ import {
   type BookmarkMeta,
 } from '../metadata-fetcher';
 import { renderBookmarkPreview } from './preview';
+import { RUNTIME_PARTS_OWNER } from '../../../components/tools/runtime-parts-owner';
 
 export interface BookmarkData extends BookmarkMeta, BlockToolData {}
 
@@ -41,6 +42,10 @@ const URL_PATTERN = /https?:\/\/\S+/;
  * that cannot be read renders the link itself.
  */
 export class Bookmark implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'bookmark';
+  }
+
   public static describe = describeBookmark;
   public static actionHandlers = LINK_ACTION_HANDLERS.bookmark;
 

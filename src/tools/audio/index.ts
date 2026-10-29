@@ -46,10 +46,15 @@ import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { logLabeled } from '../../components/utils/logger';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 import { renderAudioPreview } from './preview';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
 export class AudioTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'audio';
+  }
+
   public static describe = describeAudio;
   public static actionHandlers = MEDIA_ACTION_HANDLERS.audio;
 

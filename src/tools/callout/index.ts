@@ -35,6 +35,7 @@ import {
   EMOJI_JUMP_IN_ANIMATION,
   EMOJI_GHOST_STYLES,
 } from './constants';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 /**
  * Resolve emoji from legacy callout data fields
@@ -102,6 +103,10 @@ function disposeSharedEmojiPicker(shared: SharedEmojiPicker): void {
 }
 
 export class CalloutTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'callout';
+  }
+
   public static describe = describeCallout;
 
   private readonly api: API;

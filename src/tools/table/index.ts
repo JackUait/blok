@@ -56,6 +56,7 @@ import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
 import type { LegacyCellContent, TableData, TableConfig, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -84,6 +85,10 @@ const WRAPPER_EDIT_CLASSES = [
  * Renders a 2D grid of contentEditable cells.
  */
 export class Table implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'table';
+  }
+
   public static describe = describeTable;
   public static actionHandlers = TABLE_ACTION_HANDLERS;
 

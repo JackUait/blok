@@ -35,6 +35,7 @@ import { buildArrow } from '../toggle/dom-builder';
 import { createArrowTooltip, updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
 import { renderHeadingPreview, renderToggleHeadingPreview } from './preview';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 /**
  * Toggle-heading icon per level. Keyed 1-6 so toggle headings stay one-to-one
@@ -174,6 +175,10 @@ interface Level {
  * @version 2.0.0
  */
 export class Header implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'header';
+  }
+
   public static describe = describeHeader;
 
   /**

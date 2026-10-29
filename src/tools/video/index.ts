@@ -50,6 +50,7 @@ import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 import { renderVideoPreview } from './preview';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -59,6 +60,10 @@ const DEFAULT_MAX_TRANSCODE_SECONDS = 600;
 const CONVERSION_IDLE_MS = 10 * 60_000;
 
 export class VideoTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'video';
+  }
+
   public static describe = describeVideo;
   public static actionHandlers = MEDIA_ACTION_HANDLERS.video;
 

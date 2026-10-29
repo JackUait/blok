@@ -25,6 +25,7 @@ import { renderTabsPreview } from './preview';
 import { tabRegistry, type TabsHandle } from './registry';
 import type { TabData, TabsData } from './types';
 import { layoutDraftOf, type LayoutDraft } from './draft';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 /** Origins that mean "the author just made this block". Only these seed tabs. */
 const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
@@ -45,6 +46,10 @@ interface SeedData {
  * Each tab is a `tab` child block. Which tab is open is UI state, not data.
  */
 export class TabsTool implements BlockTool, TabsHandle {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'tabs';
+  }
+
   public static describe = describeTabs;
   public static actionHandlers = TABS_ACTION_HANDLERS;
 

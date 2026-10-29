@@ -67,6 +67,7 @@ import { detectLanguage } from './language-detector';
 import { renderCodePreview } from './preview';
 import { normalizeFenceLang } from '../../markdown/fence-language';
 import { CODE_LANGUAGE_ATTR } from '../../components/modules/paste/constants';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -97,6 +98,10 @@ function findTextPosition(root: Node, targetOffset: number): { node: Node; offse
 }
 
 export class CodeTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'code';
+  }
+
   public static describe = describeCode;
 
   private api: API;

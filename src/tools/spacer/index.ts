@@ -16,6 +16,7 @@ import { SPACER_WRAPPER_CLASSES } from '../../shared/tool-classes/spacer';
 import { AlignmentGuide, collectSiblingBlocks, findSnapTarget, measureEdgeOffsets } from './alignment-guide';
 import { renderSpacerPreview } from './preview';
 import { COLUMNS_ATTR } from '../columns-shared';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 /**
  * Height bounds and default (px). The minimum matches the default Text block
@@ -55,6 +56,10 @@ const clampHeight = (value: number): number => Math.min(MAX_HEIGHT, Math.max(MIN
  * sibling columns of unequal length, replacing piles of empty paragraphs.
  */
 export class SpacerTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'spacer';
+  }
+
   public static describe = describeSpacer;
 
   /**

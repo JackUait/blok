@@ -31,6 +31,7 @@ import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, writeDerived } from '../image/detached-upload';
 import { renderFilePreview } from './toolbox-preview';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -41,6 +42,10 @@ const IMAGE_EXTENSION_RE = /\.(png|jpe?g|gif|webp|svg)(?:[?#]|$)/i;
 const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
 
 export class FileTool implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'file';
+  }
+
   public static describe = describeFile;
   public static actionHandlers = MEDIA_ACTION_HANDLERS.file;
 

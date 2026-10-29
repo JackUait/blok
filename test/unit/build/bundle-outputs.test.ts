@@ -383,7 +383,7 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
   }
 
   /** Every file an entry loads at import time: static imports only, `import()` excluded. */
-  const staticClosure = (): Set<string> => {
+  const staticClosure = (files: string[] = OVERRIDE_ENTRIES.map((entry) => entry.file)): Set<string> => {
     const seen = new Set<string>()
     const visit = (file: string): void => {
       if (seen.has(file)) {
@@ -398,11 +398,43 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
         }
       }
     }
-    for (const entry of OVERRIDE_ENTRIES) {
-      visit(join(dist, `${entry.file}.mjs`))
+    for (const file of files) {
+      visit(join(dist, `${file}.mjs`))
     }
     return seen
   }
+
+  const closureCode = (file: string): string =>
+    [...staticClosure([file])].map((path) => readFileSync(path, 'utf-8')).join('\n')
+
+  // Each string lives only in its tool's src/tools/<name>/index.ts.
+  const BLOCK_TOOL_FINGERPRINTS: Record<string, string> = {
+    DatabaseTool: 'data-blok-database-layout-pool',
+    ImageTool: 'image-fullscreen',
+    VideoTool: 'video-copy-url-at-time',
+    AudioTool: 'audio-cover-remove',
+  }
+
+  it('tools.mjs loads the block tools at import time (fingerprint non-vacuity)', async () => {
+    await initLexer()
+    const code = closureCode('tools')
+    const missing = Object.entries(BLOCK_TOOL_FINGERPRINTS).filter(([, print]) => !code.includes(print))
+    expect(missing).toEqual([])
+  })
+
+  it('blok.mjs does not load the built-in block tools at import time', async () => {
+    await initLexer()
+    const code = closureCode('blok')
+    const found = Object.entries(BLOCK_TOOL_FINGERPRINTS).filter(([, print]) => code.includes(print))
+    expect(found).toEqual([])
+  })
+
+  it('keeps the blok.mjs import-time code under its byte budget', async () => {
+    await initLexer()
+    const bytes = [...staticClosure(['blok'])].reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
+    // Measured 3,746,538 bytes once core stopped importing the tool classes.
+    expect(bytes).toBeLessThan(3.9 * 1024 * 1024)
+  })
 
   it('keeps mermaid behind a dynamic import (non-vacuity)', async () => {
     await initLexer()

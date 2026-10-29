@@ -45,11 +45,17 @@ import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedCon
 import { getListSanitizeConfig, getListPasteConfig, getListConversionConfig } from './static-configs';
 import { STYLE_CONFIGS, getToolboxConfig } from './style-config';
 import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from './types';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 /** A moved() event that may carry the neighbours of an index move core no longer makes. */
 type IndexMoveEvent = MoveEvent & { [INDEX_MOVE_NEIGHBOURS]?: IndexMoveNeighbours };
 
 export class ListItem implements BlockTool {
+  // Feeds only the agent planner; in-editor conversion still runs conversionConfig's functions.
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'list';
+  }
+
   public static describe = describeList;
 
   private api: API;

@@ -10,6 +10,7 @@ import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
 import type { ColumnData } from './types';
+import { RUNTIME_PARTS_OWNER } from '../../components/tools/runtime-parts-owner';
 
 /**
  * Origins that mean "the author just made this block" — the only ones allowed to
@@ -30,6 +31,10 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
  * paragraph when created so it is never empty.
  */
 export class Column implements BlockTool {
+  public static get [RUNTIME_PARTS_OWNER](): string {
+    return 'column';
+  }
+
   public static describe = describeColumn;
 
   private readonly api: API;

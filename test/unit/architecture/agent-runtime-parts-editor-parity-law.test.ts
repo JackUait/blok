@@ -10,7 +10,8 @@ import { builtInEditorTools } from '../shared/tool-descriptions/built-in-tools';
  * ARCHITECTURE LAW — the in-editor agent runs the same tool checks as the headless one.
  *
  * Headless runtimes come from BUILT_IN_TOOL_RUNTIMES by name. The editor builds its own in
- * runtimesFromTools (src/components/tools/registry-snapshot.ts), by tool class. A part missing
+ * runtimesFromTools (src/components/tools/registry-snapshot.ts), by the RUNTIME_PARTS_OWNER brand on
+ * the tool class (src/components/tools/runtime-parts-owner.ts). A missing brand or a part missing
  * there passes every headless test while Ask AI in the editor skips it: that is how the embed
  * write check first shipped headless-only. Every part of every built-in tool must reach the
  * editor as the same object.

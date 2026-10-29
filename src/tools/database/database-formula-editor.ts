@@ -50,6 +50,8 @@ class FormulaEditor implements FormulaEditorHandle {
   private readonly list = document.createElement('div');
   private readonly popover: CellPopover;
   private open = true;
+  /** The formula as it opened: Escape on it writes nothing. */
+  private readonly initial: string;
 
   constructor(anchor: HTMLElement, private readonly options: FormulaEditorOptions) {
     const t = (key: string): string => options.i18n.t(key);
@@ -61,6 +63,7 @@ class FormulaEditor implements FormulaEditorHandle {
     this.input.rows = 3;
     this.input.spellcheck = false;
     this.input.value = formatFormulaForDisplay(options.property.formula?.expression ?? '', options.schema, options.relatedSchema ?? []);
+    this.initial = this.input.value;
     this.preview.setAttribute('data-blok-database-formula-preview', '');
     this.preview.setAttribute('aria-live', 'polite');
     this.error.setAttribute('data-blok-database-formula-error', '');
@@ -89,7 +92,7 @@ class FormulaEditor implements FormulaEditorHandle {
       anchor,
       content: this.root,
       minWidth: '400px',
-      onEscape: () => this.finish(true),
+      onEscape: () => this.escape(),
       onDismiss: () => this.finish(false),
     });
     this.refresh();
@@ -106,6 +109,16 @@ class FormulaEditor implements FormulaEditorHandle {
     this.open = false;
     if (closePopover) this.popover.close();
     this.options.onClose?.();
+  }
+
+  /** notion-spec-2 §18.3: Escape saves the typed formula. One that does not compile closes unsaved (unmeasured). */
+  private escape(): void {
+    const compiled = this.options.compile(this.input.value);
+
+    if (this.input.value !== this.initial && compiled.ok) {
+      this.options.onSave(serializeFormula(compiled.formula));
+    }
+    this.finish(true);
   }
 
   private save(): void {

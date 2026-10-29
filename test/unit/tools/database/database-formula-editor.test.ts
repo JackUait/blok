@@ -114,6 +114,42 @@ describe('formula editor', () => {
     expect(options.onSave).not.toHaveBeenCalled();
   });
 
+  // notion-spec-2 §18.3: Escape saves the typed formula and closes.
+  describe('Escape', () => {
+    const escape = (): void => {
+      input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    };
+
+    it('saves a changed formula and closes', () => {
+      const options = open();
+
+      type('prop("Amount") + 1');
+      escape();
+
+      expect(options.onSave).toHaveBeenCalledWith('{{property:amount}} + 1');
+      expect(document.querySelector('[data-blok-database-formula-editor]')).toBeNull();
+    });
+
+    it('writes nothing when the formula is unchanged', () => {
+      const options = open();
+
+      escape();
+
+      expect(options.onSave).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-database-formula-editor]')).toBeNull();
+    });
+
+    it('closes without saving a formula that fails to compile', () => {
+      const options = open();
+
+      type('1 +');
+      escape();
+
+      expect(options.onSave).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-database-formula-editor]')).toBeNull();
+    });
+  });
+
   it('keeps a new line on Shift+Enter', () => {
     const options = open();
     const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true });

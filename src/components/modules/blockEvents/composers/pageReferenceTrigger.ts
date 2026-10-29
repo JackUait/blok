@@ -103,7 +103,12 @@ export class PageReferenceTrigger extends BlockEventComposer {
 
     if (!this.opened || active === null || active.input !== input || active.start !== query.start) {
       this.close();
-      this.picker = new PagePicker(this.Blok.I18n.t('toolNames.page'), this.Blok.I18n.t('tools.page.unresolved'));
+      this.picker = new PagePicker(
+        this.Blok.I18n.t('toolNames.page'),
+        this.Blok.I18n.t('tools.page.unresolved'),
+        this.Blok.I18n.t('tools.page.draft'),
+        this.Blok.I18n.t('popover.nothingFound')
+      );
       this.picker.open(query.query, input, (pageId) => {
         void this.commit(pageId);
       });
@@ -123,7 +128,7 @@ export class PageReferenceTrigger extends BlockEventComposer {
             const info = await page.resolve?.(hit.pageId);
 
             return info !== null && info !== undefined && info.access !== 'none'
-              ? { ...hit, title: info.title }
+              ? { ...hit, title: info.title, path: info.path ?? hit.path, status: info.status ?? hit.status }
               : null;
           } catch {
             return null;
@@ -131,11 +136,6 @@ export class PageReferenceTrigger extends BlockEventComposer {
         }))).filter((hit): hit is NonNullable<typeof hit> => hit !== null);
 
       if (token !== this.searchToken || !this.opened) {
-        return false;
-      }
-      if (results.length > 0 && visible.length === 0) {
-        this.close();
-
         return false;
       }
       this.clearResultSubscriptions();

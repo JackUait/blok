@@ -6,13 +6,28 @@ import type { PageConfig, PageSearchResult } from '../../../../../../src/tools/p
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import { createBlock, createBlokModules, setCaret } from './emojiTrigger.fixture';
 
-const { MockPopover } = vi.hoisted(() => {
+const { MockPopover, popovers } = vi.hoisted(() => {
+  const instances: Array<{ nothingFound: boolean; messages?: { nothingFound?: string } }> = [];
+
   class PopoverDouble {
     private root: HTMLElement | null = null;
     private readonly items: Array<{ element?: HTMLElement }>;
+    public readonly messages?: { nothingFound?: string };
+    public nothingFound = false;
 
-    constructor(params: { items: Array<{ element?: HTMLElement }>; listbox?: boolean; listboxId?: string }) {
+    constructor(params: {
+      items: Array<{ element?: HTMLElement }>;
+      listbox?: boolean;
+      listboxId?: string;
+      messages?: { nothingFound?: string };
+    }) {
       this.items = params.items;
+      this.messages = params.messages;
+      instances.push(this);
+    }
+
+    setNothingFound(isDisplayed: boolean): void {
+      this.nothingFound = isDisplayed;
     }
 
     show(): void {
@@ -38,7 +53,7 @@ const { MockPopover } = vi.hoisted(() => {
     }
   }
 
-  return { MockPopover: PopoverDouble };
+  return { MockPopover: PopoverDouble, popovers: instances };
 });
 
 vi.mock('../../../../../../src/components/utils/popover', () => ({
@@ -86,6 +101,7 @@ describe('PageReferenceTrigger', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    popovers.length = 0;
   });
 
   afterEach(() => {
@@ -204,8 +220,46 @@ describe('PageReferenceTrigger', () => {
 
     expect(document.body.textContent).not.toContain('Secret');
     expect(document.body.textContent).not.toContain('Broken');
-    expect(trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))).toBe(false);
+    // Every hit was filtered out: the picker stays open and says Nothing found.
+    expect(trigger.opened).toBe(true);
+    expect(popovers.at(-1)?.nothingFound).toBe(true);
+    expect(popovers.at(-1)?.messages?.nothingFound).toBe('popover.nothingFound');
+    expect(trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }))).toBe(true);
     expect(block.currentInput?.textContent).toBe('@road');
+  });
+
+  it('shows Nothing found when resolve denies every hit', async () => {
+    const { block, page, search, trigger } = setup('@road');
+
+    current = trigger;
+    page.resolve = vi.fn().mockResolvedValue({ access: 'none' });
+    search.mockResolvedValue([{ pageId: 'p1', title: 'Secret' }]);
+    await trigger.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+    expect(trigger.opened).toBe(true);
+    expect(popovers.at(-1)?.nothingFound).toBe(true);
+    expect(document.body.textContent).not.toContain('Secret');
+  });
+
+  it('shows the path and draft status from resolve over the search hit', async () => {
+    const { block, page, search, trigger } = setup('@nap');
+
+    current = trigger;
+    page.resolve = vi.fn().mockImplementation((pageId: string) => (pageId === 'p1'
+      ? { title: 'Напитки', path: ['Общее КЦ', 'Меню'], status: 'draft' }
+      : { title: 'Root' }));
+    search.mockResolvedValue([
+      { pageId: 'p1', title: 'Old', path: ['Stale'], status: 'published' },
+      { pageId: 'p2', title: 'Root', path: ['Home'], status: 'draft' },
+    ]);
+    await trigger.handleInput(inputEvent(block.currentInput as HTMLElement));
+    const options = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'));
+
+    expect(options[0]?.querySelector('[data-blok-testid="page-picker-option-path"]')?.textContent).toBe('Общее КЦ / Меню');
+    expect(options[0]?.getAttribute('data-blok-page-status')).toBe('draft');
+    expect(options[0]?.querySelector('[data-blok-testid="page-draft-badge"]')?.textContent).toBe('tools.page.draft');
+    expect(options[1]?.querySelector('[data-blok-testid="page-picker-option-path"]')?.textContent).toBe('Home');
+    expect(options[1]?.getAttribute('data-blok-page-status')).toBe('draft');
   });
 
   it.each(['Enter', 'ArrowDown'])(
@@ -265,8 +319,10 @@ describe('PageReferenceTrigger', () => {
 
     current = trigger;
     search.mockResolvedValue([{ pageId: 'p1', title: 'Roadmap' }]);
-    page.resolve = vi.fn().mockResolvedValue({ access: 'none' });
+    // Visible at search time, denied at commit time.
+    page.resolve = vi.fn().mockResolvedValueOnce({ title: 'Roadmap' }).mockResolvedValue({ access: 'none' });
     await trigger.handleInput(inputEvent(block.currentInput as HTMLElement));
+    expect(document.querySelectorAll('[role="option"]')).toHaveLength(1);
 
     trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
     await vi.waitFor(() => {

@@ -38,7 +38,6 @@ import { generateBlockId } from '../../components/utils/id-generator';
 import { log } from '../../components/utils/logger';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
-  PAGE_DRAFT_BADGE_CLASSES,
   PAGE_ICON_CLASSES,
   PAGE_LINK_CLASSES,
   PAGE_LINK_DENIED_CLASSES,
@@ -49,6 +48,7 @@ import {
   PAGE_WRAPPER_CLASSES,
 } from './constants';
 import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, type PagePreviewLine } from './hover-preview';
+import { appendDraftBadge } from './draft-badge';
 import { renderPagePreview } from './preview';
 import { renderDatabasePreview } from '../database/preview';
 import { outputBlocksToHtml } from '../../shared/rich-text/block-data';
@@ -795,8 +795,7 @@ export class PageTool implements BlockTool {
     link.append(this.buildIcon(), this.buildTitle(state));
     // A denied or missing page must not reveal its status.
     if (this.isNavigable && this.info?.status === 'draft') {
-      link.setAttribute('data-blok-page-status', 'draft');
-      link.append(this.buildDraftBadge());
+      appendDraftBadge(link, this.api.i18n.t('tools.page.draft'));
     }
     this.preview.attach(link);
 
@@ -840,16 +839,6 @@ export class PageTool implements BlockTool {
     title.textContent = this.titleText(state);
 
     return title;
-  }
-
-  private buildDraftBadge(): HTMLElement {
-    const badge = document.createElement('span');
-
-    badge.className = PAGE_DRAFT_BADGE_CLASSES;
-    badge.setAttribute(DATA_ATTR.testid, 'page-draft-badge');
-    badge.textContent = this.api.i18n.t('tools.page.draft');
-
-    return badge;
   }
 
   private titleText(state: PageState): string {

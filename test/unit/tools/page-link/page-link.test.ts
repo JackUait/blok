@@ -182,4 +182,61 @@ describe('PageLink', () => {
     link.removed();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
+
+  describe('draft status', () => {
+    const renderLink = async (config: PageConfig): Promise<HTMLElement> => {
+      const link = new PageLink(options({ pageId: 'p1' }, config));
+      const root = link.render();
+
+      link.rendered();
+      await flush();
+
+      return root;
+    };
+
+    const anchorOf = (root: HTMLElement): HTMLAnchorElement | null => root.querySelector('a');
+    const badgeOf = (root: HTMLElement): HTMLElement | null =>
+      root.querySelector<HTMLElement>('[data-blok-testid="page-draft-badge"]');
+
+    it.each([
+      ['a titled draft', { title: 'Roadmap', status: 'draft' as const }],
+      ['an untitled draft', { status: 'draft' as const }],
+    ])('shows the page block\'s draft badge for %s', async (_name, info) => {
+      const root = await renderLink({ resolve: () => info });
+
+      expect(anchorOf(root)?.getAttribute('data-blok-page-status')).toBe('draft');
+      expect(badgeOf(root)?.textContent).toBe('tools.page.draft');
+      expect(anchorOf(root)?.lastElementChild).toBe(badgeOf(root));
+    });
+
+    it.each([
+      ['a published page', () => ({ title: 'Roadmap', status: 'published' as const })],
+      ['a page with no status', () => ({ title: 'Roadmap' })],
+      ['a denied draft', () => ({ access: 'none' as const, title: 'Roadmap', status: 'draft' as const })],
+      ['a missing page', () => null],
+      ['an unresolved page', () => new Promise<PageInfo>(() => undefined)],
+    ])('shows no draft badge for %s', async (_name, resolve) => {
+      const root = await renderLink({ resolve });
+
+      expect(anchorOf(root)?.hasAttribute('data-blok-page-status')).toBe(false);
+      expect(badgeOf(root)).toBeNull();
+    });
+
+    it('drops the badge when the host publishes the page', async () => {
+      const state = { status: 'draft' as 'draft' | 'published' };
+      let notify: (() => void) | undefined;
+      const root = await renderLink({
+        resolve: () => ({ title: 'Roadmap', status: state.status }),
+        subscribe: (_id, onChange) => { notify = onChange; },
+      });
+
+      expect(badgeOf(root)).not.toBeNull();
+      state.status = 'published';
+      notify?.();
+      await flush();
+
+      expect(badgeOf(root)).toBeNull();
+      expect(anchorOf(root)?.hasAttribute('data-blok-page-status')).toBe(false);
+    });
+  });
 });

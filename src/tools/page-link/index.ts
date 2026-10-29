@@ -19,6 +19,7 @@ import {
   PAGE_TITLE_MUTED_CLASSES,
   PAGE_WRAPPER_CLASSES,
 } from '../page/constants';
+import { appendDraftBadge } from '../page/draft-badge';
 import { pageIconNode } from '../page/hover-preview';
 import type { PageConfig, PageInfo } from '../page/types';
 
@@ -253,6 +254,10 @@ export class PageLink implements BlockTool {
     title.className = state === 'normal' ? PAGE_TITLE_CLASSES : `${PAGE_TITLE_CLASSES} ${PAGE_TITLE_MUTED_CLASSES}`;
     title.textContent = this.titleText(state);
     link.append(icon, title);
+    // A denied or missing page must not reveal its status.
+    if (this.isNavigable && this.info?.status === 'draft') {
+      appendDraftBadge(link, this.api.i18n.t('tools.page.draft'));
+    }
     link.addEventListener('mousedown', this.handleMouseDown);
     link.addEventListener('click', this.handleClick);
 

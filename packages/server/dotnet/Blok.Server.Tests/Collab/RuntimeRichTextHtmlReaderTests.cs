@@ -30,6 +30,19 @@ public sealed class RuntimeRichTextHtmlReaderTests
         read.Select(segments => segments[0]!["text"]!.GetValue<string>()));
   }
 
+  /// <summary>An edit's cap bounds one call only if two capped fields never share it.</summary>
+  [Fact]
+  public async Task TwoFieldsAtTheEditCapGoInTwoCalls()
+  {
+    var runtime = new EchoRuntime();
+    var reader = new RuntimeRichTextHtmlReader(runtime);
+    var html = new string('x', CollabDocConverter.MaxEditHtmlChars - 1);
+
+    await reader.ReadAsync([new RichTextHtml("paragraph", "text", $"a{html}"), new RichTextHtml("paragraph", "text", $"b{html}")]);
+
+    Assert.Equal(2, runtime.Calls.Count);
+  }
+
   [Fact]
   public async Task PassesTheCallersBudgetToEveryCall()
   {

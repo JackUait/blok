@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Documents;
 using Microsoft.AspNetCore.Authentication;
@@ -655,6 +656,39 @@ public sealed class EditEndpointTests
     Assert.Empty(operations.Committed(SyncApp.Doc));
   }
 
+  /// <summary>
+  /// One huge HTML field held a shared runtime engine for seconds. It is
+  /// refused before the runtime sees it, on the real converter.
+  /// </summary>
+  [Fact]
+  public async Task AnEditWithAnHtmlFieldPastTheCapIsA413AndNeverReachesTheRuntime()
+  {
+    var operations = new FakeCollabOperationStore();
+    var reader = new CountingHtmlReader();
+    var fakes = new SyncFakes(
+        operationStore: operations,
+        converter: new CollabDocConverter(TimeProvider.System, reader));
+    fakes.Endpoint.HoldsDocument(SyncApp.Doc, new JsonObject { ["blocks"] = new JsonArray() });
+    await using var app = await SyncApp.StartAsync(
+        services: collection => collection.AddSingleton<ICollabOperationStore>(operations),
+        fakes: fakes);
+    var html = new string('x', CollabDocConverter.MaxEditHtmlChars + 1);
+
+    using var response = await Edit(
+        app,
+        key: "huge-field",
+        body: $$"""{ "ops": [ { "op": "insert", "id": "big", "block": { "type": "paragraph", "data": { "text": "{{html}}" } } } ] }""");
+
+    Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    Assert.Null(response.Headers.RetryAfter);
+    Assert.Contains(
+        $"an edit may send at most {CollabDocConverter.MaxEditHtmlChars}",
+        await response.Content.ReadAsStringAsync(),
+        StringComparison.Ordinal);
+    Assert.Equal(0, reader.Calls);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+  }
+
   [Fact]
   public async Task TheRetryAfterOfAnOverloadedEditIsTheRoomsRetryBackoff()
   {
@@ -753,5 +787,20 @@ public sealed class EditEndpointTests
         "text/plain; charset=utf-8",
         response.Content.Headers.ContentType?.ToString());
     Assert.Equal(body, await response.Content.ReadAsStringAsync());
+  }
+
+  private sealed class CountingHtmlReader : IRichTextHtmlReader
+  {
+    internal int Calls { get; private set; }
+
+    public ValueTask<IReadOnlyList<JsonArray>> ReadAsync(
+        IReadOnlyList<RichTextHtml> fields,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+    {
+      Calls++;
+
+      return ValueTask.FromResult<IReadOnlyList<JsonArray>>([.. fields.Select(_ => new JsonArray())]);
+    }
   }
 }

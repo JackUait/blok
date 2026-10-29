@@ -24,6 +24,17 @@ internal sealed class CollabDocConverter(
   /// </summary>
   internal static readonly TimeSpan MigrationReadTimeout = TimeSpan.FromSeconds(60);
 
+  /// <summary>
+  /// The longest HTML one rich field of an edit may hold. The runtime reads a
+  /// field in one call on a pooled engine every room shares. With
+  /// <see cref="RuntimeRichTextHtmlReader.MaxCallChars"/> equal to this, a
+  /// call carries at most this much, and the pool hands the engine to the
+  /// next waiter between calls, so another room waits about one call. Seeds
+  /// and migrations are not capped: they read stored documents a cap would
+  /// lock out.
+  /// </summary>
+  internal const int MaxEditHtmlChars = 32 * 1024;
+
   private readonly RichTextFields fields = fields ?? RichTextFields.BuiltIn;
 
   public async ValueTask SeedAsync(
@@ -59,6 +70,14 @@ internal sealed class CollabDocConverter(
     // it is then: a doc that moved in between can only cause a refusal.
     var found = YDocConverter.CollectOpsHtml(doc, ops, fields);
     RichTextInput input;
+
+    if (found.FirstOrDefault(html => html.Html.Length > MaxEditHtmlChars) is { } huge)
+    {
+      // The room answers 413 only for this inner exception.
+      throw new CollabEditException(
+          $"collab: rich text field \"{huge.Type}.{huge.Field}\" holds {huge.Html.Length} HTML characters; an edit may send at most {MaxEditHtmlChars}.",
+          new BlokDocumentConversionException(BlokConversionFailure.DocumentTooLarge, new InvalidDataException("the HTML is past the edit cap")));
+    }
 
     try
     {

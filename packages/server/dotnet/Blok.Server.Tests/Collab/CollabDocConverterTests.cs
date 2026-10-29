@@ -286,6 +286,23 @@ public sealed class CollabDocConverterTests
     Assert.Equal(TimeSpan.FromSeconds(60), CollabDocConverter.MigrationReadTimeout);
   }
 
+  [Fact]
+  public async Task AnEditHtmlFieldPastTheCapIsRefusedAsTooLargeBeforeAnyRead()
+  {
+    var reader = new RecordingHtmlReader();
+    var converter = new CollabDocConverter(time, reader);
+    var atCap = new string('x', CollabDocConverter.MaxEditHtmlChars);
+
+    await converter.ApplyOpsAsync(LegacyHtmlDoc(), Ops(
+        $$"""{ "op": "update", "id": "a", "data": { "text": "{{atCap}}" } }"""));
+    var refusal = await Assert.ThrowsAsync<CollabEditException>(async () => await converter.ApplyOpsAsync(LegacyHtmlDoc(), Ops(
+        $$"""{ "op": "update", "id": "a", "data": { "text": "{{atCap}}y" } }""")));
+
+    // The room maps exactly this inner exception to 413.
+    Assert.True(CollabDocConverter.IsTooLarge(refusal.InnerException));
+    Assert.Single(reader.Timeouts);
+  }
+
   private sealed class RecordingHtmlReader : IRichTextHtmlReader
   {
     internal List<TimeSpan?> Timeouts { get; } = [];

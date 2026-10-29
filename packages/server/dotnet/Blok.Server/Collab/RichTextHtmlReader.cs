@@ -25,13 +25,14 @@ internal interface IRichTextHtmlReader
 internal sealed class RuntimeRichTextHtmlReader(IBlokRuntime runtime) : IRichTextHtmlReader
 {
   /// <summary>
-  /// HTML characters one runtime call may carry. Each call runs under the
-  /// runtime's wall-clock timeout (10 s by default) and its cost grows with
-  /// the HTML: about 60 KB took 0.6-0.9 s of CPU and up to 2.4 s of wall on a
-  /// loaded host, while 700 KB in one call ran past the timeout. A field is
-  /// never split, so a larger one goes in a call of its own.
+  /// HTML characters one runtime call may carry. Each call holds a pooled
+  /// engine every room shares, and its cost grows with the HTML: the worst
+  /// markup measured (<c>&lt;p&gt;x</c> repeated) took 0.7-2.4 s of CPU at
+  /// 32K on a loaded host, and twice that at 64K. A field is
+  /// never split, so a larger one (a seed or migration) goes in a call of its
+  /// own. Equal to the edit cap, so two capped fields never share a call.
   /// </summary>
-  internal const int MaxCallChars = 64 * 1024;
+  internal const int MaxCallChars = CollabDocConverter.MaxEditHtmlChars;
 
   private readonly IBlokRuntime runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
 

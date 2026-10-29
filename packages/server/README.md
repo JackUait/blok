@@ -317,6 +317,7 @@ On a journal-backed service, `POST /sync/{doc}/reset` first adopts a working cop
 A rich text field in an edit may be an HTML string or segments. The service reads the HTML into segments before it applies anything. A rich text field is the `text` of a paragraph, header, quote, toggle or list block, plus every field in `--rich-text-fields`.
 
 - If reading that HTML runs past the runtime's timeout, the edit answers 503 with `Retry-After` (2 seconds by default) and applies nothing. Retry with the same key.
+- One HTML string may hold at most 32768 characters (UTF-16 code units). A longer one answers 413 before any of it is read. Segments have no such limit.
 - If that HTML runs out of the runtime's memory budget, the edit answers 413 and applies nothing. The budget is per request, so the same body fails every time. Do not retry it; send less rich text.
 - HTML the reader refuses answers 422.
 

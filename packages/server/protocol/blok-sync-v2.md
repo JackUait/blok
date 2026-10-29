@@ -861,7 +861,7 @@ reads HTML into segments before it applies anything:
 | Status | When |
 | --- | --- |
 | 422 | The server's reader refuses the HTML. |
-| 413 | Reading the HTML ran out of the server's memory budget. The budget is per request, so the same body fails every time. Nothing was applied or recorded. Do not retry it. |
+| 413 | One HTML string is longer than 32768 UTF-16 code units, or reading the HTML ran out of the server's memory budget. The server checks the length before it reads anything. Both limits are per request, so the same body fails every time. Nothing was applied or recorded. Do not retry it. |
 | 503 with `Retry-After` | Reading the HTML ran past the server's time limit. Nothing was applied, and nothing was recorded under the key. Retry after that many seconds. |
 
 ### 12.2 `If-Match` on an edit

@@ -6621,8 +6621,8 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-list] {
   display: flex;
   flex-direction: column;
-  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: 0;
 }
 
 [data-blok-database-list-row] {

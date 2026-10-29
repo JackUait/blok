@@ -3186,14 +3186,14 @@ button[data-blok-database-column-count]:hover {
 /* ─── List View ──────────────────────────────────────── */
 
 /**
- * List wrapper — constrained to content width, centered like the editor body.
- * Uses the same padding trick as the tab bar and board view.
+ * List wrapper — starts at the text column like the tab bar and runs to the
+ * view toolbar's end, as Notion's rows do (notion-spec-2 §21.8).
  */
 [data-blok-database-list] {
   display: flex;
   flex-direction: column;
-  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
-  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-inline-end: 0;
 }
 
 /**

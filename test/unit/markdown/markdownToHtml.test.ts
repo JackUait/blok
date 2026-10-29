@@ -141,6 +141,17 @@ describe('markdownToHtml', () => {
     expect(html).toContain('the site</a>');
   });
 
+  it('prefers a top-level definition over a later one inside a container', async () => {
+    expect(await markdownToHtml('[a]\n\n[a]: /first\n\n> [a]: /second')).toContain('href="/first"');
+    expect(await markdownToHtml('[a]\n\n[a]: /ok\n\n> [a]: javascript:alert(1)')).toContain('href="/ok"');
+    expect(await markdownToHtml('![i][a]\n\n[a]: /first.png\n\n> [a]: javascript:x')).toContain('<img src="/first.png" alt="i">');
+
+    const notes = await markdownToHtml('x[^n]\n\n[^n]: first\n\n> [^n]: second');
+
+    expect(notes).toContain('<p>first</p>');
+    expect(notes).not.toContain('second</p><a');
+  });
+
   it('resolves a link reference whose definition sits inside a blockquote', async () => {
     const html = await markdownToHtml('See [the site][site].\n\n> [site]: https://example.com');
     expect(html).toContain('<a href="https://example.com"');

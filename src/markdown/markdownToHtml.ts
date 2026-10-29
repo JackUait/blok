@@ -101,23 +101,27 @@ export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = 
   };
 
   // Prepass: collect definitions and footnote definitions so references can
-  // resolve against nodes that live elsewhere in the tree — including inside
-  // a blockquote or list item, where the parser resolves them too.
-  const collect = (nodes: RootContent[]): void => {
+  // resolve against nodes that live elsewhere in the tree. Top-level ones win,
+  // as they always did in the preview; one inside a blockquote or list item
+  // only fills a label the top level lacks.
+  const nested = { definitions: new Map<string, Definition>(), footnoteDefs: new Map<string, FootnoteDefinition>() };
+  const collect = (nodes: RootContent[], into: Pick<RenderContext, 'definitions' | 'footnoteDefs'>): void => {
     for (const node of nodes) {
       if (node.type === 'definition') {
-        ctx.definitions.set(node.identifier, node);
+        into.definitions.set(node.identifier, node);
       } else if (node.type === 'footnoteDefinition') {
-        ctx.footnoteDefs.set(node.identifier, node);
+        into.footnoteDefs.set(node.identifier, node);
       }
 
       if ('children' in node) {
-        collect(node.children);
+        collect(node.children, nested);
       }
     }
   };
 
-  collect(children);
+  collect(children, ctx);
+  nested.definitions.forEach((node, key) => ctx.definitions.has(key) || ctx.definitions.set(key, node));
+  nested.footnoteDefs.forEach((node, key) => ctx.footnoteDefs.has(key) || ctx.footnoteDefs.set(key, node));
 
   const body = await nodesToHtml(children, ctx);
 

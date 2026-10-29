@@ -52,7 +52,15 @@ describe('package.json sideEffects', () => {
   })
 
   it('keeps the entry files side-effect free, so an unused entry is dropped', () => {
-    const entries = ['blok.mjs', 'tools.mjs', 'full.mjs', 'markdown.mjs', 'icons.mjs', 'blok.cjs', 'tools.cjs']
-    expect(entries.filter((name) => isDeclared(join(dist, name)))).toEqual([])
+    const conditions: unknown[] = Object.values(packageJson.exports)
+    const entries = conditions.flatMap((target) => {
+      if (typeof target !== 'object' || target === null) {
+        return []
+      }
+      const { import: esm, require: cjs } = target as { import?: string; require?: string }
+      return [esm, cjs].filter((path): path is string => path !== undefined)
+    })
+    expect(entries.length).toBeGreaterThan(20)
+    expect(entries.filter((path) => isDeclared(resolve(repoRoot, path)))).toEqual([])
   })
 })

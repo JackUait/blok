@@ -99,11 +99,12 @@ describe('list row widths (findings-listgallery L01)', () => {
     expect(body).not.toContain('flex-shrink: 0');
   });
 
-  it('lets each slot shrink, clipped, with Notion\'s caps per type', () => {
+  // notion-spec-2 §21.8 (list-row.png): values keep their size in one run, and the run is cut at the row's right edge.
+  it('keeps each slot at its own size, clipped only by its cap, with Notion\'s caps per type', () => {
     const slot = ruleBody(database, '[data-blok-database-list-row-property]');
 
-    expect(slot).toContain('flex: 0 1 auto');
-    expect(slot).toContain('min-width: 0');
+    expect(slot).toContain('flex: none');
+    expect(slot).not.toContain('flex: 0 1 auto');
     expect(slot).toContain('overflow: hidden');
     expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-cell]')).toContain('flex-wrap: nowrap');
     expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-cell] > *')).toContain('flex-shrink: 0');

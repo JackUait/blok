@@ -3327,8 +3327,8 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-list-row-property] {
   display: inline-flex;
   align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
+  /* Values keep their size; the row clips the run (notion-spec-2 §21.8). */
+  flex: none;
   height: 30px;
   padding: 0 var(--blok-space-2);
   overflow: hidden;

@@ -6741,8 +6741,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-list-row-property] {
   display: inline-flex;
   align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: none;
   height: 30px;
   padding: 0 var(--blok-space-2);
   overflow: hidden;

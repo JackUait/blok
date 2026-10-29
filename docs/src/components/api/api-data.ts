@@ -4767,7 +4767,7 @@ const rowBlocks = blocks.getChildren(databaseBlockId);`,
         name: "markdownToBlocks(md, config?)",
         returnType: "Promise<OutputBlockData[]>",
         description:
-          "Convert Markdown to blocks WITHOUT an editor instance. It is the standalone `@bloklabs/core/markdown` subpath, not a method on the hook.\n\nIt needs no DOM and no mounted Blok, so it covers the server-side path that insertMarkdown/exportMarkdown cannot:\n\n- import Markdown in a Node job\n- seed a document\n- precompute `data` before the editor mounts\n\n`config` is a `MarkdownImportConfig` (tool mapping, GFM, extensions). The result is ready for `blocks.render()` or `blocks.insertMany()`.\n\nWith `title: true` in `config`, a leading `#` heading is dropped from the blocks. markdownToBlocksWithReport returns it as `title` and `icon`. A leading emoji and a space in the heading become the icon.",
+          "Convert Markdown to blocks WITHOUT an editor instance. It is the standalone `@bloklabs/core/markdown` subpath, not a method on the hook.\n\nIt needs no DOM and no mounted Blok, so it covers the server-side path that insertMarkdown/exportMarkdown cannot:\n\n- import Markdown in a Node job\n- seed a document\n- precompute `data` before the editor mounts\n\n`config` is a `MarkdownImportConfig` (tool mapping, GFM, title). The result is ready for `blocks.render()` or `blocks.insertMany()`.\n\nWith `title: true` in `config`, a leading `#` heading is dropped from the blocks. markdownToBlocksWithReport returns it as `title` and `icon`. A leading emoji and a space in the heading become the icon.",
         example: `import { markdownToBlocks } from '@bloklabs/core/markdown';
 
 // No editor instance required — this also runs on the server

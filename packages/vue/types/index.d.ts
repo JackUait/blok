@@ -342,7 +342,7 @@ export interface UseBlocksApi {
    * `parentId` nests the import (top-level converted blocks are reparented under
    * it); a dangling `parentId` (re-checked after the async convert) and a
    * converter failure both return `[]`. Returns all created {@link BlockNode}s in
-   * document order. `config` is forwarded to the converter (gfm/toolMap/extensions).
+   * document order. `config` is forwarded to the converter (gfm/toolMap/onUnknownNode/title).
    */
   insertMarkdown(
     markdown: string,

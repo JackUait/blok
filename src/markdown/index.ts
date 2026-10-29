@@ -30,7 +30,7 @@ export interface MarkdownImportResult {
  * Convert a Markdown string to an array of Blok OutputBlockData.
  *
  * @param md - Markdown source string
- * @param config - Optional configuration for tool mapping, GFM, and extensions
+ * @param config - Optional configuration for tool mapping, GFM and title lifting
  * @returns Array of OutputBlockData ready for `blok.blocks.render()` or `blok.blocks.insertMany()`
  */
 export async function markdownToBlocks(md: string, config: MarkdownImportConfig = {}): Promise<OutputBlockData[]> {
@@ -274,7 +274,7 @@ const TITLE_MARKS_DROPPED: MarkdownDegradation = {
  * writing a document it will later read back.
  *
  * @param md - Markdown source string
- * @param config - Optional configuration for tool mapping, GFM, and extensions
+ * @param config - Optional configuration for tool mapping, GFM and title lifting
  * @returns the blocks and their degradations, plus the lifted title with `title: true`
  */
 export async function markdownToBlocksWithReport(

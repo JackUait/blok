@@ -6516,6 +6516,49 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   content: attr(data-blok-database-person-initial);
 }
 
+/*
+ * notion-spec-2 §18.2 and notion-live-3 created-by-editor.png (pixels): a 280x84 card, 10px corners,
+ * the menu shadow; a 56px round avatar 12px in, the name 12px after it. Notion's role and local-time
+ * lines have no Blok data, so the name sits alone, centred on the avatar.
+ */
+[data-blok-database-person-card] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-3);
+  box-sizing: border-box;
+  inline-size: 280px;
+  max-inline-size: 100vw;
+  min-block-size: 84px;
+  padding: var(--blok-space-3-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-database-popover-bg);
+  box-shadow: var(--blok-database-popover-shadow);
+  color: var(--blok-database-ink);
+  text-align: start;
+}
+
+[data-blok-database-person-card] [data-blok-database-person-card-avatar] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: var(--blok-database-option-default-bg);
+  color: var(--blok-database-ink-secondary);
+  font-size: 24px;
+}
+
+[data-blok-database-person-card] [data-blok-database-person-card-name] {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
 /* notion-spec-2 §20.1: a long "by" name ends in "…". text-overflow needs a block box: an inline-flex chip ignores it. */
 :is([data-blok-database-cell="createdBy"], [data-blok-database-cell="lastEditedBy"]) {
   max-width: 100%;

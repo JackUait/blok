@@ -2,7 +2,7 @@ import { IconAlarm, IconCheck, IconPageEmpty, IconWarning } from '../../../compo
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { hide as hideHint, onHover, show as showHint } from '../../../components/utils/tooltip';
 import { safeHref, safeImageSrc, urlScheme } from '../../../components/utils/sanitize-url';
-import type { PlaceValue, PropertyDefinition, PropertyValue, SelectOption } from '../types';
+import type { DatabasePerson, PlaceValue, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
 import { relationIdsOf } from '../relation-values';
 import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
@@ -252,6 +252,31 @@ const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: Pr
   cell.appendChild(pill);
 };
 
+/**
+ * notion-spec-2 §18.2, §19.16 (created-by-editor.png): a profile card above the name. Notion adds a role
+ * and the local time; a Blok person has neither. The delay stays Blok's hint delay.
+ */
+const attachPersonCard = (chip: HTMLElement, person: DatabasePerson, ctx: CellContext): void => {
+  const card = document.createElement('div');
+  const name = document.createElement('div');
+  const src = person.avatarUrl === undefined ? null : safeImageSrc(person.avatarUrl);
+  const avatar = document.createElement(src === null ? 'span' : 'img');
+
+  card.setAttribute('data-blok-database-person-card', '');
+  avatar.setAttribute('data-blok-database-person-card-avatar', '');
+  if (avatar instanceof HTMLImageElement && src !== null) {
+    avatar.src = src;
+    avatar.alt = '';
+  } else {
+    avatar.textContent = [...person.name][0] ?? '';
+    avatar.setAttribute('aria-hidden', 'true');
+  }
+  name.setAttribute('data-blok-database-person-card-name', '');
+  name.textContent = person.id === ctx.me ? ctx.i18n.t('tools.database.personYou').replace('{name}', person.name) : person.name;
+  card.append(avatar, name);
+  onHover(chip, card, { placement: 'top', gap: 6, surface: true });
+};
+
 const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {
   for (const id of personIdsOf(value)) {
     const person = ctx.people?.find((p) => p.id === id);
@@ -277,6 +302,7 @@ const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: 
       chip.appendChild(initial);
     }
     chip.append(name);
+    if (person !== undefined) attachPersonCard(chip, person, ctx);
     cell.appendChild(chip);
   }
 };

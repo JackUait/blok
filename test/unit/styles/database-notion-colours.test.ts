@@ -685,6 +685,24 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(ruleBody(`${CARD} [data-blok-database-place-card-map]`)).toContain('border-radius: var(--blok-radius-control)');
   });
 
+  it('notion-spec-2 §18.2, notion-live-3 created-by-editor: the profile card is 280x84, 10px corners, the menu shadow, a 56px round avatar 12px in, the name 14/24 bold 12px after it', () => {
+    const CARD = '[data-blok-database-person-card]';
+
+    expect(ruleBody(CARD)).toContain('inline-size: 280px');
+    expect(ruleBody(CARD)).toContain('min-block-size: 84px');
+    expect(ruleBody(CARD)).toContain('padding: var(--blok-space-3-5) var(--blok-space-3)');
+    expect(ruleBody(CARD)).toContain('gap: var(--blok-space-3)');
+    expect(ruleBody(CARD)).toContain('border-radius: var(--blok-radius-surface)');
+    expect(ruleBody(CARD)).toContain('background-color: var(--blok-database-popover-bg)');
+    expect(ruleBody(CARD)).toContain('box-shadow: var(--blok-database-popover-shadow)');
+    expect(ruleBody(`${CARD} [data-blok-database-person-card-avatar]`)).toContain('inline-size: 56px');
+    expect(ruleBody(`${CARD} [data-blok-database-person-card-avatar]`)).toContain('block-size: 56px');
+    expect(ruleBody(`${CARD} [data-blok-database-person-card-avatar]`)).toContain('border-radius: 50%');
+    expect(ruleBody(`${CARD} [data-blok-database-person-card-name]`)).toContain('font-size: 14px');
+    expect(ruleBody(`${CARD} [data-blok-database-person-card-name]`)).toContain('line-height: 24px');
+    expect(ruleBody(`${CARD} [data-blok-database-person-card-name]`)).toContain('font-weight: 600');
+  });
+
   it('the × takes Notion\'s icon grey: 142,139,134 light, 173,169,163 dark', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-table-header-icon)');
     expect(themed('--blok-database-table-header-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });

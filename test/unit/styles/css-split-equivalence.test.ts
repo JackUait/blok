@@ -1381,6 +1381,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DARK_MENU_VALUE_BYTES = 689;
     // database.css: the Place hover card hugs its text, 216 at least, with a 14/20 name and a 168px map (r12 #12).
     const DATABASE_PLACE_CARD_FIT_BYTES = 500;
+    // database.css: the 280x84 person profile card with a 56px avatar (notion-spec-2 §18.2).
+    const DATABASE_PERSON_CARD_BYTES = 1_300;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1718,7 +1720,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DARK_DATE_PICKER_BYTES
       + DATABASE_DARK_RELATION_TOGGLE_BYTES
       + DATABASE_DARK_MENU_VALUE_BYTES
-      + DATABASE_PLACE_CARD_FIT_BYTES;
+      + DATABASE_PLACE_CARD_FIT_BYTES
+      + DATABASE_PERSON_CARD_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

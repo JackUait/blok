@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "لنڪ ايمبيڊ ڪريو",
   "tools.database.filesTabUpload": "اپ لوڊ ڪريو",
   "tools.database.filesTabLink": "لنڪ",
+  "tools.database.filesLimitOne": "1 فائل",
+  "tools.database.filesReplace": "فائل يا تصوير مٽايو",
   "tools.database.addProperty": "+ پراپرٽي شامل ڪريو",
   "tools.database.propertyName": "پراپرٽي جو نالو",
   "tools.database.propertyNameTaken": "هن ڊيٽابيس ۾ {name} نالي پراپرٽي اڳ ۾ ئي موجود آهي.",

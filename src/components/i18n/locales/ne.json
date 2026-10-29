@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "लिङ्क इम्बेड गर्नुहोस्",
   "tools.database.filesTabUpload": "अपलोड",
   "tools.database.filesTabLink": "लिङ्क",
+  "tools.database.filesLimitOne": "1 फाइल",
+  "tools.database.filesReplace": "फाइल वा तस्बिर बदल्नुहोस्",
   "tools.database.addProperty": "+ गुण थप्नुहोस्",
   "tools.database.propertyName": "गुणको नाम",
   "tools.database.propertyNameTaken": "यो डाटाबेसमा {name} नामको गुण पहिल्यै छ।",

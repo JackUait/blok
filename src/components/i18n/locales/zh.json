@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "嵌入链接",
   "tools.database.filesTabUpload": "上传",
   "tools.database.filesTabLink": "链接",
+  "tools.database.filesLimitOne": "1 个文件",
+  "tools.database.filesReplace": "替换文件或图片",
   "tools.database.addProperty": "+ 添加属性",
   "tools.database.propertyName": "属性名称",
   "tools.database.propertyNameTaken": "此数据库中已存在名为“{name}”的属性。",

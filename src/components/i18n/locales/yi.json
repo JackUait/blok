@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "אײַנבעטן לינק",
   "tools.database.filesTabUpload": "אַרויפֿלאָדן",
   "tools.database.filesTabLink": "לינק",
+  "tools.database.filesLimitOne": "1 טעקע",
+  "tools.database.filesReplace": "פֿאַרבײַטן אַ טעקע אָדער בילד",
   "tools.database.addProperty": "+ צולייגן אַן אייגנשאפט",
   "tools.database.propertyName": "אייגנשאפט נאָמען",
   "tools.database.propertyNameTaken": "אַן אייגנשאפט מיטן נאָמען {name} איז שוין דאָ אין דעם דאטאבאנק.",

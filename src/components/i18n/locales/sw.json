@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Pachika kiungo",
   "tools.database.filesTabUpload": "Pakia",
   "tools.database.filesTabLink": "Kiungo",
+  "tools.database.filesLimitOne": "Faili 1",
+  "tools.database.filesReplace": "Badilisha faili au picha",
   "tools.database.addProperty": "+ Ongeza sifa",
   "tools.database.propertyName": "Jina la sifa",
   "tools.database.propertyNameTaken": "Sifa inayoitwa {name} tayari ipo katika hifadhidata hii.",

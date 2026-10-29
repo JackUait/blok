@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Вгради врска",
   "tools.database.filesTabUpload": "Прикачи",
   "tools.database.filesTabLink": "Врска",
+  "tools.database.filesLimitOne": "1 датотека",
+  "tools.database.filesReplace": "Замени датотека или слика",
   "tools.database.addProperty": "+ Додај својство",
   "tools.database.propertyName": "Име на својството",
   "tools.database.propertyNameTaken": "Во оваа база на податоци веќе постои својство со име {name}.",

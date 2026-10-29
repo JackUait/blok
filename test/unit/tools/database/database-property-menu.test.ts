@@ -131,7 +131,8 @@ describe('property menu entries (research/08 header menus, property-level items)
     ['status', ['editProperty', 'displayAs', 'changeType', 'visibility', 'duplicate', 'delete']],
     ['date', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
     ['checkbox', ['changeType', 'visibility', 'duplicate', 'delete']],
-    ['files', ['changeType', 'visibility', 'duplicate', 'delete']],
+    // notion-spec-2 §19.21: Files has Edit property, holding only Limit.
+    ['files', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
     ['createdTime', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
     // notion-spec-2 §19.21: URL, Created by and Last edited by have no Edit property.
     ['url', ['changeType', 'visibility', 'duplicate', 'delete']],
@@ -649,6 +650,46 @@ describe('DatabasePropertyMenu', () => {
         { person: { limit: 1, notifications: 'usersAndGroups' } },
         { person: { limit: 1 } },
       ]);
+    });
+  });
+
+  // notion-spec-2 §19.21, §20.7: Files' Edit property is one Limit row, "1 file" or "No limit".
+  describe('Edit property for files', () => {
+    const editItems = (property: PropertyDefinition): { cb: ReturnType<typeof callbacks>; items: CapturedItem[] } => {
+      const cb = open(property);
+
+      return { cb, items: byName(lastItems(), 'editProperty').children?.items ?? [] };
+    };
+
+    it('holds only Limit, reading No limit by default, with 1 file and No limit to pick', () => {
+      const { items } = editItems(prop('files'));
+
+      expect(items.map((i) => [i.name, i.title, i.valueLabel])).toEqual([['limit', 'tools.database.relationLimit', 'tools.database.relationLimitNone']]);
+      expect((byName(items, 'limit').children?.items ?? []).map((i) => [i.name, i.title, i.trailingIcon === IconCheck])).toEqual([
+        ['limit-one', 'tools.database.filesLimitOne', false],
+        ['limit-none', 'tools.database.relationLimitNone', true],
+      ]);
+    });
+
+    it('shows and checks a stored 1 file', () => {
+      const { items } = editItems(prop('files', { files: { limit: 1 } }));
+
+      expect(byName(items, 'limit').valueLabel).toBe('tools.database.filesLimitOne');
+      expect(byName(byName(items, 'limit').children?.items ?? [], 'limit-one').trailingIcon).toBe(IconCheck);
+    });
+
+    it('saves 1 file as limit 1, and No limit drops the setting', () => {
+      const { cb, items } = editItems(prop('files', { files: { limit: 1 } }));
+      const pick = (name: string): void => {
+        const item = byName(byName(items, 'limit').children?.items ?? [], name);
+
+        item.onActivate?.(item);
+      };
+
+      pick('limit-one');
+      pick('limit-none');
+
+      expect(cb.onUpdate.mock.calls).toEqual([['p', { files: { limit: 1 } }], ['p', { files: undefined }]]);
     });
   });
 

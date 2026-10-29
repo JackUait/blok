@@ -198,6 +198,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // "Media" is the standard Finnish loanword for media content.
   fi: new Set(['notifier.ok', 'toolbox.sectionMedia']),
   fil: new Set([
+    'tools.database.filesLimitOne',
     // "Spotlight" is the Filipino/Taglish loanword for the dim-around effect.
     'tools.image.markupSpotlight',
     'tools.link.emailAddress',
@@ -287,12 +288,14 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.colorSwatchLabel',
   ]),
   id: new Set([
+    'tools.database.filesLimitOne',
     'tools.image.cropRatioOval',
     'tools.database.defaultStatusProperty',
     // "Media" is the standard Indonesian loanword for media content.
     'toolbox.sectionMedia',
   ]),
   it: new Set([
+    'tools.database.filesLimitOne',
     // Established Italian product and computing loanwords.
     'searchTerms.layout',
     'toolNames.file',

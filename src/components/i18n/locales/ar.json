@@ -1577,6 +1577,8 @@
   "tools.database.filesEmbed": "تضمين الرابط",
   "tools.database.filesTabUpload": "رفع",
   "tools.database.filesTabLink": "رابط",
+  "tools.database.filesLimitOne": "ملف واحد",
+  "tools.database.filesReplace": "استبدال ملف أو صورة",
   "tools.database.addProperty": "+ إضافة خاصية",
   "tools.database.propertyName": "اسم الخاصية",
   "tools.database.propertyNameTaken": "توجد خاصية باسم {name} في قاعدة البيانات هذه بالفعل.",

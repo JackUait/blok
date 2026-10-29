@@ -1571,6 +1571,8 @@
   "tools.database.filesEmbed": "Iegult saiti",
   "tools.database.filesTabUpload": "Augšupielādēt",
   "tools.database.filesTabLink": "Saite",
+  "tools.database.filesLimitOne": "1 fails",
+  "tools.database.filesReplace": "Aizstāt failu vai attēlu",
   "tools.database.addProperty": "+ Pievienot rekvizītu",
   "tools.database.propertyName": "Rekvizīta nosaukums",
   "tools.database.propertyNameTaken": "Šajā datubāzē jau ir rekvizīts ar nosaukumu {name}.",

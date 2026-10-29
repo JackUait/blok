@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "បង្កប់តំណ",
   "tools.database.filesTabUpload": "បង្ហោះ",
   "tools.database.filesTabLink": "តំណ",
+  "tools.database.filesLimitOne": "ឯកសារ 1",
+  "tools.database.filesReplace": "ជំនួសឯកសារ ឬរូបភាព",
   "tools.database.addProperty": "+ បន្ថែមលក្ខណៈ",
   "tools.database.propertyName": "ឈ្មោះលក្ខណៈ",
   "tools.database.propertyNameTaken": "លក្ខណៈឈ្មោះ {name} មានរួចហើយនៅក្នុងមូលដ្ឋានទិន្នន័យនេះ។",

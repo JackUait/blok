@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "दुवा एम्बेड करा",
   "tools.database.filesTabUpload": "अपलोड",
   "tools.database.filesTabLink": "दुवा",
+  "tools.database.filesLimitOne": "1 फाइल",
+  "tools.database.filesReplace": "फाइल किंवा प्रतिमा बदला",
   "tools.database.addProperty": "+ गुणधर्म जोडा",
   "tools.database.propertyName": "गुणधर्माचे नाव",
   "tools.database.propertyNameTaken": "या डेटाबेसमध्ये {name} नावाचा गुणधर्म आधीच आहे.",

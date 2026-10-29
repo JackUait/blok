@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Ներկառուցել հղումը",
   "tools.database.filesTabUpload": "Վերբեռնել",
   "tools.database.filesTabLink": "Հղում",
+  "tools.database.filesLimitOne": "1 ֆայլ",
+  "tools.database.filesReplace": "Փոխարինել ֆայլը կամ պատկերը",
   "tools.database.addProperty": "+ Ավելացնել հատկություն",
   "tools.database.propertyName": "Հատկության անուն",
   "tools.database.propertyNameTaken": "{name} անունով հատկություն արդեն կա այս տվյալների բազայում։",

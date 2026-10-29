@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Link einbetten",
   "tools.database.filesTabUpload": "Hochladen",
   "tools.database.filesTabLink": "Link",
+  "tools.database.filesLimitOne": "1 Datei",
+  "tools.database.filesReplace": "Datei oder Bild ersetzen",
   "tools.database.addProperty": "+ Eigenschaft hinzufügen",
   "tools.database.propertyName": "Name der Eigenschaft",
   "tools.database.propertyNameTaken": "In dieser Datenbank gibt es bereits eine Eigenschaft namens {name}.",

@@ -207,6 +207,10 @@ export interface PropertySettingsV2 {
   /** Read on the "Blocked by" relation only: how a date change moves the items it blocks. */
   dependency?: DependencySettings;
   person?: PersonSettings;
+  /** Files: `limit` 1 keeps one file, so adding one replaces it. Absent means no limit. */
+  files?: { limit?: 1 | null };
+  /** URL: `showFullUrl` draws the path in ink, not grey. Absent means off. */
+  url?: { showFullUrl?: boolean };
 }
 
 // ─── Structure (Phase 6): sub-items, dependencies, templates, buttons ───

@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Integrer link",
   "tools.database.filesTabUpload": "Upload",
   "tools.database.filesTabLink": "Link",
+  "tools.database.filesLimitOne": "1 fil",
+  "tools.database.filesReplace": "Erstat en fil eller et billede",
   "tools.database.addProperty": "+ Tilføj en egenskab",
   "tools.database.propertyName": "Egenskabsnavn",
   "tools.database.propertyNameTaken": "Der findes allerede en egenskab med navnet {name} i denne database.",

@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "አገናኙን አካት",
   "tools.database.filesTabUpload": "ስቀል",
   "tools.database.filesTabLink": "አገናኝ",
+  "tools.database.filesLimitOne": "1 ፋይል",
+  "tools.database.filesReplace": "ፋይል ወይም ምስል ተካ",
   "tools.database.addProperty": "+ ንብረት ጨምር",
   "tools.database.propertyName": "የንብረት ስም",
   "tools.database.propertyNameTaken": "{name} የሚባል ንብረት በዚህ የውሂብ ጎታ ውስጥ አስቀድሞ አለ።",

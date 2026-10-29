@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Bağlantıyı yerleştir",
   "tools.database.filesTabUpload": "Yükle",
   "tools.database.filesTabLink": "Bağlantı",
+  "tools.database.filesLimitOne": "1 dosya",
+  "tools.database.filesReplace": "Dosya veya görseli değiştir",
   "tools.database.addProperty": "+ Özellik ekle",
   "tools.database.propertyName": "Özellik adı",
   "tools.database.propertyNameTaken": "Bu veritabanında {name} adlı bir özellik zaten var.",

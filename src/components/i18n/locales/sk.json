@@ -1573,6 +1573,8 @@
   "tools.database.filesEmbed": "Vložiť odkaz",
   "tools.database.filesTabUpload": "Nahrať",
   "tools.database.filesTabLink": "Odkaz",
+  "tools.database.filesLimitOne": "1 súbor",
+  "tools.database.filesReplace": "Nahradiť súbor alebo obrázok",
   "tools.database.addProperty": "+ Pridať vlastnosť",
   "tools.database.propertyName": "Názov vlastnosti",
   "tools.database.propertyNameTaken": "Vlastnosť s názvom {name} v tejto databáze už existuje.",

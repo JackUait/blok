@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Keçidi yerləşdir",
   "tools.database.filesTabUpload": "Yüklə",
   "tools.database.filesTabLink": "Keçid",
+  "tools.database.filesLimitOne": "1 fayl",
+  "tools.database.filesReplace": "Faylı və ya şəkli əvəz et",
   "tools.database.addProperty": "+ Xüsusiyyət əlavə et",
   "tools.database.propertyName": "Xüsusiyyətin adı",
   "tools.database.propertyNameTaken": "Bu verilənlər bazasında {name} adlı xüsusiyyət artıq var.",

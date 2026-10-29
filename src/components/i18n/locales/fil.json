@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "I-embed ang link",
   "tools.database.filesTabUpload": "Mag-upload",
   "tools.database.filesTabLink": "Link",
+  "tools.database.filesLimitOne": "1 file",
+  "tools.database.filesReplace": "Palitan ang file o larawan",
   "tools.database.addProperty": "+ Magdagdag ng property",
   "tools.database.propertyName": "Pangalan ng property",
   "tools.database.propertyNameTaken": "May property na nang {name} ang pangalan sa database na ito.",

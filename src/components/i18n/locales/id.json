@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Sematkan tautan",
   "tools.database.filesTabUpload": "Unggah",
   "tools.database.filesTabLink": "Tautan",
+  "tools.database.filesLimitOne": "1 file",
+  "tools.database.filesReplace": "Ganti file atau gambar",
   "tools.database.addProperty": "+ Tambah properti",
   "tools.database.propertyName": "Nama properti",
   "tools.database.propertyNameTaken": "Properti bernama {name} sudah ada di basis data ini.",

@@ -1571,6 +1571,8 @@
   "tools.database.filesEmbed": "Intégrer le lien",
   "tools.database.filesTabUpload": "Importer",
   "tools.database.filesTabLink": "Lien",
+  "tools.database.filesLimitOne": "1 fichier",
+  "tools.database.filesReplace": "Remplacer un fichier ou une image",
   "tools.database.addProperty": "+ Ajouter une propriété",
   "tools.database.propertyName": "Nom de la propriété",
   "tools.database.propertyNameTaken": "Une propriété nommée {name} existe déjà dans cette base de données.",

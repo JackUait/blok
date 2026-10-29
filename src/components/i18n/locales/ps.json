@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "لینک ځای پر ځای کړئ",
   "tools.database.filesTabUpload": "اپلوډ کړئ",
   "tools.database.filesTabLink": "لینک",
+  "tools.database.filesLimitOne": "1 فایل",
+  "tools.database.filesReplace": "فایل یا انځور بدل کړئ",
   "tools.database.addProperty": "+ ځانګړتیا اضافه کړئ",
   "tools.database.propertyName": "د ځانګړتیا نوم",
   "tools.database.propertyNameTaken": "په دې ډیټابیس کې د {name} په نوم ځانګړتیا له مخکې شته.",

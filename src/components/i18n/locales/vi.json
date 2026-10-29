@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Nhúng liên kết",
   "tools.database.filesTabUpload": "Tải lên",
   "tools.database.filesTabLink": "Liên kết",
+  "tools.database.filesLimitOne": "1 tệp",
+  "tools.database.filesReplace": "Thay tệp hoặc hình ảnh",
   "tools.database.addProperty": "+ Thêm thuộc tính",
   "tools.database.propertyName": "Tên thuộc tính",
   "tools.database.propertyNameTaken": "Cơ sở dữ liệu này đã có thuộc tính tên {name}.",

@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "ბმულის ჩაშენება",
   "tools.database.filesTabUpload": "ატვირთვა",
   "tools.database.filesTabLink": "ბმული",
+  "tools.database.filesLimitOne": "1 ფაილი",
+  "tools.database.filesReplace": "ფაილის ან სურათის ჩანაცვლება",
   "tools.database.addProperty": "+ თვისების დამატება",
   "tools.database.propertyName": "თვისების სახელი",
   "tools.database.propertyNameTaken": "ამ მონაცემთა ბაზაში {name} სახელის თვისება უკვე არსებობს.",

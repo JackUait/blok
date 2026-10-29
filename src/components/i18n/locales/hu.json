@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Hivatkozás beágyazása",
   "tools.database.filesTabUpload": "Feltöltés",
   "tools.database.filesTabLink": "Hivatkozás",
+  "tools.database.filesLimitOne": "1 fájl",
+  "tools.database.filesReplace": "Fájl vagy kép cseréje",
   "tools.database.addProperty": "+ Tulajdonság hozzáadása",
   "tools.database.propertyName": "Tulajdonság neve",
   "tools.database.propertyNameTaken": "Ebben az adatbázisban már van {name} nevű tulajdonság.",

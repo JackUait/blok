@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Вгради връзката",
   "tools.database.filesTabUpload": "Качи",
   "tools.database.filesTabLink": "Връзка",
+  "tools.database.filesLimitOne": "1 файл",
+  "tools.database.filesReplace": "Замени файл или изображение",
   "tools.database.addProperty": "+ Добави свойство",
   "tools.database.propertyName": "Име на свойството",
   "tools.database.propertyNameTaken": "В тази база данни вече има свойство с име {name}.",

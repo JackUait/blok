@@ -1571,6 +1571,8 @@
   "tools.database.filesEmbed": "הטמע קישור",
   "tools.database.filesTabUpload": "העלאה",
   "tools.database.filesTabLink": "קישור",
+  "tools.database.filesLimitOne": "קובץ 1",
+  "tools.database.filesReplace": "החלף קובץ או תמונה",
   "tools.database.addProperty": "+ הוסף מאפיין",
   "tools.database.propertyName": "שם המאפיין",
   "tools.database.propertyNameTaken": "מאפיין בשם {name} כבר קיים במסד הנתונים הזה.",

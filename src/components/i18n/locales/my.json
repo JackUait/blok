@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "လင့်ခ်ကို မြှုပ်သွင်းရန်",
   "tools.database.filesTabUpload": "အပ်လုဒ်",
   "tools.database.filesTabLink": "လင့်ခ်",
+  "tools.database.filesLimitOne": "ဖိုင် 1 ခု",
+  "tools.database.filesReplace": "ဖိုင် သို့မဟုတ် ပုံ အစားထိုးရန်",
   "tools.database.addProperty": "+ ဂုဏ်သတ္တိ ထည့်ရန်",
   "tools.database.propertyName": "ဂုဏ်သတ္တိအမည်",
   "tools.database.propertyNameTaken": "{name} အမည်ရှိ ဂုဏ်သတ္တိသည် ဤဒေတာဘေ့စ်တွင် ရှိပြီးဖြစ်သည်။",

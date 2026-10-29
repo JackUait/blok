@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "リンクを埋め込む",
   "tools.database.filesTabUpload": "アップロード",
   "tools.database.filesTabLink": "リンク",
+  "tools.database.filesLimitOne": "1 ファイル",
+  "tools.database.filesReplace": "ファイルまたは画像を置き換え",
   "tools.database.addProperty": "+ プロパティを追加",
   "tools.database.propertyName": "プロパティ名",
   "tools.database.propertyNameTaken": "{name} という名前のプロパティはこのデータベースに既にあります。",

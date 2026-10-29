@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "جێگیرکردنی بەستەر",
   "tools.database.filesTabUpload": "بارکردن",
   "tools.database.filesTabLink": "بەستەر",
+  "tools.database.filesLimitOne": "1 فایل",
+  "tools.database.filesReplace": "گۆڕینی فایل یان وێنە",
   "tools.database.addProperty": "+ زیادکردنی تایبەتمەندی",
   "tools.database.propertyName": "ناوی تایبەتمەندی",
   "tools.database.propertyNameTaken": "تایبەتمەندییەک بە ناوی {name} پێشتر لەم داتابەیسەدا هەیە.",

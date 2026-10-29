@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Integro lidhjen",
   "tools.database.filesTabUpload": "Ngarko",
   "tools.database.filesTabLink": "Lidhje",
+  "tools.database.filesLimitOne": "1 skedar",
+  "tools.database.filesReplace": "Zëvendëso një skedar ose imazh",
   "tools.database.addProperty": "+ Shto një veti",
   "tools.database.propertyName": "Emri i vetisë",
   "tools.database.propertyNameTaken": "Në këtë bazë të dhënash ekziston tashmë një veti me emrin {name}.",

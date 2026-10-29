@@ -44,7 +44,7 @@ const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(
 
 /** Types whose "Edit property" panel holds settings Blok has. */
 const EDITABLE_SETTINGS: ReadonlySet<PropertyType> = new Set<PropertyType>([
-  'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button', 'person',
+  'number', 'select', 'multiSelect', 'status', 'date', 'createdTime', 'lastEditedTime', 'uniqueId', 'relation', 'rollup', 'formula', 'button', 'person', 'files',
 ]);
 
 /**
@@ -922,6 +922,27 @@ export class DatabasePropertyMenu {
     ];
   }
 
+  /** notion-spec-2 §19.21, §20.7: Files' one Edit property row. */
+  private filesLimitItem(one: boolean, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
+    const labelKey = (choice: 'one' | 'none'): string => choice === 'one' ? 'tools.database.filesLimitOne' : 'tools.database.relationLimitNone';
+
+    return {
+      name: 'limit',
+      title: this.t('tools.database.relationLimit'),
+      valueLabel: this.t(labelKey(one ? 'one' : 'none')),
+      children: {
+        ...VALUE_LIST,
+        items: (['one', 'none'] as const).map((choice) => ({
+          name: `limit-${choice}`,
+          title: this.t(labelKey(choice)),
+          ...checkedIf(one === (choice === 'one')),
+          closeOnActivate: true,
+          onActivate: () => update({ files: choice === 'one' ? { limit: 1 } : undefined }),
+        })),
+      },
+    };
+  }
+
   /** notion-spec-2 §17.1: the Enable switch, then the name of the mirror in the related database. */
   private twoWayItem(propertyId: string, twoWay: boolean): PopoverItemParams {
     const host = this.options.computed;
@@ -1345,6 +1366,9 @@ export class DatabasePropertyMenu {
     }
     if (property.type === 'person') {
       return this.personItems(property.person ?? {}, (person) => update({ person }));
+    }
+    if (property.type === 'files') {
+      return [this.filesLimitItem(property.files?.limit === 1, update)];
     }
     if (property.type === 'rollup') {
       return this.rollupItems(property, update);

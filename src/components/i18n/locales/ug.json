@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "ئۇلانمىنى سىڭدۈرۈش",
   "tools.database.filesTabUpload": "يۈكلەش",
   "tools.database.filesTabLink": "ئۇلانما",
+  "tools.database.filesLimitOne": "1 ھۆججەت",
+  "tools.database.filesReplace": "ھۆججەت ياكى رەسىم ئالماشتۇرۇش",
   "tools.database.addProperty": "+ خاسلىق قوشۇش",
   "tools.database.propertyName": "خاسلىق ئاتى",
   "tools.database.propertyNameTaken": "بۇ ساندا {name} ناملىق خاسلىق ئاللىبۇرۇن بار.",

@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "লিঙ্ক এম্বেড করুন",
   "tools.database.filesTabUpload": "আপলোড",
   "tools.database.filesTabLink": "লিঙ্ক",
+  "tools.database.filesLimitOne": "1টি ফাইল",
+  "tools.database.filesReplace": "ফাইল বা ছবি বদলান",
   "tools.database.addProperty": "+ বৈশিষ্ট্য যোগ করুন",
   "tools.database.propertyName": "বৈশিষ্ট্যের নাম",
   "tools.database.propertyNameTaken": "এই ডেটাবেসে {name} নামে একটি বৈশিষ্ট্য আগে থেকেই আছে।",

@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Bädda in länk",
   "tools.database.filesTabUpload": "Ladda upp",
   "tools.database.filesTabLink": "Länk",
+  "tools.database.filesLimitOne": "1 fil",
+  "tools.database.filesReplace": "Ersätt en fil eller bild",
   "tools.database.addProperty": "+ Lägg till en egenskap",
   "tools.database.propertyName": "Egenskapsnamn",
   "tools.database.propertyNameTaken": "Det finns redan en egenskap med namnet {name} i den här databasen.",

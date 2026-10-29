@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Ενσωμάτωση συνδέσμου",
   "tools.database.filesTabUpload": "Μεταφόρτωση",
   "tools.database.filesTabLink": "Σύνδεσμος",
+  "tools.database.filesLimitOne": "1 αρχείο",
+  "tools.database.filesReplace": "Αντικατάσταση αρχείου ή εικόνας",
   "tools.database.addProperty": "+ Προσθήκη ιδιότητας",
   "tools.database.propertyName": "Όνομα ιδιότητας",
   "tools.database.propertyNameTaken": "Υπάρχει ήδη ιδιότητα με το όνομα {name} σε αυτή τη βάση δεδομένων.",

@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Benamkan pautan",
   "tools.database.filesTabUpload": "Muat naik",
   "tools.database.filesTabLink": "Pautan",
+  "tools.database.filesLimitOne": "1 fail",
+  "tools.database.filesReplace": "Ganti fail atau imej",
   "tools.database.addProperty": "+ Tambah sifat",
   "tools.database.propertyName": "Nama sifat",
   "tools.database.propertyNameTaken": "Sifat bernama {name} sudah wujud dalam pangkalan data ini.",

@@ -1573,6 +1573,8 @@
   "tools.database.filesEmbed": "Vdelaj povezavo",
   "tools.database.filesTabUpload": "Naloži",
   "tools.database.filesTabLink": "Povezava",
+  "tools.database.filesLimitOne": "1 datoteka",
+  "tools.database.filesReplace": "Zamenjaj datoteko ali sliko",
   "tools.database.addProperty": "+ Dodaj lastnost",
   "tools.database.propertyName": "Ime lastnosti",
   "tools.database.propertyNameTaken": "Lastnost z imenom {name} v tej zbirki podatkov že obstaja.",

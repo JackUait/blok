@@ -1571,6 +1571,8 @@
   "tools.database.filesEmbed": "Ugradi poveznicu",
   "tools.database.filesTabUpload": "Prenesi",
   "tools.database.filesTabLink": "Poveznica",
+  "tools.database.filesLimitOne": "1 datoteka",
+  "tools.database.filesReplace": "Zamijeni datoteku ili sliku",
   "tools.database.addProperty": "+ Dodaj svojstvo",
   "tools.database.propertyName": "Naziv svojstva",
   "tools.database.propertyNameTaken": "Svojstvo s nazivom {name} već postoji u ovoj bazi podataka.",

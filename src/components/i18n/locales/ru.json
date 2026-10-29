@@ -1573,6 +1573,8 @@
   "tools.database.filesEmbed": "Встроить ссылку",
   "tools.database.filesTabUpload": "Загрузить",
   "tools.database.filesTabLink": "Ссылка",
+  "tools.database.filesLimitOne": "1 файл",
+  "tools.database.filesReplace": "Заменить файл или изображение",
   "tools.database.addProperty": "+ Добавить свойство",
   "tools.database.propertyName": "Название свойства",
   "tools.database.propertyNameTaken": "Свойство с названием {name} уже есть в этой базе данных.",

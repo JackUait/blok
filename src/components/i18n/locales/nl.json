@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Link insluiten",
   "tools.database.filesTabUpload": "Uploaden",
   "tools.database.filesTabLink": "Link",
+  "tools.database.filesLimitOne": "1 bestand",
+  "tools.database.filesReplace": "Bestand of afbeelding vervangen",
   "tools.database.addProperty": "+ Eigenschap toevoegen",
   "tools.database.propertyName": "Naam van eigenschap",
   "tools.database.propertyNameTaken": "Er bestaat al een eigenschap met de naam {name} in deze database.",

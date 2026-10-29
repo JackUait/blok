@@ -1573,6 +1573,8 @@
   "tools.database.filesEmbed": "Įterpti nuorodą",
   "tools.database.filesTabUpload": "Įkelti",
   "tools.database.filesTabLink": "Nuoroda",
+  "tools.database.filesLimitOne": "1 failas",
+  "tools.database.filesReplace": "Pakeisti failą arba vaizdą",
   "tools.database.addProperty": "+ Pridėti savybę",
   "tools.database.propertyName": "Savybės pavadinimas",
   "tools.database.propertyNameTaken": "Šioje duomenų bazėje jau yra savybė pavadinimu {name}.",

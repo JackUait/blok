@@ -39,6 +39,8 @@ const tabIds = { next: 0 };
 class FilesEditor implements CellEditorHandle {
   private readonly root = document.createElement('div');
   private readonly list = document.createElement('div');
+  /** "Add a file or image", or "Replace a file or image" under Limit 1 file with a file present. */
+  private readonly addLabel = document.createElement('div');
   private readonly popover: CellPopover;
   private files: FileValue[];
   private open = true;
@@ -63,11 +65,8 @@ class FilesEditor implements CellEditorHandle {
       return;
     }
 
-    const heading = document.createElement('div');
-
-    heading.setAttribute('data-blok-database-select-hint', '');
-    heading.textContent = this.t('tools.database.filesAdd');
-    this.root.append(this.list, heading);
+    this.addLabel.setAttribute('data-blok-database-select-hint', '');
+    this.root.append(this.list, this.addLabel);
     if (ctx.uploadFile !== undefined) {
       this.root.appendChild(this.buildUpload(ctx.uploadFile));
     }
@@ -119,6 +118,11 @@ class FilesEditor implements CellEditorHandle {
     if (added) this.dropPanel();
   }
 
+  /** notion-spec-2 §20.7: under Limit 1 file, adding replaces the file. */
+  private addFile(file: FileValue): void {
+    this.setFiles(this.property.files?.limit === 1 ? [file] : [...this.files, file]);
+  }
+
   private buildUpload(upload: NonNullable<CellEditorContext['uploadFile']>): HTMLElement {
     const label = document.createElement('label');
     const input = document.createElement('input');
@@ -137,7 +141,7 @@ class FilesEditor implements CellEditorHandle {
           const url = safeHref(stored.url);
 
           if (url !== null && this.open) {
-            this.setFiles([...this.files, { id: nanoid(), name: stored.name ?? file.name, url }]);
+            this.addFile({ id: nanoid(), name: stored.name ?? file.name, url });
           }
         }).catch(() => undefined);
       }
@@ -175,7 +179,7 @@ class FilesEditor implements CellEditorHandle {
       }
       input.value = '';
       input.removeAttribute('aria-invalid');
-      this.setFiles([...this.files, { id: nanoid(), name: fileNameFromUrl(raw), url }]);
+      this.addFile({ id: nanoid(), name: fileNameFromUrl(raw), url });
     };
 
     input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
@@ -319,6 +323,7 @@ class FilesEditor implements CellEditorHandle {
   }
 
   private renderList(): void {
+    this.addLabel.textContent = this.t(this.property.files?.limit === 1 && this.files.length > 0 ? 'tools.database.filesReplace' : 'tools.database.filesAdd');
     this.list.replaceChildren(...this.files.map((file) => {
       const row = document.createElement('div');
       const name = document.createElement('span');

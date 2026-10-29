@@ -1573,6 +1573,8 @@
   "tools.database.filesEmbed": "Вбудувати посилання",
   "tools.database.filesTabUpload": "Завантажити",
   "tools.database.filesTabLink": "Посилання",
+  "tools.database.filesLimitOne": "1 файл",
+  "tools.database.filesReplace": "Замінити файл або зображення",
   "tools.database.addProperty": "+ Додати властивість",
   "tools.database.propertyName": "Назва властивості",
   "tools.database.propertyNameTaken": "Властивість із назвою «{name}» уже є в цій базі даних.",

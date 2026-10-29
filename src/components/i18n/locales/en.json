@@ -1569,6 +1569,8 @@
   "tools.database.filesEmbed": "Embed link",
   "tools.database.filesTabUpload": "Upload",
   "tools.database.filesTabLink": "Link",
+  "tools.database.filesLimitOne": "1 file",
+  "tools.database.filesReplace": "Replace a file or image",
   "tools.database.addProperty": "+ Add a property",
   "tools.database.propertyName": "Property name",
   "tools.database.propertyNameTaken": "A property named {name} already exists in this database.",

@@ -6,7 +6,6 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconArrowDiagonal,
-  IconCheck,
   IconCopy,
   IconExpandFullscreen,
   IconEmojiSmile,
@@ -260,7 +259,6 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
       name: SHOW_PAGE_ICON_ITEM,
       title: i18n.t('tools.database.settingsShowPageIcon'),
       icon: IconEmojiSmile,
-      trailingIcon: IconCheck,
       isActive: () => state.showPageIcon,
       closeOnActivate: false,
       onActivate: () => {

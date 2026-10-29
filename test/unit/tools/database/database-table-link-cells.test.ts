@@ -231,6 +231,10 @@ describe('table URL, email and phone cells', () => {
         { id: 'p-made', name: 'Made', type: 'createdTime', position: 'b9' },
         { id: 'p-by', name: 'By', type: 'createdBy', position: 'c1' },
         { id: 'p-done', name: 'Done', type: 'checkbox', position: 'c2' },
+        { id: 'p-edited', name: 'Edited', type: 'lastEditedTime', position: 'c3' },
+        { id: 'p-editor', name: 'Editor', type: 'lastEditedBy', position: 'c4' },
+        { id: 'p-due', name: 'Due', type: 'date', position: 'c5' },
+        { id: 'p-btn', name: 'Go', type: 'button', position: 'c6' },
       ];
       const moreRows = (): DatabaseRow[] => [
         {
@@ -244,9 +248,10 @@ describe('table URL, email and phone cells', () => {
             'p-file': [{ id: 'f1', url: 'https://example.com/a.pdf', name: 'a.pdf' }],
             'p-id': 1,
             'p-done': true,
+            'p-due': '2026-10-28',
           },
           computed: { 'p-rel': [{ id: 'r2' }], 'p-roll': 42 },
-          meta: { createdAt: Date.UTC(2026, 9, 28), createdBy: 'u1' },
+          meta: { createdAt: Date.UTC(2026, 9, 28), createdBy: 'u1', lastEditedAt: Date.UTC(2026, 9, 29), lastEditedBy: 'u1' },
         },
         rows()[1],
       ];
@@ -265,16 +270,24 @@ describe('table URL, email and phone cells', () => {
         expect(actions(cell(mountMore({ comment: undefined }), 'r1', propertyId))).toBeNull();
       });
 
-      it.each(['p-id', 'p-made'])('a %s cell carries Copy only', (propertyId) => {
+      // notion-spec-2 §20.11: a filled Date shows Comment + Copy, like Text.
+      it('a filled date cell carries Comment and Copy to Clipboard', () => {
+        expect(labels(cell(mountMore(), 'r1', 'p-due'))).toEqual(['tools.database.tableComment', 'tools.database.cellCopy']);
+      });
+
+      // notion-spec-2 §18.2, §20.1, §20.10.
+      it.each(['p-id', 'p-made', 'p-edited'])('a %s cell carries Copy only', (propertyId) => {
         expect(labels(cell(mountMore(), 'r1', propertyId))).toEqual(['tools.database.cellCopy']);
       });
 
-      it.each(['p-by', 'p-done'])('a %s cell carries no box', (propertyId) => {
+      // notion-spec-2 §20.1, §20.11.
+      it.each(['p-by', 'p-editor', 'p-done', 'p-btn'])('a %s cell carries no box', (propertyId) => {
         expect(actions(cell(mountMore(), 'r1', propertyId))).toBeNull();
       });
 
-      it('a filled rollup cell carries Configure rollup and Copy, and Configure opens its property settings', () => {
-        const handlers = { ...makeHandlers(), editProperty: vi.fn() };
+      // notion-spec-2 §18.2, §20.11. What Configure opens is the host's.
+      it('a filled rollup cell carries Configure rollup and Copy, and Configure calls the host with the cell', () => {
+        const handlers = { ...makeHandlers(), configureRollup: vi.fn() };
         const root = mountMore({ handlers });
         const target = cell(root, 'r1', 'p-roll');
 
@@ -283,16 +296,20 @@ describe('table URL, email and phone cells', () => {
 
         clickOn(action(target, 'tools.database.rollupConfigure') as HTMLButtonElement);
 
-        expect(handlers.editProperty).toHaveBeenCalledWith('p-roll');
+        expect(handlers.configureRollup).toHaveBeenCalledWith('p-roll', target);
         expect(editorField()).toBeNull();
       });
 
-      it('read-only: a rollup cell carries Copy only', () => {
-        expect(labels(cell(mountMore({ readOnly: true }), 'r1', 'p-roll'))).toEqual(['tools.database.cellCopy']);
+      it('without the host hook a rollup cell carries Copy only', () => {
+        expect(labels(cell(mountMore(), 'r1', 'p-roll'))).toEqual(['tools.database.cellCopy']);
       });
 
-      // notion-spec-2 §18.3: a click on these opens nothing and selects the whole row, not the cell.
-      it.each(['p-id', 'p-made', 'p-by'])('a click on a %s cell selects its whole row', (propertyId) => {
+      it('read-only: a rollup cell carries Copy only', () => {
+        expect(labels(cell(mountMore({ readOnly: true, handlers: { ...makeHandlers(), configureRollup: vi.fn() } }), 'r1', 'p-roll'))).toEqual(['tools.database.cellCopy']);
+      });
+
+      // notion-spec-2 §18.3, §20.1: a click on these opens nothing and selects the whole row, not the cell.
+      it.each(['p-id', 'p-made', 'p-by', 'p-edited', 'p-editor'])('a click on a %s cell selects its whole row', (propertyId) => {
         const root = mountMore();
         const target = cell(root, 'r1', propertyId);
 
@@ -317,16 +334,20 @@ describe('table URL, email and phone cells', () => {
         expect(root.querySelector('[data-blok-database-table-row][data-row-id="r2"]')?.getAttribute('aria-selected')).toBe('false');
       });
 
-      it('Copy on an ID cell copies and leaves the row unselected', async () => {
+      // notion-spec-2 §20.10: Copy shows "Copied property to clipboard" and selects nothing.
+      it('Copy on an ID cell copies, shows the toast and leaves the row unselected', async () => {
         const writeText = vi.fn(() => Promise.resolve());
+        const notify = vi.fn();
 
         vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
-        const root = mountMore();
+        const root = mountMore({ notify });
 
         clickOn(action(cell(root, 'r1', 'p-id'), 'tools.database.cellCopy') as HTMLButtonElement);
         await Promise.resolve();
+        await Promise.resolve();
 
         expect(writeText).toHaveBeenCalledWith('1');
+        expect(notify).toHaveBeenCalledWith('tools.database.cellCopied');
         expect(root.querySelector('[data-blok-database-table-row][data-row-id="r1"]')?.getAttribute('aria-selected')).toBe('false');
         vi.unstubAllGlobals();
       });

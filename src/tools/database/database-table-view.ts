@@ -124,6 +124,8 @@ export interface TableHandlers {
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property": open that column's property menu. */
   editProperty?: (propertyId: string) => void;
+  /** A rollup cell's "Configure rollup" hover button. Without it the button is not shown. */
+  configureRollup?: (propertyId: string, cell: HTMLElement) => void;
   /** The date picker's format rows. Returns undefined where the property may not change. Drawn on editEnded. */
   dateDisplayChanger?: (propertyId: string) => ((change: DateDisplayChange) => void) | undefined;
 }
@@ -246,15 +248,15 @@ const MAX_SHOWN_COUNT = 99;
 
 /** Cells whose value is a link: a click on it follows it, and a hover shows the action pill. */
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
-/** notion-spec-2 §18.2, §19.6, §19.20: filled cells whose hover shows Comment + Copy. */
-const COPY_PILL_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number', 'formula']);
+/** notion-spec-2 §18.2, §19.6, §19.20, §20.11: filled cells whose hover shows Comment + Copy. */
+const COPY_PILL_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number', 'formula', 'date']);
 /** notion-spec-2 §18.2: filled cells whose hover shows Comment alone. */
 const COMMENT_ONLY_TYPES: ReadonlySet<string> = new Set(['select', 'multiSelect', 'status', 'person', 'files', 'relation']);
-/** notion-spec-2 §18.2: cells whose hover shows Copy alone. Last edited time is not measured. */
-const COPY_ONLY_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime']);
+/** notion-spec-2 §18.2, §20.1: cells whose hover shows Copy alone. */
+const COPY_ONLY_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime', 'lastEditedTime']);
 
-/** notion-spec-2 §18.3: a click on these selects the whole row. Last edited time and by are not measured. */
-const ROW_SELECT_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime', 'createdBy']);
+/** notion-spec-2 §18.3, §20.1: a click on these selects the whole row. */
+const ROW_SELECT_TYPES: ReadonlySet<string> = new Set(['uniqueId', 'createdTime', 'createdBy', 'lastEditedTime', 'lastEditedBy']);
 
 type CellAction = [action: string, key: string, icon: string];
 
@@ -1014,8 +1016,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (COMMENT_ONLY_TYPES.has(type)) return comment;
     if (COPY_ONLY_TYPES.has(type)) return copy;
     if (type !== 'rollup') return [];
-    // What Notion's Configure rollup opens is not measured; it opens the property's settings.
-    const configure: CellAction[] = this.options.readOnly || this.handlers?.editProperty === undefined
+    const configure: CellAction[] = this.options.readOnly || this.handlers?.configureRollup === undefined
       ? []
       : [['configure', 'tools.database.rollupConfigure', IconPencilLine]];
 
@@ -1059,7 +1060,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     } else if (action === 'copy') {
       this.copyCellValue(rowId, propertyId);
     } else if (action === 'configure') {
-      this.handlers?.editProperty?.(propertyId);
+      this.handlers?.configureRollup?.(propertyId, cellEl);
     }
 
     return action !== undefined

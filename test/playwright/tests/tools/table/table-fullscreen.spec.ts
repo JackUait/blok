@@ -41,7 +41,7 @@ const headedData: OutputData = {
   ],
 };
 
-/** How far the button sits in from the table's top inline-end corner. */
+/** How far the button sits in from the table's inline-end edge. */
 const CORNER_INSET = 6;
 
 const narrowData: OutputData = {
@@ -521,19 +521,21 @@ test.describe('Table full screen', () => {
     await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
   });
 
-  test('the button sits in the top corner of a table narrower than the page', async ({ page }) => {
+  test('the button sits in the top corner of a table narrower than the page, centred on the first row', async ({ page }) => {
     await createBlok(page, false, narrowData);
     await page.getByRole('table').hover();
     const grid = await page.getByRole('table').boundingBox();
+    const row = await page.locator('[data-blok-table-row]').first().boundingBox();
     const button = await page.getByRole('button', { name: OPEN_LABEL }).boundingBox();
 
     expect(grid).not.toBeNull();
+    expect(row).not.toBeNull();
     expect(button).not.toBeNull();
-    if (grid === null || button === null) {
+    if (grid === null || row === null || button === null) {
       return;
     }
     expect(Math.abs(grid.x + grid.width - (button.x + button.width) - CORNER_INSET)).toBeLessThanOrEqual(1);
-    expect(Math.abs(button.y - grid.y - CORNER_INSET)).toBeLessThanOrEqual(1);
+    expect(Math.abs(button.y + button.height / 2 - (row.y + row.height / 2))).toBeLessThanOrEqual(0.5);
   });
 
   test('the button of a table wider than the page sits at the visible end', async ({ page }) => {

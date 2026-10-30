@@ -13,7 +13,7 @@ const SIZE_ATTR = 'data-blok-table-fullscreen-size';
 const SIZE_EDITOR_ATTR = 'data-blok-table-fullscreen-size-editor';
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
 
-/** How far the button sits in from the table's top inline-end corner. Matches tables.css. */
+/** How far the button sits in from the table's inline-end edge. */
 const CORNER_INSET = 6;
 /** How close the pointer must come before the button shows. Same reach as the add bars. */
 const NEAR_PX = 40;
@@ -396,6 +396,8 @@ export class TableFullscreen {
     const rootBox = root.getBoundingClientRect();
     const scrollerBox = scroller.getBoundingClientRect();
     const gridBox = grid.getBoundingClientRect();
+    // Centred on the first row, however tall its text makes it.
+    const rowBox = grid.querySelector('[data-blok-table-row]')?.getBoundingClientRect() ?? gridBox;
     const style = getComputedStyle(scroller);
     const rtl = style.direction === 'rtl';
     const size = this.button.offsetWidth;
@@ -404,10 +406,11 @@ export class TableFullscreen {
       ? Math.max(gridBox.left, scrollerBox.left + parseFloat(style.paddingLeft))
       : Math.min(gridBox.right, scrollerBox.right - parseFloat(style.paddingRight));
     const end = rtl ? corner - rootBox.left + CORNER_INSET : rootBox.right - corner + CORNER_INSET;
-    const top = gridBox.top - rootBox.top + CORNER_INSET;
+    const buttonTop = rowBox.top + (rowBox.height - size) / 2;
+    const top = buttonTop - rootBox.top;
     const left = rtl ? corner + CORNER_INSET : corner - CORNER_INSET - size;
     const dx = Math.max(left - event.clientX, 0, event.clientX - (left + size));
-    const dy = Math.max(gridBox.top + CORNER_INSET - event.clientY, 0, event.clientY - (gridBox.top + CORNER_INSET + size));
+    const dy = Math.max(buttonTop - event.clientY, 0, event.clientY - (buttonTop + size));
 
     this.button.style.setProperty('--blok-table-toggle-end', `${end}px`);
     this.button.style.setProperty('--blok-table-toggle-top', `${top}px`);

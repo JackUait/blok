@@ -34,7 +34,21 @@ public sealed class CSharpCaptureTests
     }
 
     Assert.True(File.Exists(path), $"{FileName} is missing; run with BLOK_WRITE_CSHARP_CAPTURE=1");
-    Assert.Equal(File.ReadAllText(path), built);
+    var committed = File.ReadAllText(path).Split('\n');
+    var fresh = built.Split('\n');
+
+    for (var line = 0; line < Math.Max(committed.Length, fresh.Length); line++)
+    {
+      var was = line < committed.Length ? committed[line] : "(end of file)";
+      var now = line < fresh.Length ? fresh[line] : "(end of file)";
+
+      if (was != now)
+      {
+        Assert.Fail(
+            $"{FileName} is stale at line {line + 1}; rerun with BLOK_WRITE_CSHARP_CAPTURE=1 if the change is intended.\n" +
+            $"file:   {was}\nengine: {now}");
+      }
+    }
   }
 
   private static string Build()

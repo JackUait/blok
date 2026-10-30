@@ -39,10 +39,12 @@ Commit `fix(server): read wire JSON content with JsJson.Parse` (533aea17).
 - The converter (`YDocConverter.TryToPlain`) drops a string holding a lone surrogate, as it drops undefined.
   - Before, `TryReadWireJson` dropped the WHOLE wire value. Now only that string goes; the rest survives (`ExportDropsOnlyTheLoneSurrogateStringInsideAWireJsonValue`).
   - `ExportSkipsAWireJsonValueItCannotMaterialise` still passes.
-- Side effects for refs 2 and 5 only (no Blok client writes them):
-  - number text is now JS-formatted (`1.0` → `1`, `1e999` → null);
-  - depth past 256 now gets the converter's lockstep null;
-  - `SameAsLive` can now find an equal wire value.
+- Side effects for refs 2 and 5 only (no Blok client writes them), pinned by `ExportWritesWireJsonAsJavaScriptReadsIt`:
+  - `{"n":1.0,"e":1e2,"i":1e999}` now exports as `{"n":1,"e":100,"i":null}`. Before, it exported the raw number text `1.0`, `1e2`, `1e999`. That old output comes from probe 3 (`JsonNode ... ok -> 1e999`); it was not re-run on the old code.
+  - A 300-deep ref-2 array now exports as 256 levels with null at the bottom (the converter's lockstep cap). Before, it exported whole.
+  - `SameAsLive` can now find an equal wire value. Before, it never could, so it always rewrote.
+- **Behaviour change on a shipped surface.** `TryReadWireJson` shipped in v1.16.1 (`git merge-base --is-ancestor` on commit 8372f514). Commit 533aea17 carries no BREAKING label. The label and a release note are owed when this lands, and the user decides.
+  - Compatible route, if wanted: keep the raw text beside the parsed value, and let the converter re-read the raw text as before.
 - **The collab lane must reproduce the lone-surrogate drop in the Go converter.**
 - UNVERIFIED: a lone surrogate in an object KEY of wire JSON. STJ would write it as U+FFFD; nothing drops it.
 

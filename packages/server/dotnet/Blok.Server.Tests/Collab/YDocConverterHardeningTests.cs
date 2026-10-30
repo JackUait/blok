@@ -350,6 +350,33 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
+  /// Wire JSON reads as JSON.parse reads it, so the export spells it as the JS
+  /// client would save it: numbers re-written, a non-finite one as null, and
+  /// nesting past the value cap as the lockstep null. The Go converter must
+  /// match these.
+  /// </summary>
+  [Fact]
+  public void ExportWritesWireJsonAsJavaScriptReadsIt()
+  {
+    var doc = new YDoc();
+    var deep = new string('[', 300) + "1" + new string(']', 300);
+
+    WriteBlock(doc, "n1");
+    ApplyForeign(
+        doc,
+        Keyed(0, DataOf(doc, "n1"), "numbers", new ContentEmbed("""{"n":1.0,"e":1e2,"i":1e999}""")),
+        Keyed(1, DataOf(doc, "n1"), "deep", new ContentJson([deep])));
+
+    var data = Assert.Single(RichTextRuntime.Export(doc))!["data"]!;
+
+    Assert.Equal("""{"n":1,"e":100,"i":null}""", data["numbers"]!.ToJsonString());
+    var written = data["deep"]!.ToJsonString();
+
+    // Depth, then what is left at the bottom: the cap writes null there.
+    Assert.Equal("256:null", $"{written.TakeWhile(character => character == '[').Count()}:{written.Trim('[', ']')}");
+  }
+
+  /// <summary>
   /// Only the string that cannot be written is dropped, as undefined is: the
   /// rest of the wire value survives.
   /// </summary>

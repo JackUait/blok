@@ -396,14 +396,14 @@ test.describe('root popover boundary', () => {
       // collision engine's above/below flip threshold during the 80px scroll.
       await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 240), SCROLL_HOST_ID);
 
-      // Use a plain child so the native right-click path is not intentionally
-      // excluded as an interactive link/media context menu.
+      // A plain child with no text: links and media are skipped by the native
+      // right-click path, and text keeps the browser menu.
       await bookmark.evaluate((element) => {
         const target = document.createElement('span');
 
         target.dataset.virtualAnchorTarget = 'true';
-        target.textContent = 'Open block context menu';
         target.style.display = 'block';
+        target.style.height = '24px';
         element.appendChild(target);
       });
 

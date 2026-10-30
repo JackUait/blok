@@ -499,6 +499,8 @@ export class LinkHoverCard {
       'appearance-none border-0 bg-transparent m-0 p-0 font-[inherit] cursor-pointer',
       // px, not the rem-based `max-w-70`: the card must not resize with the host's root font-size.
       'min-w-0 max-w-[280px] truncate text-left text-gray-text',
+      // `truncate` clips, so the card's `leading-none` would cut off letter tails.
+      'leading-normal',
       'underline-offset-2 can-hover:hover:underline can-hover:hover:text-text-primary'
     );
     url.setAttribute('data-blok-testid', 'link-hover-card-url');

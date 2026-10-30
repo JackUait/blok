@@ -116,6 +116,31 @@ test.describe('link hover card', () => {
     expect(gaps.copyToEdit).toBeGreaterThanOrEqual(2);
   });
 
+  test('shows the whole url text, letter tails included', async ({ page }) => {
+    await createLinkParagraph(page);
+    await page.locator(PARAGRAPH_LINK_SELECTOR).hover();
+
+    const url = page.getByTestId('link-hover-card-url');
+
+    await expect(page.getByTestId('link-hover-card')).toHaveAttribute('data-state', 'open');
+
+    // The url clips its overflow, so its box must hold the font's full
+    // ascent-to-descent run, which a text Range reports.
+    const boxes = await url.evaluate((element) => {
+      const range = document.createRange();
+
+      range.selectNodeContents(element);
+
+      const text = range.getBoundingClientRect();
+      const box = element.getBoundingClientRect();
+
+      return { textTop: text.top, textBottom: text.bottom, boxTop: box.top, boxBottom: box.bottom };
+    });
+
+    expect(boxes.textBottom).toBeLessThanOrEqual(boxes.boxBottom);
+    expect(boxes.textTop).toBeGreaterThanOrEqual(boxes.boxTop);
+  });
+
   test('shows the hover card without the edit button in read-only mode', async ({ page }) => {
     await createLinkParagraph(page, { readOnly: true });
 

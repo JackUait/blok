@@ -331,6 +331,7 @@ export class PagePicker {
     document.removeEventListener('pointerdown', this.handleOutsidePointer, true);
     content?.replaceChildren();
     listbox?.removeAttribute('role');
+    listbox?.removeAttribute('aria-busy');
     listbox?.removeAttribute('aria-label');
     listbox?.removeAttribute('id');
     search?.destroy();
@@ -465,6 +466,11 @@ export class PagePicker {
     this.entries = entries;
     this.activeIndex = entries.length === 0 ? -1 : Math.min(Math.max(this.activeIndex, 0), entries.length - 1);
     content.replaceChildren(...rows);
+    if (this.loading) {
+      this.listbox?.setAttribute('aria-busy', 'true');
+    } else {
+      this.listbox?.removeAttribute('aria-busy');
+    }
     this.popover?.setNothingFound(this.answered && !this.loading && entries.length === 0);
     this.syncSelection();
   }
@@ -513,7 +519,8 @@ export class PagePicker {
     if (name === 'link' && this.loading) {
       const spinner = document.createElement('span');
 
-      spinner.setAttribute('role', 'status');
+      // A listbox may own only options, so the spinner is hidden and the list is marked busy.
+      spinner.setAttribute('aria-hidden', 'true');
       spinner.setAttribute('aria-label', this.t('tools.page.searching'));
       spinner.setAttribute(DATA_ATTR.testid, 'page-picker-spinner');
       spinner.className = 'inline-block size-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent';

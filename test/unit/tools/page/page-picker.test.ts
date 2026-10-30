@@ -563,6 +563,10 @@ describe('PagePicker sections', () => {
     const skeletons = document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]');
 
     expect(spinner?.getAttribute('aria-label')).toBe('Searching…');
+    // A listbox may own only options: the spinner stays out of the tree and the list says it is busy.
+    expect(spinner?.getAttribute('aria-hidden')).toBe('true');
+    expect(spinner?.hasAttribute('role')).toBe(false);
+    expect(document.querySelector('[role="listbox"]')?.getAttribute('aria-busy')).toBe('true');
     expect(section('link')?.contains(spinner ?? null)).toBe(true);
     expect(skeletons).toHaveLength(2);
     skeletons.forEach((row) => expect(row.getAttribute('aria-hidden')).toBe('true'));
@@ -573,6 +577,7 @@ describe('PagePicker sections', () => {
 
     expect(document.querySelector('[data-blok-testid="page-picker-spinner"]')).toBeNull();
     expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(0);
+    expect(document.querySelector('[role="listbox"]')?.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('keeps the previous rows while a later search runs, with the spinner and no skeletons', () => {

@@ -1,0 +1,863 @@
+{
+  "cases": [
+    {
+      "name": "defaults",
+      "options": {},
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on wildcard",
+      "options": {
+        "ListenAddress": "0.0.0.0:4000"
+      },
+      "error": "--auth none serves anyone who can reach \"0.0.0.0:4000\" (which binds every network interface); it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on no host",
+      "options": {
+        "ListenAddress": ":4000"
+      },
+      "error": "--auth none serves anyone who can reach \":4000\" (an address with no host binds every network interface); it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on ipv6 any",
+      "options": {
+        "ListenAddress": "[::]:4000"
+      },
+      "error": "--auth none serves anyone who can reach \"[::]:4000\" (which binds every network interface); it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on public ip",
+      "options": {
+        "ListenAddress": "10.0.0.1:4000"
+      },
+      "error": "--auth none serves anyone who can reach \"10.0.0.1:4000\"; it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on localhost",
+      "options": {
+        "ListenAddress": "LOCALHOST:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on 127.1",
+      "options": {
+        "ListenAddress": "127.1:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on 0x7f",
+      "options": {
+        "ListenAddress": "0x7f.0.0.1:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on integer loopback",
+      "options": {
+        "ListenAddress": "2130706433:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on mapped loopback",
+      "options": {
+        "ListenAddress": "[::ffff:127.0.0.1]:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on mapped 127.0.0.2",
+      "options": {
+        "ListenAddress": "[::ffff:127.0.0.2]:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "none on ipv6 loopback",
+      "options": {
+        "ListenAddress": "[::1]:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "proxy on wildcard",
+      "options": {
+        "Auth": "proxy",
+        "ListenAddress": "0.0.0.0:4000"
+      },
+      "error": "--auth proxy trusts every caller, so it may only bind loopback, not \"0.0.0.0:4000\" (which binds every network interface) — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "proxy on no host",
+      "options": {
+        "Auth": "proxy",
+        "ListenAddress": ":4000"
+      },
+      "error": "--auth proxy trusts every caller, so it may only bind loopback, not \":4000\" (an address with no host binds every network interface) — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "proxy on dns",
+      "options": {
+        "Auth": "proxy",
+        "ListenAddress": "example.com:4000"
+      },
+      "error": "--auth proxy trusts every caller, so it may only bind loopback, not \"example.com:4000\" — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket short secret",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "short",
+        "AllowedOrigins": [
+          "https://a.example"
+        ]
+      },
+      "error": "--secret must be at least 32 characters (got 5)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket secret of 16 e-acute",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "éééééééééééééééé",
+        "AllowedOrigins": [
+          "https://a.example"
+        ]
+      },
+      "error": "--secret must be at least 32 characters (got 16)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket secret of 16 emoji",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00",
+        "AllowedOrigins": [
+          "https://a.example"
+        ]
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket no origins",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "s3cret-value-at-least-32-chars-long!"
+      },
+      "error": "a public service needs --allow-origin: without it anyone who finds this address can drive requests at third-party sites from your IP",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket on wildcard",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "s3cret-value-at-least-32-chars-long!",
+        "AllowedOrigins": [
+          "https://a.example"
+        ],
+        "ListenAddress": "0.0.0.0:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket on dns host",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "s3cret-value-at-least-32-chars-long!",
+        "AllowedOrigins": [
+          "https://a.example"
+        ],
+        "ListenAddress": "example.com:4000"
+      },
+      "error": "listen tcp: DNS host \"example.com\" would bind every network interface; use an IP address, localhost, or an explicit wildcard",
+      "localPublicPath": ""
+    },
+    {
+      "name": "ticket on star",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "s3cret-value-at-least-32-chars-long!",
+        "AllowedOrigins": [
+          "https://a.example"
+        ],
+        "ListenAddress": "*:4000"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "bad auth",
+      "options": {
+        "Auth": "NONE"
+      },
+      "error": "--auth must be none, proxy, or ticket (got \"NONE\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen without port",
+      "options": {
+        "ListenAddress": "127.0.0.1"
+      },
+      "error": "listen tcp: address 127.0.0.1: missing port in address",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen empty port",
+      "options": {
+        "ListenAddress": "127.0.0.1:"
+      },
+      "error": "listen tcp: address 127.0.0.1:: missing port in address",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen too many colons",
+      "options": {
+        "ListenAddress": "::1:4000"
+      },
+      "error": "--auth none serves anyone who can reach \"::1:4000\"; it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen bracket no port",
+      "options": {
+        "ListenAddress": "[::1]"
+      },
+      "error": "listen tcp: address [::1]: missing port in address",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen bad port",
+      "options": {
+        "ListenAddress": "127.0.0.1:65536"
+      },
+      "error": "listen tcp: address 65536: invalid port",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen signed port",
+      "options": {
+        "ListenAddress": "127.0.0.1:+80"
+      },
+      "error": "listen tcp: address +80: invalid port",
+      "localPublicPath": ""
+    },
+    {
+      "name": "listen dns host ticket",
+      "options": {
+        "Auth": "ticket",
+        "Secret": "s3cret-value-at-least-32-chars-long!",
+        "AllowedOrigins": [
+          "x"
+        ],
+        "ListenAddress": "host.local:80"
+      },
+      "error": "listen tcp: DNS host \"host.local\" would bind every network interface; use an IP address, localhost, or an explicit wildcard",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero max upload",
+      "options": {
+        "MaxUploadBytes": 0
+      },
+      "error": "--max-upload must be a positive number of bytes (got 0): a zero cap refuses every upload",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative max upload",
+      "options": {
+        "MaxUploadBytes": -5
+      },
+      "error": "--max-upload must be a positive number of bytes (got -5): a zero cap refuses every upload",
+      "localPublicPath": ""
+    },
+    {
+      "name": "max upload past array max with by-url",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/files",
+        "UnfurlDisabled": false,
+        "MaxUploadBytes": 2147483592
+      },
+      "error": "--max-upload must be no greater than 2147483591 bytes when remote URL upload is enabled (got 2147483592)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "max upload at array max with by-url",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/files",
+        "UnfurlDisabled": false,
+        "MaxUploadBytes": 2147483591
+      },
+      "error": "",
+      "localPublicPath": "/files"
+    },
+    {
+      "name": "max upload past array max without unfurl",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/files",
+        "MaxUploadBytes": 2147483592
+      },
+      "error": "",
+      "localPublicPath": "/files"
+    },
+    {
+      "name": "negative rate limit",
+      "options": {
+        "RateLimitPerMinute": -1
+      },
+      "error": "--rate-limit must be zero or greater (got -1)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero per-user cap",
+      "options": {
+        "CollabMaxConnectionsPerUserPerDoc": 0
+      },
+      "error": "CollabMaxConnectionsPerUserPerDoc must be a positive number (got 0): a zero cap refuses every sync connection",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative max connections",
+      "options": {
+        "CollabMaxConnections": -1
+      },
+      "error": "CollabMaxConnections must be zero (no ceiling) or greater (got -1)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero message bytes",
+      "options": {
+        "CollabMaxMessageBytes": 0
+      },
+      "error": "CollabMaxMessageBytes must be a positive number of bytes (got 0): a zero cap closes every sync connection on its first frame",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative keep-alive",
+      "options": {
+        "CollabKeepAliveIntervalMs": -1500
+      },
+      "error": "CollabKeepAliveInterval must be zero (off) or greater (got -00:00:01.5000000)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative keep-alive day",
+      "options": {
+        "CollabKeepAliveIntervalMs": -90061001
+      },
+      "error": "CollabKeepAliveInterval must be zero (off) or greater (got -1.01:01:01.0010000)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative frames",
+      "options": {
+        "CollabInboundFramesPerSecond": -1
+      },
+      "error": "CollabInboundFramesPerSecond must be zero (off) or greater (got -1)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero burst",
+      "options": {
+        "CollabInboundBurstFrames": 0
+      },
+      "error": "CollabInboundBurstFrames must be a positive number of frames (got 0): a zero burst closes every connection on its first frame",
+      "localPublicPath": ""
+    },
+    {
+      "name": "empty rich text type",
+      "options": {
+        "RichTextFields": {
+          "": [
+            "title"
+          ]
+        }
+      },
+      "error": "RichTextFields: rich text fields: a block type name is empty or holds a NUL.",
+      "localPublicPath": ""
+    },
+    {
+      "name": "nul rich text field",
+      "options": {
+        "RichTextFields": {
+          "callout": [
+            "a\u0000b"
+          ]
+        }
+      },
+      "error": "RichTextFields: rich text fields: a field of \"callout\" name is empty or holds a NUL.",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative resyncs",
+      "options": {
+        "CollabInboundResyncsPerMinute": -1
+      },
+      "error": "CollabInboundResyncsPerMinute must be zero (off) or greater (got -1)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "negative awareness",
+      "options": {
+        "CollabInboundAwarenessBytesPerSecond": -1
+      },
+      "error": "CollabInboundAwarenessBytesPerSecond must be zero (off) or greater (got -1)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "doc endpoint without collab",
+      "options": {
+        "DocEndpoint": "https://app.example/docs"
+      },
+      "error": "--doc-endpoint needs --collab: without it no sync room ever runs and the endpoint would be silently ignored",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 prefix without collab",
+      "options": {
+        "CollabS3Prefix": "collab/"
+      },
+      "error": "--collab-s3-prefix needs --collab: without it no working set is ever written and the prefix would be silently ignored",
+      "localPublicPath": ""
+    },
+    {
+      "name": "journal without collab",
+      "options": {
+        "CollabJournal": true
+      },
+      "error": "--collab-journal needs --collab: without it no sync room ever runs and the journal would be silently ignored",
+      "localPublicPath": ""
+    },
+    {
+      "name": "journal with s3 prefix",
+      "options": {
+        "CollabEnabled": true,
+        "CollabJournal": true,
+        "CollabS3Prefix": "c/"
+      },
+      "error": "--collab-journal cannot be used with --collab-s3-prefix: the journal is kept on this machine's disk, so a second instance sharing the bucket would not see it and would accept edits the journal never holds",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab without endpoint",
+      "options": {
+        "CollabEnabled": true
+      },
+      "error": "--collab needs --doc-endpoint: sync rooms seed documents from it and export them back to it, e.g. https://app.example.com/api/blok-docs",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint relative",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "/docs"
+      },
+      "error": "--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment (got \"/docs\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint with query",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs?x"
+      },
+      "error": "--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment (got \"https://app.example/docs?x\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint with userinfo",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://u@app.example/docs"
+      },
+      "error": "--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment (got \"https://u@app.example/docs\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint ftp",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "ftp://app.example/docs"
+      },
+      "error": "--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment (got \"ftp://app.example/docs\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint http remote",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "http://app.example/docs"
+      },
+      "error": "--doc-endpoint must use HTTPS unless it targets loopback for local development (got \"http://app.example/docs\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint http loopback",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "http://127.1:5000/docs"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab endpoint auth newline",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs",
+        "DocEndpointAuth": "Bearer x\n"
+      },
+      "error": "--doc-endpoint-auth must not contain a line break (a trailing newline from `echo` or a file is the usual cause): the header would be silently dropped from every doc-endpoint request",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab s3 prefix without bucket",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs",
+        "CollabS3Prefix": "c/"
+      },
+      "error": "--collab-s3-prefix needs --s3-bucket: the collaboration working set can only live in the bucket this server is configured for",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab dir equals storage",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs",
+        "CollabDirectory": "./data",
+        "StorageDirectory": "./data/",
+        "PublicUrl": "/files"
+      },
+      "error": "--collab-dir must not resolve inside --storage-dir (\"./data\" is under \"./data/\"): uploaded files are served publicly and the collaboration working set would be downloadable by anyone",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab dir inside storage",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs",
+        "CollabDirectory": "./data/collab",
+        "StorageDirectory": "./data",
+        "PublicUrl": "/files"
+      },
+      "error": "--collab-dir must not resolve inside --storage-dir (\"./data/collab\" is under \"./data\"): uploaded files are served publicly and the collaboration working set would be downloadable by anyone",
+      "localPublicPath": ""
+    },
+    {
+      "name": "collab dir beside storage",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs",
+        "CollabDirectory": "./data-collab",
+        "StorageDirectory": "./data",
+        "PublicUrl": "/files"
+      },
+      "error": "",
+      "localPublicPath": "/files"
+    },
+    {
+      "name": "collab dir via dot dot",
+      "options": {
+        "CollabEnabled": true,
+        "DocEndpoint": "https://app.example/docs",
+        "CollabDirectory": "./x/../data/c",
+        "StorageDirectory": "./data",
+        "PublicUrl": "/files"
+      },
+      "error": "--collab-dir must not resolve inside --storage-dir (\"./x/../data/c\" is under \"./data\"): uploaded files are served publicly and the collaboration working set would be downloadable by anyone",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url query",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/files?x"
+      },
+      "error": "PublicUrl must not contain a query or fragment (got \"/files?x\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url empty",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": ""
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url bad escape",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/fi%zzles"
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"/fi%zzles\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url protocol relative",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "//cdn.example/files"
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"//cdn.example/files\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url backslash",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/a\\b"
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"/a\\b\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url relative",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "files"
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"files\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url root",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "/"
+      },
+      "error": "",
+      "localPublicPath": "/"
+    },
+    {
+      "name": "public url absolute",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "https://cdn.example/media/files/"
+      },
+      "error": "",
+      "localPublicPath": "/media/files"
+    },
+    {
+      "name": "public url ftp",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "ftp://cdn.example/files"
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"ftp://cdn.example/files\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "public url userinfo",
+      "options": {
+        "StorageDirectory": "./u",
+        "PublicUrl": "https://u@cdn.example/files"
+      },
+      "error": "PublicUrl must be an HTTP(S) URL or a root-relative path (got \"https://u@cdn.example/files\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 without endpoint",
+      "options": {
+        "S3Bucket": "blok"
+      },
+      "error": "--s3-bucket needs --s3-endpoint, e.g. https://s3.eu-central-1.amazonaws.com",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 endpoint host only",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-endpoint must be a full HTTP(S) origin without credentials, a path, a query or a fragment (got \"s3.example.test\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 endpoint with path",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test/bucket",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-endpoint must be a full HTTP(S) origin without credentials, a path, a query or a fragment (got \"https://s3.example.test/bucket\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 endpoint with double slash",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test//",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 endpoint http remote",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "http://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-endpoint must use HTTPS unless it targets loopback for local development (got \"http://s3.example.test\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 endpoint http loopback",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "http://127.0.0.1:9000",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 without region",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-bucket needs --s3-region: an empty region is signed into every request and fails only at the first upload",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 without bucket url",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-bucket needs --s3-bucket-url: it is the prefix stored URLs are built from, and the only prefix a delete is recognised under",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 bucket url query",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://cdn.example/x?y",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-bucket-url must not contain a query or fragment (got \"https://cdn.example/x?y\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 bucket url relative",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "/media",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-bucket-url must be a full HTTP(S) URL (got \"/media\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 bucket url bad escape",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://cdn.example/%",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b"
+      },
+      "error": "--s3-bucket-url must be a full HTTP(S) URL (got \"https://cdn.example/%\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 without credentials",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": ""
+      },
+      "error": "--s3-bucket needs credentials in the BLOK_S3_ACCESS_KEY and BLOK_S3_SECRET_KEY environment variables (they are deliberately not flags: a flag lands in this machine's process list)",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 bad addressing",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b",
+        "S3Addressing": "dns"
+      },
+      "error": "--s3-addressing must be \"path\" or \"virtual\", or empty to choose automatically (got \"dns\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "s3 virtual",
+      "options": {
+        "S3Bucket": "blok",
+        "S3Endpoint": "https://s3.example.test",
+        "S3Region": "eu-central-1",
+        "S3BucketUrl": "https://uploads.example.test",
+        "S3AccessKey": "a",
+        "S3SecretKey": "b",
+        "S3Addressing": "virtual"
+      },
+      "error": "",
+      "localPublicPath": ""
+    }
+  ]
+}

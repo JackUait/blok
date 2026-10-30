@@ -159,9 +159,20 @@ interface OpenStart {
 interface PendingOpen {
   replace: boolean;
   start: OpenStart;
-  /** Keys typed while the bar code loads. They become the query. */
-  typed: string;
-  keysListener: string | undefined;
+  /**
+   * Holds focus while the bar code loads. Being a real field, it takes typing,
+   * paste, IME and dead keys natively, and keeps them out of the document.
+   */
+  field: HTMLInputElement;
+  /** The bar waits for an IME composition to end: moving focus would cut it short. */
+  composing: boolean;
+  loaded: typeof Kit | null;
+}
+
+/** What was typed into the stand-in field. It becomes the query. */
+interface Typed {
+  value: string;
+  selection: [number, number];
 }
 
 interface Rect {
@@ -262,7 +273,7 @@ export class Find extends Module {
    */
   public open(withReplace = false): Promise<void> {
     if (kit.loaded !== null) {
-      this.openWith(kit.loaded, withReplace, this.openStart(), '');
+      this.openWith(kit.loaded, withReplace, this.openStart(), null);
 
       return Promise.resolve();
     }
@@ -273,21 +284,21 @@ export class Find extends Module {
       return loadKit().then(() => undefined, () => undefined);
     }
 
-    const pending: PendingOpen = { replace: withReplace, start: this.openStart(), typed: '', keysListener: undefined };
+    // Read before the stand-in field takes focus and the selection.
+    const start = this.openStart();
+    const pending: PendingOpen = { replace: withReplace, start, field: this.standInField(), composing: false, loaded: null };
 
     this.pending = pending;
-    // Window capture runs before the editor's own document capture listener, which takes Escape.
-    pending.keysListener = this.listeners.on(window, 'keydown', this.onPendingKeydown, true);
+    document.body.appendChild(pending.field);
+    pending.field.focus({ preventScroll: true });
 
     return loadKit().then((loaded) => {
-      if (this.pending !== pending) {
-        return;
-      }
-      this.endPending();
-      this.openWith(loaded, pending.replace, pending.start, pending.typed);
+      pending.loaded = loaded;
+      this.adopt(pending);
     }, (error: unknown) => {
       if (this.pending === pending) {
         this.endPending();
+        this.giveFocusBack(pending.start.returnFocus);
       }
       console.error('[Blok] Failed to open find. Reason:', error);
     });
@@ -325,6 +336,10 @@ export class Find extends Module {
       return;
     }
 
+    this.giveFocusBack(back);
+  }
+
+  private giveFocusBack(back: Find['returnFocus']): void {
     if (back !== null && back.element.isConnected) {
       back.element.focus({ preventScroll: true });
 
@@ -433,36 +448,69 @@ export class Find extends Module {
     }
   };
 
-  /**
-   * While the bar code loads, keys meant for the find field must not edit the
-   * document. Typed text is kept for the query; Escape gives up the open.
-   */
-  private readonly onPendingKeydown = (event: Event): void => {
+  private standInField(): HTMLInputElement {
+    const field = document.createElement('input');
+
+    field.type = 'text';
+    field.setAttribute('aria-label', this.Blok.I18n.t('find.placeholder'));
+    // Find's own surface: other editors and the key routing treat it as the bar.
+    field.setAttribute('data-blok-interface', 'find');
+    // Invisible and out of the layout; it lives for one chunk load.
+    Object.assign(field.style, { position: 'fixed', width: '1px', height: '1px', opacity: '0', pointerEvents: 'none' });
+
+    field.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' || event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+      }
+      if (event.key === 'Escape' && this.pending?.field === field) {
+        const back = this.pending.start.returnFocus;
+
+        this.endPending();
+        this.giveFocusBack(back);
+      }
+    });
+    field.addEventListener('compositionstart', () => {
+      if (this.pending?.field === field) {
+        this.pending.composing = true;
+      }
+    });
+    field.addEventListener('compositionend', () => {
+      if (this.pending?.field === field) {
+        this.pending.composing = false;
+        this.adopt(this.pending);
+      }
+    });
+    // Focus went elsewhere: the reader moved on.
+    field.addEventListener('blur', () => {
+      if (this.pending?.field === field) {
+        this.endPending();
+      }
+    });
+
+    return field;
+  }
+
+  /** Open the bar with what the stand-in field holds, once the code is here and no composition runs. */
+  private adopt(pending: PendingOpen): void {
+    if (this.pending !== pending || pending.loaded === null || pending.composing) {
+      return;
+    }
+
+    const { field } = pending;
+    const typed: Typed | null = field.value === ''
+      ? null
+      : { value: field.value, selection: [field.selectionStart ?? field.value.length, field.selectionEnd ?? field.value.length] };
+
+    this.endPending();
+    this.openWith(pending.loaded, pending.replace, pending.start, typed);
+  }
+
+  /** Drop a pending open and its stand-in field. Focus is left where it is. */
+  private endPending(): void {
     const pending = this.pending;
 
-    if (pending === null || !(event instanceof KeyboardEvent) || event.isComposing || isModKey(event)) {
-      return;
-    }
-
-    if (event.key === 'Escape') {
-      this.endPending();
-    } else if (event.key === 'Backspace') {
-      pending.typed = pending.typed.slice(0, -1);
-    } else if ([...event.key].length === 1) {
-      pending.typed += event.key;
-    } else if (event.key !== 'Enter' && event.key !== 'Delete') {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
-  private endPending(): void {
-    if (this.pending?.keysListener !== undefined) {
-      this.listeners.offById(this.pending.keysListener);
-    }
     this.pending = null;
+    pending?.field.remove();
   }
 
   private readonly markActive = (): void => {
@@ -565,7 +613,7 @@ export class Find extends Module {
   private ownsKeyTarget(target: EventTarget | null, inHostField: boolean): boolean {
     const { wrapper } = this.Blok.UI.nodes;
 
-    const isInBar = target instanceof Node && this.bar?.element.contains(target) === true;
+    const isInBar = target instanceof Node && (this.bar?.element.contains(target) === true || this.pending?.field === target);
 
     if (isInBar) {
       return !inHostField;
@@ -639,13 +687,13 @@ export class Find extends Module {
    * @param loaded - the bar code
    * @param withReplace - also open the replace row
    * @param start - what the page held at the keystroke
-   * @param typed - keys typed while the bar code loaded; they win over the prefill
+   * @param typed - text typed while the bar code loaded; it wins over the prefill
    */
-  private openWith(loaded: typeof Kit, withReplace: boolean, start: OpenStart, typed: string): void {
+  private openWith(loaded: typeof Kit, withReplace: boolean, start: OpenStart, typed: Typed | null): void {
     const bar = this.ensureBar(loaded);
     const wasOpen = bar.isOpen;
-    const query = typed !== '' ? typed : start.prefill;
-    const hop = typed === '' && start.prefill !== null && start.prefillRange !== null
+    const query = typed?.value ?? start.prefill;
+    const hop = typed === null && start.prefill !== null && start.prefillRange !== null
       ? loaded.hopSourceFromRange(start.prefillRange, start.prefill)
       : null;
 
@@ -665,7 +713,7 @@ export class Find extends Module {
       replace: withReplace,
       readOnly: this.Blok.ReadOnly.isEnabled,
       hop,
-      caretAtEnd: typed !== '',
+      selection: typed?.selection,
     });
 
     // Search now, not after the typing debounce: until then the bar would show "No results".

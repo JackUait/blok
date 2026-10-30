@@ -238,6 +238,29 @@ describe('Find module', () => {
 
   describe('before the bar code has loaded', () => {
     const KEY_F = { key: 'f', code: 'KeyF', ctrlKey: true };
+    const KEY_H = { key: 'h', code: 'KeyH', ctrlKey: true };
+
+    /** Where keys go while the bar code loads: a real field, so paste, IME and dead keys work natively. */
+    const standIn = (): HTMLInputElement => {
+      const field = document.activeElement;
+
+      if (!(field instanceof HTMLInputElement)) {
+        throw new Error('focus is not in a text field');
+      }
+
+      return field;
+    };
+
+    /** Native typing: the browser writes the text and the caret, then fires input. */
+    const typeInto = (value: string): void => {
+      const field = standIn();
+
+      field.value = value;
+      field.setSelectionRange(value.length, value.length);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const textOf = (redactor: HTMLElement): HTMLElement => redactor.querySelector<HTMLElement>('[contenteditable]') ?? redactor;
 
     it('keeps Cmd+F from the browser at once and opens the bar when the code arrives', async () => {
       const { redactor } = editor([{ id: 'a', text: 'hello' }]);
@@ -250,25 +273,67 @@ describe('Find module', () => {
       expect(searchInput()).toHaveFocus();
     });
 
-    it('puts what the reader types while it loads into the find field, not the document', async () => {
-      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
-      const text = redactor.querySelector('[contenteditable]') ?? redactor;
+    it('moves focus out of the document at the keystroke, so typing, paste, IME and Tab cannot edit it', async () => {
+      const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
+      const text = textOf(redactor);
 
+      text.focus();
       press(text, KEY_F);
-      const typed = [
-        press(text, { key: 'h', code: 'KeyH' }),
-        press(text, { key: 'x', code: 'KeyX' }),
-        press(text, { key: 'Backspace', code: 'Backspace' }),
-        press(text, { key: 'e', code: 'KeyE' }),
-      ];
 
-      expect(typed.map((event) => event.defaultPrevented)).toEqual([true, true, true, true]);
+      const field = standIn();
+
+      expect(wrapper.contains(field)).toBe(false);
+      expect(field.getAttribute('data-blok-interface')).toBe('find');
+      // Tab would move focus on and give up the open; the bar it stands in for keeps it.
+      expect(press(field, { key: 'Tab', code: 'Tab' }).defaultPrevented).toBe(true);
 
       await settle();
 
-      expect(searchInput().value).toBe('he');
-      // The caret goes after the typed text, so the next key adds to it.
-      expect([searchInput().selectionStart, searchInput().selectionEnd]).toEqual([2, 2]);
+      expect(field.isConnected).toBe(false);
+    });
+
+    it('carries what was typed or pasted while it loaded into the find field, caret included', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(textOf(redactor), KEY_F);
+      const field = standIn();
+
+      typeInto('held');
+      field.setSelectionRange(1, 3);
+      await settle();
+
+      expect(searchInput().value).toBe('held');
+      expect([searchInput().selectionStart, searchInput().selectionEnd]).toEqual([1, 3]);
+    });
+
+    it('waits for an IME composition to end before it moves the text into the bar', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(textOf(redactor), KEY_F);
+      const field = standIn();
+
+      field.dispatchEvent(new CompositionEvent('compositionstart'));
+      typeInto('にほ');
+      await settle();
+
+      expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
+      expect(field).toHaveFocus();
+
+      typeInto('日本');
+      field.dispatchEvent(new CompositionEvent('compositionend'));
+
+      expect(searchInput().value).toBe('日本');
+      expect(searchInput()).toHaveFocus();
+    });
+
+    it('opens the replace row when the replace shortcut comes while it loads', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(textOf(redactor), KEY_F);
+      expect(press(standIn(), KEY_H).defaultPrevented).toBe(true);
+      await settle();
+
+      expect(openBar().querySelector('[data-blok-testid="find-replace-toggle"]')?.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('takes the selection from the moment of the keystroke', async () => {
@@ -288,31 +353,65 @@ describe('Find module', () => {
       expect(searchInput().value).toBe('hello');
     });
 
-    it('does not open when Escape is pressed while it loads', async () => {
+    it('gives up the open and puts focus back in the text on Escape', async () => {
       const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+      const text = textOf(redactor);
 
-      press(redactor, KEY_F);
-
-      expect(press(redactor, { key: 'Escape', code: 'Escape' }).defaultPrevented).toBe(true);
-
+      text.focus();
+      press(text, KEY_F);
+      press(standIn(), { key: 'Escape', code: 'Escape' });
       await settle();
 
       expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
-      expect(press(redactor, { key: 'a', code: 'KeyA' }).defaultPrevented).toBe(false);
+      expect(text).toHaveFocus();
     });
 
-    it('keeps Escape from the editor\'s own document listener while it loads', async () => {
-      const editorKeys = vi.fn();
-
-      document.addEventListener('keydown', editorKeys, true);
+    it('gives up the open when the reader clicks elsewhere while it loads', async () => {
       const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+      const hostInput = document.createElement('input');
 
-      press(redactor, KEY_F);
-      press(redactor, { key: 'Escape', code: 'Escape' });
-      document.removeEventListener('keydown', editorKeys, true);
+      document.body.appendChild(hostInput);
+      press(textOf(redactor), KEY_F);
+      const field = standIn();
+
+      hostInput.focus();
       await settle();
 
-      expect(editorKeys.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual(['f']);
+      expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
+      expect(field.isConnected).toBe(false);
+      expect(hostInput).toHaveFocus();
+    });
+
+    it('with two editors, a Cmd+F while the first loads opens only one bar, and keys reach no editor', async () => {
+      const first = editor([{ id: 'a', text: 'first' }]);
+      const second = editor([{ id: 'b', text: 'second' }]);
+
+      press(textOf(first.redactor), KEY_F);
+      expect(press(standIn(), KEY_F).defaultPrevented).toBe(true);
+      typeInto('fir');
+      await settle();
+
+      expect(document.querySelectorAll('[data-blok-find]:not([hidden])')).toHaveLength(1);
+      expect(searchInput().value).toBe('fir');
+      expect(first.find.isOpen).toBe(true);
+      expect(second.find.isOpen).toBe(false);
+    });
+
+    it('with two editors, moving to the second while the first loads opens only the second', async () => {
+      const first = editor([{ id: 'a', text: 'first' }]);
+      const second = editor([{ id: 'b', text: 'second' }]);
+      const secondText = textOf(second.redactor);
+
+      press(textOf(first.redactor), KEY_F);
+      secondText.focus();
+      press(secondText, KEY_F);
+      typeInto('sec');
+      await settle();
+
+      expect(document.querySelectorAll('[data-blok-find]:not([hidden])')).toHaveLength(1);
+      expect(first.find.isOpen).toBe(false);
+      expect(second.find.isOpen).toBe(true);
+      expect(searchInput().value).toBe('sec');
     });
 
     it('does not open in an editor destroyed while it loads', async () => {
@@ -323,6 +422,7 @@ describe('Find module', () => {
       await settle();
 
       expect(document.querySelector('[data-blok-find]')).toBeNull();
+      expect(document.querySelector('[data-blok-interface="find"]')).toBeNull();
     });
 
     it('reports a failed load, gives the keyboard back, and tries again on the next Cmd+F', async () => {
@@ -332,16 +432,19 @@ describe('Find module', () => {
         throw new Error('offline');
       });
       const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+      const text = textOf(redactor);
 
-      press(redactor, KEY_F);
+      text.focus();
+      press(text, KEY_F);
       await settle();
 
       expect(error).toHaveBeenCalledWith('[Blok] Failed to open find. Reason:', expect.anything());
       expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
-      expect(press(redactor, { key: 'a', code: 'KeyA' }).defaultPrevented).toBe(false);
+      expect(document.querySelector('[data-blok-interface="find"]')).toBeNull();
+      expect(text).toHaveFocus();
 
       vi.doUnmock(KIT_PATH);
-      press(redactor, KEY_F);
+      press(text, KEY_F);
       await settle();
 
       expect(searchInput()).toHaveFocus();

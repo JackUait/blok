@@ -248,13 +248,36 @@ test.describe('find in page', () => {
       await focusParagraph(page, 'alpha');
       await page.keyboard.press(FIND_KEY);
       await expect.poll(() => held.length).toBe(1);
-      await page.keyboard.type('beta');
+      await page.keyboard.type('be');
+      await page.keyboard.press('Tab');
+      // What a paste or an IME commit does: text inserted without key presses.
+      await page.keyboard.insertText('ta');
       release();
 
       await expect(page.getByTestId('find-input')).toBeFocused();
       await expect(page.getByTestId('find-input')).toHaveValue('beta');
       await waitPastOnChangeBatch(page);
       expect(await savedTexts(page)).toEqual(['alpha', 'beta']);
+      await page.unroute(KIT_CHUNK);
+    });
+
+    test('a click in the text while the bar code loads gives up the open', async ({ page }) => {
+      const { held, release } = await holdFindCode(page);
+
+      await createEditor(page, paragraphs('alpha', 'beta'));
+      await focusParagraph(page, 'alpha');
+      await page.keyboard.press(FIND_KEY);
+      await expect.poll(() => held.length).toBe(1);
+      await page.getByText('beta', { exact: true }).click();
+      const arrived = page.waitForResponse(KIT_CHUNK);
+
+      release();
+      await arrived;
+      await page.keyboard.type('!');
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      await waitPastOnChangeBatch(page);
+      expect(await savedTexts(page)).toEqual(['alpha', 'beta!']);
       await page.unroute(KIT_CHUNK);
     });
 
@@ -2033,8 +2056,8 @@ test.describe('find in page', () => {
         await focusParagraph(page, 'hello there');
         await page.keyboard.press(FIND_KEY);
 
-        // One synchronous read, at the bloom's first frame.
-        const start = await page.evaluate(() => {
+        // Polled every frame: one read at the bloom's first frame, once the bar code has loaded.
+        const opened = await page.waitForFunction(() => {
           const dock = document.querySelector<HTMLElement>('[data-blok-find]');
           const bar = document.querySelector<HTMLElement>('[data-blok-find-bar]');
           const skin = dock?.getAnimations({ subtree: true }).find((animation) => {
@@ -2054,7 +2077,8 @@ test.describe('find in page', () => {
           skin.play();
 
           return read;
-        });
+        }, undefined, { polling: 'raf' });
+        const start = await opened.jsonValue();
 
         expect(start?.dir).toBe(dir);
         expect(start?.width).toBe('40px');

@@ -339,7 +339,7 @@ export class FindBar {
     return { matchCase: this.matchCase, wholeWord: this.wholeWord };
   }
 
-  public open(init: { query?: string; replace?: boolean; readOnly: boolean; hop?: HopSource | null; caretAtEnd?: boolean }): void {
+  public open(init: { query?: string; replace?: boolean; readOnly: boolean; hop?: HopSource | null; selection?: [number, number] }): void {
     // The same word hopping in again: its old copy in the field fades instead of blinking out.
     const again = init.query !== undefined && init.query !== '' && this.input.value === init.query;
 
@@ -391,9 +391,9 @@ export class FindBar {
 
     this.focusQuery();
 
-    // Text typed while the bar loaded: the next key adds to it.
-    if (init.caretAtEnd === true) {
-      this.input.setSelectionRange(this.input.value.length, this.input.value.length);
+    // Text typed while the bar loaded keeps its caret, so the next key lands where the reader expects.
+    if (init.selection !== undefined) {
+      this.input.setSelectionRange(...init.selection);
     }
   }
 

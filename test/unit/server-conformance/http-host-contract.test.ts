@@ -5,7 +5,7 @@
 // --target csharp --suite http-host-contract. Any other run compares.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { chmod, mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -370,4 +370,57 @@ it('reads the unfurl url from the query the way ASP.NET does', async () => {
   }
 
   compareGolden('unfurl-queries.json', actual);
+}, 60_000);
+
+interface DeleteGolden {
+  name: string;
+  response: GoldenResponse & { keyExistsAfter: boolean };
+}
+
+it('deletes local blobs with the C# failures', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-delete-'));
+  const storage = join(directory, 'storage');
+  const publicUrl = 'https://uploads.example.com/files/';
+  const key = (letter: string): string => `${letter.repeat(32)}.txt`;
+  const exists = (path: string): Promise<boolean> => stat(path).then(() => true, () => false);
+  // Each step stages the storage, then deletes one key. The last ones break
+  // the storage directory itself.
+  const steps: Array<{ name: string; key: string; stage: () => Promise<void> }> = [
+    { name: 'a stored file', key: key('a'), stage: () => writeFile(join(storage, key('a')), 'x') },
+    { name: 'a missing file', key: key('b'), stage: async () => undefined },
+    { name: 'an empty directory at the key', key: key('c'), stage: () => mkdir(join(storage, key('c'))) },
+    {
+      name: 'a full directory at the key',
+      key: key('d'),
+      stage: async () => {
+        await mkdir(join(storage, key('d')));
+        await writeFile(join(storage, key('d'), 'inner'), 'x');
+      },
+    },
+    { name: 'a missing storage directory', key: key('e'), stage: () => rm(storage, { recursive: true }) },
+    { name: 'a file where the storage directory was', key: key('f'), stage: () => writeFile(storage, 'x') },
+  ];
+  const actual: DeleteGolden[] = [];
+
+  try {
+    await mkdir(storage);
+    await withServer(['--storage-dir', storage, '--public-url', publicUrl], async (server) => {
+      for (const step of steps) {
+        await step.stage();
+        const response = await server.request('POST', '/delete', {
+          body: JSON.stringify({ url: `${publicUrl}${step.key}` }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        actual.push({
+          name: step.name,
+          response: { ...golden(response), keyExistsAfter: await exists(join(storage, step.key)) },
+        });
+      }
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  compareGolden('local-delete-responses.json', actual);
 }, 60_000);

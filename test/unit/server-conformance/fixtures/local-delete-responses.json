@@ -1,0 +1,98 @@
+[
+  {
+    "name": "a stored file",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1}\n",
+      "keyExistsAfter": false
+    }
+  },
+  {
+    "name": "a missing file",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1}\n",
+      "keyExistsAfter": false
+    }
+  },
+  {
+    "name": "an empty directory at the key",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "delete failed\n",
+      "keyExistsAfter": true
+    }
+  },
+  {
+    "name": "a full directory at the key",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "delete failed\n",
+      "keyExistsAfter": true
+    }
+  },
+  {
+    "name": "a missing storage directory",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "delete failed\n",
+      "keyExistsAfter": false
+    }
+  },
+  {
+    "name": "a file where the storage directory was",
+    "response": {
+      "status": 502,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "delete failed\n",
+      "keyExistsAfter": false
+    }
+  }
+]

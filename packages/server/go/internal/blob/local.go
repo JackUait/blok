@@ -74,7 +74,12 @@ func (l *Local) Delete(ctx context.Context, url string) error {
 	if !ok {
 		return ErrForeign
 	}
-	err := os.Remove(filepath.Join(l.Directory, key))
+	path := filepath.Join(l.Directory, key)
+	// File.Delete never removes a directory; os.Remove would rmdir an empty one.
+	if info, err := os.Lstat(path); err == nil && info.IsDir() {
+		return &fs.PathError{Op: "remove", Path: path, Err: errors.New("is a directory")}
+	}
+	err := os.Remove(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		if _, statErr := os.Stat(l.Directory); statErr != nil {
 			return statErr

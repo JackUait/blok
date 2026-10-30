@@ -563,6 +563,12 @@ export class BlockHierarchy {
 
     hideUnderCollapsedParent(block, id => this.repository.getBlockById(id));
 
+    // Only a block with the flag has anything to drop, so only it pays for
+    // the sibling walk: a table row adds a visible child per cell.
+    if (oldParentId === newParentId || !block.holder.classList.contains('hidden')) {
+      return;
+    }
+
     // A block leaving a collapsed toggle keeps its `hidden` flag only if the
     // new parent hides it too. A hidden parent whose holder holds the block
     // (an inactive tab) already conceals it; a flag of its own would outlive
@@ -578,7 +584,7 @@ export class BlockHierarchy {
       })
     );
 
-    if (oldParentId !== newParentId && !hiddenByNewParent) {
+    if (!hiddenByNewParent) {
       block.holder.classList.remove('hidden');
     }
   }

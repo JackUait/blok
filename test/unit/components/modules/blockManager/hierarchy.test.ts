@@ -2614,4 +2614,60 @@ describe('BlockHierarchy', () => {
       expect(c2.holder.parentElement).toBe(cellTwo);
     });
   });
+
+  describe('syncVisibilityWithParent', () => {
+    const familyOf = (children: number): { repository: BlockRepository; moved: Block } => {
+      const childIds = Array.from({ length: children }, (_, i) => `c${i}`);
+      const repository = createRepositoryWithBlocks([
+        { id: 'parent', contentIds: [...childIds, 'moved'], name: 'table' },
+        ...childIds.map(id => ({ id, parentId: 'parent' })),
+        { id: 'moved', parentId: 'parent' },
+      ]);
+      const moved = repository.getBlockById('moved');
+
+      if (moved === undefined) {
+        throw new Error('no moved block');
+      }
+
+      return { repository, moved };
+    };
+
+    // A table row adds one child per cell: a walk over all siblings per child made the drag slow down as the table grew.
+    it('looks up as many siblings for a visible block under a big parent as under a small one', () => {
+      const lookups = (children: number): number => {
+        const { repository, moved } = familyOf(children);
+        const getById = vi.spyOn(repository, 'getBlockById');
+
+        hierarchyOf(repository).syncVisibilityWithParent(moved, null);
+
+        const calls = getById.mock.calls.length;
+
+        getById.mockRestore();
+
+        return calls;
+      };
+
+      expect(lookups(300)).toBe(lookups(5));
+    });
+
+    it('shows a hidden block that moves under a parent whose children are visible', () => {
+      const { repository, moved } = familyOf(3);
+
+      moved.holder.classList.add('hidden');
+      hierarchyOf(repository).syncVisibilityWithParent(moved, 'old-toggle');
+
+      expect(moved.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('keeps a hidden block hidden when it moves among hidden siblings', () => {
+      const { repository, moved } = familyOf(3);
+
+      ['c0', 'c1', 'c2'].forEach(id => repository.getBlockById(id)?.holder.classList.add('hidden'));
+      moved.holder.classList.add('hidden');
+      hierarchyOf(repository).syncVisibilityWithParent(moved, 'old-toggle');
+
+      expect(moved.holder.classList.contains('hidden')).toBe(true);
+    });
+  });
 });
+

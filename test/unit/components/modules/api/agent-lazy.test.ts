@@ -93,7 +93,7 @@ const answer = (text: string): AgentModelResponse => ({ stop_reason: 'end_turn',
 // A cold transform of the whole editor can outlast one test's timeout.
 beforeAll(async () => {
   await import('../../../../../src/blok');
-  await import(AGENT_CODE);
+  await import('../../../../../src/components/modules/api/agent-impl');
 }, 60_000);
 
 beforeEach(() => {

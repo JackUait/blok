@@ -13,7 +13,6 @@ const chunk = vi.hoisted(() => ({
 }));
 
 const PICKER = '../../../../../src/tools/callout/emoji-picker';
-const CONTROL = '../../../../../src/components/modules/pageTitle/icon-control';
 
 const pickerModule = async (): Promise<unknown> => {
   await chunk.gate;
@@ -48,7 +47,7 @@ const freshControl = async (initial: PageIcon | null): Promise<{
 }> => {
   vi.resetModules();
   vi.doMock(PICKER, pickerModule);
-  const { createIconControl } = await import(CONTROL);
+  const { createIconControl } = await import('../../../../../src/components/modules/pageTitle/icon-control');
   const row = document.createElement('div');
   const state = { icon: initial, readOnly: false };
 

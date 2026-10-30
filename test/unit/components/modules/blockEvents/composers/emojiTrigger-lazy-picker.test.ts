@@ -27,7 +27,6 @@ const data = vi.hoisted(() => ({ loads: 0 }));
 
 const PICKER = '../../../../../../src/tools/callout/emoji-picker';
 const EMOJI_DATA = '../../../../../../src/components/utils/emoji/emoji-data';
-const TRIGGER = '../../../../../../src/components/modules/blockEvents/composers/emojiTrigger';
 
 const pickerModule = async (): Promise<unknown> => {
   await chunk.gate;
@@ -67,7 +66,7 @@ const freshTrigger = async (): Promise<{ trigger: EmojiTrigger; block: ReturnTyp
       },
     };
   });
-  const { EmojiTrigger: Trigger } = await import(TRIGGER);
+  const { EmojiTrigger: Trigger } = await import('../../../../../../src/components/modules/blockEvents/composers/emojiTrigger');
   const block = createBlock(':fi');
 
   document.body.appendChild(block.holder);

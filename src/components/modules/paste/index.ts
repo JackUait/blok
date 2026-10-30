@@ -3,7 +3,7 @@ import { Dom as dom$ } from '../../dom';
 import { findOwn } from '../../utils/own-element';
 import { recordPasteHandling } from '../../utils/paste-continuation';
 import { log } from '../../utils/logger';
-import { getCaretOffset } from '../../utils/caret/selection';
+import { rangeAtTextOffsets, textOffsetOf } from '../../utils/caret/selection';
 
 import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME } from './constants';
 import { ToolRegistry } from './tool-registry';
@@ -19,7 +19,15 @@ interface PastePlace {
   blockId: string | undefined;
   /** Index of the input the caret was in, or null when it was in none. */
   inputIndex: number | null;
+  /** Text offsets of the selection in that input; equal for a caret. */
   offset: number;
+  endOffset: number;
+  /**
+   * The selection itself, used while its nodes are still in that input: an
+   * offset at a node edge cannot tell "end of the text before a link" from
+   * "start of the link".
+   */
+  range: Range | null;
 }
 
 /**
@@ -243,16 +251,20 @@ export class Paste extends Module {
   private placeOfPaste(): PastePlace {
     const block = this.Blok.BlockManager.currentBlock;
     const selection = window.getSelection();
-    const anchor = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0).startContainer : null;
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
     const inputs = block?.inputs ?? [];
-    const inputIndex = anchor === null ? -1 : inputs.findIndex(input => input.contains(anchor));
+    const inputIndex = range === null ? -1 : inputs.findIndex(input => input.contains(range.startContainer));
     const input = inputs[inputIndex];
 
-    return {
-      blockId: block?.id,
-      inputIndex: input === undefined ? null : inputIndex,
-      offset: input === undefined ? 0 : getCaretOffset(input),
-    };
+    if (range === null || input === undefined) {
+      return { blockId: block?.id, inputIndex: null, offset: 0, endOffset: 0, range: null };
+    }
+
+    const offset = textOffsetOf(input, range.startContainer, range.startOffset);
+    // A selection that runs past this input is kept up to the input's end.
+    const endOffset = input.contains(range.endContainer) ? textOffsetOf(input, range.endContainer, range.endOffset) : (input.textContent ?? '').length;
+
+    return { blockId: block?.id, inputIndex, offset, endOffset: Math.max(offset, endOffset), range: range.cloneRange() };
   }
 
   private caretInEditor(): boolean {
@@ -294,11 +306,18 @@ export class Paste extends Module {
     const input = place.inputIndex === null ? undefined : inputs[place.inputIndex] ?? inputs.at(-1);
 
     if (input !== undefined) {
-      const { node, offset } = dom$.getNodeByOffset(input, place.offset);
+      const kept = place.range;
+      // A Range follows DOM edits, so it is trusted only while it still covers the same text.
+      const range = kept !== null && input.contains(kept.startContainer) && input.contains(kept.endContainer) &&
+        textOffsetOf(input, kept.startContainer, kept.startOffset) === place.offset &&
+        textOffsetOf(input, kept.endContainer, kept.endOffset) === place.endOffset
+        ? kept
+        : rangeAtTextOffsets(input, place.offset, place.endOffset);
 
       // Focus first: moving focus between inputs can reset the selection.
       input.focus();
-      window.getSelection()?.collapse(node ?? input, node === null ? input.childNodes.length : offset);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
       block.currentInput = input;
     }
 

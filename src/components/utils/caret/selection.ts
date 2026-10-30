@@ -5,6 +5,8 @@
  * from the DOM. It is the foundation for other caret utilities.
  */
 
+import { Dom } from '../../dom';
+
 /**
  * Returns TextNode containing a caret and a caret offset in it.
  * Returns null if there is no caret set.
@@ -87,4 +89,41 @@ export const getCaretOffset = (input?: HTMLElement): number => {
 
   // Get the text length up to the caret
   return preCaretRange.toString().length;
+};
+
+/**
+ * Length of the text in `input` before a point inside it.
+ * @param input - the editable that holds the point
+ * @param node - the point's node
+ * @param offset - the point's offset in that node
+ */
+export const textOffsetOf = (input: HTMLElement, node: Node, offset: number): number => {
+  const range = document.createRange();
+
+  range.selectNodeContents(input);
+  range.setEnd(node, offset);
+
+  return range.toString().length;
+};
+
+/**
+ * A range over the text of `input` between two text offsets, clamped to its
+ * length. An offset at a node edge resolves to the end of the earlier node.
+ * @param input - the editable
+ * @param start - text offset of the start
+ * @param end - text offset of the end
+ */
+export const rangeAtTextOffsets = (input: HTMLElement, start: number, end: number): Range => {
+  const from = Dom.getNodeByOffset(input, start);
+  const to = Dom.getNodeByOffset(input, end);
+  const range = document.createRange();
+
+  range.selectNodeContents(input);
+  range.collapse(false);
+  if (from.node !== null && to.node !== null) {
+    range.setStart(from.node, from.offset);
+    range.setEnd(to.node, to.offset);
+  }
+
+  return range;
 };

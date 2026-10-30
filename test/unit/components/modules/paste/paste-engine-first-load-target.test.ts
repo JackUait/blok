@@ -134,6 +134,22 @@ describe('first paste while the pipeline loads', () => {
     });
   });
 
+  it('replaces the text that was selected when the paste was made', async () => {
+    const instance = await boot();
+    const target = editable('a');
+
+    target.focus();
+    instance.caret.setToBlock('a', 'end');
+    window.getSelection()?.selectAllChildren(target);
+    target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+      clipboardData: { getData: (type: string): string => (type === 'text/plain' ? 'P1' : ''), types: ['text/plain'] },
+    }));
+
+    await vi.waitFor(async () => {
+      expect(await texts(instance)).toEqual(['P1', 'B']);
+    });
+  });
+
   it('lands two pastes made during the load in their own blocks, in order', async () => {
     const instance = await boot();
 

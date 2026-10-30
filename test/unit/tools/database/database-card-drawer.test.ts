@@ -1705,10 +1705,12 @@ describe('DatabaseCardDrawer', () => {
     });
 
     it('passes toolsConfig to the nested Blok instance', async () => {
-      const mockBlokConstructor = vi.fn().mockReturnValue({
-        isReady: Promise.resolve(),
-        save: vi.fn().mockResolvedValue({ blocks: [] }),
-        destroy: vi.fn(),
+      const mockBlokConstructor = vi.fn(function nestedEditor(_cfg: { tools?: unknown; inlineToolbar?: unknown; holder?: unknown }) {
+        return {
+          isReady: Promise.resolve(),
+          save: vi.fn().mockResolvedValue({ blocks: [] }),
+          destroy: vi.fn(),
+        };
       });
 
       vi.resetModules();
@@ -1764,10 +1766,12 @@ describe('DatabaseCardDrawer', () => {
     });
 
     it('creates nested Blok without tools when toolsConfig is not provided', async () => {
-      const mockBlokConstructor = vi.fn().mockReturnValue({
-        isReady: Promise.resolve(),
-        save: vi.fn().mockResolvedValue({ blocks: [] }),
-        destroy: vi.fn(),
+      const mockBlokConstructor = vi.fn(function nestedEditor(_cfg: { tools?: unknown; inlineToolbar?: unknown; holder?: unknown }) {
+        return {
+          isReady: Promise.resolve(),
+          save: vi.fn().mockResolvedValue({ blocks: [] }),
+          destroy: vi.fn(),
+        };
       });
 
       vi.resetModules();

@@ -2,7 +2,10 @@ module github.com/JackUait/blok/packages/server/go
 
 go 1.27.1
 
-require github.com/dop251/goja v0.0.0-20261030192516-032d024709ca
+require (
+	github.com/dop251/goja v0.0.0-20261030192516-032d024709ca
+	golang.org/x/net v0.61.0
+)
 
 require (
 	github.com/dlclark/regexp2/v2 v2.11.0 // indirect

@@ -1,6 +1,7 @@
 package jsjson
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"slices"
@@ -78,9 +79,7 @@ func KeyOrder(members []Member) []Member {
 			rest = append(rest, member)
 		}
 	}
-	slices.SortStableFunc(indexes, func(a, b indexed) int {
-		return int(int64(a.index) - int64(b.index))
-	})
+	slices.SortStableFunc(indexes, func(a, b indexed) int { return cmp.Compare(a.index, b.index) })
 	ordered := make([]Member, 0, len(members))
 	for _, entry := range indexes {
 		ordered = append(ordered, entry.member)

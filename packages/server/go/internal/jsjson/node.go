@@ -76,7 +76,7 @@ func (m NodeMember) Key() (Str, error) { return decodeStrict(m.raw) }
 
 // ParseNode reads one JSON value like JsonNode.Parse(bytes, documentOptions).
 func ParseNode(data []byte, options Options) (*Node, error) {
-	p := parser{data: data, maxDepth: options.MaxDepth, refuseDuplicates: options.RefuseDuplicates}
+	p := parser{data: data, maxDepth: options.MaxDepth}
 	if p.maxDepth == 0 {
 		p.maxDepth = 64
 	}
@@ -89,14 +89,47 @@ func ParseNode(data []byte, options Options) (*Node, error) {
 	if p.pos != len(data) {
 		return nil, p.fail(ErrInvalid, "data after the value")
 	}
+	// .NET checks repeats only once the whole text is valid JSON.
+	if options.RefuseDuplicates {
+		if err := node.checkDuplicates(); err != nil {
+			return nil, err
+		}
+	}
 	return node, nil
 }
 
+// checkDuplicates walks in document order. .NET compares unescaped UTF-8
+// bytes, so invalid bytes compare raw and a lone escape fails.
+func (n *Node) checkDuplicates() error {
+	for _, item := range n.Items {
+		if err := item.checkDuplicates(); err != nil {
+			return err
+		}
+	}
+	var seen map[string]struct{}
+	for _, member := range n.Members {
+		name, err := unescapeBytes(member.raw)
+		if err != nil {
+			return err
+		}
+		if seen == nil {
+			seen = map[string]struct{}{}
+		}
+		if _, dup := seen[string(name)]; dup {
+			return fmt.Errorf("%w: property %q", ErrDuplicate, name)
+		}
+		seen[string(name)] = struct{}{}
+		if err := member.Value.checkDuplicates(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type parser struct {
-	data             []byte
-	pos              int
-	maxDepth         int
-	refuseDuplicates bool
+	data     []byte
+	pos      int
+	maxDepth int
 }
 
 func (p *parser) fail(kind error, what string) error {
@@ -265,7 +298,6 @@ func (p *parser) array(depth int) (*Node, error) {
 
 func (p *parser) object(depth int) (*Node, error) {
 	node := &Node{Kind: KindObject}
-	var seen map[string]struct{}
 	p.pos++
 	p.skipSpace()
 	if p.pos < len(p.data) && p.data[p.pos] == '}' {
@@ -280,20 +312,6 @@ func (p *parser) object(depth int) (*Node, error) {
 		raw, err := p.string()
 		if err != nil {
 			return nil, err
-		}
-		if p.refuseDuplicates {
-			// .NET compares unescaped UTF-8 bytes, so invalid bytes compare raw.
-			name, err := unescapeBytes(raw)
-			if err != nil {
-				return nil, err
-			}
-			if seen == nil {
-				seen = map[string]struct{}{}
-			}
-			if _, dup := seen[string(name)]; dup {
-				return nil, p.fail(ErrDuplicate, fmt.Sprintf("property %q", name))
-			}
-			seen[string(name)] = struct{}{}
 		}
 		p.skipSpace()
 		if p.pos >= len(p.data) || p.data[p.pos] != ':' {

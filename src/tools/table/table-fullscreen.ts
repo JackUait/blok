@@ -69,6 +69,20 @@ const canAnimate = (el: HTMLElement): boolean =>
 const insetOf = (outer: DOMRect, inner: DOMRect): string =>
   `inset(${inner.top - outer.top}px ${outer.right - inner.right}px ${outer.bottom - inner.bottom}px ${inner.left - outer.left}px round 4px)`;
 
+/** The grid's box, cut to what the scroll container shows of it. */
+const visibleGrid = (scroller: HTMLElement, box: DOMRect): DOMRect => {
+  const grid = scroller.firstElementChild;
+
+  if (!(grid instanceof HTMLElement)) {
+    return box;
+  }
+  const g = grid.getBoundingClientRect();
+  const left = Math.max(g.left, box.left);
+  const right = Math.min(g.right, box.right);
+
+  return new DOMRect(left, g.top, Math.max(right - left, 0), g.height);
+};
+
 /**
  * Where the page after the holder starts, in page coordinates: the next block,
  * or the container's end. Page, not viewport: the holder's height changes in between.
@@ -112,6 +126,8 @@ export class TableFullscreen {
   private backdrop: HTMLElement | null = null;
   /** The table's inline box at open. The page is scroll-locked, so it holds until close. */
   private origin: DOMRect | null = null;
+  /** The table's own visible box at open: the scroll container runs past a narrow grid. */
+  private shape: DOMRect | null = null;
   /** The holder, held at its inline height so the page under the modal does not reflow. */
   private holder: HTMLElement | null = null;
   private closing: { host: HTMLElement; backdrop: HTMLElement | null; animations: Animation[] } | null = null;
@@ -193,6 +209,7 @@ export class TableFullscreen {
     // One layout for every read before the box moves.
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]') ?? host;
     const origin = source.getBoundingClientRect();
+    const shape = visibleGrid(source, origin);
     const holder = host.parentElement;
     const flowBefore = holder === null ? 0 : flowEdge(holder);
     const room = holder === null ? 0 : flowBefore - (window.scrollY + holder.getBoundingClientRect().top);
@@ -235,8 +252,9 @@ export class TableFullscreen {
     window.addEventListener('keydown', this.onKeydown, true);
     this.host = host;
     this.origin = origin;
+    this.shape = shape;
     this.syncButton();
-    this.animateOpen(host, backdrop, source, origin);
+    this.animateOpen(host, backdrop, source, origin, shape);
   }
 
   /**
@@ -304,6 +322,7 @@ export class TableFullscreen {
     }
     this.closing = null;
     this.origin = null;
+    this.shape = null;
 
     closing.animations.forEach(a => a.cancel());
     removeFromTopLayer(closing.host);
@@ -331,14 +350,14 @@ export class TableFullscreen {
    * Only clip-path, transform and opacity move, so no frame relays the table out.
    * WAAPI writes no attributes, so none of this reaches the block's mutation observer.
    */
-  private animateOpen(host: HTMLElement, backdrop: HTMLElement, source: HTMLElement, origin: DOMRect): void {
+  private animateOpen(host: HTMLElement, backdrop: HTMLElement, source: HTMLElement, origin: DOMRect, shape: DOMRect): void {
     if (!canAnimate(host)) {
       return;
     }
     const landed = source.getBoundingClientRect();
     const timing = { duration: OPEN_MS, easing: SPRING };
 
-    host.animate([{ clipPath: insetOf(host.getBoundingClientRect(), origin) }, { clipPath: SHEET_CLIP }], timing);
+    host.animate([{ clipPath: insetOf(host.getBoundingClientRect(), shape) }, { clipPath: SHEET_CLIP }], timing);
     source.parentElement?.animate([shift(origin, landed), { transform: 'none' }], timing);
     backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS * 0.8, easing: 'linear' });
     // The header and button are position: fixed inside the moving root, which
@@ -351,16 +370,17 @@ export class TableFullscreen {
 
   private animateClose(host: HTMLElement, backdrop: HTMLElement | null): Animation[] {
     const origin = this.origin;
+    const shape = this.shape;
 
     host.getAnimations({ subtree: true }).forEach(a => a.cancel());
 
-    if (origin === null || !host.isConnected || !canAnimate(host)) {
+    if (origin === null || shape === null || !host.isConnected || !canAnimate(host)) {
       return [];
     }
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]');
     const timing = { duration: CLOSE_MS, easing: SPRING, fill: 'forwards' as const };
     const animations = [
-      host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), origin) }], timing),
+      host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), shape) }], timing),
     ];
 
     if (source?.parentElement) {

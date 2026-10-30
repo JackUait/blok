@@ -315,6 +315,51 @@ test.describe('Table full screen', () => {
     expect(await page.locator('[data-blok-tool="table"]').evaluate(el => el.closest('[data-blok-element-content]')?.matches(':popover-open'))).toBe(false);
   });
 
+  test('a narrow table grows from and shrinks back into its own shape', async ({ page }) => {
+    await createBlok(page, false, narrowData);
+    const grid = await page.getByRole('table').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    });
+
+    /** The box the clip animation shows at its open (first) or closed (last) keyframe. */
+    const clipBox = async (end: 'first' | 'last'): Promise<{ left: number; top: number; right: number; bottom: number } | null> =>
+      page.evaluate((which) => {
+        const host = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+        const clip = host?.getAnimations()
+          .map(a => (a.effect as KeyframeEffect | null)?.getKeyframes() ?? [])
+          .find(frames => frames.some(f => typeof f.clipPath === 'string'));
+
+        if (host === undefined || host === null || clip === undefined) {
+          return null;
+        }
+        const frame = which === 'first' ? clip[0] : clip[clip.length - 1];
+        const [t, r, b, l] = String(frame.clipPath).match(/-?[\d.]+px/g)?.map(parseFloat) ?? [];
+        const box = host.getBoundingClientRect();
+
+        return { left: box.left + l, top: box.top + t, right: box.right - r, bottom: box.bottom - b };
+      }, end);
+
+    await page.getByRole('table').hover();
+    await page.getByRole('button', { name: OPEN_LABEL }).click();
+    const opened = await clipBox('first');
+
+    expect(opened).not.toBeNull();
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) {
+      expect(Math.abs((opened?.[side] ?? 0) - grid[side])).toBeLessThanOrEqual(1);
+    }
+
+    await expect.poll(() => clipBox('first')).toBeNull();
+    await page.getByRole('button', { name: CLOSE_LABEL }).click();
+    const closed = await clipBox('last');
+
+    expect(closed).not.toBeNull();
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) {
+      expect(Math.abs((closed?.[side] ?? 0) - grid[side])).toBeLessThanOrEqual(1);
+    }
+  });
+
   test('with reduced motion the modal opens and closes at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await createBlok(page);

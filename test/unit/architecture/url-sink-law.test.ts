@@ -343,6 +343,25 @@ function rawSinks(source: ts.SourceFile, inLinkDir: boolean): Array<{ node: ts.N
     found.push({ node, form, value });
   };
 
+  // Object.assign(el, { href }) and Object.assign(el.style, { backgroundImage }).
+  const addAssignedProperties = (first: ts.Expression | undefined, literal: ts.ObjectLiteralExpression): void => {
+    const styleTarget = first !== undefined && propertyName(first) === 'style';
+    const form: SinkForm = styleTarget ? 'style' : 'Object.assign';
+
+    for (const property of literal.properties) {
+      const key = property.name !== undefined && (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
+        ? property.name.text
+        : undefined;
+      const isSink = key !== undefined && (styleTarget ? CSS_URL_PROPERTIES.has(key) : URL_PROPERTIES.has(key));
+
+      if (isSink && ts.isPropertyAssignment(property)) {
+        add(property, form, property.initializer);
+      } else if (isSink && ts.isShorthandPropertyAssignment(property)) {
+        add(property, form, property.name);
+      }
+    }
+  };
+
   const visit = (node: ts.Node): void => {
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
       const name = propertyName(node.left);
@@ -374,20 +393,7 @@ function rawSinks(source: ts.SourceFile, inLinkDir: boolean): Array<{ node: ts.N
         add(node, 'style', second);
       } else if (method === 'assign' && target !== undefined && ts.isIdentifier(target) && target.text === 'Object'
         && second !== undefined && ts.isObjectLiteralExpression(second)) {
-        const styleTarget = first !== undefined && propertyName(first) === 'style';
-
-        for (const property of second.properties) {
-          const key = property.name !== undefined && (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
-            ? property.name.text
-            : undefined;
-          const isSink = key !== undefined && (styleTarget ? CSS_URL_PROPERTIES.has(key) : URL_PROPERTIES.has(key));
-
-          if (isSink && ts.isPropertyAssignment(property)) {
-            add(property, styleTarget ? 'style' : 'Object.assign', property.initializer);
-          } else if (isSink && ts.isShorthandPropertyAssignment(property)) {
-            add(property, styleTarget ? 'style' : 'Object.assign', property.name);
-          }
-        }
+        addAssignedProperties(first, second);
       }
     }
     ts.forEachChild(node, visit);

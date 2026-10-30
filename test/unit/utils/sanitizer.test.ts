@@ -1533,7 +1533,7 @@ describe('PLAINTEXT sanitizer rule', () => {
     const rules = { code: PLAINTEXT } as unknown as SanitizerConfig;
 
     const result = stripUnsafeUrlsDeep({ constructor: { code: CODE },
-      other: { code: CODE } }, rules) as Record<string, unknown>;
+      other: { code: CODE } }, rules);
 
     expect(result.constructor).toEqual(result.other);
   });

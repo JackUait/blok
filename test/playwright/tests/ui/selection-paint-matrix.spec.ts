@@ -77,7 +77,7 @@ const mount = async (page: Page, blocks: OutputData['blocks']): Promise<void> =>
   await openFixtureToggles(page, { blocks });
   // Offscreen images load lazily, and decode() on one that never starts never settles.
   await page.evaluate(() => Promise.all(Array.from(document.images, (img) => {
-    img.loading = 'eager';
+    img.setAttribute('loading', 'eager');
 
     return img.decode().catch(() => undefined);
   })));

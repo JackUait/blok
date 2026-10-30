@@ -2,8 +2,10 @@ package yjs
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
+	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/internal/lib0"
 )
 
@@ -131,5 +133,92 @@ func TestEncodeReturnsAnEngineFailureAsAnError(t *testing.T) {
 	}()
 	if update != nil || !errors.As(err, &engine) {
 		t.Fatalf("got %x, %v; want an *EngineError", update, err)
+	}
+}
+
+func isStr(value any, want string) bool {
+	text, ok := value.(jsjson.Str)
+	return ok && text.String() == want
+}
+
+func itemWith(clock uint64, content Content) *Item {
+	return &Item{header: header{id: ID{storeClient, clock}, length: content.Len()}, content: content}
+}
+
+func chain(parent *typeCore, items ...*Item) {
+	for index, item := range items {
+		item.parent = parent
+		if index == 0 {
+			parent.start = item
+			continue
+		}
+		item.left = items[index-1]
+		items[index-1].right = item
+	}
+}
+
+func TestArrayEnumerateSkipsDeletedAndNonCountable(t *testing.T) {
+	array := &Array{}
+	nested := &Map{}
+	gone := itemWith(2, &ContentAny{Items: []any{s("skipped")}})
+	gone.deleted = true
+	nestedContent := newContentType(1, nil)
+	nestedContent.Type = nested
+	chain(&array.typeCore,
+		itemWith(0, &ContentAny{Items: []any{1.0, 2.0}}),
+		gone,
+		itemWith(3, &ContentFormat{Key: s("bold"), JSON: s("true")}),
+		itemWith(4, nestedContent),
+		itemWith(5, &ContentString{Text: s("hi")}))
+
+	values := array.Values()
+	if len(values) != 5 || values[0] != 1.0 || values[1] != 2.0 || values[2] != AbstractType(nested) ||
+		!isStr(values[3], "h") || !isStr(values[4], "i") {
+		t.Fatalf("values %#v", values)
+	}
+	if array.Len() != 5 || array.Get(0) != 1.0 || array.Get(2) != AbstractType(nested) || !isStr(array.Get(4), "i") {
+		t.Fatal("get")
+	}
+	if array.Get(5) != nil || array.Get(-1) != nil {
+		t.Fatal("out of range")
+	}
+}
+
+func TestMapTryGetReadsTheLastValueOfTheHeadAndSkipsDeleted(t *testing.T) {
+	m := &Map{}
+	m.mapSetHead(s("single"), itemWith(0, &ContentAny{Items: []any{s("x")}}))
+	m.mapSetHead(s("run"), itemWith(1, &ContentAny{Items: []any{s("p"), s("q")}}))
+	gone := itemWith(3, &ContentAny{Items: []any{s("dead")}})
+	gone.deleted = true
+	m.mapSetHead(s("gone"), gone)
+
+	if value, ok := m.Get(s("single")); !ok || !isStr(value, "x") {
+		t.Fatalf("single %#v", value)
+	}
+	// A map head's value is the LAST element of its content, never the first.
+	if value, ok := m.Get(s("run")); !ok || !isStr(value, "q") {
+		t.Fatalf("run %#v", value)
+	}
+	if value, ok := m.Get(s("gone")); ok || value != nil {
+		t.Fatalf("gone %#v", value)
+	}
+	if _, ok := m.Get(s("absent")); ok {
+		t.Fatal("absent")
+	}
+	keys := m.Keys()
+	slices.SortFunc(keys, jsjson.Compare)
+	if len(keys) != 2 || keys[0].String() != "run" || keys[1].String() != "single" || m.Len() != 2 {
+		t.Fatalf("keys %v", keys)
+	}
+}
+
+func TestGetStateIsZeroForAnUnknownClient(t *testing.T) {
+	store := newStore()
+	if store.getState(storeClient) != 0 || len(store.getStateVector().Clients()) != 0 {
+		t.Fatal("empty store")
+	}
+	store.addStruct(anyItem(storeClient, 0, s("a"), s("b")))
+	if store.getState(storeClient) != 2 || store.getState(storeClient+1) != 0 || store.getStateVector().Get(storeClient) != 2 {
+		t.Fatal("after one struct")
 	}
 }

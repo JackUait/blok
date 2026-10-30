@@ -227,3 +227,44 @@ func TestARemoteApplyInsideALocalTransactionMakesItRemote(t *testing.T) {
 		t.Fatal("kept the client id")
 	}
 }
+
+func TestSameClientGapParksTheTail(t *testing.T) {
+	c := scenarioNamed(t, "out-of-order-delivery")
+	doc := NewDoc(Options{ClientID: &c.clientID, NoGC: !c.gc})
+	// Only the third op of a three-op run: nothing can be placed, and the
+	// gap is recorded as "waiting for the clock before this one".
+	if _, err := doc.ApplyUpdate(stepUpdate(t, c, "s3")); err != nil {
+		t.Fatal(err)
+	}
+	store := doc.store
+	if !doc.HasPending() || len(store.clients) != 0 || len(store.pendingStructs) != 1 {
+		t.Fatalf("pending %v, clients %d, parked %d", doc.HasPending(), len(store.clients), len(store.pendingStructs))
+	}
+	if id := store.pendingStructs[0].head().id; id != (ID{pinnedClient, 2}) {
+		t.Fatalf("parked %v", id)
+	}
+	if store.pendingMissing == nil || store.pendingMissing.Get(pinnedClient) != 1 {
+		t.Fatalf("missing %v", store.pendingMissing)
+	}
+}
+
+func TestPendingRetriesWhenTheDependencyArrives(t *testing.T) {
+	c := scenarioNamed(t, "out-of-order-delivery")
+	doc := NewDoc(Options{ClientID: &c.clientID, NoGC: !c.gc})
+	for _, id := range []string{"s3", "s1"} {
+		if _, err := doc.ApplyUpdate(stepUpdate(t, c, id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Clock 1 is still missing, so the parked clock 2 stays parked.
+	if !doc.HasPending() || doc.store.getState(pinnedClient) != 1 {
+		t.Fatalf("pending %v, state %d", doc.HasPending(), doc.store.getState(pinnedClient))
+	}
+	if _, err := doc.ApplyUpdate(stepUpdate(t, c, "s2")); err != nil {
+		t.Fatal(err)
+	}
+	// The retry ran inside the same transaction: all three clocks are in.
+	if doc.HasPending() || doc.store.getState(pinnedClient) != 3 || doc.store.pendingStructs != nil || doc.store.pendingMissing != nil {
+		t.Fatalf("pending %v, state %d, parked %v, missing %v", doc.HasPending(), doc.store.getState(pinnedClient), doc.store.pendingStructs, doc.store.pendingMissing)
+	}
+}

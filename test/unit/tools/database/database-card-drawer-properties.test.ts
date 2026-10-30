@@ -229,6 +229,23 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(options.wrapper.querySelector('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]')?.textContent).toBe('Lead');
   });
 
+  // An icon picked from the row page menu shows on its row at once.
+  it('a new schema redraws the open page property icons in place', () => {
+    const options = createOptions();
+    const drawer = new DatabaseCardDrawer(options);
+    const iconOf = (): Element | null | undefined => options.wrapper
+      .querySelector('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]')
+      ?.parentElement?.querySelector('[data-blok-database-drawer-prop-icon]');
+
+    drawer.open(ROW);
+    drawer.setSchema(SCHEMA.map((p) => (p.id === 'prop-owner' ? { ...p, icon: '📌' } : p)));
+    expect(iconOf()?.textContent).toBe('📌');
+
+    drawer.setSchema(SCHEMA);
+    expect(iconOf()?.textContent).not.toBe('📌');
+    expect(iconOf()?.querySelector('svg')).not.toBeNull();
+  });
+
   // Show as Ring, chosen from the row page menu, draws there at once.
   it('a new schema redraws a value whose display changed, keeping its slot', () => {
     const schema: PropertyDefinition[] = [...SCHEMA, { id: 'prop-score', name: 'Score', type: 'number', position: 'a6' }];

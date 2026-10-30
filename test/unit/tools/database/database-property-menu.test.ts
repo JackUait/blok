@@ -189,26 +189,87 @@ describe('DatabasePropertyMenu', () => {
     document.body.innerHTML = '';
   });
 
-  // A row page peek is in the top layer: an icon picker on body would paint under it.
-  it('opens the icon picker inside the top-layer panel the menu was opened from', () => {
-    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
-    const peek = document.createElement('div');
-    const anchor = document.createElement('button');
+  describe('icon picker', () => {
+    const shown: Element[] = [];
+    const menus: DatabasePropertyMenu[] = [];
 
-    peek.setAttribute('data-blok-top-layer', 'true');
-    peek.appendChild(anchor);
-    document.body.appendChild(peek);
-    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+    beforeEach(() => {
+      shown.length = 0;
+      vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+      // jsdom has no Popover API.
+      Object.defineProperty(HTMLElement.prototype, 'popover', { configurable: true, get(this: HTMLElement) { return this.getAttribute('popover'); } });
+      Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, writable: true, value(this: HTMLElement) { shown.push(this); } });
+      Object.defineProperty(HTMLElement.prototype, 'hidePopover', { configurable: true, writable: true, value(this: HTMLElement) { shown.splice(shown.indexOf(this), 1); } });
+    });
 
-    menu.open(prop('text'), anchor);
-    const name = lastItems().find((i) => i.name === 'name')?.element;
+    // A picker left open would finish rendering after matchMedia is unstubbed.
+    afterEach(() => {
+      for (const menu of menus.splice(0)) menu.destroy();
+      for (const key of ['popover', 'showPopover', 'hidePopover']) Reflect.deleteProperty(HTMLElement.prototype, key);
+      vi.unstubAllGlobals();
+    });
 
-    document.body.appendChild(name ?? document.createElement('div'));
-    name?.querySelector<HTMLElement>('[data-blok-database-property-menu-icon]')?.click();
+    const openPicker = (property: PropertyDefinition, anchor: HTMLElement, options: Partial<ReturnType<typeof callbacks>> & { onIconUpdate?: () => void } = {}): { menu: DatabasePropertyMenu; icon: HTMLElement } => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks(), ...options });
 
-    expect(document.querySelector('[data-blok-emoji-picker]')?.closest('[data-blok-top-layer]')).toBe(peek);
-    menu.destroy();
-    vi.unstubAllGlobals();
+      menus.push(menu);
+      menu.open(property, anchor);
+      const name = lastItems().find((i) => i.name === 'name')?.element ?? document.createElement('div');
+
+      document.body.appendChild(name);
+      const icon = name.querySelector<HTMLElement>('[data-blok-database-property-menu-icon]');
+
+      if (icon === null) throw new Error('no icon button');
+      icon.click();
+
+      return { menu, icon };
+    };
+
+    // The menu is in the top layer, shown after any peek it opened from: the picker must enter it later still.
+    it('shows the picker in the top layer above the menu, on every open', () => {
+      const peek = document.createElement('div');
+      const anchor = document.createElement('button');
+
+      peek.setAttribute('data-blok-top-layer', 'true');
+      peek.appendChild(anchor);
+      document.body.appendChild(peek);
+      const { menu, icon } = openPicker(prop('text'), anchor);
+      const picker = document.querySelector('[data-blok-emoji-picker]');
+
+      expect(shown.at(-1)?.contains(picker)).toBe(true);
+      // Another top-layer panel shown since then (a reopened menu) must not cover the next open.
+      shown.push(document.createElement('div'));
+      icon.click();
+      expect(shown.at(-1)?.contains(picker)).toBe(true);
+      menu.destroy();
+      expect(shown.some((el) => el.contains(picker))).toBe(false);
+    });
+
+    it('shows the picked emoji on the icon button at once', async () => {
+      const { icon } = openPicker(prop('text'), document.body.appendChild(document.createElement('button')));
+      const emoji = await vi.waitFor(() => {
+        const button = document.querySelector<HTMLElement>('[data-blok-emoji-picker] [data-emoji-grid] button[data-emoji-native]');
+        const native = button?.querySelector('[data-emoji-glyph]')?.textContent ?? '';
+
+        if (button === null || native === '') throw new Error('grid not ready');
+
+        return { button, native };
+      }, { timeout: 5000 });
+
+      emoji.button.click();
+
+      expect(icon.textContent).toBe(emoji.native);
+    });
+
+    it('shows the type icon again once the emoji is removed', () => {
+      const { icon } = openPicker(prop('text', { icon: '✂️' }), document.body.appendChild(document.createElement('button')));
+
+      expect(icon.textContent).toBe('✂️');
+      document.querySelector<HTMLElement>('[data-emoji-picker-remove]')?.click();
+
+      expect(icon.textContent).not.toBe('✂️');
+      expect(icon.querySelector('svg')).not.toBeNull();
+    });
   });
 
   // research/09 §1b: a row page property menu ends with "Customize layout".

@@ -3407,9 +3407,12 @@ export class DatabaseCardDrawer {
 
     this.schema = schema;
     for (const label of this.drawer?.querySelectorAll<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id]') ?? []) {
-      const name = schema.find((p) => p.id === label.getAttribute('data-property-id'))?.name;
+      const def = schema.find((p) => p.id === label.getAttribute('data-property-id'));
+      const icon = label.previousElementSibling;
 
-      if (name !== undefined && label.textContent !== name) label.textContent = name;
+      if (def === undefined) continue;
+      if (label.textContent !== def.name) label.textContent = def.name;
+      if (icon?.hasAttribute('data-blok-database-drawer-prop-icon') === true) icon.replaceWith(this.propertyIcon(def));
     }
     const row = this.currentRow;
 

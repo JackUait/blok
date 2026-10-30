@@ -19,7 +19,7 @@ import { offersAutofill } from './database-autofill-setup';
 import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-table-menus';
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
-import { overlayMountFor } from '../../components/utils/top-layer';
+import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { hide as hideHint, onHover, type HintOptions } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
 import type {
@@ -264,6 +264,8 @@ export class DatabasePropertyMenu {
   /** The open property with localized option and group names, for display only. Patches come from the saved one. */
   private shown: PropertyDefinition | null = null;
   private emojiPicker: EmojiPicker | null = null;
+  /** Holds the picker in the top layer. Outside the menu popover, so a pick still lands after the menu closes. */
+  private pickerLayer: HTMLElement | null = null;
   /** What the menu opened from; the icon picker mounts beside it. */
   private anchor: HTMLElement | null = null;
   /** Saves the open menu's description field if it changed. */
@@ -700,6 +702,9 @@ export class DatabasePropertyMenu {
     this.emojiPicker?.close();
     this.emojiPicker?.getElement().remove();
     this.emojiPicker = null;
+    if (this.pickerLayer !== null) removeFromTopLayer(this.pickerLayer);
+    this.pickerLayer?.remove();
+    this.pickerLayer = null;
   }
 
   private nameField(property: PropertyDefinition, describable: boolean): HTMLElement {
@@ -711,12 +716,16 @@ export class DatabasePropertyMenu {
     icon.type = 'button';
     icon.setAttribute('data-blok-database-property-menu-icon', '');
     icon.setAttribute('aria-label', this.t('tools.database.propertyIcon'));
-    if (property.icon !== undefined && property.icon !== '') {
-      icon.textContent = property.icon;
-    } else {
-      icon.innerHTML = propertyTypeMeta(property.type).icon;
-    }
-    icon.addEventListener('click', () => this.openIconPicker(property, icon));
+    const paintIcon = (value: string | undefined): void => {
+      if (value !== undefined && value !== '') {
+        icon.textContent = value;
+      } else {
+        icon.innerHTML = propertyTypeMeta(property.type).icon;
+      }
+    };
+
+    paintIcon(property.icon);
+    icon.addEventListener('click', () => this.openIconPicker(property, icon, paintIcon));
 
     input.type = 'text';
     input.value = property.name;
@@ -816,22 +825,32 @@ export class DatabasePropertyMenu {
     return { button, box };
   }
 
-  private openIconPicker(property: PropertyDefinition, anchor: HTMLElement): void {
+  private openIconPicker(property: PropertyDefinition, anchor: HTMLElement, paintIcon: (icon: string | undefined) => void): void {
     if (!this.isOpen) return;
     const update = this.options.onIconUpdate ?? this.options.onUpdate;
     const handlers = {
-      onSelect: (native: string): void => update(property.id, { icon: native }),
-      onRemove: (): void => update(property.id, { icon: undefined }),
+      onSelect: (native: string): void => {
+        update(property.id, { icon: native });
+        paintIcon(native);
+      },
+      onRemove: (): void => {
+        update(property.id, { icon: undefined });
+        paintIcon(undefined);
+      },
     };
 
     if (this.emojiPicker === null) {
       this.emojiPicker = new EmojiPicker({ ...handlers, i18n: this.options.i18n, locale: this.options.i18n.getLocale() });
     }
     const element = this.emojiPicker.getElement();
+    const layer = this.pickerLayer ?? document.createElement('div');
 
-    if (!element.isConnected) {
-      overlayMountFor(this.anchor ?? anchor).appendChild(element);
-    }
+    this.pickerLayer = layer;
+    if (!layer.isConnected) document.body.appendChild(layer);
+    if (!layer.contains(element)) layer.appendChild(element);
+    // The top layer paints in show order: shown again, it lands above the menu and any peek under it.
+    removeFromTopLayer(layer);
+    promoteToTopLayer(layer);
     void this.emojiPicker.open(anchor, undefined, handlers);
   }
 

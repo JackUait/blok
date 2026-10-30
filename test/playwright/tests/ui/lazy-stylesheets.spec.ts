@@ -53,18 +53,33 @@ const blokStyleTags = async (page: Page): Promise<Array<{ id: string; nonce: str
       markers: [...(tag.textContent ?? '').matchAll(/\[data-blok-sheet=([a-z0-9-]+)\]/g)].map((match) => match[1]),
     })));
 
-/** A fresh page whose chunk matching `pattern` fails to load. */
-const pageWithoutChunk = async (browser: Browser, pattern: RegExp): Promise<{ page: Page; errors: string[]; close: () => Promise<void> }> => {
+/** A fresh page whose stylesheet chunk matching `pattern` fails to load. */
+const pageWithoutChunk = async (
+  browser: Browser,
+  pattern: RegExp
+): Promise<{ page: Page; errors: string[]; aborted: string[]; close: () => Promise<void> }> => {
   const context = await browser.newContext();
   const page = await context.newPage();
   const errors: string[] = [];
+  const aborted: string[] = [];
 
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.route(pattern, (route) => route.abort());
+  // A tool's code chunk can share the sheet's name, so only the chunk that
+  // carries the compiled CSS is dropped.
+  await page.route(pattern, async (route) => {
+    const response = await route.fetch();
+
+    if ((await response.text()).includes('/*! tailwindcss')) {
+      aborted.push(route.request().url());
+      await route.abort();
+    } else {
+      await route.fulfill({ response });
+    }
+  });
   await page.goto(TEST_PAGE_URL);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
-  return { page, errors, close: () => context.close() };
+  return { page, errors, aborted, close: () => context.close() };
 };
 
 test.beforeAll(ensureBlokBundleBuilt);
@@ -146,14 +161,16 @@ test.describe('lazy stylesheets', () => {
   });
 
   for (const [sheet, pattern] of [
-    // Exactly the sheet chunk: `database-csv-<hash>` is code.
-    ['fonts', /\/dist\/chunks\/fonts-[\w-]{8}\.mjs$/],
-    ['database', /\/dist\/chunks\/database-[\w-]{8}\.mjs$/],
+    // `database-csv-<hash>` is code; the hash is exactly 8 characters.
+    ['fonts', /\/dist\/(?:pure-)?chunks\/fonts-[\w-]{8}\.mjs$/],
+    ['database', /\/dist\/(?:pure-)?chunks\/database-[\w-]{8}\.mjs$/],
   ] as const) {
     test(`the editor still boots when the ${sheet} chunk fails to load`, async ({ browser }) => {
-      const { page, errors, close } = await pageWithoutChunk(browser, pattern);
+      const { page, errors, aborted, close } = await pageWithoutChunk(browser, pattern);
 
       await mount(page, 'blok', DATABASE);
+
+      expect(aborted).toHaveLength(1);
 
       await expect(page.locator('[data-blok-database-wrapper]').first()).toBeVisible();
       expect((await blokStyleTags(page))[0]?.markers.includes(sheet)).toBe(true);

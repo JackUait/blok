@@ -53,10 +53,14 @@ interface NormalizedListenerOptions {
  */
 export class Listeners {
   /**
-   * Stores all listeners data to find/remove/process it
-   * @type {ListenerData[]}
+   * All listeners by id, in the order they were added. Keyed, not a list:
+   * every block binds and unbinds its own, and a scan per call grew with
+   * the document.
    */
-  private allListeners: ListenerData[] = [];
+  private allListeners = new Map<string, ListenerData>();
+
+  /** The same listeners grouped by their target. */
+  private byTarget = new Map<EventTarget, ListenerData[]>();
 
   /**
    * Assigns event listener on element and returns unique identifier
@@ -86,7 +90,8 @@ export class Listeners {
       options,
     };
 
-    this.allListeners.push(assignedEventData);
+    this.allListeners.set(id, assignedEventData);
+    this.byTarget.set(element, [...(this.byTarget.get(element) ?? []), assignedEventData]);
     element.addEventListener(eventType, handler, options);
 
     return id;
@@ -105,14 +110,8 @@ export class Listeners {
     handler?: (event: Event) => void,
     options?: boolean | AddEventListenerOptions
   ): void {
-    const existingListeners = this.findAll(element, eventType, handler, options);
-
-    existingListeners.forEach((listener, i) => {
-      const index = this.allListeners.indexOf(existingListeners[i]);
-
-      if (index > -1) {
-        this.allListeners.splice(index, 1);
-
+    this.findAll(element, eventType, handler, options).forEach((listener) => {
+      if (this.forget(listener)) {
         listener.element.removeEventListener(listener.eventType, listener.handler, listener.options);
       }
     });
@@ -130,11 +129,28 @@ export class Listeners {
     }
 
     listener.element.removeEventListener(listener.eventType, listener.handler, listener.options);
-    const index = this.allListeners.indexOf(listener);
+    this.forget(listener);
+  }
 
-    if (index > -1) {
-      this.allListeners.splice(index, 1);
+  /**
+   * Drop a listener from both indexes.
+   * @param listener - stored listener
+   * @returns whether it was stored
+   */
+  private forget(listener: ListenerData): boolean {
+    if (!this.allListeners.delete(listener.id)) {
+      return false;
     }
+
+    const rest = (this.byTarget.get(listener.element) ?? []).filter((stored) => stored !== listener);
+
+    if (rest.length === 0) {
+      this.byTarget.delete(listener.element);
+    } else {
+      this.byTarget.set(listener.element, rest);
+    }
+
+    return true;
   }
 
   /**
@@ -193,7 +209,8 @@ export class Listeners {
       current.element.removeEventListener(current.eventType, current.handler, current.options);
     });
 
-    this.allListeners = [];
+    this.allListeners.clear();
+    this.byTarget.clear();
   }
 
   /**
@@ -209,7 +226,7 @@ export class Listeners {
    * @returns {Array} listeners that found on element
    */
   private findByEventTarget(element: EventTarget): ListenerData[] {
-    return this.allListeners.filter((listener) => listener.element === element);
+    return this.byTarget.get(element) ?? [];
   }
 
   /**
@@ -218,7 +235,7 @@ export class Listeners {
    * @returns {ListenerData[]} listeners that found on element
    */
   private findByType(eventType: string): ListenerData[] {
-    return this.allListeners.filter((listener) => listener.eventType === eventType);
+    return Array.from(this.allListeners.values()).filter((listener) => listener.eventType === eventType);
   }
 
   /**
@@ -227,7 +244,7 @@ export class Listeners {
    * @returns {ListenerData[]} listeners that found on element
    */
   private findByHandler(handler: (event: Event) => void): ListenerData[] {
-    return this.allListeners.filter((listener) => listener.handler === handler);
+    return Array.from(this.allListeners.values()).filter((listener) => listener.handler === handler);
   }
 
   /**
@@ -236,7 +253,7 @@ export class Listeners {
    * @returns {ListenerData}
    */
   private findById(id: string): ListenerData | undefined {
-    return this.allListeners.find((listener) => listener.id === id);
+    return this.allListeners.get(id);
   }
 
   /**

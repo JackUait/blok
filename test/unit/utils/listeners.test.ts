@@ -3,7 +3,7 @@ import { Listeners, type ListenerData } from '../../../src/components/utils/list
 import * as Utils from '../../../src/components/utils';
 
 const getStoredListeners = (instance: Listeners): ListenerData[] => {
-  return (instance as unknown as { allListeners: ListenerData[] }).allListeners;
+  return Array.from((instance as unknown as { allListeners: Map<string, ListenerData> }).allListeners.values());
 };
 
 describe('Listeners', () => {
@@ -170,6 +170,35 @@ describe('Listeners', () => {
 
     expect(getStoredListeners(listeners)).toHaveLength(0);
   });
-});
 
+  // Every block binds and unbinds listeners: a scan of all of them per call made each new table cell cost more in a long document.
+  it('binds and unbinds one listener with the same array work however many are registered', () => {
+    const workFor = (registered: number): number => {
+      const registry = new Listeners();
+
+      Array.from({ length: registered }).forEach(() => registry.on(document.createElement('div'), 'click', () => undefined));
+
+      const visited = { count: 0 };
+      const methods = ['filter', 'find', 'indexOf', 'splice', 'findIndex', 'some'] as const;
+      const spies = methods.map(name => {
+        const original = Array.prototype[name] as (...args: unknown[]) => unknown;
+
+        return vi.spyOn(Array.prototype, name).mockImplementation(function (this: unknown[], ...args: unknown[]) {
+          visited.count += this.length;
+
+          return original.apply(this, args);
+        });
+      });
+      const target = document.createElement('div');
+      const id = registry.on(target, 'click', () => undefined);
+
+      registry.offById(id ?? '');
+      spies.forEach(spy => spy.mockRestore());
+
+      return visited.count;
+    };
+
+    expect(workFor(2000)).toBe(workFor(10));
+  });
+});
 

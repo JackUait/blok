@@ -4,14 +4,15 @@ import { Module } from '../__module';
 import { I18nChanged } from '../events';
 import type { I18nextInitResult } from '../i18n/i18next-loader';
 import { LightweightI18n } from '../i18n/lightweight-i18n';
+import englishCore from '../i18n/locales/english-core';
 import { repaintBlocks } from '../utils/repaint-blocks';
+import { messagesOfTools } from '../utils/tool-messages';
 import {
   DEFAULT_LOCALE,
   loadLocale,
   getDirection,
   normalizeLocale,
-  enMessages,
-} from '../i18n/locales';
+} from '../i18n/locales/catalog';
 
 /**
  * I18n module - handles translations and locale management.
@@ -33,6 +34,12 @@ export class I18n extends Module {
    * Lightweight i18n for English (synchronous, no dependencies)
    */
   private lightweightI18n: LightweightI18n;
+
+  /**
+   * This editor's English: core's plus what its tools declare. Built per
+   * editor, so one editor's tools never add keys to another's.
+   */
+  private english: I18nDictionary = englishCore;
 
   /**
    * Full i18next instance (loaded dynamically for non-English locales)
@@ -115,7 +122,7 @@ export class I18n extends Module {
    * @returns English translation string, or empty string if not found
    */
   public getEnglishTranslation(key: string): string {
-    return (enMessages as I18nDictionary)[key] ?? '';
+    return this.english[key] ?? '';
   }
 
   /**
@@ -269,6 +276,13 @@ export class I18n extends Module {
    */
   public async prepare(): Promise<void> {
     const i18nConfig = this.config.i18n;
+    const declared = messagesOfTools(this.config.tools);
+
+    // Before any locale loads: i18next copies the English fallback at init.
+    if (Object.keys(declared).length > 0) {
+      this.english = { ...englishCore, ...declared };
+      this.lightweightI18n = new LightweightI18n(this.english);
+    }
 
     // Set default locale if configured
     this.applyDefaultLocale(i18nConfig?.defaultLocale);
@@ -403,7 +417,7 @@ export class I18n extends Module {
     // Dynamic import of the i18next loader
     const { loadI18next } = await import('../i18n/i18next-loader');
 
-    this.i18nextWrapper = await loadI18next(locale, localeConfig);
+    this.i18nextWrapper = await loadI18next(locale, localeConfig, this.english);
   }
 
   /**

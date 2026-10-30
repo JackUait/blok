@@ -195,6 +195,7 @@ import type { BacklinkSource } from './backlinks';
 import { DatabaseRowTool } from '../database-row';
 import { DatabaseCommentTool } from '../database-comment';
 import type { LazySheet } from '../../components/utils/lazy-styles';
+import { DATABASE_MESSAGES } from './database-english';
 import type { BaseToolConstructable } from '../../../types/tools';
 import { overrideStatic } from '../../components/utils/override-static';
 
@@ -527,6 +528,11 @@ export class DatabaseTool implements BlockTool {
   /** Core loads these before the first render. Subclasses inherit it. */
   public static get 'blok.toolSheets'(): LazySheet[] {
     return ['database'];
+  }
+
+  /** Core adds these to the editor's English before I18n starts. Subclasses inherit it. */
+  public static get 'blok.toolMessages'(): Record<string, string> {
+    return DATABASE_MESSAGES;
   }
 
   public static get actionHandlers(): DatabaseToolActionHandlers {

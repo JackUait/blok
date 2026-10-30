@@ -4,6 +4,7 @@ import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tool
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { LazySheet } from '../../components/utils/lazy-styles';
+import { DATABASE_MESSAGES } from '../database/database-english';
 import { IconPage, IconPlus } from '../../components/icons';
 import { isAnnotationBlock, mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import type { ConvertedValue, DatabaseRowData, DateReminder, PropertyValue, TemplateRepeat } from '../database/types';
@@ -98,6 +99,11 @@ export class DatabaseRowTool implements BlockTool {
   /** Core loads these before the first render. Subclasses inherit it. */
   public static get 'blok.toolSheets'(): LazySheet[] {
     return ['database'];
+  }
+
+  /** Core adds these to the editor's English before I18n starts. Subclasses inherit it. */
+  public static get 'blok.toolMessages'(): Record<string, string> {
+    return DATABASE_MESSAGES;
   }
 
   private _data: DatabaseRowData;

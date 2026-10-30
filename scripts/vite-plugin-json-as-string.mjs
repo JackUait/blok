@@ -13,8 +13,10 @@
  *
  * Lazy UI and emoji locales ship as values against one shared key list per
  * kind (see locale-data-codec.mjs); the decoded object is the same as the
- * source.
+ * source. English is split into a core part and a database part (see
+ * english-parts.mjs).
  */
+import { englishModuleCode } from './english-parts.mjs';
 import { LOCALE_KINDS, buildKeyList, encodeLocale, keyListModule, localeKindOf } from './locale-data-codec.mjs';
 
 const kindByResolvedId = new Map(LOCALE_KINDS.map((kind) => [`\0${kind.keysId}`, kind]));
@@ -45,13 +47,16 @@ export default function jsonAsStringPlugin() {
       filter: { id: /^virtual:blok-[a-z]+-keys$/ },
       handler: (id) => (kindByResolvedId.has(`\0${id}`) ? `\0${id}` : null),
     },
-    load: {
-      filter: { id: /^\0virtual:blok-[a-z]+-keys$/ },
-      handler(id) {
-        const kind = kindByResolvedId.get(id);
+    load(id) {
+      const kind = kindByResolvedId.get(id);
 
-        return kind === undefined ? null : { code: keyListModule(kind, keyList(kind)), map: null, moduleType: 'js' };
-      },
+      if (kind !== undefined) {
+        return { code: keyListModule(kind, keyList(kind)), map: null, moduleType: 'js' };
+      }
+
+      const english = encodeLocales ? englishModuleCode(id.split('?')[0]) : null;
+
+      return english === null ? null : { code: english, map: null, moduleType: 'js' };
     },
     transform: {
       filter: { id: /\.json(?:\?|$)/ },

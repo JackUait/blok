@@ -1,7 +1,7 @@
 import type { I18n, OutputData } from '../../../types';
 import type { Events } from '../../../types/api/events';
 import type { ToolsConfig } from '../../../types/api/tools';
-import { englishDictionary } from '../../components/i18n/lightweight-i18n';
+import { databaseEnglish } from './database-english';
 import type { DatabaseRow, DatabaseRowPages, DateReminderOffset, OpenPagesIn, PageVisibility, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { bindFileNameHint, openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
@@ -3427,7 +3427,7 @@ export class DatabaseCardDrawer {
 
   /** Chrome labels fall back to bundled English, as the close button always did. */
   private label(key: string): string {
-    return this.i18n?.t(key) ?? (englishDictionary as Record<string, string>)[key] ?? key;
+    return this.i18n?.t(key) ?? databaseEnglish[key] ?? key;
   }
 
   /** Draws a value into its slot. The drawer pill attribute shipped in v1.16.1, so it stays. */
@@ -4070,7 +4070,7 @@ export class DatabaseCardDrawer {
     const failure = document.createElement('p');
 
     failure.setAttribute('role', 'alert');
-    failure.textContent = this.i18n?.t('tools.stub.error') ?? englishDictionary['tools.stub.error'];
+    failure.textContent = this.i18n?.t('tools.stub.error') ?? databaseEnglish['tools.stub.error'];
     editorHolder.replaceChildren(failure);
   }
 }

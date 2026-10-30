@@ -1,6 +1,6 @@
 import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
 
-import enMessages from './locales/en.json';
+import englishCore from './locales/english-core';
 
 const englishPlural = new Intl.PluralRules('en');
 
@@ -23,8 +23,11 @@ export class LightweightI18n {
    */
   private overrides: I18nDictionary | null = null;
 
-  constructor() {
-    this.dictionary = enMessages;
+  /**
+   * @param english - the editor's English: core's plus what its tools declare
+   */
+  constructor(english: I18nDictionary = englishCore) {
+    this.dictionary = english;
   }
 
   /**
@@ -93,6 +96,6 @@ export class LightweightI18n {
 }
 
 /**
- * English dictionary for synchronous access
+ * Core's English dictionary for synchronous access
  */
-export const englishDictionary = enMessages;
+export const englishDictionary = englishCore;

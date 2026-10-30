@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import type { I18n } from '../../../types';
-import { englishDictionary } from '../../components/i18n/lightweight-i18n';
+import { databaseEnglish } from './database-english';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconArrowDiagonal, IconArrowUp, IconCheck, IconCopy, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash, IconUndo } from '../../components/icons';
 import { holdLeave } from '../../components/utils/leave-guards';
@@ -1636,7 +1636,7 @@ export class PageLayoutBuilder {
   }
 
   private label(key: string, vars?: Record<string, string>): string {
-    const fallback = (englishDictionary as Record<string, string>)[key] ?? key;
+    const fallback = databaseEnglish[key] ?? key;
 
     return this.options.i18n?.t(key, vars) ?? fallback.replace(/\{(\w+)\}/g, (match, name: string) => vars?.[name] ?? match);
   }

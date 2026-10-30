@@ -3,8 +3,6 @@ import type { i18n as I18nextInstance, InitOptions } from 'i18next';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
 import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
 
-import { englishDictionary } from './lightweight-i18n';
-
 /**
  * i18next instance type after initialization
  */
@@ -27,11 +25,13 @@ export interface I18nextInitResult {
  *
  * @param initialLocale - The locale to initialize with
  * @param localeConfig - The loaded locale configuration
+ * @param english - the editor's English fallback
  * @returns Initialized i18next wrapper
  */
 export const loadI18next = async (
   initialLocale: SupportedLocale,
-  localeConfig: { dictionary: I18nDictionary }
+  localeConfig: { dictionary: I18nDictionary },
+  english: I18nDictionary
 ): Promise<I18nextInitResult> => {
   // Dynamic import of i18next - this is the key to tree-shaking it out
   const i18next = await import('i18next');
@@ -51,7 +51,7 @@ export const loadI18next = async (
      */
     resources: {
       en: {
-        translation: { ...englishDictionary },
+        translation: { ...english },
       },
       [initialLocale]: {
         translation: { ...localeConfig.dictionary },

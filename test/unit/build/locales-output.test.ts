@@ -5,6 +5,8 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
 import { describe, it, expect } from 'vitest'
 
+import { isDatabaseOnlyKey } from '../../../scripts/english-parts.mjs'
+
 const repoRoot = resolve(__dirname, '../../../')
 const dist = resolve(repoRoot, 'dist')
 const localeSources = resolve(repoRoot, 'src/components/i18n/locales')
@@ -32,6 +34,25 @@ function reachableFrom(entry: string): Set<string> {
     }
   }
   return seen
+}
+
+const STATIC_IMPORT_RE = /(?:^|[;}\n])\s*(?:import|export)\s*(?:[\w*{}\s,$]+from\s*)?["'](\.[^"']+)["']/g
+
+/** The files an entry loads before it runs: its static import closure. */
+function eagerFrom(entry: string): string[] {
+  const seen = new Set<string>()
+  const queue = [resolve(dist, entry)]
+  while (queue.length > 0) {
+    const file = queue.pop()
+    if (file === undefined || seen.has(file)) {
+      continue
+    }
+    seen.add(file)
+    for (const match of readFileSync(file, 'utf-8').matchAll(STATIC_IMPORT_RE)) {
+      queue.push(resolve(dirname(file), match[1]))
+    }
+  }
+  return [...seen]
 }
 
 function listEsFiles(dir: string): string[] {
@@ -162,6 +183,28 @@ const codes = JSON.parse(codesJson)
   process.stdout.write(JSON.stringify(out))
 })()
 `
+
+describe('English split between core and the Database tools', () => {
+  const english = Object.keys(JSON.parse(readFileSync(resolve(localeSources, 'en.json'), 'utf-8')) as Record<string, string>)
+  const databaseOnly = english.filter(isDatabaseOnlyKey)
+  const missingFrom = (entry: string, keys: string[]): string[] => {
+    const code = eagerFrom(entry).map((file) => readFileSync(file, 'utf-8')).join('\n')
+    return keys.filter((key) => !code.includes(`"${key}"`))
+  }
+
+  it('leaves database-only keys out of the bare core import', () => {
+    expect(databaseOnly.length).toBeGreaterThan(1000)
+    expect(missingFrom('blok.mjs', databaseOnly)).toHaveLength(databaseOnly.length)
+  })
+
+  it('keeps every key core reads in the bare core import', () => {
+    expect(missingFrom('blok.mjs', english.filter((key) => !isDatabaseOnlyKey(key)))).toEqual([])
+  })
+
+  it('ships the database keys with the tools entry', () => {
+    expect(missingFrom('tools.mjs', databaseOnly)).toEqual([])
+  })
+})
 
 describe('emoji locale files', () => {
   const emojiSources = resolve(repoRoot, 'src/components/utils/emoji/locales')

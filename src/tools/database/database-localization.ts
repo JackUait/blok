@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { englishDictionary } from '../../components/i18n/lightweight-i18n';
+import { databaseEnglish } from './database-english';
 import type { DatabaseViewConfig, PropertyDefinition, SelectOption, StatusGroup } from './types';
 import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 import { numbered } from '../../shared/database/seed-layouts';
@@ -48,7 +48,7 @@ const DEFAULT_KEYS = {
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
 
 const englishDefault = (key: DefaultKey): string =>
-  (englishDictionary as Record<string, string>)[key] ?? key;
+  databaseEnglish[key] ?? key;
 
 export { DATABASE_DEFAULT_TEXT };
 

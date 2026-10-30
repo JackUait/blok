@@ -112,14 +112,20 @@ test.describe('lazy stylesheets', () => {
     expect((await blokStyleTags(page))[0]?.markers.includes('askai')).toBe(false);
   });
 
-  test('"Nothing found" never shows its drawing unstyled, in an editor with no media tool', async ({ page }) => {
+  test('"Nothing found" never shows its drawing unstyled, in an editor with no media tool', async ({ browser }) => {
+    // A fresh page: the loaded sheets are page-wide, and another test may have loaded media.
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
     await page.evaluate(async () => {
       const holder = document.createElement('div');
 
       holder.id = 'blok';
       document.body.appendChild(holder);
-      const Original = (window as unknown as { BlokOriginal: typeof window.Blok }).BlokOriginal;
-      const blok = new Original({ holder, data: { blocks: [{ type: 'paragraph', data: { text: '' } }] } });
+      const { BlokOriginal, BlokParagraph } = window as unknown as { BlokOriginal: typeof window.Blok; BlokParagraph: unknown };
+      const blok = new BlokOriginal({ holder, tools: { paragraph: BlokParagraph }, data: { blocks: [{ type: 'paragraph', data: { text: '' } }] } });
 
       await blok.isReady;
     });
@@ -136,6 +142,7 @@ test.describe('lazy stylesheets', () => {
     // media-empty.css sizes the drawing; it may show only once that is in.
     expect((await blokStyleTags(page))[0]?.markers.includes('media-2')).toBe(false);
     await expect(art).toHaveCSS('display', 'block');
+    await context.close();
   });
 
   for (const [sheet, pattern] of [

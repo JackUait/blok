@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import { IconCheck, IconCheckbox, IconChevronDown, IconCopy, IconCross, IconHash, IconPageEmpty, IconReturn } from '../../components/icons';
+import { IconCheck, IconCheckbox, IconChevronDown, IconCopy, IconCross, IconHash, IconPageEmpty, IconUTurnLeft } from '../../components/icons';
 import { propertyTypeMeta } from './database-property-types';
 import { FormulaField, paintFormulaInto, renderFormulaInto } from './database-formula-field';
 import { CellPopover } from './cells/cell-popover';
@@ -581,7 +581,7 @@ class FormulaEditor implements FormulaEditorHandle {
     }
     label.textContent = ref.label;
     // `32-formula-typed.png`: a ↩ at the row's end; CSS shows it on the highlighted row only.
-    item.append(icon, label, glyph('data-blok-database-formula-reference-return', IconReturn));
+    item.append(icon, label, glyph('data-blok-database-formula-reference-return', IconUTurnLeft));
     item.addEventListener('mousedown', (event) => event.preventDefault());
     item.addEventListener('click', () => this.insert(ref.insert));
 

@@ -611,6 +611,15 @@ export const IconReturn = `
 </svg>
 `;
 
+// U-turn (Notion's arrowUTurnDownLeft, Edit formula's insert hint): a left arrow whose shaft
+// turns up and back on the right. Ink 12x8, as in `32-formula-typed.png`.
+export const IconUTurnLeft = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7.625 7.5L4.625 10.5L7.625 13.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 6.5H13.375a2 2 0 0 1 0 4H4.625" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Undo — the return icon's arrowhead on a hook that turns back (Ask AI bar)
 export const IconUndo = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

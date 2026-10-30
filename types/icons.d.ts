@@ -83,6 +83,7 @@ export declare const IconBookmark: string;
 export declare const IconMail: string;
 export declare const IconHash: string;
 export declare const IconReturn: string;
+export declare const IconUTurnLeft: string;
 export declare const IconUndo: string;
 export declare const IconQuote: string;
 export declare const IconCallout: string;

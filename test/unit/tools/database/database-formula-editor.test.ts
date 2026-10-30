@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { IconUTurnLeft } from '../../../../src/components/icons';
 import { openFormulaEditor } from '../../../../src/tools/database/database-formula-editor';
 import type { FormulaEditorOptions } from '../../../../src/tools/database/database-formula-editor';
 import { compileFormula } from '../../../../src/tools/database/formula';
@@ -721,6 +722,11 @@ describe('formula editor', () => {
     expect(rows.every((row) => row.lastElementChild?.hasAttribute('data-blok-database-formula-reference-return'))).toBe(true);
     expect(rows[0].lastElementChild?.getAttribute('aria-hidden')).toBe('true');
     expect(rows[0].lastElementChild?.querySelector('svg')).not.toBeNull();
+    // §26.5: Notion's `arrowUTurnDownLeft`, not an Enter key arrow.
+    const drawn = (root: ParentNode): string[] => [...root.querySelectorAll('path')].map((path) => path.getAttribute('d') ?? '');
+
+    expect(drawn(rows[0].lastElementChild ?? document.createElement('span')))
+      .toEqual(drawn(new DOMParser().parseFromString(IconUTurnLeft, 'image/svg+xml')));
   });
 
   it('inserts an operator with a space on each side', () => {

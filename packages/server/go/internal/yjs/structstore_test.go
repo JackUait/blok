@@ -1,6 +1,7 @@
 package yjs
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/lib0"
@@ -108,4 +109,27 @@ func TestCreateTypeCoversEveryTypeRef(t *testing.T) {
 		}
 	}
 	expectPanic(t, "ref 7", func() { createType(7, nil) })
+}
+
+// EncodeStateAsUpdate promises an error, so an engine invariant failing
+// inside it must come back as one, never as a panic that ends the process.
+func TestEncodeReturnsAnEngineFailureAsAnError(t *testing.T) {
+	doc := pinnedDoc()
+	// A gap the store never allows: clocks 2..4 are missing.
+	doc.store.clients[storeClient] = []Struct{anyItem(storeClient, 0, s("a"), s("b")), anyItem(storeClient, 5, s("c"))}
+	doc.store.order = append(doc.store.order, storeClient)
+	target := &StateVector{}
+	target.Set(storeClient, 3)
+	var engine *EngineError
+	update, err := func() (update []byte, err error) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				t.Fatalf("panicked: %v", recovered)
+			}
+		}()
+		return doc.EncodeStateAsUpdate(target.Encode())
+	}()
+	if update != nil || !errors.As(err, &engine) {
+		t.Fatalf("got %x, %v; want an *EngineError", update, err)
+	}
 }

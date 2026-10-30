@@ -179,8 +179,10 @@ func (d *Doc) EncodeStateVector() []byte { return d.store.getStateVector().Encod
 
 // EncodeStateAsUpdate is everything target has not seen: integrated and
 // parked structs plus the whole delete history and parked deletes. An empty
-// target means "seen nothing".
-func (d *Doc) EncodeStateAsUpdate(target []byte) ([]byte, error) {
+// target means "seen nothing". An engine invariant failure comes back as an
+// *EngineError, as C# throws one a caller frame can catch.
+func (d *Doc) EncodeStateAsUpdate(target []byte) (update []byte, err error) {
+	defer recoverEngine(&err)
 	vector := &StateVector{}
 	if len(target) > 0 {
 		decoded, err := DecodeStateVector(target)
@@ -193,6 +195,18 @@ func (d *Doc) EncodeStateAsUpdate(target []byte) ([]byte, error) {
 	writeRuns(w, buildRuns(d.store, vector, true))
 	d.deletedSoFar().write(w)
 	return w.Bytes(), nil
+}
+
+// recoverEngine turns an *EngineError panic into err. Any other panic is a
+// bug and keeps going up.
+func recoverEngine(err *error) {
+	if recovered := recover(); recovered != nil {
+		engine, ok := recovered.(*EngineError)
+		if !ok {
+			panic(recovered)
+		}
+		*err = engine
+	}
 }
 
 // ApplyUpdate decodes and applies. Malformed bytes leave the doc untouched.
@@ -208,15 +222,7 @@ func (d *Doc) ApplyUpdate(update []byte) (ApplyResult, error) {
 
 // ApplyDecoded applies an already decoded update in one remote transaction.
 func (d *Doc) ApplyDecoded(update *DecodedUpdate) (result ApplyResult, err error) {
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			engine, ok := recovered.(*EngineError)
-			if !ok {
-				panic(recovered)
-			}
-			err = engine
-		}
-	}()
+	defer recoverEngine(&err)
 	parkedBefore := d.parkedCoverage()
 	_, moved := d.transact(func(t *Transaction) {
 		t.local = false
@@ -231,7 +237,8 @@ func (d *Doc) ApplyDecoded(update *DecodedUpdate) (result ApplyResult, err error
 
 // Transact runs body in a local transaction and returns the update it
 // emitted, or nil when nothing changed. A nested call joins the open one
-// and returns nil: only the outermost emits.
+// and returns nil: only the outermost emits. An engine invariant failure
+// panics with *EngineError; a caller that must survive it recovers.
 func (d *Doc) Transact(body func(*Transaction)) []byte {
 	update, _ := d.transact(body, true)
 	return update

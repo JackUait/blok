@@ -191,7 +191,7 @@ describe('server release wiring', () => {
     expect(server.version).toBe(root.version);
   });
 
-  it('keeps every Node and C# server gate in final CI', () => {
+  it('keeps every Node, C# and Go server gate in final CI', () => {
     const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
     const jobs = [workflow.jobs.server, workflow.jobs['server-delivery']];
     const steps = jobs.flatMap((job) => job?.steps ?? []);
@@ -214,6 +214,7 @@ describe('server release wiring', () => {
     );
     expect(runs).toContain('node scripts/test-server-packages.mjs');
     expect(runs).toContain('node scripts/test-server-conformance.mjs --target csharp');
+    expect(runs).toContain('node scripts/test-server-conformance.mjs --target go');
     expect(runs).toContain('node scripts/publish-server.mjs --version 1.10.1 --dry-run');
     expect(runs).toContain('test/unit/architecture/server-release-wiring.test.ts');
   });
@@ -228,6 +229,8 @@ describe('server release wiring', () => {
       'test/unit/server-conformance/server-contract.test.ts',
       'test/unit/server-conformance/sync-contract.test.ts',
       'test/unit/server-conformance/blok-client-contract.test.ts',
+      'test/unit/server-conformance/protocol-v2-contract.test.ts',
+      'test/unit/server-conformance/mcp-agent-participant.test.ts',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }

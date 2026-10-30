@@ -354,6 +354,38 @@ jobs:
       - name: Test C# conformance
         run: node scripts/test-server-conformance.mjs --target csharp
 
+      # Go has no dependencies yet, so go.mod stands in for go.sum: the cache
+      # step fails the job when its path matches nothing.
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.mod
+
+      - name: Check Go formatting
+        working-directory: packages/server/go
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet Go server
+        working-directory: packages/server/go
+        run: go vet ./...
+
+      - name: Test Go server with coverage
+        working-directory: packages/server/go
+        run: |
+          go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...
+          go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1
+
+      # The pattern holds the tests the Go server passes so far. Widen it as
+      # Go gains features, and drop it once Go passes the whole suite.
+      - name: Test Go conformance
+        run: node scripts/test-server-conformance.mjs --target go --test-name-pattern health
+
       - name: Dry-run server artifacts
         run: node scripts/publish-server.mjs --version 1.10.1 --dry-run
 

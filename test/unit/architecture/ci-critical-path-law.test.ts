@@ -336,7 +336,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('ships and conformance-tests the .NET server in parallel with its tests', () => {
+  it('ships and conformance-tests the .NET and Go servers in parallel with the .NET tests', () => {
     const delivery = getJob(ci, 'server-delivery');
 
     expect(delivery.name).toBe('Server Delivery');
@@ -359,6 +359,42 @@ describe('CI critical-path law', () => {
       {
         name: 'Test C# conformance',
         run: 'node scripts/test-server-conformance.mjs --target csharp',
+      },
+      {
+        name: 'Setup Go',
+        uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16',
+        with: {
+          'go-version-file': 'packages/server/go/go.mod',
+          'cache-dependency-path': 'packages/server/go/go.mod',
+        },
+      },
+      {
+        name: 'Check Go formatting',
+        'working-directory': 'packages/server/go',
+        run: [
+          'unformatted="$(gofmt -l .)"',
+          'if [ -n "$unformatted" ]; then',
+          '  echo "$unformatted"',
+          '  exit 1',
+          'fi',
+        ].join('\n'),
+      },
+      {
+        name: 'Vet Go server',
+        'working-directory': 'packages/server/go',
+        run: 'go vet ./...',
+      },
+      {
+        name: 'Test Go server with coverage',
+        'working-directory': 'packages/server/go',
+        run: [
+          'go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...',
+          'go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1',
+        ].join('\n'),
+      },
+      {
+        name: 'Test Go conformance',
+        run: 'node scripts/test-server-conformance.mjs --target go --test-name-pattern health',
       },
       {
         name: 'Dry-run server artifacts',

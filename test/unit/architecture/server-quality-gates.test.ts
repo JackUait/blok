@@ -78,6 +78,20 @@ describe('server quality gates', () => {
     expect(tools.tools['dotnet-reportgenerator-globaltool']?.version).toBe('5.5.11');
   });
 
+  it('formats, vets, tests and measures the Go server in CI', () => {
+    const steps = workflow('.github/workflows/ci.yml').jobs['server-delivery']?.steps ?? [];
+    const runs = steps
+      .flatMap(step => step.run === undefined ? [] : [step.run])
+      .join('\n');
+    const uses = steps.flatMap(step => step.uses === undefined ? [] : [step.uses]);
+
+    expect(uses).toContain('actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16');
+    expect(runs).toContain('gofmt -l .');
+    expect(runs).toContain('go vet ./...');
+    expect(runs).toMatch(/go test -p 2 .*-coverprofile=/);
+    expect(runs).toContain('node scripts/test-server-conformance.mjs --target go');
+  });
+
   it('scans secrets, vulnerable dependencies, configuration, and C# code', () => {
     const ci = workflow('.github/workflows/ci.yml');
     const securitySteps = ci.jobs['server-security']?.steps ?? [];

@@ -3,9 +3,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -16,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/route"
+	"github.com/JackUait/blok/packages/server/go/blokserver"
 )
 
 // version is stamped at build time: -ldflags "-X main.version=1.2.3".
@@ -74,48 +71,17 @@ const usage = `Usage of blok-server:
 // shutdownGrace stays under the 2s the conformance harness waits before SIGKILL.
 const shutdownGrace = 1500 * time.Millisecond
 
-type options struct {
-	listen string
-	auth   string
-}
+const (
+	defaultRequestTimeout = 10 * time.Minute
+	keepAliveTimeout      = 2 * time.Minute
+	headerTimeout         = 10 * time.Second
+)
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
-	code := run(ctx, os.Args[1:], os.Stderr)
+	code := run(ctx, os.Args[1:], os.Getenv, os.Stderr)
 	stop()
 	os.Exit(code)
-}
-
-// parseArguments returns code -1 when the host should start.
-func parseArguments(args []string, stderr io.Writer) (options, int) {
-	parsed := options{}
-	flags := flag.NewFlagSet("blok-server", flag.ContinueOnError)
-	flags.SetOutput(stderr)
-	flags.Usage = func() { fmt.Fprint(stderr, usage) }
-
-	flags.StringVar(&parsed.listen, "listen", "127.0.0.1:4000", "")
-	flags.StringVar(&parsed.auth, "auth", "none", "")
-	// Accepted so the C# command lines parse. Not acted on yet: the Go host
-	// serves only the ungated /health, and every other path is 404.
-	for _, name := range []string{
-		"secret", "allow-origin", "storage-dir", "public-url", "max-upload",
-		"rate-limit", "s3-endpoint", "s3-region", "s3-bucket", "s3-bucket-url",
-		"s3-addressing", "doc-endpoint", "doc-endpoint-auth", "collab-dir",
-		"collab-s3-prefix", "rich-text-fields",
-	} {
-		flags.String(name, "", "")
-	}
-	for _, name := range []string{"no-unfurl", "collab", "collab-journal"} {
-		flags.Bool(name, false, "")
-	}
-
-	if err := flags.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return parsed, 0
-		}
-		return parsed, 2
-	}
-	return parsed, -1
 }
 
 // bindAddress copies the C# host: a bare ":PORT" binds IPv4 any.
@@ -126,56 +92,61 @@ func bindAddress(listen string) string {
 	return listen
 }
 
-func newHandler() http.Handler {
-	router := &route.Router{}
-	router.Handle("/health", []string{"GET", "HEAD"}, http.HandlerFunc(health))
-	router.Handle("/health", nil, route.MethodNotAllowed("GET, HEAD"))
-	return router
-}
-
-func health(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// Methods match case-insensitively, and net/http drops the body only for
-	// an exact "HEAD". No flush here: with no body written, net/http sends
-	// Content-Length: 0 for "head" and no length for "HEAD", like Kestrel.
-	if strings.EqualFold(r.Method, http.MethodHead) {
-		return
-	}
-	route.StartStream(w, http.StatusOK)
-	body, _ := json.Marshal(struct {
-		Status  string `json:"status"`
-		Version string `json:"version"`
-	}{"ok", version})
-	_, _ = w.Write(append(body, '\n'))
-}
-
-func newServer() *http.Server {
+// newHTTPServer is Kestrel's limits: headers within 10 s, 2 min idle, and
+// every request cut off with 504 at the request deadline.
+func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Server {
 	return &http.Server{
-		Handler:           newHandler(),
-		ReadHeaderTimeout: 10 * time.Second,
+		Handler:           withDeadline(handler, requestTimeout),
+		ReadHeaderTimeout: headerTimeout,
+		IdleTimeout:       keepAliveTimeout,
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,
 	}
 }
 
-func run(ctx context.Context, args []string, stderr io.Writer) int {
-	parsed, code := parseArguments(args, stderr)
-	if code >= 0 {
-		return code
+func run(ctx context.Context, args []string, getenv func(string) string, stderr io.Writer) int {
+	hostArgs, conformance, conformanceErr := parseConformanceArguments(args)
+	if conformanceErr != "" {
+		fmt.Fprintln(stderr, conformanceErr)
+		fmt.Fprint(stderr, usage)
+		return 2
 	}
-
-	listener, err := net.Listen("tcp", bindAddress(parsed.listen))
+	parsed := parseHostArguments(hostArgs, getenv)
+	if parsed.help {
+		fmt.Fprint(stderr, usage)
+		return 0
+	}
+	if parsed.err != "" {
+		fmt.Fprintln(stderr, parsed.err)
+		fmt.Fprint(stderr, usage)
+		return 2
+	}
+	options := parsed.options
+	options.Version = version
+	server, err := blokserver.New(options)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)
 		return 1
 	}
+	if parsed.secretFromFlag {
+		fmt.Fprintln(stderr, "warning: --secret puts the shared secret in this machine's process list; set BLOK_SECRET in the environment instead")
+	}
+	if parsed.docEndpointAuthFromFlag {
+		fmt.Fprintln(stderr, "warning: --doc-endpoint-auth puts the credential in this machine's process list; set BLOK_DOC_ENDPOINT_AUTH in the environment instead")
+	}
+	applyConformance(server, conformance)
 
-	server := newServer()
+	listener, err := net.Listen("tcp", bindAddress(options.ListenAddress))
+	if err != nil {
+		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)
+		return 1
+	}
+	httpServer := newHTTPServer(server.Handler(""), defaultRequestTimeout)
 	served := make(chan error, 1)
-	go func() { served <- server.Serve(listener) }()
+	go func() { served <- httpServer.Serve(listener) }()
 
 	// The harness trusts /health only after this line, so it must follow the bind.
-	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)\n", version, parsed.listen, parsed.auth)
+	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)\n", version, options.ListenAddress, options.Auth)
 
 	select {
 	case err := <-served:
@@ -186,6 +157,9 @@ func run(ctx context.Context, args []string, stderr io.Writer) int {
 
 	shutdown, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
-	_ = server.Shutdown(shutdown)
+	if err := server.Drain(shutdown); err != nil {
+		fmt.Fprintf(stderr, "warning: collab: the shutdown drain did not complete: %v\n", err)
+	}
+	_ = httpServer.Shutdown(shutdown)
 	return 0
 }

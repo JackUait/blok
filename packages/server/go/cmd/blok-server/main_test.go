@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/blokserver"
 )
 
 // syncBuffer lets the test read stderr while run writes it.
@@ -63,7 +65,7 @@ func waitFor(t *testing.T, condition func() bool) {
 func TestHelpPrintsUsageAndExitsZero(t *testing.T) {
 	for _, flag := range []string{"--help", "-h", "-help"} {
 		var stderr bytes.Buffer
-		code := run(context.Background(), []string{flag}, &stderr)
+		code := run(context.Background(), []string{flag}, noEnv, &stderr)
 
 		if code != 0 {
 			t.Fatalf("%s: exit %d", flag, code)
@@ -102,7 +104,7 @@ func TestUsageMatchesTheCSharpHost(t *testing.T) {
 
 func TestUnknownFlagPrintsErrorThenUsageAndExitsTwo(t *testing.T) {
 	var stderr bytes.Buffer
-	code := run(context.Background(), []string{"--not-a-real-flag"}, &stderr)
+	code := run(context.Background(), []string{"--not-a-real-flag"}, noEnv, &stderr)
 
 	if code != 2 {
 		t.Fatalf("exit %d", code)
@@ -115,18 +117,20 @@ func TestUnknownFlagPrintsErrorThenUsageAndExitsTwo(t *testing.T) {
 
 func TestMissingFlagValueExitsTwo(t *testing.T) {
 	var stderr bytes.Buffer
-	code := run(context.Background(), []string{"--listen"}, &stderr)
+	code := run(context.Background(), []string{"--listen"}, noEnv, &stderr)
 
 	if code != 2 || !strings.HasPrefix(stderr.String(), "flag needs an argument: -listen\n") {
 		t.Fatalf("exit %d, stderr %q", code, stderr.String())
 	}
 }
 
-func TestListenDefault(t *testing.T) {
-	options, code := parseArguments([]string{}, io.Discard)
+func noEnv(string) string { return "" }
 
-	if code != -1 || options.listen != "127.0.0.1:4000" || options.auth != "none" {
-		t.Fatalf("code %d, options %+v", code, options)
+func TestListenDefault(t *testing.T) {
+	parsed := parseHostArguments([]string{}, noEnv)
+
+	if parsed.err != "" || parsed.options.ListenAddress != "127.0.0.1:4000" || parsed.options.Auth != "none" {
+		t.Fatalf("%+v", parsed)
 	}
 }
 
@@ -137,18 +141,18 @@ func TestListenAcceptsEveryFlagSpelling(t *testing.T) {
 		{"--listen=127.0.0.1:5000"},
 		{"-listen=127.0.0.1:5000"},
 	} {
-		options, code := parseArguments(args, io.Discard)
-		if code != -1 || options.listen != "127.0.0.1:5000" {
-			t.Fatalf("%v: code %d, listen %q", args, code, options.listen)
+		parsed := parseHostArguments(args, noEnv)
+		if parsed.err != "" || parsed.options.ListenAddress != "127.0.0.1:5000" {
+			t.Fatalf("%v: %+v", args, parsed)
 		}
 	}
 }
 
 func TestBareBooleanFlagsParse(t *testing.T) {
-	_, code := parseArguments([]string{"--no-unfurl", "--collab", "--collab-journal"}, io.Discard)
+	parsed := parseHostArguments([]string{"--no-unfurl", "--collab", "--collab-journal"}, noEnv)
 
-	if code != -1 {
-		t.Fatalf("code %d", code)
+	if parsed.err != "" || parsed.options.UnfurlEnabled || !parsed.options.CollabEnabled || !parsed.options.CollabJournal {
+		t.Fatalf("%+v", parsed)
 	}
 }
 
@@ -172,7 +176,7 @@ func TestMalformedListenRefusesToStart(t *testing.T) {
 	}
 	for listen, want := range cases {
 		var stderr bytes.Buffer
-		code := run(context.Background(), []string{"--listen", listen}, &stderr)
+		code := run(context.Background(), []string{"--listen", listen}, noEnv, &stderr)
 
 		if code != 1 || stderr.String() != want {
 			t.Fatalf("%q: exit %d, stderr %q", listen, code, stderr.String())
@@ -188,7 +192,7 @@ func TestLostBindRefusesToStart(t *testing.T) {
 	defer owner.Close()
 
 	var stderr bytes.Buffer
-	code := run(context.Background(), []string{"--listen", owner.Addr().String()}, &stderr)
+	code := run(context.Background(), []string{"--listen", owner.Addr().String()}, noEnv, &stderr)
 
 	if code != 1 {
 		t.Fatalf("exit %d", code)
@@ -206,7 +210,7 @@ func TestListeningLineComesAfterBindAndHealthAnswers(t *testing.T) {
 	stderr := &syncBuffer{}
 	done := make(chan int, 1)
 
-	go func() { done <- run(ctx, []string{"--listen", address}, stderr) }()
+	go func() { done <- run(ctx, []string{"--listen", address}, noEnv, stderr) }()
 
 	waitFor(t, func() bool { return strings.Contains(stderr.String(), " listening on ") })
 
@@ -236,6 +240,18 @@ func TestListeningLineComesAfterBindAndHealthAnswers(t *testing.T) {
 		t.Fatal("run did not return within 2s of cancel")
 	}
 }
+
+func newHandler() http.Handler {
+	options := blokserver.DefaultOptions()
+	options.Version = version
+	server, err := blokserver.New(options)
+	if err != nil {
+		panic(err)
+	}
+	return server.Handler("")
+}
+
+func newServer() *http.Server { return newHTTPServer(newHandler(), defaultRequestTimeout) }
 
 func request(t *testing.T, method, path string) *http.Response {
 	t.Helper()

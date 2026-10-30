@@ -174,6 +174,7 @@ const PARSE_TEXTS = [
   ['short escapes', '"\\"\\\\\\/\\b\\f\\n\\r\\t\\u0041\\u00e9\\u0001\\u001f"'],
   ['numbers', '[1.0,1e2,-0,1E400,-1e999,5e-324,1e-400,0.1,12345678901234567890123,1e+2,1E-2]'],
   ['raw non-ascii', '["é😀<>&\'+`"]'],
+  ['depth 512', deep(512)],
   ['depth 513 (JS has no limit)', deep(513)],
   ['empty containers', '[{},[],""]'],
 ];
@@ -269,6 +270,7 @@ function dotnetInputs() {
     ['byte order mark', 'efbbbf31'],
     ['invalid byte in string', '22ff4122'],
     ['overlong in string', '22c08022'],
+    ['3-byte overlong in string', '22e0808022'],
     ['encoded surrogate in string', '22eda08022'],
     ['truncated 3-byte in string', '22e28222'],
     ['truncated 4-byte in string', '22f09f9822'],

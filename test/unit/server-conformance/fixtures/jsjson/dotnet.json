@@ -1067,6 +1067,33 @@
       "canonical": "\"\\uFFFD\\uFFFD\""
     },
     {
+      "name": "3-byte overlong in string",
+      "hex": "22e0808022",
+      "maxDepth": 0,
+      "refuseDuplicates": false,
+      "parse": "ok",
+      "write": "\"\\uFFFD\\uFFFD\\uFFFD\"",
+      "canonical": "\"\\uFFFD\\uFFFD\\uFFFD\""
+    },
+    {
+      "name": "3-byte overlong in string (512)",
+      "hex": "22e0808022",
+      "maxDepth": 512,
+      "refuseDuplicates": false,
+      "parse": "ok",
+      "write": "\"\\uFFFD\\uFFFD\\uFFFD\"",
+      "canonical": "\"\\uFFFD\\uFFFD\\uFFFD\""
+    },
+    {
+      "name": "3-byte overlong in string (512, no duplicates)",
+      "hex": "22e0808022",
+      "maxDepth": 512,
+      "refuseDuplicates": true,
+      "parse": "ok",
+      "write": "\"\\uFFFD\\uFFFD\\uFFFD\"",
+      "canonical": "\"\\uFFFD\\uFFFD\\uFFFD\""
+    },
+    {
       "name": "encoded surrogate in string",
       "hex": "22eda08022",
       "maxDepth": 0,

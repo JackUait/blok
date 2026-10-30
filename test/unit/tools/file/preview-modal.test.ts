@@ -24,7 +24,13 @@ vi.mock('../../../../src/tools/code/prism-applier', () => ({
   ensurePrismStyles: vi.fn(),
 }));
 
+vi.mock('../../../../src/tools/code/line-geometry', () => ({
+  rowHeight: vi.fn().mockReturnValue(0),
+  measureLineRows: vi.fn().mockReturnValue([]),
+}));
+
 import { loadTextPreview } from '../../../../src/tools/file/text-preview';
+import { measureLineRows, rowHeight } from '../../../../src/tools/code/line-geometry';
 import { markdownToHtml } from '../../../../src/markdown/markdownToHtml';
 import { fillOfficeBody } from '../../../../src/tools/file/office-preview';
 
@@ -232,6 +238,44 @@ describe('openFilePreview — text kinds', () => {
     await vi.waitFor(() => {
       expect(document.querySelector('[data-role="file-preview-code"] .token')).not.toBeNull();
     });
+    teardown();
+  });
+
+  it('numbers each line of a code file in a gutter beside the code', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: 'a\nb\n\nd\n' });
+    const teardown = openFilePreview({ url: 'app.ts', fileName: 'app.ts', labels: LABELS });
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-role="file-preview-code"] .token')).not.toBeNull();
+    });
+
+    const gutter = document.querySelector<HTMLElement>('[data-role="file-preview-code"] [data-role="file-preview-gutter"]');
+    // The trailing newline ends line 4; it does not start a fifth line.
+    expect(Array.from(gutter?.children ?? [], (line) => line.textContent)).toEqual(['1', '2', '3', '4']);
+    expect(gutter?.getAttribute('aria-hidden')).toBe('true');
+    expect(document.querySelector('[data-role="file-preview-code"] code')?.contains(gutter ?? null)).toBe(false);
+    teardown();
+  });
+
+  it('stretches a line number to cover every row its wrapped line takes', async () => {
+    vi.mocked(rowHeight).mockReturnValue(20);
+    vi.mocked(measureLineRows).mockReturnValue([1, 3, 1]);
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: 'a\na very long line\nc' });
+    const teardown = openFilePreview({ url: 'app.ts', fileName: 'app.ts', labels: LABELS });
+
+    await vi.waitFor(() => {
+      const lines = document.querySelectorAll<HTMLElement>('[data-role="file-preview-gutter"] > *');
+      expect(Array.from(lines, (line) => line.style.height)).toEqual(['', '60px', '']);
+    });
+    teardown();
+  });
+
+  it('keeps line numbers out of plain-text previews', async () => {
+    vi.mocked(loadTextPreview).mockResolvedValue({ ok: true, text: 'a\nb' });
+    const teardown = openFilePreview({ url: 'notes.txt', fileName: 'notes.txt', labels: LABELS });
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-role="file-preview-text"]')).not.toBeNull();
+    });
+    expect(document.querySelector('[data-role="file-preview-gutter"]')).toBeNull();
     teardown();
   });
 

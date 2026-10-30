@@ -108,7 +108,11 @@ export function measureLineRows(code: HTMLElement): number[] {
     return acc;
   }, []);
 
-  return lines.map((line, index) => (line === '' ? 1 : rowsOf(code, runs, starts[index], starts[index] + line.length, row)));
+  // Client rects carry ancestor transforms (a dialog opening from scale(0.92))
+  // and the line-height does not, so scale the row to match the rects.
+  const scale = code.offsetHeight > 0 ? code.getBoundingClientRect().height / code.offsetHeight : 1;
+
+  return lines.map((line, index) => (line === '' ? 1 : rowsOf(code, runs, starts[index], starts[index] + line.length, row * scale)));
 }
 
 /** Logical line holding a collapsed caret inside `code`, or null when there is none. */

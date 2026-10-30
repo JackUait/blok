@@ -408,7 +408,7 @@ describe('openFilePreview — text and code bodies', () => {
     expect(body.querySelector('[data-role="file-preview-loading"]')).toBeNull();
     expect(isHighlightable).toHaveBeenCalledWith('typescript');
     expect(tokenizePrism).toHaveBeenCalledWith('const x = 1;', 'typescript');
-    expect(applyPrismHighlight).toHaveBeenCalledWith(pre.firstElementChild, CODE_TOKENS, 'typescript');
+    expect(applyPrismHighlight).toHaveBeenCalledWith(pre.querySelector('code'), CODE_TOKENS, 'typescript');
   });
 
   it('skips tokenizing when the language is not highlightable', async () => {

@@ -5,6 +5,7 @@ import { loadTextPreview } from './text-preview';
 import { extToPrismLang } from './code-languages';
 import { tokenizePrism, isHighlightable } from '../code/prism-loader';
 import { applyPrismHighlight, ensurePrismStyles } from '../code/prism-applier';
+import { measureLineRows, rowHeight } from '../code/line-geometry';
 import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
@@ -79,21 +80,66 @@ function renderPlainText(body: HTMLElement, text: string): void {
   body.appendChild(pre);
 }
 
-async function renderCode(body: HTMLElement, text: string, lang: string): Promise<void> {
+async function renderCode(
+  body: HTMLElement,
+  text: string,
+  lang: string,
+  onRelease: (release: () => void) => void,
+): Promise<void> {
   body.replaceChildren();
   const pre = document.createElement('pre');
   pre.className = 'blok-file-preview-pre';
   pre.setAttribute('data-role', 'file-preview-code');
+  // Source reads LTR in any editor direction, so the gutter stays on the left.
+  pre.dir = 'ltr';
+
+  // A trailing newline ends the last line; it does not start a new one.
+  const lines = text.split('\n');
+  const lineCount = lines.length > 1 && lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
+  // A sibling of <code>, so the highlighter's innerHTML swap leaves it alone.
+  const gutter = document.createElement('div');
+  gutter.className = 'blok-file-preview-gutter';
+  gutter.setAttribute('data-role', 'file-preview-gutter');
+  gutter.setAttribute('aria-hidden', 'true');
+  Array.from({ length: lineCount }, (_, i) => {
+    const line = document.createElement('div');
+    line.textContent = String(i + 1);
+    gutter.appendChild(line);
+  });
+
   const code = document.createElement('code');
   code.textContent = text;
-  pre.appendChild(code);
+  pre.append(gutter, code);
   body.appendChild(pre);
+
+  // Long lines wrap, so a number must grow to cover every row of its line.
+  const syncRows = (): void => {
+    const rows = measureLineRows(code);
+    const row = rowHeight(code);
+    Array.from(gutter.children).forEach((line, index) => {
+      if (!(line instanceof HTMLElement)) {
+        return;
+      }
+      if ((rows[index] ?? 1) > 1) {
+        line.style.setProperty('height', `${rows[index] * row}px`);
+      } else {
+        line.style.removeProperty('height');
+      }
+    });
+  };
 
   if (isHighlightable(lang)) {
     const html = await tokenizePrism(text, lang);
     if (html !== null) {
       applyPrismHighlight(code, html, lang);
     }
+  }
+
+  syncRows();
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(syncRows);
+    observer.observe(code);
+    onRelease(() => observer.disconnect());
   }
 }
 
@@ -187,6 +233,7 @@ async function fillTextBody(
   opts: FilePreviewOptions,
   kind: Exclude<PreviewKind, 'pdf'>,
   isClosed: () => boolean,
+  onRelease: (release: () => void) => void,
 ): Promise<void> {
   const result = await loadTextPreview(opts.url);
   if (isClosed()) {
@@ -202,7 +249,7 @@ async function fillTextBody(
     await renderMarkdown(body, header, result.text, opts);
   } else if (kind === 'code') {
     const ext = extOf(opts.fileName ?? opts.url);
-    await renderCode(body, result.text, extToPrismLang(ext) ?? 'plain');
+    await renderCode(body, result.text, extToPrismLang(ext) ?? 'plain', onRelease);
   } else {
     renderPlainText(body, result.text);
   }
@@ -326,7 +373,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
       return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release));
     }
     if (textualKind !== null) {
-      return fillTextBody(body, header, opts, textualKind, () => state.closed);
+      return fillTextBody(body, header, opts, textualKind, () => state.closed, (release) => releases.push(release));
     }
 
     return Promise.resolve();

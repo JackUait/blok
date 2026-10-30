@@ -277,6 +277,55 @@ test('Markdown file preview toggles between rendered and raw views', async ({ pa
   await expect(rawView).toContainText('# Hello');
 });
 
+test('code file preview wraps long lines and keeps each line number beside its line', async ({ page }) => {
+  const source = ['const a = 1;', `const long = '${'x'.repeat(600)}';`, 'const b = 2;'].join('\n');
+
+  await uploadFixture(page, { name: 'main.ts', mimeType: 'text/plain', buffer: Buffer.from(source) });
+  await page.getByRole('button', { name: /main\.ts/i }).click();
+
+  const dialog = page.getByRole('dialog');
+  const pre = dialog.locator('[data-role="file-preview-code"]');
+  // Highlighting swaps the plain text for token spans; measure after it lands.
+  await expect.poll(() => pre.evaluate((el) => el.querySelector('code')?.childElementCount ?? 0)).toBeGreaterThan(0);
+  await dialog.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+
+  const layout = await pre.evaluate((el) => {
+    const code = el.querySelector('code');
+    const numbers = Array.from(el.querySelectorAll('[data-role="file-preview-gutter"] > *'));
+    const text = code?.textContent ?? '';
+    // Top of the glyph box at a text offset; same half-leading on every line.
+    const topAt = (target: number): number => {
+      const range = document.createRange();
+      const walker = document.createTreeWalker(code ?? el, NodeFilter.SHOW_TEXT);
+      let seen = 0;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const length = node.textContent?.length ?? 0;
+        if (seen + length > target) {
+          range.setStart(node, target - seen);
+          range.setEnd(node, target - seen + 1);
+
+          return range.getBoundingClientRect().top;
+        }
+        seen += length;
+      }
+
+      return NaN;
+    };
+
+    return {
+      overflow: el.scrollWidth - el.clientWidth,
+      firstOffset: numbers[0].getBoundingClientRect().top - topAt(0),
+      lastOffset: numbers[2].getBoundingClientRect().top - topAt(text.lastIndexOf('const b')),
+      longNumberHeight: numbers[1].getBoundingClientRect().height,
+      firstNumberHeight: numbers[0].getBoundingClientRect().height,
+    };
+  });
+
+  expect(layout.overflow).toBe(0);
+  expect(layout.longNumberHeight).toBeGreaterThan(layout.firstNumberHeight * 2);
+  expect(Math.abs(layout.lastOffset - layout.firstOffset)).toBeLessThan(1);
+});
+
 // ---------------------------------------------------------------------------
 // 5. Office previews: docx / xlsx / pptx render inline in the modal
 // ---------------------------------------------------------------------------

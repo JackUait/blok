@@ -653,6 +653,32 @@
   background: var(--blok-bg-primary);
 }
 
+/* Code files get a line-number gutter and wrap long lines instead of
+   scrolling sideways. The gutter shares the pre's font and line-height, and
+   preview-modal.ts stretches a number over every row its wrapped line takes. */
+.blok-file-preview-pre[data-role="file-preview-code"] {
+  display: flex;
+  align-items: flex-start;
+  overflow-x: hidden;
+}
+
+.blok-file-preview-pre[data-role="file-preview-code"] code {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.blok-file-preview-gutter {
+  flex: none;
+  min-width: 2ch;
+  margin-inline-end: var(--blok-space-5);
+  text-align: right;
+  color: var(--blok-text-secondary);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
 /* Markdown source is prose, not code: soft-wrap it so long lines stop
    clipping off the right edge, and centre it in the same reading column
    as the rendered view so toggling Rendered ⇄ Raw feels continuous. */

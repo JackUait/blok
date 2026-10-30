@@ -1,0 +1,460 @@
+{
+  "secret": "s3cret-value-at-least-32-chars-long!",
+  "now": 1700000000,
+  "payloads": [
+    {
+      "payload": "{\"user\":\"u1\",\"doc\":\"doc-42\",\"write\":true,\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "doc-42",
+        "write": true,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"USER\":\"u1\",\"write\":true,\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "",
+        "doc": "",
+        "write": true,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"write\":null,\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"write\":1,\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"write\":\"true\",\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":5.0}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":1e3}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":\"4102444800\"}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":null}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":9223372036854775807}",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "",
+        "write": false,
+        "exp": 9223372036854775807
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":9223372036854775808}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":-1}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":1}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\"}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"a\",\"user\":\"b\",\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "b",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":null,\"doc\":null,\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":5,\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"doc\":[\"x\"],\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"\\ud800\",\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"\\u00e9\\ud83d\\ude00\",\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "é\uD83D\uDE00",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"extra\":{\"deep\":[1,2,{\"x\":null}]},\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800,}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800} ",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": " {\"user\":\"u1\",\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800}{}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "null",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "[]",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "\"x\"",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800,\"write\":false,\"write\":true}",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "",
+        "write": true,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "\uFEFF{\"user\":\"u1\",\"exp\":4102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":04102444800}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800.0}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800e0}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800, \"nested\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "payload": "{\"user\":\"u1\",\"exp\":4102444800, \"nested\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    },
+    {
+      "payload": "{\"user\":\"ÿ\",\"exp\":4102444800}",
+      "answer": {
+        "valid": true,
+        "user": "ÿ",
+        "doc": "",
+        "write": false,
+        "exp": 4102444800
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "token": "",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": ".",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "..",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "a.b",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "a.b.c.d",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..x",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7s",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "doc-42",
+        "write": true,
+        "exp": 4102444800
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7t",
+      "answer": {
+        "valid": true,
+        "user": "u1",
+        "doc": "doc-42",
+        "write": true,
+        "exp": 4102444800
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7s=",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7\ns",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A+/1RmvNglmTHE_GR7s",
+      "answer": {
+        "valid": false
+      }
+    },
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7",
+      "answer": {
+        "valid": false
+      }
+    }
+  ],
+  "emptySecret": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7s",
+  "mints": [
+    {
+      "secret": "s3cret-value-at-least-32-chars-long!",
+      "user": "u1",
+      "doc": "doc-42",
+      "write": true,
+      "ttl": 300,
+      "answer": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjoxNzAwMDAwMzAwfQ.wQSPUp1wT4B9xmuh0a9CRe2mn4ypK5OYwc-KFNs2eBY"
+      }
+    },
+    {
+      "secret": "s3cret-value-at-least-32-chars-long!",
+      "user": "café <b>&'+\"\\/",
+      "doc": null,
+      "write": false,
+      "ttl": 60,
+      "answer": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiY2FmXHUwMEU5IFx1MDAzQ2JcdTAwM0VcdTAwMjZcdTAwMjdcdTAwMkJcdTAwMjJcXC8iLCJ3cml0ZSI6ZmFsc2UsImV4cCI6MTcwMDAwMDA2MH0.uJYYRONkujE_CG4WFiKI9tUBo4vDMNw-liOpnM8HecM"
+      }
+    },
+    {
+      "secret": "s3cret-value-at-least-32-chars-long!",
+      "user": "",
+      "doc": "",
+      "write": false,
+      "ttl": 1,
+      "answer": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiIiwiZG9jIjoiIiwid3JpdGUiOmZhbHNlLCJleHAiOjE3MDAwMDAwMDF9.0VI8ABH1Bn0Kc3ZZu4pTSJVjcU3jHVvoMMSXoja_Qh4"
+      }
+    },
+    {
+      "secret": "s3cret-value-at-least-32-chars-long!",
+      "user": "\uD83D\uDE00",
+      "doc": "d\n\t\u2028",
+      "write": true,
+      "ttl": 300,
+      "answer": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiXHVEODNEXHVERTAwIiwiZG9jIjoiZFxuXHRcdTIwMjgiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjoxNzAwMDAwMzAwfQ.oMElrFjbf4Fl8fNBOAX8olx3cCHPGdpTbkEKFrd5tAA"
+      }
+    },
+    {
+      "secret": "short",
+      "user": "u",
+      "doc": null,
+      "write": false,
+      "ttl": 300,
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "secret": "éééééééééééééééé",
+      "user": "u",
+      "doc": null,
+      "write": false,
+      "ttl": 300,
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "secret": "\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00",
+      "user": "u",
+      "doc": null,
+      "write": false,
+      "ttl": 300,
+      "answer": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidSIsIndyaXRlIjpmYWxzZSwiZXhwIjoxNzAwMDAwMzAwfQ.DSEl-KfuKqZeymx_xfG_5zYxlg5HiTc4gEgGzhPBzFw"
+      }
+    },
+    {
+      "secret": "s3cret-value-at-least-32-chars-long!",
+      "user": "u",
+      "doc": null,
+      "write": false,
+      "ttl": 0,
+      "answer": {
+        "throws": "ArgumentOutOfRangeException"
+      }
+    },
+    {
+      "secret": "s3cret-value-at-least-32-chars-long!",
+      "user": "u",
+      "doc": null,
+      "write": false,
+      "ttl": -5,
+      "answer": {
+        "throws": "ArgumentOutOfRangeException"
+      }
+    }
+  ],
+  "emptySecretAnswer": {
+    "valid": false
+  }
+}

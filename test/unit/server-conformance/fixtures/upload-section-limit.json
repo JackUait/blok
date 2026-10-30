@@ -1,0 +1,62 @@
+[
+  {
+    "name": "file then 999 fields",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "file then 1000 fields",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "malformed upload\n"
+    }
+  },
+  {
+    "name": "999 fields then the file",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "1000 fields then the file",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "malformed upload\n"
+    }
+  }
+]

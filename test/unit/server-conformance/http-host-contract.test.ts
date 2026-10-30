@@ -5,7 +5,8 @@
 // --target csharp --suite http-host-contract. Any other run compares.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { chmod, mkdir, mkdtemp, rm, stat, utimes, writeFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
+import { chmod, mkdir, mkdtemp, readdir, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -423,4 +424,128 @@ it('deletes local blobs with the C# failures', async () => {
   }
 
   compareGolden('local-delete-responses.json', actual);
+}, 60_000);
+
+const BOUNDARY = 'blok-http-host-boundary';
+
+function filePart(name: string, bytes: string): string {
+  return `--${BOUNDARY}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\n` +
+    `Content-Type: text/plain\r\n\r\n${bytes}\r\n`;
+}
+
+function fieldPart(index: number): string {
+  return `--${BOUNDARY}\r\nContent-Disposition: form-data; name="f${index}"\r\n\r\nv\r\n`;
+}
+
+function multipart(parts: string[]): string {
+  return `${parts.join('')}--${BOUNDARY}--\r\n`;
+}
+
+interface UploadGolden {
+  name: string;
+  response: GoldenResponse;
+}
+
+it('caps an upload at 1000 multipart sections', async () => {
+  const fields = (count: number): string[] => Array.from({ length: count }, (_, index) => fieldPart(index));
+  const bodies: Record<string, string> = {
+    'file then 999 fields': multipart([filePart('a.txt', 'one'), ...fields(999)]),
+    'file then 1000 fields': multipart([filePart('a.txt', 'one'), ...fields(1000)]),
+    '999 fields then the file': multipart([...fields(999), filePart('a.txt', 'one')]),
+    '1000 fields then the file': multipart([...fields(1000), filePart('a.txt', 'one')]),
+  };
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-sections-'));
+  const actual: UploadGolden[] = [];
+
+  try {
+    await withServer(['--storage-dir', directory, '--public-url', 'https://uploads.example.com/files/'], async (server) => {
+      for (const [name, body] of Object.entries(bodies)) {
+        const response = golden(await server.request('POST', '/upload', {
+          body,
+          headers: { 'Content-Type': `multipart/form-data; boundary=${BOUNDARY}` },
+        }));
+
+        response.body = response.body.replace(/[0-9a-f]{32}/g, '<key>');
+        actual.push({ name, response });
+      }
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  compareGolden('upload-section-limit.json', actual);
+}, 60_000);
+
+const SPOOL_NAME = /^\.blok-upload-[0-9a-f]{32}$/;
+
+async function spoolFiles(directory: string): Promise<string[]> {
+  return (await readdir(directory)).filter((name) => name.startsWith('.blok-upload-'));
+}
+
+async function waitFor<T>(read: () => Promise<T>, done: (value: T) => boolean): Promise<T> {
+  const deadline = Date.now() + 10_000;
+  let value = await read();
+
+  while (!done(value) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    value = await read();
+  }
+
+  return value;
+}
+
+async function uploadWhileWatchingTheSpool(baseUrl: string, temp: string, ending: 'abort' | 'finish'): Promise<void> {
+  const head = `--${BOUNDARY}\r\nContent-Disposition: form-data; name="file"; filename="a.txt"\r\n\r\n` +
+    'x'.repeat(100_000);
+  const request = httpRequest(new URL('/upload', baseUrl), {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${BOUNDARY}` },
+  });
+  const answered = new Promise<number>((resolve, reject) => {
+    request.once('response', (response) => {
+      response.resume();
+      response.once('end', () => resolve(response.statusCode ?? 0));
+    });
+    request.once('error', (error) => (ending === 'abort' ? resolve(0) : reject(error)));
+  });
+
+  request.write(head);
+
+  const during = await waitFor(() => spoolFiles(temp), (names) => names.length > 0);
+
+  expect(during, ending).toHaveLength(1);
+  expect(during[0]).toMatch(SPOOL_NAME);
+  expect((await stat(join(temp, during[0]))).mode & 0o777, ending).toBe(0o600);
+
+  if (ending === 'finish') {
+    request.end(`\r\n--${BOUNDARY}--\r\n`);
+    expect(await answered).toBe(200);
+  } else {
+    request.destroy();
+    await answered;
+  }
+
+  expect(await waitFor(() => spoolFiles(temp), (names) => names.length === 0), ending).toEqual([]);
+}
+
+it('spools an upload to a private temp file and removes it after', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'blok-http-host-spool-'));
+  const storage = await mkdtemp(join(tmpdir(), 'blok-http-host-spool-store-'));
+
+  try {
+    const server = await startServer({
+      args: ['--listen', '127.0.0.1:0', '--storage-dir', storage],
+      env: { ...process.env, TMPDIR: temp },
+    });
+
+    try {
+      await uploadWhileWatchingTheSpool(server.baseUrl, temp, 'finish');
+      await uploadWhileWatchingTheSpool(server.baseUrl, temp, 'abort');
+    } finally {
+      await server.stop();
+    }
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+    await rm(storage, { recursive: true, force: true });
+  }
 }, 60_000);

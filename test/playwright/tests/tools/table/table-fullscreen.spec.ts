@@ -119,7 +119,8 @@ test.describe('Table full screen', () => {
     await expect(dialog.locator('[data-blok-tool="table"]')).toHaveCount(1);
     await expect(page.locator(TABLE_SELECTOR)).toHaveCount(1);
     expect(parentBefore).toBe(true);
-    expect(await paintsOnTop(page, '[data-blok-table-fullscreen]')).toBe(true);
+    // While the box grows its clip is still the table's inline rect, so poll past the motion.
+    await expect.poll(() => paintsOnTop(page, '[data-blok-table-fullscreen]')).toBe(true);
 
     await page.locator(CELL_SELECTOR).first().click();
     await page.keyboard.press('Escape');

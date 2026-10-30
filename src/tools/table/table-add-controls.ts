@@ -7,7 +7,8 @@ import { twMerge } from '../../components/utils/tw';
 import { getElementDirection } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 
-import { inlineAxis, measureLastColumnWidth, measureLastRowHeight } from './table-direction';
+import { inlineAxis, measureLastColumnWidth, measureLastRowHeight, scrollToInlineEnd } from './table-direction';
+import { AUTO_SCROLL_GAIN_PER_SECOND, AUTO_SCROLL_VIEWPORT_BAND, revealBottom, verticalPort } from './table-scroll-port';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
@@ -56,6 +57,13 @@ interface DragState {
   didDrag: boolean;
   /** Pointer positions are mirrored in RTL, so outward is always positive. */
   direction: TextDirection;
+  /** Last pointer position: the auto-scroll keeps running without new events. */
+  pointerPos: number;
+  autoScrollFrame: number | null;
+  /** Timestamp of the previous auto-scroll frame; 0 before the first one. */
+  autoScrollAt: number;
+  /** Growth earned from holding the pointer at the edge, not yet spent on a whole row/column. */
+  pending: number;
 }
 
 /**
@@ -132,8 +140,14 @@ export class TableAddControls {
     this.grid = options.grid;
     this.i18n = options.i18n;
 
-    this.boundAddRowClick = options.onAddRow;
-    this.boundAddColClick = options.onAddColumn;
+    this.boundAddRowClick = (): void => {
+      options.onAddRow();
+      this.reveal('row');
+    };
+    this.boundAddColClick = (): void => {
+      options.onAddColumn();
+      this.reveal('col');
+    };
     this.onDragStart = options.onDragStart;
     this.onDragAddRow = options.onDragAddRow;
     this.onDragRemoveRow = options.onDragRemoveRow;
@@ -320,6 +334,8 @@ export class TableAddControls {
   }
 
   public destroy(): void {
+    this.stopAutoScroll();
+
     if (this.scrollContainer && this.boundScrollHandler) {
       this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
       this.scrollContainer = null;
@@ -382,6 +398,10 @@ export class TableAddControls {
       pointerId: e.pointerId,
       didDrag: false,
       direction,
+      pointerPos: axis === 'row' ? e.clientY : inlineAxis(direction).x(e.clientX),
+      autoScrollFrame: null,
+      autoScrollAt: 0,
+      pending: 0,
     };
 
     target.addEventListener('pointermove', this.boundPointerMove);
@@ -411,6 +431,123 @@ export class TableAddControls {
 
     this.resizeTo(axis, startSize + delta, direction);
     this.showDimensionTooltip();
+    this.dragState.pointerPos = currentPos;
+    this.syncAutoScroll();
+  }
+
+  /** The new row (or column) and its add bar, scrolled into view. */
+  private reveal(axis: 'row' | 'col'): void {
+    if (axis === 'row') {
+      revealBottom(this.grid, this.grid.getBoundingClientRect().bottom + this.addRowBtn.offsetHeight);
+    } else if (this.scrollContainer !== null) {
+      scrollToInlineEnd(this.scrollContainer);
+    }
+  }
+
+  /**
+   * How far into the edge band of whatever scrolls the table (the window, or
+   * the full-screen modal) the pointer is held, in px: the pointer has run out
+   * of screen to drag with. Mid-screen, the bar follows the pointer on its own,
+   * and growing on top of that would move the table unasked.
+   */
+  private autoScrollOvershoot(): number {
+    const state = this.dragState;
+
+    if (state === null || !state.didDrag) {
+      return 0;
+    }
+    const port = verticalPort(this.grid);
+
+    if (state.axis === 'row') {
+      const lower = port.bottom - AUTO_SCROLL_VIEWPORT_BAND;
+
+      // Armed once one more row and the bar under it would not fit before the band.
+      if (this.grid.getBoundingClientRect().bottom + this.measureAddUnit('row') + this.addRowBtn.offsetHeight < lower) {
+        return 0;
+      }
+
+      return Math.max(0, state.pointerPos - lower);
+    }
+    const sc = this.scrollContainer;
+
+    // Only a grid clipped by its scroll container has columns out of view.
+    if (sc === null || sc.scrollWidth <= sc.clientWidth + 1) {
+      return 0;
+    }
+    const axis = inlineAxis(state.direction);
+    const edge = axis.end(new DOMRect(port.left, port.top, port.right - port.left, port.bottom - port.top));
+
+    return Math.max(0, state.pointerPos - (edge - AUTO_SCROLL_VIEWPORT_BAND));
+  }
+
+  private syncAutoScroll(): void {
+    const state = this.dragState;
+
+    if (state === null) {
+      return;
+    }
+    if (this.autoScrollOvershoot() === 0) {
+      this.stopAutoScroll();
+
+      return;
+    }
+    if (state.autoScrollFrame === null) {
+      state.autoScrollFrame = requestAnimationFrame(timestamp => this.autoScrollTick(timestamp));
+    }
+  }
+
+  private stopAutoScroll(): void {
+    const state = this.dragState;
+
+    if (state === null) {
+      return;
+    }
+    if (state.autoScrollFrame !== null) {
+      cancelAnimationFrame(state.autoScrollFrame);
+      state.autoScrollFrame = null;
+    }
+    state.autoScrollAt = 0;
+    state.pending = 0;
+  }
+
+  /**
+   * Same feel as the corner drag: growth follows how far past the edge the
+   * pointer is held and is spent in whole rows/columns, then the drag
+   * re-anchors so pulling back from the edge shrinks from where the table is.
+   */
+  private autoScrollTick(timestamp: number): void {
+    const state = this.dragState;
+
+    if (state === null) {
+      return;
+    }
+    state.autoScrollFrame = null;
+
+    const overshoot = this.autoScrollOvershoot();
+
+    if (overshoot === 0) {
+      this.stopAutoScroll();
+
+      return;
+    }
+
+    // The first frame only starts the clock: a drag released just past the edge adds nothing.
+    const elapsed = state.autoScrollAt === 0 ? 0 : (timestamp - state.autoScrollAt) / 1000;
+    const unit = this.measureAddUnit(state.axis);
+
+    state.autoScrollAt = timestamp;
+    state.pending += overshoot * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
+
+    if (unit > 0 && state.pending >= unit) {
+      state.pending -= unit;
+      (state.axis === 'row' ? this.onDragAddRow : this.onDragAddCol)();
+      this.syncRowButtonWidth();
+      state.startSize = this.measureGridSize(state.axis) - (state.pointerPos - state.startPos);
+      this.showDimensionTooltip();
+    }
+
+    this.reveal(state.axis);
+    state.autoScrollFrame = requestAnimationFrame(next => this.autoScrollTick(next));
   }
 
   /**
@@ -502,6 +639,8 @@ export class TableAddControls {
       return;
     }
 
+    this.stopAutoScroll();
+
     const { axis, pointerId, didDrag } = this.dragState;
 
     const target = axis === 'row' ? this.addRowBtn : this.addColBtn;
@@ -534,6 +673,8 @@ export class TableAddControls {
     if (!this.dragState) {
       return;
     }
+
+    this.stopAutoScroll();
 
     const { axis, didDrag } = this.dragState;
 

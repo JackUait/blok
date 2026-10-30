@@ -5,6 +5,7 @@ import { show as showTooltip, showReadout, hide as hideTooltip } from '../../com
 import { getElementDirection } from '../../components/utils/direction';
 
 import { inlineAxis, measureLastColumnWidth, measureLastRowHeight, scrollToInlineEnd } from './table-direction';
+import { AUTO_SCROLL_GAIN_PER_SECOND, AUTO_SCROLL_VIEWPORT_BAND, verticalPort } from './table-scroll-port';
 import type { InlineAxis } from './table-direction';
 
 const CORNER_DRAG_ATTR = 'data-blok-table-corner-drag';
@@ -43,26 +44,6 @@ const MAX_STEPS_PER_MOVE = 200;
  * table without the user asking.
  */
 const AUTO_SCROLL_OVERSHOOT = 0;
-
-/**
- * Auto-scroll speed, as table growth per second per pixel the pointer is held
- * past the edge: 10px out grows 80px/s, 100px out grows 800px/s. Speed follows
- * the pointer rather than a fixed cadence, so how fast the table expands stays
- * under the reader's thumb — the same proportional rule drag-autoscroll uses
- * everywhere else.
- *
- * The budget accrues in pixels but is only ever spent in WHOLE rows/columns:
- * asking the geometry walk to grow by a fraction of one still appends a whole
- * one, which is how a px/ms budget once appended one per frame (~3600px/s).
- */
-const AUTO_SCROLL_GAIN_PER_SECOND = 8;
-
-/**
- * How close to the viewport's lower edge counts as having run out of screen.
- * Rows are never clipped the way columns are, so the vertical trigger is the
- * pointer running out of room to drag with rather than the corner being hidden.
- */
-const AUTO_SCROLL_VIEWPORT_BAND = 24;
 
 /**
  * How far past the container edge the pointer must pull back from its furthest
@@ -546,7 +527,7 @@ export class TableCornerDrag {
       return 0;
     }
 
-    return Math.max(0, this.dragState.pointerY - (window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND));
+    return Math.max(0, this.dragState.pointerY - (verticalPort(this.gridEl).bottom - AUTO_SCROLL_VIEWPORT_BAND));
   }
 
   private overshootUp(): number {
@@ -554,7 +535,7 @@ export class TableCornerDrag {
       return 0;
     }
 
-    return Math.max(0, AUTO_SCROLL_VIEWPORT_BAND - this.dragState.pointerY);
+    return Math.max(0, verticalPort(this.gridEl).top + AUTO_SCROLL_VIEWPORT_BAND - this.dragState.pointerY);
   }
 
   private shouldAutoScrollUp(): boolean {
@@ -583,8 +564,8 @@ export class TableCornerDrag {
   }
 
   /**
-   * Vertically the table is bounded by the page, not by its own scroller (which
-   * hides overflow-y), so this arms on the viewport and scrolls the window. Both
+   * Vertically the table is bounded by the box that scrolls it (the window, or
+   * the full-screen modal), not by its own scroller, which hides overflow-y. Both
    * ends matter: the bottom band grows the table when the pointer runs out of
    * screen, the top band keeps shrinking it in the mirrored case.
    *
@@ -602,7 +583,9 @@ export class TableCornerDrag {
       return;
     }
 
-    const lower = window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND;
+    const port = verticalPort(this.gridEl);
+    const lower = port.bottom - AUTO_SCROLL_VIEWPORT_BAND;
+    const upper = port.top + AUTO_SCROLL_VIEWPORT_BAND;
     const bottom = this.gridEl.getBoundingClientRect().bottom;
 
     if (state.pointerY >= lower) {
@@ -613,9 +596,9 @@ export class TableCornerDrag {
       return;
     }
 
-    if (state.pointerY <= AUTO_SCROLL_VIEWPORT_BAND) {
+    if (state.pointerY <= upper) {
       if (state.verticalArm !== 'up') {
-        state.verticalArm = bottom <= AUTO_SCROLL_VIEWPORT_BAND ? 'up' : 'none';
+        state.verticalArm = bottom <= upper ? 'up' : 'none';
       }
 
       return;
@@ -704,20 +687,16 @@ export class TableCornerDrag {
       scrollToInlineEnd(this.scrollContainer);
     }
 
-    if (down) {
-      const overshoot = this.gridEl.getBoundingClientRect().bottom - (window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND);
+    if (down || up) {
+      const port = verticalPort(this.gridEl);
+      const bottom = this.gridEl.getBoundingClientRect().bottom;
+      // Down: past the lower band. Up, negative: risen above the upper band.
+      const move = down
+        ? Math.max(0, bottom - (port.bottom - AUTO_SCROLL_VIEWPORT_BAND))
+        : Math.min(0, bottom - (port.top + AUTO_SCROLL_VIEWPORT_BAND));
 
-      if (overshoot > 0) {
-        window.scrollBy(0, overshoot);
-      }
-    }
-
-    if (up) {
-      // Negative: the corner has risen above the band, so bring the page back up.
-      const rise = this.gridEl.getBoundingClientRect().bottom - AUTO_SCROLL_VIEWPORT_BAND;
-
-      if (rise < 0) {
-        window.scrollBy(0, rise);
+      if (move !== 0) {
+        port.scrollBy(move);
       }
     }
 

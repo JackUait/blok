@@ -60,10 +60,10 @@ describe('renderVideo', () => {
     expect(media!.style.aspectRatio).toBe('21 / 9');
   });
 
-  it('video element has preload metadata and no native controls', () => {
+  it('video element downloads nothing until asked and has no native controls', () => {
     const fig = renderVideo({ url: 'u' });
     const video = fig.querySelector('video')!;
-    expect(video.getAttribute('preload')).toBe('metadata');
+    expect(video.getAttribute('preload')).toBe('none');
     expect(video.hasAttribute('controls')).toBe(false);
   });
 

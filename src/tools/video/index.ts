@@ -51,6 +51,7 @@ import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 import { renderVideoPreview } from './preview';
 import { overrideStatic } from '../../components/utils/override-static';
+import { whenNearViewport } from '../../components/utils/near-viewport';
 import type { LazySheet } from '../../components/utils/lazy-styles';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
@@ -100,6 +101,7 @@ export class VideoTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
+  private stopNearWatch: () => void = () => undefined;
   private loopOverrideActive: boolean;
   // Ephemeral theater (cinema-width) state — presentation only, never saved.
   private theater = false;
@@ -324,6 +326,7 @@ export class VideoTool implements BlockTool {
     this.cancelConversionIfGone();
     this.detached = true;
     this.detachResize();
+    this.stopNearWatch();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     releaseObjectUrl(this.api, this.block.id, this.data.url);
@@ -694,6 +697,7 @@ export class VideoTool implements BlockTool {
   private renderState(): void {
     if (!this.root) return;
     this.detachResize();
+    this.stopNearWatch();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     this.root.replaceChildren();
@@ -784,11 +788,17 @@ export class VideoTool implements BlockTool {
       // affordance: muted + autoplay + loop turns the block into a gif. Browsers
       // only honour autoplay when muted, so we mute here; editing never autoplays.
       video.loop = this.data.loop === true;
-      if (this.readOnly && this.data.autoplay === true) {
+      const autoplay = this.readOnly && this.data.autoplay === true;
+
+      if (autoplay) {
         video.muted = true;
         video.setAttribute('muted', '');
-        video.setAttribute('autoplay', '');
       }
+      // `autoplay` waits too: per the HTML spec it overrides `preload` and starts the download.
+      this.stopNearWatch = whenNearViewport(video, () => {
+        video.preload = 'metadata';
+        if (autoplay) video.setAttribute('autoplay', '');
+      });
       // "Hide controls" tune renders a clean, control-free frame — the custom
       // chrome is skipped entirely (native controls were never attached). Loop
       // and autoplay above still apply: they are content/viewer affordances.

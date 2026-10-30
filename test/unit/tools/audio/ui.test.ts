@@ -10,7 +10,7 @@ describe('renderNowPlaying', () => {
     expect(figure.getAttribute('data-role')).toBe('audio-figure');
     expect(audio.getAttribute('src')).toBe('https://x/y.mp3');
     expect(audio.hasAttribute('controls')).toBe(false);
-    expect(audio.getAttribute('preload')).toBe('metadata');
+    expect(audio.getAttribute('preload')).toBe('none');
   });
 
   it('renders title and artist text from data', () => {
@@ -33,6 +33,7 @@ describe('renderNowPlaying', () => {
     const { cover } = renderNowPlaying({ url: 'u', coverUrl: 'https://x/c.jpg' }, { editable: true });
     const img = cover.querySelector('img');
     expect(img?.getAttribute('src')).toBe('https://x/c.jpg');
+    expect(img?.getAttribute('loading')).toBe('lazy');
   });
 
   it('renders no decorative equalizer badge on the cover', () => {

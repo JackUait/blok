@@ -156,6 +156,26 @@ describe('AudioTool', () => {
     expect((audio as HTMLAudioElement).hasAttribute('controls')).toBe(false);
   });
 
+  it('an offscreen player downloads nothing until it nears the viewport', () => {
+    const near: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
+
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+        near.push(callback);
+      }
+      public observe(): void {}
+      public disconnect(): void {}
+    });
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3' }));
+    const audio = tool.render().querySelector('audio');
+
+    expect(audio?.getAttribute('preload')).toBe('none');
+
+    near.forEach((fire) => fire([{ isIntersecting: true }]));
+
+    expect(audio?.getAttribute('preload')).toBe('metadata');
+  });
+
   it('save() returns only defined fields', () => {
     const tool = new AudioTool(opts({ url: 'u', title: 'T', artist: 'A', width: 50, alignment: 'center', loop: true }));
     tool.render();

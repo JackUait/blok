@@ -47,6 +47,7 @@ import { logLabeled } from '../../components/utils/logger';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 import { renderAudioPreview } from './preview';
 import { overrideStatic } from '../../components/utils/override-static';
+import { whenNearViewport } from '../../components/utils/near-viewport';
 import type { LazySheet } from '../../components/utils/lazy-styles';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
@@ -93,6 +94,7 @@ export class AudioTool implements BlockTool {
   private errorService: ErrorService | undefined;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private controlsHandle: ControlsHandle | null = null;
+  private stopNearWatch: () => void = () => undefined;
   private waveformHandle: WaveformHandle | null = null;
   private destroyed = false;
   private coverPicker: CoverPickerHandle | null = null;
@@ -295,6 +297,7 @@ export class AudioTool implements BlockTool {
 
   public removed(): void {
     this.destroyed = true;
+    this.stopNearWatch();
     if (this.captionExitTimer) { clearTimeout(this.captionExitTimer); this.captionExitTimer = null; }
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
@@ -562,6 +565,7 @@ export class AudioTool implements BlockTool {
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
     this.waveformHandle = null;
+    this.stopNearWatch();
     this.root.replaceChildren();
     this.uploadingEl = null;
     this.syncRootAttributes();
@@ -642,6 +646,11 @@ export class AudioTool implements BlockTool {
       titlePlaceholder,
       artistPlaceholder,
       coverChangeLabel: tr(this.api.i18n, 'tools.audio.coverChange', 'Change cover'),
+    });
+
+    // The figure, not the <audio>: without `controls` it is display:none and never intersects.
+    this.stopNearWatch = whenNearViewport(figure, () => {
+      audio.preload = 'metadata';
     });
 
     // Waveform (if peaks are available)

@@ -39,7 +39,8 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
   video.setAttribute(DATA_ATTR.blockContextMenu, '');
   video.setAttribute('data-blok-testid', 'video-player');
   video.setAttribute('playsinline', '');
-  video.setAttribute('preload', 'metadata');
+  // The block raises it to `metadata` once the player nears the viewport.
+  video.setAttribute('preload', 'none');
   // Focusable so the player can field keyboard control (seek, volume, speed,
   // play/pause, mute, fullscreen) à la a native player.
   video.setAttribute('tabindex', '0');

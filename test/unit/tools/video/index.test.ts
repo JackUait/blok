@@ -429,7 +429,7 @@ describe('VideoTool — EMPTY state', () => {
 
 describe('VideoTool — editor actions (block settings)', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
   type SettingsItem = {
     name?: string;
@@ -709,6 +709,29 @@ describe('VideoTool — editor actions (block settings)', () => {
     expect(v?.muted).toBe(true);
     expect(v?.hasAttribute('autoplay')).toBe(true);
     expect(v?.loop).toBe(true);
+  });
+
+  it('an offscreen player loads and autoplays only once it nears the viewport', () => {
+    const near: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
+
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+        near.push(callback);
+      }
+      public observe(): void {}
+      public disconnect(): void {}
+    });
+    const tool = new VideoTool({ ...createOptions({ url: 'u', autoplay: true, loop: true }), readOnly: true });
+    const v = tool.render().querySelector('video');
+
+    expect(v?.getAttribute('preload')).toBe('none');
+    expect(v?.hasAttribute('autoplay')).toBe(false);
+
+    near.forEach((fire) => fire([{ isIntersecting: true }]));
+
+    expect(v?.getAttribute('preload')).toBe('metadata');
+    expect(v?.hasAttribute('autoplay')).toBe(true);
+    expect(v?.muted).toBe(true);
   });
 
   it('does not autoplay in edit mode (autoplay is a read-only viewer affordance)', () => {

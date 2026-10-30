@@ -48,6 +48,7 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
   cover.setAttribute('data-role', 'audio-cover');
   if (data.coverUrl) {
     const img = document.createElement('img');
+    img.setAttribute('loading', 'lazy');
     img.src = data.coverUrl;
     img.alt = '';
     cover.appendChild(img);
@@ -103,7 +104,8 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
 
   const audio = document.createElement('audio');
   audio.setAttribute('data-role', 'audio-media');
-  audio.setAttribute('preload', 'metadata');
+  // The block raises it to `metadata` once the player nears the viewport.
+  audio.setAttribute('preload', 'none');
   audio.src = data.url;
   audio.tabIndex = 0;
   if (data.loop) audio.loop = true;

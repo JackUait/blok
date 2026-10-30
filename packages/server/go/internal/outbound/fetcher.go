@@ -220,6 +220,9 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 func (f *Fetcher) tlsConfig(target Target) *tls.Config {
 	config := &tls.Config{NextProtos: []string{"http/1.1"}}
 	config.RootCAs = f.RootCAs
+	if config.RootCAs == nil {
+		config.RootCAs = defaultRoots()
+	}
 	if !target.Literal.IsValid() {
 		config.ServerName = target.Host
 	}

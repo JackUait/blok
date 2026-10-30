@@ -45,7 +45,8 @@ Packages are at module-root `internal/` so the collab lane (`internal/collab/...
 - `harness-contract.test.ts`: 2/2 pass.
 - `routing-contract.test.ts`: all non-skipped pass. Skipped on Go: the collab host block (collab lane) and "malformed escape on an unknown route" (net/http answers 400 before any handler; not fixable in a router).
 - `blok-client-contract.test.ts`: 0/12. Every test needs `/sync` (collab lane): connects-with-subprotocol, converges-with-stock-peer, reads-seeded-doc, read-only-client, resets-on-4409, close-1001-on-SIGTERM, awareness, v2-on-v1-server, stock-reader-with-v2-writer, two-tabs-one-outbox, row-journalled-by-other-tab, quarantine-on-verdicts.
-- CI: `node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract` (new `--suite` flag). Local wall time 1 min 44 s (the 65 s rate-limit window test dominates). **Check the CI job against the 7-minute budget.**
+- CI: `node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract --suite host-cli-contract` (new `--suite` flag).
+- `host-cli-contract.test.ts` (new): 19/19 on Go and on C#. Local wall time 1 min 44 s (the 65 s rate-limit window test dominates). **Check the CI job against the 7-minute budget.**
 - Harness fix: `server-process.ts`/`run-against.ts` kill every child when its test finishes (`onTestFinished`) and on worker exit. Oracle: `server-process-cleanup.test.ts`; a timed-out test's child was also checked dead by hand.
 
 ## Ledger rows
@@ -54,7 +55,8 @@ DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (n
 
 ### 1a Host (H)
 - DONE: H1, H2, H3, H5 (usage byte-copy test), H6, H7, H8 (SC:752), H10, H11, H12 (SC upload URLs use the default), H13, H14, H15, H16, H17, H25, H26, H27, H29, H30 (HC), H4 (Go `TestMissingFlagValueExitsTwo`), H28 (Go `TestBindAddress…`), H33 (Go `deadline_test.go`, mutation-checked), H39, H40 (SC:1369/1390/1407).
-- IMPL: H9, H20 (warnings), H22, H23, H24 (env/flag precedence, duplicate-key refusal via jsjson), H31 (ReadHeaderTimeout 10 s), H32 (IdleTimeout 2 min). Oracle: F1 `host-cli-contract.test.ts` (not written).
+- DONE (new black-box `host-cli-contract.test.ts`, green on C# AND Go, in CI for Go): H4, H9 (secret warning), H22, H23 (bad env), H24 (duplicate key, non-object), H25 overflow, plus V3, V9, V11, V12, V15, V17, V22-ish (S3 rows), V24, V28, V31, and "explicit empty secret beats BLOK_SECRET" (T3).
+- IMPL: H20 (doc-endpoint-auth warning; needs --collab to start), H31 (ReadHeaderTimeout 10 s), H32 (IdleTimeout 2 min).
 - Collab lane: H18, H19, H21, H34–H38, H41 (`--conformance-journal` is parsed and ignored).
 
 ### 1b Validate (V)
@@ -63,13 +65,13 @@ DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (n
 
 ### 1c Library (L)
 - DONE: L3 (SC local + S3), L17 (SC unfurl/by-url cases).
-- IMPL: L1 (`New`; no public override seams yet), L6, L7 (`Handler(prefix)`; prefix untested), L8 (files outside the prefix; untested), L10/L11 (`Authorization` interface; consulted by collab only), L12 (`User` on context in ticket mode; untested).
+- IMPL: L1 (`New`; no public override seams yet), L6, L7 (`Handler(prefix)`; prefix untested), L8 (files outside the prefix; untested), L10/L11 (`Authorization` interface; consulted by collab only).
 - TODO: L9 open-routes warning (needs collab; and a `Logger` option).
 - Collab/documents: L2, L4, L5, L13–L16.
 
 ### 1d Routing and guard (R)
 - DONE: R1–R3, R5–R7, R9–R15, R18–R21, R23 (SC + `internal/route`).
-- IMPL: R16 write-access 403, R17 doc claim ignored on HTTP routes. Oracle: Go guard test (next).
+- DONE: R16 write-access 403, R17 doc claim ignored, L12 user on context (Go `guard_test.go`, mutation-checked).
 - Collab: R4, R8, R22.
 
 ### 1e Upload, by-url, delete, unfurl
@@ -93,7 +95,8 @@ DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (n
 ### 1i Outbound (O)
 - DONE: O1, O2 (`outbound-policy.json`), O8 (SC redirect), O9 (SC timeout), O11 (SC oversized), O13, O14 (SC link).
 - IMPL: O3–O7, O10, O12 (gzip/br/deflate; brotli is `github.com/andybalholm/brotli` v1.2.6). Oracle: F8 black-box through the conformance origin (not written).
-- TODO: O15–O17 TLS. The darwin decision (T27) is not measured yet; Go uses the default verifier with system roots. Next round: F12 leak test, then decide.
+- O16/O17 darwin TLS: MEASURED and DECIDED. Go 1.27.1 on macOS, a leaf whose caIssuers URL points at a local listener: with `RootCAs` nil or `x509.SystemCertPool()` the platform verifier (trustd) fetched the issuer once (then cached it); with a pool built from PEM (a custom root, or `/etc/ssl/cert.pem`) it never did. Probe: `scratchpad/tlsprobe`. Decision: on darwin the guarded fetcher verifies against a pool built from `/etc/ssl/cert.pem` (`internal/outbound/tls_darwin.go`); a missing bundle fails https closed. Gap vs C#: Keychain-only roots (enterprise CAs) are not trusted for unfurl/by-url on macOS; C# keeps them via SecTrust with network fetch off. No cgo. Oracle: `tls_darwin_test.go` (the Go port of `SslStreamStillLeaksAnIssuerFetchOnMacOs`, red before the fix).
+- O15 (no revocation check, SNI = host, no SNI for IP literals): IMPL, Go's verifier does no revocation; no oracle. Windows issuer fetching is UNVERIFIED.
 - Architecture law DONE: `internal/outbound/law_test.go` (AST; S3 pinned to one client, one transport, one dialer; planted violations fail it). Doc-endpoint exemption to add when collab lands its client.
 
 ### 1j Unfurl parser (M)
@@ -115,9 +118,7 @@ None this round.
 A Go stub `…/blok-server-conformance-ALy01T/go-conformance/blok-server --listen 127.0.0.1:0 --storage-dir  --max-upload 0` (pid 9831, parent 1) was running before this lane's first run, from a deleted temp dir. Left alone; it is the orphan the task describes.
 
 ## Next round, in order
-1. F1 `host-cli-contract.test.ts` (black-box): H4, H9, H20, H22–H24, V3, V9, V11, V12, V15–V25, V28, V31, IPv4 shorthand listens.
-2. Go guard test for R16/R17/L12.
-3. F8 outbound black-box (encodings, 6-hop redirect, UA/no Accept-Encoding, 5 concurrent).
+1. Extend `host-cli-contract.test.ts`: H20 doc-endpoint-auth warning (needs collab), H23 flag-over-env, IPv4 shorthand listens (`127.1:PORT`: what Kestrel binds is UNVERIFIED, T1).
+2. F8 outbound black-box (encodings, 6-hop redirect, UA/no Accept-Encoding, 5 concurrent).
 4. F9 byte ranges; F13 unfurl HTML; F7 S3 golden.
-5. Darwin TLS: measure (F12), decide, document.
 6. L9 warning + `Logger` option (with collab).

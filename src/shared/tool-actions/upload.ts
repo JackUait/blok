@@ -1,7 +1,7 @@
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { AssetKind } from '../../../types/tools/block-tool';
 import type { ToolActionImpl } from '../../../types/tools/tool-description';
-import { plainLine } from '../agent/approval';
+import { plainLine } from '../agent/plain-line';
 import { failure } from '../agent/errors';
 import { matchesMime } from '../mime-match';
 

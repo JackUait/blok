@@ -51,11 +51,11 @@ type ContentDeleted struct {
 	ticks int
 }
 
-func (*ContentDeleted) Ref() byte         { return 1 }
-func (c *ContentDeleted) Len() int        { return c.ticks }
-func (*ContentDeleted) Countable() bool   { return false }
-func (*ContentDeleted) Values() []any     { return nil }
-func (c *ContentDeleted) copy() Content   { return &ContentDeleted{ticks: c.ticks} }
+func (*ContentDeleted) Ref() byte       { return 1 }
+func (c *ContentDeleted) Len() int      { return c.ticks }
+func (*ContentDeleted) Countable() bool { return false }
+func (*ContentDeleted) Values() []any   { return nil }
+func (c *ContentDeleted) copy() Content { return &ContentDeleted{ticks: c.ticks} }
 func (c *ContentDeleted) write(w *writer, offset int) {
 	w.WriteVarUint(uint64(c.ticks - offset))
 }
@@ -118,11 +118,11 @@ type ContentBinary struct {
 	Bytes []byte
 }
 
-func (*ContentBinary) Ref() byte              { return 3 }
-func (*ContentBinary) Len() int               { return 1 }
-func (*ContentBinary) Countable() bool        { return true }
-func (c *ContentBinary) Values() []any        { return []any{c.Bytes} }
-func (c *ContentBinary) copy() Content        { return c }
+func (*ContentBinary) Ref() byte                { return 3 }
+func (*ContentBinary) Len() int                 { return 1 }
+func (*ContentBinary) Countable() bool          { return true }
+func (c *ContentBinary) Values() []any          { return []any{c.Bytes} }
+func (c *ContentBinary) copy() Content          { return c }
 func (c *ContentBinary) write(w *writer, _ int) { w.WriteVarBytes(c.Bytes) }
 
 // ContentString (4) is Y.Text's characters, one tick per UTF-16 unit.

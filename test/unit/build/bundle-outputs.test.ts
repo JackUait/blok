@@ -568,20 +568,31 @@ describe('unbundled entries load only the icons they use', () => {
     return match[1]
   }
 
-  const closureCode = (entry: string): string => {
+  const parsed = new Map<string, ReturnType<typeof parseModule>[0]>()
+  const importsOf = (file: string, dynamic: boolean): string[] => {
+    if (!parsed.has(file)) parsed.set(file, parseModule(readFileSync(file, 'utf-8'))[0])
+    return (parsed.get(file) ?? [])
+      // d === -1 marks a static import; import() has d >= 0.
+      .filter(({ d, n }) => (d === -1) !== dynamic && n?.startsWith('.') === true)
+      .map(({ n }) => resolve(dirname(file), n as string))
+  }
+
+  // Files a static import of `start` downloads, skipping those already in `loaded`.
+  const closureFiles = (start: string, loaded = new Set<string>()): Set<string> => {
     const seen = new Set<string>()
-    const stack = [resolve(dist, entry)]
+    const stack = [start]
     while (stack.length > 0) {
       const file = stack.pop() as string
-      if (seen.has(file)) continue
+      if (seen.has(file) || loaded.has(file)) continue
       seen.add(file)
-      const [imports] = parseModule(readFileSync(file, 'utf-8'))
-      imports
-        .filter(({ d, n }) => d === -1 && n?.startsWith('.') === true)
-        .forEach(({ n }) => stack.push(resolve(dirname(file), n as string)))
+      stack.push(...importsOf(file, false))
     }
-    return [...seen].map((file) => readFileSync(file, 'utf-8')).join('\n')
+    return seen
   }
+
+  const codeOf = (files: Set<string>): string => [...files].map((file) => readFileSync(file, 'utf-8')).join('\n')
+
+  const closureCode = (entry: string): string => codeOf(closureFiles(resolve(dist, entry)))
 
   it('blok.mjs leaves out an icon only the video player draws', async () => {
     const { IconPlayerTheater, IconCross } = await import('../../../src/components/icons')
@@ -589,6 +600,36 @@ describe('unbundled entries load only the icons they use', () => {
     const code = closureCode('blok.mjs')
     expect(code.includes(pathOf(IconPlayerTheater))).toBe(false)
     expect(code.includes(pathOf(IconCross))).toBe(true)
+  })
+
+  it('a lazy load from blok.mjs leaves out icons it never draws', async () => {
+    const { IconPlayerTheater, IconEmojiDice } = await import('../../../src/components/icons')
+    await initLexer()
+    const eager = closureFiles(resolve(dist, 'blok.mjs'))
+    const reached = new Set<string>()
+    const stack = [...eager]
+    const targets = new Set<string>()
+    while (stack.length > 0) {
+      const file = stack.pop() as string
+      if (reached.has(file)) continue
+      reached.add(file)
+      stack.push(...importsOf(file, false))
+      importsOf(file, true).forEach((target) => {
+        targets.add(target)
+        stack.push(target)
+      })
+    }
+    const holders = (icon: string): Set<string> =>
+      new Set([...reached].filter((file) => readFileSync(file, 'utf-8').includes(pathOf(icon))))
+    const loading = (icon: string): string[] => {
+      const files = holders(icon)
+      return [...targets].filter((target) => !eager.has(target) && [...closureFiles(target, eager)].some((file) => files.has(file)))
+    }
+    const pulling = loading(IconPlayerTheater)
+    const drawing = loading(IconEmojiDice)
+    expect(pulling.map((target) => target.slice(dist.length + 1))).toEqual([])
+    // The emoji picker loads lazily and draws the dice, so the check above saw lazy icons.
+    expect(drawing.length).toBeGreaterThan(0)
   })
 
   it('icons.mjs exports the same names and values as the source', async () => {

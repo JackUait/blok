@@ -1,6 +1,9 @@
 /**
- * Ship the icons as two chunks: the ones dist/blok.mjs needs at load, and the
- * rest. A page that loads dist without a bundler then skips the tool-only icons.
+ * Put the icons dist/blok.mjs needs at load in one chunk, and let the bundler
+ * place every other icon next to the code that draws it. A page that loads
+ * dist without a bundler then skips the tool-only icons, and a lazy UI that
+ * draws one icon downloads only that one. One group for the other icons would
+ * make every lazy UI download all of them.
  *
  * Rolldown keeps a module whole in one chunk, so the build splits the icons
  * file into one virtual module per export. The source stays one file because
@@ -77,7 +80,7 @@ export default function splitIconsPlugin(iconsFile, coreEntry) {
       }
       coreIcons ??= iconsOfCore(ctx);
 
-      return coreIcons.has(id.slice(PREFIX.length)) ? 'icons-core' : 'icons';
+      return coreIcons.has(id.slice(PREFIX.length)) ? 'icons-core' : null;
     },
   };
 

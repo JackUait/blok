@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Find } from '../../../../../src/components/modules/find';
+import type { Find as FindModule } from '../../../../../src/components/modules/find';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokConfig } from '../../../../../types';
@@ -14,6 +14,15 @@ class FakeHighlight extends Set<Range> {
 
 const highlights = new Map<string, FakeHighlight>();
 
+const FIND_PATH = '../../../../../src/components/modules/find';
+const KIT_PATH = '../../../../../src/components/modules/find/find-kit';
+
+/** A fresh module per test, so each test meets the bar code not loaded yet, as a new page does. */
+let Find: typeof FindModule;
+
+/** Let the bar code finish loading. */
+const settle = (): Promise<void> => vi.dynamicImportSettled();
+
 interface FakeBlock {
   id: string;
   parentId: string | null;
@@ -22,7 +31,7 @@ interface FakeBlock {
 }
 
 interface Harness {
-  find: Find;
+  find: FindModule;
   wrapper: HTMLElement;
   redactor: HTMLElement;
   blocks: FakeBlock[];
@@ -208,8 +217,10 @@ describe('Find module', () => {
     return created;
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
+    ({ Find } = await import(FIND_PATH));
     vi.useFakeTimers();
     highlights.clear();
     vi.stubGlobal('Highlight', FakeHighlight);
@@ -224,9 +235,108 @@ describe('Find module', () => {
     vi.restoreAllMocks();
   });
 
-  it('takes over Ctrl/Cmd+F and opens the find bar on the page, above everything', () => {
+  describe('before the bar code has loaded', () => {
+    const KEY_F = { key: 'f', code: 'KeyF', ctrlKey: true };
+
+    it('keeps Cmd+F from the browser at once and opens the bar when the code arrives', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      expect(press(redactor, KEY_F).defaultPrevented).toBe(true);
+      expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
+
+      await settle();
+
+      expect(searchInput()).toHaveFocus();
+    });
+
+    it('puts what the reader types while it loads into the find field, not the document', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+      const text = redactor.querySelector('[contenteditable]') ?? redactor;
+
+      press(text, KEY_F);
+      const typed = [
+        press(text, { key: 'h', code: 'KeyH' }),
+        press(text, { key: 'x', code: 'KeyX' }),
+        press(text, { key: 'Backspace', code: 'Backspace' }),
+        press(text, { key: 'e', code: 'KeyE' }),
+      ];
+
+      expect(typed.map((event) => event.defaultPrevented)).toEqual([true, true, true, true]);
+
+      await settle();
+
+      expect(searchInput().value).toBe('he');
+      // The caret goes after the typed text, so the next key adds to it.
+      expect([searchInput().selectionStart, searchInput().selectionEnd]).toEqual([2, 2]);
+    });
+
+    it('takes the selection from the moment of the keystroke', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello world' }]);
+      const node = redactor.querySelector('[contenteditable]')?.firstChild as Text;
+      const range = document.createRange();
+
+      range.setStart(node, 0);
+      range.setEnd(node, 5);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      press(redactor, KEY_F);
+      window.getSelection()?.collapse(node, 8);
+      await settle();
+
+      expect(searchInput().value).toBe('hello');
+    });
+
+    it('does not open when Escape is pressed while it loads', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(redactor, KEY_F);
+
+      expect(press(redactor, { key: 'Escape', code: 'Escape' }).defaultPrevented).toBe(true);
+
+      await settle();
+
+      expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
+      expect(press(redactor, { key: 'a', code: 'KeyA' }).defaultPrevented).toBe(false);
+    });
+
+    it('does not open in an editor destroyed while it loads', async () => {
+      const { redactor, find } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(redactor, KEY_F);
+      find.destroy();
+      await settle();
+
+      expect(document.querySelector('[data-blok-find]')).toBeNull();
+    });
+
+    it('reports a failed load, gives the keyboard back, and tries again on the next Cmd+F', async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      vi.doMock(KIT_PATH, () => {
+        throw new Error('offline');
+      });
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(redactor, KEY_F);
+      await settle();
+
+      expect(error).toHaveBeenCalledWith('[Blok] Failed to open find. Reason:', expect.anything());
+      expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
+      expect(press(redactor, { key: 'a', code: 'KeyA' }).defaultPrevented).toBe(false);
+
+      vi.doUnmock(KIT_PATH);
+      press(redactor, KEY_F);
+      await settle();
+
+      expect(searchInput()).toHaveFocus();
+    });
+  });
+
+  it('takes over Ctrl/Cmd+F and opens the find bar on the page, above everything', async () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
     const event = press(redactor.querySelector('[contenteditable]') ?? redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(event.defaultPrevented).toBe(true);
     expect(searchInput()).toHaveFocus();
@@ -235,66 +345,73 @@ describe('Find module', () => {
     expect(wrapper.contains(openBar())).toBe(false);
   });
 
-  it('treats keys inside its own bar as its own, though the bar is outside the editor', () => {
+  it('treats keys inside its own bar as its own, though the bar is outside the editor', async () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'apple one' }, { id: 'b', text: 'apple two' }]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'apple');
 
     expect(press(searchInput(), { key: 'g', code: 'KeyG', ctrlKey: true }).defaultPrevented).toBe(true);
     expect(activeText()).toBe('apple two');
   });
 
-  it('takes its text direction from the editor', () => {
+  it('takes its text direction from the editor', async () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
 
     wrapper.setAttribute('dir', 'rtl');
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(openBar().getAttribute('dir')).toBe('rtl');
   });
 
-  it('removes its bar from the page when the editor is destroyed', () => {
+  it('removes its bar from the page when the editor is destroyed', async () => {
     const { redactor, find } = editor([{ id: 'a', text: 'hello' }]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     find.destroy();
 
     expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
 
-  it('opens from the body when this is the only editor', () => {
+  it('opens from the body when this is the only editor', async () => {
     const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
 
     expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+    await settle();
     expect(searchInput(wrapper)).toHaveFocus();
   });
 
-  it('leaves Cmd+F alone when the host turned find off', () => {
+  it('leaves Cmd+F alone when the host turned find off', async () => {
     const { redactor } = editor([{ id: 'a', text: 'hello' }], { find: false });
 
     expect(press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(false);
+    await settle();
   });
 
-  it('turns on with the object form of the config and puts the bar where the host asked', () => {
+  it('turns on with the object form of the config and puts the bar where the host asked', async () => {
     const { redactor } = editor([{ id: 'a', text: 'hello' }], { find: { placement: 'bottom-center', offset: { y: 40 } } });
 
     expect(press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    await settle();
     expect(openBar().getAttribute('data-blok-find-placement')).toBe('bottom-center');
     expect(openBar().style.getPropertyValue('--blok-find-offset-y')).toBe('40px');
   });
 
-  it('opens from a host input outside the editor', () => {
+  it('opens from a host input outside the editor', async () => {
     const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
     const hostInput = document.createElement('input');
 
     document.body.appendChild(hostInput);
 
     expect(press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    await settle();
     expect(searchInput(wrapper)).toHaveFocus();
   });
 
-  it('opens from a host contenteditable outside the editor', () => {
+  it('opens from a host contenteditable outside the editor', async () => {
     const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
     const hostTitle = document.createElement('h1');
 
@@ -302,16 +419,18 @@ describe('Find module', () => {
     document.body.appendChild(hostTitle);
 
     expect(press(hostTitle, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    await settle();
     expect(searchInput(wrapper)).toHaveFocus();
   });
 
-  it('leaves Cmd+F to a host field that handles it itself', () => {
+  it('leaves Cmd+F to a host field that handles it itself', async () => {
     editor([{ id: 'a', text: 'hello' }]);
     const hostInput = document.createElement('input');
 
     hostInput.addEventListener('keydown', (event) => event.preventDefault());
     document.body.appendChild(hostInput);
     press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
@@ -321,7 +440,7 @@ describe('Find module', () => {
       vi.spyOn(wrapper, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 100, 100)] as unknown as DOMRectList);
     };
 
-    it('goes to the visible editor when the one used last is hidden', () => {
+    it('goes to the visible editor when the one used last is hidden', async () => {
       const hidden = editor([{ id: 'a', text: 'hello' }]);
       const shown = editor([{ id: 'b', text: 'world' }]);
 
@@ -329,11 +448,12 @@ describe('Find module', () => {
       hidden.wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
       expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+      await settle();
       expect(shown.find.isOpen).toBe(true);
       expect(hidden.find.isOpen).toBe(false);
     });
 
-    it('goes to exactly one editor when the one used last is gone', () => {
+    it('goes to exactly one editor when the one used last is gone', async () => {
       const used = editor([{ id: 'a', text: 'hello' }]);
       const first = editor([{ id: 'b', text: 'world' }]);
       const second = editor([{ id: 'c', text: 'again' }]);
@@ -344,34 +464,37 @@ describe('Find module', () => {
       used.find.destroy();
 
       expect(press(document.body, { key: 'f', code: 'KeyF', metaKey: true }).defaultPrevented).toBe(true);
+      await settle();
       expect(first.find.isOpen).toBe(true);
       expect(second.find.isOpen).toBe(false);
     });
   });
 
-  it('only the editor that holds the target opens its bar', () => {
+  it('only the editor that holds the target opens its bar', async () => {
     const first = editor([{ id: 'a', text: 'hello' }]);
     const second = editor([{ id: 'b', text: 'world' }]);
 
     press(second.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(searchInput()).toHaveFocus();
     expect(document.querySelectorAll('[data-blok-find]')).toHaveLength(1);
     expect(first.wrapper.querySelector('input')).toBeNull();
   });
 
-  it('opens the inner editor Find bar for a shortcut inside it', () => {
+  it('opens the inner editor Find bar for a shortcut inside it', async () => {
     const outer = editor([{ id: 'outer', text: 'outer words' }]);
     const inner = editor([{ id: 'inner', text: 'inner words' }]);
 
     outer.redactor.appendChild(inner.wrapper);
     press(inner.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(inner.find.isOpen).toBe(true);
     expect(outer.find.isOpen).toBe(false);
   });
 
-  it('paints every match and walks through them with Enter and Shift+Enter', () => {
+  it('paints every match and walks through them with Enter and Shift+Enter', async () => {
     const { wrapper, redactor } = editor([
       { id: 'a', text: 'apple one' },
       { id: 'b', text: 'apple two' },
@@ -379,6 +502,7 @@ describe('Find module', () => {
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'APPLE');
 
     expect(painted('blok-find-match').length + painted('blok-find-match-active').length).toBe(3);
@@ -392,13 +516,14 @@ describe('Find module', () => {
     expect(activeText()).toBe('apple three');
   });
 
-  it('moves with Cmd+G and Shift+Cmd+G while the page has focus', () => {
+  it('moves with Cmd+G and Shift+Cmd+G while the page has focus', async () => {
     const { wrapper, redactor } = editor([
       { id: 'a', text: 'apple one' },
       { id: 'b', text: 'apple two' },
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'apple');
 
     const next = press(redactor, { key: 'g', code: 'KeyG', metaKey: true });
@@ -449,11 +574,12 @@ describe('Find module', () => {
       Reflect.deleteProperty(Element.prototype, 'checkVisibility');
     });
 
-    it('switches to the host tab that holds it when the reader steps to it', () => {
+    it('switches to the host tab that holds it when the reader steps to it', async () => {
       const { wrapper, redactor } = editor([{ id: 'a', text: 'cat here' }]);
       const { panel } = hostTab();
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
 
@@ -462,11 +588,12 @@ describe('Find module', () => {
       expect(matchCount()).toBe(2);
     });
 
-    it('asks its own block to show it when the reader steps to it, like a code block source behind its preview', () => {
+    it('asks its own block to show it when the reader steps to it, like a code block source behind its preview', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat here' }, { id: 'code', text: 'diagram' }]);
 
       hiddenSource(blocks[1]);
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
 
@@ -475,12 +602,13 @@ describe('Find module', () => {
       expect(matchCount()).toBe(2);
     });
 
-    it('switches nothing while the query is being typed, and starts on a shown match', () => {
+    it('switches nothing while the query is being typed, and starts on a shown match', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'code', text: 'diagram' }, { id: 'a', text: 'cat here' }]);
       const { panel } = hostTab();
 
       hiddenSource(blocks[0]);
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
 
       expect(blocks[0].call).not.toHaveBeenCalled();
@@ -490,7 +618,7 @@ describe('Find module', () => {
       expect(active instanceof Range ? active.startContainer.parentElement?.closest('[data-blok-element]') : null).toBe(blocks[1].holder);
     });
 
-    it('still counts a match in a hidden tab block', () => {
+    it('still counts a match in a hidden tab block', async () => {
       const { wrapper, redactor } = editor([
         { id: 'tabs', text: 'tabs' },
         { id: 'tab-1', text: 'cat first', parent: 'tabs' },
@@ -499,26 +627,28 @@ describe('Find module', () => {
       ]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
 
       expect(matchCount()).toBe(2);
     });
   });
 
-  it('never opens a collapsed toggle while the query is being typed', () => {
+  it('never opens a collapsed toggle while the query is being typed', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'outer', text: 'outer', collapsed: true },
       { id: 'leaf', text: 'hidden treasure', parent: 'outer' },
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'treasure');
 
     expect(blocks[0].call).not.toHaveBeenCalled();
     expect(searchInput(wrapper)).toHaveFocus();
   });
 
-  it('opens every collapsed toggle above a match the reader steps to', () => {
+  it('opens every collapsed toggle above a match the reader steps to', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'outer', text: 'outer', collapsed: true },
       { id: 'inner', text: 'inner', parent: 'outer', collapsed: true },
@@ -526,6 +656,7 @@ describe('Find module', () => {
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'treasure');
     press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
 
@@ -536,7 +667,7 @@ describe('Find module', () => {
     expect(leaf.call).not.toHaveBeenCalled();
   });
 
-  it('reveals a match inside a hidden ancestor by expanding it, outermost first', () => {
+  it('reveals a match inside a hidden ancestor by expanding it, outermost first', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'tabs', text: 'tabs' },
       { id: 'tab-1', text: 'first', parent: 'tabs' },
@@ -546,6 +677,7 @@ describe('Find module', () => {
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'treasure');
     press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
 
@@ -559,7 +691,7 @@ describe('Find module', () => {
     expect(leaf.call).not.toHaveBeenCalled();
   });
 
-  it('prefers a visible match over one under a hidden ancestor while typing', () => {
+  it('prefers a visible match over one under a hidden ancestor while typing', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'tab-1', text: 'tab one', hidden: true },
       { id: 'inside', text: 'treasure inside', parent: 'tab-1' },
@@ -567,13 +699,14 @@ describe('Find module', () => {
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'treasure');
 
     expect(activeText()).toBe('treasure outside');
     expect(blocks[0].call).not.toHaveBeenCalled();
   });
 
-  it('reveals a collapsed match inside a nested editor', () => {
+  it('reveals a collapsed match inside a nested editor', async () => {
     const outer = editor([{ id: 'outer', text: 'treasure outside' }]);
     const inner = editor([
       { id: 'inner-toggle', text: 'Toggle title', collapsed: true },
@@ -582,13 +715,14 @@ describe('Find module', () => {
 
     outer.redactor.appendChild(inner.wrapper);
     press(outer.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(outer.wrapper, 'treasure');
     press(searchInput(outer.wrapper), { key: 'Enter', code: 'Enter' });
 
     expect(inner.blocks[0].call).toHaveBeenCalledWith('expand');
   });
 
-  it('does not mistake a nested toggle\'s state for its container\'s', () => {
+  it('does not mistake a nested toggle\'s state for its container\'s', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'callout', text: 'callout' },
       { id: 'folded', text: 'folded', parent: 'callout', collapsed: true },
@@ -596,31 +730,34 @@ describe('Find module', () => {
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'treasure');
     press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
 
     expect(blocks[0].call).not.toHaveBeenCalled();
   });
 
-  it('leaves an open toggle and the matched block itself alone', () => {
+  it('leaves an open toggle and the matched block itself alone', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'outer', text: 'outer treasure', collapsed: true },
       { id: 'inner', text: 'inner', parent: 'outer', collapsed: false },
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'treasure');
     press(searchInput(wrapper), { key: 'Enter', code: 'Enter' });
 
     expect(blocks[0].call).not.toHaveBeenCalled();
   });
 
-  it('replaces the current match and moves on to the next one', () => {
+  it('replaces the current match and moves on to the next one', async () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'a', text: 'cat and cat' },
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
     const replaceButton = [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replace' || button.textContent === 'find.replace');
@@ -631,13 +768,14 @@ describe('Find module', () => {
     expect(blocks[0].holder.textContent).toBe('dog and cat');
   });
 
-  it('replaces every match as one undo step', () => {
+  it('replaces every match as one undo step', async () => {
     const { wrapper, redactor, blocks, blockManager } = editor([
       { id: 'a', text: 'cat one' },
       { id: 'b', text: 'two cat, cat' },
     ]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
     clickReplaceAll();
@@ -647,12 +785,13 @@ describe('Find module', () => {
     expect(blockManager.endToolTransaction).toHaveBeenCalledTimes(1);
   });
 
-  it('Replace All in an outer editor leaves a nested editor unchanged', () => {
+  it('Replace All in an outer editor leaves a nested editor unchanged', async () => {
     const outer = editor([{ id: 'outer', text: 'cat outside' }]);
     const inner = editor([{ id: 'inner', text: 'cat inside' }]);
 
     outer.redactor.appendChild(inner.wrapper);
     press(outer.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(outer.wrapper, 'cat');
     outer.find.replaceAll('dog');
 
@@ -660,7 +799,7 @@ describe('Find module', () => {
     expect(outer.blocks[0].holder.textContent).toBe('dog outside');
   });
 
-  it('keeps formatting when a replaced match spans two marks', () => {
+  it('keeps formatting when a replaced match spans two marks', async () => {
     const { wrapper, redactor, blocks } = editor([{ id: 'a', text: '' }]);
     const input = blocks[0].holder.querySelector('[contenteditable]');
 
@@ -670,6 +809,7 @@ describe('Find module', () => {
     input.innerHTML = 'a <b>bo</b><i>ld</i> move';
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'bold');
     setReplacement(wrapper, 'brave');
     clickReplaceAll();
@@ -699,34 +839,37 @@ describe('Find module', () => {
       return paragraph;
     };
 
-    it('are disabled when every match is outside the editor', () => {
+    it('are disabled when every match is outside the editor', async () => {
       const { wrapper, redactor } = editor([{ id: 'a', text: 'nothing here' }]);
 
       hostText('a cat on the host page');
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
 
       expect(replaceButton().disabled).toBe(true);
       expect(replaceAllButton().disabled).toBe(true);
     });
 
-    it('are disabled when every match is in text that is not editable', () => {
+    it('are disabled when every match is in text that is not editable', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat' }]);
 
       blocks[0].holder.querySelector('[contenteditable]')?.setAttribute('contenteditable', 'false');
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
 
       expect(replaceButton().disabled).toBe(true);
       expect(replaceAllButton().disabled).toBe(true);
     });
 
-    it('enable Replace only on a match it can replace, and Replace all while any is left', () => {
+    it('enable Replace only on a match it can replace, and Replace all while any is left', async () => {
       const { wrapper, redactor, blocks, find } = editor([{ id: 'a', text: 'cat in the editor' }]);
       const host = hostText('a cat on the host page');
       const activeIn = (): Node | undefined => [...highlights.get('blok-find-match-active') ?? []][0]?.startContainer;
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
 
       expect(host.contains(activeIn() ?? null)).toBe(true);
@@ -740,10 +883,11 @@ describe('Find module', () => {
       expect(replaceAllButton().disabled).toBe(false);
     });
 
-    it('disable Replace on a match that already reads exactly like the replacement, case included', () => {
+    it('disable Replace on a match that already reads exactly like the replacement, case included', async () => {
       const { wrapper, redactor, find } = editor([{ id: 'a', text: 'cat and Cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('cat');
 
@@ -755,10 +899,11 @@ describe('Find module', () => {
       expect(replaceButton().disabled).toBe(false);
     });
 
-    it('leave Replace all nothing to do when every match already reads like the replacement', () => {
+    it('leave Replace all nothing to do when every match already reads like the replacement', async () => {
       const { wrapper, redactor, find, blockManager } = editor([{ id: 'a', text: 'cat and cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('cat');
 
@@ -770,12 +915,13 @@ describe('Find module', () => {
     });
   });
 
-  it('never replaces in read-only mode', () => {
+  it('never replaces in read-only mode', async () => {
     const { wrapper, redactor, blocks, readOnly, find } = editor([{ id: 'a', text: 'cat' }]);
 
     readOnly.isEnabled = true;
     find.toggleReadOnly(true);
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'cat');
     find.replaceAll('dog');
 
@@ -786,6 +932,7 @@ describe('Find module', () => {
     const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'one apple' }]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'apple');
     blocks[0].holder.querySelector('[contenteditable]')?.append(' apple');
     await Promise.resolve();
@@ -794,10 +941,11 @@ describe('Find module', () => {
     expect(painted('blok-find-match').length + painted('blok-find-match-active').length).toBe(2);
   });
 
-  it('clears the paint and selects the current match when closed with Escape', () => {
+  it('clears the paint and selects the current match when closed with Escape', async () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'one apple' }]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'apple');
     press(searchInput(wrapper), { key: 'Escape', code: 'Escape' });
     vi.runAllTimers();
@@ -806,7 +954,7 @@ describe('Find module', () => {
     expect(window.getSelection()?.toString()).toBe('apple');
   });
 
-  it('gives focus back to the editor when closed without a match', () => {
+  it('gives focus back to the editor when closed without a match', async () => {
     const { wrapper, blocks } = editor([{ id: 'a', text: 'one apple' }]);
     const input = blocks[0].holder.querySelector<HTMLElement>('[contenteditable]');
 
@@ -815,27 +963,31 @@ describe('Find module', () => {
     }
     input.focus();
     press(input, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'pear');
     press(searchInput(wrapper), { key: 'Escape', code: 'Escape' });
 
     expect(input).toHaveFocus();
   });
 
-  it('keeps a second Cmd+F in the find field from opening the browser find', () => {
+  it('keeps a second Cmd+F in the find field from opening the browser find', async () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(press(searchInput(wrapper), { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    await settle();
     expect(searchInput(wrapper)).toHaveFocus();
   });
 
-  it('keeps Escape in the find bar from reaching the page', () => {
+  it('keeps Escape in the find bar from reaching the page', async () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
     const pageHandler = vi.fn();
 
     document.addEventListener('keydown', pageHandler);
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     press(searchInput(wrapper), { key: 'Escape', code: 'Escape' });
     document.removeEventListener('keydown', pageHandler);
 
@@ -851,6 +1003,7 @@ describe('Find module', () => {
     }
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'foo');
     setReplacement(wrapper, 'foo2');
     [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replace')?.click();
@@ -874,6 +1027,7 @@ describe('Find module', () => {
     const host = blocks[0].holder.querySelector('[contenteditable]');
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'apple');
 
     await Array.from({ length: 20 }).reduce(async (previous: Promise<void>) => {
@@ -886,7 +1040,7 @@ describe('Find module', () => {
     expect(painted('blok-find-match').length + painted('blok-find-match-active').length).toBeGreaterThan(1);
   });
 
-  it('tells only the edited field about a replace, not the whole editor', () => {
+  it('tells only the edited field about a replace, not the whole editor', async () => {
     const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat' }]);
     const host = blocks[0].holder.querySelector('[contenteditable]');
     const onHost = vi.fn();
@@ -895,6 +1049,7 @@ describe('Find module', () => {
     host?.addEventListener('input', onHost);
     redactor.addEventListener('input', onEditor);
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
     clickReplaceAll();
@@ -903,7 +1058,7 @@ describe('Find module', () => {
     expect(onHost).toHaveBeenCalled();
   });
 
-  it('prefills the query from a short text selection', () => {
+  it('prefills the query from a short text selection', async () => {
     const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
     const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
 
@@ -912,6 +1067,7 @@ describe('Find module', () => {
     }
     window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(searchInput(wrapper).value).toBe('this');
   });
@@ -939,13 +1095,14 @@ describe('Find module', () => {
     }
     window.getSelection()?.setBaseAndExtent(text, 5, text, 9);
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
     await Promise.resolve();
 
     expect(searchInput(wrapper).getAttribute('aria-invalid')).toBeNull();
     expect(painted('blok-find-match-active')).toHaveLength(1);
   });
 
-  it('prefills the query from a selection in a host contenteditable outside the editor', () => {
+  it('prefills the query from a selection in a host contenteditable outside the editor', async () => {
     const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
     const hostTitle = document.createElement('h1');
 
@@ -960,11 +1117,12 @@ describe('Find module', () => {
     }
     window.getSelection()?.setBaseAndExtent(text, 0, text, 4);
     press(hostTitle, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(searchInput(wrapper).value).toBe('Blok');
   });
 
-  it('prefills the query from the selected part of a host input', () => {
+  it('prefills the query from the selected part of a host input', async () => {
     const { wrapper } = editor([{ id: 'a', text: 'hello' }]);
     const hostInput = document.createElement('input');
 
@@ -973,6 +1131,7 @@ describe('Find module', () => {
     hostInput.focus();
     hostInput.setSelectionRange(7, 12);
     press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+    await settle();
 
     expect(searchInput(wrapper).value).toBe('words');
   });
@@ -990,7 +1149,7 @@ describe('Find module', () => {
       }
     });
 
-    it('gives the bar no hop for a host input selection, which has no rect', () => {
+    it('gives the bar no hop for a host input selection, which has no rect', async () => {
       const { wrapper, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
       const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
       const hostInput = document.createElement('input');
@@ -1016,12 +1175,13 @@ describe('Find module', () => {
       hostInput.focus();
       hostInput.setSelectionRange(7, 12);
       press(hostInput, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
 
       expect(searchInput(wrapper).value).toBe('words');
       expect(document.querySelector('[data-blok-find-hop-chip]')).toBeNull();
     });
 
-    it('measures the selected word before the bar opens and takes focus', () => {
+    it('measures the selected word before the bar opens and takes focus', async () => {
       const { redactor, blocks } = editor([{ id: 'a', text: 'pick this word' }]);
       const text = blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
 
@@ -1040,13 +1200,14 @@ describe('Find module', () => {
         return [{ left: 10, top: 10, width: 30, height: 18, right: 40, bottom: 28 }];
       });
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
 
       expect(focusAtMeasure.length).toBeGreaterThan(0);
       expect(focusAtMeasure[0]?.closest('[data-blok-find]')).toBeNull();
     });
   });
 
-  it('does not prefill from a selection in another editor', () => {
+  it('does not prefill from a selection in another editor', async () => {
     const first = editor([{ id: 'a', text: 'hello' }]);
     const second = editor([{ id: 'b', text: 'other words' }]);
     const text = second.blocks[0].holder.querySelector('[contenteditable]')?.firstChild;
@@ -1055,17 +1216,18 @@ describe('Find module', () => {
       throw new Error('text missing');
     }
     window.getSelection()?.setBaseAndExtent(text, 0, text, 5);
-    first.find.open();
+    await first.find.open();
 
     expect(searchInput(first.wrapper).value).toBe('');
   });
 
   describe('replace preview', () => {
-    it('shows each match struck through with its replacement after it, without touching the document', () => {
+    it('shows each match struck through with its replacement after it, without touching the document', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat and cat' }]);
       const input = blocks[0].holder.querySelector('[contenteditable]');
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
 
@@ -1080,12 +1242,13 @@ describe('Find module', () => {
       expect(preview.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('does not preview a nested editor from the outer Find bar', () => {
+    it('does not preview a nested editor from the outer Find bar', async () => {
       const outer = editor([{ id: 'outer', text: 'cat outside' }]);
       const inner = editor([{ id: 'inner', text: 'cat inside' }]);
 
       outer.redactor.appendChild(inner.wrapper);
       press(outer.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(outer.wrapper, 'cat');
       typeReplacement('dog');
 
@@ -1097,6 +1260,7 @@ describe('Find module', () => {
       const { wrapper, redactor } = editor([{ id: 'a', text: 'cat and cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('cat cat');
       await Promise.resolve();
@@ -1106,13 +1270,14 @@ describe('Find module', () => {
       expect(redactor.querySelectorAll(PREVIEW)).toHaveLength(1);
     });
 
-    it('previews a nested match once, inside its top-level block', () => {
+    it('previews a nested match once, inside its top-level block', async () => {
       const { wrapper, redactor, blocks } = editor([
         { id: 'a', text: 'toggle cat' },
         { id: 'b', text: 'child cat', parent: 'a' },
       ]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
 
@@ -1121,10 +1286,11 @@ describe('Find module', () => {
       expect(blocks[1].holder.hasAttribute('data-blok-find-preview')).toBe(false);
     });
 
-    it('strikes each match through with nothing after it when the replacement is empty', () => {
+    it('strikes each match through with nothing after it when the replacement is empty', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat and cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
       typeReplacement('');
@@ -1138,10 +1304,11 @@ describe('Find module', () => {
     it.each([
       ['the replace row closes', () => openBar().querySelector<HTMLButtonElement>('[data-blok-testid="find-replace-toggle"]')?.click()],
       ['the bar closes', () => press(searchInput(), { key: 'Escape', code: 'Escape' })],
-    ])('goes away when %s', (_, act) => {
+    ])('goes away when %s', async (_, act) => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
       act();
@@ -1151,10 +1318,11 @@ describe('Find module', () => {
       expect(blocks[0].holder.hasAttribute('data-blok-find-preview')).toBe(false);
     });
 
-    it('goes away when the editor turns read-only', () => {
+    it('goes away when the editor turns read-only', async () => {
       const { wrapper, redactor, find, readOnly } = editor([{ id: 'a', text: 'cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
       readOnly.isEnabled = true;
@@ -1163,11 +1331,12 @@ describe('Find module', () => {
       expect(redactor.querySelector(PREVIEW)).toBeNull();
     });
 
-    it('selects the real match, not the preview, when closed', () => {
+    it('selects the real match, not the preview, when closed', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'one cat' }]);
       const input = blocks[0].holder.querySelector('[contenteditable]');
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
       press(searchInput(), { key: 'Escape', code: 'Escape' });
@@ -1178,10 +1347,11 @@ describe('Find module', () => {
       expect(input?.contains(selection?.anchorNode ?? null)).toBe(true);
     });
 
-    it('matches what Replace All then writes', () => {
+    it('matches what Replace All then writes', async () => {
       const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'a <cat> and cat' }]);
 
       press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      await settle();
       typeQuery(wrapper, 'cat');
       typeReplacement('dog');
 

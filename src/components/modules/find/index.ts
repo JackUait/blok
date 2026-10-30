@@ -12,17 +12,34 @@ import { getUserOS } from '../../utils/browser';
 import { hiddenAncestors } from '../blockManager/new-block-placement';
 import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
-import { FindBar } from './find-bar';
-import { hopSourceFromRange, type HopSource } from './find-motion';
-import { FindLens } from './find-lens';
+import type { FindBar } from './find-bar';
+import type { FindLens } from './find-lens';
+import type * as Kit from './find-kit';
 import { clearFindHighlights, paintFindHighlights } from './find-highlight';
 import type { FindOptions } from '../../../shared/text-match';
 import { getCaretPositionFromPoint } from '../../utils/caret/navigation';
-import { isInPreviewedBlock, isPreviewMutation, ReplacePreview } from './replace-preview';
+import type { ReplacePreview } from './replace-preview';
 import { editableHostOf, replaceRangeText } from './replace-text';
 import { findRanges } from './text-index';
 import type { TextPoint } from './text-point';
 import { pointOf, startsAtOrAfter } from './text-point';
+
+/** The bar code. Shared by every editor on the page; loaded on the first Cmd+F. */
+const kit: { loaded: typeof Kit | null; pending: Promise<typeof Kit> | null } = { loaded: null, pending: null };
+
+/** One shared load; a failed one is dropped so the next Cmd+F tries again. */
+const loadKit = (): Promise<typeof Kit> => {
+  kit.pending ??= import('./find-kit').then((loaded) => {
+    kit.loaded = loaded;
+
+    return loaded;
+  }, (error: unknown) => {
+    kit.pending = null;
+    throw error;
+  });
+
+  return kit.pending;
+};
 
 const EDITOR_SELECTOR = '[data-blok-testid="blok-editor"]';
 const editorOf = (node: Node): Element | null =>
@@ -129,6 +146,24 @@ interface RenderOptions {
   expand?: boolean;
 }
 
+/** What an open reads from the page, taken at the keystroke: the bar code may load after it. */
+interface OpenStart {
+  prefill: string | null;
+  /** The selection the prefill came from, for the hop. Null for a host input. */
+  prefillRange: Range | null;
+  /** Where the next search starts; null keeps the current one. */
+  position: { anchor: TextPoint | null; fromView: boolean } | null;
+  returnFocus: Find['returnFocus'];
+}
+
+interface PendingOpen {
+  replace: boolean;
+  start: OpenStart;
+  /** Keys typed while the bar code loads. They become the query. */
+  typed: string;
+  keysListener: string | undefined;
+}
+
 interface Rect {
   top: number;
   left: number;
@@ -178,6 +213,8 @@ export class Find extends Module {
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   /** Focus and selection from before the bar opened, given back when it closes on no match. */
   private returnFocus: { element: HTMLElement; range: Range | null } | null = null;
+  /** A Cmd+F waiting for the bar code to load. */
+  private pending: PendingOpen | null = null;
 
   /**
    * Whether the find bar is open.
@@ -220,43 +257,39 @@ export class Find extends Module {
   }
 
   /**
-   * Open the find bar.
+   * Open the find bar. The first open loads the bar code; later ones open at once.
    * @param withReplace - also open the replace row
    */
-  public open(withReplace = false): void {
-    const bar = this.ensureBar();
-    const wasOpen = bar.isOpen;
-    const prefill = this.selectedTextForPrefill();
-    // Before bar.open() takes focus and the search reveal scrolls.
-    const hop = prefill === null ? null : this.hopSource(prefill);
+  public open(withReplace = false): Promise<void> {
+    if (kit.loaded !== null) {
+      this.openWith(kit.loaded, withReplace, this.openStart(), '');
 
-    if (!wasOpen || prefill !== null) {
-      const caret = this.caretRange();
-      // A caret the reader scrolled away from is not where they are reading.
-      const shown = caret !== null && isOnScreen(caret);
-
-      this.anchor = shown ? pointOf(caret, document.body) : null;
-      this.fromView = !shown;
+      return Promise.resolve();
     }
 
-    if (!wasOpen) {
-      this.returnFocus = this.focusToReturn();
-      this.startObserving();
+    if (this.pending !== null) {
+      this.pending.replace ||= withReplace;
+
+      return loadKit().then(() => undefined, () => undefined);
     }
 
-    syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
-    bar.open({
-      query: prefill ?? undefined,
-      replace: withReplace,
-      readOnly: this.Blok.ReadOnly.isEnabled,
-      hop,
+    const pending: PendingOpen = { replace: withReplace, start: this.openStart(), typed: '', keysListener: undefined };
+
+    this.pending = pending;
+    pending.keysListener = this.listeners.on(document, 'keydown', this.onPendingKeydown, true);
+
+    return loadKit().then((loaded) => {
+      if (this.pending !== pending) {
+        return;
+      }
+      this.endPending();
+      this.openWith(loaded, pending.replace, pending.start, pending.typed);
+    }, (error: unknown) => {
+      if (this.pending === pending) {
+        this.endPending();
+      }
+      console.error('[Blok] Failed to open find. Reason:', error);
     });
-
-    // Search now, not after the typing debounce: until then the bar would show "No results".
-    if (bar.query !== '' && (!wasOpen || prefill !== null)) {
-      this.cancelSearch();
-      this.search({ reveal: true });
-    }
   }
 
   /**
@@ -375,6 +408,7 @@ export class Find extends Module {
    * Tear down the bar, the paint and the shortcuts.
    */
   public destroy(): void {
+    this.endPending();
     this.stopObserving();
     this.clearPaint();
     this.bar?.destroy();
@@ -398,6 +432,38 @@ export class Find extends Module {
     }
   };
 
+  /**
+   * While the bar code loads, keys meant for the find field must not edit the
+   * document. Typed text is kept for the query; Escape gives up the open.
+   */
+  private readonly onPendingKeydown = (event: Event): void => {
+    const pending = this.pending;
+
+    if (pending === null || !(event instanceof KeyboardEvent) || event.isComposing || isModKey(event)) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.endPending();
+    } else if (event.key === 'Backspace') {
+      pending.typed = pending.typed.slice(0, -1);
+    } else if ([...event.key].length === 1) {
+      pending.typed += event.key;
+    } else if (event.key !== 'Enter' && event.key !== 'Delete') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  private endPending(): void {
+    if (this.pending?.keysListener !== undefined) {
+      this.listeners.offById(this.pending.keysListener);
+    }
+    this.pending = null;
+  }
+
   private readonly markActive = (): void => {
     Find.lastActive = this;
   };
@@ -412,7 +478,7 @@ export class Find extends Module {
       return;
     }
 
-    const onPreview = event.target instanceof Element && isInPreviewedBlock(event.target);
+    const onPreview = event.target instanceof Element && kit.loaded?.isInPreviewedBlock(event.target) === true;
 
     this.close({ restoreFocus: false });
 
@@ -471,7 +537,7 @@ export class Find extends Module {
     if (isFind || isReplace) {
       event.preventDefault();
       event.stopPropagation();
-      this.open(isReplace);
+      void this.open(isReplace);
 
       return;
     }
@@ -545,7 +611,70 @@ export class Find extends Module {
     return shown[0] ?? last;
   }
 
-  private ensureBar(): FindBar {
+  /** Read everything an open needs from the page now, before any await. */
+  private openStart(): OpenStart {
+    const wasOpen = this.bar?.isOpen === true;
+    const prefill = this.selectedTextForPrefill();
+    const start: OpenStart = {
+      prefill,
+      // Before bar.open() takes focus and the search reveal scrolls.
+      prefillRange: prefill === null ? null : this.prefillRange(),
+      position: null,
+      returnFocus: wasOpen ? null : this.focusToReturn(),
+    };
+
+    if (!wasOpen || prefill !== null) {
+      const caret = this.caretRange();
+      // A caret the reader scrolled away from is not where they are reading.
+      const shown = caret !== null && isOnScreen(caret);
+
+      start.position = { anchor: shown ? pointOf(caret, document.body) : null, fromView: !shown };
+    }
+
+    return start;
+  }
+
+  /**
+   * @param loaded - the bar code
+   * @param withReplace - also open the replace row
+   * @param start - what the page held at the keystroke
+   * @param typed - keys typed while the bar code loaded; they win over the prefill
+   */
+  private openWith(loaded: typeof Kit, withReplace: boolean, start: OpenStart, typed: string): void {
+    const bar = this.ensureBar(loaded);
+    const wasOpen = bar.isOpen;
+    const query = typed !== '' ? typed : start.prefill;
+    const hop = typed === '' && start.prefill !== null && start.prefillRange !== null
+      ? loaded.hopSourceFromRange(start.prefillRange, start.prefill)
+      : null;
+
+    if (start.position !== null) {
+      this.anchor = start.position.anchor;
+      this.fromView = start.position.fromView;
+    }
+
+    if (!wasOpen) {
+      this.returnFocus = start.returnFocus;
+      this.startObserving(loaded);
+    }
+
+    syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
+    bar.open({
+      query: query ?? undefined,
+      replace: withReplace,
+      readOnly: this.Blok.ReadOnly.isEnabled,
+      hop,
+      caretAtEnd: typed !== '',
+    });
+
+    // Search now, not after the typing debounce: until then the bar would show "No results".
+    if (bar.query !== '' && (!wasOpen || query !== null)) {
+      this.cancelSearch();
+      this.search({ reveal: true });
+    }
+  }
+
+  private ensureBar(loaded: typeof Kit): FindBar {
     if (this.bar !== null) {
       return this.bar;
     }
@@ -555,7 +684,7 @@ export class Find extends Module {
 
     const hostConfig = typeof this.config.find === 'object' ? this.config.find : {};
 
-    this.bar = new FindBar({
+    this.bar = new loaded.FindBar({
       t: (key, vars) => I18n.t(key, vars),
       isMac: getUserOS().mac,
       placement: hostConfig.placement,
@@ -581,8 +710,8 @@ export class Find extends Module {
     // The scope attribute brings Blok's preflight reset and tokens along.
     this.bar.element.setAttribute('data-blok-interface', 'find');
     document.body.appendChild(this.bar.element);
-    this.lens = new FindLens(document.documentElement, wrapper);
-    this.preview = new ReplacePreview(this.Blok.UI.nodes.redactor);
+    this.lens = new loaded.FindLens(document.documentElement, wrapper);
+    this.preview = new loaded.ReplacePreview(this.Blok.UI.nodes.redactor);
 
     return this.bar;
   }
@@ -644,8 +773,8 @@ export class Find extends Module {
     return text;
   }
 
-  /** Where the prefilled word sits on screen. A host input's selection has no range to measure. */
-  private hopSource(text: string): HopSource | null {
+  /** The selection the prefilled word came from. A host input's selection has no range to measure. */
+  private prefillRange(): Range | null {
     const field = document.activeElement;
     const selection = window.getSelection();
 
@@ -653,7 +782,7 @@ export class Find extends Module {
       return null;
     }
 
-    return hopSourceFromRange(selection.getRangeAt(0), text);
+    return selection.getRangeAt(0).cloneRange();
   }
 
   private caretRange(): Range | null {
@@ -684,12 +813,12 @@ export class Find extends Module {
     };
   }
 
-  private startObserving(): void {
+  private startObserving(loaded: typeof Kit): void {
     this.observer = new MutationObserver((records) => {
       const isOwnMutation = (record: MutationRecord): boolean => {
         const target = record.target instanceof Element ? record.target : record.target.parentElement;
 
-        return isPreviewMutation(record) || (target?.closest('[data-blok-interface="find"]') ?? null) !== null;
+        return loaded.isPreviewMutation(record) || (target?.closest('[data-blok-interface="find"]') ?? null) !== null;
       };
 
       if (!records.every(isOwnMutation)) {

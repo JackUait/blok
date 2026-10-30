@@ -157,6 +157,14 @@ describe('UI locale files', () => {
     expect(withKeys.map((file) => basename(file))).toEqual([])
   })
 
+  it('the shared key list takes the English core keys from the loaded English, not a second copy', () => {
+    const keyLists = listEsFiles(dist).concat(
+      readdirSync(join(dist, 'pure-chunks')).filter((name) => name.endsWith('.cjs')).map((name) => join(dist, 'pure-chunks', name)),
+    ).filter((file) => basename(file).startsWith('message-keys-'))
+    expect(keyLists.length).toBeGreaterThan(0)
+    expect(keyLists.filter((file) => readFileSync(file, 'utf-8').includes('blockSettings.dragToMove')).map((file) => basename(file))).toEqual([])
+  })
+
   it('every file the locales entry imports exists', async () => {
     await initLexer()
     const impl = resolve(dist, existsSync(resolve(dist, 'locales-impl.mjs')) ? 'locales-impl.mjs' : 'locales.mjs')

@@ -11,6 +11,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ENGLISH_MODULES, splitEnglish } from './english-parts.mjs';
+
 /**
  * Rebuild an object from `[values, moves]`. `values[i]` belongs to `keys[i]`,
  * `null` for a key the locale lacks. Present keys come out in key list order,
@@ -87,11 +89,73 @@ const decodeEmojiEntry = (entry) => {
 
 const identity = (value) => value;
 
+/**
+ * A key list as items: a string is a key, two numbers `start, length` copy
+ * that run of `base`. Lazy locales use it to point at the English core keys,
+ * which every editor has already loaded, instead of storing them again.
+ * @param {string[]} keys
+ * @param {string[]} base
+ * @returns {(string | number)[]}
+ */
+export const encodeKeyRuns = (keys, base) => {
+  const index = new Map(base.map((key, i) => [key, i]));
+  const items = [];
+
+  for (let i = 0; i < keys.length;) {
+    const start = index.get(keys[i]);
+
+    if (start === undefined) {
+      items.push(keys[i]);
+      i++;
+      continue;
+    }
+
+    let length = 1;
+
+    while (i + length < keys.length && index.get(keys[i + length]) === start + length) {
+      length++;
+    }
+    items.push(start, length);
+    i += length;
+  }
+
+  return items;
+};
+
+/**
+ * The inverse of encodeKeyRuns. The plugin emits this function's source.
+ * @param {(string | number)[]} items
+ * @param {string[]} base
+ * @returns {string[]}
+ */
+export const decodeKeyRuns = (items, base) => {
+  const keys = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (typeof item === 'string') {
+      keys.push(item);
+    } else {
+      for (let k = item, end = item + items[++i]; k < end; k++) {
+        keys.push(base[k]);
+      }
+    }
+  }
+
+  return keys;
+};
+
+const englishCoreKeys = () => Object.keys(
+  splitEnglish(JSON.parse(readFileSync(srcPath('components/i18n/locales/en.json'), 'utf8'))).core,
+);
+
 const srcPath = (...parts) => path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src', ...parts);
 
 /**
  * The locale data kinds. `exclude` stays a plain object: English messages are
- * eager, so a key list would not shrink them.
+ * eager, so a key list would not shrink them. `base` is a module every editor
+ * loads anyway; the key list copies runs of its keys instead of storing them.
  */
 export const LOCALE_KINDS = [
   {
@@ -99,6 +163,7 @@ export const LOCALE_KINDS = [
     keysId: 'virtual:blok-message-keys',
     dir: srcPath('components/i18n/locales'),
     exclude: 'en.json',
+    base: { module: ENGLISH_MODULES.core, keys: englishCoreKeys },
     encodeValue: (value) => {
       if (typeof value !== 'string') {
         throw new Error('blok:locale-data: a message value is not a string');
@@ -113,6 +178,7 @@ export const LOCALE_KINDS = [
     keysId: 'virtual:blok-emoji-keys',
     dir: srcPath('components/utils/emoji/locales'),
     exclude: null,
+    base: null,
     encodeValue: encodeEmojiEntry,
     decodeValue: decodeEmojiEntry,
   },
@@ -235,9 +301,31 @@ export const encodeLocale = (kind, keys, data) => {
  * @param {string[]} keys
  * @returns {string}
  */
-export const keyListModule = (kind, keys) => [
-  `const keys = /* @__PURE__ */ JSON.parse(${JSON.stringify(JSON.stringify(keys))});`,
-  `const decodePositional = ${decodePositional.toString()};`,
-  `const decodeValue = ${kind.decodeValue.toString()};`,
-  'export default (payload) => decodePositional(keys, payload, decodeValue);',
-].join('\n');
+export const keyListModule = (kind, keys) => {
+  const data = (value) => `/* @__PURE__ */ JSON.parse(${JSON.stringify(JSON.stringify(value))})`;
+  const decoder = [
+    `const decodePositional = ${decodePositional.toString()};`,
+    `const decodeValue = ${kind.decodeValue.toString()};`,
+    'export default (payload) => decodePositional(keys, payload, decodeValue);',
+  ];
+
+  if (kind.base === null) {
+    return [`const keys = ${data(keys)};`, ...decoder].join('\n');
+  }
+
+  const base = kind.base.keys();
+  const items = encodeKeyRuns(keys, base);
+
+  if (JSON.stringify(decodeKeyRuns(items, base)) !== JSON.stringify(keys)) {
+    throw new Error(`blok:locale-data: the ${kind.name} key list does not decode to itself`);
+  }
+
+  // Object.keys of the built English core gives `base` in this order: the
+  // build emits that module from the same splitEnglish result.
+  return [
+    `import base from ${JSON.stringify(kind.base.module)};`,
+    `const decodeKeyRuns = ${decodeKeyRuns.toString()};`,
+    `const keys = /* @__PURE__ */ decodeKeyRuns(${data(items)}, Object.keys(base));`,
+    ...decoder,
+  ].join('\n');
+};

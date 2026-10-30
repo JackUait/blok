@@ -229,6 +229,25 @@ describe('formula editor', () => {
       expect(painted('function')).toEqual(['upper']);
     });
 
+    // `40-help-Checkbox.png`: the bare words `not` and `and` are blue; the call form keeps the function colour.
+    it('colours the bare words not, and, or as keywords', () => {
+      open();
+      type('not true and false or and(true, true)');
+
+      expect(painted('keyword')).toEqual(['not', 'and', 'or']);
+      expect(painted('function')).toEqual(['and']);
+    });
+
+    it('colours the help examples\' keywords', () => {
+      open({ schema: [...schema, { id: 'cb', name: 'Done', type: 'checkbox', position: 'a3' }] });
+      type('');
+      document.querySelector('[data-blok-database-formula-reference-item][data-name="prop:Done"]')
+        ?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      const keywords = [...document.querySelectorAll('[data-blok-database-formula-syntax="keyword"]')].map((el) => el.textContent);
+
+      expect(keywords).toEqual(['not', 'and', 'and', 'not']);
+    });
+
     it('colours the part before an unfinished string', () => {
       open();
       type('1 + "ab');
@@ -524,6 +543,20 @@ describe('formula editor', () => {
 
       expect(options.onSave).not.toHaveBeenCalled();
     });
+  });
+
+  // notion-spec-2 §26.3 (`34-after-tab.png`): Tab types a tab; nothing from the list goes in, and the highlight stays.
+  it('puts a tab character in the field on Tab', () => {
+    const options = open();
+
+    type('1 + 2');
+    const before = highlighted();
+    const event = press('Tab');
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(highlighted()).toBe(before);
+    commit();
+    expect(options.onSave).toHaveBeenCalledWith('1 + 2\t');
   });
 
   it('puts a new line on Shift+Enter', () => {

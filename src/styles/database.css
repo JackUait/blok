@@ -40,6 +40,11 @@
   --blok-database-formula-punctuation: rgb(158, 158, 158);
   /* `40-help-Text.png` (pixels, glyph cores of "b" and "red", so a lower bound on depth). */
   --blok-database-formula-string: rgb(120, 157, 55);
+  /* `40-help-Checkbox.png` (pixels): `not` and `and` stems hold rgb(61,124,170). Syntax colour, not a
+     selected state, so the no-blue rule does not apply. */
+  --blok-database-formula-keyword: rgb(61, 124, 170);
+  /* `31-formula-open.png` (pixels): the "Type: …" tag on the white box. */
+  --blok-database-formula-type-bg: rgb(240, 239, 237);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   /* Notion's ink at 0.3 is 1.4:1 and the knob is white on a white menu, so the off state was invisible.
@@ -431,6 +436,9 @@
     --blok-database-formula-function: rgb(236, 236, 147);
     --blok-database-formula-string: rgb(189, 224, 82);
     --blok-database-formula-punctuation: rgb(240, 239, 237);
+    /* Notion's dark keyword colour is unmeasured: plain ink until it is. */
+    --blok-database-formula-keyword: var(--blok-database-ink);
+    --blok-database-formula-type-bg: rgba(255, 255, 235, 0.1);
     /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
     --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
     --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -764,6 +772,9 @@
   --blok-database-formula-function: rgb(236, 236, 147);
   --blok-database-formula-string: rgb(189, 224, 82);
   --blok-database-formula-punctuation: rgb(240, 239, 237);
+  /* Notion's dark keyword colour is unmeasured: plain ink until it is. */
+  --blok-database-formula-keyword: var(--blok-database-ink);
+  --blok-database-formula-type-bg: rgba(255, 255, 235, 0.1);
   /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
@@ -13949,6 +13960,11 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-formula-punctuation);
 }
 
+[data-blok-database-formula-input]::highlight(blok-formula-keyword),
+[data-blok-database-formula-syntax="keyword"] {
+  color: var(--blok-database-formula-keyword);
+}
+
 [data-blok-database-formula-input]:empty::before {
   content: attr(data-placeholder);
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -14149,7 +14165,7 @@ textarea[data-blok-database-cell-input] {
   height: 20px;
   padding: 0 var(--blok-space-1-5);
   border-radius: var(--blok-radius-control-sm);
-  background: var(--blok-database-hover-bg);
+  background: var(--blok-database-formula-type-bg);
   font-size: 12px;
   line-height: 20px;
   color: var(--blok-database-ink-secondary);

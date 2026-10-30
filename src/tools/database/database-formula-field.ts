@@ -71,7 +71,10 @@ const sourceOf = (node: Node): string => {
   return node.nodeName === 'DIV' || node.nodeName === 'P' ? `\n${inner}` : inner;
 };
 
-export type SyntaxKind = 'number' | 'string' | 'operator' | 'function' | 'punctuation';
+export type SyntaxKind = 'number' | 'string' | 'operator' | 'function' | 'punctuation' | 'keyword';
+
+/** `40-help-Checkbox.png`: the bare words. `and(…)` is a call and keeps the function colour. */
+const KEYWORDS = new Set(['not', 'and', 'or']);
 
 /** notion-spec-2 §26.5: `( ) , .` are punctuation. `[` and `]` are unmeasured, so they keep the ink. */
 const PUNCTUATION = new Set(['(', ')', ',', '.']);
@@ -81,6 +84,7 @@ const kindOf = (token: Token, next: Token | undefined): SyntaxKind | null => {
   if (token.type === 'string') return 'string';
   if (token.type === 'op') return 'operator';
   if (token.type === 'ident' && next?.type === 'punct' && next.value === '(') return 'function';
+  if (token.type === 'ident' && KEYWORDS.has(token.value)) return 'keyword';
   if (token.type === 'punct' && PUNCTUATION.has(token.value)) return 'punctuation';
 
   return null;
@@ -317,6 +321,13 @@ export class FormulaField {
     if (event.key === 'Enter' && event.shiftKey) {
       event.preventDefault();
       this.replaceSelection('\n');
+
+      return;
+    }
+    // notion-spec-2 §26.3 (`34-after-tab.png`): Tab types a tab in the field, so it never moves focus.
+    if (event.key === 'Tab' && !event.shiftKey && !mod && !event.altKey) {
+      event.preventDefault();
+      this.replaceSelection('\t');
 
       return;
     }

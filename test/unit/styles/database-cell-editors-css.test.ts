@@ -122,6 +122,20 @@ describe('cell editor CSS', () => {
       expect(themed('--blok-database-formula-token-bg').slice(1)).toEqual(['transparent', 'transparent']);
     });
 
+    // `40-help-Checkbox.png` (pixels): `not` and `and` keep a plateau of rgb(61,124,170) on their stems.
+    // Notion has no dark shot of a keyword, so dark keeps the plain ink until one is measured.
+    it('paints keywords blue in light, plain ink in dark', () => {
+      expect(declared('[data-blok-database-formula-input]::highlight(blok-formula-keyword)', 'color')).toEqual(['var(--blok-database-formula-keyword)']);
+      expect(declared('[data-blok-database-formula-syntax="keyword"]', 'color')).toEqual(['var(--blok-database-formula-keyword)']);
+      expect(themed('--blok-database-formula-keyword')).toEqual(['rgb(61, 124, 170)', 'var(--blok-database-ink)', 'var(--blok-database-ink)']);
+    });
+
+    // Light: `31-formula-open.png` (pixels) rgb(240,239,237) on the white box. Dark: notion-spec-2 §26.5.
+    it('fills the Type tag with Notion\'s tag colour in light and dark', () => {
+      expect(declared('[data-blok-database-formula-type]', 'background')).toEqual(['var(--blok-database-formula-type-bg)']);
+      expect(themed('--blok-database-formula-type-bg')).toEqual(['rgb(240, 239, 237)', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
+    });
+
     // `32-formula-typed.png` (pixels): the ↩ ink is 12x8 at x 963-974, darkest rgb(141,139,134) (964,517), only on the highlighted row.
     it('shows the return glyph at the end of the highlighted row only', () => {
       expect(declared('[data-blok-database-formula-reference-return]', 'visibility')).toEqual(['hidden']);

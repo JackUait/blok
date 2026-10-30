@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
 import { describe, it, expect } from 'vitest'
 
-import { isDatabaseOnlyKey } from '../../../scripts/english-parts.mjs'
+import { RELEASED_DATABASE_KEYS, isDatabaseOnlyKey } from '../../../scripts/english-parts.mjs'
 
 const repoRoot = resolve(__dirname, '../../../')
 const dist = resolve(repoRoot, 'dist')
@@ -113,15 +113,18 @@ describe('UI locale files', () => {
     expect(counts.filter((entry) => !entry.endsWith(': 1'))).toEqual([])
   })
 
-  it('ships the English messages once across the core and /locales entries', () => {
+  it('ships the English messages once across the core, tools and /locales entries', () => {
     // An app importing both entries must not download English twice.
-    const reachable = new Set([...reachableFrom('blok.mjs'), ...reachableFrom('locales.mjs')])
-    const copies = [...reachable].filter((file) => {
-      const code = readFileSync(file, 'utf-8')
-      return code.includes('blockSettings.dragToMove') && code.includes('Drag to move')
-    })
+    const reachable = new Set(['blok.mjs', 'tools.mjs', 'locales.mjs'].flatMap((entry) => [...reachableFrom(entry)]))
+    const copiesOf = (key: string, value: string): string[] => [...reachable]
+      .filter((file) => {
+        const code = readFileSync(file, 'utf-8')
+        return code.includes(`"${key}"`) && code.includes(value)
+      })
+      .map((file) => basename(file))
     expect(reachable.size).toBeGreaterThan(100)
-    expect(copies.map((file) => basename(file))).toHaveLength(1)
+    expect(copiesOf('blockSettings.dragToMove', 'Drag to move')).toHaveLength(1)
+    expect(copiesOf('tools.database.tableDragHandle', 'Drag to move, click to open menu')).toHaveLength(1)
   })
 
   it('every UI locale loads as the exact object its source JSON parses to', () => {
@@ -199,6 +202,10 @@ describe('English split between core and the Database tools', () => {
 
   it('keeps every key core reads in the bare core import', () => {
     expect(missingFrom('blok.mjs', english.filter((key) => !isDatabaseOnlyKey(key)))).toEqual([])
+  })
+
+  it('keeps the database keys v1.16.1 shipped in the bare core import', () => {
+    expect(missingFrom('blok.mjs', RELEASED_DATABASE_KEYS)).toEqual([])
   })
 
   it('ships the database keys with the tools entry', () => {

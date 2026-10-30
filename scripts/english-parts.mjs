@@ -57,10 +57,65 @@ export const CORE_DATABASE_PREFIXES = [
   'tools.database.formula.error.',
 ];
 
+/**
+ * Database keys v1.16.1 shipped in core's English. `i18n.t`, `has` and
+ * `getEnglishTranslation` answered them without the Database tool, so they stay.
+ */
+export const RELEASED_DATABASE_KEYS = [
+  'tools.database.addColumn',
+  'tools.database.renameColumn',
+  'tools.database.deleteColumn',
+  'tools.database.addCard',
+  'tools.database.newPage',
+  'tools.database.deleteCard',
+  'tools.database.editCardTitle',
+  'tools.database.cardMenuLabel',
+  'tools.database.cardTitlePlaceholder',
+  'tools.database.columnTitlePlaceholder',
+  'tools.database.emptyColumn',
+  'tools.database.rowTitlePlaceholder',
+  'tools.database.addRow',
+  'tools.database.newRow',
+  'tools.database.openRow',
+  'tools.database.deleteRow',
+  'tools.database.titlePlaceholder',
+  'tools.database.renameView',
+  'tools.database.duplicateView',
+  'tools.database.deleteView',
+  'tools.database.addView',
+  'tools.database.viewTypeBoard',
+  'tools.database.viewTypeList',
+  'tools.database.viewTypeBoardDescription',
+  'tools.database.viewTypeListDescription',
+  'tools.database.propertyTypeHeading',
+  'tools.database.propertyTypeText',
+  'tools.database.propertyTypeNumber',
+  'tools.database.propertyTypeSelect',
+  'tools.database.propertyTypeMultiSelect',
+  'tools.database.propertyTypeDate',
+  'tools.database.propertyTypeCheckbox',
+  'tools.database.propertyTypeUrl',
+  'tools.database.listView',
+  'tools.database.kanbanBoard',
+  'tools.database.cardDetails',
+  'tools.database.cardTitle',
+  'tools.database.close',
+  'tools.database.defaultTitleProperty',
+  'tools.database.defaultStatusProperty',
+  'tools.database.defaultStatusNotStarted',
+  'tools.database.defaultStatusInProgress',
+  'tools.database.defaultStatusDone',
+  'tools.database.defaultViewBoard',
+  'tools.database.checkboxChecked',
+  'tools.database.checkboxUnchecked',
+  'tools.database.moreViews',
+];
+
 /** True for a database key that core itself never reads. */
 export const isDatabaseOnlyKey = (key) =>
   key.startsWith(DATABASE_PREFIX) &&
   !CORE_DATABASE_KEYS.includes(key) &&
+  !RELEASED_DATABASE_KEYS.includes(key) &&
   !CORE_DATABASE_PREFIXES.some((prefix) => key.startsWith(prefix));
 
 /**

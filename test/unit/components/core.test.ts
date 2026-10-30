@@ -423,6 +423,31 @@ describe('Core', () => {
       expect(order.slice(0, 3)).toEqual(['load fonts', 'load database', 'i18n']);
     });
 
+    it.each([
+      ['with an assistant, also fetches the Ask AI sheet before any module prepares', { assistant: { model: () => undefined } }, ['load fonts', 'load askai', 'i18n']],
+      ['without an assistant, never fetches the Ask AI sheet', undefined, ['load fonts', 'i18n']],
+    ])('%s', async (_title, agent, expected) => {
+      const core = await createReadyCore({ holder: 'blok', ...(agent === undefined ? {} : { agent }) } as unknown as BlokConfig);
+      const order: string[] = [];
+
+      mockLoadSheet.mockClear();
+      mockLoadSheet.mockImplementation((name) => {
+        order.push(`load ${name}`);
+
+        return Promise.resolve();
+      });
+      mockRegistry.modules.i18nPrepare.mockImplementationOnce(() => {
+        order.push('i18n');
+
+        return Promise.resolve();
+      });
+
+      await core.start();
+      mockLoadSheet.mockImplementation(() => Promise.resolve());
+
+      expect(order.slice(0, expected.length)).toEqual(expected);
+    });
+
     it('becomes ready when a boot sheet stalls, after a short wait', async () => {
       vi.useFakeTimers();
       try {

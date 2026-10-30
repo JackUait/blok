@@ -5,6 +5,7 @@ import { tr } from './i18n';
 import { COVER_TYPES, COVER_MAX_SIZE } from './constants';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { getTabbables } from '../../components/utils/modal-dialog';
+import { isSheetLoaded, loadSheet } from '../../components/utils/lazy-styles';
 import { registerLayer } from '../../components/utils/dismissable-layer';
 import {
   positionAnchored,
@@ -93,6 +94,14 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
     }
   };
 
+  // A database row opens it too, before the media sheet may be in. Unstyled it
+  // would flash at full size, so it stays invisible and unfocused until then.
+  const styled = isSheetLoaded('media');
+
+  if (!styled) {
+    dialog.style.visibility = 'hidden';
+  }
+
   document.body.appendChild(dialog);
   // The anchor mirrors with the editor, so a flip re-places the picker.
   syncPortalDirection(dialog, { source: opts.anchor, onResync: reposition });
@@ -107,7 +116,20 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
   trigger.setAttribute('aria-expanded', 'true');
 
   // Pull focus into the picker so keyboard + screen-reader users land inside it.
-  getTabbables(dialog)[0]?.focus();
+  const enter = (): void => getTabbables(dialog)[0]?.focus();
+
+  if (styled) {
+    enter();
+  } else {
+    void loadSheet('media').then(() => {
+      if (state.detached) {
+        return;
+      }
+      dialog.style.removeProperty('visibility');
+      reposition();
+      enter();
+    });
+  }
 
   // Keep the picker glued to the anchor across scroll / resize / own-size
   // changes (shared autoUpdate-style tracker).

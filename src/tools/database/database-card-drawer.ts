@@ -26,6 +26,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { loadEmojiGrid } from '../../components/utils/emoji/emoji-data';
 import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
+import { loadSheet } from '../../components/utils/lazy-styles';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
@@ -1263,6 +1264,10 @@ export class DatabaseCardDrawer {
     const src = row.cover === undefined ? null : safeImageSrc(row.cover);
     const backlinks = this.buildBacklinks(row.id);
 
+    if (!this.readOnly && this.onCoverChange !== undefined) {
+      // The cover picker is styled by the media sheet; it waits for it, so fetch it now.
+      void loadSheet('media');
+    }
     if (src !== null) {
       const cover = document.createElement('div');
       const img = document.createElement('img');

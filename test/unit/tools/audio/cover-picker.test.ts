@@ -1,4 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+const sheets = vi.hoisted(() => ({
+  loaded: true,
+  load: vi.fn((): Promise<void> => Promise.resolve()),
+}));
+
+vi.mock('../../../../src/components/utils/lazy-styles', () => ({
+  isSheetLoaded: () => sheets.loaded,
+  loadSheet: sheets.load,
+}));
+
 import { validateCoverFile, openCoverPicker } from '../../../../src/tools/audio/cover-picker';
 import { getTabbables } from '../../../../src/components/utils/modal-dialog';
 import { COVER_MAX_SIZE } from '../../../../src/tools/audio/constants';
@@ -149,6 +160,61 @@ describe('openCoverPicker', () => {
     const dialog = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]')!;
     expect(dialog.contains(document.activeElement)).toBe(true);
     handle.close();
+  });
+
+  describe('before the media sheet is in (a database row opens it too)', () => {
+    afterEach(() => {
+      sheets.loaded = true;
+      sheets.load.mockImplementation(() => Promise.resolve());
+    });
+
+    it('stays invisible and leaves focus alone until the sheet lands, then shows and takes focus', async () => {
+      const gate: { open?: () => void } = {};
+
+      sheets.loaded = false;
+      sheets.load.mockImplementation(() => new Promise<void>((resolve) => {
+        gate.open = resolve;
+      }));
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+      anchor.focus();
+      const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+      const dialog = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]');
+
+      expect(dialog?.style.visibility).toBe('hidden');
+      expect(sheets.load).toHaveBeenCalledWith('media');
+      expect(anchor).toHaveFocus();
+
+      gate.open?.();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(dialog?.style.visibility).toBe('');
+      expect(dialog?.contains(document.activeElement)).toBe(true);
+      handle.close();
+    });
+
+    it('does nothing when it closed before the sheet landed', async () => {
+      const gate: { open?: () => void } = {};
+
+      sheets.loaded = false;
+      sheets.load.mockImplementation(() => new Promise<void>((resolve) => {
+        gate.open = resolve;
+      }));
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+      const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+
+      handle.close();
+      anchor.blur();
+      gate.open?.();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(document.body).toHaveFocus();
+    });
   });
 
   it('restores focus to the previously focused element on close', () => {

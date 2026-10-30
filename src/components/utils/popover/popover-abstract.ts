@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { isSheetLoaded, loadSheet } from '../lazy-styles';
 import { EventsDispatcher } from '../events';
 import { Listeners } from '../listeners';
 import { syncPortalDirection } from '../portal-direction';
@@ -950,7 +951,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
       // Only on entry: replaying on every unmatched keystroke would flicker.
       if (wasHidden) {
-        this.animateNothingFoundEntrance();
+        this.revealNothingFoundArt();
       }
     } else {
       this.nodes.nothingFoundMessage.classList.add('hidden');
@@ -960,6 +961,31 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         this.nodes.popoverContainer?.classList.add('px-(--blok-space-1)');
       }
     }
+  }
+
+  /**
+   * The drawing is styled by the media sheet. Unstyled, its SVG paints at full
+   * size, so it stays hidden until the sheet is in; the label shows at once.
+   */
+  private revealNothingFoundArt(): void {
+    const message = this.nodes.nothingFoundMessage;
+    const art = message.querySelector('[data-blok-media-preview]')?.parentElement;
+
+    if (isSheetLoaded('media') || art === null || art === undefined) {
+      this.animateNothingFoundEntrance();
+
+      return;
+    }
+    if (art.hidden) {
+      return;
+    }
+    art.hidden = true;
+    void loadSheet('media').then(() => {
+      art.hidden = false;
+      if (message.hasAttribute(DATA_ATTR.nothingFoundDisplayed)) {
+        this.animateNothingFoundEntrance();
+      }
+    });
   }
 
   /**

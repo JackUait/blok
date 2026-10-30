@@ -13,6 +13,10 @@ const failDatabaseChunk = (): void => {
 };
 vi.mock('../../../../src/styles/lazy/block-preview.css?inline', () => ({ default: '.bp{}' }));
 vi.mock('../../../../src/styles/lazy/presence.css?inline', () => ({ default: '.pr{}' }));
+vi.mock('../../../../src/styles/lazy/media.css?inline', () => ({
+  default: '.m1{}[data-blok-sheet=media-2]{--blok-sheet:media-2}.m2{}[data-blok-sheet=media-3]{--blok-sheet:media-3}.m3{}',
+}));
+vi.mock('../../../../src/styles/lazy/askai.css?inline', () => ({ default: '.ai{}' }));
 
 const REGISTRY = LAZY_REGISTRY;
 
@@ -69,6 +73,33 @@ describe('lazy stylesheets', () => {
     await loadSheet('database');
 
     expect(sheetText()).toBe('.a{}.db{}.b{}');
+  });
+
+  it('splices each part of a sheet at its own marker, so a sheet can sit in several places', async () => {
+    const { mountStyles, loadSheet } = await lazyStyles();
+
+    mountStyles(`.a{}${marker('media')}.b{}${marker('media-2')}.c{}${marker('media-3')}.d{}`, undefined);
+    await loadSheet('media');
+
+    expect(sheetText()).toBe('.a{}.m1{}.b{}.m2{}.c{}.m3{}.d{}');
+  });
+
+  it('appends the parts whose markers are missing, in order', async () => {
+    const { mountStyles, loadSheet } = await lazyStyles();
+
+    mountStyles(`.a{}${marker('media')}.b{}`, undefined);
+    await loadSheet('media');
+
+    expect(sheetText()).toBe('.a{}.m1{}.b{}\n.m2{}\n.m3{}');
+  });
+
+  it('loads the Ask AI sheet', async () => {
+    const { mountStyles, loadSheet } = await lazyStyles();
+
+    mountStyles(`.a{}${marker('askai')}.b{}`, undefined);
+    await loadSheet('askai');
+
+    expect(sheetText()).toBe('.a{}.ai{}.b{}');
   });
 
   it('writes a sheet that loaded before #blok-styles existed when it mounts', async () => {

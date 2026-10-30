@@ -1,0 +1,11 @@
+/* The narrow-card rules of media-empty.css. They come after invalid-field.css, which stays eager. */
+@container (max-width: 460px) {
+  .blok-media-empty__panel { flex-wrap: wrap; }
+  .blok-media-empty__content--row { flex-wrap: wrap; }
+  .blok-media-empty__primary { width: 100%; }
+  .blok-media-empty__meta { font-size: 10px; }
+}
+@container (max-width: 360px) {
+  .blok-media-empty__tabs { margin-inline-start: 0; }
+  .blok-media-empty__header { flex-wrap: wrap; }
+}

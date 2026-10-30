@@ -7,7 +7,7 @@
  * - `aria-describedby` pointing at the visible error element so the message is
  *   announced when the field takes focus.
  *
- * The paired CSS rule keyed on `[aria-invalid="true"]` (in `media-empty.css`,
+ * The paired CSS rule keyed on `[aria-invalid="true"]` (in `invalid-field.css`,
  * shipped globally) draws the destructive ring, so callers only own the state.
  *
  * @param input - the control whose validity changed

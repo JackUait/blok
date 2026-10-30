@@ -38,6 +38,7 @@ import { createEmbedWindow } from './empty-window';
 import { isAllowedEmbedOrigin } from './allowed-origins';
 import { renderEmbedPreview } from './preview';
 import { overrideStatic } from '../../../components/utils/override-static';
+import type { LazySheet } from '../../../components/utils/lazy-styles';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -149,6 +150,11 @@ const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
 export class Embed implements BlockTool {
   public static get 'blok.runtimePartsOwner'(): string {
     return 'embed';
+  }
+
+  /** Core loads these before the first render. Subclasses inherit it. */
+  public static get 'blok.toolSheets'(): LazySheet[] {
+    return ['media'];
   }
 
   public static get describe(): typeof describeEmbed {

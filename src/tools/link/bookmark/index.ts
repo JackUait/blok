@@ -25,6 +25,7 @@ import {
 } from '../metadata-fetcher';
 import { renderBookmarkPreview } from './preview';
 import { overrideStatic } from '../../../components/utils/override-static';
+import type { LazySheet } from '../../../components/utils/lazy-styles';
 
 export interface BookmarkData extends BookmarkMeta, BlockToolData {}
 
@@ -44,6 +45,11 @@ const URL_PATTERN = /https?:\/\/\S+/;
 export class Bookmark implements BlockTool {
   public static get 'blok.runtimePartsOwner'(): string {
     return 'bookmark';
+  }
+
+  /** Core loads these before the first render. Subclasses inherit it. */
+  public static get 'blok.toolSheets'(): LazySheet[] {
+    return ['media'];
   }
 
   public static get describe(): typeof describeBookmark {

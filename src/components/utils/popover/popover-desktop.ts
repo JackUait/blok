@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { loadSheet } from '../lazy-styles';
 import { PopoverRegistry } from './popover-registry';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
@@ -2436,6 +2437,10 @@ export class PopoverDesktop extends PopoverAbstract {
     // Filtering slides rows under a resting pointer; that hover is not the user's.
     this.armSuppressSyncHover();
     this.isSearching = !isEmptyQuery;
+    if (!isEmptyQuery) {
+      // The "Nothing found" drawing is styled by it; most searches never need it, so not on open.
+      void loadSheet('media');
+    }
     // An item hidden by name (a tool the container's childTools deny) stays
     // hidden, so it must not count as a match or "Nothing found" never shows.
     const allTopLevel = (data.topLevelItems as unknown as PopoverItemDefault[])

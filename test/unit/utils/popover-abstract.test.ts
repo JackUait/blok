@@ -8,6 +8,16 @@ vi.mock('../../../src/components/utils/media-preview-3d', () => ({
   leanPreview: vi.fn(),
 }));
 
+const sheets = vi.hoisted(() => ({
+  loaded: true,
+  load: vi.fn((): Promise<void> => Promise.resolve()),
+}));
+
+vi.mock('../../../src/components/utils/lazy-styles', () => ({
+  isSheetLoaded: () => sheets.loaded,
+  loadSheet: sheets.load,
+}));
+
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 import type {
   PopoverParams,
@@ -1002,6 +1012,63 @@ describe('PopoverAbstract', () => {
       popover.invokeToggleNothingFoundMessage(true);
 
       expect(animate).not.toHaveBeenCalled();
+    });
+
+    describe('before the media sheet is in', () => {
+      const deferLoad = (): (() => Promise<void>) => {
+        const gate: { open?: () => void } = {};
+
+        sheets.loaded = false;
+        sheets.load.mockImplementation(() => new Promise<void>((resolve) => {
+          gate.open = () => {
+            sheets.loaded = true;
+            resolve();
+          };
+        }));
+
+        return async () => {
+          gate.open?.();
+          await Promise.resolve();
+          await Promise.resolve();
+        };
+      };
+
+      afterEach(() => {
+        sheets.loaded = true;
+        sheets.load.mockImplementation(() => Promise.resolve());
+      });
+
+      it('shows the message at once, hides the unstyled drawing, then shows it and plays the entrance once the sheet lands', async () => {
+        const animate = installAnimate();
+        const land = deferLoad();
+        const popover = createPopover();
+        const message = popover.getNodesForTests().nothingFoundMessage;
+        const art = stageOf(message).parentElement;
+
+        popover.invokeToggleNothingFoundMessage(true);
+
+        expect(art?.hidden).toBe(true);
+        expect(message.classList.contains('hidden')).toBe(false);
+        expect(sheets.load).toHaveBeenCalledWith('media');
+        expect(animate).not.toHaveBeenCalled();
+
+        await land();
+
+        expect(art?.hidden).toBe(false);
+        expect(animate.mock.contexts).toContain(stageOf(message).querySelector('.blok-media-preview__loupe'));
+      });
+
+      it('does not play the entrance when the message closed before the sheet landed', async () => {
+        const animate = installAnimate();
+        const land = deferLoad();
+        const popover = createPopover();
+
+        popover.invokeToggleNothingFoundMessage(true);
+        popover.invokeToggleNothingFoundMessage(false);
+        await land();
+
+        expect(animate).not.toHaveBeenCalled();
+      });
     });
 
     it('tilts the drawing toward the pointer and back to rest when it leaves', () => {

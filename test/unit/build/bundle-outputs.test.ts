@@ -941,7 +941,11 @@ describe('lazy stylesheets stay out of the startup closure', () => {
     database: '[data-blok-database-wrapper]{color:',
     'block-preview': '[data-blok-interface=block-preview]{',
     presence: '[data-blok-presence-caret]{',
+    media: '.blok-darkroom{--blok-darkroom-bg-center:',
+    askai: '[data-blok-assistant-icon]{display:none',
   }
+  // The media sheet's later parts each replace their own marker (see lazy-styles.ts).
+  const SHEET_PARTS = ['media-2', 'media-3', 'media-4', 'media-5']
 
   for (const entry of ['blok.mjs', 'full.mjs']) {
     it(`${entry} reaches no lazy sheet through static imports`, async () => {
@@ -965,10 +969,10 @@ describe('lazy stylesheets stay out of the startup closure', () => {
     const root = postcss.parse((main ?? '').slice(start, end))
     const markers: Array<{ name: string; topLevel: boolean }> = []
     root.walkRules((rule) => {
-      const match = /^\[data-blok-sheet=([a-z-]+)\]$/.exec(rule.selector)
+      const match = /^\[data-blok-sheet=([a-z0-9-]+)\]$/.exec(rule.selector)
       if (match !== null) markers.push({ name: match[1], topLevel: rule.parent?.type === 'root' })
     })
-    expect(markers.map((marker) => marker.name).sort()).toEqual(Object.keys(LAZY_FINGERPRINTS).sort())
+    expect(markers.map((marker) => marker.name).sort()).toEqual([...Object.keys(LAZY_FINGERPRINTS), ...SHEET_PARTS].sort())
     expect(markers.filter((marker) => !marker.topLevel)).toEqual([])
   })
 

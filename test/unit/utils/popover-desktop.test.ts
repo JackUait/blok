@@ -97,6 +97,13 @@ vi.mock('../../../src/components/flipper', () => {
   };
 });
 
+const loadSheet = vi.hoisted(() => vi.fn((): Promise<void> => Promise.resolve()));
+
+vi.mock('../../../src/components/utils/lazy-styles', () => ({
+  isSheetLoaded: () => true,
+  loadSheet,
+}));
+
 const searchInputRegistry = vi.hoisted(() => ({
   instances: [] as unknown[],
   reset(): void {
@@ -1754,6 +1761,20 @@ describe('PopoverDesktop', () => {
 
         expect(el?.style.transitionDuration).toBe('');
       });
+    });
+
+    it('starts loading the "Nothing found" drawing\'s sheet on the first typed query, not on open', () => {
+      loadSheet.mockClear();
+      const popover = createPopover({ items: [{ title: 'Header', name: 'header', onActivate: vi.fn() }] });
+
+      popover.show();
+      popover.filterItems('');
+
+      expect(loadSheet).not.toHaveBeenCalled();
+
+      popover.filterItems('h');
+
+      expect(loadSheet).toHaveBeenCalledWith('media');
     });
 
     it('filterItems sorts matching items by fuzzy match score', () => {

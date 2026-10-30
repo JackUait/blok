@@ -1,5 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as LazyStyles from '../../../../../src/components/utils/lazy-styles';
+
+const sheets = vi.hoisted(() => ({
+  loaded: true,
+  load: vi.fn((): Promise<void> => Promise.resolve()),
+}));
+
+vi.mock('../../../../../src/components/utils/lazy-styles', async (importOriginal) => ({
+  ...(await importOriginal<typeof LazyStyles>()),
+  isSheetLoaded: () => sheets.loaded,
+  loadSheet: sheets.load,
+}));
+
 import { onGapChange, reserveGap, releaseGap } from '../../../../../src/components/modules/assistant/gap';
 import { createLivePreview } from '../../../../../src/components/modules/assistant/live-preview';
 import type { LivePreview } from '../../../../../src/components/modules/assistant/live-preview';
@@ -1303,6 +1316,33 @@ describe('createLivePreview', () => {
       vi.advanceTimersByTime(35 * 10);
 
       expect(state.layer.querySelector(IMAGE)).toBeNull();
+    });
+
+    it('keeps an image invisible until the media sheet that styles it is in', async () => {
+      const gate: { open?: () => void } = {};
+
+      sheets.loaded = false;
+      sheets.load.mockImplementation(() => new Promise<void>((resolve) => {
+        gate.open = resolve;
+      }));
+      try {
+        const preview = make();
+
+        preview.update('c1', markdown('![Red planet](https://example.com/mars.png)'));
+        vi.advanceTimersByTime(35 * 10);
+        const image = state.layer.querySelector<HTMLElement>(IMAGE);
+
+        expect(sheets.load).toHaveBeenCalledWith('media');
+        expect(image?.style.visibility).toBe('hidden');
+
+        gate.open?.();
+        await Promise.resolve();
+
+        expect(image?.style.visibility).toBe('');
+      } finally {
+        sheets.loaded = true;
+        sheets.load.mockImplementation(() => Promise.resolve());
+      }
     });
 
     it('draws an image from block.insert', () => {

@@ -7,6 +7,10 @@
  * its CSS replaces that rule, so its rules keep their place in the cascade.
  * A comment would not do as a marker: lightningcss hoists `/*!` comments to
  * the top.
+ *
+ * A sheet whose files sit in several places in main.css is cut into parts: its
+ * entry holds a `<name>-2`, `<name>-3`… marker before each later part, and
+ * main.css holds the same marker where that part goes.
  */
 
 /** Each entry imports a file from src/styles/lazy, which Tailwind compiles like main.css. */
@@ -15,6 +19,8 @@ const LOADERS = {
   database: () => import('../../styles/lazy/database.css?inline'),
   'block-preview': () => import('../../styles/lazy/block-preview.css?inline'),
   presence: () => import('../../styles/lazy/presence.css?inline'),
+  media: () => import('../../styles/lazy/media.css?inline'),
+  askai: () => import('../../styles/lazy/askai.css?inline'),
 };
 
 export type LazySheet = keyof typeof LOADERS;
@@ -72,6 +78,16 @@ const registry = (): Registry => {
 const markerOf = (name: string): RegExp =>
   new RegExp(`\\[data-blok-sheet=["']?${name}["']?\\]\\s*\\{\\s*--blok-sheet:\\s*${name}\\s*;?\\s*\\}`);
 
+/** The sheet cut at its own part markers, each piece with the marker it replaces. */
+const partsOf = (name: string, sheet: string, index = 1): Array<[string, string]> => {
+  const marker = index === 1 ? name : `${name}-${index}`;
+  const found = markerOf(`${name}-${index + 1}`).exec(sheet);
+
+  return found === null
+    ? [[marker, sheet]]
+    : [[marker, sheet.slice(0, found.index)], ...partsOf(name, sheet.slice(found.index + found[0].length), index + 1)];
+};
+
 const write = (name: string): void => {
   const { css, written } = registry();
   const sheet = css.get(name);
@@ -87,10 +103,11 @@ const write = (name: string): void => {
     return;
   }
 
-  const text = tag.textContent ?? '';
-  const marker = markerOf(name);
+  tag.textContent = partsOf(name, sheet).reduce((text, [marker, part]) => {
+    const pattern = markerOf(marker);
 
-  tag.textContent = marker.test(text) ? text.replace(marker, () => sheet) : `${text}\n${sheet}`;
+    return pattern.test(text) ? text.replace(pattern, () => part) : `${text}\n${part}`;
+  }, tag.textContent ?? '');
   done.add(name);
   written.set(tag, done);
 };

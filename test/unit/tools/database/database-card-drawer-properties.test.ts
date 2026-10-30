@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import type * as LazyStyles from '../../../../src/components/utils/lazy-styles';
+
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
@@ -8,6 +10,13 @@ import { pageLayoutOf } from '../../../../src/tools/database/page-layout';
 import type { PageLayoutOp } from '../../../../src/tools/database/page-layout';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
+
+const loadSheet = vi.hoisted(() => vi.fn((_name: string): Promise<void> => Promise.resolve()));
+
+vi.mock('../../../../src/components/utils/lazy-styles', async (importOriginal) => ({
+  ...(await importOriginal<typeof LazyStyles>()),
+  loadSheet,
+}));
 
 vi.mock('../../../../src/blok', () => ({
   Blok: vi.fn(function stubBlok() {
@@ -368,6 +377,17 @@ describe('DatabaseCardDrawer — page header and body start', () => {
       'data-blok-database-drawer-add-icon', 'data-blok-database-drawer-add-cover', 'data-blok-database-drawer-customize',
     ]);
     expect(buttons.every((b) => b.querySelector('svg') !== null)).toBe(true);
+  });
+
+  it.each([
+    ['a writer with a cover handler', { onCoverChange: vi.fn() }, true],
+    ['a read-only viewer', { onCoverChange: vi.fn(), readOnly: true }, false],
+    ['a writer without a cover handler', {}, false],
+  ])('%s: a row page that can set a cover starts loading the cover picker\'s sheet', (_who, extra, loads) => {
+    loadSheet.mockClear();
+    createDrawer(createOptions(extra)).open(ROW);
+
+    expect(loadSheet.mock.calls.some(([name]) => name === 'media')).toBe(loads);
   });
 
   // feel/findings-rowpage R33: Add icon sets a random emoji at once.

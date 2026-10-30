@@ -1,0 +1,5 @@
+/* Loaded by src/components/utils/lazy-styles.ts. The @tailwind line makes Tailwind compile and optimize this file as it does main.css. */
+@import '../assistant.css';
+@import '../ask-ai-menu.css';
+@import '../ask-ai-icons.css';
+@tailwind utilities source(none);

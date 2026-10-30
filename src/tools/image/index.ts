@@ -77,6 +77,7 @@ import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDe
 import { renderImagePreview } from './preview';
 import { figureInsets } from './figure-insets';
 import { overrideStatic } from '../../components/utils/override-static';
+import type { LazySheet } from '../../components/utils/lazy-styles';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -99,6 +100,11 @@ const merged: { actionHandlers?: ImageToolActionHandlers } = {};
 export class ImageTool implements BlockTool {
   public static get 'blok.runtimePartsOwner'(): string {
     return 'image';
+  }
+
+  /** Core loads these before the first render. Subclasses inherit it. */
+  public static get 'blok.toolSheets'(): LazySheet[] {
+    return ['media'];
   }
 
   public static get describe(): typeof describeImage {

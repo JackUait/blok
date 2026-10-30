@@ -26,24 +26,29 @@ export const lazyEntries = (): string[] =>
 /**
  * The authored stylesheet the browser ends up with: main.css, each lazy entry
  * put back where its `[data-blok-sheet='<name>']` marker rule sits (or at the end
- * when it has none), with only the entries' local imports kept.
+ * when it has none), with only the entries' local imports kept. An entry cut
+ * into parts by `<name>-2`, `<name>-3`… markers puts each part at its own marker.
  */
 export const withLazySheets = (
   mainSource: string,
   inlineFile: (filePath: string) => string,
 ): string => {
-  const localImports = (entry: string): string =>
-    [...readFileSync(entry, 'utf-8').matchAll(/@import\s+['"](\.[^'"]+)['"]/g)]
+  const markerOf = (name: string): string => `[data-blok-sheet='${name}'] { --blok-sheet: ${name}; }`;
+  const localImports = (entry: string, source: string): string =>
+    [...source.matchAll(/@import\s+['"](\.[^'"]+)['"]/g)]
       .map(([, spec]) => inlineFile(resolve(dirname(entry), spec)))
       .join('\n');
 
-  return lazyEntries().reduce((source, entry) => {
+  return lazyEntries().reduce((result, entry) => {
     const name = basename(entry, '.css');
-    const marker = `[data-blok-sheet='${name}'] { --blok-sheet: ${name}; }`;
+    const parts = readFileSync(entry, 'utf-8').split(new RegExp(`^\\[data-blok-sheet='${name}-\\d+'\\].*$`, 'm'));
 
-    return source.includes(marker)
-      ? source.replace(marker, () => localImports(entry))
-      : `${source}\n${localImports(entry)}`;
+    return parts.reduce((source, part, index) => {
+      const marker = markerOf(index === 0 ? name : `${name}-${index + 1}`);
+      const css = localImports(entry, part);
+
+      return source.includes(marker) ? source.replace(marker, () => css) : `${source}\n${css}`;
+    }, result);
   }, mainSource);
 };
 

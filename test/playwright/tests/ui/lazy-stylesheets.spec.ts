@@ -10,6 +10,9 @@ declare global {
   }
 }
 
+/** A 1×1 PNG, so an image block renders without the network. */
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
 /** A database with one table row, the smallest block that needs the database sheet. */
 const DATABASE: OutputBlockData[] = [
   {
@@ -47,7 +50,7 @@ const blokStyleTags = async (page: Page): Promise<Array<{ id: string; nonce: str
     .map((tag) => ({
       id: tag.id,
       nonce: (tag as HTMLStyleElement).nonce,
-      markers: [...(tag.textContent ?? '').matchAll(/\[data-blok-sheet=([a-z-]+)\]/g)].map((match) => match[1]),
+      markers: [...(tag.textContent ?? '').matchAll(/\[data-blok-sheet=([a-z0-9-]+)\]/g)].map((match) => match[1]),
     })));
 
 /** A fresh page whose chunk matching `pattern` fails to load. */
@@ -80,10 +83,59 @@ test.describe('lazy stylesheets', () => {
     expect(others).toEqual([]);
     expect(tag?.id).toBe('blok-styles');
     expect(tag?.nonce).toBe('n0nce');
-    // Fonts and database are in; the toolbox preview sheet waits for its card.
-    expect(tag?.markers.filter((name) => name !== 'presence')).toEqual(['block-preview']);
+    // Fonts, database and media (the page has media tools) are in; the toolbox
+    // preview sheet waits for its card, and Ask AI needs an assistant.
+    expect(tag?.markers.filter((name) => name !== 'presence')).toEqual(['block-preview', 'askai']);
     // database.css paints the wrapper in the database ink.
     await expect(page.locator('[data-blok-database-wrapper]').first()).toHaveCSS('color', 'rgb(44, 44, 43)');
+  });
+
+  test('an image block is styled the moment the editor is ready', async ({ page }) => {
+    await mount(page, 'blok', [{ type: 'image', data: { url: PNG, caption: 'An image' } }]);
+
+    // image.css places the block; unstyled it would be `static`.
+    await expect(page.locator('[data-blok-tool="image"]').first()).toHaveCSS('position', 'relative', { timeout: 1 });
+    expect((await blokStyleTags(page))[0]?.markers.some((name) => name.startsWith('media'))).toBe(false);
+  });
+
+  test('with an assistant, the Ask AI sheet is in the moment the editor is ready', async ({ page }) => {
+    await page.evaluate(async () => {
+      const holder = document.createElement('div');
+
+      holder.id = 'blok';
+      document.body.appendChild(holder);
+      const blok = new window.Blok({ holder, agent: { assistant: { model: () => undefined } } });
+
+      await blok.isReady;
+    });
+
+    expect((await blokStyleTags(page))[0]?.markers.includes('askai')).toBe(false);
+  });
+
+  test('"Nothing found" never shows its drawing unstyled, in an editor with no media tool', async ({ page }) => {
+    await page.evaluate(async () => {
+      const holder = document.createElement('div');
+
+      holder.id = 'blok';
+      document.body.appendChild(holder);
+      const Original = (window as unknown as { BlokOriginal: typeof window.Blok }).BlokOriginal;
+      const blok = new Original({ holder, data: { blocks: [{ type: 'paragraph', data: { text: '' } }] } });
+
+      await blok.isReady;
+    });
+    expect((await blokStyleTags(page))[0]?.markers.includes('media')).toBe(true);
+
+    const paragraph = page.locator('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"]');
+
+    await paragraph.click();
+    await paragraph.type('/qqqzzzxx');
+
+    const art = page.getByTestId('popover-nothing-found').locator('[data-blok-media-preview="search"]');
+
+    await expect(art).toBeVisible();
+    // media-empty.css sizes the drawing; it may show only once that is in.
+    expect((await blokStyleTags(page))[0]?.markers.includes('media-2')).toBe(false);
+    await expect(art).toHaveCSS('display', 'block');
   });
 
   for (const [sheet, pattern] of [

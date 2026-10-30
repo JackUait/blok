@@ -168,7 +168,7 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the URL field may look active however it was focused.',
   },
   {
-    file: 'src/styles/media-empty.css',
+    file: 'src/styles/invalid-field.css',
     match: '[aria-invalid="true"]',
     reason: 'Text input: the invalid-value border belongs to the field, not to keyboard navigation.',
   },

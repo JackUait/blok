@@ -2,7 +2,7 @@
  * Static analysis of the shared invalid-field convention (H11) styling.
  *
  * `setFieldValidity()` marks rejected inputs with `aria-invalid="true"`, and
- * media-empty.css pairs that with a destructive ring (border-color + focus
+ * invalid-field.css pairs that with a destructive ring (border-color + focus
  * box-shadow). Because main.css ships as a global stylesheet, a bare
  * `[aria-invalid="true"]` selector would leak onto every host-app form field
  * on the page — and its `outline: none` focus rule would strip focus

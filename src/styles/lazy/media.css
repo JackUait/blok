@@ -1,0 +1,18 @@
+/* Loaded by src/components/utils/lazy-styles.ts. The @tailwind line makes Tailwind compile and optimize this file as it does main.css. Each media-N marker starts the part that goes at the same marker in main.css. */
+@import '../../tools/image/darkroom/darkroom.css';
+@import '../../tools/image/darkroom/markup-panel.css';
+@import '../../tools/image/darkroom/markup-editor.css';
+@import '../../tools/image/alt-popover.css';
+[data-blok-sheet='media-2'] { --blok-sheet: media-2; }
+@import '../media-empty.css';
+[data-blok-sheet='media-3'] { --blok-sheet: media-3; }
+@import '../media-empty-narrow.css';
+@import '../image.css';
+@import '../video.css';
+@import '../audio.css';
+@import '../embed.css';
+[data-blok-sheet='media-4'] { --blok-sheet: media-4; }
+@import '../bookmark.css';
+[data-blok-sheet='media-5'] { --blok-sheet: media-5; }
+@import '../file.css';
+@tailwind utilities source(none);

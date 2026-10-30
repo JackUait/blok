@@ -31,7 +31,7 @@
  */
 import { build } from 'esbuild';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { compile } from '@tailwindcss/node';
@@ -479,6 +479,29 @@ const HEADER = `/**
  */
 const LAYER_ORDER = '@layer properties;\n@layer theme, base, components, utilities;\n';
 
+/** Lazy sheets whose files the view still needs, put back where main.css marks them. */
+const KEPT_SHEETS = ['media', 'askai'];
+
+/**
+ * The `@import` lines of one part of a kept lazy sheet, relative to main.css.
+ * A sheet's entry starts each later part with a `<name>-N` marker.
+ */
+const keptSheetPart = (marker) => {
+  const name = KEPT_SHEETS.find((sheet) => marker === sheet || marker.startsWith(`${sheet}-`));
+
+  if (name === undefined) {
+    return '';
+  }
+
+  const entry = join(dirname(STYLES_ENTRY), 'lazy', `${name}.css`);
+  const parts = readFileSync(entry, 'utf-8').split(new RegExp(`^\\[data-blok-sheet='${name}-\\d+'\\].*$`, 'm'));
+  const index = marker === name ? 0 : Number(marker.slice(name.length + 1)) - 1;
+
+  return [...(parts[index] ?? '').matchAll(/^@import '(\.[^']+)';$/gm)]
+    .map(([, spec]) => `@import './${relative(dirname(STYLES_ENTRY), resolve(dirname(entry), spec))}';`)
+    .join('\n');
+};
+
 /**
  * Compile, prune and write the stylesheet.
  */
@@ -529,6 +552,8 @@ const main = async () => {
    * not in main.css at all: they load lazily (src/components/utils/lazy-styles.ts),
    * and main.css holds only a marker rule for each. The markers are stripped:
    * they only set a custom property, so the pruner would keep them as carriers.
+   * The media and Ask AI sheets load lazily too, but a view draws media blocks,
+   * so their files go back in at their markers (see keptSheetPart).
    *
    * `loading.css` is stripped from the entry: its token block reads as a
    * carrier, and a view never shows the loading skeleton.
@@ -544,7 +569,7 @@ const main = async () => {
    * label token reads as a carrier.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
-    .replace(/^\[data-blok-sheet='[a-z-]+'\] \{ --blok-sheet: [a-z-]+; \}$/gm, '')
+    .replace(/^\[data-blok-sheet='([a-z0-9-]+)'\] \{ --blok-sheet: [a-z0-9-]+; \}$/gm, (_marker, name) => keptSheetPart(name))
     .replace(/^@import '\.\/loading\.css';$/m, '')
     .replace(/^@import '\.\/page-title\.css';$/m, '')
     .replace(/^@import '\.\/assistant\.css';$/m, '')

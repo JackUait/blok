@@ -32,6 +32,7 @@ import { openFilePreview } from './preview-modal';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, writeDerived } from '../image/detached-upload';
 import { renderFilePreview } from './toolbox-preview';
 import { overrideStatic } from '../../components/utils/override-static';
+import type { LazySheet } from '../../components/utils/lazy-styles';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -44,6 +45,11 @@ const VIDEO_EXTENSION_RE = /\.(mp4|webm|ogg|mov|m4v)(?:[?#]|$)/i;
 export class FileTool implements BlockTool {
   public static get 'blok.runtimePartsOwner'(): string {
     return 'file';
+  }
+
+  /** Core loads these before the first render. Subclasses inherit it. */
+  public static get 'blok.toolSheets'(): LazySheet[] {
+    return ['media'];
   }
 
   public static get describe(): typeof describeFile {

@@ -16,6 +16,7 @@ import { buildCodeDOM, setActiveViewMode } from '../../../tools/code/dom-builder
 import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { colorVarName } from '../../shared/color-presets';
+import { isSheetLoaded, loadSheet } from '../../utils/lazy-styles';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { makePreview } from '../../utils/media-empty-preview';
 import { isSafeRasterImageDataUrl, safeImageSrc, stripIgnoredUrlChars } from '../../utils/sanitize-url';
@@ -898,6 +899,11 @@ const makeImage = (): View => {
   const placeholder = makePreview('image');
 
   root.setAttribute('data-blok-tool', 'image');
+  // Styled by the media sheet, which only an image tool in the config loads at boot.
+  if (!isSheetLoaded('media')) {
+    root.style.visibility = 'hidden';
+    void loadSheet('media').then(() => root.style.removeProperty('visibility'));
+  }
   Object.entries({ 'data-state': 'rendered', 'data-size': 'full', 'data-align': 'center', 'data-frame': 'none', 'data-rounded': 'on', 'data-caption': 'on' })
     .forEach(([name, value]) => root.setAttribute(name, value));
   figure.className = 'blok-image-inner';

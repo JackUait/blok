@@ -10,7 +10,7 @@ import type { Collaboration } from './modules/collaboration';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
-import { BOOT_SHEET_WAIT_MS, loadSheet, sheetsOfTools, waitAtMost, whenIdle } from './utils/lazy-styles';
+import { BOOT_SHEET_WAIT_MS, loadSheet, sheetsOfTools, waitAtMost, whenIdle, type LazySheet } from './utils/lazy-styles';
 import { expandPersistenceConfig, unwrapPersistedDocument } from './utils/persistence';
 import { expandServerConfig } from './utils/server-config';
 import { normalizeOutputBlocks } from '../shared/output-data';
@@ -439,7 +439,9 @@ export class Core {
    */
   public async start(): Promise<void> {
     // Fetched beside module setup; awaited below, so no block renders before them.
-    const sheets = Promise.all((['fonts', ...sheetsOfTools(this.config.tools)] as const).map(loadSheet));
+    // Same check as AgentAPI.hasAssistant: the Ask AI bar and its inline menu exist only then.
+    const askAi: LazySheet[] = typeof this.config.agent?.assistant?.model === 'function' ? ['askai'] : [];
+    const sheets = Promise.all((['fonts', ...askAi, ...sheetsOfTools(this.config.tools)] as const).map(loadSheet));
 
     const modulesToPrepare = [
       'I18n',

@@ -3,6 +3,7 @@ import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { IconArrowUp, IconCheck, IconPlayerSpeed, IconRose, IconUndo } from '../../icons';
 import { generateBlockId } from '../../utils/id-generator';
+import { loadSheet } from '../../utils/lazy-styles';
 import { PopoverDesktop } from '../../utils/popover';
 import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
@@ -765,8 +766,9 @@ export class AssistantBar {
     if (reply.trim() === '') {
       return;
     }
-    void import('../../../markdown/markdownToHtml')
-      .then(({ markdownToHtml }) => Promise.all([markdownToHtml(summary), rest === '' ? '' : markdownToHtml(rest)]))
+    // Markdown's alerts, tasks and footnotes are styled by the media sheet (file.css).
+    void Promise.all([import('../../../markdown/markdownToHtml'), loadSheet('media')])
+      .then(([{ markdownToHtml }]) => Promise.all([markdownToHtml(summary), rest === '' ? '' : markdownToHtml(rest)]))
       .then(([summaryHtml, restHtml]) => {
         // A later render (a new prompt, close) owns the reply now.
         if (this.replyToken !== token) {

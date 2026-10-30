@@ -1,10 +1,7 @@
 [data-blok-sheet='fonts'] { --blok-sheet: fonts; }
 @import './popover-animation.css';
 @import './keyframes.css';
-@import '../tools/image/darkroom/darkroom.css';
-@import '../tools/image/darkroom/markup-panel.css';
-@import '../tools/image/darkroom/markup-editor.css';
-@import '../tools/image/alt-popover.css';
+[data-blok-sheet='media'] { --blok-sheet: media; }
 
 /*
   Import Tailwind CSS sub-modules individually instead of `@import 'tailwindcss'`
@@ -734,24 +731,20 @@
 @import './slash-search.css';
 @import './emoji-picker.css';
 [data-blok-sheet='database'] { --blok-sheet: database; }
-@import './media-empty.css';
-@import './image.css';
-@import './video.css';
-@import './audio.css';
-@import './embed.css';
+[data-blok-sheet='media-2'] { --blok-sheet: media-2; }
+@import './invalid-field.css';
+[data-blok-sheet='media-3'] { --blok-sheet: media-3; }
 @import './heading.css';
-@import './bookmark.css';
+[data-blok-sheet='media-4'] { --blok-sheet: media-4; }
 @import './page-title.css';
-@import './file.css';
+[data-blok-sheet='media-5'] { --blok-sheet: media-5; }
 @import './columns.css';
 @import './tabs.css';
 [data-blok-sheet='block-preview'] { --blok-sheet: block-preview; }
 @import './resize-cue.css';
 [data-blok-sheet='presence'] { --blok-sheet: presence; }
 @import './find.css';
-@import './assistant.css';
-@import './ask-ai-menu.css';
-@import './ask-ai-icons.css';
+[data-blok-sheet='askai'] { --blok-sheet: askai; }
 @import './field.css';
 @import './notifier-card.css';
 @import './spotlight.css';

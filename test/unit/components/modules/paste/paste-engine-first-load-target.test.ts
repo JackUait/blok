@@ -134,6 +134,33 @@ describe('first paste while the pipeline loads', () => {
     });
   });
 
+  it('lands two pastes made during the load in their own blocks, in order', async () => {
+    const instance = await boot();
+
+    duringLoad.run = () => {
+      duringLoad.run = () => undefined;
+      pasteInto(instance, 'b', { 'text/plain': 'P2' });
+    };
+    pasteInto(instance, 'a', { 'text/plain': 'P1' });
+
+    await vi.waitFor(async () => {
+      expect(await texts(instance)).toEqual(['AP1', 'BP2']);
+    });
+  });
+
+  it('lands at the same offset after the text node it was pasted into is replaced', async () => {
+    const instance = await boot();
+
+    duringLoad.run = () => {
+      editable('a').textContent = 'A';
+    };
+    pasteInto(instance, 'a', { 'text/plain': 'P1' });
+
+    await vi.waitFor(async () => {
+      expect(await texts(instance)).toEqual(['AP1', 'B']);
+    });
+  });
+
   it('pastes the plain text into the block it was pasted into when the load fails after a click outside', async () => {
     const instance = await boot();
 

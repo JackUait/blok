@@ -43,8 +43,29 @@ export class InvalidDate extends Error {}
 
 export const isDateInRange = (ms: number): boolean => Math.abs(ms) <= MAX_DATE_MS;
 
+/**
+ * The Go server's engine (goja) has no Intl. There, Date's own getters still
+ * read UTC and the host zone; no other zone can be read.
+ */
+const wallTimeWithoutIntl = (ms: number, timeZone: string | undefined): WallTime => {
+  if (timeZone !== undefined && timeZone !== 'UTC') throw new InvalidDate();
+  const date = new Date(ms);
+  const utc = timeZone === 'UTC';
+
+  return {
+    year: utc ? date.getUTCFullYear() : date.getFullYear(),
+    month: (utc ? date.getUTCMonth() : date.getMonth()) + 1,
+    day: utc ? date.getUTCDate() : date.getDate(),
+    hour: utc ? date.getUTCHours() : date.getHours(),
+    minute: utc ? date.getUTCMinutes() : date.getMinutes(),
+    second: utc ? date.getUTCSeconds() : date.getSeconds(),
+    ms: ((ms % 1000) + 1000) % 1000,
+  };
+};
+
 export const wallTime = (ms: number, timeZone: string | undefined): WallTime => {
   if (!isDateInRange(ms)) throw new InvalidDate();
+  if (typeof Intl === 'undefined') return wallTimeWithoutIntl(ms, timeZone);
   const parts: Record<string, number> = {};
 
   for (const part of formatterFor(timeZone).formatToParts(ms)) {

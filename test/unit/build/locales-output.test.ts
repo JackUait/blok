@@ -141,3 +141,58 @@ describe('UI locale files', () => {
     expect(targets.filter((file) => !existsSync(file))).toEqual([])
   })
 })
+
+/** Like LOAD_EVERY_LOCALE, but imports every `<code>-<hash>` chunk directly. */
+const LOAD_LOCALE_CHUNKS = `
+const { createHash } = require('node:crypto')
+const { readdirSync } = require('node:fs')
+const { join } = require('node:path')
+const sha1 = (text) => createHash('sha1').update(text).digest('hex')
+const [dist, codesJson] = process.argv.slice(1)
+const codes = JSON.parse(codesJson)
+;(async () => {
+  const out = { mjs: {}, cjs: {} }
+  for (const name of readdirSync(join(dist, 'chunks'))) {
+    const match = /^([a-zA-Z-]+)-[A-Za-z0-9_-]{8}\\.(mjs|cjs)$/.exec(name)
+    if (match === null || !codes.includes(match[1])) continue
+    const file = join(dist, 'chunks', name)
+    const data = match[2] === 'mjs' ? (await import(file)).default : require(file).default
+    ;(out[match[2]][match[1]] ??= []).push(sha1(JSON.stringify(data)))
+  }
+  process.stdout.write(JSON.stringify(out))
+})()
+`
+
+describe('emoji locale files', () => {
+  const emojiSources = resolve(repoRoot, 'src/components/utils/emoji/locales')
+  const emojiLocales = readdirSync(emojiSources)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => name.replace(/\.json$/, ''))
+  const esFiles = listEsFiles(dist)
+
+  it('every emoji locale loads as the exact object its source JSON parses to', () => {
+    // Search ranks keywords above names, so the keyword lists must come back
+    // whole and in order. Stringify checks that, key order included.
+    const loaded = JSON.parse(
+      execFileSync(process.execPath, ['-e', LOAD_LOCALE_CHUNKS, dist, JSON.stringify(emojiLocales)], {
+        encoding: 'utf-8',
+        maxBuffer: 1 << 24,
+      }),
+    ) as Record<'mjs' | 'cjs', Record<string, string[]>>
+    const mismatches = emojiLocales.flatMap((code) => {
+      const expected = sha1(JSON.stringify(JSON.parse(readFileSync(resolve(emojiSources, `${code}.json`), 'utf-8'))))
+      return (['mjs', 'cjs'] as const).flatMap((format) =>
+        (loaded[format][code] ?? []).filter((hash) => hash === expected).length === 1 ? [] : [`${code}.${format}`],
+      )
+    })
+    expect(emojiLocales.length).toBeGreaterThan(60)
+    expect(mismatches).toEqual([])
+  })
+
+  it('emoji locales ship their entries against one shared emoji list', () => {
+    const keyLists = esFiles.filter((file) => basename(file).startsWith('emoji-locale-keys-'))
+    expect(keyLists.map((file) => basename(file))).toHaveLength(1)
+    const importers = esFiles.filter((file) => readFileSync(file, 'utf-8').includes('./emoji-locale-keys-'))
+    expect(importers).toHaveLength(emojiLocales.length)
+  })
+})

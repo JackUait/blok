@@ -11,27 +11,24 @@
  * Emits a default export only — all JSON consumers in src use default imports
  * or `.default` on dynamic imports (guarded by test/unit/build tests).
  *
- * Lazy UI locales ship as values against one shared key list (see
- * locale-message-codec.mjs); the decoded object is the same as the source.
+ * Lazy UI and emoji locales ship as values against one shared key list per
+ * kind (see locale-data-codec.mjs); the decoded object is the same as the
+ * source.
  */
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { LOCALE_KINDS, buildKeyList, encodeLocale, keyListModule, localeKindOf } from './locale-data-codec.mjs';
 
-import {
-  MESSAGE_KEYS_ID,
-  buildKeyList,
-  encodeMessages,
-  isLazyMessageLocale,
-  keyListModule,
-} from './locale-message-codec.mjs';
-
-const LOCALES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/components/i18n/locales');
-const RESOLVED_KEYS_ID = `\0${MESSAGE_KEYS_ID}`;
+const kindByResolvedId = new Map(LOCALE_KINDS.map((kind) => [`\0${kind.keysId}`, kind]));
 
 export default function jsonAsStringPlugin() {
-  let keys = null;
+  const keyLists = new Map();
   let encodeLocales = true;
-  const keyList = () => (keys ??= buildKeyList(LOCALES_DIR));
+  const keyList = (kind) => {
+    if (!keyLists.has(kind)) {
+      keyLists.set(kind, buildKeyList(kind));
+    }
+
+    return keyLists.get(kind);
+  };
 
   return {
     name: 'blok:json-as-string',
@@ -42,15 +39,19 @@ export default function jsonAsStringPlugin() {
       encodeLocales = config.command === 'build';
     },
     buildStart() {
-      keys = null;
+      keyLists.clear();
     },
     resolveId: {
-      filter: { id: new RegExp(`^${MESSAGE_KEYS_ID}$`) },
-      handler: () => RESOLVED_KEYS_ID,
+      filter: { id: /^virtual:blok-[a-z]+-keys$/ },
+      handler: (id) => (kindByResolvedId.has(`\0${id}`) ? `\0${id}` : null),
     },
     load: {
-      filter: { id: new RegExp(`^\\0${MESSAGE_KEYS_ID}$`) },
-      handler: () => ({ code: keyListModule(keyList()), map: null, moduleType: 'js' }),
+      filter: { id: /^\0virtual:blok-[a-z]+-keys$/ },
+      handler(id) {
+        const kind = kindByResolvedId.get(id);
+
+        return kind === undefined ? null : { code: keyListModule(kind, keyList(kind)), map: null, moduleType: 'js' };
+      },
     },
     transform: {
       filter: { id: /\.json(?:\?|$)/ },
@@ -59,13 +60,13 @@ export default function jsonAsStringPlugin() {
           return null;
         }
 
-        const file = id.split('?')[0];
+        const kind = encodeLocales ? localeKindOf(id.split('?')[0]) : null;
 
-        if (encodeLocales && isLazyMessageLocale(file)) {
-          const payload = JSON.stringify(JSON.stringify(encodeMessages(keyList(), JSON.parse(code))));
+        if (kind !== null) {
+          const payload = JSON.stringify(JSON.stringify(encodeLocale(kind, keyList(kind), JSON.parse(code))));
 
           return {
-            code: `import decode from '${MESSAGE_KEYS_ID}';\nexport default /* @__PURE__ */ decode(JSON.parse(${payload}));`,
+            code: `import decode from '${kind.keysId}';\nexport default /* @__PURE__ */ decode(JSON.parse(${payload}));`,
             map: null,
             moduleType: 'js',
           };

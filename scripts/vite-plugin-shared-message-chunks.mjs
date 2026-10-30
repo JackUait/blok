@@ -1,6 +1,6 @@
 /**
- * Put the eager English messages, and the key list every lazy locale decodes
- * against, in chunks of their own with stable names.
+ * Put the eager English messages, and the key lists the lazy UI and emoji
+ * locales decode against, in chunks of their own with stable names.
  *
  * The main build and `scripts/build-locales.mjs` both bundle English. Each
  * writes it to `chunks/<name>-<hash>.mjs`; the bytes, and so the file name,
@@ -9,8 +9,9 @@
  */
 const MESSAGE_GROUPS = [
   { name: 'messages-en', test: /[\\/]src[\\/]components[\\/]i18n[\\/]locales[\\/]en\.json(?:\?|$)/ },
-  // The virtual module from vite-plugin-json-as-string.mjs.
+  // The virtual modules from vite-plugin-json-as-string.mjs.
   { name: 'message-keys', test: /^\0virtual:blok-message-keys$/ },
+  { name: 'emoji-locale-keys', test: /^\0virtual:blok-emoji-keys$/ },
 ];
 
 /**

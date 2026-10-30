@@ -6,10 +6,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as Engine from '../../../../../src/components/modules/paste/engine';
+import type * as LazyStyles from '../../../../../src/components/utils/lazy-styles';
 import type * as Logger from '../../../../../src/components/utils/logger';
 
-/** Runs while the pipeline loads; `fail` makes the load fail. */
+/** Runs while the pipeline loads; `fail` makes the load fail. A paste of `HANG` never settles. */
 const duringLoad = vi.hoisted(() => ({ run: (): void => undefined, fail: false }));
+
+// No idle warm-up: these tests need the first paste to wait for the load.
+vi.mock('../../../../../src/components/utils/lazy-styles', async (importOriginal) => ({
+  ...await importOriginal<typeof LazyStyles>(),
+  whenIdle: (): void => undefined,
+}));
 
 vi.mock('../../../../../src/components/modules/paste/engine', async (importOriginal) => {
   const actual = await importOriginal<typeof Engine>();
@@ -21,6 +28,10 @@ vi.mock('../../../../../src/components/modules/paste/engine', async (importOrigi
         throw new Error('chunk failed');
       }
       super(...args);
+    }
+
+    public override processDataTransfer(...args: Parameters<Engine.PasteEngine['processDataTransfer']>): Promise<void> {
+      return args[0].getData('text/plain') === 'HANG' ? new Promise<void>(() => undefined) : super.processDataTransfer(...args);
     }
   }
 
@@ -149,6 +160,49 @@ describe('first paste while the pipeline loads', () => {
       expect(await texts(instance)).toEqual(['P1', 'B']);
     });
   });
+
+  it('follows text another writer inserts before the caret during the load', async () => {
+    const instance = await boot();
+
+    duringLoad.run = () => {
+      const text = editable('a').firstChild;
+
+      if (text instanceof Text) {
+        text.insertData(0, 'ZZ');
+      }
+    };
+    pasteInto(instance, 'a', { 'text/plain': 'P1' });
+
+    await vi.waitFor(async () => {
+      expect(await texts(instance)).toEqual(['ZZAP1', 'B']);
+    });
+  });
+
+  it('does not let a paste that never settles block pastes made after the load', async () => {
+    const instance = await boot();
+
+    pasteInto(instance, 'a', { 'text/plain': 'HANG' });
+    await settle();
+    pasteInto(instance, 'b', { 'text/plain': 'P2' });
+
+    await vi.waitFor(async () => {
+      expect(await texts(instance)).toEqual(['A', 'BP2']);
+    });
+  });
+
+  it('lets the next first-load paste run when the one before it never settles', async () => {
+    const instance = await boot();
+
+    duringLoad.run = () => {
+      duringLoad.run = () => undefined;
+      pasteInto(instance, 'b', { 'text/plain': 'P2' });
+    };
+    pasteInto(instance, 'a', { 'text/plain': 'HANG' });
+
+    await vi.waitFor(async () => {
+      expect(await texts(instance)).toEqual(['A', 'BP2']);
+    }, { timeout: 8000 });
+  }, 15_000);
 
   it('lands two pastes made during the load in their own blocks, in order', async () => {
     const instance = await boot();

@@ -76,7 +76,7 @@ export class Core {
           await this.start();
           await this.render();
 
-          const { BlockManager, Caret, UI, ModificationsObserver, TabSync } = this.moduleInstances;
+          const { BlockManager, Caret, UI, ModificationsObserver, TabSync, Paste } = this.moduleInstances;
 
           UI.checkEmptiness();
           // Optional: unit fixtures build Core without the module.
@@ -88,6 +88,8 @@ export class Core {
 
           // Adding a sheet makes the browser restyle the whole page; do it before the first toolbox hover.
           whenIdle(() => void loadSheet('block-preview'));
+          // So the first paste rarely waits for the paste code. Optional: unit fixtures build Core without it.
+          whenIdle(() => Paste?.warm());
 
           /**
            * A collaboration session is still empty at this point — its blocks

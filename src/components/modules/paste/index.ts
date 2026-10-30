@@ -3,12 +3,14 @@ import { Dom as dom$ } from '../../dom';
 import { findOwn } from '../../utils/own-element';
 import { recordPasteHandling } from '../../utils/paste-continuation';
 import { log } from '../../utils/logger';
+import { waitAtMost } from '../../utils/lazy-styles';
 import { rangeAtTextOffsets, textOffsetOf } from '../../utils/caret/selection';
 
 import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME } from './constants';
 import { ToolRegistry } from './tool-registry';
 // Type only: the pipeline loads on the first paste.
 import type { PasteEngine } from './engine';
+import type { Block } from '../../block';
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 
 /**
@@ -23,12 +25,23 @@ interface PastePlace {
   offset: number;
   endOffset: number;
   /**
-   * The selection itself, used while its nodes are still in that input: an
-   * offset at a node edge cannot tell "end of the text before a link" from
-   * "start of the link".
+   * The selection itself. It follows edits made during the load, so it is
+   * used while its own nodes are still in that input.
    */
   range: Range | null;
+  startNode: Node | null;
+  endNode: Node | null;
 }
+
+/** How long a first-load paste waits for the one before it. Matches the table's paste continuation. */
+const FIRST_PASTE_WAIT_MS = 5000;
+
+/**
+ * A block's inputs, read from its DOM: a block re-rendered during the load can
+ * still list its old ones.
+ * @param block - the block
+ */
+const inputsOf = (block: Block | undefined): HTMLElement[] => (block?.holder instanceof HTMLElement ? dom$.findAllInputs(block.holder) : []);
 
 /**
  * A copy of a DataTransfer that stays readable after its event is over.
@@ -112,6 +125,13 @@ export class Paste extends Module {
     await this.engine();
   }
 
+  /** Loads the pipeline ahead of the first paste. A failure stays silent: the next paste loads it again. */
+  public warm(): void {
+    if (!this.isDestroyed && !this.Blok.ReadOnly.isEnabled) {
+      this.engine().catch(() => undefined);
+    }
+  }
+
   /**
    * Process text data (public API).
    * Used by API.renderFromHTML() to process HTML or plain text.
@@ -145,10 +165,10 @@ export class Paste extends Module {
    * Handle pasted data transfer object. Reads it at once: the browser empties
    * a clipboard once its event is over, and the pipeline may still be loading.
    */
-  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
+  public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element, loadedAtEvent = this.engineLoaded): Promise<void> {
     const snapshot = snapshotOf(dataTransfer);
 
-    await this.withEngine(snapshot, false, engine => engine.processDataTransfer(snapshot, pasteTarget));
+    await this.withEngine(snapshot, false, loadedAtEvent, engine => engine.processDataTransfer(snapshot, pasteTarget));
   }
 
   /** The paste pipeline. One shared load; a failed one is dropped so the next paste tries again. */
@@ -182,10 +202,11 @@ export class Paste extends Module {
    * lands the plain text, since the event's default was prevented.
    * @param clipboard - the event's data, already copied
    * @param plainOnly - paste without formatting, so no HTML hook runs
+   * @param loadedAtEvent - whether the pipeline had loaded when the event fired
    * @param paste - the pipeline call
    */
-  private async withEngine(clipboard: DataTransfer, plainOnly: boolean, paste: (engine: PasteEngine) => Promise<void>): Promise<void> {
-    if (this.engineLoaded && this.firstPastes === null) {
+  private async withEngine(clipboard: DataTransfer, plainOnly: boolean, loadedAtEvent: boolean, paste: (engine: PasteEngine) => Promise<void>): Promise<void> {
+    if (loadedAtEvent && this.firstPastes === null) {
       const engine = await this.engine();
 
       if (this.canStillPaste()) {
@@ -196,7 +217,12 @@ export class Paste extends Module {
     }
 
     const place = this.placeOfPaste();
-    const turn = (this.firstPastes ?? Promise.resolve()).then(() => this.pasteAt(place, clipboard, plainOnly, paste));
+
+    // Made after the load: it does not wait behind first-load pastes, one of which may never settle.
+    if (loadedAtEvent) {
+      return this.pasteAt(place, clipboard, plainOnly, paste);
+    }
+    const turn = waitAtMost(this.firstPastes ?? Promise.resolve(), FIRST_PASTE_WAIT_MS).then(() => this.pasteAt(place, clipboard, plainOnly, paste));
     const done = turn.catch(() => undefined);
 
     this.firstPastes = done;
@@ -252,19 +278,27 @@ export class Paste extends Module {
     const block = this.Blok.BlockManager.currentBlock;
     const selection = window.getSelection();
     const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-    const inputs = block?.inputs ?? [];
+    const inputs = inputsOf(block);
     const inputIndex = range === null ? -1 : inputs.findIndex(input => input.contains(range.startContainer));
     const input = inputs[inputIndex];
 
     if (range === null || input === undefined) {
-      return { blockId: block?.id, inputIndex: null, offset: 0, endOffset: 0, range: null };
+      return { blockId: block?.id, inputIndex: null, offset: 0, endOffset: 0, range: null, startNode: null, endNode: null };
     }
 
     const offset = textOffsetOf(input, range.startContainer, range.startOffset);
     // A selection that runs past this input is kept up to the input's end.
     const endOffset = input.contains(range.endContainer) ? textOffsetOf(input, range.endContainer, range.endOffset) : (input.textContent ?? '').length;
 
-    return { blockId: block?.id, inputIndex, offset, endOffset: Math.max(offset, endOffset), range: range.cloneRange() };
+    return {
+      blockId: block?.id,
+      inputIndex,
+      offset,
+      endOffset: Math.max(offset, endOffset),
+      range: range.cloneRange(),
+      startNode: range.startContainer,
+      endNode: range.endContainer,
+    };
   }
 
   private caretInEditor(): boolean {
@@ -302,20 +336,19 @@ export class Paste extends Module {
     BlockManager.currentBlock = block;
 
     // Read afresh: a block re-rendered during the load can still list its old inputs.
-    const inputs = dom$.findAllInputs(block.holder);
+    const inputs = inputsOf(block);
     const input = place.inputIndex === null ? undefined : inputs[place.inputIndex] ?? inputs.at(-1);
 
     if (input !== undefined) {
       const kept = place.range;
-      // A Range follows DOM edits, so it is trusted only while it still covers the same text.
-      const range = kept !== null && input.contains(kept.startContainer) && input.contains(kept.endContainer) &&
-        textOffsetOf(input, kept.startContainer, kept.startOffset) === place.offset &&
-        textOffsetOf(input, kept.endContainer, kept.endOffset) === place.endOffset
+      // A removed node moves the Range to its parent, so it is trusted only while it still sits in its own nodes.
+      const range = kept !== null && kept.startContainer === place.startNode && kept.endContainer === place.endNode &&
+        input.contains(kept.startContainer) && input.contains(kept.endContainer)
         ? kept
         : rangeAtTextOffsets(input, place.offset, place.endOffset);
 
       // Focus first: moving focus between inputs can reset the selection.
-      input.focus();
+      input.focus({ preventScroll: true });
       window.getSelection()?.removeAllRanges();
       window.getSelection()?.addRange(range);
       block.currentInput = input;
@@ -334,8 +367,8 @@ export class Paste extends Module {
     this.Blok.Caret.insertContentAtCaretPosition(escaped);
   }
 
-  private async processAsText(plainData: string): Promise<void> {
-    await this.withEngine(plainTextOnly(plainData), true, engine => engine.processAsText(plainData));
+  private async processAsText(plainData: string, loadedAtEvent: boolean): Promise<void> {
+    await this.withEngine(plainTextOnly(plainData), true, loadedAtEvent, engine => engine.processAsText(plainData));
   }
 
   /**
@@ -569,6 +602,7 @@ export class Paste extends Module {
 
     // Read now: the awaits below can outlive the event, and the browser empties its clipboard then.
     const clipboard = event.clipboardData ? snapshotOf(event.clipboardData) : null;
+    const loadedAtEvent = this.engineLoaded;
     const { BlockManager, BlockEvents, Toolbar } = this.Blok;
 
     /**
@@ -610,9 +644,9 @@ export class Paste extends Module {
       // raw text/plain payload, skipping the markdown/HTML→blocks conversion
       // that processDataTransfer would otherwise apply.
       if (this.isShiftHeld) {
-        await this.processAsText(clipboard.getData('text/plain'));
+        await this.processAsText(clipboard.getData('text/plain'), loadedAtEvent);
       } else {
-        await this.processDataTransfer(clipboard, pasteTarget);
+        await this.processDataTransfer(clipboard, pasteTarget, loadedAtEvent);
       }
     }
 

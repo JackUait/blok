@@ -114,6 +114,7 @@ vi.mock('../../../src/components/modules', () => {
   class MockPaste {
     public state?: BlokModules;
     public prepare = mockRegistry.modules.pastePrepare;
+    public warm = vi.fn();
   }
 
   /**
@@ -469,7 +470,7 @@ describe('Core', () => {
       }
     });
 
-    it('warms the toolbox preview sheet when the page is idle after ready', async () => {
+    it('warms the toolbox preview sheet and the paste code when the page is idle after ready', async () => {
       const idle: Array<() => void> = [];
 
       vi.stubGlobal('requestIdleCallback', (callback: () => void) => {
@@ -478,11 +479,15 @@ describe('Core', () => {
         return idle.length;
       });
       try {
-        await createReadyCore();
+        const core = await createReadyCore();
+        const paste = core.moduleInstances.Paste as unknown as { warm: ReturnType<typeof vi.fn> };
+
         expect(mockLoadSheet).not.toHaveBeenCalledWith('block-preview');
+        expect(paste.warm).not.toHaveBeenCalled();
 
         idle.forEach((callback) => callback());
         expect(mockLoadSheet).toHaveBeenCalledWith('block-preview');
+        expect(paste.warm).toHaveBeenCalledTimes(1);
       } finally {
         vi.unstubAllGlobals();
       }

@@ -6,9 +6,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as Engine from '../../../../../src/components/modules/paste/engine';
+import type * as LazyStyles from '../../../../../src/components/utils/lazy-styles';
 import type * as Logger from '../../../../../src/components/utils/logger';
 
 const engineLoad = vi.hoisted(() => ({ failures: 0 }));
+
+// No idle warm-up: these tests need the first paste to wait for the load.
+vi.mock('../../../../../src/components/utils/lazy-styles', async (importOriginal) => ({
+  ...await importOriginal<typeof LazyStyles>(),
+  whenIdle: (): void => undefined,
+}));
 
 vi.mock('../../../../../src/components/modules/paste/engine', async (importOriginal) => {
   const actual = await importOriginal<typeof Engine>();

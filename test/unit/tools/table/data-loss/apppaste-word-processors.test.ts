@@ -29,6 +29,7 @@ import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import type { CellContent, TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { savedAsHtml } from '../../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -93,6 +94,7 @@ const editableOf = (id: string): HTMLElement => {
 };
 
 const paste = async (target: HTMLElement, flavors: Record<string, string>): Promise<void> => {
+  await loadPasteEngine();
   const event = new Event('paste', { bubbles: true, cancelable: true });
 
   Object.defineProperty(event, 'clipboardData', {

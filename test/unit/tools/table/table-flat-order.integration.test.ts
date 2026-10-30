@@ -15,6 +15,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { validateTreeOrder } from '../../../../src/components/utils/hierarchy-invariant';
 import type { API, OutputBlockData } from '../../../../types';
+import { loadPasteEngine } from '../../helpers/paste-engine';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -217,6 +218,7 @@ describe('table cell blocks keep the flat array depth-first', () => {
 
     target.focus();
     instance.caret.setToBlock('target');
+    await loadPasteEngine();
     target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
       clipboardData: { getData: (type: string): string => data[type] ?? '', types: Object.keys(data) },
     }));

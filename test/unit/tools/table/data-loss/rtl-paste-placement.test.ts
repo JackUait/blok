@@ -11,6 +11,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import type { TableData } from '../../../../../src/tools/table/types';
 import type { OutputData } from '../../../../../types';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -46,6 +47,7 @@ const pasteHtml = async (html: string, plain: string): Promise<void> => {
     throw new Error('no paragraph to paste into');
   }
   const data: Record<string, string> = { 'text/html': html, 'text/plain': plain };
+  await loadPasteEngine();
   const event = new Event('paste', { bubbles: true, cancelable: true });
 
   Object.defineProperty(event, 'clipboardData', {

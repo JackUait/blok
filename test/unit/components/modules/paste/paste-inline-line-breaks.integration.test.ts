@@ -13,6 +13,7 @@ import { ToggleItem } from '../../../../../src/tools/toggle';
 import { BoldInlineTool } from '../../../../../src/components/inline-tools/inline-tool-bold';
 import type { API, OutputBlockData, OutputData } from '../../../../../types';
 import { htmlOf } from '../../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -54,6 +55,7 @@ const pasteInto = async (instance: TestEditor, id: string, data: Record<string, 
   target.setAttribute('contenteditable', 'true');
   target.focus();
   instance.caret.setToBlock(id, 'end');
+  await loadPasteEngine();
   target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
     clipboardData: { getData: (type: string): string => data[type] ?? '', types: Object.keys(data) },
   }));

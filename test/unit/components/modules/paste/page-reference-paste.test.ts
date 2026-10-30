@@ -6,6 +6,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { LinkInlineTool } from '../../../../../src/components/inline-tools/inline-tool-link';
 import type { API, OutputData } from '../../../../../types';
 import { htmlOf } from '../../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -58,6 +59,7 @@ describe('inline page reference paste', () => {
     const html = '<a data-blok-page-id="p1" href="https://example.test/old-title" title="Old title">Old title</a>';
     const data = { 'text/html': html, 'text/plain': 'Old title' };
 
+    await loadPasteEngine();
     target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
       clipboardData: { getData: (type: string): string => data[type as keyof typeof data] ?? '', types: Object.keys(data) },
     }));
@@ -97,6 +99,7 @@ describe('inline page reference paste', () => {
     const html = '<a href="https://example.test/">Site</a>';
     const data = { 'text/html': html, 'text/plain': 'Site' };
 
+    await loadPasteEngine();
     target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
       clipboardData: { getData: (type: string): string => data[type as keyof typeof data] ?? '', types: Object.keys(data) },
     }));

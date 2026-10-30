@@ -574,11 +574,10 @@ describe('Paste module', () => {
 
       mocks.holder.dispatchEvent(event);
 
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
       expect(event.defaultPrevented).toBe(true);
-      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => {
+        expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+      });
 
       const [tool, pasteEvent] = mocks.BlockManager.paste.mock.calls[0] as [string, CustomEvent];
 
@@ -2054,7 +2053,9 @@ describe('Paste module', () => {
 
       await paste.prepare();
 
-      const handlers = (paste as unknown as { handlers: unknown[] }).handlers;
+      // The handlers live in the paste pipeline, which loads on the first paste.
+      const engine = await (paste as unknown as { engine: () => Promise<unknown> }).engine();
+      const handlers = (engine as { handlers: unknown[] }).handlers;
 
       expect(handlers).toBeDefined();
       expect(handlers.length).toBeGreaterThan(0);

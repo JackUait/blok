@@ -12,6 +12,7 @@ import { isCellWithBlocks } from '../../../../../src/tools/table/types';
 import type { CellContent, TableConfig, TableData } from '../../../../../src/tools/table/types';
 import type { BlockToolConstructorOptions, OutputBlockData, OutputData } from '../../../../../types';
 import { savedAsHtml } from '../../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 interface SelectionRange { minRow: number; maxRow: number; minCol: number; maxCol: number }
 
@@ -87,6 +88,7 @@ const copyRange = (tableId: string, range: SelectionRange, type: 'copy' | 'cut' 
 };
 
 const paste = async (target: HTMLElement, data: Record<string, string>): Promise<void> => {
+  await loadPasteEngine();
   const event = new Event('paste', { bubbles: true, cancelable: true });
 
   Object.defineProperty(event, 'clipboardData', {

@@ -16,6 +16,7 @@ import {
   NOTION_BLOCKS_V3_MIME,
 } from '../../../../../src/components/modules/paste/notion-blocks-v3';
 import { htmlOf } from '../../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 /**
  * Page-root id used by the real fixture. Top-level blocks point their
@@ -1311,6 +1312,7 @@ describe('Notion v3 paste with optional page tools', () => {
       'text/plain': 'Notion content',
     };
 
+    await loadPasteEngine();
     target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
       clipboardData: { getData: (type: string): string => data[type as keyof typeof data] ?? '', types: Object.keys(data) },
     }));

@@ -25,6 +25,7 @@ import { blocksToHtml } from '../../../../../src/view';
 import type { CellContent, TableData } from '../../../../../src/tools/table/types';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 import { savedAsHtml } from '../../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../../helpers/paste-engine';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -69,6 +70,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
 
 const pasteHtml = async (target: HTMLElement, html: string, plain = ''): Promise<void> => {
   const data: Record<string, string> = { 'text/html': html, 'text/plain': plain };
+  await loadPasteEngine();
   const event = new Event('paste', { bubbles: true, cancelable: true });
 
   Object.defineProperty(event, 'clipboardData', {

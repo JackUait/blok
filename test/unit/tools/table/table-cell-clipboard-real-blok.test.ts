@@ -27,6 +27,7 @@ import type { CellContent, CellPlacement, TableCellsClipboard, TableConfig, Tabl
 import type { API, BlockToolConstructorOptions, ConversionConfig, OutputBlockData, OutputData, PasteConfig } from '../../../../types';
 import { htmlToSegmentsDom } from '../../../../src/components/utils/rich-text-dom';
 import { savedAsHtml } from '../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../helpers/paste-engine';
 
 interface CellSelectionHandle {
   selectRow: (row: number) => void;
@@ -151,8 +152,10 @@ const copyRowFlavors = (tableId: string, row: number): Record<string, string> =>
 
 const copyRow = (tableId: string, row: number): string => copyRowFlavors(tableId, row)['text/html'] ?? '';
 
-const pasteHtml = (target: HTMLElement, html: string): void => {
+const pasteHtml = async (target: HTMLElement, html: string): Promise<void> => {
   const data: Record<string, string> = { 'text/html': html };
+
+  await loadPasteEngine();
   const event = new Event('paste', { bubbles: true, cancelable: true });
 
   Object.defineProperty(event, 'clipboardData', {
@@ -256,7 +259,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       ],
     });
 
-    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
     const saved = savedAsHtml(await editor.save());
 
@@ -277,7 +280,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       ],
     }, undefined, undefined, { open: () => undefined });
 
-    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
     const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
@@ -300,7 +303,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       ],
     }, undefined, undefined, { open: () => undefined }, false);
 
-    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
     const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
@@ -323,7 +326,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       ],
     }, undefined, undefined, { open: () => undefined }, false, 'code');
 
-    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
     const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
@@ -349,7 +352,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       ],
     }, undefined, undefined, { open: () => undefined }, false, 'custom', paragraphCanImport);
 
-    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
     const saved = savedAsHtml(await editor.save());
     const copiedId = savedCell(saved, 'dst', 0, 0).blocks[0];
@@ -424,7 +427,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       const before = await editor.save();
       const sourceText = cellTexts(before, savedCell(before, 'src', 0, 0))[0];
 
-      pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+      await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
       await settle();
 
       const saved = await editor.save();
@@ -436,7 +439,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
     it('pasting outside a table keeps every mark the source cell saved', async () => {
       const editor = await boot(sourceAndTarget(MARKED));
 
-      pasteHtml(holder.querySelector<HTMLElement>('[data-blok-id="free"] [data-blok-element-content] > *') ?? holder, copyRow('src', 0));
+      await pasteHtml(holder.querySelector<HTMLElement>('[data-blok-id="free"] [data-blok-element-content] > *') ?? holder, copyRow('src', 0));
       await settle();
 
       const saved = await editor.save();
@@ -463,7 +466,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
         { row: 0, col: 1, blocks: [{ tool: 'paragraph', data: { text: 'b' } }] },
       ]));
 
-      pasteHtml(cellEditable('dst', 0, 0), forged);
+      await pasteHtml(cellEditable('dst', 0, 0), forged);
       await settle();
 
       // Read the live cell, not save(): the saver sanitizes again and would hide a leak.
@@ -498,7 +501,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       ],
     });
 
-    pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
+    await pasteHtml(cellEditable('dst', 0, 0), copyRow('src', 0));
     await settle();
 
     const saved = savedAsHtml(await editor.save());
@@ -528,7 +531,7 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
       expect(html).toContain(`text-align: ${start}; vertical-align: middle`);
       expect(html.startsWith('<table dir="rtl"')).toBe(direction === 'rtl');
 
-      pasteHtml(cellEditable('dst', 0, 0), html);
+      await pasteHtml(cellEditable('dst', 0, 0), html);
       await settle();
 
       const saved = savedAsHtml(await editor.save());

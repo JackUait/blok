@@ -35,6 +35,8 @@ function run(command, args, options = {}) {
 const ORDINARY_CONFIGURATION = 'Release';
 const JOURNAL_CONFIGURATIONS = ['Debug', 'Release'];
 
+const TARGETS = ['csharp', 'go'];
+
 function selectedOptions(args) {
   const targetIndex = args.indexOf('--target');
   const target = targetIndex >= 0 ? args[targetIndex + 1] : 'csharp';
@@ -43,18 +45,20 @@ function selectedOptions(args) {
   const configurationIndex = args.indexOf('--configuration');
   const configuration = configurationIndex >= 0 ? args[configurationIndex + 1] : 'Debug';
 
+  // Go has no Debug or Release build, so --configuration would mean nothing.
   if (
-    target !== 'csharp' ||
+    !TARGETS.includes(target) ||
+    (target === 'go' && configurationIndex >= 0) ||
     (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === '')) ||
     !JOURNAL_CONFIGURATIONS.includes(configuration)
   ) {
     throw new Error(
-      'Usage: node scripts/test-server-conformance.mjs [--target csharp] ' +
-      '[--test-name-pattern PATTERN] [--configuration Debug|Release]',
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go] ' +
+      '[--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]',
     );
   }
 
-  return { testNamePattern, configuration };
+  return { target, testNamePattern, configuration };
 }
 
 /**
@@ -101,10 +105,7 @@ async function requireExecutedTests(reportPath, testNamePattern) {
   );
 }
 
-async function main() {
-  const options = selectedOptions(process.argv.slice(2));
-  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-'));
-  const executableSuffix = process.platform === 'win32' ? '.exe' : '';
+async function buildCsharp(options, temporaryDirectory, executableSuffix) {
   const ordinaryDirectory = join(temporaryDirectory, 'csharp-ordinary');
   const conformanceDirectory = join(temporaryDirectory, 'csharp-conformance');
   const hostProject = join(
@@ -112,30 +113,78 @@ async function main() {
     'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
   );
 
-  try {
-    announceConfigurations(options.configuration);
+  announceConfigurations(options.configuration);
 
-    await run('dotnet', [
-      'build',
-      hostProject,
-      '--configuration',
-      ORDINARY_CONFIGURATION,
-      '--output',
-      ordinaryDirectory,
-    ], {
-      cwd: repositoryRoot,
-    });
-    await run('dotnet', [
-      'build',
-      hostProject,
-      '--configuration',
-      options.configuration,
-      '--output',
-      conformanceDirectory,
-      '-p:BlokServerConformance=true',
-    ], {
-      cwd: repositoryRoot,
-    });
+  await run('dotnet', [
+    'build',
+    hostProject,
+    '--configuration',
+    ORDINARY_CONFIGURATION,
+    '--output',
+    ordinaryDirectory,
+  ], {
+    cwd: repositoryRoot,
+  });
+  await run('dotnet', [
+    'build',
+    hostProject,
+    '--configuration',
+    options.configuration,
+    '--output',
+    conformanceDirectory,
+    '-p:BlokServerConformance=true',
+  ], {
+    cwd: repositoryRoot,
+  });
+
+  return {
+    ordinary: join(ordinaryDirectory, `Blok.Server.Host${executableSuffix}`),
+    conformance: join(conformanceDirectory, `Blok.Server.Host${executableSuffix}`),
+  };
+}
+
+function announceGo() {
+  console.log('Conformance binaries — go: ordinary build, and one with -tags conformance.');
+}
+
+/** No -ldflags version stamp: the suite expects /health to report "dev". */
+async function buildGo(temporaryDirectory, executableSuffix) {
+  const ordinary = join(temporaryDirectory, 'go-ordinary', `blok-server${executableSuffix}`);
+  const conformance = join(temporaryDirectory, 'go-conformance', `blok-server${executableSuffix}`);
+  const moduleDirectory = join(repositoryRoot, 'packages/server/go');
+
+  announceGo();
+
+  await run('go', ['build', '-o', ordinary, './cmd/blok-server'], { cwd: moduleDirectory });
+  await run('go', [
+    'build',
+    '-tags',
+    'conformance',
+    '-o',
+    conformance,
+    './cmd/blok-server',
+  ], { cwd: moduleDirectory });
+
+  return { ordinary, conformance };
+}
+
+function announce(options) {
+  if (options.target === 'go') {
+    announceGo();
+  } else {
+    announceConfigurations(options.configuration);
+  }
+}
+
+async function main() {
+  const options = selectedOptions(process.argv.slice(2));
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-'));
+  const executableSuffix = process.platform === 'win32' ? '.exe' : '';
+
+  try {
+    const binaries = options.target === 'go'
+      ? await buildGo(temporaryDirectory, executableSuffix)
+      : await buildCsharp(options, temporaryDirectory, executableSuffix);
 
     const vitestArgs = [
       join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
@@ -164,14 +213,8 @@ async function main() {
       cwd: repositoryRoot,
       env: {
         ...process.env,
-        BLOK_CONFORMANCE_ORDINARY_SERVER: join(
-          ordinaryDirectory,
-          `Blok.Server.Host${executableSuffix}`,
-        ),
-        BLOK_CONFORMANCE_SERVER: join(
-          conformanceDirectory,
-          `Blok.Server.Host${executableSuffix}`,
-        ),
+        BLOK_CONFORMANCE_ORDINARY_SERVER: binaries.ordinary,
+        BLOK_CONFORMANCE_SERVER: binaries.conformance,
       },
     });
 
@@ -179,7 +222,7 @@ async function main() {
       await requireExecutedTests(reportPath, options.testNamePattern);
     }
 
-    announceConfigurations(options.configuration);
+    announce(options);
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

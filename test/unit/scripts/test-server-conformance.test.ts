@@ -61,4 +61,31 @@ describe('test-server-conformance', () => {
     expect(result.stdout).toBe('');
     expect(result.stderr).toContain('--configuration Debug|Release');
   });
+
+  it('builds the Go binaries with go, not dotnet', () => {
+    const result = runWithoutDotnet(['--target', 'go']);
+
+    expect(result.stdout).toContain('Conformance binaries — go: ordinary build, and one with -tags conformance.');
+    expect(result.stderr).toContain('spawn go ENOENT');
+  });
+
+  // Go has no Debug or Release build, so the flag would be silently ignored.
+  it('refuses --configuration for the Go target', () => {
+    const result = runWithoutDotnet(['--target', 'go', '--configuration', 'Release']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe(
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go] ' +
+      '[--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]\n',
+    );
+  });
+
+  it('refuses an unknown target before any build', () => {
+    const result = runWithoutDotnet(['--target', 'rust']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('[--target csharp|go]');
+  });
 });

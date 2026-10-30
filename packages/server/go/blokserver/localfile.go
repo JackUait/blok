@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 )
 
 const maxRanges = 16
@@ -132,7 +133,7 @@ func preconditions(r *http.Request, modified time.Time) int {
 		if !hasWildcardTag(ifMatch) {
 			return http.StatusPreconditionFailed
 		}
-	} else if since, ok := parseHTTPDate(r.Header.Get("If-Unmodified-Since")); ok && modified.After(since) {
+	} else if since, ok := headerDate(r, "If-Unmodified-Since"); ok && modified.After(since) {
 		return http.StatusPreconditionFailed
 	}
 	if ifNoneMatch := strings.Join(r.Header.Values("If-None-Match"), ","); ifNoneMatch != "" {
@@ -141,7 +142,7 @@ func preconditions(r *http.Request, modified time.Time) int {
 		}
 		return 0
 	}
-	if since, ok := parseHTTPDate(r.Header.Get("If-Modified-Since")); ok && !modified.After(since) {
+	if since, ok := headerDate(r, "If-Modified-Since"); ok && !modified.After(since) {
 		return http.StatusNotModified
 	}
 	return 0
@@ -157,22 +158,18 @@ func hasWildcardTag(value string) bool {
 }
 
 func ifRangeMatches(r *http.Request, modified time.Time) bool {
-	value := r.Header.Get("If-Range")
+	value := strings.Join(r.Header.Values("If-Range"), ",")
 	if value == "" {
 		return true
 	}
-	date, ok := parseHTTPDate(value)
+	date, ok := dotnet.ParseHTTPDate(value)
 	return ok && date.Equal(modified)
 }
 
-// parseHTTPDate stands in for HeaderUtilities.TryParseDate; which formats
-// .NET accepts beyond these three is UNVERIFIED.
-func parseHTTPDate(value string) (time.Time, bool) {
-	if value == "" {
-		return time.Time{}, false
-	}
-	t, err := http.ParseTime(value)
-	return t, err == nil
+// headerDate reads a date header the way C# does: every line joined with ","
+// (StringValues.ToString), then HeaderUtilities.TryParseDate.
+func headerDate(r *http.Request, name string) (time.Time, bool) {
+	return dotnet.ParseHTTPDate(strings.Join(r.Header.Values(name), ","))
 }
 
 func parseRanges(header string, size int64) ([]byteRange, string) {

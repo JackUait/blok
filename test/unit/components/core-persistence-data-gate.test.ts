@@ -102,6 +102,7 @@ vi.mock('../../../src/components/modules', () => {
   class MockPaste {
     public state?: BlokModules;
     public prepare = mockRegistry.modules.pastePrepare;
+    public warm = vi.fn();
   }
 
   /**

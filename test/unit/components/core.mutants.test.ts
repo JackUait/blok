@@ -93,6 +93,7 @@ vi.mock('../../../src/components/modules', () => {
   class MockPaste {
     public state?: BlokModules;
     public prepare = calls.pastePrepare;
+    public warm = vi.fn();
   }
 
   class MockBlockSelection {

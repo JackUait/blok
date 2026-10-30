@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Blok.Server.Runtime;
 
 namespace Blok.Server.Documents;
@@ -64,7 +63,7 @@ public static class BlokDocuments
   /// </param>
   /// <returns>
   /// <c>true</c> when the input parses as a JSON object whose <c>blocks</c>
-  /// member is an array.
+  /// member is an array, with no key repeated anywhere in it.
   /// </returns>
   public static bool LooksLikeADocument(string? documentJson)
   {
@@ -73,12 +72,28 @@ public static class BlokDocuments
       return false;
     }
 
+    /*
+     * A repeated key is refused, not resolved: Jint's JSON.parse reads
+     * {"blocks":1,"blocks":[]} as blocks = 1 once the bundle is loaded, where
+     * node and goja keep the last. JsonNode would throw on it instead, and on
+     * a lone-surrogate key.
+     */
     try
     {
-      return JsonNode.Parse(documentJson) is JsonObject document
-          && document["blocks"] is JsonArray;
+      using var document = JsonDocument.Parse(
+          documentJson,
+          new JsonDocumentOptions { AllowDuplicateProperties = false });
+      var root = document.RootElement;
+
+      return root.ValueKind == JsonValueKind.Object
+          && root.TryGetProperty("blocks", out var blocks)
+          && blocks.ValueKind == JsonValueKind.Array;
     }
     catch (JsonException)
+    {
+      return false;
+    }
+    catch (InvalidOperationException)
     {
       return false;
     }

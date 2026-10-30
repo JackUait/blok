@@ -1,0 +1,1899 @@
+[
+  {
+    "name": "markdown, bare document passes through",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"## Caf\\u00e9\",\"warnings\":[{\"construct\":\"toggle\",\"action\":\"degraded\",\"detail\":\"é\"}]}"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "## Café",
+        "warnings": [
+          {
+            "construct": "toggle",
+            "action": "degraded",
+            "detail": "é"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "markdown, an answer of null",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "null"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "invalidOperation",
+        "message": "The Blok runtime returned no Markdown conversion."
+      }
+    }
+  },
+  {
+    "name": "markdown, an answer that is not JSON",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "nope"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "json"
+      }
+    }
+  },
+  {
+    "name": "markdown with pages",
+    "method": "ToMarkdownWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {
+        "pg-deny": {
+          "noAccess": true,
+          "title": "Hidden"
+        },
+        "pg-emoji": {
+          "title": "Specs ü",
+          "icon": {
+            "emoji": "📐"
+          }
+        },
+        "pg-image": {
+          "icon": {
+            "image": "https://cdn/x.png"
+          }
+        },
+        "pg-missing": null,
+        "pg-plain": {}
+      },
+      "pageHrefs": {
+        "pg-deny": "/never",
+        "pg-emoji": "/p/emoji",
+        "pg-image": "",
+        "pg-plain": "/p/plain"
+      }
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"## Caf\\u00e9\",\"warnings\":[{\"construct\":\"toggle\",\"action\":\"degraded\",\"detail\":\"é\"}]}"
+    },
+    "request": {
+      "op": "blocksToMarkdownWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{\"pg-deny\":{\"access\":\"none\"},\"pg-emoji\":{\"title\":\"Specs \\u00FC\",\"icon\":{\"type\":\"emoji\",\"value\":\"\\uD83D\\uDCD0\"},\"href\":\"/p/emoji\"},\"pg-image\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/x.png\"}},\"pg-missing\":null,\"pg-plain\":{\"href\":\"/p/plain\"}}}"
+    },
+    "hrefCalls": [
+      "pg-emoji",
+      "pg-image",
+      "pg-plain"
+    ],
+    "expect": {
+      "result": {
+        "markdown": "## Café",
+        "warnings": [
+          {
+            "construct": "toggle",
+            "action": "degraded",
+            "detail": "é"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "markdown with pages and no href builder",
+    "method": "ToMarkdownWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {
+        "pg-deny": {
+          "noAccess": true,
+          "title": "Hidden"
+        },
+        "pg-emoji": {
+          "title": "Specs ü",
+          "icon": {
+            "emoji": "📐"
+          }
+        },
+        "pg-image": {
+          "icon": {
+            "image": "https://cdn/x.png"
+          }
+        },
+        "pg-missing": null,
+        "pg-plain": {}
+      }
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"## Caf\\u00e9\",\"warnings\":[{\"construct\":\"toggle\",\"action\":\"degraded\",\"detail\":\"é\"}]}"
+    },
+    "request": {
+      "op": "blocksToMarkdownWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{\"pg-deny\":{\"access\":\"none\"},\"pg-emoji\":{\"title\":\"Specs \\u00FC\",\"icon\":{\"type\":\"emoji\",\"value\":\"\\uD83D\\uDCD0\"}},\"pg-image\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/x.png\"}},\"pg-missing\":null,\"pg-plain\":{}}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "## Café",
+        "warnings": [
+          {
+            "construct": "toggle",
+            "action": "degraded",
+            "detail": "é"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "markdown with title",
+    "method": "ToMarkdownWithTitle",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"## Caf\\u00e9\",\"warnings\":[{\"construct\":\"toggle\",\"action\":\"degraded\",\"detail\":\"é\"}]}"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"title\":true}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "## Café",
+        "warnings": [
+          {
+            "construct": "toggle",
+            "action": "degraded",
+            "detail": "é"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "markdown with title and pages",
+    "method": "ToMarkdownWithTitleAndPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {
+        "pg-deny": {
+          "noAccess": true,
+          "title": "Hidden"
+        },
+        "pg-emoji": {
+          "title": "Specs ü",
+          "icon": {
+            "emoji": "📐"
+          }
+        },
+        "pg-image": {
+          "icon": {
+            "image": "https://cdn/x.png"
+          }
+        },
+        "pg-missing": null,
+        "pg-plain": {}
+      },
+      "pageHrefs": {
+        "pg-deny": "/never",
+        "pg-emoji": "/p/emoji",
+        "pg-image": "",
+        "pg-plain": "/p/plain"
+      }
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"## Caf\\u00e9\",\"warnings\":[{\"construct\":\"toggle\",\"action\":\"degraded\",\"detail\":\"é\"}]}"
+    },
+    "request": {
+      "op": "blocksToMarkdownWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{\"pg-deny\":{\"access\":\"none\"},\"pg-emoji\":{\"title\":\"Specs \\u00FC\",\"icon\":{\"type\":\"emoji\",\"value\":\"\\uD83D\\uDCD0\"},\"href\":\"/p/emoji\"},\"pg-image\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/x.png\"}},\"pg-missing\":null,\"pg-plain\":{\"href\":\"/p/plain\"}},\"title\":true}"
+    },
+    "hrefCalls": [
+      "pg-emoji",
+      "pg-image",
+      "pg-plain"
+    ],
+    "expect": {
+      "result": {
+        "markdown": "## Café",
+        "warnings": [
+          {
+            "construct": "toggle",
+            "action": "degraded",
+            "detail": "é"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "html, bare document passes through even when it is not JSON",
+    "method": "ToHtml",
+    "args": {
+      "document": "not json"
+    },
+    "runtime": {
+      "answer": "<p>x</p>"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "not json"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "<p>x</p>"
+    }
+  },
+  {
+    "name": "html, bare document nested past the host depth",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "<p>deep</p>"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "<p>deep</p>"
+    }
+  },
+  {
+    "name": "html, bare document with a lone surrogate",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "<p>a</p>"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "<p>a</p>"
+    }
+  },
+  {
+    "name": "html with pages",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {
+        "pg-deny": {
+          "noAccess": true,
+          "title": "Hidden"
+        },
+        "pg-emoji": {
+          "title": "Specs ü",
+          "icon": {
+            "emoji": "📐"
+          }
+        },
+        "pg-image": {
+          "icon": {
+            "image": "https://cdn/x.png"
+          }
+        },
+        "pg-missing": null,
+        "pg-plain": {}
+      },
+      "pageHrefs": {
+        "pg-deny": "/never",
+        "pg-emoji": "/p/emoji",
+        "pg-image": "",
+        "pg-plain": "/p/plain"
+      }
+    },
+    "runtime": {
+      "answer": "<p>é</p>"
+    },
+    "request": {
+      "op": "blocksToHtmlWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{\"pg-deny\":{\"access\":\"none\"},\"pg-emoji\":{\"title\":\"Specs \\u00FC\",\"icon\":{\"type\":\"emoji\",\"value\":\"\\uD83D\\uDCD0\"},\"href\":\"/p/emoji\"},\"pg-image\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/x.png\"}},\"pg-missing\":null,\"pg-plain\":{\"href\":\"/p/plain\"}}}"
+    },
+    "hrefCalls": [
+      "pg-emoji",
+      "pg-image",
+      "pg-plain"
+    ],
+    "expect": {
+      "result": "<p>é</p>"
+    }
+  },
+  {
+    "name": "html with title",
+    "method": "ToHtmlWithTitle",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "<h1>t</h1>"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"title\":true}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "<h1>t</h1>"
+    }
+  },
+  {
+    "name": "html with title and pages",
+    "method": "ToHtmlWithTitleAndPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {
+        "pg-deny": {
+          "noAccess": true,
+          "title": "Hidden"
+        },
+        "pg-emoji": {
+          "title": "Specs ü",
+          "icon": {
+            "emoji": "📐"
+          }
+        },
+        "pg-image": {
+          "icon": {
+            "image": "https://cdn/x.png"
+          }
+        },
+        "pg-missing": null,
+        "pg-plain": {}
+      },
+      "pageHrefs": {
+        "pg-deny": "/never",
+        "pg-emoji": "/p/emoji",
+        "pg-image": "",
+        "pg-plain": "/p/plain"
+      }
+    },
+    "runtime": {
+      "answer": "<h1>t</h1>"
+    },
+    "request": {
+      "op": "blocksToHtmlWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{\"pg-deny\":{\"access\":\"none\"},\"pg-emoji\":{\"title\":\"Specs \\u00FC\",\"icon\":{\"type\":\"emoji\",\"value\":\"\\uD83D\\uDCD0\"},\"href\":\"/p/emoji\"},\"pg-image\":{\"icon\":{\"type\":\"image\",\"url\":\"https://cdn/x.png\"}},\"pg-missing\":null,\"pg-plain\":{\"href\":\"/p/plain\"}},\"title\":true}"
+    },
+    "hrefCalls": [
+      "pg-emoji",
+      "pg-image",
+      "pg-plain"
+    ],
+    "expect": {
+      "result": "<h1>t</h1>"
+    }
+  },
+  {
+    "name": "html with an empty pages map",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": ""
+    },
+    "request": {
+      "op": "blocksToHtmlWithPages",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"pages\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": ""
+    }
+  },
+  {
+    "name": "plain text",
+    "method": "ToPlainText",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "Café"
+    },
+    "request": {
+      "op": "blocksToPlainText",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeHiddenText\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "Café"
+    }
+  },
+  {
+    "name": "plain text with hidden text",
+    "method": "ToPlainText",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "includeHiddenText": true
+    },
+    "runtime": {
+      "answer": "Café alt"
+    },
+    "request": {
+      "op": "blocksToPlainText",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeHiddenText\":true}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "Café alt"
+    }
+  },
+  {
+    "name": "plain text with title",
+    "method": "ToPlainTextWithTitle",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "includeHiddenText": true
+    },
+    "runtime": {
+      "answer": "T\nCafé"
+    },
+    "request": {
+      "op": "blocksToPlainText",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeHiddenText\":true,\"title\":true}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "T\nCafé"
+    }
+  },
+  {
+    "name": "plain text with report",
+    "method": "ToPlainTextWithReport",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"text\":\"Caf\\u00e9\",\"warnings\":[{\"construct\":\"org-chart\",\"action\":\"dropped\",\"detail\":\"d\"}]}"
+    },
+    "request": {
+      "op": "blocksToPlainTextWithReport",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeHiddenText\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "text": "Café",
+        "warnings": [
+          {
+            "construct": "org-chart",
+            "action": "dropped",
+            "detail": "d"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "plain text with report, an answer of null",
+    "method": "ToPlainTextWithReport",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "null"
+    },
+    "request": {
+      "op": "blocksToPlainTextWithReport",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeHiddenText\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "invalidOperation",
+        "message": "The Blok runtime returned no plain-text conversion."
+      }
+    }
+  },
+  {
+    "name": "extract texts",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "[\"Caf\\u00e9\",\"x\"]"
+    },
+    "request": {
+      "op": "extractTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": [
+        "Café",
+        "x"
+      ]
+    }
+  },
+  {
+    "name": "extract texts with code",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "includeCode": true
+    },
+    "runtime": {
+      "answer": "[]"
+    },
+    "request": {
+      "op": "extractTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":true}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": []
+    }
+  },
+  {
+    "name": "extract texts, an answer of null",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "null"
+    },
+    "request": {
+      "op": "extractTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "invalidOperation",
+        "message": "The Blok runtime returned no texts."
+      }
+    }
+  },
+  {
+    "name": "inject texts",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "texts": [
+        "Tëxt <b>",
+        "two"
+      ],
+      "includeCode": true
+    },
+    "runtime": {
+      "answer": "{\"document\":{\"time\":1.0,\"n\":9007199254740993,\"blocks\":[],\"t\":\"é<>&'\\\"+😀\"}}"
+    },
+    "request": {
+      "op": "injectTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":true,\"texts\":[\"T\\u00EBxt \\u003Cb\\u003E\",\"two\"]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "{\"time\":1.0,\"n\":9007199254740993,\"blocks\":[],\"t\":\"\\u00E9\\u003C\\u003E\\u0026\\u0027\\u0022\\u002B\\uD83D\\uDE00\"}"
+    }
+  },
+  {
+    "name": "inject texts, a count mismatch",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "texts": [
+        "one"
+      ]
+    },
+    "runtime": {
+      "answer": "{\"mismatch\":{\"expected\":2,\"received\":1}}"
+    },
+    "request": {
+      "op": "injectTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":false,\"texts\":[\"one\"]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "texts",
+        "message": "This document yields 2 translatable strings, but 1 were given."
+      }
+    }
+  },
+  {
+    "name": "inject texts, no document in the answer",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "texts": []
+    },
+    "runtime": {
+      "answer": "{}"
+    },
+    "request": {
+      "op": "injectTexts",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"includeCode\":false,\"texts\":[]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "invalidOperation",
+        "message": "The Blok runtime returned no document."
+      }
+    }
+  },
+  {
+    "name": "page index",
+    "method": "PageIndex",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"owners\":[{\"pageId\":\"pg\",\"sourceBlockId\":\"own\",\"order\":0}],\"text\":[{\"blockId\":null,\"order\":1,\"text\":\"é\"},{\"blockId\":\"h1\",\"order\":0,\"text\":\"x\"}],\"references\":[{\"pageId\":\"ref\",\"sourceBlockId\":null,\"order\":2}]}"
+    },
+    "request": {
+      "op": "pageIndex",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "owners": [
+          {
+            "pageId": "pg",
+            "sourceBlockId": "own",
+            "order": 0
+          }
+        ],
+        "text": [
+          {
+            "blockId": null,
+            "order": 1,
+            "text": "é"
+          },
+          {
+            "blockId": "h1",
+            "order": 0,
+            "text": "x"
+          }
+        ],
+        "references": [
+          {
+            "pageId": "ref",
+            "sourceBlockId": null,
+            "order": 2
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "remap",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {
+        "a": "A",
+        "h1": "H"
+      },
+      "pageIds": {
+        "pg-1": "pg-2"
+      }
+    },
+    "runtime": {
+      "answer": "{\"document\":{\"blocks\":[{\"id\":\"H\",\"x\":1.50,\"t\":\"ü\"}]}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{\"a\":\"A\",\"h1\":\"H\"},\"pageIds\":{\"pg-1\":\"pg-2\"}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "{\"blocks\":[{\"id\":\"H\",\"x\":1.50,\"t\":\"\\u00FC\"}]}"
+    }
+  },
+  {
+    "name": "remap, every kind of id problem",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "{\"unmapped\":{\"missingBlockIds\":[\"a\",\"b\"],\"duplicateBlockIds\":[\"x\"],\"idlessBlocks\":2}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{},\"pageIds\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "No new id for \"a\", \"b\"; More than one block maps to \"x\"; 2 block(s) without an id."
+      }
+    }
+  },
+  {
+    "name": "remap, only idless blocks",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "{\"unmapped\":{\"missingBlockIds\":[],\"duplicateBlockIds\":[],\"idlessBlocks\":1}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{},\"pageIds\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "1 block(s) without an id."
+      }
+    }
+  },
+  {
+    "name": "remap, only a missing id",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "{\"unmapped\":{\"missingBlockIds\":[\"é\"],\"duplicateBlockIds\":[],\"idlessBlocks\":0}}"
+    },
+    "request": {
+      "op": "remapPageDocument",
+      "input": "{\"document\":{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Caf\\u00E9 \\u003Cb\\u003Ex\\u003C/b\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\",\"level\":2}}]},\"blockIds\":{},\"pageIds\":{}}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "No new id for \"é\"."
+      }
+    }
+  },
+  {
+    "name": "validate, a document",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"isEmpty\":false,\"blockCount\":1,\"malformedBlockCount\":0,\"unrecognizedBlockTypes\":[]}"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": true,
+        "isEmpty": false,
+        "blockCount": 1,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": null,
+        "isFullyUnderstood": true
+      }
+    }
+  },
+  {
+    "name": "validate, unrecognized blocks",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"isEmpty\":true,\"blockCount\":2,\"malformedBlockCount\":1,\"unrecognizedBlockTypes\":[\"org-chart\"]}"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": true,
+        "isEmpty": true,
+        "blockCount": 2,
+        "malformedBlockCount": 1,
+        "unrecognizedBlockTypes": [
+          "org-chart"
+        ],
+        "failure": null,
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "validate, not a document never reaches the runtime",
+    "method": "Validate",
+    "args": {
+      "document": "{}"
+    },
+    "runtime": {
+      "answer": "{}"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": false,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "InvalidDocument",
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "validate, null",
+    "method": "Validate",
+    "args": {
+      "document": null
+    },
+    "runtime": {
+      "answer": "{}"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": false,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "InvalidDocument",
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "validate, a timeout becomes a failure",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "error": "TimedOut"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": false,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "TimedOut",
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "validate, an invalid document becomes a failure",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "error": "InvalidDocument"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": false,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "InvalidDocument",
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "validate, an answer that is not JSON",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "nope"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": false,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "Unknown",
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "validate, an answer of null",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "null"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": true,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "Unknown",
+        "isFullyUnderstood": true
+      }
+    }
+  },
+  {
+    "name": "validate, an answer with a lone surrogate",
+    "method": "Validate",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "answer": "{\"isEmpty\":true,\"blockCount\":1,\"malformedBlockCount\":0,\"unrecognizedBlockTypes\":[\"\\ud800\"]}"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": false,
+        "isEmpty": false,
+        "blockCount": 0,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [],
+        "failure": "Unknown",
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
+    "name": "from markdown",
+    "method": "FromMarkdown",
+    "args": {
+      "text": "Café <b> & \"q\" 😀"
+    },
+    "runtime": {
+      "answer": "{\"version\":\"1.0\",\"time\":1.0,\"blocks\":[{\"id\":\"md-1\",\"type\":\"paragraph\",\"data\":{\"text\":\"é\"}}],\"warnings\":[{\"construct\":\"html\",\"action\":\"dropped\",\"detail\":\"<b>\"}]}"
+    },
+    "request": {
+      "op": "markdownToBlocks",
+      "input": "{\"markdown\":\"Caf\\u00E9 \\u003Cb\\u003E \\u0026 \\u0022q\\u0022 \\uD83D\\uDE00\"}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "document": "{\"version\":\"1.0\",\"time\":1.0,\"blocks\":[{\"id\":\"md-1\",\"type\":\"paragraph\",\"data\":{\"text\":\"\\u00E9\"}}]}",
+        "warnings": [
+          {
+            "construct": "html",
+            "action": "dropped",
+            "detail": "<b>"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "from markdown, no warnings key",
+    "method": "FromMarkdown",
+    "args": {
+      "text": "x"
+    },
+    "runtime": {
+      "answer": "{\"blocks\":[]}"
+    },
+    "request": {
+      "op": "markdownToBlocks",
+      "input": "{\"markdown\":\"x\"}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "document": "{\"blocks\":[]}",
+        "warnings": []
+      }
+    }
+  },
+  {
+    "name": "from html",
+    "method": "FromHtml",
+    "args": {
+      "text": "<p>Café</p>"
+    },
+    "runtime": {
+      "answer": "{\"warnings\":[],\"blocks\":[]}"
+    },
+    "request": {
+      "op": "htmlToBlocks",
+      "input": "{\"html\":\"\\u003Cp\\u003ECaf\\u00E9\\u003C/p\\u003E\"}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "document": "{\"blocks\":[]}",
+        "warnings": []
+      }
+    }
+  },
+  {
+    "name": "from html, an answer that is not an object",
+    "method": "FromHtml",
+    "args": {
+      "text": "<p>x</p>"
+    },
+    "runtime": {
+      "answer": "[]"
+    },
+    "request": {
+      "op": "htmlToBlocks",
+      "input": "{\"html\":\"\\u003Cp\\u003Ex\\u003C/p\\u003E\"}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "invalidOperation",
+        "message": "The node must be of type 'JsonObject'."
+      }
+    }
+  },
+  {
+    "name": "runtime failure passes through",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "error": "DocumentTooLarge"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "DocumentTooLarge"
+      }
+    }
+  },
+  {
+    "name": "envelope keeps repeated keys and number text",
+    "method": "ToPlainText",
+    "args": {
+      "document": "{\"blocks\":[],\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"x\",\"text\":\"y\"}}]}"
+    },
+    "runtime": {
+      "answer": ""
+    },
+    "request": {
+      "op": "blocksToPlainText",
+      "input": "{\"document\":{\"blocks\":[],\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"x\",\"text\":\"y\"}}]},\"includeHiddenText\":false}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": ""
+    }
+  },
+  {
+    "name": "ToMarkdownWithPages, not JSON",
+    "method": "ToMarkdownWithPages",
+    "args": {
+      "document": "{\"blocks\":",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithPages, a lone surrogate",
+    "method": "ToMarkdownWithPages",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithPages, nested past the host depth",
+    "method": "ToMarkdownWithPages",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitle, not JSON",
+    "method": "ToMarkdownWithTitle",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitle, a lone surrogate",
+    "method": "ToMarkdownWithTitle",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitle, nested past the host depth",
+    "method": "ToMarkdownWithTitle",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitleAndPages, not JSON",
+    "method": "ToMarkdownWithTitleAndPages",
+    "args": {
+      "document": "{\"blocks\":",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitleAndPages, a lone surrogate",
+    "method": "ToMarkdownWithTitleAndPages",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitleAndPages, nested past the host depth",
+    "method": "ToMarkdownWithTitleAndPages",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithPages, not JSON",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"blocks\":",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithPages, a lone surrogate",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithPages, nested past the host depth",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitle, not JSON",
+    "method": "ToHtmlWithTitle",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitle, a lone surrogate",
+    "method": "ToHtmlWithTitle",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitle, nested past the host depth",
+    "method": "ToHtmlWithTitle",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitleAndPages, not JSON",
+    "method": "ToHtmlWithTitleAndPages",
+    "args": {
+      "document": "{\"blocks\":",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitleAndPages, a lone surrogate",
+    "method": "ToHtmlWithTitleAndPages",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitleAndPages, nested past the host depth",
+    "method": "ToHtmlWithTitleAndPages",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "pages": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainText, not JSON",
+    "method": "ToPlainText",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainText, a lone surrogate",
+    "method": "ToPlainText",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainText, nested past the host depth",
+    "method": "ToPlainText",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainTextWithTitle, not JSON",
+    "method": "ToPlainTextWithTitle",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainTextWithTitle, a lone surrogate",
+    "method": "ToPlainTextWithTitle",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainTextWithTitle, nested past the host depth",
+    "method": "ToPlainTextWithTitle",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainTextWithReport, not JSON",
+    "method": "ToPlainTextWithReport",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainTextWithReport, a lone surrogate",
+    "method": "ToPlainTextWithReport",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ToPlainTextWithReport, nested past the host depth",
+    "method": "ToPlainTextWithReport",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ExtractTexts, not JSON",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ExtractTexts, a lone surrogate",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "ExtractTexts, nested past the host depth",
+    "method": "ExtractTexts",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "InjectTexts, not JSON",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"blocks\":",
+      "texts": []
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "InjectTexts, a lone surrogate",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}",
+      "texts": []
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "InjectTexts, nested past the host depth",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "texts": []
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "PageIndex, not JSON",
+    "method": "PageIndex",
+    "args": {
+      "document": "{\"blocks\":"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "PageIndex, a lone surrogate",
+    "method": "PageIndex",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "PageIndex, nested past the host depth",
+    "method": "PageIndex",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, not JSON",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"blocks\":",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, a lone surrogate",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, nested past the host depth",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+      "blockIds": {},
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument"
+      }
+    }
+  }
+]

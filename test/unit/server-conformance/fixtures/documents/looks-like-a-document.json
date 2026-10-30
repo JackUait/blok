@@ -1,0 +1,152 @@
+[
+  {
+    "name": "null",
+    "input": null,
+    "expected": false
+  },
+  {
+    "name": "empty",
+    "input": "",
+    "expected": false
+  },
+  {
+    "name": "spaces",
+    "input": "   ",
+    "expected": false
+  },
+  {
+    "name": "whitespace",
+    "input": "\t\r\n",
+    "expected": false
+  },
+  {
+    "name": "not json",
+    "input": "not json at all",
+    "expected": false
+  },
+  {
+    "name": "array",
+    "input": "[]",
+    "expected": false
+  },
+  {
+    "name": "number",
+    "input": "42",
+    "expected": false
+  },
+  {
+    "name": "json null",
+    "input": "null",
+    "expected": false
+  },
+  {
+    "name": "string",
+    "input": "\"a string\"",
+    "expected": false
+  },
+  {
+    "name": "empty object",
+    "input": "{}",
+    "expected": false
+  },
+  {
+    "name": "blocks null",
+    "input": "{\"blocks\":null}",
+    "expected": false
+  },
+  {
+    "name": "blocks string",
+    "input": "{\"blocks\":\"not an array\"}",
+    "expected": false
+  },
+  {
+    "name": "blocks object",
+    "input": "{\"blocks\":{}}",
+    "expected": false
+  },
+  {
+    "name": "truncated",
+    "input": "{\"blocks\":",
+    "expected": false
+  },
+  {
+    "name": "trailing text",
+    "input": "{\"blocks\":[]} x",
+    "expected": false
+  },
+  {
+    "name": "empty document",
+    "input": "{\"blocks\":[]}",
+    "expected": true
+  },
+  {
+    "name": "one paragraph",
+    "input": "{\"blocks\":[{\"type\":\"paragraph\",\"data\":{\"text\":\"Body\"}}]}",
+    "expected": true
+  },
+  {
+    "name": "versioned",
+    "input": "{\"version\":\"1.15.1\",\"blocks\":[{\"type\":\"divider\",\"data\":{}}]}",
+    "expected": true
+  },
+  {
+    "name": "unknown block type",
+    "input": "{\"blocks\":[{\"type\":\"org-chart\",\"data\":{}}]}",
+    "expected": true
+  },
+  {
+    "name": "escaped blocks key",
+    "input": "{\"bl\\u006fcks\":[]}",
+    "expected": true
+  },
+  {
+    "name": "repeated blocks, last is an array",
+    "input": "{\"blocks\":1,\"blocks\":[]}",
+    "expected": false
+  },
+  {
+    "name": "repeated blocks, last is not an array",
+    "input": "{\"blocks\":[],\"blocks\":1}",
+    "expected": false
+  },
+  {
+    "name": "repeated other key",
+    "input": "{\"a\":1,\"a\":2,\"blocks\":[]}",
+    "expected": false
+  },
+  {
+    "name": "repeated key inside a block",
+    "input": "{\"blocks\":[{\"type\":\"paragraph\",\"type\":\"header\",\"data\":{}}]}",
+    "expected": false
+  },
+  {
+    "name": "repeated key spelled two ways",
+    "input": "{\"blocks\":[],\"bl\\u006fcks\":[]}",
+    "expected": false
+  },
+  {
+    "name": "lone surrogate key",
+    "input": "{\"\\ud800\":1,\"blocks\":[]}",
+    "expected": false
+  },
+  {
+    "name": "lone surrogate value",
+    "input": "{\"x\":\"\\ud800\",\"blocks\":[]}",
+    "expected": true
+  },
+  {
+    "name": "nested 64 deep",
+    "input": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "expected": true
+  },
+  {
+    "name": "nested 65 deep",
+    "input": "{\"blocks\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "expected": false
+  },
+  {
+    "name": "leading whitespace",
+    "input": " \n{\"blocks\":[]}\n ",
+    "expected": true
+  }
+]

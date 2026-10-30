@@ -127,7 +127,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
     var output = await runtime.InvokeAsync(
         "pageIndex",
-        new JsonObject { ["document"] = ParseDocument(documentJson) }.ToJsonString(),
+        Serialize(new JsonObject { ["document"] = ParseDocument(documentJson) }),
         cancellationToken: cancellationToken);
 
     return JsonSerializer.Deserialize<BlokPageIndex>(output)
@@ -150,7 +150,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       ["blockIds"] = IdMap(blockIds),
       ["pageIds"] = IdMap(pageIds),
     };
-    var output = await runtime.InvokeAsync("remapPageDocument", request.ToJsonString(), cancellationToken: cancellationToken);
+    var output = await runtime.InvokeAsync("remapPageDocument", Serialize(request), cancellationToken: cancellationToken);
     var result = JsonNode.Parse(output)
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
 
@@ -207,7 +207,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       request["texts"] = new JsonArray([.. texts.Select(text => JsonValue.Create(text))]);
     }
 
-    return request.ToJsonString();
+    return Serialize(request);
   }
 
   /// <summary>
@@ -228,7 +228,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       request["title"] = true;
     }
 
-    return request.ToJsonString();
+    return Serialize(request);
   }
 
   /// <summary>
@@ -239,11 +239,11 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     ArgumentNullException.ThrowIfNull(documentJson);
 
-    return new JsonObject
+    return Serialize(new JsonObject
     {
       ["document"] = ParseDocument(documentJson),
       ["title"] = true,
-    }.ToJsonString();
+    });
   }
 
   /// <summary>
@@ -279,7 +279,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       request["title"] = true;
     }
 
-    return request.ToJsonString();
+    return Serialize(request);
   }
 
   private static JsonObject? PageEntry(string pageId, BlokPageInfo? info, Func<string, string>? pageHref)
@@ -332,6 +332,23 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       return JsonNode.Parse(documentJson);
     }
     catch (JsonException exception)
+    {
+      throw new BlokDocumentConversionException(BlokConversionFailure.InvalidDocument, exception);
+    }
+  }
+
+  /*
+   * JsonNode.Parse accepts a lone-surrogate escape such as "\ud800", and only
+   * writing the string back fails, with an InvalidOperationException. That
+   * is still a document Blok cannot use, so it is reported like bad JSON.
+   */
+  private static string Serialize(JsonObject request)
+  {
+    try
+    {
+      return request.ToJsonString();
+    }
+    catch (InvalidOperationException exception)
     {
       throw new BlokDocumentConversionException(BlokConversionFailure.InvalidDocument, exception);
     }

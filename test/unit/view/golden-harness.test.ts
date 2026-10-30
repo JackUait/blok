@@ -181,6 +181,11 @@ const isSkippedSubtree = (el: Element): boolean => {
     return true;
   }
 
+  /** The table's full-screen header: chrome in the tool root, shown only in the modal. */
+  if (el.hasAttribute('data-blok-table-fullscreen-header')) {
+    return true;
+  }
+
   /** Editor chrome rendered as spans (e.g. the toggle expand arrow). */
   if (el.getAttribute('role') === 'button') {
     return true;

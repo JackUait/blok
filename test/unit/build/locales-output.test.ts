@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
@@ -42,15 +44,47 @@ function listEsFiles(dir: string): string[] {
   })
 }
 
+const sha1 = (text: string): string => createHash('sha1').update(text).digest('hex')
+
+/**
+ * Load every locale the way a consumer does, in a plain node process: the ES
+ * files through `/locales` `loadLocale`, the CJS chunks through `require`.
+ * Vitest would push ~70 multi-megabyte chunks through its transform.
+ * Prints `{ es: { code: sha1 }, cjs: { code: sha1[] } }` of JSON.stringify(dictionary).
+ */
+const LOAD_EVERY_LOCALE = `
+const { createHash } = require('node:crypto')
+const { readdirSync } = require('node:fs')
+const { join } = require('node:path')
+const sha1 = (text) => createHash('sha1').update(text).digest('hex')
+const dist = process.argv[1]
+;(async () => {
+  const locales = await import(join(dist, 'locales.mjs'))
+  const es = {}
+  for (const code of locales.ALL_LOCALE_CODES) {
+    es[code] = sha1(JSON.stringify((await locales.loadLocale(code)).dictionary))
+  }
+  const cjs = {}
+  for (const name of readdirSync(join(dist, 'chunks'))) {
+    const match = /^([a-zA-Z-]+)-[A-Za-z0-9_-]{8}\\.cjs$/.exec(name)
+    if (match === null || !locales.ALL_LOCALE_CODES.includes(match[1])) continue
+    const data = require(join(dist, 'chunks', name)).default
+    ;(cjs[match[1]] ??= []).push(sha1(JSON.stringify(data)))
+  }
+  process.stdout.write(JSON.stringify({ es, cjs }))
+})()
+`
+
 describe('UI locale files', () => {
   const esFiles = listEsFiles(dist)
 
   it('ships each lazy UI locale once', () => {
-    // The emoji data for a locale shares its name, so match the message JSON too.
+    // The emoji data for a locale shares its name. UI chunks hold values only,
+    // so they are the ones that import the shared message key list.
     const counts = lazyLocales.map((code) => {
       const nameRe = new RegExp(`^${code}-[A-Za-z0-9_-]{8}\\.mjs$`)
       const copies = esFiles.filter((file) =>
-        nameRe.test(basename(file)) && readFileSync(file, 'utf-8').includes('"blockSettings.dragToMove"'),
+        nameRe.test(basename(file)) && readFileSync(file, 'utf-8').includes('./message-keys-'),
       )
       return `${code}: ${copies.length}`
     })
@@ -67,6 +101,35 @@ describe('UI locale files', () => {
     })
     expect(reachable.size).toBeGreaterThan(100)
     expect(copies.map((file) => basename(file))).toHaveLength(1)
+  })
+
+  it('every UI locale loads as the exact object its source JSON parses to', () => {
+    // Stringify compares values, missing keys and key order in one go.
+    const loaded = JSON.parse(
+      execFileSync(process.execPath, ['-e', LOAD_EVERY_LOCALE, dist], { encoding: 'utf-8', maxBuffer: 1 << 24 }),
+    ) as { es: Record<string, string>, cjs: Record<string, string[]> }
+    const codes = [...lazyLocales, 'en']
+    const mismatches = codes.flatMap((code) => {
+      const expected = sha1(JSON.stringify(JSON.parse(readFileSync(resolve(localeSources, `${code}.json`), 'utf-8'))))
+      const esOk = loaded.es[code] === expected
+      const cjsOk = code === 'en' || (loaded.cjs[code] ?? []).filter((hash) => hash === expected).length === 1
+      return esOk && cjsOk ? [] : [`${code}: es ${esOk ? 'ok' : 'differs'}, cjs ${cjsOk ? 'ok' : 'differs'}`]
+    })
+    expect(Object.keys(loaded.es)).toHaveLength(codes.length)
+    expect(mismatches).toEqual([])
+  })
+
+  it('lazy UI locales ship their values against one shared key list', () => {
+    // Keys are ~half of every locale file; only the shared list carries them.
+    const keyLists = esFiles.filter((file) => basename(file).startsWith('message-keys-'))
+    expect(keyLists.map((file) => basename(file))).toHaveLength(1)
+    const withKeys = lazyLocales.flatMap((code) => {
+      const nameRe = new RegExp(`^${code}-[A-Za-z0-9_-]{8}\\.mjs$`)
+      return esFiles.filter((file) =>
+        nameRe.test(basename(file)) && readFileSync(file, 'utf-8').includes('blockSettings.clickToOpenMenu'),
+      )
+    })
+    expect(withKeys.map((file) => basename(file))).toEqual([])
   })
 
   it('every file the locales entry imports exists', async () => {

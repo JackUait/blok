@@ -728,14 +728,15 @@ describe('dist weight (consumer parse cost)', () => {
 
   it('emits UI message locales as JSON.parse strings, not object literals', () => {
     // Each lazy locale ships as `chunks/<locale>-<hash>.mjs`. The emoji data
-    // for the same locale shares that name, so the message key picks the UI file.
+    // for the same locale shares that name. UI files hold values only, against
+    // one shared key list, so importing that list picks the UI file.
     const codes = readdirSync(resolve(srcDir, 'components/i18n/locales'))
       .filter((name) => name.endsWith('.json') && name !== 'en.json')
       .map((name) => name.replace(/\.json$/, ''))
     const localeChunkRe = new RegExp(`^(?:${codes.join('|')})-[A-Za-z0-9_-]{8}\\.mjs$`)
     const messageFiles = esFiles.filter((file) => {
       const name = file.slice(file.lastIndexOf('/') + 1)
-      return localeChunkRe.test(name) && readFileSync(file, 'utf-8').includes('"blockSettings.dragToMove"')
+      return localeChunkRe.test(name) && readFileSync(file, 'utf-8').includes('./message-keys-')
     })
     expect(messageFiles.length).toBe(codes.length)
     const objectLiteralLocales = messageFiles.filter(

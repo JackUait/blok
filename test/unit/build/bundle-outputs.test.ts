@@ -1033,6 +1033,37 @@ describe('lazy stylesheets stay out of the startup closure', () => {
   })
 })
 
+describe('the database template builder loads when a template is picked', () => {
+  const staticClosure = (entry: string): string[] => {
+    const seen = new Set<string>()
+    const queue = [entry]
+
+    while (queue.length > 0) {
+      const file = queue.pop()
+      if (file === undefined || seen.has(file)) continue
+      seen.add(file)
+      const [imports] = parseModule(readFileSync(file, 'utf-8'))
+      // d === -1 marks a static import; dynamic import() has d >= 0.
+      const statics = imports.filter((record) => record.d === -1 && record.n?.startsWith('.') === true)
+      queue.push(...statics.map((record) => resolve(dirname(file), record.n ?? '')))
+    }
+
+    return [...seen]
+  }
+  // A sample row title only buildStarter reads, as code (a quoted key not followed by `:`).
+  const BUILDER_FINGERPRINT = /[`'"]tools\.database\.starterTaskRow1Description[`'"](?!\s*:)/
+
+  it.each(['tools.mjs', 'tool-entries/tool-database.mjs'])('%s reaches no template builder through static imports', async (entry) => {
+    await initLexer()
+    const closure = staticClosure(resolve(dist, entry))
+    expect(closure.length).toBeGreaterThan(1)
+    expect(closure.filter((file) => BUILDER_FINGERPRINT.test(readFileSync(file, 'utf-8'))).map((file) => basename(file))).toEqual([])
+    // The lazy message key list names the key too; it is data, not the builder.
+    const holders = chunkFiles().filter((file) => !basename(file).startsWith('message-keys-') && BUILDER_FINGERPRINT.test(readFileSync(file, 'utf-8')))
+    expect(holders).toHaveLength(1)
+  })
+})
+
 describe('a consumer that imports one tool gets only that tool (tree shaking)', () => {
   // A static class field compiles (es2017) to `Tool.x = …` after the class.
   // Consumer bundlers keep that assignment as a side effect, and with it every

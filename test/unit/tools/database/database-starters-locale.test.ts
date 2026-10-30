@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { I18n } from '../../../../src/components/modules/i18n';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
-import { buildStarter } from '../../../../src/tools/database/database-starters';
+import { buildStarter } from '../../../../src/tools/database/database-starter-build';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';

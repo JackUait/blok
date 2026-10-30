@@ -4,6 +4,7 @@ import type { DatabaseTool } from '../../../../src/tools/database';
 import { buildDatabase, makeDoc } from './structure-harness';
 import type { Doc } from './structure-harness';
 import * as icons from '../../../../src/components/icons';
+import { loadStarterBuilder } from '../../../../src/tools/database/database-starters';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -83,6 +84,7 @@ const insert = async (others: Array<Partial<DatabaseData>> = [], config: Databas
 // Done resolves the Customize promise; the database is built a microtask later.
 const applyTasks = async (): Promise<void> => {
   byTestId(panel(), 'database-new-database-starter-tasks').click();
+  await picked();
   byTestId(modal() ?? undefined, 'database-starter-next').click();
   byTestId(modal() ?? undefined, 'database-starter-done').click();
   await settle();
@@ -90,6 +92,11 @@ const applyTasks = async (): Promise<void> => {
 const settingsRow = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="${id}"]`)
   ?? (popovers.items as HtmlItem[][]).flat().map((item) => item.element?.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`) ?? null).find((el) => el !== null) ?? null;
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+// A pick opens Customize, or builds, once the template builder has loaded.
+const picked = async (): Promise<void> => {
+  await loadStarterBuilder();
+  await settle();
+};
 const rows = (doc: Doc, parent = 'db'): string[] => doc.childrenOf(parent)
   .filter((id) => doc.blocks.get(id)?.name === 'database-row' && (doc.blocks.get(id)?.data as DatabaseRowData).template !== true);
 const templateRows = (doc: Doc): string[] => doc.childrenOf('db').filter((id) => (doc.blocks.get(id)?.data as DatabaseRowData | undefined)?.template === true);
@@ -129,6 +136,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const titleId = saved(tool).schema.find((p) => p.type === 'title')?.id;
 
     byTestId(panel(), 'database-new-database-starter-skills').click();
+    await picked();
     const data = saved(tool);
 
     expect(modal()).toBeNull();
@@ -148,6 +156,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const before = doc.transact.mock.calls.length;
 
     byTestId(panel(), 'database-new-database-starter-tasks').click();
+    await picked();
     const dialog = modal();
 
     expect(dialog).not.toBeNull();
@@ -179,6 +188,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const { tool } = await insert();
 
     byTestId(panel(), 'database-new-database-starter-tasks').click();
+    await picked();
     const dialog = modal() ?? undefined;
     const chip = byTestId(dialog, 'database-starter-feature-effort');
 
@@ -202,6 +212,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     await insert();
 
     byTestId(panel(), 'database-new-database-starter-tasks').click();
+    await picked();
     const dialog = modal() ?? undefined;
     const footer = (): string | null => dialog?.querySelector('[data-blok-database-starter-preview-hidden]')?.textContent ?? null;
 
@@ -223,6 +234,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
 
     byTestId(panel(), 'database-new-database-more-templates').click();
     byTestId(document.body, 'database-template-gallery-template-brainstorm').click();
+    await picked();
     const dialog = modal() ?? undefined;
     const footer = (): string | null => dialog?.querySelector('[data-blok-database-starter-preview-hidden]')?.textContent ?? null;
     const active = (): string | null => dialog?.querySelector('[data-blok-database-starter-preview-tabs] [aria-current="true"]')?.textContent ?? null;
@@ -243,6 +255,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
       await insert();
       byTestId(panel(), 'database-new-database-more-templates').click();
       byTestId(document.body, `database-template-gallery-template-${id}`).click();
+      await picked();
 
       return modal() ?? undefined;
     };
@@ -306,6 +319,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const schema = saved(tool).schema;
 
     byTestId(panel(), 'database-new-database-starter-projects').click();
+    await picked();
     byTestId(modal() ?? undefined, 'database-starter-close').click();
     await settle();
 
@@ -319,6 +333,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const { doc } = await insert();
 
     byTestId(panel(), 'database-new-database-starter-tasks').click();
+    await picked();
     byTestId(modal() ?? undefined, 'database-starter-next').click();
     byTestId(modal() ?? undefined, 'database-starter-done').click();
     await settle();
@@ -372,6 +387,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
 
     byTestId(panel(), 'database-new-database-more-templates').click();
     byTestId(document.body, 'database-template-gallery-template-documentHub').click();
+    await picked();
     expect(document.querySelector('[data-blok-testid="database-template-gallery"]')).toBeNull();
     byTestId(modal() ?? undefined, 'database-starter-next').click();
     byTestId(modal() ?? undefined, 'database-starter-done').click();
@@ -622,6 +638,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const { tool } = await insert();
 
     byTestId(panel(), 'database-new-database-starter-skills').click();
+    await picked();
     byTestId(document.body, 'database-toolbar-settings').click();
     const row = settingsRow('database-settings-undo-starter');
 
@@ -676,6 +693,7 @@ describe('templates gallery and Customize, as measured (findings-creation N07, N
     await insert();
     byTestId(panel(), 'database-new-database-more-templates').click();
     byTestId(document.body, 'database-template-gallery-template-tasks').click();
+    await picked();
 
     return modal() ?? document.body;
   };
@@ -710,6 +728,7 @@ describe('templates gallery and Customize, as measured (findings-creation N07, N
   it('opened from the panel, Customize keeps × and "Get started"', async () => {
     await insert();
     byTestId(panel(), 'database-new-database-starter-tasks').click();
+    await picked();
     const dialog = modal() ?? undefined;
 
     expect(byTestId(dialog, 'database-starter-close')).not.toBeNull();
@@ -719,6 +738,7 @@ describe('templates gallery and Customize, as measured (findings-creation N07, N
   it('the Customize preview fills Status from the template\'s rows, and its tabs and headers carry glyphs (N07)', async () => {
     await insert();
     byTestId(panel(), 'database-new-database-starter-tasks').click();
+    await picked();
     const preview = modal()?.querySelector('[data-blok-database-starter-preview]');
     const pills = [...(preview?.querySelectorAll('[data-blok-database-starter-preview-row=""] [data-blok-database-option-pill], [data-blok-database-starter-preview-row=""] [data-blok-database-pill]') ?? [])];
 

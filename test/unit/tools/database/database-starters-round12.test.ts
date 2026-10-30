@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
-import { DATABASE_STARTERS, buildStarter, galleryStarters, hiddenPropertyCount } from '../../../../src/tools/database/database-starters';
+import { buildStarter } from '../../../../src/tools/database/database-starter-build';
+import { DATABASE_STARTERS, galleryStarters, hiddenPropertyCount } from '../../../../src/tools/database/database-starters';
 import type { StarterBuild, StarterId } from '../../../../src/tools/database/database-starters';
 import type { PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';

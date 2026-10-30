@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { DatabaseConfig, DatabaseData, DatabaseSetup, DatabaseSetupRequest } from '../../../../src/tools/database/types';
 import type { BlockOrigin } from '../../../../types';
 import { DatabaseTool } from '../../../../src/tools/database';
+import { loadStarterBuilder } from '../../../../src/tools/database/database-starters';
 import type { ToolboxConfigEntry } from '../../../../types';
 import { buildDatabase, makeDoc } from './structure-harness';
 import { IconMap, IconTable } from '../../../../src/components/icons';
@@ -603,6 +604,7 @@ describe('"New database" panel for every database toolbox entry', () => {
 
     expect(cards).toHaveLength(3);
     panel()?.querySelector<HTMLElement>('[data-blok-testid="database-new-database-starter-skills"]')?.click();
+    await loadStarterBuilder();
 
     expect(doc.childrenOf('db').filter((id) => cards.includes(id))).toEqual([]);
   });

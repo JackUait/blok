@@ -51,8 +51,9 @@ import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import { planAiSetup } from './database-ai-setup';
-import { DATABASE_STARTERS, buildStarter, galleryStarters, suggestedStarters } from './database-starters';
+import { DATABASE_STARTERS, galleryStarters, loadStarterBuilder, suggestedStarters } from './database-starters';
 import type { StarterId, StarterMeta } from './database-starters';
+import type { buildStarter } from './database-starter-build';
 import { openStarterCustomize } from './database-starter-modal';
 import { openTemplateGallery } from './database-template-gallery';
 import type { StarterPicks } from './database-starter-modal';
@@ -1183,6 +1184,8 @@ export class DatabaseTool implements BlockTool {
     const anchor = this.titleRowElement ?? this.element;
 
     if (this.readOnly || this.structureLocked() || this.sourcePicker !== null || anchor === null) return;
+    // Fetched early so a pick seldom waits; a failure here is reported by the pick.
+    loadStarterBuilder().catch(() => undefined);
     const panel = openNewSourcePanel({
       anchor,
       t: (key, vars) => this.api.i18n.t(key, vars),
@@ -1327,6 +1330,7 @@ export class DatabaseTool implements BlockTool {
   /** "More templates" (research/27 §1e): Empty database keeps this one empty, a source links to it. */
   private openTemplateGallery(): void {
     if (this.readOnly || this.structureLocked()) return;
+    loadStarterBuilder().catch(() => undefined);
     const t = (key: string, vars?: Record<string, string>): string => this.api.i18n.t(key, vars);
 
     openTemplateGallery({
@@ -1355,26 +1359,32 @@ export class DatabaseTool implements BlockTool {
     const meta = DATABASE_STARTERS.find((starter) => starter.id === id);
 
     if (meta === undefined) return;
-    if (meta.features.length === 0) {
-      this.createFromStarter(meta.id);
+    // The builder loads now; Customize opens once it has, so its preview draws at once.
+    loadStarterBuilder().then((build) => {
+      if (this.destroyed) return;
+      if (meta.features.length === 0) {
+        this.createFromStarter(build, meta.id);
 
-      return;
-    }
-    void openStarterCustomize({
-      meta,
-      t: (key, vars) => this.api.i18n.t(key, vars),
-      preview: (picks) => buildStarter(meta.id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks }),
-      ...(fromGallery ? { onBack: () => this.openTemplateGallery() } : {}),
-      directionSource: this.element,
-    }).then((picks) => {
-      if (picks !== null) this.createFromStarter(meta.id, picks);
+        return;
+      }
+      void openStarterCustomize({
+        meta,
+        t: (key, vars) => this.api.i18n.t(key, vars),
+        preview: (picks) => build(meta.id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks }),
+        ...(fromGallery ? { onBack: () => this.openTemplateGallery() } : {}),
+        directionSource: this.element,
+      }).then((picks) => {
+        if (picks !== null) this.createFromStarter(build, meta.id, picks);
+      });
+    }, () => {
+      this.api.notifier.show({ message: this.api.i18n.t('tools.stub.error'), style: 'error' });
     });
   }
 
   /** The template's schema, views, rows and row bodies, as one undo step. */
-  private createFromStarter(id: StarterId, picks?: StarterPicks): void {
+  private createFromStarter(build: typeof buildStarter, id: StarterId, picks?: StarterPicks): void {
     if (this.destroyed || this.readOnly || this.structureLocked()) return;
-    const made = buildStarter(id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks });
+    const made = build(id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks });
     const oldSchema = this.model.getSchema();
     const oldViews = this.model.getViews();
 

@@ -151,7 +151,16 @@ export class BlockInsertion {
       inferParent = false,
       eventParentId,
       placementAfterAdded,
+      parentId: namedParentId,
     } = options;
+    const parentNamed = namedParentId === undefined ? undefined : this.repository.getBlockById(namedParentId);
+
+    if (namedParentId !== undefined && parentNamed === undefined) {
+      throw new BlockPlacementError(`Parent block with id "${namedParentId}" not found`);
+    }
+    if (parentNamed !== undefined && !acceptsChildren(parentNamed)) {
+      throw new BlockPlacementError(`"${parentNamed.id}" takes no children`);
+    }
 
     const prevIndex = this.ctx.rawCurrentBlockIndex;
     const current = this.ctx.currentBlock;
@@ -160,9 +169,10 @@ export class BlockInsertion {
     const afterCurrentRun = index === undefined && !replace && current !== undefined && this.isOutermostSelfPlacing(current)
       ? current
       : undefined;
-    const requestedIndex = index
-      ?? (afterCurrentRun !== undefined ? this.subtreeEnd(afterCurrentRun) : prevIndex + (replace ? 0 : 1));
-    const slot = inferParent && !replace && !forceTopLevel && !appendToWorkingArea
+    const requestedIndex = parentNamed !== undefined
+      ? this.clampIntoSubtree(parentNamed, index ?? Number.MAX_SAFE_INTEGER)
+      : index ?? (afterCurrentRun !== undefined ? this.subtreeEnd(afterCurrentRun) : prevIndex + (replace ? 0 : 1));
+    const slot = inferParent && parentNamed === undefined && !replace && !forceTopLevel && !appendToWorkingArea
       ? this.inferredSlot(requestedIndex, tool ?? this.dependencies.config.defaultBlock)
       : undefined;
     const targetIndex = slot?.index ?? requestedIndex;
@@ -200,7 +210,7 @@ export class BlockInsertion {
     // child's subtree, such as a row's page body under `childTools` deny.
     const namedParent = impliedParent === undefined && eventParentId !== undefined && eventParentId !== null
       ? this.repository.getBlockById(eventParentId)
-      : undefined;
+      : parentNamed;
     const resolvedToolName = this.toolForIndexInsert(tool, targetIndex, replace, impliedParent ?? namedParent, exited, forceTopLevel);
 
     // Bind events immediately for user-created blocks so mutations are tracked right away
@@ -344,6 +354,11 @@ export class BlockInsertion {
       this.hierarchy.setBlockParent(block, impliedParent.id);
     }
 
+    // Before the doc write below, so the block is written under its parent.
+    if (parentNamed !== undefined) {
+      this.hierarchy.setBlockParent(block, parentNamed.id);
+    }
+
     if (!replace && !forceTopLevel && block.parentId === null && impliedParent === undefined) {
       // Unguarded, index 0 would read getBlockByIndex(-1): the LAST block.
       const predecessor = exited ?? (targetIndex > 0 ? this.repository.getBlockByIndex(targetIndex - 1) : undefined);
@@ -373,7 +388,7 @@ export class BlockInsertion {
       // Placement only when it is final here: an inferring insert has set it,
       // other callers name it, the rest (paste, replay) set it later.
       ...(eventParentId !== undefined && { parentId: eventParentId }),
-      ...(eventParentId === undefined && inferParent && { parentId: block.parentId }),
+      ...(eventParentId === undefined && (inferParent || parentNamed !== undefined) && { parentId: block.parentId }),
     });
 
     // A live parent during block-added makes local table children await cell data.

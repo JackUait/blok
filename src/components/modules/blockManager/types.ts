@@ -108,6 +108,12 @@ export interface InsertBlockOptions {
    */
   forceTopLevel?: boolean;
   /**
+   * The new block's parent, set before the doc write so the block is written
+   * under it. An insert at root and a move after would leave a tombstone in
+   * the root order for good. Replaces `inferParent`.
+   */
+  parentId?: string;
+  /**
    * When true, a new block with no parent takes the parent its flat index
    * implies, so the flat array stays depth-first. Set by the public
    * `blocks.insert`; internal callers assign parents themselves.

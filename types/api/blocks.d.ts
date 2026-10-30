@@ -269,6 +269,11 @@ export interface Blocks {
    *   your own insertion UI (a custom toolbar, slash menu or keyboard shortcut)
    *   so a container Tool can tell the gesture from a programmatic refetch and
    *   seed its default children only for the former.
+   * @param parentId — optional parent of the new block. The block is created
+   *   under it in one write, at `index` in the flat order (kept inside the
+   *   parent's subtree; its end when `index` is omitted). Use it instead of
+   *   `insert` followed by `setBlockParent`. A tool the parent does not allow is
+   *   demoted. Cannot be combined with `replace`.
    */
   insert(
     type?: string,
@@ -280,6 +285,7 @@ export interface Blocks {
     id?: string,
     tunes?: { [name: string]: BlockTuneData },
     origin?: BlockOrigin,
+    parentId?: string | null,
   ): BlockAPI;
 
   /**

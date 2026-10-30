@@ -136,7 +136,9 @@ const createStore = (): Store => {
     needToFocus?: boolean,
     replace?: boolean,
     id?: string,
-    tunes?: Record<string, BlockTuneData>
+    tunes?: Record<string, BlockTuneData>,
+    _origin?: unknown,
+    parentId?: string | null
   ): BlockAPI => {
     insertCalls.push({ tool, data, index, needToFocus, replace, id, tunes });
 
@@ -148,7 +150,7 @@ const createStore = (): Store => {
 
     idCounter += 1;
 
-    const stored = makeBlock(id ?? `made-${idCounter}`, name, data ?? {}, null);
+    const stored = makeBlock(id ?? `made-${idCounter}`, name, data ?? {}, parentId ?? null);
     const at = index === undefined ? blocks.length : Math.min(Math.max(index, 0), blocks.length);
 
     blocks.splice(at, 0, stored);

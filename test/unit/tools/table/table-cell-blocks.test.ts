@@ -1440,9 +1440,45 @@ describe('TableCellBlocks', () => {
         { text: '' },
         expect.anything(),
         1,
-        true
+        true,
+        false,
+        undefined,
+        undefined,
+        undefined,
+        't1'
       );
       expect(container.contains(mockBlockHolder)).toBe(true);
+    });
+
+    it('creates the fill block under the table in one write, with no move after', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockInsert = vi.fn().mockReturnValue({ id: 'fill-p', holder: document.createElement('div') });
+      const setBlockParent = vi.fn();
+      const api = {
+        blocks: { insert: mockInsert, getBlockIndex: vi.fn(), getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent, transactWithoutCapture: vi.fn((fn: () => void) => fn()) },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.ensureCellHasBlock(cell);
+
+      // A root insert and a move after it would leave a tombstone in the root order.
+      expect(mockInsert.mock.calls[0]?.[9]).toBe('t1');
+      expect(setBlockParent).not.toHaveBeenCalled();
     });
 
     it('inserts a tracked block, outside transactWithoutCapture, when the fill is part of a gesture', async () => {
@@ -1523,7 +1559,7 @@ describe('TableCellBlocks', () => {
 
       cellBlocks.ensureCellHasBlock(cell);
 
-      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: '' }, expect.anything(), 1, true);
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: '' }, expect.anything(), 1, true, false, undefined, undefined, undefined, 't1');
     });
 
     it('does not guess a cell for a peer\'s block whose cell the table data has not named yet', async () => {
@@ -1832,7 +1868,12 @@ describe('TableCellBlocks', () => {
         { text: '' },
         expect.anything(),
         0,
-        true
+        true,
+        false,
+        undefined,
+        undefined,
+        undefined,
+        't1'
       );
     });
 

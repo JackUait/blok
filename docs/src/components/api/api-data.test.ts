@@ -462,7 +462,7 @@ describe("API_SECTIONS", () => {
         "blocks.getBlockByElement(element)",
         "blocks.getChildren(parentId)",
         "blocks.getBlocksCount()",
-        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?)",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?, parentId?)",
         "blocks.insertMany(blocks, index?)",
         "blocks.composeBlockData(toolName)",
         "blocks.update(id, data?, tunes?)",
@@ -856,7 +856,7 @@ describe("API_SECTIONS", () => {
     it("blocks.insert example shows the inserted block's id as output", () => {
       const method = findMethod(
         "blocks-api",
-        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?)",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?, parentId?)",
       );
       expect(method?.example).toMatch(/\/\/\s*→/);
     });

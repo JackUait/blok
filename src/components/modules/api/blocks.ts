@@ -541,6 +541,7 @@ export class BlocksAPI extends Module {
    * @param origin — why the block is being created; defaults to `'api'`. Pass
    *   `'user'` from your own insertion UI (a custom toolbar or slash menu) so a
    *   container tool can tell the gesture from a programmatic refetch.
+   * @param parentId — the new block's parent; `index` still places it in the flat order
    */
   public insert = (
     type?: string,
@@ -551,9 +552,15 @@ export class BlocksAPI extends Module {
     replace?: boolean,
     id?: string,
     tunes?: { [name: string]: BlockTuneData },
-    origin: BlockOrigin = 'api'
+    origin: BlockOrigin = 'api',
+    parentId?: string | null
   ): BlockAPIInterface => {
     this.Blok.YjsManager.beginApiCall();
+
+    if (typeof parentId === 'string' && replace === true) {
+      throw new BlockPlacementError('replace cannot be combined with parentId');
+    }
+
     const defaultTool = type ?? (this.config.defaultBlock);
     const tool = (() => {
       if (!defaultTool) {
@@ -589,6 +596,7 @@ export class BlocksAPI extends Module {
       tunes,
       origin,
       inferParent: true,
+      ...(typeof parentId === 'string' && { parentId }),
     });
 
     return new BlockAPI(insertedBlock, this.Blok.API);

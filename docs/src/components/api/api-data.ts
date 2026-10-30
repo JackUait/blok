@@ -1003,7 +1003,7 @@ editor.blocks.moveTo(childId, { position: { after: containerId } });`,
 console.log('Total blocks:', count);`,
       },
       {
-        name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?)",
+        name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?, parentId?)",
         returnType: "BlockAPI",
         description:
           "Insert a new block with full control over its properties and position.",
@@ -1019,7 +1019,10 @@ const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undef
 
 // From your own slash menu / toolbar: declare the user gesture so a container
 // tool seeds its default children (see BlockOrigin on the tool contract)
-const block = editor.blocks.insert('column_list', undefined, undefined, index, undefined, undefined, undefined, undefined, 'user');`,
+const block = editor.blocks.insert('column_list', undefined, undefined, index, undefined, undefined, undefined, undefined, 'user');
+
+// Create a block straight under its parent, in one write
+const child = editor.blocks.insert('paragraph', { text: '' }, undefined, index, false, false, undefined, undefined, undefined, 'toggle-1');`,
         params: [
           {
             name: "type",
@@ -1087,6 +1090,14 @@ const block = editor.blocks.insert('column_list', undefined, undefined, index, u
             description:
               "Why the block is being created. It is handed to the tool constructor as `origin`. That is how a container tool tells a genuine creation (seed default children) from a re-materialisation, such as a document load, an undo/redo replay or a paste (never seed).\n\n- Pass `'user'` when the insert comes from your own insertion UI: a custom toolbar, slash menu or keyboard shortcut.\n  - Then Blok's own containers (`column_list`, `column`) and your own behave the same as they do for the built-in menu.\n- Leave it out for programmatic inserts and refetches.\n  - The `'api'` default is still a creation, but it is never mistaken for a user gesture.",
           },
+          {
+            name: "parentId",
+            type: "string",
+            required: false,
+            default: "undefined",
+            description:
+              "The new block's parent. The block is created under it in one write, at `index` in the flat order. `index` is kept inside the parent's subtree; leave it out to add the block at the end of that subtree.\n\n- Use it instead of `insert()` followed by `setBlockParent()`. The two-step way writes the block at the root first, and every block ever moved out leaves an entry in the root list for good.\n- A tool the parent does not allow is swapped for one it allows.\n- It cannot be combined with `replace: true`.",
+          },
         ],
         errors: [
           {
@@ -1103,6 +1114,21 @@ const block = editor.blocks.insert('column_list', undefined, undefined, index, u
             condition: "`replace: true` is passed but no block exists at `index`.",
             message: 'Could not replace Block at index <index>. Block not found.',
             resolution: "Check `index` against `blocks.getBlocksCount()` before calling with `replace: true`.",
+          },
+          {
+            condition: "`parentId` names no block.",
+            message: 'Parent block with id "<parentId>" not found',
+            resolution: "Pass the id of a block that exists.",
+          },
+          {
+            condition: "`parentId` names a block that takes no children, such as a page.",
+            message: '"<parentId>" takes no children',
+            resolution: "Insert under a block that can hold children.",
+          },
+          {
+            condition: "`parentId` is passed together with `replace: true`.",
+            message: 'replace cannot be combined with parentId',
+            resolution: "Drop `replace`, or drop `parentId`: the replaced block's parent is kept.",
           },
         ],
       },

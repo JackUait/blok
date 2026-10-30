@@ -414,6 +414,9 @@
               },
               "origin": {
                 "description": "Why the block is being created. It is handed to the tool constructor as `origin`. That is how a container tool tells a genuine creation (seed default children) from a re-materialisation, such as a document load, an undo/redo replay or a paste (never seed).\n\n- Pass `'user'` when the insert comes from your own insertion UI: a custom toolbar, slash menu or keyboard shortcut.\n  - Then Blok's own containers (`column_list`, `column`) and your own behave the same as they do for the built-in menu.\n- Leave it out for programmatic inserts and refetches.\n  - The `'api'` default is still a creation, but it is never mistaken for a user gesture."
+              },
+              "parentId": {
+                "description": "The new block's parent. The block is created under it in one write, at `index` in the flat order. `index` is kept inside the parent's subtree; leave it out to add the block at the end of that subtree.\n\n- Use it instead of `insert()` followed by `setBlockParent()`. The two-step way writes the block at the root first, and every block ever moved out leaves an entry in the root list for good.\n- A tool the parent does not allow is swapped for one it allows.\n- It cannot be combined with `replace: true`."
               }
             },
             "errors": {
@@ -428,6 +431,18 @@
               "2": {
                 "condition": "`replace: true` is passed but no block exists at `index`.",
                 "resolution": "Check `index` against `blocks.getBlocksCount()` before calling with `replace: true`."
+              },
+              "3": {
+                "condition": "`parentId` names no block.",
+                "resolution": "Pass the id of a block that exists."
+              },
+              "4": {
+                "condition": "`parentId` names a block that takes no children, such as a page.",
+                "resolution": "Insert under a block that can hold children."
+              },
+              "5": {
+                "condition": "`parentId` is passed together with `replace: true`.",
+                "resolution": "Drop `replace`, or drop `parentId`: the replaced block's parent is kept."
               }
             }
           },

@@ -1826,7 +1826,7 @@ export class TableCellBlocks {
     this.isRepairingCell = true;
 
     const fill = (): void => {
-      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexForCell(cell), true);
+      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexForCell(cell), true, false, undefined, undefined, undefined, this.tableBlockId);
 
       if (options.standIn ?? options.track !== true) {
         this.repairIds.add(block.id);
@@ -1835,7 +1835,6 @@ export class TableCellBlocks {
         this.paddedFillIds.add(block.id);
       }
       container.appendChild(block.holder);
-      this.api.blocks.setBlockParent(block.id, this.tableBlockId);
       this.syncBlockToModel(cell, block.id);
       this.stripPlaceholders(container);
     };

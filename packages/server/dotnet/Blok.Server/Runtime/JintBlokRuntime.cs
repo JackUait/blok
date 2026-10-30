@@ -283,7 +283,20 @@ internal sealed class JintBlokRuntime : IBlokRuntime
    */
   private static BlokConversionFailure Classify(JsValue error)
   {
-    var name = error is ObjectInstance instance ? instance.Get("name").ToString() : null;
+    string? name;
+
+    /*
+     * Reading `name` can run JS (a getter, a toString) that throws. This runs
+     * inside a catch clause, so an exception here would escape raw.
+     */
+    try
+    {
+      name = error is ObjectInstance instance ? instance.Get("name").ToString() : null;
+    }
+    catch (JavaScriptException)
+    {
+      return BlokConversionFailure.Unknown;
+    }
 
     return name is "SyntaxError" or "TypeError"
         ? BlokConversionFailure.InvalidDocument

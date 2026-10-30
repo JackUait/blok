@@ -1,0 +1,528 @@
+[
+  {
+    "name": "throws an object with no prototype",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw Object.create(null);\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "throws a symbol",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw Symbol('s');\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "throws an object whose name getter throws",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  const e = {}; Object.defineProperty(e, 'name', { get() { throw new Error('x'); } }); throw e;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "throws an object whose name getter says TypeError",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { get name() { return 'TypeError'; } };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "InvalidDocument"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "throws an object whose name is a number",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { name: 7 };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "throws an object whose name is a String object",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { name: new String('TypeError') };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "InvalidDocument"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "throws an object whose name has a throwing toString",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { name: { toString() { throw new Error('y'); } } };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns undefined",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return undefined;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns null",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return null;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns an object",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return {};\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns a number",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return 42;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns a symbol",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return Symbol('s');\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns a String object",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return new String('x');\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws an object with no prototype",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw Object.create(null);\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "InvalidDocument"
+        },
+        "goja": {
+          "error": "Unknown"
+        },
+        "why": "Jint turns the rejected value into a string for its exception message; String(Object.create(null)) throws a TypeError, and C# classifies that TypeError instead of the value. goja keeps the value."
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws a symbol",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw Symbol('s');\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws an object whose name getter throws",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  const e = {}; Object.defineProperty(e, 'name', { get() { throw new Error('x'); } }); throw e;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws an object whose name getter says TypeError",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { get name() { return 'TypeError'; } };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "InvalidDocument"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws an object whose name is a number",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { name: 7 };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws an object whose name is a String object",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { name: new String('TypeError') };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "InvalidDocument"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, throws an object whose name has a throwing toString",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  throw { name: { toString() { throw new Error('y'); } } };\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, returns undefined",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return undefined;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, returns null",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return null;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, returns an object",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return {};\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, returns a number",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return 42;\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, returns a symbol",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return Symbol('s');\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "async, returns a String object",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = async function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return new String('x');\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns a promise of a symbol",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return Promise.resolve(Symbol('s'));\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns a promise of undefined",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return Promise.resolve(undefined);\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "error": "Unknown"
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "1"
+        }
+      }
+    ]
+  },
+  {
+    "name": "returns an empty string",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  return '';\n};\n",
+    "steps": [
+      {
+        "op": "odd",
+        "expect": {
+          "result": ""
+        }
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
+  }
+]

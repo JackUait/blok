@@ -51,6 +51,15 @@ Packages are at module-root `internal/` so the collab lane (`internal/collab/...
 
 ## Ledger rows
 
+Count (python over the ledger's §1 table rows, 217 total): 154 DONE, 20 deferred to the collab/documents lanes, 43 IMPL or TODO:
+H20 H31 H32 V1 V35 L1 L6 L7 L8 L10 L11 U4 U8 B8 D4 LF3 LF6–LF12 S6 S8 S10–S13 S15 S16 O3–O7 O10 O12 O15 M1 M3 M7 M10.
+
+### Hand-off to collab: the request deadline (H33)
+H33 is DONE except "Sync opts out". `cmd/blok-server/deadline.go` wraps every route. Before `/sync` lands:
+1. `SetReadDeadline` stays on the `net.Conn` after a hijack; net/http leaves clearing it to the caller, so a sync socket's reads would fail 10 minutes in. Clear both deadlines right after `Hijack`, or skip `withDeadline` for `GET /sync/{doc}`.
+2. `trackingWriter` has `Unwrap`, so `http.NewResponseController(w).Hijack()` works, but a `w.(http.Hijacker)` assertion does not.
+3. The `AfterFunc` would write 504 onto a hijacked connection. Mark the writer hijacked (or bypass it) so `timeOut` is a no-op.
+
 DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (next round: add one). TODO = not done.
 
 ### 1a Host (H)

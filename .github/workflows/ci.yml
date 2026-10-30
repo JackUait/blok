@@ -382,7 +382,7 @@ jobs:
       # The suites the Go server passes whole so far. Add a suite as Go gains
       # its features, and drop the list once Go passes them all.
       - name: Test Go conformance
-        run: node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract
+        run: node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract --suite host-cli-contract
 
       - name: Dry-run server artifacts
         run: node scripts/publish-server.mjs --version 1.10.1 --dry-run

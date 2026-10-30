@@ -80,8 +80,8 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "92c2bb14aa69d6fa",
-    "date": "2026-10-29"
+    "hash": "bae9e8939f823d0b",
+    "date": "2026-10-30"
   },
   "/docs/core": {
     "hash": "bbf26a19fdeecc03",
@@ -184,12 +184,12 @@
     "date": "2026-10-26"
   },
   "/docs/page": {
-    "hash": "210c12bd3f812e60",
-    "date": "2026-10-25"
+    "hash": "3648de8f4fb70c97",
+    "date": "2026-10-30"
   },
   "/docs/page-link": {
-    "hash": "f5c919bb6b2d7fe9",
-    "date": "2026-10-05"
+    "hash": "9676c2329dc1eede",
+    "date": "2026-10-30"
   },
   "/docs/paragraph": {
     "hash": "f6f4cbabd5dd2b57",
@@ -312,8 +312,8 @@
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "d427b7644053fee8",
-    "date": "2026-10-29"
+    "hash": "9eaaaf2bfebf1c85",
+    "date": "2026-10-30"
   },
   "/docs/view-state-api": {
     "hash": "1981c1ecf65077dc",
@@ -412,8 +412,8 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "ce860a3f6aeede52",
-    "date": "2026-10-29"
+    "hash": "e2ee3791526d0a8b",
+    "date": "2026-10-30"
   },
   "/ru/docs/core": {
     "hash": "b1c6e1c381d91d77",
@@ -516,12 +516,12 @@
     "date": "2026-10-26"
   },
   "/ru/docs/page": {
-    "hash": "f21959c44bc3bfa2",
-    "date": "2026-10-25"
+    "hash": "9b84b4ded88be1c8",
+    "date": "2026-10-30"
   },
   "/ru/docs/page-link": {
-    "hash": "5326132ec3321d28",
-    "date": "2026-10-05"
+    "hash": "4a17b6190ff46ca9",
+    "date": "2026-10-30"
   },
   "/ru/docs/paragraph": {
     "hash": "ca9479f9a9427d27",
@@ -644,8 +644,8 @@
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "4cf0c8d4d24a6492",
-    "date": "2026-10-29"
+    "hash": "4d37ab75d3964774",
+    "date": "2026-10-30"
   },
   "/ru/docs/view-state-api": {
     "hash": "b0418f22b56273c5",
@@ -668,16 +668,16 @@
     "date": "2026-09-08"
   },
   "/ru/server": {
-    "hash": "241e2f251a8d9418",
-    "date": "2026-10-08"
+    "hash": "b7797677734725ef",
+    "date": "2026-10-30"
   },
   "/ru/tools": {
     "hash": "2b0fddd440ba58c4",
     "date": null
   },
   "/server": {
-    "hash": "632130f3f793197d",
-    "date": "2026-10-08"
+    "hash": "cda9ff8da6bff7d5",
+    "date": "2026-10-30"
   },
   "/tools": {
     "hash": "8ae406d370e08ec0",

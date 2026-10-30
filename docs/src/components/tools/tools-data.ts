@@ -1151,10 +1151,10 @@ const editor = new Blok({
       },
       {
         option: 'create',
-        type: '(init: { pageId: string; document?: OutputData }) => void | { pageId: string } | Promise<…>',
+        type: '(init: { pageId: string; document?: OutputData; title?: string; parentId?: string }) => void | { pageId: string } | Promise<…>',
         default: 'undefined',
         description:
-          'Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend\'s id instead of Blok\'s. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok\'s id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.\n\n`init.document`, when present, is the new page\'s starting content. Store it as the page\'s document. "Database - Full page" sends one `database` block with `fullPage: true`. The database finishes its setup when the page opens.',
+          'Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend\'s id instead of Blok\'s. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok\'s id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.\n\n`init.document`, when present, is the new page\'s starting content. Store it as the page\'s document. "Database - Full page" sends one `database` block with `fullPage: true`. The database finishes its setup when the page opens.\n\nWith `createFromMention`, the `@` menu calls it too. Then `init.title` is the typed text, and `init.parentId` is the page the user chose. No `parentId` means the page this editor shows. Blok mentions the new page and does not open it.',
       },
       {
         option: 'databasePages',
@@ -1164,11 +1164,18 @@ const editor = new Blok({
           'Offers "Database - Full page" in the toolbox\'s Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nTurn it on only when `create` stores `document` as the new page\'s content and the `database` tool is registered.',
       },
       {
+        option: 'createFromMention',
+        type: 'boolean',
+        default: 'false',
+        description:
+          'Offers a New page section in the `@` menu. It has two items: a sub-page of the current page, and a page under one the user picks. Each makes a page titled with the typed text and mentions it.\n\nTurn it on only when `create` stores `title` and `parentId`.',
+      },
+      {
         option: 'search',
         type: '(query: string) => Promise<readonly PageSearchResult[]>',
         default: 'undefined',
         description:
-          'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nA result may carry `path`, the titles of the pages above it, shown under its title. `status: \'draft\'` shows a Draft mark. With `resolve`, Blok checks each result and uses its title, path and status. When nothing matches, the list says Nothing found.',
+          'Offers accessible pages for inline `@` and `[[` references. Filter results by the current user before returning them; Blok does not own global search.\n\nThe `@` menu opens as soon as "@" is typed and asks with an empty query. Answer it with recent pages. While a search runs, the menu shows a spinner and placeholder rows.\n\nThe Link to page section lists the results. Each row shows the icon, the title and `path`, the titles of the pages above it. `status: \'draft\'` shows a Draft mark. Six rows show first, then a "more results" row expands the list.\n\nWith `resolve`, Blok checks each result and uses its title, icon, path and status. Nothing found shows only when no section has items.',
       },
       {
         option: 'subscribe',
@@ -1240,7 +1247,7 @@ const html = blocksToHtml(savedData, {
         type: '(query: string) => Promise<readonly PageSearchResult[]>',
         default: 'undefined',
         description:
-          'Shows Link to page in the "/" menu and lists the pages to pick from. Results work as in `Page`: `path`, a Draft mark and Nothing found.\n\n"/" reads this tool\'s config, and `@` reads the `Page` tool\'s config. Pass both the same object.',
+          'Shows Link to page in the "/" menu and lists the pages to pick from. Results work as in `Page`: icon, `path`, a Draft mark, the "more results" row and Nothing found. There is no New page section.\n\n"/" reads this tool\'s config, and `@` reads the `Page` tool\'s config. Pass both the same object.',
       },
     ],
     saveDataShape: `interface PageLinkData {

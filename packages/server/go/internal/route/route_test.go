@@ -187,3 +187,38 @@ func TestALiteralBeatsAParameterInTheSamePass(t *testing.T) {
 		}
 	}
 }
+
+// Kestrel refuses a decoded NUL anywhere in the path, before routing, with an
+// empty 400. It does not refuse %00 in the query, %2500, or other controls.
+func TestEncodedNULInThePathIsABadRequest(t *testing.T) {
+	router := testRouter()
+	for _, c := range []struct{ method, target string }{
+		{"GET", "/health%00"},
+		{"HEAD", "/health%00"},
+		{"POST", "/x%00"},
+		{"GET", "/a%00b/c"},
+		{"GET", "/x/../health%00"},
+		{"GET", "/sync/a%00/state"},
+	} {
+		got := serve(t, router, c.method, c.target)
+		if got.status != 400 || got.body != "" ||
+			got.header.Get("Content-Length") != "0" ||
+			got.header.Get("Connection") != "close" ||
+			got.header.Get("Content-Type") != "" {
+			t.Errorf("%s %s: %d %q %v", c.method, c.target, got.status, got.body, got.header)
+		}
+	}
+	for _, c := range []struct {
+		target string
+		status int
+	}{
+		{"/health?x=%00", 200},
+		{"/health%2500", 404},
+		{"/health%01", 404},
+		{"/health%0A", 404},
+	} {
+		if got := serve(t, router, "GET", c.target); got.status != c.status {
+			t.Errorf("GET %s: %d, want %d", c.target, got.status, c.status)
+		}
+	}
+}

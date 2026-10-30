@@ -255,6 +255,30 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       expectStreamed(response, method, 'HTTP/1.0');
     });
 
+    // Kestrel refuses a decoded NUL in the path before routing, on any method.
+    it.each([
+      ['GET', '/health%00'],
+      ['HEAD', '/health%00'],
+      ['POST', '/x%00'],
+      ['GET', '/a%00b/c'],
+      ['GET', '/x/../health%00'],
+    ])('answers %s %s with an empty 400', async (method, path) => {
+      const response = await rawRequest(server.baseUrl, method, path);
+
+      expect(response.status).toBe(400);
+      expect(response.headers['content-length']).toEqual(['0']);
+      expect(response.headers['content-type']).toBeUndefined();
+      expect(response.body).toBe('');
+    });
+
+    it.each([
+      ['/health?x=%00', 200],
+      ['/health%2500', 404],
+      ['/health%01', 404],
+    ])('does not refuse GET %s', async (path, status) => {
+      expect((await rawRequest(server.baseUrl, 'GET', path)).status).toBe(status);
+    });
+
     it.skipIf(goHostGap)('answers a malformed escape on an unknown route with the 404 catch-all', async () => {
       const response = await rawRequest(server.baseUrl, 'GET', '/a%zzb');
 

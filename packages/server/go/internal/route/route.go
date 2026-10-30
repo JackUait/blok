@@ -63,7 +63,12 @@ func (r *Router) Handle(pattern string, methods []string, h http.Handler) {
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	parts, ok := pathSegments(req.URL.EscapedPath())
+	decoded := decodeKeepingSlash(req.URL.EscapedPath())
+	if strings.IndexByte(decoded, 0) >= 0 {
+		badRequest(w)
+		return
+	}
+	parts, ok := pathSegments(decoded)
 	if ok {
 		for _, anyMethod := range []bool{false, true} {
 			var best *entry
@@ -137,15 +142,15 @@ func (e entry) match(parts []string) (map[string]string, bool) {
 	return values, true
 }
 
-// pathSegments decodes the escaped path, removes dot segments and one
-// trailing slash, and splits it. Decoding comes first: Kestrel removes
-// "/%2e/" too. ok is false for a path that does not start with "/", such as
-// the "*" of "OPTIONS *".
-func pathSegments(escaped string) ([]string, bool) {
-	if !strings.HasPrefix(escaped, "/") {
+// pathSegments removes dot segments and one trailing slash from the decoded
+// path, and splits it. Decoding comes first: Kestrel removes "/%2e/" too. ok
+// is false for a path that does not start with "/", such as the "*" of
+// "OPTIONS *".
+func pathSegments(decoded string) ([]string, bool) {
+	if !strings.HasPrefix(decoded, "/") {
 		return nil, false
 	}
-	path := removeDotSegments(decodeKeepingSlash(escaped))
+	path := removeDotSegments(decoded)
 	path = strings.TrimSuffix(path, "/")
 	if path == "" {
 		return []string{}, true
@@ -241,6 +246,14 @@ func MethodNotAllowed(allow string) http.Handler {
 		w.Header().Set("Allow", allow)
 		writePlain(w, http.StatusMethodNotAllowed, "Method Not Allowed\n")
 	})
+}
+
+// badRequest is Kestrel's answer to a NUL in the path: no body, a zero
+// length even on HEAD, and the connection closed.
+func badRequest(w http.ResponseWriter) {
+	w.Header().Set("Connection", "close")
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusBadRequest)
 }
 
 // NotFound is the catch-all for a path no route matches, whatever the method.

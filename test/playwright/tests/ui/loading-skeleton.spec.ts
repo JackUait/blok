@@ -87,6 +87,40 @@ test.describe('boot loading skeleton', () => {
     expect(await height('empty')).toBe(await height('full'));
   });
 
+  test('an empty paragraph never changes height while the skeleton hands off', async ({ page }) => {
+    await bootSlow(page);
+    await expect(page.getByTestId('loading-skeleton')).toBeVisible();
+
+    const heights = await page.evaluate(() => new Promise<number[]>((resolve) => {
+      const seen: number[] = [];
+      const sample = (): void => {
+        const empty = document.querySelector('[data-blok-id="empty"] [contenteditable]');
+
+        if (empty !== null) {
+          seen.push(empty.getBoundingClientRect().height);
+        }
+
+        if (document.querySelector('[data-blok-testid="loading-skeleton"]') === null && seen.length > 0) {
+          resolve(seen);
+
+          return;
+        }
+        requestAnimationFrame(sample);
+      };
+
+      window.releaseLoad?.([
+        { id: 'full', type: 'paragraph', data: { text: 'One line' } },
+        { id: 'empty', type: 'paragraph', data: { text: '' } },
+      ]);
+      requestAnimationFrame(sample);
+    }));
+
+    const full = await page.locator('[data-blok-id="full"] [contenteditable="true"]')
+      .evaluate(el => el.getBoundingClientRect().height);
+
+    expect(new Set(heights)).toEqual(new Set([full]));
+  });
+
   test('reduced motion: bars do not animate', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await bootSlow(page);

@@ -853,10 +853,7 @@ export class UI extends Module<UINodes> {
        */
       this.nodes.wrapper.setAttribute(DATA_ATTR.nativeSelection, '');
     }
-    this.nodes.redactor = $.make('div', [
-      // Firefox empty contenteditable fix
-      '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
-    ]);
+    this.nodes.redactor = $.make('div');
     this.nodes.redactor.setAttribute(DATA_ATTR.redactor, '');
     this.nodes.redactor.setAttribute('data-blok-testid', 'redactor');
 

@@ -705,6 +705,14 @@
   --_blok-callout-heading-size: var(--blok-heading-3-font-size, 1.25rem);
 }
 
+/* An empty editable gets its line only while the browser treats it as editable:
+   Chrome drops it under `inert` (the boot skeleton) and does not redo the layout
+   after. A zero-width character keeps the line, so an empty block never changes
+   height. Read-only blocks are left out: paragraph and quote put a <br> there. */
+[data-blok-redactor] [contenteditable]:not([contenteditable="false"]):empty::after {
+  content: "\feff";
+}
+
 /**
  * Table cell block minimum height.
  * Keeps .blok-block inside table cells above 1.6em so empty non-contenteditable

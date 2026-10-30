@@ -3184,6 +3184,10 @@
   --_blok-callout-heading-size: var(--blok-heading-3-font-size, 1.25rem);
 }
 
+[data-blok-redactor] [contenteditable]:not([contenteditable="false"]):empty::after {
+  content: "\feff";
+}
+
 [data-blok-table-cell-blocks] .blok-block {
 
 }

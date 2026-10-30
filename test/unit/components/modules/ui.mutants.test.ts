@@ -362,9 +362,6 @@ describe('UI module — mutants', () => {
 
       expect(nodes.redactor.getAttribute('data-blok-redactor')).toBe('');
       expect(nodes.redactor.getAttribute('data-blok-testid')).toBe('redactor');
-      expect(nodes.redactor.classList.contains(
-        '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
-      )).toBe(true);
 
       expect(nodes.bottomZone.getAttribute('data-blok-bottom-zone')).toBe('');
       expect(nodes.bottomZone.getAttribute('data-blok-testid')).toBe('bottom-zone');

@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { blocksAsHtml } from '../helpers/saved-as-html';
 
@@ -217,6 +217,37 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-input')).toBeFocused();
       await expect(page.getByRole('search')).toBeVisible();
       await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: true });
+    });
+
+    test('keys typed while the bar code loads go to the find field, not the document', async ({ page }) => {
+      const held: string[] = [];
+      const gate: { release: () => void } = { release: () => undefined };
+      const released = new Promise<void>((resolve) => {
+        gate.release = resolve;
+      });
+
+      const kitChunk = /\/find-kit-[^/]*\.mjs$/;
+
+      await page.route(kitChunk, async (route) => {
+        held.push(route.request().url());
+        await released;
+        await route.continue();
+      });
+      // The shared page may hold the bar code from an earlier test; a new realm loads it again.
+      await page.goto(TEST_PAGE_URL);
+      await page.waitForFunction(() => typeof window.Blok === 'function');
+      await createEditor(page, paragraphs('alpha', 'beta'));
+      await focusParagraph(page, 'alpha');
+      await page.keyboard.press(FIND_KEY);
+      await expect.poll(() => held.length).toBe(1);
+      await page.keyboard.type('beta');
+      gate.release();
+
+      await expect(page.getByTestId('find-input')).toBeFocused();
+      await expect(page.getByTestId('find-input')).toHaveValue('beta');
+      await waitPastOnChangeBatch(page);
+      expect(await savedTexts(page)).toEqual(['alpha', 'beta']);
+      await page.unroute(kitChunk);
     });
 
     test('a second Mod+F inside the find bar stays in the bar and selects the query', async ({ page }) => {
@@ -1935,6 +1966,8 @@ test.describe('find in page', () => {
         await createEditor(page, paragraphs('hello there'), { config: { find: { placement }, i18n: { direction: dir } } });
         await focusParagraph(page, 'hello there');
         await page.keyboard.press(FIND_KEY);
+        // The bar code loads on the first open; no animation runs until it arrives.
+        await expect(page.getByTestId('find-input')).toBeFocused();
         await settle(page);
 
         const fit = await page.evaluate(() => {

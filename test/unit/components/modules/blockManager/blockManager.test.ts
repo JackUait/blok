@@ -59,9 +59,10 @@ const createBlockManager = (): {
   blockManager.state = blokStub as unknown as BlokModules;
 
   // Patch the private `operations` field with a minimal stub.
-  // transactForTool only reads/writes suppressStopCapturing.
+  // transactForTool reads/writes suppressStopCapturing and runs the body through withDevChecksAtEnd.
   (blockManager as unknown as Record<string, unknown>).operations = {
     suppressStopCapturing: false,
+    withDevChecksAtEnd: (fn: () => void): void => fn(),
   };
 
   return {

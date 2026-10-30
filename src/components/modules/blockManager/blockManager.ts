@@ -1238,7 +1238,11 @@ export class BlockManager extends Module {
     this.beginToolTransaction();
 
     try {
-      fn();
+      if (this.operations === undefined) {
+        fn();
+      } else {
+        this.operations.withDevChecksAtEnd(fn);
+      }
     } finally {
       this.endToolTransaction();
     }

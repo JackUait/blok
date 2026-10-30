@@ -71,6 +71,12 @@ export class BlockOperations implements OperationsContext {
   /** Whether the running outermost operation hit the dev gate. */
   private treeOrderCheckPending = false;
 
+  /** Open {@link withDevChecksAtEnd} scopes. */
+  private devCheckScopeDepth = 0;
+
+  /** The last operation that hit the dev gate inside such a scope. */
+  private devCheckPendingContext: string | null = null;
+
   /**
    * @param dependencies - Required dependencies
    * @param repository - BlockRepository for block lookups
@@ -581,6 +587,37 @@ export class BlockOperations implements OperationsContext {
   }
 
   /**
+   * Runs `fn` with the dev gate deferred to its end: one check of the whole
+   * document instead of one per operation. A table row is a few dozen
+   * operations in one tool transaction, and each check walks every block.
+   * A violation still throws, from this call. Skipped when `fn` throws, so
+   * its own error is the one that surfaces.
+   * @param fn - the batch of operations
+   */
+  public withDevChecksAtEnd(fn: () => void): void {
+    this.devCheckScopeDepth++;
+
+    const done = { ok: false };
+
+    try {
+      fn();
+      done.ok = true;
+    } finally {
+      this.devCheckScopeDepth--;
+
+      const context = this.devCheckScopeDepth === 0 ? this.devCheckPendingContext : null;
+
+      if (context !== null) {
+        this.devCheckPendingContext = null;
+      }
+
+      if (context !== null && done.ok) {
+        this.assertHierarchyInvariantInDev(context);
+      }
+    }
+  }
+
+  /**
    * Runs one operation. When the outermost one returns (for an async one, when
    * its synchronous part returns), checks tree order if the dev gate ran.
    * Nested operations only mark the check: two-step paths inside one
@@ -662,6 +699,12 @@ export class BlockOperations implements OperationsContext {
     const env = resolveRuntimeEnv();
 
     if (env !== 'test' && env !== 'development') {
+      return;
+    }
+
+    if (this.devCheckScopeDepth > 0) {
+      this.devCheckPendingContext = context;
+
       return;
     }
 

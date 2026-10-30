@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 
 import { sendRequest, type HttpRequestOptions, type HttpResponse } from './http-client';
-import { startServerProcess } from './server-process';
+import { adoptChild, startServerProcess } from './server-process';
 
 const LOOPBACK_PLACEHOLDER = '127.0.0.1:0';
 // A port is allocated by binding and closing, so another worker's server can
@@ -29,6 +29,8 @@ export interface RunningServer {
 
 export interface RunServerCommandOptions {
   args: string[];
+  /** Test seam: defaults to BLOK_CONFORMANCE_SERVER. */
+  command?: string;
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
 }
@@ -97,13 +99,15 @@ function replaceListenPlaceholder(args: string[], port: number): string[] {
 }
 
 export function runServerCommand(options: RunServerCommandOptions): Promise<ServerCommandResult> {
-  const command = configuredServerCommand();
+  const command = options.command ?? configuredServerCommand();
 
   return new Promise((resolve, reject) => {
     const child = spawn(command, options.args, {
       env: { ...process.env, ...options.env },
       stdio: ['ignore', 'ignore', 'pipe'],
     });
+
+    adoptChild(child);
     let stderr = '';
 
     const timeoutMs = options.timeoutMs ?? 10_000;

@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
+import { onTestFinished } from 'vitest';
+
 import { sendRequest } from './http-client';
 
 const HEALTH_REQUEST_TIMEOUT_MS = 250;
@@ -85,6 +87,32 @@ async function killProcess(child: ChildProcess): Promise<void> {
   }
 }
 
+const liveChildren = new Set<ChildProcess>();
+
+// A worker that exits with servers still running would orphan them.
+process.once('exit', () => {
+  for (const child of liveChildren) {
+    child.kill('SIGKILL');
+  }
+});
+
+/**
+ * Kills the child when the test that started it finishes, whatever the
+ * outcome. A test that times out, or a host that should have refused its flags
+ * and started instead, would otherwise leave a server running after the suite.
+ * A child started outside a test (in beforeAll) is left to its afterAll.
+ */
+export function adoptChild(child: ChildProcess): void {
+  liveChildren.add(child);
+  child.once('exit', () => liveChildren.delete(child));
+
+  try {
+    onTestFinished(() => killProcess(child));
+  } catch {
+    // Not inside a running test.
+  }
+}
+
 async function healthFailure(baseUrl: string): Promise<string | undefined> {
   try {
     const health = await sendRequest('GET', new URL('/health', baseUrl), {
@@ -102,6 +130,7 @@ export async function startServerProcess(options: ServerProcessOptions): Promise
     env: options.env,
     stdio: ['ignore', 'ignore', 'pipe'],
   });
+  adoptChild(child);
   let launchError: Error | undefined;
   let stderr = '';
 

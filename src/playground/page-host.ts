@@ -507,6 +507,21 @@ export class PointerWatch {
   }
 }
 
+/**
+ * The page tool's `create`. A page from the "@" menu brings its title, and a
+ * parent when the user chose one; else it goes under `shownPageId`.
+ */
+export const createHostPage = (
+  pages: PageRegistry,
+  init: { pageId: string; document?: OutputData; title?: string; parentId?: string },
+  shownPageId: string | null
+): void => {
+  pages.create(init.pageId, init.parentId ?? shownPageId, init.document);
+  if (init.title !== undefined && init.title !== '') {
+    pages.setTitle(init.pageId, init.title);
+  }
+};
+
 export const hasPointer = (blocks: OutputBlockData[], pageId: string): boolean => pointedPages(blocks).includes(pageId);
 
 /** A page block for `pageId`, to put back into its parent on restore. */

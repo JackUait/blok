@@ -1821,7 +1821,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
+    import { PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, PointerWatch, createHostPage, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
     import { playgroundModel, playgroundWebTools } from './src/playground/ai-model.ts';
@@ -2038,11 +2038,13 @@
             resolve: (id) => pages.info(id),
             subscribe: (id, onChange) => pages.subscribe(id, onChange),
             databasePages: true,
-            create: ({ pageId: id, document }) => {
-              createdHere.add(id);
-              pages.create(id, pageId, document);
+            // "@" offers New page: createHostPage stores the title and parent.
+            createFromMention: true,
+            create: (init) => {
+              createdHere.add(init.pageId);
+              createHostPage(pages, init, pageId);
               // Under collaboration the room is the page's body: its first connect seeds these.
-              if (document !== undefined) heldDocuments.hold(id, document.blocks);
+              if (init.document !== undefined) heldDocuments.hold(init.pageId, init.document.blocks);
             },
             preview: (id) => pages.get(id)?.blocks,
             // Ask AI reads and writes sub-pages through these.

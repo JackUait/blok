@@ -7,6 +7,7 @@ import {
   ROOT_STORAGE_KEY,
   PageRegistry,
   PointerWatch,
+  createHostPage,
   keepPageHeaderAligned,
   pointerBlock,
   renderPageHeader,
@@ -167,6 +168,19 @@ describe('PageRegistry', () => {
     pages.create('tasks', 'guide', { title: 'Tasks', blocks: [database] });
 
     expect(pages.get('tasks')).toMatchObject({ title: 'Tasks', parentId: 'guide', blocks: [database] });
+  });
+
+  it('creates a page from the page tool: titled, under the chosen parent or else the page shown', () => {
+    const pages = new PageRegistry(seed());
+
+    createHostPage(pages, { pageId: 'sub', title: 'Plan' }, 'guide');
+    createHostPage(pages, { pageId: 'in', title: 'Notes', parentId: 'keys' }, 'guide');
+    createHostPage(pages, { pageId: 'blank' }, null);
+
+    expect(pages.get('sub')).toMatchObject({ title: 'Plan', parentId: 'guide' });
+    expect(pages.get('in')).toMatchObject({ title: 'Notes', parentId: 'keys' });
+    expect(pages.get('blank')).toMatchObject({ title: '', parentId: null });
+    expect(pages.info('in')?.path?.slice(1)).toEqual(['Guide', 'Keys']);
   });
 
   it('keeps a locally created page after its first storage write fails', () => {
@@ -575,6 +589,19 @@ describe('page trash', () => {
     new PointerWatch(pages).observe([pointer('keys')]);
 
     expect(pages.trashedIn('keys')).toBeNull();
+  });
+
+  it('never trashes a page made from an "@" mention: no page block ever pointed at it', () => {
+    const pages = new PageRegistry(seed());
+    const watch = new PointerWatch(pages);
+    const mention = { id: 'm', type: 'paragraph', data: { text: 'See <a data-blok-page-id="plan">Page</a>' } };
+
+    createHostPage(pages, { pageId: 'plan', title: 'Plan' }, 'guide');
+    watch.observe([para]);
+    watch.observe([mention]);
+    watch.observe([]);
+
+    expect(pages.trashedIn('plan')).toBeNull();
   });
 
   it('puts a sub-page in trash with the page that holds it', () => {

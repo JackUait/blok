@@ -140,7 +140,8 @@ test.describe('Adding rows and columns keeps them in view', () => {
 
     await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2);
     await page.mouse.down();
-    await page.mouse.move(modalBox.x + modalBox.width - 2, bar.y + bar.height / 2, { steps: 8 });
+    // Past the modal, to the window edge: the drag must first outgrow the modal to clip the grid.
+    await page.mouse.move((page.viewportSize()?.width ?? modalBox.x + modalBox.width) - 2, bar.y + bar.height / 2, { steps: 8 });
     const parked = await columns.count();
 
     await expect.poll(() => columns.count(), { timeout: 5_000 }).toBeGreaterThan(parked + 3);

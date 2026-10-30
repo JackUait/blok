@@ -398,6 +398,29 @@ test.describe('Table full screen', () => {
     }
   });
 
+  test('the table sits close to the header and to the modal sides', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    const gaps = await modal.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const header = el.querySelector('[data-blok-table-fullscreen-header]')?.getBoundingClientRect();
+      const scroller = el.querySelector('[data-blok-table-scroll]')?.getBoundingClientRect();
+
+      return header === undefined || scroller === undefined
+        ? null
+        : { top: scroller.top - header.bottom, start: scroller.left - box.left, end: box.right - scroller.right };
+    });
+
+    expect(gaps).not.toBeNull();
+    expect(gaps?.top).toBeLessThanOrEqual(12);
+    expect(gaps?.start).toBeLessThanOrEqual(16);
+    // The end also holds the add-column strip (the tool root's pe-5).
+    expect(gaps?.end).toBeLessThanOrEqual(16 + 20);
+  });
+
   test('with reduced motion the modal opens and closes at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await createBlok(page);

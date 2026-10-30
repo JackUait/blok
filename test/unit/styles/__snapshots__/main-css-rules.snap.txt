@@ -3406,7 +3406,7 @@
   max-width: none;
   margin: 0;
   transition: none;
-  padding: calc(var(--blok-space-14) + var(--blok-space-6)) var(--blok-space-10) var(--blok-space-10);
+  padding: calc(var(--blok-space-14) + var(--blok-space-1)) var(--blok-space-4) var(--blok-space-10);
   overflow: auto;
   background-color: var(--blok-bg-primary);
   border-radius: var(--blok-radius-dialog);

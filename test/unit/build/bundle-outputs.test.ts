@@ -1073,6 +1073,21 @@ describe('the database template builder loads when a template is picked', () => 
     const holders = chunkFiles().filter((file) => !basename(file).startsWith('message-keys-') && BUILDER_FINGERPRINT.test(readFileSync(file, 'utf-8')))
     expect(holders).toHaveLength(1)
   })
+
+  it('the builder imports nothing from the Database tool chunk', async () => {
+    // esbuild treats an import() target as an entry. A builder that uses the
+    // Database chunk makes that chunk live, and a Paragraph-only consumer then
+    // loads it at startup.
+    await initLexer()
+    const builder = chunkFiles().find((file) => basename(file).startsWith('database-starter-build-'))
+    expect(builder).toBeDefined()
+    const [imports] = parseModule(readFileSync(builder ?? '', 'utf-8'))
+    const databaseTool = imports
+      .filter((record) => record.n?.startsWith('.') === true)
+      .map((record) => resolve(dirname(builder ?? ''), record.n ?? ''))
+      .filter((file) => readFileSync(file, 'utf-8').includes('data-blok-database-layout-pool'))
+    expect(databaseTool.map((file) => basename(file))).toEqual([])
+  })
 })
 
 describe('a consumer that imports one tool gets only that tool (tree shaking)', () => {

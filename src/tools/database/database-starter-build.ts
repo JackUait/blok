@@ -2,14 +2,16 @@ import { positionBetween } from '../../shared/database/positions';
 import { newView, createDefaultStatusOptions, createDefaultStatusSettings } from '../../shared/database/schema-ops';
 import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 import { ME_FILTER_VALUE } from './database-query';
-import { DATABASE_STARTERS } from './database-starters';
-import type { StarterBodyBlock, StarterBuild, StarterBuildOptions, StarterChoice, StarterId, StarterRow } from './database-starters';
+import type { StarterBodyBlock, StarterBuild, StarterBuildOptions, StarterBuilder, StarterChoice, StarterId, StarterMeta, StarterRow } from './database-starters';
 import type { DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue, ViewType } from './types';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 
 /*
  * Builds a template's schema, views and rows. It runs only after the user
  * picks a template, so the Database tool loads it then (see loadStarterBuilder).
+ * The template list comes in as an argument: a value imported from the Database
+ * tool's chunk would make esbuild load that chunk for every tools.mjs consumer
+ * (test/unit/build/bundle-outputs.test.ts).
  */
 const picked = (list: StarterChoice[], chosen: ReadonlySet<string> | undefined): Set<string> =>
   new Set(list.filter((c) => (chosen === undefined ? c.on : chosen.has(c.id))).map((c) => c.id));
@@ -17,10 +19,10 @@ const picked = (list: StarterChoice[], chosen: ReadonlySet<string> | undefined):
 const MDY = { dateFormat: 'month_day_year', timeFormat: '12_hour' } as const;
 const FULL = { dateFormat: 'full', timeFormat: '12_hour' } as const;
 
-/** Builds one template's schema, views, rows and row bodies. */
-export const buildStarter = (id: StarterId, options: StarterBuildOptions): StarterBuild => {
+/** The template builder over `starters`, the list of DATABASE_STARTERS. */
+export const createStarterBuilder = (starters: readonly StarterMeta[]): StarterBuilder => (id: StarterId, options: StarterBuildOptions): StarterBuild => {
   const { t, newId } = options;
-  const meta = DATABASE_STARTERS.find((s) => s.id === id) ?? DATABASE_STARTERS[0];
+  const meta = starters.find((s) => s.id === id) ?? starters[0];
   const features = picked(meta.features, options.features);
   const views = picked(meta.views, options.views);
   const schema: PropertyDefinition[] = [];

@@ -1,5 +1,4 @@
 import type { DatabaseIcon, DatabaseRowData, DatabaseStarterId, DatabaseViewConfig, PropertyDefinition, PropertyType, ViewType } from './types';
-import type { buildStarter } from './database-starter-build';
 
 /**
  * The database templates of Notion's "New database" panel and its "More
@@ -632,11 +631,14 @@ export const hiddenPropertyCount = (made: StarterBuild, first = made.views[0]): 
   return made.schema.filter((p, index) => index > 0 && !first.visibleProperties.includes(p.id) && p.id !== first.groupBy).length;
 };
 
-const builderLoad: { pending: Promise<typeof buildStarter> | null } = { pending: null };
+/** Builds one template's schema, views, rows and row bodies. */
+export type StarterBuilder = (id: StarterId, options: StarterBuildOptions) => StarterBuild;
+
+const builderLoad: { pending: Promise<StarterBuilder> | null } = { pending: null };
 
 /** The template builder. A failed download is tried again by the next call. */
-export const loadStarterBuilder = (): Promise<typeof buildStarter> => {
-  builderLoad.pending ??= import('./database-starter-build').then((module) => module.buildStarter, (error: unknown) => {
+export const loadStarterBuilder = (): Promise<StarterBuilder> => {
+  builderLoad.pending ??= import('./database-starter-build').then((module) => module.createStarterBuilder(DATABASE_STARTERS), (error: unknown) => {
     builderLoad.pending = null;
     throw error;
   });

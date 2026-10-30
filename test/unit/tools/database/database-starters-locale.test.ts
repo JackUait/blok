@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { I18n } from '../../../../src/components/modules/i18n';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
-import { buildStarter } from '../../../../src/tools/database/database-starter-build';
+import { createStarterBuilder } from '../../../../src/tools/database/database-starter-build';
+import { DATABASE_STARTERS } from '../../../../src/tools/database/database-starters';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
+
+const buildStarter = createStarterBuilder(DATABASE_STARTERS);
 
 /** Days open builds its "N days" text from a localized pattern through Blok's own translator. */
 describe('Issue Tracking Days open in a non-English locale (research/33 §3.12)', () => {

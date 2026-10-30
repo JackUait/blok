@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
-import { buildStarter } from '../../../../src/tools/database/database-starter-build';
+import { createStarterBuilder } from '../../../../src/tools/database/database-starter-build';
 import { DATABASE_STARTERS, suggestedStarters } from '../../../../src/tools/database/database-starters';
 import type { StarterBuild } from '../../../../src/tools/database/database-starters';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
+
+const buildStarter = createStarterBuilder(DATABASE_STARTERS);
 
 const dictionary: Record<string, string> = englishDictionary;
 const t = (key: string, vars: Record<string, string> = {}): string => {

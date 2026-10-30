@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
-import { buildStarter } from '../../../../src/tools/database/database-starter-build';
+import { createStarterBuilder } from '../../../../src/tools/database/database-starter-build';
 import { DATABASE_STARTERS, galleryStarters, hiddenPropertyCount } from '../../../../src/tools/database/database-starters';
 import type { StarterBuild, StarterId } from '../../../../src/tools/database/database-starters';
 import type { PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
 import { ME_FILTER_VALUE } from '../../../../src/tools/database/database-query';
+
+const buildStarter = createStarterBuilder(DATABASE_STARTERS);
 
 /** research/33 §3: the twelve "More templates" after Content Calendar, and Campaign / Content Calendar with every chip on. */
 

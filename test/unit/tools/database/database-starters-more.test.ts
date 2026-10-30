@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
-import { buildStarter } from '../../../../src/tools/database/database-starter-build';
+import { createStarterBuilder } from '../../../../src/tools/database/database-starter-build';
 import { DATABASE_STARTERS, galleryStarters, hiddenPropertyCount, suggestedStarters } from '../../../../src/tools/database/database-starters';
 import type { StarterBuild, StarterId } from '../../../../src/tools/database/database-starters';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
 import { renderCellValue } from '../../../../src/tools/database/cells/display';
+
+const buildStarter = createStarterBuilder(DATABASE_STARTERS);
 
 const dictionary: Record<string, string> = englishDictionary;
 const t = (key: string, vars: Record<string, string> = {}): string => {

@@ -52,8 +52,7 @@ import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import { planAiSetup } from './database-ai-setup';
 import { DATABASE_STARTERS, galleryStarters, loadStarterBuilder, suggestedStarters } from './database-starters';
-import type { StarterId, StarterMeta } from './database-starters';
-import type { buildStarter } from './database-starter-build';
+import type { StarterBuilder, StarterId, StarterMeta } from './database-starters';
 import { openStarterCustomize } from './database-starter-modal';
 import { openTemplateGallery } from './database-template-gallery';
 import type { StarterPicks } from './database-starter-modal';
@@ -1382,7 +1381,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** The template's schema, views, rows and row bodies, as one undo step. */
-  private createFromStarter(build: typeof buildStarter, id: StarterId, picks?: StarterPicks): void {
+  private createFromStarter(build: StarterBuilder, id: StarterId, picks?: StarterPicks): void {
     if (this.destroyed || this.readOnly || this.structureLocked()) return;
     const made = build(id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks });
     const oldSchema = this.model.getSchema();

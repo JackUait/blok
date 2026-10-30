@@ -227,7 +227,7 @@ func (c *Converter) ExtractTexts(ctx context.Context, documentJSON string, inclu
 // document to store. A list of the wrong length is a *TextCountError.
 func (c *Converter) InjectTexts(ctx context.Context, documentJSON string, texts []string, includeCode bool) (string, error) {
 	if texts == nil {
-		texts = []string{}
+		return "", &NullArgumentError{Name: "texts"}
 	}
 	input, err := textsRequest(documentJSON, texts, includeCode)
 	if err != nil {
@@ -283,8 +283,14 @@ func (c *Converter) PageIndex(ctx context.Context, documentJSON string) (PageInd
 
 // RemapPageDocument copies a page document under new block and page ids.
 // Maps that do not cover the document are an *UnmappedIDsError. A nil map
-// reads as empty.
+// is a *NullArgumentError.
 func (c *Converter) RemapPageDocument(ctx context.Context, documentJSON string, blockIDs, pageIDs map[string]string) (string, error) {
+	if blockIDs == nil {
+		return "", &NullArgumentError{Name: "blockIds"}
+	}
+	if pageIDs == nil {
+		return "", &NullArgumentError{Name: "pageIds"}
+	}
 	request := newEnvelope()
 	if err := request.document(documentJSON); err != nil {
 		return "", err
@@ -750,6 +756,9 @@ func titleRequest(documentJSON string) (string, error) {
 // pagesRequest builds the entries before parsing the document, as C# does,
 // so pageHref runs even for a document that then fails to parse.
 func pagesRequest(documentJSON string, pages map[string]*PageInfo, pageHref func(string) string, title bool) (string, error) {
+	if pages == nil {
+		return "", &NullArgumentError{Name: "pages"}
+	}
 	entries := newEnvelope()
 	for _, pageID := range sortedKeys(pages) {
 		entries.raw(pageID, pageEntry(pageID, pages[pageID], pageHref))

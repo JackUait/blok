@@ -52,7 +52,7 @@ func (e *ConversionError) Error() string {
 	case TimedOut:
 		return "Converting this document ran past the runtime's timeout."
 	case DocumentTooLarge:
-		return "Converting this document ran past the runtime's memory budget."
+		return "Converting this document ran past the runtime's per-call allocation budget."
 	}
 	return "The Blok runtime could not convert this document."
 }
@@ -66,6 +66,15 @@ type ArgumentError interface {
 	error
 	Param() string
 }
+
+// NullArgumentError is a nil map or list where C# throws
+// ArgumentNullException. The check runs before the document is read.
+type NullArgumentError struct{ Name string }
+
+func (e *NullArgumentError) Error() string { return "Value cannot be null." }
+
+// Param names the nil argument.
+func (e *NullArgumentError) Param() string { return e.Name }
 
 // TextCountError is a translation list whose length does not match the
 // document's translatable strings.

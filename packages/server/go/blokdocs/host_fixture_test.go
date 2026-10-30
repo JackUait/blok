@@ -95,6 +95,9 @@ func fixturePages(t *testing.T, c hostCase) map[string]*PageInfo {
 		NoAccess bool    `json:"noAccess"`
 	}
 	raw := arg[map[string]*page](t, c, "pages")
+	if raw == nil {
+		return nil
+	}
 	pages := map[string]*PageInfo{}
 	for id, p := range raw {
 		if p == nil {
@@ -194,7 +197,7 @@ func errorShape(err error) map[string]any {
 	var answer *AnswerError
 	switch {
 	case errors.As(err, &conversion):
-		return map[string]any{"kind": "conversion", "reason": conversion.Reason.String()}
+		return map[string]any{"kind": "conversion", "reason": conversion.Reason.String(), "message": conversion.Error()}
 	case errors.As(err, &argument):
 		return map[string]any{"kind": "argument", "param": argument.Param(), "message": argument.Error()}
 	case errors.As(err, &answer) && answer.NotJSON:

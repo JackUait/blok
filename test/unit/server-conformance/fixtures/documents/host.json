@@ -1151,7 +1151,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "DocumentTooLarge"
+        "reason": "DocumentTooLarge",
+        "message": "Converting this document ran past the runtime's per-call allocation budget."
       }
     }
   },
@@ -1188,7 +1189,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1207,7 +1209,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1226,7 +1229,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1244,7 +1248,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1262,7 +1267,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1280,7 +1286,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1299,7 +1306,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1318,7 +1326,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1337,7 +1346,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1356,7 +1366,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1375,7 +1386,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1394,7 +1406,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1412,7 +1425,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1430,7 +1444,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1448,7 +1463,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1467,7 +1483,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1486,7 +1503,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1505,7 +1523,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1523,7 +1542,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1541,7 +1561,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1559,7 +1580,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1577,7 +1599,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1595,7 +1618,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1613,7 +1637,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1631,7 +1656,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1649,7 +1675,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1667,7 +1694,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1685,7 +1713,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1703,7 +1732,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1721,7 +1751,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1740,7 +1771,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1759,7 +1791,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1778,7 +1811,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1796,7 +1830,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1814,7 +1849,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1832,7 +1868,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1852,7 +1889,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1872,7 +1910,8 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
       }
     }
   },
@@ -1892,7 +1931,298 @@
     "expect": {
       "error": {
         "kind": "conversion",
-        "reason": "InvalidDocument"
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
+      }
+    }
+  },
+  {
+    "name": "runtime failure passes through, TimedOut",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "error": "TimedOut"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "TimedOut",
+        "message": "Converting this document ran past the runtime's timeout."
+      }
+    }
+  },
+  {
+    "name": "runtime failure passes through, Unknown",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "error": "Unknown"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "Unknown",
+        "message": "The Blok runtime could not convert this document."
+      }
+    }
+  },
+  {
+    "name": "runtime failure passes through, InvalidDocument",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "runtime": {
+      "error": "InvalidDocument"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "conversion",
+        "reason": "InvalidDocument",
+        "message": "This is not a usable Blok document."
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithPages, null pages",
+    "method": "ToMarkdownWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pages",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "ToMarkdownWithTitleAndPages, null pages",
+    "method": "ToMarkdownWithTitleAndPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pages",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithPages, null pages",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pages",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithTitleAndPages, null pages",
+    "method": "ToHtmlWithTitleAndPages",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "pages": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pages",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "ToHtmlWithPages, null pages and not JSON",
+    "method": "ToHtmlWithPages",
+    "args": {
+      "document": "{\"blocks\":",
+      "pages": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pages",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "InjectTexts, null texts",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "texts": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "texts",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "InjectTexts, null texts and not JSON",
+    "method": "InjectTexts",
+    "args": {
+      "document": "{\"blocks\":",
+      "texts": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "texts",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, null blockIds",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": null,
+      "pageIds": {}
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, null pageIds",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": {},
+      "pageIds": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pageIds",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, both null",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"time\":1.0,\"big\":9007199254740993,\"blocks\":[{\"id\":\"h1\",\"type\":\"header\",\"data\":{\"text\":\"Café <b>x</b> & \\\"q\\\" 😀\",\"level\":2}}]}",
+      "blockIds": null,
+      "pageIds": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "blockIds",
+        "message": "Value cannot be null."
+      }
+    }
+  },
+  {
+    "name": "RemapPageDocument, null pageIds and not JSON",
+    "method": "RemapPageDocument",
+    "args": {
+      "document": "{\"blocks\":",
+      "blockIds": {},
+      "pageIds": null
+    },
+    "runtime": {
+      "answer": "unused"
+    },
+    "request": null,
+    "hrefCalls": null,
+    "expect": {
+      "error": {
+        "kind": "argument",
+        "param": "pageIds",
+        "message": "Value cannot be null."
       }
     }
   }

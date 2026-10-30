@@ -98,7 +98,7 @@ public sealed class HostEnvelopeFixtureTests
     }
     catch (BlokDocumentConversionException exception)
     {
-      expect = Error("conversion", ("reason", exception.Reason.ToString()));
+      expect = Error("conversion", ("reason", exception.Reason.ToString()), ("message", exception.Message));
     }
     catch (ArgumentException exception)
     {
@@ -153,20 +153,20 @@ public sealed class HostEnvelopeFixtureTests
     return method switch
     {
       "ToMarkdown" => Shape(await converter.ToMarkdownAsync(document!)),
-      "ToMarkdownWithPages" => Shape(await converter.ToMarkdownAsync(document!, Pages(args), href)),
+      "ToMarkdownWithPages" => Shape(await converter.ToMarkdownAsync(document!, Pages(args)!, href)),
       "ToMarkdownWithTitle" => Shape(await converter.ToMarkdownWithTitleAsync(document!)),
-      "ToMarkdownWithTitleAndPages" => Shape(await converter.ToMarkdownWithTitleAsync(document!, Pages(args), href)),
+      "ToMarkdownWithTitleAndPages" => Shape(await converter.ToMarkdownWithTitleAsync(document!, Pages(args)!, href)),
       "ToHtml" => await converter.ToHtmlAsync(document!),
-      "ToHtmlWithPages" => await converter.ToHtmlAsync(document!, Pages(args), href),
+      "ToHtmlWithPages" => await converter.ToHtmlAsync(document!, Pages(args)!, href),
       "ToHtmlWithTitle" => await converter.ToHtmlWithTitleAsync(document!),
-      "ToHtmlWithTitleAndPages" => await converter.ToHtmlWithTitleAsync(document!, Pages(args), href),
+      "ToHtmlWithTitleAndPages" => await converter.ToHtmlWithTitleAsync(document!, Pages(args)!, href),
       "ToPlainText" => await converter.ToPlainTextAsync(document!, includeHidden),
       "ToPlainTextWithTitle" => await converter.ToPlainTextWithTitleAsync(document!, includeHidden),
       "ToPlainTextWithReport" => JsonSerializer.SerializeToNode(await converter.ToPlainTextWithReportAsync(document!, includeHidden)),
       "ExtractTexts" => JsonSerializer.SerializeToNode(await converter.ExtractTextsAsync(document!, includeCode)),
-      "InjectTexts" => await converter.InjectTextsAsync(document!, Texts(args), includeCode),
+      "InjectTexts" => await converter.InjectTextsAsync(document!, Texts(args)!, includeCode),
       "PageIndex" => JsonSerializer.SerializeToNode(await converter.GetPageIndexAsync(document!)),
-      "RemapPageDocument" => await converter.RemapPageDocumentAsync(document!, Ids(args, "blockIds"), Ids(args, "pageIds")),
+      "RemapPageDocument" => await converter.RemapPageDocumentAsync(document!, Ids(args, "blockIds")!, Ids(args, "pageIds")!),
       "Validate" => Shape(await converter.ValidateAsync(document)),
       "FromMarkdown" => Shape(await converter.FromMarkdownAsync(args["text"]!.GetValue<string>())),
       "FromHtml" => Shape(await converter.FromHtmlAsync(args["text"]!.GetValue<string>())),
@@ -193,11 +193,16 @@ public sealed class HostEnvelopeFixtureTests
     ["isFullyUnderstood"] = validation.IsFullyUnderstood,
   };
 
-  private static Dictionary<string, BlokPageInfo?> Pages(JsonObject args)
+  private static Dictionary<string, BlokPageInfo?>? Pages(JsonObject args)
   {
+    if (args["pages"] is not JsonObject given)
+    {
+      return null;
+    }
+
     var pages = new Dictionary<string, BlokPageInfo?>();
 
-    foreach (var (pageId, raw) in args["pages"]!.AsObject())
+    foreach (var (pageId, raw) in given)
     {
       if (raw is null)
       {
@@ -238,11 +243,11 @@ public sealed class HostEnvelopeFixtureTests
     };
   }
 
-  private static string[] Texts(JsonObject args) =>
-      [.. args["texts"]!.AsArray().Select(text => text!.GetValue<string>())];
+  private static string[]? Texts(JsonObject args) =>
+      args["texts"] is JsonArray texts ? [.. texts.Select(text => text!.GetValue<string>())] : null;
 
-  private static Dictionary<string, string> Ids(JsonObject args, string name) =>
-      args[name]!.AsObject().ToDictionary(pair => pair.Key, pair => pair.Value!.GetValue<string>());
+  private static Dictionary<string, string>? Ids(JsonObject args, string name) =>
+      args[name]?.AsObject().ToDictionary(pair => pair.Key, pair => pair.Value!.GetValue<string>());
 
   private sealed class FixtureRuntime(JsonObject script) : IBlokRuntime
   {

@@ -350,6 +350,25 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
+  /// Only the string that cannot be written is dropped, as undefined is: the
+  /// rest of the wire value survives.
+  /// </summary>
+  [Fact]
+  public void ExportDropsOnlyTheLoneSurrogateStringInsideAWireJsonValue()
+  {
+    var doc = new YDoc();
+
+    WriteBlock(doc, "n1");
+    ApplyForeign(
+        doc,
+        Keyed(0, DataOf(doc, "n1"), "mixed", new ContentEmbed("{\"a\":\"\\ud800\",\"b\":[1,\"\\udc00\"]}")));
+
+    var block = Assert.Single(RichTextRuntime.Export(doc));
+
+    Assert.Equal("""{"b":[1,null]}""", block!["data"]!["mixed"]!.ToJsonString());
+  }
+
+  /// <summary>
   /// The same agreement at the seam: a payload the decoder accepted has to
   /// survive the export walk, or the record is never written again.
   /// </summary>

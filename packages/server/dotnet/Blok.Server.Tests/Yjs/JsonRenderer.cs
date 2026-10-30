@@ -87,11 +87,6 @@ internal static class JsonRenderer
       case AnyArray items:
         return RenderAnyArray(items);
 
-      case JsonNode node:
-        // Content that kept the wire's raw JSON; already in the shape the
-        // Node renderer produces for a plain value.
-        return node.DeepClone();
-
       // JSON.stringify of a Y.Doc is {}, which is what the Node renderer and
       // the converter both write for a subdoc.
       case YSubdoc:

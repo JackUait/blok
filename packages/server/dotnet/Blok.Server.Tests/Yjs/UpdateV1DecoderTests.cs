@@ -335,6 +335,23 @@ public sealed class UpdateV1DecoderTests
     Assert.NotNull(decoded.Structs.Values.Single()[0].Content!.GetContent()[0]);
   }
 
+  /// <summary>
+  /// Wire JSON reads back as JSON.parse would: engine values, an escaped lone
+  /// surrogate kept as one unit. A System.Text.Json node accepts it at parse
+  /// and throws on the first read, so every reader had to guard it.
+  /// </summary>
+  [Fact]
+  public void WireJsonReadsBackAsEngineValuesEvenWithALoneSurrogate()
+  {
+    var embed = new ContentEmbed("\"\\ud800\"").GetContent()[0];
+    var legacy = new ContentJson(["{\"a\":\"\\ud800\"}", "[1,2]", "undefined"]).GetContent();
+
+    Assert.Equal("\ud800", Assert.IsType<string>(embed));
+    Assert.Equal("{\"a\":\"\\ud800\"}", JsJson.Stringify(Assert.IsType<AnyObject>(legacy[0])));
+    Assert.Equal("[1,2]", JsJson.Stringify(Assert.IsType<AnyArray>(legacy[1])));
+    Assert.Same(YUndefined.Instance, legacy[2]);
+  }
+
   [Fact]
   public void DeleteSetSortsMergesAndWritesClientsDescending()
   {

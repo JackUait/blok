@@ -4199,6 +4199,12 @@ internal static class YDocConverter
 
           return true;
 
+        // Only wire JSON (refs 2 and 5) can carry a lone surrogate: the
+        // varstring read refuses invalid UTF-8. System.Text.Json would write
+        // it as U+FFFD, so it is dropped as undefined is.
+        case string text when HasLoneSurrogate(text):
+          return false;
+
         case string text:
           plain = JsonValue.Create(text);
 
@@ -4233,12 +4239,6 @@ internal static class YDocConverter
 
           return true;
 
-        // Wire refs 2 and 5 hand back parsed JSON. No Blok client writes
-        // either, but a legacy or non-JS peer does, and the client reads them
-        // as ordinary values.
-        case JsonNode node:
-          return TryReadWireJson(node, out plain);
-
         case YUndefined:
           return false;
 
@@ -4260,28 +4260,21 @@ internal static class YDocConverter
       return result;
     }
 
-    /// <summary>
-    /// A wire JSON value, materialised now rather than when the export is
-    /// written. System.Text.Json parses lazily, and it refuses to materialise
-    /// a string a browser can legitimately put on the wire — an unpaired
-    /// surrogate, which JSON.stringify escapes rather than drops. Left lazy,
-    /// that failure lands in the save call, outside every guard here, and
-    /// costs the whole record rather than the one value.
-    /// </summary>
-    private static bool TryReadWireJson(JsonNode node, out JsonNode? plain)
+    private static bool HasLoneSurrogate(string text)
     {
-      plain = null;
-
-      try
+      for (var index = 0; index < text.Length; index++)
       {
-        plain = JsonNode.Parse(node.ToJsonString(), null, YContent.JsonLimits);
-      }
-      catch (InvalidOperationException)
-      {
-        return false;
+        if (char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+        {
+          index++;
+        }
+        else if (char.IsSurrogate(text[index]))
+        {
+          return true;
+        }
       }
 
-      return true;
+      return false;
     }
 
     /// <summary>

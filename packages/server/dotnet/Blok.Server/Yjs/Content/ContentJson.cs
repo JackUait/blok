@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 namespace Blok.Server.Yjs;
 
 /// <summary>
@@ -20,15 +18,17 @@ internal sealed class ContentJson(IReadOnlyList<string> values) : YContent
   internal IReadOnlyList<string> Values { get; private set; } = values;
 
   /// <summary>
-  /// Parsed on read only. 'undefined' is the sentinel yjs writes for a value
-  /// JSON cannot hold, so it reads back as undefined rather than as a string.
+  /// Parsed on read only, as JSON.parse would (a System.Text.Json node throws
+  /// on a lone surrogate the decoder accepted). 'undefined' is the sentinel
+  /// yjs writes for a value JSON cannot hold, so it reads back as undefined
+  /// rather than as a string.
   /// </summary>
   public override IReadOnlyList<object?> GetContent()
   {
     return Values
         .Select(value => value == "undefined"
             ? YUndefined.Instance
-            : (object?)JsonNode.Parse(value, null, JsonLimits))
+            : JsJson.Parse(value))
         .ToArray();
   }
 

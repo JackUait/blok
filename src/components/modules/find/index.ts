@@ -276,7 +276,8 @@ export class Find extends Module {
     const pending: PendingOpen = { replace: withReplace, start: this.openStart(), typed: '', keysListener: undefined };
 
     this.pending = pending;
-    pending.keysListener = this.listeners.on(document, 'keydown', this.onPendingKeydown, true);
+    // Window capture runs before the editor's own document capture listener, which takes Escape.
+    pending.keysListener = this.listeners.on(window, 'keydown', this.onPendingKeydown, true);
 
     return loadKit().then((loaded) => {
       if (this.pending !== pending) {

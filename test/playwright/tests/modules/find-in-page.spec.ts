@@ -219,16 +219,17 @@ test.describe('find in page', () => {
       await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: true });
     });
 
-    test('keys typed while the bar code loads go to the find field, not the document', async ({ page }) => {
+    const KIT_CHUNK = /\/find-kit-[^/]*\.mjs$/;
+
+    /** Hold the find bar code back on a fresh page; call the result to let it through. */
+    const holdFindCode = async (page: Page): Promise<{ held: string[]; release: () => void }> => {
       const held: string[] = [];
       const gate: { release: () => void } = { release: () => undefined };
       const released = new Promise<void>((resolve) => {
         gate.release = resolve;
       });
 
-      const kitChunk = /\/find-kit-[^/]*\.mjs$/;
-
-      await page.route(kitChunk, async (route) => {
+      await page.route(KIT_CHUNK, async (route) => {
         held.push(route.request().url());
         await released;
         await route.continue();
@@ -236,18 +237,49 @@ test.describe('find in page', () => {
       // The shared page may hold the bar code from an earlier test; a new realm loads it again.
       await page.goto(TEST_PAGE_URL);
       await page.waitForFunction(() => typeof window.Blok === 'function');
+
+      return { held, release: () => gate.release() };
+    };
+
+    test('keys typed while the bar code loads go to the find field, not the document', async ({ page }) => {
+      const { held, release } = await holdFindCode(page);
+
       await createEditor(page, paragraphs('alpha', 'beta'));
       await focusParagraph(page, 'alpha');
       await page.keyboard.press(FIND_KEY);
       await expect.poll(() => held.length).toBe(1);
       await page.keyboard.type('beta');
-      gate.release();
+      release();
 
       await expect(page.getByTestId('find-input')).toBeFocused();
       await expect(page.getByTestId('find-input')).toHaveValue('beta');
       await waitPastOnChangeBatch(page);
       expect(await savedTexts(page)).toEqual(['alpha', 'beta']);
-      await page.unroute(kitChunk);
+      await page.unroute(KIT_CHUNK);
+    });
+
+    test('Escape while the bar code loads gives up the open and leaves the caret in the text', async ({ page }) => {
+      const { held, release } = await holdFindCode(page);
+
+      await createEditor(page, paragraphs('alpha'));
+      await focusParagraph(page, 'alpha');
+      await page.keyboard.press(FIND_KEY);
+      await expect.poll(() => held.length).toBe(1);
+      await page.keyboard.press('Escape');
+      // Wait for the chunk itself, so the bar would have opened by now.
+      const arrived = page.waitForResponse(KIT_CHUNK);
+
+      release();
+      await arrived;
+      await waitPastOnChangeBatch(page);
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      expect(await page.getByText('alpha', { exact: true }).evaluate((element) => {
+        const active = document.activeElement;
+
+        return active instanceof HTMLElement && active.isContentEditable && (active === element || active.contains(element));
+      })).toBe(true);
+      await page.unroute(KIT_CHUNK);
     });
 
     test('a second Mod+F inside the find bar stays in the bar and selects the query', async ({ page }) => {
@@ -1888,6 +1920,8 @@ test.describe('find in page', () => {
         document.body.appendChild(cover);
       });
       await page.keyboard.press(FIND_KEY);
+      // The bar code loads on the first open; no animation runs until it arrives.
+      await expect(page.getByTestId('find-input')).toBeFocused();
       // The bloom clips the bar to a dot at first, so its centre is not hit-testable until it lands.
       await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
 
@@ -2102,8 +2136,13 @@ test.describe('find in page', () => {
       await selectWord(page, 'pick this word', 5, 9);
       await page.keyboard.press(FIND_KEY);
 
-      const state = await page.evaluate(() => {
+      // Polled every frame: read on the first frame the bar is open, once its code has loaded.
+      const opened = await page.waitForFunction(() => {
         const bar = document.querySelector('[data-blok-find-bar]');
+
+        if (document.querySelector('[data-blok-find]:not([hidden])') === null) {
+          return null;
+        }
 
         return {
           running: document.querySelector('[data-blok-find]')?.getAnimations({ subtree: true }).length ?? -1,
@@ -2111,7 +2150,8 @@ test.describe('find in page', () => {
           opacity: bar === null ? null : getComputedStyle(bar).opacity,
           clip: bar === null ? null : getComputedStyle(bar).clipPath,
         };
-      });
+      }, undefined, { polling: 'raf' });
+      const state: unknown = await opened.jsonValue();
 
       expect(state).toEqual({ running: 0, chips: 0, opacity: '1', clip: 'none' });
       await expect(page.getByTestId('find-input')).toHaveValue('this');

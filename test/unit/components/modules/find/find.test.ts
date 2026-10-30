@@ -229,6 +229,7 @@ describe('Find module', () => {
   });
 
   afterEach(() => {
+    vi.doUnmock(KIT_PATH);
     editors.splice(0).forEach(({ find }) => find.destroy());
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -298,6 +299,20 @@ describe('Find module', () => {
 
       expect(document.querySelector('[data-blok-find]:not([hidden])')).toBeNull();
       expect(press(redactor, { key: 'a', code: 'KeyA' }).defaultPrevented).toBe(false);
+    });
+
+    it('keeps Escape from the editor\'s own document listener while it loads', async () => {
+      const editorKeys = vi.fn();
+
+      document.addEventListener('keydown', editorKeys, true);
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(redactor, KEY_F);
+      press(redactor, { key: 'Escape', code: 'Escape' });
+      document.removeEventListener('keydown', editorKeys, true);
+      await settle();
+
+      expect(editorKeys.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual(['f']);
     });
 
     it('does not open in an editor destroyed while it loads', async () => {

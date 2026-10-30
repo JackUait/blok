@@ -20,8 +20,8 @@
     "date": "2026-10-18"
   },
   "/docs/agent-api": {
-    "hash": "2d3a0fde142a88d0",
-    "date": "2026-10-27"
+    "hash": "340097e99ef61e80",
+    "date": "2026-10-30"
   },
   "/docs/audio": {
     "hash": "b24af5f207524c40",
@@ -36,8 +36,8 @@
     "date": "2026-10-26"
   },
   "/docs/blocks-api": {
-    "hash": "e504b5036a278b9b",
-    "date": "2026-10-28"
+    "hash": "94a1870c4bcd3352",
+    "date": "2026-10-30"
   },
   "/docs/blok-editor": {
     "hash": "6f75015eb476bc78",
@@ -80,7 +80,7 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "bae9e8939f823d0b",
+    "hash": "661118d35fa4fb50",
     "date": "2026-10-30"
   },
   "/docs/core": {
@@ -352,8 +352,8 @@
     "date": "2026-10-18"
   },
   "/ru/docs/agent-api": {
-    "hash": "40c74ed0e23dd923",
-    "date": "2026-10-27"
+    "hash": "10591acaaa9d238f",
+    "date": "2026-10-30"
   },
   "/ru/docs/audio": {
     "hash": "6e78dc793dd15388",
@@ -368,8 +368,8 @@
     "date": "2026-10-26"
   },
   "/ru/docs/blocks-api": {
-    "hash": "3512ef2bd04e338e",
-    "date": "2026-10-28"
+    "hash": "16085e47e5254b9e",
+    "date": "2026-10-30"
   },
   "/ru/docs/blok-editor": {
     "hash": "5536bd3bdc5a817e",
@@ -412,7 +412,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "e2ee3791526d0a8b",
+    "hash": "2b359294a8c0ae50",
     "date": "2026-10-30"
   },
   "/ru/docs/core": {
@@ -668,7 +668,7 @@
     "date": "2026-09-08"
   },
   "/ru/server": {
-    "hash": "b7797677734725ef",
+    "hash": "81a5778727d2b6ae",
     "date": "2026-10-30"
   },
   "/ru/tools": {
@@ -676,7 +676,7 @@
     "date": null
   },
   "/server": {
-    "hash": "cda9ff8da6bff7d5",
+    "hash": "7658ca2b00fa3c54",
     "date": "2026-10-30"
   },
   "/tools": {

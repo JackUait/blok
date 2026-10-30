@@ -8,6 +8,7 @@ Branch `go/documents-runtime`. Ledger: `documents-runtime.md`. Read this first i
 |---|---|---|
 | `test/unit/server-conformance/fixtures/documents/looks-like-a-document.json` | xunit `LooksLikeADocumentFixtureTests`, Go `blokdocs` | D5, and D27's "non-document" half |
 | `test/unit/server-conformance/fixtures/documents/host.json` | xunit `HostEnvelopeFixtureTests`, Go `blokdocs` | D10-D29: exact request bytes, href calls, result shape, error kind/reason/param/message |
+| `test/unit/server-conformance/fixtures/documents/ops.json` (F-OPS, 397 cases) | xunit `DocumentOpsFixtureTests` (Jint), Go `jsruntime` `TestMatchesNodeOnTheDocumentOpsFixture` (goja), vitest `documents-ops-fixture.freshness.test.ts` (node regenerates) | B5-B24: every op over the C# test documents and edge cases |
 
 `host.json` expectations are captured from C#: `BLOK_CAPTURE_HOST_FIXTURE=1 dotnet test Blok.Server.Tests --filter FullyQualifiedName~HostEnvelopeFixtureTests.CapturesTheFixtureWhenAsked`. A normal run compares, so a stale fixture fails C# too.
 
@@ -44,3 +45,82 @@ lone key -> THROWS InvalidOperationException: Cannot read incomplete UTF-16 JSON
 
 - Envelope ops refuse JSON nested past 64 (`JsonNode.Parse` default depth) with `InvalidDocument` and never call the runtime; bare ops hand it to JS. Pinned in `host.json`. Go uses `jsjson.ParseNode` with `MaxDepth` 0 (64), not `jsjson.Parse` (512).
 - Map key order (`pages`, `blockIds`, `pageIds`) is not part of the contract: the bundle reads `pages` through `hasOwn` (`src/view/server-runtime.ts` `parsePagesRequest`) and `findRemapProblems` walks the document (`src/view/page-document-remap.ts:220`). Go writes keys in UTF-16 order; `host.json` maps are authored in that order, so C# and Go send the same bytes.
+
+## Go layout
+
+- `packages/server/go/blokdocs` (public): `New(Options)`, `*Converter` with every C# converter method, `LooksLikeADocument`, result types, `ConversionError{Reason}`, `TextCountError`/`UnmappedIDsError` (`ArgumentError` with `Param()`), `AnswerError`, `ErrNoVersion`, `StartupError`/`ConstraintError` (aliases).
+- `packages/server/go/internal/jsruntime`: `NewPool(Options)`, `(*Pool).Invoke(ctx, op, input, timeout)`, `guard.go` (deadline, live-heap watchdog, cancel, all through `Interrupt`).
+
+## Ledger rows
+
+DONE = an oracle both languages run, or a Go hand-port of the C# test where a fixture cannot express it (timing, pool, cancellation; run with `-race`).
+
+| Rows | Status | Oracle |
+|---|---|---|
+| R1, R2, R9, R26 | DONE | `ops.json` through `Pool.Invoke`; bundle law (embed); no host global is added |
+| R3, R5, R6, R7, R13 | DONE | `TestTakesTheDefaultsForZeroOptions`, `TestRefusesLimitsBelowTheirFloors`, `TestLoadsAtTheFloors`, `TestReportsAnyOtherLoadFailure` |
+| R4, R19 | DONE, approximate (U2) | `TestStopsACallThatOutgrowsItsMemoryBudget`. See decisions: live heap, 1 GiB default |
+| R8 | DONE | `TestHandlesConcurrentCallsWithoutSharingAnEngine` (64 calls, pool 4, `-race`), `TestCallersWaitWhenEveryEngineIsBusy` |
+| R10, R11, R12 | DONE | `TestReportsALoadThatOutgrowsTheBudget`, `…RunsPastTheTimeout`, `…AnyOtherLoadFailure` |
+| R14, R15, R16, R17, R18 | DONE | `TestAPerCallTimeout*`, `TestCancellationEndsTheWaitForAnEngine`, `TestTimesOutInsideTheJobQueue`, `TestReturnsTheCallersCancellationUnwrapped`, `TestKeepsServingAfterATimeoutAndReplacesTheEngine` |
+| R20, R21 | DONE | `TestClassifiesJavaScriptErrorsAndKeepsTheEngine`, `TestClassifiesTheBundlesOwnErrorsByName`, `ops.json` error cases (C# checks the reason too) |
+| R22 | DONE in code, no test | A Go panic inside goja is recovered as `Unknown` and the engine replaced. No known input makes goja panic. |
+| R23 | DONE | `TestKeepsTheSlotWhenARebuildFails` |
+| R24 | N/A | A cap-N channel holding exactly the taken engines cannot refuse a send (comment in `pool.go`) |
+| R25 | DONE, differs (U4) | `TestSurvivesRunawayRecursionAndKeepsTheEngine`, `TestConvertsADeeplyNestedOutline`. goja's overflow is not catchable in JS. |
+| R27 | DONE (U5) | `TestFailsAPendingPromiseAtOnceAndKeepsTheEngine` |
+| (late interrupt) | DONE | `TestDisarmClearsAnInterruptThatLandedAfterTheRun`, `TestALateInterruptAfterDisarmIsIgnored` (both mutation-checked: removing the guard line fails them) |
+| D1, D2, D3, D4, D6 | DONE | `host.json` reasons; `TestRefusesLimitsBelowTheFloorsBeforeLoading`; `TestConvertsThroughTheEmbeddedBundle` |
+| D5 | DONE | `looks-like-a-document.json` |
+| D7 | DEFERRED | agent ledger (`blokagent`) |
+| D8, D9 | DONE | C# xunit (existing) + Go `TestAsksTheBundleForItsVersionOnlyOnce`, `TestRefusesToHandOutAVersionTheBundleDoesNotHaveAndAsksAgain`, `TestFetchesTheSchemaOnce` |
+| D10-D24, D26-D36 | DONE | `host.json` (84 cases); D27 also `TestReportsTheCallersOwnCancellationAsCancellation` |
+| D25 | N/A | Go has no default interface members; `*Converter` is a concrete struct, so there is nothing to refuse |
+| D37 | DONE | `host.json` page cases (`EmojiIcon`, `ImageIcon`, `Title *string`, `NoAccess`) |
+| D38 | DECIDED | Go strings cannot be nil. A nil map reads as an empty map (Go convention). |
+| H1 | DONE | `New` validates before loading (`TestRefusesLimitsBelowTheFloorsBeforeLoading`) |
+| H3 | DONE (API) | `(*Converter).WarmUp(ctx)` converts C#'s 220-block article. Starting it in a goroutine is host wiring. |
+| H2, H4 | DEFERRED | host wiring in `cmd/blok-server` (http-host lane) |
+| B1, B2, B3, B4 | DONE | `server-go-runtime-bundle-law.test.ts` (fresh build, C# copy, release rebuild) |
+| B5-B15, B17-B21, B23, B24 | DONE | `ops.json` |
+| B16 | DONE (fixture), agent ledger owns it | `ops.json` `manifest` (sha256) |
+| B22 | DEFERRED | agent ledger |
+
+Rows: 93. DONE or N/A or decided: 87. Deferred to other ledgers: 6 (D7, H2, H4, B22, and B16/B21 are also listed there).
+
+## Decisions (continued)
+
+- **Memory guard (R4).** goja has no allocation count. The watchdog polls `/gc/heap/live:bytes` every millisecond and interrupts past the budget. Measured on a 3 MiB data URL to Markdown: heap objects (with unswept garbage) peaked 738 MiB above the start; live heap peaked 412-562 MiB across runs. C# converts it under its 512 MiB churn budget, so the Go default is 1 GiB. C#'s `StopsAConversionThatOutgrowsTheBudgetItWasGiven` (64 MiB, 700 KB article to HTML) cannot be reproduced: goja's live heap for it is far smaller. Process-wide, so concurrent calls add up.
+- **Stack limit (R25).** `SetMaxCallStackSize(10000)`. Measured frames per outline nesting level: plain text and Markdown about 3, HTML about 8 (1000 levels needed 8040). Jint (dotnet fsi main thread) converted 800 levels to HTML and failed at 1000.
+- **Pending promise (R27).** Fails at once as `Unknown` and keeps the engine.
+- **ConstraintError params** are the Go field names (`Timeout`, `MemoryBudget`, `PoolSize`, and `timeout` for a per-call value).
+- **Lone surrogates (T5).** Envelope ops refuse them in both languages (C# fix 2). goja's `JSON.parse` reads a lone-surrogate escape as U+FFFD (measured: `JSON.parse('"a\\ud800b"').charCodeAt(1)` is `fffd`); node and Jint keep the unit. So bare ops on such a document differ in Go. `ops.json` `lone.*` pins it: the Go test expects node's answer with each lone escape read as U+FFFD.
+- **Repeated keys.** Jint with the bundle loaded reads `{"blocks":1,"blocks":[]}` as `blocks = 1`; node and goja keep the last. The shape check refuses repeats in both languages. Bare ops still differ between engines on such a document; `ops.json` has no repeated-key case.
+- **Intl (T6, U11).** Fixed in `src/shared/database/formula/dates.ts`: without `Intl`, UTC and the host zone read through `Date` getters, and any other zone is an invalid date (formula result empty). Jint output on the 46 probe cases is identical before and after (`scratchpad/dr2/jint-old.json` vs `jint-new.json`). Agent date formulas through goja are not yet exercised end to end (agent lane).
+
+## Timings (ms, single sample, same machine, `ops.json` big cases)
+
+goja: `go test -run …/big -v`, no race. Jint: xunit, Debug build, one engine, 5 min timeout.
+
+| case | goja | Jint |
+|---|---|---|
+| big.plain.text (600 KB) | 200 | ~1,000 |
+| big.plain.markdown | 420 | ~5,000 |
+| big.plain.html | 520 | ~1,000 |
+| big.marked.text (700 KB) | 2,290 | ~6,000 |
+| big.marked.markdown | 2,310 | ~6,000 |
+| big.marked.html | 3,370 | ~11,000 |
+| big.marked.pageIndex | 5,840 | ~20,000 |
+| big.marked.extract | 130 | 61 |
+| big.url.image.markdown (3 MiB) | 1,670 | ~2,000 |
+| big.url.bookmark.markdown | 2,190 | ~1,000 |
+| big.fromMarkdown (~120 KB) | 3,560 | ~12,000 |
+
+xunit rounds to whole seconds. `big.marked.pageIndex` ran 20 s in Jint here, twice the 10 s default timeout; the ledger probe (Release, own runner) measured 7.2 s.
+
+## Remaining for the next round
+
+- Agent date formulas through goja end to end (needs an `agentExecute` input; agent lane).
+- Optional: replace goja's lossy `JSON.parse` so lone-surrogate escapes survive (would need a Go `JSON.parse` returning UTF-16 strings; not started).
+- Optional: a `go generate` directive for the bundle (the law already fails a stale copy).
+- R22 has no test (no known way to make goja panic).

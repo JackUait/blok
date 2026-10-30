@@ -8,7 +8,7 @@ Date: 2026-10-31. Bundle probed: `packages/server/dotnet/Blok.Server/Generated/b
 
 1. **goja runs the bundle unchanged and matches it exactly.** I sent 46 cases (every documents op plus `htmlFieldsToSegments`, `manifest`, error paths, and the large and deep documents from `JintBlokRuntimeTests`) through node:vm, goja and Jint 4.17.0 (with JintBlokRuntime's settings). All three gave the same output for all 46 (`diff.mjs`: `46/46 identical`, both goja-vs-node and jint-vs-goja). Two caveats:
    - The import ops make ids from the clock (`md-<base36>-N`, `html-<base36>-N`), so the diff normalizes them.
-   - The three error cases agree on `error.name`, but the messages differ: Jint says `Unexpected token ILLEGAL in JSON at position 0`, goja says `invalid character 'o' in literal null (expecting 'u')`, and V8 has its own text. C# classifies by `name` only (`JintBlokRuntime.cs:286-290`), so the outcome is the same.
+   - The three error cases agree on `error.name`. Only `err.notjson` has different messages: Jint says `Unexpected token ILLEGAL in JSON at position 0`, goja says `invalid character 'o' in literal null (expecting 'u')`, and V8 has its own text. The other two messages are the same in all three engines (critique.md §4). C# classifies by `name` only (`JintBlokRuntime.cs:286-290`), so the outcome is the same.
 2. **Load cost:**
    - goja: `goja.Compile` 138.9 ms, then `RunProgram` 11.0 ms.
    - A second goja runtime from the same compiled `*goja.Program` costs 7.6 ms.
@@ -16,7 +16,7 @@ Date: 2026-10-31. Bundle probed: `packages/server/dotnet/Blok.Server/Generated/b
    - node:vm: 40.9 ms.
    - So a Go pool can compile once and build every engine cheaply.
 3. **Timeout works:** `vm.Interrupt(v)` from a timer goroutine stops `for(;;){}` at 201 ms, also inside JS `try/catch`, and also after `await` (job queue) at 224.6 ms. It comes back as `*goja.InterruptedError`.
-   - **Gap:** an interrupt cannot stop a native builtin while it runs. A backtracking regex `/^(a+)+$/.test('a'*24+'b')` was stopped only after **7,301 ms**, and `'a'*26` after 11,014 ms (15,221 ms with the `u` flag), even though the deadline was 200 ms.
+   - **Gap:** an interrupt cannot stop a native builtin while it runs. (Single samples; a re-run gave about half these figures, critique.md §4.) A backtracking regex `/^(a+)+$/.test('a'*24+'b')` was stopped only after **7,301 ms**, and `'a'*26` after 11,014 ms (15,221 ms with the `u` flag), even though the deadline was 200 ms.
    - Jint's deadline constraint has the same blind spot in principle (UNVERIFIED for Jint).
    - The runtime stays usable after `ClearInterrupt()`. It also answered `1+1` without `ClearInterrupt()`, but call `ClearInterrupt()` anyway.
 4. **No allocation budget exists in goja (parity gap).** goja has no `LimitMemory` equivalent.

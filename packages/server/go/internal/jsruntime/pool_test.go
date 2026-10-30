@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -394,5 +395,18 @@ func TestRefusesLimitsBelowTheirFloors(t *testing.T) {
 func TestLoadsAtTheFloors(t *testing.T) {
 	if _, err := NewPool(Options{PoolSize: 1, MemoryBudget: MinimumMemoryBudget, Timeout: 30 * time.Second}); err != nil {
 		t.Fatalf("NewPool at the budget floor: %v", err)
+	}
+}
+
+func TestTakesTheDefaultsForZeroOptions(t *testing.T) {
+	p, err := NewPool(Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.timeout != 10*time.Second || p.budget != 1<<30 {
+		t.Fatalf("timeout = %v, budget = %d", p.timeout, p.budget)
+	}
+	if want := max(1, min(runtime.NumCPU(), 4)); cap(p.engines) != want || len(p.engines) != want {
+		t.Fatalf("pool holds %d of %d engines, want %d", len(p.engines), cap(p.engines), want)
 	}
 }

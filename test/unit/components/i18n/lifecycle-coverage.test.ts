@@ -211,6 +211,8 @@ const deriveLifecycle = (): {
   // The database block's toolbox entries no longer use it (research/28 renamed them), but
   // its name is still read as toolNames.database the same way.
   addDynamic('toolNames.database');
+  // The page picker calls tools.page.moreResults with a count; the plural rule adds the suffix.
+  for (const category of ['one', 'other']) addDynamic(`tools.page.moreResults_${category}`);
 
   for (const key of literal) dynamic.delete(key);
 
@@ -274,7 +276,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 2038 + 136 + 519 + 4 closure for all 2697 keys', () => {
+  it('rebuilds a disjoint 2044 + 138 + 519 + 4 closure for all 2705 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +290,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2697);
+    expect(lifecycle.size).toBe(2705);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -486,7 +488,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +3: the Edit formula list's General, People and pages, and Lists group headings, by literal.
       // +105: the Edit formula help pane's one-line description of every operator, value and function, by literal.
       // +3: "/" Link to page calls toolNames.pageLink, toolbox.preview.pageLink and tools.page.search by literal.
-      'executable-literal': 2038,
+      // +6: the "@" menu's New page section and the picker's Searching… label, by literal.
+      'executable-literal': 2044,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -498,7 +501,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the Table view toolbox entry's toolNames.tableView (toolNames.mapView is a literal: the seeded map view's name).
       // +9: the Ask AI action labels, assistant.action.<skill id>.
       // +1: toolNames.databaseFullPage (f6d462a0).
-      'finite-dynamic': 136,
+      // +2: the picker's tools.page.moreResults_one/_other, a plural of one literal call.
+      'finite-dynamic': 138,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

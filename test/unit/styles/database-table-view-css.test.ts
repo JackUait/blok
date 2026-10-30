@@ -152,6 +152,15 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-table-open] > span[aria-hidden="true"]')).toMatch(/width:\s*15\.25px/);
   });
 
+  // `notion-live-7/33-open-hover.png` and `notion-live-8/62-close-hover.png` (pixels): the glyph's ink is about 15x12.
+  it('draws the OPEN and CLOSE glyph at 18px, over its 15.25px slot', () => {
+    const svg = ruleBody('[data-blok-database-table-open] svg');
+
+    expect(svg).toMatch(/width:\s*18px/);
+    expect(svg).toMatch(/height:\s*18px/);
+    expect(svg).toMatch(/flex:\s*none/);
+  });
+
   it('uses logical properties only, so RTL mirrors the grid', () => {
     expect(tableCss.length).toBeGreaterThan(1000);
     expect(tableCss).not.toMatch(/(?:^|[\s;{])(?:left|right|margin-left|margin-right|padding-left|padding-right|border-left|border-right)\s*:/m);

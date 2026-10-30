@@ -8825,9 +8825,12 @@ textarea[data-blok-database-cell-input] {
   width: 15.25px;
 }
 
+/* `33-open-hover.png`, `62-close-hover.png` (pixels): Notion's ink is about 15x12; 18px draws 15x12 here.
+   It overhangs the slot evenly, so the button keeps Notion's width. */
 [data-blok-database-table-open] svg {
-  width: 14px;
-  height: 14px;
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 
 [data-blok-database-table-row]:hover [data-blok-database-table-open],

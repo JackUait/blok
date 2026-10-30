@@ -11718,8 +11718,9 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-open] svg {
-  width: 14px;
-  height: 14px;
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 
 [data-blok-database-table-row]:hover [data-blok-database-table-open], [data-blok-database-table-cell][data-blok-database-table-cell-anchor] [data-blok-database-table-open] {

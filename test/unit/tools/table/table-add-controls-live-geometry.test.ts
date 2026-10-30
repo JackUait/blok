@@ -448,4 +448,47 @@ describe('TableAddControls drag follows the live grid', () => {
 
     expect(ops.onDragAddRow).not.toHaveBeenCalled();
   });
+
+  // Each measure lays out the whole table: one per row crossed made a fast pull freeze.
+  it('measures the grid as often for a pull across ten rows as across two', () => {
+    const measuresFor = (rowsCrossed: number, axis: 'row' | 'col'): { measures: number; size: number } => {
+      const geo: Geometry = { left: 0, top: 0, colWidths: [100, 100], rowHeights: [30, 30], scrollLeft: 0 };
+      const built = buildGrid(geo);
+
+      wrapper?.remove();
+      wrapper = built.wrapper;
+      installGeometry(built.wrapper, built.grid, geo);
+
+      const ops = wireOps(built.grid, geo, { newRowHeight: 30, newColWidth: 100 });
+      const local = mount(built.wrapper, built.grid, ops, 100);
+      const btn = button(built.wrapper, axis);
+      const start = axis === 'row' ? 60 : 200;
+      const unit = axis === 'row' ? 30 : 100;
+      const rect = vi.mocked(HTMLElement.prototype.getBoundingClientRect);
+
+      pointer(btn, 'pointerdown', axis, start);
+      pointer(btn, 'pointermove', axis, start + 10);
+
+      const before = rect.mock.contexts.filter(context => context === built.grid).length;
+
+      pointer(btn, 'pointermove', axis, start + unit * rowsCrossed);
+
+      const measures = rect.mock.contexts.filter(context => context === built.grid).length - before;
+      const size = axis === 'row' ? geo.rowHeights.length : geo.colWidths.length;
+
+      local.destroy();
+      vi.restoreAllMocks();
+
+      return { measures, size };
+    };
+
+    const rowsFew = measuresFor(2, 'row');
+    const rowsMany = measuresFor(10, 'row');
+    const colsFew = measuresFor(2, 'col');
+    const colsMany = measuresFor(10, 'col');
+
+    expect([rowsFew.size, rowsMany.size, colsFew.size, colsMany.size]).toStrictEqual([4, 12, 4, 12]);
+    expect(rowsMany.measures).toBe(rowsFew.measures);
+    expect(colsMany.measures).toBe(colsFew.measures);
+  });
 });

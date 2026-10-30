@@ -419,6 +419,8 @@ export class TableAddControls {
    * one the user widened, the next one gets the new-column width.
    */
   private resizeTo(axis: 'row' | 'col', target: number, direction: TextDirection): void {
+    const changes = { count: 0 };
+
     // `some` stops at the first step that returns true.
     Array.from({ length: MAX_STEPS_PER_MOVE }).some(() => {
       const size = this.measureGridSize(axis);
@@ -431,34 +433,42 @@ export class TableAddControls {
       const addUnit = this.measureAddUnit(axis);
       const lastUnit = this.measureLastUnit(axis, direction);
 
-      // Nearest whole unit: the edge stays within half a row/column of the pointer.
-      const changed = addUnit > 0 && target - size >= addUnit / 2
-        ? this.stepSize(axis, 'add', size)
-        : lastUnit > 0 && size - target > lastUnit / 2 && this.stepSize(axis, 'remove', size);
+      // Nearest whole unit: the edge stays within half a row/column of the
+      // pointer. Every unit the pointer crossed goes in one step, measured
+      // once after: each measure lays out the whole table. A unit that came
+      // out a different size is corrected on the next turn.
+      const adds = addUnit > 0 ? Math.floor((target - size) / addUnit + 0.5) : 0;
+      const removes = lastUnit > 0 ? Math.ceil((size - target) / lastUnit - 0.5) : 0;
+      const changed = adds > 0
+        ? this.stepSize(axis, 'add', size, adds)
+        : removes > 0 && this.stepSize(axis, 'remove', size, removes);
 
       if (!changed) {
         return true;
       }
 
-      this.syncRowButtonWidth();
+      changes.count += 1;
 
       return false;
     });
+
+    if (changes.count > 0) {
+      this.syncRowButtonWidth();
+    }
   }
 
   /**
-   * One add or remove. A refused one (the last row/column has content) or one
-   * that does not change the size ends the loop.
+   * Up to `count` adds or removes. A refused one (the last row/column has
+   * content) stops the run; a run that does not change the size ends the loop.
    */
-  private stepSize(axis: 'row' | 'col', kind: 'add' | 'remove', size: number): boolean {
+  private stepSize(axis: 'row' | 'col', kind: 'add' | 'remove', size: number, count: number): boolean {
     const [add, remove] = axis === 'row'
       ? [this.onDragAddRow, this.onDragRemoveRow]
       : [this.onDragAddCol, this.onDragRemoveCol];
     const callback = kind === 'add' ? add : remove;
 
-    if (!callback()) {
-      return false;
-    }
+    // `every` stops at the first refusal.
+    Array.from({ length: Math.min(count, MAX_STEPS_PER_MOVE) }).every(() => callback());
 
     const next = this.measureGridSize(axis);
 

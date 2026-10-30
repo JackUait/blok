@@ -559,6 +559,49 @@ describe('opt-in subsystems load behind import()', () => {
   }
 })
 
+describe('unbundled entries load only the icons they use', () => {
+  // A page that imports dist/blok.mjs without a bundler downloads every file in
+  // its static closure, so an icon only a tool draws must not ride along.
+  const pathOf = (icon: string): string => {
+    const match = /\bd="([^"]+)"/.exec(icon)
+    if (match === null) throw new Error('icon has no path')
+    return match[1]
+  }
+
+  const closureCode = (entry: string): string => {
+    const seen = new Set<string>()
+    const stack = [resolve(dist, entry)]
+    while (stack.length > 0) {
+      const file = stack.pop() as string
+      if (seen.has(file)) continue
+      seen.add(file)
+      const [imports] = parseModule(readFileSync(file, 'utf-8'))
+      imports
+        .filter(({ d, n }) => d === -1 && n?.startsWith('.') === true)
+        .forEach(({ n }) => stack.push(resolve(dirname(file), n as string)))
+    }
+    return [...seen].map((file) => readFileSync(file, 'utf-8')).join('\n')
+  }
+
+  it('blok.mjs leaves out an icon only the video player draws', async () => {
+    const { IconPlayerTheater, IconCross } = await import('../../../src/components/icons')
+    await initLexer()
+    const code = closureCode('blok.mjs')
+    expect(code.includes(pathOf(IconPlayerTheater))).toBe(false)
+    expect(code.includes(pathOf(IconCross))).toBe(true)
+  })
+
+  it('icons.mjs exports the same names and values as the source', async () => {
+    const source = await import('../../../src/components/icons')
+    const built = (await import(resolve(dist, 'icons.mjs'))) as Record<string, unknown>
+    const strings = (module: Record<string, unknown>): Record<string, unknown> =>
+      Object.fromEntries(Object.entries(module).filter(([, value]) => typeof value !== 'function'))
+    expect(Object.keys(built).sort()).toEqual(Object.keys(source).sort())
+    expect(strings(built)).toEqual(strings(source))
+    expect((built.buildIconColumnsCount as (count: number) => string)(3)).toBe(source.buildIconColumnsCount(3))
+  })
+})
+
 describe('ESM outputs still present', () => {
   it('still produces blok.mjs', () => {
     expect(existsSync(resolve(dist, 'blok.mjs'))).toBe(true)

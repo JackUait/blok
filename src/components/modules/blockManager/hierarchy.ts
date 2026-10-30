@@ -177,7 +177,37 @@ export class BlockHierarchy {
    * @param block - the subtree root
    */
   private subtreeOf(block: Block): Block[] {
-    return this.repository.blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+    const blocks = this.repository.blocks;
+    // One pass by parentId, then a walk down from `block`: a parent walk up
+    // from every block cost the whole document per placement.
+    const children = new Map<string, string[]>();
+
+    blocks.forEach(candidate => {
+      if (candidate.parentId === null) {
+        return;
+      }
+
+      const siblings = children.get(candidate.parentId);
+
+      if (siblings === undefined) {
+        children.set(candidate.parentId, [candidate.id]);
+      } else {
+        siblings.push(candidate.id);
+      }
+    });
+
+    const inside = new Set<string>();
+    const visit = (id: string): void => {
+      if (inside.has(id)) {
+        return;
+      }
+      inside.add(id);
+      (children.get(id) ?? []).forEach(visit);
+    };
+
+    (children.get(block.id) ?? []).forEach(visit);
+
+    return blocks.filter(candidate => candidate === block || inside.has(candidate.id));
   }
 
   /**

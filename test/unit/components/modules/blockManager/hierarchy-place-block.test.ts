@@ -212,6 +212,33 @@ describe('BlockHierarchy.placeBlock', () => {
     vi.restoreAllMocks();
   });
 
+  describe('cost', () => {
+    // A table row places one block per cell: a parent walk from every block in the document per placement made the row cost grow with the table.
+    it('looks up as many blocks to place one under a toggle beside a big table as beside a small one', () => {
+      const lookups = (cells: number): number => {
+        const h = build(workingArea, [
+          { id: 'tb', kind: 'table' },
+          ...Array.from({ length: cells }, (_, i) => ({ id: `c${i}`, parentId: 'tb' })),
+          { id: 't', kind: 'toggle' },
+          { id: 'x' },
+        ]);
+        const getById = vi.spyOn(BlockRepository.prototype, 'getBlockById');
+
+        h.hierarchy.placeBlock(h.get('x'), { parentId: 't', afterId: null });
+
+        const calls = getById.mock.calls.length;
+
+        getById.mockRestore();
+        expect(h.get('t').contentIds).toEqual(['x']);
+        workingArea.replaceChildren();
+
+        return calls;
+      };
+
+      expect(lookups(300)).toBe(lookups(5));
+    });
+  });
+
   describe('data', () => {
     it('makes the block the first child when afterId is null', () => {
       const h = build(workingArea, [

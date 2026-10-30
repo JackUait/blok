@@ -19,10 +19,9 @@ enableJsdomWebStorageGuard();
 
 // Unit tests that read build output. CI's unit shards start before the build
 // and skip them; Workspace Unit Tests runs them after it (ci-critical-path-law).
+// The whole build folder, so a new test there cannot land in a shard by mistake.
 const DIST_TESTS = [
-  'test/unit/build/bundle-outputs.test.ts',
-  'test/unit/build/vendor-license.test.ts',
-  'test/unit/build/override-entries.test.ts',
+  'test/unit/build/**',
   'test/unit/architecture/react-fixture-import-map-law.test.ts',
 ];
 

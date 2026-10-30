@@ -6,7 +6,7 @@
  * and shard counts stay optimized, while every original command, diagnostic
  * artifact, and report step remains represented in its intended job.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
@@ -466,6 +466,18 @@ describe('CI critical-path law', () => {
         },
       },
     ]);
+  });
+
+  it('keeps every test/unit/build file out of the unit shards, which start before dist exists', () => {
+    const distTests = /const DIST_TESTS = \[([^\]]*)\]/.exec(readFileSync(resolve(root, 'vitest.config.ts'), 'utf8'))?.[1] ?? '';
+    const entries = [...distTests.matchAll(/'([^']+)'/g)].map(([, entry]) => entry);
+    const buildTests = readdirSync(resolve(root, 'test/unit/build'))
+      .filter((name) => name.endsWith('.test.ts'))
+      .map((name) => `test/unit/build/${name}`);
+    const covered = (file: string): boolean => entries.some((entry) => entry === file
+      || (entry.endsWith('/**') && file.startsWith(entry.slice(0, -2))));
+
+    expect(buildTests.filter((file) => !covered(file))).toEqual([]);
   });
 
   it('runs unsharded workspace suites and the dist-reading unit tests after build', () => {

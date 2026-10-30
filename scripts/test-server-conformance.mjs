@@ -196,6 +196,7 @@ async function main() {
       'test/unit/server-conformance/blok-client-contract.test.ts',
       'test/unit/server-conformance/protocol-v2-contract.test.ts',
       'test/unit/server-conformance/mcp-agent-participant.test.ts',
+      'test/unit/server-conformance/routing-contract.test.ts',
     ];
 
     const reportPath = join(temporaryDirectory, 'vitest-report.json');
@@ -215,6 +216,7 @@ async function main() {
         ...process.env,
         BLOK_CONFORMANCE_ORDINARY_SERVER: binaries.ordinary,
         BLOK_CONFORMANCE_SERVER: binaries.conformance,
+        BLOK_CONFORMANCE_TARGET: options.target,
       },
     });
 

@@ -69,6 +69,12 @@ describe('test-server-conformance', () => {
     expect(result.stderr).toContain('spawn go ENOENT');
   });
 
+  // Suites skip the cases a target has not ported yet by reading this.
+  it('tells the suites which target they drive', () => {
+    expect(read('scripts/test-server-conformance.mjs'))
+      .toContain('BLOK_CONFORMANCE_TARGET: options.target,');
+  });
+
   // Go has no Debug or Release build, so the flag would be silently ignored.
   it('refuses --configuration for the Go target', () => {
     const result = runWithoutDotnet(['--target', 'go', '--configuration', 'Release']);

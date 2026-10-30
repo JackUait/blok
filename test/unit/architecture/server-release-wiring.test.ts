@@ -231,6 +231,7 @@ describe('server release wiring', () => {
       'test/unit/server-conformance/blok-client-contract.test.ts',
       'test/unit/server-conformance/protocol-v2-contract.test.ts',
       'test/unit/server-conformance/mcp-agent-participant.test.ts',
+      'test/unit/server-conformance/routing-contract.test.ts',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }

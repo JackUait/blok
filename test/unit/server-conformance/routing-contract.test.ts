@@ -64,6 +64,7 @@ function rawRequest(
   method: string,
   path: string,
   headers: Record<string, string> = {},
+  protocol = 'HTTP/1.1',
 ): Promise<RawResponse> {
   const { hostname, port } = new URL(baseUrl);
 
@@ -99,12 +100,25 @@ function rawRequest(
 
     const extra = Object.entries(headers).map(([name, value]) => `${name}: ${value}\r\n`).join('');
 
-    socket.write(`${method} ${path} HTTP/1.1\r\nHost: ${hostname}:${port}\r\nConnection: close\r\n${extra}\r\n`);
+    socket.write(`${method} ${path} ${protocol}\r\nHost: ${hostname}:${port}\r\nConnection: close\r\n${extra}\r\n`);
   });
 }
 
-function expectNotFound(response: RawResponse): void {
+/**
+ * Kestrel streams every answer with a body: chunked on HTTP/1.1, closed on
+ * HTTP/1.0, and on HEAD no length header at all. Only an exact "HEAD" counts
+ * as HEAD here; "head" is framed like GET.
+ */
+function expectStreamed(response: RawResponse, method: string, protocol = 'HTTP/1.1'): void {
+  const chunked = method !== 'HEAD' && protocol === 'HTTP/1.1';
+
+  expect(response.headers['content-length']).toBeUndefined();
+  expect(response.headers['transfer-encoding']).toEqual(chunked ? ['chunked'] : undefined);
+}
+
+function expectNotFound(response: RawResponse, method = 'GET'): void {
   expect(response.status).toBe(404);
+  expectStreamed(response, method);
   expect(response.headers['content-type']).toEqual(['text/plain; charset=utf-8']);
   expect(response.headers.allow).toBeUndefined();
   expect(response.headers['x-content-type-options']).toBeUndefined();
@@ -112,6 +126,7 @@ function expectNotFound(response: RawResponse): void {
 
 function expectMethodNotAllowed(response: RawResponse, allow: string, method: string): void {
   expect(response.status).toBe(405);
+  expectStreamed(response, method);
   expect(response.headers.allow).toEqual([allow]);
   expect(response.headers['content-type']).toEqual(['text/plain; charset=utf-8']);
   expect(response.headers['x-content-type-options']).toBeUndefined();
@@ -156,6 +171,7 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       const response = await rawRequest(server.baseUrl, 'GET', path);
 
       expect(response.status).toBe(200);
+      expectStreamed(response, 'GET');
       expect(response.headers['content-type']).toEqual(['application/json']);
       expect(response.headers.location).toBeUndefined();
       expect(response.body).toBe(HEALTH_BODY);
@@ -174,6 +190,18 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toEqual(['application/json']);
       expect(response.body).toBe('');
+    });
+
+    // Health writes no body for either spelling. Kestrel frames "head" like
+    // GET, and an answer with no body written gets Content-Length: 0.
+    it.each([
+      ['HEAD', undefined],
+      ['head', ['0']],
+    ])('frames %s /health with Content-Length %j', async (method, contentLength) => {
+      const response = await rawRequest(server.baseUrl, method, '/health');
+
+      expect(response.headers['content-length']).toEqual(contentLength);
+      expect(response.headers['transfer-encoding']).toBeUndefined();
     });
 
     it.each([
@@ -202,15 +230,29 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     ])('answers %s %s with the 404 catch-all', async (method, path) => {
       const response = await rawRequest(server.baseUrl, method, path);
 
-      expectNotFound(response);
+      expectNotFound(response, method);
       expect(response.body).toBe('404 page not found\n');
     });
 
     it('answers HEAD on an unknown route with 404 and no body', async () => {
       const response = await rawRequest(server.baseUrl, 'HEAD', '/nope');
 
-      expectNotFound(response);
+      expectNotFound(response, 'HEAD');
       expect(response.body).toBe('');
+    });
+
+    // DELETE, not POST: Kestrel refuses an HTTP/1.0 POST with no length.
+    it.each([
+      ['GET', '/health', 200],
+      ['HEAD', '/health', 200],
+      ['GET', '/nope', 404],
+      ['HEAD', '/nope', 404],
+      ['DELETE', '/health', 405],
+    ])('answers %s %s over HTTP/1.0 with %i and no length header', async (method, path, status) => {
+      const response = await rawRequest(server.baseUrl, method, path, {}, 'HTTP/1.0');
+
+      expect(response.status).toBe(status);
+      expectStreamed(response, method, 'HTTP/1.0');
     });
 
     it.skipIf(goHostGap)('answers a malformed escape on an unknown route with the 404 catch-all', async () => {

@@ -250,6 +250,14 @@ var NotFound http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http
 
 func writePlain(w http.ResponseWriter, status int, body string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(status)
+	StartStream(w, status)
 	_, _ = io.WriteString(w, body)
+}
+
+// StartStream sends the status line and headers before any body, so net/http
+// adds no Content-Length: chunked on HTTP/1.1, close-delimited on HTTP/1.0,
+// and no length header on HEAD. That is how Kestrel frames these answers.
+func StartStream(w http.ResponseWriter, status int) {
+	w.WriteHeader(status)
+	_ = http.NewResponseController(w).Flush()
 }

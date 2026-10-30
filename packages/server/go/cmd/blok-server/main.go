@@ -136,10 +136,12 @@ func newHandler() http.Handler {
 func health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	// Methods match case-insensitively, and net/http drops the body only for
-	// an exact "HEAD".
+	// an exact "HEAD". No flush here: with no body written, net/http sends
+	// Content-Length: 0 for "head" and no length for "HEAD", like Kestrel.
 	if strings.EqualFold(r.Method, http.MethodHead) {
 		return
 	}
+	route.StartStream(w, http.StatusOK)
 	body, _ := json.Marshal(struct {
 		Status  string `json:"status"`
 		Version string `json:"version"`

@@ -319,7 +319,7 @@ func TestOptionsStarGetsTheCatchAll(t *testing.T) {
 	defer conn.Close()
 	_, _ = io.WriteString(conn, "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
 	reply, _ := io.ReadAll(conn)
-	if !strings.HasPrefix(string(reply), "HTTP/1.1 404 ") || !strings.HasSuffix(string(reply), "404 page not found\n") {
+	if !strings.HasPrefix(string(reply), "HTTP/1.1 404 ") || !strings.Contains(string(reply), "\r\n404 page not found\n\r\n") {
 		t.Fatalf("OPTIONS *: %q", reply)
 	}
 }
@@ -406,5 +406,63 @@ func TestBinaryVersionComesFromLdflags(t *testing.T) {
 	response.Body.Close()
 	if string(body) != "{\"status\":\"ok\",\"version\":\"9.8.7\"}\n" {
 		t.Fatalf("body %q", body)
+	}
+}
+
+// exchange sends one raw request to a real server and returns the status code
+// and the response header lines, keyed by lower-case name.
+func exchange(t *testing.T, address, method, path, proto string) (string, map[string][]string) {
+	t.Helper()
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_, _ = io.WriteString(conn, method+" "+path+" "+proto+"\r\nHost: x\r\nConnection: close\r\n\r\n")
+	reply, _ := io.ReadAll(conn)
+	head, _, _ := strings.Cut(string(reply), "\r\n\r\n")
+	lines := strings.Split(head, "\r\n")
+	headers := map[string][]string{}
+	for _, line := range lines[1:] {
+		name, value, _ := strings.Cut(line, ":")
+		headers[strings.ToLower(name)] = append(headers[strings.ToLower(name)], strings.TrimSpace(value))
+	}
+	return strings.SplitN(lines[0], " ", 3)[1], headers
+}
+
+// Kestrel streams answers with a body: chunked on HTTP/1.1, closed on
+// HTTP/1.0, and no length header on HEAD. It frames "head" like GET, and an
+// answer with no body written gets Content-Length: 0.
+func TestAnswersAreFramedLikeKestrel(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := newServer()
+	go func() { _ = server.Serve(listener) }()
+	defer server.Close()
+
+	cases := []struct{ method, path, proto, status, transferEncoding, contentLength string }{
+		{"GET", "/health", "HTTP/1.1", "200", "chunked", ""},
+		{"HEAD", "/health", "HTTP/1.1", "200", "", ""},
+		{"head", "/health", "HTTP/1.1", "200", "", "0"},
+		{"GET", "/health", "HTTP/1.0", "200", "", ""},
+		{"HEAD", "/health", "HTTP/1.0", "200", "", ""},
+		{"GET", "/nope", "HTTP/1.1", "404", "chunked", ""},
+		{"HEAD", "/nope", "HTTP/1.1", "404", "", ""},
+		{"head", "/nope", "HTTP/1.1", "404", "chunked", ""},
+		{"GET", "/nope", "HTTP/1.0", "404", "", ""},
+		{"HEAD", "/nope", "HTTP/1.0", "404", "", ""},
+		{"POST", "/health", "HTTP/1.1", "405", "chunked", ""},
+		{"DELETE", "/health", "HTTP/1.0", "405", "", ""},
+	}
+	for _, c := range cases {
+		status, headers := exchange(t, listener.Addr().String(), c.method, c.path, c.proto)
+		transferEncoding := strings.Join(headers["transfer-encoding"], ",")
+		contentLength := strings.Join(headers["content-length"], ",")
+		if status != c.status || transferEncoding != c.transferEncoding || contentLength != c.contentLength {
+			t.Errorf("%s %s %s: %s, Transfer-Encoding %q, Content-Length %q", c.method, c.path, c.proto,
+				status, transferEncoding, contentLength)
+		}
 	}
 }

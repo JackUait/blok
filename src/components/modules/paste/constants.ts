@@ -82,3 +82,12 @@ export const collectTagNames = (tagOrSanitizeConfig: string | SanitizerConfig): 
  * survives sanitization, and read back in that tool's `onPaste`.
  */
 export const CODE_LANGUAGE_ATTR = 'data-blok-code-language';
+
+/** Blok's own clipboard flavour: the copied blocks as JSON. */
+export const BLOK_MIME_TYPE = 'application/x-blok';
+
+/** MIME flavour that carries Notion's lossless block record-map. */
+export const NOTION_BLOCKS_V3_MIME = 'text/_notion-blocks-v3-production';
+
+/** MIME flavours that carry buildin.ai's lossless block envelope. */
+export const NEXT_SPACE_MIMES = ['text/next-space-blocks', 'text/next-space-content'];

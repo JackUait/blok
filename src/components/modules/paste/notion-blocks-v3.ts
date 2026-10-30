@@ -26,8 +26,7 @@ import { DEFAULT_LANGUAGE, LANGUAGES } from '../../../tools/code/constants';
 import { matchEmbedService } from '../../../tools/link/registry';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../shared/page-reference';
 
-/** MIME flavour that carries Notion's lossless block record-map. */
-export const NOTION_BLOCKS_V3_MIME = 'text/_notion-blocks-v3-production';
+export { NOTION_BLOCKS_V3_MIME } from './constants';
 
 /**
  * A single Blok-ready block produced from the Notion record-map.

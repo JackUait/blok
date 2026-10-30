@@ -33,8 +33,7 @@ import { matchEmbedService } from '../../../tools/link/registry';
 // content is captured. (Block-level callout colours ARE handled, via
 // `normalizeBuildinColor` below.)
 
-/** MIME flavours that carry buildin.ai's lossless block envelope. */
-export const NEXT_SPACE_MIMES = ['text/next-space-blocks', 'text/next-space-content'];
+export { NEXT_SPACE_MIMES } from './constants';
 
 /**
  * A single Blok-ready block produced from the buildin envelope.

@@ -61,7 +61,16 @@ func newFromSource(name, source string) (*Runtime, error) {
 }
 
 func fromProgram(program *goja.Program) (*Runtime, error) {
+	return fromVM(newVM(), program)
+}
+
+func newVM() *goja.Runtime {
 	vm := goja.New()
+	vm.SetMaxCallStackSize(MaxCallStackSize)
+	return vm
+}
+
+func fromVM(vm *goja.Runtime, program *goja.Program) (*Runtime, error) {
 	if _, err := vm.RunProgram(program); err != nil {
 		return nil, fmt.Errorf("jsruntime: load bundle: %w", err)
 	}

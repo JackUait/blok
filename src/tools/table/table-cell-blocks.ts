@@ -31,6 +31,14 @@ export type InitCellContent = LegacyCellContent | (CellContent & { leadingText?:
 
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
 
+/**
+ * `from` or the nearest earlier sibling carrying `attr`, or null.
+ * @param from - element to start at
+ * @param attr - attribute to look for
+ */
+const previousWith = (from: Element | null, attr: string): Element | null =>
+  from === null || from.hasAttribute(attr) ? from : previousWith(from.previousElementSibling, attr);
+
 const neutralizeCopiedPageReferences = (data: Record<string, unknown>): Record<string, unknown> => {
   const text = data?.text;
 
@@ -600,22 +608,19 @@ export class TableCellBlocks {
    */
   private indexForCell(cell: HTMLElement): number {
     // A cell's child block may contain another table; its cells are not siblings.
-    const cells = Array.from(this.gridElement.querySelectorAll<HTMLElement>(
-      `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}], :scope > [${ROW_ATTR}] > [${CELL_ATTR}]`
-    ));
-    const at = cells.indexOf(cell);
+    const row = cell.parentElement;
+    const isOwnCell = cell.hasAttribute(CELL_ATTR)
+      && row?.hasAttribute(ROW_ATTR) === true
+      && (row.parentElement === this.gridElement || (row.parentElement?.tagName === 'TBODY' && row.parentElement.parentElement === this.gridElement));
 
-    if (at === -1) {
+    if (!isOwnCell) {
       return this.indexAfterTableSubtree();
     }
 
     // Nearest earlier cell first, stopping at the first that holds a block: a
-    // drag fills a whole new row or column, one cell at a time.
-    const lastBefore = cells.slice(0, at).reverse().reduce<string | undefined>((found, candidate) => found
-      ?? Array.from(candidate.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.children ?? [])
-        .map(child => child.getAttribute('data-blok-id'))
-        .filter(id => id !== null)
-        .pop(), undefined);
+    // drag fills a whole new row or column, one cell at a time. Walked through
+    // siblings, never a list of every cell: a new row asks once per cell.
+    const lastBefore = this.lastBlockBefore(cell);
 
     if (lastBefore !== undefined) {
       return this.indexAfterSubtreeOf(lastBefore);
@@ -624,6 +629,43 @@ export class TableCellBlocks {
     const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
 
     return tableIndex === undefined ? this.api.blocks.getBlocksCount() : tableIndex + 1;
+  }
+
+  /**
+   * The id of the last block in the nearest earlier cell that has one, in
+   * grid order (rows top to bottom, cells in DOM order).
+   * @param cell - a cell of this grid
+   */
+  private lastBlockBefore(cell: Element): string | undefined {
+    const previous = this.previousCell(cell);
+
+    if (previous === null) {
+      return undefined;
+    }
+
+    const ids = Array.from(previous.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.children ?? [])
+      .map(child => child.getAttribute('data-blok-id'))
+      .filter(id => id !== null);
+
+    return ids.at(-1) ?? this.lastBlockBefore(previous);
+  }
+
+  /**
+   * The cell before `cell` in grid order, or null at the first cell.
+   * @param cell - a cell of this grid
+   */
+  private previousCell(cell: Element): Element | null {
+    return previousWith(cell.previousElementSibling, CELL_ATTR) ?? this.lastCellBeforeRow(cell.parentElement);
+  }
+
+  /**
+   * The last cell of the nearest earlier row that has one.
+   * @param row - a row of this grid
+   */
+  private lastCellBeforeRow(row: Element | null): Element | null {
+    const rowBefore = previousWith(row?.previousElementSibling ?? null, ROW_ATTR);
+
+    return rowBefore === null ? null : previousWith(rowBefore.lastElementChild, CELL_ATTR) ?? this.lastCellBeforeRow(rowBefore);
   }
 
   /**

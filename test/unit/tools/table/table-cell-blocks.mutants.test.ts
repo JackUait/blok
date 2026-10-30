@@ -773,13 +773,24 @@ describe('TableCellBlocks — surviving-mutant coverage', () => {
           return id;
         });
 
+        const lastCell = fixture.grid.cell(rows - 1, 3);
         const spy = vi.spyOn(Element.prototype, 'querySelector');
+        const listed = { count: 0 };
+        const realAll = Element.prototype.querySelectorAll;
+        const listAll = vi.spyOn(Element.prototype, 'querySelectorAll').mockImplementation(function (this: Element, selector: string) {
+          const found = realAll.call(this, selector);
 
-        fixture.instance.ensureCellHasBlock(fixture.grid.cell(rows - 1, 3));
+          listed.count += found.length;
 
-        const reads = spy.mock.calls.filter(([selector]) => selector === `[${CELL_BLOCKS_ATTR}]`).length;
+          return found;
+        });
+
+        fixture.instance.ensureCellHasBlock(lastCell);
+
+        const reads = spy.mock.calls.filter(([selector]) => selector === `[${CELL_BLOCKS_ATTR}]`).length + listed.count;
 
         spy.mockRestore();
+        listAll.mockRestore();
 
         return { reads, index: fixture.store.insertCalls[0]?.index };
       };

@@ -592,3 +592,85 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     expect(content.style.marginLeft).toBe('');
   });
 });
+
+describe('Toolbar — the content column moves after the toolbar opened', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('re-aligns the handle with the content column when the block holder resizes', () => {
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content, wrapper } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+    const onResize: Array<() => void> = [];
+
+    priv.positioner = {
+      calculateToolbarY: vi.fn().mockReturnValue(100),
+      moveToY: vi.fn(),
+      setHoveredTarget: vi.fn(),
+      resetCachedPosition: vi.fn(),
+      applyContentOffset: vi.fn(),
+      repositionToolbar: vi.fn().mockReturnValue(false),
+      watchTargetResize: vi.fn((_target: Element, cb: () => void) => {
+        onResize.push(cb);
+      }),
+      stopWatchingTargetResize: vi.fn(),
+      target: null,
+    };
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    vi.spyOn(toolbar.nodes.actions as HTMLElement, 'offsetWidth', 'get').mockReturnValue(47);
+    const rect = (left: number, width: number): DOMRect => ({
+      left, top: 0, right: left + width, bottom: 0, width, height: 0, x: left, y: 0, toJSON: () => ({}),
+    });
+
+    // A wide page: the column is centred 316px into the holder.
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(rect(56, 1352));
+    const contentRect = vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue(rect(372, 720));
+
+    toolbar.moveAndOpen(block);
+    expect(content.style.marginLeft).toBe('316px');
+
+    // The page narrows (e.g. beside a side peek) and the column now starts at the holder's edge.
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(rect(56, 700));
+    contentRect.mockReturnValue(rect(56, 700));
+    onResize.forEach((cb) => cb());
+
+    expect(content.style.marginLeft).toBe('0px');
+    expect(content.style.maxWidth).toBe('700px');
+
+    document.body.removeChild(blockHolder);
+  });
+});

@@ -2022,6 +2022,14 @@ export class Toolbar extends Module<ToolbarNodes> {
       },
       this.nodes.plusButton
     );
+
+    // The holder's width can change without a new hover (a side peek narrows the page),
+    // which moves the content column; the handle must follow it.
+    const blockContentElement = this.hoveredBlock.holder.querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`);
+
+    if (blockContentElement) {
+      this.syncContentToBlock(this.hoveredBlock.holder, blockContentElement);
+    }
   }
 
 

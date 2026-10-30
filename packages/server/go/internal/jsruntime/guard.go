@@ -17,19 +17,20 @@ const (
 	interruptCancel
 )
 
-// heapMetric is live plus not-yet-swept heap objects, process-wide.
+// heapMetric is the live heap the last GC marked, process-wide.
 //
 // The memory budget is approximate, unlike Jint's per-engine allocation
 // count:
 //   - It is process-wide, so concurrent calls add up and the call that
 //     crosses the line is the one stopped.
-//   - It measures heap growth, not churn. goja allocates more per call than
-//     Jint counts (blocksToHtml of a 700 KB article: 554 MiB allocated, but
-//     only 27 MiB of heap growth, measured), so churn would refuse documents
-//     C# converts.
-//   - It is polled every millisecond, and an interrupt only lands between JS
+//   - It measures live heap, not churn. goja allocates far more than Jint
+//     counts (blocksToHtml of a 700 KB article allocated 554 MiB), so churn
+//     would refuse documents C# converts. Heap objects including unswept
+//     garbage peaked 738 MiB above the start on a 3 MiB data URL to
+//     Markdown; live heap peaked 429 MiB (measured).
+//   - It moves only when a GC ends, and an interrupt lands only between JS
 //     instructions, never inside a long native builtin.
-const heapMetric = "/memory/classes/heap/objects:bytes"
+const heapMetric = "/gc/heap/live:bytes"
 
 const pollEvery = time.Millisecond
 

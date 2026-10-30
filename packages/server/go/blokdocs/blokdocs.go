@@ -31,10 +31,12 @@ type Options struct {
 	// instructions, so a long native builtin (a backtracking regex) overruns
 	// it by seconds.
 	Timeout time.Duration
-	// MemoryBudget is the heap growth one conversion may cause. 0 means 512 MiB.
+	// MemoryBudget is the live heap growth one conversion may cause. 0 means
+	// 1 GiB.
 	//
-	// Approximate, unlike C#'s per-engine allocation count: it is read from
-	// the whole process every millisecond, so concurrent conversions add up.
+	// Approximate, unlike C#'s per-engine allocation count: it is the whole
+	// process's live heap as of the last GC, read every millisecond, so
+	// concurrent conversions add up.
 	MemoryBudget int64
 }
 

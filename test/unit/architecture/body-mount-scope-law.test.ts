@@ -105,6 +105,9 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'tools/image/ui.ts': {
     reason: 'lightbox styled by authored blok-image-lightbox BEM classes (unscoped) + colors.css tokens via data-blok-top-layer',
   },
+  'tools/table/table-fullscreen.ts': {
+    reason: 'full-screen backdrop styled by unscoped attribute CSS (tables.css) + colors.css tokens via data-blok-top-layer, no utilities',
+  },
   'tools/audio/cover-picker.ts': {
     reason: 'dialog styled by authored blok-audio-cover-picker / blok-media-empty BEM classes (unscoped)',
   },

@@ -303,39 +303,83 @@
 }
 
 /*
-  Full screen (table-fullscreen.ts). The block holder goes to the top layer.
+  Full screen (table-fullscreen.ts). The holder's content box goes to the top
+  layer; the holder stays in the page at its height.
   The `[data-blok-top-layer][popover]` reset in main.css (0,2,0) clears inset,
   size, padding and overflow, so the box is set again here at higher specificity.
-  The margin is !important: a nested holder carries an inline margin-left.
+  The radius must match SHEET_CLIP in table-fullscreen.ts, which animates the box.
 */
 [data-blok-table-fullscreen][data-blok-top-layer][popover] {
   position: fixed;
-  inset: 32px;
-  margin: 0 !important;
-  padding: var(--blok-space-14) var(--blok-space-10) 32px;
+  inset: var(--blok-space-5);
+  max-width: none;
+  margin: 0;
+  padding: calc(var(--blok-space-14) + var(--blok-space-6)) var(--blok-space-10) var(--blok-space-10);
   overflow: auto;
   background-color: var(--blok-bg-primary);
   border-radius: var(--blok-radius-dialog);
-  box-shadow: 0 0 0 1px var(--blok-border-subtle), 0 12px 32px var(--blok-popover-shadow);
+  box-shadow: 0 0 0 1px var(--blok-border-subtle), 0 30px 80px -20px var(--blok-table-fullscreen-shadow);
 }
 
-[data-blok-table-fullscreen] > [data-blok-element-content] {
-  max-width: none;
-}
-
-/* Blok mounts its +/drag toolbar in the hovered holder, so it would ride into the modal over the first cell. */
-[data-blok-table-fullscreen] [data-blok-toolbar] {
-  visibility: hidden;
-}
 
 [data-blok-table-fullscreen-backdrop] {
   position: fixed;
   inset: 0;
   background-color: var(--blok-table-fullscreen-backdrop);
+  backdrop-filter: blur(6px) saturate(0.85);
 }
 
 [data-blok-table-fullscreen-backdrop][data-blok-top-layer][popover] {
   inset: 0;
+}
+
+[data-blok-table-fullscreen-header] {
+  display: none;
+}
+
+/*
+  Fixed, not in flow: the grip overlay places grips from the wrapper's top,
+  so anything in flow above the grid shifts every grip. The end padding leaves room for the close button over it.
+*/
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-header] {
+  position: fixed;
+  top: var(--blok-space-5);
+  inset-inline: var(--blok-space-5);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  height: var(--blok-space-14);
+  padding-block: 0;
+  padding-inline: var(--blok-space-5) 96px;
+  border-bottom: 1px solid var(--blok-border-subtle);
+  border-start-start-radius: var(--blok-radius-dialog);
+  border-start-end-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-bg-primary);
+  color: var(--blok-text-secondary);
+  font-size: 14px;
+  user-select: none;
+}
+
+[data-blok-table-fullscreen-header] svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+[data-blok-table-fullscreen-title] {
+  overflow: hidden;
+  color: var(--blok-text-primary);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-table-fullscreen-size] {
+  flex: none;
+  color: var(--blok-text-tertiary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Sits over the last header cell, clear of the add-column strip (pe-5). */
@@ -347,6 +391,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--blok-space-1-5);
   width: 24px;
   height: 24px;
   padding: 0;
@@ -365,6 +410,16 @@
   height: 18px;
 }
 
+[data-blok-table-fullscreen-toggle] kbd {
+  padding: var(--blok-space-0-25) var(--blok-space-1-25);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-item-hover-bg);
+  color: var(--blok-text-tertiary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 16px;
+}
+
 [data-blok-table-fullscreen-toggle]:hover {
   background-color: var(--blok-item-hover-bg);
 }
@@ -375,11 +430,16 @@
   opacity: 1;
 }
 
-/* In the modal it is the close button, at the modal's corner. */
+/* In the modal it is the close button, at the end of the header: the modal inset plus 14px. */
 [data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle] {
   position: fixed;
-  top: 44px;
-  inset-inline-end: 44px;
+  top: calc(var(--blok-space-5) + var(--blok-space-3-5));
+  inset-inline-end: calc(var(--blok-space-5) + var(--blok-space-3-5));
+  z-index: 6;
+  width: auto;
+  height: 28px;
+  padding-block: 0;
+  padding-inline: var(--blok-space-2) var(--blok-space-1-5);
   box-shadow: none;
 }
 

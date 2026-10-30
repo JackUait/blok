@@ -34,8 +34,15 @@ const tableData: OutputData = {
   ],
 };
 
-const createBlok = async (page: Page, readOnly = false): Promise<void> => {
-  await page.evaluate(async ({ holder, data, readOnly: isReadOnly }) => {
+const headedData: OutputData = {
+  blocks: [
+    { id: 'title', type: 'header', data: { text: 'Feature status', level: 3 } },
+    ...tableData.blocks,
+  ],
+};
+
+const createBlok = async (page: Page, readOnly = false, data: OutputData = tableData): Promise<void> => {
+  await page.evaluate(async ({ holder, data: blocks, readOnly: isReadOnly }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -48,12 +55,12 @@ const createBlok = async (page: Page, readOnly = false): Promise<void> => {
     document.body.appendChild(container);
     window.fullscreenChanges = 0;
 
-    const tableClass = (window as unknown as Record<string, Record<string, unknown>>).Blok.Table;
+    const classes = (window as unknown as Record<string, Record<string, unknown>>).Blok;
     const blok = new window.Blok({
       holder,
       readOnly: isReadOnly,
-      data,
-      tools: { table: { class: tableClass } },
+      data: blocks,
+      tools: { table: { class: classes.Table }, header: { class: classes.Header } },
       onChange: () => {
         window.fullscreenChanges = (window.fullscreenChanges ?? 0) + 1;
       },
@@ -61,7 +68,7 @@ const createBlok = async (page: Page, readOnly = false): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, data: tableData, readOnly });
+  }, { holder: HOLDER_ID, data, readOnly });
 
   await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 };
@@ -219,5 +226,137 @@ test.describe('Table full screen', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
     expect(await page.evaluate(() => document.body.hasAttribute('data-blok-scroll-locked'))).toBe(false);
+  });
+
+  test('the modal header names the table after the heading above it and shows its size', async ({ page }) => {
+    await createBlok(page, false, headedData);
+    await page.locator(TABLE_SELECTOR).hover();
+    await page.getByRole('button', { name: OPEN_LABEL }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'Feature status' });
+
+    await expect(dialog).toBeVisible();
+    const header = dialog.locator('[data-blok-table-fullscreen-header]');
+
+    await expect(header).toBeVisible();
+    await expect(header).toContainText('Feature status');
+    await expect(header).toContainText('2 × 2');
+  });
+
+  test('a table with no heading above it is titled Table', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    await expect(page.locator('[data-blok-table-fullscreen-header]')).toContainText('Table');
+  });
+
+  test('the header stays hidden while the table is inline', async ({ page }) => {
+    await createBlok(page, false, headedData);
+
+    await expect(page.locator('[data-blok-table-fullscreen-header]')).toBeHidden();
+  });
+
+  test('the modal grows out of the table and shrinks back into it', async ({ page }) => {
+    await createBlok(page);
+    await page.locator(TABLE_SELECTOR).hover();
+
+    const clipAnimations = async (): Promise<number> => page.evaluate(() => {
+      const box = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+
+      return box?.getAnimations().filter(a => !(a instanceof CSSTransition) && !(a instanceof CSSAnimation)
+        && JSON.stringify((a.effect as KeyframeEffect | null)?.getKeyframes()).includes('clip')).length ?? 0;
+    });
+
+    await page.getByRole('button', { name: OPEN_LABEL }).click();
+    expect(await clipAnimations()).toBeGreaterThan(0);
+    await expect.poll(clipAnimations).toBe(0);
+
+    await page.getByRole('button', { name: CLOSE_LABEL }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // It shrinks while still above the page, then lands back inline.
+    expect(await clipAnimations()).toBeGreaterThan(0);
+    await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+    expect(await page.locator('[data-blok-tool="table"]').evaluate(el => el.closest('[data-blok-element-content]')?.matches(':popover-open'))).toBe(false);
+  });
+
+  test('with reduced motion the modal opens and closes at once', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await createBlok(page);
+
+    const animationsAfterClick = async (): Promise<number> => page.evaluate(() => {
+      document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click();
+      const box = document.querySelector('[data-blok-tool="table"]')?.closest('[data-blok-element-content]');
+
+      return box?.getAnimations().filter(a => !(a instanceof CSSTransition) && !(a instanceof CSSAnimation)).length ?? -1;
+    });
+
+    expect(await animationsAfterClick()).toBe(0);
+    await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
+    expect(await animationsAfterClick()).toBe(0);
+    await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+  });
+
+  test('the page behind the modal is blurred', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    const filter = await page.locator('[data-blok-table-fullscreen-backdrop]').evaluate(el => getComputedStyle(el).backdropFilter);
+
+    expect(filter).toContain('blur');
+  });
+
+  test('the page under the modal keeps its layout', async ({ page }) => {
+    await createBlok(page);
+    const after = page.getByText('After the table');
+    const before = await after.boundingBox();
+
+    await openWithButton(page);
+
+    expect(await after.boundingBox()).toEqual(before);
+  });
+
+  test('a scrolled page stays where it was when the modal opens and closes', async ({ page }) => {
+    const rows = Array.from({ length: 30 }, (_, i) => [`Row ${i}`, 'Complete']);
+
+    await createBlok(page, false, {
+      blocks: [
+        { id: 'tbl', type: 'table', data: { withHeadings: true, content: [['Feature', 'Status'], ...rows] } },
+        { id: 'after', type: 'paragraph', data: { text: 'After the table' } },
+      ],
+    });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const scrolled = await page.evaluate(() => window.scrollY);
+
+    expect(scrolled).toBeGreaterThan(0);
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click());
+    await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-table-fullscreen]')).toHaveCount(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  });
+
+  test('the size in the header follows rows and columns added in the modal', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    const size = page.locator('[data-blok-table-fullscreen-size]');
+
+    await expect(size).toHaveText('2 × 2');
+
+    const grid = page.getByRole('dialog').getByRole('table');
+    const box = await grid.boundingBox();
+
+    if (box === null) {
+      throw new Error('table not laid out');
+    }
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height - 10);
+    await page.locator('[data-blok-table-add-row]').click();
+    await expect(size).toHaveText('3 × 2');
+
+    await page.mouse.move(box.x + box.width - 10, box.y + box.height / 2);
+    await page.locator('[data-blok-table-add-col]').click();
+    await expect(size).toHaveText('3 × 3');
   });
 });

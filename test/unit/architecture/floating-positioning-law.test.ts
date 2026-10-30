@@ -115,6 +115,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'tools/image/tone-sampler.ts': 'Synchronous zero-size probe that reads the root Canvas colour, removed before control returns.',
   'tools/image/ui.ts': 'Viewport modal lightbox, not a surface positioned against a live anchor.',
   'tools/spacer/alignment-guide.ts': 'Pointer-driven fixed guide whose coordinates refresh throughout the drag.',
+  'tools/table/table-fullscreen.ts': 'Viewport backdrop behind the full-screen table, not a surface positioned against a live anchor.',
   'tools/table/table-row-col-drag.ts': 'Pointer-following table ghost and indicator refreshed on every pointer move.',
   'tools/tabs/index.ts': 'Mount owner for the tracked emoji-picker root surface (tab Edit icon).',
   'tools/database/database-download.ts': 'Transient styleless download anchor clicked and removed synchronously.',

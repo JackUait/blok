@@ -42,6 +42,10 @@ const EXEMPT: Record<string, Record<string, string>> = {
   'src/tools/table/table-add-controls.ts': {
     insertAdjacentHTML: 'inserts the IconPlus constant, never data',
   },
+  'src/tools/table/table-fullscreen.ts': {
+    header: 'holds the IconTable constant and two empty spans; the title goes in as textContent',
+    button: 'swaps icon constants and a fixed Esc label, never data',
+  },
   'src/tools/table/table-heading-toggle.ts': {
     iconWrapper: 'holds an icon constant, never data',
   },

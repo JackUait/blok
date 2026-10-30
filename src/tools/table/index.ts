@@ -23,6 +23,7 @@ import {
   IconTextSizeLarge,
   IconTextSizeSmall,
 } from '../../components/icons';
+import { findOwn } from '../../components/utils/own-element';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
@@ -162,7 +163,9 @@ export class Table implements BlockTool {
     this.blockId = block?.id;
     this.block = block;
     this.fullscreen = new TableFullscreen({
-      getHost: () => this.block?.holder ?? null,
+      getHost: () => this.element?.parentElement ?? null,
+      getTitle: () => this.headingAbove(),
+      getSize: () => ({ rows: this.model.rows, cols: this.model.cols }),
       t: (key) => this.api.i18n.t(key),
     });
     this.subsystems = new TableSubsystems(this.createSubsystemHost());
@@ -667,6 +670,7 @@ export class Table implements BlockTool {
     }
 
     wrapper.appendChild(this.fullscreen.button);
+    wrapper.appendChild(this.fullscreen.header);
     this.element = wrapper;
 
     if (this.model.withHeadings) {
@@ -685,6 +689,35 @@ export class Table implements BlockTool {
     }
 
     return wrapper;
+  }
+
+  /**
+   * The text of the heading right before this table among its siblings.
+   * Walks the flat list back: other blocks' children sit between siblings.
+   */
+  private headingAbove(): string | null {
+    const block = this.block;
+    const index = block === undefined ? undefined : this.api.blocks.getBlockIndex(block.id);
+
+    if (block === undefined || index === undefined) {
+      return null;
+    }
+
+    for (const i of Array.from({ length: index }, (_, k) => index - 1 - k)) {
+      const prev = this.api.blocks.getBlockByIndex(i);
+
+      if (prev === undefined) {
+        return null;
+      }
+      if (prev.parentId !== block.parentId) {
+        continue;
+      }
+      const text = findOwn(prev.holder, 'h1, h2, h3, h4, h5, h6')?.textContent?.trim();
+
+      return text !== undefined && text !== '' ? text : null;
+    }
+
+    return null;
   }
 
   /**

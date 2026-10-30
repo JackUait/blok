@@ -1,0 +1,21 @@
+feature,area,priority,original,clone,notes
+Menu opens on "@" before the first answer,@ menu,must,yes,no,S01
+Section header "Link to page",@ menu,must,yes,no,S01/S02 gray small header
+Recent pages on empty query,@ menu,must,yes,no,search('') answer; host decides recents
+"N more results" row expands the list,@ menu,should,yes,no,S01 ~6 rows then gray row
+Loading: spinner by header + 2 skeleton rows,@ menu,must,yes,no,S02
+Result row: icon + title + gray path line,@ menu,must,yes,partial,path exists; icon missing in picker rows
+Draft mark in rows,@ menu,must,n/a,yes,KB requirement
+No page match: section hides; Nothing found only when every section is empty,@ menu,must,yes,partial,S03
+Section "New page": New "q" sub-page (query bold),@ menu,must,yes,no,needs create({ title })
+Section "New page": New "q" page in… opens parent picker,@ menu,should,yes,no,needs create({ parentId })
+Empty-query labels Add new sub-page / Add new page in…,@ menu,must,yes,no,S01
+Hover card on New page items (delayed),@ menu,could,yes,no,hint law 500ms
+"@query" shown in a gray pill while the menu is open,@ menu,should,yes,no,S01/S02
+Arrows across sections skip headers,@ menu,must,yes,partial,
+Escape keeps "@query" as text,@ menu,must,yes,yes,F04
+Menu flips above the line when no room,@ menu,should,yes,unknown,
+"/" Link to page,/ menu,must,yes,yes,shipped 31cabe13
+People / Invite,@ menu,skip,yes,no,user: no user tagging now
+Date / Remind me,@ menu,skip,yes,no,user chose not now
+Give search feedback footer,@ menu,skip,yes,no,Notion-internal

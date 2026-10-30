@@ -1,0 +1,618 @@
+{
+  "ips": [
+    "0.0.0.0",
+    "0.255.255.255",
+    "1.0.0.0",
+    "1.1.1.1",
+    "10.0.0.0",
+    "10.255.255.255",
+    "100.127.255.255",
+    "100.128.0.0",
+    "100.63.255.255",
+    "100.64.0.0",
+    "100:0:0:1::",
+    "100:0:0:2::",
+    "100::",
+    "100::1:ffff:ffff:ffff:ffff",
+    "100::ffff:ffff:ffff:ffff",
+    "11.0.0.0",
+    "126.255.255.255",
+    "127.0.0.0",
+    "127.255.255.255",
+    "128.0.0.0",
+    "169.253.255.255",
+    "169.254.0.0",
+    "169.254.255.255",
+    "169.255.0.0",
+    "172.15.255.255",
+    "172.16.0.0",
+    "172.31.255.255",
+    "172.32.0.0",
+    "191.255.255.255",
+    "192.0.0.0",
+    "192.0.0.255",
+    "192.0.1.0",
+    "192.0.1.255",
+    "192.0.2.0",
+    "192.0.2.255",
+    "192.0.3.0",
+    "192.167.255.255",
+    "192.168.0.0",
+    "192.168.255.255",
+    "192.169.0.0",
+    "192.88.100.0",
+    "192.88.98.255",
+    "192.88.99.0",
+    "192.88.99.255",
+    "198.17.255.255",
+    "198.18.0.0",
+    "198.19.255.255",
+    "198.20.0.0",
+    "198.51.100.0",
+    "198.51.100.255",
+    "198.51.101.0",
+    "198.51.99.255",
+    "2000:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:0:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:10::",
+    "2001:1::",
+    "2001:1:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:1f:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:1ff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:200::",
+    "2001:20::",
+    "2001:2:0:ffff:ffff:ffff:ffff:ffff",
+    "2001:2:1::",
+    "2001:2::",
+    "2001:2f:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:30::",
+    "2001::",
+    "2001:db7:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:db8::",
+    "2001:db8:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:db9::",
+    "2001:f:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2002::",
+    "2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2003::",
+    "203.0.112.255",
+    "203.0.113.0",
+    "203.0.113.255",
+    "203.0.114.0",
+    "223.255.255.255",
+    "224.0.0.0",
+    "239.255.255.255",
+    "240.0.0.0",
+    "255.255.255.254",
+    "255.255.255.255",
+    "2606:4700::1111",
+    "3ffe:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "3fff:1000::",
+    "3fff::",
+    "3fff:fff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "5eff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "5f00::",
+    "5f00:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "5f01::",
+    "64:ff9a:ffff:ffff:ffff:ffff:ffff:ffff",
+    "64:ff9b:0:ffff:ffff:ffff:ffff:ffff",
+    "64:ff9b:1::",
+    "64:ff9b:1:ffff:ffff:ffff:ffff:ffff",
+    "64:ff9b:2::",
+    "64:ff9b::",
+    "64:ff9b::1:0:0",
+    "64:ff9b::ffff:ffff",
+    "8.8.8.8",
+    "9.255.255.255",
+    "::",
+    "::1",
+    "::1:0:0",
+    "::ffff:0.0.0.0",
+    "::ffff:10.0.0.1",
+    "::ffff:127.0.0.1",
+    "::ffff:8.8.8.8",
+    "::ffff:ffff",
+    "fbff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "fc00::",
+    "fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "fe00::",
+    "fe7f:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "fe80::",
+    "fe80::1%1",
+    "febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "fec0::",
+    "feff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "ff00::",
+    "ff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
+  ],
+  "urls": [
+    "http://example.com/",
+    "https://example.com/a?b#c",
+    "http://example.com:80/",
+    "https://example.com:443/",
+    "http://example.com:443/",
+    "https://example.com:80/",
+    "http://example.com:8080/",
+    "http://user@example.com/",
+    "http://user:pw@example.com/",
+    "ftp://example.com/",
+    "file:///etc/passwd",
+    "javascript:alert(1)",
+    "",
+    "   ",
+    "/relative",
+    "//example.com/x",
+    "http://127.0.0.1/",
+    "http://127.1/",
+    "http://0x7f.0.0.1/",
+    "http://2130706433/",
+    "http://[::1]/",
+    "http://[::ffff:127.0.0.1]/",
+    "http://[fe80::1%25eth0]/",
+    "http://169.254.169.254/latest/meta-data",
+    "http://bücher.example/path",
+    "http://xn--bcher-kva.example/",
+    "http://example.com\\@evil.com/",
+    "http://a@b@c/",
+    "http://localhost/",
+    "http://LOCALHOST./",
+    "http://example.com./",
+    "http://999.1.1.1/",
+    "http://1.2.3.4.5/",
+    "http://exa mple.com/",
+    "http:x",
+    "https://8.8.8.8/",
+    "http://[2606:4700::1111]/",
+    "http://example.com/%7Efoo/%2e%2e/bar",
+    " http://example.com/ "
+  ],
+  "relative": [
+    [
+      "http://example.com/a/b",
+      "/c"
+    ],
+    [
+      "http://example.com/a/b",
+      "//evil.example/x"
+    ],
+    [
+      "http://example.com/a/b",
+      "\\\\evil.com/x"
+    ],
+    [
+      "http://example.com/a/b",
+      "http://127.0.0.1/"
+    ],
+    [
+      "http://example.com/a/b",
+      "javascript:x"
+    ],
+    [
+      "https://example.com/a",
+      "//[::1]:443/x"
+    ],
+    [
+      "http://example.com/a/b",
+      "https:x"
+    ],
+    [
+      "http://example.com/a/b",
+      "http:x"
+    ],
+    [
+      "http://example.com/a/b",
+      ""
+    ],
+    [
+      "http://example.com/a/b",
+      "../../../x?y#z"
+    ]
+  ],
+  "answers": {
+    "ips": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ],
+    "urls": [
+      {
+        "allowed": true,
+        "url": "http://example.com/",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com/a?b#c",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com/",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com:443/",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com:80/",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://127.0.0.1/",
+        "host": "127.0.0.1",
+        "port": 80,
+        "literal": "127.0.0.1"
+      },
+      {
+        "allowed": true,
+        "url": "http://127.0.0.1/",
+        "host": "127.0.0.1",
+        "port": 80,
+        "literal": "127.0.0.1"
+      },
+      {
+        "allowed": true,
+        "url": "http://127.0.0.1/",
+        "host": "127.0.0.1",
+        "port": 80,
+        "literal": "127.0.0.1"
+      },
+      {
+        "allowed": true,
+        "url": "http://127.0.0.1/",
+        "host": "127.0.0.1",
+        "port": 80,
+        "literal": "127.0.0.1"
+      },
+      {
+        "allowed": true,
+        "url": "http://[::1]/",
+        "host": "::1",
+        "port": 80,
+        "literal": "::1"
+      },
+      {
+        "allowed": true,
+        "url": "http://[::ffff:127.0.0.1]/",
+        "host": "::ffff:127.0.0.1",
+        "port": 80,
+        "literal": "::ffff:127.0.0.1"
+      },
+      {
+        "allowed": true,
+        "url": "http://[fe80::1]/",
+        "host": "fe80::1%25eth0",
+        "port": 80,
+        "literal": "fe80::1"
+      },
+      {
+        "allowed": true,
+        "url": "http://169.254.169.254/latest/meta-data",
+        "host": "169.254.169.254",
+        "port": 80,
+        "literal": "169.254.169.254"
+      },
+      {
+        "allowed": true,
+        "url": "http://bücher.example/path",
+        "host": "xn--bcher-kva.example",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://xn--bcher-kva.example/",
+        "host": "xn--bcher-kva.example",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://localhost/",
+        "host": "localhost",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://localhost./",
+        "host": "localhost.",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com./",
+        "host": "example.com.",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://999.1.1.1/",
+        "host": "999.1.1.1",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://1.2.3.4.5/",
+        "host": "1.2.3.4.5",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "https://8.8.8.8/",
+        "host": "8.8.8.8",
+        "port": 443,
+        "literal": "8.8.8.8"
+      },
+      {
+        "allowed": true,
+        "url": "http://[2606:4700::1111]/",
+        "host": "2606:4700::1111",
+        "port": 80,
+        "literal": "2606:4700::1111"
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/bar",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      }
+    ],
+    "relative": [
+      {
+        "allowed": true,
+        "url": "http://example.com/c",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://evil.example/x",
+        "host": "evil.example",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://127.0.0.1/",
+        "host": "127.0.0.1",
+        "port": 80,
+        "literal": "127.0.0.1"
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "https://[::1]/x",
+        "host": "::1",
+        "port": 443,
+        "literal": "::1"
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/a/x",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/x?y#z",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      }
+    ]
+  }
+}

@@ -101,14 +101,15 @@ export const quote = (name: string): string => `"${name.replace(/\\/g, '\\\\').r
 
 /**
  * The help pane's examples for a property row: `30-formula-empty.png` (Number), notion-spec-2 §26.4
- * (Text, Checkbox, Date). Notion's third Checkbox example names properties a database may lack, so it
- * cannot run and is left out. Other types show only themselves: theirs are unmeasured.
+ * (Text, Checkbox, Date). Notion's third Checkbox example, `Signed and Sealed and Delivered`, names
+ * properties a database may lack, so Blok keeps its chain of `and` with values that always run.
+ * Other types show only themselves: theirs are unmeasured.
  */
 const PROPERTY_EXAMPLES: Partial<Record<PropertyDefinition['type'], (ref: string) => string[]>> = {
   number: (ref) => [ref, `${ref} / 2`, `pi() * ${ref} ^ 2`],
   text: (ref) => [ref, `upper(${ref})`, `${ref}.style("b", "red")`],
   richText: (ref) => [ref, `upper(${ref})`, `${ref}.style("b", "red")`],
-  checkbox: (ref) => [ref, `not ${ref}`],
+  checkbox: (ref) => [ref, `not ${ref}`, `${ref} and true and not false`],
   date: (ref) => [ref, `${ref} > now()`, `${ref}.dateAdd(1, "weeks")`, `dateBetween(${ref}, now(), "days")`],
 };
 

@@ -91,7 +91,8 @@ describe('formula function catalogue', () => {
   it.each([
     ['text', typed[0], ['prop("Text")', 'upper(prop("Text"))', 'prop("Text").style("b", "red")']],
     ['richText', typed[1], ['prop("Notes")', 'upper(prop("Notes"))', 'prop("Notes").style("b", "red")']],
-    ['checkbox', typed[2], ['prop("Checkbox")', 'not prop("Checkbox")']],
+    // Notion's third is `Signed and Sealed and Delivered`, a chain of `and` over properties a database may lack.
+    ['checkbox', typed[2], ['prop("Checkbox")', 'not prop("Checkbox")', 'prop("Checkbox") and true and not false']],
     ['date', typed[3], ['prop("Date")', 'prop("Date") > now()', 'prop("Date").dateAdd(1, "weeks")', 'dateBetween(prop("Date"), now(), "days")']],
   ])('gives a %s property Notion\'s examples, each of which runs', (_type, property, codes) => {
     const examples = propertyExamples(property);

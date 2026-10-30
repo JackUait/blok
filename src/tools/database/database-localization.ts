@@ -48,7 +48,7 @@ const DEFAULT_KEYS = {
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
 
 const englishDefault = (key: DefaultKey): string =>
-  databaseEnglish[key] ?? key;
+  databaseEnglish(key) ?? key;
 
 export { DATABASE_DEFAULT_TEXT };
 

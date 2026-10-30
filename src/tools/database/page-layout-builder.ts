@@ -1636,7 +1636,7 @@ export class PageLayoutBuilder {
   }
 
   private label(key: string, vars?: Record<string, string>): string {
-    const fallback = databaseEnglish[key] ?? key;
+    const fallback = databaseEnglish(key) ?? key;
 
     return this.options.i18n?.t(key, vars) ?? fallback.replace(/\{(\w+)\}/g, (match, name: string) => vars?.[name] ?? match);
   }

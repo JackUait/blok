@@ -1,4 +1,4 @@
-# Progress: yjs-lib0 lane (round 1, 2026-10-31)
+# Progress: yjs-lib0 lane (rounds 1-2, 2026-10-31)
 
 Branch `go/yjs-lib0`, worktree `/Users/jackuait/Packages/.blok-go/yjs-lib0`. Read this first next round.
 
@@ -33,7 +33,7 @@ Branch `go/yjs-lib0`, worktree `/Users/jackuait/Packages/.blok-go/yjs-lib0`. Rea
 
 ## C# fix (T17 / U6)
 
-Commit `fix(server): read wire JSON content with JsJson.Parse` (533aea17).
+Commit `fix(server)!: BREAKING read wire JSON content with JsJson.Parse` (03e827ac, was 533aea17 before the round-2 reword).
 - `ContentJson.GetContent` and `ContentEmbed.GetContent` now use `JsJson.Parse`.
   - Before, a `JsonNode` accepted a lone surrogate escape and threw on first read.
 - The converter (`YDocConverter.TryToPlain`) drops a string holding a lone surrogate, as it drops undefined.
@@ -43,8 +43,14 @@ Commit `fix(server): read wire JSON content with JsJson.Parse` (533aea17).
   - `{"n":1.0,"e":1e2,"i":1e999}` now exports as `{"n":1,"e":100,"i":null}`. Before, it exported the raw number text `1.0`, `1e2`, `1e999`. That old output comes from probe 3 (`JsonNode ... ok -> 1e999`); it was not re-run on the old code.
   - A 300-deep ref-2 array now exports as 256 levels with null at the bottom (the converter's lockstep cap). Before, it exported whole.
   - `SameAsLive` can now find an equal wire value. Before, it never could, so it always rewrote.
-- **Behaviour change on a shipped surface.** `TryReadWireJson` shipped in v1.16.1 (`git merge-base --is-ancestor` on commit 8372f514). Commit 533aea17 carries no BREAKING label. The label and a release note are owed when this lands, and the user decides.
+- **Behaviour change on a shipped surface.** `TryReadWireJson` shipped in v1.16.1 (`git merge-base --is-ancestor` on commit 8372f514).
+  - Round 2: the commit was reworded (non-interactive `commit-tree` + `rebase --onto`; tree unchanged) to carry `BREAKING` in the subject and a `BREAKING CHANGE:` body with old, new and migration. No other branch or worktree contained it (`git branch -a --contains`, plus `merge-base --is-ancestor` against every detached worktree HEAD).
+  - A release note is still owed when this lands; the user decides the bump.
   - Compatible route, if wanted: keep the raw text beside the parsed value, and let the converter re-read the raw text as before.
+- **Who reaches the new `case string text when HasLoneSurrogate(text)`** (round 2, partly verified). It runs on every string `TryToPlain` sees, which is map and array values and Any members, not Y.Text (YText/YXmlText take their own branches above it).
+  - ContentAny strings cannot carry one: the varstring read is strict UTF-8 (`Lib0Reader.cs:126-131`; negative case `invalid-utf8-key`).
+  - Rich-text HTML answers parsed with `JsJson.Parse` (`RichTextHtmlReader.cs:91`) go to `RichText.ToJson`, not to a map value.
+  - UNVERIFIED: that no other LOCAL writer (the importer) can put a lone-surrogate string in a map value. Its inputs come through System.Text.Json `JsonNode`, which round 1's probe 3 showed throws on a lone-surrogate read.
 - **The collab lane must reproduce the lone-surrogate drop in the Go converter.**
 - UNVERIFIED: a lone surrogate in an object KEY of wire JSON. STJ would write it as U+FFFD; nothing drops it.
 
@@ -61,29 +67,61 @@ DONE = a passing Go test reads a shared fixture or the C# capture, or is a twin 
 | J6-J7 | DONE | P2 twin, TestAcceptsEveryRawJSONPayloadABrowserAccepts, TestRefusesRawJSONContent |
 | C1-C14 | DONE | structs.json, negative.json, hand-built write-backs, scenarios, P1; C14 via TestDuplicateDeliveryOfOneDecodedUpdateIsIdempotent |
 | W1-W21 | DONE | structs/negative/yrs-compat/collab updates rewritten byte for byte; delete set and state vector ports; P1 for W19/W21 |
-| S1-S19 | DONE | scenarios + fuzz + P1; store, delete set, pending, parked-coverage and hostile ports |
-| D1-D28 | DONE | scenarios engineWrites bytes, P1, integration/write/text ports, P4/P5 twins |
+| S1-S19 | DONE | scenarios + fuzz + P1; store, delete set, pending, parked-coverage and hostile ports. S1 now also `TestGetStateIsZeroForAnUnknownClient` (round 2) |
+| D1-D28 | DONE | scenarios engineWrites bytes, P1, integration/write/text ports, P4/P5 twins. Round 2: D18 adds `TestMapTryGetReadsTheLastValueOfTheHeadAndSkipsDeleted`, D21 adds `TestArrayEnumerateSkipsDeletedAndNonCountable` (before, both rows lacked their cited oracle; mutations M9 `last := 0` and M10 drop `!countable()` now fail them) |
 | X1-X6 | DONE | varint.json, P2 twins, TooDeepPastTheCap, AGapWiderThanAnInt |
+| T4 | DONE (round 2) | `yjstest.TestCanonicalSortsKeysByUTF16Units`, expected text from node; mutation M12 (byte compare) fails it |
+| T16 | DONE (round 2) | twin tests, see below |
 
 So 112 DONE and 1 deferred with a reason.
 
-## Not done / round 2
+## Round 2 fixes (review findings)
 
-- **NodeReplay harness for Go** (the 8 C# tests marked NODE: EncoderTests ×5, YDocWriteTests ×2, YTextFormattingTests ×1, plus the harness test).
-  - They are covered transitively: Go bytes equal C# bytes (P1), and C# bytes are replayed into yjs.
-  - A direct port needs node in the Go CI job.
+1. **T16 was a real divergence, now fixed in C#.** `List.Sort` is unstable from 17 items; Go was stable.
+   - C#: `YDoc.MergeParked` and `PendingNormalizer.ParkedByClient` now sort with LINQ `OrderBy` (stable). For 16 or fewer items `List.Sort` was already stable (reviewer probe 1), so nothing smaller changes: the C# Yjs suite (753) and P1 still pass.
+   - Twin tests: C# `PendingRetentionTests.EqualClockParkedStructsKeepTheirParkedOrder`, Go `TestEqualClockParkedStructsKeepTheirParkedOrder`. 16 one-char items park at clocks 10..25, a 5-char item parks at clock 13, then clocks 0..9 fill the gap. They pin the parked full state bytes and the final text, for conflicting and for same content.
+   - The C# test failed before the fix (`Expected AQ0HCgQ... Actual AQwHCgQ...`). A Go mutation (length-descending tiebreak) fails the Go twin; P1 did not catch it.
+2. **A length-0 struct broke every later encode.** Pre-existing C# defect, ported into Go.
+   - yjs accepts length-0 items and GCs, and still encodes: `findIndexSS` tests the LAST struct for an exact clock before bisecting (`node_modules/yjs/src/utils/StructStore.js:111-118`). Our bisection could not find a length-0 last struct that the state vector names.
+   - Fix in both: the same exact-last check in `StructStore.FindIndex` / `store.findIndex`. For structs of length 1 or more it returns the same index as before.
+   - Shared oracle `fixtures/yjs-engine/empty-structs.json` (new, in the manifest, from the generator): 9 cases, each applies its updates and must encode `sv`, `full` and a `diff` against `{1000:1}` exactly as yjs did. Read by C# `HostileUpdateTests.ALengthZeroStructEncodesAsYjsDoes` and Go `TestALengthZeroStructEncodesAsYjsDoes`. The C# test failed before the fix with `client 1000 has no struct at clock 0`.
+   - `AMapKeyWithNoValueReadsAsUndefined` (8372f514, shipped) now also asserts the encode succeeds, in both languages. Its applied-and-undefined contract is unchanged.
+   - A ContentDeleted of length 0 is the one empty shape yjs also refuses (it throws mid-apply; `yjsAccepts: false`). Both decoders now refuse it, so the doc stays as it was. New negative case `empty-deleted-content` (reason `empty-struct`); negative.json has 9 cases.
+   - Not refused: empty strings, JSON, Any and GCs, because yjs accepts them and refusing would reverse 8372f514. That also keeps journal replay of an old room working.
+3. **`Doc.EncodeStateAsUpdate` now returns an engine failure as `*EngineError`** instead of panicking (shared `recoverEngine`, also used by `ApplyDecoded`). Test: `TestEncodeReturnsAnEngineFailureAsAnError` corrupts the store directly; it panicked before the fix. `Doc.Transact` returns no error, so it still panics with `*EngineError`; its comment now says so. `ApplyUpdate`, `ApplyDecoded`, `Decode` and `DecodeStateVector` already return errors.
+4. **Pending-gap store state** is now checked in Go: `TestSameClientGapParksTheTail` (pendingMissing {1000:1}, empty store, one parked id) and `TestPendingRetriesWhenTheDependencyArrives` (state after each delivery). Mutation M11 fails the first.
+
+## Not done / round 3
+
+- **NodeReplay harness for Go.** 16 C# test bodies call NodeReplay (FuzzCorpus excluded):
+  - EncoderTests: DiffAgainstAnEmptyVectorReplaysIntoYjsWithIdenticalJson, DiffAgainstAPeerVectorIsAcceptedByYjs, PendingWithGapsEncodesSkipsReadableByYjs, TransactionEmitsOneUpdateThatReplaysIntoYjs, ApplyEmitsTheAppliedChangeOnly, ForeignTextEmbedsAndFormatsSurviveTheOracle.
+  - YDocWriteTests: OneTransactionEmitsOneUpdateReadableByYjs, PrelimMapIntegratesWithItsParent, SetAdmitsUndefined, JsonNumbersAlwaysLowerToDouble, TextWritesMatchYjs, TextSplitsOnSurrogatePairsLikeYjs, TextRoundTripsThroughNode.
+  - YTextFormattingTests: FormattedWritesReadBackInYjs, ToDeltaReadsANullEmbed.
+  - YjsEngineHarnessTests: NodeReplayAppliesAnEmptyUpdateAndReportsNoPending.
+  - Go has a non-Node counterpart only for PrelimMapIntegratesWithItsParent and ToDeltaReadsANullEmbed (`write_test.go`). The rest are covered only transitively: Go bytes equal C# bytes (P1), and C# bytes are replayed into yjs. A direct port needs node in the Go CI job.
 - **YrsCompatCorpusTests export side.** It belongs to the collab ledger, because it needs the converter.
 - **Collab seam API.** Go exports `Doc`, `Map`, `Array`, `Text`, `XmlText`, `Inspect`, `Decode`, `DecodedUpdate`, `ApplyResult`, `UpdateEvent`, `lib0.Reader/Writer/ReadAny/WriteAny`. The collab port may need more accessors (item walking for `RichText`, for example). Add them there.
-- **Panics.** Engine invariant violations panic with `*yjs.EngineError`. `Doc.ApplyDecoded` turns that into an error. Any other panic, or one from `Doc.Transact`, propagates. Collab must `recover()` at the room boundary (T12).
+- **Panics.** `Doc.Transact`, and anything else with no error return, panics with `*yjs.EngineError` on an engine invariant failure. Collab must `recover()` at the room boundary (T12).
+- **NEW, open (round 2): yjs drops the parentSub bit whenever the doc holds pending structs; neither engine does.** yjs `encodeStateAsUpdate` runs `mergeUpdates` when anything is pending (`encoding.js:522-540`). The merge re-reads every struct, and an item with an origin reads back with no parentSub, so it is rewritten without BIT6.
+  - Measured with yjs 13.6.33: a doc holding map "m" key "k" set twice encodes the second value with info `a8` and nothing pending, but `88` once one unrelated struct is parked. Probe: `/private/tmp/claude-501/-Users-jackuait-Packages-blok/1972ea3d-88af-4e14-951b-0edd9367e8e3/scratchpad/bitprobe/probe.mjs`.
+  - C# writes `0x20` from `ParentSub` or `WireParentSubBit` (`YItem.cs:86`), whatever is pending. Go matches C#, so P1 is blind to it.
+  - Impact: bytes only. A reader skips the parentSub bytes when an origin is set, so both forms decode to the same document. UNVERIFIED whether anything compares sync bytes to yjs.
+  - `empty-structs.json` keeps its parked case free of parentSub for this reason, and says so in the generator.
+  - Fix, if wanted: when pending structs or a pending delete set exist, write BIT6 only when the parentSub bytes are written (no origin and no right origin). Do it in C# first, regenerate P1 with `BLOK_WRITE_CSHARP_CAPTURE=1`, then Go.
 
 ## Known differences and edges (documented, not hidden)
 
-- **T16.** Go sorts parked structs stably. C# `List.Sort` is unstable from 16 elements.
-  - P1 shows no difference on today's fixtures.
-  - UNVERIFIED for 16 or more equal-clock parked structs.
+- **T16.** Fixed in round 2: both engines sort parked structs stably.
 - **D27.** `===` on `[]any` compares the backing array. An empty array with no backing store is never identical, even to itself. C# compares references.
   - This only matters for an empty array used as a text mark value.
 - **BOM.** UNVERIFIED whether C# `JsonDocument.Parse(string)` skips a leading U+FEFF in raw JSON content. Go's jsjson reader was not checked for it either.
+
+## Round 2 test runs
+
+- `go test -race -p 2 -count=1 ./internal/lib0/... ./internal/yjs/... ./internal/jsjson/...`: all 4 packages ok. `gofmt -l internal/` printed nothing. `go vet ./internal/...` was clean.
+- `dotnet test Blok.Server.Tests --filter Yjs|YDocConverter|JsJson`: 1191 passed, 0 failed.
+- `vitest run test/unit/server-conformance/yjs-engine-fixtures.freshness.test.ts`: 59 passed (the generator was edited).
+- `node scripts/test-server-conformance.mjs --target csharp`: 192 of 194 passed. The 2 fails were page-title sync timeouts (`status=connecting`). A rerun with `--test-name-pattern "page title"` passed 5/5, so they were load, not this change. The Mac was shared with other lanes' dotnet runs.
 
 ## Process note
 

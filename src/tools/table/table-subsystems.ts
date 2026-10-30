@@ -311,6 +311,135 @@ export class TableSubsystems {
     physicalOp();
   }
 
+  private addRowAtEnd(gridEl: HTMLElement): void {
+    this.host.runTransactedStructuralOp(() => {
+      const hadMerges = this.host.model.hasMerges();
+
+      this.host.model.addRow();
+      this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
+      populateNewCells(gridEl, this.host.cellBlocks);
+      updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
+      updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
+    });
+  }
+
+  /** Removes the last row only when no cell in it has content. */
+  private removeLastRowIfEmpty(gridEl: HTMLElement): boolean {
+    return this.host.runTransactedStructuralOp(() => {
+      const rowCount = this.host.grid.getRowCount(gridEl);
+
+      if (rowCount <= 1 || !isRowEmpty(gridEl, rowCount - 1)) {
+        return false;
+      }
+
+      const hadMerges = this.host.model.hasMerges();
+      const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
+
+      this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
+      this.applyStructuralDom(hadMerges, () => this.host.grid.deleteRow(gridEl, rowCount - 1));
+
+      return true;
+    });
+  }
+
+  private addColumnAtEnd(gridEl: HTMLElement): void {
+    this.host.runTransactedStructuralOp(() => {
+      const colWidths = this.host.model.colWidths ?? readPixelWidths(gridEl);
+      const halfWidth = this.host.model.initialColWidth !== undefined
+        ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
+        : computeHalfAvgWidth(colWidths);
+
+      const newWidths = [...colWidths, halfWidth];
+
+      const hadMergesForCol = this.host.model.hasMerges();
+
+      this.host.model.addColumn(undefined, halfWidth);
+      this.host.model.setColWidths(newWidths);
+      this.applyStructuralDom(hadMergesForCol, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
+      applyPixelWidths(gridEl, newWidths);
+      populateNewCells(gridEl, this.host.cellBlocks);
+      updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
+
+      if (this.host.scrollContainer) {
+        scrollToInlineEnd(this.host.scrollContainer);
+      }
+    });
+  }
+
+  /** Removes the last column only when no cell in it has content. */
+  private removeLastColumnIfEmpty(gridEl: HTMLElement): boolean {
+    return this.host.runTransactedStructuralOp(() => {
+      const colCount = this.host.grid.getColumnCount(gridEl);
+
+      if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
+        return false;
+      }
+
+      // model.deleteColumn() already removes the width internally,
+      // so no additional syncColWidthsAfterDeleteColumn is needed.
+      const hadMerges = this.host.model.hasMerges();
+      const { blocksToDelete } = this.host.model.deleteColumn(colCount - 1);
+
+      this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
+      this.applyStructuralDom(hadMerges, () => this.host.grid.deleteColumn(gridEl, colCount - 1));
+
+      const updatedWidths = this.host.model.colWidths;
+
+      if (updatedWidths) {
+        applyPixelWidths(gridEl, updatedWidths);
+      }
+
+
+      return true;
+    });
+  }
+
+  /**
+   * The smallest size that keeps every filled cell: empty rows and columns at
+   * the end can go, the rest cannot. Never below one row and one column.
+   */
+  public minSize(gridEl: HTMLElement): { rows: number; cols: number } {
+    const { rows, cols } = this.host.model;
+    const emptyRows = Array.from({ length: rows - 1 }, (_, i) => rows - 1 - i).findIndex(r => !isRowEmpty(gridEl, r));
+    const emptyCols = Array.from({ length: cols - 1 }, (_, i) => cols - 1 - i).findIndex(c => !isColumnEmpty(gridEl, c));
+
+    return {
+      rows: emptyRows === -1 ? 1 : rows - emptyRows,
+      cols: emptyCols === -1 ? 1 : cols - emptyCols,
+    };
+  }
+
+  /**
+   * Grows or shrinks the table at its end to `rows` x `cols`, as one undo step.
+   * Shrinking stops at the first row or column that has content.
+   */
+  public setSize(gridEl: HTMLElement, rows: number, cols: number): void {
+    this.openDragTransaction();
+    this.resize?.destroy();
+    this.resize = null;
+    this.rowColControls?.hideAllGrips();
+
+    const step = (more: () => boolean, fewer: () => boolean, current: () => number, target: number): void => {
+      Array.from({ length: Math.abs(target - current()) }).every(() => (current() < target ? more() : fewer()));
+    };
+
+    step(() => {
+      this.addRowAtEnd(gridEl);
+
+      return true;
+    }, () => this.removeLastRowIfEmpty(gridEl), () => this.host.model.rows, rows);
+    step(() => {
+      this.addColumnAtEnd(gridEl);
+
+      return true;
+    }, () => this.removeLastColumnIfEmpty(gridEl), () => this.host.model.cols, cols);
+
+    this.initResize(gridEl);
+    this.rowColControls?.refresh();
+    this.addControls?.syncRowButtonWidth();
+    this.closeDragTransaction();
+  }
+
   private initAddControls(gridEl: HTMLElement): void {
     this.addControls?.destroy();
 
@@ -388,88 +517,25 @@ export class TableSubsystems {
         this.rowColControls?.setGripsDisplay(false);
       },
       onDragAddRow: () => {
-        this.host.runTransactedStructuralOp(() => {
-          const hadMerges = this.host.model.hasMerges();
-
-          this.host.model.addRow();
-          this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
-          populateNewCells(gridEl, this.host.cellBlocks);
-          updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
-          updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
-        });
+        this.addRowAtEnd(gridEl);
 
         return true;
       },
-      onDragRemoveRow: () => {
-        return this.host.runTransactedStructuralOp(() => {
-          const rowCount = this.host.grid.getRowCount(gridEl);
-
-          if (rowCount <= 1 || !isRowEmpty(gridEl, rowCount - 1)) {
-            return false;
-          }
-
-          const hadMerges = this.host.model.hasMerges();
-          const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
-
-          this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
-          this.applyStructuralDom(hadMerges, () => this.host.grid.deleteRow(gridEl, rowCount - 1));
-
-          return true;
-        });
-      },
+      onDragRemoveRow: () => this.removeLastRowIfEmpty(gridEl),
       onDragAddCol: () => {
-        this.host.runTransactedStructuralOp(() => {
-          const colWidths = this.host.model.colWidths ?? readPixelWidths(gridEl);
-          const halfWidth = this.host.model.initialColWidth !== undefined
-            ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
-            : computeHalfAvgWidth(colWidths);
-
-          const newWidths = [...colWidths, halfWidth];
-
-          const hadMergesForCol = this.host.model.hasMerges();
-
-          this.host.model.addColumn(undefined, halfWidth);
-          this.host.model.setColWidths(newWidths);
-          this.applyStructuralDom(hadMergesForCol, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
-          applyPixelWidths(gridEl, newWidths);
-          populateNewCells(gridEl, this.host.cellBlocks);
-          updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
-
-          dragState.addedCols++;
-
-          if (this.host.scrollContainer) {
-            scrollToInlineEnd(this.host.scrollContainer);
-          }
-        });
+        this.addColumnAtEnd(gridEl);
+        dragState.addedCols++;
 
         return true;
       },
       onDragRemoveCol: () => {
-        return this.host.runTransactedStructuralOp(() => {
-          const colCount = this.host.grid.getColumnCount(gridEl);
+        const removed = this.removeLastColumnIfEmpty(gridEl);
 
-          if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
-            return false;
-          }
-
-          // model.deleteColumn() already removes the width internally,
-          // so no additional syncColWidthsAfterDeleteColumn is needed.
-          const hadMerges = this.host.model.hasMerges();
-          const { blocksToDelete } = this.host.model.deleteColumn(colCount - 1);
-
-          this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
-          this.applyStructuralDom(hadMerges, () => this.host.grid.deleteColumn(gridEl, colCount - 1));
-
-          const updatedWidths = this.host.model.colWidths;
-
-          if (updatedWidths) {
-            applyPixelWidths(gridEl, updatedWidths);
-          }
-
+        if (removed) {
           dragState.addedCols--;
+        }
 
-          return true;
-        });
+        return removed;
       },
       onDragEnd: () => {
         this.initResize(gridEl);

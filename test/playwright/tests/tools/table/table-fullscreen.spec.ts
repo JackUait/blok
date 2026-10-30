@@ -374,7 +374,8 @@ test.describe('Table full screen', () => {
     }
     await page.mouse.move(box.x + box.width / 2, box.y + box.height - 10);
     await page.locator('[data-blok-table-add-row]').click();
-    await expect(size).toHaveText('3 × 2');
+    // Columns first, like the readout while dragging the add bars.
+    await expect(size).toHaveText('2 × 3');
 
     await page.mouse.move(box.x + box.width - 10, box.y + box.height / 2);
     await page.locator('[data-blok-table-add-col]').click();
@@ -406,5 +407,82 @@ test.describe('Table full screen', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-blok-table-fullscreen]')).toHaveCount(0);
     await expect.poll(async () => Math.max(...await handleDrift())).toBeLessThanOrEqual(2);
+  });
+
+  test('clicking the size lets you type columns and rows', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    const columns = page.getByRole('textbox', { name: 'Columns' });
+    const rows = page.getByRole('textbox', { name: 'Rows' });
+
+    await expect(columns).toHaveValue('2');
+    await expect(rows).toHaveValue('2');
+    await expect(columns).toBeFocused();
+
+    await columns.fill('4');
+    await rows.fill('5');
+    await rows.press('Enter');
+
+    await expect(page.getByRole('button', { name: 'Change table size' })).toHaveText('4 × 5');
+    await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
+    const content = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks[0]?.data.content as unknown[][]);
+
+    expect(content).toHaveLength(5);
+    expect(content.every(row => row.length === 4)).toBe(true);
+  });
+
+  test('the size cannot go below the filled cells', async ({ page }) => {
+    await createBlok(page, false, {
+      blocks: [{ id: 'tbl', type: 'table', data: { withHeadings: false, content: [['A', 'B', ''], ['C', 'D', ''], ['', '', '']] } }],
+    });
+    await openWithButton(page);
+
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    const columns = page.getByRole('textbox', { name: 'Columns' });
+    const rows = page.getByRole('textbox', { name: 'Rows' });
+
+    await columns.fill('1');
+    // Flagged while typing: one column would drop column B.
+    await expect(columns).toHaveAttribute('aria-invalid', 'true');
+    await rows.fill('1');
+    await rows.press('Enter');
+
+    await expect(page.getByRole('button', { name: 'Change table size' })).toHaveText('2 × 2');
+    const saved = JSON.stringify(await page.evaluate(async () => window.blokInstance?.save()));
+
+    for (const text of ['A', 'B', 'C', 'D']) {
+      expect(saved).toContain(`"${text}"`);
+    }
+  });
+
+  test('Escape cancels a size edit and keeps the modal open', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    await page.getByRole('textbox', { name: 'Rows' }).fill('9');
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByRole('textbox', { name: 'Rows' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Change table size' })).toHaveText('2 × 2');
+    await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
+    await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
+  });
+
+  test('a size change is one undo step', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    await page.getByRole('textbox', { name: 'Columns' }).fill('4');
+    await page.getByRole('textbox', { name: 'Rows' }).fill('4');
+    await page.keyboard.press('Enter');
+    await expect(page.locator(CELL_SELECTOR)).toHaveCount(16);
+
+    await page.keyboard.press('ControlOrMeta+z');
+
+    await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
   });
 });

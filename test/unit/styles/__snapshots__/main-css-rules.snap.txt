@@ -3463,8 +3463,39 @@
 
 [data-blok-table-fullscreen-size] {
   flex: none;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: transparent;
+  color: var(--blok-text-tertiary);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+[data-blok-table-fullscreen-size]:hover {
+  background-color: var(--blok-item-hover-bg);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-table-fullscreen-size]:disabled {
+  background-color: transparent;
+  color: var(--blok-text-tertiary);
+  cursor: default;
+}
+
+[data-blok-table-fullscreen-size-editor]:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
   color: var(--blok-text-tertiary);
   font-size: 13px;
+}
+
+[data-blok-table-fullscreen-size-editor] input[data-blok-field] {
+  width: 6ch;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 

@@ -166,6 +166,13 @@ export class Table implements BlockTool {
       getHost: () => this.element?.parentElement ?? null,
       getTitle: () => this.headingAbove(),
       getSize: () => ({ rows: this.model.rows, cols: this.model.cols }),
+      getMinSize: () => (this.gridElement === null ? { rows: 1, cols: 1 } : this.subsystems.minSize(this.gridElement)),
+      isReadOnly: () => this.readOnly,
+      setSize: ({ rows, cols }) => {
+        if (!this.readOnly && this.gridElement !== null) {
+          this.subsystems.setSize(this.gridElement, rows, cols);
+        }
+      },
       onRelayout: () => {
         if (!this.readOnly && this.gridElement !== null) {
           this.subsystems.relayout(this.gridElement);

@@ -10,6 +10,15 @@ const TOGGLE_ATTR = 'data-blok-table-fullscreen-toggle';
 const HEADER_ATTR = 'data-blok-table-fullscreen-header';
 const TITLE_ATTR = 'data-blok-table-fullscreen-title';
 const SIZE_ATTR = 'data-blok-table-fullscreen-size';
+const SIZE_EDITOR_ATTR = 'data-blok-table-fullscreen-size-editor';
+
+/** Highest row or column count the size field accepts: each new cell holds a block. */
+const MAX_SIZE = 100;
+
+interface TableSize {
+  rows: number;
+  cols: number;
+}
 
 const OPEN_MS = 460;
 const CLOSE_MS = 420;
@@ -25,7 +34,13 @@ interface TableFullscreenOptions {
   getHost: () => HTMLElement | null;
   /** Text of the heading right above the table, if there is one. */
   getTitle: () => string | null;
-  getSize: () => { rows: number; cols: number };
+  getSize: () => TableSize;
+  /** The smallest size that keeps every filled cell. */
+  getMinSize: () => TableSize;
+  /** Grows or shrinks the table at its end, as one undo step. */
+  setSize: (size: TableSize) => void;
+  /** A read-only table shows its size but cannot change it. */
+  isReadOnly: () => boolean;
   /** The table changed width: a fluid table's handles and grips were placed for the old one. */
   onRelayout: () => void;
   t: (key: string) => string;
@@ -78,6 +93,13 @@ export class TableFullscreen {
   /** Sits in the tool root, hidden until the modal opens. */
   public readonly header: HTMLElement;
 
+  private readonly sizeButton: HTMLButtonElement;
+  private readonly sizeEditor: HTMLElement;
+  private readonly colsInput: HTMLInputElement;
+  private readonly rowsInput: HTMLInputElement;
+  /** The size fields' floor while they are open. */
+  private minSize: TableSize | null = null;
+
   private host: HTMLElement | null = null;
   private backdrop: HTMLElement | null = null;
   /** The table's inline box at open. The page is scroll-locked, so it holds until close. */
@@ -110,9 +132,36 @@ export class TableFullscreen {
 
     header.setAttribute(HEADER_ATTR, '');
     header.setAttribute(DATA_ATTR.mutationFree, 'true');
+    // The size fields take Enter, Escape and arrows; Blok's block keys must stand down.
+    header.setAttribute(DATA_ATTR.keyboardOwner, '');
     header.contentEditable = 'false';
-    header.innerHTML = `${IconTable}<span ${TITLE_ATTR}></span><span ${SIZE_ATTR}></span>`;
+    header.innerHTML = `${IconTable}<span ${TITLE_ATTR}></span><button type="button" ${SIZE_ATTR}></button>`
+      + `<span ${SIZE_EDITOR_ATTR} hidden><input data-blok-field="text" inputmode="numeric" autocomplete="off">`
+      + '<span aria-hidden="true">×</span><input data-blok-field="text" inputmode="numeric" autocomplete="off"></span>';
     this.header = header;
+
+    const [colsInput, rowsInput] = Array.from(header.querySelectorAll('input'));
+
+    this.sizeButton = header.querySelector<HTMLButtonElement>(`[${SIZE_ATTR}]`) ?? document.createElement('button');
+    this.sizeEditor = header.querySelector<HTMLElement>(`[${SIZE_EDITOR_ATTR}]`) ?? document.createElement('span');
+    this.colsInput = colsInput;
+    this.rowsInput = rowsInput;
+    this.sizeButton.setAttribute('aria-label', options.t('tools.table.changeSize'));
+    colsInput.setAttribute('aria-label', options.t('tools.table.columns'));
+    rowsInput.setAttribute('aria-label', options.t('tools.table.rows'));
+    this.sizeButton.addEventListener('click', () => this.startSizeEdit());
+    this.sizeEditor.addEventListener('input', () => this.flagTooSmall());
+    this.sizeEditor.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.commitSizeEdit();
+      }
+    });
+    this.sizeEditor.addEventListener('focusout', (event) => {
+      if (!(event.relatedTarget instanceof Node && this.sizeEditor.contains(event.relatedTarget))) {
+        this.commitSizeEdit();
+      }
+    });
 
     this.syncButton();
   }
@@ -143,6 +192,7 @@ export class TableFullscreen {
 
     this.syncTitle(title);
     this.syncSize();
+    this.sizeButton.disabled = this.options.isReadOnly();
     this.sizeWatch.observe(source, { childList: true, subtree: true });
 
     const backdrop = document.createElement('div');
@@ -194,6 +244,7 @@ export class TableFullscreen {
     this.host = null;
 
     window.removeEventListener('keydown', this.onKeydown, true);
+    this.endSizeEdit();
     this.sizeWatch.disconnect();
     host.removeAttribute('role');
     host.removeAttribute('aria-modal');
@@ -315,8 +366,80 @@ export class TableFullscreen {
     }
     event.preventDefault();
     event.stopPropagation();
+
+    if (this.minSize !== null) {
+      this.endSizeEdit();
+      this.sizeButton.focus();
+
+      return;
+    }
     this.close();
   };
+
+  private startSizeEdit(): void {
+    if (!this.isOpen || this.options.isReadOnly()) {
+      return;
+    }
+    const { rows, cols } = this.options.getSize();
+
+    this.minSize = this.options.getMinSize();
+    this.colsInput.value = String(cols);
+    this.rowsInput.value = String(rows);
+    this.sizeButton.hidden = true;
+    this.sizeEditor.hidden = false;
+    this.colsInput.focus();
+    this.colsInput.select();
+  }
+
+  /** Marks a field whose value would drop filled cells, so the floor shows before Enter. */
+  private flagTooSmall(): void {
+    const min = this.minSize;
+
+    if (min === null) {
+      return;
+    }
+    const flag = (input: HTMLInputElement, floor: number): void => {
+      const value = Number.parseInt(input.value, 10);
+
+      input.setAttribute('aria-invalid', String(Number.isFinite(value) && value < floor));
+    };
+
+    flag(this.colsInput, min.cols);
+    flag(this.rowsInput, min.rows);
+  }
+
+  private commitSizeEdit(): void {
+    const min = this.minSize;
+
+    if (min === null) {
+      return;
+    }
+    const current = this.options.getSize();
+    const read = (input: HTMLInputElement, fallback: number, floor: number): number => {
+      const value = Number.parseInt(input.value, 10);
+
+      return Math.min(MAX_SIZE, Math.max(floor, Number.isFinite(value) ? value : fallback));
+    };
+    const next = { cols: read(this.colsInput, current.cols, min.cols), rows: read(this.rowsInput, current.rows, min.rows) };
+
+    this.endSizeEdit();
+
+    if (next.cols !== current.cols || next.rows !== current.rows) {
+      this.options.setSize(next);
+      this.syncSize();
+    }
+    if (this.isOpen) {
+      this.sizeButton.focus();
+    }
+  }
+
+  private endSizeEdit(): void {
+    this.minSize = null;
+    this.sizeEditor.hidden = true;
+    this.sizeButton.hidden = false;
+    this.colsInput.removeAttribute('aria-invalid');
+    this.rowsInput.removeAttribute('aria-invalid');
+  }
 
   private hasLayerAbove(): boolean {
     const host = this.host;
@@ -338,13 +461,13 @@ export class TableFullscreen {
     }
   }
 
+  /** Columns first, like the readout while dragging the add bars. */
   private syncSize(): void {
-    const sizeEl = this.header.querySelector(`[${SIZE_ATTR}]`);
     const { rows, cols } = this.options.getSize();
-    const size = `${rows} × ${cols}`;
+    const size = `${cols} × ${rows}`;
 
-    if (sizeEl !== null && sizeEl.textContent !== size) {
-      sizeEl.textContent = size;
+    if (this.sizeButton.textContent !== size) {
+      this.sizeButton.textContent = size;
     }
   }
 

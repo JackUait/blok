@@ -1,11 +1,65 @@
 package route
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
+
+// routingFixture is shared with routing-contract.test.ts, which checks the
+// same cases against the real C# host.
+type routingFixture struct {
+	HealthHost struct {
+		MatchesHealth    []string   `json:"matchesHealth"`
+		MethodNotAllowed []refusal  `json:"methodNotAllowed"`
+		NotFound         []request  `json:"notFound"`
+		EncodedNUL       []request  `json:"encodedNul"`
+		NotRefused       []routedAs `json:"notRefused"`
+	} `json:"healthHost"`
+	CollabHost struct {
+		MethodNotAllowed []refusal `json:"methodNotAllowed"`
+		NotFound         []string  `json:"notFound"`
+		EncodedSeparator []struct {
+			Path string `json:"path"`
+			Doc  string `json:"doc"`
+		} `json:"encodedSeparator"`
+	} `json:"collabHost"`
+}
+
+type request struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
+}
+
+type refusal struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
+	Allow  string `json:"allow"`
+}
+
+type routedAs struct {
+	Path   string `json:"path"`
+	Status int    `json:"status"`
+}
+
+func loadFixture(t *testing.T) routingFixture {
+	t.Helper()
+	bytes, err := os.ReadFile("../../../../../test/unit/server-conformance/fixtures/routing.json")
+	if err != nil {
+		t.Fatalf("shared routing fixture: %v", err)
+	}
+	var fixture routingFixture
+	if err := json.Unmarshal(bytes, &fixture); err != nil {
+		t.Fatalf("shared routing fixture: %v", err)
+	}
+	if len(fixture.HealthHost.MatchesHealth) == 0 || len(fixture.CollabHost.EncodedSeparator) == 0 {
+		t.Fatal("shared routing fixture has empty lists")
+	}
+	return fixture
+}
 
 // named answers with its own name and the {doc} value, so a test can see
 // which route ran and what it captured.
@@ -26,6 +80,10 @@ func testRouter() *Router {
 	router.Handle("/sync/{doc}/state", []string{"GET"}, named("state"))
 	router.Handle("/sync/{doc}/state", []string{"OPTIONS"}, named("preflight"))
 	router.Handle("/sync/{doc}/state", nil, MethodNotAllowed("GET, OPTIONS"))
+	router.Handle("/sync/{doc}/history/{lineage}", []string{"DELETE", "OPTIONS"}, named("history"))
+	router.Handle("/sync/{doc}/history/{lineage}", nil, MethodNotAllowed("DELETE, OPTIONS"))
+	router.Handle("/unfurl", []string{"GET", "OPTIONS"}, named("unfurl"))
+	router.Handle("/unfurl", nil, MethodNotAllowed("GET, HEAD, OPTIONS"))
 	return router
 }
 
@@ -45,27 +103,20 @@ func serve(t *testing.T, router http.Handler, method, target string) answer {
 }
 
 func TestMatchesLikeKestrel(t *testing.T) {
+	fixture := loadFixture(t)
 	cases := []struct{ method, target, body string }{
-		{"GET", "/health", "health|"},
-		{"GET", "/HEALTH", "health|"},
-		{"GET", "/Health/", "health|"},
 		{"HEAD", "/health/", "health|"},
-		{"GET", "/./health", "health|"},
-		{"GET", "/x/../health", "health|"},
-		{"GET", "/../health", "health|"},
-		{"GET", "/%2e/health", "health|"},
-		{"GET", "/%2E%2E/health", "health|"},
-		{"GET", "/%68ealth", "health|"},
-		{"GET", "/health?x=1", "health|"},
-		{"GET", "/health/.", "health|"},
-		{"GET", "/health/./", "health|"},
 		{"GET", "/SYNC/AbC/STATE/", "state|AbC"},
 		{"GET", "/sync/a%20b", "sync|a b"},
 		{"GET", "/sync/a%2Fb", "sync|a%2Fb"},
-		{"GET", "/sync/a%2fb/state", "state|a%2fb"},
-		{"GET", "/sync/a%5Cb/state", `state|a\b`},
 		{"GET", "/sync/a%252Fb", "sync|a%2Fb"},
 		{"OPTIONS", "/sync/x/state", "preflight|x"},
+	}
+	for _, path := range fixture.HealthHost.MatchesHealth {
+		cases = append(cases, struct{ method, target, body string }{"GET", path, "health|"})
+	}
+	for _, c := range fixture.CollabHost.EncodedSeparator {
+		cases = append(cases, struct{ method, target, body string }{"GET", c.Path, "state|" + c.Doc})
 	}
 	router := testRouter()
 	for _, c := range cases {
@@ -77,25 +128,16 @@ func TestMatchesLikeKestrel(t *testing.T) {
 }
 
 func TestUnmatchedPathsGetTheCatchAll(t *testing.T) {
+	fixture := loadFixture(t)
+	targets := fixture.CollabHost.NotFound
+	for _, r := range fixture.HealthHost.NotFound {
+		// testRouter serves /unfurl; the health-only host does not.
+		if r.Path != "/unfurl" {
+			targets = append(targets, r.Path)
+		}
+	}
 	router := testRouter()
-	for _, target := range []string{
-		"//health",
-		"/health//",
-		"/health%2F",
-		"/health%2fx",
-		"/health/x",
-		"/health/..",
-		"/",
-		"*",
-		"/nope",
-		"/sync",
-		"/sync/",
-		"/sync//state",
-		"/sync/x/state//",
-		"/sync/%2e%2e/state",
-		// "ſ" upper-cases to "S" in Unicode; literals fold ASCII only.
-		"/%C5%BFync/x/state",
-	} {
+	for _, target := range targets {
 		for _, method := range []string{"GET", "POST", "OPTIONS"} {
 			got := serve(t, router, method, target)
 			if got.status != 404 || got.body != "404 page not found\n" ||
@@ -109,22 +151,20 @@ func TestUnmatchedPathsGetTheCatchAll(t *testing.T) {
 }
 
 func TestMethodRoutesBeatTheFallback(t *testing.T) {
-	cases := []struct{ method, target, allow string }{
-		{"POST", "/health", "GET, HEAD"},
+	fixture := loadFixture(t)
+	cases := append([]refusal{
 		{"OPTIONS", "/HEALTH/", "GET, HEAD"},
-		{"HEAD", "/sync/x", "GET"},
-		{"OPTIONS", "/sync/x", "GET"},
-		{"HEAD", "/sync/x/state", "GET, OPTIONS"},
 		{"DELETE", "/sync/x/state/", "GET, OPTIONS"},
-	}
+	}, fixture.HealthHost.MethodNotAllowed...)
+	cases = append(cases, fixture.CollabHost.MethodNotAllowed...)
 	router := testRouter()
 	for _, c := range cases {
-		got := serve(t, router, c.method, c.target)
-		if got.status != 405 || got.header.Get("Allow") != c.allow ||
+		got := serve(t, router, c.Method, c.Path)
+		if got.status != 405 || got.header.Get("Allow") != c.Allow ||
 			got.header.Get("Content-Type") != "text/plain; charset=utf-8" ||
 			got.header.Get("X-Content-Type-Options") != "" ||
 			got.body != "Method Not Allowed\n" {
-			t.Errorf("%s %s: %d %q %v", c.method, c.target, got.status, got.body, got.header)
+			t.Errorf("%s %s: %d %q %v", c.Method, c.Path, got.status, got.body, got.header)
 		}
 	}
 }
@@ -191,34 +231,20 @@ func TestALiteralBeatsAParameterInTheSamePass(t *testing.T) {
 // Kestrel refuses a decoded NUL anywhere in the path, before routing, with an
 // empty 400. It does not refuse %00 in the query, %2500, or other controls.
 func TestEncodedNULInThePathIsABadRequest(t *testing.T) {
+	fixture := loadFixture(t)
 	router := testRouter()
-	for _, c := range []struct{ method, target string }{
-		{"GET", "/health%00"},
-		{"HEAD", "/health%00"},
-		{"POST", "/x%00"},
-		{"GET", "/a%00b/c"},
-		{"GET", "/x/../health%00"},
-		{"GET", "/sync/a%00/state"},
-	} {
-		got := serve(t, router, c.method, c.target)
+	for _, c := range append(fixture.HealthHost.EncodedNUL, request{"GET", "/sync/a%00/state"}) {
+		got := serve(t, router, c.Method, c.Path)
 		if got.status != 400 || got.body != "" ||
 			got.header.Get("Content-Length") != "0" ||
 			got.header.Get("Connection") != "close" ||
 			got.header.Get("Content-Type") != "" {
-			t.Errorf("%s %s: %d %q %v", c.method, c.target, got.status, got.body, got.header)
+			t.Errorf("%s %s: %d %q %v", c.Method, c.Path, got.status, got.body, got.header)
 		}
 	}
-	for _, c := range []struct {
-		target string
-		status int
-	}{
-		{"/health?x=%00", 200},
-		{"/health%2500", 404},
-		{"/health%01", 404},
-		{"/health%0A", 404},
-	} {
-		if got := serve(t, router, "GET", c.target); got.status != c.status {
-			t.Errorf("GET %s: %d, want %d", c.target, got.status, c.status)
+	for _, c := range fixture.HealthHost.NotRefused {
+		if got := serve(t, router, "GET", c.Path); got.status != c.Status {
+			t.Errorf("GET %s: %d, want %d", c.Path, got.status, c.Status)
 		}
 	}
 }

@@ -1,0 +1,79 @@
+{
+  "healthHost": {
+    "matchesHealth": [
+      "/health",
+      "/HEALTH",
+      "/Health/",
+      "/health/",
+      "/./health",
+      "/x/../health",
+      "/../health",
+      "/%2e/health",
+      "/%2E%2E/health",
+      "/%68ealth",
+      "/health?x=1",
+      "/health/.",
+      "/health/./"
+    ],
+    "methodNotAllowed": [
+      { "method": "POST", "path": "/health", "allow": "GET, HEAD" },
+      { "method": "post", "path": "/health", "allow": "GET, HEAD" },
+      { "method": "PUT", "path": "/health/", "allow": "GET, HEAD" },
+      { "method": "DELETE", "path": "/HEALTH/", "allow": "GET, HEAD" },
+      { "method": "OPTIONS", "path": "/health", "allow": "GET, HEAD" }
+    ],
+    "notFound": [
+      { "method": "GET", "path": "//health" },
+      { "method": "GET", "path": "/health//" },
+      { "method": "GET", "path": "/health%2F" },
+      { "method": "GET", "path": "/health%2fx" },
+      { "method": "GET", "path": "/health/x" },
+      { "method": "GET", "path": "/health/.." },
+      { "method": "GET", "path": "/" },
+      { "method": "GET", "path": "/nope" },
+      { "method": "POST", "path": "/nope" },
+      { "method": "OPTIONS", "path": "/nope" },
+      { "method": "OPTIONS", "path": "*" },
+      { "method": "GET", "path": "/unfurl" }
+    ],
+    "encodedNul": [
+      { "method": "GET", "path": "/health%00" },
+      { "method": "HEAD", "path": "/health%00" },
+      { "method": "POST", "path": "/x%00" },
+      { "method": "GET", "path": "/a%00b/c" },
+      { "method": "GET", "path": "/x/../health%00" }
+    ],
+    "notRefused": [
+      { "path": "/health?x=%00", "status": 200 },
+      { "path": "/health%2500", "status": 404 },
+      { "path": "/health%01", "status": 404 },
+      { "path": "/health%0A", "status": 404 }
+    ]
+  },
+  "collabHost": {
+    "methodNotAllowed": [
+      { "method": "HEAD", "path": "/sync/x", "allow": "GET" },
+      { "method": "POST", "path": "/sync/x", "allow": "GET" },
+      { "method": "OPTIONS", "path": "/sync/x", "allow": "GET" },
+      { "method": "HEAD", "path": "/sync/x/state", "allow": "GET, OPTIONS" },
+      { "method": "POST", "path": "/sync/x/state", "allow": "GET, OPTIONS" },
+      { "method": "GET", "path": "/sync/x/history/l", "allow": "DELETE, OPTIONS" },
+      { "method": "PUT", "path": "/sync/x/history/l", "allow": "DELETE, OPTIONS" },
+      { "method": "POST", "path": "/unfurl", "allow": "GET, HEAD, OPTIONS" }
+    ],
+    "notFound": [
+      "/sync",
+      "/sync/",
+      "/sync//state",
+      "/sync/x/state//",
+      "/sync/%2e%2e/state",
+      "/%C5%BFync/x/state"
+    ],
+    "encodedSeparator": [
+      { "path": "/sync/a%2Fb/state", "doc": "a%2Fb" },
+      { "path": "/sync/a%2fb/state", "doc": "a%2fb" },
+      { "path": "/sync/a%5Cb/state", "doc": "a\\b" },
+      { "path": "/sync/a%252Fb/state", "doc": "a%2Fb" }
+    ]
+  }
+}

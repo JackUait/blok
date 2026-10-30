@@ -1,9 +1,11 @@
 // @vitest-environment node
 
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -17,12 +19,29 @@ const unset = (name: string): boolean =>
 const noServer = unset('BLOK_CONFORMANCE_SERVER');
 const target = process.env.BLOK_CONFORMANCE_TARGET ?? 'csharp';
 
-// The Go host does not serve these routes yet; they still run for csharp.
-const notPortedToGo = noServer || target === 'go';
+// Each skip site says why Go cannot run it yet.
+const skipOnGo = noServer || target === 'go';
 
-// Go's http.Server answers 400 for a bad escape before any handler runs, so no
-// router can match Kestrel here. A known host gap, kept apart from the above.
-const goHostGap = noServer || target === 'go';
+interface RoutingFixture {
+  collabHost: {
+    encodedSeparator: { doc: string; path: string }[];
+    methodNotAllowed: { allow: string; method: string; path: string }[];
+    notFound: string[];
+  };
+  healthHost: {
+    encodedNul: { method: string; path: string }[];
+    matchesHealth: string[];
+    methodNotAllowed: { allow: string; method: string; path: string }[];
+    notFound: { method: string; path: string }[];
+    notRefused: { path: string; status: number }[];
+  };
+}
+
+// Shared with packages/server/go/internal/route/route_test.go.
+const routing = JSON.parse(readFileSync(
+  fileURLToPath(new URL('./fixtures/routing.json', import.meta.url)),
+  'utf8',
+)) as RoutingFixture;
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
 const DISALLOWED_ORIGIN = 'https://evil.example.net';
@@ -153,21 +172,7 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       await server?.stop();
     });
 
-    it.each([
-      '/health',
-      '/HEALTH',
-      '/Health/',
-      '/health/',
-      '/./health',
-      '/x/../health',
-      '/../health',
-      '/%2e/health',
-      '/%2E%2E/health',
-      '/%68ealth',
-      '/health?x=1',
-      '/health/.',
-      '/health/./',
-    ])('matches GET %s to /health without a redirect', async (path) => {
+    it.each(routing.healthHost.matchesHealth)('matches GET %s to /health without a redirect', async (path) => {
       const response = await rawRequest(server.baseUrl, 'GET', path);
 
       expect(response.status).toBe(200);
@@ -204,30 +209,14 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       expect(response.headers['transfer-encoding']).toBeUndefined();
     });
 
-    it.each([
-      ['POST', '/health'],
-      ['post', '/health'],
-      ['PUT', '/health/'],
-      ['DELETE', '/HEALTH/'],
-      ['OPTIONS', '/health'],
-    ])('answers %s %s with 405 and Allow: GET, HEAD', async (method, path) => {
-      expectMethodNotAllowed(await rawRequest(server.baseUrl, method, path), 'GET, HEAD', method);
-    });
+    it.each(routing.healthHost.methodNotAllowed)(
+      'answers $method $path with 405 and Allow: $allow',
+      async ({ method, path, allow }) => {
+        expectMethodNotAllowed(await rawRequest(server.baseUrl, method, path), allow, method);
+      },
+    );
 
-    it.each([
-      ['GET', '//health'],
-      ['GET', '/health//'],
-      ['GET', '/health%2F'],
-      ['GET', '/health%2fx'],
-      ['GET', '/health/x'],
-      ['GET', '/health/..'],
-      ['GET', '/'],
-      ['GET', '/nope'],
-      ['POST', '/nope'],
-      ['OPTIONS', '/nope'],
-      ['OPTIONS', '*'],
-      ['GET', '/unfurl'],
-    ])('answers %s %s with the 404 catch-all', async (method, path) => {
+    it.each(routing.healthHost.notFound)('answers $method $path with the 404 catch-all', async ({ method, path }) => {
       const response = await rawRequest(server.baseUrl, method, path);
 
       expectNotFound(response, method);
@@ -256,13 +245,7 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     });
 
     // Kestrel refuses a decoded NUL in the path before routing, on any method.
-    it.each([
-      ['GET', '/health%00'],
-      ['HEAD', '/health%00'],
-      ['POST', '/x%00'],
-      ['GET', '/a%00b/c'],
-      ['GET', '/x/../health%00'],
-    ])('answers %s %s with an empty 400', async (method, path) => {
+    it.each(routing.healthHost.encodedNul)('answers $method $path with an empty 400', async ({ method, path }) => {
       const response = await rawRequest(server.baseUrl, method, path);
 
       expect(response.status).toBe(400);
@@ -271,15 +254,13 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       expect(response.body).toBe('');
     });
 
-    it.each([
-      ['/health?x=%00', 200],
-      ['/health%2500', 404],
-      ['/health%01', 404],
-    ])('does not refuse GET %s', async (path, status) => {
+    it.each(routing.healthHost.notRefused)('does not refuse GET $path', async ({ path, status }) => {
       expect((await rawRequest(server.baseUrl, 'GET', path)).status).toBe(status);
     });
 
-    it.skipIf(goHostGap)('answers a malformed escape on an unknown route with the 404 catch-all', async () => {
+    // Go's http.Server answers 400 for a bad escape before any handler runs,
+    // so no Go router can match Kestrel here.
+    it.skipIf(skipOnGo)('answers a malformed escape on an unknown route with the 404 catch-all', async () => {
       const response = await rawRequest(server.baseUrl, 'GET', '/a%zzb');
 
       expectNotFound(response);
@@ -328,7 +309,8 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     });
   });
 
-  describe.skipIf(notPortedToGo)('a host with unfurl and collab routes', () => {
+  // The Go host does not serve these routes yet.
+  describe.skipIf(skipOnGo)('a host with unfurl and collab routes', () => {
     let server: RunningServer;
     let endpoint: FixtureDocEndpoint;
     let collabDirectory: string;
@@ -356,18 +338,12 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       await rm(collabDirectory, { recursive: true, force: true });
     });
 
-    it.each([
-      ['HEAD', '/sync/x', 'GET'],
-      ['POST', '/sync/x', 'GET'],
-      ['OPTIONS', '/sync/x', 'GET'],
-      ['HEAD', '/sync/x/state', 'GET, OPTIONS'],
-      ['POST', '/sync/x/state', 'GET, OPTIONS'],
-      ['GET', '/sync/x/history/l', 'DELETE, OPTIONS'],
-      ['PUT', '/sync/x/history/l', 'DELETE, OPTIONS'],
-      ['POST', '/unfurl', 'GET, HEAD, OPTIONS'],
-    ])('answers %s %s with 405 and Allow: %s', async (method, path, allow) => {
-      expectMethodNotAllowed(await rawRequest(server.baseUrl, method, path), allow, method);
-    });
+    it.each(routing.collabHost.methodNotAllowed)(
+      'answers $method $path with 405 and Allow: $allow',
+      async ({ method, path, allow }) => {
+        expectMethodNotAllowed(await rawRequest(server.baseUrl, method, path), allow, method);
+      },
+    );
 
     // The single-segment refusal comes before any document load, so a 400
     // proves the state route ran without starting the document runtime.
@@ -378,13 +354,9 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       expect(response.body).toBe('document ids must be a single path segment\n');
     });
 
-    // Literal segments fold ASCII only: "ſ" (U+017F) upper-cases to "S" in
-    // Unicode, and must still miss /sync.
-    it.each([
-      '/sync/x/state//',
-      '/sync/%2e%2e/state',
-      '/%C5%BFync/x/state',
-    ])('answers GET %s with the 404 catch-all', async (path) => {
+    // Literal segments fold ASCII only: the fixture's "/%C5%BFync/x/state" has
+    // "ſ" (U+017F), which upper-cases to "S" in Unicode, and must still miss.
+    it.each(routing.collabHost.notFound)('answers GET %s with the 404 catch-all', async (path) => {
       const response = await rawRequest(server.baseUrl, 'GET', path);
 
       expectNotFound(response);
@@ -393,9 +365,9 @@ describe('routing contract: health, unknown routes and ported routes', () => {
 
     // Decoded, the slash would split {doc} and the path would match no route.
     // %252F decodes once, to a {doc} of "a%2Fb".
-    it.each(['/sync/a%2Fb/state', '/sync/a%2fb/state', '/sync/a%5Cb/state', '/sync/a%252Fb/state'])(
-      'keeps the encoded separator in {doc} for GET %s',
-      async (path) => {
+    it.each(routing.collabHost.encodedSeparator)(
+      'keeps the encoded separator in {doc} for GET $path',
+      async ({ path }) => {
         const response = await rawRequest(server.baseUrl, 'GET', path);
 
         expect(response.status).toBe(400);

@@ -197,6 +197,7 @@ function createPasteHarness(): {
     Toolbar: toolbar,
     YjsManager: yjsManager,
     DragManager: dragManager,
+    ReadOnly: { isEnabled: false },
     UI: { nodes: { holder } },
   } as unknown as Paste['Blok'];
 

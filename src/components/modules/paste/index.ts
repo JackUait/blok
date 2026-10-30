@@ -8,6 +8,7 @@ import { BLOK_MIME_TYPE, NEXT_SPACE_MIMES, NOTION_BLOCKS_V3_MIME } from './const
 import { ToolRegistry } from './tool-registry';
 // Type only: the pipeline loads on the first paste.
 import type { PasteEngine } from './engine';
+import type { Block } from '../../block';
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 
 /**
@@ -16,6 +17,12 @@ import type { OutputBlockData } from '../../../../types/data-formats/output-data
  * since `types` does not always list them.
  * @param dataTransfer - the event's clipboard or drop data
  */
+/** Where a paste was made: the block and the caret, read in its event. */
+interface PastePlace {
+  block: Block | undefined;
+  range: Range | null;
+}
+
 const snapshotOf = (dataTransfer: DataTransfer): DataTransfer => {
   const types = Array.from(dataTransfer.types ?? []);
   const named = ['text/plain', 'text/html', BLOK_MIME_TYPE, NOTION_BLOCKS_V3_MIME, ...NEXT_SPACE_MIMES];
@@ -32,6 +39,12 @@ const snapshotOf = (dataTransfer: DataTransfer): DataTransfer => {
   return snapshot as unknown as DataTransfer;
 };
 
+/** A clipboard that holds only `text`, for paste without formatting. */
+const plainTextOnly = (text: string): DataTransfer => snapshotOf({
+  types: ['text/plain'],
+  getData: (type: string): string => (type === 'text/plain' ? text : ''),
+} as unknown as DataTransfer);
+
 /**
  * @class Paste
  * @classdesc Contains methods to handle paste on blok
@@ -47,6 +60,7 @@ export class Paste extends Module {
 
   private toolRegistry!: ToolRegistry;
   private engineLoad: Promise<PasteEngine> | null = null;
+  private engineLoaded = false;
 
   /**
    * Whether the most recent keyboard activity had Shift held. A `paste`
@@ -118,7 +132,7 @@ export class Paste extends Module {
    */
   public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
     const snapshot = snapshotOf(dataTransfer);
-    const engine = await this.engineForEvent(snapshot.getData('text/plain'));
+    const engine = await this.engineForEvent(snapshot);
 
     await engine?.processDataTransfer(snapshot, pasteTarget);
   }
@@ -129,7 +143,13 @@ export class Paste extends Module {
       return this.engineLoad;
     }
 
-    const load = import('./engine').then(({ PasteEngine: Engine }) => new Engine(this.Blok, this.config, this.toolRegistry));
+    const load = import('./engine').then(({ PasteEngine: Engine }) => {
+      const engine = new Engine(this.Blok, this.config, this.toolRegistry);
+
+      this.engineLoaded = true;
+
+      return engine;
+    });
 
     this.engineLoad = load;
     load.catch(() => {
@@ -145,26 +165,87 @@ export class Paste extends Module {
    * The pipeline for a paste or drop the editor already took from the browser,
    * or null when there is nothing left to do. A failed load still lands the
    * plain text: the event's default was prevented, so nothing else would.
-   * @param plainText - the event's text/plain flavour
+   * @param clipboard - the event's data, already copied
+   * @param plainOnly - paste without formatting, so no HTML hook runs
    */
-  private async engineForEvent(plainText: string): Promise<PasteEngine | null> {
+  private async engineForEvent(clipboard: DataTransfer, plainOnly = false): Promise<PasteEngine | null> {
+    const place = this.engineLoaded ? null : this.placeOfPaste();
+
     try {
       const engine = await this.engine();
 
-      return this.canStillPaste() ? engine : null;
+      if (!this.canStillPaste()) {
+        return null;
+      }
+      if (place !== null && !this.returnTo(place)) {
+        log('Paste: the place of the paste left the editor while the paste code loaded, so nothing was pasted.', 'warn');
+
+        return null;
+      }
+
+      return engine;
     } catch (error) {
-      if (this.canStillPaste()) {
-        log('Paste: the paste code failed to load, so the clipboard text was pasted without formatting.', 'warn', error);
-        this.insertPlainText(plainText);
+      if (!this.canStillPaste()) {
+        return null;
+      }
+      log('Paste: the paste code failed to load, so the clipboard text was pasted without formatting.', 'warn', error);
+      if (!plainOnly) {
+        this.runOnBeforePaste(clipboard.getData('text/html'));
+      }
+      if (place !== null && place.range !== null && this.returnTo(place)) {
+        this.insertPlainText(clipboard.getData('text/plain'));
       }
 
       return null;
     }
   }
 
-  /** The editor can be destroyed while the pipeline loads. */
+  /** The host hook sees every HTML paste, as it does when the pipeline runs it. */
+  private runOnBeforePaste(html: string): void {
+    if (html !== '' && this.config.onBeforePaste) {
+      this.config.onBeforePaste(html);
+    }
+  }
+
+  /** Destroy or read-only can land while the pipeline loads. */
   private canStillPaste(): boolean {
-    return !this.isDestroyed;
+    return !this.isDestroyed && !this.Blok.ReadOnly.isEnabled;
+  }
+
+  private placeOfPaste(): PastePlace {
+    const selection = window.getSelection();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+    const inEditor = range !== null && this.Blok.UI.nodes.holder.contains(range.startContainer);
+
+    return { block: this.Blok.BlockManager.currentBlock, range: inEditor ? range : null };
+  }
+
+  /**
+   * Puts the caret back where the paste was made: the person may have moved it
+   * while the pipeline loaded. False when that place has left the editor.
+   * @param place - read in the paste event
+   */
+  private returnTo(place: PastePlace): boolean {
+    const { BlockManager } = this.Blok;
+    const { block, range } = place;
+
+    if (range !== null) {
+      if (!range.startContainer.isConnected || !this.Blok.UI.nodes.holder.contains(range.startContainer)) {
+        return false;
+      }
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+    if (block !== undefined && BlockManager.currentBlock !== block) {
+      if (!block.holder.isConnected) {
+        return false;
+      }
+      BlockManager.currentBlock = block;
+    }
+
+    return true;
   }
 
   private insertPlainText(text: string): void {
@@ -178,7 +259,7 @@ export class Paste extends Module {
   }
 
   private async processAsText(plainData: string): Promise<void> {
-    const engine = await this.engineForEvent(plainData);
+    const engine = await this.engineForEvent(plainTextOnly(plainData), true);
 
     await engine?.processAsText(plainData);
   }

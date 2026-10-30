@@ -8,6 +8,7 @@ import { ModificationsObserver } from '../../../../src/components/modules/modifi
 import { Saver } from '../../../../src/components/modules/saver';
 import type { BlokConfig, OutputBlockData, OutputData } from '../../../../types';
 import { htmlOf } from '../../helpers/saved-as-html';
+import { loadPasteEngine } from '../../helpers/paste-engine';
 
 /**
  * A real editor torn down inside the last batch window: the edit must still
@@ -238,6 +239,8 @@ describe('ModificationsObserver — final flush on teardown (real editor)', () =
     typeInto('p1', 'typed');
     await wait(20);
 
+    // Loaded first, so the destroy below lands inside the import, not in the load.
+    await loadPasteEngine();
     // Header has rendered(), so each pasted heading waits a frame: the import
     // spans several tasks, and a host can destroy the editor in between.
     void live.blocks.renderFromHTML('<h2>A</h2><p>one</p><h2>B</h2><p>two</p>').catch(() => undefined);

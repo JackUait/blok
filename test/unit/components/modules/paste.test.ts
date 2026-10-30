@@ -213,6 +213,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     Toolbar: toolbar,
     YjsManager: yjsManager,
     DragManager: dragManager,
+    ReadOnly: { isEnabled: false },
     UI: {
       nodes: {
         holder,

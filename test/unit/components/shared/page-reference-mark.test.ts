@@ -66,6 +66,7 @@ const pasteWithPageTool = async (
     Toolbar: { close: vi.fn(), moveAndOpen: vi.fn() },
     YjsManager: { stopCapturing: vi.fn() },
     DragManager: { isDragging: false },
+    ReadOnly: { isEnabled: false },
     UI: { nodes: { holder: document.createElement('div') } },
   } as unknown as BlokModules;
 

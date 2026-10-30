@@ -874,6 +874,88 @@ describe('BoldInlineTool mutants', () => {
       }
     });
 
+    it('checks an added node without walking the rest of the editor', async () => {
+      const visitsFor = async (paragraphs: number): Promise<number> => {
+        document.body.innerHTML = '';
+
+        const editor = editorWith('<p>text</p>'.repeat(paragraphs));
+        const { Bold, cleanup } = await loadFreshBold();
+        const nextNode = vi.spyOn(TreeWalker.prototype, 'nextNode');
+
+        try {
+          new Bold();
+
+          const added = document.createElement('p');
+
+          added.innerHTML = '<b>new</b>';
+          editor.appendChild(added);
+          observerCallbacks[observerCallbacks.length - 1]([childListRecord(editor, [added])], liveObservers[liveObservers.length - 1]);
+
+          // Read before the assertion: jsdom's querySelector walks with a TreeWalker too.
+          const visits = nextNode.mock.calls.length;
+
+          expect(editor.querySelector('b')).toBeNull();
+
+          return visits;
+        } finally {
+          nextNode.mockRestore();
+          cleanup();
+        }
+      };
+
+      expect(await visitsFor(500)).toBe(await visitsFor(5));
+    });
+
+    it('converts the b around a node added inside it', async () => {
+      const editor = editorWith('<b>old</b>');
+      const legacy = mustFind(editor, 'b');
+      const { Bold, cleanup } = await loadFreshBold();
+
+      try {
+        new Bold();
+
+        const text = document.createTextNode(' more');
+
+        legacy.appendChild(text);
+        observerCallbacks[0]([childListRecord(legacy, [text])], liveObservers[0]);
+
+        expect(editor.querySelector('b')).toBeNull();
+        expect(mustFind(editor, 'strong').textContent).toBe('old more');
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('converts a b it kept for the caret on a later change elsewhere, once the caret has left', async () => {
+      const editor = editorWith('<p><b>caret</b></p><p>other</p>');
+      const text = mustFind(editor, 'b').firstChild;
+      const other = mustFind(editor, 'p:last-child');
+      const { Bold, cleanup } = await loadFreshBold();
+
+      if (!(text instanceof Text)) {
+        throw new Error('the legacy b has no text node');
+      }
+
+      try {
+        new Bold();
+        select(text, 2, 2);
+        observerCallbacks[0]([characterDataRecord(text)], liveObservers[0]);
+        expect(editor.querySelector('b')).not.toBeNull();
+
+        select(other.firstChild ?? other, 1, 1);
+
+        const added = document.createElement('span');
+
+        other.appendChild(added);
+        observerCallbacks[0]([childListRecord(other, [added])], liveObservers[0]);
+
+        expect(editor.querySelector('b')).toBeNull();
+        expect(mustFind(editor, 'strong').textContent).toBe('caret');
+      } finally {
+        cleanup();
+      }
+    });
+
     it('treats an editor element added to the page as its own scope', async () => {
       const { Bold, cleanup } = await loadFreshBold();
 

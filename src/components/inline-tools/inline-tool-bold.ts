@@ -66,6 +66,7 @@ export class BoldInlineTool implements InlineTool {
 
   private static mutationObserver?: MutationObserver;
   private static isProcessingMutation = false;
+  private static keptForCaret: Element[] = [];
   private static readonly instances = new Set<BoldInlineTool>();
 
   /**
@@ -296,26 +297,7 @@ export class BoldInlineTool implements InlineTool {
       BoldInlineTool.isProcessingMutation = true;
 
       try {
-        const processScope = (scope: Element | null): void => {
-          if (scope) {
-            // Never convert the <b> holding the caret (see BoldNormalizationPass):
-            // reparenting it mid-typing displaces the caret. It converts once the
-            // caret moves out.
-            const preserveNode = window.getSelection()?.anchorNode ?? null;
-
-            new BoldNormalizationPass({ mergeAdjacent: false, removeEmpty: false, normalizeWhitespace: false, preserveNode }).run(scope);
-          }
-        };
-
-        mutations.forEach((mutation) => {
-          mutation.addedNodes.forEach((node) => {
-            processScope(BoldInlineTool.findBlokScopeFromNode(node));
-          });
-
-          if (mutation.type === 'characterData') {
-            processScope(BoldInlineTool.findBlokScopeFromNode(mutation.target));
-          }
-        });
+        BoldInlineTool.normalizeChanged(mutations);
       } finally {
         BoldInlineTool.isProcessingMutation = false;
       }
@@ -328,6 +310,87 @@ export class BoldInlineTool implements InlineTool {
     });
 
     BoldInlineTool.mutationObserver = observer;
+  }
+
+  /**
+   * Convert legacy <b> in what changed: each added subtree and the <b> around
+   * a changed node. Never the whole editor: a table row adds a few dozen nodes,
+   * and a walk of the document per change froze the "+" drag.
+   * @param mutations - one observer batch
+   */
+  private static normalizeChanged(mutations: MutationRecord[]): void {
+    const roots = new Set<Element>(BoldInlineTool.keptForCaret);
+
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        BoldInlineTool.collectRoot(node, roots, true);
+      });
+
+      if (mutation.type === 'characterData') {
+        BoldInlineTool.collectRoot(mutation.target, roots, false);
+      }
+    });
+
+    if (roots.size === 0) {
+      return;
+    }
+
+    // Never convert the <b> holding the caret (see BoldNormalizationPass):
+    // reparenting it mid-typing displaces the caret.
+    const preserveNode = window.getSelection()?.anchorNode ?? null;
+    const pass = new BoldNormalizationPass({ mergeAdjacent: false, removeEmpty: false, normalizeWhitespace: false, preserveNode });
+
+    roots.forEach((root) => {
+      if (root.isConnected) {
+        pass.run(root);
+      }
+    });
+
+    // The skipped <b> is revisited on the next batch, wherever it lands, so it
+    // converts once the caret has left it.
+    const kept = preserveNode === null ? null : BoldInlineTool.outermostBold(preserveNode);
+
+    BoldInlineTool.keptForCaret = kept === null ? [] : [kept];
+  }
+
+  /**
+   * Add the part of the editor a changed node can affect: its outermost <b>
+   * ancestor, else the node itself when it was added.
+   * @param node - added node or changed text
+   * @param roots - the batch's roots
+   * @param added - whether the node was added (its subtree is new)
+   */
+  private static collectRoot(node: Node, roots: Set<Element>, added: boolean): void {
+    const bold = BoldInlineTool.outermostBold(node);
+
+    if (bold !== null) {
+      roots.add(bold);
+
+      return;
+    }
+
+    if (added && node.nodeType === Node.ELEMENT_NODE && BoldInlineTool.findBlokScopeFromNode(node) !== null) {
+      roots.add(node as Element);
+    }
+  }
+
+  /**
+   * The outermost <b> holding a node inside a blok scope, or null.
+   * @param node - node to start from
+   */
+  private static outermostBold(node: Node): Element | null {
+    const scope = BoldInlineTool.findBlokScopeFromNode(node);
+
+    if (scope === null) {
+      return null;
+    }
+
+    const climb = (element: Element | null, found: Element | null): Element | null =>
+      element === null || element === scope
+        ? found
+        : climb(element.parentElement, element.tagName === 'B' ? element : found);
+
+    return climb(node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement, null);
   }
 
   /**

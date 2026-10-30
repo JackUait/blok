@@ -70,6 +70,8 @@ const PPTX_BLOB = 'pptx picture as CSS url() of a blob: URL made from deck media
  * Every entry MUST carry a reason.
  */
 const EXEMPT_SINKS: Record<string, string> = {
+  'shared/katex.ts » `https://cdn.jsdelivr.net/npm/katex@${version}/dist/katex.min.css`':
+    'a stylesheet <link> on a fixed https origin; the only variable is the version string of the bundled KaTeX module, not user data',
   'tools/database/database-maplibre.ts » `#${encodeURIComponent(item.rowId)}`':
     'a map pin links to its row as a same-page fragment: a fixed "#" before a percent-encoded id cannot carry a scheme',
   'tools/database/cells/display.ts » href':

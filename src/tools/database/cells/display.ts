@@ -290,6 +290,7 @@ const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: 
     if (avatar !== null) {
       const img = document.createElement('img');
 
+      img.setAttribute('loading', 'lazy');
       img.src = avatar;
       img.alt = '';
       img.setAttribute('data-blok-database-person-avatar', '');

@@ -222,6 +222,7 @@ describe('Bookmark tool', () => {
 
       expect(card?.hasAttribute('data-blok-block-context-menu')).toBe(true);
       expect(cover?.closest('[data-blok-block-context-menu]')).toBe(card);
+      expect(cover?.getAttribute('loading')).toBe('lazy');
     });
 
     afterEach(() => {
@@ -309,6 +310,7 @@ describe('Bookmark tool', () => {
       expect(favicon).not.toBeNull();
       expect(favicon?.classList.contains('blok-bookmark__favicon')).toBe(true);
       expect(favicon?.getAttribute('alt')).toBe('');
+      expect(favicon?.getAttribute('loading')).toBe('lazy');
 
       const urlSpan = linkRow?.querySelector('[data-role="bookmark-url"]');
 

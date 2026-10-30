@@ -75,7 +75,12 @@ const mount = async (page: Page, blocks: OutputData['blocks']): Promise<void> =>
     await blok.isReady;
   }, { holder: HOLDER_ID, data: blocks });
   await openFixtureToggles(page, { blocks });
-  await page.evaluate(() => Promise.all(Array.from(document.images, (img) => img.decode().catch(() => undefined))));
+  // Offscreen images load lazily, and decode() on one that never starts never settles.
+  await page.evaluate(() => Promise.all(Array.from(document.images, (img) => {
+    img.loading = 'eager';
+
+    return img.decode().catch(() => undefined);
+  })));
   // Embed frames load lazily; one that paints between the two shots would read as a wrong tint.
   const frames = await page.evaluate(() => {
     const embeds = document.querySelectorAll('[data-blok-tool="embed"] iframe');

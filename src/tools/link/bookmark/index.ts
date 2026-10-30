@@ -337,6 +337,7 @@ export class Bookmark implements BlockTool {
 
       favicon.classList.add('blok-bookmark__favicon');
       favicon.setAttribute('data-role', 'bookmark-favicon');
+      favicon.setAttribute('loading', 'lazy');
       favicon.src = this.data.favicon;
       favicon.alt = '';
       addressPill.appendChild(favicon);
@@ -379,6 +380,7 @@ export class Bookmark implements BlockTool {
       const image = document.createElement('img');
 
       image.addEventListener('error', () => image.replaceWith(this.drawnCover(address?.host ?? this.data.url)), { once: true });
+      image.setAttribute('loading', 'lazy');
       image.src = this.data.image;
       image.alt = '';
       frame.append(bar, image);

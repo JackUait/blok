@@ -102,6 +102,7 @@ describe('renderCellValue — new property types', () => {
 
       expect(chips.map((c) => c.textContent)).toEqual(['Ada Lovelace', 'Grace Hopper']);
       expect(chips[0].querySelector('img')?.getAttribute('src')).toBe('https://img.example.com/a.png');
+      expect(chips[0].querySelector('img')?.getAttribute('loading')).toBe('lazy');
       expect(chips[1].querySelector('[data-blok-database-person-initial]')?.getAttribute('data-blok-database-person-initial')).toBe('G');
     });
 

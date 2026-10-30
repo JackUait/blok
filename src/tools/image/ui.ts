@@ -105,6 +105,7 @@ export function renderImage(
 
   const img = document.createElement('img');
   img.setAttribute(DATA_ATTR.blockContextMenu, '');
+  img.setAttribute('loading', 'lazy');
   img.setAttribute('src', data.url);
   img.setAttribute('alt', data.alt ?? '');
   img.draggable = false;

@@ -20,6 +20,12 @@ describe('renderImage', () => {
     expect(image?.hasAttribute('data-blok-block-context-menu')).toBe(true);
   });
 
+  it('loads the picture only when it nears the viewport', () => {
+    const image = renderImage({ url: 'https://x/y.png' }).querySelector('img');
+
+    expect(image?.getAttribute('loading')).toBe('lazy');
+  });
+
   it('returns figure with <img> carrying url and alt; width is set on figure so container fits image', () => {
     const fig = renderImage({ url: 'https://x/y.png', alt: 'photo', width: 60, alignment: 'center' });
     const img = fig.querySelector('img');

@@ -25,10 +25,7 @@ var unfurlLimits = outbound.Limits{Timeout: 10 * time.Second, MaxBytes: 2 << 20,
 // unfurl is UnfurlEndpoint: 400 {"success":0} without a url, 200
 // {"success":0} for any fetch failure, else the metadata.
 func (s *Server) unfurl(w http.ResponseWriter, r *http.Request) {
-	target := ""
-	if values := r.URL.Query()["url"]; len(values) > 0 {
-		target = values[0]
-	}
+	target := dotnet.QueryFirst(r.URL.RawQuery, "url")
 	if target == "" {
 		writeJSON(w, http.StatusBadRequest, []byte("{\"success\":0}\n"))
 		return

@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { expect, it as baseIt } from 'vitest';
 
+import { startFixtureOrigin } from './fixture-origin';
 import { startServer, type RunningServer } from './run-against';
 import type { HttpResponse } from './http-client';
 
@@ -248,6 +249,34 @@ async function withLocalFileServer(run: (server: RunningServer) => Promise<void>
   }
 }
 
+async function withServer(args: string[], run: (server: RunningServer) => Promise<void>): Promise<void> {
+  const server = await startServer({ args: ['--listen', '127.0.0.1:0', ...args] });
+
+  try {
+    await run(server);
+  } finally {
+    await server.stop();
+  }
+}
+
+// Writes the golden on a C# capture run; otherwise the inputs must match the
+// golden's, so a case the golden lacks cannot pass without a C# answer.
+function compareGolden<T extends { name: string; response: unknown }>(name: string, actual: T[]): void {
+  if (capturing) {
+    writeGolden(name, actual);
+    return;
+  }
+
+  const expected = readGolden<T[]>(name);
+
+  expect(actual.map(({ response: _response, ...input }) => input))
+    .toEqual(expected.map(({ response: _response, ...input }) => input));
+
+  for (const [index, entry] of actual.entries()) {
+    expect.soft(entry, entry.name).toEqual(expected[index]);
+  }
+}
+
 function readGolden<T>(name: string): T {
   return JSON.parse(readFileSync(fixturePath(name), 'utf8')) as T;
 }
@@ -288,4 +317,57 @@ it('serves local files with the C# preconditions, ranges and failures', async ()
   for (const [index, entry] of actual.entries()) {
     expect.soft(entry, entry.name).toEqual(expected[index]);
   }
+}, 60_000);
+
+interface QueryGolden {
+  name: string;
+  query: string;
+  response: GoldenResponse;
+}
+
+it('reads the unfurl url from the query the way ASP.NET does', async () => {
+  const origin = await startFixtureOrigin();
+  const page = `${origin.baseUrl}/metadata/final/page.html`;
+  // Each query goes on the wire as written.
+  const queries: Record<string, string> = {
+    'encoded url': `url=${encodeURIComponent(`${page}?from=redirect`)}`,
+    'raw url': `url=${page}?from=redirect`,
+    'semicolon in the value': `url=${page}?from=redirect;x`,
+    'semicolon before the key': `a=1;url=${page}`,
+    'upper-case key': `URL=${page}`,
+    'mixed-case key': `Url=${page}`,
+    'encoded key': `%75rl=${page}`,
+    'bad escape in the value': `url=${page}?q=%zz`,
+    'bad escape in another pair': `x=%zz&url=${page}`,
+    'plus in the value': `url=${page}?q=a+b`,
+    'empty first value': `url=&url=${page}`,
+    'bare key first': `url&url=${page}`,
+    'two values': `url=${page}&url=${page}?second=1`,
+    'lead question mark': `?url=${page}`,
+    'empty pairs': `&&url=${page}&&`,
+    'no url': 'x=1',
+    'empty query': '',
+  };
+  const actual: QueryGolden[] = [];
+
+  try {
+    await withServer(['--storage-dir', '', '--conformance-origin', origin.baseUrl], async (server) => {
+      for (const [name, query] of Object.entries(queries)) {
+        const response = await server.request('GET', `/unfurl?${query}`);
+        const recorded = golden(response);
+        const portable = (value: string): string => value
+          .split(encodeURIComponent(origin.baseUrl)).join('<origin>')
+          .split(origin.baseUrl).join('<origin>');
+
+        recorded.body = portable(recorded.body);
+        // The body carries the origin's port, so its length is not stable.
+        delete recorded.headers['content-length'];
+        actual.push({ name, query: portable(query), response: recorded });
+      }
+    });
+  } finally {
+    await origin.stop();
+  }
+
+  compareGolden('unfurl-queries.json', actual);
 }, 60_000);

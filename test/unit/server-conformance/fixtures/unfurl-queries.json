@@ -1,0 +1,274 @@
+[
+  {
+    "name": "encoded url",
+    "query": "url=<origin>%2Fmetadata%2Ffinal%2Fpage.html%3Ffrom%3Dredirect",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html?from=redirect\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "raw url",
+    "query": "url=<origin>/metadata/final/page.html?from=redirect",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html?from=redirect\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "semicolon in the value",
+    "query": "url=<origin>/metadata/final/page.html?from=redirect;x",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html?from=redirect;x\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "semicolon before the key",
+    "query": "a=1;url=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "upper-case key",
+    "query": "URL=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "mixed-case key",
+    "query": "Url=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "encoded key",
+    "query": "%75rl=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "bad escape in the value",
+    "query": "url=<origin>/metadata/final/page.html?q=%zz",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html?q=%25zz\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "bad escape in another pair",
+    "query": "x=%zz&url=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "plus in the value",
+    "query": "url=<origin>/metadata/final/page.html?q=a+b",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html?q=a%20b\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "empty first value",
+    "query": "url=&url=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "bare key first",
+    "query": "url&url=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "two values",
+    "query": "url=<origin>/metadata/final/page.html&url=<origin>/metadata/final/page.html?second=1",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "lead question mark",
+    "query": "?url=<origin>/metadata/final/page.html",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "empty pairs",
+    "query": "&&url=<origin>/metadata/final/page.html&&",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/metadata/final/page.html\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/metadata/images/cover.png?size=2\"},\"favicon\":\"<origin>/metadata/final/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "no url",
+    "query": "x=1",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "empty query",
+    "query": "",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  }
+]

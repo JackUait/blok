@@ -1097,6 +1097,21 @@ export class TableSubsystems {
    * (fit-to-page-width drops colWidths, so the resizer must go back to percent
    * mode and stop pinning pixel widths on the next pointerdown).
    */
+  /**
+   * Re-place every overlay after the table changed width, without a rebuild:
+   * moving DOM in the block counts as an edit. Same set as a direction flip.
+   */
+  public relayout(gridEl: HTMLElement): void {
+    if (this.host.model.colWidths === undefined) {
+      this.resize?.repositionFor(readPixelWidths(gridEl));
+    }
+    this.rowColControls?.positionGrips();
+    this.addControls?.syncRowButtonWidth();
+    this.cornerDrag?.syncPosition();
+    this.scrollHaze?.update();
+    this.cellSelection?.reposition();
+  }
+
   public refreshResize(gridEl: HTMLElement): void {
     this.initResize(gridEl);
     this.rowColControls?.positionGrips();

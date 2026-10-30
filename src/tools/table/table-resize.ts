@@ -368,6 +368,18 @@ export class TableResize {
     this.updateHandlePositions();
   }
 
+  /**
+   * Re-place the handles for new column widths, in place. A fluid table's
+   * widths change whenever its box does (full screen), and a rebuild counts as an edit.
+   */
+  public repositionFor(widths: number[]): void {
+    if (widths.length !== this.colWidths.length) {
+      return;
+    }
+    this.colWidths = [...widths];
+    this.updateHandlePositions();
+  }
+
   private updateHandlePositions(): void {
     this.handles.forEach((handle, i) => {
       const handleEl: HTMLElement = handle;

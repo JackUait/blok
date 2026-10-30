@@ -11,7 +11,7 @@ const HEADER_ATTR = 'data-blok-table-fullscreen-header';
 const TITLE_ATTR = 'data-blok-table-fullscreen-title';
 const SIZE_ATTR = 'data-blok-table-fullscreen-size';
 
-const OPEN_MS = 520;
+const OPEN_MS = 460;
 const CLOSE_MS = 420;
 const SPRING = 'cubic-bezier(.16, 1, .3, 1)';
 /* Matches the modal's corner radius in tables.css (--blok-radius-dialog). */
@@ -26,6 +26,8 @@ interface TableFullscreenOptions {
   /** Text of the heading right above the table, if there is one. */
   getTitle: () => string | null;
   getSize: () => { rows: number; cols: number };
+  /** The table changed width: a fluid table's handles and grips were placed for the old one. */
+  onRelayout: () => void;
   t: (key: string) => string;
 }
 
@@ -48,7 +50,7 @@ const insetOf = (outer: DOMRect, inner: DOMRect): string =>
 
 /**
  * Where the page after the holder starts, in page coordinates: the next block,
- * or the container's end. Page, not viewport: the scroll can clamp in between.
+ * or the container's end. Page, not viewport: the holder's height changes in between.
  */
 const flowEdge = (holder: HTMLElement): number =>
   window.scrollY + (
@@ -58,12 +60,12 @@ const flowEdge = (holder: HTMLElement): number =>
   );
 
 /**
- * Moves the tool root (position: relative) by offsets, not a transform: a
- * transform would make it the box its position: fixed header and button sit in.
+ * Moves the tool root with a transform, which stays on the compositor; left/top
+ * relaid the table out every frame. The root, not the scroll container: the
+ * grips and add buttons measure the grid against the root, so both must move.
  */
-const offset = (to: DOMRect, from: DOMRect): Keyframe => ({
-  left: `${to.left - from.left}px`,
-  top: `${to.top - from.top}px`,
+const shift = (to: DOMRect, from: DOMRect): Keyframe => ({
+  transform: `translate(${to.left - from.left}px, ${to.top - from.top}px)`,
 });
 
 /**
@@ -131,8 +133,12 @@ export class TableFullscreen {
     // First: locking sets overflow on body, which can shift the page by a margin.
     this.scroll.lock();
 
+    // One layout for every read before the box moves.
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]') ?? host;
     const origin = source.getBoundingClientRect();
+    const holder = host.parentElement;
+    const flowBefore = holder === null ? 0 : flowEdge(holder);
+    const room = holder === null ? 0 : flowBefore - (window.scrollY + holder.getBoundingClientRect().top);
     const title = this.options.getTitle() ?? this.options.t('tools.table.title');
 
     this.syncTitle(title);
@@ -148,13 +154,10 @@ export class TableFullscreen {
     promoteToTopLayer(backdrop);
     this.backdrop = backdrop;
 
-    const holder = host.parentElement;
-    const flowBefore = holder === null ? 0 : flowEdge(holder);
-    const scrollY = window.scrollY;
-
-    // Pinned before the box leaves the flow: a shorter page would clamp the scroll position.
+    // Pinned to the full gap down to the next block, so the page never gets
+    // shorter and the scroll position cannot clamp.
     if (holder !== null) {
-      holder.style.minHeight = `${holder.getBoundingClientRect().height}px`;
+      holder.style.minHeight = `${room}px`;
     }
 
     host.setAttribute(FULLSCREEN_ATTR, '');
@@ -163,18 +166,14 @@ export class TableFullscreen {
     host.setAttribute('aria-label', title);
     promoteToTopLayer(host);
 
+    // One more layout for every read after it. The pin overshoots by the next
+    // block's own margin, which stops collapsing once the holder is empty.
     if (holder !== null) {
-      // Margins that collapsed through the holder change once it is pinned, so correct by measuring twice.
-      const first = holder.getBoundingClientRect().height + flowBefore - flowEdge(holder);
-
-      holder.style.minHeight = `${first}px`;
-      holder.style.minHeight = `${first + flowBefore - flowEdge(holder)}px`;
+      holder.style.minHeight = `${room + flowBefore - flowEdge(holder)}px`;
     }
     this.holder = holder;
+    this.options.onRelayout();
 
-    if (window.scrollY !== scrollY) {
-      window.scrollTo({ top: scrollY, behavior: 'instant' });
-    }
     window.addEventListener('keydown', this.onKeydown, true);
     this.host = host;
     this.origin = origin;
@@ -245,26 +244,34 @@ export class TableFullscreen {
 
     this.scroll.unlock();
 
+    if (closing.host.isConnected) {
+      this.options.onRelayout();
+    }
+
     if (this.button.isConnected) {
       this.button.focus({ preventScroll: true });
     }
   }
 
-  /** WAAPI writes no attributes, so none of this reaches the block's mutation observer. */
+  /**
+   * Only clip-path, transform and opacity move, so no frame relays the table out.
+   * WAAPI writes no attributes, so none of this reaches the block's mutation observer.
+   */
   private animateOpen(host: HTMLElement, backdrop: HTMLElement, source: HTMLElement, origin: DOMRect): void {
     if (!canAnimate(host)) {
       return;
     }
     const landed = source.getBoundingClientRect();
-    const content = source.parentElement;
     const timing = { duration: OPEN_MS, easing: SPRING };
 
     host.animate([{ clipPath: insetOf(host.getBoundingClientRect(), origin) }, { clipPath: SHEET_CLIP }], timing);
-    content?.animate([offset(origin, landed), { left: '0px', top: '0px' }], timing);
+    source.parentElement?.animate([shift(origin, landed), { transform: 'none' }], timing);
     backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS * 0.8, easing: 'linear' });
+    // The header and button are position: fixed inside the moving root, which
+    // holds them while it has a transform. They show once it stops.
     [this.header, this.button].forEach(el => el.animate(
       [{ opacity: 0 }, { opacity: 1 }],
-      { duration: 240, delay: OPEN_MS * 0.4, easing: 'ease-out', fill: 'backwards' }
+      { duration: 180, delay: OPEN_MS, easing: 'ease-out', fill: 'backwards' }
     ));
   }
 
@@ -277,23 +284,21 @@ export class TableFullscreen {
       return [];
     }
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]');
-    const content = source?.parentElement;
     const timing = { duration: CLOSE_MS, easing: SPRING, fill: 'forwards' as const };
     const animations = [
       host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), origin) }], timing),
     ];
 
-    if (source && content) {
-      const from = source.getBoundingClientRect();
-
-      animations.push(content.animate([{ left: '0px', top: '0px' }, offset(origin, from)], timing));
+    if (source?.parentElement) {
+      animations.push(source.parentElement.animate([{ transform: 'none' }, shift(origin, source.getBoundingClientRect())], timing));
       source.scrollLeft = 0;
     }
     if (backdrop !== null) {
       animations.push(backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { ...timing, easing: 'linear' }));
     }
+    // Hidden at once: the moving root would carry them off their place (see animateOpen).
     [this.header, this.button].forEach(el => animations.push(
-      el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'linear', fill: 'forwards' })
+      el.animate([{ opacity: 0 }, { opacity: 0 }], { duration: CLOSE_MS, fill: 'forwards' })
     ));
 
     return animations;

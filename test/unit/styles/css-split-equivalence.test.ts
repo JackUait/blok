@@ -1442,8 +1442,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // file.css: the code preview's line-number gutter and wrapped lines.
     const FILE_PREVIEW_GUTTER_BYTES = 725;
     // tables.css + colors.css: the full-screen table modal, backdrop, toggle and space-14 token,
-    // then its header, blur, shadow token and grow motion.
-    const TABLE_FULLSCREEN_BYTES = 4_547;
+    // then its header, shadow token, grow motion and the transition reset that keeps it smooth.
+    const TABLE_FULLSCREEN_BYTES = 4_618;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

@@ -491,7 +491,7 @@
   --blok-bg-tertiary: var(--blok-bg-light);
 
   /* Full-screen table backdrop (table-fullscreen.ts). */
-  --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.28);
+  --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.4);
   --blok-table-fullscreen-shadow: rgba(15, 15, 15, 0.35);
 
   /* Image lightbox chrome (dark, independent of page theme). */
@@ -701,7 +701,7 @@
 
     /* Generic surface / text / accent tokens (image tool + reusable). */
     --blok-bg-primary: #191919;
-    --blok-table-fullscreen-backdrop: rgba(0, 0, 0, 0.5);
+    --blok-table-fullscreen-backdrop: rgba(0, 0, 0, 0.6);
     --blok-table-fullscreen-shadow: rgba(0, 0, 0, 0.7);
     --blok-bg-hover: rgba(255, 255, 255, 0.04);
     --blok-border-subtle: #2a2a28;
@@ -906,7 +906,7 @@
 
   /* Generic surface / text / accent tokens (image tool + reusable). */
   --blok-bg-primary: #191919;
-  --blok-table-fullscreen-backdrop: rgba(0, 0, 0, 0.5);
+  --blok-table-fullscreen-backdrop: rgba(0, 0, 0, 0.6);
   --blok-table-fullscreen-shadow: rgba(0, 0, 0, 0.7);
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;

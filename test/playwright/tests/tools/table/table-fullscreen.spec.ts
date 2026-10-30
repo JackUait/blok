@@ -296,13 +296,33 @@ test.describe('Table full screen', () => {
     await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
   });
 
-  test('the page behind the modal is blurred', async ({ page }) => {
+  test('opening starts no CSS transitions and the motion animates no layout properties', async ({ page }) => {
+    await createBlok(page);
+
+    const motion = await page.evaluate(() => {
+      document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click();
+
+      return document.getAnimations().map(a => ({
+        transition: a instanceof CSSTransition ? a.transitionProperty : null,
+        properties: [...new Set(((a.effect as KeyframeEffect | null)?.getKeyframes() ?? [])
+          .flatMap(k => Object.keys(k))
+          .filter(k => !['offset', 'computedOffset', 'easing', 'composite'].includes(k)))],
+      }));
+    });
+
+    // An inherited `color` transition restyles every cell each frame; a layout property relays the table out.
+    expect(motion.filter(m => m.transition !== null && m.transition !== 'opacity')).toEqual([]);
+    expect(motion.flatMap(m => m.properties).filter(p => !['transform', 'clipPath', 'opacity'].includes(p))).toEqual([]);
+  });
+
+  test('the backdrop has no backdrop filter', async ({ page }) => {
     await createBlok(page);
     await openWithButton(page);
 
+    // A blur re-renders under the growing sheet on every frame.
     const filter = await page.locator('[data-blok-table-fullscreen-backdrop]').evaluate(el => getComputedStyle(el).backdropFilter);
 
-    expect(filter).toContain('blur');
+    expect(filter).toBe('none');
   });
 
   test('the page under the modal keeps its layout', async ({ page }) => {
@@ -358,5 +378,32 @@ test.describe('Table full screen', () => {
     await page.mouse.move(box.x + box.width - 10, box.y + box.height / 2);
     await page.locator('[data-blok-table-add-col]').click();
     await expect(size).toHaveText('3 × 3');
+  });
+
+  test('column resize handles sit on the column borders in the modal and back on the page', async ({ page }) => {
+    await createBlok(page, false, {
+      blocks: [{ id: 'tbl', type: 'table', data: { withHeadings: true, content: [['A', 'B', 'C'], ['1', '2', '3']] } }],
+    });
+
+    // How far each handle's middle is from the border it resizes.
+    const handleDrift = async (): Promise<number[]> => page.evaluate(() => {
+      const cells = [...document.querySelectorAll<HTMLElement>('[data-blok-table-cell-row="0"]')];
+      const handles = [...document.querySelectorAll<HTMLElement>('[data-blok-table-resize]')];
+
+      return handles.slice(0, cells.length - 1).map((handle, i) => {
+        const box = handle.getBoundingClientRect();
+
+        return Math.round(Math.abs(box.left + box.width / 2 - cells[i].getBoundingClientRect().right));
+      });
+    });
+
+    expect(Math.max(...await handleDrift())).toBeLessThanOrEqual(2);
+
+    await openWithButton(page);
+    await expect.poll(async () => Math.max(...await handleDrift())).toBeLessThanOrEqual(2);
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-table-fullscreen]')).toHaveCount(0);
+    await expect.poll(async () => Math.max(...await handleDrift())).toBeLessThanOrEqual(2);
   });
 });

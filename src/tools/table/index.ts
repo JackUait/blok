@@ -166,6 +166,11 @@ export class Table implements BlockTool {
       getHost: () => this.element?.parentElement ?? null,
       getTitle: () => this.headingAbove(),
       getSize: () => ({ rows: this.model.rows, cols: this.model.cols }),
+      onRelayout: () => {
+        if (!this.readOnly && this.gridElement !== null) {
+          this.subsystems.relayout(this.gridElement);
+        }
+      },
       t: (key) => this.api.i18n.t(key),
     });
     this.subsystems = new TableSubsystems(this.createSubsystemHost());

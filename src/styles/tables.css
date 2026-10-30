@@ -314,6 +314,8 @@
   inset: var(--blok-space-5);
   max-width: none;
   margin: 0;
+  /* The box's transition-colors covers inherited color: each frame would restyle every cell. */
+  transition: none;
   padding: calc(var(--blok-space-14) + var(--blok-space-6)) var(--blok-space-10) var(--blok-space-10);
   overflow: auto;
   background-color: var(--blok-bg-primary);
@@ -326,7 +328,6 @@
   position: fixed;
   inset: 0;
   background-color: var(--blok-table-fullscreen-backdrop);
-  backdrop-filter: blur(6px) saturate(0.85);
 }
 
 [data-blok-table-fullscreen-backdrop][data-blok-top-layer][popover] {

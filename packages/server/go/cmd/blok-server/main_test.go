@@ -277,6 +277,53 @@ func TestHealthWire(t *testing.T) {
 	}
 }
 
+// The rest of the routing rules are pinned in internal/route and black-box in
+// test/unit/server-conformance/routing-contract.test.ts.
+func TestHealthGoesThroughTheKestrelRouter(t *testing.T) {
+	for _, path := range []string{"/HEALTH", "/health/", "/./health"} {
+		if got := request(t, "GET", path); got.StatusCode != 200 {
+			t.Errorf("GET %s: %d", path, got.StatusCode)
+		}
+	}
+	for _, path := range []string{"//health", "/health//"} {
+		if got := request(t, "GET", path); got.StatusCode != 404 {
+			t.Errorf("GET %s: %d", path, got.StatusCode)
+		}
+	}
+	post := request(t, "POST", "/health")
+	if post.StatusCode != 405 || post.Header.Get("X-Content-Type-Options") != "" {
+		t.Errorf("POST /health: %d %v", post.StatusCode, post.Header)
+	}
+	if got := request(t, "head", "/health"); got.StatusCode != 200 {
+		t.Errorf("head /health: %d", got.StatusCode)
+	} else if body, _ := io.ReadAll(got.Body); len(body) != 0 {
+		t.Errorf("head /health wrote %q", body)
+	}
+}
+
+// net/http answers "OPTIONS *" with 200 itself unless told not to; Kestrel
+// sends it to the 404 catch-all.
+func TestOptionsStarGetsTheCatchAll(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := newServer()
+	go func() { _ = server.Serve(listener) }()
+	defer server.Close()
+
+	conn, err := net.Dial("tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_, _ = io.WriteString(conn, "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+	reply, _ := io.ReadAll(conn)
+	if !strings.HasPrefix(string(reply), "HTTP/1.1 404 ") || !strings.HasSuffix(string(reply), "404 page not found\n") {
+		t.Fatalf("OPTIONS *: %q", reply)
+	}
+}
+
 func TestHealthReportsTheStampedVersion(t *testing.T) {
 	saved := version
 	version = "1.2.3"

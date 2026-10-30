@@ -15,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/internal/route"
 )
 
 // version is stamped at build time: -ldflags "-X main.version=1.2.3".
@@ -125,19 +127,33 @@ func bindAddress(listen string) string {
 }
 
 func newHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodHead {
-			return
-		}
-		body, _ := json.Marshal(struct {
-			Status  string `json:"status"`
-			Version string `json:"version"`
-		}{"ok", version})
-		_, _ = w.Write(append(body, '\n'))
-	})
-	return mux
+	router := &route.Router{}
+	router.Handle("/health", []string{"GET", "HEAD"}, http.HandlerFunc(health))
+	router.Handle("/health", nil, route.MethodNotAllowed("GET, HEAD"))
+	return router
+}
+
+func health(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// Methods match case-insensitively, and net/http drops the body only for
+	// an exact "HEAD".
+	if strings.EqualFold(r.Method, http.MethodHead) {
+		return
+	}
+	body, _ := json.Marshal(struct {
+		Status  string `json:"status"`
+		Version string `json:"version"`
+	}{"ok", version})
+	_, _ = w.Write(append(body, '\n'))
+}
+
+func newServer() *http.Server {
+	return &http.Server{
+		Handler:           newHandler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		// Without this net/http answers "OPTIONS *" itself.
+		DisableGeneralOptionsHandler: true,
+	}
 }
 
 func run(ctx context.Context, args []string, stderr io.Writer) int {
@@ -152,7 +168,7 @@ func run(ctx context.Context, args []string, stderr io.Writer) int {
 		return 1
 	}
 
-	server := &http.Server{Handler: newHandler(), ReadHeaderTimeout: 10 * time.Second}
+	server := newServer()
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
 

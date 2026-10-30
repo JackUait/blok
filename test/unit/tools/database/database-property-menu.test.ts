@@ -191,7 +191,7 @@ describe('DatabasePropertyMenu', () => {
 
   describe('icon picker', () => {
     const shown: Element[] = [];
-    const menus: DatabasePropertyMenu[] = [];
+    const menus: Array<InstanceType<typeof DatabasePropertyMenu>> = [];
 
     beforeEach(() => {
       shown.length = 0;
@@ -209,7 +209,7 @@ describe('DatabasePropertyMenu', () => {
       vi.unstubAllGlobals();
     });
 
-    const openPicker = (property: PropertyDefinition, anchor: HTMLElement, options: Partial<ReturnType<typeof callbacks>> & { onIconUpdate?: () => void } = {}): { menu: DatabasePropertyMenu; icon: HTMLElement } => {
+    const openPicker = (property: PropertyDefinition, anchor: HTMLElement, options: Partial<ReturnType<typeof callbacks>> & { onIconUpdate?: () => void } = {}): { menu: InstanceType<typeof DatabasePropertyMenu>; icon: HTMLElement } => {
       const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks(), ...options });
 
       menus.push(menu);

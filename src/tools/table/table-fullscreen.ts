@@ -12,6 +12,8 @@ const TITLE_ATTR = 'data-blok-table-fullscreen-title';
 const SIZE_ATTR = 'data-blok-table-fullscreen-size';
 const SIZE_EDITOR_ATTR = 'data-blok-table-fullscreen-size-editor';
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
+const CLOSING_ATTR = 'data-blok-table-fullscreen-closing';
+const INLINE_WIDTH_VAR = '--blok-table-inline-width';
 
 /** How far the button sits in from the table's inline-end edge. */
 const CORNER_INSET = 6;
@@ -128,6 +130,8 @@ export class TableFullscreen {
   private origin: DOMRect | null = null;
   /** The table's own visible box at open: the scroll container runs past a narrow grid. */
   private shape: DOMRect | null = null;
+  /** The tool root's width on the page. A fluid table takes it back the moment close starts. */
+  private inlineWidth = 0;
   /** The holder, held at its inline height so the page under the modal does not reflow. */
   private holder: HTMLElement | null = null;
   private closing: { host: HTMLElement; backdrop: HTMLElement | null; animations: Animation[] } | null = null;
@@ -210,6 +214,7 @@ export class TableFullscreen {
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]') ?? host;
     const origin = source.getBoundingClientRect();
     const shape = visibleGrid(source, origin);
+    const inlineWidth = source.parentElement?.offsetWidth ?? 0;
     const holder = host.parentElement;
     const flowBefore = holder === null ? 0 : flowEdge(holder);
     const room = holder === null ? 0 : flowBefore - (window.scrollY + holder.getBoundingClientRect().top);
@@ -253,6 +258,7 @@ export class TableFullscreen {
     this.host = host;
     this.origin = origin;
     this.shape = shape;
+    this.inlineWidth = inlineWidth;
     this.syncButton();
     this.animateOpen(host, backdrop, source, origin, shape);
   }
@@ -323,6 +329,8 @@ export class TableFullscreen {
     this.closing = null;
     this.origin = null;
     this.shape = null;
+    closing.host.removeAttribute(CLOSING_ATTR);
+    closing.host.style.removeProperty(INLINE_WIDTH_VAR);
 
     closing.animations.forEach(a => a.cancel());
     removeFromTopLayer(closing.host);
@@ -377,6 +385,12 @@ export class TableFullscreen {
     if (origin === null || shape === null || !host.isConnected || !canAnimate(host)) {
       return [];
     }
+    // The table takes its page width back now, while it moves: after the
+    // motion a fluid table's columns would snap narrower at rest.
+    host.style.setProperty(INLINE_WIDTH_VAR, `${this.inlineWidth}px`);
+    host.setAttribute(CLOSING_ATTR, '');
+    this.options.onRelayout();
+
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]');
     const timing = { duration: CLOSE_MS, easing: SPRING, fill: 'forwards' as const };
     const animations = [

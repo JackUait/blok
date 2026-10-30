@@ -346,6 +346,8 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // the table's top corner. Reads fall back to the old spot before the first pointer move.
   '--blok-table-toggle-end',
   '--blok-table-toggle-top',
+  // Set at runtime on the closing full-screen table by animateClose: its width on the page.
+  '--blok-table-inline-width',
   // Consumer-supplied per-block font sizes (config.style.fontSize, or any
   // --blok-* channel: style.tokens / editor.tokens.set() / plain CSS). Each
   // falls back to that block's historical size, so an unconfigured editor is

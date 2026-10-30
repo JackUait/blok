@@ -342,6 +342,11 @@
   Fixed, not in flow: the grip overlay places grips from the wrapper's top,
   so anything in flow above the grid shifts every grip. The end padding leaves room for the close button over it.
 */
+/* Closing: the table is back at its page width while it shrinks home (table-fullscreen.ts). */
+[data-blok-table-fullscreen][data-blok-table-fullscreen-closing] > [data-blok-tool="table"] {
+  width: var(--blok-table-inline-width);
+}
+
 [data-blok-table-fullscreen] [data-blok-table-fullscreen-header] {
   position: fixed;
   top: var(--blok-space-5);

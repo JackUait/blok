@@ -360,6 +360,44 @@ test.describe('Table full screen', () => {
     }
   });
 
+  test('a fluid table does not shift as it shrinks back or when it lands', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await createBlok(page);
+    const cell = page.locator(`[data-blok-table-row]:first-child ${CELL_SELECTOR}`).nth(1);
+    const boxOf = async (): Promise<{ x: number; y: number; width: number }> => cell.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+
+      return { x: r.x, y: r.y, width: r.width };
+    });
+    const inline = await boxOf();
+
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    expect((await boxOf()).width).toBeGreaterThan(inline.width + 50);
+
+    await page.getByRole('button', { name: CLOSE_LABEL }).click();
+    // The last frame of the close motion.
+    await page.evaluate(() => document.getAnimations().forEach((animation) => {
+      animation.pause();
+      Object.assign(animation, { currentTime: 419 });
+    }));
+    const landing = await boxOf();
+
+    for (const key of ['x', 'y', 'width'] as const) {
+      expect(Math.abs(landing[key] - inline[key])).toBeLessThanOrEqual(1);
+    }
+
+    await page.evaluate(() => document.getAnimations().forEach(a => a.play()));
+    await expect(page.locator('[data-blok-table-fullscreen-backdrop]')).toHaveCount(0);
+    const landed = await boxOf();
+
+    for (const key of ['x', 'y', 'width'] as const) {
+      expect(Math.abs(landed[key] - inline[key])).toBeLessThanOrEqual(1);
+    }
+  });
+
   test('with reduced motion the modal opens and closes at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await createBlok(page);

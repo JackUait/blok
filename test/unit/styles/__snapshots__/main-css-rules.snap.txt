@@ -3427,6 +3427,10 @@
   display: none;
 }
 
+[data-blok-table-fullscreen][data-blok-table-fullscreen-closing] > [data-blok-tool="table"] {
+  width: var(--blok-table-inline-width);
+}
+
 [data-blok-table-fullscreen] [data-blok-table-fullscreen-header] {
   position: fixed;
   top: var(--blok-space-5);

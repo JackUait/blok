@@ -1,0 +1,2998 @@
+[
+  {
+    "name": "plain GET",
+    "method": "GET",
+    "file": "text",
+    "headers": {},
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "plain HEAD",
+    "method": "HEAD",
+    "file": "text",
+    "headers": {},
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "missing key",
+    "method": "GET",
+    "file": "missing",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    }
+  },
+  {
+    "name": "directory at a generated key",
+    "method": "GET",
+    "file": "directory",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    }
+  },
+  {
+    "name": "unknown extension",
+    "method": "GET",
+    "file": "unknownType",
+    "headers": {},
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "application/octet-stream"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "empty file",
+    "method": "GET",
+    "file": "empty",
+    "headers": {},
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "0"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "empty file, start past the end",
+    "method": "GET",
+    "file": "empty",
+    "headers": {
+      "Range": "bytes=0-"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "0"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "empty file, suffix",
+    "method": "GET",
+    "file": "empty",
+    "headers": {
+      "Range": "bytes=-5"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "0"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "empty file, bad unit",
+    "method": "GET",
+    "file": "empty",
+    "headers": {
+      "Range": "items=0-1"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "unreadable file",
+    "method": "GET",
+    "file": "unreadable",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    }
+  },
+  {
+    "name": "range: first byte",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-0"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "1"
+        ],
+        "content-range": [
+          "bytes 0-0/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0"
+    }
+  },
+  {
+    "name": "range: middle",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=5-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "5"
+        ],
+        "content-range": [
+          "bytes 5-9/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "56789"
+    }
+  },
+  {
+    "name": "range: open end",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=15-"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "5"
+        ],
+        "content-range": [
+          "bytes 15-19/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "fghij"
+    }
+  },
+  {
+    "name": "range: end past the length",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=15-100"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "5"
+        ],
+        "content-range": [
+          "bytes 15-19/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "fghij"
+    }
+  },
+  {
+    "name": "range: suffix",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=-3"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "3"
+        ],
+        "content-range": [
+          "bytes 17-19/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "hij"
+    }
+  },
+  {
+    "name": "range: suffix past the length",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=-100"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-range": [
+          "bytes 0-19/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "range: zero suffix",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=-0"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "33"
+        ],
+        "content-range": [
+          "bytes */20"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range: failed to overlap\n"
+    }
+  },
+  {
+    "name": "range: plus sign",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=+5-+9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "5"
+        ],
+        "content-range": [
+          "bytes 5-9/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "56789"
+    }
+  },
+  {
+    "name": "range: minus zero start",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=-0-3"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: spaces inside",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes= 2 - 4 "
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "3"
+        ],
+        "content-range": [
+          "bytes 2-4/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "234"
+    }
+  },
+  {
+    "name": "range: start past the end",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=20-"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "33"
+        ],
+        "content-range": [
+          "bytes */20"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range: failed to overlap\n"
+    }
+  },
+  {
+    "name": "range: start past the end with a good one",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=20-,0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "range: start after end",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=5-4"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: no dash",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=5"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: empty specs",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=,,0-1,,"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "range: only commas",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=,"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "range: bad unit",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "items=0-1"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: uppercase unit",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "Bytes=0-1"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: space before equals",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes =0-1"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: not a number",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=a-b"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: end not a number",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-x"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: double suffix sign",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=--3"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: overflow",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-9223372036854775808"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "invalid range\n"
+    }
+  },
+  {
+    "name": "range: two ranges",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-1,5-6"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "232"
+        ],
+        "content-type": [
+          "multipart/byteranges; boundary=<boundary>"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "--<boundary>\r\nContent-Range: bytes 0-1/20\r\nContent-Type: text/plain\r\n\r\n01\r\n--<boundary>\r\nContent-Range: bytes 5-6/20\r\nContent-Type: text/plain\r\n\r\n56\r\n--<boundary>--\r\n"
+    }
+  },
+  {
+    "name": "range: overlapping ranges",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-5,3-8"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "240"
+        ],
+        "content-type": [
+          "multipart/byteranges; boundary=<boundary>"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "--<boundary>\r\nContent-Range: bytes 0-5/20\r\nContent-Type: text/plain\r\n\r\n012345\r\n--<boundary>\r\nContent-Range: bytes 3-8/20\r\nContent-Type: text/plain\r\n\r\n345678\r\n--<boundary>--\r\n"
+    }
+  },
+  {
+    "name": "range: ranges past the sum guard",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-15,0-15"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "range: ranges at the sum limit",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-9,10-19"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "250"
+        ],
+        "content-type": [
+          "multipart/byteranges; boundary=<boundary>"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "--<boundary>\r\nContent-Range: bytes 0-9/20\r\nContent-Type: text/plain\r\n\r\n0123456789\r\n--<boundary>\r\nContent-Range: bytes 10-19/20\r\nContent-Type: text/plain\r\n\r\nabcdefghij\r\n--<boundary>--\r\n"
+    }
+  },
+  {
+    "name": "range: sixteen ranges",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-0,1-1,2-2,3-3,4-4,5-5,6-6,7-7,8-8,9-9,10-10,11-11,12-12,13-13,14-14,15-15"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "1586"
+        ],
+        "content-type": [
+          "multipart/byteranges; boundary=<boundary>"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "--<boundary>\r\nContent-Range: bytes 0-0/20\r\nContent-Type: text/plain\r\n\r\n0\r\n--<boundary>\r\nContent-Range: bytes 1-1/20\r\nContent-Type: text/plain\r\n\r\n1\r\n--<boundary>\r\nContent-Range: bytes 2-2/20\r\nContent-Type: text/plain\r\n\r\n2\r\n--<boundary>\r\nContent-Range: bytes 3-3/20\r\nContent-Type: text/plain\r\n\r\n3\r\n--<boundary>\r\nContent-Range: bytes 4-4/20\r\nContent-Type: text/plain\r\n\r\n4\r\n--<boundary>\r\nContent-Range: bytes 5-5/20\r\nContent-Type: text/plain\r\n\r\n5\r\n--<boundary>\r\nContent-Range: bytes 6-6/20\r\nContent-Type: text/plain\r\n\r\n6\r\n--<boundary>\r\nContent-Range: bytes 7-7/20\r\nContent-Type: text/plain\r\n\r\n7\r\n--<boundary>\r\nContent-Range: bytes 8-8/20\r\nContent-Type: text/plain\r\n\r\n8\r\n--<boundary>\r\nContent-Range: bytes 9-9/20\r\nContent-Type: text/plain\r\n\r\n9\r\n--<boundary>\r\nContent-Range: bytes 10-10/20\r\nContent-Type: text/plain\r\n\r\na\r\n--<boundary>\r\nContent-Range: bytes 11-11/20\r\nContent-Type: text/plain\r\n\r\nb\r\n--<boundary>\r\nContent-Range: bytes 12-12/20\r\nContent-Type: text/plain\r\n\r\nc\r\n--<boundary>\r\nContent-Range: bytes 13-13/20\r\nContent-Type: text/plain\r\n\r\nd\r\n--<boundary>\r\nContent-Range: bytes 14-14/20\r\nContent-Type: text/plain\r\n\r\ne\r\n--<boundary>\r\nContent-Range: bytes 15-15/20\r\nContent-Type: text/plain\r\n\r\nf\r\n--<boundary>--\r\n"
+    }
+  },
+  {
+    "name": "range: seventeen ranges",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-0,1-1,2-2,3-3,4-4,5-5,6-6,7-7,8-8,9-9,10-10,11-11,12-12,13-13,14-14,15-15,16-16"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "16"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "too many ranges\n"
+    }
+  },
+  {
+    "name": "range: seventeen with empties",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-0,,,,,,,,,,,,,,,,"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "16"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "too many ranges\n"
+    }
+  },
+  {
+    "name": "range: two Range lines",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "Range": [
+        "bytes=0-1",
+        "5-6"
+      ]
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "232"
+        ],
+        "content-type": [
+          "multipart/byteranges; boundary=<boundary>"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "--<boundary>\r\nContent-Range: bytes 0-1/20\r\nContent-Type: text/plain\r\n\r\n01\r\n--<boundary>\r\nContent-Range: bytes 5-6/20\r\nContent-Type: text/plain\r\n\r\n56\r\n--<boundary>--\r\n"
+    }
+  },
+  {
+    "name": "range HEAD: middle",
+    "method": "HEAD",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=5-9"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "5"
+        ],
+        "content-range": [
+          "bytes 5-9/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "range HEAD: two ranges",
+    "method": "HEAD",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=0-1,5-6"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "232"
+        ],
+        "content-type": [
+          "multipart/byteranges; boundary=<boundary>"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "range HEAD: bad unit",
+    "method": "HEAD",
+    "file": "text",
+    "headers": {
+      "Range": "items=0-1"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "14"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "range HEAD: start past the end",
+    "method": "HEAD",
+    "file": "text",
+    "headers": {
+      "Range": "bytes=20-"
+    },
+    "response": {
+      "status": 416,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "33"
+        ],
+        "content-range": [
+          "bytes */20"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Match star",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": "*"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-Match tag",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": "\"abc\""
+    },
+    "response": {
+      "status": 412,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "0"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Match list with star",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": "\"abc\", *"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-Match star and later If-Unmodified-Since earlier",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": "*",
+      "If-Unmodified-Since": "Fri, 02 Jan 2026 03:04:04 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-Unmodified-Since earlier",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Unmodified-Since": "Fri, 02 Jan 2026 03:04:04 GMT"
+    },
+    "response": {
+      "status": 412,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "0"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Unmodified-Since exact",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Unmodified-Since": "Fri, 02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-Unmodified-Since later",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Unmodified-Since": "Fri, 02 Jan 2026 03:04:06 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-None-Match star",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-None-Match": "*"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-None-Match tag",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-None-Match": "\"abc\""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-None-Match tag beats If-Modified-Since",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-None-Match": "\"abc\"",
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:06 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-Modified-Since earlier",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:04 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "precondition: If-Modified-Since exact",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Modified-Since later",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:06 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Match tag and If-None-Match star",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": "\"abc\"",
+      "If-None-Match": "*"
+    },
+    "response": {
+      "status": 412,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "0"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Match star and If-None-Match star",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": "*",
+      "If-None-Match": "*"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition: If-Modified-Since exact with a range",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "precondition HEAD: If-Modified-Since exact",
+    "method": "HEAD",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Modified-Since date: rfc1123",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: rfc1123",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:05 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: rfc850",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Friday, 02-Jan-26 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: rfc850",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Friday, 02-Jan-26 03:04:05 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: asctime",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri Jan  2 03:04:05 2026"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: asctime",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri Jan  2 03:04:05 2026",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: no weekday",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: no weekday",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "02 Jan 2026 03:04:05 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: wrong weekday",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Mon, 02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range date: wrong weekday",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Mon, 02 Jan 2026 03:04:05 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: UTC zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 UTC"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range date: UTC zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:05 UTC",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: numeric zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 +0000"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: numeric zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:05 +0000",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: other zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 04:04:05 +0100"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: other zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 04:04:05 +0100",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: lowercase",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "fri, 02 jan 2026 03:04:05 gmt"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range date: lowercase",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "fri, 02 jan 2026 03:04:05 gmt",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: single digit day",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 2 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: single digit day",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 2 Jan 2026 03:04:05 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: surrounding spaces",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "  Fri, 02 Jan 2026 03:04:05 GMT  "
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: surrounding spaces",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "  Fri, 02 Jan 2026 03:04:05 GMT  ",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: no zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "If-Range date: no zone",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:05",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: iso",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "2026-01-02T03:04:05Z"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range date: iso",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "2026-01-02T03:04:05Z",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Modified-Since date: garbage",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": "yesterday"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range date: garbage",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "yesterday",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range earlier",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:04 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range later",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:06 GMT",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range entity tag",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "\"abc\"",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range without Range",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:04 GMT"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range mismatch with a bad range",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "Fri, 02 Jan 2026 03:04:04 GMT",
+      "Range": "items=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Range empty",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": "",
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 206,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "2"
+        ],
+        "content-range": [
+          "bytes 0-1/20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "01"
+    }
+  },
+  {
+    "name": "If-Range on two lines",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Range": [
+        "Fri, 02 Jan 2026 03:04:05 GMT",
+        "Fri, 02 Jan 2026 03:04:05 GMT"
+      ],
+      "Range": "bytes=0-1"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Modified-Since on two lines",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Modified-Since": [
+        "Fri, 02 Jan 2026 03:04:05 GMT",
+        "Fri, 02 Jan 2026 03:04:05 GMT"
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-Match on two lines",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-Match": [
+        "\"abc\"",
+        "*"
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "accept-ranges": [
+          "bytes"
+        ],
+        "content-disposition": [
+          "attachment"
+        ],
+        "content-length": [
+          "20"
+        ],
+        "content-type": [
+          "text/plain"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": "0123456789abcdefghij"
+    }
+  },
+  {
+    "name": "If-None-Match empty",
+    "method": "GET",
+    "file": "text",
+    "headers": {
+      "If-None-Match": "",
+      "If-Modified-Since": "Fri, 02 Jan 2026 03:04:05 GMT"
+    },
+    "response": {
+      "status": 304,
+      "headers": {
+        "content-disposition": [
+          "attachment"
+        ],
+        "last-modified": [
+          "Fri, 02 Jan 2026 03:04:05 GMT"
+        ],
+        "x-content-type-options": [
+          "nosniff"
+        ]
+      },
+      "body": ""
+    }
+  }
+]

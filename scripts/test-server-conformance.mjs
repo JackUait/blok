@@ -46,6 +46,7 @@ const SUITES = [
   'mcp-agent-participant',
   'routing-contract',
   'host-cli-contract',
+  'http-host-contract',
 ];
 
 function selectedOptions(args) {

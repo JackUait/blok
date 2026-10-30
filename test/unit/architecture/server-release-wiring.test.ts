@@ -236,6 +236,7 @@ describe('server release wiring', () => {
       'mcp-agent-participant',
       'routing-contract',
       'host-cli-contract',
+      'http-host-contract',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }

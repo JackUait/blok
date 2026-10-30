@@ -277,8 +277,14 @@ export class UndoHistory {
    */
   private nothingUndoable = false;
 
-  /** Stops the doc listener that clears {@link nothingUndoable}. */
+  /** Stops the doc listeners set up by {@link watchDoc}. */
   private stopDocWatch: (() => void) | null = null;
+
+  /**
+   * The transaction whose `afterTransaction` is running. Yjs does not pass it
+   * to `stack-item-updated`, and only its own deletes need a placement read.
+   */
+  private observedTransaction: Y.Transaction | null = null;
 
   /**
    * Flag to skip caret stack updates during explicit undo/redo operations.
@@ -445,8 +451,23 @@ export class UndoHistory {
       }
     };
 
+    // `beforeObserverCalls` fires before `afterTransaction` of the same transaction.
+    const observe = (transaction: Y.Transaction): void => {
+      this.observedTransaction = transaction;
+    };
+    const forget = (): void => {
+      this.observedTransaction = null;
+    };
+
     doc.on('afterTransaction', clear);
-    this.stopDocWatch = () => doc.off('afterTransaction', clear);
+    doc.on('beforeObserverCalls', observe);
+    doc.on('afterTransactionCleanup', forget);
+    this.stopDocWatch = () => {
+      doc.off('afterTransaction', clear);
+      doc.off('beforeObserverCalls', observe);
+      doc.off('afterTransactionCleanup', forget);
+      this.observedTransaction = null;
+    };
   }
 
   /**
@@ -1327,7 +1348,14 @@ export class UndoHistory {
       // A block delete always writes an order array. Typing never does, so
       // a keystroke costs no scan and no extra transaction.
       if ([...event.changedParentTypes.keys()].some((type) => type instanceof Y.AbstractType && this.isOrderArray(type))) {
-        this.recordDeletedPlacements(event.stackItem);
+        const transaction = this.observedTransaction;
+
+        // Only this transaction's deletes: earlier ones of the step are recorded already,
+        // and rescanning them made a long drag quadratic.
+        this.recordDeletedPlacements(
+          event.stackItem,
+          transaction?.changedParentTypes === event.changedParentTypes ? transaction.deleteSet : event.stackItem.deletions
+        );
       }
     };
 
@@ -1340,8 +1368,9 @@ export class UndoHistory {
    * order-array item. Must run right after the delete: later moves insert new
    * items next to the tombstone and change what sits left of it.
    * @param stackItem - the item that just recorded a delete
+   * @param deletes - the deletes to read: the ones the latest transaction added to the item
    */
-  private recordDeletedPlacements(stackItem: StackItem): void {
+  private recordDeletedPlacements(stackItem: StackItem, deletes: StackItem['deletions']): void {
     const blocks = this.blocksScope;
 
     if (blocks === null || blocks.doc === null) {
@@ -1352,7 +1381,7 @@ export class UndoHistory {
     const orderItems: Y.Item[] = [];
 
     blocks.doc.transact((transaction) => {
-      Y.iterateDeletedStructs(transaction, stackItem.deletions, (struct) => {
+      Y.iterateDeletedStructs(transaction, deletes, (struct) => {
         if (!(struct instanceof Y.Item)) {
           return;
         }

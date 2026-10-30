@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Sleep om rijen/kolommen toe te voegen of te verwijderen",
   "tools.table.fitToPageWidth": "Aanpassen aan paginabreedte",
   "tools.table.fullWidth": "Volledige breedte",
+  "tools.table.openFullScreen": "Openen in volledig scherm",
+  "tools.table.closeFullScreen": "Volledig scherm sluiten",
   "tools.table.textSize": "Tekstgrootte",
   "tools.table.compactText": "Compacte tekst",
   "tools.table.comfortableText": "Comfortabele tekst",

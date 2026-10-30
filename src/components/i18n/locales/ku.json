@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ڕیز/ستوون",
   "tools.table.fitToPageWidth": "بگونجێنە بە پانی لاپەڕە",
   "tools.table.fullWidth": "پانی تەواو",
+  "tools.table.openFullScreen": "کردنەوە بە پڕ شاشە",
+  "tools.table.closeFullScreen": "داخستنی پڕ شاشە",
   "tools.table.textSize": "قەبارەی دەق",
   "tools.table.compactText": "دەقی چڕ",
   "tools.table.comfortableText": "دەقی فراوان",

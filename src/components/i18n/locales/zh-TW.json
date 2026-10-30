@@ -137,6 +137,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "拖曳以新增或刪除列/欄",
   "tools.table.fitToPageWidth": "配合頁面寬度",
   "tools.table.fullWidth": "全寬",
+  "tools.table.openFullScreen": "以全螢幕開啟",
+  "tools.table.closeFullScreen": "關閉全螢幕",
   "tools.table.textSize": "文字大小",
   "tools.table.compactText": "精簡文字",
   "tools.table.comfortableText": "舒適文字",

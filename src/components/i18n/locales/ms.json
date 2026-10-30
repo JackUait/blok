@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Seret untuk menambah atau mengalih keluar baris/lajur",
   "tools.table.fitToPageWidth": "Muatkan pada lebar halaman",
   "tools.table.fullWidth": "Lebar penuh",
+  "tools.table.openFullScreen": "Buka dalam skrin penuh",
+  "tools.table.closeFullScreen": "Tutup skrin penuh",
   "tools.table.textSize": "Saiz teks",
   "tools.table.compactText": "Teks padat",
   "tools.table.comfortableText": "Teks selesa",

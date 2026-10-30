@@ -133,6 +133,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "வரிசைகளைச்/நெடுவரிசைகளைச் சேர்க்க அல்லது நீக்க இழுக்கவும்",
   "tools.table.fitToPageWidth": "பக்க அகலத்திற்குப் பொருத்து",
   "tools.table.fullWidth": "முழு அகலம்",
+  "tools.table.openFullScreen": "முழுத்திரையில் திற",
+  "tools.table.closeFullScreen": "முழுத்திரையை மூடு",
   "tools.table.textSize": "உரை அளவு",
   "tools.table.compactText": "இறுக்கமான உரை",
   "tools.table.comfortableText": "இடைவெளியுள்ள உரை",

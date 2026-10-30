@@ -236,6 +236,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ਕਤਾਰਾਂ/ਕਾਲਮ ਜੋੜਨ ਜਾਂ ਹਟਾਉਣ ਲਈ ਖਿੱਚੋ",
   "tools.table.fitToPageWidth": "ਪੰਨੇ ਦੀ ਚੌੜਾਈ ਅਨੁਸਾਰ ਫਿੱਟ ਕਰੋ",
   "tools.table.fullWidth": "ਪੂਰੀ ਚੌੜਾਈ",
+  "tools.table.openFullScreen": "ਪੂਰੀ ਸਕ੍ਰੀਨ ਵਿੱਚ ਖੋਲ੍ਹੋ",
+  "tools.table.closeFullScreen": "ਪੂਰੀ ਸਕ੍ਰੀਨ ਬੰਦ ਕਰੋ",
   "tools.table.textSize": "ਟੈਕਸਟ ਦਾ ਆਕਾਰ",
   "tools.table.compactText": "ਕੰਪੈਕਟ ਟੈਕਸਟ",
   "tools.table.comfortableText": "ਆਰਾਮਦਾਇਕ ਟੈਕਸਟ",

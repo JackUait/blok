@@ -259,6 +259,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Vilkite norėdami pridėti arba pašalinti eilutes/stulpelius",
   "tools.table.fitToPageWidth": "Pritaikyti prie puslapio pločio",
   "tools.table.fullWidth": "Visas plotis",
+  "tools.table.openFullScreen": "Atidaryti visame ekrane",
+  "tools.table.closeFullScreen": "Uždaryti viso ekrano režimą",
   "tools.table.textSize": "Teksto dydis",
   "tools.table.compactText": "Kompaktiškas tekstas",
   "tools.table.comfortableText": "Patogus tekstas",

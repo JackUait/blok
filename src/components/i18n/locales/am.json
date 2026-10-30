@@ -236,6 +236,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ረድፎችን/አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.fitToPageWidth": "ከገጹ ስፋት ጋር አስማማ",
   "tools.table.fullWidth": "ሙሉ ስፋት",
+  "tools.table.openFullScreen": "በሙሉ ማያ ክፈት",
+  "tools.table.closeFullScreen": "ሙሉ ማያን ዝጋ",
   "tools.table.textSize": "የጽሑፍ መጠን",
   "tools.table.compactText": "የታመቀ ጽሑፍ",
   "tools.table.comfortableText": "ምቹ ጽሑፍ",

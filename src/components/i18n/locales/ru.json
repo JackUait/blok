@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Перетащите, чтобы добавить или удалить строки/столбцы",
   "tools.table.fitToPageWidth": "По ширине страницы",
   "tools.table.fullWidth": "Полная ширина",
+  "tools.table.openFullScreen": "Открыть на весь экран",
+  "tools.table.closeFullScreen": "Закрыть полноэкранный режим",
   "tools.table.textSize": "Размер текста",
   "tools.table.compactText": "Компактный текст",
   "tools.table.comfortableText": "Обычный текст",

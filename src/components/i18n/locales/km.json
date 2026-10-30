@@ -133,6 +133,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "អូសដើម្បីបន្ថែម ឬលុបជួរដេក/ឈរ",
   "tools.table.fitToPageWidth": "ធ្វើឱ្យសមនឹងទទឹងទំព័រ",
   "tools.table.fullWidth": "ទទឹងពេញ",
+  "tools.table.openFullScreen": "បើកពេញអេក្រង់",
+  "tools.table.closeFullScreen": "បិទអេក្រង់ពេញ",
   "tools.table.textSize": "ទំហំអត្ថបទ",
   "tools.table.compactText": "អត្ថបទតូច",
   "tools.table.comfortableText": "អត្ថបទធម្មតា",

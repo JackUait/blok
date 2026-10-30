@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Мөр/багана нэмэх эсвэл хасахын тулд чирнэ үү",
   "tools.table.fitToPageWidth": "Хуудасны өргөнд тааруулах",
   "tools.table.fullWidth": "Бүтэн өргөн",
+  "tools.table.openFullScreen": "Бүтэн дэлгэцээр нээх",
+  "tools.table.closeFullScreen": "Бүтэн дэлгэцийг хаах",
   "tools.table.textSize": "Текстийн хэмжээ",
   "tools.table.compactText": "Авсаархан текст",
   "tools.table.comfortableText": "Ердийн хэмжээтэй текст",

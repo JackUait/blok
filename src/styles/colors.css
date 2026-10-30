@@ -416,6 +416,7 @@
   --blok-space-5: 20px;
   --blok-space-6: 24px;
   --blok-space-10: 40px;
+  --blok-space-14: 56px;
 
   /* Icon sizing (non-scale, role-based). */
   --blok-size-icon-sm: 18px;
@@ -488,6 +489,9 @@
     host-customization-tokens.test.ts.
   */
   --blok-bg-tertiary: var(--blok-bg-light);
+
+  /* Full-screen table backdrop (table-fullscreen.ts). */
+  --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.6);
 
   /* Image lightbox chrome (dark, independent of page theme). */
   --blok-image-lightbox-backdrop: rgba(25, 25, 24, 0.92);
@@ -696,6 +700,7 @@
 
     /* Generic surface / text / accent tokens (image tool + reusable). */
     --blok-bg-primary: #191919;
+    --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.8);
     --blok-bg-hover: rgba(255, 255, 255, 0.04);
     --blok-border-subtle: #2a2a28;
     --blok-border-primary: #333331;
@@ -899,6 +904,7 @@
 
   /* Generic surface / text / accent tokens (image tool + reusable). */
   --blok-bg-primary: #191919;
+  --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.8);
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;
   --blok-border-primary: #333331;

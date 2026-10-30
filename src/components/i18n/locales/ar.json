@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "اسحب لإضافة أو إزالة صفوف/أعمدة",
   "tools.table.fitToPageWidth": "ملاءمة عرض الصفحة",
   "tools.table.fullWidth": "عرض كامل",
+  "tools.table.openFullScreen": "فتح بملء الشاشة",
+  "tools.table.closeFullScreen": "إغلاق ملء الشاشة",
   "tools.table.textSize": "حجم النص",
   "tools.table.compactText": "نص مضغوط",
   "tools.table.comfortableText": "نص مريح",

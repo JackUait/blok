@@ -236,6 +236,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Prevucite za dodavanje ili uklanjanje redova/kolona",
   "tools.table.fitToPageWidth": "Prilagodi širini stranice",
   "tools.table.fullWidth": "Puna širina",
+  "tools.table.openFullScreen": "Otvori na cijelom ekranu",
+  "tools.table.closeFullScreen": "Zatvori cijeli ekran",
   "tools.table.textSize": "Veličina teksta",
   "tools.table.compactText": "Kompaktan tekst",
   "tools.table.comfortableText": "Prozračan tekst",

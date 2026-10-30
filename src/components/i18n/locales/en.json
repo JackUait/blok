@@ -137,6 +137,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Drag to add or remove rows/columns",
   "tools.table.fitToPageWidth": "Fit to page width",
   "tools.table.fullWidth": "Full width",
+  "tools.table.openFullScreen": "Open in full screen",
+  "tools.table.closeFullScreen": "Close full screen",
   "tools.table.textSize": "Text size",
   "tools.table.compactText": "Compact text",
   "tools.table.comfortableText": "Comfortable text",

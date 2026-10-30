@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ลากเพื่อเพิ่มหรือลบแถว/คอลัมน์",
   "tools.table.fitToPageWidth": "ปรับให้พอดีกับความกว้างของหน้า",
   "tools.table.fullWidth": "เต็มความกว้าง",
+  "tools.table.openFullScreen": "เปิดแบบเต็มหน้าจอ",
+  "tools.table.closeFullScreen": "ปิดโหมดเต็มหน้าจอ",
   "tools.table.textSize": "ขนาดข้อความ",
   "tools.table.compactText": "ข้อความกะทัดรัด",
   "tools.table.comfortableText": "ข้อความสบายตา",

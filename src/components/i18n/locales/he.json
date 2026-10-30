@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "גרור להוספה או הסרה של שורות/עמודות",
   "tools.table.fitToPageWidth": "התאם לרוחב הדף",
   "tools.table.fullWidth": "רוחב מלא",
+  "tools.table.openFullScreen": "פתח במסך מלא",
+  "tools.table.closeFullScreen": "סגור מסך מלא",
   "tools.table.textSize": "גודל טקסט",
   "tools.table.compactText": "טקסט קומפקטי",
   "tools.table.comfortableText": "טקסט נוח",

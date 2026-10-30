@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ރޯ/ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.fitToPageWidth": "ޞަފްޙާގެ ފުޅާމިނަށް ފައްތާ",
   "tools.table.fullWidth": "ފުރިހަމަ ފުޅާމިން",
+  "tools.table.openFullScreen": "ފުލް ސްކްރީނުގައި ހުޅުވާ",
+  "tools.table.closeFullScreen": "ފުލް ސްކްރީން ބަންދުކުރޭ",
   "tools.table.textSize": "ލިޔުމުގެ ސައިޒު",
   "tools.table.compactText": "ކުޑަ ލިޔުން",
   "tools.table.comfortableText": "އާދައިގެ ލިޔުން",

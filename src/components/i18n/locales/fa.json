@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "برای افزودن یا حذف سطرها/ستون‌ها بکشید",
   "tools.table.fitToPageWidth": "متناسب با عرض صفحه",
   "tools.table.fullWidth": "عرض کامل",
+  "tools.table.openFullScreen": "باز کردن در حالت تمام‌صفحه",
+  "tools.table.closeFullScreen": "بستن تمام‌صفحه",
   "tools.table.textSize": "اندازه متن",
   "tools.table.compactText": "متن فشرده",
   "tools.table.comfortableText": "متن معمولی",

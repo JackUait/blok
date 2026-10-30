@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "שלעפּ צו צולייגן אָדער אויסמעקן רײען/שפּאַלטן",
   "tools.table.fitToPageWidth": "צופּאַסן צו דער בלאַט־ברייט",
   "tools.table.fullWidth": "פֿולע ברייט",
+  "tools.table.openFullScreen": "עפֿענען אויפֿן פֿולן עקראַן",
+  "tools.table.closeFullScreen": "פֿאַרמאַכן דעם פֿולן עקראַן",
   "tools.table.textSize": "טעקסט גרייס",
   "tools.table.compactText": "קאָמפּאַקטער טעקסט",
   "tools.table.comfortableText": "באַקוועמער טעקסט",

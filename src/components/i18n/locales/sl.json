@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Povlecite za dodajanje ali odstranjevanje vrstic/stolpcev",
   "tools.table.fitToPageWidth": "Prilagodi širini strani",
   "tools.table.fullWidth": "Polna širina",
+  "tools.table.openFullScreen": "Odpri v celozaslonskem načinu",
+  "tools.table.closeFullScreen": "Zapri celozaslonski način",
   "tools.table.textSize": "Velikost besedila",
   "tools.table.compactText": "Strnjeno besedilo",
   "tools.table.comfortableText": "Udobno besedilo",

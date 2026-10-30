@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Trascina per aggiungere o rimuovere righe/colonne",
   "tools.table.fitToPageWidth": "Adatta alla larghezza della pagina",
   "tools.table.fullWidth": "Larghezza massima",
+  "tools.table.openFullScreen": "Apri a schermo intero",
+  "tools.table.closeFullScreen": "Chiudi schermo intero",
   "tools.table.textSize": "Dimensione del testo",
   "tools.table.compactText": "Testo compatto",
   "tools.table.comfortableText": "Testo standard",

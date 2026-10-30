@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Dra for å legge til eller fjerne rader/kolonner",
   "tools.table.fitToPageWidth": "Tilpass til sidebredde",
   "tools.table.fullWidth": "Full bredde",
+  "tools.table.openFullScreen": "Åpne i fullskjerm",
+  "tools.table.closeFullScreen": "Lukk fullskjerm",
   "tools.table.textSize": "Tekststørrelse",
   "tools.table.compactText": "Kompakt tekst",
   "tools.table.comfortableText": "Luftig tekst",

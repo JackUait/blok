@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Kéo để thêm hoặc xóa hàng/cột",
   "tools.table.fitToPageWidth": "Vừa với chiều rộng trang",
   "tools.table.fullWidth": "Toàn bộ chiều rộng",
+  "tools.table.openFullScreen": "Mở toàn màn hình",
+  "tools.table.closeFullScreen": "Đóng toàn màn hình",
   "tools.table.textSize": "Cỡ chữ",
   "tools.table.compactText": "Văn bản thu gọn",
   "tools.table.comfortableText": "Văn bản thoải mái",

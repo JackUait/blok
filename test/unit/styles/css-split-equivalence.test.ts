@@ -1441,6 +1441,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const PAGE_MENTION_QUERY_PILL_BYTES = 242;
     // file.css: the code preview's line-number gutter and wrapped lines.
     const FILE_PREVIEW_GUTTER_BYTES = 725;
+    // tables.css + colors.css: the full-screen table modal, backdrop, toggle and space-14 token.
+    const TABLE_FULLSCREEN_BYTES = 2_692;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1806,7 +1808,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROUND18_OPEN_ICON_BYTES
       + DATABASE_ROUND18_TOOLBAR_FOLD_BYTES
       + PAGE_MENTION_QUERY_PILL_BYTES
-      + FILE_PREVIEW_GUTTER_BYTES;
+      + FILE_PREVIEW_GUTTER_BYTES
+      + TABLE_FULLSCREEN_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

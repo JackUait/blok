@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "拖动以添加或删除行/列",
   "tools.table.fitToPageWidth": "适应页面宽度",
   "tools.table.fullWidth": "全宽",
+  "tools.table.openFullScreen": "全屏打开",
+  "tools.table.closeFullScreen": "关闭全屏",
   "tools.table.textSize": "文本大小",
   "tools.table.compactText": "紧凑文本",
   "tools.table.comfortableText": "舒适文本",

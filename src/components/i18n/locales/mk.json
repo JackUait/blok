@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Повлечете за додавање или отстранување редови/колони",
   "tools.table.fitToPageWidth": "Прилагоди на ширината на страницата",
   "tools.table.fullWidth": "Целосна ширина",
+  "tools.table.openFullScreen": "Отвори на цел екран",
+  "tools.table.closeFullScreen": "Затвори цел екран",
   "tools.table.textSize": "Големина на текстот",
   "tools.table.compactText": "Компактен текст",
   "tools.table.comfortableText": "Удобен текст",

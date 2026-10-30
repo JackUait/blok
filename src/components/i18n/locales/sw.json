@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Buruta ili kuongeza au kuondoa safu mlalo/wima",
   "tools.table.fitToPageWidth": "Linganisha na upana wa ukurasa",
   "tools.table.fullWidth": "Upana kamili",
+  "tools.table.openFullScreen": "Fungua kwenye skrini nzima",
+  "tools.table.closeFullScreen": "Funga skrini nzima",
   "tools.table.textSize": "Ukubwa wa maandishi",
   "tools.table.compactText": "Maandishi yaliyobanana",
   "tools.table.comfortableText": "Maandishi yenye nafasi",

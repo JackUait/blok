@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Перетягніть, щоб додати або видалити рядки/колонки",
   "tools.table.fitToPageWidth": "За шириною сторінки",
   "tools.table.fullWidth": "Повна ширина",
+  "tools.table.openFullScreen": "Відкрити на весь екран",
+  "tools.table.closeFullScreen": "Закрити повноекранний режим",
   "tools.table.textSize": "Розмір тексту",
   "tools.table.compactText": "Компактний текст",
   "tools.table.comfortableText": "Комфортний текст",

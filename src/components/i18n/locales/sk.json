@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Potiahnutím pridáte alebo odoberiete riadky/stĺpce",
   "tools.table.fitToPageWidth": "Prispôsobiť šírke stránky",
   "tools.table.fullWidth": "Celá šírka",
+  "tools.table.openFullScreen": "Otvoriť na celú obrazovku",
+  "tools.table.closeFullScreen": "Zavrieť celú obrazovku",
   "tools.table.textSize": "Veľkosť textu",
   "tools.table.compactText": "Kompaktný text",
   "tools.table.comfortableText": "Pohodlný text",

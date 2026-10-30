@@ -259,6 +259,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Velciet, lai pievienotu vai noņemtu rindas/kolonnas",
   "tools.table.fitToPageWidth": "Pielāgot lapas platumam",
   "tools.table.fullWidth": "Pilns platums",
+  "tools.table.openFullScreen": "Atvērt pilnekrāna režīmā",
+  "tools.table.closeFullScreen": "Aizvērt pilnekrāna režīmu",
   "tools.table.textSize": "Teksta izmērs",
   "tools.table.compactText": "Kompakts teksts",
   "tools.table.comfortableText": "Ērts teksts",

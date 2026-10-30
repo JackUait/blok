@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "قطاریں/کالم شامل یا حذف کرنے کے لیے گھسیٹیں",
   "tools.table.fitToPageWidth": "صفحے کی چوڑائی کے مطابق کریں",
   "tools.table.fullWidth": "پوری چوڑائی",
+  "tools.table.openFullScreen": "پوری اسکرین میں کھولیں",
+  "tools.table.closeFullScreen": "پوری اسکرین بند کریں",
   "tools.table.textSize": "متن کا سائز",
   "tools.table.compactText": "کمپیکٹ متن",
   "tools.table.comfortableText": "آرام دہ متن",

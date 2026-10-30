@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Σύρετε για προσθήκη ή αφαίρεση γραμμών/στηλών",
   "tools.table.fitToPageWidth": "Προσαρμογή στο πλάτος σελίδας",
   "tools.table.fullWidth": "Πλήρες πλάτος",
+  "tools.table.openFullScreen": "Άνοιγμα σε πλήρη οθόνη",
+  "tools.table.closeFullScreen": "Κλείσιμο πλήρους οθόνης",
   "tools.table.textSize": "Μέγεθος κειμένου",
   "tools.table.compactText": "Συμπαγές κείμενο",
   "tools.table.comfortableText": "Άνετο κείμενο",

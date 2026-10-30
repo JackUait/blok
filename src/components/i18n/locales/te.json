@@ -236,6 +236,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "వరుసలు/స్తంభాలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
   "tools.table.fitToPageWidth": "పేజీ వెడల్పుకు సరిపోల్చు",
   "tools.table.fullWidth": "పూర్తి వెడల్పు",
+  "tools.table.openFullScreen": "పూర్తి స్క్రీన్‌లో తెరవండి",
+  "tools.table.closeFullScreen": "పూర్తి స్క్రీన్‌ను మూసివేయండి",
   "tools.table.textSize": "వచన పరిమాణం",
   "tools.table.compactText": "కాంపాక్ట్ వచనం",
   "tools.table.comfortableText": "సౌకర్యవంతమైన వచనం",

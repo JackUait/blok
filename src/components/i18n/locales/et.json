@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Lohista ridade/veergude lisamiseks või eemaldamiseks",
   "tools.table.fitToPageWidth": "Sobita lehe laiusega",
   "tools.table.fullWidth": "Täislaius",
+  "tools.table.openFullScreen": "Ava täisekraanil",
+  "tools.table.closeFullScreen": "Sulge täisekraan",
   "tools.table.textSize": "Teksti suurus",
   "tools.table.compactText": "Kompaktne tekst",
   "tools.table.comfortableText": "Mugav tekst",

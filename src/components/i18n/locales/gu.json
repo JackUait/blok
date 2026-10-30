@@ -236,6 +236,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "હરોળ/કૉલમ ઉમેરવા અથવા દૂર કરવા ખેંચો",
   "tools.table.fitToPageWidth": "પૃષ્ઠની પહોળાઈમાં ફિટ કરો",
   "tools.table.fullWidth": "પૂર્ણ પહોળાઈ",
+  "tools.table.openFullScreen": "પૂર્ણ સ્ક્રીનમાં ખોલો",
+  "tools.table.closeFullScreen": "પૂર્ણ સ્ક્રીન બંધ કરો",
   "tools.table.textSize": "ટેક્સ્ટનું કદ",
   "tools.table.compactText": "કોમ્પેક્ટ ટેક્સ્ટ",
   "tools.table.comfortableText": "આરામદાયક ટેક્સ્ટ",

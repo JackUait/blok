@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Húzza sorok/oszlopok hozzáadásához vagy eltávolításához",
   "tools.table.fitToPageWidth": "Igazítás az oldal szélességéhez",
   "tools.table.fullWidth": "Teljes szélesség",
+  "tools.table.openFullScreen": "Megnyitás teljes képernyőn",
+  "tools.table.closeFullScreen": "Teljes képernyő bezárása",
   "tools.table.textSize": "Szövegméret",
   "tools.table.compactText": "Kompakt szöveg",
   "tools.table.comfortableText": "Kényelmes szöveg",

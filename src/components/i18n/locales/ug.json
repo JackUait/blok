@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "قۇر/ئىستون قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
   "tools.table.fitToPageWidth": "بەت كەڭلىكىگە ماسلاشتۇرۇش",
   "tools.table.fullWidth": "تولۇق كەڭلىك",
+  "tools.table.openFullScreen": "پۈتۈن ئېكراندا ئېچىش",
+  "tools.table.closeFullScreen": "پۈتۈن ئېكراننى تاقاش",
   "tools.table.textSize": "تېكىست چوڭلۇقى",
   "tools.table.compactText": "ئىخچام تېكىست",
   "tools.table.comfortableText": "كەڭرى تېكىست",

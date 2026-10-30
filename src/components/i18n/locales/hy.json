@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Քաշեք՝ տողեր/սյունակներ ավելացնելու կամ հեռացնելու համար",
   "tools.table.fitToPageWidth": "Հարմարեցնել էջի լայնությանը",
   "tools.table.fullWidth": "Ամբողջ լայնություն",
+  "tools.table.openFullScreen": "Բացել ամբողջ էկրանով",
+  "tools.table.closeFullScreen": "Փակել ամբողջ էկրանը",
   "tools.table.textSize": "Տեքստի չափը",
   "tools.table.compactText": "Սեղմ տեքստ",
   "tools.table.comfortableText": "Հարմարավետ տեքստ",

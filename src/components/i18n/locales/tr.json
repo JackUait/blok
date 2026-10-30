@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Satır/sütun eklemek veya kaldırmak için sürükle",
   "tools.table.fitToPageWidth": "Sayfa genişliğine sığdır",
   "tools.table.fullWidth": "Tam genişlik",
+  "tools.table.openFullScreen": "Tam ekranda aç",
+  "tools.table.closeFullScreen": "Tam ekranı kapat",
   "tools.table.textSize": "Metin boyutu",
   "tools.table.compactText": "Sıkışık metin",
   "tools.table.comfortableText": "Rahat metin",

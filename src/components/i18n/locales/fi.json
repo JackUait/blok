@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Vedä lisätäksesi tai poistaaksesi rivejä/sarakkeita",
   "tools.table.fitToPageWidth": "Sovita sivun leveyteen",
   "tools.table.fullWidth": "Koko leveys",
+  "tools.table.openFullScreen": "Avaa koko näytöllä",
+  "tools.table.closeFullScreen": "Sulje koko näytön tila",
   "tools.table.textSize": "Tekstin koko",
   "tools.table.compactText": "Tiivis teksti",
   "tools.table.comfortableText": "Väljä teksti",

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InlineToolbar } from '../../../../../../src/components/modules/toolbar/inline/index';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
+import { SelectionUtils } from '../../../../../../src/components/selection/index';
 
 /**
  * Mock the helper classes that InlineToolbar instantiates in its constructor.
@@ -252,6 +253,61 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
 
     expect(wrapper.style.getPropertyValue('--_blok-inline-toolbar-origin')).toBe('left top');
+  });
+
+  describe('selection inside a top-layer panel', () => {
+    const selectInside = (host: HTMLElement): void => {
+      const text = document.createTextNode('cell');
+
+      host.appendChild(text);
+      vi.mocked(SelectionUtils.get).mockReturnValue({ anchorNode: text } as unknown as Selection);
+    };
+    const wrapperOf = (toolbar: InlineToolbar): HTMLElement =>
+      (toolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+    afterEach(() => {
+      vi.mocked(SelectionUtils.get).mockReturnValue(null);
+      document.body.innerHTML = '';
+    });
+
+    it('joins the top layer above a panel the selection sits in', async () => {
+      const panel = document.createElement('div');
+
+      panel.setAttribute('data-blok-top-layer', 'true');
+      document.body.appendChild(panel);
+      selectInside(panel);
+
+      await inlineToolbar.tryToShow();
+
+      expect(wrapperOf(inlineToolbar).getAttribute('data-blok-top-layer')).toBe('true');
+      expect(wrapperOf(inlineToolbar).style.position).toBe('fixed');
+    });
+
+    it('leaves the top layer when it closes', async () => {
+      const panel = document.createElement('div');
+
+      panel.setAttribute('data-blok-top-layer', 'true');
+      document.body.appendChild(panel);
+      selectInside(panel);
+      await inlineToolbar.tryToShow();
+
+      inlineToolbar.close();
+
+      expect(wrapperOf(inlineToolbar).hasAttribute('data-blok-top-layer')).toBe(false);
+      expect(wrapperOf(inlineToolbar).style.position).toBe('');
+    });
+
+    it('stays in the page for a selection in the page', async () => {
+      const block = document.createElement('div');
+
+      document.body.appendChild(block);
+      selectInside(block);
+
+      await inlineToolbar.tryToShow();
+
+      expect(wrapperOf(inlineToolbar).hasAttribute('data-blok-top-layer')).toBe(false);
+      expect(wrapperOf(inlineToolbar).style.position).toBe('');
+    });
   });
 
   it('leaves a fading copy of the card when it closes', async () => {

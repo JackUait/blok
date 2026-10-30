@@ -15,6 +15,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import {
   IconCollapseFullscreen,
+  IconExpandDiagonal,
   IconExpandFullscreen,
   IconHeaderColumn,
   IconHeaderRow,
@@ -52,6 +53,7 @@ import { TableModel } from './table-model';
 import { renderTablePreview } from './preview';
 import { ownPastedCells, ownPastedRows } from './table-cell-paste';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
+import { TableFullscreen } from './table-fullscreen';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
 import type { LegacyCellContent, TableData, TableConfig, TableTextSize } from './types';
@@ -64,12 +66,12 @@ const DEFAULT_COLS = 3;
 const SYNC_SETTLE_MAX_FRAMES = 5;
 
 const WRAPPER_CLASSES = [
+  'relative',
   'my-2',
   'pe-5',
 ];
 
 const WRAPPER_EDIT_CLASSES = [
-  'relative',
   'mb-7',
   'after:content-[""]',
   'after:absolute',
@@ -117,6 +119,7 @@ export class Table implements BlockTool {
   private gridElement: HTMLElement | null = null;
   private scrollContainer: HTMLDivElement | null = null;
   private gripOverlay: HTMLDivElement | null = null;
+  private readonly fullscreen: TableFullscreen;
   private blockId: string | undefined;
   private block: BlockAPI | undefined;
   private isNewTable = false;
@@ -158,6 +161,10 @@ export class Table implements BlockTool {
     this.model = new TableModel(normalized, { mintId: generateTableId });
     this.blockId = block?.id;
     this.block = block;
+    this.fullscreen = new TableFullscreen({
+      getHost: () => this.block?.holder ?? null,
+      t: (key) => this.api.i18n.t(key),
+    });
     this.subsystems = new TableSubsystems(this.createSubsystemHost());
 
     if (this.config.restrictedTools !== undefined) {
@@ -659,6 +666,7 @@ export class Table implements BlockTool {
       this.gripOverlay = overlay;
     }
 
+    wrapper.appendChild(this.fullscreen.button);
     this.element = wrapper;
 
     if (this.model.withHeadings) {
@@ -719,6 +727,13 @@ export class Table implements BlockTool {
         isActive: this.model.stretched,
         closeOnActivate: true,
         onActivate: (): void => this.toggleFullWidth(),
+      },
+      {
+        icon: IconExpandDiagonal,
+        title: i18n.t('tools.table.openFullScreen'),
+        name: 'table-open-fullscreen',
+        closeOnActivate: true,
+        onActivate: (): void => this.fullscreen.open(),
       },
       {
         icon: IconTextSizeLarge,
@@ -1509,6 +1524,7 @@ export class Table implements BlockTool {
   }
 
   public destroy(): void {
+    this.fullscreen.destroy();
     this.unregisterRestrictedTools?.();
     this.unregisterRestrictedTools = null;
 

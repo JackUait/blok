@@ -118,6 +118,7 @@ describe('Table block settings menu', () => {
       expect(names).toContain('table-heading-column');
       expect(names).toContain('table-fit-to-page-width');
       expect(names).toContain('table-full-width');
+      expect(names).toContain('table-open-fullscreen');
     });
 
     it('titles come from i18n', () => {

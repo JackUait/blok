@@ -301,3 +301,90 @@
   top: 0;
   left: 0;
 }
+
+/*
+  Full screen (table-fullscreen.ts). The block holder goes to the top layer.
+  The `[data-blok-top-layer][popover]` reset in main.css (0,2,0) clears inset,
+  size, padding and overflow, so the box is set again here at higher specificity.
+  The margin is !important: a nested holder carries an inline margin-left.
+*/
+[data-blok-table-fullscreen][data-blok-top-layer][popover] {
+  position: fixed;
+  inset: 32px;
+  margin: 0 !important;
+  padding: var(--blok-space-14) var(--blok-space-10) 32px;
+  overflow: auto;
+  background-color: var(--blok-bg-primary);
+  border-radius: var(--blok-radius-dialog);
+  box-shadow: 0 0 0 1px var(--blok-border-subtle), 0 12px 32px var(--blok-popover-shadow);
+}
+
+[data-blok-table-fullscreen] > [data-blok-element-content] {
+  max-width: none;
+}
+
+/* Blok mounts its +/drag toolbar in the hovered holder, so it would ride into the modal over the first cell. */
+[data-blok-table-fullscreen] [data-blok-toolbar] {
+  visibility: hidden;
+}
+
+[data-blok-table-fullscreen-backdrop] {
+  position: fixed;
+  inset: 0;
+  background-color: var(--blok-table-fullscreen-backdrop);
+}
+
+[data-blok-table-fullscreen-backdrop][data-blok-top-layer][popover] {
+  inset: 0;
+}
+
+/* Sits over the last header cell, clear of the add-column strip (pe-5). */
+[data-blok-table-fullscreen-toggle] {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 26px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-text-secondary);
+  background-color: var(--blok-bg-primary);
+  box-shadow: 0 0 0 1px var(--blok-border-subtle);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+[data-blok-table-fullscreen-toggle] svg {
+  width: 18px;
+  height: 18px;
+}
+
+[data-blok-table-fullscreen-toggle]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-tool="table"]:hover > [data-blok-table-fullscreen-toggle],
+[data-blok-table-fullscreen-toggle]:focus-visible,
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle] {
+  opacity: 1;
+}
+
+/* In the modal it is the close button, at the modal's corner. */
+[data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle] {
+  position: fixed;
+  top: 44px;
+  inset-inline-end: 44px;
+  box-shadow: none;
+}
+
+@media (hover: none) {
+  [data-blok-table-fullscreen-toggle] {
+    opacity: 1;
+  }
+}

@@ -236,6 +236,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "সারি/কলাম যোগ বা সরাতে টানুন",
   "tools.table.fitToPageWidth": "পৃষ্ঠার প্রস্থে ফিট করুন",
   "tools.table.fullWidth": "সম্পূর্ণ প্রস্থ",
+  "tools.table.openFullScreen": "পূর্ণ স্ক্রিনে খুলুন",
+  "tools.table.closeFullScreen": "পূর্ণ স্ক্রিন বন্ধ করুন",
   "tools.table.textSize": "টেক্সটের আকার",
   "tools.table.compactText": "কমপ্যাক্ট টেক্সট",
   "tools.table.comfortableText": "আরামদায়ক টেক্সট",

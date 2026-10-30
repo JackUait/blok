@@ -13,6 +13,7 @@ import type { Popover, PopoverItemParams } from '../../../utils/popover';
 import { PopoverInline } from '../../../utils/popover/popover-inline';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { twMerge } from '../../../utils/tw';
+import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, TOP_LAYER_MARKER_ATTR } from '../../../utils/top-layer';
 
 /**
  * Refactored InlineToolbar components
@@ -426,6 +427,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     // Clear wrapper content
     if (this.nodes.wrapper) {
       this.nodes.wrapper.innerHTML = '';
+      this.leaveTopLayer();
     }
 
     // Handle test mocks for PopoverInline
@@ -596,6 +598,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       ?? popoverElement?.getBoundingClientRect().width
       ?? 0;
 
+    this.followSelectionIntoTopLayer();
     this.applyPosition(popoverWidth, popoverSize?.height ?? 0);
 
     // Mount popover
@@ -641,6 +644,33 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
         },
       };
     });
+  }
+
+  /**
+   * A top-layer panel (a full-screen table) paints over the page, so a
+   * selection inside it needs the toolbar in the top layer too, shown after
+   * the panel. Fixed, because applyPosition then measures from the viewport.
+   */
+  private followSelectionIntoTopLayer(): void {
+    const wrapper = this.nodes.wrapper;
+    const anchor = SelectionUtils.get()?.anchorNode ?? null;
+    const anchorElement = anchor instanceof Element ? anchor : anchor?.parentElement ?? null;
+
+    if (!wrapper || anchorElement?.closest(`[${TOP_LAYER_MARKER_ATTR}]`) == null) {
+      return;
+    }
+    wrapper.style.position = 'fixed';
+    promoteToTopLayer(wrapper);
+  }
+
+  private leaveTopLayer(): void {
+    const wrapper = this.nodes.wrapper;
+
+    if (!wrapper || !isPromotedToTopLayer(wrapper)) {
+      return;
+    }
+    removeFromTopLayer(wrapper);
+    wrapper.style.position = '';
   }
 
   /**

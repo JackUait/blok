@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Glisser pour ajouter ou supprimer des lignes/colonnes",
   "tools.table.fitToPageWidth": "Ajuster à la largeur de la page",
   "tools.table.fullWidth": "Pleine largeur",
+  "tools.table.openFullScreen": "Ouvrir en plein écran",
+  "tools.table.closeFullScreen": "Fermer le plein écran",
   "tools.table.textSize": "Taille du texte",
   "tools.table.compactText": "Texte compact",
   "tools.table.comfortableText": "Texte aéré",

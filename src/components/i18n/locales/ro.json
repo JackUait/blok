@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Trageți pentru a adăuga sau elimina rânduri/coloane",
   "tools.table.fitToPageWidth": "Potrivire la lățimea paginii",
   "tools.table.fullWidth": "Lățime completă",
+  "tools.table.openFullScreen": "Deschide pe tot ecranul",
+  "tools.table.closeFullScreen": "Închide ecranul complet",
   "tools.table.textSize": "Dimensiunea textului",
   "tools.table.compactText": "Text compact",
   "tools.table.comfortableText": "Text aerisit",

@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ჩავლებით გადაიტანეთ სტრიქონების/სვეტების დასამატებლად ან წასაშლელად",
   "tools.table.fitToPageWidth": "გვერდის სიგანეზე მორგება",
   "tools.table.fullWidth": "სრული სიგანე",
+  "tools.table.openFullScreen": "სრულ ეკრანზე გახსნა",
+  "tools.table.closeFullScreen": "სრული ეკრანის დახურვა",
   "tools.table.textSize": "ტექსტის ზომა",
   "tools.table.compactText": "კომპაქტური ტექსტი",
   "tools.table.comfortableText": "კომფორტული ტექსტი",

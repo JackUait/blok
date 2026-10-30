@@ -248,6 +248,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "पंक्तियाँ/स्तंभ जोड़ने या हटाने के लिए खींचें",
   "tools.table.fitToPageWidth": "पृष्ठ की चौड़ाई में फ़िट करें",
   "tools.table.fullWidth": "पूरी चौड़ाई",
+  "tools.table.openFullScreen": "फ़ुलस्क्रीन में खोलें",
+  "tools.table.closeFullScreen": "फ़ुलस्क्रीन बंद करें",
   "tools.table.textSize": "टेक्स्ट का आकार",
   "tools.table.compactText": "सघन टेक्स्ट",
   "tools.table.comfortableText": "आरामदायक टेक्स्ट",

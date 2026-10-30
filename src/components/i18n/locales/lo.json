@@ -247,6 +247,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ/ຖັນ",
   "tools.table.fitToPageWidth": "ປັບໃຫ້ພໍດີກັບຄວາມກວ້າງໜ້າ",
   "tools.table.fullWidth": "ຄວາມກວ້າງເຕັມ",
+  "tools.table.openFullScreen": "ເປີດເຕັມຈໍ",
+  "tools.table.closeFullScreen": "ປິດເຕັມຈໍ",
   "tools.table.textSize": "ຂະໜາດຂໍ້ຄວາມ",
   "tools.table.compactText": "ຂໍ້ຄວາມກະທັດຮັດ",
   "tools.table.comfortableText": "ຂໍ້ຄວາມສະບາຍ",

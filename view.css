@@ -823,6 +823,7 @@
   --blok-space-5: 20px;
   --blok-space-6: 24px;
   --blok-space-10: 40px;
+  --blok-space-14: 56px;
   --blok-size-icon-sm: 18px;
   --blok-size-icon-md: 22px;
   --blok-size-icon-lg: 26px;
@@ -866,6 +867,7 @@
   --blok-line-height-option: 1.3;
   --blok-accent: var(--blok-color-accent);
   --blok-bg-tertiary: var(--blok-bg-light);
+  --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.6);
   --blok-image-lightbox-backdrop: rgba(25, 25, 24, 0.92);
   --blok-image-lightbox-toolbar-bg: #252525;
   --blok-image-lightbox-toolbar-fg: #e2e0dc;
@@ -1035,6 +1037,7 @@
     --blok-border-secondary: rgba(255, 255, 255, 0.08);
     --blok-code-bg: #222221;
     --blok-bg-primary: #191919;
+    --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.8);
     --blok-bg-hover: rgba(255, 255, 255, 0.04);
     --blok-border-subtle: #2a2a28;
     --blok-border-primary: #333331;
@@ -1202,6 +1205,7 @@
   --blok-border-secondary: rgba(255, 255, 255, 0.08);
   --blok-code-bg: #222221;
   --blok-bg-primary: #191919;
+  --blok-table-fullscreen-backdrop: rgba(15, 15, 15, 0.8);
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;
   --blok-border-primary: #333331;

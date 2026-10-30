@@ -145,6 +145,8 @@
   "tools.table.dragToAddRemoveRowsColumns": "Ziehen, um Zeilen/Spalten hinzuzufügen oder zu entfernen",
   "tools.table.fitToPageWidth": "An Seitenbreite anpassen",
   "tools.table.fullWidth": "Volle Breite",
+  "tools.table.openFullScreen": "Im Vollbild öffnen",
+  "tools.table.closeFullScreen": "Vollbild schließen",
   "tools.table.textSize": "Textgröße",
   "tools.table.compactText": "Kompakter Text",
   "tools.table.comfortableText": "Luftiger Text",

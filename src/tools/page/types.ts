@@ -3,6 +3,17 @@ import type { BlockToolData, OutputBlockData, OutputData } from '../../../types'
 /** What `create` may answer: the id the host gave the page, or nothing to keep Blok's. */
 export type PageCreateResult = void | { pageId: string };
 
+/** What `create` gets. */
+export interface PageCreateInit {
+  pageId: string;
+  /** The new page's starting content. */
+  document?: OutputData;
+  /** The new page's title, from the "@" menu's New page items. */
+  title?: string;
+  /** Where the page goes. Missing means the page this editor shows. */
+  parentId?: string;
+}
+
 /** A page's icon: an emoji, or an image at a URL. */
 export type PageIcon = { type: 'emoji'; value: string } | { type: 'image'; url: string };
 
@@ -58,7 +69,9 @@ export interface PageSearchResult {
 export interface PageConfig {
   /** Offers "Database - Full page" in the toolbox. Needs a `create` that stores `document`. */
   databasePages?: boolean;
-  /** Searches visible pages for an inline reference. */
+  /** Offers "New page" in the "@" menu. Needs a `create` that stores `title` and `parentId`. */
+  createFromMention?: boolean;
+  /** Searches visible pages for an inline reference. `''` asks for recent pages. */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /** The page's URL. Without it the link has no href. */
   href?(pageId: string): string;
@@ -69,7 +82,7 @@ export interface PageConfig {
   /** Authorized metadata. `null` means missing; `undefined` means unresolved. */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /** Makes the page a new page block points at. May answer with the host's own id. */
-  create?(init: { pageId: string; document?: OutputData }): PageCreateResult | Promise<PageCreateResult>;
+  create?(init: PageCreateInit): PageCreateResult | Promise<PageCreateResult>;
   /** Calls `onChange` for local-tab and remote metadata or access changes. */
   subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /** Saves a new title from the block menu's Rename. */

@@ -74,6 +74,18 @@ export interface PageSearchResult {
   status?: 'draft' | 'published';
 }
 
+/** What `PageConfig.create` gets. */
+export interface PageCreateInit {
+  /** The id Blok minted for the page. */
+  pageId: string;
+  /** The page's starting content. */
+  document?: OutputData;
+  /** The page's title, from the "@" menu's New page items. */
+  title?: string;
+  /** The page to put it under. Missing means the page this editor shows. */
+  parentId?: string;
+}
+
 /**
  * Page Tool's configuration. The host owns pages; Blok only links to them.
  */
@@ -84,7 +96,17 @@ export interface PageConfig {
    * `database` tool is registered.
    */
   databasePages?: boolean;
-  /** Searches visible pages for an inline reference. */
+  /**
+   * Offers a "New page" section in the "@" menu: a sub-page of the current
+   * page, or a page under one the user picks. Default false. Turn it on only
+   * when `create` stores `title` and `parentId`. The new page is mentioned,
+   * not opened.
+   */
+  createFromMention?: boolean;
+  /**
+   * Searches visible pages for an inline reference. The "@" menu asks with
+   * `''` as soon as "@" is typed: answer with recent pages.
+   */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /**
    * The page's URL. Used for the link, middle click and Cmd/Ctrl click.
@@ -133,8 +155,12 @@ export interface PageConfig {
    * `document`, when present, is the page's starting content. Store it as the
    * page's document. The "Database - Full page" entry sends one database block
    * with `fullPage: true`; open the page to let it finish seeding.
+   *
+   * From the "@" menu (with `createFromMention`), `title` is the typed text
+   * and `parentId` the page the user chose. No `parentId` means the page
+   * this editor shows.
    */
-  create?(init: { pageId: string; document?: OutputData }): PageCreateResult | Promise<PageCreateResult>;
+  create?(init: PageCreateInit): PageCreateResult | Promise<PageCreateResult>;
   /**
    * Saves a new title. Called by the block menu's Rename and Cmd/Ctrl+Shift+R
    * on the selected block. Without it, Rename is not offered. Blok shows the

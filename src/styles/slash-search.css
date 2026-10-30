@@ -106,3 +106,9 @@ span[data-blok-slash-search] {
 [data-blok-popover-scrollbar][data-blok-dragging] {
   background: var(--blok-gray-text);
 }
+
+/* The "@query" pill while the "@" page menu is open (mention-query-highlight.ts).
+   A highlight paints only a fill, so it has no radius or padding. */
+::highlight(blok-page-mention-query) {
+  background-color: var(--blok-search-input-bg);
+}

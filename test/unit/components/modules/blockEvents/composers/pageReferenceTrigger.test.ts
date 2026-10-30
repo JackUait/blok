@@ -7,7 +7,7 @@ import type { BlokModules } from '../../../../../../src/types-internal/blok-modu
 import { createBlock, createBlokModules, setCaret } from './emojiTrigger.fixture';
 
 const { MockPopover, popovers } = vi.hoisted(() => {
-  const instances: Array<{ nothingFound: boolean; messages?: { nothingFound?: string } }> = [];
+  const instances: Array<{ nothingFound: boolean; messages?: { nothingFound?: string }; closeFromOutside: () => void }> = [];
 
   class PopoverDouble {
     private root: HTMLElement | null = null;
@@ -45,7 +45,23 @@ const { MockPopover, popovers } = vi.hoisted(() => {
       this.root = root;
     }
 
-    on(): void {}
+    private closed: (() => void) | null = null;
+
+    on(_event: string, callback: () => void): void {
+      this.closed = callback;
+    }
+
+    closeFromOutside(): void {
+      this.closed?.();
+    }
+
+    getElement(): HTMLElement {
+      return this.root ?? document.createElement('div');
+    }
+
+    mountSearchField(field: HTMLElement): void {
+      this.root?.prepend(field);
+    }
 
     destroy(): void {
       this.root?.remove();
@@ -453,5 +469,301 @@ describe('PageReferenceTrigger', () => {
     expect(trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }))).toBe(true);
     expect(trigger.opened).toBe(false);
     expect(block.currentInput?.textContent).toBe('@road');
+  });
+});
+
+class FakeHighlight extends Set<Range> {
+  constructor(...ranges: Range[]) {
+    super(ranges);
+  }
+}
+
+describe('PageReferenceTrigger — Notion "@" menu', () => {
+  const highlights = new Map<string, FakeHighlight>();
+  let current: PageReferenceTrigger | undefined;
+
+  const option = (testid: string): HTMLElement | null =>
+    document.querySelector<HTMLElement>(`[data-blok-testid="${testid}"]`);
+  const press = (key: string): boolean =>
+    current?.handleKeydown(new KeyboardEvent('keydown', { key, cancelable: true })) ?? false;
+  const mentionSetup = (text: string, config: Partial<PageConfig> = {}): Setup => {
+    const result = setup(text);
+
+    Object.assign(result.page, config);
+    current = result.trigger;
+
+    return result;
+  };
+  const painted = (): string[] =>
+    Array.from(highlights.get('blok-page-mention-query') ?? []).map((range) => range.toString());
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    popovers.length = 0;
+    highlights.clear();
+    vi.stubGlobal('Highlight', FakeHighlight);
+    vi.stubGlobal('CSS', { highlights });
+  });
+
+  afterEach(() => {
+    current?.destroy();
+    current = undefined;
+    document.body.replaceChildren();
+    window.getSelection()?.removeAllRanges();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('opens on "@" alone with the loading state until recents arrive', async () => {
+    const { block, search } = mentionSetup('See @');
+    let answer: ((results: readonly PageSearchResult[]) => void) | undefined;
+
+    search.mockReturnValue(new Promise((resolve) => {
+      answer = resolve;
+    }));
+    const pending = current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+    expect(search).toHaveBeenCalledWith('');
+    expect(current?.opened).toBe(true);
+    expect(option('page-picker-spinner')).not.toBeNull();
+    expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(2);
+    expect(popovers.at(-1)?.nothingFound).toBe(false);
+
+    answer?.([{ pageId: 'p1', title: 'Recent' }]);
+    await pending;
+
+    expect(option('page-picker-spinner')).toBeNull();
+    expect(option('page-picker-option')?.textContent).toBe('Recent');
+  });
+
+  it.each([
+    ['no createFromMention', { create: vi.fn() }],
+    ['createFromMention without create', { createFromMention: true }],
+  ])('has no New page section with %s', async (_name, config) => {
+    const { block } = mentionSetup('@que', config);
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+    expect(option('page-picker-new-sub-page')).toBeNull();
+    expect(popovers.at(-1)?.nothingFound).toBe(true);
+  });
+
+  it('keeps only the New page section when no page matches, without Nothing found', async () => {
+    const { block } = mentionSetup('@zzqx', { createFromMention: true, create: vi.fn() });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+    expect(option('page-picker-new-sub-page')).not.toBeNull();
+    expect(option('page-picker-new-page-in')).not.toBeNull();
+    expect(document.querySelector('[data-blok-page-picker-section="link"]')).toBeNull();
+    expect(popovers.at(-1)?.nothingFound).toBe(false);
+  });
+
+  it('creates a titled sub-page, uses the host\'s id and mentions it without opening it', async () => {
+    const create = vi.fn().mockResolvedValue({ pageId: 'host-id' });
+    const open = vi.fn();
+    const { block, page } = mentionSetup('See @que', { createFromMention: true, create, open });
+
+    // A brand-new page may not resolve yet; the mention must still land.
+    page.resolve = vi.fn().mockReturnValue(null);
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    option('page-picker-new-sub-page')?.click();
+
+    await vi.waitFor(() => {
+      expect(block.currentInput?.innerHTML).toBe('See <a data-blok-page-id="host-id">Page</a>');
+    });
+    const init = create.mock.calls[0]?.[0] as { pageId: string; title: string; parentId?: string };
+
+    expect(create).toHaveBeenCalledOnce();
+    expect(init.title).toBe('que');
+    expect(init.pageId).toMatch(/\S/);
+    expect('parentId' in init).toBe(false);
+    expect(open).not.toHaveBeenCalled();
+    expect(block.dispatchChange).toHaveBeenCalledOnce();
+    expect(current?.opened).toBe(false);
+  });
+
+  it('keeps Blok\'s id when create answers nothing', async () => {
+    const create = vi.fn().mockResolvedValue(undefined);
+    const { block } = mentionSetup('@que', { createFromMention: true, create });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    option('page-picker-new-sub-page')?.click();
+
+    await vi.waitFor(() => expect(block.currentInput?.querySelector('[data-blok-page-id]')).not.toBeNull());
+    expect(block.currentInput?.querySelector('[data-blok-page-id]')?.getAttribute('data-blok-page-id'))
+      .toBe((create.mock.calls[0]?.[0] as { pageId: string }).pageId);
+  });
+
+  it('shows the item busy while create runs', async () => {
+    let finish: (() => void) | undefined;
+    const create = vi.fn().mockReturnValue(new Promise<void>((resolve) => {
+      finish = resolve;
+    }));
+    const { block } = mentionSetup('@que', { createFromMention: true, create });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    press('Enter');
+
+    expect(create).toHaveBeenCalledOnce();
+    expect(option('page-picker-new-sub-page')?.getAttribute('aria-busy')).toBe('true');
+    expect(current?.opened).toBe(true);
+
+    finish?.();
+    await vi.waitFor(() => expect(current?.opened).toBe(false));
+    expect(block.currentInput?.querySelector('[data-blok-page-id]')).not.toBeNull();
+  });
+
+  it('inserts nothing and keeps "@query" when create rejects', async () => {
+    const create = vi.fn().mockRejectedValue(new Error('offline'));
+    const { block } = mentionSetup('@que', { createFromMention: true, create });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    press('Enter');
+
+    await vi.waitFor(() => expect(current?.opened).toBe(false));
+    expect(block.currentInput?.textContent).toBe('@que');
+    expect(block.currentInput?.querySelector('[data-blok-page-id]')).toBeNull();
+    expect(painted()).toEqual([]);
+  });
+
+  it('does not create when the "@query" text changed before the pick', async () => {
+    const create = vi.fn();
+    const { block } = mentionSetup('@que', { createFromMention: true, create });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    if (block.currentInput === undefined) {
+      throw new Error('missing input');
+    }
+    block.currentInput.textContent = 'gone';
+    setCaret(block, 4);
+    press('Enter');
+
+    expect(create).not.toHaveBeenCalled();
+    expect(current?.opened).toBe(false);
+    expect(block.currentInput.textContent).toBe('gone');
+  });
+
+  it('drops the mention when the caret moved while create ran', async () => {
+    let finish: (() => void) | undefined;
+    const create = vi.fn().mockReturnValue(new Promise<void>((resolve) => {
+      finish = resolve;
+    }));
+    const { block } = mentionSetup('See @que', { createFromMention: true, create });
+
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    press('Enter');
+    setCaret(block, 1);
+    finish?.();
+
+    await vi.waitFor(() => expect(current?.opened).toBe(false));
+    expect(create).toHaveBeenCalledOnce();
+    expect(block.currentInput?.textContent).toBe('See @que');
+    expect(block.currentInput?.querySelector('[data-blok-page-id]')).toBeNull();
+  });
+
+  it('"page in…" asks for a parent in the same menu, then creates the page there', async () => {
+    const create = vi.fn().mockResolvedValue(undefined);
+    const { block, search } = mentionSetup('See @que', { createFromMention: true, create });
+
+    search.mockImplementation((query) => Promise.resolve(query === ''
+      ? [{ pageId: 'parent-1', title: 'Home' }, { pageId: 'parent-2', title: 'Plans' }]
+      : []));
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    option('page-picker-new-page-in')?.click();
+
+    const field = option('page-picker-search-input');
+
+    expect(popovers).toHaveLength(1);
+    expect(field).toHaveFocus();
+    expect(field?.getAttribute('placeholder')).toBe('tools.page.search');
+    expect(search).toHaveBeenLastCalledWith('');
+    await vi.waitFor(() => expect(document.querySelectorAll('[data-blok-testid="page-picker-option"]')).toHaveLength(2));
+    expect(create).not.toHaveBeenCalled();
+
+    document.querySelectorAll<HTMLElement>('[data-blok-testid="page-picker-option"]')[1]?.click();
+
+    await vi.waitFor(() => expect(block.currentInput?.querySelector('[data-blok-page-id]')).not.toBeNull());
+    expect(create).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ title: 'que', parentId: 'parent-2' }));
+    expect(block.currentInput?.textContent).toBe('See Page');
+    expect(current?.opened).toBe(false);
+  });
+
+  it('Escape in the parent step keeps "@query" and puts the caret back after it', async () => {
+    const create = vi.fn();
+    const { block } = mentionSetup('See @que', { createFromMention: true, create });
+
+    // jsdom focuses a contenteditable only with a tabindex.
+    block.currentInput?.setAttribute('tabindex', '0');
+    await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+    option('page-picker-new-page-in')?.click();
+    option('page-picker-search-input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(current?.opened).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+    expect(block.currentInput?.textContent).toBe('See @que');
+    expect(block.currentInput).toHaveFocus();
+    expect(window.getSelection()?.getRangeAt(0).startOffset).toBe(8);
+    expect(painted()).toEqual([]);
+  });
+
+  describe('the "@query" pill', () => {
+    it('paints the typed "@query" without touching the text DOM', async () => {
+      const { block, search } = mentionSetup('See @road');
+      const before = block.currentInput?.innerHTML;
+
+      search.mockResolvedValue([{ pageId: 'p1', title: 'Roadmap' }]);
+      await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+      expect(painted()).toEqual(['@road']);
+      expect(block.currentInput?.innerHTML).toBe(before);
+    });
+
+    it('follows the query as it grows', async () => {
+      const { block } = mentionSetup('@ro');
+
+      await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+      if (block.currentInput === undefined) {
+        throw new Error('missing input');
+      }
+      block.currentInput.textContent = '@road';
+      setCaret(block, 5);
+      await current?.handleInput(inputEvent(block.currentInput));
+
+      expect(painted()).toEqual(['@road']);
+    });
+
+    it.each([
+      ['Escape', (): void => {
+        press('Escape');
+      }],
+      ['a close from outside', (): void => {
+        popovers.at(-1)?.closeFromOutside();
+      }],
+      ['destroy', (): void => {
+        current?.destroy();
+      }],
+    ])('is cleared on %s', async (_name, closeIt) => {
+      const { block } = mentionSetup('@road');
+
+      await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+      expect(painted()).toEqual(['@road']);
+
+      closeIt();
+
+      expect(painted()).toEqual([]);
+      expect(current?.opened).toBe(false);
+    });
+
+    it('is cleared after a pick inserts the mention', async () => {
+      const { block, search } = mentionSetup('@road');
+
+      search.mockResolvedValue([{ pageId: 'p1', title: 'Roadmap' }]);
+      await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+      press('Enter');
+
+      await vi.waitFor(() => expect(block.currentInput?.querySelector('[data-blok-page-id]')).not.toBeNull());
+      expect(painted()).toEqual([]);
+    });
   });
 });

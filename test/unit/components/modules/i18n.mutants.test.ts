@@ -13,10 +13,7 @@ import { I18nChanged } from '../../../../src/components/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 
-type LoadI18next = (
-  locale: SupportedLocale,
-  localeConfig: { dictionary: I18nDictionary }
-) => Promise<I18nextInitResult>;
+type LoadI18next = typeof I18nextLoaderModule.loadI18next;
 
 const mocks = vi.hoisted(() => ({
   loadI18next: vi.fn(),
@@ -46,14 +43,14 @@ vi.mock('../../../../src/components/utils/repaint-blocks', () => ({
 /**
  * Runs the unmocked loader, so locale bundles behave exactly as in production.
  */
-const realLoadI18next: LoadI18next = async (locale, localeConfig) => {
+const realLoadI18next: LoadI18next = async (locale, localeConfig, english) => {
   const load = mocks.real.loadI18next;
 
   if (load === undefined) {
     throw new Error('the i18next loader module was never imported');
   }
 
-  return load(locale, localeConfig);
+  return load(locale, localeConfig, english);
 };
 
 /**
@@ -65,9 +62,10 @@ const realLoadI18next: LoadI18next = async (locale, localeConfig) => {
 const failChangeLanguageFor = (failing: SupportedLocale): void => {
   mocks.loadI18next.mockImplementationOnce(async (
     locale: SupportedLocale,
-    localeConfig: { dictionary: I18nDictionary }
+    localeConfig: { dictionary: I18nDictionary },
+    english: I18nDictionary
   ): Promise<I18nextInitResult> => {
-    const wrapper = await realLoadI18next(locale, localeConfig);
+    const wrapper = await realLoadI18next(locale, localeConfig, english);
 
     return {
       ...wrapper,

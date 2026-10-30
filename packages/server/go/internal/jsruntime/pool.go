@@ -274,6 +274,9 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 	// finished, so it is kept.
 	case errors.Is(err, ErrPending):
 		return "", true, &Failure{Kind: KindUnknown, Err: err}
+	// C# AsString throws and its catch-all replaces the engine.
+	case errors.Is(err, ErrNotAString):
+		return "", false, &Failure{Kind: KindUnknown, Err: err}
 	case errors.As(err, &panicked):
 		return "", false, &Failure{Kind: KindUnknown, Err: err}
 	}

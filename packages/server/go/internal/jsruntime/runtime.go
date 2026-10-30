@@ -81,13 +81,17 @@ func fromVM(vm *goja.Runtime, program *goja.Program) (*Runtime, error) {
 	return &Runtime{vm: vm, invoke: invoke}, nil
 }
 
+// ErrNotAString means the bundle answered with something other than a
+// primitive string. C# (Jint AsString) throws on it and replaces the engine.
+var ErrNotAString = errors.New("jsruntime: the bundle did not answer with a string")
+
 // Invoke runs one operation of the bundle and returns its string result.
 func (r *Runtime) Invoke(op, inputJSON string) (string, error) {
 	value, err := r.invoke(goja.Undefined(), r.vm.ToValue(op), r.vm.ToValue(inputJSON))
 	if err != nil {
 		var exception *goja.Exception
 		if errors.As(err, &exception) {
-			return "", jsError(exception.Value())
+			return "", r.jsError(exception.Value())
 		}
 		return "", err
 	}
@@ -96,19 +100,38 @@ func (r *Runtime) Invoke(op, inputJSON string) (string, error) {
 	if promise, ok := value.Export().(*goja.Promise); ok {
 		switch promise.State() {
 		case goja.PromiseStateFulfilled:
-			return promise.Result().String(), nil
+			value = promise.Result()
 		case goja.PromiseStateRejected:
-			return "", jsError(promise.Result())
+			return "", r.jsError(promise.Result())
 		default:
 			return "", ErrPending
 		}
 	}
+	if !goja.IsString(value) {
+		return "", ErrNotAString
+	}
 	return value.String(), nil
 }
 
-func jsError(value goja.Value) *JSError {
-	if object, ok := value.(*goja.Object); ok {
-		return &JSError{Name: object.Get("name").String(), Message: object.Get("message").String()}
+// jsError reads name and message as C# does (Get, then ToString). Either
+// read can be missing or run a throwing getter or toString; a name that
+// cannot be read is "", which classifies as Unknown.
+func (r *Runtime) jsError(value goja.Value) *JSError {
+	object, ok := value.(*goja.Object)
+	if !ok {
+		return &JSError{Name: "Error", Message: value.String()}
 	}
-	return &JSError{Name: "Error", Message: value.String()}
+	read := func(key string) string {
+		var text string
+		if r.vm.Try(func() {
+			text = "undefined"
+			if field := object.Get(key); field != nil {
+				text = field.String()
+			}
+		}) != nil {
+			return ""
+		}
+		return text
+	}
+	return &JSError{Name: read("name"), Message: read("message")}
 }

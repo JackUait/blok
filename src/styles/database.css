@@ -14228,7 +14228,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* `32-formula-typed.png` (pixels): the ↩ ink is 12x8 (963-974, 513-520), 10px from the row's end, on the highlighted row only.
-   IconReturn's ink sits 5px inside its box, so the box overhangs the row padding by 3px. */
+   IconUTurnLeft's ink sits 4px inside its box, so the box overhangs the row padding by 3px. */
 [data-blok-database-formula-reference-return] {
   display: inline-flex;
   flex: none;

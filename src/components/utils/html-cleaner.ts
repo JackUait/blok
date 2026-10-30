@@ -444,6 +444,8 @@ class ChildWalk {
   }
 }
 
+const MARKUP_SIGNIFICANT = /[<>&\r\0 \ud800-\udfff]/;
+
 /**
  * Keep only the tags and attributes `tags` allows. A tag not in `tags` is
  * unwrapped: its children stay, except for script/style text.
@@ -456,6 +458,12 @@ export const cleanHtml = (html: string, tags: CleanerTags): string => {
 
   if (!valid) {
     throw new Error('The configuration was invalid');
+  }
+
+  // Text the parse-and-serialize round trip cannot change: no tag, entity or
+  // escaped character, no CR or NUL the parser rewrites, no lone surrogate.
+  if (!MARKUP_SIGNIFICANT.test(html)) {
+    return html;
   }
 
   const sandbox = document.implementation.createHTMLDocument('');

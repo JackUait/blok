@@ -47,3 +47,32 @@ describe('cleanHtml on long runs of text nodes', () => {
     expect(next.mock.calls.length).toBeLessThanOrEqual(5);
   });
 });
+
+describe('cleanHtml on strings with no markup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Saved data is full of ids and plain words: a table save cleans three ids per cell.
+  it('returns plain text without building a document to parse it in', () => {
+    const createDocument = vi.spyOn(document.implementation, 'createHTMLDocument');
+    const plain = ['', '   ', 'Y_W56LMXDg', 'two words', 'tab\tand\nnewline', 'café 中 ​'];
+
+    expect(plain.map((value) => cleanHtml(value, { b: {} }))).toStrictEqual(plain);
+    expect(createDocument).not.toHaveBeenCalled();
+  });
+
+  it('still parses text the parser or serializer would change', () => {
+    expect(cleanHtml('a &amp; b', {})).toBe('a &amp; b');
+    expect(cleanHtml('a & b', {})).toBe('a &amp; b');
+    expect(cleanHtml('1 > 0', {})).toBe('1 &gt; 0');
+    expect(cleanHtml('no break', {})).toBe('no&nbsp;break');
+    expect(cleanHtml('line\r\nend', {})).toBe('line\nend');
+    expect(cleanHtml('nul\u0000here', {})).toBe('nulhere');
+    expect(cleanHtml('<b>x</b>', {})).toBe('x');
+  });
+});

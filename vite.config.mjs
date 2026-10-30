@@ -8,6 +8,7 @@ import license from 'rollup-plugin-license';
 import unfurlPlugin from './scripts/unfurl/vite-plugin-unfurl.mjs';
 import scopeUtilitiesPlugin from './scripts/scope-utilities/vite-plugin-scope-utilities.mjs';
 import jsonAsStringPlugin from './scripts/vite-plugin-json-as-string.mjs';
+import sharedMessageChunksPlugin from './scripts/vite-plugin-shared-message-chunks.mjs';
 
 import * as pkg from './package.json';
 
@@ -152,6 +153,7 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       jsonAsStringPlugin(),
+      sharedMessageChunksPlugin(),
       unfurlPlugin(),
       tailwindcss(),
       scopeUtilitiesPlugin(),

@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import jsonAsStringPlugin from './vite-plugin-json-as-string.mjs';
+import sharedMessageChunksPlugin from './vite-plugin-shared-message-chunks.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mode = process.argv[2] || 'production';
@@ -38,7 +39,7 @@ async function buildLocales() {
         },
       },
     },
-    plugins: [jsonAsStringPlugin()],
+    plugins: [jsonAsStringPlugin(), sharedMessageChunksPlugin()],
     define: {
       'NODE_ENV': JSON.stringify(mode),
       'process.env.NODE_ENV': JSON.stringify(mode),

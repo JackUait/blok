@@ -12,6 +12,26 @@ const lazyLocales = readdirSync(localeSources)
   .filter((name) => name.endsWith('.json') && name !== 'en.json')
   .map((name) => name.replace(/\.json$/, ''))
 
+// Static and dynamic relative imports, as the minifier writes them.
+const IMPORT_RE = /(?:from|import)\s*\(?\s*["'`](\.[^"'`]+)["'`]/g
+
+/** Every dist file an entry can load: its static and lazy import closure. */
+function reachableFrom(entry: string): Set<string> {
+  const seen = new Set<string>()
+  const queue = [resolve(dist, entry)]
+  while (queue.length > 0) {
+    const file = queue.pop()
+    if (file === undefined || seen.has(file) || !existsSync(file)) {
+      continue
+    }
+    seen.add(file)
+    for (const match of readFileSync(file, 'utf-8').matchAll(IMPORT_RE)) {
+      queue.push(resolve(dirname(file), match[1]))
+    }
+  }
+  return seen
+}
+
 function listEsFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name)
@@ -36,6 +56,17 @@ describe('UI locale files', () => {
     })
     expect(lazyLocales.length).toBeGreaterThan(60)
     expect(counts.filter((entry) => !entry.endsWith(': 1'))).toEqual([])
+  })
+
+  it('ships the English messages once across the core and /locales entries', () => {
+    // An app importing both entries must not download English twice.
+    const reachable = new Set([...reachableFrom('blok.mjs'), ...reachableFrom('locales.mjs')])
+    const copies = [...reachable].filter((file) => {
+      const code = readFileSync(file, 'utf-8')
+      return code.includes('blockSettings.dragToMove') && code.includes('Drag to move')
+    })
+    expect(reachable.size).toBeGreaterThan(100)
+    expect(copies.map((file) => basename(file))).toHaveLength(1)
   })
 
   it('every file the locales entry imports exists', async () => {

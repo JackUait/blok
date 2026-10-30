@@ -447,4 +447,3 @@ func formatTimeSpan(d time.Duration) string {
 	}
 	return text
 }
-

@@ -196,8 +196,9 @@ describe('TableRowColControls — geometry and grip state', () => {
       const colGrips = gripsIn(overlay, GRIP_COL_ATTR);
 
       // Centres 50/150/250 minus scrollLeft 50 → 0/100/200.
-      expect(colGrips.map(g => g.style.left)).toEqual(['0px', '100px', '200px']);
-      // Visible range is [0, clientWidth] inclusive: only the third is out.
+      // Visible range is [0, clientWidth] inclusive: only the third is out,
+      // and it is parked on the strip edge so it cannot widen the page.
+      expect(colGrips.map(g => g.style.left)).toEqual(['0px', '100px', '100px']);
       expect(colGrips.map(g => g.style.visibility)).toEqual(['', '', 'hidden']);
     });
 
@@ -214,13 +215,13 @@ describe('TableRowColControls — geometry and grip state', () => {
 
       const colGrips = gripsIn(overlay, GRIP_COL_ATTR);
 
-      expect(colGrips.map(g => g.style.left)).toEqual(['50px', '150px', '250px']);
+      expect(colGrips.map(g => g.style.left)).toEqual(['50px', '100px', '100px']);
 
       Object.defineProperty(scroller, 'scrollLeft', { value: 150, writable: true, configurable: true });
       scroller.dispatchEvent(new Event('scroll'));
 
       // Without the scroll listener the grips stay behind the table body.
-      expect(colGrips.map(g => g.style.left)).toEqual(['-100px', '0px', '100px']);
+      expect(colGrips.map(g => g.style.left)).toEqual(['0px', '0px', '100px']);
       expect(colGrips[0].style.visibility).toBe('hidden');
     });
   });

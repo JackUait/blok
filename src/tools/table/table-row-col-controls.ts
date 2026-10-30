@@ -627,9 +627,19 @@ export class TableRowColControls {
     style.top = `${BORDER_WIDTH / 2}px`;
     style.left = `${adjustedX}px`;
 
-    // Hide grips scrolled out of the visible area
-    if (this.overlay) {
-      style.visibility = (adjustedX < frame.visibleStart || adjustedX > frame.visibleStart + frame.visibleWidth) ? 'hidden' : '';
+    if (!this.overlay) {
+      return;
+    }
+
+    const visibleEnd = frame.visibleStart + frame.visibleWidth;
+    const isOutOfView = adjustedX < frame.visibleStart || adjustedX > visibleEnd;
+
+    style.visibility = isOutOfView ? 'hidden' : '';
+
+    // The overlay does not clip, and a hidden grip still takes up layout space.
+    // Left where its column is, it would make the page scroll sideways.
+    if (isOutOfView) {
+      style.left = `${Math.min(Math.max(adjustedX, frame.visibleStart), visibleEnd)}px`;
     }
   }
 

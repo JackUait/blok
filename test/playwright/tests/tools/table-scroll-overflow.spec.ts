@@ -35,14 +35,17 @@ const resetBlok = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createBlok = async (page: Page, options: { data: OutputData; readOnly?: boolean }): Promise<void> => {
-  const { data, readOnly = false } = options;
+const createBlok = async (
+  page: Page,
+  options: { data: OutputData; readOnly?: boolean; direction?: 'ltr' | 'rtl' }
+): Promise<void> => {
+  const { data, readOnly = false, direction = 'ltr' } = options;
 
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holder, data: initialData, readOnly: isReadOnly }) => {
+    async ({ holder, data: initialData, readOnly: isReadOnly, dir }) => {
       const globalScope = window as unknown as Record<string, Record<string, unknown>>;
       const tableClass = globalScope.Blok?.Table;
 
@@ -54,6 +57,7 @@ const createBlok = async (page: Page, options: { data: OutputData; readOnly?: bo
         holder,
         readOnly: isReadOnly,
         data: initialData,
+        i18n: { direction: dir },
         tools: {
           table: { class: tableClass as never },
         },
@@ -62,7 +66,7 @@ const createBlok = async (page: Page, options: { data: OutputData; readOnly?: bo
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, data, readOnly }
+    { holder: HOLDER_ID, data, readOnly, dir: direction }
   );
 
   await page.locator(SCROLL_SELECTOR).first().waitFor();
@@ -144,6 +148,36 @@ test.describe('table horizontal overflow', () => {
 
     await expect(page.locator(RIGHT_HAZE_SELECTOR)).toHaveAttribute(HAZE_VISIBLE_ATTR, '');
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    test(`a wide ${direction} table never makes the page scroll sideways`, async ({ page }) => {
+      // Wider than the viewport, so a column out of view lies past the page edge.
+      await createBlok(page, { data: fluidTable(40), direction });
+
+      const pageOverflow = (): Promise<number> => page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+
+      expect(await pageOverflow()).toBeLessThanOrEqual(0);
+
+      // Scrolling to the far end brings the other side's columns out of view.
+      // Grips follow on the scroll event, so wait one frame past it.
+      await page.evaluate(({ sel, dir }) => new Promise<void>((resolve, reject) => {
+        const sc = document.querySelector<HTMLElement>(sel);
+
+        if (!sc) {
+          reject(new Error('scroll container not found'));
+
+          return;
+        }
+
+        sc.addEventListener('scroll', () => requestAnimationFrame(() => resolve()), { once: true });
+        sc.scrollLeft = dir === 'rtl' ? -sc.scrollWidth : sc.scrollWidth;
+      }), { sel: SCROLL_SELECTOR, dir: direction });
+
+      expect(await pageOverflow()).toBeLessThanOrEqual(0);
+    });
+  }
 
   test('a read-only wide table still scrolls', async ({ page }) => {
     await createBlok(page, { data: fluidTable(20), readOnly: true });

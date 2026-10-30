@@ -1,5 +1,5 @@
 import type { OutputBlockData, OutputData } from '../../types';
-import type { PageInfo } from '../../types/tools/page';
+import type { PageInfo, PageSearchResult } from '../../types/tools/page';
 import seedPages from '../../playground-pages.json';
 
 /**
@@ -19,6 +19,8 @@ export interface PageRecord {
   trashed?: true;
   /** Restored from Trash; the parent still needs its block back. */
   restorePending?: true;
+  /** Shows the Draft mark on links and in the page picker. */
+  status?: 'draft';
 }
 
 export type PageMap = Record<string, PageRecord>;
@@ -186,7 +188,22 @@ export class PageRegistry {
       title: page.title,
       ...(page.icon !== undefined && { icon: { type: 'emoji' as const, value: page.icon } }),
       path: [untitled(this.rootPage.title), ...above],
+      ...(page.status === 'draft' && { status: 'draft' as const }),
     };
+  }
+
+  /** What the page tool's `search` gets: pages whose title holds the query, Trash left out. */
+  public search(query: string): Promise<PageSearchResult[]> {
+    const needle = query.trim().toLowerCase();
+    const hits = Object.keys(this.pages)
+      .filter((pageId) => this.get(pageId)?.trashed !== true)
+      .flatMap((pageId) => {
+        const info = this.info(pageId);
+
+        return info !== null && untitled(info.title).toLowerCase().includes(needle) ? [{ pageId, ...info }] : [];
+      });
+
+    return Promise.resolve(hits);
   }
 
   /** `document`: the starting content the page tool sent, e.g. a full-page database. */

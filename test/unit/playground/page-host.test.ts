@@ -69,6 +69,23 @@ describe('PageRegistry', () => {
     expect(pages.info('nope')).toBeNull();
   });
 
+  it('finds pages by title for the page picker, with their path and draft status', async () => {
+    const pages = new PageRegistry({
+      ...seed(),
+      plan: { title: 'Release plan', parentId: 'guide', blocks: [], status: 'draft' },
+      old: { title: 'Old guide', parentId: null, blocks: [], trashed: true },
+    });
+
+    await expect(pages.search('GUI')).resolves.toEqual([
+      { pageId: 'guide', title: 'Guide', icon: { type: 'emoji', value: '📘' }, path: ['Blok'] },
+    ]);
+    await expect(pages.search('plan')).resolves.toEqual([
+      { pageId: 'plan', title: 'Release plan', path: ['Blok', 'Guide'], status: 'draft' },
+    ]);
+    await expect(pages.search('')).resolves.toHaveLength(3);
+    expect(pages.info('plan')?.status).toBe('draft');
+  });
+
   it('keeps edits in localStorage, so a new registry sees them', () => {
     const first = new PageRegistry(seed());
 

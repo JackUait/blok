@@ -127,6 +127,7 @@
     "title": "Design notes",
     "icon": "🎨",
     "parentId": null,
+    "status": "draft",
     "blocks": [
       {
         "id": "dn-intro",

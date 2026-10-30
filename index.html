@@ -2024,6 +2024,8 @@
       if (state.tools.page) tools.page = {
         class: Page,
         config: {
+          // "@" in text and "/" Link to page list pages from here.
+          search: (query) => pages.search(query),
           href: (id) => pagePath(id, window.location.search),
           pageIdFromHref: (href) => {
             const url = new URL(href);
@@ -2048,6 +2050,8 @@
           }),
         },
       };
+      // Same config as page: "/" Link to page reads search from page-link's own config.
+      if (state.tools.page) tools['page-link'] = { class: PageLink, config: tools.page.config };
 
       const collaboration = collaborationConfig(pageId);
       // ?slowLoad=<ms> holds the document back to show the boot skeleton.

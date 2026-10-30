@@ -83,8 +83,31 @@ describe('test-server-conformance', () => {
     expect(result.stdout).toBe('');
     expect(result.stderr).toBe(
       'Usage: node scripts/test-server-conformance.mjs [--target csharp|go] ' +
-      '[--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]\n',
+      '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]\n',
     );
+  });
+
+  // CI runs Go on the suites it passes whole, so a name typo must not
+  // quietly run nothing or everything.
+  it('runs only the suites it is given', () => {
+    const result = runWithoutDotnet([
+      '--target', 'go', '--suite', 'server-contract', '--suite', 'routing-contract',
+    ]);
+
+    expect(result.stdout).toContain('Conformance suites: server-contract, routing-contract.');
+    expect(result.stderr).toContain('spawn go ENOENT');
+  });
+
+  it('runs every suite when none is named', () => {
+    expect(runWithoutDotnet(['--target', 'go']).stdout).toContain('Conformance suites: all.');
+  });
+
+  it('refuses a suite it does not have', () => {
+    const result = runWithoutDotnet(['--target', 'go', '--suite', 'server-contrac']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('[--suite NAME]...');
   });
 
   it('refuses an unknown target before any build', () => {

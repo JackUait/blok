@@ -221,20 +221,25 @@ describe('server release wiring', () => {
 
   // The runner is the only thing that builds the binaries the gated conformance
   // suites drive; a suite missing from its vitest arguments is never run anywhere.
+  // The runner builds each path from its SUITES list; the C# step names no
+  // --suite, so it runs them all.
   it('runs every conformance suite through the runner CI invokes', () => {
     const runner = read('scripts/test-server-conformance.mjs');
 
+    expect(runner).toContain('`test/unit/server-conformance/${suite}.test.ts`');
     for (const suite of [
-      'test/unit/server-conformance/harness-contract.test.ts',
-      'test/unit/server-conformance/server-contract.test.ts',
-      'test/unit/server-conformance/sync-contract.test.ts',
-      'test/unit/server-conformance/blok-client-contract.test.ts',
-      'test/unit/server-conformance/protocol-v2-contract.test.ts',
-      'test/unit/server-conformance/mcp-agent-participant.test.ts',
-      'test/unit/server-conformance/routing-contract.test.ts',
+      'harness-contract',
+      'server-contract',
+      'sync-contract',
+      'blok-client-contract',
+      'protocol-v2-contract',
+      'mcp-agent-participant',
+      'routing-contract',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }
+    expect(read('.github/workflows/ci.yml'))
+      .toContain('run: node scripts/test-server-conformance.mjs --target csharp\n');
   });
 
   it('installs docs dependencies only for jobs that ask for them', () => {

@@ -394,7 +394,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Test Go conformance',
-        run: 'node scripts/test-server-conformance.mjs --target go --test-name-pattern health',
+        run: 'node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract',
       },
       {
         name: 'Dry-run server artifacts',

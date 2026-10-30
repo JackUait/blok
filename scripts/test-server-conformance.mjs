@@ -37,6 +37,16 @@ const JOURNAL_CONFIGURATIONS = ['Debug', 'Release'];
 
 const TARGETS = ['csharp', 'go'];
 
+const SUITES = [
+  'harness-contract',
+  'server-contract',
+  'sync-contract',
+  'blok-client-contract',
+  'protocol-v2-contract',
+  'mcp-agent-participant',
+  'routing-contract',
+];
+
 function selectedOptions(args) {
   const targetIndex = args.indexOf('--target');
   const target = targetIndex >= 0 ? args[targetIndex + 1] : 'csharp';
@@ -44,21 +54,23 @@ function selectedOptions(args) {
   const testNamePattern = filterIndex >= 0 ? args[filterIndex + 1] : undefined;
   const configurationIndex = args.indexOf('--configuration');
   const configuration = configurationIndex >= 0 ? args[configurationIndex + 1] : 'Debug';
+  const suites = args.flatMap((arg, index) => (arg === '--suite' ? [args[index + 1]] : []));
 
   // Go has no Debug or Release build, so --configuration would mean nothing.
   if (
     !TARGETS.includes(target) ||
     (target === 'go' && configurationIndex >= 0) ||
     (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === '')) ||
-    !JOURNAL_CONFIGURATIONS.includes(configuration)
+    !JOURNAL_CONFIGURATIONS.includes(configuration) ||
+    suites.some((suite) => !SUITES.includes(suite))
   ) {
     throw new Error(
       'Usage: node scripts/test-server-conformance.mjs [--target csharp|go] ' +
-      '[--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]',
+      '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]',
     );
   }
 
-  return { target, testNamePattern, configuration };
+  return { target, testNamePattern, configuration, suites: suites.length > 0 ? suites : SUITES };
 }
 
 /**
@@ -168,7 +180,12 @@ async function buildGo(temporaryDirectory, executableSuffix) {
   return { ordinary, conformance };
 }
 
+function announceSuites(options) {
+  console.log(`Conformance suites: ${options.suites === SUITES ? 'all' : options.suites.join(', ')}.`);
+}
+
 function announce(options) {
+  announceSuites(options);
   if (options.target === 'go') {
     announceGo();
   } else {
@@ -178,6 +195,7 @@ function announce(options) {
 
 async function main() {
   const options = selectedOptions(process.argv.slice(2));
+  announceSuites(options);
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-'));
   const executableSuffix = process.platform === 'win32' ? '.exe' : '';
 
@@ -190,13 +208,7 @@ async function main() {
       join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
       'run',
       '--project=unit',
-      'test/unit/server-conformance/harness-contract.test.ts',
-      'test/unit/server-conformance/server-contract.test.ts',
-      'test/unit/server-conformance/sync-contract.test.ts',
-      'test/unit/server-conformance/blok-client-contract.test.ts',
-      'test/unit/server-conformance/protocol-v2-contract.test.ts',
-      'test/unit/server-conformance/mcp-agent-participant.test.ts',
-      'test/unit/server-conformance/routing-contract.test.ts',
+      ...options.suites.map((suite) => `test/unit/server-conformance/${suite}.test.ts`),
     ];
 
     const reportPath = join(temporaryDirectory, 'vitest-report.json');

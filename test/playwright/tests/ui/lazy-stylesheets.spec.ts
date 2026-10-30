@@ -98,9 +98,12 @@ test.describe('lazy stylesheets', () => {
     expect(others).toEqual([]);
     expect(tag?.id).toBe('blok-styles');
     expect(tag?.nonce).toBe('n0nce');
-    // Fonts, database and media (the page has media tools) are in; the toolbox
-    // preview sheet waits for its card, and Ask AI needs an assistant.
-    expect(tag?.markers.filter((name) => name !== 'presence')).toEqual(['block-preview', 'askai']);
+    // Fonts, database and media (the page has media tools) are in, and Ask AI
+    // needs an assistant. Core loads the toolbox preview sheet at idle, so
+    // whether it is in yet depends on timing.
+    const pending = tag?.markers.filter((name) => name !== 'presence' && name !== 'block-preview');
+
+    expect(pending).toEqual(['askai']);
     // database.css paints the wrapper in the database ink.
     await expect(page.locator('[data-blok-database-wrapper]').first()).toHaveCSS('color', 'rgb(44, 44, 43)');
   });

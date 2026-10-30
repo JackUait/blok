@@ -232,12 +232,13 @@ describe('darkroom.css', () => {
     });
   });
 
-  it('is imported by main.css instead of the old crop styles', () => {
+  it('is imported by the lazy media sheet instead of the old crop styles', () => {
     const main = readFileSync(resolve(__dirname, '../../../../../src/styles/main.css'), 'utf8');
+    const media = readFileSync(resolve(__dirname, '../../../../../src/styles/lazy/media.css'), 'utf8');
 
-    expect(main).toContain("@import '../tools/image/darkroom/darkroom.css';");
-    expect(main).not.toContain('crop-editor.css');
-    expect(main).not.toContain('crop-modal.css');
+    expect(media).toContain("@import '../../tools/image/darkroom/darkroom.css';");
+    expect(main + media).not.toContain('crop-editor.css');
+    expect(main + media).not.toContain('crop-modal.css');
   });
   it('holding M for the original hides the marks and the drawing layer', () => {
     const original = rule('.blok-darkroom__surface[data-original] [data-role="markup-layer"]');

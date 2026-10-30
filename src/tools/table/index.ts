@@ -683,6 +683,7 @@ export class Table implements BlockTool {
 
     wrapper.appendChild(this.fullscreen.button);
     wrapper.appendChild(this.fullscreen.header);
+    this.fullscreen.watchCorner(wrapper);
     this.element = wrapper;
 
     if (this.model.withHeadings) {

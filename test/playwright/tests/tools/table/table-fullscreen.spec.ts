@@ -1,5 +1,5 @@
 // spec: open a table in a full-screen modal and edit it there
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
@@ -41,6 +41,37 @@ const headedData: OutputData = {
   ],
 };
 
+/** How far the button sits in from the table's top inline-end corner. */
+const CORNER_INSET = 6;
+
+const narrowData: OutputData = {
+  blocks: [
+    {
+      id: 'tbl',
+      type: 'table',
+      data: {
+        withHeadings: true,
+        colWidths: [180, 180],
+        content: [['Feature', 'Status'], ['Grid rendering', 'Complete'], ['Paste', 'Complete']],
+      },
+    },
+  ],
+};
+
+const wideData: OutputData = {
+  blocks: [
+    {
+      id: 'tbl',
+      type: 'table',
+      data: {
+        withHeadings: true,
+        colWidths: Array.from({ length: 8 }, () => 300),
+        content: [Array.from({ length: 8 }, (_, c) => `H${c}`), Array.from({ length: 8 }, (_, c) => `C${c}`)],
+      },
+    },
+  ],
+};
+
 const createBlok = async (page: Page, readOnly = false, data: OutputData = tableData): Promise<void> => {
   await page.evaluate(async ({ holder, data: blocks, readOnly: isReadOnly }) => {
     if (window.blokInstance) {
@@ -78,6 +109,10 @@ const openWithButton = async (page: Page): Promise<void> => {
   await page.getByRole('button', { name: OPEN_LABEL }).click();
   await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
 };
+
+/** The button's opacity once its fade has finished. */
+const settledOpacity = async (locator: Locator): Promise<string> =>
+  locator.evaluate(el => (el.getAnimations().length > 0 ? 'fading' : getComputedStyle(el).opacity));
 
 /** The element painted at the centre of `selector`'s box, inside it or not. */
 const paintsOnTop = async (page: Page, selector: string): Promise<boolean> =>
@@ -484,5 +519,61 @@ test.describe('Table full screen', () => {
     await page.keyboard.press('ControlOrMeta+z');
 
     await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
+  });
+
+  test('the button sits in the top corner of a table narrower than the page', async ({ page }) => {
+    await createBlok(page, false, narrowData);
+    await page.getByRole('table').hover();
+    const grid = await page.getByRole('table').boundingBox();
+    const button = await page.getByRole('button', { name: OPEN_LABEL }).boundingBox();
+
+    expect(grid).not.toBeNull();
+    expect(button).not.toBeNull();
+    if (grid === null || button === null) {
+      return;
+    }
+    expect(Math.abs(grid.x + grid.width - (button.x + button.width) - CORNER_INSET)).toBeLessThanOrEqual(1);
+    expect(Math.abs(button.y - grid.y - CORNER_INSET)).toBeLessThanOrEqual(1);
+  });
+
+  test('the button of a table wider than the page sits at the visible end', async ({ page }) => {
+    await createBlok(page, false, wideData);
+    await page.getByRole('table').hover();
+    const scroller = await page.locator('[data-blok-table-scroll]').boundingBox();
+    const button = await page.getByRole('button', { name: OPEN_LABEL }).boundingBox();
+
+    expect(scroller).not.toBeNull();
+    expect(button).not.toBeNull();
+    if (scroller === null || button === null) {
+      return;
+    }
+    expect(button.x + button.width).toBeLessThanOrEqual(scroller.x + scroller.width);
+    expect(button.x).toBeGreaterThan(scroller.x + scroller.width / 2);
+  });
+
+  test('the button shows only while the pointer is near it', async ({ page }) => {
+    await createBlok(page, false, narrowData);
+    const button = page.getByRole('button', { name: OPEN_LABEL });
+    const cell = await page.locator(CELL_SELECTOR).first().boundingBox();
+
+    expect(cell).not.toBeNull();
+    if (cell === null) {
+      return;
+    }
+
+    await page.mouse.move(cell.x + 10, cell.y + cell.height / 2);
+    await expect.poll(() => settledOpacity(button)).toBe('0');
+    const box = await button.boundingBox();
+
+    expect(box).not.toBeNull();
+    if (box === null) {
+      return;
+    }
+
+    await page.mouse.move(box.x - 20, box.y + box.height + 10);
+    await expect.poll(() => settledOpacity(button)).toBe('1');
+
+    await page.mouse.move(cell.x + 10, cell.y + cell.height / 2);
+    await expect.poll(() => settledOpacity(button)).toBe('0');
   });
 });

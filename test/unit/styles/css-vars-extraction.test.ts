@@ -342,6 +342,10 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // Set at runtime on the failed-upload card by renderErrorState (tools/image/error-state.ts):
   // how far the resend bar had filled, so it drains back from there. Reads fall back to 0%.
   '--blok-image-drain-from',
+  // Set at runtime on the table's full-screen button by onRootPointerMove (tools/table/table-fullscreen.ts):
+  // the table's top corner. Reads fall back to the old spot before the first pointer move.
+  '--blok-table-toggle-end',
+  '--blok-table-toggle-top',
   // Consumer-supplied per-block font sizes (config.style.fontSize, or any
   // --blok-* channel: style.tokens / editor.tokens.set() / plain CSS). Each
   // falls back to that block's historical size, so an unconfigured editor is

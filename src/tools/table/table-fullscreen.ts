@@ -11,6 +11,12 @@ const HEADER_ATTR = 'data-blok-table-fullscreen-header';
 const TITLE_ATTR = 'data-blok-table-fullscreen-title';
 const SIZE_ATTR = 'data-blok-table-fullscreen-size';
 const SIZE_EDITOR_ATTR = 'data-blok-table-fullscreen-size-editor';
+const NEAR_ATTR = 'data-blok-table-fullscreen-near';
+
+/** How far the button sits in from the table's top inline-end corner. Matches tables.css. */
+const CORNER_INSET = 6;
+/** How close the pointer must come before the button shows. Same reach as the add bars. */
+const NEAR_PX = 40;
 
 /** Highest row or column count the size field accepts: each new cell holds a block. */
 const MAX_SIZE = 100;
@@ -101,6 +107,8 @@ export class TableFullscreen {
   private minSize: TableSize | null = null;
 
   private host: HTMLElement | null = null;
+  /** The tool root the button sits in, watched for the pointer coming near. */
+  private root: HTMLElement | null = null;
   private backdrop: HTMLElement | null = null;
   /** The table's inline box at open. The page is scroll-locked, so it holds until close. */
   private origin: DOMRect | null = null;
@@ -266,9 +274,24 @@ export class TableFullscreen {
     void Promise.all(animations.map(a => a.finished)).then(() => this.finishClose(), () => undefined);
   }
 
+  /**
+   * Keeps the button in the table's top inline-end corner and shows it only
+   * when the pointer comes near. The tool root is wider than a narrow table.
+   */
+  public watchCorner(root: HTMLElement): void {
+    this.root?.removeEventListener('pointermove', this.onRootPointerMove);
+    this.root?.removeEventListener('pointerleave', this.onRootPointerLeave);
+    root.addEventListener('pointermove', this.onRootPointerMove);
+    root.addEventListener('pointerleave', this.onRootPointerLeave);
+    this.root = root;
+  }
+
   public destroy(): void {
     this.close();
     this.finishClose();
+    this.root?.removeEventListener('pointermove', this.onRootPointerMove);
+    this.root?.removeEventListener('pointerleave', this.onRootPointerLeave);
+    this.root = null;
     this.button.remove();
     this.header.remove();
   }
@@ -360,6 +383,41 @@ export class TableFullscreen {
    * the event before it reaches the holder, and a menu's Escape closes the menu
    * before hasLayerAbove could see it. A menu above the table closes first.
    */
+  /** Reads every box first and writes after, so a pointer move forces no extra layout. */
+  private readonly onRootPointerMove = (event: PointerEvent): void => {
+    const root = this.root;
+    const scroller = root?.querySelector<HTMLElement>('[data-blok-table-scroll]');
+    const grid = scroller?.firstElementChild;
+
+    if (this.isOpen || root === null || scroller == null || !(grid instanceof HTMLElement)) {
+      return;
+    }
+
+    const rootBox = root.getBoundingClientRect();
+    const scrollerBox = scroller.getBoundingClientRect();
+    const gridBox = grid.getBoundingClientRect();
+    const style = getComputedStyle(scroller);
+    const rtl = style.direction === 'rtl';
+    const size = this.button.offsetWidth;
+    // A clipped grid ends where the add-column strip starts.
+    const corner = rtl
+      ? Math.max(gridBox.left, scrollerBox.left + parseFloat(style.paddingLeft))
+      : Math.min(gridBox.right, scrollerBox.right - parseFloat(style.paddingRight));
+    const end = rtl ? corner - rootBox.left + CORNER_INSET : rootBox.right - corner + CORNER_INSET;
+    const top = gridBox.top - rootBox.top + CORNER_INSET;
+    const left = rtl ? corner + CORNER_INSET : corner - CORNER_INSET - size;
+    const dx = Math.max(left - event.clientX, 0, event.clientX - (left + size));
+    const dy = Math.max(gridBox.top + CORNER_INSET - event.clientY, 0, event.clientY - (gridBox.top + CORNER_INSET + size));
+
+    this.button.style.setProperty('--blok-table-toggle-end', `${end}px`);
+    this.button.style.setProperty('--blok-table-toggle-top', `${top}px`);
+    this.button.toggleAttribute(NEAR_ATTR, Math.hypot(dx, dy) <= NEAR_PX);
+  };
+
+  private readonly onRootPointerLeave = (): void => {
+    this.button.removeAttribute(NEAR_ATTR);
+  };
+
   private readonly onKeydown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape' || this.hasLayerAbove()) {
       return;

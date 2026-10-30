@@ -3501,8 +3501,8 @@
 
 [data-blok-table-fullscreen-toggle] {
   position: absolute;
-  top: 6px;
-  inset-inline-end: 26px;
+  top: var(--blok-table-toggle-top, 6px);
+  inset-inline-end: var(--blok-table-toggle-end, 26px);
   z-index: 4;
   display: flex;
   align-items: center;
@@ -3540,7 +3540,7 @@
   background-color: var(--blok-item-hover-bg);
 }
 
-[data-blok-tool="table"]:hover > [data-blok-table-fullscreen-toggle], [data-blok-table-fullscreen-toggle]:focus-visible, [data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle] {
+[data-blok-table-fullscreen-toggle][data-blok-table-fullscreen-near], [data-blok-table-fullscreen-toggle]:focus-visible, [data-blok-table-fullscreen] [data-blok-table-fullscreen-toggle] {
   opacity: 1;
 }
 

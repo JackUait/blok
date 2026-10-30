@@ -212,9 +212,10 @@ internal static class PendingNormalizer
       run.Add(waiting);
     }
 
-    foreach (var run in parked.Values)
+    // Stable, as in YDoc.MergeParked: equal clocks keep their parked order.
+    foreach (var client in parked.Keys.ToList())
     {
-      run.Sort((left, right) => left.Id.Clock.CompareTo(right.Id.Clock));
+      parked[client] = [.. parked[client].OrderBy(waiting => waiting.Id.Clock)];
     }
 
     return parked;

@@ -91,6 +91,38 @@ public sealed class PendingRetentionTests
     Assert.Single(UpdateV1Decoder.Decode(diff).Structs);
   }
 
+  /// <summary>
+  /// 16 one-char items park at clocks 10..25, then a 5-char item parks at
+  /// clock 13. With 17 structs List.Sort is unstable, so the two at clock 13
+  /// swapped and the covered filter kept different structs than Go does.
+  /// Twin of Go TestEqualClockParkedStructsKeepTheirParkedOrder.
+  /// </summary>
+  [Theory]
+  [InlineData(
+      "AQEHDQQBAXQFQUJDREUA",
+      "AQ0HCgQBAXQBYQQBAXQBYgQBAXQBYwQBAXQBZIQHDQRCQ0RFBAEBdAFpBAEBdAFqBAEBdAFrBAEBdAFsBAEBdAFtBAEBdAFuBAEBdAFvBAEBdAFwAA==",
+      "ponmlkjidBCDEcba0000000000")]
+  [InlineData(
+      "AQEHDQQBAXQFZGVmZ2gA",
+      "AQ0HCgQBAXQBYQQBAXQBYgQBAXQBYwQBAXQBZIQHDQRlZmdoBAEBdAFpBAEBdAFqBAEBdAFrBAEBdAFsBAEBdAFtBAEBdAFuBAEBdAFvBAEBdAFwAA==",
+      "ponmlkjidefghcba0000000000")]
+  public void EqualClockParkedStructsKeepTheirParkedOrder(string run, string pending, string text)
+  {
+    const string items = "ARAHCgQBAXQBYQQBAXQBYgQBAXQBYwQBAXQBZAQBAXQBZQQBAXQBZgQBAXQBZwQBAXQBaAQBAXQBaQQBAXQBagQBAXQBawQBAXQBbAQBAXQBbQQBAXQBbgQBAXQBbwQBAXQBcAA=";
+    const string gapFill = "AQoHAAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAA=";
+    var doc = new YDoc(1000);
+
+    doc.GetText("t");
+    doc.ApplyUpdate(Convert.FromBase64String(items));
+    doc.ApplyUpdate(Convert.FromBase64String(run));
+
+    Assert.Equal(pending, Convert.ToBase64String(doc.EncodeStateAsUpdate()));
+
+    doc.ApplyUpdate(Convert.FromBase64String(gapFill));
+
+    Assert.Equal(text, doc.GetText("t").ToString());
+  }
+
   private static void Apply(YDoc doc, IReadOnlyList<DecodedStruct> structs)
   {
     doc.ApplyUpdate(new DecodedUpdate(

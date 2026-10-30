@@ -470,12 +470,14 @@ internal sealed class YDoc
       }
 
       known.AddRange(structs);
-      known.Sort((left, right) => left.Id.Clock.CompareTo(right.Id.Clock));
 
-      var kept = new List<YStruct>(known.Count);
+      // Stable: List.Sort is unstable from 17 items, and the covered filter
+      // keeps the first of two equal clocks. Go sorts stably too.
+      var sorted = known.OrderBy(parkedStruct => parkedStruct.Id.Clock).ToList();
+      var kept = new List<YStruct>(sorted.Count);
       var covered = 0UL;
 
-      foreach (var candidate in known)
+      foreach (var candidate in sorted)
       {
         if (kept.Count > 0 && candidate.Id.Clock + (ulong)candidate.Length <= covered)
         {

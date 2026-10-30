@@ -244,3 +244,35 @@ func TestNoApplyThatGrowsParkedContentReportsNoChange(t *testing.T) {
 		t.Fatalf("swept %d", swept)
 	}
 }
+
+// Twin of C# PendingRetentionTests.EqualClockParkedStructsKeepTheirParkedOrder.
+// 16 one-char items of client 7 park at clocks 10..25, then a 5-char item
+// parks at clock 13. With 17 structs an unstable sort reorders the two at
+// clock 13, and the covered filter then keeps different structs.
+func TestEqualClockParkedStructsKeepTheirParkedOrder(t *testing.T) {
+	const items = "ARAHCgQBAXQBYQQBAXQBYgQBAXQBYwQBAXQBZAQBAXQBZQQBAXQBZgQBAXQBZwQBAXQBaAQBAXQBaQQBAXQBagQBAXQBawQBAXQBbAQBAXQBbQQBAXQBbgQBAXQBbwQBAXQBcAA="
+	const gapFill = "AQoHAAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAQBAXQBMAA="
+	cases := []struct{ name, run, pending, text string }{
+		{"conflicting content", "AQEHDQQBAXQFQUJDREUA", "AQ0HCgQBAXQBYQQBAXQBYgQBAXQBYwQBAXQBZIQHDQRCQ0RFBAEBdAFpBAEBdAFqBAEBdAFrBAEBdAFsBAEBdAFtBAEBdAFuBAEBdAFvBAEBdAFwAA==", "ponmlkjidBCDEcba0000000000"},
+		{"same content", "AQEHDQQBAXQFZGVmZ2gA", "AQ0HCgQBAXQBYQQBAXQBYgQBAXQBYwQBAXQBZIQHDQRlZmdoBAEBdAFpBAEBdAFqBAEBdAFrBAEBdAFsBAEBdAFtBAEBdAFuBAEBdAFvBAEBdAFwAA==", "ponmlkjidefghcba0000000000"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			doc := pinnedDoc()
+			doc.GetText(s("t"))
+			applyBytes(t, doc, b64Bytes(t, items))
+			applyBytes(t, doc, b64Bytes(t, c.run))
+			full, err := doc.EncodeStateAsUpdate(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := base64.StdEncoding.EncodeToString(full); got != c.pending {
+				t.Fatalf("pending state %s, want %s", got, c.pending)
+			}
+			applyBytes(t, doc, b64Bytes(t, gapFill))
+			if got := doc.GetText(s("t")).String(); got != c.text {
+				t.Fatalf("text %q, want %q", got, c.text)
+			}
+		})
+	}
+}

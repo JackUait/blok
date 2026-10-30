@@ -127,6 +127,15 @@ Scripts live in `package.json`. Two things it does not tell you:
 
 Run `yarn release <version>`. Publish happens **before** git push. Full workflow and the release-notes rules: `/release:release`.
 
+## Backend: Go and C#
+
+Every backend feature in `packages/server` is written twice: in Go (`packages/server/go`) and in C# (`packages/server/dotnet`).
+
+- Parity is proven by the shared conformance suite. Run it against both: `node scripts/test-server-conformance.mjs --target csharp` and `--target go`.
+- Both test suites read the same fixtures under `test/unit/server-conformance/fixtures`.
+- A backend change is not done until both servers have it, with tests.
+- `test/unit/architecture/server-go-parity-law.test.ts` fails if CI stops running either target.
+
 ## Architecture
 
 DOM nesting per block: `holder` → `contentElement` → `toolRenderedElement`

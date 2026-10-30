@@ -621,12 +621,21 @@ from a run rather than trust the sentence.
 ### 11.1 What runs them, and what a passing run does not prove
 
 `node scripts/test-server-conformance.mjs` is this repository's conformance
-runner. It builds
-`packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj` twice — once
-in Release, once in Debug with `BLOK_SERVER_CONFORMANCE` defined — and then
-runs four of the files in `test/unit/server-conformance/` against the built
-binaries — the two fixture-freshness files there are not in its list. `--target` accepts only `csharp`: **the runner drives the built C#
-host and nothing else, and this document adds no external-target mode.**
+runner. `--target` picks the server it builds:
+
+- `csharp` (the default) builds
+  `packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj` twice —
+  once in Release, once in Debug with `BLOK_SERVER_CONFORMANCE` defined.
+  `--configuration Debug|Release` picks the second build.
+- `go` builds `packages/server/go/cmd/blok-server` twice — once plain, once
+  with `-tags conformance`. Go has no Debug or Release build, so the runner
+  refuses `--configuration` for it. The Go server is in progress and passes
+  only the health tests so far.
+
+Either way, the runner then runs the suites it lists from
+`test/unit/server-conformance/` against the built binaries. The
+fixture-freshness files there are not in its list. **This document adds no
+mode for a server outside this repository.**
 `--test-name-pattern` is a case-sensitive regular expression matched against
 the whole test name; vitest exits 0 when a pattern selects nothing, so the
 runner fails any run whose pattern executed no test rather than reporting a

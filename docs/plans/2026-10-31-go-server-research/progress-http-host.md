@@ -1,6 +1,16 @@
 # Progress: http-host lane (Go server)
 
-Branch `go/http-host`, worktree `/Users/jackuait/Packages/.blok-go/http-host`. Round 1, 2026-10-31.
+Branch `go/http-host`, worktree `/Users/jackuait/Packages/.blok-go/http-host`. Round 1 and round 2, 2026-10-31.
+
+## Round 2 (newest first)
+
+New suite `test/unit/server-conformance/http-host-contract.test.ts` (in CI for Go and C#). Each `it` replays requests and compares with a golden captured from C# (`BLOK_WRITE_FIXTURES=1 node scripts/test-server-conformance.mjs --target csharp --suite http-host-contract`); the input list must equal the golden's.
+
+- LF3, LF6–LF12 DONE: `fixtures/local-file-responses.json` (120 requests). It found a Go bug: dates. `internal/dotnet/httpdate.go` ports `HeaderUtilities.TryParseDate` (16 formats read from the decompiled ASP.NET 10.0.11 dll, DoStrictParse rules from System.Private.CoreLib); `fixtures/http-dates.json` (172 inputs, `HttpDateFixtureTests` recomputes). Multi-line headers are joined with "," like `StringValues.ToString`.
+- Query parsing bug fixed: `/unfurl?url=` now uses `dotnet.QueryFirst` (split on `&` only, `+` to space, `Uri.UnescapeDataString`, name OrdinalIgnoreCase). Oracle `fixtures/unfurl-queries.json` (17 spellings; `;`, `URL=`, `%zz` failed on Go before).
+- D4, S6 DONE: `fixtures/local-delete-responses.json`. Go bug fixed: `os.Remove` removed an empty directory at the key; C# answers 502.
+- U4 DONE (`fixtures/upload-section-limit.json`), U8 DONE (spool name, mode 0600, removed after finish and abort; mutation-checked).
+
 
 Read this first next round. Ledger: `http-host.md`. Row IDs below are the ledger's.
 

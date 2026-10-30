@@ -5,7 +5,7 @@ const state = {
   cssInjected: false,
 };
 
-function injectCss(): void {
+function injectCss(version: string): void {
   /**
    * `renderLatex` is reachable from the DOM-free `./view` entry (SSR, workers,
    * RSC), where there is no document to hang a stylesheet on and the host owns
@@ -22,7 +22,8 @@ function injectCss(): void {
 
   link.rel = 'stylesheet';
   link.setAttribute('data-katex-css', '');
-  link.href = 'https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.css';
+  // Same release as the KaTeX code that renders the markup.
+  link.href = `https://cdn.jsdelivr.net/npm/katex@${version}/dist/katex.min.css`;
 
   document.head.appendChild(link);
 }
@@ -109,10 +110,12 @@ export async function renderLatex(
   latex: string,
   options: LatexRenderOptions = {},
 ): Promise<string> {
-  injectCss();
-
   try {
-    return renderWith(await loadKatex(), latex, options);
+    const katex = await loadKatex();
+
+    injectCss(katex.version);
+
+    return renderWith(katex, latex, options);
   } catch (error) {
     return errorMarkup(error);
   }
@@ -144,9 +147,9 @@ export async function renderLatex(
 export async function createLatexRenderer(): Promise<
   (latex: string, options?: LatexRenderOptions) => string
 > {
-  injectCss();
-
   const katex = await loadKatex();
+
+  injectCss(katex.version);
 
   return (latex, options = {}) => {
     try {

@@ -200,7 +200,7 @@ export class PageRegistry {
       .flatMap((pageId) => {
         const info = this.info(pageId);
 
-        return info !== null && untitled(info.title).toLowerCase().includes(needle) ? [{ pageId, ...info }] : [];
+        return info !== null && untitled(info.title ?? '').toLowerCase().includes(needle) ? [{ pageId, ...info }] : [];
       });
 
     return Promise.resolve(hits);

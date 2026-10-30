@@ -585,6 +585,18 @@ describe('PagePicker sections', () => {
     expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(0);
   });
 
+  it('gives the active row and a hovered row the neutral menu fill, as popover items do', () => {
+    picker.open('', anchor, onPick, { newPage: { onSubPage: vi.fn(), onPageIn: vi.fn() } });
+    picker.setResults(pages(7));
+
+    options().forEach((option) => {
+      expect(option.className.split(' ')).toEqual(expect.arrayContaining([
+        'aria-selected:bg-item-focus-bg', 'can-hover:hover:bg-item-hover-bg',
+      ]));
+      expect(option.className).not.toMatch(/blue|primary-bg|accent/);
+    });
+  });
+
   it('draws each row\'s emoji, image or the page glyph, hidden from readers', () => {
     picker.open('', anchor, onPick);
     picker.setResults([

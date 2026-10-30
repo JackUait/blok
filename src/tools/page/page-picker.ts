@@ -39,6 +39,10 @@ const toVisiblePage = (value: unknown): PageSearchResult | null => {
 /** Rows shown before the "N more results" row. */
 const COLLAPSED_ROWS = 6;
 
+/** The active row (the first one, as in Notion) and a hovered row get the menu's neutral fill. */
+const ROW_FILL_CLASSES = 'mx-1 cursor-pointer rounded-(--blok-radius-inner,var(--blok-radius-control)) aria-selected:bg-item-focus-bg can-hover:hover:bg-item-hover-bg';
+const ROW_CLASSES = `${ROW_FILL_CLASSES} flex items-start gap-2 px-2 py-1.5 text-sm text-text-primary`;
+
 /** Stands in for the query while a label template is split around it. */
 const QUERY_MARK = '\u0000';
 
@@ -526,7 +530,7 @@ export class PagePicker {
 
     option.setAttribute('role', 'option');
     option.setAttribute(DATA_ATTR.testid, testid);
-    option.className = 'flex items-start gap-2 cursor-pointer px-3 py-1.5 text-sm text-text-primary';
+    option.className = ROW_CLASSES;
     slot.className = PAGE_ICON_CLASSES;
     slot.setAttribute('aria-hidden', 'true');
     slot.setAttribute(DATA_ATTR.testid, 'page-picker-option-icon');
@@ -581,7 +585,7 @@ export class PagePicker {
 
     option.setAttribute('role', 'option');
     option.setAttribute(DATA_ATTR.testid, 'page-picker-more');
-    option.className = 'cursor-pointer px-3 py-1.5 text-sm leading-5 text-text-secondary';
+    option.className = `${ROW_FILL_CLASSES} block px-2 py-1.5 text-sm leading-5 text-text-secondary`;
     option.textContent = this.t('tools.page.moreResults', { count });
     option.addEventListener('pointerdown', (event) => event.preventDefault());
     option.addEventListener('click', () => this.activate(this.entries.findIndex((entry) => entry.element === option)));

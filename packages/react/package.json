@@ -43,8 +43,7 @@
   },
   "files": [
     "dist",
-    "types",
-    "src"
+    "types"
   ],
   "publishConfig": {
     "access": "public"

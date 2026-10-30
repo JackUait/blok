@@ -433,6 +433,18 @@ writeFileSync(angularPkgPath, `${JSON.stringify(angularPkg, null, 2)}\n`, 'utf8'
 // which is how @bloklabs/angular shipped 1.3.0.
 cpSync(path.resolve(root, 'packages/angular/README.md'), path.resolve(destDir, 'README.md'));
 
+// ng-packagr always writes FESM source maps. They point at the staging dir,
+// which step 7 deletes, so they only add weight to the package.
+for (const entry of readdirSync(destDir, { recursive: true })) {
+  const file = path.resolve(destDir, entry);
+
+  if (file.endsWith('.map')) {
+    rmSync(file);
+  } else if (file.endsWith('.mjs')) {
+    writeFileSync(file, readFileSync(file, 'utf8').replace(/\n\/\/# sourceMappingURL=\S+\s*$/, '\n'), 'utf8');
+  }
+}
+
 // 7. Drop the staging dir; keep only the published APF output.
 rmSync(stagingDir, { recursive: true, force: true });
 

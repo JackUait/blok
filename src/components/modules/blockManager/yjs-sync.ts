@@ -1141,7 +1141,8 @@ export class BlockYjsSync {
    * @param context - label of the sync that just ran (for error messages)
    */
   private assertDomOrderInvariantInDev(context: string): void {
-    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+    // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+    const env = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
 
     if (env !== 'test' && env !== 'development') {
       return;

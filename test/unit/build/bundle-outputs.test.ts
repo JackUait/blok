@@ -1033,6 +1033,17 @@ describe('lazy stylesheets stay out of the startup closure', () => {
   })
 })
 
+describe('dev-only NODE_ENV gates', () => {
+  // The define makes NODE_ENV "production", so a gate that throws only in
+  // test or development is dead code; a `typeof process` guard kept it alive.
+  it('leave no `typeof process` NODE_ENV check in the production chunks', () => {
+    const gate = /typeof process\s*(?:<|!==?)\s*[`'"]u(?:ndefined)?[`'"]\s*\?\s*[`'"]production[`'"]/
+    const hits = chunkFiles().filter((file) => gate.test(readFileSync(file, 'utf-8'))).map((file) => basename(file))
+    expect(chunkFiles().length).toBeGreaterThan(100)
+    expect(hits).toEqual([])
+  })
+})
+
 describe('the database template builder loads when a template is picked', () => {
   const staticClosure = (entry: string): string[] => {
     const seen = new Set<string>()

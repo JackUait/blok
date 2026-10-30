@@ -634,7 +634,8 @@ export class Saver extends Module {
       `Saver: children of block(s) ${[...repairs.keys()].join(', ')} are saved in a different order than their DOM order — ` +
       'a mutation path moved a holder in the DOM without moving the block in the flat array (or vice versa), ' +
       'so the saved document would not match what the user sees.';
-    const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+    // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+    const nodeEnv = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
 
     if (nodeEnv === 'test' || nodeEnv === 'development') {
       throw new Error(message);
@@ -806,7 +807,8 @@ export class Saver extends Module {
 
     const message =
       `Saver: table children diverge from their grid references — a rebuild path desynced the table view from the flat model. ${problems.join('; ')}`;
-    const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+    // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+    const nodeEnv = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
 
     if (nodeEnv === 'test' || nodeEnv === 'development') {
       throw new Error(message);
@@ -935,7 +937,8 @@ export class Saver extends Module {
 
     const message =
       `Saver: table cell block order diverges from the DOM order — a mutation path changed a cell's visible order without updating the table model, so the saved document would not match what the user sees. ${problems.join('; ')}`;
-    const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+    // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+    const nodeEnv = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
 
     if (nodeEnv === 'test' || nodeEnv === 'development') {
       throw new Error(message);
@@ -1274,7 +1277,8 @@ export class Saver extends Module {
     if (violations.length > 0) {
       const summary = violations.map(v => v.message).join('; ');
       const message = `Saver produced output with hierarchy drift: ${summary}`;
-      const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+      // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+      const nodeEnv = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
 
       // Throw in test AND development so manual dev-time testing (yarn serve)
       // flushes drift out immediately. Only production silently logs so an

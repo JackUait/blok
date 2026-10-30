@@ -518,7 +518,8 @@ export class BlockHierarchy {
       newParentId === null || this.repository.getBlockById(newParentId) !== undefined;
 
     if (!parentExists) {
-      const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+      // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+      const env = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
       const isSyncingFromYjs = this.getIsSyncingFromYjs?.() === true;
       const message =
         `BlockHierarchy.setBlockParent: dangling parent id "${newParentId}" ` +

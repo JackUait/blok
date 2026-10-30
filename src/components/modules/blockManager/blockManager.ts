@@ -2470,7 +2470,8 @@ export class BlockManager extends Module {
       ...(block.parentId !== null && !underExistingParents.has(block) && { parent: block.parentId }),
       ...(block.contentIds.length > 0 && { content: block.contentIds }),
     }));
-    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+    // The NODE_ENV test lets a production build fold this to undefined and drop the gate.
+    const env = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production' ? process.env?.NODE_ENV : undefined;
 
     if (env === 'test' || env === 'development') {
       assertHierarchy(snapshot, 'BlockManager.insertMany');

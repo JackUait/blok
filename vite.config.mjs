@@ -37,6 +37,28 @@ const toolEntries = () => {
   return Object.fromEntries(dirs.map((dir) => [`tool-${dir.replace('/', '-')}`, path.join(SRC, 'tools', dir, 'index.ts')]));
 };
 
+/**
+ * The emoji names and keywords are CLDR data (Unicode-3.0), which asks for its
+ * notice to ship with copies. scripts/build-emoji-locale-data.mjs generates the
+ * data into src, so the license plugin never sees the package.
+ */
+const cldrNotice = () => {
+  const root = path.resolve(__dirname, 'node_modules', 'cldr-annotations-full');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+
+  return [
+    `Name: ${manifest.name}`,
+    `Version: ${manifest.version}`,
+    `License: ${manifest.license}`,
+    'Private: false',
+    'Description: Unicode CLDR emoji annotations; Blok ships emoji names and search keywords generated from them',
+    'License Text:',
+    '===',
+    '',
+    fs.readFileSync(path.join(root, 'LICENSE'), 'utf8').trim(),
+  ].join('\n');
+};
+
 const entryFileNames = (ext) => (chunk) => (chunk.name.startsWith('tool-') ? `tool-entries/[name].${ext}` : `[name].${ext}`);
 
 // A chunk goes to `pure-chunks/`, outside the `./dist/chunks/*` sideEffects
@@ -140,7 +162,11 @@ export default defineConfig(({ mode }) => {
                 failOnUnlicensed: true,
                 failOnViolation: true,
               },
-              output: path.resolve(__dirname, 'dist', 'vendor.LICENSE.txt'),
+              output: {
+                file: path.resolve(__dirname, 'dist', 'vendor.LICENSE.txt'),
+                // Same layout as the plugin's default, plus the CLDR notice.
+                template: (dependencies) => [...dependencies.map((dependency) => dependency.text()), cldrNotice()].join('\n\n---\n\n'),
+              },
             },
           }),
         ],

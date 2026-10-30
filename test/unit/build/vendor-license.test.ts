@@ -8,9 +8,12 @@ const PERMISSIVE = ['MIT', 'Apache-2.0', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 
 
 // Must match the named exceptions in vite.config.mjs's license gate.
 // elkjs is EPL-2.0: mermaid 12 imports it for its default ELK layout.
+// cldr-annotations-full is data, not code: vite.config.mjs appends its notice
+// because scripts/build-emoji-locale-data.mjs generates it into src.
 const NAMED_EXCEPTIONS: Record<string, string> = {
   khroma: 'null',
   elkjs: 'EPL-2.0',
+  'cldr-annotations-full': 'Unicode-3.0',
 }
 
 interface VendorEntry {
@@ -54,6 +57,17 @@ describe('dist/vendor.LICENSE.txt', () => {
     expect(names).not.toContain('pako')
     expect(names).not.toContain('lie')
     expect(names).not.toContain('setimmediate')
+  })
+
+  it('ships the Unicode-3.0 notice of the CLDR emoji data, at the installed version', () => {
+    const cldrRoot = resolve(__dirname, '../../../node_modules/cldr-annotations-full')
+    const manifest = JSON.parse(readFileSync(resolve(cldrRoot, 'package.json'), 'utf8')) as { version: string }
+    const notice = readFileSync(resolve(cldrRoot, 'LICENSE'), 'utf8').trim()
+    const cldr = readVendorEntries().filter((entry) => entry.name === 'cldr-annotations-full')
+
+    expect(cldr.map((entry) => entry.license)).toEqual(['Unicode-3.0'])
+    expect(/^Version: (.+)$/m.exec(cldr[0]?.block ?? '')?.[1]).toBe(manifest.version)
+    expect(cldr[0]?.block).toContain(notice)
   })
 
   it('lists mermaid, the package that pulls elkjs in', () => {

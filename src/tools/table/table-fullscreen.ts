@@ -112,9 +112,15 @@ const shift = (to: DOMRect, from: DOMRect): Keyframe => ({
  */
 export class TableFullscreen {
   public readonly button: HTMLButtonElement;
-  /** Sits in the tool root, hidden until the modal opens. */
+  /**
+   * Sits in the tool root and stays empty until the modal opens. Its size
+   * fields would otherwise count as the block's caret inputs.
+   */
   public readonly header: HTMLElement;
 
+  /** The header's contents, mounted only while the modal is open. */
+  private readonly headerParts: Node[];
+  private readonly titleEl: HTMLElement;
   private readonly sizeButton: HTMLButtonElement;
   private readonly sizeEditor: HTMLElement;
   private readonly colsInput: HTMLInputElement;
@@ -170,8 +176,11 @@ export class TableFullscreen {
 
     const [colsInput, rowsInput] = Array.from(header.querySelectorAll('input'));
 
+    this.titleEl = header.querySelector<HTMLElement>(`[${TITLE_ATTR}]`) ?? document.createElement('span');
     this.sizeButton = header.querySelector<HTMLButtonElement>(`[${SIZE_ATTR}]`) ?? document.createElement('button');
     this.sizeEditor = header.querySelector<HTMLElement>(`[${SIZE_EDITOR_ATTR}]`) ?? document.createElement('span');
+    this.headerParts = Array.from(header.childNodes);
+    header.replaceChildren();
     this.colsInput = colsInput;
     this.rowsInput = rowsInput;
     this.sizeButton.setAttribute('aria-label', options.t('tools.table.changeSize'));
@@ -220,6 +229,8 @@ export class TableFullscreen {
     const room = holder === null ? 0 : flowBefore - (window.scrollY + holder.getBoundingClientRect().top);
     const title = this.options.getTitle() ?? this.options.t('tools.table.title');
 
+    // Inside the mutation-free header, so filling it is not an edit.
+    this.header.replaceChildren(...this.headerParts);
     this.syncTitle(title);
     this.syncSize();
     this.sizeButton.disabled = this.options.isReadOnly();
@@ -333,6 +344,7 @@ export class TableFullscreen {
     closing.host.style.removeProperty(INLINE_WIDTH_VAR);
 
     closing.animations.forEach(a => a.cancel());
+    this.header.replaceChildren();
     removeFromTopLayer(closing.host);
     closing.host.removeAttribute(FULLSCREEN_ATTR);
     this.holder?.style.removeProperty('min-height');
@@ -529,6 +541,11 @@ export class TableFullscreen {
   }
 
   private endSizeEdit(): void {
+    // No writes when not editing: close may empty the header in the same task,
+    // and a record on a detached part reads as a block edit.
+    if (this.minSize === null) {
+      return;
+    }
     this.minSize = null;
     this.sizeEditor.hidden = true;
     this.sizeButton.hidden = false;
@@ -549,11 +566,7 @@ export class TableFullscreen {
   }
 
   private syncTitle(title: string): void {
-    const titleEl = this.header.querySelector(`[${TITLE_ATTR}]`);
-
-    if (titleEl !== null) {
-      titleEl.textContent = title;
-    }
+    this.titleEl.textContent = title;
   }
 
   /** Columns first, like the readout while dragging the add bars. */

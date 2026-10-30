@@ -4869,14 +4869,15 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      // In readonly mode, edit classes should not be present
-      expect(element.classList.contains('relative')).toBe(false);
+      expect(element.classList.contains('mb-7')).toBe(false);
+      // The full-screen button is absolute in read-only too.
+      expect(element.classList.contains('relative')).toBe(true);
 
       table.setReadOnly(false);
 
-      // After exiting readonly, edit classes should be added
-      expect(element.classList.contains('relative')).toBe(true);
       expect(element.classList.contains('mb-7')).toBe(true);
+      expect(element.classList.contains('after:absolute')).toBe(true);
+      expect(element.classList.contains('relative')).toBe(true);
 
       table.destroy();
       document.body.removeChild(element);
@@ -4892,14 +4893,14 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      // In edit mode, edit classes should be present
-      expect(element.classList.contains('relative')).toBe(true);
+      expect(element.classList.contains('mb-7')).toBe(true);
 
       table.setReadOnly(true);
 
-      // After entering readonly, edit classes should be removed
-      expect(element.classList.contains('relative')).toBe(false);
       expect(element.classList.contains('mb-7')).toBe(false);
+      expect(element.classList.contains('after:absolute')).toBe(false);
+      // The full-screen button is absolute in read-only too.
+      expect(element.classList.contains('relative')).toBe(true);
 
       table.destroy();
       document.body.removeChild(element);

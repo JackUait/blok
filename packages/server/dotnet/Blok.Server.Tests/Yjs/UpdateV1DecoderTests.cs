@@ -336,6 +336,23 @@ public sealed class UpdateV1DecoderTests
   }
 
   /// <summary>
+  /// The two boundaries a Go port could move silently: raw JSON nests to 512
+  /// and no deeper, and a length fits an int. The Go engine pins both too.
+  /// </summary>
+  [Fact]
+  public void RawJsonDepthAndLengthBoundariesHold()
+  {
+    static string Deep(int depth) => new string('[', depth) + "1" + new string(']', depth);
+
+    Assert.Single(UpdateV1Decoder.Decode(
+        SingleStruct(0x05, "m", "k", writer => writer.WriteVarString(Deep(512)))).Structs);
+    AssertRefused("is not JSON", SingleStruct(0x05, "m", "k", writer => writer.WriteVarString(Deep(513))));
+
+    Assert.Single(UpdateV1Decoder.Decode(RawStruct(0, writer => writer.WriteVarUint(int.MaxValue))).Structs);
+    AssertRefused("past int.MaxValue", RawStruct(0, writer => writer.WriteVarUint((ulong)int.MaxValue + 1)));
+  }
+
+  /// <summary>
   /// Wire JSON reads back as JSON.parse would: engine values, an escaped lone
   /// surrogate kept as one unit. A System.Text.Json node accepts it at parse
   /// and throws on the first read, so every reader had to guard it.

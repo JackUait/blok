@@ -251,6 +251,62 @@ public sealed class IntegrationTests
     Assert.Equal(4242UL, bystander.ClientId);
   }
 
+  /// <summary>
+  /// After a state load the room adopts the stored writer's id; a write then
+  /// continues that clock line. The Go engine holds the same test.
+  /// </summary>
+  [Fact]
+  public void AdoptClientIdWritesUnderTheAdoptedId()
+  {
+    var author = new YDoc(1000);
+    var blocks = author.GetMap("blocks");
+
+    author.Transact(transaction => blocks.Set(transaction, "a", 1d));
+
+    var restored = new YDoc(5);
+
+    restored.ApplyUpdate(author.EncodeStateAsUpdate());
+    restored.AdoptClientId(1000);
+
+    var update = restored.Transact(transaction => restored.GetMap("blocks").Set(transaction, "b", 2d));
+    var group = UpdateV1Decoder.Decode(update!).Structs.Single();
+
+    Assert.Equal(1000UL, group.Key);
+    Assert.Equal(1UL, group.Value[0].Id.Clock);
+  }
+
+  /// <summary>
+  /// A remote apply inside an open local transaction joins it, reports no
+  /// move of its own, and turns the whole transaction remote — so its one
+  /// update is not local, and, having advanced the doc's own clock, the
+  /// transaction re-mints the client id. The Go engine holds the same test.
+  /// </summary>
+  [Fact]
+  public void ARemoteApplyInsideALocalTransactionMakesItRemote()
+  {
+    var peer = new YDoc(1001);
+
+    peer.Transact(transaction => peer.GetMap("m").Set(transaction, "k", 1d));
+
+    var update = peer.EncodeStateAsUpdate();
+    var doc = new YDoc(1000);
+    var events = new List<YUpdateEvent>();
+    ApplyResult nested = default;
+
+    doc.UpdateEmitted += events.Add;
+
+    var emitted = doc.Transact(transaction =>
+    {
+      doc.GetMap("m").Set(transaction, "own", 2d);
+      nested = doc.ApplyUpdate(update);
+    });
+
+    Assert.False(nested.Changed);
+    Assert.NotNull(emitted);
+    Assert.False(Assert.Single(events).Local);
+    Assert.NotEqual(1000UL, doc.ClientId);
+  }
+
   [Fact]
   public void MalformedBytesReportMalformedAndLeaveTheDocUntouched()
   {

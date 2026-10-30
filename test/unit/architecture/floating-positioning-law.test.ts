@@ -138,6 +138,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
   'components/modules/assistant/assistant-bar.ts': 'Writes top from the anchor holder\'s bottom plus its gap offset, and left and width from the content column (12px past it on each side); copies the anchor\'s font-size onto the shimmer slots.',
+  'components/modules/find/index.ts': 'Stand-in field while the find bar code loads: an invisible 1px input pinned at the window origin (constant 0, not measured geometry), so focus never scrolls and IME candidates stay on screen. It is removed when the bar opens.',
   'components/modules/find/find-motion.ts': 'Hop chip: a transient aria-hidden copy of the selected word. It turns the selection rect into dock-local px once, at open, and is removed when it lands or is interrupted; the bar itself is still placed by find.css.',
   'components/ui/toolbox-preview.ts': 'Fixed hover card reads the menu and row rects on every row change and on menu-list scroll; any other scroll closes it.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',

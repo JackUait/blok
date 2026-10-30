@@ -262,6 +262,11 @@ describe('Find module', () => {
 
     const textOf = (redactor: HTMLElement): HTMLElement => redactor.querySelector<HTMLElement>('[contenteditable]') ?? redactor;
 
+    // jsdom's window never has focus; a real page in use does.
+    beforeEach(() => {
+      vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+    });
+
     it('keeps Cmd+F from the browser at once and opens the bar when the code arrives', async () => {
       const { redactor } = editor([{ id: 'a', text: 'hello' }]);
 
@@ -324,6 +329,38 @@ describe('Find module', () => {
 
       expect(searchInput().value).toBe('日本');
       expect(searchInput()).toHaveFocus();
+    });
+
+    it('lets Escape that ends an IME composition leave the open alone', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(textOf(redactor), KEY_F);
+      typeInto('にほ');
+      press(standIn(), { key: 'Escape', code: 'Escape', isComposing: true });
+      await settle();
+
+      expect(searchInput().value).toBe('にほ');
+    });
+
+    it('pins its field in the window at a size iPadOS does not zoom on', () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(textOf(redactor), KEY_F);
+      const { style } = standIn();
+
+      expect([style.position, style.top, style.left, style.fontSize]).toEqual(['fixed', '0px', '0px', '16px']);
+    });
+
+    it('keeps the open when the whole window loses focus while it loads', async () => {
+      const { redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+      press(textOf(redactor), KEY_F);
+      typeInto('kept');
+      vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+      standIn().blur();
+      await settle();
+
+      expect(searchInput().value).toBe('kept');
     });
 
     it('opens the replace row when the replace shortcut comes while it loads', async () => {

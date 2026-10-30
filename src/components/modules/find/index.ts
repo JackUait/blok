@@ -455,10 +455,24 @@ export class Find extends Module {
     field.setAttribute('aria-label', this.Blok.I18n.t('find.placeholder'));
     // Find's own surface: other editors and the key routing treat it as the bar.
     field.setAttribute('data-blok-interface', 'find');
-    // Invisible and out of the layout; it lives for one chunk load.
-    Object.assign(field.style, { position: 'fixed', width: '1px', height: '1px', opacity: '0', pointerEvents: 'none' });
+    // Invisible, and pinned in the window so focus never scrolls and IME candidates sit on screen.
+    // 16px: iPadOS zooms the page on focus into smaller text.
+    Object.assign(field.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '1px',
+      height: '1px',
+      fontSize: '16px',
+      opacity: '0',
+      pointerEvents: 'none',
+    });
 
     field.addEventListener('keydown', (event) => {
+      // This Escape or Enter ends an IME composition; it is not meant for find.
+      if (event.isComposing) {
+        return;
+      }
       if (event.key === 'Escape' || event.key === 'Enter' || event.key === 'Tab') {
         event.preventDefault();
       }
@@ -480,9 +494,10 @@ export class Find extends Module {
         this.adopt(this.pending);
       }
     });
-    // Focus went elsewhere: the reader moved on.
+    // Focus went elsewhere: the reader moved on. A blur from switching apps
+    // is not that: the open completes and the bar takes the text.
     field.addEventListener('blur', () => {
-      if (this.pending?.field === field) {
+      if (this.pending?.field === field && document.hasFocus()) {
         this.endPending();
       }
     });

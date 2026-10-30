@@ -20,14 +20,17 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		// ends it at the same moment.
 		_ = http.NewResponseController(w).SetReadDeadline(deadline)
 		tracked := &trackingWriter{ResponseWriter: w}
+		// By the clock, not ctx.Err(): the read deadline can cancel the
+		// connection's context first, and that reads as Canceled.
+		expired := func() bool { return !time.Now().Before(deadline) }
 		stop := context.AfterFunc(ctx, func() {
-			if ctx.Err() == context.DeadlineExceeded {
+			if expired() {
 				tracked.timeOut()
 			}
 		})
 		defer stop()
 		next.ServeHTTP(tracked, r.WithContext(ctx))
-		if ctx.Err() == context.DeadlineExceeded {
+		if expired() {
 			tracked.timeOut()
 		}
 	})

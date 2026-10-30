@@ -6,7 +6,8 @@
  * `insertBefore` rewriting references), and the upstream test cases pin them.
  * What is left out on purpose: globals, auto-highlighting of the page, the
  * web worker, plugins, and every hook Blok's grammars do not use.
- * One deviation: rematch work per tokenize is capped (see `rematchBudget`).
+ * Deviations: rematch work per tokenize is capped (see `rematchBudget`), and
+ * so is how deep `inside` grammars nest (see `maxInsideDepth`).
  *
  * Prism is MIT-licensed; its notice ships in NOTICE.
  */
@@ -112,6 +113,8 @@ interface Pass {
   searches: Map<RegExp, Search>;
   /** Rematch steps left. */
   budget: number;
+  /** How many `inside` grammars this text sits in. */
+  depth: number;
 }
 
 /**
@@ -121,6 +124,15 @@ interface Pass {
  * spent, rematches stop early: highlighting changes, the text never does.
  */
 const rematchBudget = (text: string): number => 10 * text.length + 1000;
+
+/**
+ * Each `inside` level is a recursion. A CSS at-rule can hold another at-rule
+ * and a C macro another macro, so `@a .@t.@t…` or `#a #a …` nests once per
+ * few chars and would overflow the stack. Real code nested at most
+ * 7 levels (355 upstream cases, ~2.2k real files). Past this depth a match's
+ * content stays plain text.
+ */
+const maxInsideDepth = 64;
 
 const hasOwn = (o: Record<string, unknown>, key: string): boolean => Object.prototype.hasOwnProperty.call(o, key);
 
@@ -326,7 +338,7 @@ type GreedySpan =
  * Prism's `tokenize`. The functions below are its `matchGrammar`, split up
  * only to keep nesting shallow: every loop, branch and cursor move is Prism's.
  */
-const tokenize = (text: string, grammar: Grammar): TokenStream => {
+const tokenize = (text: string, grammar: Grammar, depth = 0): TokenStream => {
   const rest = grammar.rest;
 
   if (rest) {
@@ -342,7 +354,7 @@ const tokenize = (text: string, grammar: Grammar): TokenStream => {
   const tokenList = createList();
 
   addAfter(tokenList, tokenList.head, text);
-  matchGrammar(text, tokenList, grammar, tokenList.head, 0, { searches: new Map(), budget: rematchBudget(text) });
+  matchGrammar(text, tokenList, grammar, tokenList.head, 0, { searches: new Map(), budget: rematchBudget(text), depth });
 
   return toArray(tokenList);
 };
@@ -445,7 +457,9 @@ const wrapMatch = (
 
   removeRange(run.list, removeFrom, removeCount);
 
-  const wrapped = new Token(run.token, run.inside ? tokenize(matchStr, run.inside) : matchStr, run.alias, matchStr);
+  const { depth } = run.pass;
+  const content = run.inside && depth < maxInsideDepth ? tokenize(matchStr, run.inside, depth + 1) : matchStr;
+  const wrapped = new Token(run.token, content, run.alias, matchStr);
   const node = addAfter(run.list, removeFrom, wrapped);
 
   if (after) {
@@ -713,7 +727,7 @@ export const createHighlighter = (): Highlighter => {
       return ret;
     },
 
-    tokenize,
+    tokenize: (text, grammar) => tokenize(text, grammar),
 
     tokenizeWithHooks(text, grammar, language) {
       return runTokenize({ code: text, grammar, language, tokens: [] }).tokens;

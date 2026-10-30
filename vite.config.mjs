@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
@@ -14,6 +15,45 @@ import * as pkg from './package.json';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const SRC = path.resolve(__dirname, 'src');
+
+/**
+ * One internal lib entry per tool folder that src/tools/index.ts re-exports,
+ * so each tool gets its own chunk and a consumer's bundler can drop the tools
+ * an app never imports. With `/tools` as the only entry, all tools shared one
+ * chunk, and their static fields (lowered to top-level assignments) kept every
+ * tool alive. The Paragraph-only guard in test/unit/build/bundle-outputs.test.ts
+ * checks the result.
+ */
+const toolEntries = () => {
+  const index = fs.readFileSync(path.join(SRC, 'tools', 'index.ts'), 'utf8');
+  const dirs = [...new Set([...index.matchAll(/^export \{[^}]*\} from '\.\/([a-z/-]+)';$/gm)].map((match) => match[1]))]
+    .filter((dir) => fs.existsSync(path.join(SRC, 'tools', dir, 'index.ts')));
+
+  if (dirs.length === 0) {
+    throw new Error('vite.config.mjs: found no tool folders in src/tools/index.ts, so the per-tool split would silently vanish');
+  }
+
+  return Object.fromEntries(dirs.map((dir) => [`tool-${dir.replace('/', '-')}`, path.join(SRC, 'tools', dir, 'index.ts')]));
+};
+
+const entryFileNames = (ext) => (chunk) => (chunk.name.startsWith('tool-') ? `tool-entries/[name].${ext}` : `[name].${ext}`);
+
+// A chunk goes to `pure-chunks/`, outside the `./dist/chunks/*` sideEffects
+// glob, only when it holds nothing but Blok's own side-effect-free modules.
+// That lets a bundler skip the chunks of tools an app never imports.
+// - Package code stays in `chunks/`: some of it runs on load (mermaid's diagram
+//   chunks are imported for their effects alone), and a bundler drops such an
+//   import into an undeclared file.
+// - The modules below change the page on load.
+// test/unit/build/side-effects.test.ts checks both.
+const GLOBAL_EFFECT_MODULE = /src[\\/]components[\\/](?:polyfills|utils[\\/]input-modality)\.ts$/;
+
+const isPureModule = (id) => id.startsWith('\0') || (id.startsWith(SRC + path.sep) && !GLOBAL_EFFECT_MODULE.test(id));
+
+const chunkFileNames = (ext) => (chunk) =>
+  chunk.moduleIds.every(isPureModule) ? `pure-chunks/[name]-[hash].${ext}` : `chunks/[name]-[hash].${ext}`;
+
 /**
  * Trick to use Vite server.open option on macOS
  * @see https://github.com/facebook/create-react-app/pull/1690#issuecomment-283518768
@@ -23,6 +63,18 @@ process.env.BROWSER = 'open';
 export default defineConfig(({ mode }) => {
   const NODE_ENV = mode || 'development';
   const VERSION = pkg.version;
+  const entries = {
+    blok: path.resolve(__dirname, 'src', 'blok.ts'),
+    tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
+    full: path.resolve(__dirname, 'src', 'full.ts'),
+    markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
+    view: path.resolve(__dirname, 'src', 'view', 'index.ts'),
+    migrate: path.resolve(__dirname, 'src', 'migrate', 'index.ts'),
+    adapters: path.resolve(__dirname, 'src', 'adapters.ts'),
+    icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
+    preprocess: path.resolve(__dirname, 'src', 'preprocess', 'index.ts'),
+    'agent-models': path.resolve(__dirname, 'src', 'agent-models', 'index.ts'),
+  };
 
   return {
     build: {
@@ -37,18 +89,7 @@ export default defineConfig(({ mode }) => {
       target: [ 'es2020', 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       cssTarget: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       lib: {
-        entry: {
-          blok: path.resolve(__dirname, 'src', 'blok.ts'),
-          tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
-          full: path.resolve(__dirname, 'src', 'full.ts'),
-          markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
-          view: path.resolve(__dirname, 'src', 'view', 'index.ts'),
-          migrate: path.resolve(__dirname, 'src', 'migrate', 'index.ts'),
-          adapters: path.resolve(__dirname, 'src', 'adapters.ts'),
-          icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
-          preprocess: path.resolve(__dirname, 'src', 'preprocess', 'index.ts'),
-          'agent-models': path.resolve(__dirname, 'src', 'agent-models', 'index.ts'),
-        },
+        entry: { ...entries, ...toolEntries() },
         formats: ['es', 'cjs'],
       },
       rollupOptions: {
@@ -56,14 +97,14 @@ export default defineConfig(({ mode }) => {
         output: [
           {
             format: 'es',
-            entryFileNames: '[name].mjs',
-            chunkFileNames: 'chunks/[name]-[hash].mjs',
+            entryFileNames: entryFileNames('mjs'),
+            chunkFileNames: chunkFileNames('mjs'),
             minify: true,
           },
           {
             format: 'cjs',
-            entryFileNames: '[name].cjs',
-            chunkFileNames: 'chunks/[name]-[hash].cjs',
+            entryFileNames: entryFileNames('cjs'),
+            chunkFileNames: chunkFileNames('cjs'),
             minify: true,
           },
         ],

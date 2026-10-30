@@ -3,7 +3,7 @@
  * decode against, in chunks of their own with stable names.
  *
  * The main build and `scripts/build-locales.mjs` both bundle English. Each
- * writes it to `chunks/<name>-<hash>.mjs`; the bytes, and so the file name,
+ * writes it to `pure-chunks/<name>-<hash>.mjs`; the bytes, and so the file name,
  * match, so `/locales` reuses the main build's files instead of shipping a
  * second copy. Wire this plugin into BOTH builds, or the copies split again.
  */

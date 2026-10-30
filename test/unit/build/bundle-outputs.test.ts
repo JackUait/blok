@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
-import { resolve, join, dirname } from 'node:path'
+import { basename, resolve, join, dirname } from 'node:path'
 import { init as initLexer, parse as parseModule } from 'es-module-lexer/minimal'
 import postcss from 'postcss'
 import ts from 'typescript'
@@ -34,6 +34,14 @@ function listJsFiles(dir: string): string[] {
     }
     return /\.(mjs|cjs|js)$/.test(entry.name) ? [full] : []
   })
+}
+
+// vite.config.mjs splits chunks between `chunks/` (global effects, declared in
+// sideEffects) and `pure-chunks/`; which one a chunk lands in is not a contract.
+function chunkFiles(): string[] {
+  return ['chunks', 'pure-chunks']
+    .flatMap((dir) => (existsSync(join(dist, dir)) ? listJsFiles(join(dist, dir)) : []))
+    .filter((file) => file.endsWith('.mjs'))
 }
 
 /** Reduce a bare specifier to its package name, or null if it is not an external package. */
@@ -464,12 +472,13 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
     })
   }
 
+  // The importer may sit in pure-chunks/ and the target in chunks/ (vite.config.mjs chunkFileNames).
   it('keeps mermaid behind a dynamic import (non-vacuity)', async () => {
     await initLexer()
     const closure = [...staticClosure()]
     expect(closure.some((file) => /mermaid\.core-[^/]*\.mjs$/.test(file))).toBe(false)
     expect(
-      closure.some((file) => /import\(\s*[`'"]\.\/mermaid\.core-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
+      closure.some((file) => /import\(\s*[`'"]\.{1,2}\/(?:[\w-]+\/)?mermaid\.core-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
     ).toBe(true)
   })
 
@@ -478,7 +487,7 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
     const closure = [...staticClosure()]
     expect(closure.some((file) => /maplibre-runtime-[^/]*\.mjs$/.test(file))).toBe(false)
     expect(
-      closure.some((file) => /import\(\s*[`'"]\.\/maplibre-runtime-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
+      closure.some((file) => /import\(\s*[`'"]\.{1,2}\/(?:[\w-]+\/)?maplibre-runtime-[^`'"]+\.mjs[`'"]\s*\)/.test(readFileSync(file, 'utf-8')))
     ).toBe(true)
   })
 
@@ -752,23 +761,18 @@ describe('dist weight (consumer parse cost)', () => {
   })
 
   it('emits the emoji grid and keyword data chunks as JSON.parse strings', () => {
-    const chunkDir = join(dist, 'chunks')
-    const chunks = readdirSync(chunkDir)
-
     for (const prefix of ['emoji-grid-', 'emoji-keywords-']) {
-      const dataChunks = chunks.filter((name) => name.startsWith(prefix) && name.endsWith('.mjs'))
+      const dataChunks = chunkFiles().filter((file) => basename(file).startsWith(prefix))
       expect(dataChunks, prefix).toHaveLength(1)
-      for (const name of dataChunks) {
-        expect(readFileSync(join(chunkDir, name), 'utf-8')).toContain('JSON.parse(')
+      for (const file of dataChunks) {
+        expect(readFileSync(file, 'utf-8')).toContain('JSON.parse(')
       }
     }
   })
 
   it('does not ship the raw emoji-mart set, which the two emoji data chunks replace', () => {
-    const nativeChunks = readdirSync(join(dist, 'chunks')).filter(
-      (name) => name.startsWith('native-') && name.endsWith('.mjs'),
-    )
-    expect(nativeChunks).toEqual([])
+    expect(chunkFiles().length).toBeGreaterThan(0)
+    expect(chunkFiles().filter((file) => basename(file).startsWith('native-'))).toEqual([])
   })
 
   it('parses markdown math without shipping a KaTeX renderer', () => {
@@ -961,7 +965,7 @@ describe('lazy stylesheets stay out of the startup closure', () => {
   // A lazy sheet's CSS replaces its marker rule in #blok-styles. A marker inside
   // @media or @layer would put the whole sheet under that condition.
   it('keeps every lazy sheet marker a top-level rule of the built main sheet', () => {
-    const chunks = listJsFiles(join(dist, 'chunks')).filter((file) => file.endsWith('.mjs'))
+    const chunks = chunkFiles()
     const main = chunks.map((file) => readFileSync(file, 'utf-8')).find((code) => code.includes('[data-blok-sheet=fonts]'))
     expect(main, 'no chunk holds the main sheet').toBeDefined()
     const start = (main ?? '').indexOf('/*! tailwindcss')
@@ -977,7 +981,7 @@ describe('lazy stylesheets stay out of the startup closure', () => {
   })
 
   it('ships each lazy sheet in a chunk that Tailwind compiled', () => {
-    const chunks = listJsFiles(join(dist, 'chunks')).filter((file) => file.endsWith('.mjs'))
+    const chunks = chunkFiles()
     for (const [name, fingerprint] of Object.entries(LAZY_FINGERPRINTS)) {
       const holders = chunks.filter((file) => readFileSync(file, 'utf-8').includes(fingerprint))
       expect(holders, name).toHaveLength(1)
@@ -1073,16 +1077,17 @@ describe('a consumer that imports one tool gets only that tool (tree shaking)', 
       maxBuffer: 256 * 1024 * 1024,
     })
 
+  // Measured 45,149 (rolldown) and 58,990 (esbuild) bytes with one lib entry
+  // per tool (vite.config.mjs toolEntries); ceilings keep ~15% headroom.
+  // A tool that imports src/blok (even with import()) keeps the whole core here: ~2.5 MB more.
   it.each([
-    ['vite (rolldown)', bundleWithVite],
-    ['esbuild', bundleWithEsbuild],
-  ])('%s drops the tools a Paragraph-only import never uses', async (_name, bundleConsumer) => {
+    ['vite (rolldown)', bundleWithVite, 52_000],
+    ['esbuild', bundleWithEsbuild, 68_000],
+  ])('%s drops the tools a Paragraph-only import never uses', async (_name, bundleConsumer, ceiling) => {
     const code = await bundleConsumer()
     const kept = Object.entries(UNUSED_TOOL_FINGERPRINTS).filter(([, print]) => code.includes(print)).map(([tool]) => tool)
     expect(kept).toEqual([])
     expect(code.includes(PARAGRAPH_FINGERPRINT)).toBe(true)
-    // Measured 368,366 (rolldown) and 477,761 (esbuild) bytes. ~10% headroom over esbuild.
-    // A tool that imports src/blok (even with import()) keeps the whole core here: ~500 KB more.
-    expect(Buffer.byteLength(code)).toBeLessThan(0.5 * 1024 * 1024)
+    expect(Buffer.byteLength(code)).toBeLessThan(ceiling)
   }, 60_000)
 })

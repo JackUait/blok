@@ -86,10 +86,11 @@ const dist = process.argv[1]
     es[code] = sha1(JSON.stringify((await locales.loadLocale(code)).dictionary))
   }
   const cjs = {}
-  for (const name of readdirSync(join(dist, 'chunks'))) {
+  // vite.config.mjs splits chunks between these two folders.
+  for (const [dir, name] of ['chunks', 'pure-chunks'].flatMap((dir) => readdirSync(join(dist, dir)).map((name) => [dir, name]))) {
     const match = /^([a-zA-Z-]+)-[A-Za-z0-9_-]{8}\\.cjs$/.exec(name)
     if (match === null || !locales.ALL_LOCALE_CODES.includes(match[1])) continue
-    const data = require(join(dist, 'chunks', name)).default
+    const data = require(join(dist, dir, name)).default
     ;(cjs[match[1]] ??= []).push(sha1(JSON.stringify(data)))
   }
   process.stdout.write(JSON.stringify({ es, cjs }))
@@ -176,10 +177,10 @@ const [dist, codesJson] = process.argv.slice(1)
 const codes = JSON.parse(codesJson)
 ;(async () => {
   const out = { mjs: {}, cjs: {} }
-  for (const name of readdirSync(join(dist, 'chunks'))) {
+  for (const [dir, name] of ['chunks', 'pure-chunks'].flatMap((dir) => readdirSync(join(dist, dir)).map((name) => [dir, name]))) {
     const match = /^([a-zA-Z-]+)-[A-Za-z0-9_-]{8}\\.(mjs|cjs)$/.exec(name)
     if (match === null || !codes.includes(match[1])) continue
-    const file = join(dist, 'chunks', name)
+    const file = join(dist, dir, name)
     const data = match[2] === 'mjs' ? (await import(file)).default : require(file).default
     ;(out[match[2]][match[1]] ??= []).push(sha1(JSON.stringify(data)))
   }

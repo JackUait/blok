@@ -1,0 +1,384 @@
+{
+  "inputs": [
+    "text/plain",
+    "text/plain; charset=utf-8",
+    "  text/plain  ",
+    "TEXT/Plain",
+    "text",
+    "text/",
+    "/plain",
+    "text/plain;",
+    "text/plain; charset",
+    "text/plain; charset=",
+    "text/plain; charset=\"\"",
+    "text/plain;charset=utf-8",
+    "text/plain ;charset=utf-8",
+    "text / plain",
+    "text/plain; charset=utf-8; charset=utf-8",
+    "text/plain; charset=utf-8; charset=us-ascii",
+    "text/plain; charset=utf-8; CHARSET=utf-8",
+    "text/plain; charset=UTF-8; charset=utf-8",
+    "text/plain; charset=\"a\\z\"; charset=az",
+    "text/plain; charset=\"a\\/b\"; charset=\"a/b\"",
+    "text/plain; charset=\"a\\/b\"; charset=a/b",
+    "text/plain; a=\"x y\"",
+    "text/plain; a=x y",
+    "text/plain; a=\"unterminated",
+    "text/plain; a=b,c",
+    "text/plain, text/html",
+    "text/plain;;a=b",
+    "text/plain; =b",
+    "image/png",
+    "application/octet-stream",
+    "not a media type",
+    "*/*",
+    "text/*",
+    "a+b/c-d.e",
+    "téxt/plain",
+    "text/plain; a=é",
+    "text/plain; a=\"é\"",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/y",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/y",
+    "text/plain\t;\ta=b",
+    "text/plain; a=\"b\\\"c\"",
+    "multipart/form-data; boundary=abc",
+    "multipart/form-data; boundary=\"abc\"",
+    "multipart/form-data; boundary=\"\"",
+    "multipart/form-data",
+    "multipart/form-data; boundary=a; boundary=a",
+    "multipart/form-data; boundary=a; boundary=b",
+    "multipart/form-data; boundary=\"m\\z\"; boundary=mz",
+    "MULTIPART/FORM-DATA; BOUNDARY=x",
+    "multipart/mixed; boundary=x",
+    "multipart/form-data; boundary=a b",
+    "multipart/form-data; boundary=\"a b\"",
+    "multipart/form-data ; boundary = x",
+    "application/json",
+    "application/json; charset=utf-8",
+    "APPLICATION/JSON",
+    "application/json; charset=utf-8; charset=utf-16",
+    "application/problem+json",
+    "application/json-patch+json",
+    "application/json;",
+    "",
+    "  ",
+    "text/plain; charset=\"utf-8\"; charset=utf-8"
+  ],
+  "answers": [
+    {
+      "wire": "text/plain",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=utf-8",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "TEXT/Plain",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain;",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=\"\"",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain;charset=utf-8",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain ;charset=utf-8",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text / plain",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=utf-8; charset=utf-8",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=utf-8; CHARSET=utf-8",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=\"a\\/b\"; charset=\"a/b\"",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; a=\"x y\"",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "image/png",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "application/octet-stream",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "*/*",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/*",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "a+b/c-d.e",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; a=\"é\"",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/y",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain\t;\ta=b",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; a=\"b\\\"c\"",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data; boundary=abc",
+      "boundary": "abc",
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data; boundary=\"abc\"",
+      "boundary": "abc",
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data; boundary=\"\"",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data; boundary=a; boundary=a",
+      "boundary": "a",
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "MULTIPART/FORM-DATA; BOUNDARY=x",
+      "boundary": "x",
+      "json": false
+    },
+    {
+      "wire": "multipart/mixed; boundary=x",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data; boundary=\"a b\"",
+      "boundary": "a b",
+      "json": false
+    },
+    {
+      "wire": "multipart/form-data ; boundary = x",
+      "boundary": "x",
+      "json": false
+    },
+    {
+      "wire": "application/json",
+      "boundary": null,
+      "json": true
+    },
+    {
+      "wire": "application/json; charset=utf-8",
+      "boundary": null,
+      "json": true
+    },
+    {
+      "wire": "APPLICATION/JSON",
+      "boundary": null,
+      "json": true
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "application/problem+json",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "application/json-patch+json",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "application/json;",
+      "boundary": null,
+      "json": true
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "",
+      "boundary": null,
+      "json": false
+    },
+    {
+      "wire": "text/plain; charset=\"utf-8\"; charset=utf-8",
+      "boundary": null,
+      "json": false
+    }
+  ]
+}

@@ -118,6 +118,7 @@ describe('paste engine that fails to load', () => {
     engineLoad.failures = 1;
 
     await expect(instance.blocks.renderFromHTML('<p>first</p>')).rejects.toThrow('chunk failed');
+    expect(await savedText(instance)).toBe('X');
 
     await instance.blocks.renderFromHTML('<p>second</p>');
 

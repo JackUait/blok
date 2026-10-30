@@ -413,6 +413,8 @@ export class BlocksAPI extends Module {
    */
   public async renderFromHTML(data: string): Promise<void> {
     this.refuseWholesaleReplace('renderFromHTML');
+    // Before the clear: a failed load must leave the document as it was.
+    await this.Blok.Paste.load();
 
     this.Blok.Renderer.markRenderStart();
 

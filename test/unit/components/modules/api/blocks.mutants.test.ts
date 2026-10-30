@@ -223,7 +223,7 @@ type BlokStub = {
     adoptDocumentRecordId: Mock<(id: string) => void>;
     resetDocumentRecordId: Mock<() => void>;
   };
-  Paste: { processText: Mock<(html: string, sanitize?: boolean) => Promise<void>> };
+  Paste: { load: Mock<() => Promise<void>>; processText: Mock<(html: string, sanitize?: boolean) => Promise<void>> };
   BlockSelection: { selectBlock: Mock<(block: unknown) => void>; clearSelection: Mock<() => void> };
   Tools: { blockTools: Map<string, ToolStub> };
   YjsManager: {
@@ -260,7 +260,7 @@ const createBlokStub = (blockManager: BlockManagerMock, overrides: Partial<BlokS
     pendingHashScroll: null,
   },
   Saver: { save: vi.fn(async () => undefined), adoptDocumentRecordId: vi.fn(), resetDocumentRecordId: vi.fn() },
-  Paste: { processText: vi.fn(async (_html: string, _sanitize?: boolean) => {}) },
+  Paste: { load: vi.fn(async () => {}), processText: vi.fn(async (_html: string, _sanitize?: boolean) => {}) },
   BlockSelection: { selectBlock: vi.fn(), clearSelection: vi.fn() },
   Tools: { blockTools: new Map<string, ToolStub>() },
   YjsManager: {

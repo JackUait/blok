@@ -280,6 +280,7 @@ type BlokStub = {
     clearSelection: ReturnType<typeof vi.fn>;
   };
   Paste: {
+    load: ReturnType<typeof vi.fn>;
     processText: ReturnType<typeof vi.fn>;
   };
   Tools: {
@@ -346,6 +347,7 @@ const createBlokStub = (
       resetDocumentRecordId: vi.fn(),
     },
     Paste: {
+      load: vi.fn(async () => {}) as ReturnType<typeof vi.fn>,
       processText: vi.fn(async (_html: string, _sanitize: boolean) => {}) as ReturnType<typeof vi.fn>,
     },
     BlockSelection: {

@@ -76,6 +76,14 @@ export class Paste extends Module {
   }
 
   /**
+   * Loads the paste pipeline. A caller that changes the document before it
+   * pastes awaits this first, so a failed load changes nothing.
+   */
+  public async load(): Promise<void> {
+    await this.engine();
+  }
+
+  /**
    * Process text data (public API).
    * Used by API.renderFromHTML() to process HTML or plain text.
    * @param data - Text or HTML string to process

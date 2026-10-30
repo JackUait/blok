@@ -1,0 +1,14 @@
+[
+  {
+    "name": "blocksToMarkdown keeps astral characters",
+    "op": "blocksToMarkdown",
+    "input": "{\"blocks\":[{\"id\":\"h\",\"type\":\"header\",\"data\":{\"text\":\"Hello 😀 world\",\"level\":2}},{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Bold\",\"marks\":{\"bold\":true}},{\"text\":\" and 𝒳 plain\"}]}},{\"id\":\"l\",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"item < one\"}}]}",
+    "output": "{\"markdown\":\"## Hello 😀 world\\n\\n**Bold** and 𝒳 plain\\n\\n- item < one\",\"warnings\":[]}"
+  },
+  {
+    "name": "blocksToHtml escapes and keeps astral characters",
+    "op": "blocksToHtml",
+    "input": "{\"blocks\":[{\"id\":\"h\",\"type\":\"header\",\"data\":{\"text\":\"Hello 😀 world\",\"level\":2}},{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Bold\",\"marks\":{\"bold\":true}},{\"text\":\" and 𝒳 plain\"}]}},{\"id\":\"l\",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"item < one\"}}]}",
+    "output": "<h2>Hello 😀 world</h2><p><strong>Bold</strong> and 𝒳 plain</p><ul><li>item &lt; one</li></ul>"
+  }
+]

@@ -324,7 +324,8 @@ if (isDirectRun) {
   run('node scripts/build-all.mjs --with-cli');
 
   if (!isDryRun) {
-    run(`git add package.json yarn.lock ${WORKSPACE_MANIFESTS.join(' ')}`);
+    // build-all rewrote the Go copy of the runtime with the new VERSION.
+    run(`git add package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js ${WORKSPACE_MANIFESTS.join(' ')}`);
     run(`git commit -m "chore(release): ${version}"`);
 
     if (runCapture('git status --porcelain') !== '') {

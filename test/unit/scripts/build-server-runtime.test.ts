@@ -6,7 +6,7 @@ import { createContext, runInContext } from 'node:vm';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildServerRuntime } from '../../../scripts/build-server-runtime.mjs';
+import { buildServerRuntime, writeServerRuntimes } from '../../../scripts/build-server-runtime.mjs';
 import { COMMANDS } from '../../../src/shared/agent/commands';
 import { buildBuiltInSnapshot } from '../../../src/shared/built-in-snapshot';
 import { readCustomToolsFile, snapshotWithCustomTools } from '../../../src/shared/custom-tools-file';
@@ -227,6 +227,17 @@ describe('buildServerRuntime', () => {
     const expected = JSON.parse(readFileSync(join(__dirname, '../../../package.json'), 'utf8')).version;
 
     expect(await invoke('version', '{}')).toBe(expected);
+  });
+
+  /** Go embeds its own committed copy; the script keeps it equal to the C# one. */
+  it('writes the same bundle for C# and for Go', async () => {
+    const csharpDir = join(outDir, 'csharp');
+    const goDir = join(outDir, 'go');
+    const written = await writeServerRuntimes({ csharpDir, goDir });
+
+    expect(written).toEqual([join(csharpDir, 'blok-server-runtime.js'), join(goDir, 'blok-server-runtime.js')]);
+    expect(readFileSync(written[1]).equals(readFileSync(written[0]))).toBe(true);
+    expect(readdirSync(goDir)).toEqual(['blok-server-runtime.js']);
   });
 
   it('keeps the previous bundle available while rebuilding', async () => {

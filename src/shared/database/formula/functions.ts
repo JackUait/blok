@@ -88,10 +88,13 @@ const math = (fn: (...xs: number[]) => number, arity = 1): FunctionDef => ({
   run: (args) => num(fn(...args.map(n))),
 });
 
-/** A RegExp, or null when the pattern is invalid. */
-export const compileRegex = (pattern: string, flags: string): RegExp | null => {
+/**
+ * A RegExp, or null when the pattern is invalid. Flags stay literal so the
+ * server bundle law can prove no sticky regex reaches goja.
+ */
+export const compileRegex = (pattern: string, flags: '' | 'g'): RegExp | null => {
   try {
-    return new RegExp(pattern, flags);
+    return flags === 'g' ? new RegExp(pattern, 'g') : new RegExp(pattern, '');
   } catch {
     return null;
   }
@@ -101,7 +104,7 @@ export const compileRegex = (pattern: string, flags: string): RegExp | null => {
  * Null for an invalid pattern. A pattern that could backtrack without bound,
  * or past the evaluation's regex budget on `input`, hits a limit.
  */
-const regex = (pattern: string, flags: string, input: string, ctx: RunContext): RegExp | null => {
+const regex = (pattern: string, flags: '' | 'g', input: string, ctx: RunContext): RegExp | null => {
   const re = compileRegex(pattern, flags);
   const shape = re === null ? null : patternShape(pattern);
 
@@ -124,7 +127,7 @@ const replacedLength = (input: string, re: RegExp, replacement: string): number 
   return matches.reduce((total, match) => total + replacement.length + dollars * copy(match), input.length);
 };
 
-const replaceText = (x: FormulaValue, pattern: FormulaValue, replacement: FormulaValue, flags: string, ctx: RunContext): FormulaValue => {
+const replaceText = (x: FormulaValue, pattern: FormulaValue, replacement: FormulaValue, flags: '' | 'g', ctx: RunContext): FormulaValue => {
   const input = s(x);
   const re = regex(s(pattern), flags, input, ctx);
 

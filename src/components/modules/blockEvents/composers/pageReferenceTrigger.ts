@@ -1,7 +1,6 @@
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
-import { PagePicker, type PagePickerNewPage } from '../../../../tools/page/page-picker';
+import type { PagePicker, PagePickerNewPage } from '../../../../tools/page/page-picker';
 import { createdId } from '../../../../tools/page/page-values';
-import { searchVisiblePages } from '../../../../tools/page/search-pages';
 import type { PageConfig, PageSearchResult } from '../../../../tools/page/types';
 import type { Block } from '../../../block';
 import { Dom } from '../../../dom';
@@ -11,6 +10,9 @@ import { isInsideKeyboardOwner } from '../utils/keyboard';
 import { isTextLikeBlock } from '../utils/text-like-block';
 import { BlockEventComposer } from './__base';
 import { paintMentionQuery } from './mention-query-highlight';
+import { loadPagePickerKit } from './load-page-picker-kit';
+import type * as PagePickerKit from './page-picker-kit';
+import { logLabeled } from '../../../utils/logger';
 
 interface ActiveQuery {
   block: Block;
@@ -51,6 +53,7 @@ const textPosition = (input: HTMLElement, offset: number): { node: Text; offset:
 
 export class PageReferenceTrigger extends BlockEventComposer {
   private picker: PagePicker | null = null;
+  private kit: typeof PagePickerKit | null = null;
   private active: ActiveQuery | null = null;
   private searchToken = 0;
   private resultGeneration = 0;
@@ -105,11 +108,17 @@ export class PageReferenceTrigger extends BlockEventComposer {
       return false;
     }
 
+    const kit = this.kit;
+
+    if (kit === null) {
+      return this.loadKitThenRetry(event);
+    }
+
     const active = this.active;
 
     if (!this.opened || active === null || active.input !== input || active.start !== query.start) {
       this.close();
-      const picker = new PagePicker(
+      const picker = new kit.PagePicker(
         this.Blok.I18n.t('toolNames.page'),
         this.Blok.I18n.t('tools.page.unresolved'),
         this.Blok.I18n.t('tools.page.draft'),
@@ -132,7 +141,7 @@ export class PageReferenceTrigger extends BlockEventComposer {
 
     this.picker?.startSearch(query.query);
     try {
-      const visible = await searchVisiblePages(page, query.query);
+      const visible = await kit.searchVisiblePages(page, query.query);
 
       if (token !== this.searchToken || !this.opened) {
         return false;
@@ -148,6 +157,28 @@ export class PageReferenceTrigger extends BlockEventComposer {
 
       return false;
     }
+  }
+
+  /**
+   * Loads the picker code, then reads the "@query" again from the page: the
+   * user may have typed on, deleted the "@" or moved the caret meanwhile.
+   * Only the newest input runs again; a close or a later input makes this
+   * one stale.
+   */
+  private async loadKitThenRetry(event: InputEvent): Promise<boolean> {
+    const token = ++this.searchToken;
+
+    try {
+      this.kit = await loadPagePickerKit();
+    } catch (error: unknown) {
+      if (token === this.searchToken) {
+        logLabeled('The page picker failed to load', 'error', error);
+      }
+
+      return false;
+    }
+
+    return token === this.searchToken ? this.handleInput(event) : false;
   }
 
   public handleKeydown(event: KeyboardEvent): boolean {
@@ -281,6 +312,12 @@ export class PageReferenceTrigger extends BlockEventComposer {
       return;
     }
 
+    const kit = this.kit;
+
+    if (kit === null) {
+      return;
+    }
+
     const token = { value: 0 };
 
     // The field takes focus; leaving the step puts the caret back after "@query".
@@ -289,7 +326,7 @@ export class PageReferenceTrigger extends BlockEventComposer {
       onQuery: (query) => {
         const mine = ++token.value;
 
-        void searchVisiblePages(page, query).catch((): [] => []).then((results) => {
+        void kit.searchVisiblePages(page, query).catch((): [] => []).then((results) => {
           if (mine === token.value && this.picker === picker) {
             picker.setResults(results);
           }

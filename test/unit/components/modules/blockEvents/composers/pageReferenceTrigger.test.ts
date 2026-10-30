@@ -353,6 +353,9 @@ describe('PageReferenceTrigger', () => {
     const { block, search, trigger } = setup('@ro');
 
     current = trigger;
+    // The picker code loads on the first "@"; load it so both searches below really run.
+    await trigger.handleInput(inputEvent(block.currentInput as HTMLElement));
+    search.mockClear();
     let finishFirst: ((results: readonly PageSearchResult[]) => void) | undefined;
     const firstResults = new Promise<readonly PageSearchResult[]>((resolve) => {
       finishFirst = resolve;
@@ -523,7 +526,8 @@ describe('PageReferenceTrigger — Notion "@" menu', () => {
     }));
     const pending = current?.handleInput(inputEvent(block.currentInput as HTMLElement));
 
-    expect(search).toHaveBeenCalledWith('');
+    // The picker code loads on the first "@".
+    await vi.waitFor(() => expect(search).toHaveBeenCalledWith(''));
     expect(current?.opened).toBe(true);
     expect(option('page-picker-spinner')).not.toBeNull();
     expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(2);

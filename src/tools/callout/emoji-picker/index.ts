@@ -3,6 +3,7 @@
 import { loadEmojiData, loadEmojiGrid, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
 import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search-ranked';
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
+import { prefetchEmojiPickerData } from '../../../components/utils/emoji/emoji-prefetch';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { DATA_ATTR } from '../../../components/constants';
 import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
@@ -134,26 +135,7 @@ function saveSkinTone(index: number): void {
 /** Dice SVG for the random button. */
 const ICON_DICE = IconEmojiDice;
 
-/**
- * Warm the caches the picker blocks on when it opens.
- *
- * The emoji dataset is two lazy chunks: the grid (~99KB, ~23KB brotli) and the
- * search keywords (~71KB, ~15KB brotli). Fetching them at click time is nearly
- * the whole of a slow first open: on a throttled 4G profile a cold open
- * measured ~500ms, versus ~50ms once this had run. The
- * loaders are module-cached, so calling this on hover/focus of the trigger
- * moves the transfer off the open path — and repeat calls are free.
- *
- * Fire-and-forget: a warm-up that fails must stay silent and let `open()` retry.
- * @param locale - active editor locale, whose emoji annotations are warmed too
- */
-export function prefetchEmojiPickerData(locale: string): void {
-  void loadEmojiData().catch(() => undefined);
-
-  if (locale !== 'en') {
-    void loadEmojiLocale(locale).catch(() => undefined);
-  }
-}
+export { prefetchEmojiPickerData };
 
 /**
  * Public warm-up for hosts, exported from `@bloklabs/core/tools`. Signature is

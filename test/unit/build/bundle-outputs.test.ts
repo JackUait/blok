@@ -502,6 +502,8 @@ describe('opt-in subsystems load behind import()', () => {
       fingerprints: ['html.insert runs only in the editor.', 'The insert plan has no created block.'],
       entries: ['blok.mjs', 'full.mjs'],
     },
+    // full.mjs ships the Callout tool, which imports the picker itself.
+    'the emoji picker': { fingerprints: ['EmojiPicker: failed to build required elements'], entries: ['blok.mjs'] },
   }
 
   /** Files an entry loads at import time, and the ones its first-level import() calls load. */

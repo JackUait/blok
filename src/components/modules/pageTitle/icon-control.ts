@@ -1,4 +1,5 @@
-import { EmojiPicker } from '../../../tools/callout/emoji-picker';
+// Type only: the picker loads on first open, so the bare editor bundle does not carry it.
+import type { EmojiPicker } from '../../../tools/callout/emoji-picker';
 import { IconEmojiSmile } from '../../icons';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { loadEmojiGrid } from '../../utils/emoji/emoji-data';
@@ -13,6 +14,18 @@ export interface IconControlHost {
   picker(): { i18n: { t(key: string): string }; locale: string };
 }
 
+const pickerLoad: { pending: Promise<typeof EmojiPicker> | null } = { pending: null };
+
+/** One shared load; a failed one is dropped so the next click tries again. */
+const loadPicker = (): Promise<typeof EmojiPicker> => {
+  pickerLoad.pending ??= import('../../../tools/callout/emoji-picker').then(({ EmojiPicker: Picker }) => Picker, (error: unknown) => {
+    pickerLoad.pending = null;
+    throw error;
+  });
+
+  return pickerLoad.pending;
+};
+
 const randomEmoji = async (): Promise<string> => {
   const emojis = await loadEmojiGrid();
   const emoji = emojis[Math.floor(Math.random() * emojis.length)];
@@ -25,10 +38,11 @@ const randomEmoji = async (): Promise<string> => {
 };
 
 export const createIconControl = (row: HTMLElement, host: IconControlHost): { redraw(): void; destroy(): void } => {
-  const slot: { picker: EmojiPicker | null; locale: string | null; watch: MutationObserver | null } = {
+  const slot: { picker: EmojiPicker | null; locale: string | null; watch: MutationObserver | null; destroyed: boolean } = {
     picker: null,
     locale: null,
     watch: null,
+    destroyed: false,
   };
 
   // The open picker is anchored to the button and gives focus back to it, so a
@@ -36,11 +50,21 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
   const shown: { kind: 'add' | 'icon' | null; button: HTMLButtonElement | null } = { kind: null, button: null };
 
   const openPicker = (anchor: HTMLElement): void => {
+    // A failed chunk opens nothing; the next click tries again.
+    loadPicker().then((Picker) => {
+      // Destroy or read-only can land while the code loads.
+      if (!slot.destroyed && !host.isReadOnly()) {
+        showPicker(Picker, anchor);
+      }
+    }, () => undefined);
+  };
+
+  const showPicker = (Picker: typeof EmojiPicker, anchor: HTMLElement): void => {
     const { i18n, locale } = host.picker();
 
     if (slot.picker === null || slot.locale !== locale) {
       slot.picker?.getElement().remove();
-      slot.picker = new EmojiPicker({
+      slot.picker = new Picker({
         onSelect: (native) => host.setIcon({ type: 'emoji', value: native }),
         onRemove: () => host.setIcon(null),
         i18n,
@@ -167,10 +191,13 @@ export const createIconControl = (row: HTMLElement, host: IconControlHost): { re
   };
 
   redraw();
+  // Loaded now, like the emoji grid, so the first open does not wait for it.
+  loadPicker().catch(() => undefined);
 
   return {
     redraw,
     destroy: (): void => {
+      slot.destroyed = true;
       slot.watch?.disconnect();
       slot.picker?.close();
       slot.picker?.getElement().remove();

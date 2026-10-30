@@ -8,7 +8,9 @@ import { resolveEmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span
 import { ScrollLocker } from '../../../utils/scroll-locker';
 import { isTextLikeBlock } from '../utils/text-like-block';
 
-import { EmojiPicker, prefetchEmojiPickerData } from '../../../../tools/callout/emoji-picker';
+import { prefetchEmojiPickerData } from '../../../utils/emoji/emoji-prefetch';
+// Type only: the picker loads with the first menu, so the bare editor bundle does not carry it.
+import type { EmojiPicker } from '../../../../tools/callout/emoji-picker';
 
 import { BlockEventComposer } from './__base';
 
@@ -133,6 +135,19 @@ function rectAtOffset(container: HTMLElement, offset: number): DOMRect | undefin
 
   return range.getBoundingClientRect();
 }
+
+const pickerLoad: { pending: Promise<typeof EmojiPicker | null> | null } = { pending: null };
+
+/** The picker class, or null when its chunk fails to load. One shared load; a failed one is dropped so the next ":" tries again. */
+const loadPicker = (): Promise<typeof EmojiPicker | null> => {
+  pickerLoad.pending ??= import('../../../../tools/callout/emoji-picker').then(({ EmojiPicker: Picker }) => Picker, () => {
+    pickerLoad.pending = null;
+
+    return null;
+  });
+
+  return pickerLoad.pending;
+};
 
 /**
  * Detects a ":query" span at the caret in a text-like block and opens a
@@ -310,10 +325,16 @@ export class EmojiTrigger extends BlockEventComposer {
       prefetchEmojiPickerData(this.Blok.I18n.getLocale());
     }
 
-    const emojis = await loadEmojiData();
+    const [emojis, Picker] = await Promise.all([loadEmojiData(), loadPicker()]);
 
     if (token !== this.renderToken) {
       return this.opened;
+    }
+
+    if (Picker === null) {
+      this.close();
+
+      return false;
     }
 
     this.allEmojis = emojis;
@@ -326,7 +347,7 @@ export class EmojiTrigger extends BlockEventComposer {
       return false;
     }
 
-    await this.renderMenu(input, span, token);
+    await this.renderMenu(input, span, token, Picker);
 
     if (token !== this.renderToken) {
       return this.opened;
@@ -786,7 +807,7 @@ export class EmojiTrigger extends BlockEventComposer {
    * @param span - the resolved ":query" span
    * @param token - this call's render generation, from handleInput's `renderToken` claim
    */
-  private async renderMenu(input: HTMLElement, span: EmojiTriggerSpan, token: number): Promise<void> {
+  private async renderMenu(input: HTMLElement, span: EmojiTriggerSpan, token: number, Picker: typeof EmojiPicker): Promise<void> {
     const isFreshTrigger = !this.opened || span.start !== this.activeSpanStart;
 
     if (isFreshTrigger) {
@@ -800,7 +821,7 @@ export class EmojiTrigger extends BlockEventComposer {
       return;
     }
 
-    const picker = this.ensurePicker();
+    const picker = this.ensurePicker(Picker);
 
     if (isFreshTrigger) {
       if (this.pendingOpen === null) {
@@ -842,12 +863,12 @@ export class EmojiTrigger extends BlockEventComposer {
   }
 
   /** Builds the picker once and reuses it, mirroring Callout's own one-picker-per-tool lifecycle. */
-  private ensurePicker(): EmojiPicker {
+  private ensurePicker(Picker: typeof EmojiPicker): EmojiPicker {
     if (this.picker !== null) {
       return this.picker;
     }
 
-    const picker = new EmojiPicker({
+    const picker = new Picker({
       // The picker resolves the skin tone itself (getSkinnedNative) before
       // calling back, so `native` here is already final — insertNative(),
       // not commit(), which would apply the tone a second time.

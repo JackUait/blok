@@ -88,10 +88,10 @@ describe('createIconControl', () => {
     expect(add?.textContent).toContain('Add icon');
     add?.click();
     await vi.waitFor(() => expect(host.setIcon).toHaveBeenCalledWith({ type: 'emoji', value: '🚀' }));
-    expect(open).toHaveBeenCalled();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
   });
 
-  it('icon set: shows the emoji; click opens the picker without changing it', () => {
+  it('icon set: shows the emoji; click opens the picker without changing it', async () => {
     const { row, host } = setup({ type: 'emoji', value: '🌿' });
     const button = row.querySelector<HTMLButtonElement>(`[${DATA_ATTR.pageIcon}]`);
 
@@ -99,14 +99,15 @@ describe('createIconControl', () => {
     expect(button?.getAttribute('aria-label')).toBe('Change icon');
     button?.click();
 
-    expect(open).toHaveBeenCalled();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
     expect(host.setIcon).not.toHaveBeenCalled();
   });
 
-  it('picker select and remove write the icon', () => {
+  it('picker select and remove write the icon', async () => {
     const { row, host } = setup({ type: 'emoji', value: '🌿' });
 
     row.querySelector<HTMLButtonElement>(`[${DATA_ATTR.pageIcon}]`)?.click();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
     lastOptions?.onSelect('🔥');
     lastOptions?.onRemove();
 
@@ -139,11 +140,12 @@ describe('createIconControl', () => {
     expect(row.querySelector('img')).toBeNull();
   });
 
-  it('a pick while the picker is open keeps the same anchor button', () => {
+  it('a pick while the picker is open keeps the same anchor button', async () => {
     const { row } = setup({ type: 'emoji', value: '🌿' });
     const button = iconButton(row);
 
     button?.click();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
     lastOptions?.onSelect('🔥');
 
     expect(button?.isConnected).toBe(true);
@@ -167,21 +169,23 @@ describe('createIconControl', () => {
     expect(anchor?.textContent).toBe('🔥');
   });
 
-  it('remove while open closes the picker and moves focus to Add icon', () => {
+  it('remove while open closes the picker and moves focus to Add icon', async () => {
     const { row } = setup({ type: 'emoji', value: '🌿' });
 
     iconButton(row)?.focus();
     iconButton(row)?.click();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
     lastOptions?.onRemove();
 
     expect(close).toHaveBeenCalled();
     expect(row.querySelector(`[${DATA_ATTR.pageAddIcon}]`)).toHaveFocus();
   });
 
-  it('turning read-only closes an open picker', () => {
+  it('turning read-only closes an open picker', async () => {
     const { row, state, redraw } = setup({ type: 'emoji', value: '🌿' });
 
     iconButton(row)?.click();
+    await vi.waitFor(() => expect(open).toHaveBeenCalled());
     state.readOnly = true;
     redraw();
 

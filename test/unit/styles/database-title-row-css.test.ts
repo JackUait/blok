@@ -124,6 +124,29 @@ describe('a narrow view bar folds like Notion (notion-spec-2 §26.1)', () => {
     expect(rule('[data-blok-database-view-bar][data-blok-database-fold-new] > [data-blok-database-view-toolbar] > [data-blok-database-new]')).toMatch(/display: none/);
   });
 
+  // notion-spec-2 §26.1 (`tb-1000-closed.txt`): "4 more…" is 76.7x32, as tall as a tab.
+  it('"N more…" in the view bar is as tall as a tab', () => {
+    const body = rule('[data-blok-database-view-bar] [data-blok-database-tab-more]');
+
+    expect(body).toMatch(/height: 32px/);
+    expect(body).toMatch(/align-items: center/);
+  });
+
+  // §26.1 (`tb-1000-closed.txt`): Filter 652.7, Sort 680.7: 28x28 icons back to back, New 6px after Settings.
+  it('puts the toolbar icons back to back and New 6px after them', () => {
+    expect(rule('[data-blok-database-view-toolbar]')).toMatch(/gap: 0/);
+    expect(rule('[data-blok-database-new]')).toMatch(/margin-inline-start: var\(--blok-space-1-5\)/);
+  });
+
+  // `20-tb-800-closed.png` (pixels): "Table ⌄" is 101.4 wide; its chevron's ink is 9x5, 12px from the end.
+  it('draws the "Table ⌄" chevron at 20px with its empty edges pulled in', () => {
+    const chevron = rule('[data-blok-database-tab-compact-chevron] svg');
+
+    expect(chevron).toMatch(/width: 20px/);
+    expect(chevron).toMatch(/height: 20px/);
+    expect(rule('[data-blok-database-tab-compact-chevron]')).toMatch(/margin-inline: calc\(-1 \* var\(--blok-space-0-75\)\) calc\(-1 \* var\(--blok-space-1-75\)\)/);
+  });
+
   it('"Table ⌄" wears the current tab\'s fill and ink', () => {
     const body = rule('[data-blok-database-tab-compact]');
 

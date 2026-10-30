@@ -114,6 +114,24 @@ describe('Go runtime bundle', () => {
     expect(readFileSync(path.join(ROOT, 'scripts/build-all.mjs'), 'utf8')).toContain('node scripts/build-server-runtime.mjs');
   });
 
+  // Preflight runs this law, so the Go copy must already carry the bumped version.
+  it('is rebuilt by the release between the version bump and preflight', () => {
+    const release = readFileSync(path.join(ROOT, 'scripts/release.mjs'), 'utf8');
+    const bump = release.indexOf('npm version ${version}');
+    const rebuild = release.indexOf("run('node scripts/build-server-runtime.mjs')");
+    const preflight = release.indexOf("run('yarn release:preflight')");
+
+    expect(bump).toBeGreaterThan(-1);
+    expect(rebuild).toBeGreaterThan(bump);
+    expect(preflight).toBeGreaterThan(rebuild);
+  });
+
+  it('is restored by a dry run', () => {
+    const release = readFileSync(path.join(ROOT, 'scripts/release.mjs'), 'utf8');
+
+    expect(release).toMatch(/git checkout -- [^\n]*packages\/server\/go\/internal\/jsruntime\/blok-server-runtime\.js/);
+  });
+
   it('reports the package version under node:vm', async () => {
     const invoke = loadInvoke(readFileSync(GO_BUNDLE, 'utf8'));
     const { version } = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { version: string };

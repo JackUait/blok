@@ -315,6 +315,9 @@ if (isDirectRun) {
   // release commit fails CI's `yarn install --immutable` with YN0028.
   run('yarn install --mode=update-lockfile');
 
+  // The Go copy of the runtime is tracked and carries VERSION; preflight checks it.
+  run('node scripts/build-server-runtime.mjs');
+
   if (!skipPreflight) {
     run('yarn release:preflight');
   }
@@ -324,7 +327,6 @@ if (isDirectRun) {
   run('node scripts/build-all.mjs --with-cli');
 
   if (!isDryRun) {
-    // build-all rewrote the Go copy of the runtime with the new VERSION.
     run(`git add package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js ${WORKSPACE_MANIFESTS.join(' ')}`);
     run(`git commit -m "chore(release): ${version}"`);
 
@@ -418,7 +420,7 @@ if (isDirectRun) {
   cleanupNpmrc = false; // the family loop always removes .npmrc in restoreName
 
   if (isDryRun) {
-    run('git checkout -- package.json yarn.lock ' + WORKSPACE_MANIFESTS.join(' '));
+    run('git checkout -- package.json yarn.lock packages/server/go/internal/jsruntime/blok-server-runtime.js ' + WORKSPACE_MANIFESTS.join(' '));
     console.log(`\nDry run complete for ${version} — nothing was published.`);
     process.exit(0);
   }

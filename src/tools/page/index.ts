@@ -55,22 +55,16 @@ import { outputBlocksToHtml } from '../../shared/rich-text/block-data';
 import { declaredRichTextFields } from '../../components/tools/base';
 import { richTextFieldsFor } from '../../shared/rich-text/fields';
 import type { PageConfig, PageData, PageIcon, PageInfo } from './types';
+import { createdId, readIcon } from './page-values';
 import { overrideStatic } from '../../components/utils/override-static';
 
 const isOutputBlock = (value: unknown): value is OutputBlockData =>
   typeof value === 'object' && value !== null && typeof Reflect.get(value, 'type') === 'string'
   && typeof Reflect.get(value, 'data') === 'object' && Reflect.get(value, 'data') !== null;
 
-export type { PageCache, PageConfig, PageCreateResult, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
+export type { PageCache, PageConfig, PageCreateInit, PageCreateResult, PageData, PageIcon, PageInfo, PageSearchResult } from './types';
 
 type PageState = 'creating' | 'unresolved' | 'normal' | 'untitled' | 'missing' | 'no-access';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-/** The id `create` answered with; anything else keeps the id Blok passed. */
-const createdId = (answer: unknown): string | undefined =>
-  isRecord(answer) && typeof answer.pageId === 'string' && answer.pageId !== '' ? answer.pageId : undefined;
 
 /**
  * Ids `prepareInsert` made pages for. The block the toolbox then inserts
@@ -107,20 +101,6 @@ const databasePageDocument = (): OutputData => ({
 
 const isRenameShortcut = (event: KeyboardEvent): boolean =>
   event.code === 'KeyR' && event.shiftKey && !event.altKey && (event.metaKey || event.ctrlKey);
-
-const readIcon = (value: unknown): PageIcon | undefined => {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  if (value.type === 'emoji' && typeof value.value === 'string' && value.value !== '') {
-    return { type: 'emoji', value: value.value };
-  }
-  if (value.type === 'image' && typeof value.url === 'string' && value.url !== '') {
-    return { type: 'image', url: value.url };
-  }
-
-  return undefined;
-};
 
 /** A page block points to a host-owned page. Only its ID is saved. */
 export class PageTool implements BlockTool {

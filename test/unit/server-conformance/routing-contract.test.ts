@@ -221,6 +221,47 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     });
   });
 
+  // C# maps the local file route "/{fileName}" before /health. A literal
+  // segment still beats a parameter, and the file route (order 0) beats the
+  // /upload 405 fallback (order 1).
+  describe.skipIf(noServer)('a host that serves local files at the root', () => {
+    let server: RunningServer;
+    let storageDirectory: string;
+
+    beforeAll(async () => {
+      storageDirectory = await mkdtemp(join(tmpdir(), 'blok-routing-files-'));
+      server = await startServer({
+        args: [
+          '--listen', '127.0.0.1:0',
+          '--auth', 'none',
+          '--storage-dir', storageDirectory,
+          '--public-url', '/',
+          '--rate-limit', '0',
+          '--no-unfurl',
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await server?.stop();
+      await rm(storageDirectory, { recursive: true, force: true });
+    });
+
+    it.each(['/health', '/HEALTH/'])('matches GET %s to /health, not the file route', async (path) => {
+      const response = await rawRequest(server.baseUrl, 'GET', path);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toBe(HEALTH_BODY);
+    });
+
+    it('answers GET /upload from the file route, not with 405', async () => {
+      const response = await rawRequest(server.baseUrl, 'GET', '/upload');
+
+      expectNotFound(response);
+      expect(response.body).toBe('404 page not found\n');
+    });
+  });
+
   describe.skipIf(notPortedToGo)('a host with unfurl and collab routes', () => {
     let server: RunningServer;
     let endpoint: FixtureDocEndpoint;

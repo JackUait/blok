@@ -161,3 +161,29 @@ func TestRejectsBadPatterns(t *testing.T) {
 		}()
 	}
 }
+
+// The C# host maps the local file route "/{fileName}" before /health. Kestrel
+// still sends /health to health, and sends GET /upload to the file route rather
+// than to /upload's 405 fallback, which sits one order later.
+func TestALiteralBeatsAParameterInTheSamePass(t *testing.T) {
+	router := &Router{}
+	router.Handle("/{fileName}", []string{"GET", "HEAD"}, named("file"))
+	router.Handle("/health", []string{"GET", "HEAD"}, named("health"))
+	router.Handle("/health", nil, MethodNotAllowed("GET, HEAD"))
+	router.Handle("/upload", []string{"POST"}, named("upload"))
+	router.Handle("/upload", nil, MethodNotAllowed("OPTIONS, POST"))
+	cases := []struct{ method, target, body string }{
+		{"GET", "/health", "health|"},
+		{"GET", "/HEALTH/", "health|"},
+		{"HEAD", "/health", "health|"},
+		{"GET", "/upload", "file|"},
+		{"POST", "/upload", "upload|"},
+		{"GET", "/other", "file|"},
+	}
+	for _, c := range cases {
+		got := serve(t, router, c.method, c.target)
+		if got.status != 200 || got.body != c.body {
+			t.Errorf("%s %s: %d %q, want 200 %q", c.method, c.target, got.status, got.body, c.body)
+		}
+	}
+}

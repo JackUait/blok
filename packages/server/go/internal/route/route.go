@@ -8,10 +8,14 @@ import (
 	"strings"
 )
 
-// Router matches a request against its routes in two passes: routes that name
-// the request method first, then routes that take any method. Within a pass
-// the first registered match wins. A request no route matches gets the 404
-// catch-all.
+// Router picks a route like ASP.NET endpoint routing does with the C# host's
+// orders. Routes that name methods are order 0 and routes that take any method
+// (the 405 fallbacks, WithOrder(1) in C#) are order 1, so they are tried in two
+// passes and a match in the first pass always wins. Within a pass the route
+// with a literal at the first segment where the matches differ wins, so
+// "/health" beats "/{fileName}" whichever was registered first. Among routes
+// with the same shape the first registered wins. A request no route matches
+// gets the 404 catch-all.
 //
 // Paths match like Kestrel: literal segments compare case-insensitively
 // (ASCII only), one trailing slash is ignored, dot segments are removed
@@ -62,17 +66,23 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	parts, ok := pathSegments(req.URL.EscapedPath())
 	if ok {
 		for _, anyMethod := range []bool{false, true} {
-			for _, e := range r.routes {
+			var best *entry
+			var bestValues map[string]string
+			for i := range r.routes {
+				e := &r.routes[i]
 				if (e.methods == nil) != anyMethod || !e.allows(req.Method) {
 					continue
 				}
-				if values, matched := e.match(parts); matched {
-					for name, value := range values {
-						req.SetPathValue(name, value)
-					}
-					e.handler.ServeHTTP(w, req)
-					return
+				if values, matched := e.match(parts); matched && (best == nil || e.moreLiteralThan(best)) {
+					best, bestValues = e, values
 				}
+			}
+			if best != nil {
+				for name, value := range bestValues {
+					req.SetPathValue(name, value)
+				}
+				best.handler.ServeHTTP(w, req)
+				return
 			}
 		}
 	}
@@ -86,6 +96,18 @@ func (e entry) allows(method string) bool {
 	for _, m := range e.methods {
 		if asciiEqualFold(m, method) {
 			return true
+		}
+	}
+	return false
+}
+
+// moreLiteralThan reports whether e has a literal at the first segment where
+// e and other differ in kind. Both matched the same path, so they have the
+// same number of segments.
+func (e *entry) moreLiteralThan(other *entry) bool {
+	for i, s := range e.segments {
+		if isParam, otherIsParam := s.param != "", other.segments[i].param != ""; isParam != otherIsParam {
+			return otherIsParam
 		}
 	}
 	return false

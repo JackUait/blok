@@ -64,7 +64,7 @@ DONE = an oracle both languages run, or a Go hand-port of the C# test where a fi
 | R10, R11, R12 | DONE | `TestReportsALoadThatOutgrowsTheBudget`, `…RunsPastTheTimeout`, `…AnyOtherLoadFailure` |
 | R14, R15, R16, R17, R18 | DONE | `TestAPerCallTimeout*`, `TestCancellationEndsTheWaitForAnEngine`, `TestTimesOutInsideTheJobQueue`, `TestReturnsTheCallersCancellationUnwrapped`, `TestKeepsServingAfterATimeoutAndReplacesTheEngine` |
 | R20, R21 | DONE | `TestClassifiesJavaScriptErrorsAndKeepsTheEngine`, `TestClassifiesTheBundlesOwnErrorsByName`, `ops.json` error cases (C# checks the reason too) |
-| R22 | DONE in code, no test | A Go panic inside goja is recovered as `Unknown` and the engine replaced. No known input makes goja panic. |
+| R22 | DEFERRED (no oracle) | The code recovers a Go panic inside goja as `Unknown` and replaces the engine, but no known input makes goja panic, so nothing tests it. |
 | R23 | DONE | `TestKeepsTheSlotWhenARebuildFails` |
 | R24 | N/A | A cap-N channel holding exactly the taken engines cannot refuse a send (comment in `pool.go`) |
 | R25 | DONE, differs (U4) | `TestSurvivesRunawayRecursionAndKeepsTheEngine`, `TestConvertsADeeplyNestedOutline`. goja's overflow is not catchable in JS. |
@@ -74,19 +74,19 @@ DONE = an oracle both languages run, or a Go hand-port of the C# test where a fi
 | D5 | DONE | `looks-like-a-document.json` |
 | D7 | DEFERRED | agent ledger (`blokagent`) |
 | D8, D9 | DONE | C# xunit (existing) + Go `TestAsksTheBundleForItsVersionOnlyOnce`, `TestRefusesToHandOutAVersionTheBundleDoesNotHaveAndAsksAgain`, `TestFetchesTheSchemaOnce` |
-| D10-D24, D26-D36 | DONE | `host.json` (84 cases); D27 also `TestReportsTheCallersOwnCancellationAsCancellation` |
+| D10-D24, D26-D36 | DONE | `host.json` (84 cases); D27 also `TestReportsTheCallersOwnCancellationAsCancellation`. A lone surrogate in a bare document is a recorded divergence (see decisions), pinned by `TestReadsALoneSurrogateInABareDocumentAsAReplacementCharacter` |
 | D25 | N/A | Go has no default interface members; `*Converter` is a concrete struct, so there is nothing to refuse |
 | D37 | DONE | `host.json` page cases (`EmojiIcon`, `ImageIcon`, `Title *string`, `NoAccess`) |
 | D38 | DECIDED | Go strings cannot be nil. A nil map reads as an empty map (Go convention). |
 | H1 | DONE | `New` validates before loading (`TestRefusesLimitsBelowTheFloorsBeforeLoading`) |
-| H3 | DONE (API) | `(*Converter).WarmUp(ctx)` converts C#'s 220-block article. Starting it in a goroutine is host wiring. |
+| H3 | DONE | `Options.WarmUp`: `New` starts the warm-up (C#'s 220-block article) in a goroutine, never waits, ignores failure. `TestWarmsUpOffTheStartupPathWithALongArticle`, `TestIgnoresAWarmUpThatFails`, `TestWarmsUpOnlyWhenAsked` |
 | H2, H4 | DEFERRED | host wiring in `cmd/blok-server` (http-host lane) |
 | B1, B2, B3, B4 | DONE | `server-go-runtime-bundle-law.test.ts` (fresh build, C# copy, release rebuild) |
 | B5-B15, B17-B21, B23, B24 | DONE | `ops.json` |
 | B16 | DONE (fixture), agent ledger owns it | `ops.json` `manifest` (sha256) |
 | B22 | DEFERRED | agent ledger |
 
-Rows: 93. DONE or N/A or decided: 87. Deferred to other ledgers: 6 (D7, H2, H4, B22, and B16/B21 are also listed there).
+Rows: 93. DONE, N/A or decided: 88. Deferred: 5 (D7, H2, H4, B22 to other ledgers; R22 for lack of an oracle).
 
 ## Decisions (continued)
 
@@ -124,3 +124,27 @@ xunit rounds to whole seconds. `big.marked.pageIndex` ran 20 s in Jint here, twi
 - Optional: replace goja's lossy `JSON.parse` so lone-surrogate escapes survive (would need a Go `JSON.parse` returning UTF-16 strings; not started).
 - Optional: a `go generate` directive for the bundle (the law already fails a stale copy).
 - R22 has no test (no known way to make goja panic).
+
+## BREAKING (C# fixes in 42107cac, for the landing commit and release notes)
+
+`LooksLikeADocument` and the envelope ops shipped in v1.16.1 (`git log v1.16.1..HEAD` on these files shows only this lane's commit). The commit subject lacks `BREAKING`; history was not rewritten, so the landing must label it:
+
+- `BlokDocuments.LooksLikeADocument`: OLD threw `ArgumentException` on a repeated key at the root and `InvalidOperationException` on a lone-surrogate key, and returned `true` for a key repeated inside a block. NEW returns `false` for all three. Migration: none needed to stop the crash; a caller relying on `true` for a nested repeat must de-duplicate keys. `ValidateAsync` follows it.
+  - The nested part is avoidable: refusing only root repeats and lone-surrogate keys keeps the old `true`. It was kept because Jint with the bundle loaded misreads nested repeats too (measured: `{"type":"paragraph","type":"header"}` renders `<p>a</p>` in Jint and `<h2>b</h2>` in node, `scratchpad/dr2/nested.fsx`).
+- Envelope ops (`ToPlainText*`, `ExtractTexts`, `InjectTexts`, `GetPageIndex`, `RemapPageDocument`, `*WithPages`, `*WithTitle`): OLD threw a raw `InvalidOperationException` for a document holding a lone-surrogate escape. NEW throws `BlokDocumentConversionException` with `Reason = InvalidDocument`. Migration: catch `BlokDocumentConversionException`.
+
+## Known divergence: lone surrogate in a bare document (not fixed this round)
+
+Measured with the real runtimes on `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"a\ud800b"}}]}` (`scratchpad/dr2/lonemd.fsx`):
+
+| Call | C# (Jint) | Go (goja) |
+|---|---|---|
+| `ToMarkdown` (bare) | throws raw `JsonException` (`…could not be converted to BlokMarkdownConversion. Path: $.markdown`) | `"a\ufffdb"` |
+| `ToHtml` (bare) | `<p>a` + U+D800 + `b</p>` (UTF-8 on the wire turns it into U+FFFD) | `<p>a\ufffdb</p>` |
+| `ValidateAsync`, lone-surrogate block type | `Failure = Unknown` (the answer fails to deserialize) | `UnrecognizedBlockTypes = ["\ufffd"]` |
+
+The raw `JsonException` from C# `ToMarkdownAsync` is a C# bug (the contract promises `BlokDocumentConversionException`). It is not fixed yet because the fix is a design choice that changes a shipped surface either way: refuse such documents on the bare ops too (a host parse on a path that is raw by design), or read answers with `JsJson.Parse` so the unit survives. Go cannot keep the unit in either case unless goja's `JSON.parse` is replaced. Needs a user decision.
+
+## Process note
+
+`pool.go` and `guard.go` were written before `pool_test.go`, not test-first. Compensating evidence: two mutation checks (drop `ClearInterrupt`; drop the `finished` guard), each failing a guard test, and the reuse counts in the pool tests. Everything else in this lane was test-first (C# fixes, Intl, blokdocs, warm-up, the fixtures).

@@ -38,6 +38,10 @@ type Options struct {
 	// process's live heap as of the last GC, read every millisecond, so
 	// concurrent conversions add up.
 	MemoryBudget int64
+	// WarmUp converts a long article in the background once the pool is
+	// built, so the first request does not pay for cold paths. New does not
+	// wait for it, and its failure is ignored.
+	WarmUp bool
 }
 
 // StartupError is an engine that could not load the bundle at New.
@@ -69,7 +73,11 @@ func New(options Options) (*Converter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newConverter(pool), nil
+	converter := newConverter(pool)
+	if options.WarmUp {
+		converter.warmed = converter.warmUpInBackground()
+	}
+	return converter, nil
 }
 
 func newConverter(runtime invoker) *Converter {

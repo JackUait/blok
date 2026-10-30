@@ -28,6 +28,9 @@ type Converter struct {
 	mu      sync.Mutex
 	version string
 	schema  *string
+
+	// warmed closes when the warm-up New started has finished.
+	warmed <-chan struct{}
 }
 
 func (c *Converter) invoke(ctx context.Context, op, input string) (string, error) {
@@ -385,6 +388,17 @@ func (c *Converter) importDocument(ctx context.Context, op, input string) (Impor
 func (c *Converter) WarmUp(ctx context.Context) error {
 	_, err := c.ToPlainText(ctx, warmUpDocument(), false)
 	return err
+}
+
+// warmUpInBackground never fails a start: a slow host can push the warm-up
+// past its own timeout, and that is no reason to refuse to serve.
+func (c *Converter) warmUpInBackground() <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = c.WarmUp(context.Background())
+	}()
+	return done
 }
 
 func warmUpDocument() string {

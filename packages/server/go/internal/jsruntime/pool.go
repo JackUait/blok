@@ -21,7 +21,7 @@ const (
 	// goja's live heap by up to 562 MiB (measured).
 	DefaultMemoryBudget int64 = 1 << 30
 	// MinimumMemoryBudget is C#'s floor. Loading the bundle from a compiled
-	// program grew the Go heap by 6 MiB (measured), so 8 MiB still loads.
+	// program allocated 6 MiB (measured), so 8 MiB still loads.
 	MinimumMemoryBudget int64 = 8 << 20
 	// MaxCallStackSize stops runaway recursion before it eats the heap.
 	// Measured frames per nesting level of an outline: about 3 for plain text

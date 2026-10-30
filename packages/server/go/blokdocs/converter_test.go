@@ -149,3 +149,29 @@ func isReason(err error, reason Reason) bool {
 	var conversion *ConversionError
 	return errors.As(err, &conversion) && conversion.Reason == reason
 }
+
+// goja's JSON.parse reads a lone-surrogate escape as U+FFFD, so the bare
+// operations convert such a document in Go. C# differs (measured, recorded in
+// progress-documents-runtime.md): ToMarkdown throws a raw JsonException, and
+// Validate reports Unknown for a lone-surrogate block type.
+func TestReadsALoneSurrogateInABareDocumentAsAReplacementCharacter(t *testing.T) {
+	c := newRealConverter(t)
+	ctx := context.Background()
+	const lone = `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"a\ud800b"}}]}`
+
+	md, err := c.ToMarkdown(ctx, lone)
+	if err != nil || md.Markdown != "a�b" {
+		t.Fatalf("ToMarkdown = %+v, %v", md, err)
+	}
+	html, err := c.ToHTML(ctx, lone)
+	if err != nil || html != "<p>a�b</p>" {
+		t.Fatalf("ToHTML = %q, %v", html, err)
+	}
+	v, err := c.Validate(ctx, `{"blocks":[{"type":"\udc00","data":{}}]}`)
+	if err != nil || v.Failure != nil || strings.Join(v.UnrecognizedBlockTypes, ",") != "�" {
+		t.Fatalf("Validate = %+v, %v", v, err)
+	}
+	if _, err := c.ToPlainText(ctx, lone, false); !isReason(err, InvalidDocument) {
+		t.Fatalf("an envelope operation: err = %v, want InvalidDocument", err)
+	}
+}

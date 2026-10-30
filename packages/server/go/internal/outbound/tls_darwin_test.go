@@ -67,7 +67,7 @@ func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
 		root, &middleKey.PublicKey, rootKey)
 	leaf := makeCert(t, &x509.Certificate{SerialNumber: big.NewInt(3), Subject: pkix.Name{CommonName: "aia.example"},
 		DNSNames: []string{"aia.example"}, NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour),
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		IssuingCertificateURL: []string{"http://" + issuer.Addr().String() + "/issuer.cer"}},
 		middle, &leafKey.PublicKey, middleKey)
 	issuerServer := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

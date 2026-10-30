@@ -491,4 +491,61 @@ describe('TableAddControls drag follows the live grid', () => {
     expect(rowsMany.measures).toBe(rowsFew.measures);
     expect(colsMany.measures).toBe(colsFew.measures);
   });
+
+  // One pull lands where adding one row at a time would. New rows can be taller than the rows above; an estimate from the last old row added one row too many.
+  it('adds the rows the one-at-a-time rule would when new rows are taller than the old ones', () => {
+    const existing = 30;
+    const fresh = 33;
+    // The rule before batching: one row per turn, both units read live.
+    const oneAtATime = (target: number): number => {
+      const rows = [existing, existing];
+
+      Array.from({ length: 200 }).some(() => {
+        const size = rows.reduce((total, height) => total + height, 0);
+        const last = rows.at(-1) ?? 0;
+
+        if (target - size >= last / 2) {
+          rows.push(fresh);
+
+          return false;
+        }
+        if (size - target > last / 2 && rows.length > 1) {
+          rows.pop();
+
+          return false;
+        }
+
+        return true;
+      });
+
+      return rows.length - 2;
+    };
+    const pulls = Array.from({ length: 41 }, (_, i) => existing * i / 4);
+    const results = pulls.map((pull) => {
+      const geo: Geometry = { left: 0, top: 0, colWidths: [100], rowHeights: [existing, existing], scrollLeft: 0 };
+      const built = buildGrid(geo);
+
+      wrapper?.remove();
+      wrapper = built.wrapper;
+      installGeometry(built.wrapper, built.grid, geo);
+
+      const ops = wireOps(built.grid, geo, { newRowHeight: fresh });
+      const local = mount(built.wrapper, built.grid, ops, 45);
+      const btn = button(built.wrapper, 'row');
+      const start = 300;
+
+      pointer(btn, 'pointerdown', 'row', start);
+      pointer(btn, 'pointermove', 'row', start + 6);
+      pointer(btn, 'pointermove', 'row', start + pull);
+
+      const added = geo.rowHeights.length - 2;
+
+      local.destroy();
+      vi.restoreAllMocks();
+
+      return added;
+    });
+
+    expect(results).toStrictEqual(pulls.map(pull => oneAtATime(existing * 2 + pull)));
+  });
 });

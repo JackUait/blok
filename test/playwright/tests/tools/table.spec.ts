@@ -1892,8 +1892,8 @@ test.describe('table tool', () => {
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
 
-      // Drag down by ~2.5 row heights to add 2 rows
-      const dragDistance = rowBox.height * 2.5;
+      // 2.25 rows, not 2.5: the edge snaps to the nearest whole row, and half a row is the tie that adds one more
+      const dragDistance = rowBox.height * 2.25;
 
       await page.mouse.move(startX, startY);
       await page.mouse.down();

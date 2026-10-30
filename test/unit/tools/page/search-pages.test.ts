@@ -59,6 +59,21 @@ describe('searchVisiblePages', () => {
     ]);
   });
 
+  it('shows the icon from resolve over the search hit, and keeps the hit\'s when resolve has none', async () => {
+    const page: PageConfig = {
+      search: () => Promise.resolve([
+        { pageId: 'p1', icon: { type: 'emoji', value: '📄' } },
+        { pageId: 'p2', icon: { type: 'emoji', value: '📌' } },
+      ]),
+      resolve: (pageId) => pageId === 'p1' ? { title: 'One', icon: { type: 'emoji', value: '🗺️' } } : { title: 'Two' },
+    };
+
+    await expect(searchVisiblePages(page, '')).resolves.toEqual([
+      { pageId: 'p1', title: 'One', icon: { type: 'emoji', value: '🗺️' } },
+      { pageId: 'p2', title: 'Two', icon: { type: 'emoji', value: '📌' } },
+    ]);
+  });
+
   it('finds nothing without a search hook', async () => {
     await expect(searchVisiblePages({}, 'r')).resolves.toEqual([]);
   });

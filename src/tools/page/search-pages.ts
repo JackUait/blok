@@ -2,7 +2,7 @@ import type { PageConfig, PageSearchResult } from './types';
 
 /**
  * The host's search hits the user may see. With `resolve`, a hit stays only
- * when resolve finds it and grants access, and resolve's title, path and
+ * when resolve finds it and grants access, and resolve's title, icon, path and
  * status win. "@" and "/" Link to page both list pages through this.
  */
 export const searchVisiblePages = async (page: PageConfig, query: string): Promise<PageSearchResult[]> => {
@@ -23,7 +23,7 @@ export const searchVisiblePages = async (page: PageConfig, query: string): Promi
       const info = await page.resolve?.(hit.pageId);
 
       return info !== null && info !== undefined && info.access !== 'none'
-        ? { ...hit, title: info.title, path: info.path ?? hit.path, status: info.status ?? hit.status }
+        ? { ...hit, title: info.title, icon: info.icon ?? hit.icon, path: info.path ?? hit.path, status: info.status ?? hit.status }
         : null;
     } catch {
       return null;

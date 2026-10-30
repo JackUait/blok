@@ -94,8 +94,8 @@ export class PageLink implements BlockTool {
         return;
       }
 
-      const t = (key: string): string => api.i18n.t(key);
-      const picker = new PagePicker(t('toolNames.pageLink'), t('tools.page.unresolved'), t('tools.page.draft'), t('popover.nothingFound'));
+      const t = (key: string, vars?: Record<string, string | number>): string => api.i18n.t(key, vars);
+      const picker = new PagePicker(t('toolNames.pageLink'), t('tools.page.unresolved'), t('tools.page.draft'), t('popover.nothingFound'), t);
       const search = { token: 0 };
       const onAbort = (): void => picker.close();
       const show = async (query: string): Promise<void> => {
@@ -118,6 +118,7 @@ export class PageLink implements BlockTool {
           reject(new Error('Link to page was cancelled'));
         },
       });
+      picker.startSearch('');
       void show('');
     });
   }

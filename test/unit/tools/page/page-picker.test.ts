@@ -76,6 +76,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: MockPopover,
 }));
 
+import { LightweightI18n } from '../../../../src/components/i18n/lightweight-i18n';
 import { PagePicker } from '../../../../src/tools/page/page-picker';
 
 describe('PagePicker', () => {
@@ -493,5 +494,342 @@ describe('PagePicker', () => {
     picker.close();
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('PagePicker sections', () => {
+  let anchor: HTMLElement;
+  let picker: PagePicker;
+  let onPick: ReturnType<typeof vi.fn<(pageId: string) => void>>;
+
+  const t = (key: string, vars?: Record<string, string | number>): string => {
+    const messages: Record<string, string> = {
+      'toolNames.pageLink': 'Link to page',
+      'tools.page.mentionNewSection': 'New page',
+      'tools.page.mentionNewSubPage': 'New “{query}” sub-page',
+      'tools.page.mentionNewPageIn': 'New “{query}” page in…',
+      'tools.page.mentionAddSubPage': 'Add new sub-page',
+      'tools.page.mentionAddPageIn': 'Add new page in…',
+      'tools.page.moreResults': '{count} more results',
+      'tools.page.searching': 'Searching…',
+    };
+
+    return (messages[key] ?? key).replace(/\{(\w+)\}/g, (match, name: string) => String(vars?.[name] ?? match));
+  };
+  const options = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'));
+  const press = (key: string): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { key, cancelable: true });
+
+    picker.handleKeydown(event);
+
+    return event;
+  };
+  const pages = (count: number): Array<{ pageId: string; title: string }> =>
+    Array.from({ length: count }, (_, index) => ({ pageId: `p${index + 1}`, title: `Page ${index + 1}` }));
+  const section = (name: string): HTMLElement | null =>
+    document.querySelector<HTMLElement>(`[data-blok-page-picker-section="${name}"]`);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    popovers.length = 0;
+    anchor = document.createElement('div');
+    anchor.contentEditable = 'true';
+    document.body.append(anchor);
+    onPick = vi.fn<(pageId: string) => void>();
+    picker = new PagePicker('Pages', 'Page', 'Draft', 'Nothing found', t);
+  });
+
+  afterEach(() => {
+    picker.close();
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('heads the page rows with a "Link to page" section that headers keep out of the options', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(2));
+    const header = section('link');
+
+    expect(header?.textContent).toBe('Link to page');
+    expect(header?.getAttribute('role')).toBe('presentation');
+    expect(options()).toHaveLength(2);
+  });
+
+  it('shows a spinner and two hidden skeleton rows while the first search runs', () => {
+    picker.open('', anchor, onPick);
+    picker.startSearch('');
+
+    const spinner = document.querySelector('[data-blok-testid="page-picker-spinner"]');
+    const skeletons = document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]');
+
+    expect(spinner?.getAttribute('aria-label')).toBe('Searching…');
+    expect(section('link')?.contains(spinner ?? null)).toBe(true);
+    expect(skeletons).toHaveLength(2);
+    skeletons.forEach((row) => expect(row.getAttribute('aria-hidden')).toBe('true'));
+    expect(options()).toHaveLength(0);
+    expect(popovers[0]?.nothingFound).toBe(false);
+
+    picker.setResults(pages(1));
+
+    expect(document.querySelector('[data-blok-testid="page-picker-spinner"]')).toBeNull();
+    expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(0);
+  });
+
+  it('keeps the previous rows while a later search runs, with the spinner and no skeletons', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(2));
+    picker.startSearch('pa');
+
+    expect(options()).toHaveLength(2);
+    expect(document.querySelector('[data-blok-testid="page-picker-spinner"]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(0);
+  });
+
+  it('draws each row\'s emoji, image or the page glyph, hidden from readers', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults([
+      { pageId: 'p1', title: 'Map', icon: { type: 'emoji', value: '🗺️' } },
+      { pageId: 'p2', title: 'Photo', icon: { type: 'image', url: 'https://example.com/a.png' } },
+      { pageId: 'p3', title: 'Plain' },
+      { pageId: 'p4', title: 'Bad', icon: { type: 'image', url: 'javascript:alert(1)' } },
+    ]);
+    const icons = options().map((option) => option.querySelector<HTMLElement>('[data-blok-testid="page-picker-option-icon"]'));
+
+    expect(icons.every((icon) => icon?.getAttribute('aria-hidden') === 'true')).toBe(true);
+    expect(icons[0]?.textContent).toBe('🗺️');
+    expect(icons[1]?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/a.png');
+    expect(icons[2]?.querySelector('svg')).not.toBeNull();
+    expect(icons[3]?.querySelector('img')).toBeNull();
+    expect(icons[3]?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('shows six rows, then a "more results" option that expands the list in place', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(9));
+
+    expect(options().map((option) => option.textContent)).toEqual([
+      'Page 1', 'Page 2', 'Page 3', 'Page 4', 'Page 5', 'Page 6', '3 more results',
+    ]);
+    ['End', 'Enter'].forEach(press);
+
+    expect(onPick).not.toHaveBeenCalled();
+    expect(options().map((option) => option.textContent)).toHaveLength(9);
+    // The active row is the first one the expansion revealed.
+    expect(anchor.getAttribute('aria-activedescendant')).toBe(options()[6]?.id);
+    expect(options()[6]?.textContent).toBe('Page 7');
+  });
+
+  it('expands on a click of the more-results row', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(7));
+    document.querySelector<HTMLElement>('[data-blok-testid="page-picker-more"]')?.click();
+
+    expect(options()).toHaveLength(7);
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it('collapses again when a new answer arrives', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(8));
+    document.querySelector<HTMLElement>('[data-blok-testid="page-picker-more"]')?.click();
+    picker.setResults(pages(8));
+
+    expect(options()).toHaveLength(7);
+  });
+
+  describe('New page section', () => {
+    let onSubPage: ReturnType<typeof vi.fn<(query: string) => Promise<void> | void>>;
+    let onPageIn: ReturnType<typeof vi.fn<(query: string) => void>>;
+    const openWithNewPage = (): void => {
+      picker.open('', anchor, onPick, { newPage: { onSubPage, onPageIn } });
+    };
+
+    beforeEach(() => {
+      onSubPage = vi.fn<(query: string) => Promise<void> | void>();
+      onPageIn = vi.fn<(query: string) => void>();
+    });
+
+    it('offers Add new sub-page and Add new page in… with an empty query', () => {
+      openWithNewPage();
+      picker.startSearch('');
+      const header = section('new');
+
+      expect(header?.textContent).toBe('New page');
+      expect(header?.getAttribute('role')).toBe('presentation');
+      expect(options().map((option) => option.textContent)).toEqual(['Add new sub-page', 'Add new page in…']);
+      expect(options()[0]?.querySelector('svg')).not.toBeNull();
+      expect(options()[1]?.querySelector('svg')).not.toBeNull();
+    });
+
+    it('names the query in bold, as text, in both items', () => {
+      openWithNewPage();
+      picker.startSearch('<b>x</b>');
+      const [subPage, pageIn] = options();
+
+      expect(subPage?.textContent).toBe('New “<b>x</b>” sub-page');
+      expect(pageIn?.textContent).toBe('New “<b>x</b>” page in…');
+      expect(subPage?.querySelector('strong')?.textContent).toBe('<b>x</b>');
+      expect(subPage?.querySelector('b')).toBeNull();
+    });
+
+    it('puts the page rows first and moves across both sections with arrows', () => {
+      openWithNewPage();
+      picker.startSearch('pa');
+      picker.setResults(pages(2));
+
+      expect(options().map((option) => option.textContent)).toEqual([
+        'Page 1', 'Page 2', 'New “pa” sub-page', 'New “pa” page in…',
+      ]);
+      ['ArrowDown', 'ArrowDown'].forEach(press);
+      expect(anchor.getAttribute('aria-activedescendant')).toBe(options()[2]?.id);
+      press('End');
+      press('ArrowDown');
+      expect(anchor.getAttribute('aria-activedescendant')).toBe(options()[0]?.id);
+      press('ArrowUp');
+      press('Enter');
+
+      expect(onPageIn).toHaveBeenCalledExactlyOnceWith('pa');
+      expect(onPick).not.toHaveBeenCalled();
+    });
+
+    it('hides the page section and its header when no page matches, and never says Nothing found', () => {
+      openWithNewPage();
+      picker.startSearch('zzqx');
+      picker.setResults([]);
+
+      expect(section('link')).toBeNull();
+      expect(section('new')).not.toBeNull();
+      expect(popovers[0]?.nothingFound).toBe(false);
+      expect(options()).toHaveLength(2);
+    });
+
+    it('draws a hairline between the two sections only when both show', () => {
+      openWithNewPage();
+      picker.startSearch('pa');
+      picker.setResults(pages(1));
+
+      expect(document.querySelectorAll('[data-blok-testid="page-picker-separator"]')).toHaveLength(1);
+
+      picker.setResults([]);
+
+      expect(document.querySelectorAll('[data-blok-testid="page-picker-separator"]')).toHaveLength(0);
+    });
+
+    it('marks the sub-page item busy while its create runs and ignores another Enter', async () => {
+      let finish: (() => void) | undefined;
+
+      onSubPage.mockReturnValue(new Promise<void>((resolve) => {
+        finish = resolve;
+      }));
+      openWithNewPage();
+      picker.startSearch('pa');
+      picker.setResults([]);
+      press('Enter');
+      const item = options()[0];
+
+      expect(onSubPage).toHaveBeenCalledExactlyOnceWith('pa');
+      expect(item?.getAttribute('aria-busy')).toBe('true');
+      press('Enter');
+      item?.click();
+      expect(onSubPage).toHaveBeenCalledOnce();
+
+      finish?.();
+      await vi.waitFor(() => expect(item?.hasAttribute('aria-busy')).toBe(false));
+    });
+
+    it('keeps the query a later search answers with in the item labels', () => {
+      openWithNewPage();
+      picker.startSearch('p');
+      picker.startSearch('pa');
+      picker.setResults([]);
+
+      expect(options()[0]?.textContent).toBe('New “pa” sub-page');
+    });
+  });
+
+  it('shows Nothing found only when the page list is empty and there is no New page section', () => {
+    picker.open('', anchor, onPick);
+    picker.startSearch('zz');
+
+    expect(popovers[0]?.nothingFound).toBe(false);
+
+    picker.setResults([]);
+
+    expect(popovers[0]?.nothingFound).toBe(true);
+  });
+
+  it('has no section headers in the search-field mode', () => {
+    picker.open('', anchor, onPick, { searchField: { placeholder: 'Search', onQuery: vi.fn() } });
+    picker.setResults(pages(7));
+
+    expect(section('link')).toBeNull();
+    expect(options()).toHaveLength(7);
+    expect(options()[6]?.textContent).toBe('1 more results');
+  });
+
+  describe('choosing a parent', () => {
+    it('turns the open menu into a search field over the pages, then hands the chosen page back busy', async () => {
+      let finish: (() => void) | undefined;
+      const onQuery = vi.fn<(query: string) => void>();
+      const onChoose = vi.fn<(pageId: string) => Promise<void>>().mockReturnValue(new Promise<void>((resolve) => {
+        finish = resolve;
+      }));
+
+      picker.open('', anchor, onPick, { newPage: { onSubPage: vi.fn(), onPageIn: vi.fn() } });
+      picker.setResults(pages(1));
+      picker.chooseParent({ placeholder: 'Search pages…', onQuery, onChoose });
+      const field = document.querySelector<HTMLInputElement>('[data-blok-testid="page-picker-search-input"]');
+
+      expect(popovers).toHaveLength(1);
+      expect(field).toHaveFocus();
+      expect(field?.getAttribute('role')).toBe('combobox');
+      expect(anchor.hasAttribute('aria-controls')).toBe(false);
+      expect(section('new')).toBeNull();
+      expect(onQuery).toHaveBeenCalledExactlyOnceWith('');
+      expect(popovers[0]?.getElement().hasAttribute('data-blok-keyboard-owner')).toBe(true);
+
+      picker.setResults(pages(2));
+      field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      field?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(onChoose).toHaveBeenCalledExactlyOnceWith('p2');
+      expect(onPick).not.toHaveBeenCalled();
+      expect(picker.opened).toBe(true);
+      expect(options()[1]?.getAttribute('aria-busy')).toBe('true');
+      finish?.();
+      await vi.waitFor(() => expect(options()[1]?.hasAttribute('aria-busy')).toBe(false));
+    });
+  });
+});
+
+describe('PagePicker with the English messages', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('pluralizes the more-results row and bolds the query in the New page items', () => {
+    vi.clearAllMocks();
+    const i18n = new LightweightI18n();
+    const anchor = document.createElement('div');
+    const picker = new PagePicker('Pages', 'Page', 'Draft', 'Nothing found', (key, vars) => i18n.t(key, vars));
+
+    document.body.append(anchor);
+    picker.open('', anchor, vi.fn(), { newPage: { onSubPage: vi.fn(), onPageIn: vi.fn() } });
+    picker.startSearch('plan');
+    picker.setResults(Array.from({ length: 7 }, (_, index) => ({ pageId: `p${index}`, title: `P${index}` })));
+
+    expect(document.querySelector('[data-blok-testid="page-picker-more"]')?.textContent).toBe('1 more result');
+    expect(document.querySelector('[data-blok-page-picker-section="link"]')?.textContent).toBe('Link to page');
+    expect(document.querySelector('[data-blok-page-picker-section="new"]')?.textContent).toBe('New page');
+    const subPage = document.querySelector('[data-blok-testid="page-picker-new-sub-page"]');
+
+    expect(subPage?.textContent).toBe('New “plan” sub-page');
+    expect(subPage?.querySelector('strong')?.textContent).toBe('plan');
+
+    picker.setResults(Array.from({ length: 9 }, (_, index) => ({ pageId: `p${index}`, title: `P${index}` })));
+
+    expect(document.querySelector('[data-blok-testid="page-picker-more"]')?.textContent).toBe('3 more results');
+    picker.close();
   });
 });

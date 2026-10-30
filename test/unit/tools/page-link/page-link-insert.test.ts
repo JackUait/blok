@@ -188,6 +188,34 @@ describe('PageLink.pickInsert', () => {
     expect(searchInput()).toBeNull();
   });
 
+  it('shows skeleton rows until the first answer', async () => {
+    const answers: Array<(results: PageSearchResult[]) => void> = [];
+
+    void pick({ search: () => new Promise((resolve) => answers.push(resolve)) }).catch(() => undefined);
+
+    expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(2);
+    answers[0]?.([{ pageId: 'p1', title: 'Roadmap' }]);
+    await flush();
+
+    expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(0);
+  });
+
+  it('draws the "@" rows: icon, six rows and a more-results row, and no New page section', async () => {
+    const results = Array.from({ length: 8 }, (_, index) => ({
+      pageId: `p${index}`, title: `Page ${index}`, icon: { type: 'emoji' as const, value: '🗺️' },
+    }));
+
+    void pick({ search: () => Promise.resolve(results), createFromMention: true, create: vi.fn() }).catch(() => undefined);
+    await flush();
+
+    expect(options()).toHaveLength(6);
+    expect(options()[0]?.querySelector('[data-blok-testid="page-picker-option-icon"]')?.textContent).toBe('🗺️');
+    expect(document.querySelector('[data-blok-testid="page-picker-new-sub-page"]')).toBeNull();
+    document.querySelector<HTMLElement>('[data-blok-testid="page-picker-more"]')?.click();
+
+    expect(options()).toHaveLength(8);
+  });
+
   it('shows Nothing found when the search fails', async () => {
     void pick({ search: () => Promise.reject(new Error('down')) }).catch(() => undefined);
     await flush();

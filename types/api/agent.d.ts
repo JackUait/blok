@@ -85,7 +85,11 @@ export interface Agent {
   tools(options: AgentToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
   /** System-prompt guidance loads lazily. */
   guidance(): Promise<string>;
-  /** Throws AgentTurnOpenError when a turn is already open. */
+  /**
+   * Throws AgentTurnOpenError when a turn is already open.
+   * The agent code loads on first use, or before `isReady` when the config sets `agent`.
+   * A turn begun before it loads queues its calls; its `describe()` throws until an awaited call on it settles.
+   */
   begin(options: AgentTurnOptions): AgentTurn;
   /** Same object until state changes, for useSyncExternalStore. */
   readonly state: AgentState;

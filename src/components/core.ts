@@ -453,6 +453,7 @@ export class Core {
       'ReadOnly',
       'ThemeManager',
       'Find',
+      'AgentAPI',
       'Assistant',
       'PageReferences',
       'PageTitle',

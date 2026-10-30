@@ -2,10 +2,11 @@ import type {
   Agent,
   AgentAnthropicTool,
   AgentAskOptions,
-  AgentRun,
   AgentIdentity,
   AgentModelStreamEvent,
   AgentOpenAITool,
+  AgentRun,
+  AgentRunResult,
   AgentState,
   AgentThinkingLevel,
   AgentToolResult,
@@ -13,29 +14,18 @@ import type {
   AgentTurn,
   AgentTurnOptions,
 } from '../../../../types/api';
-import type { OutputData } from '../../../../types';
-import type { AgentActor, AgentApprovalRequest, AgentBatch, AgentResult, AgentSession, AgentVersionHistory, ChangedSet } from '../../../../types/agent';
-import type { HostService } from '../../../../types/tools/tool-description';
+import type { AgentApprovalRequest, AgentBatch, AgentResult, ChangedSet } from '../../../../types/agent';
+import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
-import { announce } from '../../utils/announcer';
-import { prefersReducedMotion } from '../../utils/reduced-motion';
-import { createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
-import { inputIndexForField } from '../collaboration/agent-placement';
-import { composeFirstMessage } from '../../../agent/first-message';
 import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../../agent/thinking';
+import { AgentFailure } from '../../../shared/agent/errors';
+import { nextEditorSessionId } from '../agent/session-id';
+import { describeUserPlace, NOWHERE, type UserPlace } from './agent-place';
+import type { DiscardOutcome } from './agent-run';
+// Type only: the code loads on first use, so a bare editor never downloads it.
+import type * as AgentCode from './agent-impl';
 
-import { createAgentPresence, type AgentPresence } from './agent-presence';
-
-import { deepEqual } from '../../../shared/deep-equal';
-import { createEditorServices, type HostPageWrite } from './agent-services';
-import { createPageDocuments, type PageDocuments } from '../agent/page-documents';
-import { isBlockReadOnly } from '../../utils/read-only-blocks';
-import type { Block } from '../../block';
-import { AgentFailure, failure } from '../../../shared/agent/errors';
-import { canRestore } from '../../../shared/agent/version-history';
-import { createAgentRun, type DiscardOutcome, type PageRestore } from './agent-run';
-import { createAgentTurn } from './agent-turn';
-import { askAiSessionOptions } from './agent-session-options';
+export type { UserPlace };
 
 export class AgentTurnOpenError extends Error {
   public constructor() {
@@ -45,16 +35,6 @@ export class AgentTurnOpenError extends Error {
 }
 
 const IDLE: AgentState = { status: 'idle' };
-
-const DEFAULT_MAX_STEPS = 100;
-
-/** Where the user is: the text for the model and the blocks it names. */
-export interface UserPlace {
-  text: string;
-  blockIds: string[];
-}
-
-const NOWHERE: UserPlace = { text: '', blockIds: [] };
 
 /** What the prompt bar hears from its run. */
 export interface AssistantRunHooks {
@@ -71,24 +51,21 @@ export interface AssistantRunHooks {
   onApproval?(request: AgentApprovalRequest, signal: AbortSignal): Promise<boolean>;
 }
 
-interface TurnPage {
-  /** The page before the turn's first save. */
-  original: OutputData;
-  /** What the agent saved last. */
-  saved?: OutputData;
-  /** Someone wrote the page between two agent saves. */
-  kept: boolean;
-}
-
 /** Options only Blok's own assistant bar passes to begin(). */
-interface InternalTurnOptions {
+export interface InternalTurnOptions {
   /** False: publish and follow, but draw no local caret, marker or pulse. */
   drawLocal: boolean;
   onExecuted?(changed: ChangedSet): void;
   onApproval?: AssistantRunHooks['onApproval'];
 }
 
-type ToolsOptions = AgentToolsOptions;
+type Core = AgentCode.AgentCore;
+
+/** A call made before the code loaded: run on the loaded turn or run, or fail with the load error. */
+interface Pending<T> {
+  run(target: T): void;
+  fail(error: unknown): void;
+}
 
 const readIdentity = (agent: AgentIdentity | undefined): AgentIdentity => {
   if (typeof agent?.id !== 'string' || agent.id === '' || typeof agent.name !== 'string' || agent.name.trim() === '') {
@@ -98,54 +75,100 @@ const readIdentity = (agent: AgentIdentity | undefined): AgentIdentity => {
   return { ...agent };
 };
 
+const stillLoading = (): Error =>
+  new Error('editor.agent: the agent code is still loading. Await a call on this turn, such as read(), before describe().');
+
+/**
+ * The agent API. Its code (sessions, commands, tool definitions) loads on the
+ * first call. Turns and runs begun before that queue their calls and replay
+ * them in order once it lands.
+ */
 export class AgentAPI extends Module {
-  private readonly current: { state: AgentState; turn: AgentTurn | null } = { state: IDLE, turn: null };
+  private readonly current: { state: AgentState } = { state: IDLE };
 
   private readonly subscribers = new Set<() => void>();
 
-  private serviceCache: Partial<Record<HostService, unknown>> | null = null;
-  /** Undefined until first asked; null when no page tool has loadDocument and saveDocument. */
-  private pageDocs: PageDocuments | null | undefined;
-  /** Each sub-page the open turn saved. Discard writes `original` back unless someone else changed the page. */
-  private turnPages = new Map<string, TurnPage>();
-  /** Each page title or icon the open turn wrote through a host hook, by `pageId field`: the first write and the last. */
-  private turnHostWrites = new Map<string, { first: HostPageWrite; last: HostPageWrite }>();
-  /** The open turn restored a version: a write no undo reaches, so Discard cannot take it back. */
-  private turnRestored = false;
-  /** The open run's onPageWritten. */
-  private turnPageWritten: (() => void) | undefined;
-  /** PageIds an agent left on a page block. Kept across turns: such an id could name any document. */
-  private readonly agentPageIds = new Set<string>();
-  /** PageIds the host's create gave. Trusted though the agent's insert writes them too. */
-  private readonly hostPageIds = new Set<string>();
-  /** Page block id → pageId when the turn began, leaving out ids an agent wrote. */
-  private startPageIds = new Map<string, string>();
-  /** Who page writes are stamped with: the open turn's agent. */
-  private actor: AgentActor = { id: 'agent', name: 'Agent', kind: 'agent' };
+  private core: Core | null = null;
 
-  private contractSource: ContractSource | null = null;
+  private loading: Promise<Core> | null = null;
 
-  /** The open turn's session, for Discard to join its steps. */
-  private turnSession: { sealSteps(): void } | null = null;
+  /** A turn or run begun before the code loaded, until it closes or the code takes it over. */
+  private early: { id: string } | null = null;
 
-  private presenceLayer: AgentPresence | null = null;
+  /** Turns closed before the code loaded. Their replay must not show as working again. */
+  private readonly ghosts = new Set<string>();
 
-  /** What the open turn changed, for one screen reader summary when it closes. */
-  private turnLog = { agentName: '', changed: new Set<string>() };
+  /** Called once the code loads, for callers that got null from inputIndexFor(). */
+  private readonly onLoaded = new Set<() => void>();
+
+  /** Signals of turns still waiting for the code. Destroy aborts them, as it stops a loaded turn. */
+  private readonly waiting = new Set<AbortController>();
+
+  private gone = false;
+
+  constructor(options: ModuleConfig) {
+    super(options);
+    // Started at construction so the download overlaps the other modules' prepare().
+    if (options.config.agent !== undefined) {
+      this.load().catch(() => undefined);
+    }
+  }
 
   /**
-   * Which input of a block edits `field`, or null.
-   * @param blockId - the block
-   * @param field - a data field of that block
+   * With `agent` config, isReady waits for the code, so begin() is complete at once.
+   * A failed chunk fails only the agent calls, never boot.
    */
-  public inputIndexFor(blockId: string, field: string): number | null {
-    const type = this.Blok.BlockManager.getBlockById(blockId)?.name;
+  public async prepare(): Promise<void> {
+    await this.loading?.catch(() => undefined);
+  }
 
-    if (type === undefined) {
-      return null;
+  /** The loaded agent code. A failed load is not kept, so the next call tries again. */
+  public load(): Promise<Core> {
+    if (this.core !== null) {
+      return Promise.resolve(this.core);
+    }
+    if (this.loading !== null) {
+      return this.loading;
     }
 
-    return inputIndexForField(field, this.source().contract().manifest.blocks.find((entry) => entry.name === type));
+    const loading = import('./agent-impl').then((code) => {
+      if (this.gone || this.isDestroyed) {
+        throw new Error('editor.agent: the editor was destroyed.');
+      }
+      this.core ??= this.create(code);
+      this.onLoaded.forEach((callback) => callback());
+      this.onLoaded.clear();
+
+      return this.core;
+    });
+
+    this.loading = loading;
+    loading.catch(() => {
+      if (this.loading === loading) {
+        this.loading = null;
+      }
+    });
+
+    return loading;
+  }
+
+  /**
+   * Which input of a block edits `field`, or null. Null until the code loads;
+   * the first such call starts the load and `loaded` runs once it lands.
+   * @param blockId - the block
+   * @param field - a data field of that block
+   * @param loaded - redraw with the real answer
+   */
+  public inputIndexFor(blockId: string, field: string, loaded?: () => void): number | null {
+    if (this.core !== null) {
+      return this.core.inputIndexFor(blockId, field);
+    }
+    if (loaded !== undefined) {
+      this.onLoaded.add(loaded);
+    }
+    this.load().catch(() => undefined);
+
+    return null;
   }
 
   public get methods(): Agent {
@@ -153,7 +176,7 @@ export class AgentAPI extends Module {
 
     return {
       tools: this.tools.bind(this),
-      guidance: () => this.guidance(),
+      guidance: () => this.load().then((core) => core.guidance()),
       begin: (options: AgentTurnOptions) => this.begin(options),
       get state(): AgentState {
         return readState();
@@ -178,7 +201,7 @@ export class AgentAPI extends Module {
    * Where the user is: text for the model and the block ids it names. Read before focus leaves the document.
    */
   public describeUserPlace(): UserPlace {
-    return this.editorContext();
+    return describeUserPlace(this.Blok);
   }
 
   /**
@@ -187,13 +210,7 @@ export class AgentAPI extends Module {
    * @param batch - the commands to apply
    */
   public executeInRun(batch: AgentBatch): Promise<AgentResult> {
-    const turn = this.current.turn;
-
-    if (turn === null) {
-      return Promise.reject(new Error('No agent turn is open.'));
-    }
-
-    return turn.execute(batch);
+    return this.core !== null ? this.core.executeInRun(batch) : this.load().then((core) => core.executeInRun(batch));
   }
 
   /**
@@ -213,12 +230,68 @@ export class AgentAPI extends Module {
     return this.ask(prompt, { context: false }, place, thinking, hooks, { drawLocal: false, onExecuted: hooks.onExecuted, onApproval: hooks.onApproval });
   }
 
+  public destroy(): void {
+    this.gone = true;
+    this.core?.destroy();
+    this.waiting.forEach((controller) => controller.abort());
+    this.waiting.clear();
+    this.subscribers.clear();
+    this.onLoaded.clear();
+  }
+
+  private create(code: typeof AgentCode): Core {
+    const core = new code.AgentCore({ config: this.config, eventsDispatcher: this.eventsDispatcher }, {
+      opened: (id, agent) => this.opened(id, agent),
+      closed: (id) => this.closed(id),
+      isDestroyed: () => this.gone || this.isDestroyed,
+    });
+
+    core.state = this.Blok;
+
+    return core;
+  }
+
+  private tools(options: AgentToolsOptions & { format: 'anthropic' }): Promise<AgentAnthropicTool[]>;
+  private tools(options: AgentToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
+  private tools(options: AgentToolsOptions): Promise<AgentAnthropicTool[] | AgentOpenAITool[]> {
+    return this.load().then((core) => core.tools(options));
+  }
+
+  private assertNoTurn(): void {
+    if (this.early !== null || this.core?.hasOpenTurn === true) {
+      throw new AgentTurnOpenError();
+    }
+  }
+
+  private identityOf(agent: AgentIdentity | undefined): AgentIdentity {
+    const given = readIdentity(agent);
+    const userId = this.config.user?.id;
+
+    // The person at this editor is who the agent acts for, unless the host named one.
+    return given.onBehalfOf === undefined && typeof userId === 'string' && userId !== ''
+      ? { ...given, onBehalfOf: userId }
+      : given;
+  }
+
+  private begin(options: AgentTurnOptions, internal?: InternalTurnOptions): AgentTurn {
+    this.assertNoTurn();
+
+    const identity = this.identityOf(options?.agent);
+    const id = nextEditorSessionId();
+
+    if (this.core !== null) {
+      return this.core.begin(identity, id, options, internal);
+    }
+
+    return this.earlyTurn(identity, id, (core) => core.begin(identity, id, options, internal));
+  }
+
   private ask(
     prompt: string,
     options: AgentAskOptions = {},
     captured: UserPlace = NOWHERE,
-    picked: () => AgentThinkingLevel | undefined = () => undefined,
-    hooks: AssistantRunHooks = {},
+    picked?: () => AgentThinkingLevel | undefined,
+    hooks?: AssistantRunHooks,
     internal?: InternalTurnOptions
   ): AgentRun {
     const assistant = this.config.agent?.assistant;
@@ -233,435 +306,263 @@ export class AgentAPI extends Module {
       throw new TypeError(`editor.agent.ask() got an unknown thinking level: ${String(options.thinking)}.`);
     }
 
-    const hostTools = assistant.tools ?? [];
-    const taken = hostTools.find((tool) => tool.name.startsWith('blok_'));
+    const taken = (assistant.tools ?? []).find((tool) => tool.name.startsWith('blok_'));
 
     if (taken !== undefined) {
       throw new TypeError(`agent.assistant.tools: "${taken.name}" is taken. Names starting with blok_ belong to Blok.`);
     }
+    this.assertNoTurn();
 
-    const choice = this.thinkingChoice();
-    const thinking = (): AgentThinkingLevel | undefined => options.thinking ?? picked() ?? choice?.initial;
-
-    const place = options.context === false ? captured : this.editorContext();
-    const name = assistant.name?.trim() || 'AI';
-    const agent = { id: 'blok-assistant', name };
+    const place = options.context === false ? captured : describeUserPlace(this.Blok);
+    const agent = { id: 'blok-assistant', name: assistant.name?.trim() || 'AI' };
+    const identity = this.identityOf(agent);
     const { YjsManager } = this.Blok;
 
     // Typing still pending would land above the base and look like a later user edit.
     YjsManager.flushPendingBlockWrites();
-    const base = YjsManager.topUndoToken();
-    const turn = this.begin({ agent }, internal);
-    const pagesSaved = this.turnPages;
-    const hostWrites = this.turnHostWrites;
+    const input: AgentCode.AskInput = {
+      prompt,
+      options,
+      place,
+      base: YjsManager.topUndoToken(),
+      id: nextEditorSessionId(),
+      agent,
+      identity,
+      picked,
+      hooks,
+      internal,
+    };
 
-    this.turnPageWritten = hooks.onPageWritten;
-    const session = this.turnSession;
+    if (this.core !== null) {
+      return this.core.ask(input);
+    }
 
-    return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
-      turn,
-      model: assistant.model,
-      maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,
-      thinking,
-      hostTools,
-      prepare: async () => {
-        const [tools, system] = await Promise.all([this.tools({ format: 'anthropic', schema: 'mixed' }), this.guidance()]);
-        const offered = hostTools.map(({ name, description, input_schema }) => ({ name, description, input_schema }));
-
-        return { tools: [...tools, ...offered], system };
-      },
-      changed: () => [...this.turnLog.changed],
-      restorePages: () => this.restorePages(pagesSaved, hostWrites),
-      sealSteps: () => session?.sealSteps(),
-      restored: () => this.turnRestored,
-      undoneAll: () => {
-        YjsManager.flushPendingBlockWrites();
-
-        return YjsManager.topUndoToken() === base;
-      },
-      onDiscarded: hooks.onDiscarded,
-      onActivity: hooks.onActivity,
-      onStream: hooks.onStream,
-      onToolDone: hooks.onToolDone,
-    });
+    return this.earlyRun(identity, input);
   }
 
   /**
-   * Where the user is, for the first message. The document view never carries
-   * the selection, so it travels as text.
+   * Shows `working` at once and hands back the loaded turn or run to `attach`,
+   * or the load error to `failed`.
    */
-  private editorContext(): UserPlace {
-    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+  private startEarly<T>(
+    identity: AgentIdentity,
+    id: string,
+    open: (core: Core) => T,
+    attach: (target: T) => void,
+    failed: (error: unknown) => void
+  ): { id: string } {
+    const early = { id };
 
-    // A block selection leaves no native range, or a stray one.
-    if (selectedBlocks.length > 0) {
-      const ids = selectedBlocks.map((block) => block.id);
+    this.early = early;
+    this.setState({ status: 'working', turn: { id, agent: identity } });
 
-      return {
-        text: `(Editor context: the user selected whole blocks ${ids.join(', ')}. "This" in the request means those blocks.)`,
-        blockIds: ids,
-      };
-    }
+    const release = (): void => {
+      if (this.early === early) {
+        this.early = null;
+      }
+    };
 
-    const quotes = new Map<string, string[]>();
+    this.load().then((core) => {
+      const target = open(core);
 
-    // An empty share is a triple-click's end at the start of the next block.
-    this.Blok.CrossBlockSelection.textSelection?.subRanges
-      .map(({ block, range }) => ({ id: block.id, text: range.toString() }))
-      .filter(({ text }) => text !== '')
-      .forEach(({ id, text }) => quotes.set(id, [...quotes.get(id) ?? [], text]));
-
-    if (quotes.size > 1) {
-      const ids = [...quotes.keys()];
-      const quoted = [...quotes].map(([id, parts]) => `In block ${id}: ${JSON.stringify(parts.join('\n'))}.`).join(' ');
-
-      return {
-        text: `(Editor context: the user selected text across blocks ${ids.join(', ')}. ${quoted} "This" in the request means that text.)`,
-        blockIds: ids,
-      };
-    }
-
-    const selection = document.getSelection();
-    const anchor = selection?.anchorNode ?? null;
-
-    if (selection === null || anchor === null || !this.Blok.UI.nodes.wrapper.contains(anchor)) {
-      return NOWHERE;
-    }
-
-    const block = this.Blok.BlockManager.getBlockByChildNode(anchor);
-
-    if (block === undefined) {
-      return NOWHERE;
-    }
-
-    const selected = selection.isCollapsed ? '' : selection.toString();
-    const text = selected === ''
-      ? `(Editor context: the user's caret is in block ${block.id}.) Write new content right after this block unless the request names another place.`
-      : `(Editor context: the user selected this text in block ${block.id}: ${JSON.stringify(selected)}. "This" in the request means that text.)`;
-
-    return { text, blockIds: [block.id] };
-  }
-
-  public destroy(): void {
-    this.current.turn?.stop();
-    this.subscribers.clear();
-  }
-
-  private services(): Partial<Record<HostService, unknown>> {
-    this.serviceCache ??= createEditorServices(this.Blok, this.config, () => this.actor, this.pages(), (write) => {
-      const key = `${write.pageId} ${write.field}`;
-      const seen = this.turnHostWrites.get(key);
-
-      this.turnHostWrites.set(key, { first: seen?.first ?? write, last: write });
-      this.turnPageWritten?.();
-    });
-    const history = this.config.agent?.versionHistory;
-    const restore = history?.restore;
-
-    if (history !== undefined && restore !== undefined && this.serviceCache.versionHistory === history) {
-      this.serviceCache.versionHistory = {
-        list: (options) => history.list(options),
-        read: (version) => history.read(version),
-        restore: async (version, options) => {
-          const restored = await restore.call(history, version, options);
-
-          this.turnRestored ||= restored === true;
-
-          return restored;
-        },
-      } satisfies AgentVersionHistory;
-    }
-
-    return this.serviceCache;
-  }
-
-  private source(): ContractSource {
-    // Keep tool definitions and every session on the same live source.
-    this.contractSource ??= liveContractSource(this.Blok, {
-      services: Object.keys(this.services()).filter((name): name is HostService =>
-        name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'versionHistory'
-      ),
-      ...(canRestore(this.services().versionHistory) && { restores: true }),
-      overrides: this.config.agent?.overrides,
+      release();
+      attach(target);
+    }).catch((error: unknown) => {
+      release();
+      this.ghosts.delete(id);
+      this.closed(id);
+      failed(error);
     });
 
-    return this.contractSource;
+    return early;
   }
 
-  private presence(): AgentPresence {
-    this.presenceLayer ??= createAgentPresence({
-      host: this.Blok.UI.nodes.wrapper,
-      resolveHolder: (id) => this.Blok.BlockManager.getBlockById(id)?.holder ?? null,
-      resolveInputs: (id) => this.Blok.BlockManager.getBlockById(id)?.inputs ?? [],
-      inputIndexFor: (id, field) => this.inputIndexFor(id, field),
-      isHidden: () => this.Blok.ReadOnly.isControlsHidden,
-      publish: (cursor) => this.Blok.YjsManager.setAwarenessField('agentCursor', cursor),
-      // Only the scroll half of BlocksAPI.scrollToBlock: its per-call announce
-      // and pulse would flood a screen reader once per batch.
-      scrollTo: (id) => {
-        const holder = this.Blok.BlockManager.getBlockById(id)?.holder;
+  /** Close an early turn or run in the facade: idle at once, and its replay stays hidden. */
+  private closeEarly(early: { id: string }): void {
+    if (this.early === early) {
+      this.early = null;
+    }
+    this.closed(early.id);
+    this.ghosts.add(early.id);
+  }
 
-        if (holder === undefined) {
-          return;
+  private earlyTurn(identity: AgentIdentity, id: string, open: (core: Core) => AgentTurn): AgentTurn {
+    const controller = new AbortController();
+    const queue: Pending<AgentTurn>[] = [];
+    const box: { real: AgentTurn | null; closed: boolean } = { real: null, closed: false };
+
+    this.waiting.add(controller);
+    const early = this.startEarly(identity, id, open, (real) => {
+      this.waiting.delete(controller);
+      box.real = real;
+      real.signal.addEventListener('abort', () => controller.abort(real.signal.reason), { once: true });
+      queue.splice(0).forEach((pending) => pending.run(real));
+    }, (error) => {
+      this.waiting.delete(controller);
+      box.closed = true;
+      controller.abort(error);
+      queue.splice(0).forEach((pending) => pending.fail(error));
+    });
+
+    const later = <R>(call: (turn: AgentTurn) => Promise<R>): Promise<R> => {
+      if (box.real !== null) {
+        return call(box.real);
+      }
+
+      return new Promise<R>((resolve, reject) => {
+        queue.push({
+          run: (turn) => {
+            try {
+              call(turn).then(resolve, reject);
+            } catch (error) {
+              reject(error);
+            }
+          },
+          fail: reject,
+        });
+      });
+    };
+
+    const close = (stop: boolean): void => {
+      if (box.real !== null) {
+        if (stop) {
+          box.real.stop();
+        } else {
+          box.real.end();
         }
 
-        const top = holder.getBoundingClientRect().top + window.scrollY - (this.config.scrollToBlock?.topOffset ?? 0);
-
-        window.scrollTo({ top, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
-      },
-    });
-
-    return this.presenceLayer;
-  }
-
-  private tools(options: ToolsOptions & { format: 'anthropic' }): Promise<AgentAnthropicTool[]>;
-  private tools(options: ToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
-  private async tools(options: ToolsOptions): Promise<AgentAnthropicTool[] | AgentOpenAITool[]> {
-    const { renderAgentTools } = await import('../../../agent/render-tools');
-    const tools = renderAgentTools(this.source().contract(), { ...options, schema: options.schema ?? 'mixed', pages: this.pages() !== null });
-
-    return options.format === 'anthropic'
-      ? tools.filter((tool): tool is AgentAnthropicTool => 'input_schema' in tool)
-      : tools.filter((tool): tool is AgentOpenAITool => 'parameters' in tool);
-  }
-
-  private async guidance(): Promise<string> {
-    const { composeGuidance } = await import('../../../agent/guidance');
-
-    return composeGuidance(this.source().contract(), { pages: this.pages() !== null });
-  }
-
-  private pages(): PageDocuments | null {
-    if (this.pageDocs === undefined) {
-      this.pageDocs = createPageDocuments(this.Blok, this.config.documentId, {
-        beforeSave: (pageId, loaded) => {
-          const page = this.turnPages.get(pageId);
-
-          if (page === undefined) {
-            this.turnPages.set(pageId, { original: loaded, kept: false });
-
-            return;
-          }
-          // Someone wrote the page between two agent saves: this save carries their edit.
-          if (page.saved === undefined || this.pageDocs?.same(loaded, page.saved) !== true) {
-            page.kept = true;
-          }
-        },
-        saved: (pageId, saved) => {
-          const page = this.turnPages.get(pageId);
-
-          if (page !== undefined) {
-            page.saved = saved;
-          }
-          this.turnPageWritten?.();
-        },
-        contractSource: () => this.source(),
-        services: () => this.services(),
-        onPagePointed: (pageId) => this.agentPageIds.add(pageId),
-        isAgentPageId: (pageId) => this.agentPageIds.has(pageId),
-      });
-    }
-
-    return this.pageDocs;
-  }
-
-  /**
-   * Writes back each sub-page a turn saved, and calls the host's rename and
-   * setIcon hooks again with the old value. A page someone changed after the
-   * agent's last write is kept as it is, so their edit survives. A write that
-   * cannot be reverted is kept too.
-   */
-  private async restorePages(
-    pages: Map<string, TurnPage>,
-    hostWrites: Map<string, { first: HostPageWrite; last: HostPageWrite }>
-  ): Promise<PageRestore> {
-    const docs = this.pages();
-    const outcome: PageRestore = { restored: 0, kept: [] };
-    const keep = (pageId: string): void => {
-      if (!outcome.kept.includes(pageId)) {
-        outcome.kept.push(pageId);
+        return;
       }
+      if (box.closed) {
+        return;
+      }
+      box.closed = true;
+      if (stop) {
+        controller.abort();
+      }
+      this.closeEarly(early);
+      queue.push({ run: (turn) => (stop ? turn.stop() : turn.end()), fail: () => undefined });
     };
-    const restoreDocument = async (pageId: string, page: TurnPage): Promise<boolean> => {
-      if (docs === null || page.kept || page.saved === undefined) {
-        return false;
-      }
-      const current = await docs.load(pageId);
-
-      if (current === null || !docs.same(current, page.saved)) {
-        return false;
-      }
-      await docs.save(pageId, page.original);
-
-      return true;
-    };
-    const revertHostWrite = async ({ first, last }: { first: HostPageWrite; last: HostPageWrite }): Promise<boolean> => {
-      const current = await last.current();
-
-      if (first.before === undefined || current === undefined) {
-        return false;
-      }
-      const now = last.field === 'title' ? current.title ?? '' : current.icon ?? null;
-
-      if (!deepEqual(now, last.written)) {
-        return false;
-      }
-      await first.revert();
-
-      return true;
-    };
-    const attempt = async (pageId: string, run: () => Promise<boolean>): Promise<void> => {
-      const reverted = await run().catch(() => false);
-
-      if (reverted) {
-        outcome.restored += 1;
-      } else {
-        keep(pageId);
-      }
-    };
-
-    await Promise.all([
-      ...[...pages].map(([pageId, page]) => attempt(pageId, () => restoreDocument(pageId, page))),
-      ...[...hostWrites.values()].map((write) => attempt(write.last.pageId, () => revertHostWrite(write))),
-    ]);
-    pages.clear();
-    hostWrites.clear();
-
-    return outcome;
-  }
-
-  /** The sub-page document a page block in this document points at. */
-  private async openPage(blockId: string, actor: AgentActor): Promise<AgentSession & { close(): void }> {
-    const docs = this.pages();
-    const block = this.Blok.BlockManager.getBlockById(blockId);
-
-    if (docs === null) {
-      throw new AgentFailure({ code: 'COMMAND_UNAVAILABLE', message: 'This editor cannot open sub-page documents. Omit `page`.', retryable: false, path: '/page' });
-    }
-    if (block === undefined) {
-      throw failure('BLOCK_NOT_FOUND', `No block "${blockId}".`, { details: { blockId } });
-    }
-    const pageId = block.preservedData.pageId;
-
-    if (block.name !== 'page' || typeof pageId !== 'string') {
-      throw failure('INVALID_ARGS', `Block "${blockId}" is not a page block with a pageId.`, { path: '/page', details: { blockId } });
-    }
-    // Allowed: the id the block had before the turn, or one the host's create gave.
-    if (this.startPageIds.get(blockId) !== pageId && !this.hostPageIds.has(pageId)) {
-      throw failure('INVALID_ARGS', `Block "${blockId}" points at a page an agent set, not one the host created. It cannot be opened.`, { path: '/page', details: { blockId } });
-    }
-    const session = await docs.open(pageId, actor, { created: this.hostPageIds.has(pageId) });
-    const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
 
     return {
-      ...session,
-      execute: (batch, options) => (isBlockReadOnly(block, getById)
-        ? Promise.reject(failure('READ_ONLY', `Page block "${blockId}" is read-only.`, { details: { blockId } }))
-        : session.execute(batch, options)),
-    };
-  }
-
-  /** The bar's question, unless the host would refuse the change anyway: then the person is not asked. */
-  private approver(ask: NonNullable<AssistantRunHooks['onApproval']>): NonNullable<AssistantRunHooks['onApproval']> {
-    return (request, signal) => {
-      const block = this.Blok.BlockManager.getBlockById(request.blockId);
-
-      if (block?.toolDataReadOnly === true) {
-        return Promise.reject(failure('PRECONDITION_FAILED', `Block "${request.blockId}" is read-only here: the host does not allow editing it. It stays locked.`));
-      }
-
-      return ask(request, signal);
-    };
-  }
-
-  private begin(options: AgentTurnOptions, internal: InternalTurnOptions = { drawLocal: true }): AgentTurn {
-    if (this.current.turn !== null) {
-      throw new AgentTurnOpenError();
-    }
-
-    const given = readIdentity(options?.agent);
-    const userId = this.config.user?.id;
-    // The person at this editor is who the agent acts for, unless the host named one.
-    const identity: AgentIdentity = given.onBehalfOf === undefined && typeof userId === 'string' && userId !== ''
-      ? { ...given, onBehalfOf: userId }
-      : given;
-
-    this.actor = { ...identity, kind: 'agent' };
-    this.turnPages = new Map();
-    this.turnHostWrites = new Map();
-    this.turnRestored = false;
-    this.turnPageWritten = undefined;
-    this.startPageIds = new Map();
-    for (const block of this.Blok.BlockManager.blocks) {
-      const pageId = block.name === 'page' ? block.preservedData.pageId : undefined;
-
-      if (typeof pageId === 'string' && !this.agentPageIds.has(pageId)) {
-        this.startPageIds.set(block.id, pageId);
-      }
-    }
-    const session = createEditorAgentSession(
-      this.Blok,
-      { ...identity, kind: 'agent' },
-      askAiSessionOptions({
-        contractSource: this.source(),
-        services: this.services(),
-        attributeTo: options.attributeTo,
-        onPrepared: (type, data) => {
-          if (type === 'page' && typeof data.pageId === 'string') {
-            this.hostPageIds.add(data.pageId);
-          }
-        },
-        onPagePointed: (pageId) => this.agentPageIds.add(pageId),
-      })
-    );
-    this.turnSession = session;
-    this.turnLog = { agentName: identity.name, changed: new Set<string>() };
-
-    const turn = createAgentTurn(session, {
-      onExecuted: (result) => {
-        const { created, updated, moved, removed } = result.changed;
-
-        [...created, ...updated, ...moved, ...removed].forEach((id) => this.turnLog.changed.add(id));
-        this.presence().show(result, { draw: internal.drawLocal });
-        try {
-          internal.onExecuted?.(result.changed);
-        } catch {
-          // A listener must not fail an applied batch.
-        }
+      get id(): string {
+        return box.real?.id ?? id;
       },
-      onClosed: () => this.closeTurn(turn),
-      isEditorDestroyed: () => this.isDestroyed,
-      ...(this.pages() === null ? {} : { openPage: (blockId: string) => this.openPage(blockId, { ...identity, kind: 'agent' }) }),
-      ...(internal.onApproval === undefined ? {} : { approve: this.approver(internal.onApproval) }),
-    });
-
-    this.current.turn = turn;
-    this.setState({ status: 'working', turn: { id: turn.id, agent: identity } });
-    this.presence().start(identity, {
-      follow: options.follow === true,
-    });
-
-    return turn;
+      get actor() {
+        return box.real?.actor ?? { ...identity, kind: 'agent' as const };
+      },
+      signal: controller.signal,
+      read: (args) => later((turn) => turn.read(args)),
+      describe: (query) => {
+        if (box.real !== null) {
+          return box.real.describe(query);
+        }
+        if (box.closed) {
+          throw new AgentFailure({ code: 'CANCELLED', message: 'This turn was stopped or ended. Nothing was applied.', retryable: false });
+        }
+        throw stillLoading();
+      },
+      execute: (batch) => later((turn) => turn.execute(batch)),
+      log: () => box.real?.log() ?? [],
+      call: (name, input) => later((turn) => turn.call(name, input)),
+      close: () => close(false),
+      end: () => close(false),
+      stop: () => close(true),
+    };
   }
 
-  private closeTurn(turn: AgentTurn): void {
-    if (this.current.turn !== turn) {
+  private earlyRun(identity: AgentIdentity, input: AgentCode.AskInput): AgentRun {
+    const queue: Pending<AgentRun>[] = [];
+    const box: { real: AgentRun | null; ended: boolean; first: (result: Promise<AgentRunResult> | AgentRunResult) => void } = {
+      real: null,
+      ended: false,
+      first: () => undefined,
+    };
+    const first = new Promise<AgentRunResult>((resolve) => {
+      box.first = resolve;
+    });
+
+    const early = this.startEarly(identity, input.id, (core) => core.ask(input), (real) => {
+      box.real = real;
+      box.first(real.result);
+      queue.splice(0).forEach((pending) => pending.run(real));
+    }, (error) => {
+      box.first({ status: 'failed', reply: '', error: error instanceof Error ? error.message : String(error), changed: [] });
+      queue.splice(0).forEach((pending) => pending.fail(error));
+    });
+
+    const queueCall = (run: (target: AgentRun) => void): void => {
+      queue.push({ run, fail: () => undefined });
+    };
+
+    return {
+      get result(): Promise<AgentRunResult> {
+        return box.real?.result ?? first;
+      },
+      followUp: (prompt) => {
+        if (box.real !== null) {
+          return box.real.followUp(prompt);
+        }
+        if (box.ended) {
+          throw new Error('editor.agent: this run has ended. Call editor.agent.ask() to start a new one.');
+        }
+        throw new Error('editor.agent: this run is still answering. Await `result` or call stop() first.');
+      },
+      stop: () => {
+        if (box.real !== null) {
+          box.real.stop();
+
+          return;
+        }
+        queueCall((real) => real.stop());
+      },
+      discard: () => {
+        if (box.real !== null) {
+          return box.real.discard();
+        }
+
+        return new Promise<boolean>((resolve, reject) => {
+          queue.push({ run: (real) => {
+            real.discard().then(resolve, reject);
+          }, fail: reject });
+        });
+      },
+      end: () => {
+        if (box.real !== null) {
+          box.real.end();
+
+          return;
+        }
+        if (box.ended) {
+          return;
+        }
+        box.ended = true;
+        this.closeEarly(early);
+        queueCall((real) => real.end());
+      },
+    };
+  }
+
+  private opened(id: string, agent: AgentIdentity): void {
+    const now = this.current.state;
+
+    // A ghost's replay, or the early turn that already showed it.
+    if (this.ghosts.has(id) || (now.status === 'working' && now.turn.id === id)) {
+      return;
+    }
+    this.setState({ status: 'working', turn: { id, agent } });
+  }
+
+  private closed(id: string): void {
+    if (this.ghosts.delete(id)) {
       return;
     }
 
-    this.current.turn = null;
-    this.turnSession = null;
-    this.presence().stop();
+    const now = this.current.state;
 
-    const count = this.turnLog.changed.size;
-
-    // One summary per turn: per-batch announcements would flood a screen reader.
-    if (count > 0) {
-      const key = count === 1 ? 'agent.changedOneBlock' : 'agent.changedBlocks';
-
-      announce(this.Blok.I18n.t(key, { agent: this.turnLog.agentName, count }), { politeness: 'polite' });
+    if (now.status === 'working' && now.turn.id === id) {
+      this.setState(IDLE);
     }
-    this.setState(IDLE);
   }
 
   private subscribe(listener: () => void): () => void {

@@ -78,6 +78,9 @@ describe.each(SERVICE_CONFIGS)('editor runtime, services $label', ({ page }) => 
   it('inserts every type its contract lists as insertable, and refuses the rest', async () => {
     const editor = await boot(page);
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    // No agent config: the agent code loads with the turn's first call, and describe() waits for it.
+    await turn.read();
     const tools = toolsOf(turn);
     const outcomes: Record<string, string> = {};
 

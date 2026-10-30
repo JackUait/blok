@@ -767,6 +767,7 @@ export class Collaboration extends Module {
     // through `collaboration.user` alone teaches the directory directly.
     this.Blok.UserDirectory.identify(settings.user?.name);
 
+    const redrawPresence = (): void => this.presence?.redraw();
     const presenceRenderer = createPresenceRenderer({
       // The WRAPPER, not the redactor: the redactor is under the
       // modifications observer, and this host is only watched for reflow.
@@ -780,7 +781,8 @@ export class Collaboration extends Module {
       // them one.
       isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
       resolvePersonName: (userId) => this.personNameFor(userId),
-      resolveAgentInput: (blockId, field) => this.Blok.AgentAPI.inputIndexFor(blockId, field),
+      // Null until the agent code loads; then one redraw places the cursor for real.
+      resolveAgentInput: (blockId, field) => this.Blok.AgentAPI.inputIndexFor(blockId, field, redrawPresence),
     });
 
     /**

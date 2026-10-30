@@ -18,6 +18,7 @@ import { runtimesFromTools, snapshotFromTools } from '../../tools/registry-snaps
 import { getBlokVersion } from '../../utils/version';
 import { EditorApplier } from './editor-applier';
 import { createEditorPorts } from './editor-ports';
+import { nextEditorSessionId } from './session-id';
 
 export type InternalEditorHandle = BlokModules;
 
@@ -55,13 +56,13 @@ export const liveContractSource = (
   };
 };
 
-const editorSessions = { count: 0 };
-
 export const createEditorAgentSession = (
   editor: InternalEditorHandle,
   actor: AgentActor,
   options: {
     contractSource?: ContractSource;
+    /** Given by a turn begun before this code loaded, which already showed it. */
+    id?: string;
     turnId?: string;
     mergeSteps?: 'batch' | 'turn';
     attributeLastEditedBy?: boolean;
@@ -70,7 +71,7 @@ export const createEditorAgentSession = (
     onPagePointed?(pageId: string): void;
   } = {}
 ): AgentSession & { sealSteps(): void } => {
-  const id = `editor-session-${++editorSessions.count}`;
+  const id = options.id ?? nextEditorSessionId();
   const services: Partial<Record<HostService, unknown>> = options.services ?? {};
   const serviceNames = Object.keys(services).filter((name): name is HostService =>
     (name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'host' || name === 'versionHistory')

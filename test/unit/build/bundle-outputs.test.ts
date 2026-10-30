@@ -496,8 +496,12 @@ describe('eager ESM path ships no ES2023+ runtime APIs', () => {
 
 describe('opt-in subsystems load behind import()', () => {
   // Each string lives only in that subsystem's lazy body. Strings that the CSS also uses do not work: the CSS ships inside the eager JS.
-  const SUBSYSTEMS: Record<string, string[]> = {
-    'Ask AI': ['Continue where you stopped.', 'data-blok-assistant-continue'],
+  const SUBSYSTEMS: Record<string, { fingerprints: string[]; entries: string[] }> = {
+    'Ask AI': { fingerprints: ['Continue where you stopped.', 'data-blok-assistant-continue'], entries: ['blok.mjs', 'full.mjs'] },
+    'the agent API': {
+      fingerprints: ['html.insert runs only in the editor.', 'The insert plan has no created block.'],
+      entries: ['blok.mjs', 'full.mjs'],
+    },
   }
 
   /** Files an entry loads at import time, and the ones its first-level import() calls load. */
@@ -528,8 +532,8 @@ describe('opt-in subsystems load behind import()', () => {
     return { eager, lazy }
   }
 
-  for (const entry of ['blok.mjs', 'full.mjs']) {
-    for (const [name, fingerprints] of Object.entries(SUBSYSTEMS)) {
+  for (const [name, { fingerprints, entries }] of Object.entries(SUBSYSTEMS)) {
+    for (const entry of entries) {
       it(`${entry} loads ${name} only through import()`, async () => {
         await initLexer()
         const { eager, lazy } = closures(entry)

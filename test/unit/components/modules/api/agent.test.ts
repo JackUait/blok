@@ -121,6 +121,8 @@ const createAgentApi = async (): Promise<{ api: AgentAPI; modules: BlokModules }
 
   apis.push(api);
   api.state = modules;
+  // These tests drive the loaded agent code; agent-lazy.test.ts covers calls made before it loads.
+  await api.load();
 
   return { api, modules };
 };
@@ -224,7 +226,7 @@ describe('AgentAPI state and turns', () => {
     expect(editorSession.createEditorAgentSession).toHaveBeenCalledExactlyOnceWith(
       modules,
       ACTOR,
-      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn', onPrepared: expect.any(Function), onPagePointed: expect.any(Function) }
+      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn', onPrepared: expect.any(Function), onPagePointed: expect.any(Function), id: expect.any(String) }
     );
     expect(editorSession.liveContractSource).toHaveBeenCalledExactlyOnceWith(modules, { services: [] });
     expect(editorSession.liveContractSource.mock.calls[0]?.[0]).toBe(modules);
@@ -264,7 +266,7 @@ describe('AgentAPI state and turns', () => {
       expect(editorSession.createEditorAgentSession).toHaveBeenCalledExactlyOnceWith(
         modules,
         ACTOR,
-        { contractSource: source, services: {}, attributeLastEditedBy: stamp, mergeSteps: 'turn', onPrepared: expect.any(Function), onPagePointed: expect.any(Function) }
+        { contractSource: source, services: {}, attributeLastEditedBy: stamp, mergeSteps: 'turn', onPrepared: expect.any(Function), onPagePointed: expect.any(Function), id: expect.any(String) }
       );
       expect(editorSession.liveContractSource).toHaveBeenCalledExactlyOnceWith(modules, { services: [] });
       expect(editorSession.liveContractSource.mock.calls[0]?.[0]).toBe(modules);
@@ -460,7 +462,7 @@ describe('AgentAPI tools and guidance', () => {
     expect(editorSession.createEditorAgentSession).toHaveBeenCalledExactlyOnceWith(
       modules,
       ACTOR,
-      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn', onPrepared: expect.any(Function), onPagePointed: expect.any(Function) }
+      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn', onPrepared: expect.any(Function), onPagePointed: expect.any(Function), id: expect.any(String) }
     );
     expect(editorSession.liveContractSource).toHaveBeenCalledExactlyOnceWith(modules, { services: [] });
     expect(editorSession.liveContractSource.mock.calls[0]?.[0]).toBe(modules);

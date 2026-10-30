@@ -54,7 +54,6 @@
   "test/unit/architecture/published-types-no-src-refs.test.ts": 0.038,
   "test/unit/architecture/react-fixture-import-map-law.test.ts": 0.008,
   "test/unit/architecture/reactive-config-contract-law.test.ts": 0.258,
-  "test/unit/architecture/server-go-removal-law.test.ts": 2.058,
   "test/unit/architecture/server-quality-gates.test.ts": 0.083,
   "test/unit/architecture/server-release-wiring.test.ts": 0.249,
   "test/unit/architecture/split-caret-law.test.ts": 6.775,

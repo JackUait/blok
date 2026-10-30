@@ -674,6 +674,9 @@ internal sealed class ScenarioRunner
   /// <summary>How many expectations were checked; a silent run is a broken test.</summary>
   internal int Checks { get; private set; }
 
+  /// <summary>What the step's apply answered, or null when it applied nothing.</summary>
+  internal ApplyResult? LastResult { get; private set; }
+
   internal void RunAll()
   {
     foreach (var step in testCase.Steps)
@@ -685,6 +688,8 @@ internal sealed class ScenarioRunner
   internal void Run(ScenarioStep step)
   {
     ArgumentNullException.ThrowIfNull(step);
+
+    LastResult = null;
 
     // An engineWrites step registers what the ENGINE produced, not the
     // fixture's mirror copy, so a later delivery replays the engine's own
@@ -783,6 +788,8 @@ internal sealed class ScenarioRunner
   {
     var result = Doc.ApplyUpdate(
         update ?? throw new InvalidDataException($"step \"{step.Id}\" carries no update"));
+
+    LastResult = result;
 
     Assert.Equal(ApplyOutcome.Applied, result.Outcome);
   }

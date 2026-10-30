@@ -354,13 +354,11 @@ jobs:
       - name: Test C# conformance
         run: node scripts/test-server-conformance.mjs --target csharp
 
-      # Go has no dependencies yet, so go.mod stands in for go.sum: the cache
-      # step fails the job when its path matches nothing.
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: packages/server/go/go.mod
-          cache-dependency-path: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.sum
 
       - name: Check Go formatting
         working-directory: packages/server/go

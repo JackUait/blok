@@ -365,7 +365,7 @@ describe('CI critical-path law', () => {
         uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16',
         with: {
           'go-version-file': 'packages/server/go/go.mod',
-          'cache-dependency-path': 'packages/server/go/go.mod',
+          'cache-dependency-path': 'packages/server/go/go.sum',
         },
       },
       {

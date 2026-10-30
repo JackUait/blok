@@ -143,6 +143,10 @@ func readItem(r *lib0.Reader, id ID, info byte) *DecodedStruct {
 		}
 	}
 	decoded.Content = readContent(info, r)
+	if deleted, ok := decoded.Content.(*ContentDeleted); ok && deleted.ticks == 0 {
+		// yjs throws on this one mid-apply; refusing it here leaves the doc as it was.
+		panic(lib0.Errorf("yjs: the deleted item at %d:%d has length 0.", id.Client, id.Clock))
+	}
 	decoded.Length = decoded.Content.Len()
 	return decoded
 }

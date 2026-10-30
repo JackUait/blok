@@ -220,12 +220,13 @@ var reasonText = map[string]string{
 	"duplicate-client":     "is listed twice",
 	"unknown-content-ref":  "is not an item content ref",
 	"v2-update":            "follow the delete set",
+	"empty-struct":         "has length 0",
 }
 
 func TestRejectsEveryNegativeGolden(t *testing.T) {
 	cases := fixtureCases(t, "negative.json")
-	if len(cases) != 8 {
-		t.Fatalf("want 8 negative cases, got %d", len(cases))
+	if len(cases) != 9 {
+		t.Fatalf("want 9 negative cases, got %d", len(cases))
 	}
 	for _, c := range cases {
 		name, reason := yjstest.String(c, "name"), yjstest.String(c, "reason")

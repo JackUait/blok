@@ -28,6 +28,12 @@
       "sha256": "033b78fe56e46b27d6da8699cf5c0a42b2d720b10973b724217d72d86be7bade"
     },
     {
+      "path": "empty-structs.json",
+      "description": "Length-0 structs yjs accepts, with what yjs encodes after them.",
+      "bytes": 3252,
+      "sha256": "3f4398acd59d5e3aa56e6db97fd6d2f675c982a1aabedb069744e2f809980de9"
+    },
+    {
       "path": "fuzz/seed-000001.json",
       "description": "Seeded fuzz schedule 1.",
       "bytes": 12215,
@@ -334,8 +340,8 @@
     {
       "path": "negative.json",
       "description": "Hand-assembled malformed updates the decoder must refuse.",
-      "bytes": 2607,
-      "sha256": "f2f994ad28b41b49b5cf573884f37cae794394716cf25fc9d4da84e602c0d3f3"
+      "bytes": 2915,
+      "sha256": "7b237e281d6cdbc5b766d7567d5fee94603a89950028b2eef1260614ee0cc65b"
     },
     {
       "path": "scenarios.json",

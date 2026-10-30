@@ -73,6 +73,42 @@ public sealed class HostileUpdateTests
     // The key exists, as yjs's has() reports, and reading it yields nothing.
     Assert.True(doc.GetMap("m").TryGet("k", out var value));
     Assert.Same(YUndefined.Instance, value);
+
+    // An empty run put {1000: 0} in the state vector; the sync answer must
+    // still encode.
+    Assert.NotEmpty(doc.EncodeStateAsUpdate());
+  }
+
+  public static TheoryData<string> EmptyStructCases()
+  {
+    return new TheoryData<string>(YjsEngineFixtures.Cases("empty-structs.json")
+        .Select(node => node!["name"]!.GetValue<string>()));
+  }
+
+  /// <summary>
+  /// yjs never writes a length-0 struct but accepts one, and then encodes the
+  /// document: its findIndexSS tests the last struct for an exact clock
+  /// first. Without that, every sync answer of the document threw.
+  /// </summary>
+  [Theory]
+  [MemberData(nameof(EmptyStructCases))]
+  public void ALengthZeroStructEncodesAsYjsDoes(string name)
+  {
+    var golden = YjsEngineFixtures.Cases("empty-structs.json")
+        .First(node => node!["name"]!.GetValue<string>() == name)!;
+    var doc = new YDoc(4242);
+
+    foreach (var update in golden["updates"]!.AsArray())
+    {
+      doc.ApplyUpdate(Convert.FromBase64String(update!.GetValue<string>()));
+    }
+
+    Assert.Equal(golden["sv"]!.GetValue<string>(), Convert.ToBase64String(doc.EncodeStateVector()));
+    Assert.Equal(golden["full"]!.GetValue<string>(), Convert.ToBase64String(doc.EncodeStateAsUpdate()));
+    Assert.Equal(
+        golden["diff"]!.GetValue<string>(),
+        Convert.ToBase64String(doc.EncodeStateAsUpdate(
+            Convert.FromBase64String(golden["behind"]!.GetValue<string>()))));
   }
 
   /// <summary>

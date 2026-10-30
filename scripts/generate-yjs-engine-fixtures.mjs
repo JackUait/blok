@@ -1114,6 +1114,16 @@ function buildNegative() {
       }),
     },
     {
+      name: 'empty-deleted-content',
+      reason: 'empty-struct',
+      description: 'One item on root "m" whose content is a ContentDeleted of length 0. yjs throws on it mid-apply; ours refuses it before the doc changes.',
+      bytes: assemble((encoder) => {
+        writeItemHeader(encoder, { info: 0x01 });
+        encoding.writeVarUint(encoder, 0);
+        encoding.writeVarUint(encoder, 0);
+      }),
+    },
+    {
       name: 'v2-update',
       reason: 'v2-update',
       description: 'A real Y.encodeStateAsUpdateV2 payload. Its leading 00 reads as zero struct groups, so a v1 reader swallows it whole and returns an empty update.',
@@ -1145,6 +1155,85 @@ function buildNegative() {
       'HAND-ASSEMBLED malformed updates (the v2 case excepted; it says so). Every case must be ' +
       'REFUSED by the C# decoder. `yjsAccepts` records what real yjs does with the same bytes — ' +
       'where it is true, yjs is the lenient one and the engine is deliberately stricter.',
+    cases,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// empty-structs.json
+// ---------------------------------------------------------------------------
+
+const hex = (text) => Uint8Array.from(Buffer.from(text.replace(/ /g, ''), 'hex'));
+
+/**
+ * yjs never writes a length-0 struct but accepts one: the state vector then
+ * holds {client: 0}, and its encoders find the struct because findIndexSS
+ * tests the last struct for an exact clock first. Each case records what yjs
+ * encodes after applying the updates in order.
+ */
+function buildEmptyStructs() {
+  const specs = [
+    ['root-text-empty-string', 'One empty string item on root text "0".', ['0101e807 00 04 0101 30 00 00']],
+    ['map-key-empty-string', 'Map "m" key "k" holding an empty string.', ['0101e807 00 24 0101 6d 01 6b 00 00']],
+    ['map-key-empty-any', 'Map "m" key "k" holding a ContentAny with no values.', ['0101e807 00 28 0101 6d 01 6b 00 00']],
+    ['map-key-empty-json', 'Map "m" key "k" holding a ContentJSON with no values.', ['0101e807 00 22 0101 6d 01 6b 00 00']],
+    ['empty-gc', 'One GC struct of length 0.', ['0101e807 00 00 00 00']],
+    // No parentSub on the parked item: when anything is parked, yjs's merge
+    // pass drops the parentSub bit of every item written with an origin, and
+    // neither engine does that yet.
+    [
+      'empty-item-then-parked-item',
+      'An empty JSON map value at clock 0, then "abc" at clock 0 under a parent nobody has, which parks.',
+      ['0102e807 00 22 0101 30 01 30 00 04 00 d00f 05 03 616263 00'],
+    ],
+    ['empty-then-content-same-clock', 'An empty item at clock 0, then "ab" at clock 0, in one update.', ['0102e807 00 04 0101 74 00 04 0101 74 02 6162 00']],
+    ['content-then-empty-last', '"ab" at clocks 0..1, then an empty item at clock 2 as the last struct.', ['0102e807 00 04 0101 74 02 6162 04 0101 74 00 00']],
+    [
+      'empty-last-then-content',
+      'The empty item ends the run at clock 2, then "c" arrives at clock 2 in a second update.',
+      ['0102e807 00 04 0101 74 02 6162 04 0101 74 00 00', '0101e807 02 04 0101 74 01 63 00'],
+    ],
+  ];
+
+  const cases = specs.map(([name, description, updates]) => {
+    const doc = new Y.Doc({ gc: false });
+
+    for (const update of updates) {
+      Y.applyUpdate(doc, hex(update));
+    }
+
+    const behind = new Map([[CLIENT_A, 1]]);
+    const behindVector = encoding.createEncoder();
+
+    encoding.writeVarUint(behindVector, behind.size);
+
+    for (const [client, clock] of behind) {
+      encoding.writeVarUint(behindVector, client);
+      encoding.writeVarUint(behindVector, clock);
+    }
+
+    const vector = encoding.toUint8Array(behindVector);
+    const result = {
+      name,
+      description,
+      updates: updates.map((update) => b64(hex(update))),
+      sv: b64(Y.encodeStateVector(doc)),
+      full: b64(Y.encodeStateAsUpdate(doc)),
+      behind: b64(vector),
+      diff: b64(Y.encodeStateAsUpdate(doc, vector)),
+    };
+
+    doc.destroy();
+
+    return result;
+  });
+
+  return {
+    $comment: DO_NOT_EDIT,
+    $description:
+      'HAND-ASSEMBLED updates holding length-0 structs, which yjs never writes but accepts. ' +
+      'Apply `updates` in order; the engine must then encode `sv`, `full`, and `diff` against `behind` ' +
+      'exactly as yjs did.',
     cases,
   };
 }
@@ -1953,6 +2042,7 @@ writeJson('any.json', buildAny(), { description: 'lib0 writeAny goldens, one per
 writeJson('varint.json', buildVarint(), { description: 'lib0 varuint and varint goldens.' });
 writeJson('structs.json', buildStructs(), { description: 'One update per struct/content shape with its decoded structure and JSON oracle.' });
 writeJson('negative.json', buildNegative(), { description: 'Hand-assembled malformed updates the decoder must refuse.' });
+writeJson('empty-structs.json', buildEmptyStructs(), { description: 'Length-0 structs yjs accepts, with what yjs encodes after them.' });
 writeJson('scenarios.json', buildScenarios(), { description: 'Deterministic multi-doc delivery scripts with a per-step oracle.' });
 
 for (let seed = 1; seed <= SEED_COUNT; seed += 1) {

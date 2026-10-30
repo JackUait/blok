@@ -133,6 +133,13 @@ internal static class UpdateV1Decoder
 
     var content = YContent.Read(info, ref reader);
 
+    if (content is ContentDeleted { Length: 0 })
+    {
+      // yjs throws on this one mid-apply; refusing it here leaves the doc as it was.
+      throw new Lib0FormatException(
+          $"yjs: the deleted item at {id.Client}:{id.Clock} has length 0.");
+    }
+
     return new DecodedStruct(
         id,
         content.Length,

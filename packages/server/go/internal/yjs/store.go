@@ -55,6 +55,12 @@ func (s *Store) find(id ID) Struct {
 func (s *Store) findIndex(client, clock uint64) int {
 	structs := s.structs(client)
 	left, right := 0, len(structs)-1
+	// yjs tests the last struct for an exact clock first. Only that finds a
+	// length-0 last struct, which the state vector names: without it every
+	// encode of such a document fails.
+	if right >= 0 && structs[right].head().id.Clock == clock {
+		return right
+	}
 	for left <= right {
 		middle := left + (right-left)/2
 		current := structs[middle].head()

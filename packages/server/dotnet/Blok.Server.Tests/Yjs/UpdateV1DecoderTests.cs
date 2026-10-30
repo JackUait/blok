@@ -678,6 +678,7 @@ public sealed class UpdateV1DecoderTests
       "trailing-bytes" => "follow the delete set",
       "duplicate-client" => "is listed twice",
       "unknown-content-ref" => "is not an item content ref",
+      "empty-struct" => "has length 0",
       // A v1 reader cannot know the payload is v2: its leading 00 reads as
       // zero struct groups and the rest is left over.
       "v2-update" => "follow the delete set",

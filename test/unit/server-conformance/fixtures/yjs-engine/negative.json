@@ -52,6 +52,13 @@
       "yjsAccepts": false
     },
     {
+      "name": "empty-deleted-content",
+      "reason": "empty-struct",
+      "description": "One item on root \"m\" whose content is a ContentDeleted of length 0. yjs throws on it mid-apply; ours refuses it before the doc changes.",
+      "update": "AQHoBwABAQFtAAA=",
+      "yjsAccepts": false
+    },
+    {
       "name": "v2-update",
       "reason": "v2-update",
       "description": "A real Y.encodeStateAsUpdateV2 payload. Its leading 00 reads as zero struct groups, so a v1 reader swallows it whole and returns an empty update.",

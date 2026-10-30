@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/yjs/yjstest"
 )
 
 // Ports of HostileUpdateTests, PendingRetentionTests and ParkedCoverageTests:
@@ -93,6 +94,54 @@ func TestAMapKeyWithNoValueReadsAsUndefined(t *testing.T) {
 		if !ok || value != (jsjson.Undefined{}) {
 			t.Errorf("%s: %#v %v", what, value, ok)
 		}
+		// An empty run put {1000: 0} in the state vector; the sync answer
+		// must still encode.
+		if full := mustEncode(t, doc, nil); len(full) == 0 {
+			t.Errorf("%s: empty full state", what)
+		}
+	}
+}
+
+// mustEncode fails the test on an error or an engine panic.
+func mustEncode(t *testing.T, doc *Doc, target []byte) (update []byte) {
+	t.Helper()
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("encode panicked: %v", recovered)
+		}
+	}()
+	update, err := doc.EncodeStateAsUpdate(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return update
+}
+
+// Shared oracle with C# HostileUpdateTests.ALengthZeroStructEncodesAsYjsDoes:
+// yjs accepts a length-0 struct and still encodes the document.
+func TestALengthZeroStructEncodesAsYjsDoes(t *testing.T) {
+	cases := fixtureCases(t, "empty-structs.json")
+	if len(cases) == 0 {
+		t.Fatal("empty-structs.json has no cases")
+	}
+	for _, c := range cases {
+		t.Run(yjstest.String(c, "name"), func(t *testing.T) {
+			doc := docWithID(4242)
+			for _, update := range yjstest.Items(c, "updates") {
+				applyBytes(t, doc, b64Bytes(t, update.(jsjson.Str).String()))
+			}
+			b64 := base64.StdEncoding.EncodeToString
+			if got, want := b64(doc.EncodeStateVector()), yjstest.String(c, "sv"); got != want {
+				t.Errorf("sv %s, want %s", got, want)
+			}
+			if got, want := b64(mustEncode(t, doc, nil)), yjstest.String(c, "full"); got != want {
+				t.Errorf("full %s, want %s", got, want)
+			}
+			behind := fixtureBytes(t, c, "behind")
+			if got, want := b64(mustEncode(t, doc, behind)), yjstest.String(c, "diff"); got != want {
+				t.Errorf("diff %s, want %s", got, want)
+			}
+		})
 	}
 }
 

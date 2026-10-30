@@ -61,6 +61,14 @@ internal sealed class StructStore
     var left = 0;
     var right = structs.Count - 1;
 
+    // yjs tests the last struct for an exact clock first. Only that finds a
+    // length-0 last struct, which the state vector names: without it every
+    // encode of such a document throws.
+    if (right >= 0 && structs[right].Id.Clock == clock)
+    {
+      return right;
+    }
+
     // yjs pivots the first probe on the clock's share of the run; a plain
     // bisection lands on the same struct because the runs are contiguous.
     while (left <= right)

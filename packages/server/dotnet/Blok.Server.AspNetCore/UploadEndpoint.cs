@@ -272,11 +272,30 @@ internal static class UploadEndpoint
     return true;
   }
 
+  // The code pages Encoding.GetEncoding knows with no provider registered.
+  // Go decodes exactly these.
+  private static readonly HashSet<int> BuiltInCodePages =
+    [20127, 28591, 1200, 1201, 12000, 12001, 65001];
+
   // The decoder catches only ArgumentException, but a UTF-7 charset throws
   // NotSupportedException. Treat it as a charset .NET does not know.
   private static StringSegment ReadFileNameStar(
       ContentDispositionHeaderValue disposition)
   {
+    // AngleSharp registers the code-pages provider on the first unfurl, so
+    // without this check windows-1252 and the like decode only after one.
+    var raw = disposition.Parameters
+      .FirstOrDefault(parameter => parameter.Name.Equals(
+          "filename*",
+          StringComparison.OrdinalIgnoreCase))
+      ?.Value.Value;
+    var quote = raw?.IndexOf('\'') ?? -1;
+
+    if (raw is not null && quote > 0 && IsCodePageCharset(raw[..quote]))
+    {
+      return default;
+    }
+
     try
     {
       return disposition.FileNameStar;
@@ -284,6 +303,19 @@ internal static class UploadEndpoint
     catch (NotSupportedException)
     {
       return default;
+    }
+  }
+
+  private static bool IsCodePageCharset(string charset)
+  {
+    try
+    {
+      return !BuiltInCodePages.Contains(Encoding.GetEncoding(charset).CodePage);
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or NotSupportedException)
+    {
+      return false;
     }
   }
 

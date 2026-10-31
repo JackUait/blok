@@ -39,6 +39,10 @@ type S3 struct {
 	TempDir       string
 	Now           func() time.Time
 	client        *http.Client
+	dialer        *net.Dialer
+	// S3BlobStoreOptions.RequestTimeout and ResponseHeaderTimeout; zero is
+	// the default. Only tests set them.
+	requestTimeout, headerTimeout time.Duration
 }
 
 // NewS3 checks the target the way S3TargetResolver does and builds the client.
@@ -46,14 +50,22 @@ func NewS3(s *S3) (*S3, error) {
 	if _, _, err := s.target("validation"); err != nil {
 		return nil, err
 	}
-	dialer := &net.Dialer{Timeout: s3ConnectTimeout}
+	if s.requestTimeout <= 0 {
+		s.requestTimeout = s3RequestTimeout
+	}
+	if s.headerTimeout <= 0 {
+		s.headerTimeout = s3ResponseHeaderTimeout
+	}
+	s.dialer = &net.Dialer{Timeout: s3ConnectTimeout}
 	s.client = &http.Client{
 		Transport: &http.Transport{
 			// SocketsHttpHandler's default: the system proxy. Which proxy
 			// settings .NET reads on each OS is UNVERIFIED.
-			Proxy:                 http.ProxyFromEnvironment,
-			DialContext:           dialer.DialContext,
-			ResponseHeaderTimeout: s3ResponseHeaderTimeout,
+			Proxy:       http.ProxyFromEnvironment,
+			DialContext: s.dialer.DialContext,
+			// Counts from the end of the body, like the PayloadContent
+			// callback in S3BlobStore.SendAsync.
+			ResponseHeaderTimeout: s.headerTimeout,
 		},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
@@ -255,7 +267,7 @@ func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Rea
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, s3RequestTimeout)
+	ctx, cancel := context.WithTimeout(ctx, s.requestTimeout)
 	defer cancel()
 	if body == nil {
 		body = http.NoBody

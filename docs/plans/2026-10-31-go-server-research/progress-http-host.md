@@ -16,6 +16,7 @@ New suite `test/unit/server-conformance/http-host-contract.test.ts` (in CI for G
 - S8, S10, S11, S12, S15 DONE: `internal/blob/s3_test.go` hand-ports S3TargetResolverTests (11 + 14 cases), the frozen SigV4 vector, the 7 S3BlobStoreObjectMethodsTests, the PUT attachment headers, the media-type cases, the spool cap. Mutation-checked.
 - V1 DONE: `fixtures/options-defaults.json` (`OptionsValidateFixtureTests.DefaultsMatchTheFixture`; Go `TestDefaultOptionsMatchTheCSharpDefaults`).
 - H31 DONE, Go bug fixed: Kestrel answers stalled headers with a bare 408 and closes (`fixtures/header-timeout.json`); Go closed silently. `cmd/blok-server/headertimeout.go` keeps a per-connection clock from the first byte to the handler (net/http's StateActive fires only after the headers). H32 pinned by a field test (a 2-minute black-box case is too slow).
+- A silent connection (no byte at all) closes after KeepAliveTimeout, no answer, like Kestrel (decompiled `Http1Connection.BeginRequestProcessing`); Go test `TestASilentConnectionClosesAtTheKeepAliveTimeout`. Kestrel skips leading CR/LF before starting the header clock; Go starts it on any byte (not ported). Hooks: `limitRequestHeaders` chains earlier ConnState/ConnContext. Collab hand-off: Hijack returns a `*headerConn`, not a `*net.TCPConn`.
 - L7, L8, L10, L11 DONE: `blokserver/handler_test.go` (prefix routes, files at the root, deny-all Authorization never asked on upload/unfurl/delete).
 
 ### Round 2 conformance (`--target go`)
@@ -24,7 +25,7 @@ New suite `test/unit/server-conformance/http-host-contract.test.ts` (in CI for G
 - blok-client-contract: 0/12, every test needs `/sync` (collab lane).
 
 ### Still open after round 2
-- Deferred to collab: H18, H19, H20 (warning needs --collab), H21, H34–H38, H41, L2, L4, L5, L9 (open-routes warning), L13–L16, R4, R8, R22, H33 "sync opts out" (hand-off notes below; also `headerConn` wraps the hijacked conn, its clock stops on StateHijacked).
+- Deferred to collab: H18, H19, H20 (the warning needs --collab to start), H21, H34–H38, H41, L2, L4, L5, L9 (open-routes warning), L13–L16, R4, R8, R22, H33 "sync opts out" (hand-off notes below; also `headerConn` wraps the hijacked conn, its clock stops on StateHijacked).
 - Decisions, not ports: V35 (Go validates once in `New` and copies Options, so no post-registration mutation exists), L1 (no DI container; hooks are Options fields, `s.fetcher`/`s.store` are the only seams, internal), L6 (spool dir `os.TempDir()`, cap MaxUploadBytes, `server.go:321`; by code).
 - By code, no oracle: S13 (timeouts are constants in `s3.go`), O15 (Go's verifier does no revocation; SNI per `tlsConfig`), O5 proxy.
 - UNVERIFIED: S16 (which proxy settings .NET reads; Go uses `http.ProxyFromEnvironment`). Non-ASCII header bytes in date headers (Go parses UTF-8 runes; Kestrel's decoding not measured).
@@ -90,6 +91,8 @@ H33 is DONE except "Sync opts out". `cmd/blok-server/deadline.go` wraps every ro
 3. The `AfterFunc` would write 504 onto a hijacked connection. Mark the writer hijacked (or bypass it) so `timeOut` is a no-op.
 
 DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (next round: add one). TODO = not done.
+
+**The Round 2 section above supersedes the IMPL/TODO marks below.**
 
 ### 1a Host (H)
 - DONE: H1, H2, H3, H5 (usage byte-copy test), H6, H7, H8 (SC:752), H10, H11, H12 (SC upload URLs use the default), H13, H14, H15, H16, H17, H25, H26, H27, H29, H30 (HC), H4 (Go `TestMissingFlagValueExitsTwo`), H28 (Go `TestBindAddress…`), H33 (Go `deadline_test.go`, mutation-checked), H39, H40 (SC:1369/1390/1407).

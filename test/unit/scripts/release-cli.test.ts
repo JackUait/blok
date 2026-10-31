@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildReleaseNotes, gprPublishCommand, publishPackagePair } from '../../../scripts/release.mjs';
+import { buildReleaseNotes, gprPublishCommand, publishPackagePair, releaseGitTags } from '../../../scripts/release.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 
@@ -10,6 +10,62 @@ describe('release.mjs GitHub release sequencing', () => {
     const source = readFileSync(resolve(repositoryRoot, 'scripts/release.mjs'), 'utf8');
 
     expect(source).toMatch(/gh release create \$\{gitTag\}[^\n]* --draft/);
+  });
+});
+
+describe('release.mjs Go module tag', () => {
+  const goMod = (modulePath: string): string => `module ${modulePath}\n\ngo 1.27.1\n`;
+  const modulePath = 'github.com/JackUait/blok/packages/server/go';
+  const releaseSource = (): string => readFileSync(resolve(repositoryRoot, 'scripts/release.mjs'), 'utf8');
+
+  // A module in a subdirectory is versioned only by tags under that
+  // directory; a root v1.2.3 tag does not version it.
+  it('tags the Go module under its directory beside the family tag', () => {
+    expect(releaseGitTags('1.17.0', goMod(modulePath))).toEqual({
+      gitTag: 'v1.17.0',
+      goModuleTag: 'packages/server/go/v1.17.0',
+    });
+    expect(releaseGitTags('1.17.0-beta.1', goMod(modulePath)).goModuleTag)
+      .toBe('packages/server/go/v1.17.0-beta.1');
+  });
+
+  // The proxy keeps a tag forever, so a v2 tag on a path without /v2 can
+  // never be taken back.
+  it('refuses a major version the module path does not carry', () => {
+    expect(() => releaseGitTags('2.0.0', goMod(modulePath))).toThrow(
+      `Go module path ${modulePath} cannot take version 2.0.0; it must end in packages/server/go/v2`,
+    );
+    expect(() => releaseGitTags('1.17.0', goMod(`${modulePath}/v2`))).toThrow(
+      `Go module path ${modulePath}/v2 cannot take version 1.17.0; it must end in packages/server/go`,
+    );
+    expect(releaseGitTags('2.0.0', goMod(`${modulePath}/v2`)).goModuleTag)
+      .toBe('packages/server/go/v2.0.0');
+    expect(() => releaseGitTags('1.17.0', 'go 1.27.1\n')).toThrow('packages/server/go/go.mod has no module line');
+  });
+
+  it('accepts the family version with the go.mod on disk', () => {
+    const { version } = JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8')) as { version: string };
+    const onDisk = readFileSync(resolve(repositoryRoot, 'packages/server/go/go.mod'), 'utf8');
+
+    expect(releaseGitTags(version, onDisk).goModuleTag).toBe(`packages/server/go/v${version}`);
+  });
+
+  it('checks the Go tag before publishing and pushes it before the family tag', () => {
+    const source = releaseSource();
+    const check = source.indexOf('releaseGitTags(version, readFileSync(');
+    const versionBump = source.indexOf('run(`npm version ${version}');
+    const familyTag = source.indexOf('run(`git tag ${gitTag}`)');
+    const goTag = source.indexOf('run(`git tag ${goModuleTag}`)');
+    const goPush = source.indexOf('run(`git push origin ${goModuleTag}`)');
+    const familyPush = source.indexOf('run(`git push origin ${gitTag}`)');
+
+    expect(check).toBeGreaterThan(-1);
+    expect(versionBump).toBeGreaterThan(check);
+    expect(familyTag).toBeGreaterThan(versionBump);
+    expect(goTag).toBeGreaterThan(familyTag);
+    // The family tag starts the release workflows, so it goes last.
+    expect(goPush).toBeGreaterThan(goTag);
+    expect(familyPush).toBeGreaterThan(goPush);
   });
 });
 

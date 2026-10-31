@@ -15,6 +15,37 @@ export const RELEASE_TAG_WORKFLOWS = [
   '.github/workflows/mirror.yml',
 ];
 
+const GO_MODULE_DIRECTORY = 'packages/server/go';
+
+/**
+ * The family tag and the Go module's tag. A module in a subdirectory is
+ * versioned only by tags under that directory. From major 2 on, the module
+ * path must end in /vN, and the proxy keeps a published tag forever, so a
+ * mismatch is refused here, before anything is published.
+ *
+ * @param {string} version - release version, no leading v
+ * @param {string} goMod - packages/server/go/go.mod contents
+ * @returns {{ gitTag: string, goModuleTag: string }}
+ */
+export function releaseGitTags(version, goMod) {
+  const modulePath = /^module\s+(\S+)\s*$/m.exec(goMod)?.[1];
+
+  if (modulePath === undefined) {
+    throw new Error(`${GO_MODULE_DIRECTORY}/go.mod has no module line`);
+  }
+
+  const major = Number(version.split('.')[0]);
+  const expectedEnd = major >= 2 ? `${GO_MODULE_DIRECTORY}/v${major}` : GO_MODULE_DIRECTORY;
+
+  if (!modulePath.endsWith(`/${expectedEnd}`)) {
+    throw new Error(
+      `Go module path ${modulePath} cannot take version ${version}; it must end in ${expectedEnd}`,
+    );
+  }
+
+  return { gitTag: `v${version}`, goModuleTag: `${GO_MODULE_DIRECTORY}/v${version}` };
+}
+
 /**
  * Secrets these workflows read that the repository does not hold.
  *
@@ -195,7 +226,7 @@ if (isDirectRun) {
 
   const isBeta = version.includes('-');
   const tag = isBeta ? 'beta' : 'latest';
-  const gitTag = `v${version}`;
+  const { gitTag, goModuleTag } = releaseGitTags(version, readFileSync(`${GO_MODULE_DIRECTORY}/go.mod`, 'utf8'));
 
   function run(cmd, opts = {}) {
     console.log(`\n> ${cmd}`);
@@ -430,7 +461,9 @@ if (isDirectRun) {
   }
 
   run(`git tag ${gitTag}`);
+  run(`git tag ${goModuleTag}`);
   run('git push');
+  run(`git push origin ${goModuleTag}`);
   run(`git push origin ${gitTag}`);
 
   // --- GitHub release ---

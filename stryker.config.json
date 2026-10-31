@@ -40,6 +40,7 @@
     ".dev/**",
     "override-extension/**",
     "*.png",
-    "*.json.gz"
+    "*.json.gz",
+    "!test/**/*.json.gz"
   ]
 }

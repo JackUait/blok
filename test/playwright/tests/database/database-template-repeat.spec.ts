@@ -190,6 +190,8 @@ test('at the window\'s right edge the ↻ hint shows, and "…" opens the submen
 });
 
 test('a monthly schedule picks its day from "On the [Nth] [Day]"', async ({ page }) => {
+  // Starting reads "Today"/"Tomorrow" near Nov 1, so "Nov 1" needs a fixed today.
+  await page.clock.setFixedTime(new Date('2026-10-21T12:00:00.000Z'));
   await mount(page, { frequency: 'monthly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
   await openBanner(page);
   await page.getByRole('button', { name: 'Duplicate every month' }).click();

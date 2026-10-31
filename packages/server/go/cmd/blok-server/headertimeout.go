@@ -13,16 +13,26 @@ import (
 // byte of a request until its handler runs. On a miss Kestrel writes a bare
 // 408 and closes; net/http's ReadHeaderTimeout would close without a word,
 // and its StateActive fires only after the headers are read, so the clock
-// lives on the connection. It returns the listener wrapper to serve on.
-func limitRequestHeaders(server *http.Server, timeout time.Duration) func(net.Listener) net.Listener {
+// lives on the connection. Before a connection's first byte Kestrel waits
+// KeepAliveTimeout (Http1Connection.BeginRequestProcessing) and closes with
+// no answer; net/http sets no deadline there, so idle covers that wait.
+// It returns the listener wrapper to serve on. Earlier hooks still run.
+func limitRequestHeaders(server *http.Server, timeout, idle time.Duration) func(net.Listener) net.Listener {
 	next := server.Handler
+	earlierContext, earlierState := server.ConnContext, server.ConnState
 	server.ConnContext = func(ctx context.Context, c net.Conn) context.Context {
+		if earlierContext != nil {
+			ctx = earlierContext(ctx, c)
+		}
 		if conn, ok := c.(*headerConn); ok {
 			return context.WithValue(ctx, headerConnKey{}, conn)
 		}
 		return ctx
 	}
 	server.ConnState = func(c net.Conn, state http.ConnState) {
+		if earlierState != nil {
+			earlierState(c, state)
+		}
 		conn, ok := c.(*headerConn)
 		if !ok {
 			return
@@ -40,14 +50,14 @@ func limitRequestHeaders(server *http.Server, timeout time.Duration) func(net.Li
 		}
 		next.ServeHTTP(w, r)
 	})
-	return func(l net.Listener) net.Listener { return headerListener{l, timeout} }
+	return func(l net.Listener) net.Listener { return headerListener{l, timeout, idle} }
 }
 
 type headerConnKey struct{}
 
 type headerListener struct {
 	net.Listener
-	timeout time.Duration
+	timeout, idle time.Duration
 }
 
 func (l headerListener) Accept() (net.Conn, error) {
@@ -55,7 +65,9 @@ func (l headerListener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &headerConn{Conn: c, timeout: l.timeout, armed: true}, nil
+	conn := &headerConn{Conn: c, timeout: l.timeout, armed: true}
+	conn.timer = time.AfterFunc(l.idle, func() { _ = c.Close() })
+	return conn, nil
 }
 
 type headerConn struct {
@@ -72,11 +84,30 @@ func (c *headerConn) Read(p []byte) (int, error) {
 		c.mu.Lock()
 		if c.armed {
 			c.armed = false
+			if c.timer != nil {
+				c.timer.Stop()
+			}
 			c.timer = time.AfterFunc(c.timeout, c.expire)
 		}
 		c.mu.Unlock()
 	}
 	return n, err
+}
+
+// CloseWrite and ReadFrom keep what net/http asserts on the raw conn: the
+// half close before closing on an unread body, and sendfile.
+func (c *headerConn) CloseWrite() error {
+	if w, ok := c.Conn.(interface{ CloseWrite() error }); ok {
+		return w.CloseWrite()
+	}
+	return nil
+}
+
+func (c *headerConn) ReadFrom(r io.Reader) (int64, error) {
+	if w, ok := c.Conn.(io.ReaderFrom); ok {
+		return w.ReadFrom(r)
+	}
+	return io.Copy(struct{ io.Writer }{c.Conn}, r)
 }
 
 func (c *headerConn) expire() {

@@ -485,6 +485,44 @@ it('caps an upload at 1000 multipart sections', async () => {
   compareGolden('upload-section-limit.json', actual);
 }, 60_000);
 
+// End to end over the shared file-name fixture: decode, sanitize, JSON.
+const FILE_NAME_PARAMETERS = [
+  "filename*=iso-8859-1''caf%E9.txt",
+  "filename*=us-ascii''abc%80.txt",
+  "filename*=utf-16''a%00.txt",
+  "filename*=utf-8''%F0%9F%98%80%ED%A0%80.txt",
+  "filename*=utf-8''a%C3.txt",
+  "filename*=utf-8''a%22%5C%0D.txt",
+  "filename*=utf-7''a.txt",
+  'filename*=utf-7\'\'a.txt; filename="b.txt"',
+  "filename*=utf-8''a'b.txt",
+];
+
+it('reads filename* with every charset .NET knows', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-filename-'));
+  const actual: UploadGolden[] = [];
+
+  try {
+    await withServer(['--storage-dir', directory, '--public-url', 'https://uploads.example.com/files/'], async (server) => {
+      for (const parameters of FILE_NAME_PARAMETERS) {
+        const body = `--${BOUNDARY}\r\nContent-Disposition: form-data; name="file"; ${parameters}\r\n` +
+          `Content-Type: text/plain\r\n\r\none\r\n--${BOUNDARY}--\r\n`;
+        const response = golden(await server.request('POST', '/upload', {
+          body,
+          headers: { 'Content-Type': `multipart/form-data; boundary=${BOUNDARY}` },
+        }));
+
+        response.body = response.body.replace(/[0-9a-f]{32}/g, '<key>');
+        actual.push({ name: parameters, response });
+      }
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  compareGolden('upload-file-names.json', actual);
+}, 60_000);
+
 const SPOOL_NAME = /^\.blok-upload-[0-9a-f]{32}$/;
 
 async function spoolFiles(directory: string): Promise<string[]> {

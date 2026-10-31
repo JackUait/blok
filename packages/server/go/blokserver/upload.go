@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
 	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
@@ -200,9 +199,18 @@ func (c *countingReader) Read(p []byte) (int, error) {
 // fileMetadata is TryGetFileMetadata: a form-data part named "file" with a
 // filename (filename* first).
 func fileMetadata(part *multipartPart) (fileName, mimeType string, ok bool) {
-	dispositionType, params, parsed := mediatypeLikeDisposition(part.header("Content-Disposition"))
-	if !parsed || !strings.EqualFold(dispositionType, "form-data") {
+	fileName, ok = fileNameFromDisposition(part.header("Content-Disposition"))
+	if !ok {
 		return "", "", false
+	}
+	return fileName, mediatype.SanitizeWire(part.header("Content-Type")), true
+}
+
+// fileNameFromDisposition is UploadEndpoint.TryReadFileName.
+func fileNameFromDisposition(disposition string) (string, bool) {
+	dispositionType, params, parsed := mediatypeLikeDisposition(disposition)
+	if !parsed || !strings.EqualFold(dispositionType, "form-data") {
+		return "", false
 	}
 	var name, plain, star *string
 	for i := range params {
@@ -223,26 +231,19 @@ func fileMetadata(part *multipartPart) (fileName, mimeType string, ok bool) {
 		}
 	}
 	if name == nil || removeQuotes(*name) != "file" {
-		return "", "", false
+		return "", false
 	}
-	raw := ""
-	switch {
-	case star != nil:
-		decoded, ok := decodeExtendedValue(*star)
-		if !ok {
-			if plain == nil {
-				return "", "", false
-			}
-			raw = *plain
-		} else {
-			raw = decoded
+	raw, decoded := "", false
+	if star != nil {
+		raw, decoded = decodeExtendedValue(*star)
+	}
+	if !decoded {
+		if plain == nil {
+			return "", false
 		}
-	case plain != nil:
 		raw = *plain
-	default:
-		return "", "", false
 	}
-	return sanitizeFileName(unquoteFileName(raw)), mediatype.SanitizeWire(part.header("Content-Type")), true
+	return sanitizeFileName(unquoteFileName(raw)), true
 }
 
 // mediatypeLikeDisposition reads "type; name=value" with the media-type
@@ -260,29 +261,6 @@ func mediatypeLikeDisposition(value string) (string, []mediatype.Param, bool) {
 	}
 	_, params, ok := mediatype.Parse("x/y" + rest)
 	return dispositionType, params, ok
-}
-
-// decodeExtendedValue reads RFC 5987 "UTF-8”percent-encoded".
-func decodeExtendedValue(value string) (string, bool) {
-	parts := strings.SplitN(value, "'", 3)
-	if len(parts) != 3 || !strings.EqualFold(parts[0], "utf-8") {
-		return "", false
-	}
-	var b bytes.Buffer
-	text := parts[2]
-	for i := 0; i < len(text); i++ {
-		if text[i] == '%' && i+2 < len(text) && isHexDigit(text[i+1]) && isHexDigit(text[i+2]) {
-			hi, _ := hex.DecodeString(text[i+1 : i+3])
-			b.Write(hi)
-			i += 2
-			continue
-		}
-		b.WriteByte(text[i])
-	}
-	if !utf8.Valid(b.Bytes()) {
-		return "", false
-	}
-	return b.String(), true
 }
 
 func removeQuotes(value string) string {

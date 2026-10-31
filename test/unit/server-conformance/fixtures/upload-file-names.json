@@ -1,0 +1,137 @@
+[
+  {
+    "name": "filename*=iso-8859-1''caf%E9.txt",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"caf\\u00E9.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=us-ascii''abc%80.txt",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"abc?.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=utf-16''a%00.txt",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"a\\uFFFD.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=utf-8''%F0%9F%98%80%ED%A0%80.txt",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"\\uD83D\\uDE00\\uFFFD\\uFFFD\\uFFFD.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=utf-8''a%C3.txt",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"a\\uFFFD.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=utf-8''a%22%5C%0D.txt",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"\\r.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=utf-7''a.txt",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "missing file field\n"
+    }
+  },
+  {
+    "name": "filename*=utf-7''a.txt; filename=\"b.txt\"",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"url\":\"https://uploads.example.com/files/<key>.txt\",\"fileName\":\"b.txt\",\"size\":3,\"mimeType\":\"text/plain\"}\n"
+    }
+  },
+  {
+    "name": "filename*=utf-8''a'b.txt",
+    "response": {
+      "status": 400,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "missing file field\n"
+    }
+  }
+]

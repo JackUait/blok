@@ -153,6 +153,20 @@ test.describe('blok version override', () => {
 
       const armSwitch = popup.getByRole('switch', { name: 'Use your build on http://localhost:4444' });
       await expect(armSwitch).toHaveAttribute('aria-checked', 'false');
+
+      // Keep the page's main thread busy for longer than the expect budget,
+      // the way a slow runner is while the reload evaluates the multi-MB
+      // payload. The popup cannot read a busy page, and the switch must not
+      // wait for it: the worker has already armed the origin.
+      await page.evaluate((ms) => {
+        setTimeout(() => {
+          const end = Date.now() + ms;
+
+          while (Date.now() < end) {
+            // busy on purpose
+          }
+        }, 0);
+      }, 8_000);
       await armSwitch.click();
       await expect(armSwitch).toHaveAttribute('aria-checked', 'true');
 
@@ -214,11 +228,14 @@ test.describe('blok version override', () => {
         loads += 1;
       });
 
+      // Arming reloads once — at that point the payload was not in the realm yet,
+      // so a reload was the right call. That reload runs the multi-MB payload
+      // first, so wait for its load event under the test budget, as above.
+      const reloaded = page.waitForEvent('load', { timeout: 0 });
       await sw.evaluate(async () => {
         await (globalThis as unknown as { armOriginForTests: (o: string) => Promise<void> }).armOriginForTests('http://localhost:4444');
       });
-      // Arming reloads once — at that point the payload was not in the realm yet,
-      // so a reload was the right call.
+      await reloaded;
       await expect(page.getByRole('status').filter({ hasText: 'too old to swap' })).toBeVisible();
       expect(loads).toBe(1);
 

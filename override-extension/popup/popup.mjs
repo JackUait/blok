@@ -197,8 +197,17 @@ const applyFacts = (page) => {
 };
 
 const refresh = async ({ probeHelper = false } = {}) => {
-  const [status, page, catalog] = await Promise.all([send({ type: 'status' }), collectFacts(), readCachedCatalog()]);
-  state.status = status;
+  // Paint the worker's answer as soon as it lands. collectFacts waits for the
+  // page that arm/disarm/setRedirects just reloaded, and an armed reload runs
+  // the multi-MB payload first, so the switch would sit on its old value for
+  // seconds. Not before the first paint: detection is still unset.
+  const statusLanded = send({ type: 'status' }).then((status) => {
+    state.status = status;
+    if (renderCount > 0) {
+      render();
+    }
+  });
+  const [, page, catalog] = await Promise.all([statusLanded, collectFacts(), readCachedCatalog()]);
   applyFacts(page);
   state.catalog = catalog;
   render();

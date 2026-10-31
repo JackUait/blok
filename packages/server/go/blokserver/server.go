@@ -38,10 +38,21 @@ func New(o Options) (*Server, error) {
 		return nil, err
 	}
 	o.AllowedOrigins = append([]string(nil), o.AllowedOrigins...)
+	if o.RichTextFields != nil {
+		fields := make(map[string][]string, len(o.RichTextFields))
+		for block, names := range o.RichTextFields {
+			fields[block] = append([]string(nil), names...)
+		}
+		o.RichTextFields = fields
+	}
+	clock := o.Clock
+	if clock == nil {
+		clock = time.Now
+	}
 	s := &Server{
 		options:    o,
 		publicPath: publicPath,
-		clock:      time.Now,
+		clock:      clock,
 		fetcher:    outbound.NewFetcher(outbound.DefaultPolicy{}),
 	}
 	s.limiter = newRateLimiter(o.RateLimitPerMinute, func() time.Time { return s.clock() })

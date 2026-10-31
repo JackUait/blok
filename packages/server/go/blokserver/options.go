@@ -73,6 +73,10 @@ type Options struct {
 	// Authorization narrows document access. Nil allows what the ticket
 	// allows.
 	Authorization Authorization
+
+	// Clock is the TimeProvider override: tickets, the rate limit window and
+	// S3 signing read it. Nil is the system clock.
+	Clock func() time.Time
 }
 
 // DefaultOptions returns the C# BlokServerOptions defaults.

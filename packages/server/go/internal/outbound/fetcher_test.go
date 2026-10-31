@@ -295,3 +295,26 @@ func TestHoldsFourResponsesUntilOneIsReleased(t *testing.T) {
 		response.Release()
 	}
 }
+
+// GuardedOutboundFetcherTests.RejectsTheRedirectAfterTheConfiguredCap.
+func TestRejectsTheRedirectAfterTheConfiguredCap(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Location", "/"+strconv.Itoa(int(requests.Add(1))))
+		w.WriteHeader(http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+	port := server.Listener.Addr().(*net.TCPAddr).Port
+	resolver := &countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}}
+	policy := &fixturePolicy{host: "cap.example", port: port, allowed: addrs("127.0.0.1")}
+	f := newTestFetcher(policy, resolver)
+	limits := Limits{Timeout: 2 * time.Second, MaxBytes: 1024, MaxRedirects: 2}
+
+	_, err := f.Get(context.Background(), "http://cap.example:"+strconv.Itoa(port)+"/0", limits)
+	if !IsFailure(err, TooManyRedirects) {
+		t.Fatalf("got %v, want TooManyRedirects", err)
+	}
+	if requests.Load() != 3 || resolver.calls.Load() != 3 {
+		t.Fatalf("%d requests and %d lookups, want 3 and 3", requests.Load(), resolver.calls.Load())
+	}
+}

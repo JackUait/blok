@@ -614,6 +614,37 @@ it('sends only the C# request headers to an outbound origin', async () => {
   compareGolden('outbound-request-headers.json', actual);
 }, 60_000);
 
+it('follows five outbound redirects and refuses the sixth', async () => {
+  const origin = await startFixtureOrigin();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-redirects-'));
+  const actual: Array<{ name: string; response: GoldenResponse }> = [];
+
+  try {
+    await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl], async (server) => {
+      for (const hops of [5, 6]) {
+        const page = golden(await server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/chain/${hops}/page.html`)}`));
+        const media = golden(await server.request('POST', '/upload-by-url', {
+          body: JSON.stringify({ url: `${origin.baseUrl}/chain/${hops}/photo.png` }),
+          headers: { 'Content-Type': 'application/json' },
+        }));
+
+        for (const recorded of [page, media]) {
+          recorded.body = recorded.body.split(origin.baseUrl).join('<origin>').split(server.baseUrl).join('<server>')
+            .replace(/[0-9a-f]{32}/g, '<key>');
+          delete recorded.headers['content-length'];
+        }
+        actual.push({ name: `unfurl after ${hops} redirects`, response: page });
+        actual.push({ name: `upload-by-url after ${hops} redirects`, response: media });
+      }
+    });
+  } finally {
+    await origin.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  compareGolden('outbound-redirect-cap.json', actual);
+}, 60_000);
+
 it('shares four outbound fetches between unfurl and upload-by-url', async () => {
   const origin = await startFixtureOrigin();
   const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-permits-'));

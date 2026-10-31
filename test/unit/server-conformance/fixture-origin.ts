@@ -138,6 +138,24 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
       }
     }
 
+    // /chain/N/name redirects N times, then serves name.
+    const chain = /^\/chain\/(\d+)\/(.+)$/.exec(path);
+
+    if (chain !== null) {
+      const hops = Number(chain[1]);
+
+      if (hops > 0) {
+        response.writeHead(302, { Location: `/chain/${hops - 1}/${chain[2]}` });
+        response.end();
+      } else if (chain[2].endsWith('.png')) {
+        send(response, 200, 'image/png', FIXTURE_MEDIA_BODY);
+      } else {
+        send(response, 200, 'text/html; charset=utf-8', PRECEDENCE_HTML);
+      }
+
+      return;
+    }
+
     if (path.startsWith('/hold/')) {
       held.current++;
       held.peak = Math.max(held.peak, held.current);

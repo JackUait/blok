@@ -21,6 +21,10 @@ func TestEqualsOrdinalIgnoreCase(t *testing.T) {
 		{"a\xe9", "a\xe9", true},
 		{"a\xe9", "a\xc9", false},
 		{"ab", "a", false},
+		// The pair differs in UTF-8 length; .NET compares UTF-16 chars.
+		{"http://\u0250.example", "http://\u2c6f.example", true},
+		{"http://\u2c65.example", "http://\u023a.example", true},
+		{"a\xe9", "a\u00e9", false},
 	}
 	for _, c := range cases {
 		if got := EqualsOrdinalIgnoreCase(c.a, c.b); got != c.want {

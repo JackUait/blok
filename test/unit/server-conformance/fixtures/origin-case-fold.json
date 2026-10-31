@@ -68,6 +68,14 @@
     "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
+    "name": "preflight capital turned a",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight capital a with stroke",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
     "name": "preflight with non-ASCII requested headers",
     "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
   },

@@ -13,10 +13,13 @@ func EqualsOrdinalIgnoreCase(a, b string) bool {
 	for a != "" && b != "" {
 		x, xn := utf8.DecodeRuneInString(a)
 		y, yn := utf8.DecodeRuneInString(b)
-		if xn != yn || a[:xn] != b[:yn] && ordinalUpper(x) != ordinalUpper(y) {
-			return false
-		}
-		if x == utf8.RuneError && xn == 1 && a[0] != b[0] {
+		xBad, yBad := x == utf8.RuneError && xn == 1, y == utf8.RuneError && yn == 1
+		switch {
+		case xBad || yBad:
+			if !xBad || !yBad || a[0] != b[0] {
+				return false
+			}
+		case ordinalUpper(x) != ordinalUpper(y):
 			return false
 		}
 		a, b = a[xn:], b[yn:]

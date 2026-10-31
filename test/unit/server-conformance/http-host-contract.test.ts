@@ -795,12 +795,16 @@ const ORIGIN_SPELLINGS: Record<string, string> = {
   'micro sign': 'http://\u00b5.example',
   'capital mu': 'http://\u039c.example',
   'emoji': 'http://\u{1F600}.example',
+  // Upper and lower case differ in UTF-8 length here.
+  'capital turned a': 'http://\u2c6f.example',
+  'capital a with stroke': 'http://\u023a.example',
 };
 
 it('matches request origins the way OrdinalIgnoreCase does', async () => {
   const actual: Array<{ name: string; response: string }> = [];
   const allowed = ['http://k.example', 'http://s.example', 'http://i.example', 'http://\u00e9.example',
-    'http://\u00df.example', 'http://\u03c3.example', 'http://\u03bc.example'];
+    'http://\u00df.example', 'http://\u03c3.example', 'http://\u03bc.example', 'http://\u0250.example',
+    'http://\u2c65.example'];
 
   await withServer(['--auth', 'ticket', '--allow-origin', allowed.join(','), '--storage-dir', ''], async (server) => {
     for (const [name, origin] of Object.entries(ORIGIN_SPELLINGS)) {

@@ -219,7 +219,13 @@ const canListenOnIpv6Loopback = await (async () => {
 
 // Kestrel binds what UseUrls makes of the address: an IPv4 address alone,
 // any IPv6 address for a wildcard, and both loopbacks for localhost.
-it.skipIf(!canListenOnIpv6Loopback).each([
+const itWithIpv6 = baseIt.skipIf(
+  process.env.BLOK_CONFORMANCE_SERVER === undefined ||
+  process.env.BLOK_CONFORMANCE_SERVER === '' ||
+  !canListenOnIpv6Loopback,
+);
+
+itWithIpv6.each([
   { listen: ':', ipv4: true, ipv6: false },
   { listen: '0.0.0.0:', ipv4: true, ipv6: false },
   { listen: '127.1:', ipv4: true, ipv6: false },

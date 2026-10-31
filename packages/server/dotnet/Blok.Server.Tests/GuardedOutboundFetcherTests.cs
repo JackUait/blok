@@ -240,6 +240,85 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal("/literal", origin.LastRequest?.Target);
   }
 
+  // An IPv6 socket never reaches an IPv4-mapped address, so such a literal
+  // is refused even though the policy allows it.
+  [Fact]
+  public async Task AnIpv4MappedLiteralNeverConnects()
+  {
+    if (!Socket.OSSupportsIPv6)
+    {
+      return;
+    }
+
+    var mapped = IPAddress.Parse("::ffff:127.0.0.1");
+    await using var origin = new LoopbackOrigin(IPAddress.Loopback);
+    var resolver = new SequenceDnsResolver([mapped]);
+    var fetcher = new GuardedOutboundFetcher(
+        new LiteralFixturePolicy(origin.Port, mapped),
+        resolver);
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://[::ffff:127.0.0.1]:{origin.Port}/mapped",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
+    Assert.Equal(0, resolver.CallCount);
+    Assert.Null(origin.LastRequest);
+  }
+
+  [Fact]
+  public async Task AnIpv4MappedDnsAnswerNeverConnects()
+  {
+    if (!Socket.OSSupportsIPv6)
+    {
+      return;
+    }
+
+    await using var origin = new LoopbackOrigin();
+    var mapped = IPAddress.Parse("::ffff:127.0.0.1");
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy("mapped.example", origin.Port, mapped),
+        new SequenceDnsResolver([mapped]));
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://mapped.example:{origin.Port}/mapped",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
+    Assert.Null(origin.LastRequest);
+  }
+
+  [Fact]
+  public async Task SkipsAnIpv4MappedDnsAnswerForTheNextAddress()
+  {
+    if (!Socket.OSSupportsIPv6)
+    {
+      return;
+    }
+
+    await using var origin = new LoopbackOrigin();
+    var mapped = IPAddress.Parse("::ffff:127.0.0.1");
+    var resolver = new SequenceDnsResolver([mapped, IPAddress.Loopback]);
+    var policy = new FixtureOutboundPolicy(
+        "mapped.example",
+        origin.Port,
+        mapped,
+        IPAddress.Loopback);
+    var fetcher = new GuardedOutboundFetcher(policy, resolver);
+
+    await using var response = await fetcher.GetAsync(
+        $"http://mapped.example:{origin.Port}/mapped",
+        Limits,
+        CancellationToken.None);
+
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
+    Assert.Equal("/mapped", origin.LastRequest?.Target);
+  }
+
   [Fact]
   public async Task ConnectsToTheExactValidatedIpv6Candidate()
   {

@@ -21,6 +21,8 @@ const UserAgent = "blok-server (+https://blokeditor.com)"
 
 const connectAttemptTimeout = time.Second
 
+var errMappedAddress = errors.New("address family not supported by protocol family")
+
 // Limits are GuardedFetchLimits.
 type Limits struct {
 	Timeout      time.Duration
@@ -191,6 +193,12 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 			}
 			var last error
 			for i, ip := range addresses {
+				// .NET dials a mapped address on an IPv6-only socket, which
+				// fails at once; Go would reach the IPv4 address instead.
+				if ip.Is4In6() {
+					last = errMappedAddress
+					continue
+				}
 				attempt := ctx
 				cancel := context.CancelFunc(func() {})
 				if i < len(addresses)-1 {
@@ -229,7 +237,7 @@ func (f *Fetcher) tlsConfig(target Target) *tls.Config {
 
 func hostHeader(target Target) string {
 	host := target.Host
-	if target.Literal.Is6() && !target.Literal.Is4In6() {
+	if target.Literal.Is6() {
 		host = "[" + host + "]"
 	}
 	if target.Port != 80 && target.URL.Scheme == "http" || target.Port != 443 && target.URL.Scheme == "https" {

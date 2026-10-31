@@ -318,3 +318,90 @@ func TestRejectsTheRedirectAfterTheConfiguredCap(t *testing.T) {
 		t.Fatalf("%d requests and %d lookups, want 3 and 3", requests.Load(), resolver.calls.Load())
 	}
 }
+
+// mappedPolicy is LiteralFixturePolicy for ::ffff:127.0.0.1.
+type mappedPolicy struct{ port int }
+
+func (p mappedPolicy) Validate(raw string, base *dotnet.URI) (Target, error) {
+	url, ok := resolve(raw, base)
+	if !ok || url.Port != p.port {
+		return Target{}, fail(Blocked)
+	}
+	return Target{URL: url, Host: "::ffff:127.0.0.1", Port: p.port, Literal: netip.MustParseAddr("::ffff:127.0.0.1")}, nil
+}
+
+func (mappedPolicy) AddressAllowed(address netip.Addr) bool {
+	return address == netip.MustParseAddr("::ffff:127.0.0.1")
+}
+
+// .NET opens an IPv6 socket for a mapped address, and it never connects.
+func TestAnIPv4MappedLiteralNeverConnects(t *testing.T) {
+	o := startOrigin(t, "tcp4", "127.0.0.1:0")
+	resolver := &countingResolver{answers: [][]netip.Addr{addrs("::ffff:127.0.0.1")}}
+	f := newTestFetcher(mappedPolicy{port: o.port}, resolver)
+
+	_, err := f.Get(context.Background(), "http://[::ffff:127.0.0.1]:"+strconv.Itoa(o.port)+"/mapped", testLimits)
+	if !IsFailure(err, Blocked) {
+		t.Fatalf("got %v, want Blocked", err)
+	}
+	if resolver.calls.Load() != 0 || o.lastPath != "" {
+		t.Fatalf("resolved %d times, origin saw %q", resolver.calls.Load(), o.lastPath)
+	}
+}
+
+func TestSkipsAnIPv4MappedDNSAnswerForTheNextAddress(t *testing.T) {
+	o := startOrigin(t, "tcp4", "127.0.0.1:0")
+	resolver := &countingResolver{answers: [][]netip.Addr{addrs("::ffff:127.0.0.1", "127.0.0.1")}}
+	policy := &fixturePolicy{host: "mapped.example", port: o.port, allowed: addrs("::ffff:127.0.0.1", "127.0.0.1")}
+	f := newTestFetcher(policy, resolver)
+	started := time.Now()
+
+	response, err := f.Get(context.Background(), "http://mapped.example:"+strconv.Itoa(o.port)+"/mapped", testLimits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Release()
+	if string(response.Body) != "ok" || o.lastPath != "/mapped" {
+		t.Fatalf("body %q, path %q", response.Body, o.lastPath)
+	}
+	// The mapped attempt fails at once; it must not wait out the attempt timeout.
+	if elapsed := time.Since(started); elapsed >= connectAttemptTimeout {
+		t.Fatalf("took %v", elapsed)
+	}
+}
+
+func TestAnIPv4MappedDNSAnswerNeverConnects(t *testing.T) {
+	o := startOrigin(t, "tcp4", "127.0.0.1:0")
+	resolver := &countingResolver{answers: [][]netip.Addr{addrs("::ffff:127.0.0.1")}}
+	policy := &fixturePolicy{host: "mapped.example", port: o.port, allowed: addrs("::ffff:127.0.0.1")}
+	f := newTestFetcher(policy, resolver)
+
+	_, err := f.Get(context.Background(), "http://mapped.example:"+strconv.Itoa(o.port)+"/mapped", testLimits)
+	if !IsFailure(err, Blocked) {
+		t.Fatalf("got %v, want Blocked", err)
+	}
+	if o.lastPath != "" {
+		t.Fatalf("origin saw %q", o.lastPath)
+	}
+}
+
+// CreateHostHeader brackets every InterNetworkV6 literal, mapped ones too.
+func TestHostHeaderBracketsEveryIPv6Literal(t *testing.T) {
+	cases := map[string]string{
+		"http://127.0.0.1/":             "127.0.0.1",
+		"http://[::1]:8080/":            "[::1]:8080",
+		"http://[::ffff:127.0.0.1]/":    "[::ffff:127.0.0.1]",
+		"https://[::ffff:8.8.8.8]:444/": "[::ffff:8.8.8.8]:444",
+	}
+	for raw, want := range cases {
+		url, ok := resolve(raw, nil)
+		if !ok {
+			t.Fatalf("%s did not parse", raw)
+		}
+		literal, _ := dotnet.ParseIP(url.IdnHost)
+		target := Target{URL: url, Host: url.IdnHost, Port: url.Port, Literal: literal}
+		if got := hostHeader(target); got != want {
+			t.Errorf("%s: got %q, want %q", raw, got, want)
+		}
+	}
+}

@@ -1,0 +1,310 @@
+[
+  {
+    "name": "no proxy variables",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "HTTPS_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "https_proxy",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "HTTPS_PROXY without a scheme",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "only HTTP_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "ALL_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "all_proxy",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "NO_PROXY names the host",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "NO_PROXY names the domain",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "NO_PROXY bare domain",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "NO_PROXY star",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "no_proxy names the host",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "empty no_proxy beside NO_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty https_proxy beside HTTPS_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "HTTPS_PROXY beside ALL_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "HTTPS_PROXY with a path after the port",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "HTTPS_PROXY in upper case scheme",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "HTTPS_PROXY with an empty port",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "NO_PROXY list with spaces and case",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "NO_PROXY dot entry names the host itself",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": []
+    }
+  },
+  {
+    "name": "HTTPS_PROXY under CGI",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "CONNECT",
+          "target": "s3.blok-proxy.invalid:443",
+          "host": "s3.blok-proxy.invalid:443"
+        }
+      ]
+    }
+  },
+  {
+    "name": "loopback http endpoint with HTTP_PROXY",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "PUT",
+          "target": "http://<proxy>/media/<key>.txt",
+          "host": "<proxy>"
+        }
+      ]
+    }
+  },
+  {
+    "name": "loopback http endpoint with no proxy",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "PUT",
+          "target": "/media/<key>.txt",
+          "host": "<proxy>"
+        }
+      ]
+    }
+  },
+  {
+    "name": "loopback http endpoint with HTTP_PROXY under CGI",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "PUT",
+          "target": "/media/<key>.txt",
+          "host": "<proxy>"
+        }
+      ]
+    }
+  },
+  {
+    "name": "loopback http endpoint with http_proxy under CGI",
+    "response": {
+      "status": 502,
+      "text": "upload failed\n",
+      "proxied": [
+        {
+          "method": "PUT",
+          "target": "http://<proxy>/media/<key>.txt",
+          "host": "<proxy>"
+        }
+      ]
+    }
+  }
+]

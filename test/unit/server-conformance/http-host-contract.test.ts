@@ -5,8 +5,9 @@
 // --target csharp --suite http-host-contract. Any other run compares.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { request as httpRequest } from 'node:http';
+import { createServer, request as httpRequest, type IncomingMessage } from 'node:http';
 import { connect } from 'node:net';
+import type { Duplex } from 'node:stream';
 import { chmod, mkdir, mkdtemp, readdir, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -672,3 +673,110 @@ it('drops a connection whose request headers stall for 10 seconds', async () => 
     compareGolden('header-timeout.json', [{ name: 'stalled headers', response: answer }]);
   });
 }, 30_000);
+
+const PROXY_VARIABLES = [
+  'HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',
+  'GATEWAY_INTERFACE', 'REQUEST_METHOD',
+];
+
+// The S3 endpoint must be https off loopback, and its name never resolves,
+// so the only sign of a proxy is the CONNECT it receives. The proxy refuses
+// the tunnel, so every upload fails; the golden pins who was asked.
+// Captured on macOS with no system proxy set.
+const PROXY_CASES: Record<string, (proxy: string) => Record<string, string>> = {
+  'no proxy variables': () => ({}),
+  'HTTPS_PROXY': (proxy) => ({ HTTPS_PROXY: proxy }),
+  'https_proxy': (proxy) => ({ https_proxy: proxy }),
+  'HTTPS_PROXY without a scheme': (proxy) => ({ HTTPS_PROXY: proxy.replace('http://', '') }),
+  'only HTTP_PROXY': (proxy) => ({ HTTP_PROXY: proxy }),
+  'ALL_PROXY': (proxy) => ({ ALL_PROXY: proxy }),
+  'all_proxy': (proxy) => ({ all_proxy: proxy }),
+  'NO_PROXY names the host': (proxy) => ({ HTTPS_PROXY: proxy, NO_PROXY: 's3.blok-proxy.invalid' }),
+  'NO_PROXY names the domain': (proxy) => ({ HTTPS_PROXY: proxy, NO_PROXY: '.blok-proxy.invalid' }),
+  'NO_PROXY bare domain': (proxy) => ({ HTTPS_PROXY: proxy, NO_PROXY: 'blok-proxy.invalid' }),
+  'NO_PROXY star': (proxy) => ({ HTTPS_PROXY: proxy, NO_PROXY: '*' }),
+  'no_proxy names the host': (proxy) => ({ HTTPS_PROXY: proxy, no_proxy: 's3.blok-proxy.invalid' }),
+  'empty no_proxy beside NO_PROXY': (proxy) => ({ HTTPS_PROXY: proxy, no_proxy: '', NO_PROXY: 's3.blok-proxy.invalid' }),
+  'empty https_proxy beside HTTPS_PROXY': (proxy) => ({ https_proxy: '', HTTPS_PROXY: proxy }),
+  'HTTPS_PROXY beside ALL_PROXY': (proxy) => ({ HTTPS_PROXY: proxy, ALL_PROXY: 'http://127.0.0.1:9' }),
+  'HTTPS_PROXY with a path after the port': (proxy) => ({ HTTPS_PROXY: `${proxy}/ignored` }),
+  'HTTPS_PROXY in upper case scheme': (proxy) => ({ HTTPS_PROXY: proxy.replace('http://', 'HTTP://') }),
+  'HTTPS_PROXY with an empty port': (proxy) => ({ HTTPS_PROXY: `${proxy.replace(/:\d+$/, '')}:`, ALL_PROXY: proxy }),
+  'NO_PROXY list with spaces and case': (proxy) => ({ HTTPS_PROXY: proxy, NO_PROXY: ' other.example , S3.Blok-Proxy.Invalid ' }),
+  'NO_PROXY dot entry names the host itself': (proxy) => ({ HTTPS_PROXY: proxy, NO_PROXY: '.s3.blok-proxy.invalid' }),
+  'HTTPS_PROXY under CGI': (proxy) => ({ HTTPS_PROXY: proxy, GATEWAY_INTERFACE: 'CGI/1.1' }),
+  // The proxy is also the endpoint: an absolute-form target means proxied.
+  'loopback http endpoint with HTTP_PROXY': (proxy) => ({ HTTP_PROXY: proxy, ENDPOINT: proxy }),
+  'loopback http endpoint with no proxy': (proxy) => ({ ENDPOINT: proxy }),
+  'loopback http endpoint with HTTP_PROXY under CGI': (proxy) => ({ HTTP_PROXY: proxy, GATEWAY_INTERFACE: 'CGI/1.1', ENDPOINT: proxy }),
+  'loopback http endpoint with http_proxy under CGI': (proxy) => ({ http_proxy: proxy, GATEWAY_INTERFACE: 'CGI/1.1', ENDPOINT: proxy }),
+};
+
+interface ProxyGolden {
+  name: string;
+  response: { status: number; text: string; proxied: { method: string; target: string; host: string }[] };
+}
+
+async function uploadThroughS3(variables: Record<string, string>): Promise<HttpResponse> {
+  // Undefined unsets a variable in the child. An empty one is not unset
+  // for .NET: an empty no_proxy hides NO_PROXY.
+  const env: NodeJS.ProcessEnv = { BLOK_S3_ACCESS_KEY: 'AKIAEXAMPLE', BLOK_S3_SECRET_KEY: 'secret' };
+
+  for (const variable of PROXY_VARIABLES) {
+    env[variable] = undefined;
+  }
+  const { ENDPOINT: endpoint = 'https://s3.blok-proxy.invalid', ...set } = variables;
+  const server = await startServer({
+    args: [
+      '--listen', '127.0.0.1:0', '--s3-endpoint', endpoint, '--s3-region', 'us-east-1',
+      '--s3-bucket', 'media', '--s3-bucket-url', 'https://cdn.example.com/media', '--s3-addressing', 'path',
+    ],
+    env: { ...env, ...set },
+  });
+
+  try {
+    return await server.request('POST', '/upload', {
+      body: multipart([filePart('a.txt', 'one')]),
+      headers: { 'Content-Type': `multipart/form-data; boundary=${BOUNDARY}` },
+    });
+  } finally {
+    await server.stop();
+  }
+}
+
+it('sends S3 requests through the environment proxy the way .NET does', async () => {
+  const seen: { method: string; target: string; host: string }[] = [];
+  const proxy = createServer((request, response) => {
+    seen.push({
+      method: request.method ?? '',
+      target: (request.url ?? '').replace(/[0-9a-f]{32}/, '<key>').replace(/127\.0\.0\.1:\d+/, '<proxy>'),
+      host: (request.headers.host ?? '').replace(/127\.0\.0\.1:\d+/, '<proxy>'),
+    });
+    request.resume();
+    response.writeHead(502, { 'Content-Length': '0' });
+    response.end();
+  });
+
+  proxy.on('connect', (request: IncomingMessage, socket: Duplex) => {
+    seen.push({ method: request.method ?? '', target: request.url ?? '', host: request.headers.host ?? '' });
+    socket.end('HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n');
+  });
+
+  await new Promise<void>((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+  const address = proxy.address();
+  const proxyUrl = typeof address === 'object' && address !== null ? `http://127.0.0.1:${address.port}` : '';
+  const actual: ProxyGolden[] = [];
+
+  try {
+    for (const [name, variables] of Object.entries(PROXY_CASES)) {
+      seen.length = 0;
+      const response = await uploadThroughS3(variables(proxyUrl));
+
+      actual.push({ name, response: { status: response.status, text: response.text, proxied: [...seen] } });
+    }
+  } finally {
+    await new Promise<void>((resolve) => proxy.close(() => resolve()));
+  }
+
+  compareGolden('s3-proxy.json', actual);
+}, 120_000);

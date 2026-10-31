@@ -59,9 +59,8 @@ func NewS3(s *S3) (*S3, error) {
 	s.dialer = &net.Dialer{Timeout: s3ConnectTimeout}
 	s.client = &http.Client{
 		Transport: &http.Transport{
-			// SocketsHttpHandler's default: the system proxy. Which proxy
-			// settings .NET reads on each OS is UNVERIFIED.
-			Proxy:       http.ProxyFromEnvironment,
+			// SocketsHttpHandler's default: the environment proxy.
+			Proxy:       osProxy(),
 			DialContext: s.dialer.DialContext,
 			// Counts from the end of the body, like the PayloadContent
 			// callback in S3BlobStore.SendAsync.

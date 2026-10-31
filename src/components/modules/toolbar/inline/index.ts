@@ -131,6 +131,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   private openingPromise: Promise<void> | null = null;
 
   /**
+   * Bumped by every close(). An open() that awaited across a close() must not
+   * mount its card; checking `opened` alone fails when a newer open() started.
+   */
+  private closeCount = 0;
+
+  /**
    * When a popover-entry tool (Link, Equation, Marker — any tool whose render
    * config carries `children`) is triggered by its keyboard shortcut we skip the
    * format-button row entirely and present only that tool's dedicated menu. This
@@ -407,6 +413,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     this.destroyToolsInstances();
     this.opened = false;
     this.openingPromise = null;
+    this.closeCount++;
 
     // Clean up any orphaned fake background elements left by inline tools (Link, Marker, Convert)
     this.selection.clearFakeBackground();
@@ -560,9 +567,14 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.directToolName = null;
 
+    const closeCountAtStart = this.closeCount;
     const popoverItems = directName !== null
       ? await this.buildDirectMenuItems(directName)
       : await this.buildPopoverItems();
+
+    if (this.closeCount !== closeCountAtStart) {
+      return;
+    }
 
     // Create popover
     this.popover = new PopoverInline({

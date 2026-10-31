@@ -3,7 +3,8 @@ import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import {
   BLOK_INTERFACE_SELECTOR,
-  INLINE_TOOLBAR_INTERFACE_SELECTOR
+  INLINE_TOOLBAR_INTERFACE_SELECTOR,
+  selectionChangeDebounceTimeout
 } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -220,6 +221,83 @@ test.describe('api.inlineToolbar', () => {
     });
 
     await expect(toolbarContainer).toHaveCount(0);
+  });
+
+  test('inlineToolbar.close() keeps the toolbar closed after the selectionchange debounce fires', async ({ page }) => {
+    await createBlok(page, INITIAL_DATA);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await expect(paragraph).toHaveCount(1);
+    await selectText(paragraph, 'Inline toolbar');
+
+    // One page task, so close() lands before the debounce of the selection above.
+    const shown = await page.evaluate(async ({ selector, debounce }) => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+
+      blok.inlineToolbar.open();
+
+      for (let i = 0; i < 100 && document.querySelector(selector) === null; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+
+      const beforeClose = document.querySelector(selector) !== null;
+
+      blok.inlineToolbar.close();
+      await new Promise((resolve) => setTimeout(resolve, debounce * 2));
+
+      return { beforeClose, afterDebounce: document.querySelector(selector) !== null };
+    }, { selector: INLINE_TOOLBAR_CONTAINER_SELECTOR, debounce: selectionChangeDebounceTimeout });
+
+    expect(shown).toEqual({ beforeClose: true, afterDebounce: false });
+  });
+
+  test('inlineToolbar.close() wins over an open() still in flight', async ({ page }) => {
+    await createBlok(page, INITIAL_DATA);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await expect(paragraph).toHaveCount(1);
+    await selectText(paragraph, 'Inline toolbar');
+
+    const shownAfterDebounce = await page.evaluate(async ({ selector, debounce }) => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+
+      blok.inlineToolbar.open();
+      blok.inlineToolbar.close();
+      await new Promise((resolve) => setTimeout(resolve, debounce * 2));
+
+      return document.querySelector(selector) !== null;
+    }, { selector: INLINE_TOOLBAR_CONTAINER_SELECTOR, debounce: selectionChangeDebounceTimeout });
+
+    expect(shownAfterDebounce).toBe(false);
+  });
+
+  test('inlineToolbar.open() shows the toolbar again after close() on the same selection', async ({ page }) => {
+    await createBlok(page, INITIAL_DATA);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+    const toolbarContainer = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    await expect(paragraph).toHaveCount(1);
+    await selectText(paragraph, 'Inline toolbar');
+
+    await page.evaluate(() => window.blokInstance?.inlineToolbar.open());
+    await expect(toolbarContainer).toBeVisible();
+
+    await page.evaluate(() => window.blokInstance?.inlineToolbar.close());
+    await expect(toolbarContainer).toHaveCount(0);
+
+    await page.evaluate(() => window.blokInstance?.inlineToolbar.open());
+    await expect(toolbarContainer).toBeVisible();
   });
 });
 

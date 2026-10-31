@@ -149,6 +149,9 @@ vi.mock('../../../../../../src/components/utils/popover/popover-inline', () => (
   },
 }));
 
+const wrapperNode = (toolbar: InlineToolbar): HTMLElement =>
+  (toolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
 describe('InlineToolbar.tryToShow error recovery', () => {
   let inlineToolbar: InlineToolbar;
   let mockBlok: BlokModules;
@@ -327,6 +330,49 @@ describe('InlineToolbar.tryToShow error recovery', () => {
 
     expect(ghostHolder.mount).not.toHaveBeenCalled();
     expect(inlineToolbar.opened).toBe(false);
+  });
+
+  it('stays closed when close() lands while open() awaits its items', async () => {
+    const opening = inlineToolbar.tryToShow();
+
+    inlineToolbar.close();
+    await opening;
+
+    expect(popoverHolder.params).toBeNull();
+    expect(inlineToolbar.opened).toBe(false);
+    expect(wrapperNode(inlineToolbar).childElementCount).toBe(0);
+  });
+
+  it('mounts one card when a reopen starts before a cancelled open resumes', async () => {
+    const shows: Array<ReturnType<typeof vi.fn>> = [];
+
+    popoverHolder.factory = () => {
+      const show = vi.fn();
+
+      shows.push(show);
+
+      return {
+        hide: vi.fn(),
+        destroy: vi.fn(),
+        show,
+        getElement: vi.fn(() => document.createElement('div')),
+        getMountElement: vi.fn(() => document.createElement('div')),
+        hasNode: vi.fn(() => false),
+        size: { width: 200 },
+        activateItemByName: vi.fn(),
+      };
+    };
+
+    const cancelled = inlineToolbar.tryToShow();
+
+    inlineToolbar.close();
+    const reopened = inlineToolbar.tryToShow();
+
+    await Promise.all([cancelled, reopened]);
+
+    expect(shows).toHaveLength(1);
+    expect(wrapperNode(inlineToolbar).childElementCount).toBe(1);
+    expect(inlineToolbar.opened).toBe(true);
   });
 
   it('passes the localized action-group label to its popover', async () => {

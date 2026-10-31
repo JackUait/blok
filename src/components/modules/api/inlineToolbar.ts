@@ -21,6 +21,8 @@ export class InlineToolbarAPI extends Module {
    * Open Inline Toolbar
    */
   public open(): void {
+    // A host's open() overrides an earlier close() of the same selection.
+    this.Blok.InlineToolbar.clearDismissal();
     void this.Blok.InlineToolbar.tryToShow();
   }
 
@@ -28,6 +30,7 @@ export class InlineToolbarAPI extends Module {
    * Close Inline Toolbar
    */
   public close(): void {
-    this.Blok.InlineToolbar.close();
+    // Not a plain close(): a selectionchange still queued (180ms debounce) would reopen it.
+    this.Blok.InlineToolbar.dismiss();
   }
 }

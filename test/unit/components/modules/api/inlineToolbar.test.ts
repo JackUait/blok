@@ -9,6 +9,8 @@ type InlineToolbarBlokMock = {
   InlineToolbar: {
     tryToShow: ReturnType<typeof vi.fn<() => Promise<void>>>;
     close: ReturnType<typeof vi.fn>;
+    dismiss: ReturnType<typeof vi.fn>;
+    clearDismissal: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -28,6 +30,8 @@ describe('InlineToolbarAPI', () => {
       InlineToolbar: {
         tryToShow: vi.fn((): Promise<void> => Promise.resolve()),
         close: vi.fn(),
+        dismiss: vi.fn(),
+        clearDismissal: vi.fn(),
       },
       ...overrides,
     };
@@ -36,6 +40,7 @@ describe('InlineToolbarAPI', () => {
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     createInlineToolbarApi();
   });
 
@@ -46,18 +51,22 @@ describe('InlineToolbarAPI', () => {
     close();
 
     expect(blokMock.InlineToolbar.tryToShow).toHaveBeenCalledWith();
-    expect(blokMock.InlineToolbar.close).toHaveBeenCalledWith();
+    expect(blokMock.InlineToolbar.dismiss).toHaveBeenCalledWith();
   });
 
-  it('opens inline toolbar through Blok module', () => {
+  it('opens inline toolbar even for a selection it was closed for', () => {
     inlineToolbarApi.open();
 
+    expect(blokMock.InlineToolbar.clearDismissal).toHaveBeenCalledTimes(1);
     expect(blokMock.InlineToolbar.tryToShow).toHaveBeenCalledWith();
+    expect(blokMock.InlineToolbar.clearDismissal.mock.invocationCallOrder[0])
+      .toBeLessThan(blokMock.InlineToolbar.tryToShow.mock.invocationCallOrder[0]);
   });
 
-  it('closes inline toolbar through Blok module', () => {
+  it('closes inline toolbar so a queued selectionchange cannot reopen it', () => {
     inlineToolbarApi.close();
 
-    expect(blokMock.InlineToolbar.close).toHaveBeenCalledWith();
+    expect(blokMock.InlineToolbar.dismiss).toHaveBeenCalledWith();
+    expect(blokMock.InlineToolbar.close).not.toHaveBeenCalled();
   });
 });

@@ -30,15 +30,18 @@ func Parse(body []byte, finalURL string) Metadata {
 	var title, ogTitle, twitterTitle, ogDescription, twitterDescription, description, ogImage, twitterImage, icon, appleIcon string
 	// .NET decodes invalid UTF-8 to U+FFFD, one per maximal bad sequence.
 	text := jsjson.FromString(string(body)).String()
-	document, err := html.Parse(strings.NewReader(text))
+	// AngleSharp parses with scripting off, so <noscript> holds markup.
+	document, err := html.ParseWithOptions(strings.NewReader(text), html.ParseOptionEnableScripting(false))
 	if err != nil {
 		return build(base, "", "", "", "")
 	}
 	type frame struct {
 		node  *html.Node
 		depth int
+		// sel is set below a <select>; see dropsInSelect.
+		sel *selectState
 	}
-	stack := []frame{{document, 0}}
+	stack := []frame{{document, 0, nil}}
 	for len(stack) > 0 {
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
@@ -47,7 +50,14 @@ func Parse(body []byte, finalURL string) Metadata {
 			if top.depth > maxOpenElementDepth {
 				return build(base, "", "", "", "")
 			}
-			switch node.Data {
+			tag := node.Data
+			if top.sel.drops() {
+				if node.Namespace == "" && (tag == "input" || tag == "keygen" || tag == "textarea") {
+					top.sel.closed = true
+				}
+				tag = ""
+			}
+			switch tag {
 			case "title":
 				if node.Namespace == "" && node.FirstChild != nil {
 					keepFirst(&title, textContent(node.FirstChild))
@@ -78,7 +88,7 @@ func Parse(body []byte, finalURL string) Metadata {
 					break
 				}
 				for _, relation := range strings.FieldsFunc(attribute(node, "rel"), unicode.IsSpace) {
-					relation = strings.ToLower(relation)
+					relation = asciiLower(relation)
 					if relation == "icon" {
 						keepFirst(&icon, href)
 					} else if strings.HasPrefix(relation, "apple-touch-icon") {
@@ -87,12 +97,26 @@ func Parse(body []byte, finalURL string) Metadata {
 				}
 			}
 		}
+		// AngleSharp keeps template contents in a separate fragment, not
+		// among the element's children.
+		if node.Type == html.ElementNode && node.Namespace == "" && node.Data == "template" {
+			continue
+		}
+		sel := top.sel
+		if node.Type == html.ElementNode && node.Namespace == "" {
+			switch {
+			case node.Data == "select" && (sel == nil || sel.closed):
+				sel = &selectState{}
+			case sel.drops() && (node.Data == "option" || node.Data == "optgroup" || node.Data == "button"):
+				sel = &selectState{open: true}
+			}
+		}
 		var children []*html.Node
 		for child := node.FirstChild; child != nil; child = child.NextSibling {
 			children = append(children, child)
 		}
 		for i := len(children) - 1; i >= 0; i-- {
-			stack = append(stack, frame{children[i], top.depth + 1})
+			stack = append(stack, frame{children[i], top.depth + 1, sel})
 		}
 	}
 	return build(base,
@@ -100,6 +124,32 @@ func Parse(body []byte, finalURL string) Metadata {
 		firstNonEmpty(ogDescription, twitterDescription, description),
 		firstNonEmpty(ogImage, twitterImage),
 		firstNonEmpty(icon, appleIcon))
+}
+
+// selectState stands in for AngleSharp 1.8.6's "in select" mode, which x/net
+// does not have: x/net builds <select> by the customizable-select spec and
+// keeps any element inside. AngleSharp drops a start tag (title, meta, link,
+// div...) whose current node is the select itself, builds normally inside
+// option, optgroup and button, and lets input, keygen or textarea close the
+// select. unfurl-html.json pins the cases.
+type selectState struct {
+	open, closed bool
+}
+
+func (s *selectState) drops() bool {
+	return s != nil && !s.open && !s.closed
+}
+
+// asciiLower stands in for ToLowerInvariant before a compare with an ASCII
+// word: invariant casing keeps U+0130, where strings.ToLower makes it "i".
+func asciiLower(s string) string {
+	b := []byte(s)
+	for i, c := range b {
+		if 'A' <= c && c <= 'Z' {
+			b[i] = c + 'a' - 'A'
+		}
+	}
+	return string(b)
 }
 
 func build(base *dotnet.URI, title, description, image, favicon string) Metadata {

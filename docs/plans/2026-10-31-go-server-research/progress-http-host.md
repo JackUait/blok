@@ -2,7 +2,26 @@
 
 Branch `go/http-host`, worktree `/Users/jackuait/Packages/.blok-go/http-host`. Round 1 and round 2, 2026-10-31.
 
-## Round 2 (newest first)
+## Round 3 (newest first)
+
+All six rows left after round 2 are closed. No ledger row in this lane is open; the rest are deferred to collab (list under "Still open after round 2", plus L1's collab seams).
+
+- V35 DONE: `blokserver/library_test.go` `TestNewKeepsItsOwnCopyOfTheOptions`. Go bug fixed: `New` shared the `RichTextFields` map (and its slices) with the caller; it now deep-copies. Mutating `AllowedOrigins[0]` after `New` was already safe.
+- L1 DONE for the non-collab seams, rest deferred: `Options.Clock` added (the `TimeProvider` TryAdd, `BlokServerServiceCollectionExtensions.cs:77`; tickets, rate limit, S3 signing read it). Oracle `TestOptionsClockDrivesTheTicketCheck` (a 2020 ticket passes only with a 2020 clock). `Authorization` was already there. Blob store and fetcher stay unexported seams, as §5 says. Deferred to collab: `OperationStore`, `ActivityObserver`, `Logger` (their types live in the collab lane; `Logger` goes with L9).
+- L6 DONE: `TestS3StoreSpoolsToTheTempDirUpToTheUploadCap` (mutation-checked): `MaxSpoolBytes = MaxUploadBytes`, `TempDir` empty means `os.TempDir()`. Both read `TMPDIR` on Unix, as the round-2 spool case shows black-box.
+- S13 DONE: new xunit `S3BlobStoreTimeoutTests` (raw socket, `RequestTimeout`/`ResponseHeaderTimeout` options set small) and its Go port `internal/blob/s3_timeout_test.go` (unexported `requestTimeout`/`headerTimeout`, -race). Measured on C#: a GET with no body still gets the header timeout (PayloadContent's callback fires for zero-length content); the header clock starts after the body is sent (64 MiB body, server waits 3x the timeout before reading); a stalled response body ends at the request timeout. Mutation-checked on both sides (C#: start the header timer at request creation; Go: drop `ResponseHeaderTimeout`, or use the header timeout for the whole request). Connect 10 s and no redirects by a field test.
+- S16 DONE, Go bug fixed: `fixtures/s3-proxy.json` (25 settings, `http-host-contract`: "sends S3 requests through the environment proxy the way .NET does"). The S3 endpoint is an unresolvable https name, so a proxy only shows as a CONNECT; loopback http endpoints check the absolute-form target. `internal/blob/proxy.go` ports `HttpEnvironmentProxy` (decompiled from System.Net.Http 10.0.11, osx). Go's `ProxyFromEnvironment` failed 5 cases before (ALL_PROXY, bare NO_PROXY domain, `*`, empty `no_proxy` hiding `NO_PROXY`) and would also bypass loopback, which .NET does not.
+  - Not ported, documented: with no variable set .NET on macOS falls back to `MacProxy` (system settings); Go uses none. The golden is captured with no system proxy set. `socks4://`/`socks4a://` are parsed but Go's transport cannot use them. Go sends proxy credentials from the URL up front; when .NET sends them is UNVERIFIED. A host with `/?#@ ` is refused in Go; what `UriBuilder` does there is UNVERIFIED. The Linux build's fallback is UNVERIFIED (only the osx dll was read).
+- O15 DONE: `internal/outbound/tls_test.go` ports `PreservesTheHostnameForTlsSniAndCertificateValidation`, `RejectsATrustedCertificateForTheWrongHostname`, `RetainsNormalTlsCertificateValidation`, `OffersOnlyHttp11DuringMacOsTlsNegotiation` (runs on every OS in Go), plus two Go-only checks: a leaf with CRL and OCSP URLs verifies with zero hits (RevocationMode NoCheck, `GuardedOutboundFetcher.cs:455-476`), and an IP literal sends no SNI (what SslStream sends there is UNVERIFIED). ALPN and verification are mutation-checked; SNI and revocation are behaviour pins (Go's TLS never sends SNI for an IP and never checks revocation, so no code line can be mutated).
+
+### Round 3 conformance (`--target go`)
+- CI step (harness, server, routing, host-cli, http-host): 151 passed, 25 skipped (collab), 0 failed; 2 min 6 s locally. The proxy case adds about 20 s on C# and 1 s on Go.
+- `blok-client-contract`: still 0/12, every test needs `/sync` (collab lane). Suites on main did not change since this branch forked (`git log HEAD..main` over the contract files is empty).
+
+### C# changes this round
+- New test only: `Blok.Server.Tests/S3BlobStoreTimeoutTests.cs`. No C# bug found.
+
+## Round 2
 
 New suite `test/unit/server-conformance/http-host-contract.test.ts` (in CI for Go and C#). Each `it` replays requests and compares with a golden captured from C# (`BLOK_WRITE_FIXTURES=1 node scripts/test-server-conformance.mjs --target csharp --suite http-host-contract`); the input list must equal the golden's.
 

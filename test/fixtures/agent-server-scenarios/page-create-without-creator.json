@@ -1,0 +1,40 @@
+{
+  "name": "page-create-without-creator",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "host": {
+    "created": [],
+    "resolved": []
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "COMMAND_UNAVAILABLE",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "host"
+        }
+      }
+    }
+  ]
+}

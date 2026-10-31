@@ -1,0 +1,92 @@
+{
+  "name": "session-cap",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "T{i}"
+            }
+          }
+        ]
+      },
+      "times": 105,
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "times": 99,
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": "T4"
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "NOTHING_TO_UNDO",
+        "saved": false
+      }
+    }
+  ]
+}

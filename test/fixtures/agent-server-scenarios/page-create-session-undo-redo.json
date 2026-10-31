@@ -1,0 +1,77 @@
+{
+  "name": "page-create-session-undo-redo",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": [
+      "host-1"
+    ]
+  },
+  "steps": [
+    {
+      "run": "session:a",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks": {
+            "length": 0
+          }
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/0/data/pageId": "host-1"
+        }
+      }
+    }
+  ]
+}

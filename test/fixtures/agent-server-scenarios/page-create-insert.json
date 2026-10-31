@@ -1,0 +1,42 @@
+{
+  "name": "page-create-insert",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": [
+      "host-1"
+    ],
+    "resolved": []
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/0/id": "np",
+          "/blocks/0/data/pageId": "host-1"
+        }
+      }
+    }
+  ]
+}

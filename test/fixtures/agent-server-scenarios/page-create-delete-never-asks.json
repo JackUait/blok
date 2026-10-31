@@ -1,0 +1,47 @@
+{
+  "name": "page-create-delete-never-asks",
+  "seed": {
+    "blocks": [
+      {
+        "id": "pg",
+        "type": "page",
+        "data": {
+          "pageId": "kept"
+        }
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": [],
+    "resolved": []
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "pg"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks": {
+            "length": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "name": "session-page-action",
+  "seed": {
+    "id": "source",
+    "title": "Source title",
+    "blocks": [
+      {
+        "id": "pg",
+        "type": "page",
+        "data": {
+          "pageId": "page-2"
+        }
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "pages": {
+    "page-2": {
+      "stored": {
+        "id": "target",
+        "title": "Target title",
+        "icon": {
+          "type": "emoji",
+          "value": "old"
+        },
+        "blocks": [
+          {
+            "id": "body",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Keep this content"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "host": {
+    "saved": [
+      {
+        "/title": "Roadmap",
+        "/id": "target",
+        "/icon/value": "old",
+        "/blocks/0/id": "body"
+      }
+    ],
+    "resolved": [
+      "page-2"
+    ]
+  },
+  "steps": [
+    {
+      "run": "session:a",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Source"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "page.rename",
+            "args": {
+              "id": "pg",
+              "title": "Roadmap"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": false,
+        "result": {
+          "/results/0/pageId": "page-2",
+          "/results/0/applied": true
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@step:0",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "UNDO_OTHER_DOCUMENT",
+        "saved": false
+      }
+    }
+  ]
+}

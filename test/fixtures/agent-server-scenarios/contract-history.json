@@ -1,0 +1,64 @@
+{
+  "name": "contract-history",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "contract:plain",
+      "expect": {
+        "commands": {
+          "history.undo": {
+            "available": false,
+            "unavailableReason": "runtime"
+          },
+          "history.redo": {
+            "available": false,
+            "unavailableReason": "runtime"
+          },
+          "block.insert": {
+            "available": true
+          }
+        }
+      }
+    },
+    {
+      "run": "contract:session",
+      "expect": {
+        "commands": {
+          "history.undo": {
+            "available": true
+          },
+          "history.redo": {
+            "available": true
+          }
+        }
+      }
+    },
+    {
+      "run": "contract:room",
+      "expect": {
+        "commands": {
+          "history.undo": {
+            "available": true
+          },
+          "history.redo": {
+            "available": true
+          }
+        }
+      }
+    }
+  ]
+}

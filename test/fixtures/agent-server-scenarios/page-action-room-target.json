@@ -1,0 +1,57 @@
+{
+  "name": "page-action-room-target",
+  "seed": {
+    "id": "source",
+    "title": "Source title",
+    "blocks": [
+      {
+        "id": "pg",
+        "type": "page",
+        "data": {
+          "pageId": "page-2"
+        }
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "pages": {
+    "page-2": {
+      "room": "target-room"
+    }
+  },
+  "host": {
+    "saved": [],
+    "resolved": [
+      "page-2"
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "page.rename",
+            "args": {
+              "id": "pg",
+              "title": "Roadmap"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "COMMAND_UNAVAILABLE",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "runtime",
+          "/error/details/pageId": "page-2"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "name": "session-undo-redo",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "session:a",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "One"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": "One"
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Two"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": "Two"
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": "One"
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": {
+            "absent": true
+          }
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": "One"
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/title": "Two"
+        }
+      }
+    },
+    {
+      "run": "session:a",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "NOTHING_TO_REDO",
+        "saved": false
+      }
+    }
+  ]
+}

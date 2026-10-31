@@ -1,0 +1,80 @@
+{
+  "name": "page-action-set-icon",
+  "seed": {
+    "id": "source",
+    "title": "Source title",
+    "blocks": [
+      {
+        "id": "pg",
+        "type": "page",
+        "data": {
+          "pageId": "page-2"
+        }
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "pages": {
+    "page-2": {
+      "stored": {
+        "id": "target",
+        "title": "Target title",
+        "icon": {
+          "type": "emoji",
+          "value": "old"
+        },
+        "blocks": [
+          {
+            "id": "body",
+            "type": "paragraph",
+            "data": {
+              "text": [
+                {
+                  "text": "Keep this content"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "host": {
+    "saved": [
+      {
+        "/title": "Target title",
+        "/icon/value": "🚀"
+      }
+    ],
+    "resolved": [
+      "page-2"
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "page.setIcon",
+            "args": {
+              "id": "pg",
+              "icon": {
+                "type": "emoji",
+                "value": "🚀"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": false
+      }
+    }
+  ]
+}

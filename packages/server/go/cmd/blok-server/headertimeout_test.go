@@ -63,3 +63,11 @@ func TestTheHeaderClockStopsOnceTheHandlerRuns(t *testing.T) {
 		time.Sleep(300 * time.Millisecond)
 	}
 }
+
+// Program.cs:123,137: Kestrel keeps an idle connection 2 min. A black-box
+// case would wait 2 min, so this pins the field.
+func TestKeepAliveIdleTimeoutIsTwoMinutes(t *testing.T) {
+	if got := newHTTPServer(http.NotFoundHandler(), time.Minute).IdleTimeout; got != 2*time.Minute {
+		t.Fatalf("IdleTimeout %v", got)
+	}
+}

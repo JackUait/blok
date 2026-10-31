@@ -274,3 +274,30 @@ func (neverEnding) Read(p []byte) (int, error) {
 	}
 	return len(p), nil
 }
+
+// DropsAnInvalidMediaTypeBeforeSigning, SanitizesDuplicateMediaParametersLikeGo,
+// plus the S3-only ASCII rule (S3BlobStore.cs:332-415).
+func TestSanitizesTheMediaTypeBeforeSigning(t *testing.T) {
+	for _, c := range []struct {
+		mediaType string
+		kept      bool
+	}{
+		{"definitely not a media type", false},
+		{"text/plain; charset=utf-8; charset=us-ascii", false},
+		{"text/plain; charset=utf-8; charset=utf-8", true},
+		{`text/plain; charset="a\z"; charset=az`, false},
+		{`text/plain; charset="a\/b"; charset="a/b"`, true},
+		{`text/plain; charset="a\z"; charset="a\z"`, true},
+		{"text/plain; name=\"café\"", false},
+	} {
+		bucket := &fakeBucket{}
+		if _, err := bucketStore(t, bucket).Put(context.Background(), ".txt", c.mediaType, strings.NewReader("bytes")); err != nil {
+			t.Fatal(err)
+		}
+		r := bucket.requests[0]
+		signed := strings.Contains(r.Header.Get("Authorization"), "content-type")
+		if c.kept != (r.Header.Get("Content-Type") == c.mediaType) || c.kept != signed || r.Header.Get("Content-Disposition") != "attachment" {
+			t.Errorf("%q: Content-Type %q, signed %v", c.mediaType, r.Header.Get("Content-Type"), signed)
+		}
+	}
+}

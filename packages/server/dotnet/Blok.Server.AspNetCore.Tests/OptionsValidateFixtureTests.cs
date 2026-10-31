@@ -107,4 +107,41 @@ public sealed class OptionsValidateFixtureTests
           }) + "\n");
     }
   }
+
+  /// <summary>
+  /// test/unit/server-conformance/fixtures/options-defaults.json holds every
+  /// settable option of a new BlokServerOptions, named as the property. The
+  /// Go DefaultOptions must match it.
+  /// </summary>
+  [Fact]
+  public void DefaultsMatchTheFixture()
+  {
+    var defaults = new BlokServerOptions();
+    var answer = new JsonObject();
+
+    foreach (var property in typeof(BlokServerOptions).GetProperties()
+                 .Where(property => property.CanWrite && property.SetMethod!.IsPublic)
+                 .OrderBy(property => property.Name, StringComparer.Ordinal))
+    {
+      var value = property.GetValue(defaults);
+      if (value is TimeSpan span)
+      {
+        answer[property.Name + "Ms"] = (long)span.TotalMilliseconds;
+        continue;
+      }
+
+      answer[property.Name] = JsonSerializer.SerializeToNode(value, property.PropertyType);
+    }
+
+    var path = Path.Combine(RepositoryRoot(), "test/unit/server-conformance/fixtures/options-defaults.json");
+    var text = answer.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n";
+
+    if (Environment.GetEnvironmentVariable("BLOK_WRITE_FIXTURES") == "1")
+    {
+      File.WriteAllText(path, text);
+      return;
+    }
+
+    Assert.Equal(File.ReadAllText(path), text);
+  }
 }

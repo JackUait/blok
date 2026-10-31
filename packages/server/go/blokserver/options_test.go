@@ -3,6 +3,7 @@ package blokserver
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -95,6 +96,8 @@ func fromCSharp(t *testing.T, spec map[string]json.RawMessage) Options {
 			read(raw, &o.CollabInboundAwarenessBytesPerSecond)
 		case "RichTextFields":
 			read(raw, &o.RichTextFields)
+		case "Version":
+			read(raw, &o.Version)
 		default:
 			t.Fatalf("no Go mapping for option %s", name)
 		}
@@ -138,5 +141,32 @@ func TestFormatTimeSpanMatchesDotnet(t *testing.T) {
 	}
 	if !strings.HasPrefix(formatTimeSpan(-26*time.Hour), "-1.02:00:00") {
 		t.Fatal(formatTimeSpan(-26 * time.Hour))
+	}
+}
+
+// options-defaults.json is every settable BlokServerOptions property of a
+// new instance, written by OptionsValidateFixtureTests.DefaultsMatchTheFixture.
+func TestDefaultOptionsMatchTheCSharpDefaults(t *testing.T) {
+	data, err := os.ReadFile("../../../../test/unit/server-conformance/fixtures/options-defaults.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var defaults map[string]json.RawMessage
+	if err := json.Unmarshal(data, &defaults); err != nil {
+		t.Fatal(err)
+	}
+	got := fromCSharp(t, defaults)
+	want := DefaultOptions()
+	// An empty list or map in C# is nil in Go.
+	for _, o := range []*Options{&got, &want} {
+		if len(o.AllowedOrigins) == 0 {
+			o.AllowedOrigins = nil
+		}
+		if len(o.RichTextFields) == 0 {
+			o.RichTextFields = nil
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("C# defaults applied over DefaultOptions changed it:\n got %+v\nwant %+v", got, want)
 	}
 }

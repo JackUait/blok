@@ -33,16 +33,6 @@ func (p anyLoopback) Validate(raw string, base *dotnet.URI) (Target, error) {
 
 func (anyLoopback) AddressAllowed(netip.Addr) bool { return true }
 
-func makeCert(t *testing.T, template, parent *x509.Certificate, public, private any) *x509.Certificate {
-	t.Helper()
-	der, err := x509.CreateCertificate(rand.Reader, template, parent, public, private)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certificate, _ := x509.ParseCertificate(der)
-	return certificate
-}
-
 // The Go analogue of SslStreamStillLeaksAnIssuerFetchOnMacOs. On macOS the
 // platform verifier lets trustd fetch a certificate's caIssuers URL, which
 // would reach an address the guard never vetted. Measured on Go 1.27.1: with

@@ -454,7 +454,7 @@ const pendingPlan = (
   batch: AgentBatch,
   warnings: AgentWarning[],
   approved: ReadonlySet<string> = new Set()
-): { plan: Plan; snapshot: DocSnapshot; stamp: EditStamp } => {
+): { plan: Plan; draft: DocSnapshot; snapshot: DocSnapshot; stamp: EditStamp; pending: boolean } => {
   const { by, with: coAuthor } = agentAttribution(input.actor);
   const stamp = { actorId: by ?? '', ...(coAuthor !== undefined && { with: coAuthor }), at: (input.now ?? Date.now)() };
   const pending = new Map<number, unknown>();
@@ -476,7 +476,7 @@ const pendingPlan = (
 
   requireShareApprovals(snapshot, draft, approved, input.ctx.services);
 
-  return { plan, snapshot, stamp };
+  return { plan, draft, snapshot, stamp, pending: pending.size > 0 };
 };
 
 // Enough rows to check a section; a bulk edit reads the rest with blok_read.
@@ -673,11 +673,12 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
     // Asked before any prepare step, so a no leaves no host work behind. Kept for this batch only.
     const approved = new Set<string>();
-    const { plan: prePlan, stamp } = await planWithApprovals(granted => {
+    const pre = await planWithApprovals(granted => {
       warnings.splice(0, warnings.length, ...corrected);
 
       return pendingPlan(input, batch, warnings, granted);
     }, approved, input.approve, () => checkCancel(input.signal));
+    const { plan: prePlan, stamp } = pre;
     const insertTypes = new Map<number, string>();
     const preparations = preparationsFor(input, batch, prePlan, orphaned, insertTypes);
     const prepared = new Map<number, unknown>();
@@ -696,8 +697,15 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     checkRevision(batch, current, () => snapshot, input.ctx);
 
     // Only concrete warnings refer to the IDs that will be applied.
-    warnings.splice(0, warnings.length, ...corrected);
-    const { plan, draft } = finalPlan(() => {
+    // A read with nothing prepared, on the same snapshot object, would plan the same again, and a read
+    // computes every row of a database. Relies on appliers never editing a snapshot in place
+    // (document-session.ts); appliers that build a new snapshot per call always plan again.
+    const reused = !checked.writes && !pre.pending && preparations.size === 0 && snapshot === pre.snapshot;
+
+    if (!reused) {
+      warnings.splice(0, warnings.length, ...corrected);
+    }
+    const { plan, draft } = reused ? pre : finalPlan(() => {
       const planned = planBatch({
         snapshot, batch, ctx: { ...input.ctx, prepared, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
       });

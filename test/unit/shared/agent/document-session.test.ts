@@ -371,6 +371,16 @@ describe('stored document session', () => {
     expect(read.revision).toBe(contentRevision(session.output()));
   });
 
+  it('plans a read batch once: the document view is built a single time', async () => {
+    const pageTitle = vi.fn<NonNullable<AgentPorts['pageTitle']>>(() => 'Linked page');
+    const session = track(open(sourceDocument(), { ports: stubPorts({ pageTitle }) }));
+
+    const result = await session.execute({ commands: [{ name: 'doc.read', args: { ids: ['pb'] } }] });
+
+    expect(pageTitle).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ok: true, results: [{ blocks: [{ id: 'pb', pageTitle: 'Linked page' }] }] });
+  });
+
   it('exposes exactly the edits applied by the last successful stored batch', async () => {
     const session = track(open());
     const text: RichText = [{ text: 'P', marks: { bold: true } }];

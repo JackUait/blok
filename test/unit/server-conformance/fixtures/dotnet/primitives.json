@@ -26,7 +26,7 @@
     "[::1]:80",
     "::ffff:127.0.0.1",
     "::ffff:7f00:1",
-    "fe80::1%eth0",
+    "fe80::1%no-such-interface0",
     "fe80::1%1",
     "0.0.0.0",
     "::",
@@ -574,7 +574,7 @@
       "any": false
     },
     {
-      "input": "fe80::1%eth0",
+      "input": "fe80::1%no-such-interface0",
       "ok": true,
       "address": "fe80::1",
       "loopback": false,

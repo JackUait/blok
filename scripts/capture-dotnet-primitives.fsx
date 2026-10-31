@@ -5,6 +5,11 @@
 // so a stale capture fails C# too.
 //
 //   dotnet fsi scripts/capture-dotnet-primitives.fsx
+//
+// An IPv6 scope given by name ("%eth0") becomes that interface's index on the
+// machine that parses it (if_nametoindex), so "fe80::1%eth0" prints
+// "fe80::1%2" on a Linux runner and "fe80::1" on a Mac. Name scopes in
+// ipInputs must be 16+ bytes: no interface can have such a name (IFNAMSIZ).
 open System
 open System.IO
 open System.Net

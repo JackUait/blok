@@ -5,6 +5,12 @@ using Xunit;
 
 namespace Blok.Server.Tests.Agent;
 
+// The large read runs under the production 10 s wall-clock budget. Beside the parallel suite it took
+// over 10 s; run last and alone it took 0.6 s. So it must not run in parallel.
+[CollectionDefinition(nameof(JintComputedReadTests), DisableParallelization = true)]
+public sealed class JintComputedReadsRunAlone;
+
+[Collection(nameof(JintComputedReadTests))]
 public sealed class JintComputedReadTests
 {
   // Same engine as the editor cells: formula, rollup over a self-relation, prefixed ID, created time.
@@ -44,8 +50,7 @@ public sealed class JintComputedReadTests
         row["computed"]), row.ToJsonString());
   }
 
-  // 3000 rows already brushes the 10 s default deadline on a loaded machine, and ~4900 rows
-  // runs out of memory even without computed values: that limit is the runtime's.
+  // ~4900 rows runs out of memory even without computed values: that limit is the runtime's.
   [Fact]
   public async Task AFullReadOfALargeDatabaseFinishes()
   {

@@ -645,23 +645,70 @@ test.describe('Ask AI live edits', () => {
     expect(await look(real)).toEqual(before);
   });
 
-  test('a Markdown image streams as the real image block, alt text as its caption, and hands off without a jump', async ({ page }) => {
+  test('a Markdown image from a server shows the media drawing while it streams and loads only once the call runs', async ({ page }) => {
     const url = new URL('/test/playwright/fixtures/image/shot.png', page.url()).href;
+    const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown: `![Red planet](${url})` } }] });
+    const requests: string[] = [];
+
+    page.on('request', (request) => {
+      if (request.url() === url) {
+        requests.push(request.url());
+      }
+    });
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+
+    const previewImage = page.getByTestId('ai-preview').locator('[data-blok-tool="image"]');
+
+    await expect(previewImage).toContainText('Red planet');
+    await expect(previewImage.locator('[data-blok-media-preview="image"]')).toBeVisible();
+    expect(await previewImage.evaluate((element) => element.querySelector('img'))).toBeNull();
+    expect(requests).toEqual([]);
+
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect(page.getByTestId('ai-preview')).toHaveCount(0);
+
+    const real = page.locator(`#${HOLDER_ID} [data-blok-tool="image"]`);
+
+    await expect(real).toContainText('Red planet');
+    await expect.poll(() => real.evaluate((element) => element.querySelector('img')?.getAttribute('src'))).toBe(url);
+    await expect.poll(() => requests.length).toBeGreaterThan(0);
+  });
+
+  test('a Markdown data: image streams as the real image block, alt text as its caption, and hands off without a jump', async ({ page }) => {
+    // Only a data: raster draws in the preview: it reaches no server.
+    const url = await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+
+      canvas.width = 240;
+      canvas.height = 160;
+      const context = canvas.getContext('2d');
+
+      if (context !== null) {
+        context.fillStyle = '#c1440e';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      return canvas.toDataURL('image/png');
+    });
     const markdown = `![Red planet](${url})`;
     const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] });
 
     await ask(page, 'Second');
     await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
-    await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('/fixtures')) });
+    await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('base64')) });
 
     const preview = page.getByTestId('ai-preview');
     const previewImage = preview.locator('[data-blok-tool="image"]');
 
     await expect(previewImage).toBeVisible();
     await expect(previewImage).toContainText('Red planet');
-    expect(await preview.textContent()).not.toMatch(/!\[|http/);
+    expect(await preview.textContent()).not.toMatch(/!\[|data:/);
 
     await emit(page, 0, { type: 'tool_input', index: 0, json });
+    await expect.poll(() => previewImage.evaluate((element) => element.querySelector('img')?.getAttribute('src'))).toBe(url);
 
     const look = (image: Locator): Promise<Record<string, string | number>> => image.evaluate(async (element) => {
       const img = element.querySelector('img');

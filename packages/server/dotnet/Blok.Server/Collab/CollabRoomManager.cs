@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -753,6 +754,13 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       : (CollabHistoryStatus.Ready, outcome);
   }
 
+  /// <summary>The restore key's digest: the request line, never the plan.</summary>
+  internal static byte[] RestoreDigest(string lineage, ulong sequence)
+  {
+    return SHA256.HashData(Encoding.UTF8.GetBytes(
+        string.Create(CultureInfo.InvariantCulture, $"restore\n{lineage}\n{sequence}")));
+  }
+
   /// <summary>
   /// Makes the live document equal one point, as one journalled edit. The
   /// point is rebuilt outside the room; the edit is planned inside its lane,
@@ -782,7 +790,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     var target = point.Output?["blocks"] as JsonArray ?? [];
     var targetMaps = point.Doc is { } replayed ? YDocConverter.ReadPageMaps(replayed) : null;
     // The request, never the plan: a retry plans against a doc that moved.
-    var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"restore\n{lineage}\n{sequence}"));
+    var digest = RestoreDigest(lineage, sequence);
     CollabEditResult edit;
 
     try

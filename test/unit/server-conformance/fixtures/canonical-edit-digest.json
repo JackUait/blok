@@ -1,0 +1,852 @@
+{
+  "$comment": "Captured from C# by CanonicalEditDigestCaptureTests. Do not edit by hand. A body is UTF-8 text, or bodyHex when it is not UTF-8.",
+  "parse": [
+    {
+      "name": "three ops in order",
+      "body": "{ \u0022ops\u0022: [ { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022paragraph\u0022, \u0022data\u0022: { \u0022text\u0022: \u0022hi\u0022 } }, \u0022after\u0022: \u0022b0\u0022, \u0022parent\u0022: \u0022p1\u0022 }, { \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022b2\u0022, \u0022data\u0022: { \u0022text\u0022: \u0022bye\u0022 } }, { \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022b3\u0022 } ] }",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:\u0022b0\u0022,\u0022block\u0022:{\u0022data\u0022:{\u0022text\u0022:\u0022hi\u0022},\u0022type\u0022:\u0022paragraph\u0022},\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:\u0022p1\u0022},{\u0022data\u0022:{\u0022text\u0022:\u0022bye\u0022},\u0022id\u0022:\u0022b2\u0022,\u0022op\u0022:\u0022update\u0022},{\u0022id\u0022:\u0022b3\u0022,\u0022op\u0022:\u0022remove\u0022}]}",
+      "digestHex": "3923f9cf339e93abbacd44f7f96c2643d9b52c08aae81c2cb7a71bde31dfd075"
+    },
+    {
+      "name": "insert with no place",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022b1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022p\u0022,\u0022data\u0022:{}}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022block\u0022:{\u0022data\u0022:{},\u0022type\u0022:\u0022p\u0022},\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "a3035f6a4970fc374d77aebf788e8f66feeb784a5e168b554db5c1a7289fc3aa"
+    },
+    {
+      "name": "insert with null place",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022b1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022p\u0022,\u0022data\u0022:{}},\u0022after\u0022:null,\u0022parent\u0022:null}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022block\u0022:{\u0022data\u0022:{},\u0022type\u0022:\u0022p\u0022},\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "a3035f6a4970fc374d77aebf788e8f66feeb784a5e168b554db5c1a7289fc3aa"
+    },
+    {
+      "name": "block members the converter writes",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022id\u0022: \u0022b1\u0022, \u0022type\u0022: \u0022paragraph\u0022, \u0022data\u0022: { \u0022text\u0022: \u0022hi\u0022 }, \u0022tunes\u0022: { \u0022align\u0022: \u0022left\u0022 }, \u0022lastEditedAt\u0022: 17, \u0022lastEditedBy\u0022: \u0022u1\u0022, \u0022lastEditedWith\u0022: \u0022agent\u0022, \u0022createdAt\u0022: 1.5, \u0022createdBy\u0022: \u0022u2\u0022, \u0022createdWith\u0022: \u0022w\u0022 } }] }",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022block\u0022:{\u0022createdAt\u0022:1.5,\u0022createdBy\u0022:\u0022u2\u0022,\u0022createdWith\u0022:\u0022w\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022hi\u0022},\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:17,\u0022lastEditedBy\u0022:\u0022u1\u0022,\u0022lastEditedWith\u0022:\u0022agent\u0022,\u0022tunes\u0022:{\u0022align\u0022:\u0022left\u0022},\u0022type\u0022:\u0022paragraph\u0022},\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "e2f93c0d13348dcc2e8c40e96a512d24c1b56dc2c3b88742f2c7f7153a741046"
+    },
+    {
+      "name": "keys in any order",
+      "body": "{\u0022ops\u0022:[{\u0022block\u0022:{\u0022data\u0022:{\u0022text\u0022:\u0022!\u0022,\u0022z\u0022:\u0022ignored\u0022},\u0022type\u0022:\u0022p\u0022},\u0022id\u0022:\u0022new\u0022,\u0022op\u0022:\u0022insert\u0022}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022block\u0022:{\u0022data\u0022:{\u0022text\u0022:\u0022!\u0022,\u0022z\u0022:\u0022ignored\u0022},\u0022type\u0022:\u0022p\u0022},\u0022id\u0022:\u0022new\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "102fb4f56ffaea7c27173d4b3424b75d924aa2068a368c65020b31b5bf7e58c7"
+    },
+    {
+      "name": "keys in the other order",
+      "body": "{ \u0022ops\u0022: [ { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022new\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: { \u0022z\u0022: \u0022ignored\u0022, \u0022text\u0022: \u0022!\u0022 } } } ] }",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022block\u0022:{\u0022data\u0022:{\u0022text\u0022:\u0022!\u0022,\u0022z\u0022:\u0022ignored\u0022},\u0022type\u0022:\u0022p\u0022},\u0022id\u0022:\u0022new\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "102fb4f56ffaea7c27173d4b3424b75d924aa2068a368c65020b31b5bf7e58c7"
+    },
+    {
+      "name": "escaping the writer does",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022a\u0022:\u0022\u00E9\u003C\u003E\u0026\u0027\u002B\\u0041\\/\\\u0022\\\\\\b\\f\\n\\r\\t\\u001f\\u007f\\u2028 \u0022,\u0022b\u0022:\u0022\u0060\u0022}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022a\u0022:\u0022\\u00E9\\u003C\\u003E\\u0026\\u0027\\u002BA/\\u0022\\\\\\b\\f\\n\\r\\t\\u001F\\u007F\\u2028 \u0022,\u0022b\u0022:\u0022\\u0060\u0022},\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022update\u0022}]}",
+      "digestHex": "42b5262f390d1d17a43a21f390875e9a7173064b32812acdd91ad7df3cb9b1c6"
+    },
+    {
+      "name": "raw and escaped non-ASCII",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022\u00E9\u0022,\u0022data\u0022:{\u0022x\u0022:\u0022\\u00e9\u0022,\u0022y\u0022:\u0022\u00E9\u0022,\u0022z\u0022:\u0022\uD83D\uDE00\u0022,\u0022w\u0022:\u0022\\ud83d\\ude00\u0022}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022w\u0022:\u0022\\uD83D\\uDE00\u0022,\u0022x\u0022:\u0022\\u00E9\u0022,\u0022y\u0022:\u0022\\u00E9\u0022,\u0022z\u0022:\u0022\\uD83D\\uDE00\u0022},\u0022id\u0022:\u0022\\u00E9\u0022,\u0022op\u0022:\u0022update\u0022}]}",
+      "digestHex": "a18fd70a2b55739ce5c2a5e10a4d7004a6e670b0f247eabd4dd983447033e4ea"
+    },
+    {
+      "name": "keys sort by UTF-16 units",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022\uFF61\u0022:2,\u0022\uD83D\uDE00\u0022:3,\u0022a\u0022:1,\u0022B\u0022:0,\u0022ab\u0022:4,\u0022\u0022:5}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022\u0022:5,\u0022B\u0022:0,\u0022a\u0022:1,\u0022ab\u0022:4,\u0022\\uD83D\\uDE00\u0022:3,\u0022\\uFF61\u0022:2},\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022update\u0022}]}",
+      "digestHex": "551543574cdf0ead7f67718aef186cd3bee6673500dae5db0d41774a774c1750"
+    },
+    {
+      "name": "numbers keep their text",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022a\u0022:1.0,\u0022b\u0022:1e2,\u0022c\u0022:12345678901234567890123,\u0022d\u0022:-0,\u0022e\u0022:1E\u002B2,\u0022f\u0022:0.10,\u0022g\u0022:-1.5e-7}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022a\u0022:1.0,\u0022b\u0022:1e2,\u0022c\u0022:12345678901234567890123,\u0022d\u0022:-0,\u0022e\u0022:1E\u002B2,\u0022f\u0022:0.10,\u0022g\u0022:-1.5e-7},\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022update\u0022}]}",
+      "digestHex": "5de070555112a0f4b1c949cd5614998a1f41d17ef04650f9905f4cced3de9a81"
+    },
+    {
+      "name": "literals and nesting",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022t\u0022:true,\u0022f\u0022:false,\u0022n\u0022:null,\u0022a\u0022:[1,[2,{\u0022z\u0022:1,\u0022y\u0022:[]}],{}],\u0022o\u0022:{}}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022a\u0022:[1,[2,{\u0022y\u0022:[],\u0022z\u0022:1}],{}],\u0022f\u0022:false,\u0022n\u0022:null,\u0022o\u0022:{},\u0022t\u0022:true},\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022update\u0022}]}",
+      "digestHex": "a2759073638793095543fa3eaa0dcf723540212bbdba35370686f94a1bfdb288"
+    },
+    {
+      "name": "whitespace everywhere",
+      "body": " \t\r\n{ \u0022ops\u0022 :\n[ { \u0022op\u0022 : \u0022remove\u0022 , \u0022id\u0022 : \u0022b\u0022 } ] }\n ",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022remove\u0022}]}",
+      "digestHex": "96234deeeaadfaa2737cfe210a5e872675d4e0080f287e5c8808bef99f4eeaaf"
+    },
+    {
+      "name": "unknown root members are ignored",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022b\u0022}],\u0022extra\u0022:{\u0022x\u0022:1}}",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022remove\u0022}]}",
+      "digestHex": "96234deeeaadfaa2737cfe210a5e872675d4e0080f287e5c8808bef99f4eeaaf"
+    },
+    {
+      "name": "a NUL in an unknown root member",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022b\u0022}],\u0022extra\u0022:\u0022a\\u0000b\u0022}",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022remove\u0022}]}",
+      "digestHex": "96234deeeaadfaa2737cfe210a5e872675d4e0080f287e5c8808bef99f4eeaaf"
+    },
+    {
+      "name": "tunes null",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022b1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022p\u0022,\u0022data\u0022:{},\u0022tunes\u0022:null}}]}",
+      "error": "collab: op 0: \u0022tunes\u0022 must be a JSON object."
+    },
+    {
+      "name": "lastEditedAt null",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022b1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022p\u0022,\u0022data\u0022:{},\u0022lastEditedAt\u0022:null}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022block\u0022:{\u0022data\u0022:{},\u0022lastEditedAt\u0022:null,\u0022type\u0022:\u0022p\u0022},\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022insert\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "d8c2e4eb5318be6c3f64c083ab36e99a2530ffdaf3ea1c86fc8e14a0b2a2dd8c"
+    },
+    {
+      "name": "lastEditedBy null",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022b1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022p\u0022,\u0022data\u0022:{},\u0022lastEditedBy\u0022:null}}]}",
+      "error": "collab: op 0: \u0022lastEditedBy\u0022 must be a non-empty string."
+    },
+    {
+      "name": "op id with a surrogate pair",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022\\ud83d\\ude00\u0022}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022\\uD83D\\uDE00\u0022,\u0022op\u0022:\u0022remove\u0022}]}",
+      "digestHex": "76e903e3f07630b541509d7f8a8c394cd7bb8a74d85faa15eb23382eb1aecec5"
+    },
+    {
+      "name": "BOM before the body",
+      "body": "\uFEFF{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022b\u0022}]}",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "depth at the limit",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022a\u0022:[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}]}",
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022a\u0022:[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]},\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022update\u0022}]}",
+      "digestHex": "e8d60944119af6917ec23e2089710442a6df4f8632c9ef6e6e62d6ad76f6bdc9"
+    },
+    {
+      "name": "depth past the limit",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022a\u0022:[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}]}",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "not JSON",
+      "body": "not json at all",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "empty body",
+      "body": "",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "duplicate member",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022a\u0022, \u0022id\u0022: \u0022b\u0022 }] }",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "duplicate deep member",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022a\u0022, \u0022data\u0022: { \u0022k\u0022: { \u0022x\u0022: 1, \u0022x\u0022: 2 } } }] }",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "duplicate ops",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022a\u0022 }], \u0022ops\u0022: [] }",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "array root",
+      "body": "[]",
+      "error": "collab: the request body must be an object with a non-empty \u0022ops\u0022 array."
+    },
+    {
+      "name": "null root",
+      "body": "null",
+      "error": "collab: the request body must be an object with a non-empty \u0022ops\u0022 array."
+    },
+    {
+      "name": "ops object",
+      "body": "{ \u0022ops\u0022: {} }",
+      "error": "collab: the request body must be an object with a non-empty \u0022ops\u0022 array."
+    },
+    {
+      "name": "ops empty",
+      "body": "{ \u0022ops\u0022: [] }",
+      "error": "collab: the request body must be an object with a non-empty \u0022ops\u0022 array."
+    },
+    {
+      "name": "ops missing",
+      "body": "{ \u0022op\u0022: [] }",
+      "error": "collab: the request body must be an object with a non-empty \u0022ops\u0022 array."
+    },
+    {
+      "name": "trailing comma",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022a\u0022 },] }",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "trailing text",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022a\u0022 }] } x",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "comment",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022a\u0022 }] } // x",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "single quotes",
+      "body": "{ \u0027ops\u0027: [] }",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "raw control character",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022a\tb\u0022}]}",
+      "error": "collab: the request body is not valid JSON."
+    },
+    {
+      "name": "unknown op",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022move\u0022, \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: \u0022op\u0022 must be \u0022insert\u0022, \u0022update\u0022 or \u0022remove\u0022."
+    },
+    {
+      "name": "op not a string",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: 7, \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: \u0022op\u0022 must be a non-empty string."
+    },
+    {
+      "name": "op missing",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: \u0022op\u0022 must be a non-empty string."
+    },
+    {
+      "name": "op an array",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, [\u0022remove\u0022, \u0022b1\u0022]] }",
+      "error": "collab: op 1: an op must be a JSON object."
+    },
+    {
+      "name": "op null",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, null] }",
+      "error": "collab: op 1: an op must be a JSON object."
+    },
+    {
+      "name": "remove without id",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022remove\u0022 }] }",
+      "error": "collab: op 1: \u0022id\u0022 must be a non-empty string."
+    },
+    {
+      "name": "empty id",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022\u0022 }] }",
+      "error": "collab: op 1: \u0022id\u0022 must be a non-empty string."
+    },
+    {
+      "name": "id a number",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: 7 }] }",
+      "error": "collab: op 1: \u0022id\u0022 must be a non-empty string."
+    },
+    {
+      "name": "remove with data",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022data\u0022: {} }] }",
+      "error": "collab: op 1: \u0022data\u0022 is not part of this op."
+    },
+    {
+      "name": "insert without block",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: \u0022block\u0022 must be a JSON object."
+    },
+    {
+      "name": "block an array",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: [] }] }",
+      "error": "collab: op 1: \u0022block\u0022 must be a JSON object."
+    },
+    {
+      "name": "block without type",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022data\u0022: {} } }] }",
+      "error": "collab: op 1: \u0022type\u0022 must be a non-empty string."
+    },
+    {
+      "name": "block empty type",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022\u0022, \u0022data\u0022: {} } }] }",
+      "error": "collab: op 1: \u0022type\u0022 must be a non-empty string."
+    },
+    {
+      "name": "block without data",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022 } }] }",
+      "error": "collab: op 1: \u0022data\u0022 must be a JSON object."
+    },
+    {
+      "name": "block data an array",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: [] } }] }",
+      "error": "collab: op 1: \u0022data\u0022 must be a JSON object."
+    },
+    {
+      "name": "block id disagrees",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022id\u0022: \u0022x\u0022, \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {} } }] }",
+      "error": "collab: op 1: the block\u0027s \u0022id\u0022 disagrees with the op\u0027s."
+    },
+    {
+      "name": "block parent",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022parent\u0022: \u0022p\u0022 } }] }",
+      "error": "collab: op 1: \u0022parent\u0022 is not part of this op."
+    },
+    {
+      "name": "block content",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022content\u0022: [] } }] }",
+      "error": "collab: op 1: \u0022content\u0022 is not part of this op."
+    },
+    {
+      "name": "block extra",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022extra\u0022: 1 } }] }",
+      "error": "collab: op 1: \u0022extra\u0022 is not part of this op."
+    },
+    {
+      "name": "after a number",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {} }, \u0022after\u0022: 7 }] }",
+      "error": "collab: op 1: \u0022after\u0022 must be a non-empty string."
+    },
+    {
+      "name": "parent empty",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {} }, \u0022parent\u0022: \u0022\u0022 }] }",
+      "error": "collab: op 1: \u0022parent\u0022 must be a non-empty string."
+    },
+    {
+      "name": "update without data",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: \u0022data\u0022 must be a JSON object."
+    },
+    {
+      "name": "update data a string",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022data\u0022: \u0022text\u0022 }] }",
+      "error": "collab: op 1: \u0022data\u0022 must be a JSON object."
+    },
+    {
+      "name": "update data null",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022data\u0022: null }] }",
+      "error": "collab: op 1: \u0022data\u0022 must be a JSON object."
+    },
+    {
+      "name": "tunes a string",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022tunes\u0022: \u0022x\u0022 } }] }",
+      "error": "collab: op 1: \u0022tunes\u0022 must be a JSON object."
+    },
+    {
+      "name": "lastEditedAt a string",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022lastEditedAt\u0022: \u00221\u0022 } }] }",
+      "error": "collab: op 1: the block\u0027s \u0022lastEditedAt\u0022 must be a number."
+    },
+    {
+      "name": "createdAt a string",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022createdAt\u0022: \u00221\u0022 } }] }",
+      "error": "collab: op 1: the block\u0027s \u0022createdAt\u0022 must be a number."
+    },
+    {
+      "name": "lastEditedBy a number",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022lastEditedBy\u0022: 1 } }] }",
+      "error": "collab: op 1: \u0022lastEditedBy\u0022 must be a non-empty string."
+    },
+    {
+      "name": "createdBy empty",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022createdBy\u0022: \u0022\u0022 } }] }",
+      "error": "collab: op 1: \u0022createdBy\u0022 must be a non-empty string."
+    },
+    {
+      "name": "createdWith a number",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022createdWith\u0022: 1 } }] }",
+      "error": "collab: op 1: \u0022createdWith\u0022 must be a non-empty string."
+    },
+    {
+      "name": "lastEditedWith a number",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {}, \u0022lastEditedWith\u0022: 1 } }] }",
+      "error": "collab: op 1: \u0022lastEditedWith\u0022 must be a non-empty string."
+    },
+    {
+      "name": "block id a number",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022id\u0022: 1, \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {} } }] }",
+      "error": "collab: op 1: \u0022id\u0022 must be a non-empty string."
+    },
+    {
+      "name": "member order: unknown before missing id",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022x\u0022: 1, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: {} } }] }",
+      "error": "collab: op 1: \u0022x\u0022 is not part of this op."
+    },
+    {
+      "name": "patchMaps from the wire",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022patchMaps\u0022, \u0022patches\u0022: [{ \u0022map\u0022: \u0022page\u0022, \u0022key\u0022: \u0022title\u0022, \u0022value\u0022: \u0022x\u0022 }] }] }",
+      "error": "collab: op 1: \u0022op\u0022 must be \u0022insert\u0022, \u0022update\u0022 or \u0022remove\u0022."
+    },
+    {
+      "name": "op name case",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022Remove\u0022, \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: \u0022op\u0022 must be \u0022insert\u0022, \u0022update\u0022 or \u0022remove\u0022."
+    },
+    {
+      "name": "NUL in an id",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022b\\u00001\u0022 }] }",
+      "error": "collab: op 1: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "NUL in a block type",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\\u0000p\u0022, \u0022data\u0022: {} } }] }",
+      "error": "collab: op 1: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "NUL in a data key",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022data\u0022: { \u0022k\\u0000\u0022: 1 } }] }",
+      "error": "collab: op 1: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "NUL deep in data",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022insert\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022block\u0022: { \u0022type\u0022: \u0022p\u0022, \u0022data\u0022: { \u0022rows\u0022: [{ \u0022cell\u0022: \u0022a\\u0000b\u0022 }] } } }] }",
+      "error": "collab: op 1: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "NUL in an unknown member",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022b1\u0022, \u0022x\\u0000\u0022: 1 }] }",
+      "error": "collab: op 1: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "NUL before the op name is read",
+      "body": "{ \u0022ops\u0022: [{ \u0022op\u0022: \u0022remove\u0022, \u0022id\u0022: \u0022ok\u0022 }, { \u0022op\u0022: \u0022fly\\u0000\u0022, \u0022id\u0022: \u0022b1\u0022 }] }",
+      "error": "collab: op 1: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "lone high surrogate in an id",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022\\ud800\u0022}]}",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "lone low surrogate in a value",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022t\u0022:\u0022\\udc00\u0022}}]}",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "lone surrogate in a key",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022\\ud800\u0022:1}}]}",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "lone surrogate in a root key",
+      "body": "{\u0022\\ud800\u0022:1,\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022b\u0022}]}",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "reversed pair",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022\\ude00\\ud83d\u0022}]}",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "raw 0xff in a key",
+      "bodyHex": "7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b22ff223a317d7d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "raw 0xff in a value",
+      "bodyHex": "7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b2274223a22ff227d7d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "encoded surrogate in a value",
+      "bodyHex": "7b226f7073223a5b7b226f70223a2272656d6f7665222c226964223a22eda080227d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "overlong slash in a value",
+      "bodyHex": "7b226f7073223a5b7b226f70223a2272656d6f7665222c226964223a22c0af227d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "a NUL key before a bad key",
+      "bodyHex": "7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b226b5c7530303030223a312c22ff223a327d7d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "a NUL value before a bad key",
+      "bodyHex": "7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b226b223a225c7530303030222c22ff223a327d7d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "a NUL value before a bad value",
+      "bodyHex": "7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b226b223a225c7530303030222c226a223a22ff227d7d5d7d",
+      "error": "collab: op 0: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "a bad key in an earlier op than a NUL",
+      "bodyHex": "7b226f7073223a5b7b226f70223a2272656d6f7665222c226964223a225c7530303030227d2c7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b22ff223a327d7d5d7d",
+      "error": "collab: op 0: a string contains a NUL character, which this endpoint does not accept."
+    },
+    {
+      "name": "a bad root key",
+      "bodyHex": "7b22ff223a312c226f7073223a5b7b226f70223a2272656d6f7665222c226964223a2262227d5d7d",
+      "error": "collab: the request body holds text that is not valid Unicode."
+    },
+    {
+      "name": "truncated sequence in an unknown root member",
+      "bodyHex": "7b226f7073223a5b7b226f70223a2272656d6f7665222c226964223a2262227d5d2c2278223a22e282227d",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b\u0022,\u0022op\u0022:\u0022remove\u0022}]}",
+      "digestHex": "96234deeeaadfaa2737cfe210a5e872675d4e0080f287e5c8808bef99f4eeaaf"
+    }
+  ],
+  "agent": [
+    {
+      "name": "move",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:\u0022b0\u0022,\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022move\u0022,\u0022parent\u0022:\u0022p1\u0022}]}",
+      "digestHex": "7a722cce08d55948b435f6a83e3c8aa8973e5fc1affe050d6ecaadbcbebfa2bd"
+    },
+    {
+      "name": "move to the start of the root",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022after\u0022:null,\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022move\u0022,\u0022parent\u0022:null}]}",
+      "digestHex": "887d0b22afed04a772ad58e32a9ad10ccef5d72c24158f3e2c8a27c7412906d6"
+    },
+    {
+      "name": "lift",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022lift\u0022}]}",
+      "digestHex": "d33a3a3df5370fb10d6786d343c5772c316eb17667fec0bd895a3ca4aefba01f"
+    },
+    {
+      "name": "retype",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022data\u0022:{\u0022a\u0022:\u0022\\u00E9\u0022,\u0022level\u0022:2.5,\u0022z\u0022:1},\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022retype\u0022,\u0022type\u0022:\u0022header\u0022}]}",
+      "digestHex": "11296e886ee34513df58e916873bde266ffa49e9607e1ea027f50cdaefc82f82"
+    },
+    {
+      "name": "setTunes",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022op\u0022:\u0022setTunes\u0022,\u0022tunes\u0022:{\u0022align\u0022:\u0022left\u0022,\u0022anchor\u0022:null}}]}",
+      "digestHex": "fcd32c73c1b7d5720d06c741265df660ef43f64a284361a36d7a2b2e427f3f0f"
+    },
+    {
+      "name": "setMetadata",
+      "lastEditedAtBits": "4789908884267466752",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:1730000000000,\u0022lastEditedBy\u0022:\u0022user-1\u0022,\u0022op\u0022:\u0022setMetadata\u0022}]}",
+      "digestHex": "bdf0c161f2f3748592b9f1b20b485f4ff5d8c28b5c8ecc7fb54b573bbe51972b"
+    },
+    {
+      "name": "setMetadata with",
+      "lastEditedAtBits": "4599075939470750516",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:0.30000000000000004,\u0022lastEditedBy\u0022:\u0022u\\u003C1\\u003E\u0022,\u0022lastEditedWith\u0022:\u0022agent\u0022,\u0022op\u0022:\u0022setMetadata\u0022}]}",
+      "digestHex": "df06684fc902993bcbe6b5c22e431daaaeb5f1892ab58889f22fed0afe4caa47"
+    },
+    {
+      "name": "setMetadata large",
+      "lastEditedAtBits": "4921056587992461136",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:1E\u002B21,\u0022lastEditedBy\u0022:\u0022u\u0022,\u0022op\u0022:\u0022setMetadata\u0022}]}",
+      "digestHex": "4d37b4e705b7d32301ce4054ab051d39d52eda96b903d95ffde7624fc5a4889d"
+    },
+    {
+      "name": "setMetadata small",
+      "lastEditedAtBits": "4502148214488346440",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:1E-07,\u0022lastEditedBy\u0022:\u0022u\u0022,\u0022op\u0022:\u0022setMetadata\u0022}]}",
+      "digestHex": "e1cee99d7d31950dc09efd50accafc59966d2e391938f6acda31ed53021c4811"
+    },
+    {
+      "name": "setMetadata negative zero",
+      "lastEditedAtBits": "-9223372036854775808",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:-0,\u0022lastEditedBy\u0022:\u0022u\u0022,\u0022op\u0022:\u0022setMetadata\u0022}]}",
+      "digestHex": "dad5999f4ece1adc6151a1836c668b73e7e0fb1dc116bb8deeb44b65fa39226e"
+    },
+    {
+      "name": "setMetadata max",
+      "lastEditedAtBits": "9218868437227405311",
+      "canonical": "{\u0022ops\u0022:[{\u0022id\u0022:\u0022b1\u0022,\u0022lastEditedAt\u0022:1.7976931348623157E\u002B308,\u0022lastEditedBy\u0022:\u0022u\u0022,\u0022op\u0022:\u0022setMetadata\u0022}]}",
+      "digestHex": "0e815fe6d42de338367a21bdb1bfc049b6becc5d5d7be3ea51faa362185d1b79"
+    },
+    {
+      "name": "setPageField",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022key\u0022:\u0022title\u0022,\u0022op\u0022:\u0022setPageField\u0022,\u0022value\u0022:\u0022Hi\u0022}]}",
+      "digestHex": "0f6756c58e9e878f131d27dcda7ebc49aac7691fd558a4643e32bc0edece85ed"
+    },
+    {
+      "name": "setPageField null",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022key\u0022:\u0022icon\u0022,\u0022op\u0022:\u0022setPageField\u0022,\u0022value\u0022:null}]}",
+      "digestHex": "2e9d2929a2f53a98f9abdac441bf0359deea1a6b2fcf19bff510bb5da81d9244"
+    },
+    {
+      "name": "setPageField object",
+      "lastEditedAtBits": null,
+      "canonical": "{\u0022ops\u0022:[{\u0022key\u0022:\u0022icon\u0022,\u0022op\u0022:\u0022setPageField\u0022,\u0022value\u0022:{\u0022type\u0022:\u0022emoji\u0022,\u0022value\u0022:\u0022x\u0022}}]}",
+      "digestHex": "f48b929d6736be401e82a0a6160e45c5712b12efe3f7e2d1d7e07837ebdc9636"
+    }
+  ],
+  "keys": [
+    {
+      "key": "edit-key",
+      "operationId": "17dfb993d050bdfe41d1a04f725bd5f3"
+    },
+    {
+      "key": "a",
+      "operationId": "ca978112ca1bbdcafac231b39a23dc4d"
+    },
+    {
+      "key": " ",
+      "operationId": "36a9e7f1c95b82ffb99743e0c5c4ce95"
+    },
+    {
+      "key": "~",
+      "operationId": "7ace431cb61584cb9b8dc7ec08cf38ac"
+    },
+    {
+      "key": "a b",
+      "operationId": "c8687a08aa5d6ed2044328fa6a697ab8"
+    },
+    {
+      "key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+      "operationId": "69cd344d20fee04179a672ea3b2929da"
+    },
+    {
+      "key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+      "operationId": null
+    },
+    {
+      "key": "",
+      "operationId": null
+    },
+    {
+      "key": "\u001F",
+      "operationId": null
+    },
+    {
+      "key": "\u007F",
+      "operationId": null
+    },
+    {
+      "key": "\u00E9",
+      "operationId": null
+    },
+    {
+      "key": "tab\there",
+      "operationId": null
+    },
+    {
+      "key": "\u0022quoted\u0022",
+      "operationId": "272fca25899893eeb27b89583d5c81b8"
+    }
+  ],
+  "restore": [
+    {
+      "lineage": "0123456789abcdef0123456789abcdef",
+      "sequence": "1",
+      "digestHex": "63f9dea023532bb9d8ff1b5dc71609376971d672b5d0fd4769db571b828fe566"
+    },
+    {
+      "lineage": "fedcba9876543210fedcba9876543210",
+      "sequence": "18446744073709551615",
+      "digestHex": "69b525d5664b47cf081ccdba5afadbdfd456ec38eae4c574b198c9b575a94512"
+    },
+    {
+      "lineage": "0123456789abcdef0123456789abcdef",
+      "sequence": "0",
+      "digestHex": "87ec11432b9e056377c4c77d65930b762f8b56ef7cf6e284b174ff6c97ba1bb2"
+    }
+  ],
+  "doubles": [
+    {
+      "bits": "0",
+      "json": "0",
+      "invariant": "0"
+    },
+    {
+      "bits": "-9223372036854775808",
+      "json": "-0",
+      "invariant": "-0"
+    },
+    {
+      "bits": "4607182418800017408",
+      "json": "1",
+      "invariant": "1"
+    },
+    {
+      "bits": "-4616189618054758400",
+      "json": "-1",
+      "invariant": "-1"
+    },
+    {
+      "bits": "4591870180066957722",
+      "json": "0.1",
+      "invariant": "0.1"
+    },
+    {
+      "bits": "4599075939470750516",
+      "json": "0.30000000000000004",
+      "invariant": "0.30000000000000004"
+    },
+    {
+      "bits": "4609434218613702656",
+      "json": "1.5",
+      "invariant": "1.5"
+    },
+    {
+      "bits": "4636737291354636288",
+      "json": "100",
+      "invariant": "100"
+    },
+    {
+      "bits": "4816244402031689728",
+      "json": "100000000000000",
+      "invariant": "100000000000000"
+    },
+    {
+      "bits": "4817745636528479808",
+      "json": "123456789012345",
+      "invariant": "123456789012345"
+    },
+    {
+      "bits": "4831355200913801216",
+      "json": "1000000000000000",
+      "invariant": "1000000000000000"
+    },
+    {
+      "bits": "4832797072101665536",
+      "json": "1234567890123456",
+      "invariant": "1234567890123456"
+    },
+    {
+      "bits": "4846369599423283200",
+      "json": "10000000000000000",
+      "invariant": "10000000000000000"
+    },
+    {
+      "bits": "4906019910204099648",
+      "json": "1E\u002B20",
+      "invariant": "1E\u002B20"
+    },
+    {
+      "bits": "4921056587992461136",
+      "json": "1E\u002B21",
+      "invariant": "1E\u002B21"
+    },
+    {
+      "bits": "9097811302482466869",
+      "json": "1.5E\u002B300",
+      "invariant": "1.5E\u002B300"
+    },
+    {
+      "bits": "9218868437227405311",
+      "json": "1.7976931348623157E\u002B308",
+      "invariant": "1.7976931348623157E\u002B308"
+    },
+    {
+      "bits": "1",
+      "json": "5E-324",
+      "invariant": "5E-324"
+    },
+    {
+      "bits": "4503599627370496",
+      "json": "2.2250738585072014E-308",
+      "invariant": "2.2250738585072014E-308"
+    },
+    {
+      "bits": "4547007122018943789",
+      "json": "0.0001",
+      "invariant": "0.0001"
+    },
+    {
+      "bits": "4549666047238943329",
+      "json": "0.00015",
+      "invariant": "0.00015"
+    },
+    {
+      "bits": "4532020583610935537",
+      "json": "1E-05",
+      "invariant": "1E-05"
+    },
+    {
+      "bits": "4533404827286226701",
+      "json": "1.2345E-05",
+      "invariant": "1.2345E-05"
+    },
+    {
+      "bits": "4502148214488346440",
+      "json": "1E-07",
+      "invariant": "1E-07"
+    },
+    {
+      "bits": "4638387860618067575",
+      "json": "123.456",
+      "invariant": "123.456"
+    },
+    {
+      "bits": "4845873199050653695",
+      "json": "9007199254740991",
+      "invariant": "9007199254740991"
+    },
+    {
+      "bits": "4845873199050653696",
+      "json": "9007199254740992",
+      "invariant": "9007199254740992"
+    },
+    {
+      "bits": "4861130398305394688",
+      "json": "1E\u002B17",
+      "invariant": "1E\u002B17"
+    },
+    {
+      "bits": "4848869599423283200",
+      "json": "15000000000000000",
+      "invariant": "15000000000000000"
+    },
+    {
+      "bits": "4847542438873900484",
+      "json": "12345678901234568",
+      "invariant": "12345678901234568"
+    },
+    {
+      "bits": "4862596447618666293",
+      "json": "1.2345678901234568E\u002B17",
+      "invariant": "1.2345678901234568E\u002B17"
+    },
+    {
+      "bits": "4876203697187506176",
+      "json": "1E\u002B18",
+      "invariant": "1E\u002B18"
+    },
+    {
+      "bits": "4891288408196988160",
+      "json": "1E\u002B19",
+      "invariant": "1E\u002B19"
+    },
+    {
+      "bits": "4548686775598975860",
+      "json": "0.00012345678901234567",
+      "invariant": "0.00012345678901234567"
+    },
+    {
+      "bits": "4616583683022153318",
+      "json": "4.35",
+      "invariant": "4.35"
+    },
+    {
+      "bits": "4548669923058963014",
+      "json": "0.000123",
+      "invariant": "0.000123"
+    },
+    {
+      "bits": "4789908884267466752",
+      "json": "1730000000000",
+      "invariant": "1730000000000"
+    },
+    {
+      "bits": "9218378953502702454",
+      "json": "1.7E\u002B308",
+      "invariant": "1.7E\u002B308"
+    },
+    {
+      "bits": "1",
+      "json": "5E-324",
+      "invariant": "5E-324"
+    },
+    {
+      "bits": "6103021453049119613",
+      "json": "1E\u002B100",
+      "invariant": "1E\u002B100"
+    },
+    {
+      "bits": "4831355200913801215",
+      "json": "999999999999999.9",
+      "invariant": "999999999999999.9"
+    },
+    {
+      "bits": "4599075939470750516",
+      "json": "0.30000000000000004",
+      "invariant": "0.30000000000000004"
+    }
+  ]
+}

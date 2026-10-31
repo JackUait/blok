@@ -28,6 +28,10 @@ interface TestEditor {
   history: { undo: () => void; redo: () => void };
 }
 
+// These tests boot a dashboard over several databases and wait out the 500ms
+// adapter debounce. CI runs them at 3.4-5.1s under coverage, past the 5s default.
+const DASHBOARD_BOOT_TIMEOUT = 15_000;
+
 const settle = (): Promise<void> => new Promise(resolve => {
   setTimeout(resolve, 0);
 });
@@ -1597,14 +1601,16 @@ describe('row ⋮⋮ menu with a real editor', () => {
 
       await dashboardCapabilityEditSource('Standalone source after denied linked drawer');
       expect((await saved('q1'))?.data.properties.n2).toBe('Standalone source after denied linked drawer');
-      await new Promise<void>((resolve) => { setTimeout(resolve, 650); });
-      expect(source.rows.get('q1')?.properties.n2).toBe('Standalone source after denied linked drawer');
+      await vi.waitFor(() => {
+        expect(source.rows.get('q1')?.properties.n2).toBe('Standalone source after denied linked drawer');
+      });
       expect(sourceUpdate).toHaveBeenCalledWith({
         rowId: 'q1', properties: { n2: 'Standalone source after denied linked drawer' },
       });
       expect(localUpdate).not.toHaveBeenCalled();
       expect((await saved('r1'))?.data.properties.notes).toBe('short');
-    }
+    },
+    DASHBOARD_BOOT_TIMEOUT
   );
 
   it.each(['dashboard-readonly', 'definition-readonly'] as const)(
@@ -1665,14 +1671,16 @@ describe('row ⋮⋮ menu with a real editor', () => {
 
       await dashboardCapabilityEditSource('Surviving source after linked drawer revocation');
       expect((await saved('q1'))?.data.properties.n2).toBe('Surviving source after linked drawer revocation');
-      await new Promise<void>((resolve) => { setTimeout(resolve, 650); });
-      expect(source.rows.get('q1')?.properties.n2).toBe('Surviving source after linked drawer revocation');
+      await vi.waitFor(() => {
+        expect(source.rows.get('q1')?.properties.n2).toBe('Surviving source after linked drawer revocation');
+      });
       expect(sourceUpdate).toHaveBeenCalledWith({
         rowId: 'q1', properties: { n2: 'Surviving source after linked drawer revocation' },
       });
       expect(localUpdate).not.toHaveBeenCalled();
       expect((await saved('r1'))?.data.properties.notes).toBe('short');
-    }
+    },
+    DASHBOARD_BOOT_TIMEOUT
   );
 
   it('dashboard capability writable linked intermediary drawer writes only the underlying source title and property', async () => {
@@ -1727,7 +1735,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect(intermediate?.activeViewId).toBe('capability-intermediate-v');
     expect(output.blocks.find((block) => block.id === 'db2')?.data.activeViewId).toBe('v');
     expect(current.blocks.getById('db2')).not.toBeNull();
-  });
+  }, DASHBOARD_BOOT_TIMEOUT);
 
   it.each(['dashboard-readonly', 'definition-readonly'] as const)(
     'dashboard capability drawer refuses title and property edits opened through %s',
@@ -1787,7 +1795,8 @@ describe('row ⋮⋮ menu with a real editor', () => {
         rowId: 'q1', properties: { n2: 'Standalone source after readonly peek' },
       });
       expect(localUpdate).not.toHaveBeenCalled();
-    }
+    },
+    DASHBOARD_BOOT_TIMEOUT
   );
 
   it.each(['dashboard-readonly', 'definition-readonly'] as const)(
@@ -1830,7 +1839,8 @@ describe('row ⋮⋮ menu with a real editor', () => {
       expect((await saved('q2'))?.data.properties.n2).toBe('Second note');
       expect((await saved('r1'))?.data.properties.notes).toBe('short');
       expect(current.blocks.getChildren('dashboard-capability-definition')).toEqual([]);
-    }
+    },
+    DASHBOARD_BOOT_TIMEOUT
   );
 
   it('dashboard capability writable native drawer edits the source title and property', async () => {
@@ -1879,7 +1889,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
       .toBe('capability-source-v');
     expect(output.blocks.find((block) => block.id === 'db2')?.data.activeViewId).toBe('v');
     expect(current.blocks.getById('db2')).not.toBeNull();
-  });
+  }, DASHBOARD_BOOT_TIMEOUT);
 
   it.each(['dashboard-readonly', 'definition-readonly', 'remove-dashboard', 'remove-widget'] as const)(
     'dashboard capability retained drawer nodes cannot write after %s',
@@ -1946,7 +1956,8 @@ describe('row ⋮⋮ menu with a real editor', () => {
         rowId: 'q1', properties: { n2: 'Surviving source after drawer loss' },
       });
       expect(localUpdate).not.toHaveBeenCalled();
-    }
+    },
+    DASHBOARD_BOOT_TIMEOUT
   );
 
   it.each(['dashboard-readonly', 'definition-readonly', 'remove-dashboard', 'remove-widget'] as const)(
@@ -4694,7 +4705,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
     } finally {
       current.events.off('block replayed', onReplay);
     }
-  });
+  }, DASHBOARD_BOOT_TIMEOUT);
 
   it.each([
     {
@@ -5698,7 +5709,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect((await saved('r1'))?.data.properties.notes).toBe('short');
     expect(output.blocks.find((block) => block.id === 'db')?.data.activeViewId).toBe('dash');
     expect(output.blocks.find((block) => block.id === 'db2')?.data.activeViewId).toBe('v');
-  });
+  }, DASHBOARD_BOOT_TIMEOUT);
 
   it('revoking a dashboard owner denies fill from the old native grid while its source still accepts fill', async () => {
     const blocks = dashboardOwnerDoc('db');
@@ -5760,7 +5771,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
 
     expect(output.blocks.find((block) => block.id === 'db')?.data.activeViewId).toBe('dash');
     expect(output.blocks.find((block) => block.id === 'db2')?.data.activeViewId).toBe('v');
-  });
+  }, DASHBOARD_BOOT_TIMEOUT);
 
   it.each(['db2', 'db'] as const)('commits a foreign dashboard table edit with its definition on %s', async (definitionOwner) => {
     const blocks = dashboardOwnerDoc(definitionOwner);
@@ -7169,7 +7180,7 @@ describe('row ⋮⋮ menu with a real editor', () => {
         expect(output.blocks.find((block) => block.id === 'r1')?.content).toEqual(['body']);
         expect(output.blocks.find((block) => block.id === 'body')?.parent).toBe('r1');
       }
-    });
+    }, DASHBOARD_BOOT_TIMEOUT);
 
     it.each(['missing-trigger', 'missing-action', 'missing-property', 'missing-view'] as const)(
       'A1a refuses native activation with %s',

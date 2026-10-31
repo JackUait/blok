@@ -45,6 +45,7 @@ Commit `fix(server)!: BREAKING read wire JSON content with JsJson.Parse` (03e827
   - `SameAsLive` can now find an equal wire value. Before, it never could, so it always rewrote.
 - **Behaviour change on a shipped surface.** `TryReadWireJson` shipped in v1.16.1 (`git merge-base --is-ancestor` on commit 8372f514).
   - Round 2: the commit was reworded (non-interactive `commit-tree` + `rebase --onto`; tree unchanged) to carry `BREAKING` in the subject and a `BREAKING CHANGE:` body with old, new and migration. No other branch or worktree contained it (`git branch -a --contains`, plus `merge-base --is-ancestor` against every detached worktree HEAD).
+  - The commit's "Old" claims were run on the pre-change tree (`git archive 5bdc4ce3` into a scratch folder, plus the new `ExportWritesWireJsonAsJavaScriptReadsIt`). Old output: numbers `{"n":1.0,"e":1e2,"i":1e999}`, the 300-deep array exported whole (`300:1`), and the lone-surrogate value dropped whole (NullReferenceException on `data["mixed"]`).
   - A release note is still owed when this lands; the user decides the bump.
   - Compatible route, if wanted: keep the raw text beside the parsed value, and let the converter re-read the raw text as before.
 - **Who reaches the new `case string text when HasLoneSurrogate(text)`** (round 2, partly verified). It runs on every string `TryToPlain` sees, which is map and array values and Any members, not Y.Text (YText/YXmlText take their own branches above it).
@@ -85,6 +86,7 @@ So 112 DONE and 1 deferred with a reason.
    - yjs accepts length-0 items and GCs, and still encodes: `findIndexSS` tests the LAST struct for an exact clock before bisecting (`node_modules/yjs/src/utils/StructStore.js:111-118`). Our bisection could not find a length-0 last struct that the state vector names.
    - Fix in both: the same exact-last check in `StructStore.FindIndex` / `store.findIndex`. For structs of length 1 or more it returns the same index as before.
    - Shared oracle `fixtures/yjs-engine/empty-structs.json` (new, in the manifest, from the generator): 9 cases, each applies its updates and must encode `sv`, `full` and a `diff` against `{1000:1}` exactly as yjs did. Read by C# `HostileUpdateTests.ALengthZeroStructEncodesAsYjsDoes` and Go `TestALengthZeroStructEncodesAsYjsDoes`. The C# test failed before the fix with `client 1000 has no struct at clock 0`.
+   - The reviewer's exact crash input `0102e80700220101300130002100e8303001303000` is pinned by twins C# `HostileUpdateTests.TheFuzzCrashInputEncodes` and Go `TestTheFuzzCrashInputEncodes`: it applies, encodes, and its vector is `AegHAA==`. Full bytes are not pinned, because they hit the parentSub-bit item below. Removing the fix fails both.
    - `AMapKeyWithNoValueReadsAsUndefined` (8372f514, shipped) now also asserts the encode succeeds, in both languages. Its applied-and-undefined contract is unchanged.
    - A ContentDeleted of length 0 is the one empty shape yjs also refuses (it throws mid-apply; `yjsAccepts: false`). Both decoders now refuse it, so the doc stays as it was. New negative case `empty-deleted-content` (reason `empty-struct`); negative.json has 9 cases.
    - Not refused: empty strings, JSON, Any and GCs, because yjs accepts them and refusing would reverse 8372f514. That also keeps journal replay of an old room working.
@@ -103,7 +105,21 @@ So 112 DONE and 1 deferred with a reason.
 - **Collab seam API.** Go exports `Doc`, `Map`, `Array`, `Text`, `XmlText`, `Inspect`, `Decode`, `DecodedUpdate`, `ApplyResult`, `UpdateEvent`, `lib0.Reader/Writer/ReadAny/WriteAny`. The collab port may need more accessors (item walking for `RichText`, for example). Add them there.
 - **Panics.** `Doc.Transact`, and anything else with no error return, panics with `*yjs.EngineError` on an engine invariant failure. Collab must `recover()` at the room boundary (T12).
 - **NEW, open (round 2): yjs drops the parentSub bit whenever the doc holds pending structs; neither engine does.** yjs `encodeStateAsUpdate` runs `mergeUpdates` when anything is pending (`encoding.js:522-540`). The merge re-reads every struct, and an item with an origin reads back with no parentSub, so it is rewritten without BIT6.
-  - Measured with yjs 13.6.33: a doc holding map "m" key "k" set twice encodes the second value with info `a8` and nothing pending, but `88` once one unrelated struct is parked. Probe: `/private/tmp/claude-501/-Users-jackuait-Packages-blok/1972ea3d-88af-4e14-951b-0edd9367e8e3/scratchpad/bitprobe/probe.mjs`.
+  - Measured with yjs 13.6.33: a doc holding map "m" key "k" set twice encodes the second value with info `a8` and nothing pending, but `88` once one unrelated struct is parked. The probe (run from the repo root):
+
+    ```js
+    const Y = require('yjs');
+    const a = new Y.Doc(); a.clientID = 1000;
+    a.getMap('m').set('k', 1); a.getMap('m').set('k', 2);
+    const b = new Y.Doc(); b.clientID = 5;
+    Y.applyUpdate(b, Y.encodeStateAsUpdate(a));
+    console.log(Buffer.from(Y.encodeStateAsUpdate(b)).toString('hex'));
+    // client 2000 at clock 5: parks
+    Y.applyUpdate(b, Buffer.from('0101d00f0504010174016300', 'hex'));
+    console.log(Buffer.from(Y.encodeStateAsUpdate(b)).toString('hex'));
+    ```
+
+    Output: `0102e807002101016d016b01a8e80700017d0201e807010001`, then `0201d00f0504010174016302e807002101016d016b0188e80700017d0201e807010001`.
   - C# writes `0x20` from `ParentSub` or `WireParentSubBit` (`YItem.cs:86`), whatever is pending. Go matches C#, so P1 is blind to it.
   - Impact: bytes only. A reader skips the parentSub bytes when an origin is set, so both forms decode to the same document. UNVERIFIED whether anything compares sync bytes to yjs.
   - `empty-structs.json` keeps its parked case free of parentSub for this reason, and says so in the generator.

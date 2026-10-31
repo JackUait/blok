@@ -39,7 +39,8 @@ public sealed class S3BlobStoreTimeoutTests
       await Drain(stream, body.Length, stop);
       await Respond(stream, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
     }, readBody: false);
-    using var store = Create(server.Port);
+    // A long request timeout: only the header clock is under test here.
+    using var store = Create(server.Port, TimeSpan.FromSeconds(30));
 
     await store.PutObjectAsync("collab/key", body);
   }
@@ -61,7 +62,7 @@ public sealed class S3BlobStoreTimeoutTests
     Assert.InRange(clock.Elapsed, RequestTimeout, RequestTimeout * 2);
   }
 
-  private static S3BlobStore Create(int port) =>
+  private static S3BlobStore Create(int port, TimeSpan? requestTimeout = null) =>
       new(
           new S3BlobStoreOptions(
               $"http://127.0.0.1:{port}",
@@ -73,7 +74,7 @@ public sealed class S3BlobStoreTimeoutTests
               "path",
               1024,
               Path.GetTempPath(),
-              RequestTimeout,
+              requestTimeout ?? RequestTimeout,
               HeaderTimeout),
           TimeProvider.System);
 

@@ -73,10 +73,10 @@ func rawServer(t *testing.T, readBody bool, handle func(conn net.Conn, reader *b
 	return "http://" + listener.Addr().String()
 }
 
-func timeoutStore(t *testing.T, endpoint string) *S3 {
+func timeoutStore(t *testing.T, endpoint string, requestTimeout time.Duration) *S3 {
 	t.Helper()
 	s := testS3(endpoint, "media", "path")
-	s.requestTimeout = testRequestTimeout
+	s.requestTimeout = requestTimeout
 	s.headerTimeout = testHeaderTimeout
 	s, err := NewS3(s)
 	if err != nil {
@@ -87,7 +87,7 @@ func timeoutStore(t *testing.T, endpoint string) *S3 {
 
 func TestABodilessGetStillWaitsForHeadersOnlyUntilTheHeaderTimeout(t *testing.T) {
 	endpoint := rawServer(t, true, func(_ net.Conn, _ *bufio.Reader, stop <-chan struct{}) { <-stop })
-	s := timeoutStore(t, endpoint)
+	s := timeoutStore(t, endpoint, testRequestTimeout)
 	start := time.Now()
 	if _, err := s.GetObject(context.Background(), "collab/key"); err == nil {
 		t.Fatal("no error")
@@ -110,7 +110,8 @@ func TestTheHeaderTimeoutCountsFromTheEndOfTheBody(t *testing.T) {
 		io.CopyN(io.Discard, reader, int64(len(body)))
 		io.WriteString(conn, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
 	})
-	s := timeoutStore(t, endpoint)
+	// A long request timeout: only the header clock is under test here.
+	s := timeoutStore(t, endpoint, 30*time.Second)
 	if err := s.PutObject(context.Background(), "collab/key", body); err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +122,7 @@ func TestAStalledResponseBodyDiesAtTheRequestTimeout(t *testing.T) {
 		io.WriteString(conn, "HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nab")
 		<-stop
 	})
-	s := timeoutStore(t, endpoint)
+	s := timeoutStore(t, endpoint, testRequestTimeout)
 	start := time.Now()
 	if _, err := s.GetObject(context.Background(), "collab/key"); err == nil {
 		t.Fatal("no error")

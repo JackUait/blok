@@ -15,19 +15,14 @@ declare global {
  * The default Playwright `page` gives every test a fresh browser context, so
  * every test re-fetches, re-parses and re-evaluates the ~2 MB editor module
  * graph from a cold cache — pure setup cost that dwarfs most tests. This
- * fixture keeps ONE page per worker and `gotoTestPage` resets page state
- * between tests instead of reloading the world.
+ * fixture keeps ONE page per spec file on each worker and `gotoTestPage`
+ * resets page state between tests instead of reloading the world.
  *
  * Only suitable for specs that (a) navigate exclusively to TEST_PAGE_URL and
  * (b) never touch `context`/`browser` fixtures, popups, downloads or
  * `test.use({ viewport })`. Specs needing real context isolation should keep
  * importing `test` from '@playwright/test'.
  */
-const lastSpecFile = new WeakMap<Page, string>();
-/** What `browser.newContext()` gives a page when the project sets no viewport. */
-const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
-const needsFreshNavigation = new WeakSet<Page>();
-
 /** Contexts whose clock a test faked. */
 const fakedClock = new WeakSet<BrowserContext>();
 
@@ -55,17 +50,30 @@ const openPage = async (browser: Browser): Promise<Page> => {
   return context.newPage();
 };
 
-export const test = base.extend<NonNullable<unknown>, { __sharedPage: () => Promise<Page> }>({
+export const test = base.extend<NonNullable<unknown>, { __sharedPage: (specFile: string) => Promise<Page> }>({
   __sharedPage: [
     async ({ browser }, use) => {
       let page = await openPage(browser);
+      let pageSpecFile: string | undefined;
 
-      await use(async () => {
-        // A test that faked the clock hands the next test a fresh context.
-        if (fakedClock.has(page.context())) {
+      await use(async (specFile) => {
+        // In-place reset is only allowed WITHIN a spec file, where test order
+        // is fixed. Which file follows which is work-stealing roulette, so a
+        // new file gets a new context: nothing a spec set (viewport, media,
+        // routes, a faked clock) can leak into the next one.
+        //
+        // The context must not outlive its file for disk reasons too. With
+        // tracing on (CI), Playwright copies the context's whole network log
+        // at every test start and end and keeps each copy until the worker
+        // exits, so a worker-long context uses disk with the square of its
+        // test count.
+        //
+        // serve.json sends no-store, so a new context costs no extra fetches.
+        if (pageSpecFile !== undefined && (pageSpecFile !== specFile || fakedClock.has(page.context()))) {
           await page.context().close().catch(() => undefined);
           page = await openPage(browser);
         }
+        pageSpecFile = specFile;
 
         return page;
       });
@@ -74,40 +82,8 @@ export const test = base.extend<NonNullable<unknown>, { __sharedPage: () => Prom
     { scope: 'worker' },
   ],
   page: async ({ __sharedPage }, use, testInfo) => {
-    const page = await __sharedPage();
+    const page = await __sharedPage(testInfo.file);
 
-    // In-place reset is only allowed WITHIN a spec file, where test order is
-    // fixed and any state dependency is deterministic. When the worker moves
-    // to a different file, gotoTestPage performs a real navigation — a fresh
-    // JS realm — so no state can leak across files (which file follows which
-    // is work-stealing roulette and would make the suite non-deterministic).
-    // The reload is cheap here: the worker-lived context has a warm HTTP
-    // cache, unlike the default fixture's brand-new context per test.
-    if (lastSpecFile.get(page) !== testInfo.file) {
-      lastSpecFile.set(page, testInfo.file);
-      needsFreshNavigation.add(page);
-
-      // Navigation does not reset the viewport: a spec that resized it would
-      // shrink every later file on this worker (whichever file follows is
-      // work-stealing roulette, so the leak only shows up on some shards).
-      const viewport = testInfo.project.use.viewport ?? DEFAULT_VIEWPORT;
-
-      await page.setViewportSize(viewport);
-      // Media emulation survives navigation too: a spec that set reduced
-      // motion would strip every animation from the next file on this worker.
-      // null = the bare newContext() default the page was created with.
-      await page.emulateMedia({
-        media: null,
-        colorScheme: null,
-        reducedMotion: null,
-        forcedColors: null,
-        contrast: null,
-      });
-      // A route outlives its file. It keeps interception on, so Chromium keeps serving
-      // images it already loaded, and later routes for that URL never run.
-      await page.unrouteAll({ behavior: 'ignoreErrors' });
-      await page.context().unrouteAll({ behavior: 'ignoreErrors' });
-    }
     await use(page);
   },
 });
@@ -132,8 +108,8 @@ export const gotoTestPage = async (page: Page): Promise<void> => {
     await page.keyboard.up(key).catch(() => undefined);
   }
 
-  if (needsFreshNavigation.has(page) || !page.url().startsWith(TEST_PAGE_URL)) {
-    needsFreshNavigation.delete(page);
+  // A new spec file starts on a new page at about:blank, so it navigates here.
+  if (!page.url().startsWith(TEST_PAGE_URL)) {
     await page.goto(TEST_PAGE_URL);
     await page.waitForFunction(() => typeof window.Blok === 'function');
 

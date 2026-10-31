@@ -189,4 +189,4 @@ None this round.
 A Go stub `…/blok-server-conformance-ALy01T/go-conformance/blok-server --listen 127.0.0.1:0 --storage-dir  --max-upload 0` (pid 9831, parent 1) was running before this lane's first run, from a deleted temp dir. Left alone; it is the orphan the task describes.
 
 ## Next round
-Superseded: the round-1 list (F7, F8, F9, F13) was done in round 2. Left for this lane once collab lands: H20 warning, L9 open-routes warning with a `Logger` option, the collab `Options` seams of L1, and the `/sync` hand-off notes above. Still not measured: H23 flag-over-env order, the `127.1:PORT` shorthand bind (T1).
+Superseded: the round-1 list (F7, F8, F9, F13) was done in round 2. Left for this lane once collab lands: H20 warning, L9 open-routes warning with a `Logger` option, the collab `Options` seams of L1, and the `/sync` hand-off notes above. Still not measured: the `127.1:PORT` shorthand bind (T1). H23 flag-over-env is now pinned in host-cli-contract (round 3: the variable is not parsed once the flag is given).

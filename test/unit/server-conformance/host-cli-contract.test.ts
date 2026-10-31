@@ -98,6 +98,20 @@ it.each([
     stderr: '--collab-journal needs --collab',
   },
   {
+    // HostArguments.cs:287: the variable is not even parsed once the flag is given.
+    name: 'a journal flag beside a bad BLOK_COLLAB_JOURNAL',
+    args: ['--collab-journal'],
+    env: { BLOK_COLLAB_JOURNAL: 'maybe' },
+    exitCode: 1,
+    stderr: '--collab-journal needs --collab',
+  },
+  {
+    name: 'a journal flag with a bad inline value',
+    args: ['--collab-journal=maybe'],
+    exitCode: 2,
+    stderr: 'invalid value "maybe" for flag -collab-journal: parse error',
+  },
+  {
     name: 'an S3 prefix without collab',
     args: ['--collab-s3-prefix', 'collab/'],
     exitCode: 1,

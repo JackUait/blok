@@ -57,6 +57,14 @@ const stubRect = (element: HTMLElement, box: Box, shiftY: () => number = () => 0
   });
 };
 
+/**
+ * Distance an auto-scroll moved, summed over the scrollBy calls it made.
+ * Auto-scroll starts at 0.5 px per ms. The harness fakes `Date`, and a
+ * re-queued setTimeout(0) ticks once per fake ms, so 20 ms scroll 10 px.
+ */
+const scrolled = (scrollBy: Mock<(options: ScrollToOptions) => void>): number => scrollBy.mock.calls
+  .reduce((sum, [ options ]) => sum + (options.top ?? 0), 0);
+
 interface HitRegion {
   box: Box;
   element: Element;
@@ -1129,9 +1137,9 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 100);
+      vi.advanceTimersByTime(20);
 
-      expect(h.scrollBy).toHaveBeenCalledWith({ top: -3,
-        behavior: 'instant' });
+      expect(scrolled(h.scrollBy)).toBe(-10);
     });
 
     it('does not scroll one pixel below the top scroll zone', () => {
@@ -1148,9 +1156,9 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 820);
+      vi.advanceTimersByTime(20);
 
-      expect(h.scrollBy).toHaveBeenCalledWith({ top: 3,
-        behavior: 'instant' });
+      expect(scrolled(h.scrollBy)).toBe(10);
     });
 
     it('does not scroll one pixel above the bottom scroll zone', () => {
@@ -1168,36 +1176,31 @@ describe('RectangleSelection — surviving mutants', () => {
       h.rect.startSelection(640, 500);
       h.moveTo(660, 100);
 
-      vi.advanceTimersToNextTimer();
+      vi.advanceTimersByTime(20);
+      expect(scrolled(h.scrollBy)).toBe(-10);
 
-      expect(h.scrollBy).toHaveBeenCalledTimes(2);
+      vi.advanceTimersByTime(20);
+      expect(scrolled(h.scrollBy)).toBe(-20);
     });
 
-    it('does not start a second auto-scroll loop on a move inside a running one', () => {
+    it('keeps the running auto-scroll loop and its speed on a move inside it', () => {
       const h = createHarness();
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 820);
+      /** Half the ramp: the run is at 1.5 px per ms, three times a fresh run. */
+      vi.advanceTimersByTime(1000);
 
-      const ticksPer5ms = (): number => {
-        const before = h.scrollBy.mock.calls.length;
-
-        vi.advanceTimersByTime(5);
-
-        return h.scrollBy.mock.calls.length - before;
-      };
-
-      /** The first tick is due at once; later ones are 1ms apart under fake timers. */
-      vi.advanceTimersByTime(0);
-
-      const alone = ticksPer5ms();
-
-      /** Lands inside the move throttle, so it runs as the trailing call. */
+      /** Past the move throttle, so the move runs at once. */
       h.moveTo(660, 760 + h.scroll.y);
-      vi.advanceTimersByTime(10);
 
-      expect(ticksPer5ms()).toBe(alone);
-      expect(alone).toBeGreaterThan(0);
+      const before = scrolled(h.scrollBy);
+
+      vi.advanceTimersByTime(20);
+
+      /** A restarted run would scroll 10 px here. */
+      expect(scrolled(h.scrollBy) - before).toBe(30);
+      expect(vi.getTimerCount()).toBe(1);
     });
 
     it('stops once the page can scroll no further', () => {
@@ -1209,9 +1212,20 @@ describe('RectangleSelection — surviving mutants', () => {
       /** Throws on the timer loop limit if the loop never ends. */
       vi.runAllTimers();
 
-      /** 60px at 3px a tick is 20 moves, plus the tick that found no movement. */
-      expect(h.scrollBy).toHaveBeenCalledTimes(21);
       expect(h.scroll.y).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+
+      /** Only the first tick that found no movement may run with the page already at the top. */
+      const page = { y: SCROLL_Y };
+      const atTop = h.scrollBy.mock.calls.filter(([ options ]) => {
+        const wasAtTop = page.y === 0;
+
+        page.y = Math.max(0, page.y + (options.top ?? 0));
+
+        return wasAtTop;
+      });
+
+      expect(atTop).toHaveLength(1);
     });
 
     it('starts again on the next move after a scroll that found the end', () => {
@@ -1219,15 +1233,18 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 440);
       h.moveTo(660, 40);
+      vi.advanceTimersByTime(20);
 
+      /** One tick found the top and the loop ended. */
       expect(h.scrollBy).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
 
       h.scroll.y = 30;
-      h.releaseThrottle();
       h.moveTo(660, 70);
+      vi.advanceTimersByTime(20);
 
-      expect(h.scrollBy).toHaveBeenCalledTimes(2);
-      expect(h.scroll.y).toBe(27);
+      expect(h.scroll.y).toBe(20);
+      expect(h.scrollBy).toHaveBeenCalledTimes(11);
     });
 
     it('re-derives the band on each tick, since the anchor moves with the content', () => {
@@ -1235,13 +1252,14 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(700, 820);
+      vi.advanceTimersByTime(20);
 
-      /** One 3px tick ran: the anchor rose 3px, the pointer did not move. */
-      expect(h.overlayRectangle.style.top).toBe('419px');
-      expect(h.overlayRectangle.style.height).toBe('323px');
+      /** 10 px scrolled: the anchor rose 10 px, the pointer did not move. */
+      expect(h.overlayRectangle.style.top).toBe('412px');
+      expect(h.overlayRectangle.style.height).toBe('330px');
       expect(h.overlayRectangle.style.left).toBe('576px');
       expect(h.overlayRectangle.style.width).toBe('60px');
-      expect(h.scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrolled(h.scrollBy)).toBe(10);
     });
   });
 
@@ -1256,9 +1274,9 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 250);
+      vi.advanceTimersByTime(20);
 
-      expect(h.scrollerScrollBy).toHaveBeenCalledWith({ top: -3,
-        behavior: 'instant' });
+      expect(scrolled(h.scrollerScrollBy)).toBe(-10);
       expect(h.scrollBy).not.toHaveBeenCalled();
     });
 
@@ -1277,9 +1295,9 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 670);
+      vi.advanceTimersByTime(20);
 
-      expect(h.scrollerScrollBy).toHaveBeenCalledWith({ top: 3,
-        behavior: 'instant' });
+      expect(scrolled(h.scrollerScrollBy)).toBe(10);
       expect(h.scrollBy).not.toHaveBeenCalled();
     });
 
@@ -1298,9 +1316,12 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 670);
-      vi.advanceTimersToNextTimer();
 
-      expect(h.scrollerScrollBy).toHaveBeenCalledTimes(2);
+      vi.advanceTimersByTime(20);
+      expect(scrolled(h.scrollerScrollBy)).toBe(10);
+
+      vi.advanceTimersByTime(20);
+      expect(scrolled(h.scrollerScrollBy)).toBe(20);
       expect(h.scrollBy).not.toHaveBeenCalled();
     });
 
@@ -1312,17 +1333,18 @@ describe('RectangleSelection — surviving mutants', () => {
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 100);
+      vi.advanceTimersByTime(20);
+
+      expect(scrolled(h.scrollerScrollBy)).toBe(-10);
+
       h.rect.endSelection();
       h.releaseThrottle();
+      h.scrollerScrollBy.mockClear();
       h.rect.startSelection(640, 500);
       h.moveTo(660, 820);
+      vi.advanceTimersByTime(20);
 
-      expect(h.scrollerScrollBy.mock.calls).toEqual([
-        [ { top: -3,
-          behavior: 'instant' } ],
-        [ { top: 3,
-          behavior: 'instant' } ],
-      ]);
+      expect(scrolled(h.scrollerScrollBy)).toBe(10);
     });
   });
 

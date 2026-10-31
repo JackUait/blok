@@ -790,6 +790,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.toolRenderer.destroy();
     this.mutationHandler.destroy();
     this.inputManager.destroy();
+    this.tunesManager.destroy();
 
     /** Clean up drag and drop */
     if (this.draggableCleanup) {

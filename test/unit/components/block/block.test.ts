@@ -734,6 +734,24 @@ describe('Block', () => {
       expect(invocationLog).toEqual(['cb1', 'cb2']);
     });
 
+    // A tune that listens on document (Copy link's Ctrl+Cmd+L) keeps the whole
+    // editor alive after destroy unless its own destroy runs.
+    it('destroys user and internal tune instances', () => {
+      const userTune = createTuneAdapter('userTune');
+      const internalTune = createTuneAdapter('internalTune', { isInternal: true });
+      const userDestroy = vi.fn();
+      const internalDestroy = vi.fn();
+
+      Object.assign(userTune.instance, { destroy: userDestroy });
+      Object.assign(internalTune.instance, { destroy: internalDestroy });
+      const { block } = createBlock({ tunes: [userTune, internalTune] });
+
+      block.destroy();
+
+      expect(userDestroy).toHaveBeenCalledTimes(1);
+      expect(internalDestroy).toHaveBeenCalledTimes(1);
+    });
+
     it('allows unregistering a destroy callback before destroy', () => {
       const { block } = createBlock();
       const cb = vi.fn();

@@ -189,6 +189,19 @@ export class TunesManager {
   }
 
   /**
+   * Lets each tune release what it holds, like Copy link's document keydown listener.
+   */
+  public destroy(): void {
+    [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()].forEach((tune) => {
+      const { destroy } = tune as IBlockTune & { destroy?: unknown };
+
+      if (isFunction(destroy)) {
+        destroy.call(tune);
+      }
+    });
+  }
+
+  /**
    * Instantiate Block Tunes from tune adapters
    * @param tunesData - current Block tunes data
    * @private

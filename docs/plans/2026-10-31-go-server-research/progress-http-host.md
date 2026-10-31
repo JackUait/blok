@@ -19,7 +19,18 @@ All six rows left after round 2 are closed. No ledger row in this lane is open; 
 - `blok-client-contract`: still 0/12, every test needs `/sync` (collab lane). Suites on main did not change since this branch forked (`git log HEAD..main` over the contract files is empty).
 
 ### C# changes this round
-- New test only: `Blok.Server.Tests/S3BlobStoreTimeoutTests.cs`. No C# bug found.
+- New test only: `Blok.Server.Tests/S3BlobStoreTimeoutTests.cs` (`dotnet format --verify-no-changes` clean). No C# bug found.
+
+### CI time budget (7 min per job): at risk
+- "Server Delivery" runs both conformance steps. On main (run 41152050359) it took 4 min 30 s, with Go running only `--test-name-pattern health`.
+- This branch adds about 40 s to the C# step (http-host-contract: 10 s header case, about 20 s of proxy starts) and makes the Go step about 2 min 6 s (local). Projected about 6.5 to 7 min. Measured locally, not on a runner. Before landing, check the job time, or move the Go conformance step to its own job (mind the 20-job cap) or trim the 65 s rate-limit window case in host-cli-contract.
+
+### Notes for the collab lane
+- The S3 client (`blob.S3`, also the working-set store's) uses the .NET environment proxy (`internal/blob/proxy.go`), not Go's.
+- `Options.Clock` exists. Collab code must read `s.clock`, never `time.Now`.
+- `New` deep-copies `RichTextFields`; read `s.options.RichTextFields`.
+- `blob.S3` has unexported `requestTimeout`/`headerTimeout`; zero means 5 min / 60 s.
+- Leftover processes seen this round, not this lane's: pid 9831 (from round 1) and pid 78333 (cwd `/Users/jackuait/Packages/.blok-go/documents-runtime`, `lsof -d cwd`).
 
 ## Round 2
 
@@ -177,8 +188,5 @@ None this round.
 ## Leftover process (not started by this lane)
 A Go stub `…/blok-server-conformance-ALy01T/go-conformance/blok-server --listen 127.0.0.1:0 --storage-dir  --max-upload 0` (pid 9831, parent 1) was running before this lane's first run, from a deleted temp dir. Left alone; it is the orphan the task describes.
 
-## Next round, in order
-1. Extend `host-cli-contract.test.ts`: H20 doc-endpoint-auth warning (needs collab), H23 flag-over-env, IPv4 shorthand listens (`127.1:PORT`: what Kestrel binds is UNVERIFIED, T1).
-2. F8 outbound black-box (encodings, 6-hop redirect, UA/no Accept-Encoding, 5 concurrent).
-4. F9 byte ranges; F13 unfurl HTML; F7 S3 golden.
-6. L9 warning + `Logger` option (with collab).
+## Next round
+Superseded: the round-1 list (F7, F8, F9, F13) was done in round 2. Left for this lane once collab lands: H20 warning, L9 open-routes warning with a `Logger` option, the collab `Options` seams of L1, and the `/sync` hand-off notes above. Still not measured: H23 flag-over-env order, the `127.1:PORT` shorthand bind (T1).

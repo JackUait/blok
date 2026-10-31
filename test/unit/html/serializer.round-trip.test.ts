@@ -54,8 +54,20 @@ const HEADING = /^h[1-6]$/;
 
 const childrenOf = (node: ParentNode): ChildNode[] => ('content' in node ? node.content.childNodes : node.childNodes);
 
-const allNodes = (root: ParentNode): ChildNode[] =>
-  childrenOf(root).flatMap((child) => [child, ...('childNodes' in child ? allNodes(child) : [])]);
+/** Document order. A stack, not recursion: corpus pages nest deeper than the call stack. */
+const allNodes = (root: ParentNode): ChildNode[] => {
+  const out: ChildNode[] = [];
+  const stack = [...childrenOf(root)].reverse();
+
+  for (let node = stack.pop(); node !== undefined; node = stack.pop()) {
+    out.push(node);
+    if ('childNodes' in node) {
+      stack.push(...[...childrenOf(node)].reverse());
+    }
+  }
+
+  return out;
+};
 
 const isHtml = (node: Node | null, tagName?: string | RegExp): node is Element =>
   node !== null &&

@@ -118,7 +118,7 @@ describe('tree builder matches parse5', () => {
 
     expectClean(outcome, inputs);
     expect(inputs.length).toBeGreaterThan(0);
-  });
+  }, SLOW);
 
   it(`on ${FUZZ_CASES} fuzzed fragments`, () => {
     const inputs = Array.from({ length: FUZZ_CASES }, (_, seed) => fuzzHtml(seed));

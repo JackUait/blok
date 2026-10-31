@@ -213,6 +213,37 @@ public sealed class UploadEndpointTests
     Assert.Equal(expectedMediaType, Assert.Single(store.Puts).MimeType);
   }
 
+  // Encoding.GetEncoding throws NotSupportedException for UTF-7, which the
+  // filename* decoder does not catch. Treat it as any other unknown charset.
+  [Theory]
+  [InlineData("filename*=utf-7''a.txt; filename=\"b.txt\"", 200, "b.txt")]
+  [InlineData("filename*=UTF-7''a.txt", 400, null)]
+  [InlineData("filename*=x-unicode-2-0-utf-7''a.txt; filename=\"b.txt\"", 200, "b.txt")]
+  public async Task FallsBackToTheFileNameWhenTheFileNameStarCharsetIsUtf7(
+      string fileNameParameters,
+      int status,
+      string? fileName)
+  {
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var body = Encoding.ASCII.GetBytes(
+        $"--{Boundary}\r\nContent-Disposition: form-data; name=\"file\"; {fileNameParameters}\r\n" +
+        $"Content-Type: text/plain\r\n\r\nbytes\r\n--{Boundary}--\r\n");
+
+    using var response = await client.SendAsync(CreateUploadRequest(body));
+
+    Assert.Equal(status, (int)response.StatusCode);
+    if (fileName is null)
+    {
+      await AssertError(response, HttpStatusCode.BadRequest, "missing file field\n");
+      return;
+    }
+
+    using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+    Assert.Equal(fileName, payload.RootElement.GetProperty("fileName").GetString());
+  }
+
   [Fact]
   public async Task RejectsMissingOrWrongFileFieldsBeforeStorage()
   {

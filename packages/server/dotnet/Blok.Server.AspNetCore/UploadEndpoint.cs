@@ -226,11 +226,27 @@ internal static class UploadEndpoint
       out string fileName,
       out string mimeType)
   {
-    fileName = "";
     mimeType = "";
 
+    if (!TryReadFileName(section.ContentDisposition, out fileName))
+    {
+      return false;
+    }
+
+    mimeType = UploadWire.SanitizeMediaType(section.ContentType);
+
+    return true;
+  }
+
+  // The file name a form-data part named "file" carries, filename* first.
+  internal static bool TryReadFileName(
+      string? contentDisposition,
+      out string fileName)
+  {
+    fileName = "";
+
     if (!ContentDispositionHeaderValue.TryParse(
-          section.ContentDisposition,
+          contentDisposition,
           out var disposition) ||
         !string.Equals(
             disposition.DispositionType.Value,
@@ -241,8 +257,9 @@ internal static class UploadEndpoint
       return false;
     }
 
-    var rawFileName = disposition.FileNameStar.HasValue
-      ? disposition.FileNameStar
+    var fileNameStar = ReadFileNameStar(disposition);
+    var rawFileName = fileNameStar.HasValue
+      ? fileNameStar
       : disposition.FileName;
 
     if (!rawFileName.HasValue)
@@ -251,9 +268,23 @@ internal static class UploadEndpoint
     }
 
     fileName = UploadWire.SanitizeFileName(Unquote(rawFileName));
-    mimeType = UploadWire.SanitizeMediaType(section.ContentType);
 
     return true;
+  }
+
+  // The decoder catches only ArgumentException, but a UTF-7 charset throws
+  // NotSupportedException. Treat it as a charset .NET does not know.
+  private static StringSegment ReadFileNameStar(
+      ContentDispositionHeaderValue disposition)
+  {
+    try
+    {
+      return disposition.FileNameStar;
+    }
+    catch (NotSupportedException)
+    {
+      return default;
+    }
   }
 
   private static bool IsQuotedPrintable(MultipartSection section)

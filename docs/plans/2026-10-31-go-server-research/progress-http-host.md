@@ -2,6 +2,15 @@
 
 Branch `go/http-host`, worktree `/Users/jackuait/Packages/.blok-go/http-host`. Rounds 1 to 4, 2026-10-31.
 
+## Landing (2026-10-31)
+
+All 53 branch commits were cherry-picked onto main with no conflicts (d1136b57). The first main run (41161084604) showed four failures caused by this lane. All four are now fixed:
+- **Playwright could not load the harness.** `server-process.ts` imported `onTestFinished` from vitest. The MCP participant spec loads it through `run-against.ts`, so `playwright test --list` failed on every E2E shard and on Validate Spec File Coverage. Another session fixed it first in 6b9e7007 (a vitest-free registrar plus a law).
+- **The IPv6 scope fixture was host-specific.** `fe80::1%eth0` resolves to `%2` on the Ubuntu runner. Another session fixed it in 51773d6c.
+- **The HTML corpus overflowed (69eaf127).** `test/unit/html/corpus.ts` reads every JSON file under the conformance fixtures. The 10,000-deep case in `unfurl-html.json` overflowed the recursive tree walks in parser-differential and serializer.round-trip. That file is now left out of the corpus.
+- **C# upload file names depended on process history (C# bug, 343e6eb7, BREAKING).** AngleSharp.dll references `Encoding.RegisterProvider` and `CodePagesEncodingProvider`; this is from a string scan of the dll. After the first unfurl, `filename*` in windows-1252, shift_jis, koi8-r, ibm437 or gb2312 decoded; before it, it did not. That made `ContentDispositionFixtureTests` depend on test order, and it failed on the full project run. `UploadEndpoint` now ignores any charset whose code page is not built in (20127, 28591, 1200, 1201, 12000, 12001, 65001, measured with `dotnet fsi` with and without the provider). Oracle: `FileNameStarCodePageTests`, which was red before the fix. Go and the fixture are unchanged.
+- **CI time.** Server Delivery took 7 min 01 s on the first run, because the Go cache was cold after the go.sum change (vet 28 s against 1 s). Warm runs took 5 min 09 s to 6 min 01 s (e04b6b16, b7ed9a3a, 51773d6c). That leaves about 1 minute of headroom. The 61 s "resets a ticket rate-limit bucket" case now runs on both C# and Go.
+
 ## Round 4: review fixes (newest first)
 
 Each review finding is now pinned by an oracle that fails on the old Go code (or on the mutant the review used).

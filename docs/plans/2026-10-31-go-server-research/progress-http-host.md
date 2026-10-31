@@ -1,8 +1,47 @@
 # Progress: http-host lane (Go server)
 
-Branch `go/http-host`, worktree `/Users/jackuait/Packages/.blok-go/http-host`. Round 1 and round 2, 2026-10-31.
+Branch `go/http-host`, worktree `/Users/jackuait/Packages/.blok-go/http-host`. Rounds 1 to 4, 2026-10-31.
 
-## Round 3 (newest first)
+## Round 4: review fixes (newest first)
+
+Each review finding is now pinned by an oracle that fails on the old Go code (or on the mutant the review used).
+
+- U6 re-opened, now DONE. C# bug fixed first: `filename*=utf-7''...` gave a 500. `Encoding.GetEncoding` throws `NotSupportedException` for the 65000 names, and `TryDecode5987` catches only `ArgumentException`. Now `UploadEndpoint.TryReadFileName` treats UTF-7 as an unknown charset and falls back to `filename`. xunit `FallsBackToTheFileNameWhenTheFileNameStarCharsetIsUtf7` failed before the fix.
+  - Go: `blokserver/disposition.go` ports `TryDecode5987`. It has the 36 `EncodingTable` names (decompiled CoreLib 10.0.11), splits on every quote, decodes each `%XX` run on its own, and uses .NET replacement: `?` for ASCII, one U+FFFD per bad UTF-8 subpart, and U+FFFD for UTF-16/32 tails and lone surrogates.
+  - Shared fixture `content-disposition-filenames.json` (147 inputs; xunit `ContentDispositionFixtureTests` recomputes; Go `TestFileNameFromDispositionMatchesUploadEndpoint`, which also rejects lone-surrogate escapes). 86 cases failed on the old Go code.
+  - Black-box: http-host-contract "reads filename* with every charset .NET knows" (`upload-file-names.json`, the review's spellings plus UTF-7).
+  - Mutation-checked: SplitN, the ASCII `?`, and the subpart length.
+- H28/T7 re-opened, now DONE (also the `*`/`+` and localhost findings). `cmd/blok-server/listen.go` binds what Kestrel's UseUrls binds. Measured with lsof and dials on both hosts:
+  - `:P`, `0.0.0.0:P` and `127.1:P` are IPv4 only (`tcp4`);
+  - `*`, `+` and `[::]` are dual-stack (AnyIPListenOptions falls back to IPv4 any; decompiled);
+  - `localhost`, in any case, binds 127.0.0.1 and [::1] (LocalhostListenOptions: an IOException is fatal, and one of the two is enough);
+  - `localhost:0` is refused with Kestrel's message;
+  - `[::ffff:127.0.0.1]:P` is refused (C#: "Can't assign requested address");
+  - an address in use gets "Failed to bind to address http://IP:P: address already in use.".
+  Oracle: host-cli-contract "binds ... for IPv4 ... and IPv6 ..." (9 spellings, dials 127.0.0.1 and ::1; skipped when ::1 cannot listen), "refuses to start on ...", "names the address already in use ...". 10 of 13 failed on the old Go code. The string-only `TestBindAddressMatchesTheCSharpHost` is gone.
+- S3/LF2/S4 key gate, now pinned. `internal/blob/local_test.go` ports `LocalBlobStoreTests` (`RefusesForeignUrlsWithoutTouchingBystanderFiles` plus the review's `hex/../../victim.txt` key, `DeletesAnOwnedUrl...`, `KeepsOnlyABoundedAsciiAlphanumericExtension`). The review's `IsGenerated` mutant now fails 8 URLs, and the victim file is gone under it.
+- O8 cap, now pinned. Go port of `RejectsTheRedirectAfterTheConfiguredCap` (3 requests, 3 lookups; the `>` mutant fails). Black-box: http-host-contract "follows five outbound redirects and refuses the sixth" (`outbound-redirect-cap.json`, new `/chain/N/` route in `fixture-origin.ts`). It pins the production cap of 5 for unfurl and upload-by-url: setting 6 or 4 in `handlers.go` fails it.
+- R10 re-opened, now DONE. `internal/dotnet/ordinal.go` ports OrdinalIgnoreCase: the simple upper case per char, with U+0131 and U+017F unchanged (measured). It backs the origin list, Sec-Fetch-Site and the localhost checks in `options.go` and `listen.go`.
+  - Kestrel validates a response header value when it is set (decompiled `HttpResponseHeaders`, allowed chars tab and 0x20-0x7E). So an allowed non-ASCII origin, or non-ASCII Access-Control-Request-Headers, gets an empty 500 before the handler runs. Go now answers the same (`headerValueRefused`).
+  - Oracle: http-host-contract "matches request origins the way OrdinalIgnoreCase does" (`origin-case-fold.json`, raw sockets, 24 cases: Kelvin, long s, dotless i, sharp s, sigma, micro, emoji, the 500s, Sec-Fetch-Site). Also a new `options-validate.json` case for `localhoſt:4000`.
+- Mapped IPv6 outbound (minor, was UNVERIFIED), now VERIFIED. On C# a mapped literal is Blocked, a mapped DNS answer never connects, and the next address is tried: `new Socket(InterNetworkV6)` cannot reach `::ffff:x` (macOS EAFNOSUPPORT, measured). New xunit tests: `AnIpv4MappedLiteralNeverConnects`, `AnIpv4MappedDnsAnswerNeverConnects`, `SkipsAnIpv4MappedDnsAnswerForTheNextAddress`. Go ports are in `fetcher_test.go`.
+  - Go bug fixed: Go dialed the IPv4 address behind a mapped DNS answer and fetched it. It now refuses the mapped address at once.
+  - Brackets now follow `CreateHostHeader` (`TestHostHeaderBracketsEveryIPv6Literal`).
+  - Linux behaviour of the C# connect is UNVERIFIED (only macOS measured).
+
+### New open findings (measured, not fixed)
+- Request header bytes. Kestrel answers an empty 400 for a header value with invalid UTF-8 (`X-Junk: \xe9`); Go accepts it. Kestrel accepts DEL (0x7F) in a header value; Go's net/http answers 400 `400 Bad Request`. With NUL, both answer 400, but the bodies differ. Fixing this needs a check in front of net/http (invalid UTF-8) and cannot loosen net/http's DEL refusal. Not done.
+- C# may want to refuse a non-ASCII `--allow-origin` at startup: today every match gives a 500. That is a published-surface change (a config that starts today would stop starting), so it is a user decision. Go copies the 500 for now.
+
+### Round 4 runs
+- gofmt clean. go vet clean, also with `-tags conformance`. `go test -race -p 2 ./...` all ok, also with `-tags conformance`.
+- Conformance `--target go` (harness, server, routing, host-cli, http-host): 169 passed, 25 skipped (collab), 0 failed, 76 s.
+- Same suites `--target csharp`: 194/194, 88 s. This round adds about 9 s to C# (9 bind starts, 4 refusals, 3 new http-host cases). Mind the CI budget note below.
+- dotnet: Blok.Server.AspNetCore.Tests (Upload, ContentDispositionFixture, OptionsValidateFixture, HttpDateFixture, RequestGuard): 67/67. Blok.Server.Tests (GuardedOutboundFetcher, LocalBlobStore): 89/89. `dotnet format --verify-no-changes` on the changed files: clean.
+- eslint on the three changed TS files: clean.
+- Leftover processes: only the earlier 9831 and 78333, plus 518 (`/Users/jackuait/Packages/blok/.dev/server-bin`, the main checkout's dev server, not this lane's).
+
+## Round 3
 
 All six rows left after round 2 are closed. No ledger row in this lane is open; the rest are deferred to collab (list under "Still open after round 2", plus L1's collab seams).
 
@@ -125,7 +164,7 @@ DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (n
 **The Round 2 section above supersedes the IMPL/TODO marks below.**
 
 ### 1a Host (H)
-- DONE: H1, H2, H3, H5 (usage byte-copy test), H6, H7, H8 (SC:752), H10, H11, H12 (SC upload URLs use the default), H13, H14, H15, H16, H17, H25, H26, H27, H29, H30 (HC), H4 (Go `TestMissingFlagValueExitsTwo`), H28 (Go `TestBindAddress…`), H33 (Go `deadline_test.go`, mutation-checked), H39, H40 (SC:1369/1390/1407).
+- DONE: H1, H2, H3, H5 (usage byte-copy test), H6, H7, H8 (SC:752), H10, H11, H12 (SC upload URLs use the default), H13, H14, H15, H16, H17, H25, H26, H27, H29, H30 (HC), H4 (Go `TestMissingFlagValueExitsTwo`), H28 (host-cli-contract bind cases, round 4), H33 (Go `deadline_test.go`, mutation-checked), H39, H40 (SC:1369/1390/1407).
 - DONE (new black-box `host-cli-contract.test.ts`, green on C# AND Go, in CI for Go): H4, H9 (secret warning), H22, H23 (bad env), H24 (duplicate key, non-object), H25 overflow, plus V3, V9, V11, V12, V15, V17, V22-ish (S3 rows), V24, V28, V31, and "explicit empty secret beats BLOK_SECRET" (T3).
 - IMPL: H20 (doc-endpoint-auth warning; needs --collab to start), H31 (ReadHeaderTimeout 10 s), H32 (IdleTimeout 2 min).
 - Collab lane: H18, H19, H21, H34–H38, H41 (`--conformance-journal` is parsed and ignored).
@@ -164,7 +203,7 @@ DONE = implemented AND an oracle proves it. IMPL = implemented, no oracle yet (n
 - TODO: F7 `s3-store.json` (SigV4 golden with fixed time, virtual auto-selection table, 404/403 on get, spool cap). S16: Go uses `http.ProxyFromEnvironment`; what .NET reads is UNVERIFIED.
 
 ### 1i Outbound (O)
-- DONE: O1, O2 (`outbound-policy.json`), O8 (SC redirect), O9 (SC timeout), O11 (SC oversized), O13, O14 (SC link).
+- DONE: O1, O2 (`outbound-policy.json`), O8 (SC redirect; cap: Go port + `outbound-redirect-cap.json`, round 4), O9 (SC timeout), O11 (SC oversized), O13, O14 (SC link).
 - IMPL: O3–O7, O10, O12 (gzip/br/deflate; brotli is `github.com/andybalholm/brotli` v1.2.6). Oracle: F8 black-box through the conformance origin (not written).
 - O16/O17 darwin TLS: MEASURED and DECIDED. Go 1.27.1 on macOS, a leaf whose caIssuers URL points at a local listener: with `RootCAs` nil or `x509.SystemCertPool()` the platform verifier (trustd) fetched the issuer once (then cached it); with a pool built from PEM (a custom root, or `/etc/ssl/cert.pem`) it never did. Probe: `scratchpad/tlsprobe`. Decision: on darwin the guarded fetcher verifies against a pool built from `/etc/ssl/cert.pem` (`internal/outbound/tls_darwin.go`); a missing bundle fails https closed. Gap vs C#: Keychain-only roots (enterprise CAs) are not trusted for unfurl/by-url on macOS; C# keeps them via SecTrust with network fetch off. No cgo. Oracle: `tls_darwin_test.go` (the Go port of `SslStreamStillLeaksAnIssuerFetchOnMacOs`, red before the fix).
 - O15 (no revocation check, SNI = host, no SNI for IP literals): IMPL, Go's verifier does no revocation; no oracle. Windows issuer fetching is UNVERIFIED.

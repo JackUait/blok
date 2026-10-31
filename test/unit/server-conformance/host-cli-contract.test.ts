@@ -3,6 +3,9 @@
 // The host's flag, environment and startup-refusal contract, black-box, for
 // every target. Messages come from HostArguments and BlokServerOptions.
 
+import { get } from 'node:http';
+import { createServer, type Server } from 'node:net';
+
 import { expect, it as baseIt } from 'vitest';
 
 import { allocateLoopbackPort, runServerCommand } from './run-against';
@@ -180,5 +183,109 @@ it('warns when the secret comes from the flag, then starts', async () => {
     expect(server.stderr).toContain(`listening on 127.0.0.1:${port} (--auth ticket)`);
   } finally {
     await server.stop();
+  }
+});
+
+const TICKET_HOST = ['--auth', 'ticket', '--allow-origin', 'https://app.example.com', '--storage-dir', ''];
+
+function answersHealth(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const request = get({ host, port, path: '/health', timeout: 2_000 }, (response) => {
+      response.resume();
+      resolve(response.statusCode === 200);
+    });
+
+    request.once('timeout', () => request.destroy());
+    request.once('error', () => resolve(false));
+  });
+}
+
+function listenOn(host: string, port: number): Promise<Server | undefined> {
+  return new Promise((resolve) => {
+    const server = createServer();
+
+    server.once('error', () => resolve(undefined));
+    server.listen(port, host, () => resolve(server));
+  });
+}
+
+const canListenOnIpv6Loopback = await (async () => {
+  const server = await listenOn('::1', 0);
+
+  server?.close();
+
+  return server !== undefined;
+})();
+
+// Kestrel binds what UseUrls makes of the address: an IPv4 address alone,
+// any IPv6 address for a wildcard, and both loopbacks for localhost.
+it.skipIf(!canListenOnIpv6Loopback).each([
+  { listen: ':', ipv4: true, ipv6: false },
+  { listen: '0.0.0.0:', ipv4: true, ipv6: false },
+  { listen: '127.1:', ipv4: true, ipv6: false },
+  { listen: '*:', ipv4: true, ipv6: true },
+  { listen: '+:', ipv4: true, ipv6: true },
+  { listen: '[::]:', ipv4: true, ipv6: true },
+  { listen: 'localhost:', ipv4: true, ipv6: true },
+  { listen: 'LOCALHOST:', ipv4: true, ipv6: true },
+  { listen: '[::1]:', ipv4: false, ipv6: true },
+])('binds $listen for IPv4 $ipv4 and IPv6 $ipv6', async ({ listen, ipv4, ipv6 }) => {
+  const port = await allocateLoopbackPort();
+  const server = await startServerProcess({
+    command: process.env.BLOK_CONFORMANCE_SERVER ?? '',
+    args: ['--listen', `${listen}${port}`, ...TICKET_HOST],
+    baseUrl: ipv4 ? `http://127.0.0.1:${port}` : `http://[::1]:${port}`,
+    env: { ...process.env, BLOK_SECRET: SECRET },
+  });
+
+  try {
+    expect({
+      ipv4: await answersHealth('127.0.0.1', port),
+      ipv6: await answersHealth('::1', port),
+    }).toEqual({ ipv4, ipv6 });
+  } finally {
+    await server.stop();
+  }
+});
+
+it.each([
+  {
+    name: 'localhost with a dynamic port',
+    listen: async () => 'localhost:0',
+    stderr: async () => 'blok-server refused to start: Dynamic port binding is not supported when binding to localhost. ' +
+      'You must either bind to 127.0.0.1:0 or [::1]:0, or both.\n',
+  },
+  {
+    name: 'an IPv4-mapped IPv6 address',
+    listen: async () => `[::ffff:127.0.0.1]:${await allocateLoopbackPort()}`,
+    stderr: async () => 'blok-server refused to start: ',
+  },
+])('refuses to start on $name', async ({ listen, stderr }) => {
+  const result = await runServerCommand({
+    args: ['--listen', await listen(), ...TICKET_HOST],
+    env: { ...process.env, BLOK_SECRET: SECRET },
+  });
+
+  expect(result).toMatchObject({ exitCode: 1, signal: null });
+  expect(result.stderr).toContain(await stderr());
+  expect(result.stderr).not.toContain('listening on');
+});
+
+it.each(['127.0.0.1:', 'localhost:'])('names the address already in use for %s', async (listen) => {
+  const port = await allocateLoopbackPort();
+  const holder = await listenOn('127.0.0.1', port);
+
+  try {
+    const result = await runServerCommand({
+      args: ['--listen', `${listen}${port}`, ...TICKET_HOST],
+      env: { ...process.env, BLOK_SECRET: SECRET },
+    });
+
+    expect(result).toMatchObject({ exitCode: 1, signal: null });
+    expect(result.stderr).toBe(
+      `blok-server refused to start: Failed to bind to address http://127.0.0.1:${port}: address already in use.\n`,
+    );
+  } finally {
+    holder?.close();
   }
 });

@@ -5,11 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -84,14 +82,6 @@ func main() {
 	os.Exit(code)
 }
 
-// bindAddress copies the C# host: a bare ":PORT" binds IPv4 any.
-func bindAddress(listen string) string {
-	if strings.HasPrefix(listen, ":") {
-		return "0.0.0.0" + listen
-	}
-	return listen
-}
-
 // newHTTPServer is Kestrel's limits: 2 min idle, and every request cut off
 // with 504 at the request deadline. The 10 s header limit needs the
 // listener wrapped too: serve on a headerListener.
@@ -138,14 +128,16 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 	applyConformance(server, conformance)
 
-	listener, err := net.Listen("tcp", bindAddress(options.ListenAddress))
+	listeners, err := listen(options.ListenAddress)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)
 		return 1
 	}
 	httpServer := newHTTPServer(server.Handler(""), defaultRequestTimeout)
-	served := make(chan error, 1)
-	go func() { served <- httpServer.Serve(headerListener{listener, headerTimeout, keepAliveTimeout}) }()
+	served := make(chan error, len(listeners))
+	for _, listener := range listeners {
+		go func() { served <- httpServer.Serve(headerListener{listener, headerTimeout, keepAliveTimeout}) }()
+	}
 
 	// The harness trusts /health only after this line, so it must follow the bind.
 	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)\n", version, options.ListenAddress, options.Auth)

@@ -156,19 +156,6 @@ func TestBareBooleanFlagsParse(t *testing.T) {
 	}
 }
 
-func TestBindAddressMatchesTheCSharpHost(t *testing.T) {
-	cases := map[string]string{
-		":4000":          "0.0.0.0:4000",
-		"127.0.0.1:4000": "127.0.0.1:4000",
-		"[::1]:4000":     "[::1]:4000",
-	}
-	for listen, want := range cases {
-		if got := bindAddress(listen); got != want {
-			t.Fatalf("%q: got %q, want %q", listen, got, want)
-		}
-	}
-}
-
 func TestMalformedListenRefusesToStart(t *testing.T) {
 	cases := map[string]string{
 		"localhost":       "blok-server refused to start: listen tcp: address localhost: missing port in address\n",

@@ -567,6 +567,31 @@ public sealed class EditEndpointTests
   }
 
   /// <summary>
+  /// Text .NET cannot turn into a string is the caller's mistake, not the
+  /// server's: a lone-surrogate escape (valid JSON, not valid UTF-16) or raw
+  /// bytes that are not UTF-8, in a key or a value.
+  /// </summary>
+  [Theory]
+  [InlineData("7b226f7073223a5b7b226f70223a2272656d6f7665222c226964223a225c7564383030227d5d7d")]
+  [InlineData("7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b225c7564383030223a317d7d5d7d")]
+  [InlineData("7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b22ff223a317d7d5d7d")]
+  [InlineData("7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b2274223a22ff227d7d5d7d")]
+  [InlineData("7b226f7073223a5b7b226f70223a22757064617465222c226964223a2262222c2264617461223a7b2274223a225c7564633030227d7d5d7d")]
+  public async Task TextThatIsNotAStringIsRefusedAs422(string hex)
+  {
+    await using var app = await SyncApp.StartAsync();
+
+    using var response = await Edit(
+        app,
+        configure: request => request.Content = new ByteArrayContent(Convert.FromHexString(hex)));
+
+    Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    Assert.Equal(
+        "collab: the request body holds text that is not valid Unicode.\n",
+        await response.Content.ReadAsStringAsync());
+  }
+
+  /// <summary>
   /// A caller able to POST an unbounded document could grow it past what any
   /// client can ever receive, locking everyone out of the room they filled.
   /// </summary>

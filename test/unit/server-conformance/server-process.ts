@@ -1,8 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
-import { onTestFinished } from 'vitest';
-
 import { sendRequest } from './http-client';
+import { registerTestCleanup } from './test-cleanup';
 
 const HEALTH_REQUEST_TIMEOUT_MS = 250;
 const HEALTH_POLL_INTERVAL_MS = 25;
@@ -107,7 +106,7 @@ export function adoptChild(child: ChildProcess): void {
   child.once('exit', () => liveChildren.delete(child));
 
   try {
-    onTestFinished(() => killProcess(child));
+    registerTestCleanup(() => killProcess(child));
   } catch {
     // Not inside a running test.
   }

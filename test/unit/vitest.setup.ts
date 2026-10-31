@@ -1,8 +1,12 @@
-import { expect } from 'vitest';
+import { expect, onTestFinished } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { vi } from 'vitest';
 
 import { toDOMRectList } from './helpers/dom-rect-list';
+import { setTestCleanupRegistrar } from './server-conformance/test-cleanup';
+
+// The conformance harness kills each server when the test that started it ends.
+setTestCleanupRegistrar(onTestFinished);
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);

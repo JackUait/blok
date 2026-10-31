@@ -252,8 +252,15 @@ async function withLocalFileServer(run: (server: RunningServer) => Promise<void>
   }
 }
 
-async function withServer(args: string[], run: (server: RunningServer) => Promise<void>): Promise<void> {
-  const server = await startServer({ args: ['--listen', '127.0.0.1:0', ...args] });
+async function withServer(
+  args: string[],
+  run: (server: RunningServer) => Promise<void>,
+  env?: NodeJS.ProcessEnv,
+): Promise<void> {
+  const server = await startServer({
+    args: ['--listen', '127.0.0.1:0', ...args],
+    env,
+  });
 
   try {
     await run(server);
@@ -704,6 +711,109 @@ it('drops a connection whose request headers stall for 10 seconds', async () => 
     compareGolden('header-timeout.json', [{ name: 'stalled headers', response: answer }]);
   });
 }, 30_000);
+
+async function rawExchange(baseUrl: string, request: Buffer): Promise<string> {
+  const { hostname, port } = new URL(baseUrl);
+  const socket = connect(Number(port), hostname);
+  const chunks: Buffer[] = [];
+
+  socket.on('data', (chunk: Buffer) => chunks.push(chunk));
+  socket.setTimeout(5_000, () => socket.destroy());
+  // Kestrel drops a request whose sender half-closes, so write, not end.
+  socket.write(request);
+  await new Promise<void>((resolve) => {
+    socket.once('close', () => resolve());
+  });
+
+  // Header order is not part of the contract.
+  const [head = '', ...body] = Buffer.concat(chunks).toString('latin1').split('\r\n\r\n');
+  const [status = '', ...lines] = head.split('\r\n');
+  const headers = lines
+    .map((line) => line.replace(/^([^:]+):/, (name) => name.toLowerCase()))
+    .filter((line) => !/^(date|server):/.test(line))
+    .sort();
+
+  return [status, ...headers, '', body.join('\r\n\r\n')].join('\n');
+}
+
+// Origins compare with .NET OrdinalIgnoreCase: simple upper case per char,
+// but U+0131 and U+017F keep their case. Kestrel decodes header bytes as
+// UTF-8 and refuses invalid ones; an echoed non-ASCII origin is a 500.
+const ORIGIN_SPELLINGS: Record<string, string> = {
+  'ascii exact': 'http://k.example',
+  'ascii upper': 'HTTP://K.EXAMPLE',
+  'kelvin sign': 'http://\u212a.example',
+  'long s': 'http://\u017f.example',
+  'dotless i': 'http://\u0131.example',
+  'dotted capital I': 'http://\u0130.example',
+  'capital I': 'http://I.example',
+  'e acute': 'http://\u00e9.example',
+  'capital E acute': 'http://\u00c9.example',
+  'sharp s': 'http://\u00df.example',
+  'capital sharp s': 'http://\u1e9e.example',
+  'SS': 'http://SS.example',
+  'final sigma': 'http://\u03c2.example',
+  'capital sigma': 'http://\u03a3.example',
+  'micro sign': 'http://\u00b5.example',
+  'capital mu': 'http://\u039c.example',
+  'emoji': 'http://\u{1F600}.example',
+};
+
+it('matches request origins the way OrdinalIgnoreCase does', async () => {
+  const actual: Array<{ name: string; response: string }> = [];
+  const allowed = ['http://k.example', 'http://s.example', 'http://i.example', 'http://\u00e9.example',
+    'http://\u00df.example', 'http://\u03c3.example', 'http://\u03bc.example'];
+
+  await withServer(['--auth', 'ticket', '--allow-origin', allowed.join(','), '--storage-dir', ''], async (server) => {
+    for (const [name, origin] of Object.entries(ORIGIN_SPELLINGS)) {
+      actual.push({
+        name: `preflight ${name}`,
+        response: await rawExchange(server.baseUrl, Buffer.concat([
+          Buffer.from('OPTIONS /unfurl HTTP/1.1\r\nHost: x\r\nOrigin: '),
+          Buffer.from(origin, 'utf8'),
+          Buffer.from('\r\nAccess-Control-Request-Method: GET\r\nConnection: close\r\n\r\n'),
+        ])),
+      });
+    }
+    // The requested headers are echoed too, so they face the same check.
+    actual.push({
+      name: 'preflight with non-ASCII requested headers',
+      response: await rawExchange(server.baseUrl, Buffer.concat([
+        Buffer.from('OPTIONS /unfurl HTTP/1.1\r\nHost: x\r\nOrigin: http://k.example\r\n' +
+          'Access-Control-Request-Method: GET\r\nAccess-Control-Request-Headers: x-'),
+        Buffer.from('\u00e9', 'utf8'),
+        Buffer.from('\r\nConnection: close\r\n\r\n'),
+      ])),
+    });
+    for (const [name, origin] of [['e acute', 'http://\u00e9.example'], ['kelvin sign', 'http://\u212a.example']]) {
+      actual.push({
+        name: `guarded GET ${name}`,
+        response: await rawExchange(server.baseUrl, Buffer.concat([
+          Buffer.from('GET /unfurl?url=x HTTP/1.1\r\nHost: x\r\nOrigin: '),
+          Buffer.from(origin, 'utf8'),
+          Buffer.from('\r\nConnection: close\r\n\r\n'),
+        ])),
+      });
+    }
+  }, { BLOK_SECRET: 's3cret-value-at-least-32-chars-long!' });
+
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-fetch-site-'));
+
+  await withServer(['--auth', 'none', '--storage-dir', directory, '--no-unfurl'], async (server) => {
+    for (const site of ['cross-site', 'CROSS-SITE', 'cro\u017f\u017f-site', 'same-site']) {
+      actual.push({
+        name: `Sec-Fetch-Site ${site}`,
+        response: await rawExchange(server.baseUrl, Buffer.concat([
+          Buffer.from('POST /delete HTTP/1.1\r\nHost: x\r\nSec-Fetch-Site: '),
+          Buffer.from(site, 'utf8'),
+          Buffer.from('\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'),
+        ])),
+      });
+    }
+  }).finally(() => rm(directory, { recursive: true, force: true }));
+
+  compareGolden('origin-case-fold.json', actual);
+}, 60_000);
 
 const PROXY_VARIABLES = [
   'HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',

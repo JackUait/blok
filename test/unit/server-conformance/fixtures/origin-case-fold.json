@@ -1,0 +1,98 @@
+[
+  {
+    "name": "preflight ascii exact",
+    "response": "HTTP/1.1 204 No Content\naccess-control-allow-methods: GET, OPTIONS\naccess-control-allow-origin: http://k.example\naccess-control-max-age: 600\nconnection: close\nvary: Origin\n\n"
+  },
+  {
+    "name": "preflight ascii upper",
+    "response": "HTTP/1.1 204 No Content\naccess-control-allow-methods: GET, OPTIONS\naccess-control-allow-origin: HTTP://K.EXAMPLE\naccess-control-max-age: 600\nconnection: close\nvary: Origin\n\n"
+  },
+  {
+    "name": "preflight kelvin sign",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight long s",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight dotless i",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight dotted capital I",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight capital I",
+    "response": "HTTP/1.1 204 No Content\naccess-control-allow-methods: GET, OPTIONS\naccess-control-allow-origin: http://I.example\naccess-control-max-age: 600\nconnection: close\nvary: Origin\n\n"
+  },
+  {
+    "name": "preflight e acute",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight capital E acute",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight sharp s",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight capital sharp s",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight SS",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight final sigma",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight capital sigma",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight micro sign",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight capital mu",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight emoji",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "preflight with non-ASCII requested headers",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "guarded GET e acute",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "guarded GET kelvin sign",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Sec-Fetch-Site cross-site",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Sec-Fetch-Site CROSS-SITE",
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Sec-Fetch-Site croſſ-site",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Sec-Fetch-Site same-site",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  }
+]

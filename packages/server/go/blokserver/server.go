@@ -11,6 +11,7 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/internal/outbound"
 	"github.com/JackUait/blok/packages/server/go/internal/route"
@@ -142,7 +143,7 @@ func (s *Server) originAllowed(origin string) bool {
 		return false
 	}
 	for _, candidate := range s.options.AllowedOrigins {
-		if strings.EqualFold(strings.TrimSpace(candidate), origin) {
+		if dotnet.EqualsOrdinalIgnoreCase(strings.TrimSpace(candidate), origin) {
 			return true
 		}
 	}
@@ -155,16 +156,41 @@ func (s *Server) preflight(w http.ResponseWriter, r *http.Request, method string
 		writeText(w, http.StatusForbidden, "origin not allowed\n")
 		return
 	}
+	requested := firstValue(r.Header, "Access-Control-Request-Headers")
+	if !isFieldValue(origin) || !isFieldValue(requested) {
+		headerValueRefused(w)
+		return
+	}
 	h := w.Header()
 	h.Set("Access-Control-Allow-Origin", origin)
 	h.Set("Access-Control-Allow-Methods", method+", OPTIONS")
-	if requested := firstValue(r.Header, "Access-Control-Request-Headers"); requested != "" {
+	if requested != "" {
 		h.Set("Access-Control-Allow-Headers", requested)
 		h.Add("Vary", "Access-Control-Request-Headers")
 	}
 	h.Set("Access-Control-Max-Age", "600")
 	h.Add("Vary", "Origin")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// isFieldValue is Kestrel's response header check: tab and 0x20-0x7E only.
+func isFieldValue(value string) bool {
+	for i := 0; i < len(value); i++ {
+		if c := value[i]; c != '\t' && (c < 0x20 || c > 0x7e) {
+			return false
+		}
+	}
+	return true
+}
+
+// headerValueRefused is what Kestrel answers when setting a response header
+// throws: the handler stops, and an empty 500 goes out.
+func headerValueRefused(w http.ResponseWriter) {
+	for name := range w.Header() {
+		delete(w.Header(), name)
+	}
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusInternalServerError)
 }
 
 func firstValue(h http.Header, name string) string {
@@ -182,12 +208,16 @@ func (s *Server) guard(w http.ResponseWriter, r *http.Request, requireWrite bool
 	allowed := s.originAllowed(origin)
 	_, hasOrigin := r.Header["Origin"]
 	required := s.options.Auth == "ticket" || hasOrigin ||
-		strings.EqualFold(firstValue(r.Header, "Sec-Fetch-Site"), "cross-site")
+		dotnet.EqualsOrdinalIgnoreCase(firstValue(r.Header, "Sec-Fetch-Site"), "cross-site")
 	if required && !allowed {
 		writeText(w, http.StatusForbidden, "origin not allowed\n")
 		return r, false
 	}
 	if allowed {
+		if !isFieldValue(origin) {
+			headerValueRefused(w)
+			return r, false
+		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Add("Vary", "Origin")
 	}

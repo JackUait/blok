@@ -368,7 +368,7 @@ func validateListen(listen string) error {
 		return fmt.Errorf("listen tcp: address %s: invalid port", port)
 	}
 	host := listenHost(listen)
-	if host != "" && host != "*" && host != "+" && !strings.EqualFold(host, "localhost") {
+	if host != "" && host != "*" && host != "+" && !dotnet.EqualsOrdinalIgnoreCase(host, "localhost") {
 		if _, ok := dotnet.ParseIP(host); !ok {
 			return fmt.Errorf("listen tcp: DNS host %s would bind every network interface; use an IP address, localhost, or an explicit wildcard", quote(host))
 		}
@@ -396,7 +396,7 @@ func isLoopbackListen(listen string) bool {
 	if host == "" {
 		return false
 	}
-	if strings.EqualFold(host, "localhost") {
+	if dotnet.EqualsOrdinalIgnoreCase(host, "localhost") {
 		return true
 	}
 	address, ok := dotnet.ParseIP(host)

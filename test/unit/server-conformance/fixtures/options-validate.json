@@ -47,6 +47,14 @@
       "localPublicPath": ""
     },
     {
+      "name": "none on localhost spelled with a long s",
+      "options": {
+        "ListenAddress": "localhoſt:4000"
+      },
+      "error": "--auth none serves anyone who can reach \"localhoſt:4000\"; it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
       "name": "none on 127.1",
       "options": {
         "ListenAddress": "127.1:4000"

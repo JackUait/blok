@@ -37,7 +37,7 @@ func listen(address string) ([]net.Listener, error) {
 			return bindOne("tcp4", netip.AddrPortFrom(netip.IPv4Unspecified(), uint16(port)))
 		}
 		return listeners, err
-	case asciiEqualFold(host, "localhost"):
+	case dotnet.EqualsOrdinalIgnoreCase(host, "localhost"):
 		return bindLocalhost(port)
 	}
 	ip, ok := dotnet.ParseIP(host)
@@ -111,23 +111,4 @@ func closeAll(listeners []net.Listener) {
 	for _, listener := range listeners {
 		_ = listener.Close()
 	}
-}
-
-func asciiEqualFold(a, b string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := 0; i < len(a); i++ {
-		x, y := a[i], b[i]
-		if 'A' <= x && x <= 'Z' {
-			x += 'a' - 'A'
-		}
-		if 'A' <= y && y <= 'Z' {
-			y += 'a' - 'A'
-		}
-		if x != y {
-			return false
-		}
-	}
-	return true
 }

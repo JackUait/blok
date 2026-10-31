@@ -276,7 +276,9 @@ describe('a remote agent cursor', () => {
     expect(agentApi.inputIndexFor('p1', 'text', redraw)).toBeNull();
     expect(agentApi.inputIndexFor('p1', 'text', redraw)).toBeNull();
     open();
-    await settle(10);
+    // The load in flight, not a new one. A load left running past the test fills
+    // vitest's mock cache after the next test's doMock, so that test never loads.
+    await agentApi.load();
 
     expect(redraw).toHaveBeenCalledTimes(1);
     expect(agentApi.inputIndexFor('p1', 'text', redraw)).toBe(0);

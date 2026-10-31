@@ -13,7 +13,6 @@ const SIZE_ATTR = 'data-blok-table-fullscreen-size';
 const SIZE_EDITOR_ATTR = 'data-blok-table-fullscreen-size-editor';
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
 const CLOSING_ATTR = 'data-blok-table-fullscreen-closing';
-const INLINE_WIDTH_VAR = '--blok-table-inline-width';
 
 /** How far the button sits in from the table's inline-end edge. */
 const CORNER_INSET = 6;
@@ -341,7 +340,7 @@ export class TableFullscreen {
     this.origin = null;
     this.shape = null;
     closing.host.removeAttribute(CLOSING_ATTR);
-    closing.host.style.removeProperty(INLINE_WIDTH_VAR);
+    closing.host.style.removeProperty('--blok-table-inline-width');
 
     closing.animations.forEach(a => a.cancel());
     this.header.replaceChildren();
@@ -399,7 +398,7 @@ export class TableFullscreen {
     }
     // The table takes its page width back now, while it moves: after the
     // motion a fluid table's columns would snap narrower at rest.
-    host.style.setProperty(INLINE_WIDTH_VAR, `${this.inlineWidth}px`);
+    host.style.setProperty('--blok-table-inline-width', `${this.inlineWidth}px`);
     host.setAttribute(CLOSING_ATTR, '');
     this.options.onRelayout();
 

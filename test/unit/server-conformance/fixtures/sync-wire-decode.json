@@ -1,0 +1,2328 @@
+{
+  "$comment": "SyncWire answers recomputed by SyncWireDecodeFixtureTests (C#, the reference) and read by the Go wire tests. Rewrite answers with BLOK_WRITE_FIXTURES=1.",
+  "decode": [
+    {
+      "name": "empty",
+      "frameHex": "",
+      "answer": {
+        "ok": false,
+        "error": "the message type is missing or malformed",
+        "rule": 1
+      }
+    },
+    {
+      "name": "typeTruncated",
+      "frameHex": "80",
+      "answer": {
+        "ok": false,
+        "error": "the message type is missing or malformed",
+        "rule": 1
+      }
+    },
+    {
+      "name": "typeTenBytesTopBit",
+      "frameHex": "80808080808080808001",
+      "answer": {
+        "ok": true,
+        "kind": "UnknownFrame",
+        "fields": {
+          "messageType": "9223372036854775808"
+        },
+        "reencoded": {
+          "throws": "ArgumentException"
+        }
+      }
+    },
+    {
+      "name": "typeTenBytesOverflow",
+      "frameHex": "80808080808080808002",
+      "answer": {
+        "ok": false,
+        "error": "the message type is missing or malformed",
+        "rule": 1
+      }
+    },
+    {
+      "name": "typeElevenBytes",
+      "frameHex": "8080808080808080808000",
+      "answer": {
+        "ok": false,
+        "error": "the message type is missing or malformed",
+        "rule": 1
+      }
+    },
+    {
+      "name": "syncNonCanonicalType",
+      "frameHex": "8000000105",
+      "answer": {
+        "ok": true,
+        "kind": "SyncStep1Frame",
+        "fields": {
+          "stateVectorHex": "05"
+        },
+        "reencoded": "00000105"
+      }
+    },
+    {
+      "name": "syncNonCanonicalSubType",
+      "frameHex": "0080000105",
+      "answer": {
+        "ok": true,
+        "kind": "SyncStep1Frame",
+        "fields": {
+          "stateVectorHex": "05"
+        },
+        "reencoded": "00000105"
+      }
+    },
+    {
+      "name": "syncMissingSubType",
+      "frameHex": "00",
+      "answer": {
+        "ok": false,
+        "error": "the sync sub-type is missing or malformed",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncSubTypeThree",
+      "frameHex": "00030105",
+      "answer": {
+        "ok": false,
+        "error": "unknown sync sub-type 3",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncStep1EmptyPayload",
+      "frameHex": "000000",
+      "answer": {
+        "ok": false,
+        "error": "the payload is empty",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncStep1MissingPayload",
+      "frameHex": "0000",
+      "answer": {
+        "ok": false,
+        "error": "the payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncStep1LengthExceeds",
+      "frameHex": "00000501",
+      "answer": {
+        "ok": false,
+        "error": "the payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncStep1HugeLength",
+      "frameHex": "0000ffffffff0f01",
+      "answer": {
+        "ok": false,
+        "error": "the payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncStep1Trailing",
+      "frameHex": "0000010709",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the message",
+        "rule": null
+      }
+    },
+    {
+      "name": "syncStep1",
+      "frameHex": "00000100",
+      "answer": {
+        "ok": true,
+        "kind": "SyncStep1Frame",
+        "fields": {
+          "stateVectorHex": "00"
+        },
+        "reencoded": "00000100"
+      }
+    },
+    {
+      "name": "syncStep2",
+      "frameHex": "0001020000",
+      "answer": {
+        "ok": true,
+        "kind": "SyncStep2Frame",
+        "fields": {
+          "updateHex": "0000"
+        },
+        "reencoded": "0001020000"
+      }
+    },
+    {
+      "name": "syncUpdate",
+      "frameHex": "0002020000",
+      "answer": {
+        "ok": true,
+        "kind": "SyncUpdateFrame",
+        "fields": {
+          "updateHex": "0000"
+        },
+        "reencoded": "0002020000"
+      }
+    },
+    {
+      "name": "awarenessMissing",
+      "frameHex": "01",
+      "answer": {
+        "ok": false,
+        "error": "the payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "awarenessEmpty",
+      "frameHex": "0100",
+      "answer": {
+        "ok": false,
+        "error": "the payload is empty",
+        "rule": null
+      }
+    },
+    {
+      "name": "awareness",
+      "frameHex": "01020102",
+      "answer": {
+        "ok": true,
+        "kind": "AwarenessFrame",
+        "fields": {
+          "updateHex": "0102"
+        },
+        "reencoded": "01020102"
+      }
+    },
+    {
+      "name": "awarenessTrailing",
+      "frameHex": "01010000",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the message",
+        "rule": null
+      }
+    },
+    {
+      "name": "authMissingSubType",
+      "frameHex": "02",
+      "answer": {
+        "ok": false,
+        "error": "the auth sub-type is missing or malformed",
+        "rule": null
+      }
+    },
+    {
+      "name": "authUnknownSubType",
+      "frameHex": "020100",
+      "answer": {
+        "ok": false,
+        "error": "unknown auth sub-type 1",
+        "rule": null
+      }
+    },
+    {
+      "name": "authMissingReason",
+      "frameHex": "0200",
+      "answer": {
+        "ok": false,
+        "error": "the auth reason is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "authEmptyReason",
+      "frameHex": "020000",
+      "answer": {
+        "ok": true,
+        "kind": "PermissionDeniedFrame",
+        "fields": {
+          "reason": ""
+        },
+        "reencoded": "020000"
+      }
+    },
+    {
+      "name": "authInvalidUtf8",
+      "frameHex": "020002c328",
+      "answer": {
+        "ok": false,
+        "error": "the auth reason is not valid UTF-8",
+        "rule": null
+      }
+    },
+    {
+      "name": "authSurrogateBytes",
+      "frameHex": "020003eda080",
+      "answer": {
+        "ok": false,
+        "error": "the auth reason is not valid UTF-8",
+        "rule": null
+      }
+    },
+    {
+      "name": "authOverlongSlash",
+      "frameHex": "020002c0af",
+      "answer": {
+        "ok": false,
+        "error": "the auth reason is not valid UTF-8",
+        "rule": null
+      }
+    },
+    {
+      "name": "authReason",
+      "frameHex": "0200106e6f2061636365737320c3a9f09f9880",
+      "answer": {
+        "ok": true,
+        "kind": "PermissionDeniedFrame",
+        "fields": {
+          "reason": "no access é\uD83D\uDE00"
+        },
+        "reencoded": "0200106e6f2061636365737320c3a9f09f9880"
+      }
+    },
+    {
+      "name": "authTrailing",
+      "frameHex": "0200017800",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the message",
+        "rule": null
+      }
+    },
+    {
+      "name": "queryAwareness",
+      "frameHex": "03",
+      "answer": {
+        "ok": true,
+        "kind": "QueryAwarenessFrame",
+        "fields": {},
+        "reencoded": "03"
+      }
+    },
+    {
+      "name": "queryAwarenessTrailing",
+      "frameHex": "0300",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the message",
+        "rule": null
+      }
+    },
+    {
+      "name": "control",
+      "frameHex": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "0",
+          "format": 1,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlKeysReordered",
+      "frameHex": "64437b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c22666f726d6174223a332c2265706f6368223a377d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "7",
+          "format": 3,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64437b2265706f6368223a372c22666f726d6174223a332c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlWhitespace",
+      "frameHex": "644c207b202265706f636822203a2031202c0a22666f726d6174223a312c09226c696e65616765223a22356633613963316537623034643238613663663165303933376235326438346122207d20",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "1",
+          "format": 1,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64437b2265706f6368223a312c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlMissingLineage",
+      "frameHex": "64167b2265706f6368223a302c22666f726d6174223a317d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs epoch, format and lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlExtraKey",
+      "frameHex": "64497b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c2278223a317d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlExtraObjectKey",
+      "frameHex": "64537b2278223a7b2261223a5b312c325d7d2c2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlRepeatedEpoch",
+      "frameHex": "644d7b2265706f6368223a302c2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEscapedKey",
+      "frameHex": "64487b2265706f5c753030363368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "0",
+          "format": 1,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlEscapedLineage",
+      "frameHex": "64487b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a225c753030333566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "0",
+          "format": 1,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlLoneSurrogateLineage",
+      "frameHex": "64487b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a225c756438303066336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlInvalidUtf8Lineage",
+      "frameHex": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a22ff66336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlInvalidUtf8Key",
+      "frameHex": "64497b22ff223a302c2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEpochFraction",
+      "frameHex": "64457b2265706f6368223a312e302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEpochExponent",
+      "frameHex": "64457b2265706f6368223a3165322c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEpochNegativeZero",
+      "frameHex": "64447b2265706f6368223a2d302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "0",
+          "format": 1,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlEpochNegative",
+      "frameHex": "64447b2265706f6368223a2d312c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs format >= 1, epoch >= 0 and a 32-hex lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEpochMax",
+      "frameHex": "64557b2265706f6368223a393232333337323033363835343737353830372c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "9223372036854775807",
+          "format": 1,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "64557b2265706f6368223a393232333337323033363835343737353830372c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlEpochPastMax",
+      "frameHex": "64557b2265706f6368223a393232333337323033363835343737353830382c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlFormatMax",
+      "frameHex": "644c7b2265706f6368223a302c22666f726d6174223a323134373438333634372c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokControlFrame",
+        "fields": {
+          "epoch": "0",
+          "format": 2147483647,
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+        },
+        "reencoded": "644c7b2265706f6368223a302c22666f726d6174223a323134373438333634372c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+      }
+    },
+    {
+      "name": "controlFormatPastMax",
+      "frameHex": "644c7b2265706f6368223a302c22666f726d6174223a323134373438333634382c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlFormatZero",
+      "frameHex": "64437b2265706f6368223a302c22666f726d6174223a302c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs format >= 1, epoch >= 0 and a 32-hex lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlUppercaseLineage",
+      "frameHex": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223546334139433145374230344432384136434631453039333742353244383441227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs format >= 1, epoch >= 0 and a 32-hex lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlShortLineage",
+      "frameHex": "64427b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a2266336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs format >= 1, epoch >= 0 and a 32-hex lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlNumberLineage",
+      "frameHex": "64227b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a317d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlNullLineage",
+      "frameHex": "64257b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a6e756c6c7d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlStringEpoch",
+      "frameHex": "64457b2265706f6368223a2230222c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlTrailingContent",
+      "frameHex": "64457b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d2078",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlTwoObjects",
+      "frameHex": "64457b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d7b7d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlArray",
+      "frameHex": "64025b5d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not a JSON object",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEmptyObject",
+      "frameHex": "64027b7d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs epoch, format and lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlUnterminated",
+      "frameHex": "640a7b2265706f6368223a30",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlTrailingComma",
+      "frameHex": "64447b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c7d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlComment",
+      "frameHex": "64472f2a2a2f7b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlBom",
+      "frameHex": "6446efbbbf7b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlEmptyPayload",
+      "frameHex": "6400",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlMissingPayload",
+      "frameHex": "64",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlTrailingFrameByte",
+      "frameHex": "64437b2265706f6368223a302c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d00",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the message",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlLeadingZeroEpoch",
+      "frameHex": "64447b2265706f6368223a30312c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "limits",
+      "frameHex": "651b7b226d61784d6573736167654279746573223a313034383537367d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokLimitsFrame",
+        "fields": {
+          "maxMessageBytes": "1048576"
+        },
+        "reencoded": "651b7b226d61784d6573736167654279746573223a313034383537367d"
+      }
+    },
+    {
+      "name": "limitsZero",
+      "frameHex": "65157b226d61784d6573736167654279746573223a307d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload needs a positive maxMessageBytes",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsNegative",
+      "frameHex": "65167b226d61784d6573736167654279746573223a2d317d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload needs a positive maxMessageBytes",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsFraction",
+      "frameHex": "65177b226d61784d6573736167654279746573223a312e357d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsExponent",
+      "frameHex": "65177b226d61784d6573736167654279746573223a3165337d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsMax",
+      "frameHex": "65277b226d61784d6573736167654279746573223a393232333337323033363835343737353830377d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokLimitsFrame",
+        "fields": {
+          "maxMessageBytes": "9223372036854775807"
+        },
+        "reencoded": "65277b226d61784d6573736167654279746573223a393232333337323033363835343737353830377d"
+      }
+    },
+    {
+      "name": "limitsPastMax",
+      "frameHex": "65277b226d61784d6573736167654279746573223a393232333337323033363835343737353830387d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsExtraKey",
+      "frameHex": "651b7b226d61784d6573736167654279746573223a312c2278223a317d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsRepeated",
+      "frameHex": "65297b226d61784d6573736167654279746573223a312c226d61784d6573736167654279746573223a327d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsString",
+      "frameHex": "65177b226d61784d6573736167654279746573223a2231227d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsEmptyObject",
+      "frameHex": "65027b7d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload needs a positive maxMessageBytes",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsEscapedKey",
+      "frameHex": "651a7b226d61785c75303034646573736167654279746573223a357d",
+      "answer": {
+        "ok": true,
+        "kind": "BlokLimitsFrame",
+        "fields": {
+          "maxMessageBytes": "5"
+        },
+        "reencoded": "65157b226d61784d6573736167654279746573223a357d"
+      }
+    },
+    {
+      "name": "limitsNotJson",
+      "frameHex": "65046e6f7065",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsMissingPayload",
+      "frameHex": "65",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "operation",
+      "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d020000",
+      "answer": {
+        "ok": true,
+        "kind": "OperationFrame",
+        "fields": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "updateHex": "0000"
+        },
+        "reencoded": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d020000"
+      }
+    },
+    {
+      "name": "operationReordered",
+      "frameHex": "665f7b226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d020000",
+      "answer": {
+        "ok": true,
+        "kind": "OperationFrame",
+        "fields": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "updateHex": "0000"
+        },
+        "reencoded": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d020000"
+      }
+    },
+    {
+      "name": "operationInvalidUtf8",
+      "frameHex": "66407b226c696e65616765223a22ff222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid UTF-8",
+        "rule": 6
+      }
+    },
+    {
+      "name": "operationNonAsciiKey",
+      "frameHex": "66687b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22c3a9223a2278227d020000",
+      "answer": {
+        "ok": false,
+        "error": "the operation metadata needs exactly lineage and operationId, each once",
+        "rule": 11
+      }
+    },
+    {
+      "name": "operationNonAsciiValue",
+      "frameHex": "66607b226c696e65616765223a22c3a966336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d020000",
+      "answer": {
+        "ok": false,
+        "error": "the operation metadata has an ill-shaped lineage or operationId",
+        "rule": 12
+      }
+    },
+    {
+      "name": "operationEmptyMetadata",
+      "frameHex": "6600020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationArray",
+      "frameHex": "66035b315d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata top-level value is not an object",
+        "rule": 10
+      }
+    },
+    {
+      "name": "operationArrayTrailing",
+      "frameHex": "66045b315d78020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationString",
+      "frameHex": "6603227822020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata top-level value is not an object",
+        "rule": 10
+      }
+    },
+    {
+      "name": "operationNumber",
+      "frameHex": "66023131020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata top-level value is not an object",
+        "rule": 10
+      }
+    },
+    {
+      "name": "operationNumberTrailing",
+      "frameHex": "6602317d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationEmptyObject",
+      "frameHex": "66027b7d020000",
+      "answer": {
+        "ok": false,
+        "error": "the operation metadata needs exactly lineage and operationId, each once",
+        "rule": 11
+      }
+    },
+    {
+      "name": "operationNumberLineage",
+      "frameHex": "663e7b226c696e65616765223a312c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d020000",
+      "answer": {
+        "ok": false,
+        "error": "the operation metadata has an ill-shaped lineage or operationId",
+        "rule": 12
+      }
+    },
+    {
+      "name": "operationDepth64",
+      "frameHex": "66e2017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2278223a5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d7d020000",
+      "answer": {
+        "ok": false,
+        "error": "the operation metadata needs exactly lineage and operationId, each once",
+        "rule": 11
+      }
+    },
+    {
+      "name": "operationDepth65",
+      "frameHex": "66e4017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2278223a5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d7d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationUnterminated",
+      "frameHex": "662d7b226c696e65616765223a22356633613963316537623034643238613663663165303933376235326438346122020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationNoValue",
+      "frameHex": "660c7b226c696e65616765223a7d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationEmptyUpdate",
+      "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d00",
+      "answer": {
+        "ok": false,
+        "error": "the operation update must not be empty",
+        "rule": 4
+      }
+    },
+    {
+      "name": "operationMissingUpdate",
+      "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d",
+      "answer": {
+        "ok": false,
+        "error": "the operation update section is missing",
+        "rule": 3
+      }
+    },
+    {
+      "name": "operationMissingAll",
+      "frameHex": "66",
+      "answer": {
+        "ok": false,
+        "error": "the operation metadata section is missing",
+        "rule": 3
+      }
+    },
+    {
+      "name": "operationTrailing",
+      "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d02000001",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the operation frame",
+        "rule": 5
+      }
+    },
+    {
+      "name": "operationLeadingZeroNumber",
+      "frameHex": "66667b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2278223a30317d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "operationNan",
+      "frameHex": "66677b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2278223a4e614e7d020000",
+      "answer": {
+        "ok": false,
+        "error": "the metadata is not valid JSON",
+        "rule": 9
+      }
+    },
+    {
+      "name": "ack",
+      "frameHex": "67747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2231227d",
+      "answer": {
+        "ok": true,
+        "kind": "AcknowledgementFrame",
+        "fields": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "serverSequence": "1"
+        },
+        "reencoded": "67747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2231227d"
+      }
+    },
+    {
+      "name": "ackZero",
+      "frameHex": "67747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2230227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackMax",
+      "frameHex": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363135227d",
+      "answer": {
+        "ok": true,
+        "kind": "AcknowledgementFrame",
+        "fields": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "serverSequence": "18446744073709551615"
+        },
+        "reencoded": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363135227d"
+      }
+    },
+    {
+      "name": "ackPastMax",
+      "frameHex": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363136227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackLeadingZero",
+      "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223031227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackPlus",
+      "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a222b31227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackEmpty",
+      "frameHex": "67737b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a22227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackNumber",
+      "frameHex": "67727b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a317d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackFullWidthDigit",
+      "frameHex": "67767b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a22efbc91227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "ackMissingSequence",
+      "frameHex": "675f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata needs exactly lineage, operationId and serverSequence, each once",
+        "rule": 11
+      }
+    },
+    {
+      "name": "ackTrailing",
+      "frameHex": "67747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2231227d00",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the acknowledgement frame",
+        "rule": 5
+      }
+    },
+    {
+      "name": "ackMissing",
+      "frameHex": "67",
+      "answer": {
+        "ok": false,
+        "error": "the acknowledgement metadata section is missing",
+        "rule": 3
+      }
+    },
+    {
+      "name": "rejection",
+      "frameHex": "68727b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561642d6f6e6c79227d",
+      "answer": {
+        "ok": true,
+        "kind": "RejectionFrame",
+        "fields": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "read-only"
+        },
+        "reencoded": "68727b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561642d6f6e6c79227d"
+      }
+    },
+    {
+      "name": "rejectionCode64",
+      "frameHex": "68a9017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a2261626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262227d",
+      "answer": {
+        "ok": true,
+        "kind": "RejectionFrame",
+        "fields": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "reencoded": "68a9017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a2261626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262227d"
+      }
+    },
+    {
+      "name": "rejectionCode65",
+      "frameHex": "68aa017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a226162626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionUpperCode",
+      "frameHex": "686a7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a2241227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionDigitFirst",
+      "frameHex": "686b7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a223161227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionUnderscore",
+      "frameHex": "686c7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22615f62227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionNonAscii",
+      "frameHex": "686b7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22c3a9227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionEmptyCode",
+      "frameHex": "68697b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionNullCode",
+      "frameHex": "686b7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a6e756c6c7d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata has an ill-shaped field",
+        "rule": 12
+      }
+    },
+    {
+      "name": "rejectionDuplicateCode",
+      "frameHex": "68757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a2261222c22636f6465223a2262227d",
+      "answer": {
+        "ok": false,
+        "error": "the rejection metadata needs exactly lineage, operationId and code, each once",
+        "rule": 11
+      }
+    },
+    {
+      "name": "activity",
+      "frameHex": "6a",
+      "answer": {
+        "ok": true,
+        "kind": "ActivityFrame",
+        "fields": {},
+        "reencoded": "6a"
+      }
+    },
+    {
+      "name": "activityTrailing",
+      "frameHex": "6a00",
+      "answer": {
+        "ok": false,
+        "error": "1 trailing byte(s) after the message",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEmpty",
+      "frameHex": "6b117b226964656e746974696573223a5b5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": []
+        },
+        "reencoded": "6b117b226964656e746974696573223a5b5d7d"
+      }
+    },
+    {
+      "name": "identities",
+      "frameHex": "6b4f7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22616461227d2c7b226163746f724964223a22626f62222c22636c69656e744964223a34327d5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "1",
+              "actorId": "ada"
+            },
+            {
+              "clientId": "42",
+              "actorId": "bob"
+            }
+          ]
+        },
+        "reencoded": "6b4f7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22616461227d2c7b22636c69656e744964223a34322c226163746f724964223a22626f62227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesWhitespace",
+      "frameHex": "6b3c207b226964656e74697469657322203a205b207b2022636c69656e74496422203a2031202c20226163746f72496422203a20226122207d205d207d20",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "1",
+              "actorId": "a"
+            }
+          ]
+        },
+        "reencoded": "6b2d7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesSafeMax",
+      "frameHex": "6b3c7b226964656e746974696573223a5b7b22636c69656e744964223a393030373139393235343734303939312c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "9007199254740991",
+              "actorId": "a"
+            }
+          ]
+        },
+        "reencoded": "6b3c7b226964656e746974696573223a5b7b22636c69656e744964223a393030373139393235343734303939312c226163746f724964223a2261227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesPastSafe",
+      "frameHex": "6b3c7b226964656e746974696573223a5b7b22636c69656e744964223a393030373139393235343734303939322c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry clientId is past the safe-integer ceiling",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesU64Max",
+      "frameHex": "6b407b226964656e746974696573223a5b7b22636c69656e744964223a31383434363734343037333730393535313631352c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry clientId is past the safe-integer ceiling",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesNegative",
+      "frameHex": "6b2e7b226964656e746974696573223a5b7b22636c69656e744964223a2d312c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesFraction",
+      "frameHex": "6b2f7b226964656e746974696573223a5b7b22636c69656e744964223a312e302c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesExponent",
+      "frameHex": "6b2f7b226964656e746974696573223a5b7b22636c69656e744964223a3165312c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEmptyActor",
+      "frameHex": "6b2c7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesNonAsciiActor",
+      "frameHex": "6b327b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22c3a9f09f9880227d5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "1",
+              "actorId": "é\uD83D\uDE00"
+            }
+          ]
+        },
+        "reencoded": "6b3e7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a225c75303045395c75443833445c7544453030227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesEscapedActor",
+      "frameHex": "6b407b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a225c75303065395c75643833645c75646530305c6e227d5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "1",
+              "actorId": "é\uD83D\uDE00\n"
+            }
+          ]
+        },
+        "reencoded": "6b407b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a225c75303045395c75443833445c75444530305c6e227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesLoneSurrogateActor",
+      "frameHex": "6b327b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a225c7564383030227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesInvalidUtf8Actor",
+      "frameHex": "6b2d7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22ff227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesMissingKey",
+      "frameHex": "6b027b7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload needs the identities key",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesNotArray",
+      "frameHex": "6b117b226964656e746974696573223a7b7d7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesRepeatedKey",
+      "frameHex": "6b217b226964656e746974696573223a5b5d2c226964656e746974696573223a5b5d7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEntryNotObject",
+      "frameHex": "6b127b226964656e746974696573223a5b315d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry is not a JSON object",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEntryExtraKey",
+      "frameHex": "6b337b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261222c2278223a317d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEntryRepeated",
+      "frameHex": "6b3a7b226964656e746974696573223a5b7b22636c69656e744964223a312c22636c69656e744964223a322c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEntryMissingActor",
+      "frameHex": "6b1f7b226964656e746974696573223a5b7b22636c69656e744964223a317d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry needs both clientId and actorId",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEntryNullActor",
+      "frameHex": "6b2e7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a6e756c6c7d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesExtraTopKey",
+      "frameHex": "6b177b226964656e746974696573223a5b5d2c2278223a317d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesUnterminatedArray",
+      "frameHex": "6b0f7b226964656e746974696573223a5b",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesTrailing",
+      "frameHex": "6b127b226964656e746974696573223a5b5d7d78",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesArrayTop",
+      "frameHex": "6b025b5d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is not a JSON object",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesEscapedKey",
+      "frameHex": "6b377b226964656e7469745c75303036396573223a5b7b22636c69656e745c753030343964223a312c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "1",
+              "actorId": "a"
+            }
+          ]
+        },
+        "reencoded": "6b2d7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesDuplicateClient",
+      "frameHex": "6b4a7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261227d2c7b22636c69656e744964223a312c226163746f724964223a2262227d5d7d",
+      "answer": {
+        "ok": true,
+        "kind": "IdentitiesFrame",
+        "fields": {
+          "identities": [
+            {
+              "clientId": "1",
+              "actorId": "a"
+            },
+            {
+              "clientId": "1",
+              "actorId": "b"
+            }
+          ]
+        },
+        "reencoded": "6b4a7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261227d2c7b22636c69656e744964223a312c226163746f724964223a2262227d5d7d"
+      }
+    },
+    {
+      "name": "identitiesMissing",
+      "frameHex": "6b",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "unknown105",
+      "frameHex": "69ff00",
+      "answer": {
+        "ok": true,
+        "kind": "UnknownFrame",
+        "fields": {
+          "messageType": "105"
+        },
+        "reencoded": {
+          "throws": "ArgumentException"
+        }
+      }
+    },
+    {
+      "name": "unknown4",
+      "frameHex": "04",
+      "answer": {
+        "ok": true,
+        "kind": "UnknownFrame",
+        "fields": {
+          "messageType": "4"
+        },
+        "reencoded": {
+          "throws": "ArgumentException"
+        }
+      }
+    },
+    {
+      "name": "unknown99",
+      "frameHex": "63010203",
+      "answer": {
+        "ok": true,
+        "kind": "UnknownFrame",
+        "fields": {
+          "messageType": "99"
+        },
+        "reencoded": {
+          "throws": "ArgumentException"
+        }
+      }
+    },
+    {
+      "name": "unknown108",
+      "frameHex": "6c",
+      "answer": {
+        "ok": true,
+        "kind": "UnknownFrame",
+        "fields": {
+          "messageType": "108"
+        },
+        "reencoded": {
+          "throws": "ArgumentException"
+        }
+      }
+    },
+    {
+      "name": "unknown255",
+      "frameHex": "ff0105",
+      "answer": {
+        "ok": true,
+        "kind": "UnknownFrame",
+        "fields": {
+          "messageType": "255"
+        },
+        "reencoded": {
+          "throws": "ArgumentException"
+        }
+      }
+    },
+    {
+      "name": "unknownNonCanonical100",
+      "frameHex": "e48000",
+      "answer": {
+        "ok": false,
+        "error": "the control payload is missing or truncated",
+        "rule": null
+      }
+    }
+  ],
+  "awareness": [
+    {
+      "name": "zeroClients",
+      "payloadHex": "00",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 0,
+        "entries": []
+      }
+    },
+    {
+      "name": "empty",
+      "payloadHex": "",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 0,
+        "entries": []
+      }
+    },
+    {
+      "name": "removal",
+      "payloadHex": "010703046e756c6c",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "7",
+            "clock": "3",
+            "removed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "state",
+      "payloadHex": "020101177b2275736572223a7b226e616d65223a22416461227d7d0209046e756c6c",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 2,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": false
+          },
+          {
+            "clientId": "2",
+            "clock": "9",
+            "removed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "spacedNull",
+      "payloadHex": "01010106206e756c6c20",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "emptyState",
+      "payloadHex": "01010100",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "twoValues",
+      "payloadHex": "01010103312032",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "depth64",
+      "payloadHex": "01010180015b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "depth65",
+      "payloadHex": "01010182015b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "invalidUtf8String",
+      "payloadHex": "0101010322ff22",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "loneSurrogateEscape",
+      "payloadHex": "01010108225c756438303022",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "shortCount",
+      "payloadHex": "020101046e756c6c",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 2,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "trailing",
+      "payloadHex": "010101046e756c6c00",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "overCap",
+      "payloadHex": "81020101046e756c6c",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 257,
+        "entries": []
+      }
+    },
+    {
+      "name": "atCap",
+      "payloadHex": "020101046e756c6c0201046e756c6c",
+      "maxClients": 2,
+      "answer": {
+        "valid": true,
+        "clientCount": 2,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": true
+          },
+          {
+            "clientId": "2",
+            "clock": "1",
+            "removed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "pastCap",
+      "payloadHex": "030101046e756c6c0201046e756c6c0301046e756c6c",
+      "maxClients": 2,
+      "answer": {
+        "valid": false,
+        "clientCount": 3,
+        "entries": []
+      }
+    },
+    {
+      "name": "hugeCount",
+      "payloadHex": "80808080808080808001",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 2147483647,
+        "entries": []
+      }
+    },
+    {
+      "name": "countPastInt",
+      "payloadHex": "8080808008",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 2147483647,
+        "entries": []
+      }
+    },
+    {
+      "name": "bigClientId",
+      "payloadHex": "01ffffffffffffffffff0101046e756c6c",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "18446744073709551615",
+            "clock": "1",
+            "removed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "truncatedState",
+      "payloadHex": "010101056e",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "comment",
+      "payloadHex": "010101062f2a782a2f31",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "trailingComma",
+      "payloadHex": "010101045b312c5d",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "nan",
+      "payloadHex": "010101034e614e",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "leadingZero",
+      "payloadHex": "010101023031",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "badEscape",
+      "payloadHex": "01010104225c7822",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "controlChar",
+      "payloadHex": "01010103220122",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "bom",
+      "payloadHex": "01010104efbbbf31",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "nullUpper",
+      "payloadHex": "010101044e756c6c",
+      "maxClients": 256,
+      "answer": {
+        "valid": false,
+        "clientCount": 1,
+        "entries": []
+      }
+    },
+    {
+      "name": "bigNumber",
+      "payloadHex": "010101053165343030",
+      "maxClients": 256,
+      "answer": {
+        "valid": true,
+        "clientCount": 1,
+        "entries": [
+          {
+            "clientId": "1",
+            "clock": "1",
+            "removed": false
+          }
+        ]
+      }
+    }
+  ],
+  "removal": [
+    {
+      "name": "none",
+      "entries": [],
+      "answer": "00"
+    },
+    {
+      "name": "two",
+      "entries": [
+        {
+          "clientId": "1",
+          "clock": "0"
+        },
+        {
+          "clientId": "18446744073709551615",
+          "clock": "300"
+        }
+      ],
+      "answer": "020100046e756c6cffffffffffffffffff01ac02046e756c6c"
+    }
+  ],
+  "encode": [
+    {
+      "name": "identitiesEscaping",
+      "message": {
+        "kind": "IdentitiesFrame",
+        "identities": [
+          {
+            "clientId": "18446744073709551615",
+            "actorId": "é\uD83D\uDE00<>&'+\"\\\u0001\u007F\u2028"
+          }
+        ]
+      },
+      "answer": "6b89017b226964656e746974696573223a5b7b22636c69656e744964223a31383434363734343037333730393535313631352c226163746f724964223a225c75303045395c75443833445c75444530305c75303033435c75303033455c75303032365c75303032375c75303032425c75303032325c5c5c75303030315c75303037465c7532303238227d5d7d"
+    },
+    {
+      "name": "identitiesEmptyActor",
+      "message": {
+        "kind": "IdentitiesFrame",
+        "identities": [
+          {
+            "clientId": "1",
+            "actorId": ""
+          }
+        ]
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "identitiesNone",
+      "message": {
+        "kind": "IdentitiesFrame",
+        "identities": []
+      },
+      "answer": "6b117b226964656e746974696573223a5b5d7d"
+    },
+    {
+      "name": "controlBadLineage",
+      "message": {
+        "kind": "BlokControlFrame",
+        "epoch": "0",
+        "format": 1,
+        "lineage": "5F3A9C1E7B04D28A6CF1E0937B52D84A"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "controlNegativeEpoch",
+      "message": {
+        "kind": "BlokControlFrame",
+        "epoch": "-1",
+        "format": 1,
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "controlZeroFormat",
+      "message": {
+        "kind": "BlokControlFrame",
+        "epoch": "0",
+        "format": 0,
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "controlBig",
+      "message": {
+        "kind": "BlokControlFrame",
+        "epoch": "9223372036854775807",
+        "format": 2147483647,
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
+      },
+      "answer": "645e7b2265706f6368223a393232333337323033363835343737353830372c22666f726d6174223a323134373438333634372c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d"
+    },
+    {
+      "name": "limitsZero",
+      "message": {
+        "kind": "BlokLimitsFrame",
+        "maxMessageBytes": "0"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "limitsBig",
+      "message": {
+        "kind": "BlokLimitsFrame",
+        "maxMessageBytes": "9223372036854775807"
+      },
+      "answer": "65277b226d61784d6573736167654279746573223a393232333337323033363835343737353830377d"
+    },
+    {
+      "name": "ackZero",
+      "message": {
+        "kind": "AcknowledgementFrame",
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+        "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+        "serverSequence": "0"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "ackMax",
+      "message": {
+        "kind": "AcknowledgementFrame",
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+        "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+        "serverSequence": "18446744073709551615"
+      },
+      "answer": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363135227d"
+    },
+    {
+      "name": "ackBadOperationId",
+      "message": {
+        "kind": "AcknowledgementFrame",
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+        "operationId": "x",
+        "serverSequence": "1"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "rejectionBadCode",
+      "message": {
+        "kind": "RejectionFrame",
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+        "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+        "code": "Bad"
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "operationEmptyUpdate",
+      "message": {
+        "kind": "OperationFrame",
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+        "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+        "updateHex": ""
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "step1Empty",
+      "message": {
+        "kind": "SyncStep1Frame",
+        "stateVectorHex": ""
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "step2Empty",
+      "message": {
+        "kind": "SyncStep2Frame",
+        "updateHex": ""
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "updateEmpty",
+      "message": {
+        "kind": "SyncUpdateFrame",
+        "updateHex": ""
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "awarenessEmpty",
+      "message": {
+        "kind": "AwarenessFrame",
+        "updateHex": ""
+      },
+      "answer": {
+        "throws": "ArgumentException"
+      }
+    },
+    {
+      "name": "step1Long",
+      "message": {
+        "kind": "SyncStep1Frame",
+        "stateVectorHex": "0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101"
+      },
+      "answer": "0000c8010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101"
+    },
+    {
+      "name": "permissionDeniedEmpty",
+      "message": {
+        "kind": "PermissionDeniedFrame",
+        "reason": ""
+      },
+      "answer": "020000"
+    },
+    {
+      "name": "permissionDeniedText",
+      "message": {
+        "kind": "PermissionDeniedFrame",
+        "reason": "é\uD83D\uDE00"
+      },
+      "answer": "020006c3a9f09f9880"
+    },
+    {
+      "name": "queryAwareness",
+      "message": {
+        "kind": "QueryAwarenessFrame"
+      },
+      "answer": "03"
+    },
+    {
+      "name": "activity",
+      "message": {
+        "kind": "ActivityFrame"
+      },
+      "answer": "6a"
+    }
+  ]
+}

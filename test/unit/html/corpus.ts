@@ -56,7 +56,10 @@ export const storedFields = (): string[] => {
   const files = [
     join(ROOT, 'playground-document.json'),
     join(ROOT, 'playground-pages.json'),
-    ...listFiles(join(ROOT, 'test', 'unit', 'server-conformance', 'fixtures'), '.json'),
+    // unfurl-html.json holds a 10,000-deep nesting case for the unfurl scanner,
+    // which overflows the recursive tree walks in these tests.
+    ...listFiles(join(ROOT, 'test', 'unit', 'server-conformance', 'fixtures'), '.json')
+      .filter((file) => !file.endsWith('unfurl-html.json')),
     ...listFiles(join(ROOT, 'test', 'fixtures', 'notion'), '.json'),
   ];
   const out: string[] = [];

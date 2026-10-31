@@ -75,9 +75,13 @@ test.describe('blok version override', () => {
       const bundledVersion = await editor.getAttribute('data-blok-version');
 
       // No page.reload() anywhere in this test: arming reloads the tab itself.
+      // That reload runs the whole multi-MB payload before the page can load,
+      // so wait for its load event under the test budget, not the 5s expect.
+      const reloaded = page.waitForEvent('load', { timeout: 0 });
       await sw.evaluate(async () => {
         await (globalThis as unknown as { armOriginForTests: (o: string) => Promise<void> }).armOriginForTests('http://localhost:4444');
       });
+      await reloaded;
 
       await expect(editor).toHaveAttribute('data-blok-version', /-dev\./);
       await expect(editor).not.toHaveAttribute('data-blok-version', bundledVersion ?? '');
@@ -113,10 +117,12 @@ test.describe('blok version override', () => {
       await page.goto(FIXTURE);
       await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
 
+      // Disarming reloads the tab too, so the page falls back on its own.
+      const reloaded = page.waitForEvent('load', { timeout: 0 });
       await sw.evaluate(async () => {
         await (globalThis as unknown as { disarmOriginForTests: (o: string) => Promise<void> }).disarmOriginForTests('http://localhost:4444');
       });
-      // Disarming reloads the tab too, so the page falls back on its own.
+      await reloaded;
       await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /^(?!.*-dev\.).+/);
     } finally {
       await context.close();

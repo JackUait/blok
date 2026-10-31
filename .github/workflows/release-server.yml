@@ -46,6 +46,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # go.mod's toolchain line picks the Go that builds the archives.
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.sum
+
       - name: Prepare release version
         run: |
           version="${RELEASE_TAG#v}"
@@ -120,6 +127,17 @@ jobs:
           dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
           dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 
+      - name: Test and vet Go server
+        working-directory: packages/server/go
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+          go vet ./...
+          go test -p 2 ./...
+
       - name: Build NuGet and host artifacts
         run: |
           rm -rf .server-release-dist
@@ -137,6 +155,9 @@ jobs:
           node scripts/test-server-packages.mjs --package-dir .server-release-dist/nuget --version "$BLOK_SERVER_VERSION"
           node scripts/publish-server.mjs --version "$BLOK_SERVER_VERSION" --output .server-release-dist
 
+      - name: Build Go host artifacts
+        run: node scripts/publish-server-go.mjs --version "$BLOK_SERVER_VERSION" --output .server-release-dist
+
       - name: Smoke runner-native archive
         run: |
           mkdir -p .server-release-smoke
@@ -153,6 +174,31 @@ jobs:
             --volume "$PWD/.server-release-smoke/musl:/smoke:ro" \
             mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine sh -euc '
               /smoke/blok-server --help >/dev/null
+            '
+
+      # cgo is off, so the one linux archive is static and serves musl too.
+      - name: Smoke Go archives
+        run: |
+          mkdir -p .server-release-smoke/go
+          tar -xzf .server-release-dist/blok-server-go_linux_amd64.tar.gz -C .server-release-smoke/go
+          .server-release-smoke/go/blok-server --help 2>/dev/null
+
+          .server-release-smoke/go/blok-server --listen 127.0.0.1:4100 --storage-dir '' &
+          go_server=$!
+          trap 'kill "$go_server" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4100/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test "$(curl --fail --silent http://127.0.0.1:4100/health)" = \
+            "{\"status\":\"ok\",\"version\":\"$BLOK_SERVER_VERSION\"}"
+
+          docker run --rm --platform linux/amd64 \
+            --volume "$PWD/.server-release-smoke/go:/smoke:ro" \
+            alpine:3.22 sh -euc '
+              /smoke/blok-server --help 2>/dev/null
             '
 
       - name: Publish NuGet packages
@@ -198,6 +244,13 @@ jobs:
             .server-release-dist/blok-server_windows_amd64.zip \
             .server-release-dist/blok-server_windows_arm64.zip \
             .server-release-dist/checksums.txt \
+            .server-release-dist/blok-server-go_darwin_amd64.tar.gz \
+            .server-release-dist/blok-server-go_darwin_arm64.tar.gz \
+            .server-release-dist/blok-server-go_linux_amd64.tar.gz \
+            .server-release-dist/blok-server-go_linux_arm64.tar.gz \
+            .server-release-dist/blok-server-go_windows_amd64.zip \
+            .server-release-dist/blok-server-go_windows_arm64.zip \
+            .server-release-dist/checksums-go.txt \
             .server-release-dist/nuget/Blok.Server."$BLOK_SERVER_VERSION".nupkg \
             .server-release-dist/nuget/Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg \
             --clobber
@@ -323,10 +376,18 @@ jobs:
             blok-server_windows_amd64.zip
             blok-server_windows_arm64.zip
             checksums.txt
+            blok-server-go_darwin_amd64.tar.gz
+            blok-server-go_darwin_arm64.tar.gz
+            blok-server-go_linux_amd64.tar.gz
+            blok-server-go_linux_arm64.tar.gz
+            blok-server-go_windows_amd64.zip
+            blok-server-go_windows_arm64.zip
+            checksums-go.txt
             "Blok.Server.$BLOK_SERVER_VERSION.nupkg"
             "Blok.Server.AspNetCore.$BLOK_SERVER_VERSION.nupkg"
           )
           anonymous_docker_config="$(mktemp -d)"
+          go_module="$(go -C packages/server/go list -m)"
 
           for _ in $(seq 1 60); do
             ready=true
@@ -355,6 +416,11 @@ jobs:
             fi
             grep --quiet '"architecture": "amd64"' <<<"$manifest" || ready=false
             grep --quiet '"architecture": "arm64"' <<<"$manifest" || ready=false
+
+            # The Go library ships as the tagged module itself; this asks the
+            # public proxy for it, which is what go get does.
+            (cd "$RUNNER_TEMP" && GOPROXY=https://proxy.golang.org GOFLAGS='' \
+              go list -m "$go_module@v$BLOK_SERVER_VERSION" >/dev/null 2>&1) || ready=false
 
             if [ "$ready" = "true" ]; then
               exit 0

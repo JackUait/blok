@@ -61,16 +61,32 @@ export class RectangleSelection extends Module {
   private isRectSelectionActivated = false;
 
   /**
-   *  Speed of Scrolling, px per tick, when an auto-scroll run starts
+   * Speed of an auto-scroll run when it starts, in px per ms. Speeds are per
+   * ms, not per loop tick: the tick rate follows the CPU, so a per-tick step
+   * scrolls slower on a busy or slow machine.
    */
-  private readonly SCROLL_SPEED: number = 3;
+  private readonly SCROLL_SPEED: number = 0.5;
 
   /**
    * An unbroken auto-scroll run speeds up from SCROLL_SPEED to this over
    * SCROLL_RAMP_MS, so a long way off-screen is reached without a slow crawl.
    */
-  private readonly MAX_SCROLL_SPEED = 15;
+  private readonly MAX_SCROLL_SPEED = 2.5;
   private readonly SCROLL_RAMP_MS = 2000;
+
+  /**
+   * Longest gap between two ticks that counts in full. After a longer stall
+   * the band moves this much, not a jump of hundreds of px. A 6x CPU-throttled
+   * Chrome ticks about every 50 ms here, so a lower cap slows slow machines again.
+   */
+  private readonly MAX_SCROLL_TICK_MS = 100;
+
+  /**
+   * When the run last ticked, and the part of a pixel it still owes. Only
+   * whole pixels are scrolled, so a tiny step is never read as "cannot move".
+   */
+  private scrollLastTick = 0;
+  private scrollRemainder = 0;
 
   /**
    * The current auto-scroll run and when it began. A run ends when the pointer
@@ -637,13 +653,17 @@ export class RectangleSelection extends Module {
 
   /**
    * Starts an auto-scroll run, or continues `run`, while the pointer is held in a scroll zone
-   * @param {number} speed - starting step of the run, its sign the direction
+   * @param {number} speed - starting speed of the run in px per ms, its sign the direction
    * @param run - the run this tick belongs to; omitted to start a new run
    */
   private scrollVertical(speed: number, run?: number): void {
+    const now = Date.now();
+
     if (run === undefined) {
       this.scrollRun++;
-      this.scrollRunStart = Date.now();
+      this.scrollRunStart = now;
+      this.scrollLastTick = now;
+      this.scrollRemainder = 0;
     } else if (run !== this.scrollRun) {
       return;
     }
@@ -656,28 +676,38 @@ export class RectangleSelection extends Module {
       return;
     }
 
-    const ramp = Math.min(1, (Date.now() - this.scrollRunStart) / this.SCROLL_RAMP_MS);
-    const step = Math.sign(speed) * (Math.abs(speed) + (this.MAX_SCROLL_SPEED - Math.abs(speed)) * ramp);
+    const ramp = Math.min(1, (now - this.scrollRunStart) / this.SCROLL_RAMP_MS);
+    const velocity = Math.sign(speed) * (Math.abs(speed) + (this.MAX_SCROLL_SPEED - Math.abs(speed)) * ramp);
 
-    const scroller = this.scroller;
-    const offset = (): number => scroller === null ? this.getScrollTop() : scroller.scrollTop;
-    const before = offset();
+    this.scrollRemainder += velocity * Math.min(now - this.scrollLastTick, this.MAX_SCROLL_TICK_MS);
+    this.scrollLastTick = now;
 
-    // 'instant': a host's `scroll-behavior: smooth` would defer the move and read as "cannot scroll".
-    if (scroller === null) {
-      window.scrollBy({ top: step, behavior: 'instant' });
-    } else {
-      scroller.scrollBy({ top: step, behavior: 'instant' });
+    const step = Math.trunc(this.scrollRemainder);
+
+    if (step !== 0) {
+      this.scrollRemainder -= step;
+
+      const scroller = this.scroller;
+      const offset = (): number => scroller === null ? this.getScrollTop() : scroller.scrollTop;
+      const before = offset();
+
+      // 'instant': a host's `scroll-behavior: smooth` would defer the move and read as "cannot scroll".
+      if (scroller === null) {
+        window.scrollBy({ top: step, behavior: 'instant' });
+      } else {
+        scroller.scrollBy({ top: step, behavior: 'instant' });
+      }
+
+      // At the end of the content: stop until the pointer moves again.
+      if (offset() === before) {
+        this.isScrolling = false;
+
+        return;
+      }
+
+      this.changingRectangle();
     }
 
-    // At the end of the content: stop until the pointer moves again.
-    if (offset() === before) {
-      this.isScrolling = false;
-
-      return;
-    }
-
-    this.changingRectangle();
     setTimeout(() => {
       this.scrollVertical(speed, currentRun);
     }, 0);

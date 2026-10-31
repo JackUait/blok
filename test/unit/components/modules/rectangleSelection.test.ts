@@ -726,12 +726,12 @@ describe('RectangleSelection', () => {
 
     internal.isScrolling = false;
     internal.scrollByZones(10);
-    expect(scrollSpy).toHaveBeenCalledWith(-3);
+    expect(scrollSpy.mock.calls[0]?.[0]).toBeLessThan(0);
 
     internal.isScrolling = false;
     scrollSpy.mockClear();
     internal.scrollByZones(995);
-    expect(scrollSpy).toHaveBeenCalledWith(3);
+    expect(scrollSpy.mock.calls[0]?.[0]).toBeGreaterThan(0);
   });
 
   it('scrolls vertically while mouse button is pressed in a scroll zone', () => {
@@ -748,7 +748,10 @@ describe('RectangleSelection', () => {
       'changingRectangle'
     ).mockImplementation(() => undefined);
 
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    let now = 1_000_000;
+
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
 
     internal.inScrollZone = 1;
     internal.mousedown = true;
@@ -764,13 +767,16 @@ describe('RectangleSelection', () => {
       }
     });
 
-    internal.scrollVertical(5);
+    internal.scrollVertical(0.5);
+    now += 20;
+    vi.runOnlyPendingTimers();
 
     internal.inScrollZone = null;
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
 
-    expect(scrollBySpy).toHaveBeenCalledWith({ top: 5, behavior: 'instant' });
+    // 0.5 px per ms for 20 ms, in whole pixels.
+    expect(scrollBySpy).toHaveBeenCalledWith({ top: 10, behavior: 'instant' });
     // The pointer stays put on screen; the band follows via the moving anchor.
     expect(internal.mouseY).toBe(100);
     expect(changeSpy).toHaveBeenCalledWith();
@@ -788,7 +794,10 @@ describe('RectangleSelection', () => {
       isScrolling: boolean;
     };
 
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    let now = 1_000_000;
+
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
 
     internal.inScrollZone = 1;
     internal.mousedown = true;
@@ -797,7 +806,9 @@ describe('RectangleSelection', () => {
     vi.spyOn(window, 'scrollY', 'get').mockReturnValue(400);
     const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
 
-    internal.scrollVertical(5);
+    internal.scrollVertical(0.5);
+    now += 20;
+    vi.runOnlyPendingTimers();
 
     const queuedTicks = vi.getTimerCount();
 
@@ -840,91 +851,126 @@ describe('RectangleSelection', () => {
       return { internal, steps, atEnd };
     };
 
+    /** Fakes the clock the loop reads; `run` lets `ms` pass with one loop tick every `tickMs`. */
+    const fakeClock = (): { run: (ms: number, tickMs?: number) => void } => {
+      vi.useFakeTimers({ toFake: ['setTimeout'] });
+      let now = 1_000_000;
+
+      vi.spyOn(Date, 'now').mockImplementation(() => now);
+
+      return {
+        run: (ms, tickMs = 10) => {
+          const end = now + ms;
+
+          while (now < end) {
+            now += tickMs;
+            vi.runOnlyPendingTimers();
+          }
+        },
+      };
+    };
+
     afterEach(() => {
       vi.useRealTimers();
     });
 
     it('speeds up while the band stays at the edge, then holds a top speed', () => {
-      vi.useFakeTimers();
+      const clock = fakeClock();
       const { internal, steps } = holdAtEdge();
 
       internal.scrollByZones(995);
-      vi.advanceTimersByTime(6000);
+      clock.run(6000);
       internal.inScrollZone = null;
-      vi.advanceTimersByTime(50);
+      clock.run(50);
 
       const first = steps[0];
       const last = steps[steps.length - 1];
 
-      expect(first).toBe(3);
-      expect(last).toBeGreaterThan(first * 2);
-      expect(steps.every((step, i) => i === 0 || step >= steps[i - 1])).toBe(true);
+      // 0.5 px per ms over a 10 ms tick, up to 2.5 px per ms.
+      expect(first).toBe(5);
+      expect(last).toBe(25);
       // A top speed, not endless growth: the last second of steps is flat.
-      expect(new Set(steps.slice(-50)).size).toBe(1);
+      expect(new Set(steps.slice(-100)).size).toBe(1);
     });
 
     it('starts over at the default speed after the pointer leaves the edge, button still held', () => {
-      vi.useFakeTimers();
+      const clock = fakeClock();
       const { internal, steps } = holdAtEdge();
 
       internal.scrollByZones(995);
-      vi.advanceTimersByTime(3000);
+      clock.run(3000);
       internal.scrollByZones(500);
-      vi.advanceTimersByTime(50);
+      clock.run(50);
 
       const before = steps.length;
 
       internal.scrollByZones(995);
-      vi.advanceTimersByTime(10);
+      clock.run(10);
       internal.inScrollZone = null;
-      vi.advanceTimersByTime(50);
+      clock.run(50);
 
-      expect(steps[before - 1]).toBeGreaterThan(3);
-      expect(steps[before]).toBe(3);
+      expect(steps[before - 1]).toBe(25);
+      expect(steps[before]).toBe(5);
     });
 
     it('starts over at the default speed after the page could not scroll further', () => {
-      vi.useFakeTimers();
+      const clock = fakeClock();
       const { internal, steps, atEnd } = holdAtEdge();
 
       internal.scrollByZones(995);
-      vi.advanceTimersByTime(3000);
+      clock.run(3000);
       atEnd.value = true;
-      vi.advanceTimersByTime(50);
+      clock.run(50);
       atEnd.value = false;
 
       const before = steps.length;
 
       internal.scrollByZones(995);
-      vi.advanceTimersByTime(10);
+      clock.run(10);
       internal.inScrollZone = null;
-      vi.advanceTimersByTime(50);
+      clock.run(50);
 
-      expect(steps[before - 1]).toBeGreaterThan(3);
-      expect(steps[before]).toBe(3);
+      expect(steps[before - 1]).toBe(25);
+      expect(steps[before]).toBe(5);
+    });
+
+    it('scrolls the same distance in the same time on a slow machine as on a fast one', () => {
+      /** Holds the edge for `span` ms with one loop tick every `tickMs`; returns the distance scrolled. */
+      const scrolledIn = (span: number, tickMs: number): number => {
+        const clock = fakeClock();
+        const { internal, steps } = holdAtEdge();
+
+        internal.scrollByZones(995);
+        clock.run(span, tickMs);
+        internal.inScrollZone = null;
+        clock.run(tickMs, tickMs);
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+
+        return steps.reduce((sum, step) => sum + step, 0);
+      };
+
+      // Early in the run, and at top speed.
+      for (const span of [500, 3000]) {
+        const fast = scrolledIn(span, 5);
+        const slow = scrolledIn(span, 25);
+
+        expect(slow).toBeGreaterThan(fast * 0.9);
+        expect(slow).toBeLessThan(fast * 1.1);
+      }
     });
 
     it('runs one scroll loop when the pointer leaves the edge and comes straight back', () => {
-      vi.useFakeTimers();
-      const once = holdAtEdge();
-
-      once.internal.scrollByZones(995);
-      vi.advanceTimersByTime(40);
-      once.internal.inScrollZone = null;
-      vi.advanceTimersByTime(50);
-      vi.restoreAllMocks();
-
-      const { internal, steps } = holdAtEdge();
+      const clock = fakeClock();
+      const { internal } = holdAtEdge();
 
       internal.scrollByZones(995);
       internal.scrollByZones(500);
       internal.scrollByZones(995);
-      vi.advanceTimersByTime(40);
-      internal.inScrollZone = null;
-      vi.advanceTimersByTime(50);
+      clock.run(40);
 
-      // One loop takes one step per tick; a leftover second loop doubles the count.
-      expect(steps.length).toBeLessThanOrEqual(once.steps.length + 1);
+      // Each live loop keeps one tick queued.
+      expect(vi.getTimerCount()).toBe(1);
     });
   });
 

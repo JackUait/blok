@@ -10,6 +10,25 @@ New suite `test/unit/server-conformance/http-host-contract.test.ts` (in CI for G
 - Query parsing bug fixed: `/unfurl?url=` now uses `dotnet.QueryFirst` (split on `&` only, `+` to space, `Uri.UnescapeDataString`, name OrdinalIgnoreCase). Oracle `fixtures/unfurl-queries.json` (17 spellings; `;`, `URL=`, `%zz` failed on Go before).
 - D4, S6 DONE: `fixtures/local-delete-responses.json`. Go bug fixed: `os.Remove` removed an empty directory at the key; C# answers 502.
 - U4 DONE (`fixtures/upload-section-limit.json`), U8 DONE (spool name, mode 0600, removed after finish and abort; mutation-checked).
+- M1, M3, M7, M10 DONE: `fixtures/unfurl-html.json` (167 pages incl. depth 508–515, bad UTF-8, IDN domains; `UnfurlHtmlFixtureTests` recomputes; Go `internal/unfurl/parse_test.go`). Go bugs fixed: scripting must be off (noscript holds markup), `<template>` contents are not children, AngleSharp 1.8.6's own "in select" mode (decompiled; `selectState` emulates it), rel lowercasing kept U+0130. Dropped from the fixture: a `mailto:` final URL (Go's `dotnet.URI` is http/https only; unreachable, the fetcher only returns http(s) final URLs).
+- O5 (cookies, auth, redirects, compression), O6, O7, O10, O12 DONE: `fixtures/outbound-encodings.json` (29 bodies), `fixtures/outbound-request-headers.json`, and the shared-slot case (peak 4 across unfurl + by-url). Go bugs fixed: `Connection: close` was sent (now `MaxIdleConnsPerHost: -1`); gzip trailing bytes, truncated gzip/deflate/br, and brotli trailing bytes now follow .NET's non-strict decode (decompiled `Inflater.ResetStreamForLeftoverInput`, `DeflateStream.ReadCore`; `internal/outbound/decode.go`). O5 "no proxy" is by code (`Proxy: nil`), no oracle.
+- O3, O4 DONE: hand ports in `internal/outbound/fetcher_test.go` (mixed/empty/site-local answers block before any socket, one lookup, vetted addresses in order, IPv6 literal never resolved, IPv6 candidate). Slots: `TestHoldsFourResponsesUntilOneIsReleased`. B8 DONE: `blokserver/byurl_test.go`. All mutation-checked.
+- S8, S10, S11, S12, S15 DONE: `internal/blob/s3_test.go` hand-ports S3TargetResolverTests (11 + 14 cases), the frozen SigV4 vector, the 7 S3BlobStoreObjectMethodsTests, the PUT attachment headers, the media-type cases, the spool cap. Mutation-checked.
+- V1 DONE: `fixtures/options-defaults.json` (`OptionsValidateFixtureTests.DefaultsMatchTheFixture`; Go `TestDefaultOptionsMatchTheCSharpDefaults`).
+- H31 DONE, Go bug fixed: Kestrel answers stalled headers with a bare 408 and closes (`fixtures/header-timeout.json`); Go closed silently. `cmd/blok-server/headertimeout.go` keeps a per-connection clock from the first byte to the handler (net/http's StateActive fires only after the headers). H32 pinned by a field test (a 2-minute black-box case is too slow).
+- L7, L8, L10, L11 DONE: `blokserver/handler_test.go` (prefix routes, files at the root, deny-all Authorization never asked on upload/unfurl/delete).
+
+### Round 2 conformance (`--target go`)
+- harness, server, routing, host-cli, http-host contracts: 150 passed, 25 skipped (collab), 0 failed. Local wall time 1 min 16 s.
+- Same five suites on C#: 175/175. http-host-contract adds about 20 s to the C# job (the 10 s header-timeout case).
+- blok-client-contract: 0/12, every test needs `/sync` (collab lane).
+
+### Still open after round 2
+- Deferred to collab: H18, H19, H20 (warning needs --collab), H21, H34–H38, H41, L2, L4, L5, L9 (open-routes warning), L13–L16, R4, R8, R22, H33 "sync opts out" (hand-off notes below; also `headerConn` wraps the hijacked conn, its clock stops on StateHijacked).
+- Decisions, not ports: V35 (Go validates once in `New` and copies Options, so no post-registration mutation exists), L1 (no DI container; hooks are Options fields, `s.fetcher`/`s.store` are the only seams, internal), L6 (spool dir `os.TempDir()`, cap MaxUploadBytes, `server.go:321`; by code).
+- By code, no oracle: S13 (timeouts are constants in `s3.go`), O15 (Go's verifier does no revocation; SNI per `tlsConfig`), O5 proxy.
+- UNVERIFIED: S16 (which proxy settings .NET reads; Go uses `http.ProxyFromEnvironment`). Non-ASCII header bytes in date headers (Go parses UTF-8 runes; Kestrel's decoding not measured).
+- Leftover processes from other lanes (not touched): Go stubs from `.blok-go/documents-runtime` and `.blok-go/yjs-lib0` worktrees (`--storage-dir  --max-upload 0`, parent 1), and pid 9831 from round 1. Their worktrees lack this lane's harness kill fix.
 
 
 Read this first next round. Ledger: `http-host.md`. Row IDs below are the ledger's.

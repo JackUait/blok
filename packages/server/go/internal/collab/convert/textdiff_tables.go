@@ -1,7 +1,7 @@
 package convert
 
 // The GB9c Indic_Conjunct_Break sets as inclusive [first, last] pairs. They
-// must equal TextDiff.cs; converter-keys.json pins both.
+// must equal TextDiff.cs; converter-keys.json pins both (keys_test.go).
 
 var conjunctLinkers = []rune{
 	0x094D, 0x094D, 0x09CD, 0x09CD, 0x0ACD, 0x0ACD, 0x0B4D, 0x0B4D,

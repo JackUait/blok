@@ -201,9 +201,11 @@ internal static partial class TextDiff
   /// test/unit/server-conformance/server-concurrent-loss-wave2.test.ts, which
   /// re-derives all three from the live segmenter: it demands this file cover
   /// everything that engine derives, and exact equality once the engine is on
-  /// the target version.
+  /// the target version. The test reads the sets from
+  /// fixtures/converter-keys.json; ConverterKeysFixtureTests holds this file
+  /// to it, and the Go port reads the same file.
   /// </summary>
-  private static readonly int[] ConjunctLinkers =
+  internal static readonly int[] ConjunctLinkers =
   [
       0x094D, 0x094D, 0x09CD, 0x09CD, 0x0ACD, 0x0ACD, 0x0B4D, 0x0B4D,
       0x0C4D, 0x0C4D, 0x0D4D, 0x0D4D, 0x1039, 0x1039, 0x17D2, 0x17D2,
@@ -213,7 +215,7 @@ internal static partial class TextDiff
   ];
 
   /// <summary>InCB=Consonant, the characters a linker joins. See <see cref="ConjunctLinkers"/>.</summary>
-  private static readonly int[] ConjunctConsonants =
+  internal static readonly int[] ConjunctConsonants =
   [
       0x0915, 0x0939, 0x0958, 0x095F, 0x0978, 0x097F, 0x0995, 0x09A8,
       0x09AA, 0x09B0, 0x09B2, 0x09B2, 0x09B6, 0x09B9, 0x09DC, 0x09DD,
@@ -240,7 +242,7 @@ internal static partial class TextDiff
   /// Extenders that are NOT InCB=Extend, so one of them between a consonant
   /// and its linker ends the conjunct. See <see cref="ConjunctLinkers"/>.
   /// </summary>
-  private static readonly int[] ConjunctBreakers =
+  internal static readonly int[] ConjunctBreakers =
   [
       0x0903, 0x0903, 0x093B, 0x093B, 0x093E, 0x0940, 0x0949, 0x094C,
       0x094E, 0x094F, 0x0982, 0x0983, 0x09BF, 0x09C0, 0x09C7, 0x09C8,

@@ -185,11 +185,12 @@ describe('client element pairing under concurrency (the contract the server must
  * An ICU upgrade that moves those sets moves the CLIENT's character boundaries
  * with it, and a boundary the two sides disagree on makes them answer
  * different ops for the same keystroke — which merge to different documents.
- * So the sets are re-derived here from the live segmenter and compared to what
- * the C# file commits: a drift fails loudly instead of silently re-diverging.
+ * So the sets are re-derived here from the live segmenter and compared to
+ * fixtures/converter-keys.json, which the C# and Go servers each check their
+ * own copy against: a drift fails loudly instead of silently re-diverging.
  *
  * The comparison is not plain equality, because this suite runs on whatever
- * Node the runner has and the C# file is ONE table. Unicode 17.0 only added
+ * Node the runner has and the fixture is ONE table. Unicode 17.0 only added
  * to all three sets, so the file targets the newest and must COVER whatever
  * this engine derives; on an engine already at the target the two are equal.
  * A future Unicode that adds a code point fails the coverage check here.
@@ -199,10 +200,10 @@ describe('client element pairing under concurrency (the contract the server must
  * `C X L C` stops being one when X is an extender that BREAKS a conjunct.
  */
 describe('GB9c tables — lockstep with the client segmenter', () => {
-  const DIFF_PATH = resolve(process.cwd(), 'packages/server/dotnet/Blok.Server/Collab/TextDiff.cs');
+  const KEYS_PATH = resolve(process.cwd(), 'test/unit/server-conformance/fixtures/converter-keys.json');
   const CONSONANT = 0x0915;
   const LINKER = 0x094d;
-  /** The Unicode version TextDiff.cs commits, as `process.versions.unicode` spells it. */
+  /** The Unicode version the servers commit, as `process.versions.unicode` spells it. */
   const TABLE_UNICODE = '17.0';
 
   /** Every code point, minus the surrogate range no string can carry alone here. */
@@ -263,24 +264,19 @@ describe('GB9c tables — lockstep with the client segmenter', () => {
       return packed;
     }, []).flat();
 
-  /** The `int[]` a C# field is initialised with. */
-  const csharpRanges = (source: string, name: string): number[] => {
-    const found = new RegExp(`${name} =\\s*\\[([^\\]]*)\\]`).exec(source);
-
-    if (found === null) {
-      throw new Error(`no ${name} in TextDiff.cs`);
-    }
-
-    return found[1].split(',').map((part) => part.trim()).filter((part) => part.length > 0)
-      .map((part) => Number.parseInt(part, 16));
-  };
+  /**
+   * The inclusive bounds a table in converter-keys.json holds. C# TextDiff.cs
+   * and the Go port each check their copy against the same file.
+   */
+  const committedRanges = (fixture: Record<string, string[]>, name: string): number[] =>
+    fixture[name].flatMap((range) => range.split('-').map((bound) => Number.parseInt(bound, 16)));
 
   it('commits the sets this engine derives', () => {
     const extenders = characterCounts((code) => [CONSONANT, code]);
     const linkerLike = characterCounts((code) => [CONSONANT, code, CONSONANT]);
     const consonantLike = characterCounts((code) => [CONSONANT, LINKER, code]);
     const conjunct = characterCounts((code) => [CONSONANT, code, LINKER, CONSONANT]);
-    const source = readFileSync(DIFF_PATH, 'utf8');
+    const source = JSON.parse(readFileSync(KEYS_PATH, 'utf8')) as Record<string, string[]>;
 
     const linkers = points.filter((code) => linkerLike.get(code) === 1);
     const consonants = points
@@ -290,7 +286,7 @@ describe('GB9c tables — lockstep with the client segmenter', () => {
 
     /** The code points a committed `int[]` of inclusive bounds holds. */
     const covered = (name: string): Set<number> => {
-      const bounds = csharpRanges(source, name);
+      const bounds = committedRanges(source, name);
       const held = new Set<number>();
 
       for (let at = 0; at < bounds.length; at += 2) {
@@ -306,20 +302,20 @@ describe('GB9c tables — lockstep with the client segmenter', () => {
       return derived.filter((code) => !held.has(code));
     };
 
-    expect(missing('ConjunctLinkers', linkers), 'linkers TextDiff.cs does not cover').toEqual([]);
+    expect(missing('conjunctLinkers', linkers), 'linkers converter-keys.json does not cover').toEqual([]);
     expect(
-      missing('ConjunctConsonants', consonants),
-      'consonants TextDiff.cs does not cover'
+      missing('conjunctConsonants', consonants),
+      'consonants converter-keys.json does not cover'
     ).toEqual([]);
-    expect(missing('ConjunctBreakers', breakers), 'breakers TextDiff.cs does not cover').toEqual([]);
+    expect(missing('conjunctBreakers', breakers), 'breakers converter-keys.json does not cover').toEqual([]);
 
     if (process.versions.unicode !== TABLE_UNICODE) {
       return;
     }
 
     // On the target version nothing may be committed BEYOND what it derives.
-    expect(csharpRanges(source, 'ConjunctLinkers')).toEqual(ranges(linkers));
-    expect(csharpRanges(source, 'ConjunctConsonants')).toEqual(ranges(consonants));
-    expect(csharpRanges(source, 'ConjunctBreakers')).toEqual(ranges(breakers));
+    expect(committedRanges(source, 'conjunctLinkers')).toEqual(ranges(linkers));
+    expect(committedRanges(source, 'conjunctConsonants')).toEqual(ranges(consonants));
+    expect(committedRanges(source, 'conjunctBreakers')).toEqual(ranges(breakers));
   }, 60_000);
 });

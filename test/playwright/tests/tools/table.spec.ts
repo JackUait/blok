@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { AUTO_SCROLL_VIEWPORT_BAND } from '../../../../src/tools/table/table-scroll-port';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { savedAsHtml } from '../helpers/saved-as-html';
 
@@ -2317,11 +2318,19 @@ test.describe('table tool', () => {
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
       const colWidth = cellBox.width;
+      const innerWidth = await page.evaluate(() => window.innerWidth);
+      // Stop short of the screen's edge band. Inside it the bar auto-scrolls and
+      // adds columns per second held, so the count would follow CPU speed.
+      const endX = Math.min(startX + colWidth * 3, innerWidth - AUTO_SCROLL_VIEWPORT_BAND - 1);
 
       // Phase 1: Drag right to add columns
       await page.mouse.move(startX, startY);
       await page.mouse.down();
-      await page.mouse.move(startX + colWidth * 3, startY, { steps: 15 });
+      await page.mouse.move(endX, startY, { steps: 15 });
+
+      await expect(page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR)).not.toHaveCount(2);
+      // The drag scrolled the table to its new end; the release must undo that.
+      expect(await page.locator('[data-blok-table-scroll]').evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
 
       // Phase 2: Drag left past starting point — removes added empty columns
       // and attempts to remove original columns (which have content → blocked)

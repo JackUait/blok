@@ -2,6 +2,7 @@ package yjs
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -115,6 +116,24 @@ func mustEncode(t *testing.T, doc *Doc, target []byte) (update []byte) {
 		t.Fatal(err)
 	}
 	return update
+}
+
+// Twin of C# HostileUpdateTests.TheFuzzCrashInputEncodes: the input that
+// found the length-0 crash. Its full bytes hit the open parentSub-bit
+// difference with yjs, so only the vector and a clean encode are pinned.
+func TestTheFuzzCrashInputEncodes(t *testing.T) {
+	update, err := hex.DecodeString("0102e80700220101300130002100e8303001303000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := docWithID(4242)
+	if result := applyBytes(t, doc, update); result.Outcome != Applied {
+		t.Fatalf("%+v", result)
+	}
+	mustEncode(t, doc, nil)
+	if got := base64.StdEncoding.EncodeToString(doc.EncodeStateVector()); got != "AegHAA==" {
+		t.Fatalf("sv %s", got)
+	}
 }
 
 // Shared oracle with C# HostileUpdateTests.ALengthZeroStructEncodesAsYjsDoes:

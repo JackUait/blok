@@ -79,6 +79,23 @@ public sealed class HostileUpdateTests
     Assert.NotEmpty(doc.EncodeStateAsUpdate());
   }
 
+  /// <summary>
+  /// The input that found the length-0 crash. Its full bytes hit the open
+  /// parentSub-bit difference with yjs, so only the vector and a clean
+  /// encode are pinned. Twin of Go TestTheFuzzCrashInputEncodes.
+  /// </summary>
+  [Fact]
+  public void TheFuzzCrashInputEncodes()
+  {
+    var doc = new YDoc(4242);
+
+    Assert.Equal(
+        ApplyOutcome.Applied,
+        doc.ApplyUpdate(Convert.FromHexString("0102e80700220101300130002100e8303001303000")).Outcome);
+    Assert.NotEmpty(doc.EncodeStateAsUpdate());
+    Assert.Equal("AegHAA==", Convert.ToBase64String(doc.EncodeStateVector()));
+  }
+
   public static TheoryData<string> EmptyStructCases()
   {
     return new TheoryData<string>(YjsEngineFixtures.Cases("empty-structs.json")

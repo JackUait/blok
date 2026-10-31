@@ -96,3 +96,11 @@ func TestCloneIsDeep(t *testing.T) {
 		t.Fatalf("copy: %s", got)
 	}
 }
+
+// A Go string with invalid UTF-8 stands for a .NET string holding U+FFFD.
+func TestLookupReadsInvalidUTF8KeysAsReplacement(t *testing.T) {
+	found, err := mustNode(t, "{\"a\xff\":1}").Lookup("a�")
+	if err != nil || found == nil || string(found.Raw()) != "1" {
+		t.Fatalf("got %v %v", found, err)
+	}
+}

@@ -67,11 +67,12 @@ func (n *Node) Clone() *Node {
 
 // index reads every key, as a JsonObject does the first time it is
 // indexed: a lone-surrogate key or a repeated key fails the whole lookup.
+// Invalid UTF-8 reads as U+FFFD, as it does in a .NET string.
 func (n *Node) index(key string) (int, error) {
 	seen := make(map[string]struct{}, len(n.Members))
 	at := -1
 	for i, member := range n.Members {
-		name, err := decodeStrict(member.raw)
+		name, err := decodeForWrite(member.raw)
 		if err != nil {
 			return -1, err
 		}

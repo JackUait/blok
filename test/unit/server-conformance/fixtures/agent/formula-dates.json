@@ -1,0 +1,56 @@
+{
+  "why": "An agent read computes formula dates in the host's zone: the computed reader passes no timeZone (src/shared/database/computed-read.ts, engine.apply), so a property's own zone is not read and Intl is never asked for a named zone. goja has no Intl and reads the host zone through Date's getters; Jint reads it through Intl. Expectations are Jint's answers with TZ set to each zone (dotnet fsi probe).",
+  "document": "{\"blocks\":[{\"id\":\"db\",\"type\":\"database\",\"content\":[\"r1\"],\"data\":{\"title\":\"Tasks\",\"activeViewId\":\"v1\",\"views\":[{\"id\":\"v1\",\"name\":\"Table\",\"type\":\"table\",\"position\":\"a0\",\"filters\":[],\"sorts\":[],\"visibleProperties\":[]}],\"schema\":[{\"id\":\"t\",\"name\":\"Name\",\"type\":\"title\",\"position\":\"a0\"},{\"id\":\"w\",\"name\":\"When\",\"type\":\"date\",\"position\":\"a1\"},{\"id\":\"wz\",\"name\":\"Zoned\",\"type\":\"date\",\"position\":\"a2\",\"date\":{\"timeZone\":\"Asia/Yekaterinburg\"}},{\"id\":\"f1\",\"name\":\"Fmt\",\"type\":\"formula\",\"position\":\"a3\",\"formula\":{\"expression\":\"formatDate(prop(\\\"When\\\"), \\\"YYYY-MM-DD HH:mm\\\")\"}},{\"id\":\"f2\",\"name\":\"Hour\",\"type\":\"formula\",\"position\":\"a4\",\"formula\":{\"expression\":\"hour(prop(\\\"When\\\"))\"}},{\"id\":\"f3\",\"name\":\"Plus\",\"type\":\"formula\",\"position\":\"a5\",\"formula\":{\"expression\":\"dateAdd(prop(\\\"When\\\"), 1, \\\"days\\\")\"}},{\"id\":\"f4\",\"name\":\"Parsed\",\"type\":\"formula\",\"position\":\"a6\",\"formula\":{\"expression\":\"parseDate(\\\"2026-01-02\\\")\"}},{\"id\":\"f5\",\"name\":\"ZFmt\",\"type\":\"formula\",\"position\":\"a7\",\"formula\":{\"expression\":\"formatDate(prop(\\\"Zoned\\\"), \\\"YYYY-MM-DD HH:mm\\\")\"}},{\"id\":\"f6\",\"name\":\"Day\",\"type\":\"formula\",\"position\":\"a8\",\"formula\":{\"expression\":\"formatDate(prop(\\\"When\\\"), \\\"dddd\\\")\"}}]}},{\"id\":\"r1\",\"type\":\"database-row\",\"parent\":\"db\",\"data\":{\"title\":\"One\",\"position\":\"a0\",\"properties\":{\"t\":\"One\",\"w\":\"2026-03-29T01:30:00.000Z\",\"wz\":\"2026-03-29T01:30:00.000Z\"}}}]}",
+  "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"ids\":[\"r1\"]}}]}",
+  "pointer": "/results/0/blocks/0/computed",
+  "zones": {
+    "UTC": {
+      "f1": "2026-03-29 01:30",
+      "f2": 1,
+      "f3": "2026-03-30T01:30",
+      "f4": "2026-01-02",
+      "f5": "2026-03-29 01:30",
+      "f6": "Sunday"
+    },
+    "Asia/Yekaterinburg": {
+      "f1": "2026-03-29 06:30",
+      "f2": 6,
+      "f3": "2026-03-30T06:30",
+      "f4": "2026-01-02",
+      "f5": "2026-03-29 06:30",
+      "f6": "Sunday"
+    },
+    "America/New_York": {
+      "f1": "2026-03-28 21:30",
+      "f2": 21,
+      "f3": "2026-03-29T21:30",
+      "f4": "2026-01-02",
+      "f5": "2026-03-28 21:30",
+      "f6": "Saturday"
+    },
+    "Europe/Berlin": {
+      "f1": "2026-03-29 03:30",
+      "f2": 3,
+      "f3": "2026-03-30T03:30",
+      "f4": "2026-01-02",
+      "f5": "2026-03-29 03:30",
+      "f6": "Sunday"
+    },
+    "Asia/Almaty": {
+      "f1": "2026-03-29 06:30",
+      "f2": 6,
+      "f3": "2026-03-30T06:30",
+      "f4": "2026-01-02",
+      "f5": "2026-03-29 06:30",
+      "f6": "Sunday"
+    },
+    "Etc/UTC": {
+      "f1": "2026-03-29 01:30",
+      "f2": 1,
+      "f3": "2026-03-30T01:30",
+      "f4": "2026-01-02",
+      "f5": "2026-03-29 01:30",
+      "f6": "Sunday"
+    }
+  }
+}

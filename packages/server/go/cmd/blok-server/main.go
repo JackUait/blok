@@ -92,16 +92,18 @@ func bindAddress(listen string) string {
 	return listen
 }
 
-// newHTTPServer is Kestrel's limits: headers within 10 s, 2 min idle, and
-// every request cut off with 504 at the request deadline.
+// newHTTPServer is Kestrel's limits: 2 min idle, and every request cut off
+// with 504 at the request deadline. The 10 s header limit needs the
+// listener wrapped too: serve on headerListener{l, headerTimeout}.
 func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Server {
-	return &http.Server{
-		Handler:           withDeadline(handler, requestTimeout),
-		ReadHeaderTimeout: headerTimeout,
-		IdleTimeout:       keepAliveTimeout,
+	server := &http.Server{
+		Handler:     withDeadline(handler, requestTimeout),
+		IdleTimeout: keepAliveTimeout,
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,
 	}
+	limitRequestHeaders(server, headerTimeout)
+	return server
 }
 
 func run(ctx context.Context, args []string, getenv func(string) string, stderr io.Writer) int {
@@ -143,7 +145,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 	httpServer := newHTTPServer(server.Handler(""), defaultRequestTimeout)
 	served := make(chan error, 1)
-	go func() { served <- httpServer.Serve(listener) }()
+	go func() { served <- httpServer.Serve(headerListener{listener, headerTimeout}) }()
 
 	// The harness trusts /health only after this line, so it must follow the bind.
 	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)\n", version, options.ListenAddress, options.Auth)

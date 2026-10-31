@@ -6,6 +6,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
+import { connect } from 'node:net';
 import { chmod, mkdir, mkdtemp, readdir, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -646,3 +647,28 @@ it('shares four outbound fetches between unfurl and upload-by-url', async () => 
     await rm(directory, { recursive: true, force: true });
   }
 }, 60_000);
+
+// Program.cs:136 sets RequestHeadersTimeout to 10 s.
+it('drops a connection whose request headers stall for 10 seconds', async () => {
+  await withServer([], async (server) => {
+    const { hostname, port } = new URL(server.baseUrl);
+    const socket = connect(Number(port), hostname);
+    const started = Date.now();
+    const chunks: Buffer[] = [];
+
+    socket.on('data', (chunk: Buffer) => chunks.push(chunk));
+    socket.write('GET /health HTTP/1.1\r\nHost: x\r\n');
+    await new Promise<void>((resolve) => {
+      socket.once('close', () => resolve());
+    });
+
+    const elapsed = Date.now() - started;
+    const answer = Buffer.concat(chunks).toString('latin1')
+      .replace(/^Date: .*\r\n/m, 'Date: <date>\r\n')
+      .replace(/^Server: .*\r\n/m, '');
+
+    expect(elapsed).toBeGreaterThanOrEqual(9_000);
+    expect(elapsed).toBeLessThan(15_000);
+    compareGolden('header-timeout.json', [{ name: 'stalled headers', response: answer }]);
+  });
+}, 30_000);

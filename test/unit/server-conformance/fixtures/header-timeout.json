@@ -1,0 +1,6 @@
+[
+  {
+    "name": "stalled headers",
+    "response": "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnection: close\r\nDate: <date>\r\n\r\n"
+  }
+]

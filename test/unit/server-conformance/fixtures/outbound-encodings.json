@@ -1,0 +1,437 @@
+[
+  {
+    "name": "gzip",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/gzip\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "upper-gzip",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/upper-gzip\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "br",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/br\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "deflate",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/deflate\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "raw-deflate",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "identity",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/identity\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "empty",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/empty\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "two-in-one",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "two-lines",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "unknown",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "compress",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "corrupt-gzip",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "trailing-garbage",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/trailing-garbage\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "bomb",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "spaced",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/spaced\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "truncated-gzip",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/truncated-gzip\",\"meta\":{\"title\":\"Plain title\",\"description\":\"Plain description\",\"image\":{},\"favicon\":\"<origin>/favicon.ico\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "truncated-deflate",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/truncated-deflate\",\"meta\":{\"title\":\"Plain title\",\"description\":\"Plain description\",\"image\":{},\"favicon\":\"<origin>/favicon.ico\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "truncated-br",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/truncated-br\",\"meta\":{\"title\":\"Plain title\",\"description\":\"Plain description\",\"image\":{},\"favicon\":\"<origin>/favicon.ico\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "two-gzip-members",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/two-gzip-members\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "gzip-zero-padding",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/gzip-zero-padding\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "gzip-then-bad-member",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "gzip-then-one-magic-byte",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/gzip-then-one-magic-byte\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "gzip-bad-crc",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "deflate-bad-adler",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":0}\n"
+    }
+  },
+  {
+    "name": "deflate-trailing-garbage",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/deflate-trailing-garbage\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "br-trailing-garbage",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/br-trailing-garbage\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"<origin>/images/cover.png?size=2\"},\"favicon\":\"<origin>/encoded/favicon.svg\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "empty-gzip-body",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/empty-gzip-body\",\"meta\":{\"image\":{},\"favicon\":\"<origin>/favicon.ico\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "empty-br-body",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/empty-br-body\",\"meta\":{\"image\":{},\"favicon\":\"<origin>/favicon.ico\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "empty-deflate-body",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/empty-deflate-body\",\"meta\":{\"image\":{},\"favicon\":\"<origin>/favicon.ico\",\"domain\":\"127.0.0.1\"}}\n"
+    }
+  }
+]

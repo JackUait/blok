@@ -549,3 +549,100 @@ it('spools an upload to a private temp file and removes it after', async () => {
     await rm(storage, { recursive: true, force: true });
   }
 }, 60_000);
+
+const ENCODINGS = [
+  'gzip', 'upper-gzip', 'br', 'deflate', 'raw-deflate', 'identity', 'empty', 'two-in-one',
+  'two-lines', 'unknown', 'compress', 'corrupt-gzip', 'trailing-garbage', 'bomb', 'spaced',
+  'truncated-gzip', 'truncated-deflate', 'truncated-br', 'two-gzip-members', 'gzip-zero-padding',
+  'gzip-then-bad-member', 'gzip-then-one-magic-byte', 'gzip-bad-crc', 'deflate-bad-adler',
+  'deflate-trailing-garbage', 'br-trailing-garbage', 'empty-gzip-body', 'empty-br-body', 'empty-deflate-body',
+];
+
+it('decodes outbound bodies by the C# content-encoding rules', async () => {
+  const origin = await startFixtureOrigin();
+  const actual: Array<{ name: string; response: GoldenResponse }> = [];
+
+  try {
+    await withServer(['--storage-dir', '', '--conformance-origin', origin.baseUrl], async (server) => {
+      for (const name of ENCODINGS) {
+        const target = `${origin.baseUrl}/encoded/${name}`;
+        const recorded = golden(await server.request('GET', `/unfurl?url=${encodeURIComponent(target)}`));
+
+        recorded.body = recorded.body.split(origin.baseUrl).join('<origin>');
+        // The body carries the origin's port, so its length is not stable.
+        delete recorded.headers['content-length'];
+        actual.push({ name, response: recorded });
+      }
+    });
+  } finally {
+    await origin.stop();
+  }
+
+  compareGolden('outbound-encodings.json', actual);
+}, 60_000);
+
+it('sends only the C# request headers to an outbound origin', async () => {
+  const origin = await startFixtureOrigin();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-headers-'));
+  const actual: Array<{ name: string; response: Record<string, unknown> }> = [];
+
+  try {
+    await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl], async (server) => {
+      await server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/metadata/redirect`)}`, {
+        headers: { Cookie: 'session=1', Authorization: 'Bearer x', 'Accept-Encoding': 'gzip' },
+      });
+      await server.request('POST', '/upload-by-url', {
+        body: JSON.stringify({ url: origin.mediaRedirectUrl }),
+        headers: { 'Content-Type': 'application/json', Cookie: 'session=1' },
+      });
+    });
+  } finally {
+    await origin.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  for (const [index, request] of origin.received.entries()) {
+    const headers = Object.fromEntries(Object.entries(request.headers)
+      .map(([name, value]) => [name, name === 'host' ? '<origin host>' : value])
+      .sort(([left], [right]) => String(left).localeCompare(String(right))));
+
+    actual.push({ name: `${index} ${request.path}`, response: headers });
+  }
+
+  compareGolden('outbound-request-headers.json', actual);
+}, 60_000);
+
+it('shares four outbound fetches between unfurl and upload-by-url', async () => {
+  const origin = await startFixtureOrigin();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-permits-'));
+
+  try {
+    await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl], async (server) => {
+      const requests = [0, 1, 2].flatMap((index) => [
+        server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/hold/page-${index}`)}`),
+        server.request('POST', '/upload-by-url', {
+          body: JSON.stringify({ url: `${origin.baseUrl}/hold/photo-${index}.png` }),
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ]);
+
+      await waitFor(async () => origin.held.current, (current) => current >= 4);
+      // Give a fifth fetch the time to arrive if the server would let it.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(origin.held.peak).toBe(4);
+
+      while (origin.received.length < 6) {
+        origin.held.release();
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      origin.held.release();
+
+      const statuses = (await Promise.all(requests)).map((response) => response.status);
+
+      expect(statuses).toEqual([200, 200, 200, 200, 200, 200]);
+    });
+  } finally {
+    await origin.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 60_000);

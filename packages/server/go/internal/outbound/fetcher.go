@@ -1,8 +1,6 @@
 package outbound
 
 import (
-	"compress/gzip"
-	"compress/zlib"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -14,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/andybalholm/brotli"
 
 	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
 )
@@ -180,9 +176,11 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 	transport := &http.Transport{
 		Proxy:              nil,
 		DisableCompression: true,
-		DisableKeepAlives:  true,
-		ForceAttemptHTTP2:  false,
-		TLSClientConfig:    f.tlsConfig(target),
+		// No pooling, and no "Connection: close" header, which
+		// DisableKeepAlives would add and .NET does not send.
+		MaxIdleConnsPerHost: -1,
+		ForceAttemptHTTP2:   false,
+		TLSClientConfig:     f.tlsConfig(target),
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 			if f.dialHook != nil {
 				f.dialHook(network, address)
@@ -283,23 +281,8 @@ func readBounded(response *http.Response, max int64) ([]byte, error) {
 	if len(encodings) == 0 || strings.EqualFold(encodings[0], "identity") {
 		return readAll(raw, max)
 	}
-	var decoded io.Reader
-	switch strings.ToLower(encodings[0]) {
-	case "gzip":
-		reader, err := gzip.NewReader(raw)
-		if err != nil {
-			return nil, err
-		}
-		decoded = reader
-	case "br":
-		decoded = brotli.NewReader(raw)
-	case "deflate":
-		reader, err := zlib.NewReader(raw)
-		if err != nil {
-			return nil, err
-		}
-		decoded = reader
-	default:
+	decoded, ok := decoder(strings.ToLower(encodings[0]), raw)
+	if !ok {
 		return nil, fail(UnsupportedContentEncoding)
 	}
 	body, err := readAll(decoded, max)

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "0 /metadata/redirect",
+    "response": {
+      "host": "<origin host>",
+      "user-agent": "blok-server (+https://blokeditor.com)"
+    }
+  },
+  {
+    "name": "1 /metadata/final/page.html",
+    "response": {
+      "host": "<origin host>",
+      "user-agent": "blok-server (+https://blokeditor.com)"
+    }
+  },
+  {
+    "name": "2 /media/redirect",
+    "response": {
+      "host": "<origin host>",
+      "user-agent": "blok-server (+https://blokeditor.com)"
+    }
+  },
+  {
+    "name": "3 /media/final/photo.jpeg",
+    "response": {
+      "host": "<origin host>",
+      "user-agent": "blok-server (+https://blokeditor.com)"
+    }
+  }
+]

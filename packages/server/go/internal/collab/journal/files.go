@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -32,10 +33,16 @@ const (
 )
 
 // InvalidDataError is C#'s InvalidDataException: the bytes on disk are not
-// what this build writes. The message is C#'s, word for word.
-type InvalidDataError struct{ Message string }
+// what this build writes. The message is C#'s, word for word. Err is the
+// cause when there is one, such as a missing file.
+type InvalidDataError struct {
+	Message string
+	Err     error
+}
 
 func (e *InvalidDataError) Error() string { return e.Message }
+
+func (e *InvalidDataError) Unwrap() error { return e.Err }
 
 func invalidData(format string, args ...any) error {
 	return &InvalidDataError{Message: fmt.Sprintf(format, args...)}
@@ -118,7 +125,7 @@ func decodeManifestSlot(slot []byte) (Manifest, slotStatus) {
 // never published). It fails when no slot decodes, so an unreadable document
 // is never handed back as a fresh one.
 func ReadManifest(path, documentID string) (*Manifest, error) {
-	data, err := os.ReadFile(path)
+	data, err := readShared(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -163,7 +170,7 @@ func WriteSealed(path, magic string, tag uint64, content []byte) error {
 	buffer = append(buffer, content...)
 	sum := sha256.Sum256(buffer)
 	buffer = append(buffer, sum[:]...)
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	file, err := openFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, true)
 	if err != nil {
 		return err
 	}
@@ -182,9 +189,12 @@ func WriteSealed(path, magic string, tag uint64, content []byte) error {
 // it cannot be trusted.
 func ReadSealed(path, magic, documentID string) ([]byte, uint64, error) {
 	name := filepath.Base(path)
-	data, err := os.ReadFile(path)
+	data, err := readShared(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, 0, invalidData("collab: \"%s\" names %s, which is not there.", documentID, name)
+		return nil, 0, &InvalidDataError{
+			Message: fmt.Sprintf("collab: \"%s\" names %s, which is not there.", documentID, name),
+			Err:     err,
+		}
 	}
 	if err != nil {
 		return nil, 0, err
@@ -203,4 +213,14 @@ func ReadSealed(path, magic, documentID string) ([]byte, uint64, error) {
 		return nil, 0, invalidData("collab: %s for \"%s\" fails its checksum.", name, documentID)
 	}
 	return data[sealedHeaderSize:hashed], tag, nil
+}
+
+// readShared is File.ReadAllBytes: the whole file, under a shared lock.
+func readShared(path string) ([]byte, error) {
+	file, err := openFile(path, os.O_RDONLY, false)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return io.ReadAll(file)
 }

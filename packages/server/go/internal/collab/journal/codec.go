@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"unicode/utf8"
 
@@ -58,30 +57,30 @@ const (
 // EncodeRecord writes one record. It refuses what C# refuses with an ArgumentException.
 func EncodeRecord(record operation.Record) ([]byte, error) {
 	if !workingset.IsLineage(record.OperationID) {
-		return nil, fmt.Errorf("collab: the operation id %s is not 32 lowercase-hex characters", record.OperationID)
+		return nil, argumentf("collab: the operation id %s is not 32 lowercase-hex characters.", record.OperationID)
 	}
 	if record.Sequence < 1 {
-		return nil, errors.New("collab: server sequence 0 means nothing has been committed; a record must be at least 1")
+		return nil, argumentf("collab: server sequence 0 means nothing has been committed; a record must be at least 1.")
 	}
 	if !record.Source.Defined() {
-		return nil, fmt.Errorf("collab: %v is not a known operation source", record.Source)
+		return nil, argumentf("collab: %v is not a known operation source.", record.Source)
 	}
 	if len(record.Digest) != sha256.Size {
-		return nil, errors.New("collab: the digest must be 32 bytes (SHA-256)")
+		return nil, argumentf("collab: the digest must be %d bytes (SHA-256).", sha256.Size)
 	}
 	if len(record.Update) == 0 || len(record.Update) > MaxUpdateLength {
-		return nil, fmt.Errorf("collab: the update must be 1..%d bytes", MaxUpdateLength)
+		return nil, argumentf("collab: the update must be 1..%d bytes.", MaxUpdateLength)
 	}
 	actorLength := int32(-1)
 	var actor []byte
 	if record.ActorID != nil {
 		// .NET's strict encoder throws on a string that is not valid UTF-16.
 		if !utf8.ValidString(*record.ActorID) {
-			return nil, errors.New("collab: the actor id is not valid UTF-8")
+			return nil, argumentf("collab: the actor id is not valid UTF-8.")
 		}
 		actor = []byte(*record.ActorID)
 		if len(actor) > maxActorIDLength {
-			return nil, fmt.Errorf("collab: the actor id exceeds %d bytes", maxActorIDLength)
+			return nil, argumentf("collab: the actor id exceeds %d bytes.", maxActorIDLength)
 		}
 		actorLength = int32(len(actor))
 	}

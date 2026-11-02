@@ -84,9 +84,11 @@ type fakeMember struct {
 	source collab.OperationSource
 	write  bool
 
-	mu     sync.Mutex
-	frames [][]byte
-	closes []collab.CloseReason
+	mu      sync.Mutex
+	frames  [][]byte
+	closes  []collab.CloseReason
+	revoked bool
+	failure error
 }
 
 func (m *fakeMember) CanWrite() bool                         { return m.write }
@@ -94,7 +96,15 @@ func (m *fakeMember) AcceptsControlFrames() bool             { return true }
 func (m *fakeMember) ActorID() string                        { return m.actor }
 func (m *fakeMember) ProtocolSource() collab.OperationSource { return m.source }
 func (m *fakeMember) RecheckAccess(context.Context) (bool, error) {
-	return true, nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return !m.revoked, m.failure
+}
+
+func (m *fakeMember) revoke(failure error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.revoked, m.failure = failure == nil, failure
 }
 
 func (m *fakeMember) Send(frame []byte) {
@@ -383,4 +393,47 @@ func TestActivityReportsJoinedActiveOnceInTheWindowAndLeft(t *testing.T) {
 		}
 	}
 	_ = manager.Drain(context.Background())
+}
+
+// Twins of RecheckExpelsOnlyRevokedMembersWithoutResettingTheRoom and
+// ARecheckThatThrowsExpelsTheMember (M32, G12): a revoked or failing check
+// closes 4403, the others stay, the room keeps its tag, and the expelled
+// member's queued write never lands.
+func TestRecheckExpelsOnlyRevokedMembersWithoutResettingTheRoom(t *testing.T) {
+	manager, store, _ := newTestManager(t, Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour}, nil)
+	revoked := &fakeMember{source: collab.SourceClientV1, write: true}
+	failing := &fakeMember{source: collab.SourceClientV1, write: true}
+	allowed := &fakeMember{source: collab.SourceClientV1, write: true}
+	revokedMembership := join(t, manager, "doc", revoked)
+	join(t, manager, "doc", failing)
+	join(t, manager, "doc", allowed)
+	set, _ := store.Read(context.Background(), "doc")
+	revoked.revoke(nil)
+	failing.revoke(errors.New("policy failed"))
+
+	expelled, err := manager.RecheckAccess(context.Background(), "doc")
+	if err != nil || expelled != 2 {
+		t.Fatalf("recheck = %d, %v; want 2", expelled, err)
+	}
+	for _, member := range []*fakeMember{revoked, failing} {
+		if got := member.closed(); len(got) != 1 || got[0] != collab.CloseForbidden {
+			t.Fatalf("closes = %v, want one CloseForbidden", got)
+		}
+	}
+	if got := allowed.closed(); len(got) != 0 {
+		t.Fatalf("the allowed member was closed: %v", got)
+	}
+	if after, _ := store.Read(context.Background(), "doc"); after == nil || set == nil || after.Tag != set.Tag {
+		t.Fatal("the recheck changed the room's tag")
+	}
+	if absent, err := manager.RecheckAccess(context.Background(), "doc-absent"); err != nil || absent != 0 {
+		t.Fatalf("an absent doc = %d, %v", absent, err)
+	}
+	_ = revokedMembership.Receive(context.Background(), syncFrame(t, wire.SyncUpdate{Update: clientUpdate(t, 9, "stolen")}))
+	manager.Settle()
+	for _, message := range allowed.messages(t) {
+		if _, relayed := message.(wire.SyncUpdate); relayed {
+			t.Fatal("the expelled member's write was relayed")
+		}
+	}
 }

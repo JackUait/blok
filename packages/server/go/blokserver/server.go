@@ -12,6 +12,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/internal/collab/collabhttp"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -120,6 +121,15 @@ func (s *Server) Handler(prefix string) http.Handler {
 		// socket outlasts any request deadline.
 		router.Handle(prefix+"/sync/{doc}", []string{"GET"}, withoutRequestTimeout(s.syncEndpoint()))
 		router.Handle(prefix+"/sync/{doc}", nil, route.MethodNotAllowed("GET"))
+		routes := collabhttp.New(collabhttp.Config{
+			TicketMode:      o.Auth == "ticket",
+			Authorization:   o.Authorization,
+			Rooms:           s.collab.get,
+			MaxMessageBytes: o.CollabMaxMessageBytes,
+		})
+		s.shell(router, prefix+"/sync/{doc}/reset", "POST", routes.Reset)
+		s.shell(router, prefix+"/sync/{doc}/edit", "POST", routes.Edit)
+		s.shell(router, prefix+"/sync/{doc}/state", "GET", routes.State)
 	}
 	return router
 }

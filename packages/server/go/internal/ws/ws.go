@@ -213,15 +213,30 @@ func NewServerConn(raw net.Conn, reader *bufio.Reader, options Options) *Conn {
 
 func newConn(raw net.Conn, reader *bufio.Reader, options Options) *Conn {
 	c := &Conn{
-		raw:    raw,
-		reader: reader,
-		done:   make(chan struct{}),
-		last:   frameHeader{fin: true, opcode: opText, processed: true},
+		raw:  raw,
+		done: make(chan struct{}),
+		last: frameHeader{fin: true, opcode: opText, processed: true},
 	}
+	c.reader = bufio.NewReader(dataReader{c, reader})
 	if options.KeepAliveInterval > 0 {
 		c.startKeepAlive(options.KeepAliveInterval, options.KeepAliveTimeout)
 	}
 	return c
+}
+
+// dataReader is where OnDataReceived runs: after every read from the
+// stream, header reads included, as EnsureBufferContainsAsync does.
+type dataReader struct {
+	c *Conn
+	r io.Reader
+}
+
+func (d dataReader) Read(p []byte) (int, error) {
+	n, err := d.r.Read(p)
+	if n > 0 {
+		d.c.onDataReceived()
+	}
+	return n, err
 }
 
 // dispose closes the stream once; every blocked read and write ends.
@@ -433,9 +448,6 @@ func (c *Conn) Receive(buf []byte) (n int, messageType MessageType, endOfMessage
 		}
 		if !header.processed && len(buf) > 0 {
 			want := int(min(int64(len(buf)), header.remaining))
-			if c.reader.Buffered() < want {
-				c.onDataReceived()
-			}
 			if err := c.readFull(buf[:want]); err != nil {
 				return 0, 0, false, c.gone(err)
 			}

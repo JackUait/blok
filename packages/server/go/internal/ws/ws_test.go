@@ -368,3 +368,34 @@ func TestSendersNeverInterleaveFrames(t *testing.T) {
 	}
 	<-done
 }
+
+// OnDataReceived runs after every stream read, header reads included
+// (EnsureBufferContainsAsync), so a peer sending only empty frames still
+// pushes the next ping back.
+func TestEmptyFramesPushTheNextPingBack(t *testing.T) {
+	server, client := pair(t, Options{KeepAliveInterval: 150 * time.Millisecond, KeepAliveTimeout: time.Second})
+	go func() {
+		buf := make([]byte, 16)
+		for {
+			if _, _, _, err := server.Receive(buf); err != nil {
+				return
+			}
+		}
+	}()
+	pings := make(chan struct{}, 1)
+	go func() {
+		head := make([]byte, 2)
+		if _, err := io.ReadFull(client, head); err == nil && head[0] == 0x89 {
+			pings <- struct{}{}
+		}
+	}()
+	for range 12 {
+		send(t, client, frame(0x82, nil))
+		time.Sleep(50 * time.Millisecond)
+	}
+	select {
+	case <-pings:
+		t.Fatal("pinged a peer that kept sending")
+	default:
+	}
+}

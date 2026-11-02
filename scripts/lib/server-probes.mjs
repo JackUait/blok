@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { request } from 'node:http';
+import { fileURLToPath } from 'node:url';
+
+const repositoryRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 export function sendRequest(method, url, headers = {}) {
   return new Promise((resolveRequest, reject) => {
@@ -150,6 +153,8 @@ export async function probeEndpoints(
 
 export function startProcess(command, args, options = {}) {
   const child = spawn(command, args, {
+    // ASP.NET takes its content root from the working directory.
+    cwd: repositoryRoot,
     ...options,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

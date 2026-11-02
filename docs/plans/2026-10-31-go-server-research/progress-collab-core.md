@@ -70,7 +70,7 @@ E2 (header half) belongs to collab-room. So do the room's use of `DocConverter.A
 
 ## Decisions (round 2)
 
-- Oracles for X6 and X3 are C# captures like X4. The migration case and the replay test bytes are emitted updates with pinned client ids.
+- Oracles for X6 and X3 are C# captures, as for X4. The X6 cases pin the emitted update bytes, with pinned client ids.
 - The Go structure API keeps order: `ReadPageMaps` returns `[]PageMap{Name, Entries []yjs.MapEntry}` and `DescribeStructure` returns `DocStructure{Keys []KeyShape, RootOrder, Reached(id)}`. C# uses dictionaries. The restore planner (collab-room) adapts to this.
 - `editops.EditError` now has `Err` and `Unwrap`. The edit cap's 413 is `IsTooLarge(edit.Err)`, the same signal C# reads from `InnerException`.
 - TDD note: in round 2 the X12 replay and X3 structure Go tests were written before the code. I did not run them to watch them fail. They could not compile without the code, but I never saw that failure. The capture-based tests (X4, X6) were seen failing first, and each was then mutation-checked.

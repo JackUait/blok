@@ -481,7 +481,11 @@ public sealed class YDocConverterEditCaptureTests
 
     // Numbers: the live value against the request's number text.
     yield return new("numbers-equal-by-value-write-nothing", [Callout],
-        Edit("""{"op":"update","id":"cb","data":{"settings":{"icon":"star","colour":"blue"},"count":1.0,"ratio":0.10000000000000001,"big":9007199254740993}}"""));
+        Edit("""{"op":"update","id":"cb","data":{"settings":{"icon":"star","colour":"blue"},"count":1.0,"ratio":0.10000000000000001,"big":9007199254740992.0}}"""));
+    // 2^53 is still a long on the live side, so the text is compared by exact
+    // decimal value: ...993 is a different number even though it is the same double.
+    yield return new("numbers-at-2-pow-53-compare-by-decimal-value", [Callout],
+        Edit("""{"op":"update","id":"cb","data":{"settings":{"icon":"star","colour":"blue"},"count":1,"ratio":0.1,"big":9007199254740993}}"""));
     yield return new("numbers-that-differ-in-decimal-are-written", [Callout],
         Edit("""{"op":"update","id":"cb","data":{"settings":{"icon":"star","colour":"blue"},"count":1.0000000000000000001,"ratio":1e2,"big":1e400}}"""));
     yield return new("numbers-in-exponent-form", [Callout],

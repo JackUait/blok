@@ -1291,7 +1291,44 @@
         }
       ],
       "seedUpdate": "AQ0BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhAScAAQMIc2V0dGluZ3MBKAABBARpY29uAXcEc3RhcigAAQQGY29sb3VyAXcEYmx1ZSgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNiAA==",
-      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022,\u0022colour\u0022:\u0022blue\u0022},\u0022count\u0022:1.0,\u0022ratio\u0022:0.10000000000000001,\u0022big\u0022:9007199254740993}}]}",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022,\u0022colour\u0022:\u0022blue\u0022},\u0022count\u0022:1.0,\u0022ratio\u0022:0.10000000000000001,\u0022big\u0022:9007199254740992.0}}]}",
+      "updates": [],
+      "export": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "numbers-at-2-pow-53-compare-by-decimal-value",
+      "seed": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhAScAAQMIc2V0dGluZ3MBKAABBARpY29uAXcEc3RhcigAAQQGY29sb3VyAXcEYmx1ZSgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNiAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022,\u0022colour\u0022:\u0022blue\u0022},\u0022count\u0022:1,\u0022ratio\u0022:0.1,\u0022big\u0022:9007199254740993}}]}",
       "updates": [
         "AQECAKgBCQF8WgAAAAEBAQkB"
       ],

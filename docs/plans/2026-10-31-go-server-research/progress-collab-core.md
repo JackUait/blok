@@ -1,4 +1,4 @@
-# Progress: collab-core lane (round 2, 2026-11-02)
+# Progress: collab-core lane (round 3, 2026-11-02)
 
 Branch `go/collab-core`, worktree `/Users/jackuait/Packages/.blok-go/collab-core`. Read this first next round.
 
@@ -45,28 +45,45 @@ fixture is stale), or a Go twin of a C# test.
 | X4 apply ops | DONE | `fixtures/collab-edits/cases.json` (C# `YDocConverterEditCaptureTests`, 102 cases, counted with `len(cases)`): seed bytes as client 1, ops as client 2; Go `apply_test.go` emits the SAME update bytes, export and page, or the same refusal with nothing written. Covers insert/update/remove, every agent op, odd peer shapes (number slot in the order, duplicate order entries, junk entry, block without contentIds, legacy Y.Text, data that is not a map, foreign XmlText), grids (rowId and minted keys), identity lists, list slots, ordered ids, element pairing, numbers. Mutation-checked (12 mutants; 2 judged equivalent, see Decisions). Go twins: `TestRemovalVisitsOnlyTheSubtree` (Visited), `TestAStepThatFailsMidWriteIsAServerError` |
 | T15 number equality | DONE | probed .NET 10 `JsonNode.DeepEquals`: a live integer within 2^53 (NumberNode long) compares to the request text by exact decimal value; any other live number by GetDouble. Go `numberEqual`/`decimalIsInteger`; fixture cases `numbers-*`, `arrays-numbers-pair-by-value` |
 | E9 HTML field cap | DONE | Go twins of `AnEditHtmlFieldPastTheCapIsRefusedAsTooLargeBeforeAnyRead`, `AnEditThatOnlyRespellsTheHtmlWritesNothing`, `AnEditReadsHtmlForTheBlocksTypeInTheDoc`, the edit half of `SeedAndMigrationReadWithTheOneTimeBudget`, plus UTF-16 counting and the read-failure mapping (retry / refusal / cancel) |
+| P8r local op store layout | DONE | `fixtures/collab-journal/scenarios.json` (C# `CollabJournalStoreCaptureTests`, 56 scenarios with a fixed clock): every step's answer, the log, and EVERY file left on disk byte for byte (lock, manifest, ledger, `journal.<gen>.<fence>`, `baseline.<gen>.<fence>`, `checkpoint.<gen>.<through>.<fence>`, `purged`, the working-set file); Go `store_scenario_test.go` replays the steps and must leave the same files, no more and no fewer; mutation-checked |
+| P11r fence and lock | DONE | Probed .NET 10 on macOS: FileShare.None is `flock(LOCK_EX\|LOCK_NB)`, every other share is `flock(LOCK_SH\|LOCK_NB)`, also for write-only opens. Go `openFile` does the same (`lock_flock.go`; Windows uses share modes, `lock_windows.go`, vet-checked only). Fence scenarios in the fixture (lock deleted, second open, purge marker alone, purge of a stale session). Go twins: python3 flock holder (the C# test's own primitive) refuses Go and is reclaimed when killed; a Go hold refuses another process's flock; stale descriptor; -race. Linux: inferred from C#'s python-holder test passing on Linux CI, not probed here |
+| P12r import of a working set | DONE | fixture: import with 0 and 3 frames, crash before publication (retry writes `baseline.1.2`), never read again after publication (even when rotted), 3 damaged files fail closed with C#'s message and nothing written, an abandoned import of another lineage that shares the live generation |
+| P13r purge and history reads | DONE | fixture: purge of every payload and of a never-opened doc, purge refused while live, a failed purge keeps its marker, list/baseline/headers/records/delete outcomes (Deleted, NotFound, Current, Purged), reused lineage, ledger backfill, orphan generation, torn and bad ledger entries, torn journal tail left alone, missing journal or baseline while listed. Records are `iter.Seq2[operation.Record, error]`, which `BuildReplay` takes |
+| P14r MaxUpdateBytes | DONE | fixture `the-update-limit` (limit 4: 4 bytes ok, 5 refused with C#'s message, 0 refused by the codec); Go `DefaultMaxUpdateBytes` 1 MiB and the constructor refusal (twin of `RefusesAWireLimitTheRecordFormatCannotCarry`) |
 | X5 / P5 / T7 key lists | DONE | `fixtures/converter-keys.json`; client tests, C# `ConverterKeysFixtureTests`, Go `keys_test.go` |
 
 ## Section 3 constants and section 6 traps
 
 - Section 3 DONE: MaxEditHtmlChars/MaxCallChars (32768 units, reader tests), MigrationReadTimeout 60 s, MaxValueDepth/JsonMaxDepth 256/512, TextDiff 64/3/32, journal 32 MiB / 4 KiB, doc endpoint 64 MiB / 512 B / 10 s connect / 30 s request (option). Pool lifetime 5 min: documented gap.
-- Section 3 OPEN: local op store DefaultMaxUpdateBytes 1 MiB (P14r).
+- Section 3: local op store DefaultMaxUpdateBytes 1 MiB (P14r) DONE.
 - Section 6 DONE: T2, T3, T5 (runtime reader), T6, T7, T16.
-- Section 6 OPEN: T1 and T21 (wait on the op store, P8r).
+- Section 6 T1: the layout half is DONE (the byte fixture pins every name, offset and file). The black-box half (`protocol-v2-contract.test.ts` against a running Go server) is DEFERRED to collab-room: it needs the room and the collab routes.
+- Section 6 T21: DEFERRED to collab-room with a hand-off. The store side is DONE (an unreadable working set fails the open and is left in place). The ordering (open the journal before `workingset.LocalStore.Read`, which moves an unreadable file aside) is the room's job; it is written on `journal.Store`'s doc comment.
 
-## Partial rows (counted as remaining)
+## Partial rows (the rest is deferred to collab-room)
 
 - E2: the parse half (key -> op id) is DONE; the header handling belongs to the edit endpoint (collab-room).
 
-## Remaining (next round)
+## Remaining
 
-Only the local operation store is left (rows P8r, P11r, P12r, P13r, P14r and traps T1, T21). It is `LocalCollabOperationStore.cs`, 2211 lines. It was not started this round, so that it could land whole with its oracles:
+Nothing in this lane's scope. Deferred, with reasons:
 
-1. A C# capture that writes a journal directory with a fixed clock and fixed ids: the manifest, the ledger, journal files, the baseline and a checkpoint. Go must write the same bytes. Then the reverse: Go writes a dir and C# reads it, run in both test suites.
-2. Hand-ported xunit twins under `-race` for the lock, the fence re-read and the purge marker.
-3. `MaxUpdateBytes` 1 MiB (P14r), the import order against the working set (P12r, T21), and the history reads (P13r).
+- T1 black-box (PV) and T21 ordering: collab-room (see section 6 above).
+- E2 header half: the edit endpoint (collab-room).
+- RollBack after a failed write or fsync: no C# test exists, and staging a failed fsync needs a seam neither store has. Ported line by line; not proven by a test.
+- Live mutant: dropping the ledger gate in `DeleteLineage` survives the concurrent test (as it would in C#): O_APPEND writes of one 61-byte entry do not tear in practice.
 
-E2 (header half) belongs to collab-room. So do the room's use of `DocConverter.ApplyOps` (the 413 mapping through `IsTooLarge(EditError.Err)`) and `ReplayError` (history endpoints).
+## Decisions (round 3)
+
+- The journal oracle is a scenario script, not a set of golden files. C# runs each scenario against its real store with an internal `TimeProvider` (new constructor parameter, defaults to the system clock; no published surface) and writes down each answer, the log and the files. Steps that need C# code to make bytes (corrupt a record, a foreign-version manifest, a damaged working set) are written into the fixture as plain `write` steps, so Go needs no copy of that code.
+- Cross-reading: Go replays every scenario and must leave the same bytes, so C# reads Go's directories exactly as it reads its own. Go also opens every directory C# left (the `files` of each scenario) and must see C#'s fresh-store `reopen` result.
+- Errors are compared by kind and C#'s message. IOException and UnauthorizedAccessException are one kind ("IO", no message): which of the two the OS gives differs between macOS and Linux. Log lines that quote the OS's words for a held lock are cut after "held elsewhere:".
+- The fixture holds only what is the same on macOS and Linux (no symlink loops, no chmod, no case-insensitive names); those are Go twins.
+- `globFiles` is .NET's `Directory.GetFiles(dir, "stem.*")`: files only, and a bare `stem` also matches (pinned by `a-bare-journal-file-without-a-manifest` and `the-sweep-matches-like-dotnet-globs`).
+- `removeFile` is `File.Delete`: a missing file is fine and a directory is an error (Go's `os.Remove` would remove an empty directory).
+- Go's zero `MaxUpdateBytes` means the 1 MiB default; C# refuses 0. Negative and above 32 MiB are refused like C#.
+- Codec refusals are now `*ArgumentError` with C#'s words (they gained the final period C# has).
+- Test-cache trap: `go test` reused a result while mutating `store.go`; run mutants with `-count=1`.
 
 ## Decisions (round 2)
 

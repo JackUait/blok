@@ -78,7 +78,7 @@ fixture is stale), or a Go twin of a C# test.
 | Minor: chunked doc endpoint answer one byte over the cap | FIXED (`467863a9`) | `TestLoadRefusesAResponseOneByteOverTheCap` kills `> limit+1` |
 | Minor: X10 input order | FIXED (`6f335d1e`) | see X10 |
 | Minor: P14r zero | NO CHANGE | both hosts refuse 0 at startup (see P14r) |
-| Minor: 3584ac89 not labelled BREAKING | LABELLED with an empty commit `9cac1a0c` (`fix(server)!: BREAKING ...` with a `BREAKING CHANGE:` line). `/edit` shipped in v1.16.1 (`5ebc6e78` is an ancestor of the tag). History not rewritten. The user should be told: 500 -> 422 for text that is not Unicode; a client that retried on 500 must treat it as final |
+| Minor: 3584ac89 not labelled BREAKING | LABELLED with an empty commit `9cac1a0c` (`fix(server)!: BREAKING ...` with a `BREAKING CHANGE:` line). `/edit` shipped in v1.16.1 (`5ebc6e78` is an ancestor of the tag). History not rewritten. The user should be told: 500 -> 422 for text that is not Unicode; a client that retried on 500 must treat it as final. LANDING: `git cherry-pick` stops on an empty commit, so cherry-pick `9cac1a0c` with `--allow-empty`, or instead reword `3584ac89` to `fix(server)!:` with that `BREAKING CHANGE:` body |
 | Minor: protocol-v2 suite fails 14/14 on Go | DEFERRED (T1 black-box half, collab-room). No conformance suite in this lane runs against a Go server yet: the lane has no routes |
 
 Measured after the TextDiff fix, `Diff(a, a+"x")` and a mid-run insert, a = U+0915 U+094D x n:
@@ -118,6 +118,20 @@ Not ported, with reasons: the C# `flushToDisk: true` overload rules (Go's `File.
 | YDocConverterViewSettingsTests (3) | seed `database-view-lists` (state bytes pin the YArrays and the keyed lists) |
 | CollabLongestKeptOrderTests (2) | Go twin over the shared `test/fixtures/version-history/lis-cases.json`; `convert.LongestKeptOrder` ported (`ebe6f92d`) for the restore planner (collab-room). The `<` vs `<=` mutant is equivalent: positions are distinct indexes |
 
+The other section-5 classes in this lane's scope. These rows map a class to its oracle; unlike the seven above, they were NOT checked test by test this round (next round: map each test or port it).
+
+| C# class | Oracle (class level) |
+| --- | --- |
+| YDocConverterEditTests (27) | `collab-edits` capture (C# `YDocConverterEditCaptureTests`) + Go twins in `apply_test.go` (`TestRemovalVisitsOnlyTheSubtree`, `TestAStepThatFailsMidWriteIsAServerError`) |
+| YDocConverterConformanceTests (7), YDocConverterTableRowIdsTests (2), YDocConverterCellBlockIdsTests (2) | `fixtures/collab` (incl. `table-row-ids`, `cell-block-ids`), Go `seed_test.go`, `export_test.go`, `shape_test.go` |
+| YDocConverterMigrationTests (12) | `collab-migrations` capture, Go `migrate_test.go` |
+| YDocConverterRichTextTests (23), RichTextMalformedTests (3), RichTextCanonicalTests (3), RichTextEditFixtureTests (2) | `rich-text-canonical`, `rich-text-edits`, the `rich-*` migration cases, Go `richtext_test.go` |
+| TextDiffTests (21), YDocConverterTextDiffTests (11), TextDiffGraphemeTests (2+theory) | `text-diff/cases.json` + `grapheme-break.json`, the `update-diffs-*` edit cases, Go `textdiff_test.go` |
+| CollabEditOpsTests (9) | `canonical-edit-digest.json` `parse`/`agent`, Go `editops_test.go` |
+| CollabJournalCodecTests (8), CollabWorkingSetCodecTests (19), CollabDocKeyTests (4) | `collab-disk/codecs.json` (rows P1r, P2r, P6r), Go `codec_test.go`, `workingset_test.go` |
+| YDocConverterDatabaseRowTitleTests (7), YDocConverterDatabaseRelationTests (7), YDocConverterDatabaseStructureTests (4) | `fixtures/collab` `database-rows`, the `database-*` edit cases, `collab-structure` capture. UNVERIFIED that every test is covered |
+| LocalCollabOperationStoreTests (32), LocalCollabOperationHistoryTests (23) | `collab-journal/scenarios.json` + Go twins in `journal/store_test.go` (rows P8r-P14r) |
+
 Concurrency rests on two facts: Go emits C#'s update bytes, and the engines merge alike (yjs lane). The `mergedExport` checks are the direct proof for the 15 peer cases.
 
 ## Remaining
@@ -128,6 +142,7 @@ Nothing in this lane's scope. Deferred, with reasons:
 - E2 header half: the edit endpoint (collab-room).
 - Live mutant: dropping the ledger gate in `DeleteLineage` survives the concurrent test (as it would in C#): O_APPEND writes of one 61-byte entry do not tear in practice.
 - No conformance suite of this lane passes against a Go server: the lane has no routes (T1, collab-room).
+- Hand-off to collab-room: `convert.NewRichTextFields` now takes `[]RichTextFieldEntry` in config order (was a map). It never shipped, so not BREAKING.
 
 ## Decisions (round 3)
 

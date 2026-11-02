@@ -57,12 +57,32 @@ func (s *memoryStore) Delete(ctx context.Context, doc string) error { return s.R
 
 // memoryEndpoint answers null and records each save.
 type memoryEndpoint struct {
-	mu    sync.Mutex
-	saves []string
+	mu      sync.Mutex
+	saves   []string
+	loads   int
+	failure error
 }
 
 func (e *memoryEndpoint) Load(context.Context, string) (*docendpoint.Loaded, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.loads++
+	if e.failure != nil {
+		return nil, e.failure
+	}
 	return &docendpoint.Loaded{}, nil
+}
+
+func (e *memoryEndpoint) fail(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.failure = err
+}
+
+func (e *memoryEndpoint) loaded() int {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.loads
 }
 
 func (e *memoryEndpoint) Save(_ context.Context, doc string, _ any, _ *string, _ *docendpoint.Projection) (*string, error) {

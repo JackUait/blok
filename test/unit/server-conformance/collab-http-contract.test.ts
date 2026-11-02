@@ -1,7 +1,8 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -86,9 +87,9 @@ interface Host {
   directory: string;
 }
 
-async function startHost(journal: boolean): Promise<Host> {
-  const directory = await mkdtemp(join(tmpdir(), 'blok-collab-http-'));
-  const endpoint = await startDocEndpoint();
+async function startHost(journal: boolean, shared?: Host): Promise<Host> {
+  const directory = shared?.directory ?? await mkdtemp(join(tmpdir(), 'blok-collab-http-'));
+  const endpoint = shared?.endpoint ?? await startDocEndpoint();
   const server = await startServer({
     args: [
       '--listen', '127.0.0.1:0',
@@ -438,4 +439,205 @@ suite('collab HTTP routes on a journal', () => {
       expect([again.status, again.body]).toEqual([404, 'no such version\n']);
     });
   });
+});
+
+/** One journal record's header is 38 bytes: int32 body length, version, source, SHA-256. */
+const RECORD_HEADER_BYTES = 38;
+
+async function journalFile(directory: string, docId: string): Promise<string> {
+  const journal = join(directory, `${createHash('sha256').update(docId, 'utf8').digest('hex')}.journal`);
+  const names = (await readdir(journal)).filter((name) => name.startsWith('journal.'));
+
+  if (names.length !== 1) {
+    throw new Error(`${journal} holds ${names.length} journal files`);
+  }
+
+  return join(journal, names[0]);
+}
+
+function recordOffsets(journal: Buffer): number[] {
+  const offsets: number[] = [];
+
+  for (let at = 0; at < journal.length; at += RECORD_HEADER_BYTES + journal.readInt32LE(at)) {
+    offsets.push(at);
+  }
+
+  return offsets;
+}
+
+suite('collab HTTP routes on a shared or damaged journal', () => {
+  it('answers 503 on the edit, state and reset doors while another server holds the document, and still lists its history', async () => {
+    const holder = await startHost(true);
+    let other: Host | undefined;
+
+    try {
+      const edit = await send(holder.server.baseUrl, 'POST', '/sync/doc-held/edit', [[KEY, 'k1']], insertBody('b1', 'one'));
+
+      expect(edit.status).toBe(204);
+      other = await startHost(true, holder);
+
+      const base = other.server.baseUrl;
+      const unavailable = [503, 'the document is unavailable, retry\n'];
+
+      const state = await send(base, 'GET', '/sync/doc-held/state');
+
+      expect([state.status, state.body]).toEqual(unavailable);
+
+      const refusedEdit = await send(base, 'POST', '/sync/doc-held/edit', [[KEY, 'k2']], insertBody('b2', 'two'));
+
+      expect([refusedEdit.status, refusedEdit.body]).toEqual(unavailable);
+
+      const reset = await send(base, 'POST', '/sync/doc-held/reset');
+
+      expect([reset.status, reset.body]).toEqual(unavailable);
+
+      // History reads take no lock.
+      const history = await send(base, 'GET', '/sync/doc-held/history');
+      const versions = (JSON.parse(history.body) as { versions: { sequence: number }[] }).versions;
+
+      expect([history.status, versions.map((version) => version.sequence)]).toEqual([200, [1, 0]]);
+    } finally {
+      await other?.server.stop();
+      await stopHost(holder);
+    }
+  }, 60_000);
+
+  it('answers 500 on history and refuses state when a middle record is corrupt', async () => {
+    const first = await startHost(true);
+    let restarted: Host | undefined;
+
+    try {
+      for (const [key, body] of [['k1', insertBody('b1', 'one')], ['k2', insertBody('b2', 'two')], ['k3', updateBody('b1', 'three')]]) {
+        expect((await send(first.server.baseUrl, 'POST', '/sync/doc-corrupt/edit', [[KEY, key]], body)).status).toBe(204);
+      }
+
+      const lineage = String((await send(first.server.baseUrl, 'GET', '/sync/doc-corrupt/state')).headers['blok-doc-lineage']);
+
+      await first.server.kill();
+
+      const journal = await journalFile(first.directory, 'doc-corrupt');
+      const bytes = await readFile(journal);
+      const offsets = recordOffsets(bytes);
+
+      expect(offsets).toHaveLength(3);
+      bytes[offsets[1] + RECORD_HEADER_BYTES + 4] ^= 0xff;
+      await writeFile(journal, bytes);
+
+      restarted = await startHost(true, first);
+
+      const base = restarted.server.baseUrl;
+      const corrupt = [500, 'a stored version could not be read\n'];
+      const list = await send(base, 'GET', '/sync/doc-corrupt/history');
+
+      expect([list.status, list.body]).toEqual(corrupt);
+
+      const point = await send(base, 'GET', `/sync/doc-corrupt/history/${lineage}/3`);
+
+      expect([point.status, point.body]).toEqual(corrupt);
+
+      const changes = await send(base, 'GET', `/sync/doc-corrupt/history/${lineage}/3/changes`);
+
+      expect([changes.status, changes.body]).toEqual(corrupt);
+
+      const state = await send(base, 'GET', '/sync/doc-corrupt/state');
+
+      expect([state.status, state.body]).toEqual([503, 'the document could not be loaded\n']);
+    } finally {
+      await restarted?.server.stop();
+      await stopHost(first);
+    }
+  }, 60_000);
+});
+
+suite('collab history past its limits', () => {
+  let host: Host | undefined;
+  let base = '';
+
+  beforeAll(async () => {
+    host = await startHost(true);
+    base = host.server.baseUrl;
+  }, 60_000);
+
+  afterAll(async () => {
+    await stopHost(host);
+  });
+
+  it('keeps the newest 200 records of a longer window and says it truncated', async () => {
+    let lineage = '';
+
+    expect((await send(base, 'POST', '/sync/doc-many/edit', [[KEY, 'k0']], insertBody('b1', 'v0'))).status).toBe(204);
+
+    for (let edit = 1; edit <= 201; edit++) {
+      const answer = await send(base, 'POST', '/sync/doc-many/edit', [[KEY, `k${edit}`]], updateBody('b1', `v${edit}`));
+
+      expect(answer.status).toBe(204);
+      lineage = String(answer.headers['blok-doc-lineage']);
+    }
+
+    const answer = await send(base, 'GET', `/sync/doc-many/history/${lineage}/202/changes`);
+    const body = JSON.parse(answer.body) as { changes: { sequence: number }[]; truncated?: boolean };
+    const sequences = body.changes.map((change) => change.sequence);
+
+    expect([answer.status, body.truncated, sequences.length, sequences[0], sequences.at(-1)])
+      .toEqual([200, true, 200, 3, 202]);
+    expect(Object.keys(body)).toEqual(['changes', 'truncated']);
+  }, 120_000);
+
+  it('keeps the newest records that fit 4 MiB, and always at least one', async () => {
+    const big = (edit: number): string => `${String(edit).padStart(4, '0')}${'x'.repeat(30_000)}`;
+    let lineage = '';
+
+    expect((await send(base, 'POST', '/sync/doc-wide/edit', [[KEY, 'k0']], insertBody('b1', big(0)))).status).toBe(204);
+
+    for (let edit = 1; edit <= 80; edit++) {
+      const answer = await send(base, 'POST', '/sync/doc-wide/edit', [[KEY, `k${edit}`]], updateBody('b1', big(edit)));
+
+      expect(answer.status).toBe(204);
+      lineage = String(answer.headers['blok-doc-lineage']);
+    }
+
+    const answer = await send(base, 'GET', `/sync/doc-wide/history/${lineage}/81/changes`);
+    const body = JSON.parse(answer.body) as { changes: { sequence: number }[]; truncated?: boolean };
+    const sequences = body.changes.map((change) => change.sequence);
+
+    expect([answer.status, body.truncated, sequences.at(-1)]).toEqual([200, true, 81]);
+    expect(Buffer.byteLength(answer.body)).toBeLessThanOrEqual(4 << 20);
+    expect(sequences).toEqual(Array.from({ length: 69 }, (_, index) => 13 + index));
+
+    const one = await send(base, 'GET', `/sync/doc-wide/history/${lineage}/81/changes?since=80`);
+
+    expect((JSON.parse(one.body) as { changes: { sequence: number }[] }).changes.map((change) => change.sequence))
+      .toEqual([81]);
+  }, 120_000);
+
+  it('refuses to restore a point whose update would pass the message cap', async () => {
+    const text = (block: number): string => `${String(block).padStart(4, '0')}${'y'.repeat(20_000)}`;
+    const ids: string[] = [];
+    let lineage = '';
+    let sequence = '';
+
+    for (let batch = 0; batch < 3; batch++) {
+      const ops = Array.from({ length: 20 }, (_, index) => {
+        const id = `b${batch * 20 + index}`;
+
+        ids.push(id);
+
+        return { op: 'insert', id, block: { type: 'paragraph', data: { text: text(batch * 20 + index) } } };
+      });
+      const answer = await send(base, 'POST', '/sync/doc-huge/edit', [[KEY, `k${batch}`]], JSON.stringify({ ops }));
+
+      expect(answer.status).toBe(204);
+      lineage = String(answer.headers['blok-doc-lineage']);
+      sequence = String(answer.headers['blok-doc-sequence']);
+    }
+
+    const removeAll = await send(base, 'POST', '/sync/doc-huge/edit', [[KEY, 'gone']],
+      JSON.stringify({ ops: ids.map((id) => ({ op: 'remove', id })) }));
+
+    expect(removeAll.status).toBe(204);
+
+    const restore = await send(base, 'POST', `/sync/doc-huge/history/${lineage}/${sequence}/restore`, [[KEY, 'r1']]);
+
+    expect([restore.status, restore.body]).toEqual([413, 'collab: the restore is larger than one update may be.\n']);
+  }, 120_000);
 });

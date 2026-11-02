@@ -3,7 +3,10 @@ package blokserver
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -150,5 +153,47 @@ func TestDrainWaitsForOpenSyncConnectionsUpToItsContext(t *testing.T) {
 	started := time.Now()
 	if err := s.Drain(ctx); err != nil || time.Since(started) > time.Second {
 		t.Fatalf("a drain cut off by its context: %v after %s", err, time.Since(started))
+	}
+}
+
+// S3, S4, E7, Y11: a purged id answers 403 forbidden on every collab door
+// for the life of the process (CollabRoomManager.cs:201, purge lanes are
+// never removed).
+func TestAPurgedDocumentAnswersForbiddenOnEveryDoor(t *testing.T) {
+	o := collabOptions(t)
+	o.Auth = "none"
+	o.StorageDirectory = ""
+	o.CollabJournal = true
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PurgeDocument(context.Background(), "doc", func(context.Context) (bool, error) { return true, nil }); err != nil {
+		t.Fatal(err)
+	}
+	host := httptest.NewServer(s.Handler(""))
+	defer host.Close()
+	for _, c := range []struct{ method, path string }{
+		{"GET", "/sync/doc/state"},
+		{"POST", "/sync/doc/reset"},
+		{"POST", "/sync/doc/edit"},
+		{"GET", "/sync/doc/history"},
+		{"GET", "/sync/doc/history/0123456789abcdef0123456789abcdef/0"},
+		{"GET", "/sync/doc/history/0123456789abcdef0123456789abcdef/0/changes"},
+		{"DELETE", "/sync/doc/history/0123456789abcdef0123456789abcdef"},
+		{"POST", "/sync/doc/history/0123456789abcdef0123456789abcdef/0/restore"},
+	} {
+		request, _ := http.NewRequest(c.method, host.URL+c.path,
+			strings.NewReader(`{"ops":[{"op":"remove","id":"a"}]}`))
+		request.Header.Set("Blok-Idempotency-Key", "k1")
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(response.Body)
+		response.Body.Close()
+		if response.StatusCode != http.StatusForbidden || string(body) != "forbidden\n" {
+			t.Errorf("%s %s: %d %q", c.method, c.path, response.StatusCode, body)
+		}
 	}
 }

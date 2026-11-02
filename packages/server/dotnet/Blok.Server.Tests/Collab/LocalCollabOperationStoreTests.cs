@@ -1528,7 +1528,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   /// Frames of distinct lengths and contents, so a reordering, a dropped frame
   /// and a merge into one full-state frame are all separately visible.
   /// </summary>
-  private static List<byte[]> LegacyFrames(int count)
+  internal static List<byte[]> LegacyFrames(int count)
   {
     return [.. Enumerable
         .Range(1, count)
@@ -1541,7 +1541,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
         manifest.AsSpan((slot * ManifestSlotSize) + WriteCounterOffset));
   }
 
-  private static byte[] Damage(byte[] document, string mode)
+  internal static byte[] Damage(byte[] document, string mode)
   {
     var damaged = document.ToArray();
 
@@ -1608,7 +1608,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     }
   }
 
-  private static List<(int Offset, int Length)> RecordOffsets(byte[] journal)
+  internal static List<(int Offset, int Length)> RecordOffsets(byte[] journal)
   {
     var offsets = new List<(int, int)>();
     var offset = 0;
@@ -1635,7 +1635,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   /// checksum, so the mutation reaches the branch under test rather than
   /// stopping at the checksum in front of it.
   /// </summary>
-  private static void Corrupt(byte[] journal, int offset, int length, string mode)
+  internal static void Corrupt(byte[] journal, int offset, int length, string mode)
   {
     var record = journal.AsSpan(offset, length);
     var body = record[HeaderSize..];

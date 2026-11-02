@@ -137,6 +137,7 @@ internal sealed class LocalCollabOperationStore :
   private readonly string directory;
   private readonly long maxUpdateBytes;
   private readonly Action<string>? log;
+  private readonly TimeProvider time;
 
   // One ledger writer per document, in this process only. Two processes on one
   // directory are not supported: the lock file refuses the second for writes,
@@ -147,7 +148,8 @@ internal sealed class LocalCollabOperationStore :
   internal LocalCollabOperationStore(
       string directory,
       long maxUpdateBytes = DefaultMaxUpdateBytes,
-      Action<string>? log = null)
+      Action<string>? log = null,
+      TimeProvider? time = null)
   {
     ArgumentException.ThrowIfNullOrEmpty(directory);
     ArgumentOutOfRangeException.ThrowIfLessThan(maxUpdateBytes, 1);
@@ -162,6 +164,7 @@ internal sealed class LocalCollabOperationStore :
     this.directory = directory;
     this.maxUpdateBytes = maxUpdateBytes;
     this.log = log;
+    this.time = time ?? TimeProvider.System;
   }
 
   internal long MaxUpdateBytes => maxUpdateBytes;
@@ -1837,7 +1840,7 @@ internal sealed class LocalCollabOperationStore :
       var bytes = CollabJournalCodec.EncodeRecord(new CollabOperationRecord(
           candidate.OperationId,
           sequence,
-          DateTimeOffset.UtcNow,
+          store.time.GetUtcNow(),
           candidate.ActorId,
           candidate.Source,
           candidate.Update,
@@ -2071,7 +2074,7 @@ internal sealed class LocalCollabOperationStore :
       // Only after the publication returned: a delete that finds this entry
       // must also read a manifest naming it as current, or it would remove
       // the live generation.
-      store.RecordLineage(docDirectory, documentId, manifest, DateTimeOffset.UtcNow);
+      store.RecordLineage(docDirectory, documentId, manifest, store.time.GetUtcNow());
 
       return ValueTask.FromResult(
           new CollabDocumentHead(reset.Format, reset.Epoch, reset.Lineage, DurableThrough: 0));

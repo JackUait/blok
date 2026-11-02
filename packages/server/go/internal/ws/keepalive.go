@@ -41,7 +41,14 @@ func (c *Conn) startKeepAlive(delay, timeout time.Duration) {
 
 func (c *Conn) heartbeat() {
 	if c.keepAlive == nil {
-		c.sendKeepAliveFrame(opPong, nil)
+		// .NET queues one pong per tick behind a stuck send; one waiting
+		// pong is enough here, so no goroutine piles up.
+		if c.keepAliveSending.CompareAndSwap(false, true) {
+			go func() {
+				defer c.keepAliveSending.Store(false)
+				c.sendKeepAliveFrame(opPong, nil)
+			}()
+		}
 		return
 	}
 	c.stateMu.Lock()
@@ -68,8 +75,11 @@ func (c *Conn) heartbeat() {
 	}
 	payload := k.payload
 	c.stateMu.Unlock()
+	// Off the heartbeat: a send stuck on a peer that stops reading holds
+	// sendMu, and the timeout check above must keep running to abort it.
+	// pingSent allows one ping in flight.
 	if send {
-		c.sendKeepAliveFrame(opPing, binary.BigEndian.AppendUint64(nil, uint64(payload)))
+		go c.sendKeepAliveFrame(opPing, binary.BigEndian.AppendUint64(nil, uint64(payload)))
 	}
 }
 

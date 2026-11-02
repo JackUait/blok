@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -397,5 +398,55 @@ func TestEmptyFramesPushTheNextPingBack(t *testing.T) {
 	case <-pings:
 		t.Fatal("pinged a peer that kept sending")
 	default:
+	}
+}
+
+// A peer that stops reading but keeps the connection open must not pin the
+// socket: the keep-alive still times out and aborts it, which also ends the
+// stuck send (ManagedWebSocket fires the ping outside the send lock).
+func TestAStuckSendStillTimesOutTheKeepAlive(t *testing.T) {
+	raw, client := net.Pipe()
+	defer client.Close()
+	before := runtime.NumGoroutine()
+	server := NewServerConn(raw, nil, Options{KeepAliveInterval: 20 * time.Millisecond, KeepAliveTimeout: 20 * time.Millisecond})
+	stop := time.AfterFunc(10*time.Second, server.Abort)
+	defer stop.Stop()
+	sent := make(chan error, 1)
+	go func() { sent <- server.SendBinary(make([]byte, 64*1024)) }()
+	select {
+	case <-server.Done():
+	case <-time.After(time.Second):
+		t.Fatal("socket still open 1s later")
+	}
+	select {
+	case err := <-sent:
+		if err == nil {
+			t.Fatal("the stuck send reported success")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the stuck send never returned")
+	}
+	settled := time.Now().Add(time.Second)
+	for runtime.NumGoroutine() > before && time.Now().Before(settled) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if n := runtime.NumGoroutine(); n > before {
+		t.Fatalf("%d goroutines left, %d before", n, before)
+	}
+}
+
+// With no timeout the heartbeat sends unsolicited pongs; a stuck send must
+// not pile up one waiting pong per tick.
+func TestAStuckSendDoesNotPileUpPongs(t *testing.T) {
+	raw, client := net.Pipe()
+	defer client.Close()
+	server := NewServerConn(raw, nil, Options{KeepAliveInterval: time.Millisecond})
+	defer server.Abort()
+	go func() { _ = server.SendBinary(make([]byte, 64*1024)) }()
+	time.Sleep(20 * time.Millisecond)
+	before := runtime.NumGoroutine()
+	time.Sleep(100 * time.Millisecond)
+	if n := runtime.NumGoroutine(); n > before+1 {
+		t.Fatalf("%d goroutines after 100 ticks, %d before", n, before)
 	}
 }

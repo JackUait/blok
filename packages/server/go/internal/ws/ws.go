@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 )
@@ -83,8 +84,10 @@ type Conn struct {
 	receivedClose bool
 	aborted       bool
 	keepAlive     *keepAlive
-	closeOnce     sync.Once
-	done          chan struct{}
+	// keepAliveSending is an unsolicited pong waiting on sendMu.
+	keepAliveSending atomic.Bool
+	closeOnce        sync.Once
+	done             chan struct{}
 
 	// Receive state, owned by the receiving goroutine.
 	last      frameHeader

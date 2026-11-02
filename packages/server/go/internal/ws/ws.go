@@ -178,8 +178,8 @@ func acceptKey(key string) (string, bool) {
 var ErrAcceptKey = errors.New("ws: the Sec-WebSocket-Key does not fit")
 
 // Upgrade hijacks the connection and writes the 101. The caller checked
-// IsWebSocketRequest. The conn's deadlines are cleared: a socket outlives
-// the request deadline, as DisableTimeout does in C#.
+// IsWebSocketRequest. Hijack clears the conn's deadlines (net/http's
+// hijackLocked), so the socket outlives the request deadline.
 func Upgrade(w http.ResponseWriter, r *http.Request, options Options) (*Conn, error) {
 	accept, ok := acceptKey(strings.Join(r.Header.Values("Sec-WebSocket-Key"), ","))
 	if !ok {
@@ -189,7 +189,6 @@ func Upgrade(w http.ResponseWriter, r *http.Request, options Options) (*Conn, er
 	if err != nil {
 		return nil, err
 	}
-	_ = raw.SetDeadline(time.Time{})
 	response := "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: " + accept + "\r\n"
 	if strings.TrimSpace(options.SubProtocol) != "" {
 		response += "Sec-WebSocket-Protocol: " + options.SubProtocol + "\r\n"

@@ -2,8 +2,10 @@ package blokserver
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -153,4 +155,79 @@ func (l *lazyRuntime) Invoke(ctx context.Context, op, input string, timeout time
 		return "", l.err
 	}
 	return l.pool.Invoke(ctx, op, input, timeout)
+}
+
+// ErrCollabDisabled: a collab call on a server built without CollabEnabled.
+var ErrCollabDisabled = errors.New("Collaboration is disabled.")
+
+// ErrNoAuthorize: PurgeDocument needs its authorize callback.
+var ErrNoAuthorize = errors.New("collab: document purge needs an authorize callback.")
+
+// PurgeOutcome is CollabDocumentPurgeOutcome.
+type PurgeOutcome int
+
+const (
+	// Purged: the document is gone, and its id is refused until the process
+	// restarts.
+	Purged PurgeOutcome = iota
+	// PurgeOpenElsewhere: another live process holds the journal.
+	PurgeOpenElsewhere
+)
+
+// RecheckAccess is ICollabRoomManager.RecheckAccessAsync: it rechecks every
+// member of a loaded document against the Authorization hook and closes the
+// ones that fail with 4403. It answers how many were closed.
+func (s *Server) RecheckAccess(ctx context.Context, doc string) (int, error) {
+	if s.collab == nil {
+		return 0, ErrCollabDisabled
+	}
+	manager, err := s.collab.get()
+	if err != nil {
+		return 0, err
+	}
+	return manager.RecheckAccess(ctx, doc)
+}
+
+// PurgeDocument is ICollabDocumentPurger.PurgeDocumentAsync: authorize
+// runs first; then open sockets close 4403 and the working set and journal
+// are deleted.
+func (s *Server) PurgeDocument(ctx context.Context, doc string, authorize func(context.Context) (bool, error)) (PurgeOutcome, error) {
+	if s.collab == nil {
+		return 0, ErrCollabDisabled
+	}
+	if authorize == nil {
+		return 0, ErrNoAuthorize
+	}
+	manager, err := s.collab.get()
+	if err != nil {
+		return 0, err
+	}
+	outcome, err := manager.Purge(ctx, doc, authorize)
+	if err != nil {
+		return 0, err
+	}
+	if outcome == journal.PurgeOpenElsewhere {
+		return PurgeOpenElsewhere, nil
+	}
+	return Purged, nil
+}
+
+// warnOpenSyncRoutes is the open-routes warning, under the host category:
+// the standalone host prints only the room category, so it never shows it.
+func (s *Server) warnOpenSyncRoutes(prefix string) {
+	logger := s.options.Logger
+	if logger == nil {
+		return
+	}
+	history := []string{
+		"GET " + prefix + "/sync/{doc}/history",
+		"GET " + prefix + "/sync/{doc}/history/{lineage}/{sequence}",
+		"DELETE " + prefix + "/sync/{doc}/history/{lineage}",
+		"POST " + prefix + "/sync/{doc}/history/{lineage}/{sequence}/restore",
+		"GET " + prefix + "/sync/{doc}/history/{lineage}/{sequence}/changes",
+	}
+	logger.Warn(`collab: no authorization hook is set and Auth is "none", so GET `+prefix+`/sync/{doc}, POST `+prefix+
+		`/sync/{doc}/reset, POST `+prefix+`/sync/{doc}/edit, GET `+prefix+`/sync/{doc}/state and `+strings.Join(history, ", ")+
+		` are open to anyone who can reach this app unless the host puts its own auth in front; set Options.Authorization or set Auth to "ticket"`,
+		slog.String("category", "Blok.Server.AspNetCore"))
 }

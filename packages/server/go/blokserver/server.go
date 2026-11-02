@@ -136,6 +136,9 @@ func (s *Server) Handler(prefix string) http.Handler {
 		s.shell(router, prefix+"/sync/{doc}/history/{lineage}", "DELETE", routes.HistoryDelete)
 		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}/restore", "POST", routes.HistoryRestore)
 		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}/changes", "GET", routes.HistoryChanges)
+		if o.Auth == "none" && o.Authorization == nil {
+			s.warnOpenSyncRoutes(prefix)
+		}
 	}
 	return router
 }

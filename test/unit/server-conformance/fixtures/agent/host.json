@@ -1724,6 +1724,75 @@
     ]
   },
   {
+    "name": "page action: the target runs with no options, not the source batch's",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain",
+      "customTools": "{\n  \"formatVersion\": 1,\n  \"blocks\": [ { \"name\": \"quiz\", \"n\": 2.50 } ]\n}",
+      "overrides": "{\"spacer\":{\"hidden\":true},\"column_list\":{\"hiddenActions\":[\"create\"],\"guidance\":\"Use the host layout é.\"}}",
+      "builtInComments": false
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"icon\":{\"type\":\"emoji\",\"value\":\"old\"},\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"Roadmap é\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[{\"code\":\"W1\",\"message\":\"source <warn>\"}]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"Roadmap é\"}}]},\"view\":{\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}}"
+      },
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"htgt\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[{\"code\":\"W2\",\"message\":\"target warn\"}]},\"document\":{\"id\":\"target\",\"title\":\"Roadmap é\",\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"customTools\":{\"formatVersion\":1,\"blocks\":[{\"name\":\"quiz\",\"n\":2.50}]},\"overrides\":{\"spacer\":{\"hidden\":true},\"column_list\":{\"hiddenActions\":[\"create\"],\"guidance\":\"Use the host layout \\u00E9.\"}},\"comments\":false,\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"Roadmap \\u00E9\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "resolve",
+        "pageId": "page-2",
+        "actor": {
+          "id": "agent-cs",
+          "name": "Server agent",
+          "onBehalfOf": null
+        }
+      },
+      {
+        "host": "load"
+      },
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"id\":\"target\",\"title\":\"Target title\",\"icon\":{\"type\":\"emoji\",\"value\":\"old\"},\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"Roadmap \\u00E9\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "save",
+        "document": "{\"id\":\"target\",\"title\":\"Roadmap \\u00E9\",\"blocks\":[]}"
+      }
+    ],
+    "results": [
+      {
+        "result": "{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{\"pageId\":\"page-2\",\"applied\":true}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[{\"code\":\"W1\",\"message\":\"source \\u003Cwarn\\u003E\"},{\"code\":\"W2\",\"message\":\"target warn\"}]}",
+        "document": null,
+        "revision": "hsrc"
+      }
+    ]
+  },
+  {
     "name": "page action: set icon runs doc.setIcon with the icon as planned",
     "call": "Execute",
     "actor": {

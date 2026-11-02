@@ -49,6 +49,8 @@ public sealed class CollabDiskCaptureTests
       ["workingSet"] = WorkingSet(),
       ["journal"] = Journal(),
       ["ledger"] = Ledger(),
+      ["manifest"] = ManifestCases(),
+      ["sealed"] = SealedCases(),
     };
   }
 
@@ -324,6 +326,179 @@ public sealed class CollabDiskCaptureTests
           ["warnings"] = new JsonArray(warnings.Select(warning => (JsonNode)warning.Replace(path, "{path}")).ToArray()),
         },
       };
+    }
+    finally
+    {
+      directory.Delete(recursive: true);
+    }
+  }
+
+  private static JsonObject ManifestCases()
+  {
+    var manifests = new[]
+    {
+      new LocalCollabOperationStore.Manifest(1, 2, 3, true, 2, 4, Lineage, 5, 6, 7),
+      new LocalCollabOperationStore.Manifest(2, 0, 0, false, 0, 0, "00000000000000000000000000000000", 0, 0, 0),
+      new LocalCollabOperationStore.Manifest(ulong.MaxValue, ulong.MaxValue, ulong.MaxValue, true, int.MinValue, long.MinValue, "ffffffffffffffffffffffffffffffff", ulong.MaxValue, ulong.MaxValue, ulong.MaxValue),
+    };
+    var encode = new JsonArray();
+
+    foreach (var manifest in manifests)
+    {
+      var slot = new byte[LocalCollabOperationStore.ManifestSlotSize];
+      LocalCollabOperationStore.EncodeSlot(manifest, slot);
+      var entry = Describe(manifest);
+      entry["hex"] = Hex(slot);
+      encode.Add(entry);
+    }
+
+    byte[] Slot(LocalCollabOperationStore.Manifest manifest)
+    {
+      var slot = new byte[LocalCollabOperationStore.ManifestSlotSize];
+      LocalCollabOperationStore.EncodeSlot(manifest, slot);
+
+      return slot;
+    }
+
+    var older = Slot(manifests[0]);
+    var newer = Slot(manifests[1]);
+    var corrupt = Patch(older, 20, [(byte)(older[20] ^ 1)]);
+    var foreign = Patch(older, 4, [3]);
+    var foreignHash = SHA256.HashData(foreign.AsSpan(0, 96));
+    foreignHash.CopyTo(foreign, 96);
+    var badMagic = Patch(older, 0, "BKJX"u8.ToArray());
+    var reads = new JsonArray();
+    var directory = Directory.CreateTempSubdirectory("blok-manifest-");
+
+    void Read(string name, byte[] file)
+    {
+      var path = Path.Combine(directory.FullName, "manifest");
+      File.WriteAllBytes(path, file);
+      var read = new JsonObject { ["name"] = name, ["hex"] = Hex(file) };
+
+      try
+      {
+        var manifest = LocalCollabOperationStore.ReadManifest(path, "doc-1");
+        read["manifest"] = manifest is { } found ? Describe(found) : null;
+      }
+      catch (InvalidDataException error)
+      {
+        read["error"] = error.Message;
+      }
+
+      reads.Add(read);
+    }
+
+    try
+    {
+      Read("empty", []);
+      Read("both slots, second newer", [.. older, .. newer]);
+      Read("both slots, first newer", [.. newer, .. older]);
+      Read("equal counters keep the first", [.. older, .. Slot(manifests[0] with { Fence = 9 })]);
+      Read("first slot corrupt", [.. corrupt, .. newer]);
+      Read("second slot corrupt", [.. older, .. corrupt]);
+      Read("bad magic", [.. badMagic, .. newer]);
+      Read("both corrupt", [.. corrupt, .. corrupt]);
+      Read("foreign version beside a good slot", [.. foreign, .. newer]);
+      Read("foreign version only", [.. foreign, .. corrupt]);
+      Read("one byte short", [.. older, .. newer[..^1]]);
+      Read("one slot", older);
+      Read("zeroes", new byte[LocalCollabOperationStore.ManifestSize]);
+    }
+    finally
+    {
+      directory.Delete(recursive: true);
+    }
+
+    return new JsonObject { ["encode"] = encode, ["read"] = reads };
+  }
+
+  private static JsonObject Describe(LocalCollabOperationStore.Manifest manifest)
+  {
+    static JsonNode U(ulong value) => value.ToString(CultureInfo.InvariantCulture);
+
+    return new JsonObject
+    {
+      ["writeCounter"] = U(manifest.WriteCounter),
+      ["fence"] = U(manifest.Fence),
+      ["generation"] = U(manifest.Generation),
+      ["seeded"] = manifest.Seeded,
+      ["format"] = manifest.Format,
+      ["epoch"] = manifest.Epoch.ToString(CultureInfo.InvariantCulture),
+      ["lineage"] = manifest.Lineage,
+      ["checkpointThrough"] = U(manifest.CheckpointThrough),
+      ["generationFence"] = U(manifest.GenerationFence),
+      ["checkpointFence"] = U(manifest.CheckpointFence),
+    };
+  }
+
+  private static JsonObject SealedCases()
+  {
+    var directory = Directory.CreateTempSubdirectory("blok-sealed-");
+
+    try
+    {
+      var encode = new JsonArray();
+
+      void Write(string fileName, byte[] magic, ulong tag, byte[] content)
+      {
+        var path = Path.Combine(directory.FullName, fileName);
+        LocalCollabOperationStore.WriteSealed(path, magic, tag, content);
+        encode.Add(new JsonObject
+        {
+          ["magic"] = Encoding.ASCII.GetString(magic),
+          ["tag"] = tag.ToString(CultureInfo.InvariantCulture),
+          ["content"] = Hex(content),
+          ["hex"] = Hex(File.ReadAllBytes(path)),
+        });
+      }
+
+      Write("baseline.1.0", "BKJB"u8.ToArray(), 0, [1, 0, 0, 0, 7]);
+      Write("checkpoint.1.5.2", "BKJC"u8.ToArray(), 5, [0, 0]);
+      Write("checkpoint.1.9.2", "BKJC"u8.ToArray(), ulong.MaxValue, []);
+
+      var good = File.ReadAllBytes(Path.Combine(directory.FullName, "checkpoint.1.5.2"));
+      var reads = new JsonArray();
+
+      void Read(string name, byte[]? file, string magic = "BKJC")
+      {
+        var fileName = "checkpoint.1.5.2";
+        var path = Path.Combine(directory.FullName, fileName);
+        File.Delete(path);
+
+        if (file is not null)
+        {
+          File.WriteAllBytes(path, file);
+        }
+
+        var read = new JsonObject { ["name"] = name, ["fileName"] = fileName, ["magic"] = magic, ["hex"] = file is null ? null : Hex(file) };
+
+        try
+        {
+          var content = LocalCollabOperationStore.ReadSealed(path, Encoding.ASCII.GetBytes(magic), "doc-1", out var tag);
+          read["tag"] = tag.ToString(CultureInfo.InvariantCulture);
+          read["content"] = Hex(content);
+        }
+        catch (InvalidDataException error)
+        {
+          read["error"] = error.Message;
+        }
+
+        reads.Add(read);
+      }
+
+      Read("good", good);
+      Read("missing", null);
+      Read("other magic", good, "BKJB");
+      Read("short", good[..55]);
+      Read("version 2", Patch(good, 4, [2]));
+      Read("length one more", Patch(good, 16, Int64(3)));
+      Read("length negative", Patch(good, 16, Int64(-1)));
+      Read("checksum flipped", Patch(good, good.Length - 1, [(byte)(good[^1] ^ 1)]));
+      Read("content flipped", Patch(good, 24, [1]));
+      Read("trailing byte", [.. good, 0]);
+
+      return new JsonObject { ["encode"] = encode, ["read"] = reads };
     }
     finally
     {

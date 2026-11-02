@@ -38,6 +38,20 @@ func TestABacklogOverBudgetClosesTheSlowConsumer(t *testing.T) {
 	}
 }
 
+// The backlog before a frame may equal the budget; only over it closes.
+func TestABacklogExactlyAtTheBudgetStillAdmitsTheNextFrame(t *testing.T) {
+	member := newTestMember(10)
+	member.Send(make([]byte, 10))
+	member.Send(make([]byte, 1))
+	if close := member.RequestedClose(); close != nil {
+		t.Fatalf("closed at %+v with the backlog at the budget", *close)
+	}
+	member.Send(make([]byte, 1))
+	if close := member.RequestedClose(); close == nil || *close != CloseSlowConsumer {
+		t.Fatalf("got %v, want the slow-consumer close", close)
+	}
+}
+
 func TestTheFirstNonForbiddenCloseWins(t *testing.T) {
 	reset := newTestMember(10)
 	reset.Close(collab.CloseReset)

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it as baseIt } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it as baseIt } from 'vitest';
 
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
 import {
@@ -84,12 +84,30 @@ interface HarnessOptions {
   journal?: boolean;
 }
 
-async function withServer(options: HarnessOptions, run: (harness: Harness) => Promise<void>): Promise<void> {
+interface StartedHarness {
+  readonly harness: Harness;
+  /** Destroys the sockets opened so far. */
+  dropSockets(): void;
+  close(): Promise<void>;
+}
+
+async function startHarness(options: HarnessOptions): Promise<StartedHarness> {
   const auth = options.auth ?? 'none';
   const collabDirectory = await mkdtemp(join(tmpdir(), 'blok-sync-transport-'));
+  const sockets: RawSocket[] = [];
   let endpoint: FixtureDocEndpoint | undefined;
   let server: RunningServer | undefined;
-  const sockets: RawSocket[] = [];
+  const dropSockets = (): void => {
+    for (const socket of sockets.splice(0)) {
+      socket.destroy();
+    }
+  };
+  const close = async (): Promise<void> => {
+    dropSockets();
+    await server?.stop();
+    await endpoint?.stop();
+    await rm(collabDirectory, { recursive: true, force: true });
+  };
 
   try {
     endpoint = await startDocEndpoint();
@@ -107,9 +125,15 @@ async function withServer(options: HarnessOptions, run: (harness: Harness) => Pr
       ],
       env: auth === 'ticket' ? { BLOK_SECRET: tickets.secret } : {},
     });
-    const running = server;
+  } catch (error) {
+    await close();
+    throw error;
+  }
 
-    await run({
+  const running = server;
+
+  return {
+    harness: {
       server: running,
       open: async (path, openOptions) => {
         const socket = await openRaw(running.baseUrl, path, openOptions);
@@ -118,16 +142,57 @@ async function withServer(options: HarnessOptions, run: (harness: Harness) => Pr
 
         return socket;
       },
-    });
-  } finally {
-    for (const socket of sockets) {
-      socket.destroy();
-    }
+    },
+    dropSockets,
+    close,
+  };
+}
 
-    await server?.stop();
-    await endpoint?.stop();
-    await rm(collabDirectory, { recursive: true, force: true });
+/** A server of its own, for a case that spends state: a rate window or a user's cap. */
+async function withServer(options: HarnessOptions, run: (harness: Harness) => Promise<void>): Promise<void> {
+  const started = await startHarness(options);
+
+  try {
+    await run(started.harness);
+  } finally {
+    await started.close();
   }
+}
+
+/**
+ * One server per auth mode for the cases that leave nothing behind: each
+ * host start costs about a second. Started in beforeAll so the per-test
+ * child cleanup leaves it alone.
+ */
+const shared: Partial<Record<'none' | 'ticket', StartedHarness>> = {};
+
+beforeAll(async () => {
+  if (unset('BLOK_CONFORMANCE_SERVER')) {
+    return;
+  }
+
+  shared.none = await startHarness({});
+  shared.ticket = await startHarness({ auth: 'ticket' });
+}, 60_000);
+
+afterEach(() => {
+  shared.none?.dropSockets();
+  shared.ticket?.dropSockets();
+});
+
+afterAll(async () => {
+  await shared.none?.close();
+  await shared.ticket?.close();
+});
+
+async function useServer(mode: 'none' | 'ticket', run: (harness: Harness) => Promise<void>): Promise<void> {
+  const started = shared[mode];
+
+  if (started === undefined) {
+    throw new Error(`the shared ${mode} server did not start`);
+  }
+
+  await run(started.harness);
 }
 
 const ticketHeaders = (...offers: string[]): [string, string][] => [
@@ -151,7 +216,7 @@ async function expectStillServed(socket: RawSocket): Promise<void> {
 
 describe('sync transport: before the upgrade', () => {
   it('answers a plain GET with 426 and a text body', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc', { upgrade: false });
 
       expect(socket.response.status).toBe(426);
@@ -161,7 +226,7 @@ describe('sync transport: before the upgrade', () => {
   }, TEST_TIMEOUT_MS);
 
   it('answers 426 for a version other than 13 and for a key that is not 16 bytes', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       expect((await open('/sync/doc', { version: '12' })).response.status).toBe(426);
       expect((await open('/sync/doc', { key: Buffer.alloc(15).toString('base64') })).response.status).toBe(426);
       expect((await open('/sync/doc', { key: Buffer.alloc(17).toString('base64') })).response.status).toBe(426);
@@ -169,7 +234,7 @@ describe('sync transport: before the upgrade', () => {
   }, TEST_TIMEOUT_MS);
 
   it('answers a non-GET with 405 and Allow: GET', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc', { method: 'POST', upgrade: false, headers: [['Content-Length', '0']] });
 
       expect(socket.response.status).toBe(405);
@@ -178,7 +243,7 @@ describe('sync transport: before the upgrade', () => {
   }, TEST_TIMEOUT_MS);
 
   it('refuses an origin outside the list with 403, also when only Sec-Fetch-Site says cross-site', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const foreign = await open('/sync/doc', { headers: [['Origin', 'https://evil.example']] });
 
       expect(foreign.response.status).toBe(403);
@@ -191,7 +256,7 @@ describe('sync transport: before the upgrade', () => {
   }, TEST_TIMEOUT_MS);
 
   it('in ticket mode refuses a missing origin with 403 and an offer without blok-sync.v1 with 400', async () => {
-    await withServer({ auth: 'ticket' }, async ({ open }) => {
+    await useServer('ticket', async ({ open }) => {
       const noOrigin = await open(`/sync/${TICKET_DOC}`, { headers: [['Sec-WebSocket-Protocol', `${V1}, ${tickets.compatible}`]] });
 
       expect(noOrigin.response.status).toBe(403);
@@ -262,7 +327,7 @@ describe('sync transport: before the upgrade', () => {
 
 describe('sync transport: subprotocol', () => {
   it('echoes blok-sync.v1 only when offered with that exact spelling, from either header shape', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const none = await open('/sync/doc');
 
       expect(none.response.status).toBe(101);
@@ -295,7 +360,7 @@ describe('sync transport: subprotocol', () => {
 
 describe('sync transport: accept, then close', () => {
   it('closes a multi-segment doc id 4400, before the ticket checks', async () => {
-    await withServer({ auth: 'ticket' }, async ({ open }) => {
+    await useServer('ticket', async ({ open }) => {
       const socket = await open('/sync/a%2Fb', { headers: [['Origin', ALLOWED_ORIGIN]] });
 
       expect(socket.response.status).toBe(101);
@@ -305,7 +370,7 @@ describe('sync transport: accept, then close', () => {
   }, TEST_TIMEOUT_MS);
 
   it('closes 4401 with the reason for each bad pass, echoing blok-sync.v1', async () => {
-    await withServer({ auth: 'ticket' }, async ({ open }) => {
+    await useServer('ticket', async ({ open }) => {
       const cases: [string[], string][] = [
         [[V1], 'missing pass'],
         [[V1, V2], 'missing pass'],
@@ -325,7 +390,7 @@ describe('sync transport: accept, then close', () => {
   }, TEST_TIMEOUT_MS);
 
   it('tries every offered token as the pass', async () => {
-    await withServer({ auth: 'ticket' }, async ({ open }) => {
+    await useServer('ticket', async ({ open }) => {
       const socket = await open(`/sync/${TICKET_DOC}`, { headers: ticketHeaders(tickets.malformed, V1, tickets.compatible) });
 
       expect(socket.response.status).toBe(101);
@@ -334,7 +399,7 @@ describe('sync transport: accept, then close', () => {
   }, TEST_TIMEOUT_MS);
 
   it('ends a rejected socket about 250 ms after its close when the peer never answers', async () => {
-    await withServer({ auth: 'ticket' }, async ({ open }) => {
+    await useServer('ticket', async ({ open }) => {
       const socket = await open(`/sync/${TICKET_DOC}`, { headers: ticketHeaders(V1) });
       const close = await socket.closed();
       const ended = await socket.ended();
@@ -345,7 +410,7 @@ describe('sync transport: accept, then close', () => {
   }, TEST_TIMEOUT_MS);
 
   it('reads and drops frames after a rejection until the peer closes', async () => {
-    await withServer({ auth: 'ticket' }, async ({ open }) => {
+    await useServer('ticket', async ({ open }) => {
       const socket = await open(`/sync/${TICKET_DOC}`, { headers: ticketHeaders(V1) });
 
       socket.sendFrame(FIN | OP_TEXT, Buffer.from('dropped'));
@@ -361,7 +426,7 @@ describe('sync transport: accept, then close', () => {
 
 describe('sync transport: a served socket', () => {
   it('answers the peer close with 1000 and no reason', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc');
 
       socket.sendFrame(FIN | OP_CLOSE, closePayload(1000, 'bye'));
@@ -371,7 +436,7 @@ describe('sync transport: a served socket', () => {
   }, TEST_TIMEOUT_MS);
 
   it('answers a ping with a pong carrying the same bytes', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc');
 
       socket.sendFrame(FIN | OP_PING, Buffer.from('are you there'));
@@ -380,7 +445,7 @@ describe('sync transport: a served socket', () => {
   }, TEST_TIMEOUT_MS);
 
   it('closes a text frame 1003, then waits about 5 s for the peer close', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc');
 
       socket.sendFrame(FIN | OP_TEXT, Buffer.from('hello'));
@@ -397,7 +462,7 @@ describe('sync transport: a served socket', () => {
   }, TEST_TIMEOUT_MS);
 
   it('serves a message of exactly the cap and closes one byte over it 1009', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const atCap = await open('/sync/doc');
       const whole = unknownFrame(MAX_MESSAGE_BYTES);
 
@@ -415,7 +480,7 @@ describe('sync transport: a served socket', () => {
   }, TEST_TIMEOUT_MS);
 
   it('serves a message in 16 receives and closes the 17th 1008', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const fragments = (count: number): { first: number; payload?: Uint8Array }[] => [
         { first: OP_BINARY },
         ...Array.from({ length: count - 2 }, () => ({ first: OP_CONTINUATION })),
@@ -435,7 +500,7 @@ describe('sync transport: a served socket', () => {
   }, TEST_TIMEOUT_MS);
 
   it('counts receives, not frames: a message dribbled a byte at a time', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc');
       const bytes = [...Buffer.from(encodeDribble())];
 
@@ -453,7 +518,7 @@ describe('sync transport: a served socket', () => {
   }, 60_000);
 
   it('closes 1008 past the frame burst', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc');
 
       socket.sendFrames(Array.from({ length: 150 }, () => ({ first: FIN | OP_BINARY, payload: unknownFrame() })));
@@ -465,7 +530,7 @@ describe('sync transport: a served socket', () => {
     // [0x80, 0x00] is a non-canonical 0: still a sync frame.
     const resync = Buffer.from([0x80, 0x00, 0x00, 0x00]);
 
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const ten = await open('/sync/doc');
 
       ten.sendFrames(Array.from({ length: 10 }, () => ({ first: FIN | OP_BINARY, payload: resync })));
@@ -479,7 +544,7 @@ describe('sync transport: a served socket', () => {
   }, TEST_TIMEOUT_MS);
 
   it('closes 1008 for one awareness frame over the 512 KiB burst', async () => {
-    await withServer({}, async ({ open }) => {
+    await useServer('none', async ({ open }) => {
       const socket = await open('/sync/doc');
       const awareness = Buffer.alloc(512 * 1024 + 1);
 
@@ -511,7 +576,7 @@ describe('sync transport: frames RFC 6455 refuses', () => {
 
   for (const [name, send, code] of cases) {
     it(`closes ${name} ${code} with no reason`, async () => {
-      await withServer({}, async ({ open }) => {
+      await useServer('none', async ({ open }) => {
         const socket = await open('/sync/doc');
 
         send(socket);

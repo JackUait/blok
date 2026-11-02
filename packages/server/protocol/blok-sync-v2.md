@@ -58,6 +58,77 @@ A client that negotiates v1 MUST NOT claim durable acknowledgement. If it holds
 undelivered v2 operations it keeps them, blocks further edits and reports
 durability unavailable rather than replaying them through v1.
 
+### 2.1 The door and the socket
+
+These are the reference server's answers on `GET /sync/{doc}`. A second
+backend that wants the same client behaviour gives the same ones.
+`test/unit/server-conformance/sync-transport-contract.test.ts` checks each row
+as raw bytes against both servers.
+
+The checks run in this order: upgrade request, origin, doc id, ticket, rate
+limit, the application's authorization hook. A plain HTTP refusal does not
+spend the rate limit. An accept-then-close does, billed to the client address
+until a pass verifies and to the pass's user after that.
+
+Answers before the upgrade (`text/plain; charset=utf-8`, body ends in `\n`):
+
+| Status | Body | When |
+| --- | --- | --- |
+| 405 | (`Allow: GET`) | any method but GET |
+| 426 | `WebSocket upgrade required` | not a WebSocket upgrade: no `Connection: Upgrade`, version not 13, or a key that is not 16 bytes of base64 |
+| 403 | `origin not allowed` | an origin is required (ticket mode, any `Origin` header, or `Sec-Fetch-Site: cross-site`) and it is not allowed |
+| 400 | `blok-sync.v1 must be offered in Sec-WebSocket-Protocol` | ticket mode, no supported version offered (matched case-sensitively) |
+| 429 | `rate limit exceeded` | the window is spent |
+| 503 | `too many connections on this server` | the process-wide cap |
+| 429 | `too many connections` | one user already holds 8 sockets on this doc |
+| 503 | `shutting down` | the server is draining |
+| 403 | `forbidden` | the room refuses the join (purged, or access revoked after the handshake) |
+
+Accepted, then closed at once (the chosen subprotocol is still echoed):
+
+| Code | Reason | When |
+| --- | --- | --- |
+| 4400 | `document ids must be a single path segment` | the id is empty or holds `/`, `\`, `%2F` or `%5C` |
+| 4401 | `missing pass` | no token besides the version tokens |
+| 4401 | `invalid pass` | no offered token verifies |
+| 4401 | `pass is for another document` | the pass names another doc, or none |
+| 4401 | `pass names no user` | the pass has no user |
+| 4403 | `forbidden` | the authorization hook denies read |
+| 4503 | `document unavailable` | the room could not seed, or cannot serve the doc right now (held by another process, or in a commit-retry cooldown) |
+
+A rejected socket gets 250 ms to answer the close before the server drops the
+TCP connection.
+
+Closes on a served socket:
+
+| Code | Reason | When |
+| --- | --- | --- |
+| 1000 | (empty) | the answer to the client's own close |
+| 1001 | `server shutting down` | drain |
+| 1002 | (empty) | an RFC 6455 violation: unmasked frame, reserved bit, unknown opcode, a bad fragment sequence, a control frame over 125 bytes or fragmented, a 1-byte close or an invalid close code or reason |
+| 1003 | `binary frames only` | a text frame |
+| 1007 | (empty) | a text frame that is not UTF-8 (checked before 1003) |
+| 1008 | `inbound rate exceeded` | over the frame budget (50/s, burst 100), the resync budget (SyncStep1 and queryAwareness, 60/min, burst 10), the presence budget (128 KiB/s, burst 512 KiB), or one message taking more than 16 + bytes/64 receives |
+| 1008 | `outbound queue overflow` | the client reads slower than the room sends: the backlog before a frame is over 8 × the message cap |
+| 1008 | `malformed awareness` | the third unreadable awareness frame |
+| 1008 | `raw write on a v2 session` | SyncStep2 or Update on a v2 session |
+| 1009 | `message too big` | a message over 1 MiB, counted across fragments |
+| 4403 | `forbidden` | access revoked; queued frames are dropped, not sent |
+| 4409 | `document reset` | the doc was reset |
+| 4503 | `commit unavailable, retry` | a journal commit was not confirmed |
+| 1011 | `internal error` | a close reason the server does not know |
+
+A receive reads up to 16 KiB and never crosses a frame, and it waits until it
+has that much or the frame ends. So an empty fragment is one receive, but a
+frame that arrives a byte at a time is still one. The budgets read the message
+type as a varuint, so `[0x80, 0x00]` counts as type 0. After it sends a close,
+the server reads and drops frames until the peer's close, for at most 5 s. It
+leaves the room and frees the user's slot before it answers the peer's close.
+
+The server pings every 15 s with an 8-byte counter. A ping that gets no pong
+with the same counter within 30 s ends the socket with no close frame. Any
+bytes received push the next ping back.
+
 ## 3. Frame types
 
 | Type | Name | Direction | Introduced |
@@ -629,9 +700,10 @@ runner. `--target` picks the server it builds:
   `--configuration Debug|Release` picks the second build.
 - `go` builds `packages/server/go/cmd/blok-server` twice — once plain, once
   with `-tags conformance`. Go has no Debug or Release build, so the runner
-  refuses `--configuration` for it. The Go server is in progress and has no
-  sync yet. CI runs it with `--suite` on the five suites it passes whole:
-  harness, server, routing, host CLI and HTTP host.
+  refuses `--configuration` for it. The Go server is in progress. CI runs it
+  with `--suite` on the six suites it passes whole: harness, server, routing,
+  host CLI, HTTP host and sync transport. The sync door runs against a
+  stand-in room until the Go room lands.
 
 Either way, the runner then runs the suites it lists from
 `test/unit/server-conformance/`, plus the page-transfer sidecar suite in
@@ -653,16 +725,13 @@ answers has tested the encoder, not the store.
 This document, its fixtures and its scenarios are repository-only. They are not
 a package export and there is no CLI entry point for them.
 
-**THE REFERENCE SERVER JOURNALS ONLY UNDER A TEST-ONLY FLAG.** A released
-`Blok.Server.Host` binary resolves no `ICollabOperationStore` — the built-in
-`LocalCollabOperationStore` is `Blok.Server`-internal, production DI resolves
-the store with `GetService`, and no shipped host flag registers one — so it
-selects `blok-sync.v1` and journals nothing. The scenarios below run against a
-`--conformance-journal` build, a flag that exists only inside
-`#if BLOK_SERVER_CONFORMANCE`. What they prove is that the implementation
-behind that flag is conformant, not that a released binary speaks v2 today. A
-host reaches this behaviour by registering its own store with
-`UseCollabOperationStore<T>()`.
+**A JOURNAL IS OPT-IN.** A released `Blok.Server.Host` journals only with
+`--collab-journal` (or `BLOK_COLLAB_JOURNAL`), which builds the built-in
+`LocalCollabOperationStore` under `--collab-dir`; without it the host resolves
+no `ICollabOperationStore`, selects `blok-sync.v1` and journals nothing. A
+library host can register its own store with `UseCollabOperationStore<T>()`.
+The scenarios below run against a `--conformance-journal` build, a test-only
+flag inside `#if BLOK_SERVER_CONFORMANCE` that turns the same journal on.
 
 ### 11.2 The scenarios
 

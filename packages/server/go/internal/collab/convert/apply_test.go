@@ -29,6 +29,13 @@ type editCase struct {
 	} `json:"refused"`
 	Export     json.RawMessage `json:"export"`
 	ExportPage json.RawMessage `json:"exportPage"`
+	Seed       json.RawMessage `json:"seed"`
+	Page       json.RawMessage `json:"page"`
+	Shape      *string         `json:"shape"`
+	SeedHTML   []struct {
+		HTML     string          `json:"html"`
+		Segments json.RawMessage `json:"segments"`
+	} `json:"seedHtml"`
 }
 
 type editCases struct {
@@ -231,6 +238,55 @@ func TestApplyOpsWritesWhatCSharpWrites(t *testing.T) {
 				t.Errorf("page\n got %s\nwant %s", got, want)
 			}
 		})
+	}
+}
+
+// Each edit case's seed, seeded by Go as client 1, must give C#'s seed update
+// byte for byte: the bytes pin every container the seed mints (Y.Text or
+// atomic, Y.Array or leaf, keyed grids, doubles), which no export can see.
+func TestSeedWritesWhatCSharpWrites(t *testing.T) {
+	var fixture editCases
+	collabtest.Read(t, "collab-edits/cases.json", &fixture)
+	original := GenerateRowKey
+	t.Cleanup(func() { GenerateRowKey = original })
+	compared := 0
+	for _, c := range fixture.Cases {
+		if c.Shape != nil {
+			continue
+		}
+		compared++
+		t.Run(c.Name, func(t *testing.T) {
+			GenerateRowKey = rowKeyCounter("s")
+			client := fixture.SeedClient
+			doc := yjs.NewDoc(yjs.Options{ClientID: &client})
+			var page *jsjson.Object
+			if len(c.Page) > 0 {
+				page = jsValue(t, c.Page).(*jsjson.Object)
+			}
+			blocks := node(t, c.Seed).Items
+			// As C# RichTextRuntime.Seed calls it: collecting plans the grids,
+			// and planning mints row keys, so the call shows in the bytes.
+			if _, err := CollectSeedHTML(blocks, BuiltInRichTextFields()); err != nil {
+				t.Fatal(err)
+			}
+			converted := map[string][]any{}
+			for _, h := range c.SeedHTML {
+				converted[HTMLKey(str(h.HTML))] = jsValue(t, h.Segments).([]any)
+			}
+			if err := Seed(doc, blocks, Converting(BuiltInRichTextFields(), converted), page); err != nil {
+				t.Fatal(err)
+			}
+			update, err := doc.EncodeStateAsUpdate(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := base64.StdEncoding.EncodeToString(update); got != c.SeedUpdate {
+				t.Errorf("seed update\n got %s\nwant %s", got, c.SeedUpdate)
+			}
+		})
+	}
+	if compared < 80 {
+		t.Fatalf("only %d seeds compared", compared)
 	}
 }
 

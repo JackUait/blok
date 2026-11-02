@@ -90,6 +90,21 @@ public sealed class YDocConverterEditCaptureTests
 
     result["seedUpdate"] = Convert.ToBase64String(seedUpdate);
 
+    // The seed's HTML as the runtime read it, so Go can seed with no runtime
+    // and compare the seed bytes too.
+    var seedBlocks = (JsonArray)result["seed"]!;
+    var seedFound = YDocConverter.CollectSeedHtml(seedBlocks, RichTextFields.BuiltIn);
+
+    if (seedFound.Count > 0)
+    {
+      var seedSegments = RichTextRuntime.Reader.ReadAsync(seedFound).AsTask().GetAwaiter().GetResult();
+      result["seedHtml"] = new JsonArray([.. seedFound.Select((found, index) => (JsonNode)new JsonObject
+      {
+        ["html"] = found.Html,
+        ["segments"] = seedSegments[index].DeepClone(),
+      })]);
+    }
+
     if (edit.Body is not null)
     {
       result["body"] = edit.Body;

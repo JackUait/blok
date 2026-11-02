@@ -84,3 +84,41 @@ func TestTheActivityQueueDropsItsOldestPastTheBound(t *testing.T) {
 		t.Fatalf("nothing logged: %q", log)
 	}
 }
+
+// M15: the drain waits for the activity pump at most CommitTimeout
+// (CollabRoom.cs:1337-1350), then abandons it and says so.
+func TestTheDrainStopsWaitingForAStuckObserverAtTheCommitTimeout(t *testing.T) {
+	observer := &gatedObserver{gate: make(chan struct{}), entered: make(chan struct{})}
+	t.Cleanup(func() { close(observer.gate) })
+	var logMu sync.Mutex
+	var log []string
+	manager := NewManager(ManagerOptions{
+		Store: newMemoryStore(), Endpoint: &memoryEndpoint{}, Converter: &convert.DocConverter{Now: time.Now},
+		Room:     Options{CommitTimeout: 50 * time.Millisecond},
+		Activity: observer,
+		Log: func(message string) {
+			logMu.Lock()
+			defer logMu.Unlock()
+			log = append(log, message)
+		},
+	})
+	join(t, manager, "doc", &fakeMember{actor: "user-0", source: collab.SourceClientV1})
+	<-observer.entered
+
+	started := time.Now()
+	if err := manager.Drain(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if took := time.Since(started); took > 2*time.Second {
+		t.Fatalf("the drain took %v", took)
+	}
+	logMu.Lock()
+	defer logMu.Unlock()
+	abandoned := false
+	for _, line := range log {
+		abandoned = abandoned || strings.Contains(line, "the observer is past its bound")
+	}
+	if !abandoned {
+		t.Fatalf("nothing logged: %q", log)
+	}
+}

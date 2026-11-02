@@ -25,16 +25,18 @@ import (
 
 // The scenarios C# CollabJournalStoreCaptureTests ran against its store.
 type journalScenarios struct {
-	DocID      string `json:"docId"`
-	StartTicks string `json:"startTicks"`
-	Scenarios  []struct {
-		Name           string             `json:"name"`
-		MaxUpdateBytes int64              `json:"maxUpdateBytes"`
-		Steps          []map[string]any   `json:"steps"`
-		Log            []string           `json:"log"`
-		Files          map[string]*string `json:"files"`
-		Reopen         map[string]any     `json:"reopen"`
-	} `json:"scenarios"`
+	DocID      string            `json:"docId"`
+	StartTicks string            `json:"startTicks"`
+	Scenarios  []journalScenario `json:"scenarios"`
+}
+
+type journalScenario struct {
+	Name           string             `json:"name"`
+	MaxUpdateBytes int64              `json:"maxUpdateBytes"`
+	Steps          []map[string]any   `json:"steps"`
+	Log            []string           `json:"log"`
+	Files          map[string]*string `json:"files"`
+	Reopen         map[string]any     `json:"reopen"`
 }
 
 func loadJournalScenarios(t *testing.T) journalScenarios {
@@ -96,23 +98,7 @@ func TestTheStoreOpensEveryDirectoryCSharpLeft(t *testing.T) {
 	for _, scenario := range fixture.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
 			root := t.TempDir()
-			key := workingset.DocKey(fixture.DocID)
-			for _, path := range slices.Sorted(maps.Keys(scenario.Files)) {
-				full := filepath.Join(root, filepath.FromSlash(strings.ReplaceAll(path, "{doc}", key)))
-				content := scenario.Files[path]
-				if content == nil {
-					if err := os.MkdirAll(full, 0o700); err != nil {
-						t.Fatal(err)
-					}
-					continue
-				}
-				if err := os.MkdirAll(filepath.Dir(full), 0o700); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(full, collabtest.Hex(t, *content), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
+			writeScenarioFiles(t, root, fixture.DocID, scenario.Files)
 			runner := newScenarioRunner(t, root, fixture.DocID, fixture.StartTicks, scenario.MaxUpdateBytes)
 			got := runner.call("open", map[string]any{"session": "reopen"})
 			runner.closeAll()
@@ -120,6 +106,55 @@ func TestTheStoreOpensEveryDirectoryCSharpLeft(t *testing.T) {
 				t.Fatalf("got %s, want %s", encodeJSON(t, got), encodeJSON(t, scenario.Reopen))
 			}
 		})
+	}
+}
+
+// TestLineagesThatShareAGenerationKeepTheirLedgerOrder lists, many times,
+// two lineages that share a generation. C# keeps first-seen order; a Go map
+// would shuffle them.
+func TestLineagesThatShareAGenerationKeepTheirLedgerOrder(t *testing.T) {
+	fixture := loadJournalScenarios(t)
+	const name = "an-abandoned-import-of-another-lineage-is-not-deletable"
+	index := slices.IndexFunc(fixture.Scenarios, func(s journalScenario) bool { return s.Name == name })
+	if index < 0 {
+		t.Fatalf("no scenario %s", name)
+	}
+	root := t.TempDir()
+	writeScenarioFiles(t, root, fixture.DocID, fixture.Scenarios[index].Files)
+	runner := newScenarioRunner(t, root, fixture.DocID, fixture.StartTicks, 0)
+	for range 200 {
+		lineages, err := runner.store.ListLineages(context.Background(), fixture.DocID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []int64
+		for _, lineage := range lineages {
+			got = append(got, lineage.Epoch)
+		}
+		if !slices.Equal(got, []int64{7, 8}) {
+			t.Fatalf("epochs %v, want [7 8]", got)
+		}
+	}
+}
+
+func writeScenarioFiles(t *testing.T, root, docID string, files map[string]*string) {
+	t.Helper()
+	key := workingset.DocKey(docID)
+	for _, path := range slices.Sorted(maps.Keys(files)) {
+		full := filepath.Join(root, filepath.FromSlash(strings.ReplaceAll(path, "{doc}", key)))
+		content := files[path]
+		if content == nil {
+			if err := os.MkdirAll(full, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(full), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, collabtest.Hex(t, *content), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

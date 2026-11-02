@@ -742,14 +742,22 @@ func (s *Store) resolveLineages(docDir, docID string) ([]LineageEntry, *Manifest
 	}
 	// The newest generation wins a shared lineage, and older ones stay hidden
 	// even after the newest is deleted.
+	// order keeps first-seen order, as C#'s Dictionary does; the sort below
+	// is stable, so lineages that share a generation keep it.
 	newest := map[string]LineageEntry{}
+	var order []string
 	for _, entry := range published {
-		if seen, ok := newest[entry.Lineage]; !ok || entry.Generation >= seen.Generation {
+		seen, ok := newest[entry.Lineage]
+		if !ok {
+			order = append(order, entry.Lineage)
+		}
+		if !ok || entry.Generation >= seen.Generation {
 			newest[entry.Lineage] = entry
 		}
 	}
 	var lineages []LineageEntry
-	for _, entry := range newest {
+	for _, lineage := range order {
+		entry := newest[lineage]
 		if !deleted[generationKey{entry.Generation, entry.GenerationFence}] {
 			lineages = append(lineages, entry)
 		}

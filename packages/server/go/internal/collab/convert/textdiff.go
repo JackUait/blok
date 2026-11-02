@@ -121,17 +121,19 @@ func Atomize(text jsjson.Str, markup bool) []jsjson.Str {
 func clusterInteriors(text jsjson.Str) map[int]bool {
 	starts := textElementStarts(text)
 	inside := map[int]bool{}
-	clusterStart := 0
+	var conjunct conjunctState
 	for index, start := range starts {
 		end := len(text)
 		if index+1 < len(starts) {
 			end = starts[index+1]
 		}
-		if index > 0 && joinsConjunct(text, clusterStart, start) {
+		// The joined character keeps its start, so a second conjunct chains on.
+		if index > 0 && inRanges(conjunctConsonants, codePointAt(text, start)) && conjunct.joins() {
 			inside[start] = true
 		} else {
-			clusterStart = start
+			conjunct = conjunctState{clusterStart: start}
 		}
+		conjunct.take(text, start, end)
 		for at := start + 1; at < end; at++ {
 			inside[at] = true
 		}
@@ -139,31 +141,44 @@ func clusterInteriors(text jsjson.Str) map[int]bool {
 	return inside
 }
 
-// joinsConjunct is GB9c: Consonant (Extend | Linker)* Linker (Extend | Linker)* × Consonant.
-func joinsConjunct(text jsjson.Str, clusterStart, boundary int) bool {
-	if !inRanges(conjunctConsonants, codePointAt(text, boundary)) {
-		return false
+// conjunctState is GB9c: Consonant (Extend | Linker)* Linker (Extend | Linker)* × Consonant.
+// Read backwards from a boundary, the first code point that is not a linker
+// and is the character's first or a breaker decides: it must be a consonant
+// with a linker after it. Anything else counts as an extender. The state keeps
+// that stop as the character grows; walking back at every boundary was
+// quadratic. C# ConjunctState is the same.
+type conjunctState struct {
+	clusterStart    int
+	stopIsConsonant bool
+	linkedAfterStop bool
+}
+
+func (c *conjunctState) joins() bool {
+	return c.stopIsConsonant && c.linkedAfterStop
+}
+
+// take adds the element [start, end), cut into code points from the end as
+// the backward read cuts them.
+func (c *conjunctState) take(text jsjson.Str, start, end int) {
+	var points []int
+	for at := end; at > start; {
+		if at-1 > c.clusterStart && isLow(text[at-1]) && isHigh(text[at-2]) {
+			at -= 2
+		} else {
+			at--
+		}
+		points = append(points, at)
 	}
-	at := boundary
-	linked := false
-	for at > clusterStart {
-		start := at - 1
-		if at-1 > clusterStart && isLow(text[at-1]) && isHigh(text[at-2]) {
-			start = at - 2
+	for i := len(points) - 1; i >= 0; i-- {
+		code := codePointAt(text, points[i])
+		switch {
+		case inRanges(conjunctLinkers, code):
+			c.linkedAfterStop = true
+		case points[i] == c.clusterStart || inRanges(conjunctBreakers, code):
+			c.stopIsConsonant = inRanges(conjunctConsonants, code)
+			c.linkedAfterStop = false
 		}
-		code := codePointAt(text, start)
-		if inRanges(conjunctLinkers, code) {
-			linked = true
-			at = start
-			continue
-		}
-		if start > clusterStart && !inRanges(conjunctBreakers, code) {
-			at = start
-			continue
-		}
-		return linked && inRanges(conjunctConsonants, code)
 	}
-	return false
 }
 
 func inRanges(ranges []rune, code rune) bool {

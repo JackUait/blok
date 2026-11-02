@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -132,4 +134,19 @@ var graphemeKinds = map[string]string{
 	"Control": "gbControl", "CR": "gbCR", "LF": "gbLF", "Extend": "gbExtend", "ZWJ": "gbZWJ",
 	"Regional_Indicator": "gbRegionalIndicator", "Prepend": "gbPrepend", "SpacingMark": "gbSpacingMark",
 	"L": "gbL", "V": "gbV", "T": "gbT", "LV": "gbLV", "LVT": "gbLVT", "Extended_Pictograph": "gbExtendedPictograph",
+}
+
+// One long conjunct is one growing character. Joining each consonant must not
+// walk back to the character's start, or one edit costs seconds of CPU.
+func TestALongConjunctRunDiffsInLinearTime(t *testing.T) {
+	run := jsjson.FromString(strings.Repeat("क्", 32000))
+	started := time.Now()
+	atoms := Atomize(append(slices.Clone(run), 0x0915), true)
+	edits := Diff(run, append(slices.Clone(run), 'x'), true)
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatal(elapsed)
+	}
+	if len(atoms) != 1 || len(edits) == 0 {
+		t.Fatalf("%d atoms, %d edits", len(atoms), len(edits))
+	}
 }

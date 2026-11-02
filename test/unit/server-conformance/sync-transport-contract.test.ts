@@ -572,6 +572,8 @@ describe('sync transport: frames RFC 6455 refuses', () => {
     ['a close with status 1005', (s) => s.sendFrame(FIN | OP_CLOSE, closePayload(1005)), 1002],
     ['a close reason that is not UTF-8', (s) => s.sendFrame(FIN | OP_CLOSE, Buffer.concat([closePayload(1000), Buffer.from([0xff])])), 1002],
     ['a text frame that is not UTF-8', (s) => s.sendFrame(FIN | OP_TEXT, Buffer.from([0xc3, 0x28])), 1007],
+    // Over one 16 KiB receive, so the check runs chunk by chunk; U+D800 is the lowest surrogate.
+    ['a long text frame that opens with a surrogate', (s) => s.sendFrame(FIN | OP_TEXT, Buffer.concat([Buffer.from([0xed, 0xa0, 0x80]), Buffer.alloc(20000, 0x61)])), 1007],
   ];
 
   for (const [name, send, code] of cases) {

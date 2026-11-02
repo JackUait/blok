@@ -82,6 +82,11 @@ const FILES = {
   directory: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.txt',
   unreadable: 'cccccccccccccccccccccccccccccccc.txt',
   unknownType: 'dddddddddddddddddddddddddddddddd.blokunknown',
+  // Files in the storage directory that no upload named. Only generated
+  // keys are served, so these must stay 404.
+  dotFile: '.env',
+  plainName: 'config.json',
+  uploadTemp: '.blok-upload-0123456789abcdef0123456789abcdef',
 } as const;
 
 type FileName = keyof typeof FILES;
@@ -122,6 +127,9 @@ function buildCases(): LocalFileCase[] {
     { name: 'empty file, start past the end', method: 'GET', file: 'empty', headers: { Range: 'bytes=0-' } },
     { name: 'empty file, suffix', method: 'GET', file: 'empty', headers: { Range: 'bytes=-5' } },
     { name: 'empty file, bad unit', method: 'GET', file: 'empty', headers: { Range: 'items=0-1' } },
+    { name: 'dot file outside the key grammar', method: 'GET', file: 'dotFile', headers: {} },
+    { name: 'plain name outside the key grammar', method: 'GET', file: 'plainName', headers: {} },
+    { name: 'upload temp file', method: 'GET', file: 'uploadTemp', headers: {} },
   ];
 
   if (process.getuid?.() !== 0) {
@@ -224,6 +232,9 @@ async function seedStorage(directory: string): Promise<void> {
   await writeFile(empty, '');
   await writeFile(unknown, TEXT);
   await writeFile(unreadable, TEXT);
+  for (const name of [FILES.dotFile, FILES.plainName, FILES.uploadTemp]) {
+    await writeFile(join(directory, name), TEXT);
+  }
   await chmod(unreadable, 0o000);
   await mkdir(join(directory, FILES.directory));
 

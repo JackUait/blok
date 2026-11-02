@@ -246,6 +246,60 @@
     }
   },
   {
+    "name": "dot file outside the key grammar",
+    "method": "GET",
+    "file": "dotFile",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    }
+  },
+  {
+    "name": "plain name outside the key grammar",
+    "method": "GET",
+    "file": "plainName",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    }
+  },
+  {
+    "name": "upload temp file",
+    "method": "GET",
+    "file": "uploadTemp",
+    "headers": {},
+    "response": {
+      "status": 404,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "404 page not found\n"
+    }
+  },
+  {
     "name": "unreadable file",
     "method": "GET",
     "file": "unreadable",

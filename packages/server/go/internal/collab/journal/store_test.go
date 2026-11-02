@@ -458,6 +458,26 @@ func TestAnAppendWhoseFlushFailsIsUndone(t *testing.T) {
 	}
 }
 
+// A holder that took the document during the flush may reuse the sequence,
+// so a flush that succeeds after the fence moved must not answer Committed.
+func TestAnAppendWhoseFenceMovesDuringTheFlushIsNotCommitted(t *testing.T) {
+	store := newTwinStore(t)
+	session := store.open(t)
+	twinReset(t, session, 1, twinLineage(1))
+	defer func(saved func(*os.File) error) { syncJournal = saved }(syncJournal)
+	syncJournal = func(file *os.File) error {
+		if err := os.Remove(store.path(lockName)); err != nil {
+			t.Fatal(err)
+		}
+		store.open(t)
+		return file.Sync()
+	}
+	result, err := twinAppend(t, session, 1, 0x01)
+	if !errors.Is(err, ErrFenceLost) {
+		t.Fatalf("%v %v", result, err)
+	}
+}
+
 // When the fence moved before the undo, the cut could delete the new holder's
 // records, so the session leaves the bytes and stops answering.
 func TestAnAppendThatCannotBeUndoneFaultsTheSession(t *testing.T) {

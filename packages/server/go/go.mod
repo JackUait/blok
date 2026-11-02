@@ -5,7 +5,7 @@ go 1.27.1
 toolchain go1.27.3
 
 require (
-	github.com/andybalholm/brotli v1.2.6
+	github.com/andybalholm/brotli v1.2.7
 	github.com/dop251/goja v0.0.0-20261030192516-032d024709ca
 	golang.org/x/net v0.62.0
 )

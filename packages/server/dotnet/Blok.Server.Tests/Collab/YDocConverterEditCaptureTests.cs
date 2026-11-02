@@ -586,6 +586,30 @@ public sealed class YDocConverterEditCaptureTests
         """{ "id": "cu", "type": "custom", "data": { "items": [[1,2],[3,4]] } }"""],
         Edit("""{"op":"update","id":"cu","data":{"items":[[1.0,2.0],[5,6],[3e0,4]]}}"""));
 
+    yield return new("update-replaces-a-word-in-a-plain-ytext", [Image],
+        Edit("""{"op":"update","id":"img","data":{"url":"https://x.test/a.png","caption":"a blue fox"}}"""),
+        Shape: "legacy-ytext-caption");
+    yield return new("arrays-keep-an-unchanged-element-between-changed-ones", [
+        """{ "id": "cu", "type": "custom", "data": { "items": [{"a":1},{"b":2},{"c":3}] } }"""],
+        Edit("""{"op":"update","id":"cu","data":{"items":[{"a":10},{"b":2},{"c":30}]}}"""));
+    yield return new("arrays-similarity-picks-the-later-element", [
+        """{ "id": "cu", "type": "custom", "data": { "items": [{"x":1,"y":1}] } }"""],
+        Edit("""{"op":"update","id":"cu","data":{"items":[{"p":9},{"x":1,"y":2}]}}"""));
+    yield return new("arrays-refuse-a-crossing-rank-pair", [
+        """{ "id": "cu", "type": "custom", "data": { "items": [{"a":1},{"a":2},{"a":3}] } }"""],
+        Edit("""{"op":"update","id":"cu","data":{"items":[{"a":3},{"b":9}]}}"""));
+    yield return new("arrays-similarity-window-reaches-the-count-difference", [
+        """{ "id": "cu", "type": "custom", "data": { "items": [{"t":0},{"t":1},{"t":2},{"x":5,"t":3}] } }"""],
+        Edit("""{"op":"update","id":"cu","data":{"items":[{"x":5,"t":9},{"u":1}]}}"""));
+
+    yield return new("ordered-ids-keep-an-unchanged-id-between-changed-ones", [
+        """{ "id": "cu", "type": "custom", "data": { "cell": { "blocks": ["a", "b", "c"] } } }"""],
+        Edit("""{"op":"update","id":"cu","data":{"cell":{"blocks":["x","b","y"]}}}"""));
+
+    yield return new("arrays-an-element-that-gained-a-key-is-not-equal", [
+        """{ "id": "cu", "type": "custom", "data": { "items": [{"a":1},{"b":2}] } }"""],
+        Edit("""{"op":"update","id":"cu","data":{"items":[{"a":1,"z":0},{"b":2},{"c":3}]}}"""));
+
     // Agent ops.
     yield return new("move-into-a-parent-first", [Toggle, Kid1, Kid2, Root],
         Agent: """[{"op":"move","id":"root","parent":"tg"}]""");

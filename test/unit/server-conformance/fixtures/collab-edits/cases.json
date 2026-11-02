@@ -3622,6 +3622,300 @@
       "exportPage": {}
     },
     {
+      "name": "update-replaces-a-word-in-a-plain-ytext",
+      "seed": [
+        {
+          "id": "img",
+          "type": "image",
+          "data": {
+            "url": "https://x.test/a.png",
+            "caption": "a fox"
+          }
+        }
+      ],
+      "shape": "legacy-ytext-caption",
+      "seedUpdate": "AQwBACcBBmJsb2NrcwNpbWcBKAABAAJpZAF3A2ltZygAAQAEdHlwZQF3BWltYWdlJwABAARkYXRhASgAAQMDdXJsAXcUaHR0cHM6Ly94LnRlc3QvYS5wbmchAAEDB2NhcHRpb24BAAUnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcDaW1npwEFAgQAAQ4JYSByZWQgZm94AQEBBQY=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022img\u0022,\u0022data\u0022:{\u0022url\u0022:\u0022https://x.test/a.png\u0022,\u0022caption\u0022:\u0022a blue fox\u0022}}]}",
+      "updates": [
+        "AQECAMQBEAERA2JsdQEBAhEBEwE="
+      ],
+      "export": [
+        {
+          "id": "img",
+          "type": "image",
+          "data": {
+            "url": "https://x.test/a.png",
+            "caption": "a blue fox"
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-keep-an-unchanged-element-between-changed-ones",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1
+              },
+              {
+                "b": 2
+              },
+              {
+                "c": 3
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQ4BACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBYQF9AYcBBQEoAAEHAWIBfQKHAQcBKAABCQFjAX0DJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmN1AA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022a\u0022:10},{\u0022b\u0022:2},{\u0022c\u0022:30}]}}]}",
+      "updates": [
+        "AQICAKgBBgF9CqgBCgF9HgEBAgYBCgE="
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 10
+              },
+              {
+                "b": 2
+              },
+              {
+                "c": 30
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-similarity-picks-the-later-element",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "x": 1,
+                "y": 1
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQsBACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBeAF9ASgAAQUBeQF9AScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJjdQA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022p\u0022:9},{\u0022x\u0022:1,\u0022y\u0022:2}]}}]}",
+      "updates": [
+        "AQMCAEcBBQEoAAIAAXABfQmoAQcBfQIBAQEHAQ=="
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "p": 9
+              },
+              {
+                "x": 1,
+                "y": 2
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-refuse-a-crossing-rank-pair",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1
+              },
+              {
+                "a": 2
+              },
+              {
+                "a": 3
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQ4BACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBYQF9AYcBBQEoAAEHAWEBfQKHAQcBKAABCQFhAX0DJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmN1AA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022a\u0022:3},{\u0022b\u0022:9}]}}]}",
+      "updates": [
+        "AQICAIcBCQEoAAIAAWIBfQkBAQEFBA=="
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 3
+              },
+              {
+                "b": 9
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-similarity-window-reaches-the-count-difference",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "t": 0
+              },
+              {
+                "t": 1
+              },
+              {
+                "t": 2
+              },
+              {
+                "x": 5,
+                "t": 3
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AREBACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBdAF9AIcBBQEoAAEHAXQBfQGHAQcBKAABCQF0AX0ChwEJASgAAQsBeAF9BSgAAQsBdAF9AycAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJjdQA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022x\u0022:5,\u0022t\u0022:9},{\u0022u\u0022:1}]}}]}",
+      "updates": [
+        "AQMCAKgBDQF9CYcBCwEoAAIBAXUBfQEBAQIFBg0B"
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "x": 5,
+                "t": 9
+              },
+              {
+                "u": 1
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "ordered-ids-keep-an-unchanged-id-between-changed-ones",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "cell": {
+              "blocks": [
+                "a",
+                "b",
+                "c"
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AQoBACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwRjZWxsAScAAQQGYmxvY2tzAAgAAQUDdwFhdwFidwFjJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmN1AA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022cell\u0022:{\u0022blocks\u0022:[\u0022x\u0022,\u0022b\u0022,\u0022y\u0022]}}}]}",
+      "updates": [
+        "AQICAEgBBgF3AXjIAQcBCAF3AXkBAQIGAQgB"
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "cell": {
+              "blocks": [
+                "x",
+                "b",
+                "y"
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-an-element-that-gained-a-key-is-not-equal",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1
+              },
+              {
+                "b": 2
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQwBACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBYQF9AYcBBQEoAAEHAWIBfQInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcCY3UA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022a\u0022:1,\u0022z\u0022:0},{\u0022b\u0022:2},{\u0022c\u0022:3}]}}]}",
+      "updates": [
+        "AQMCACgAAQUBegF9AIcBBwEoAAIBAWMBfQMA"
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1,
+                "z": 0
+              },
+              {
+                "b": 2
+              },
+              {
+                "c": 3
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
       "name": "move-into-a-parent-first",
       "seed": [
         {

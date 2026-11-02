@@ -39,7 +39,20 @@ var GenerateRowKey = func() string {
 var ErrNotUnicode = errors.New("collab: the document holds text that is not valid Unicode")
 
 // strictValue is a Node as JS values, every string and key read strictly.
-func strictValue(n *jsjson.Node) (any, error) {
+func strictValue(n *jsjson.Node) (any, error) { return readValue(n, false) }
+
+// editValue is strictValue keeping each number's text (sourceNumber), for
+// the values an edit compares against the live doc.
+func editValue(n *jsjson.Node) (any, error) { return readValue(n, true) }
+
+// sourceNumber is a request number and its text. .NET's DeepEquals compares
+// a live integer to it by exact decimal value, a live double by GetDouble.
+type sourceNumber struct {
+	value float64
+	raw   []byte
+}
+
+func readValue(n *jsjson.Node, keepText bool) (any, error) {
 	switch n.Kind {
 	case jsjson.KindNull:
 		return nil, nil
@@ -53,6 +66,9 @@ func strictValue(n *jsjson.Node) (any, error) {
 		if err != nil && !errors.Is(err, strconv.ErrRange) {
 			return nil, err
 		}
+		if keepText {
+			return sourceNumber{number, n.Raw()}, nil
+		}
 		return number, nil
 	case jsjson.KindString:
 		text, err := n.Text()
@@ -63,7 +79,7 @@ func strictValue(n *jsjson.Node) (any, error) {
 	case jsjson.KindArray:
 		items := make([]any, len(n.Items))
 		for i, item := range n.Items {
-			v, err := strictValue(item)
+			v, err := readValue(item, keepText)
 			if err != nil {
 				return nil, err
 			}
@@ -77,7 +93,7 @@ func strictValue(n *jsjson.Node) (any, error) {
 		if err != nil {
 			return nil, errors.Join(ErrNotUnicode, err)
 		}
-		v, err := strictValue(m.Value)
+		v, err := readValue(m.Value, keepText)
 		if err != nil {
 			return nil, err
 		}
@@ -517,6 +533,8 @@ func atomicValue(v any, depth int) (any, error) {
 	switch v := v.(type) {
 	case nil, bool, float64:
 		return v, nil
+	case sourceNumber:
+		return v.value, nil
 	case jsjson.Str:
 		return noNul(v, "a string value")
 	case *jsjson.Object:

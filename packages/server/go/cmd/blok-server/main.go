@@ -66,8 +66,9 @@ const usage = `Usage of blok-server:
     list what each tool's richTextFields declares (or set BLOK_RICH_TEXT_FIELDS)
 `
 
-// shutdownGrace stays under the 2s the conformance harness waits before SIGKILL.
-const shutdownGrace = 1500 * time.Millisecond
+// shutdownGrace is C#'s HostCollab.ShutdownTimeout: a ceiling for the drain
+// and the graceful stop, not a wait.
+const shutdownGrace = 30 * time.Second
 
 const (
 	defaultRequestTimeout = 10 * time.Minute

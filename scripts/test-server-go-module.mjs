@@ -84,8 +84,9 @@ async function main() {
     await copyTrackedModule(copiedModule);
     await cp(fixtureDirectory, consumer, { recursive: true });
     await run('go', ['mod', 'edit', `-replace=${modulePath}=${copiedModule}`], { cwd: consumer });
-    // Default -mod=readonly: the fixture's go.sum must already be complete.
-    await run('go', ['build', '-o', consumerExecutable, '.'], { cwd: consumer });
+    // -mod=mod: a Dependabot bump of the module's requirements must not
+    // also need a hand edit of the fixture's go.sum.
+    await run('go', ['build', '-mod=mod', '-o', consumerExecutable, '.'], { cwd: consumer });
 
     // Like the C# fixture's manifest hash check: the binary carries the
     // bundle a fresh build of src/view/server-runtime.ts gives.

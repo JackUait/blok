@@ -194,7 +194,7 @@ describe('server release wiring', () => {
   it('keeps every Node, C# and Go server gate in final CI', () => {
     const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
     const jobs = [workflow.jobs.server, workflow.jobs['server-delivery']];
-    const steps = jobs.flatMap((job) => job?.steps ?? []);
+    const steps = [...jobs, workflow.jobs['server-security']].flatMap((job) => job?.steps ?? []);
     const runs = steps.map((step) => step.run ?? '').join('\n');
 
     // The two jobs run in parallel; each builds the server, so each needs both toolchains.
@@ -216,6 +216,8 @@ describe('server release wiring', () => {
     expect(runs).toContain('node scripts/test-server-conformance.mjs --target csharp');
     expect(runs).toContain('node scripts/test-server-conformance.mjs --target go');
     expect(runs).toContain('node scripts/publish-server.mjs --version 1.10.1 --dry-run');
+    expect(runs).toContain('node scripts/publish-server-go.mjs --version 1.10.1 --dry-run');
+    expect(runs).toContain('node scripts/test-server-go-module.mjs');
     expect(runs).toContain('test/unit/architecture/server-release-wiring.test.ts');
   });
 

@@ -336,7 +336,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('ships and conformance-tests the .NET and Go servers in parallel with the .NET tests', () => {
+  it('ships and conformance-tests the .NET server in parallel with the .NET tests', () => {
     const delivery = getJob(ci, 'server-delivery');
 
     expect(delivery.name).toBe('Server Delivery');
@@ -361,6 +361,54 @@ describe('CI critical-path law', () => {
         run: 'node scripts/test-server-conformance.mjs --target csharp',
       },
       {
+        name: 'Dry-run server artifacts',
+        run: [
+          'node scripts/publish-server.mjs --version 1.10.1 --dry-run',
+          'node scripts/publish-server-go.mjs --version 1.10.1 --dry-run',
+        ].join('\n'),
+      },
+      {
+        name: 'Test server delivery wiring',
+        run: [
+          'yarn vitest run --project=unit \\',
+          '  test/unit/server/bin.test.ts \\',
+          '  test/unit/scripts/check-server-coverage.test.ts \\',
+          '  test/unit/scripts/publish-server.test.ts \\',
+          '  test/unit/scripts/publish-server-go.test.ts \\',
+          '  test/unit/scripts/verify-docs-release.test.ts \\',
+          '  test/unit/scripts/release-cli.test.ts \\',
+          '  test/unit/architecture/server-release-wiring.test.ts \\',
+          '  test/unit/architecture/server-go-delivery-law.test.ts \\',
+          '  test/unit/architecture/server-quality-gates.test.ts \\',
+          '  test/unit/architecture/ci-critical-path-law.test.ts \\',
+          '  test/unit/architecture/package-metadata-law.test.ts',
+        ].join('\n'),
+      },
+    ]);
+  });
+
+  // The Go gates ride in Server Security, which has minutes to spare, so they
+  // take no extra job slot under the 20-job cap and leave Server Delivery
+  // well under 7 minutes.
+  it('formats, vets, tests, audits and conformance-tests the Go server beside the security scans', () => {
+    const security = getJob(ci, 'server-security');
+    const steps = (security.steps ?? []).map(normalizeStep);
+    const goStart = steps.findIndex((step) => step.name === 'Setup Node.js and Dependencies');
+
+    expect(security.name).toBe('Server Security');
+    expect(security.needs).toBeUndefined();
+    expect(steps.slice(0, goStart).map((step) => step.name)).toEqual([
+      'Checkout full history',
+      'Setup .NET',
+      'Audit NuGet dependencies',
+      'Scan committed secrets',
+      'Scan repository vulnerabilities and configuration',
+      'Build server container image',
+      'Scan server container image',
+    ]);
+    expect(steps.slice(goStart)).toEqual([
+      setupNodeDependencies,
+      {
         name: 'Setup Go',
         uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16',
         with: {
@@ -370,9 +418,8 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Check Go formatting',
-        'working-directory': 'packages/server/go',
         run: [
-          'unformatted="$(gofmt -l .)"',
+          'unformatted="$(gofmt -l packages/server/go test/fixtures/go-server-consumer)"',
           'if [ -n "$unformatted" ]; then',
           '  echo "$unformatted"',
           '  exit 1',
@@ -385,11 +432,17 @@ describe('CI critical-path law', () => {
         run: 'go vet ./...',
       },
       {
+        name: 'Audit Go dependencies',
+        'working-directory': 'packages/server/go',
+        run: 'go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...',
+      },
+      {
         name: 'Test Go server with coverage',
         'working-directory': 'packages/server/go',
         run: [
           'go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...',
           'go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1',
+          'node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"',
         ].join('\n'),
       },
       {
@@ -397,23 +450,8 @@ describe('CI critical-path law', () => {
         run: 'node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract --suite host-cli-contract --suite http-host-contract',
       },
       {
-        name: 'Dry-run server artifacts',
-        run: 'node scripts/publish-server.mjs --version 1.10.1 --dry-run',
-      },
-      {
-        name: 'Test server delivery wiring',
-        run: [
-          'yarn vitest run --project=unit \\',
-          '  test/unit/server/bin.test.ts \\',
-          '  test/unit/scripts/check-server-coverage.test.ts \\',
-          '  test/unit/scripts/publish-server.test.ts \\',
-          '  test/unit/scripts/verify-docs-release.test.ts \\',
-          '  test/unit/scripts/release-cli.test.ts \\',
-          '  test/unit/architecture/server-release-wiring.test.ts \\',
-          '  test/unit/architecture/server-quality-gates.test.ts \\',
-          '  test/unit/architecture/ci-critical-path-law.test.ts \\',
-          '  test/unit/architecture/package-metadata-law.test.ts',
-        ].join('\n'),
+        name: 'Test Go module consumer and release build',
+        run: 'node scripts/test-server-go-module.mjs',
       },
     ]);
   });

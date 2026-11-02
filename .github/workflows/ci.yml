@@ -290,6 +290,48 @@ jobs:
           format: table
           exit-code: '1'
 
+      # The Go gates live here, not in a job of their own: this job has minutes
+      # to spare, and a new job would take the 20th slot at t=0 on main.
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.sum
+
+      - name: Check Go formatting
+        run: |
+          unformatted="$(gofmt -l packages/server/go test/fixtures/go-server-consumer)"
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet Go server
+        working-directory: packages/server/go
+        run: go vet ./...
+
+      - name: Audit Go dependencies
+        working-directory: packages/server/go
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+      - name: Test Go server with coverage
+        working-directory: packages/server/go
+        run: |
+          go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...
+          go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1
+          node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"
+
+      # The suites the Go server passes whole so far. Add a suite as Go gains
+      # its features, and drop the list once Go passes them all.
+      - name: Test Go conformance
+        run: node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract --suite host-cli-contract --suite http-host-contract
+
+      - name: Test Go module consumer and release build
+        run: node scripts/test-server-go-module.mjs
+
   server:
     name: Server
     runs-on: ubuntu-latest
@@ -354,38 +396,10 @@ jobs:
       - name: Test C# conformance
         run: node scripts/test-server-conformance.mjs --target csharp
 
-      - name: Setup Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
-        with:
-          go-version-file: packages/server/go/go.mod
-          cache-dependency-path: packages/server/go/go.sum
-
-      - name: Check Go formatting
-        working-directory: packages/server/go
-        run: |
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - name: Vet Go server
-        working-directory: packages/server/go
-        run: go vet ./...
-
-      - name: Test Go server with coverage
-        working-directory: packages/server/go
-        run: |
-          go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...
-          go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1
-
-      # The suites the Go server passes whole so far. Add a suite as Go gains
-      # its features, and drop the list once Go passes them all.
-      - name: Test Go conformance
-        run: node scripts/test-server-conformance.mjs --target go --suite harness-contract --suite server-contract --suite routing-contract --suite host-cli-contract --suite http-host-contract
-
       - name: Dry-run server artifacts
-        run: node scripts/publish-server.mjs --version 1.10.1 --dry-run
+        run: |
+          node scripts/publish-server.mjs --version 1.10.1 --dry-run
+          node scripts/publish-server-go.mjs --version 1.10.1 --dry-run
 
       - name: Test server delivery wiring
         run: |
@@ -393,9 +407,11 @@ jobs:
             test/unit/server/bin.test.ts \
             test/unit/scripts/check-server-coverage.test.ts \
             test/unit/scripts/publish-server.test.ts \
+            test/unit/scripts/publish-server-go.test.ts \
             test/unit/scripts/verify-docs-release.test.ts \
             test/unit/scripts/release-cli.test.ts \
             test/unit/architecture/server-release-wiring.test.ts \
+            test/unit/architecture/server-go-delivery-law.test.ts \
             test/unit/architecture/server-quality-gates.test.ts \
             test/unit/architecture/ci-critical-path-law.test.ts \
             test/unit/architecture/package-metadata-law.test.ts

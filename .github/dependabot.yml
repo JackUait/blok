@@ -83,6 +83,27 @@ updates:
         applies-to: security-updates
         patterns: ["*"]
 
+  # The Go module only. scripts/test-server-go-module.mjs builds the consumer
+  # fixture with -mod=mod, so a bump here needs no fixture edit.
+  - package-ecosystem: gomod
+    directory: /packages/server/go
+    schedule:
+      interval: monthly
+      time: "05:19"
+    open-pull-requests-limit: 3
+    groups:
+      gomod-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      gomod-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      gomod-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
   # One image line, so splitting majors off would be theatre.
   - package-ecosystem: docker
     directory: /packages/server

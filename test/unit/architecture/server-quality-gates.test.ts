@@ -78,18 +78,22 @@ describe('server quality gates', () => {
     expect(tools.tools['dotnet-reportgenerator-globaltool']?.version).toBe('5.5.11');
   });
 
-  it('formats, vets, tests and measures the Go server in CI', () => {
-    const steps = workflow('.github/workflows/ci.yml').jobs['server-delivery']?.steps ?? [];
+  it('formats, vets, audits, tests and measures the Go server in CI', () => {
+    const steps = workflow('.github/workflows/ci.yml').jobs['server-security']?.steps ?? [];
     const runs = steps
       .flatMap(step => step.run === undefined ? [] : [step.run])
       .join('\n');
     const uses = steps.flatMap(step => step.uses === undefined ? [] : [step.uses]);
 
     expect(uses).toContain('actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16');
-    expect(runs).toContain('gofmt -l .');
+    expect(runs).toContain('gofmt -l packages/server/go test/fixtures/go-server-consumer');
     expect(runs).toContain('go vet ./...');
+    // Pinned: @latest would let a new release change what fails the gate.
+    expect(runs).toContain('go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...');
     expect(runs).toMatch(/go test -p 2 .*-coverprofile=/);
+    expect(runs).toContain('scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"');
     expect(runs).toContain('node scripts/test-server-conformance.mjs --target go');
+    expect(runs).toContain('node scripts/test-server-go-module.mjs');
   });
 
   it('scans secrets, vulnerable dependencies, configuration, and C# code', () => {
@@ -155,6 +159,7 @@ describe('server quality gates', () => {
 
     expect(targets).toEqual(expect.arrayContaining([
       ['nuget', '/packages/server/dotnet'],
+      ['gomod', '/packages/server/go'],
       ['docker', '/packages/server'],
       ['github-actions', '/'],
     ]));

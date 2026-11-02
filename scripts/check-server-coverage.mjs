@@ -11,6 +11,10 @@ export const GO_COVERAGE_THRESHOLDS = Object.freeze({
   statements: 80,
 });
 
+// Shown to two decimals, cut down and not rounded, so a value under a floor
+// never prints as the floor. The epsilon absorbs float error like 0.57 * 100.
+const shown = (percent) => Math.floor(percent * 100 + 1e-6) / 100;
+
 const percentage = (coverageTag, attribute) => {
   const match = new RegExp(`\\b${attribute}="([^"]+)"`).exec(coverageTag);
   const rate = Number(match?.[1]);
@@ -19,7 +23,7 @@ const percentage = (coverageTag, attribute) => {
     throw new Error(`Invalid Cobertura ${attribute}`);
   }
 
-  return Number((rate * 100).toFixed(2));
+  return rate * 100;
 };
 
 export const validateServerCoverage = (
@@ -32,24 +36,22 @@ export const validateServerCoverage = (
     throw new Error('Missing Cobertura coverage element');
   }
 
-  const result = {
-    lines: percentage(coverageTag, 'line-rate'),
-    branches: percentage(coverageTag, 'branch-rate'),
-  };
+  const lines = percentage(coverageTag, 'line-rate');
+  const branches = percentage(coverageTag, 'branch-rate');
 
-  if (result.lines < thresholds.lines) {
+  if (lines < thresholds.lines) {
     throw new Error(
-      `Line coverage ${result.lines}% is below ${thresholds.lines}%`,
+      `Line coverage ${shown(lines)}% is below ${thresholds.lines}%`,
     );
   }
 
-  if (result.branches < thresholds.branches) {
+  if (branches < thresholds.branches) {
     throw new Error(
-      `Branch coverage ${result.branches}% is below ${thresholds.branches}%`,
+      `Branch coverage ${shown(branches)}% is below ${thresholds.branches}%`,
     );
   }
 
-  return result;
+  return { lines: shown(lines), branches: shown(branches) };
 };
 
 /**
@@ -101,9 +103,10 @@ export const validateGoCoverage = (
     throw new Error('Go coverage profile has no statements');
   }
 
-  const statements = Number(((covered / total) * 100).toFixed(2));
+  const statements = shown((covered / total) * 100);
 
-  if (statements < thresholds.statements) {
+  // Whole numbers, so no rounding can lift a value over the floor.
+  if (covered * 100 < thresholds.statements * total) {
     throw new Error(
       `Go statement coverage ${statements}% is below ${thresholds.statements}%`,
     );

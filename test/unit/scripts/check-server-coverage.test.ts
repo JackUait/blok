@@ -36,6 +36,12 @@ describe('check-server-coverage', () => {
       .toThrow('Line coverage 79.9% is below 80%');
   });
 
+  // Rounding before the compare would let 79.996% pass an 80% floor.
+  it('rejects coverage that only rounds up to the floor', () => {
+    expect(() => validateServerCoverage(coverage('0.79996', '0.90')))
+      .toThrow('Line coverage 79.99% is below 80%');
+  });
+
   it('rejects branch coverage below the floor', () => {
     expect(() => validateServerCoverage(coverage('0.90', '0.799')))
       .toThrow('Branch coverage 79.9% is below 80%');
@@ -75,6 +81,13 @@ describe('check-server-coverage for Go profiles', () => {
       'example.com/m/a.go:1.1,2.2 799 1',
       'example.com/m/a.go:3.1,4.2 201 0',
     ))).toThrow('Go statement coverage 79.9% is below 80%');
+  });
+
+  it('rejects statement coverage that only rounds up to the floor', () => {
+    expect(() => validateGoCoverage(goProfile(
+      'example.com/m/a.go:1.1,2.2 79996 1',
+      'example.com/m/a.go:3.1,4.2 20004 0',
+    ))).toThrow('Go statement coverage 79.99% is below 80%');
   });
 
   // A package listed by two test binaries appears twice; a block counts once,

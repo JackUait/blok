@@ -241,6 +241,7 @@
   "tools.table.changeSize": "වගුවේ ප්‍රමාණය වෙනස් කරන්න",
   "tools.table.columns": "තීරු",
   "tools.table.rows": "පේළි",
+  "tools.table.sizeKeepsContent": "අන්තර්ගතය සහිත පේළි සහ තීරු ඉතිරි වේ",
   "tools.table.textSize": "පෙළ ප්‍රමාණය",
   "tools.table.compactText": "සංයුක්ත පෙළ",
   "tools.table.comfortableText": "පහසු පෙළ",

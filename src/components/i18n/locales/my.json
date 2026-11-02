@@ -138,6 +138,7 @@
   "tools.table.changeSize": "ဇယားအရွယ်အစား ပြောင်းရန်",
   "tools.table.columns": "ကော်လံများ",
   "tools.table.rows": "တန်းများ",
+  "tools.table.sizeKeepsContent": "အကြောင်းအရာပါသော တန်းများနှင့် ကော်လံများ ကျန်ရှိနေမည်",
   "tools.table.textSize": "စာသားအရွယ်အစား",
   "tools.table.compactText": "ကျစ်လစ်သော စာသား",
   "tools.table.comfortableText": "သက်တောင့်သက်သာ စာသား",

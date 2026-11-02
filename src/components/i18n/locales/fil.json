@@ -138,6 +138,7 @@
   "tools.table.changeSize": "Baguhin ang laki ng talahanayan",
   "tools.table.columns": "Mga kolum",
   "tools.table.rows": "Mga hanay",
+  "tools.table.sizeKeepsContent": "Mananatili ang mga hanay at kolum na may laman",
   "tools.table.textSize": "Laki ng teksto",
   "tools.table.compactText": "Siksik na teksto",
   "tools.table.comfortableText": "Maluwag na teksto",

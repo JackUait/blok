@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Tabelgrootte wijzigen",
   "tools.table.columns": "Kolommen",
   "tools.table.rows": "Rijen",
+  "tools.table.sizeKeepsContent": "Rijen en kolommen met inhoud blijven staan",
   "tools.table.textSize": "Tekstgrootte",
   "tools.table.compactText": "Compacte tekst",
   "tools.table.comfortableText": "Comfortabele tekst",

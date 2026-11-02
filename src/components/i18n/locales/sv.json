@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Ändra tabellens storlek",
   "tools.table.columns": "Kolumner",
   "tools.table.rows": "Rader",
+  "tools.table.sizeKeepsContent": "Rader och kolumner med innehåll blir kvar",
   "tools.table.textSize": "Textstorlek",
   "tools.table.compactText": "Kompakt text",
   "tools.table.comfortableText": "Luftig text",

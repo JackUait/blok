@@ -264,6 +264,7 @@
   "tools.table.changeSize": "Mainīt tabulas izmēru",
   "tools.table.columns": "Kolonnas",
   "tools.table.rows": "Rindas",
+  "tools.table.sizeKeepsContent": "Rindas un kolonnas ar saturu paliek",
   "tools.table.textSize": "Teksta izmērs",
   "tools.table.compactText": "Kompakts teksts",
   "tools.table.comfortableText": "Ērts teksts",

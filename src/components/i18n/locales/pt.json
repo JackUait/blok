@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Alterar tamanho da tabela",
   "tools.table.columns": "Colunas",
   "tools.table.rows": "Linhas",
+  "tools.table.sizeKeepsContent": "Linhas e colunas com conteúdo permanecem",
   "tools.table.textSize": "Tamanho do texto",
   "tools.table.compactText": "Texto compacto",
   "tools.table.comfortableText": "Texto confortável",

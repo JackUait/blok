@@ -1444,8 +1444,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // tables.css + colors.css: the full-screen table modal, backdrop, toggle and space-14 token,
     // then its header, shadow token, grow motion, the transition reset that keeps it smooth,
     // the clickable size with its two fields, the button following the table's corner,
-    // the page width a closing table takes back, and the note on the tighter padding.
-    const TABLE_FULLSCREEN_BYTES = 5_965;
+    // the page width a closing table takes back, the note on the tighter padding,
+    // and the size card with its steppers, note and Done button (replacing the two fields).
+    const TABLE_FULLSCREEN_BYTES = 7_915;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

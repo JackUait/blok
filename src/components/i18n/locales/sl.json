@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Spremeni velikost tabele",
   "tools.table.columns": "Stolpci",
   "tools.table.rows": "Vrstice",
+  "tools.table.sizeKeepsContent": "Vrstice in stolpci z vsebino ostanejo",
   "tools.table.textSize": "Velikost besedila",
   "tools.table.compactText": "Strnjeno besedilo",
   "tools.table.comfortableText": "Udobno besedilo",

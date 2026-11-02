@@ -11,6 +11,24 @@ const HEADER_ATTR = 'data-blok-table-fullscreen-header';
 const TITLE_ATTR = 'data-blok-table-fullscreen-title';
 const SIZE_ATTR = 'data-blok-table-fullscreen-size';
 const SIZE_EDITOR_ATTR = 'data-blok-table-fullscreen-size-editor';
+const SIZE_WRAP_ATTR = 'data-blok-table-fullscreen-size-wrap';
+const SIZE_LABEL_ATTR = 'data-blok-table-fullscreen-size-label';
+const SIZE_NOTE_ATTR = 'data-blok-table-fullscreen-size-note';
+const SIZE_DONE_ATTR = 'data-blok-table-fullscreen-size-done';
+const STEP_ATTR = 'data-blok-table-fullscreen-step';
+/** Holding a stepper: first repeat after this long, then one step per REPEAT_MS. */
+const HOLD_MS = 380;
+const REPEAT_MS = 70;
+
+/**
+ * One row of the size card. The − and + are pointer helpers only: the field is
+ * a spinbutton that steps with the arrow keys, so Tab skips them.
+ */
+const stepperRow = (axis: 'cols' | 'rows'): string =>
+  `<span ${SIZE_LABEL_ATTR}="${axis}"></span><span data-blok-table-fullscreen-stepper>`
+  + `<button type="button" ${STEP_ATTR}="-1" data-axis="${axis}" tabindex="-1" aria-hidden="true">−</button>`
+  + '<input role="spinbutton" inputmode="numeric" autocomplete="off">'
+  + `<button type="button" ${STEP_ATTR}="1" data-axis="${axis}" tabindex="-1" aria-hidden="true">+</button></span>`;
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
 const CLOSING_ATTR = 'data-blok-table-fullscreen-closing';
 
@@ -124,6 +142,11 @@ export class TableFullscreen {
   private readonly sizeEditor: HTMLElement;
   private readonly colsInput: HTMLInputElement;
   private readonly rowsInput: HTMLInputElement;
+  private readonly steppers: HTMLButtonElement[];
+  private readonly sizeNote: HTMLElement;
+  private holdTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The note shows once a value is brought down to the filled cells, not merely sitting there. */
+  private hitFloor = false;
   /** The size fields' floor while they are open. */
   private minSize: TableSize | null = null;
 
@@ -168,12 +191,25 @@ export class TableFullscreen {
     // The size fields take Enter, Escape and arrows; Blok's block keys must stand down.
     header.setAttribute(DATA_ATTR.keyboardOwner, '');
     header.contentEditable = 'false';
-    header.innerHTML = `${IconTable}<span ${TITLE_ATTR}></span><button type="button" ${SIZE_ATTR}></button>`
-      + `<span ${SIZE_EDITOR_ATTR} hidden><input data-blok-field="text" inputmode="numeric" autocomplete="off">`
-      + '<span aria-hidden="true">×</span><input data-blok-field="text" inputmode="numeric" autocomplete="off"></span>';
+    // The card's fields are steppers, not text boxes, so they skip the data-blok-field look.
+    header.innerHTML = `${IconTable}<span ${TITLE_ATTR}></span>`
+      + `<span ${SIZE_WRAP_ATTR}><button type="button" ${SIZE_ATTR} aria-expanded="false"></button>`
+      + `<span ${SIZE_EDITOR_ATTR} role="group" hidden>${stepperRow('cols')}${stepperRow('rows')}`
+      + `<span ${SIZE_NOTE_ATTR} hidden></span><button type="button" ${SIZE_DONE_ATTR}></button></span></span>`;
     this.header = header;
 
     const [colsInput, rowsInput] = Array.from(header.querySelectorAll('input'));
+    const label = (axis: string): HTMLElement =>
+      header.querySelector<HTMLElement>(`[${SIZE_LABEL_ATTR}="${axis}"]`) ?? document.createElement('span');
+    const done = header.querySelector<HTMLElement>(`[${SIZE_DONE_ATTR}]`) ?? document.createElement('button');
+
+    this.steppers = Array.from(header.querySelectorAll<HTMLButtonElement>(`[${STEP_ATTR}]`));
+    this.sizeNote = header.querySelector<HTMLElement>(`[${SIZE_NOTE_ATTR}]`) ?? document.createElement('span');
+    label('cols').textContent = options.t('tools.table.columns');
+    label('rows').textContent = options.t('tools.table.rows');
+    this.sizeNote.textContent = options.t('tools.table.sizeKeepsContent');
+    done.textContent = options.t('tools.equation.done');
+    done.addEventListener('click', () => this.commitSizeEdit());
 
     this.titleEl = header.querySelector<HTMLElement>(`[${TITLE_ATTR}]`) ?? document.createElement('span');
     this.sizeButton = header.querySelector<HTMLButtonElement>(`[${SIZE_ATTR}]`) ?? document.createElement('button');
@@ -183,11 +219,52 @@ export class TableFullscreen {
     this.colsInput = colsInput;
     this.rowsInput = rowsInput;
     this.sizeButton.setAttribute('aria-label', options.t('tools.table.changeSize'));
+    this.sizeEditor.setAttribute('aria-label', options.t('tools.table.changeSize'));
     colsInput.setAttribute('aria-label', options.t('tools.table.columns'));
     rowsInput.setAttribute('aria-label', options.t('tools.table.rows'));
-    this.sizeButton.addEventListener('click', () => this.startSizeEdit());
-    this.sizeEditor.addEventListener('input', () => this.flagTooSmall());
+    // Keeps focus in the card, so clicking the size again applies instead of reopening.
+    this.sizeButton.addEventListener('pointerdown', (event) => {
+      if (this.minSize !== null) {
+        event.preventDefault();
+      }
+    });
+    this.sizeButton.addEventListener('click', () => {
+      if (this.minSize === null) {
+        this.startSizeEdit();
+      } else {
+        this.commitSizeEdit();
+      }
+    });
+    this.sizeEditor.addEventListener('pointerdown', (event) => {
+      const step = event.target instanceof Element ? event.target.closest<HTMLButtonElement>(`[${STEP_ATTR}]`) : null;
+
+      if (step !== null) {
+        // The field keeps focus while a stepper is held.
+        event.preventDefault();
+        this.holdStep(step);
+      }
+    });
+    ['pointerup', 'pointercancel', 'pointerout'].forEach(type => this.sizeEditor.addEventListener(type, () => this.stopHold()));
+    this.sizeEditor.addEventListener('input', (event) => {
+      const field = event.target;
+
+      if (field instanceof HTMLInputElement) {
+        Object.assign(field, { value: field.value.replace(/\D+/g, '').slice(0, 3) });
+        this.syncSteppers();
+      }
+    });
+    // A typed value below the filled cells rises to them as the field is left.
+    this.sizeEditor.addEventListener('change', (event) => {
+      if (event.target instanceof HTMLInputElement) {
+        this.stepSize(event.target, 0);
+      }
+    });
     this.sizeEditor.addEventListener('keydown', (event) => {
+      if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && event.target instanceof HTMLInputElement) {
+        event.preventDefault();
+        this.stepSize(event.target, (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1));
+        event.target.select();
+      }
       if (event.key === 'Enter') {
         event.preventDefault();
         this.commitSizeEdit();
@@ -489,29 +566,87 @@ export class TableFullscreen {
     const { rows, cols } = this.options.getSize();
 
     this.minSize = this.options.getMinSize();
+    this.hitFloor = false;
     this.colsInput.value = String(cols);
     this.rowsInput.value = String(rows);
-    this.sizeButton.hidden = true;
+    this.syncSteppers();
     this.sizeEditor.hidden = false;
+    this.sizeButton.setAttribute('aria-expanded', 'true');
     this.colsInput.focus();
     this.colsInput.select();
   }
 
-  /** Marks a field whose value would drop filled cells, so the floor shows before Enter. */
-  private flagTooSmall(): void {
+  /** Moves a field by `by`, clamped to the filled cells and MAX_SIZE. */
+  private stepSize(input: HTMLInputElement, by: number): void {
     const min = this.minSize;
 
     if (min === null) {
       return;
     }
-    const flag = (input: HTMLInputElement, floor: number): void => {
-      const value = Number.parseInt(input.value, 10);
+    const floor = input === this.colsInput ? min.cols : min.rows;
+    const value = Number.parseInt(input.value, 10);
+    const next = Math.min(MAX_SIZE, Math.max(floor, (Number.isFinite(value) ? value : floor) + by));
 
-      input.setAttribute('aria-invalid', String(Number.isFinite(value) && value < floor));
+    if (next === floor && (by < 0 || value < floor)) {
+      this.hitFloor = true;
+    }
+    Object.assign(input, { value: String(next) });
+    this.syncSteppers();
+  }
+
+  private holdStep(step: HTMLButtonElement): void {
+    const input = step.dataset.axis === 'rows' ? this.rowsInput : this.colsInput;
+    const by = Number(step.getAttribute(STEP_ATTR));
+    const repeat = (): void => {
+      this.stepSize(input, by);
+
+      if (step.disabled) {
+        this.stopHold();
+      }
     };
 
-    flag(this.colsInput, min.cols);
-    flag(this.rowsInput, min.rows);
+    this.stopHold();
+    repeat();
+    this.holdTimer = setTimeout(() => {
+      this.holdTimer = setInterval(repeat, REPEAT_MS);
+    }, HOLD_MS);
+  }
+
+  private stopHold(): void {
+    if (this.holdTimer !== null) {
+      clearTimeout(this.holdTimer);
+      clearInterval(this.holdTimer);
+      this.holdTimer = null;
+    }
+  }
+
+  /** Disables − at the filled cells and + at the cap, and says why at the floor. */
+  private syncSteppers(): void {
+    const min = this.minSize;
+
+    if (min === null) {
+      return;
+    }
+    const fields = [
+      { input: this.colsInput, floor: min.cols, axis: 'cols' },
+      { input: this.rowsInput, floor: min.rows, axis: 'rows' },
+    ];
+    const atFloor = fields.map(({ input, floor, axis }) => {
+      const value = Number.parseInt(input.value, 10);
+
+      input.setAttribute('aria-valuemin', String(floor));
+      input.setAttribute('aria-valuemax', String(MAX_SIZE));
+      input.setAttribute('aria-valuenow', Number.isFinite(value) ? String(value) : '');
+      this.steppers.forEach((step) => {
+        if (step.dataset.axis === axis) {
+          Object.assign(step, { disabled: step.getAttribute(STEP_ATTR) === '-1' ? !(value > floor) : !(value < MAX_SIZE) });
+        }
+      });
+
+      return Number.isFinite(value) && value <= floor;
+    });
+
+    this.sizeNote.hidden = !(this.hitFloor && atFloor.some(Boolean));
   }
 
   private commitSizeEdit(): void {
@@ -545,11 +680,10 @@ export class TableFullscreen {
     if (this.minSize === null) {
       return;
     }
+    this.stopHold();
     this.minSize = null;
     this.sizeEditor.hidden = true;
-    this.sizeButton.hidden = false;
-    this.colsInput.removeAttribute('aria-invalid');
-    this.rowsInput.removeAttribute('aria-invalid');
+    this.sizeButton.setAttribute('aria-expanded', 'false');
   }
 
   private hasLayerAbove(): boolean {

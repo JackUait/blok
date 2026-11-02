@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Փոխել աղյուսակի չափը",
   "tools.table.columns": "Սյունակներ",
   "tools.table.rows": "Տողեր",
+  "tools.table.sizeKeepsContent": "Բովանդակությամբ տողերն ու սյունակները մնում են",
   "tools.table.textSize": "Տեքստի չափը",
   "tools.table.compactText": "Սեղմ տեքստ",
   "tools.table.comfortableText": "Հարմարավետ տեքստ",

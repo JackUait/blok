@@ -138,6 +138,7 @@
   "tools.table.changeSize": "ಕೋಷ್ಟಕದ ಗಾತ್ರ ಬದಲಿಸಿ",
   "tools.table.columns": "ಕಾಲಮ್‌ಗಳು",
   "tools.table.rows": "ಸಾಲುಗಳು",
+  "tools.table.sizeKeepsContent": "ವಿಷಯವಿರುವ ಸಾಲುಗಳು ಮತ್ತು ಕಾಲಮ್‌ಗಳು ಉಳಿಯುತ್ತವೆ",
   "tools.table.textSize": "ಪಠ್ಯದ ಗಾತ್ರ",
   "tools.table.compactText": "ಕಾಂಪ್ಯಾಕ್ಟ್ ಪಠ್ಯ",
   "tools.table.comfortableText": "ಆರಾಮದಾಯಕ ಪಠ್ಯ",

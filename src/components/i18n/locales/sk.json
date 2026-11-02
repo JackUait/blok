@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Zmeniť veľkosť tabuľky",
   "tools.table.columns": "Stĺpce",
   "tools.table.rows": "Riadky",
+  "tools.table.sizeKeepsContent": "Riadky a stĺpce s obsahom zostanú",
   "tools.table.textSize": "Veľkosť textu",
   "tools.table.compactText": "Kompaktný text",
   "tools.table.comfortableText": "Pohodlný text",

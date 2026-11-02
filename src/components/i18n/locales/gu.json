@@ -241,6 +241,7 @@
   "tools.table.changeSize": "કોષ્ટકનું કદ બદલો",
   "tools.table.columns": "કૉલમ",
   "tools.table.rows": "હરોળ",
+  "tools.table.sizeKeepsContent": "સામગ્રીવાળી હરોળ અને કૉલમ રહે છે",
   "tools.table.textSize": "ટેક્સ્ટનું કદ",
   "tools.table.compactText": "કોમ્પેક્ટ ટેક્સ્ટ",
   "tools.table.comfortableText": "આરામદાયક ટેક્સ્ટ",

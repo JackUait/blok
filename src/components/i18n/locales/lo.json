@@ -252,6 +252,7 @@
   "tools.table.changeSize": "ປ່ຽນຂະໜາດຕາຕະລາງ",
   "tools.table.columns": "ຖັນ",
   "tools.table.rows": "ແຖວ",
+  "tools.table.sizeKeepsContent": "ແຖວ ແລະ ຖັນທີ່ມີເນື້ອຫາຍັງຄົງຢູ່",
   "tools.table.textSize": "ຂະໜາດຂໍ້ຄວາມ",
   "tools.table.compactText": "ຂໍ້ຄວາມກະທັດຮັດ",
   "tools.table.comfortableText": "ຂໍ້ຄວາມສະບາຍ",

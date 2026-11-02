@@ -150,6 +150,7 @@
   "tools.table.changeSize": "שנה את גודל הטבלה",
   "tools.table.columns": "עמודות",
   "tools.table.rows": "שורות",
+  "tools.table.sizeKeepsContent": "שורות ועמודות עם תוכן נשארות",
   "tools.table.textSize": "גודל טקסט",
   "tools.table.compactText": "טקסט קומפקטי",
   "tools.table.comfortableText": "טקסט נוח",

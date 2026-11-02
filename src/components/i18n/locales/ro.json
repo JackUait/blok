@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Schimbă dimensiunea tabelului",
   "tools.table.columns": "Coloane",
   "tools.table.rows": "Rânduri",
+  "tools.table.sizeKeepsContent": "Rândurile și coloanele cu conținut rămân",
   "tools.table.textSize": "Dimensiunea textului",
   "tools.table.compactText": "Text compact",
   "tools.table.comfortableText": "Text aerisit",

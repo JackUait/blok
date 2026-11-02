@@ -138,6 +138,7 @@
   "tools.table.changeSize": "പട്ടികയുടെ വലുപ്പം മാറ്റുക",
   "tools.table.columns": "കോളങ്ങൾ",
   "tools.table.rows": "വരികൾ",
+  "tools.table.sizeKeepsContent": "ഉള്ളടക്കമുള്ള വരികളും കോളങ്ങളും നിലനിൽക്കും",
   "tools.table.textSize": "ടെക്സ്റ്റ് വലുപ്പം",
   "tools.table.compactText": "ഒതുക്കമുള്ള ടെക്സ്റ്റ്",
   "tools.table.comfortableText": "സൗകര്യപ്രദമായ ടെക്സ്റ്റ്",

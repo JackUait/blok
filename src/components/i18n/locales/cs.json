@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Změnit velikost tabulky",
   "tools.table.columns": "Sloupce",
   "tools.table.rows": "Řádky",
+  "tools.table.sizeKeepsContent": "Řádky a sloupce s obsahem zůstanou",
   "tools.table.textSize": "Velikost textu",
   "tools.table.compactText": "Kompaktní text",
   "tools.table.comfortableText": "Pohodlný text",

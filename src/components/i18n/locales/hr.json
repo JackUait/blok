@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Promijeni veličinu tablice",
   "tools.table.columns": "Stupci",
   "tools.table.rows": "Retci",
+  "tools.table.sizeKeepsContent": "Retci i stupci sa sadržajem ostaju",
   "tools.table.textSize": "Veličina teksta",
   "tools.table.compactText": "Kompaktan tekst",
   "tools.table.comfortableText": "Prozračan tekst",

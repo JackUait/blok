@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Изменить размер таблицы",
   "tools.table.columns": "Столбцы",
   "tools.table.rows": "Строки",
+  "tools.table.sizeKeepsContent": "Строки и столбцы с содержимым остаются",
   "tools.table.textSize": "Размер текста",
   "tools.table.compactText": "Компактный текст",
   "tools.table.comfortableText": "Обычный текст",

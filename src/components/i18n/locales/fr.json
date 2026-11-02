@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Modifier la taille du tableau",
   "tools.table.columns": "Colonnes",
   "tools.table.rows": "Lignes",
+  "tools.table.sizeKeepsContent": "Les lignes et colonnes avec du contenu sont conservées",
   "tools.table.textSize": "Taille du texte",
   "tools.table.compactText": "Texte compact",
   "tools.table.comfortableText": "Texte aéré",

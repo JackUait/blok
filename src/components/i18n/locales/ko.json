@@ -150,6 +150,7 @@
   "tools.table.changeSize": "표 크기 변경",
   "tools.table.columns": "열",
   "tools.table.rows": "행",
+  "tools.table.sizeKeepsContent": "내용이 있는 행과 열은 유지됩니다",
   "tools.table.textSize": "텍스트 크기",
   "tools.table.compactText": "촘촘한 텍스트",
   "tools.table.comfortableText": "여유로운 텍스트",

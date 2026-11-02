@@ -2657,6 +2657,7 @@ export type BlokMessageKey =
   | 'tools.table.placementTopRight'
   | 'tools.table.rowLockedByMerge'
   | 'tools.table.rows'
+  | 'tools.table.sizeKeepsContent'
   | 'tools.table.splitCell'
   | 'tools.table.textSize'
   | 'tools.table.title'

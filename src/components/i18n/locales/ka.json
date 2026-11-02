@@ -253,6 +253,7 @@
   "tools.table.changeSize": "ცხრილის ზომის შეცვლა",
   "tools.table.columns": "სვეტები",
   "tools.table.rows": "სტრიქონები",
+  "tools.table.sizeKeepsContent": "შიგთავსიანი სტრიქონები და სვეტები რჩება",
   "tools.table.textSize": "ტექსტის ზომა",
   "tools.table.compactText": "კომპაქტური ტექსტი",
   "tools.table.comfortableText": "კომფორტული ტექსტი",

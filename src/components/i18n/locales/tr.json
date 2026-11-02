@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Tablo boyutunu değiştir",
   "tools.table.columns": "Sütunlar",
   "tools.table.rows": "Satırlar",
+  "tools.table.sizeKeepsContent": "İçerik olan satırlar ve sütunlar kalır",
   "tools.table.textSize": "Metin boyutu",
   "tools.table.compactText": "Sıkışık metin",
   "tools.table.comfortableText": "Rahat metin",

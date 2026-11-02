@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Muuda tabeli suurust",
   "tools.table.columns": "Veerud",
   "tools.table.rows": "Read",
+  "tools.table.sizeKeepsContent": "Sisuga read ja veerud jäävad alles",
   "tools.table.textSize": "Teksti suurus",
   "tools.table.compactText": "Kompaktne tekst",
   "tools.table.comfortableText": "Mugav tekst",

@@ -253,6 +253,7 @@
   "tools.table.changeSize": "เปลี่ยนขนาดตาราง",
   "tools.table.columns": "คอลัมน์",
   "tools.table.rows": "แถว",
+  "tools.table.sizeKeepsContent": "แถวและคอลัมน์ที่มีเนื้อหาจะยังอยู่",
   "tools.table.textSize": "ขนาดข้อความ",
   "tools.table.compactText": "ข้อความกะทัดรัด",
   "tools.table.comfortableText": "ข้อความสบายตา",

@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Tukar saiz jadual",
   "tools.table.columns": "Lajur",
   "tools.table.rows": "Baris",
+  "tools.table.sizeKeepsContent": "Baris dan lajur yang berisi kandungan kekal",
   "tools.table.textSize": "Saiz teks",
   "tools.table.compactText": "Teks padat",
   "tools.table.comfortableText": "Teks selesa",

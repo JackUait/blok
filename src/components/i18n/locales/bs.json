@@ -241,6 +241,7 @@
   "tools.table.changeSize": "Promijeni veličinu tabele",
   "tools.table.columns": "Kolone",
   "tools.table.rows": "Redovi",
+  "tools.table.sizeKeepsContent": "Redovi i kolone sa sadržajem ostaju",
   "tools.table.textSize": "Veličina teksta",
   "tools.table.compactText": "Kompaktan tekst",
   "tools.table.comfortableText": "Prozračan tekst",

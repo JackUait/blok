@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Промени величину табеле",
   "tools.table.columns": "Колоне",
   "tools.table.rows": "Редови",
+  "tools.table.sizeKeepsContent": "Редови и колоне са садржајем остају",
   "tools.table.textSize": "Величина текста",
   "tools.table.compactText": "Компактан текст",
   "tools.table.comfortableText": "Удобан текст",

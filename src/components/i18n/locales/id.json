@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Ubah ukuran tabel",
   "tools.table.columns": "Kolom",
   "tools.table.rows": "Baris",
+  "tools.table.sizeKeepsContent": "Baris dan kolom yang berisi konten tetap ada",
   "tools.table.textSize": "Ukuran teks",
   "tools.table.compactText": "Teks ringkas",
   "tools.table.comfortableText": "Teks nyaman",

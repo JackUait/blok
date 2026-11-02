@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Αλλαγή μεγέθους πίνακα",
   "tools.table.columns": "Στήλες",
   "tools.table.rows": "Γραμμές",
+  "tools.table.sizeKeepsContent": "Οι γραμμές και οι στήλες με περιεχόμενο παραμένουν",
   "tools.table.textSize": "Μέγεθος κειμένου",
   "tools.table.compactText": "Συμπαγές κείμενο",
   "tools.table.comfortableText": "Άνετο κείμενο",

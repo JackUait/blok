@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Ndrysho madhësinë e tabelës",
   "tools.table.columns": "Kolona",
   "tools.table.rows": "Rreshta",
+  "tools.table.sizeKeepsContent": "Rreshtat dhe kolonat me përmbajtje mbeten",
   "tools.table.textSize": "Madhësia e tekstit",
   "tools.table.compactText": "Tekst kompakt",
   "tools.table.comfortableText": "Tekst i rehatshëm",

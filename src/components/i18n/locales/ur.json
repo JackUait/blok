@@ -253,6 +253,7 @@
   "tools.table.changeSize": "ٹیبل کا سائز بدلیں",
   "tools.table.columns": "کالم",
   "tools.table.rows": "قطاریں",
+  "tools.table.sizeKeepsContent": "مواد والی قطاریں اور کالم برقرار رہتے ہیں",
   "tools.table.textSize": "متن کا سائز",
   "tools.table.compactText": "کمپیکٹ متن",
   "tools.table.comfortableText": "آرام دہ متن",

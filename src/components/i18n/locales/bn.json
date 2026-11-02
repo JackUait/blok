@@ -241,6 +241,7 @@
   "tools.table.changeSize": "টেবিলের আকার বদলান",
   "tools.table.columns": "কলাম",
   "tools.table.rows": "সারি",
+  "tools.table.sizeKeepsContent": "বিষয়বস্তু থাকা সারি ও কলাম থেকে যায়",
   "tools.table.textSize": "টেক্সটের আকার",
   "tools.table.compactText": "কমপ্যাক্ট টেক্সট",
   "tools.table.comfortableText": "আরামদায়ক টেক্সট",

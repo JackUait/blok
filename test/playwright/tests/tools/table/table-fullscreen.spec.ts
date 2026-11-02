@@ -550,23 +550,30 @@ test.describe('Table full screen', () => {
     await expect.poll(async () => Math.max(...await handleDrift())).toBeLessThanOrEqual(2);
   });
 
-  test('clicking the size lets you type columns and rows', async ({ page }) => {
+  test('clicking the size opens a card where you type columns and rows', async ({ page }) => {
     await createBlok(page);
     await openWithButton(page);
 
-    await page.getByRole('button', { name: 'Change table size' }).click();
-    const columns = page.getByRole('textbox', { name: 'Columns' });
-    const rows = page.getByRole('textbox', { name: 'Rows' });
+    const size = page.getByRole('button', { name: 'Change table size' });
+
+    await size.click();
+    await expect(size).toHaveAttribute('aria-expanded', 'true');
+    const card = page.getByRole('group', { name: 'Change table size' });
+    const columns = card.getByRole('spinbutton', { name: 'Columns' });
+    const rows = card.getByRole('spinbutton', { name: 'Rows' });
 
     await expect(columns).toHaveValue('2');
     await expect(rows).toHaveValue('2');
     await expect(columns).toBeFocused();
+    // The size text stays where it was while the card is open.
+    await expect(size).toBeVisible();
 
     await columns.fill('4');
     await rows.fill('5');
-    await rows.press('Enter');
+    await card.getByRole('button', { name: 'Done' }).click();
 
-    await expect(page.getByRole('button', { name: 'Change table size' })).toHaveText('4 × 5');
+    await expect(card).toBeHidden();
+    await expect(size).toHaveText('4 × 5');
     await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
     const content = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks[0]?.data.content as unknown[][]);
 
@@ -574,22 +581,39 @@ test.describe('Table full screen', () => {
     expect(content.every(row => row.length === 4)).toBe(true);
   });
 
-  test('the size cannot go below the filled cells', async ({ page }) => {
+  test('the steppers add and remove, and stop at the filled cells', async ({ page }) => {
     await createBlok(page, false, {
       blocks: [{ id: 'tbl', type: 'table', data: { withHeadings: false, content: [['A', 'B', ''], ['C', 'D', ''], ['', '', '']] } }],
     });
     await openWithButton(page);
 
     await page.getByRole('button', { name: 'Change table size' }).click();
-    const columns = page.getByRole('textbox', { name: 'Columns' });
-    const rows = page.getByRole('textbox', { name: 'Rows' });
+    const card = page.getByRole('group', { name: 'Change table size' });
+    const rows = card.getByRole('spinbutton', { name: 'Rows' });
+    const columns = card.getByRole('spinbutton', { name: 'Columns' });
+    const steppers = card.locator('[data-blok-table-fullscreen-step]');
+    const fewerRows = steppers.nth(2);
+    const moreRows = steppers.nth(3);
 
+    await moreRows.click();
+    await moreRows.click();
+    await expect(rows).toHaveValue('5');
+    await expect(card.getByText('Rows and columns with content stay')).toBeHidden();
+
+    await fewerRows.click();
+    await fewerRows.click();
+    await fewerRows.click();
+    // Two rows hold content: minus stops there and says why.
+    await expect(rows).toHaveValue('2');
+    await expect(fewerRows).toBeDisabled();
+    await expect(card.getByText('Rows and columns with content stay')).toBeVisible();
+
+    // Typed below the floor, the field rises to it on leaving.
     await columns.fill('1');
-    // Flagged while typing: one column would drop column B.
-    await expect(columns).toHaveAttribute('aria-invalid', 'true');
-    await rows.fill('1');
-    await rows.press('Enter');
+    await rows.focus();
+    await expect(columns).toHaveValue('2');
 
+    await rows.press('Enter');
     await expect(page.getByRole('button', { name: 'Change table size' })).toHaveText('2 × 2');
     const saved = JSON.stringify(await page.evaluate(async () => window.blokInstance?.save()));
 
@@ -598,18 +622,63 @@ test.describe('Table full screen', () => {
     }
   });
 
+  test('holding plus keeps adding', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    const card = page.getByRole('group', { name: 'Change table size' });
+    const plus = await card.locator('[data-blok-table-fullscreen-step]').nth(3).boundingBox();
+
+    expect(plus).not.toBeNull();
+    await page.mouse.move((plus?.x ?? 0) + 4, (plus?.y ?? 0) + 4);
+    await page.mouse.down();
+    await expect.poll(async () => Number(await card.getByRole('spinbutton', { name: 'Rows' }).inputValue())).toBeGreaterThan(5);
+    await page.mouse.up();
+  });
+
+  test('the size fields take digits only and step with the arrow keys', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+
+    await page.getByRole('button', { name: 'Change table size' }).click();
+    const card = page.getByRole('group', { name: 'Change table size' });
+    const columns = card.getByRole('spinbutton', { name: 'Columns' });
+
+    await columns.pressSequentially('3x');
+    await expect(columns).toHaveValue('3');
+    await columns.press('ArrowUp');
+    await expect(columns).toHaveValue('4');
+    await columns.press('Shift+ArrowUp');
+    await expect(columns).toHaveValue('14');
+    await expect(columns).toHaveAttribute('aria-valuenow', '14');
+  });
+
   test('Escape cancels a size edit and keeps the modal open', async ({ page }) => {
     await createBlok(page);
     await openWithButton(page);
 
     await page.getByRole('button', { name: 'Change table size' }).click();
-    await page.getByRole('textbox', { name: 'Rows' }).fill('9');
+    await page.getByRole('spinbutton', { name: 'Rows' }).fill('9');
     await page.keyboard.press('Escape');
 
-    await expect(page.getByRole('textbox', { name: 'Rows' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Change table size' })).toBeHidden();
     await expect(page.getByRole('button', { name: 'Change table size' })).toHaveText('2 × 2');
     await expect(page.getByRole('dialog', { name: 'Table' })).toBeVisible();
     await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
+  });
+
+  test('clicking the size again closes the card and applies it', async ({ page }) => {
+    await createBlok(page);
+    await openWithButton(page);
+    const size = page.getByRole('button', { name: 'Change table size' });
+
+    await size.click();
+    await page.getByRole('spinbutton', { name: 'Rows' }).fill('3');
+    await size.click();
+
+    await expect(page.getByRole('group', { name: 'Change table size' })).toBeHidden();
+    await expect(size).toHaveText('2 × 3');
   });
 
   test('a size change is one undo step', async ({ page }) => {
@@ -617,8 +686,8 @@ test.describe('Table full screen', () => {
     await openWithButton(page);
 
     await page.getByRole('button', { name: 'Change table size' }).click();
-    await page.getByRole('textbox', { name: 'Columns' }).fill('4');
-    await page.getByRole('textbox', { name: 'Rows' }).fill('4');
+    await page.getByRole('spinbutton', { name: 'Columns' }).fill('4');
+    await page.getByRole('spinbutton', { name: 'Rows' }).fill('4');
     await page.keyboard.press('Enter');
     await expect(page.locator(CELL_SELECTOR)).toHaveCount(16);
 

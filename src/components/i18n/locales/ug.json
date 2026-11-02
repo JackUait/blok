@@ -150,6 +150,7 @@
   "tools.table.changeSize": "جەدۋەل چوڭلۇقىنى ئۆزگەرتىش",
   "tools.table.columns": "ئىستونلار",
   "tools.table.rows": "قۇرلار",
+  "tools.table.sizeKeepsContent": "مەزمۇنى بار قۇر ۋە ئىستونلار ساقلىنىدۇ",
   "tools.table.textSize": "تېكىست چوڭلۇقى",
   "tools.table.compactText": "ئىخچام تېكىست",
   "tools.table.comfortableText": "كەڭرى تېكىست",

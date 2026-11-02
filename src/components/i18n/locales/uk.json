@@ -253,6 +253,7 @@
   "tools.table.changeSize": "Змінити розмір таблиці",
   "tools.table.columns": "Колонки",
   "tools.table.rows": "Рядки",
+  "tools.table.sizeKeepsContent": "Рядки й колонки із вмістом залишаються",
   "tools.table.textSize": "Розмір тексту",
   "tools.table.compactText": "Компактний текст",
   "tools.table.comfortableText": "Комфортний текст",

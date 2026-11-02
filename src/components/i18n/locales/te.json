@@ -241,6 +241,7 @@
   "tools.table.changeSize": "పట్టిక పరిమాణం మార్చు",
   "tools.table.columns": "స్తంభాలు",
   "tools.table.rows": "వరుసలు",
+  "tools.table.sizeKeepsContent": "కంటెంట్ ఉన్న వరుసలు మరియు స్తంభాలు ఉంటాయి",
   "tools.table.textSize": "వచన పరిమాణం",
   "tools.table.compactText": "కాంపాక్ట్ వచనం",
   "tools.table.comfortableText": "సౌకర్యవంతమైన వచనం",

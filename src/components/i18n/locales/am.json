@@ -241,6 +241,7 @@
   "tools.table.changeSize": "የሰንጠረዥ መጠን ቀይር",
   "tools.table.columns": "አምዶች",
   "tools.table.rows": "ረድፎች",
+  "tools.table.sizeKeepsContent": "ይዘት ያላቸው ረድፎች እና አምዶች ይቆያሉ",
   "tools.table.textSize": "የጽሑፍ መጠን",
   "tools.table.compactText": "የታመቀ ጽሑፍ",
   "tools.table.comfortableText": "ምቹ ጽሑፍ",

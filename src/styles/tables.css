@@ -407,19 +407,102 @@
   cursor: default;
 }
 
-/* :not([hidden]): a display value here would beat the hidden attribute. */
+[data-blok-table-fullscreen-size-wrap] {
+  position: relative;
+  flex: none;
+}
+
+[data-blok-table-fullscreen-size][aria-expanded='true'] {
+  background-color: var(--blok-item-hover-bg);
+  color: var(--blok-text-secondary);
+}
+
+/* :not([hidden]): a display value here would beat the hidden attribute.
+   A small card under the size: a label and a stepper per side, then Done. */
 [data-blok-table-fullscreen-size-editor]:not([hidden]) {
-  display: flex;
+  position: absolute;
+  top: calc(100% + var(--blok-space-1-5));
+  inset-inline-start: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  gap: var(--blok-space-2) var(--blok-space-4);
+  width: 232px;
+  padding: var(--blok-space-3);
+  border-radius: var(--blok-radius-surface);
+  background-color: var(--blok-popover-bg);
+  box-shadow: var(--blok-popover-box-shadow);
+  color: var(--blok-text-primary);
   font-size: 13px;
 }
 
-[data-blok-table-fullscreen-size-editor] input[data-blok-field] {
-  width: 6ch;
-  text-align: center;
+[data-blok-table-fullscreen-stepper] {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  border: 1px solid var(--blok-border-primary);
+  border-radius: var(--blok-radius-field);
+
+  &:has(input:focus) {
+    border-color: var(--blok-popover-border);
+  }
+}
+
+[data-blok-table-fullscreen-step] {
+  width: 26px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-field);
+  background: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+
+  &:hover:not(:disabled) {
+    background-color: var(--blok-item-hover-bg);
+  }
+
+  &:disabled {
+    color: var(--blok-text-tertiary);
+    cursor: default;
+  }
+}
+
+[data-blok-table-fullscreen-stepper] input {
+  width: 4ch;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+[data-blok-table-fullscreen-size-note]:not([hidden]) {
+  grid-column: 1 / -1;
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+[data-blok-table-fullscreen-size-done] {
+  grid-column: 1 / -1;
+  justify-self: end;
+  padding: var(--blok-space-1) var(--blok-space-2-5);
+  border: 0;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-text-primary);
+  color: var(--blok-bg-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
 /* In the table's top inline-end corner; table-fullscreen.ts sets the offsets on pointer move. */

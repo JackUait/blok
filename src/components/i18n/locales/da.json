@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Skift tabellens størrelse",
   "tools.table.columns": "Kolonner",
   "tools.table.rows": "Rækker",
+  "tools.table.sizeKeepsContent": "Rækker og kolonner med indhold bliver",
   "tools.table.textSize": "Tekststørrelse",
   "tools.table.compactText": "Kompakt tekst",
   "tools.table.comfortableText": "Luftig tekst",

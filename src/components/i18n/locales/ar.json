@@ -150,6 +150,7 @@
   "tools.table.changeSize": "تغيير حجم الجدول",
   "tools.table.columns": "أعمدة",
   "tools.table.rows": "صفوف",
+  "tools.table.sizeKeepsContent": "تبقى الصفوف والأعمدة التي تحتوي على محتوى",
   "tools.table.textSize": "حجم النص",
   "tools.table.compactText": "نص مضغوط",
   "tools.table.comfortableText": "نص مريح",

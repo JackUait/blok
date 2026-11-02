@@ -138,6 +138,7 @@
   "tools.table.changeSize": "Cədvəlin ölçüsünü dəyiş",
   "tools.table.columns": "Sütunlar",
   "tools.table.rows": "Sətirlər",
+  "tools.table.sizeKeepsContent": "Məzmunu olan sətirlər və sütunlar qalır",
   "tools.table.textSize": "Mətn ölçüsü",
   "tools.table.compactText": "Kompakt mətn",
   "tools.table.comfortableText": "Rahat mətn",

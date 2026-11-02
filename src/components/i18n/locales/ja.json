@@ -150,6 +150,7 @@
   "tools.table.changeSize": "表のサイズを変更",
   "tools.table.columns": "列",
   "tools.table.rows": "行",
+  "tools.table.sizeKeepsContent": "内容のある行と列は残ります",
   "tools.table.textSize": "テキストサイズ",
   "tools.table.compactText": "コンパクトなテキスト",
   "tools.table.comfortableText": "ゆったりしたテキスト",

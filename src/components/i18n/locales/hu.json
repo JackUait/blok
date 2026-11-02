@@ -150,6 +150,7 @@
   "tools.table.changeSize": "Táblázat méretének módosítása",
   "tools.table.columns": "Oszlopok",
   "tools.table.rows": "Sorok",
+  "tools.table.sizeKeepsContent": "A tartalommal rendelkező sorok és oszlopok megmaradnak",
   "tools.table.textSize": "Szövegméret",
   "tools.table.compactText": "Kompakt szöveg",
   "tools.table.comfortableText": "Kényelmes szöveg",

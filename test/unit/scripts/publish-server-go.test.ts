@@ -85,7 +85,7 @@ describe('publish-server-go', () => {
 
     const tar = gunzipSync(archive);
 
-    expect(tar.subarray(0, 100).toString('utf8').replace(/\0.*$/s, '')).toBe(target.binary);
+    expect(tar.subarray(0, 100).toString('utf8').replace(/\0[\s\S]*$/, '')).toBe(target.binary);
   });
 
   it('dry-run prints every build and archive without go or release writes', () => {

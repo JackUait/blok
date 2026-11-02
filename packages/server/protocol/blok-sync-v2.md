@@ -62,8 +62,13 @@ durability unavailable rather than replaying them through v1.
 
 These are the reference server's answers on `GET /sync/{doc}`. A second
 backend that wants the same client behaviour gives the same ones.
-`test/unit/server-conformance/sync-transport-contract.test.ts` checks each row
-as raw bytes against both servers.
+`test/unit/server-conformance/sync-transport-contract.test.ts` checks most
+rows as raw bytes against both servers. It does not check the rows that need
+a real room, a full or draining server, or an authorization hook: 503 `shutting down`, 503
+`too many connections on this server`, 403 `forbidden`, both 4403 closes,
+4409, both 4503 closes, 1008 `outbound queue overflow`, 1008 `malformed
+awareness`, 1008 `raw write on a v2 session`, and 1011. Server unit tests
+cover some of them; the rest wait for a real room on the second server.
 
 The checks run in this order: upgrade request, origin, doc id, ticket, rate
 limit, the application's authorization hook. A plain HTTP refusal does not

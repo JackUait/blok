@@ -492,14 +492,6 @@ func (p *planner) planRemove(op Remove, index int) ([]step, error) {
 	return steps, nil
 }
 
-func isPlainMapValue(v any) bool {
-	switch v.(type) {
-	case nil, bool, float64, jsjson.Str, *jsjson.Object, []any:
-		return true
-	}
-	return false
-}
-
 func (p *planner) planPatchMaps(op PatchMaps, index int) ([]step, error) {
 	var steps []step
 	for _, patch := range op.Patches {
@@ -511,13 +503,11 @@ func (p *planner) planPatchMaps(op PatchMaps, index int) ([]step, error) {
 			steps = append(steps, patchMap(target, str(patch.Key), nil))
 			continue
 		}
-		if !isPlainMapValue(patch.Value) {
+		if !IsPlainMapValue(patch.Value) {
 			return nil, where(index, fmt.Sprintf("the value for \"%s.%s\" is not plain JSON.", patch.Map, patch.Key))
 		}
 		// C# refuses here only when encoding runs out of stack; Go's writer has no such limit.
-		w := &lib0.Writer{}
-		lib0.WriteAny(w, patch.Value)
-		steps = append(steps, patchMap(target, str(patch.Key), w.Bytes()))
+		steps = append(steps, patchMap(target, str(patch.Key), encodeAny(patch.Value)))
 	}
 	return steps, nil
 }
@@ -848,9 +838,7 @@ func (p *planner) planSetPageField(op SetPageField, index int) ([]step, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &lib0.Writer{}
-	lib0.WriteAny(w, atomic)
-	return []step{patchMap(pageMap, str(op.Key), w.Bytes())}, nil
+	return []step{patchMap(pageMap, str(op.Key), encodeAny(atomic))}, nil
 }
 
 // refuseUnlessBlockMap refuses a target in the blocks map that is not a

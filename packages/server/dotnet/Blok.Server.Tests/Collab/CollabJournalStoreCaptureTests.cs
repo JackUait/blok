@@ -994,24 +994,24 @@ public sealed class CollabJournalStoreCaptureTests
           return step;
 
         case "zero":
-        {
-          var path = Resolve(step);
-          var bytes = File.ReadAllBytes(path);
-          bytes.AsSpan((int)step["offset"]!, (int)step["length"]!).Clear();
-          File.WriteAllBytes(path, bytes);
+          {
+            var path = Resolve(step);
+            var bytes = File.ReadAllBytes(path);
+            bytes.AsSpan((int)step["offset"]!, (int)step["length"]!).Clear();
+            File.WriteAllBytes(path, bytes);
 
-          return step;
-        }
+            return step;
+          }
 
         case "flip":
-        {
-          var path = Resolve(step);
-          var bytes = File.ReadAllBytes(path);
-          bytes[(int)step["offset"]!] ^= 0xff;
-          File.WriteAllBytes(path, bytes);
+          {
+            var path = Resolve(step);
+            var bytes = File.ReadAllBytes(path);
+            bytes[(int)step["offset"]!] ^= 0xff;
+            File.WriteAllBytes(path, bytes);
 
-          return step;
-        }
+            return step;
+          }
 
         case "snapshot":
           snapshots[(string)step["name"]!] = File.ReadAllBytes(Resolve(step));
@@ -1024,16 +1024,16 @@ public sealed class CollabJournalStoreCaptureTests
           return step;
 
         case "keepRecords":
-        {
-          var path = Resolve(step);
-          var bytes = File.ReadAllBytes(path);
-          var offsets = LocalCollabOperationStoreTests.RecordOffsets(bytes);
-          var keep = (int)step["count"]!;
-          var length = keep == 0 ? 0 : offsets[keep - 1].Offset + offsets[keep - 1].Length;
-          File.WriteAllBytes(path, bytes[..length]);
+          {
+            var path = Resolve(step);
+            var bytes = File.ReadAllBytes(path);
+            var offsets = LocalCollabOperationStoreTests.RecordOffsets(bytes);
+            var keep = (int)step["count"]!;
+            var length = keep == 0 ? 0 : offsets[keep - 1].Offset + offsets[keep - 1].Length;
+            File.WriteAllBytes(path, bytes[..length]);
 
-          return step;
-        }
+            return step;
+          }
 
         case "sealed":
           LocalCollabOperationStore.WriteSealed(
@@ -1045,42 +1045,42 @@ public sealed class CollabJournalStoreCaptureTests
           return step;
 
         case "corruptRecord":
-        {
-          var path = Resolve(step);
-          var bytes = File.ReadAllBytes(path);
-          var offsets = LocalCollabOperationStoreTests.RecordOffsets(bytes);
-          var (offset, length) = offsets[(int)step["index"]!];
-          LocalCollabOperationStoreTests.Corrupt(bytes, offset, length, (string)step["mode"]!);
-          File.WriteAllBytes(path, bytes);
-
-          return Written(step, bytes);
-        }
-
-        case "foreignManifest":
-        {
-          var path = Resolve(step);
-          var bytes = File.ReadAllBytes(path);
-
-          for (var slot = 0; slot < 2; slot++)
           {
-            var span = bytes.AsSpan(slot * LocalCollabOperationStore.ManifestSlotSize, LocalCollabOperationStore.ManifestSlotSize);
-            span[4] = 1;
-            SHA256.HashData(span[..96], span[96..]);
+            var path = Resolve(step);
+            var bytes = File.ReadAllBytes(path);
+            var offsets = LocalCollabOperationStoreTests.RecordOffsets(bytes);
+            var (offset, length) = offsets[(int)step["index"]!];
+            LocalCollabOperationStoreTests.Corrupt(bytes, offset, length, (string)step["mode"]!);
+            File.WriteAllBytes(path, bytes);
+
+            return Written(step, bytes);
           }
 
-          File.WriteAllBytes(path, bytes);
+        case "foreignManifest":
+          {
+            var path = Resolve(step);
+            var bytes = File.ReadAllBytes(path);
 
-          return Written(step, bytes);
-        }
+            for (var slot = 0; slot < 2; slot++)
+            {
+              var span = bytes.AsSpan(slot * LocalCollabOperationStore.ManifestSlotSize, LocalCollabOperationStore.ManifestSlotSize);
+              span[4] = 1;
+              SHA256.HashData(span[..96], span[96..]);
+            }
+
+            File.WriteAllBytes(path, bytes);
+
+            return Written(step, bytes);
+          }
 
         case "damageWorkingSet":
-        {
-          var path = Path.Combine(root, CollabDocKey.For(DocId));
-          var bytes = LocalCollabOperationStoreTests.Damage(File.ReadAllBytes(path), (string)step["mode"]!);
-          File.WriteAllBytes(path, bytes);
+          {
+            var path = Path.Combine(root, CollabDocKey.For(DocId));
+            var bytes = LocalCollabOperationStoreTests.Damage(File.ReadAllBytes(path), (string)step["mode"]!);
+            File.WriteAllBytes(path, bytes);
 
-          return Written(new JsonObject { ["op"] = "write", ["path"] = WorkingSet }, bytes);
-        }
+            return Written(new JsonObject { ["op"] = "write", ["path"] = WorkingSet }, bytes);
+          }
 
         default:
           break;
@@ -1118,16 +1118,16 @@ public sealed class CollabJournalStoreCaptureTests
       switch (op)
       {
         case "open":
-        {
-          var opened = await store.OpenAsync(DocId);
-
-          if (opened.Session is { } session)
           {
-            sessions[name!] = session;
-          }
+            var opened = await store.OpenAsync(DocId);
 
-          return EncodeOpen(opened);
-        }
+            if (opened.Session is { } session)
+            {
+              sessions[name!] = session;
+            }
+
+            return EncodeOpen(opened);
+          }
 
         case "close":
           await sessions[name!].DisposeAsync();
@@ -1135,33 +1135,33 @@ public sealed class CollabJournalStoreCaptureTests
           return new JsonObject { ["ok"] = true };
 
         case "append":
-        {
-          var appended = await sessions[name!].AppendAsync(new CollabOperationCandidate(
-              (string)step["operationId"]!,
-              (string?)step["actorId"],
-              (CollabOperationSource)(int)step["source"]!,
-              Convert.FromHexString((string)step["update"]!),
-              Convert.FromHexString((string)step["digest"]!)));
-
-          return new JsonObject
           {
-            ["outcome"] = appended.Outcome.ToString(),
-            ["sequence"] = appended.ServerSequence.ToString(CultureInfo.InvariantCulture),
-          };
-        }
+            var appended = await sessions[name!].AppendAsync(new CollabOperationCandidate(
+                (string)step["operationId"]!,
+                (string?)step["actorId"],
+                (CollabOperationSource)(int)step["source"]!,
+                Convert.FromHexString((string)step["update"]!),
+                Convert.FromHexString((string)step["digest"]!)));
+
+            return new JsonObject
+            {
+              ["outcome"] = appended.Outcome.ToString(),
+              ["sequence"] = appended.ServerSequence.ToString(CultureInfo.InvariantCulture),
+            };
+          }
 
         case "find":
-        {
-          var found = await sessions[name!].FindCommittedAsync(
-              (string)step["operationId"]!,
-              Convert.FromHexString((string)step["digest"]!));
-
-          return new JsonObject
           {
-            ["outcome"] = found.Outcome.ToString(),
-            ["sequence"] = found.ServerSequence.ToString(CultureInfo.InvariantCulture),
-          };
-        }
+            var found = await sessions[name!].FindCommittedAsync(
+                (string)step["operationId"]!,
+                Convert.FromHexString((string)step["digest"]!));
+
+            return new JsonObject
+            {
+              ["outcome"] = found.Outcome.ToString(),
+              ["sequence"] = found.ServerSequence.ToString(CultureInfo.InvariantCulture),
+            };
+          }
 
         case "checkpoint":
           await sessions[name!].WriteCheckpointAsync(new CollabOperationCheckpoint(
@@ -1171,16 +1171,16 @@ public sealed class CollabJournalStoreCaptureTests
           return new JsonObject { ["ok"] = true };
 
         case "reset":
-        {
-          var head = await sessions[name!].ResetAsync(new CollabOperationReset(
-              (int)step["format"]!,
-              (long)step["epoch"]!,
-              (string)step["lineage"]!,
-              [.. step["baseline"]!.AsArray().Select(frame =>
+          {
+            var head = await sessions[name!].ResetAsync(new CollabOperationReset(
+                (int)step["format"]!,
+                (long)step["epoch"]!,
+                (string)step["lineage"]!,
+                [.. step["baseline"]!.AsArray().Select(frame =>
                   new ReadOnlyMemory<byte>(Convert.FromHexString((string)frame!)))]));
 
-          return EncodeHead(head);
-        }
+            return EncodeHead(head);
+          }
 
         case "purge":
           return new JsonObject { ["outcome"] = (await store.PurgeAsync(DocId)).ToString() };
@@ -1203,48 +1203,48 @@ public sealed class CollabJournalStoreCaptureTests
           };
 
         case "baseline":
-        {
-          var frames = await store.ReadBaselineAsync(DocId, (string)step["lineage"]!);
-
-          return new JsonObject
           {
-            ["baseline"] = frames is null
-              ? null
-              : new JsonArray([.. frames.Select(frame => (JsonNode?)Hex(frame.Span))]),
-          };
-        }
+            var frames = await store.ReadBaselineAsync(DocId, (string)step["lineage"]!);
+
+            return new JsonObject
+            {
+              ["baseline"] = frames is null
+                ? null
+                : new JsonArray([.. frames.Select(frame => (JsonNode?)Hex(frame.Span))]),
+            };
+          }
 
         case "records":
-        {
-          var records = new JsonArray();
-
-          await foreach (var record in store.ReadRecordsAsync(
-              DocId,
-              (string)step["lineage"]!,
-              ulong.Parse((string)step["through"]!, CultureInfo.InvariantCulture)))
           {
-            records.Add(EncodeRecord(record));
-          }
+            var records = new JsonArray();
 
-          return new JsonObject { ["records"] = records };
-        }
+            await foreach (var record in store.ReadRecordsAsync(
+                DocId,
+                (string)step["lineage"]!,
+                ulong.Parse((string)step["through"]!, CultureInfo.InvariantCulture)))
+            {
+              records.Add(EncodeRecord(record));
+            }
+
+            return new JsonObject { ["records"] = records };
+          }
 
         case "headers":
-        {
-          var headers = new JsonArray();
-
-          await foreach (var header in store.ReadHeadersAsync(DocId, (string)step["lineage"]!))
           {
-            headers.Add(new JsonObject
-            {
-              ["sequence"] = header.ServerSequence.ToString(CultureInfo.InvariantCulture),
-              ["committedAt"] = Ticks(header.CommittedAt),
-              ["actorId"] = header.ActorId,
-            });
-          }
+            var headers = new JsonArray();
 
-          return new JsonObject { ["headers"] = headers };
-        }
+            await foreach (var header in store.ReadHeadersAsync(DocId, (string)step["lineage"]!))
+            {
+              headers.Add(new JsonObject
+              {
+                ["sequence"] = header.ServerSequence.ToString(CultureInfo.InvariantCulture),
+                ["committedAt"] = Ticks(header.CommittedAt),
+                ["actorId"] = header.ActorId,
+              });
+            }
+
+            return new JsonObject { ["headers"] = headers };
+          }
 
         case "deleteLineage":
           return new JsonObject

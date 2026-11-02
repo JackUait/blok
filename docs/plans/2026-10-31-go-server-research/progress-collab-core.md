@@ -38,13 +38,14 @@ fixture is stale), or a Go twin of a C# test.
 | RichTextInput (orphan) | DONE | Refusing/Collecting/Converting ported (`richtextinput.go`); exercised by the seed tests. No fixture input carries HTML, so the Converting path with real HTML is covered only by the reader twins (gap: add a seed case with HTML) |
 | E9 / X11 doc converter (seed + export half) | DONE (partial) | Go twins of `CollabDocConverterTests` for seed, export, warnings, refusals, legacy HTML slots (incl. database-row nested docs), custom fields, transient vs repeating vs cancelled failures, the 60 s seed budget; mutation-checked. The 32768-unit edit cap and ApplyOpsAsync/MigrateRichTextAsync wait for X4/X6 |
 | D1-D7 doc endpoint client | DONE | Go twins of all `DocEndpointClientTests` (`internal/collab/docendpoint`), plus .NET probes: STJ write and read depth 512 ok / 513 refused, `1E+21`, default-encoder escapes, `0.###` seconds. Known gap: net/http has no pooled-connection lifetime (C# 5 min); IdleConnTimeout 5 min instead. SC black-box oracle needs the room (collab-room lane) |
+| P4r local working-set store | DONE | Go twins of all `LocalCollabStoreTests` + `LocalCollabStoreDirectoryModeTests` (`workingset/local_test.go`); the file is exactly `EncodeDocument`, which `codecs.json` pins, so C# and Go read each other's files; mutation-checked |
 | X5 / P5 / T7 key lists | DONE | `fixtures/converter-keys.json`; client tests, C# `ConverterKeysFixtureTests`, Go `keys_test.go` |
 
 ## Remaining (next round, in this order)
 
 1. X4 ApplyOps (`YDocConverter.cs:390-480`, `EditPlanner` `:870-1630`, `EditStep` `:1630-1980`, the diff-merge `Entry/Map/Array/Element/Grid/Identity` `:1982-2880`). Needs a new C# capture `{seed, ops} -> export` (no /edit oracle); `agent-moves.json` and `agent-page-fields.json` cover the agent ops.
 2. DocConverter.ApplyOps (E9 cap before any read, transient/edit error mapping) once X4 lands; then X6 migration (`fixtures/collab-format1`) + MigrateRichText.
-4. P4r LocalCollabStore, P5r S3 working-set store, P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, X12 replay.
+4. P5r S3 working-set store, P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, X12 replay.
 5. X3 rest: ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure.
 
 ## Decisions (round 2)

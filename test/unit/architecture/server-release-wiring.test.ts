@@ -239,9 +239,15 @@ describe('server release wiring', () => {
       'routing-contract',
       'host-cli-contract',
       'http-host-contract',
+      'page-transfer-sidecar',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }
+    // Lives under test/unit/view, so the runner maps it by hand. Without the
+    // mapping it is gated on BLOK_CONFORMANCE_SERVER and nothing ever runs it.
+    expect(runner).toContain(
+      "'page-transfer-sidecar': 'test/unit/view/page-transfer-sidecar.server.test.ts'",
+    );
     expect(read('.github/workflows/ci.yml'))
       .toContain('run: node scripts/test-server-conformance.mjs --target csharp\n');
   });

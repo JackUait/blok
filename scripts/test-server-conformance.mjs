@@ -47,7 +47,13 @@ const SUITES = [
   'routing-contract',
   'host-cli-contract',
   'http-host-contract',
+  'page-transfer-sidecar',
 ];
+
+// Suites that live outside test/unit/server-conformance.
+const SUITE_PATHS = {
+  'page-transfer-sidecar': 'test/unit/view/page-transfer-sidecar.server.test.ts',
+};
 
 function selectedOptions(args) {
   const targetIndex = args.indexOf('--target');
@@ -210,7 +216,7 @@ async function main() {
       join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
       'run',
       '--project=unit',
-      ...options.suites.map((suite) => `test/unit/server-conformance/${suite}.test.ts`),
+      ...options.suites.map((suite) => SUITE_PATHS[suite] ?? `test/unit/server-conformance/${suite}.test.ts`),
     ];
 
     const reportPath = join(temporaryDirectory, 'vitest-report.json');

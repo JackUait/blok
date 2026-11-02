@@ -12,9 +12,9 @@ import { startDocEndpoint, type FixtureDocEndpoint } from '../server-conformance
 import { startServer, type RunningServer } from '../server-conformance/run-against';
 
 /**
- * The sidecar adapter against the real C# host with --collab-journal. Opt-in
- * like the other conformance suites: BLOK_CONFORMANCE_SERVER points at a
- * built Blok.Server.Host, so a plain `yarn test` skips.
+ * The sidecar adapter against the real host with --collab-journal. Opt-in
+ * like the other conformance suites: the runner sets BLOK_CONFORMANCE_SERVER,
+ * so a plain `yarn test` skips.
  */
 const it = baseIt.skipIf(!process.env.BLOK_CONFORMANCE_SERVER);
 
@@ -137,9 +137,10 @@ describe('sidecar transfer host against the real server', () => {
       const target = await state(harness, 'target');
 
       expect(target.blocks.map((block) => block.id)).toEqual(['t', 'a', 'a1']);
+      // GET /sync/{doc}/state answers rich text as segments.
       expect(target.blocks.slice(1)).toEqual([
-        { id: 'a', type: 'toggle', data: { text: 'A' }, content: ['a1'] },
-        { id: 'a1', type: 'paragraph', parent: 'a', data: { text: 'A1' } },
+        { id: 'a', type: 'toggle', data: { text: [{ text: 'A' }] }, content: ['a1'] },
+        { id: 'a1', type: 'paragraph', parent: 'a', data: { text: [{ text: 'A1' }] } },
       ]);
       expect(await ids(harness, 'source')).toEqual(['b']);
       expect(receipt.durability.kind === 'saga' ? receipt.durability.steps.map((step) => step.doc) : []).toEqual(['target', 'source']);
@@ -194,7 +195,7 @@ describe('sidecar transfer host against the real server', () => {
 
       expect(await ids(harness, 'target')).toEqual(['t', 'a', 'a1']);
       expect(source.blocks.map((block) => block.id)).toEqual(['b']);
-      expect(source.blocks[0]?.data.text).toBe('Peer');
+      expect(source.blocks[0]?.data.text).toEqual([{ text: 'Peer' }]);
       expect(statuses).toContain(412);
     });
   });

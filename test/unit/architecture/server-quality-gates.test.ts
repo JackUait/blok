@@ -150,6 +150,25 @@ describe('server quality gates', () => {
     );
   });
 
+  // A Go leg in ci.yml's CodeQL matrix would be a 20th job at t=0 on a main
+  // push, and init's build-mode takes one language per job, so Go cannot
+  // share the C# leg. The weekly scan has no slot to spend.
+  it('scans the Go server with CodeQL weekly, not in CI', () => {
+    type Matrix = { strategy?: { matrix?: { include?: Array<Record<string, string>> } } };
+    const legs = (file: string): Array<Record<string, string>> =>
+      Object.values(parse(read(file)).jobs as Record<string, Matrix>)
+        .flatMap(job => job.strategy?.matrix?.include ?? []);
+    const weekly = workflow('.github/workflows/codeql.yml');
+    const steps = Object.values(weekly.jobs).flatMap(job => job.steps ?? []);
+
+    expect(legs('.github/workflows/codeql.yml')).toContainEqual({ language: 'go', 'build-mode': 'manual' });
+    expect(legs('.github/workflows/ci.yml').map(leg => leg.language)).not.toContain('go');
+    expect(steps.find(step => step.name === 'Setup Go')?.uses)
+      .toBe('actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16');
+    expect(steps.find(step => step.name === 'Build Go server')?.run)
+      .toBe('go build ./...');
+  });
+
   it('keeps backend package, image, and workflow dependencies updated', () => {
     const dependabot = parse(read('.github/dependabot.yml')) as Dependabot;
     const targets = dependabot.updates.map(update => [

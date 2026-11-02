@@ -533,6 +533,31 @@ public sealed class YDocConverterHardeningCaptureTests
     yield return new("a-nested-text-stays-atomic", """[{ "id": "t", "type": "table", "data": { "cell": { "text": "inner" } } }]""");
     yield return new("a-tune-text-stays-atomic", """[{ "id": "p", "type": "note", "data": {}, "tunes": { "text": "tuned" } }]""");
 
+    // TableDataLossAuditTests.
+    yield return new("table-legacy-and-ragged-grids", """
+      [{ "id": "tb", "type": "table", "data": { "withHeadings": false, "withHeadingColumn": false,
+        "content": [ ["a", "<b>b</b>"], [], ["c", { "blocks": [] }], [{ "blocks": [], "text": "d" }] ] } }]
+      """);
+    yield return new("table-with-every-field-and-its-cell-children", """
+      [{ "id": "tb", "type": "table", "content": ["p00", "p01", "p10", "p11", "p12"],
+        "data": {
+          "withHeadings": true, "withHeadingColumn": true, "stretched": true,
+          "colWidths": [120.5, 200, 333.25], "initialColWidth": 217.75, "textSize": "comfortable",
+          "content": [
+            [ { "id": "c0", "rowId": "r0", "blocks": ["p00"], "colspan": 2, "color": "blue", "textColor": "red", "placement": "middle-center" },
+              { "id": "c1", "rowId": "r0", "blocks": [], "mergedInto": [0, 0] },
+              { "id": "c2", "rowId": "r0", "blocks": ["p01"], "rowspan": 2 } ],
+            [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] },
+              { "id": "c1", "rowId": "r1", "blocks": ["p12"], "placement": "bottom-right" },
+              { "id": "c2", "rowId": "r1", "blocks": [], "mergedInto": [0, 2] } ]
+          ] } },
+       { "id": "p00", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "origin" }] } },
+       { "id": "p01", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "tall" }] } },
+       { "id": "p10", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "first" }] } },
+       { "id": "p11", "type": "list", "parent": "tb", "data": { "text": [{ "text": "second" }], "style": "unordered" } },
+       { "id": "p12", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "x" }] } }]
+      """);
+
     // YDocConverterViewSettingsTests.
     yield return new("database-view-lists", """
       [{

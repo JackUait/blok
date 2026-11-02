@@ -4097,6 +4097,194 @@
       "exportPage": {}
     },
     {
+      "name": "table-legacy-and-ragged-grids",
+      "blocks": "[{ \u0022id\u0022: \u0022tb\u0022, \u0022type\u0022: \u0022table\u0022, \u0022data\u0022: { \u0022withHeadings\u0022: false, \u0022withHeadingColumn\u0022: false,\n  \u0022content\u0022: [ [\u0022a\u0022, \u0022\u003Cb\u003Eb\u003C/b\u003E\u0022], [], [\u0022c\u0022, { \u0022blocks\u0022: [] }], [{ \u0022blocks\u0022: [], \u0022text\u0022: \u0022d\u0022 }] ] } }]",
+      "state": "ARQBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5KAABAxF3aXRoSGVhZGluZ0NvbHVtbgF5JwABAwdjb250ZW50AScAAQYGX19yb3dzASgAAQcKczAwMDAwMDAwNQF1AncBYXcIPGI\u002BYjwvYj4oAAEHCnMwMDAwMDAwMDYBdQAoAAEHCnMwMDAwMDAwMDcBdQJ3AWN2AQZibG9ja3N1ACcAAQcKczAwMDAwMDAwOAAHAAELAScAAQwGYmxvY2tzACgAAQwEdGV4dAF3AWQnAAEGCV9fcm93S2V5cwAIAAEPBHcKczAwMDAwMDAwNXcKczAwMDAwMDAwNncKczAwMDAwMDAwN3cKczAwMDAwMDAwOCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "withHeadingColumn": false,
+            "content": [
+              [
+                "a",
+                "\u003Cb\u003Eb\u003C/b\u003E"
+              ],
+              [],
+              [
+                "c",
+                {
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "blocks": [],
+                  "text": "d"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "slots": [],
+      "exportPage": {}
+    },
+    {
+      "name": "table-with-every-field-and-its-cell-children",
+      "blocks": "[{ \u0022id\u0022: \u0022tb\u0022, \u0022type\u0022: \u0022table\u0022, \u0022content\u0022: [\u0022p00\u0022, \u0022p01\u0022, \u0022p10\u0022, \u0022p11\u0022, \u0022p12\u0022],\n  \u0022data\u0022: {\n    \u0022withHeadings\u0022: true, \u0022withHeadingColumn\u0022: true, \u0022stretched\u0022: true,\n    \u0022colWidths\u0022: [120.5, 200, 333.25], \u0022initialColWidth\u0022: 217.75, \u0022textSize\u0022: \u0022comfortable\u0022,\n    \u0022content\u0022: [\n      [ { \u0022id\u0022: \u0022c0\u0022, \u0022rowId\u0022: \u0022r0\u0022, \u0022blocks\u0022: [\u0022p00\u0022], \u0022colspan\u0022: 2, \u0022color\u0022: \u0022blue\u0022, \u0022textColor\u0022: \u0022red\u0022, \u0022placement\u0022: \u0022middle-center\u0022 },\n        { \u0022id\u0022: \u0022c1\u0022, \u0022rowId\u0022: \u0022r0\u0022, \u0022blocks\u0022: [], \u0022mergedInto\u0022: [0, 0] },\n        { \u0022id\u0022: \u0022c2\u0022, \u0022rowId\u0022: \u0022r0\u0022, \u0022blocks\u0022: [\u0022p01\u0022], \u0022rowspan\u0022: 2 } ],\n      [ { \u0022id\u0022: \u0022c0\u0022, \u0022rowId\u0022: \u0022r1\u0022, \u0022blocks\u0022: [\u0022p10\u0022, \u0022p11\u0022] },\n        { \u0022id\u0022: \u0022c1\u0022, \u0022rowId\u0022: \u0022r1\u0022, \u0022blocks\u0022: [\u0022p12\u0022], \u0022placement\u0022: \u0022bottom-right\u0022 },\n        { \u0022id\u0022: \u0022c2\u0022, \u0022rowId\u0022: \u0022r1\u0022, \u0022blocks\u0022: [], \u0022mergedInto\u0022: [0, 2] } ]\n    ] } },\n { \u0022id\u0022: \u0022p00\u0022, \u0022type\u0022: \u0022paragraph\u0022, \u0022parent\u0022: \u0022tb\u0022, \u0022data\u0022: { \u0022text\u0022: [{ \u0022text\u0022: \u0022origin\u0022 }] } },\n { \u0022id\u0022: \u0022p01\u0022, \u0022type\u0022: \u0022paragraph\u0022, \u0022parent\u0022: \u0022tb\u0022, \u0022data\u0022: { \u0022text\u0022: [{ \u0022text\u0022: \u0022tall\u0022 }] } },\n { \u0022id\u0022: \u0022p10\u0022, \u0022type\u0022: \u0022paragraph\u0022, \u0022parent\u0022: \u0022tb\u0022, \u0022data\u0022: { \u0022text\u0022: [{ \u0022text\u0022: \u0022first\u0022 }] } },\n { \u0022id\u0022: \u0022p11\u0022, \u0022type\u0022: \u0022list\u0022, \u0022parent\u0022: \u0022tb\u0022, \u0022data\u0022: { \u0022text\u0022: [{ \u0022text\u0022: \u0022second\u0022 }], \u0022style\u0022: \u0022unordered\u0022 } },\n { \u0022id\u0022: \u0022p12\u0022, \u0022type\u0022: \u0022paragraph\u0022, \u0022parent\u0022: \u0022tb\u0022, \u0022data\u0022: { \u0022text\u0022: [{ \u0022text\u0022: \u0022x\u0022 }] } }]",
+      "state": "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",
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": true,
+            "withHeadingColumn": true,
+            "stretched": true,
+            "colWidths": [
+              120.5,
+              200,
+              333.25
+            ],
+            "initialColWidth": 217.75,
+            "textSize": "comfortable",
+            "content": [
+              [
+                {
+                  "id": "c0",
+                  "rowId": "r0",
+                  "blocks": [
+                    "p00"
+                  ],
+                  "colspan": 2,
+                  "color": "blue",
+                  "textColor": "red",
+                  "placement": "middle-center"
+                },
+                {
+                  "id": "c1",
+                  "rowId": "r0",
+                  "blocks": [],
+                  "mergedInto": [
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "id": "c2",
+                  "rowId": "r0",
+                  "blocks": [
+                    "p01"
+                  ],
+                  "rowspan": 2
+                }
+              ],
+              [
+                {
+                  "id": "c0",
+                  "rowId": "r1",
+                  "blocks": [
+                    "p10",
+                    "p11"
+                  ]
+                },
+                {
+                  "id": "c1",
+                  "rowId": "r1",
+                  "blocks": [
+                    "p12"
+                  ],
+                  "placement": "bottom-right"
+                },
+                {
+                  "id": "c2",
+                  "rowId": "r1",
+                  "blocks": [],
+                  "mergedInto": [
+                    0,
+                    2
+                  ]
+                }
+              ]
+            ]
+          },
+          "content": [
+            "p00",
+            "p01",
+            "p10",
+            "p11",
+            "p12"
+          ]
+        },
+        {
+          "id": "p00",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "origin"
+              }
+            ]
+          },
+          "parent": "tb"
+        },
+        {
+          "id": "p01",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "tall"
+              }
+            ]
+          },
+          "parent": "tb"
+        },
+        {
+          "id": "p10",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "first"
+              }
+            ]
+          },
+          "parent": "tb"
+        },
+        {
+          "id": "p11",
+          "type": "list",
+          "data": {
+            "text": [
+              {
+                "text": "second"
+              }
+            ],
+            "style": "unordered"
+          },
+          "parent": "tb"
+        },
+        {
+          "id": "p12",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "x"
+              }
+            ]
+          },
+          "parent": "tb"
+        }
+      ],
+      "slots": [],
+      "exportPage": {}
+    },
+    {
       "name": "database-view-lists",
       "blocks": "[{\n  \u0022id\u0022: \u0022db\u0022,\n  \u0022type\u0022: \u0022database\u0022,\n  \u0022data\u0022: {\n    \u0022schema\u0022: [{ \u0022id\u0022: \u0022t\u0022, \u0022name\u0022: \u0022Name\u0022, \u0022type\u0022: \u0022title\u0022, \u0022position\u0022: \u0022a0\u0022 }],\n    \u0022activeViewId\u0022: \u0022v1\u0022,\n    \u0022views\u0022: [\n      {\n        \u0022id\u0022: \u0022v1\u0022, \u0022name\u0022: \u0022Table\u0022, \u0022type\u0022: \u0022table\u0022, \u0022position\u0022: \u0022a0\u0022,\n        \u0022sorts\u0022: [], \u0022filters\u0022: [], \u0022visibleProperties\u0022: [],\n        \u0022properties\u0022: [{ \u0022id\u0022: \u0022t\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022s\u0022, \u0022visible\u0022: false }],\n        \u0022calculations\u0022: [],\n        \u0022filterTree\u0022: { \u0022id\u0022: \u0022v1-filters\u0022, \u0022conjunction\u0022: \u0022and\u0022, \u0022filterRules\u0022: [] },\n        \u0022colorRules\u0022: []\n      },\n      {\n        \u0022id\u0022: \u0022v2\u0022, \u0022name\u0022: \u0022Two\u0022, \u0022type\u0022: \u0022table\u0022, \u0022position\u0022: \u0022a1\u0022,\n        \u0022sorts\u0022: [], \u0022filters\u0022: [], \u0022visibleProperties\u0022: [],\n        \u0022calculations\u0022: [{ \u0022id\u0022: \u0022t\u0022, \u0022fn\u0022: \u0022count\u0022 }]\n      }\n    ]\n  }\n}]",
       "state": "ATwBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEnAAEDBnNjaGVtYQEnAAEEBl9fcm93cwEnAAEFAXQBKAABBgJpZAF3AXQoAAEGBG5hbWUBdwROYW1lKAABBgR0eXBlAXcFdGl0bGUoAAEGCHBvc2l0aW9uAXcCYTAnAAEECV9fcm93S2V5cwAIAAELAXcBdCgAAQMMYWN0aXZlVmlld0lkAXcCdjEnAAEDBXZpZXdzAScAAQ4GX19yb3dzAScAAQ8CdjEBKAABEAJpZAF3AnYxKAABEARuYW1lAXcFVGFibGUoAAEQBHR5cGUBdwV0YWJsZSgAARAIcG9zaXRpb24BdwJhMCcAARAFc29ydHMAJwABEAdmaWx0ZXJzACgAARARdmlzaWJsZVByb3BlcnRpZXMBdQAnAAEQCnByb3BlcnRpZXMBJwABGAZfX3Jvd3MBJwABGQF0ASgAARoCaWQBdwF0KAABGgd2aXNpYmxlAXgnAAEZAXMBKAABHQJpZAF3AXMoAAEdB3Zpc2libGUBeScAARgJX19yb3dLZXlzAAgAASACdwF0dwFzJwABEAxjYWxjdWxhdGlvbnMAJwABEApmaWx0ZXJUcmVlASgAASQCaWQBdwp2MS1maWx0ZXJzKAABJAtjb25qdW5jdGlvbgF3A2FuZCcAASQLZmlsdGVyUnVsZXMAJwABEApjb2xvclJ1bGVzACcAAQ8CdjIBKAABKQJpZAF3AnYyKAABKQRuYW1lAXcDVHdvKAABKQR0eXBlAXcFdGFibGUoAAEpCHBvc2l0aW9uAXcCYTEnAAEpBXNvcnRzACcAASkHZmlsdGVycwAoAAEpEXZpc2libGVQcm9wZXJ0aWVzAXUAJwABKQxjYWxjdWxhdGlvbnMBJwABMQZfX3Jvd3MBJwABMgF0ASgAATMCaWQBdwF0KAABMwJmbgF3BWNvdW50JwABMQlfX3Jvd0tleXMACAABNgF3AXQnAAEOCV9fcm93S2V5cwAIAAE4AncCdjF3AnYyJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmRiAA==",

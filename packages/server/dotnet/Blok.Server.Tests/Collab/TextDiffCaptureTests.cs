@@ -149,6 +149,14 @@ public sealed class TextDiffCaptureTests
     Add("x" + P(0x1100) + P(0x1161) + P(0x11A8) + "y", "x" + P(0x1100) + P(0x1161) + "y");
     Add("a" + low + high + "b", "a" + high + low + "b");
     Add("word" + P(0xFEFF) + "word" + P(0x85) + "word", "w0rd" + P(0xFEFF) + "word" + P(0x85) + "w0rd");
+
+    // Each unit of JavaScript's \s splits words in the coarse diff, which
+    // runs past the 64-atom cap.
+    foreach (var space in new[] { 0x0B, 0x0C, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x2029, 0x202F, 0x205F })
+    {
+      Add(string.Join(P(space), Enumerable.Range(0, 12).Select(i => $"before{i}")),
+          string.Join(P(space), Enumerable.Range(0, 12).Select(i => $"after{i}")));
+    }
     Add(string.Join(' ', Enumerable.Range(0, 40).Select(i => $"word{i}")),
         string.Join(' ', Enumerable.Range(0, 40).Select(i => i == 5 ? "replacement-of-considerable-length-five" : i == 20 ? "replacement-of-considerable-length-twenty" : $"word{i}")));
     Add(string.Join(' ', Enumerable.Range(0, 60).Select(i => $"before{i}")),

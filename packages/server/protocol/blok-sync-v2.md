@@ -629,12 +629,14 @@ runner. `--target` picks the server it builds:
   `--configuration Debug|Release` picks the second build.
 - `go` builds `packages/server/go/cmd/blok-server` twice — once plain, once
   with `-tags conformance`. Go has no Debug or Release build, so the runner
-  refuses `--configuration` for it. The Go server is in progress and passes
-  only the health tests so far.
+  refuses `--configuration` for it. The Go server is in progress and has no
+  sync yet. CI runs it with `--suite` on the five suites it passes whole:
+  harness, server, routing, host CLI and HTTP host.
 
 Either way, the runner then runs the suites it lists from
-`test/unit/server-conformance/` against the built binaries. The
-fixture-freshness files there are not in its list. **This document adds no
+`test/unit/server-conformance/`, plus the page-transfer sidecar suite in
+`test/unit/view/`, against the built binaries. The fixture-freshness files
+are not in its list. **This document adds no
 mode for a server outside this repository.**
 `--test-name-pattern` is a case-sensitive regular expression matched against
 the whole test name; vitest exits 0 when a pattern selects nothing, so the

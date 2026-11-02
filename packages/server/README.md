@@ -2,7 +2,9 @@
 
 Blok's shared server is written in C#. It handles file uploads, link previews and live collaboration, and it converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-A Go version of the server is in progress in `packages/server/go`. Today it answers only `GET /health`. The npm binary, the Docker image and the NuGet packages all ship the C# server.
+A Go version of the server is in progress in `packages/server/go`. It serves health, link previews (`/unfurl`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. It has no live collaboration yet. It accepts `--collab` and the other collaboration flags, but serves no sync routes.
+
+The npm binary, the Docker image and the NuGet packages all ship the C# server. See [Go module and archives](#go-module-and-archives) for how the Go server ships.
 
 Your documents stay yours. Your own app saves and loads them through a small endpoint, and that endpoint stays the record. With live collaboration on, the service keeps only a working copy of each open document. The copy lives in storage you point it at. Every few seconds, the service writes what people type back to your endpoint.
 
@@ -662,9 +664,18 @@ dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 dotnet restore packages/server/dotnet/Blok.Server.slnx
 ```
 
-CI collects merged production coverage and requires at least 80% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, and audits all direct and transitive NuGet packages. It scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Docker, and GitHub Actions dependencies current.
+CI collects merged production coverage and requires at least 80% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, and audits all direct and transitive NuGet packages. It scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Go, Docker, and GitHub Actions dependencies current.
 
-The Go server in `packages/server/go` has its own CI checks. `gofmt` must report no unformatted file, `go vet` must pass, and `go test` runs with coverage. The conformance tests Go passes so far run with `--target go`.
+The Go server in `packages/server/go` has its own CI checks:
+
+- `gofmt` must report no unformatted file.
+- `go vet` must pass.
+- `govulncheck` (pinned to v1.9.0) must find no reachable vulnerability.
+- `go test` must cover at least 80% of statements. Go measures statements only, so there is no Go branch floor.
+- The conformance suites Go passes so far run with `--target go`.
+- `node scripts/test-server-go-module.mjs` builds `test/fixtures/go-server-consumer` from the files git tracks in the module. The fixture mounts Blok under `/api/blok` behind its own auth and converts a document.
+
+CodeQL analyzes the Go code in the weekly scan, not on every push.
 
 ```bash
 cd packages/server/go
@@ -672,6 +683,17 @@ gofmt -l .
 go vet ./...
 go test -p 2 ./...
 ```
+
+## Go module and archives
+
+The release workflow ships the Go server in two forms. No release has shipped them yet.
+
+- **Module.** `yarn release X.Y.Z` also tags `packages/server/go/vX.Y.Z` on the release commit. Go reads a module in a subdirectory only from tags with that prefix. The module path is `github.com/JackUait/blok/packages/server/go`. Import `blokserver` for the routes and `blokdocs` for the converter.
+- **Archives.** The GitHub release gets `blok-server-go_<os>_<arch>` for macOS, Linux and Windows, on amd64 and arm64, with `checksums-go.txt`. They are built with cgo off, so they are static. The release starts the Linux amd64 one on Alpine before it uploads.
+
+The binary reports its release version on `/health`. A local `go build` reports `dev`.
+
+These names never overlap the C# archives or `checksums.txt`. The npm wrapper downloads only the C# archives, and a test fails if it ever names a Go one.
 
 ## Docs
 

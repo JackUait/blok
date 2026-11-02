@@ -57,7 +57,8 @@ export const FAMILY = [
   },
   {
     // Ships the npm wrapper (bin/) plus the ticket signer (dist/). The tag
-    // workflow publishes the shared C# host archives and container image. No
+    // workflow publishes the shared C# host archives and container image, and
+    // the Go archives under their own blok-server-go_* names. No
     // `@bloklabs/core` peer, so it sits with cli and presets rather than under
     // the ordering rule above.
     npmName: '@bloklabs/server',

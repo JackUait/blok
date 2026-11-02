@@ -141,3 +141,22 @@ func TestANonTransientExportFailureOnAJournalRoomIsRefusedAtOnce(t *testing.T) {
 		t.Fatal("the refusal was retried or logged twice")
 	}
 }
+
+// M18, S3: a state read whose export hits a runtime limit is Overloaded
+// (503 + Retry-After); any other export failure is ExportFailed (500).
+func TestAStateReadMapsExportFailures(t *testing.T) {
+	for _, c := range []struct {
+		err  error
+		want StateStatus
+	}{
+		{&convert.TransientError{Message: "limit", Err: &jsruntime.Failure{Kind: jsruntime.KindTimedOut, Err: errors.New("t")}}, StateOverloaded},
+		{&journal.InvalidDataError{Message: "bad"}, StateExportFailed},
+		{errors.New("anything else"), StateExportFailed},
+	} {
+		e := newExportRoom(t, c.err, nil)
+		result, err := e.manager.State(context.Background(), "doc")
+		if err != nil || result.Status != c.want {
+			t.Errorf("%v: state = %v, %v; want %v", c.err, result.Status, err, c.want)
+		}
+	}
+}

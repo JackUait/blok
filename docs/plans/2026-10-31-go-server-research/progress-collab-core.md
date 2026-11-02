@@ -29,7 +29,29 @@ fixture is stale), or a Go twin of a C# test.
 | X7 rich text canonical | DONE | `fixtures/rich-text-canonical` (segments <-> delta, marks); Go `richtext_test.go` |
 | X8 rich-text edit planner | DONE | `fixtures/rich-text-edits/cases.json`; Go plans the same ops, and applying them in the Go engine gives the same delta and segments |
 | X10 rich fields config | DONE | `fixtures/rich-text-fields.json` + Go twin of `RichTextFieldsTests` (`fields_test.go`). Known gap: with several bad entries Go reports the first in type order, C# in input order |
+| P9r sealed files | DONE | `codecs.json` `sealed` (C# `WriteSealed` bytes; `ReadSealed` of good, missing, wrong magic, short, version, length and checksum faults, with messages); Go `journal/files_test.go` |
+| P10r manifest slot | DONE | `codecs.json` `manifest` (slot bytes; file reads: slot choice by write counter, ties keep the first, corrupt and foreign-version slots, wrong sizes, empty); Go `journal/files_test.go`; mutation-checked |
+| X2 export | DONE | `fixtures/collab` (31 cases + manifest): apply `update.b64`, export = `canonical.segments.json` (C# canonical compare); Go `export_test.go`; mutation-checked |
+| X3 page maps (export + seed) | DONE (page fields) | the 7 page cases (`page-canonical.json`) both ways. `ReadPageMaps`/`PlainPageMaps`/`PlainMapValuesEqual` (restore/history) NOT ported yet |
+| X1 seed | DONE | `fixtures/collab`: seed `input.json` -> export = canonical, state-diff round trip into a second doc, AND the seeded doc's shared types equal the client update's (`shape_test.go`, the 3 `mutate` cases excluded); edge tests for duplicate rowIds and strings .NET cannot read; mutation-checked |
+| X11 HTML reader | DONE | Go twins of `RuntimeRichTextHtmlReaderTests` + a boundary test (fields that exactly fill a call share it) + UTF-16 counting |
+| RichTextInput (orphan) | DONE | Refusing/Collecting/Converting ported (`richtextinput.go`); exercised by the seed tests. No fixture input carries HTML, so the Converting path with real HTML is covered only by the reader twins (gap: add a seed case with HTML) |
 | X5 / P5 / T7 key lists | DONE | `fixtures/converter-keys.json`; client tests, C# `ConverterKeysFixtureTests`, Go `keys_test.go` |
+
+## Remaining (next round, in this order)
+
+1. X4 ApplyOps (`YDocConverter.cs:390-480`, `EditPlanner` `:870-1630`, `EditStep` `:1630-1980`, the diff-merge `Entry/Map/Array/Element/Grid/Identity` `:1982-2880`). Needs a new C# capture `{seed, ops} -> export` (no /edit oracle); `agent-moves.json` and `agent-page-fields.json` cover the agent ops.
+2. CollabDocConverter (E9 32768-unit cap before any read, ExportAsync slot conversion, MigrationReadTimeout 60 s), then X6 migration (`fixtures/collab-format1`).
+3. D1-D7 DocEndpointClient (httptest twins of `DocEndpointClientTests`; T16 via `dotnet.FormatDouble`).
+4. P4r LocalCollabStore, P5r S3 working-set store, P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, X12 replay.
+5. X3 rest: ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure.
+
+## Decisions (round 2)
+
+- Converter values are JS values (`*jsjson.Object`, `[]any`, `jsjson.Str`, float64, bool, nil), plus int64 for a peer bigint on export. Seed input is `jsjson.Node`, read strictly per block: a lone-surrogate escape fails as `ErrNotUnicode` (C#: InvalidOperationException from GetValue<string>, probed with dotnet fsi), not as a `DataError`.
+- Block ids are kept as UTF-16 unit keys internally, so ordinal order and lone surrogates match C# exactly.
+- Probed (.NET 10, dotnet fsi): `JsonElement.GetDouble` reads `1e400` as +Infinity; `JsonObject` set on an existing key keeps its place; `EnumerateRunes` gives U+FFFD for a lone surrogate.
+- UNVERIFIED: that Go `yjs.Map.Keys` order equals C# `YMap.Keys` (a Dictionary) after deletes. Export key order reaches the doc-endpoint PUT body; the fixture compare ignores key order.
 
 ## C# bugs fixed
 

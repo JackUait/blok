@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/blokserver"
 )
 
 // withDeadline is the host's RequestTimeoutPolicy: each request gets
@@ -15,24 +17,33 @@ import (
 // whole response.
 func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
-		deadline, _ := ctx.Deadline()
+		deadline := time.Now().Add(timeout)
 		// A stalled body read does not watch the context; the read deadline
 		// ends it at the same moment.
-		_ = http.NewResponseController(w).SetReadDeadline(deadline)
+		controller := http.NewResponseController(w)
+		_ = controller.SetReadDeadline(deadline)
 		tracked := &trackingWriter{ResponseWriter: w}
-		// By the clock, not ctx.Err(): the read deadline can cancel the
-		// connection's context first, and that reads as Canceled.
-		expired := func() bool { return !time.Now().Before(deadline) }
-		stop := context.AfterFunc(ctx, func() {
-			if expired() {
-				tracked.timeOut()
+		timer := time.AfterFunc(timeout, func() {
+			if tracked.timeOut() {
+				cancel()
 			}
 		})
-		defer stop()
-		next.ServeHTTP(tracked, r.WithContext(ctx))
-		if expired() {
+		defer timer.Stop()
+		// A route that opts out (GET /sync/{doc}) lifts all of it. The read
+		// deadline must go too: net/http's background read fails at it and
+		// cancels the request context.
+		lift := func() {
+			if tracked.exempt() {
+				timer.Stop()
+				_ = controller.SetReadDeadline(time.Time{})
+			}
+		}
+		next.ServeHTTP(tracked, r.WithContext(blokserver.WithRequestTimeoutLift(ctx, lift)))
+		// By the clock, not ctx.Err(): the read deadline can cancel the
+		// connection's context first, and that reads as Canceled.
+		if !time.Now().Before(deadline) {
 			tracked.timeOut()
 		}
 	})
@@ -43,18 +54,37 @@ type trackingWriter struct {
 	mu       sync.Mutex
 	wrote    bool
 	timedOut bool
+	expired  bool
+	lifted   bool
 }
 
-// timeOut writes 504 once, unless the handler already started its answer.
-func (t *trackingWriter) timeOut() {
+// exempt takes the request out of the deadline; false if it passed first.
+func (t *trackingWriter) exempt() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if t.expired {
+		return false
+	}
+	t.lifted = true
+	return true
+}
+
+// timeOut is the deadline passing; false if the request was lifted first.
+// It writes 504 once, unless the handler already started its answer.
+func (t *trackingWriter) timeOut() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.lifted {
+		return false
+	}
+	t.expired = true
 	if t.wrote || t.timedOut {
-		return
+		return true
 	}
 	t.timedOut = true
 	t.ResponseWriter.Header().Set("Content-Length", "0")
 	t.ResponseWriter.WriteHeader(http.StatusGatewayTimeout)
+	return true
 }
 
 func (t *trackingWriter) WriteHeader(status int) {

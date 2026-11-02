@@ -102,7 +102,7 @@ func (s *Server) Handler(prefix string) http.Handler {
 	if o.CollabEnabled && s.rooms != nil {
 		// Not behind the guard: the handshake is its own door, and a live
 		// socket outlasts any request deadline.
-		router.Handle(prefix+"/sync/{doc}", []string{"GET"}, s.syncEndpoint())
+		router.Handle(prefix+"/sync/{doc}", []string{"GET"}, withoutRequestTimeout(s.syncEndpoint()))
 		router.Handle(prefix+"/sync/{doc}", nil, route.MethodNotAllowed("GET"))
 	}
 	return router

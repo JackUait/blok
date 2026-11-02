@@ -79,3 +79,37 @@ func TestTheSyncDoorIsNotMappedWithoutCollaboration(t *testing.T) {
 		t.Fatalf("got %d", recorder.Code)
 	}
 }
+
+// GET /sync/{doc} lifts the host's request deadline before the door runs,
+// as MapGet(...).DisableRequestTimeout() does; its 405 keeps it.
+func TestTheSyncDoorLiftsTheRequestDeadlineBeforeItJoins(t *testing.T) {
+	rooms := &liftCheckingRooms{}
+	h := collabServer(t, rooms).Handler("")
+
+	lifted := 0
+	request := upgradeRequest("GET", "/sync/doc-1")
+	request = request.WithContext(WithRequestTimeoutLift(request.Context(), func() { lifted++ }))
+	rooms.lifted = &lifted
+	h.ServeHTTP(httptest.NewRecorder(), request)
+	if lifted != 1 || rooms.liftedAtJoin != 1 {
+		t.Fatalf("lifted %d times, %d before the join", lifted, rooms.liftedAtJoin)
+	}
+
+	lifted = 0
+	request = upgradeRequest("POST", "/sync/doc-1")
+	request = request.WithContext(WithRequestTimeoutLift(request.Context(), func() { lifted++ }))
+	h.ServeHTTP(httptest.NewRecorder(), request)
+	if lifted != 0 {
+		t.Fatal("the 405 lifted the deadline")
+	}
+}
+
+type liftCheckingRooms struct {
+	lifted       *int
+	liftedAtJoin int
+}
+
+func (r *liftCheckingRooms) Join(context.Context, string, collab.Member) (collab.JoinResult, error) {
+	r.liftedAtJoin = *r.lifted
+	return collab.JoinResult{Status: collab.JoinDraining}, nil
+}

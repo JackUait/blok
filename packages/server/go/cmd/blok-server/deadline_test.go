@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/blokserver"
 )
 
 func serveWithDeadline(t *testing.T, handler http.Handler, timeout time.Duration) string {
@@ -83,6 +85,28 @@ func TestDeadlineKeepsAStartedAnswer(t *testing.T) {
 	}
 	response.Body.Close()
 	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", response.StatusCode)
+	}
+}
+
+// A route that lifts the deadline (GET /sync/{doc}) runs past it: no 504,
+// its context is not cancelled, and the read deadline is gone too.
+func TestALiftedRequestOutlivesTheDeadline(t *testing.T) {
+	address := serveWithDeadline(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		blokserver.LiftRequestTimeout(r.Context())
+		time.Sleep(400 * time.Millisecond)
+		if err := r.Context().Err(); err != nil {
+			t.Errorf("context ended: %v", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}), 150*time.Millisecond)
+
+	response, err := http.Get("http://" + address + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNoContent {
 		t.Fatalf("status %d", response.StatusCode)
 	}
 }

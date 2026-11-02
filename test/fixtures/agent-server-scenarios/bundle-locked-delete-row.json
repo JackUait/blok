@@ -1,0 +1,134 @@
+{
+  "name": "bundle-locked-delete-row",
+  "seed": {
+    "blocks": [
+      {
+        "id": "D",
+        "type": "database",
+        "content": [
+          "r"
+        ],
+        "data": {
+          "schema": [
+            {
+              "id": "dt",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            }
+          ],
+          "views": [
+            {
+              "id": "Dv",
+              "name": "Table",
+              "type": "table",
+              "position": "a0"
+            }
+          ],
+          "activeViewId": "Dv"
+        }
+      },
+      {
+        "id": "r",
+        "type": "database-row",
+        "parent": "D",
+        "content": [
+          "L"
+        ],
+        "data": {
+          "properties": {
+            "dt": "r"
+          },
+          "position": "a0"
+        }
+      },
+      {
+        "id": "L",
+        "type": "database",
+        "parent": "r",
+        "content": [
+          "L-row"
+        ],
+        "data": {
+          "schema": [
+            {
+              "id": "Lt",
+              "name": "Name",
+              "type": "title",
+              "position": "a0",
+              "databaseLocked": true
+            }
+          ],
+          "views": [
+            {
+              "id": "Lv",
+              "name": "Table",
+              "type": "table",
+              "position": "a0"
+            }
+          ],
+          "activeViewId": "Lv"
+        }
+      },
+      {
+        "id": "L-row",
+        "type": "database-row",
+        "parent": "L",
+        "content": [],
+        "data": {
+          "properties": {
+            "Lt": "Row"
+          },
+          "position": "a0"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "r"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "PRECONDITION_FAILED",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "locked"
+        }
+      }
+    },
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "database.deleteRow",
+            "args": {
+              "id": "D",
+              "rowId": "r"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "PRECONDITION_FAILED",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "locked"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "name": "bundle-database-unlock-refused",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v1",
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0",
+              "databaseLocked": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "database.setLock",
+            "args": {
+              "id": "db",
+              "locked": false
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPROVAL_REQUIRED",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "no-channel"
+        }
+      }
+    }
+  ]
+}

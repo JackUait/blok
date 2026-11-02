@@ -1,0 +1,154 @@
+{
+  "name": "bundle-linked-view-add-row",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [
+          "r1"
+        ],
+        "data": {
+          "activeViewId": "v1",
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "tag",
+              "name": "Tag",
+              "type": "select",
+              "position": "a1",
+              "config": {
+                "options": [
+                  {
+                    "id": "red",
+                    "label": "Red",
+                    "position": "a0"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "r1",
+        "type": "database-row",
+        "parent": "db",
+        "content": [],
+        "data": {
+          "position": "a1",
+          "title": "r1",
+          "properties": {
+            "t": "r1"
+          }
+        }
+      },
+      {
+        "id": "lv",
+        "type": "database",
+        "content": [],
+        "data": {
+          "source": {
+            "databaseId": "db"
+          },
+          "activeViewId": "lv-v",
+          "views": [
+            {
+              "id": "lv-v",
+              "name": "Red",
+              "type": "table",
+              "position": "a0",
+              "sorts": [],
+              "visibleProperties": [],
+              "filters": [
+                {
+                  "id": "f",
+                  "propertyId": "tag",
+                  "operator": "equals",
+                  "value": "red"
+                }
+              ]
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "session:a",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "database.addRow",
+            "args": {
+              "id": "lv"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/2/parent": "db",
+          "/blocks/2/data/properties/tag": "red",
+          "/blocks/0/content": {
+            "length": 2
+          },
+          "/blocks/3/id": "lv",
+          "/blocks/3/content": {
+            "absent": true
+          }
+        }
+      }
+    },
+    {
+      "run": "session:b",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "database.addTemplate",
+            "args": {
+              "id": "lv"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/2/parent": "db",
+          "/blocks/2/data/template": true
+        }
+      }
+    }
+  ]
+}

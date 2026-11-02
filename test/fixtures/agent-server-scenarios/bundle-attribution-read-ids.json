@@ -1,0 +1,96 @@
+{
+  "name": "bundle-attribution-read-ids",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [
+          "r1"
+        ],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v1",
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "cb",
+              "name": "Creator",
+              "type": "createdBy",
+              "position": "a1"
+            }
+          ]
+        }
+      },
+      {
+        "id": "r1",
+        "type": "database-row",
+        "parent": "db",
+        "createdAt": 1767323045000,
+        "createdBy": "u1",
+        "lastEditedAt": 1767323045000,
+        "lastEditedBy": "u2",
+        "data": {
+          "title": "One",
+          "position": "a0",
+          "properties": {
+            "t": "One"
+          }
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.read",
+            "args": {
+              "ids": [
+                "r1"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "result": {
+          "/results/0/blocks": {
+            "length": 1
+          },
+          "/results/0/blocks/0/computed/cb": [
+            {
+              "id": "u1"
+            }
+          ],
+          "/results/0/blocks/0/meta": {
+            "lastEditedAt": "2026-01-02T03:04:05.000Z",
+            "lastEditedBy": {
+              "id": "u2"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

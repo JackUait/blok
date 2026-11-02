@@ -32,6 +32,20 @@ const conformanceTargets = (workflowText: string): string[] => {
   ].map((match) => match[1]));
 };
 
+/**
+ * The Go conformance runs that name no --suite and no --test-name-pattern:
+ * only those prove the whole suite on Go.
+ */
+const fullGoRuns = (workflowText: string): string[] => {
+  const workflow = parse(workflowText) as Workflow;
+
+  return Object.values(workflow.jobs ?? {})
+    .flatMap((job) => job.steps ?? [])
+    .flatMap((step) => step.run === undefined ? [] : step.run.split('\n'))
+    .map((line) => line.trim())
+    .filter((line) => line === 'node scripts/test-server-conformance.mjs --target go');
+};
+
 type RunnerResult = { status: number | null; stdout: string; stderr: string };
 
 const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go' };
@@ -79,6 +93,10 @@ describe('server Go and C# parity law', () => {
     expect(targets).toContain('go');
   });
 
+  it('runs every conformance suite on Go in CI, unfiltered', () => {
+    expect(fullGoRuns(read('.github/workflows/ci.yml'))).toHaveLength(1);
+  });
+
   it.each(['csharp', 'go'])('lets the runner accept --target %s', (target) => {
     expect(runnerAccepts(target, runRunner(runnerPath, ['--target', target]))).toBe(true);
   });
@@ -118,6 +136,18 @@ describe('server Go and C# parity law', () => {
       expect(conformanceTargets(ciWith(
         '      - run: node scripts/test-server-conformance.mjs --target go --test-name-pattern health',
       ))).toContain('go');
+    });
+
+    it('a go conformance step narrowed to some suites', () => {
+      expect(fullGoRuns(ciWith(
+        '      - run: node scripts/test-server-conformance.mjs --target go --suite server-contract',
+      ))).toEqual([]);
+      expect(fullGoRuns(ciWith(
+        '      - run: node scripts/test-server-conformance.mjs --target go --test-name-pattern health',
+      ))).toEqual([]);
+      expect(fullGoRuns(ciWith(
+        '      - run: node scripts/test-server-conformance.mjs --target go',
+      ))).toHaveLength(1);
     });
 
     it('a wrong or missing module path', () => {

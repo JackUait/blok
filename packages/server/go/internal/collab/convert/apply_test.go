@@ -32,7 +32,11 @@ type editCase struct {
 	Seed       json.RawMessage `json:"seed"`
 	Page       json.RawMessage `json:"page"`
 	Shape      *string         `json:"shape"`
-	SeedHTML   []struct {
+	Prior      *string         `json:"prior"`
+	// A peer's concurrent edit on the seeded doc, and the doc after both.
+	PeerUpdate   string          `json:"peerUpdate"`
+	MergedExport json.RawMessage `json:"mergedExport"`
+	SeedHTML     []struct {
 		HTML     string          `json:"html"`
 		Segments json.RawMessage `json:"segments"`
 	} `json:"seedHtml"`
@@ -237,6 +241,19 @@ func TestApplyOpsWritesWhatCSharpWrites(t *testing.T) {
 			if got, want := canonical(t, ExportPage(doc)), canonical(t, jsValue(t, c.ExportPage)); got != want {
 				t.Errorf("page\n got %s\nwant %s", got, want)
 			}
+			if c.PeerUpdate == "" {
+				return
+			}
+			if result, err := doc.ApplyUpdate(decode64(t, c.PeerUpdate)); err != nil || result.Outcome != yjs.Applied {
+				t.Fatalf("peer: %+v %v", result, err)
+			}
+			merged, _, err := Export(doc, BuiltInRichTextFields(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, want := canonical(t, merged), canonical(t, jsValue(t, c.MergedExport)); got != want {
+				t.Errorf("merged\n got %s\nwant %s", got, want)
+			}
 		})
 	}
 }
@@ -251,7 +268,7 @@ func TestSeedWritesWhatCSharpWrites(t *testing.T) {
 	t.Cleanup(func() { GenerateRowKey = original })
 	compared := 0
 	for _, c := range fixture.Cases {
-		if c.Shape != nil {
+		if c.Shape != nil || c.Prior != nil {
 			continue
 		}
 		compared++

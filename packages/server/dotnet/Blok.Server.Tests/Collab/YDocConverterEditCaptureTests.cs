@@ -47,13 +47,15 @@ public sealed class YDocConverterEditCaptureTests
       string? Body = null,
       string? Agent = null,
       string? Shape = null,
-      string? Page = null);
+      string? Page = null,
+      string? Prior = null,
+      string? Peer = null);
 
   private static JsonObject Build()
   {
     var cases = new JsonArray();
 
-    foreach (var edit in Cases())
+    foreach (var edit in Cases().Concat(ConcurrencyCases()))
     {
       cases.Add(Capture(edit));
     }
@@ -70,8 +72,9 @@ public sealed class YDocConverterEditCaptureTests
   private static JsonObject Capture(EditCase edit)
   {
     var seedUpdate = SeedUpdate(edit);
-    var first = Run(edit, seedUpdate);
-    var second = Run(edit, seedUpdate);
+    var peerUpdate = edit.Peer is null ? null : PeerUpdate(edit, seedUpdate);
+    var first = Run(edit, seedUpdate, peerUpdate);
+    var second = Run(edit, seedUpdate, peerUpdate);
     var result = new JsonObject
     {
       ["name"] = edit.Name,
@@ -86,6 +89,11 @@ public sealed class YDocConverterEditCaptureTests
     if (edit.Shape is not null)
     {
       result["shape"] = edit.Shape;
+    }
+
+    if (edit.Prior is not null)
+    {
+      result["prior"] = edit.Prior;
     }
 
     result["seedUpdate"] = Convert.ToBase64String(seedUpdate);
@@ -130,15 +138,24 @@ public sealed class YDocConverterEditCaptureTests
     Assert.Equal(first.Updates, second.Updates);
     result["updates"] = new JsonArray([.. first.Updates.Select(update => (JsonNode)update)]);
 
-    result["export"] = YDocConverter.Export(first.Doc);
+    result["export"] = first.Export;
     result["exportPage"] = YDocConverter.ExportPage(first.Doc);
+
+    if (peerUpdate is not null)
+    {
+      // The peer's concurrent edit, made on the seeded doc before this one,
+      // and the doc after both merge.
+      result["peerUpdate"] = Convert.ToBase64String(peerUpdate);
+      result["mergedExport"] = first.Merged;
+    }
 
     return result;
   }
 
-  private sealed record Outcome(YDoc Doc, List<string> Updates, JsonArray Html, JsonObject? Refused);
+  private sealed record Outcome(
+      YDoc Doc, List<string> Updates, JsonArray Html, JsonObject? Refused, JsonArray? Export = null, JsonArray? Merged = null);
 
-  private static Outcome Run(EditCase edit, byte[] seedUpdate)
+  private static Outcome Run(EditCase edit, byte[] seedUpdate, byte[]? peerUpdate)
   {
     var doc = new YDoc(EditClient);
 
@@ -189,7 +206,16 @@ public sealed class YDocConverterEditCaptureTests
 
     Assert.True(updates.Count <= 1, $"{edit.Name}: one request emits at most one update");
 
-    return new Outcome(doc, updates, html, null);
+    var exported = YDocConverter.Export(doc);
+    JsonArray? merged = null;
+
+    if (peerUpdate is not null)
+    {
+      Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(peerUpdate).Outcome);
+      merged = YDocConverter.Export(doc);
+    }
+
+    return new Outcome(doc, updates, html, null, exported, merged);
   }
 
   private static byte[] SeedUpdate(EditCase edit)
@@ -207,8 +233,83 @@ public sealed class YDocConverterEditCaptureTests
       Shapes[edit.Shape](doc);
     }
 
+    if (edit.Prior is not null)
+    {
+      RichTextRuntime.ApplyOps(doc, CollabEditOps.Parse(Encoding.UTF8.GetBytes(edit.Prior)));
+    }
+
     return doc.EncodeStateAsUpdate();
   }
+
+  private const uint PeerClient = 3;
+
+  /// <summary>A peer's edit on the seeded doc, as the update it sends.</summary>
+  private static byte[] PeerUpdate(EditCase edit, byte[] seedUpdate)
+  {
+    var peer = new YDoc(PeerClient);
+
+    YDocConverter.RowKeySource.Value = Counter("p");
+    Assert.Equal(ApplyOutcome.Applied, peer.ApplyUpdate(seedUpdate).Outcome);
+
+    var before = peer.EncodeStateVector();
+
+    Peers[edit.Peer!](peer);
+
+    return peer.EncodeStateAsUpdate(before);
+  }
+
+  private static YMap Cell(YDoc doc, int row, int column)
+  {
+    var grid = (YMap)Get(Data(doc, "tb"), "content")!;
+    var rows = (YMap)Get(grid, "__rows")!;
+    var order = (YArray)Get(grid, "__rowKeys")!;
+
+    return (YMap)((YArray)Get(rows, (string)order.Get(row)!)!).Get(column)!;
+  }
+
+  private static void PeerEdit(YDoc peer, string body)
+  {
+    RichTextRuntime.ApplyOps(peer, CollabEditOps.Parse(Encoding.UTF8.GetBytes(body)));
+  }
+
+  /// <summary>Peer edits, from YDocConverterConcurrentLossTests and TableDataLossAuditTests.</summary>
+  private static readonly Dictionary<string, Action<YDoc>> Peers = new(StringComparer.Ordinal)
+  {
+    ["types-in-a-cell"] = peer =>
+        peer.Transact(t => Cell(peer, 0, 0).Set(t, "text", "a1 typed")),
+    ["adds-a-block-to-a-cell"] = peer =>
+        peer.Transact(t => ((YArray)Get(Cell(peer, 0, 0), "blocks")!).Insert(t, 1, ["p2"])),
+    ["sets-a-nested-colour"] = peer =>
+        peer.Transact(t => ((YMap)Get(Data(peer, "cb"), "settings")!).Set(t, "colour", "red")),
+    ["renames-property-p2"] = peer => peer.Transact(t =>
+        ((YMap)Get((YMap)Get((YMap)Get(Data(peer, "db"), "properties")!, "__rows")!, "p2")!).Set(t, "name", "State")),
+    ["renames-property-p3"] = peer => peer.Transact(t =>
+        ((YMap)Get((YMap)Get((YMap)Get(Data(peer, "db"), "properties")!, "__rows")!, "p3")!).Set(t, "name", "Assignee")),
+    ["types-at-the-start"] = peer =>
+        peer.Transact(t => ((YXmlText)Get(Data(peer, "p"), "text")!).Insert(t, 0, "X", new AnyObject())),
+    ["types-at-the-end-of-a-ytext"] = peer =>
+        peer.Transact(t => ((YText)Get(Data(peer, "p"), "text")!).Insert(t, 5, " world")),
+    ["adds-an-align-key"] = peer =>
+        peer.Transact(t => Data(peer, "p").Set(t, "align", "center")),
+    ["moves-the-row"] = peer =>
+        peer.Transact(t => Data(peer, "r").Set(t, "position", "a5")),
+    ["marks-body-blocks"] = peer =>
+        peer.Transact(t => Data(peer, "r").Set(t, "bodyBlocks", true)),
+    ["edits-the-third-item"] = peer =>
+        peer.Transact(t => ((YMap)((YArray)Get(Data(peer, "x"), "items")!).Get(2)!).Set(t, "b", "peer")),
+    ["adds-filter-rule-ra"] = peer => PeerEdit(peer, Edit(FilterUpdate(
+        """[{ "id": "ra", "propertyId": "t", "operator": "contains", "value": "a" }]"""))),
+    ["adds-column-c3"] = peer => PeerEdit(peer, Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [
+          [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] }, { "id": "c2", "rowId": "r0", "blocks": ["p01"] }, { "id": "c3", "rowId": "r0", "blocks": [] } ],
+          [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] }, { "id": "c3", "rowId": "r1", "blocks": [] } ] ] } }
+        """)),
+    ["moves-column-c2-first"] = peer => PeerEdit(peer, Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [
+          [ { "id": "c2", "rowId": "r0", "blocks": ["p01"] }, { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] } ],
+          [ { "id": "c2", "rowId": "r1", "blocks": [] }, { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] } ] ] } }
+        """)),
+  };
 
   /// <summary>Row keys "s000000001", "e000000001"...: ten characters, like a minted key.</summary>
   private static Func<string> Counter(string prefix)
@@ -686,5 +787,199 @@ public sealed class YDocConverterEditCaptureTests
         Agent: """[{"op":"patchMaps","patches":[{"map":"values","key":"k","value":{"a":[1,"b",true,null]}},{"map":"page","key":"title","value":"T"},{"map":"values","key":"gone","remove":true}]}]""");
     yield return new("refuse-patch-of-an-unknown-map", [Root],
         Agent: """[{"op":"patchMaps","patches":[{"map":"blocks","key":"k","value":1}]}]""");
+  }
+
+  private const string LossTable =
+      """{ "id": "tb", "type": "table", "data": { "content": [[ { "text": "a1", "blocks": ["p1"] }, { "text": "b1", "blocks": [] } ]] } }""";
+
+  private const string TableWithRowIds =
+      """{ "id": "tb", "type": "table", "data": { "content": [ [ { "blocks": ["p1"], "id": "c0", "rowId": "r0" } ], [ { "blocks": ["p2"], "id": "c0", "rowId": "r1" } ] ] } }""";
+
+  private const string FullTable =
+      """
+      { "id": "tb", "type": "table", "content": ["p00", "p01", "p10", "p11", "p12"],
+        "data": {
+          "withHeadings": true, "withHeadingColumn": true, "stretched": true,
+          "colWidths": [120.5, 200, 333.25], "initialColWidth": 217.75, "textSize": "comfortable",
+          "content": [
+            [ { "id": "c0", "rowId": "r0", "blocks": ["p00"], "colspan": 2, "color": "blue", "textColor": "red", "placement": "middle-center" },
+              { "id": "c1", "rowId": "r0", "blocks": [], "mergedInto": [0, 0] },
+              { "id": "c2", "rowId": "r0", "blocks": ["p01"], "rowspan": 2 } ],
+            [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] },
+              { "id": "c1", "rowId": "r1", "blocks": ["p12"], "placement": "bottom-right" },
+              { "id": "c2", "rowId": "r1", "blocks": [], "mergedInto": [0, 2] } ]
+          ] } }
+      """;
+
+  private static readonly string[] FullTableBlocks =
+  [
+    FullTable,
+    """{ "id": "p00", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "origin" }] } }""",
+    """{ "id": "p01", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "tall" }] } }""",
+    """{ "id": "p10", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "first" }] } }""",
+    """{ "id": "p11", "type": "list", "parent": "tb", "data": { "text": [{ "text": "second" }], "style": "unordered" } }""",
+    """{ "id": "p12", "type": "paragraph", "parent": "tb", "data": { "text": [{ "text": "x" }] } }""",
+  ];
+
+  private static readonly (string Name, string Content)[] TableEdits =
+  [
+    ("move-column-c2-to-the-front", """
+      [ [ { "id": "c2", "rowId": "r0", "blocks": ["p01"] }, { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] } ],
+        [ { "id": "c2", "rowId": "r1", "blocks": [] }, { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] } ] ]
+      """),
+    ("insert-column-c3-in-the-middle", """
+      [ [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c3", "rowId": "r0", "blocks": [] }, { "id": "c1", "rowId": "r0", "blocks": [] }, { "id": "c2", "rowId": "r0", "blocks": ["p01"] } ],
+        [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c3", "rowId": "r1", "blocks": [] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] } ] ]
+      """),
+    ("delete-column-c1", """
+      [ [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c2", "rowId": "r0", "blocks": ["p01"] } ],
+        [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c2", "rowId": "r1", "blocks": [] } ] ]
+      """),
+    ("move-row-r1-above-r0", """
+      [ [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] } ],
+        [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] }, { "id": "c2", "rowId": "r0", "blocks": ["p01"] } ] ]
+      """),
+    ("merge-then-colour-the-covered-column", """
+      [ [ { "id": "c0", "rowId": "r0", "blocks": ["p00"], "colspan": 3, "rowspan": 2, "color": "green" }, { "id": "c1", "rowId": "r0", "blocks": [], "mergedInto": [0, 0] }, { "id": "c2", "rowId": "r0", "blocks": [], "mergedInto": [0, 0] } ],
+        [ { "id": "c0", "rowId": "r1", "blocks": [], "mergedInto": [0, 0] }, { "id": "c1", "rowId": "r1", "blocks": [], "mergedInto": [0, 0] }, { "id": "c2", "rowId": "r1", "blocks": [], "mergedInto": [0, 0] } ] ]
+      """),
+    ("cells-lose-their-column-ids", """
+      [ [ { "blocks": ["p00"] }, { "blocks": [] }, { "blocks": ["p01"] } ],
+        [ { "blocks": ["p10", "p11"] }, { "blocks": ["p12"] }, { "blocks": [] } ] ]
+      """),
+    ("two-columns-share-an-id", """
+      [ [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c0", "rowId": "r0", "blocks": ["p01"] }, { "id": "c2", "rowId": "r0", "blocks": [] } ],
+        [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c0", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] } ] ]
+      """),
+    ("legacy-strings-replace-the-cells", """[ ["a", "b", "c"], ["d", "e", "f"] ]"""),
+    ("table-emptied", "[ ]"),
+  ];
+
+  private static string FilterData(string rules)
+  {
+    return $$"""
+        {
+            "schema": [{ "id": "t", "name": "Name", "type": "title", "position": "a0" }],
+            "activeViewId": "v1",
+            "views": [{ "id": "v1", "name": "Table", "type": "table", "position": "a0",
+                "sorts": [], "filters": [], "visibleProperties": [],
+                "filterTree": { "id": "v1-filters", "conjunction": "and", "filterRules": {{rules}} } }] }
+        """;
+  }
+
+  private static string FilterDatabase(string rules) =>
+      $$"""{ "id": "db", "type": "database", "data": {{FilterData(rules)}} }""";
+
+  private static string FilterUpdate(string rules) =>
+      $$"""{ "op": "update", "id": "db", "data": {{FilterData(rules)}} }""";
+
+  /// <summary>
+  /// The server edits of YDocConverterConcurrentLossTests,
+  /// TableDataLossAuditTests and YDocConverterTextMergeTests. A case with a
+  /// peer also records the peer's concurrent update and the merged export.
+  /// </summary>
+  private static IEnumerable<EditCase> ConcurrencyCases()
+  {
+    const string HostCellEdit = """
+        { "op": "update", "id": "tb", "data": { "content": [[ { "text": "a1", "blocks": ["p1"] }, { "text": "b1 host", "blocks": [] } ]] } }
+        """;
+    const string Callout = """{ "id": "cb", "type": "callout", "data": { "settings": { "icon": "star", "colour": "blue" } } }""";
+    const string Row = """{ "id": "r", "type": "database-row", "data": { "position": "a0", "title": "One", "properties": { "t": "One" } } }""";
+
+    yield return new("loss-concurrent-cell-typing", [LossTable], Edit(HostCellEdit), Peer: "types-in-a-cell");
+    yield return new("loss-a-server-table-update-keeps-the-row-containers", [LossTable], Edit(HostCellEdit));
+    yield return new("loss-concurrent-block-inserts-into-one-cell", [LossTable], Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [[ { "text": "a1", "blocks": ["p1", "p3"] }, { "text": "b1", "blocks": [] } ]] } }
+        """), Peer: "adds-a-block-to-a-cell");
+    yield return new("loss-concurrent-writes-to-a-nested-map", [Callout], Edit("""
+        { "op": "update", "id": "cb", "data": { "settings": { "icon": "bolt", "colour": "blue" } } }
+        """), Peer: "sets-a-nested-colour");
+    yield return new("loss-concurrent-renames-of-two-properties", [
+        """{ "id": "db", "type": "database", "data": { "properties": [ { "id": "p1", "name": "Name" }, { "id": "p2", "name": "Status" } ] } }"""],
+        Edit("""{ "op": "update", "id": "db", "data": { "properties": [ { "id": "p1", "name": "Title" }, { "id": "p2", "name": "Status" } ] } }"""),
+        Peer: "renames-property-p2");
+    yield return new("loss-concurrent-typing-in-top-level-text",
+        ["""{ "id": "p", "type": "paragraph", "data": { "text": [{ "text": "hello" }] } }"""],
+        Edit("""{ "op": "update", "id": "p", "data": { "text": [{ "text": "hello!" }] } }"""),
+        Peer: "types-at-the-start");
+    yield return new("loss-a-top-level-key-added-concurrently",
+        ["""{ "id": "p", "type": "paragraph", "data": { "text": [{ "text": "hi" }] } }"""],
+        Edit("""{ "op": "update", "id": "p", "data": { "text": [{ "text": "hi there" }] } }"""),
+        Peer: "adds-an-align-key");
+    yield return new("loss-a-row-icon-is-a-plain-value",
+        ["""{ "id": "r", "type": "database-row", "data": { "position": "a0", "icon": "🌱", "properties": { "t": "One" } } }"""],
+        Edit("""{ "op": "update", "id": "r", "data": { "position": "a0", "icon": "🚀", "properties": { "t": "One" } } }"""),
+        Peer: "moves-the-row");
+    yield return new("loss-a-row-cover-is-a-plain-value",
+        ["""{ "id": "r", "type": "database-row", "data": { "position": "a0", "cover": "https://example.com/a.png", "properties": { "t": "One" } } }"""],
+        Edit("""{ "op": "update", "id": "r", "data": { "position": "a0", "cover": "https://example.com/b.png", "properties": { "t": "One" } } }"""),
+        Peer: "moves-the-row");
+    yield return new("loss-a-body-blocks-marker-set-concurrently", [Row],
+        Edit("""{ "op": "update", "id": "r", "data": { "position": "a0", "title": "One", "properties": { "t": "One", "n": "note" } } }"""),
+        Peer: "marks-body-blocks");
+    yield return new("loss-an-update-drops-a-nested-key", [Callout],
+        Edit("""{ "op": "update", "id": "cb", "data": { "settings": { "icon": "bolt" } } }"""));
+    yield return new("loss-adding-a-table-row-keeps-the-row-keys", [LossTable], Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [
+            [ { "text": "a1", "blocks": ["p1"] }, { "text": "b1", "blocks": [] } ],
+            [ { "text": "a2", "blocks": [] }, { "text": "b2", "blocks": [] } ] ] } }
+        """));
+    yield return new("loss-numeric-rows-pair-with-the-rows-in-the-doc", [
+        """{ "id": "tb", "type": "table", "data": { "content": [ [ { "count": 1 }, { "count": 2 } ], [ { "count": 3 }, { "count": 4.5 } ] ] } }"""],
+        Edit("""{ "op": "update", "id": "tb", "data": { "content": [ [ { "count": 1 }, { "count": 2 } ], [ { "count": 3 }, { "count": 9.5 } ] ] } }"""));
+    yield return new("loss-reordering-properties-keeps-a-concurrent-rename", [
+        """{ "id": "db", "type": "database", "data": { "properties": [ { "id": "p1", "name": "Name" }, { "id": "p2", "name": "Status" }, { "id": "p3", "name": "Owner" } ] } }"""],
+        Edit("""{ "op": "update", "id": "db", "data": { "properties": [ { "id": "p3", "name": "Owner" }, { "id": "p1", "name": "Name" }, { "id": "p2", "name": "Status" } ] } }"""),
+        Peer: "renames-property-p3");
+    yield return new("loss-an-unequal-array-middle-keeps-the-container", [
+        """{ "id": "x", "type": "tool", "data": { "items": [ { "a": "1" }, { "a": "2" }, { "a": "3" } ] } }"""],
+        Edit("""{ "op": "update", "id": "x", "data": { "items": [ { "a": "1" }, { "a": "2" }, { "a": "3x" }, { "a": "4" } ] } }"""),
+        Peer: "edits-the-third-item");
+    yield return new("loss-change-a-row-and-insert-one-above-it", [TableWithRowIds], Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [
+            [ { "blocks": [], "id": "c0", "rowId": "rN" } ],
+            [ { "blocks": ["p1", "p3"], "id": "c0", "rowId": "r0" } ],
+            [ { "blocks": ["p2"], "id": "c0", "rowId": "r1" } ] ] } }
+        """));
+    yield return new("loss-concurrent-filter-rules-in-one-group", [FilterDatabase("[]")],
+        Edit(FilterUpdate("""[{ "id": "rb", "propertyId": "t", "operator": "contains", "value": "b" }]""")),
+        Peer: "adds-filter-rule-ra");
+
+    // TableDataLossAuditTests.
+    foreach (var (name, content) in TableEdits)
+    {
+      yield return new($"table-loss-{name}", FullTableBlocks, Edit(
+          $$"""{ "op": "update", "id": "tb", "data": { "withHeadings": true, "withHeadingColumn": false, "colWidths": [100, 200], "content": {{content}} } }"""));
+    }
+
+    foreach (var (firstName, first) in TableEdits)
+    {
+      foreach (var (name, content) in TableEdits)
+      {
+        yield return new($"table-loss-{name}-after-{firstName}", FullTableBlocks,
+            Edit($$"""{ "op": "update", "id": "tb", "data": { "content": {{content}} } }"""),
+            Prior: Edit($$"""{ "op": "update", "id": "tb", "data": { "content": {{first}} } }"""));
+      }
+    }
+
+    yield return new("table-loss-a-host-cell-edit-and-a-peers-new-column", FullTableBlocks, Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [
+          [ { "id": "c0", "rowId": "r0", "blocks": ["p00"], "color": "red" }, { "id": "c1", "rowId": "r0", "blocks": [] }, { "id": "c2", "rowId": "r0", "blocks": ["p01"] } ],
+          [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] } ] ] } }
+        """), Peer: "adds-column-c3");
+    yield return new("table-loss-a-host-cell-edit-follows-a-column-move", FullTableBlocks, Edit("""
+        { "op": "update", "id": "tb", "data": { "content": [
+          [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] }, { "id": "c2", "rowId": "r0", "blocks": ["p01", "pNew"] } ],
+          [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] } ] ] } }
+        """), Peer: "moves-column-c2-first");
+
+    // YDocConverterTextMergeTests.
+    yield return new("merge-an-update-keeps-the-same-ytext",
+        ["""{ "id": "p", "type": "note", "data": { "text": "hello" } }"""],
+        Edit("""{ "op": "update", "id": "p", "data": { "text": "hello!" } }"""),
+        Peer: "types-at-the-end-of-a-ytext");
+    yield return new("merge-an-update-drops-the-omitted-keys",
+        ["""{ "id": "p", "type": "note", "data": { "text": "old", "level": 3 } }"""],
+        Edit("""{ "op": "update", "id": "p", "data": { "text": "new" } }"""));
   }
 }

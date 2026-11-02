@@ -775,7 +775,9 @@ describe('server release wiring', () => {
     expect(ignore).not.toMatch(/^\.yarnrc\.yml$/m);
   });
 
-  it('keeps every public delivery surface on C#', () => {
+  // The npm package and the Docker image still ship the C# host; the Go
+  // server ships beside them as a module tag and its own archives.
+  it('names the C# host and the Go server on the public delivery surfaces', () => {
     const publicSources = [
       read(RELEASE_WORKFLOW),
       read('packages/server/Dockerfile'),
@@ -789,6 +791,9 @@ describe('server release wiring', () => {
     expect(read('packages/server/README.md')).toContain('Blok.Server.AspNetCore');
     expect(read('packages/server/README.md')).not.toContain('UseMySql');
     expect(read(RELEASE_WORKFLOW)).not.toContain('MySql');
+    expect(read(RELEASE_WORKFLOW)).toContain('node scripts/publish-server-go.mjs');
+    expect(read('packages/server/README.md')).toContain('github.com/JackUait/blok/packages/server/go');
+    expect(read('packages/server/README.md')).toContain('checksums-go.txt');
   });
 
   it('ships an npm wrapper that verifies the C# host it downloads', () => {

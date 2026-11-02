@@ -441,3 +441,80 @@ func TestFramesReachTheRoomAndRoomFramesReachThePeer(t *testing.T) {
 		t.Fatalf("closed %+v", got)
 	}
 }
+
+// drain reads frames until the close and returns the binary count and the close.
+func drain(t *testing.T, c *clientConn) (int, CloseFrame) {
+	t.Helper()
+	_ = c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+	binaries := 0
+	for {
+		frame := readServerFrame(t, c.reader)
+		switch frame.opcode {
+		case 0x2:
+			binaries++
+		case 0x8:
+			return binaries, CloseFrame{uint16(frame.payload[0])<<8 | uint16(frame.payload[1]), string(frame.payload[2:])}
+		}
+	}
+}
+
+// APeerThatStopsReadingIsClosed1008WhileTheOthersKeepReceiving, over a real
+// socket: the stalled peer gets every admitted frame, then 1008.
+func TestAPeerThatStopsReadingIsClosed1008WhileTheOthersKeepReceiving(t *testing.T) {
+	const frames = 96
+	h := startEndpoint(t, func(c *Config) { c.MaxMessageBytes = 256 * 1024 }, nil)
+	stalled := h.dial(t, "/sync/doc")
+	stalledMember := h.rooms.lastMember(t).(*SocketMember)
+	healthy := h.dial(t, "/sync/doc")
+	healthyMember := h.rooms.lastMember(t)
+
+	presence := make([]byte, 200*1024)
+	presence[0] = 1
+	admitted := 0
+	for range frames {
+		if stalledMember.RequestedClose() == nil {
+			admitted++
+		}
+		stalledMember.Send(presence)
+		healthyMember.Send(presence)
+		_ = healthy.conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+		if frame := readServerFrame(t, healthy.reader); frame.opcode != 0x2 || len(frame.payload) != len(presence) {
+			t.Fatalf("the healthy peer got %x, %d bytes", frame.opcode, len(frame.payload))
+		}
+	}
+	if got := stalledMember.RequestedClose(); got == nil || *got != CloseSlowConsumer {
+		t.Fatalf("19 MiB at a stalled peer: close %v", got)
+	}
+	received, close := drain(t, stalled)
+	if close != CloseSlowConsumer {
+		t.Fatalf("closed %+v", close)
+	}
+	// The frame that tripped the cap was not admitted; every other one was sent.
+	if received != admitted-1 {
+		t.Fatalf("received %d of %d admitted frames before the close", received, admitted-1)
+	}
+	if healthyMember.(*SocketMember).RequestedClose() != nil {
+		t.Fatal("the healthy peer was closed")
+	}
+}
+
+// ARevokedReaderDropsQueuedFramesBeforeTheForbiddenClose, over a real socket.
+func TestARevokedReaderDropsQueuedFramesBeforeTheForbiddenClose(t *testing.T) {
+	const frames = 64
+	h := startEndpoint(t, func(c *Config) { c.MaxMessageBytes = 4 * 1024 * 1024 }, nil)
+	revoked := h.dial(t, "/sync/doc")
+	member := h.rooms.lastMember(t)
+	update := make([]byte, 400*1024)
+	update[1] = 2
+	for range frames {
+		member.Send(update)
+	}
+	member.Close(collab.CloseForbidden)
+	received, close := drain(t, revoked)
+	if close != CloseForbidden {
+		t.Fatalf("closed %+v", close)
+	}
+	if received >= frames {
+		t.Fatalf("received all %d queued frames after revocation", received)
+	}
+}

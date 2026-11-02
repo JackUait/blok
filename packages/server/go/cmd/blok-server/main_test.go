@@ -469,3 +469,18 @@ func TestAnswersAreFramedLikeKestrel(t *testing.T) {
 		}
 	}
 }
+
+// HostCollab.Configure: the host caps upgraded sockets at 1024 so the
+// service refuses 503 before a room is seeded.
+func TestTheHostCapsSyncConnectionsOnlyWhenCollaborating(t *testing.T) {
+	options := blokserver.DefaultOptions()
+	configureCollab(&options)
+	if options.CollabMaxConnections != 0 {
+		t.Fatalf("without --collab: %d", options.CollabMaxConnections)
+	}
+	options.CollabEnabled = true
+	configureCollab(&options)
+	if options.CollabMaxConnections != 1024 {
+		t.Fatalf("with --collab: %d", options.CollabMaxConnections)
+	}
+}

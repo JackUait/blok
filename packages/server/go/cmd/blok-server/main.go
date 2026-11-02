@@ -96,6 +96,18 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 	return server
 }
 
+// maxUpgradedConnections is HostCollab.DefaultMaxUpgradedConnections: an
+// accept-and-hold flood cannot pin every socket the process can hold. Go has
+// no Kestrel backstop behind it; this count is the only cap.
+const maxUpgradedConnections = 1024
+
+// configureCollab is HostCollab.Configure.
+func configureCollab(options *blokserver.Options) {
+	if options.CollabEnabled {
+		options.CollabMaxConnections = maxUpgradedConnections
+	}
+}
+
 func run(ctx context.Context, args []string, getenv func(string) string, stderr io.Writer) int {
 	hostArgs, conformance, conformanceErr := parseConformanceArguments(args)
 	if conformanceErr != "" {
@@ -115,6 +127,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 	options := parsed.options
 	options.Version = version
+	configureCollab(&options)
 	server, err := blokserver.New(options)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)

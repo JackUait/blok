@@ -208,8 +208,8 @@ func (r *recordingReader) Read(_ context.Context, fields []RichTextHTML, timeout
 	return read, nil
 }
 
-// The migration half of SeedAndMigrationReadWithTheOneTimeBudget waits for that port.
-func TestSeedReadsWithTheOneTimeBudgetAndExportAndEditWithTheDefault(t *testing.T) {
+// Twin of SeedAndMigrationReadWithTheOneTimeBudget.
+func TestSeedAndMigrationReadWithTheOneTimeBudget(t *testing.T) {
 	reader := &recordingReader{}
 	c := converter(t, reader)
 	if err := c.Seed(context.Background(), yjs.NewDoc(yjs.Options{}), parseNode(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"<b>x</b>"}}]}`)); err != nil {
@@ -221,7 +221,11 @@ func TestSeedReadsWithTheOneTimeBudgetAndExportAndEditWithTheDefault(t *testing.
 	if err := c.ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, `{"op":"update","id":"a","data":{"text":"<i>y</i>"}}`)); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(reader.timeouts, []time.Duration{MigrationReadTimeout, 0, 0}) || MigrationReadTimeout != time.Minute {
+	migrated, err := c.MigrateRichText(context.Background(), legacyHTMLDoc())
+	if err != nil || migrated != 1 {
+		t.Fatal(migrated, err)
+	}
+	if !slices.Equal(reader.timeouts, []time.Duration{MigrationReadTimeout, 0, 0, MigrationReadTimeout}) || MigrationReadTimeout != time.Minute {
 		t.Fatal(reader.timeouts)
 	}
 }

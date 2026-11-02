@@ -110,6 +110,16 @@ func (c *DocConverter) ApplyOps(ctx context.Context, doc *yjs.Doc, ops []EditOp)
 	return ApplyOps(doc, ops, Converting(c.fields(), read))
 }
 
+// MigrateRichText reads a format-1 room's legacy HTML with the one-time
+// budget, then migrates it to formatted text; it returns the field count.
+func (c *DocConverter) MigrateRichText(ctx context.Context, doc *yjs.Doc) (int, error) {
+	read, err := c.read(ctx, CollectLegacyRichText(doc, c.fields()), MigrationReadTimeout)
+	if err != nil {
+		return 0, err
+	}
+	return MigrateRichText(doc, Converting(c.fields(), read))
+}
+
 // Export is {time, blocks, title?, icon?}, the legacy HTML slots read to segments.
 func (c *DocConverter) Export(ctx context.Context, doc *yjs.Doc) (*jsjson.Object, error) {
 	now := c.Now().UnixMilli()

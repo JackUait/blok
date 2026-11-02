@@ -2,7 +2,7 @@
 
 Blok's shared server is written in C#. It handles file uploads, link previews and live collaboration, and it converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-A Go version of the server is in progress in `packages/server/go`. It serves health, link previews (`/unfurl`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. It has no live collaboration yet. It accepts `--collab` and the other collaboration flags, but serves no sync routes.
+A Go version of the server is in progress in `packages/server/go`. It serves health, link previews (`/unfurl`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. With `--collab` it also serves live collaboration: the sync socket, `/edit`, `/state`, `/reset` and the history routes. It reads and writes the same collaboration directory as the C# server.
 
 The npm binary, the Docker image and the NuGet packages all ship the C# server. See [Go module and archives](#go-module-and-archives) for how the Go server ships.
 
@@ -672,8 +672,8 @@ The Go server in `packages/server/go` has its own CI checks:
 - `go vet` must pass.
 - `govulncheck` (pinned to v1.9.0) must find no reachable vulnerability.
 - `go test` must cover at least 80% of statements. Go measures statements only, so there is no Go branch floor.
-- The conformance suites Go passes so far run with `--target go`.
-- `node scripts/test-server-go-module.mjs` builds `test/fixtures/go-server-consumer` from the files git tracks in the module. The fixture mounts Blok under `/api/blok` behind its own auth and converts a document.
+- Every conformance suite runs with `--target go`. `--target interop` checks that each server serves a collaboration directory the other wrote.
+- `node scripts/test-server-go-module.mjs` builds `test/fixtures/go-server-consumer` from the files git tracks in the module. The fixture mounts Blok under `/api/blok` behind its own auth, converts a document, and fills the collab seams.
 
 CodeQL analyzes the Go code in the weekly scan, not on every push.
 
@@ -688,7 +688,7 @@ go test -p 2 ./...
 
 The release workflow ships the Go server in two forms. No release has shipped them yet.
 
-- **Module.** `yarn release X.Y.Z` also tags `packages/server/go/vX.Y.Z` on the release commit. Go reads a module in a subdirectory only from tags with that prefix. The module path is `github.com/JackUait/blok/packages/server/go`. Import `blokserver` for the routes and `blokdocs` for the converter.
+- **Module.** `yarn release X.Y.Z` also tags `packages/server/go/vX.Y.Z` on the release commit. Go reads a module in a subdirectory only from tags with that prefix. The module path is `github.com/JackUait/blok/packages/server/go`. Import `blokserver` for the routes and `blokdocs` for the converter. Your own operation store and activity observer go in `Options.CollabOperationStore` and `Options.CollabActivityObserver`. Their types are in `blokserver/collabstore`.
 - **Archives.** The GitHub release gets `blok-server-go_<os>_<arch>` for macOS, Linux and Windows, on amd64 and arm64, with `checksums-go.txt`. They are built with cgo off, so they are static. The release starts the Linux amd64 one on Alpine before it uploads.
 
 The binary reports its release version on `/health`. A local `go build` reports `dev`.

@@ -51,7 +51,8 @@ func (c *collabRooms) Join(ctx context.Context, doc string, member collab.Member
 
 // hasJournal is CollabOperationStoreSource answering a store.
 func (s *Server) hasJournal() bool {
-	return s.options.CollabEnabled && (s.options.CollabJournal || s.conformanceJournal)
+	return s.options.CollabEnabled &&
+		(s.options.CollabOperationStore != nil || s.options.CollabJournal || s.conformanceJournal)
 }
 
 func (s *Server) collabLog(message string) {
@@ -107,7 +108,10 @@ func (s *Server) buildRoomManager() (*room.Manager, error) {
 
 	roomOptions := room.Options{AnnouncedMaxMessageBytes: int64(o.CollabMaxMessageBytes)}
 	var operations room.OperationStore
-	if s.hasJournal() {
+	if o.CollabOperationStore != nil {
+		// Only the built-in journal states its append limit.
+		operations = o.CollabOperationStore
+	} else if s.hasJournal() {
 		// The built-in journal on its default limit, as C# constructs it.
 		local, err := journal.NewStore(o.CollabDirectory, journal.StoreOptions{Log: s.collabLog})
 		if err != nil {
@@ -123,6 +127,7 @@ func (s *Server) buildRoomManager() (*room.Manager, error) {
 		Room:       roomOptions,
 		Log:        s.collabLog,
 		Operations: operations,
+		Activity:   o.CollabActivityObserver,
 	}), nil
 }
 

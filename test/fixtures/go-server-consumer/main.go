@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/blokdocs"
 	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
 )
 
 const prefix = "/api/blok"
@@ -29,6 +31,8 @@ func main() {
 	options.AllowedOrigins = []string{"https://app.example.test"}
 	options.UnfurlEnabled = true
 	options.Version = "package-fixture"
+	options.CollabActivityObserver = lastSeen{}
+	options.CollabOperationStore = elsewhere{}
 	server, err := blokserver.New(options)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -72,4 +76,19 @@ func requireUser(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// lastSeen and elsewhere prove a consumer can name and fill the collab
+// seams, which live behind internal packages. Collab is off here, so the
+// server never calls them.
+type lastSeen struct{}
+
+func (lastSeen) Record(context.Context, string, string, time.Time, collabstore.ActivityKind) error {
+	return nil
+}
+
+type elsewhere struct{}
+
+func (elsewhere) Open(context.Context, string) (collabstore.OpenOutcome, collabstore.OperationSession, error) {
+	return collabstore.DocumentOpenElsewhere, nil, nil
 }

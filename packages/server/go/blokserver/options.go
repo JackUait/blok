@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 )
@@ -74,6 +75,15 @@ type Options struct {
 	// Authorization narrows document access. Nil allows what the ticket
 	// allows.
 	Authorization Authorization
+
+	// CollabOperationStore is UseCollabOperationStore<T>: the host's own
+	// journal. Setting it turns the journal on, as CollabJournal does with
+	// the built-in one, and it wins over CollabJournal.
+	CollabOperationStore collabstore.OperationStore
+
+	// CollabActivityObserver is UseCollabActivityObserver<T>. Nil makes no
+	// calls.
+	CollabActivityObserver collabstore.ActivityObserver
 
 	// Clock is the TimeProvider override: tickets, the rate limit window and
 	// S3 signing read it. Nil is the system clock.

@@ -693,6 +693,42 @@
       }
     },
     {
+      "name": "controlEpochMin",
+      "frameHex": "64567b2265706f6368223a2d393232333337323033363835343737353830382c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload needs format >= 1, epoch >= 0 and a 32-hex lineage",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlUnknownBeforeBad",
+      "frameHex": "64107b2278223a312c2265706f6368223a7d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlLiteralTrue",
+      "frameHex": "64467b2265706f6368223a747275652c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "controlNestedDepth",
+      "frameHex": "644f7b2265706f6368223a5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+      "answer": {
+        "ok": false,
+        "error": "the control payload has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
       "name": "controlLeadingZeroEpoch",
       "frameHex": "64447b2265706f6368223a30312c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
       "answer": {
@@ -824,6 +860,42 @@
       "answer": {
         "ok": false,
         "error": "the limits payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsNegativeZero",
+      "frameHex": "65167b226d61784d6573736167654279746573223a2d307d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload needs a positive maxMessageBytes",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsPlusSign",
+      "frameHex": "65167b226d61784d6573736167654279746573223a2b317d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsDotFraction",
+      "frameHex": "65167b226d61784d6573736167654279746573223a312e7d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "limitsUpperExponent",
+      "frameHex": "65187b226d61784d6573736167654279746573223a31452b327d",
+      "answer": {
+        "ok": false,
+        "error": "the limits payload has an unknown, repeated or ill-typed property",
         "rule": null
       }
     },
@@ -1615,6 +1687,51 @@
       "answer": {
         "ok": false,
         "error": "the identities payload is missing or truncated",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesNegativeZero",
+      "frameHex": "6b2e7b226964656e746974696573223a5b7b22636c69656e744964223a2d302c226163746f724964223a2261227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "an identities entry has an unknown, repeated or ill-typed property",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesControlCharActor",
+      "frameHex": "6b2f7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22610062227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesRawControlActor",
+      "frameHex": "6b2f7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22610962227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesBadEscape",
+      "frameHex": "6b2e7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a225c78227d5d7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload is not valid JSON",
+        "rule": null
+      }
+    },
+    {
+      "name": "identitiesUnknownBeforeBad",
+      "frameHex": "6b167b2278223a312c226964656e746974696573223a5b7d",
+      "answer": {
+        "ok": false,
+        "error": "the identities payload has an unknown, repeated or ill-typed property",
         "rule": null
       }
     },

@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"maps"
 	"slices"
 	"sort"
 
@@ -278,20 +279,12 @@ func myersOps(before, after []jsjson.Str) ([]TextEdit, bool) {
 	v := map[int]int{1: 0}
 	var trace []map[int]int
 	for depth := 0; depth <= limit; depth++ {
-		trace = append(trace, maps(v))
+		trace = append(trace, maps.Clone(v))
 		if reachesEnd(before, after, v, depth) {
 			return toUnitOps(backtrackMyers(trace, before, after, depth), before), true
 		}
 	}
 	return nil, false
-}
-
-func maps(v map[int]int) map[int]int {
-	copied := make(map[int]int, len(v))
-	for k, x := range v {
-		copied[k] = x
-	}
-	return copied
 }
 
 // isJSWhitespace is JavaScript's \s, which differs from .NET's at U+0085 and U+FEFF.

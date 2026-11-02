@@ -216,6 +216,43 @@ public sealed class TextDiffCaptureTests
       Add(before, Mutate(before, 1 + random.Next(i < 300 ? 4 : 80)), markup: random.Next(4) != 0);
     }
 
+    // Conjunct material, where GB9c joins clusters on top of StringInfo:
+    // linkers, consonants, InCB=Extend marks, breakers, ZWJ, lone surrogates
+    // at the edges and long runs.
+    var run = string.Concat(Enumerable.Repeat(ka + virama, 300));
+    Add(run + ka, run + "x");
+    Add(run + P(0x093F) + run + ka, run + P(0x093F) + run + "x");
+    Add(virama + run + ka, virama + run + "y");
+    Add(run + high, run + high + "z");
+    Add(low + run + ka + P(0x093C), low + run + ka);
+    var conjunctPieces = new[]
+    {
+      ka, virama, ra, P(0x0938), P(0x093C), P(0x0951), P(0x093F), P(0x200C), P(0x200D), P(0x0ACD), P(0x0A95),
+      P(0x1D167), high, low, "a", " ", "<b>", "&amp;", ka + virama, ka + virama + ka, run,
+    };
+    var conjunctRandom = new SplitMix(20261102);
+
+    string ConjunctText(int count)
+    {
+      var text = new StringBuilder();
+
+      for (var i = 0; i < count; i++)
+      {
+        var piece = conjunctPieces[conjunctRandom.Next(conjunctPieces.Length)];
+        text.Append(piece == run && conjunctRandom.Next(8) != 0 ? ka : piece);
+      }
+
+      return text.ToString();
+    }
+
+    for (var i = 0; i < 150; i++)
+    {
+      var before = ConjunctText(1 + conjunctRandom.Next(40));
+      var at = conjunctRandom.Next(before.Length + 1);
+      var cut = Math.Min(before.Length - at, conjunctRandom.Next(4));
+      Add(before, before.Remove(at, cut).Insert(at, ConjunctText(conjunctRandom.Next(3))), markup: conjunctRandom.Next(4) != 0);
+    }
+
     var written = new StringBuilder();
     written.Append("{\n  \"$comment\": \"Captured from C# by TextDiffCaptureTests. Do not edit by hand. Edits are [index, remove, insert] in UTF-16 units.\",\n  \"cases\": [\n");
 

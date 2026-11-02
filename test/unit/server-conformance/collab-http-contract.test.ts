@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it as baseIt } from 'vitest';
 
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
+import { startFakeS3 } from './fake-s3';
 import { sendRequest } from './http-client';
 import { startServer, type RunningServer } from './run-against';
 
@@ -640,4 +641,60 @@ suite('collab history past its limits', () => {
 
     expect([restore.status, restore.body]).toEqual([413, 'collab: the restore is larger than one update may be.\n']);
   }, 120_000);
+});
+
+suite('collab working set in S3', () => {
+  it('keeps the working set under the prefix and serves it again after a restart', async () => {
+    const bucket = await startFakeS3(200, { stateful: true });
+    const endpoint = await startDocEndpoint();
+    const key = `/media/collab/${createHash('sha256').update('doc-s3', 'utf8').digest('hex')}`;
+    const start = (): Promise<RunningServer> => startServer({
+      args: [
+        '--listen', '127.0.0.1:0',
+        '--auth', 'none',
+        '--storage-dir', '',
+        '--rate-limit', '0',
+        '--s3-endpoint', bucket.baseUrl,
+        '--s3-region', 'eu-central-1',
+        '--s3-bucket', 'media',
+        '--s3-bucket-url', 'https://cdn.example.com/media',
+        '--s3-addressing', 'path',
+        '--collab',
+        '--collab-s3-prefix', '/collab/',
+        '--doc-endpoint', endpoint.url,
+      ],
+      env: { BLOK_S3_ACCESS_KEY: 'AKIAEXAMPLE', BLOK_S3_SECRET_KEY: 'conformance-secret-key' },
+    });
+
+    try {
+      const first = await start();
+
+      try {
+        expect((await send(first.baseUrl, 'POST', '/sync/doc-s3/edit', [[KEY, 'k1']], insertBody('b1', 'kept'))).status)
+          .toBe(204);
+      } finally {
+        await first.stop();
+      }
+
+      const written = bucket.requests.filter((request) => request.method === 'PUT' && request.path === key);
+
+      expect(written.length).toBeGreaterThan(0);
+      expect(written.at(-1)?.body.subarray(0, 4).toString('latin1')).toBe('BKW2');
+      expect(bucket.requests.every((request) => request.path === key)).toBe(true);
+
+      // The doc endpoint never kept the export, so only the bucket can hold the edit.
+      const second = await start();
+
+      try {
+        const state = await send(second.baseUrl, 'GET', '/sync/doc-s3/state');
+
+        expect([state.status, blocksOf(state.body)]).toEqual([200, [{ id: 'b1', text: 'kept' }]]);
+      } finally {
+        await second.stop();
+      }
+    } finally {
+      await endpoint.stop();
+      await bucket.stop();
+    }
+  }, 60_000);
 });

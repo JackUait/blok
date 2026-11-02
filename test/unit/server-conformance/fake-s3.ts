@@ -13,8 +13,14 @@ export interface FakeS3 {
   stop(): Promise<void>;
 }
 
-export async function startFakeS3(status = 200): Promise<FakeS3> {
+/**
+ * Every request is recorded. By default each one answers `status` with an
+ * empty body. A `stateful` bucket keeps what is PUT: GET and HEAD answer it
+ * or 404 NoSuchKey, and DELETE forgets it.
+ */
+export async function startFakeS3(status = 200, options: { stateful?: boolean } = {}): Promise<FakeS3> {
   const requests: RecordedS3Request[] = [];
+  const objects = new Map<string, Buffer>();
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
 
@@ -27,12 +33,37 @@ export async function startFakeS3(status = 200): Promise<FakeS3> {
         Array.isArray(value) ? value.join(', ') : value ?? '',
       ]));
 
-      requests.push({
+      const recorded = {
         body: Buffer.concat(chunks),
         headers,
         method: request.method ?? '',
         path: new URL(request.url ?? '/', 'http://127.0.0.1').pathname,
-      });
+      };
+
+      requests.push(recorded);
+
+      if (options.stateful === true) {
+        const held = objects.get(recorded.path);
+
+        if (recorded.method === 'PUT') {
+          objects.set(recorded.path, recorded.body);
+          response.writeHead(200, { ETag: '"fixture"' });
+          response.end();
+        } else if (recorded.method === 'DELETE') {
+          objects.delete(recorded.path);
+          response.writeHead(204);
+          response.end();
+        } else if (held === undefined) {
+          response.writeHead(404, { 'Content-Type': 'application/xml' });
+          response.end(recorded.method === 'HEAD' ? undefined : '<Error><Code>NoSuchKey</Code></Error>');
+        } else {
+          response.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': held.length });
+          response.end(recorded.method === 'HEAD' ? undefined : held);
+        }
+
+        return;
+      }
+
       response.writeHead(status, { 'Content-Type': 'application/xml' });
       response.end(status >= 400 ? '<Error><Code>FixtureFailure</Code></Error>' : '');
     });

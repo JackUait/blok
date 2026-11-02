@@ -209,14 +209,16 @@ public sealed class YDocConverterHardeningCaptureTests
       var data = DataOf(doc, "n1");
       doc.Transact(transaction => data.Set(transaction, "blob", new byte[] { 1, 2, 3 }));
       ApplyForeign(doc, Keyed(0, data, "sub", new ContentDoc("sub-guid", new AnyObject())));
-    });
+    }
+    );
     yield return ("peer-minted-malformed-blocks", doc =>
     {
       WriteBlock(doc, "str-data", ("data", "nope"));
       WriteBlock(doc, "num-id", ("id", 7d));
       WriteBlock(doc, "deep", ("data", NestedMaps(300)));
       WriteBlock(doc, "fine");
-    });
+    }
+    );
     yield return ("wire-json-content", doc =>
     {
       WriteBlock(doc, "n1");
@@ -224,12 +226,14 @@ public sealed class YDocConverterHardeningCaptureTests
           doc,
           Keyed(0, DataOf(doc, "n1"), "legacy", new ContentJson(["""{"a":1}"""])),
           Keyed(1, DataOf(doc, "n1"), "embed", new ContentEmbed("""{"kind":"image"}""")));
-    });
+    }
+    );
     yield return ("wire-json-that-cannot-materialise", doc =>
     {
       WriteBlock(doc, "n1");
       ApplyForeign(doc, Keyed(0, DataOf(doc, "n1"), "lone", new ContentEmbed("\"\\ud800\"")));
-    });
+    }
+    );
     yield return ("wire-json-as-javascript-reads-it", doc =>
     {
       var deep = new string('[', 300) + "1" + new string(']', 300);
@@ -238,20 +242,23 @@ public sealed class YDocConverterHardeningCaptureTests
           doc,
           Keyed(0, DataOf(doc, "n1"), "numbers", new ContentEmbed("""{"n":1.0,"e":1e2,"i":1e999}""")),
           Keyed(1, DataOf(doc, "n1"), "deep", new ContentJson([deep])));
-    });
+    }
+    );
     yield return ("wire-json-drops-only-the-lone-surrogate", doc =>
     {
       WriteBlock(doc, "n1");
       ApplyForeign(
           doc,
           Keyed(0, DataOf(doc, "n1"), "mixed", new ContentEmbed("{\"a\":\"\\ud800\",\"b\":[1,\"\\udc00\"]}")));
-    });
+    }
+    );
     yield return ("wire-json-nested-past-the-json-default", doc =>
     {
       WriteBlock(doc, "n1");
       ApplyForeign(doc, Keyed(0, DataOf(doc, "n1"), "deep",
           new ContentEmbed(new string('[', 100) + "1" + new string(']', 100))));
-    });
+    }
+    );
 
     foreach (var kind in new[] { "text", "xmltext", "xmlelement", "xmlfragment", "xmlhook" })
     {
@@ -277,7 +284,8 @@ public sealed class YDocConverterHardeningCaptureTests
             _ => (YAbstractType)new YXmlHook("h"),
           }));
         }
-      });
+      }
+      );
     }
 
     yield return ("page-shared-type-title", doc =>
@@ -287,7 +295,8 @@ public sealed class YDocConverterHardeningCaptureTests
       var icon = EmojiIcon("x");
       icon.Add("raw", new byte[] { 1, 2 });
       SetPage(doc, "Plan", icon);
-    });
+    }
+    );
     yield return ("page-title-with-a-nul", doc => SetPage(doc, "Pl" + NUL + "an", EmojiIcon("x")));
     yield return ("page-icon-with-a-nul-value", doc => SetPage(doc, "Plan", EmojiIcon("x" + NUL)));
     yield return ("page-icon-with-a-nul-in-an-extra-key", doc =>
@@ -297,7 +306,8 @@ public sealed class YDocConverterHardeningCaptureTests
       nested.Add("n" + NUL, "y");
       icon.Add("extra", nested);
       SetPage(doc, "Plan", icon);
-    });
+    }
+    );
 
     // YDocConverterLawTests.
     yield return ("parent-id-is-the-membership-arbiter", doc => BuildDoc(
@@ -355,7 +365,8 @@ public sealed class YDocConverterHardeningCaptureTests
     {
       BuildDoc(doc, ["a"], ("a", Table("a", ("whole", 3.0), ("fraction", 2.5))));
       ApplyForeign(doc, Keyed(0, DataOf(doc, "a"), "long", new ContentAny([new BigInteger(7)])));
-    });
+    }
+    );
     yield return ("grid-row-keys-normalize", doc => BuildDoc(
         doc,
         ["t"],
@@ -391,7 +402,8 @@ public sealed class YDocConverterHardeningCaptureTests
     {
       BuildDoc(doc, ["frag", "good"], ("good", Block("good")));
       doc.Transact(transaction => doc.GetMap("blocks").Set(transaction, "frag", new YXmlFragment()));
-    });
+    }
+    );
   }
 
   private static IEnumerable<SeedCase> Seeds()

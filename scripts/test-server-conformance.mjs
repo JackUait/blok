@@ -48,6 +48,7 @@ const SUITES = [
   'host-cli-contract',
   'http-host-contract',
   'page-transfer-sidecar',
+  'sync-transport-contract',
 ];
 
 // Suites that live outside test/unit/server-conformance.

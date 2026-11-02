@@ -70,7 +70,6 @@ Nothing in this lane's scope. Deferred, with reasons:
 
 - T1 black-box (PV) and T21 ordering: collab-room (see section 6 above).
 - E2 header half: the edit endpoint (collab-room).
-- RollBack after a failed write or fsync: no C# test exists, and staging a failed fsync needs a seam neither store has. Ported line by line; not proven by a test.
 - Live mutant: dropping the ledger gate in `DeleteLineage` survives the concurrent test (as it would in C#): O_APPEND writes of one 61-byte entry do not tear in practice.
 
 ## Decisions (round 3)
@@ -83,6 +82,9 @@ Nothing in this lane's scope. Deferred, with reasons:
 - `removeFile` is `File.Delete`: a missing file is fine and a directory is an error (Go's `os.Remove` would remove an empty directory).
 - Go's zero `MaxUpdateBytes` means the 1 MiB default; C# refuses 0. Negative and above 32 MiB are refused like C#.
 - Codec refusals are now `*ArgumentError` with C#'s words (they gained the final period C# has).
+- RollBack has no C# test. Go stages a failed fsync through a package seam (`syncJournal`): the record is cut and the retry commits at sequence 1; when the fence moved first, the bytes stay and the session answers "could not be flushed" from then on. Mutation-checked (3 mutants). C# is unproven here.
+- A directory at the lock path: Go refuses the open as held elsewhere, which is what C# does on Linux (EISDIR is an IOException there). C# on macOS throws instead (UnauthorizedAccessException). Not in the fixture.
+- Linux checked in docker: C# `CollabJournalStoreCaptureTests` passes on `mcr.microsoft.com/dotnet/sdk:10.0` (so the macOS-captured fixture holds on Linux), and the Go journal tests pass on `golang:1.27.3` as a non-root user with python3. GitHub's ubuntu runner has /usr/bin/python3, which the C# python-holder test already needs on Linux CI.
 - Test-cache trap: `go test` reused a result while mutating `store.go`; run mutants with `-count=1`.
 
 ## Decisions (round 2)

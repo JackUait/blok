@@ -32,11 +32,13 @@ fixture is stale), or a Go twin of a C# test.
 | P9r sealed files | DONE | `codecs.json` `sealed` (C# `WriteSealed` bytes; `ReadSealed` of good, missing, wrong magic, short, version, length and checksum faults, with messages); Go `journal/files_test.go` |
 | P10r manifest slot | DONE | `codecs.json` `manifest` (slot bytes; file reads: slot choice by write counter, ties keep the first, corrupt and foreign-version slots, wrong sizes, empty); Go `journal/files_test.go`; mutation-checked |
 | X2 export | DONE | `fixtures/collab` (31 cases + manifest): apply `update.b64`, export = `canonical.segments.json` (C# canonical compare); Go `export_test.go`; mutation-checked |
-| X3 page maps (export + seed) | DONE (page fields) | the 7 page cases (`page-canonical.json`) both ways. `ReadPageMaps`/`PlainPageMaps`/`PlainMapValuesEqual` (restore/history) NOT ported yet |
+| X3 page maps | DONE | the 7 page cases (`page-canonical.json`) both ways, plus `fixtures/collab-structure/cases.json` (C# `YDocConverterStructureCaptureTests`, 34 docs: every fixtures/collab room and 3 peer shapes): `ReadPageMaps` value kinds, `PlainPageMaps` in stored/JS key order (with and without the title skipped), `PlainMapValuesEqual` over every pair, `DescribeStructure` keys, root order and main-pass reach; Go `structure_test.go`; mutation-checked |
+| X6 format-1 migration | DONE | `fixtures/collab-migrations/cases.json` (C# `YDocConverterMigrationCaptureTests`, 67 cases: every frozen format-1 room as stored and as string leaves, a host field, NUL, orphans, markup typed as text, odd blocks): the HTML collected, the refusal with nothing answered, the count, the emitted update BYTES and the export; Go `migrate_test.go`; mutation-checked. `DocConverter.MigrateRichText` reads with the 60 s budget (twin of `SeedAndMigrationReadWithTheOneTimeBudget`, now whole) |
+| X12 history replay | DONE | Go twins of every `CollabHistoryReplayTests` case (`replay_test.go`) plus a baseline-frame refusal; `BuildReplay`/`StepReplay` over `iter.Seq2[operation.Record, error]`; refusal text is the inspector's, which C# `UpdateInspector.cs:44` spells the same |
 | X1 seed | DONE | `fixtures/collab`: seed `input.json` -> export = canonical, state-diff round trip into a second doc, AND the seeded doc's shared types equal the client update's (`shape_test.go`, the 3 `mutate` cases excluded); edge tests for duplicate rowIds and strings .NET cannot read; mutation-checked |
 | X11 HTML reader | DONE | Go twins of `RuntimeRichTextHtmlReaderTests` + a boundary test (fields that exactly fill a call share it) + UTF-16 counting |
-| RichTextInput (orphan) | DONE | Refusing/Collecting/Converting ported (`richtextinput.go`); exercised by the seed tests. No fixture input carries HTML, so the Converting path with real HTML is covered only by the reader twins (gap: add a seed case with HTML) |
-| E9 / X11 doc converter (seed + export half) | DONE (partial) | Go twins of `CollabDocConverterTests` for seed, export, warnings, refusals, legacy HTML slots (incl. database-row nested docs), custom fields, transient vs repeating vs cancelled failures, the 60 s seed budget; mutation-checked. The 32768-unit edit cap and ApplyOpsAsync/MigrateRichTextAsync wait for X4/X6 |
+| RichTextInput (orphan) | DONE | Refusing/Collecting/Converting ported (`richtextinput.go`). Converting with real HTML (read by C#'s runtime) is now pinned by the collab-edits cases that carry `html` and by the migration cases |
+| E9 / X11 doc converter | DONE | Go twins of `CollabDocConverterTests` for seed, export, warnings, refusals, legacy HTML slots (incl. database-row nested docs), custom fields, transient vs repeating vs cancelled failures, the 60 s seed budget; mutation-checked. ApplyOps and MigrateRichText landed in round 2 (rows X4, E9, X6) |
 | D1-D7 doc endpoint client | DONE | Go twins of all `DocEndpointClientTests` (`internal/collab/docendpoint`), plus .NET probes: STJ write and read depth 512 ok / 513 refused, `1E+21`, default-encoder escapes, `0.###` seconds. The default transport sends only Host and Accept on a GET, like C# (probed with a raw listener): no User-Agent, compression off so the cap counts raw bytes; pinned by an httptest test. Known gap: net/http has no pooled-connection lifetime (C# 5 min); IdleConnTimeout 5 min instead. SC black-box oracle needs the room (collab-room lane) |
 | P4r local working-set store | DONE | Go twins of all `LocalCollabStoreTests` + `LocalCollabStoreDirectoryModeTests` (`workingset/local_test.go`); the file is exactly `EncodeDocument`, which `codecs.json` pins, so C# and Go read each other's files; mutation-checked |
 | P5r S3 working-set store | DONE | Go twins of `S3CollabStoreTests` against the `ObjectStore` seam that `blob.S3` satisfies (compile-time check); SigV4, 404 and 403 handling are `internal/blob`'s own tests |
@@ -55,16 +57,23 @@ fixture is stale), or a Go twin of a C# test.
 ## Partial rows (counted as remaining)
 
 - E2: the parse half (key -> op id) is DONE; the header handling belongs to the edit endpoint (collab-room).
-- X3: page fields done both ways; ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure not ported.
 
-## Remaining (next round, in this order)
+## Remaining (next round)
 
-1. X6 migration (`fixtures/collab-format1`) + `MigrateRichText` / `CollectLegacyRichText` + `DocConverter.MigrateRichText` (the migration half of the one-time-budget twin).
-2. X12 history replay (`CollabHistoryReplay.cs`, 101 lines, on the journal codecs already ported).
-3. X3 rest: ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure.
-4. P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, then T1/T21.
+Only the local operation store is left (rows P8r, P11r, P12r, P13r, P14r and traps T1, T21). It is `LocalCollabOperationStore.cs`, 2211 lines. It was not started this round, so that it could land whole with its oracles:
+
+1. A C# capture that writes a journal directory with a fixed clock and fixed ids: the manifest, the ledger, journal files, the baseline and a checkpoint. Go must write the same bytes. Then the reverse: Go writes a dir and C# reads it, run in both test suites.
+2. Hand-ported xunit twins under `-race` for the lock, the fence re-read and the purge marker.
+3. `MaxUpdateBytes` 1 MiB (P14r), the import order against the working set (P12r, T21), and the history reads (P13r).
+
+E2 (header half) belongs to collab-room. So do the room's use of `DocConverter.ApplyOps` (the 413 mapping through `IsTooLarge(EditError.Err)`) and `ReplayError` (history endpoints).
 
 ## Decisions (round 2)
+
+- Oracles for X6 and X3 are C# captures like X4. The migration case and the replay test bytes are emitted updates with pinned client ids.
+- The Go structure API keeps order: `ReadPageMaps` returns `[]PageMap{Name, Entries []yjs.MapEntry}` and `DescribeStructure` returns `DocStructure{Keys []KeyShape, RootOrder, Reached(id)}`. C# uses dictionaries. The restore planner (collab-room) adapts to this.
+- `editops.EditError` now has `Err` and `Unwrap`. The edit cap's 413 is `IsTooLarge(edit.Err)`, the same signal C# reads from `InnerException`.
+- TDD note: in round 2 the X12 replay and X3 structure Go tests were written before the code. I did not run them to watch them fail. They could not compile without the code, but I never saw that failure. The capture-based tests (X4, X6) were seen failing first, and each was then mutation-checked.
 
 - X4 oracle is update BYTES, not export: the yjs lane proved both engines encode the same. A test-only seam `YDocConverter.RowKeySource` (AsyncLocal, so parallel xunit classes are untouched) mints grid row keys from a counter in the capture; Go swaps `GenerateRowKey`. The Go test calls `CollectOpsHTML` before `ApplyOps`, as the room does: both plan, and planning mints keys (Screen builds the grids), so the call order shows in the bytes.
 - HTML in the edit cases is read by C#'s runtime and recorded with its segments in the fixture; Go builds `Converting` from them, so the apply test needs no runtime.

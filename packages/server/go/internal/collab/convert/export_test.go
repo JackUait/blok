@@ -125,10 +125,10 @@ func collabCases(t *testing.T) []collabCase {
 func applied(t *testing.T, update []byte) *yjs.Doc {
 	doc := yjs.NewDoc(yjs.Options{})
 	result, err := doc.ApplyUpdate(update)
-	if err != nil {
-		t.Fatal(err)
+	// A parked update would export empty and still match empty-doc.
+	if err != nil || result.Outcome != yjs.Applied || doc.HasPending() {
+		t.Fatalf("%+v %v", result, err)
 	}
-	_ = result
 	return doc
 }
 

@@ -87,6 +87,8 @@ func New(options Options, transport http.RoundTripper) *Client {
 			Proxy:           http.ProxyFromEnvironment,
 			DialContext:     (&net.Dialer{Timeout: connectTimeout}).DialContext,
 			IdleConnTimeout: 5 * time.Minute,
+			// C# asks for no compression, and caps the raw body.
+			DisableCompression: true,
 		}
 	}
 	if options.MaxResponseBytes == 0 {
@@ -196,6 +198,8 @@ func seconds(d time.Duration) string {
 }
 
 func (c *Client) send(ctx context.Context, request *http.Request) ([]byte, error) {
+	// An empty value makes net/http send no User-Agent, as C# sends none.
+	request.Header["User-Agent"] = []string{""}
 	// Refused, not dropped: a stray newline from a shell-quoted secret would
 	// otherwise send every request unauthenticated.
 	if auth := c.options.Authorization; auth != "" {

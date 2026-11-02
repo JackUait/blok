@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"sync"
@@ -423,5 +424,30 @@ func TestSecondsAreWrittenLikeDotnet(t *testing.T) {
 		if got := seconds(d); got != want {
 			t.Errorf("%v: %s", d, got)
 		}
+	}
+}
+
+// C#'s HttpClient sends only Host and Accept on a GET (probed): no
+// User-Agent and no Accept-Encoding, so the cap counts the raw body.
+func TestTheDefaultTransportSendsOnlyWhatCSharpSends(t *testing.T) {
+	var got http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Clone()
+		w.Write([]byte(`{"blocks":[]}`))
+	}))
+	defer server.Close()
+	endpoint, _ := dotnet.ParseAbsoluteURI(server.URL + "/docs")
+	c := New(Options{Endpoint: endpoint, RequestTimeout: 5 * time.Second}, nil)
+	if _, err := c.Load(bg, "a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got["User-Agent"]; ok {
+		t.Errorf("User-Agent %q", got.Get("User-Agent"))
+	}
+	if _, ok := got["Accept-Encoding"]; ok {
+		t.Errorf("Accept-Encoding %q", got.Get("Accept-Encoding"))
+	}
+	if got.Get("Accept") != "application/json" {
+		t.Error(got)
 	}
 }

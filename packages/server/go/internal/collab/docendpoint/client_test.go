@@ -367,6 +367,18 @@ func TestLoadAcceptsAResponseAtTheCap(t *testing.T) {
 	}
 }
 
+func TestLoadRefusesAResponseOneByteOverTheCap(t *testing.T) {
+	body := `{"blocks":[]}`
+	limit := int64(len(body) - 1)
+	for _, declared := range []bool{true, false} {
+		r := &recorder{respond: func(*http.Request) (*http.Response, error) { return answer(200, body, declared), nil }}
+		_, err := client(t, r, setup{maxResponseBytes: limit}).Load(bg, "doc")
+		if e := endpointError(t, err); e.Message != "collab: the doc endpoint GET answer is too large (over "+strconv.FormatInt(limit, 10)+" bytes)." {
+			t.Fatal(e.Message)
+		}
+	}
+}
+
 func deepJSON(depth int) string {
 	return strings.Repeat(`{"a":`, depth) + "1" + strings.Repeat("}", depth)
 }

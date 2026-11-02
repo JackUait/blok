@@ -430,6 +430,28 @@ public sealed class CollabJournalStoreCaptureTests
         .Append("b", 1, [1])
         .Close("b");
 
+    yield return new Scenario("an-abandoned-import-of-another-lineage-is-not-deletable")
+        .WorkingSetFile(2, 7, Lineage(7), LocalCollabOperationStoreTests.LegacyFrames(1))
+        .Open("a")
+        .Close("a")
+        .Zero(Manifest, 0, 128)
+        .WorkingSetFile(2, 8, Lineage(8), LocalCollabOperationStoreTests.LegacyFrames(2))
+        .Open("b")
+        .Append("b", 1, [1])
+        .Checkpoint("b", 1, [0xc1])
+        .Lineages()
+        .DeleteLineage(Lineage(7))
+        .Close("b");
+
+    yield return new Scenario("a-purge-marker-alone-fences-a-session")
+        .Open("a")
+        .Reset("a", 1, Lineage(1))
+        .Write("{doc}.journal/purged", [])
+        .Append("a", 1, [1])
+        .Delete("{doc}.journal/purged")
+        .Append("a", 1, [1])
+        .Close("a");
+
     yield return new Scenario("an-import-is-never-read-again")
         .WorkingSetFile(2, 7, Lineage(7), LocalCollabOperationStoreTests.LegacyFrames(3))
         .Open("a")
@@ -466,6 +488,7 @@ public sealed class CollabJournalStoreCaptureTests
         .Append("a", 1, [0x11], actor: null)
         .Clock(Start.AddMinutes(3))
         .Reset("a", 3, Lineage(3))
+        .Write("{doc}.journal/checkpoint.1", [0x01])
         .Lineages()
         .Headers(Lineage(1))
         .Records(Lineage(1), 2)

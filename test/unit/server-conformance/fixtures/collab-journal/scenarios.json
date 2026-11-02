@@ -6565,6 +6565,267 @@
       }
     },
     {
+      "name": "an-abandoned-import-of-another-lineage-is-not-deletable",
+      "steps": [
+        {
+          "op": "write",
+          "path": "{doc}",
+          "hex": "424b57320200000007000000000000000000000000000000000000000000000701000000a1"
+        },
+        {
+          "op": "open",
+          "session": "a",
+          "result": {
+            "outcome": "Opened",
+            "head": {
+              "format": 2,
+              "epoch": 7,
+              "lineage": "00000000000000000000000000000007",
+              "durableThrough": "0"
+            },
+            "baseline": [
+              "a1"
+            ],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "close",
+          "session": "a",
+          "result": {
+            "ok": true
+          }
+        },
+        {
+          "op": "zero",
+          "path": "{doc}.journal/manifest",
+          "offset": 0,
+          "length": 128
+        },
+        {
+          "op": "write",
+          "path": "{doc}",
+          "hex": "424b57320200000008000000000000000000000000000000000000000000000801000000a102000000a2a2"
+        },
+        {
+          "op": "open",
+          "session": "b",
+          "result": {
+            "outcome": "Opened",
+            "head": {
+              "format": 2,
+              "epoch": 8,
+              "lineage": "00000000000000000000000000000008",
+              "durableThrough": "0"
+            },
+            "baseline": [
+              "a1",
+              "a2a2"
+            ],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "append",
+          "session": "b",
+          "operationId": "00000000000000000000000000000001",
+          "actorId": "user-1",
+          "source": 0,
+          "update": "01",
+          "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+          "result": {
+            "outcome": "Committed",
+            "sequence": "1"
+          }
+        },
+        {
+          "op": "checkpoint",
+          "session": "b",
+          "through": "1",
+          "state": "c1",
+          "result": {
+            "ok": true
+          }
+        },
+        {
+          "op": "lineages",
+          "result": {
+            "lineages": [
+              {
+                "lineage": "00000000000000000000000000000007",
+                "epoch": 7,
+                "format": 2,
+                "createdAt": null,
+                "current": false
+              },
+              {
+                "lineage": "00000000000000000000000000000008",
+                "epoch": 8,
+                "format": 2,
+                "createdAt": null,
+                "current": true
+              }
+            ]
+          }
+        },
+        {
+          "op": "deleteLineage",
+          "lineage": "00000000000000000000000000000007",
+          "result": {
+            "outcome": "Current"
+          }
+        },
+        {
+          "op": "close",
+          "session": "b",
+          "result": {
+            "ok": true
+          }
+        }
+      ],
+      "log": [
+        "collab: imported the working set for \u0022doc-1\u0022 as the baseline of lineage 00000000000000000000000000000007 at epoch 7; the old file is left in place.",
+        "collab: imported the working set for \u0022doc-1\u0022 as the baseline of lineage 00000000000000000000000000000008 at epoch 8; the old file is left in place."
+      ],
+      "files": {
+        "{doc}": "424b57320200000008000000000000000000000000000000000000000000000801000000a102000000a2a2",
+        "{doc}.journal/": null,
+        "{doc}.journal/baseline.1.1": "424b4a42010000000000000000000000050000000000000001000000a1a74366715321c9fab30e9769c2d380a0123d5b75529266a1bd8abbc246c34939",
+        "{doc}.journal/baseline.1.2": "424b4a420100000000000000000000000b0000000000000001000000a102000000a2a293b5006d144a8a39002e586c761d078b17a4c44180e50f280889a052cb52acdf",
+        "{doc}.journal/checkpoint.1.1.2": "424b4a430100000001000000000000000100000000000000c1bb0293d560bb95d4fb39f98dc11b278ac06ee7b1a4b1d4a0ccf213eed635f4ad",
+        "{doc}.journal/journal.1.1": "",
+        "{doc}.journal/journal.1.2": "6f00000001005b3048220923600b1b090d643af4f0b6ec6245ecdcfb26471d7b0fea0d191ac20000000000000000000000000000000101000000000000000020577d4637df0806000000757365722d314bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a0100000001c3cd06d7994c6959d9f5546036d00fbb36896177c3aa66c250f0e3b3ae0c7932",
+        "{doc}.journal/lineages": "0101000000000000000100000000000000000000000000000000000000000000070700000000000000020000000000000000000080d5f04f178113d4bc01010000000000000002000000000000000000000000000000000000000000000808000000000000000200000000000000000000807e3b452692d49275",
+        "{doc}.journal/lock": "",
+        "{doc}.journal/manifest": "424b4a4d0201000004000000000000000200000000000000010000000000000002000000080000000000000000000000000000000000000000000008010000000000000002000000000000000200000000000000000000000000000000000000cea5fdf9205c49e0c12852829740f023c8d8c5611dc56311602e3cde04e2cd76424b4a4d0201000003000000000000000200000000000000010000000000000002000000080000000000000000000000000000000000000000000008000000000000000002000000000000000000000000000000000000000000000000000000d8b41ab076402b0c34c1803c48acde78e0a2473e2da2f033d9c66807a0eab4b8"
+      },
+      "reopen": {
+        "outcome": "Opened",
+        "head": {
+          "format": 2,
+          "epoch": 8,
+          "lineage": "00000000000000000000000000000008",
+          "durableThrough": "1"
+        },
+        "baseline": [
+          "a1",
+          "a2a2"
+        ],
+        "checkpoint": {
+          "through": "1",
+          "state": "c1"
+        },
+        "tail": []
+      }
+    },
+    {
+      "name": "a-purge-marker-alone-fences-a-session",
+      "steps": [
+        {
+          "op": "open",
+          "session": "a",
+          "result": {
+            "outcome": "Opened",
+            "head": null,
+            "baseline": [],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "reset",
+          "session": "a",
+          "format": 1,
+          "epoch": 1,
+          "lineage": "00000000000000000000000000000001",
+          "baseline": [],
+          "result": {
+            "format": 1,
+            "epoch": 1,
+            "lineage": "00000000000000000000000000000001",
+            "durableThrough": "0"
+          }
+        },
+        {
+          "op": "write",
+          "path": "{doc}.journal/purged",
+          "hex": ""
+        },
+        {
+          "op": "append",
+          "session": "a",
+          "operationId": "00000000000000000000000000000001",
+          "actorId": "user-1",
+          "source": 0,
+          "update": "01",
+          "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+          "result": {
+            "error": {
+              "type": "FenceLost",
+              "message": "collab: the operation-store session no longer holds the document fence"
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "path": "{doc}.journal/purged"
+        },
+        {
+          "op": "append",
+          "session": "a",
+          "operationId": "00000000000000000000000000000001",
+          "actorId": "user-1",
+          "source": 0,
+          "update": "01",
+          "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+          "result": {
+            "outcome": "Committed",
+            "sequence": "1"
+          }
+        },
+        {
+          "op": "close",
+          "session": "a",
+          "result": {
+            "ok": true
+          }
+        }
+      ],
+      "log": [],
+      "files": {
+        "{doc}.journal/": null,
+        "{doc}.journal/baseline.1.1": "424b4a4201000000000000000000000000000000000000008cabe23eebcb4ee665161ba4a2573072b2ee1d154ed768bc9b2904e1921a5b02",
+        "{doc}.journal/journal.1.1": "6f00000001005b3048220923600b1b090d643af4f0b6ec6245ecdcfb26471d7b0fea0d191ac20000000000000000000000000000000101000000000000000020577d4637df0806000000757365722d314bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a0100000001c3cd06d7994c6959d9f5546036d00fbb36896177c3aa66c250f0e3b3ae0c7932",
+        "{doc}.journal/lineages": "0101000000000000000100000000000000000000000000000000000000000000010100000000000000010000000020577d4637df08c64b9ac0004e97f4",
+        "{doc}.journal/lock": "",
+        "{doc}.journal/manifest": "424b4a4d020100000200000000000000010000000000000001000000000000000100000001000000000000000000000000000000000000000000000100000000000000000100000000000000000000000000000000000000000000000000000063ef4a412c70dfd27998568bf24cca143845386ed25ad740259070abfee53832424b4a4d0200000001000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c6c1716eb5e269f88332f2839fba80235b9871749a672c99063ceab7dd033447"
+      },
+      "reopen": {
+        "outcome": "Opened",
+        "head": {
+          "format": 1,
+          "epoch": 1,
+          "lineage": "00000000000000000000000000000001",
+          "durableThrough": "1"
+        },
+        "baseline": [],
+        "checkpoint": null,
+        "tail": [
+          {
+            "operationId": "00000000000000000000000000000001",
+            "sequence": "1",
+            "committedAt": "639290448000000000",
+            "actorId": "user-1",
+            "source": 0,
+            "update": "01",
+            "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+          }
+        ]
+      }
+    },
+    {
       "name": "an-import-is-never-read-again",
       "steps": [
         {
@@ -7183,6 +7444,11 @@
           }
         },
         {
+          "op": "write",
+          "path": "{doc}.journal/checkpoint.1",
+          "hex": "01"
+        },
+        {
           "op": "lineages",
           "result": {
             "lineages": [
@@ -7432,6 +7698,7 @@
         "{doc}.journal/": null,
         "{doc}.journal/baseline.2.1": "424b4a420100000000000000000000000a0000000000000001000000b201000000b3d2bf8d2571695642eab8ea05f1bb4f3b647982b867ac43649499682cf7626de1",
         "{doc}.journal/baseline.3.1": "424b4a4201000000000000000000000000000000000000008cabe23eebcb4ee665161ba4a2573072b2ee1d154ed768bc9b2904e1921a5b02",
+        "{doc}.journal/checkpoint.1": "01",
         "{doc}.journal/journal.2.1": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce100000000000000000000000000000001010000000000000000acddc44637df08ffffffff4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a0100000011711338b4c4c2b68d0e9385822e1f1465d0065e4f746331a40309db0c6cdfcb2e",
         "{doc}.journal/journal.3.1": "6f00000001005b3048220923600b1b090d643af4f0b6ec6245ecdcfb26471d7b0fea0d191ac200000000000000000000000000000002010000000000000000f2a0e84637df0806000000757365722d31f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c01000000121cd1e6d656696fb08f6ca6d0aee86cbcf465bf00201107f1043dfa272780d567",
         "{doc}.journal/lineages": "01010000000000000001000000000000000000000000000000000000000000000101000000000000000100000000661aa14637df08db7c255fc6fc51e201020000000000000001000000000000000000000000000000000000000000000202000000000000000100000000acddc44637df089edaf11e9f23a7e601030000000000000001000000000000000000000000000000000000000000000303000000000000000100000000f2a0e84637df08f229a4527f694c1302010000000000000001000000000000000000000000000000000000000000000101000000000000000100000000661aa14637df083f54aacfb7b7753c",

@@ -19,9 +19,11 @@ Scope: collab.md 2.R, 2.M, 2.G, 2.E, 2.S, 2.Y, 2.O, 2.T, section 3, and the coll
 
 ## Oracles
 
+- Final runs on `9b7ad056`: `--target go` 12 files, 315 passed, 1 skipped; `--target csharp` 12 files, 316 passed (1 min 40 s); `--target interop` 6 passed (40 s, with the ordinary C# build dropped); the collab fixture files (`server-concurrent-loss*`, `collab-fixtures*`, `collab-format1-fixtures`) 366 passed, 48 skipped by their own per-case gates, none target-keyed.
 - Black-box, both targets: `sync-contract` 16/16, `protocol-v2-contract` 14/14, `blok-client-contract` 12/12, `mcp-agent-participant`, `routing-contract` (the collab-host block un-skipped), `sync-transport-contract` (the v2 case un-skipped), NEW `collab-http-contract` 34/34 (written and run on C# first, then Go; two Go mutants killed). Full Go run: 12 files, 315 passed, 1 skipped (routing's malformed-escape case: Go's http.Server answers 400 before any handler; reason written at the skip site, http-host lane).
 - NEW `journal-interop-contract` (runner target `interop`, builds both servers): C# writes, Go serves, then C# again; and the reverse. Document (state without the export stamp), history, a point read byte for byte, edit receipts (retry dedupes, other body 409), the tail after a SIGKILL, a working set without a journal. 6/6.
 - Go unit (`internal/collab/room`, `-race -count=3`): lane FIFO and cancel, .NET enumeration order, join frame order, 8 concurrent writers, drain (flush, 1001, joins refused), linger eviction, v2 relay-then-ack with lineage first, activity (Joined, one Active per window, Left, anonymous silent). Mutants killed: v2 broadcast without the sender, drain without flush, activity stamp dropped, .NET slot order FIFO.
+- Drain race fixed (`9b7ad056`): `http.Server.Shutdown` does not wait for hijacked sockets, so `Server.Drain` now waits for the open sync connections until its context ends (Kestrel waits for upgraded connections); `TestDrainWaitsForOpenSyncConnectionsUpToItsContext` failed first. Not reproduced black-box: 4 local loops of the BC drain case passed before the fix too.
 - Go unit (`blokserver`, `cmd`): L9 warning and its absence, RecheckAccess on an unloaded doc, purge refusals and tombstone, H37 stderr filter, H20 flag-vs-environment warning, R9 Retry-After.
 - CI: the Go step runs every suite (`--target go`, no `--suite`); `server-go-parity-law` fails if it is narrowed again, and requires an `--target interop` step (Server Delivery job, with setup-go).
 
@@ -54,7 +56,7 @@ DEFERRED, with reasons:
 
 ## CI time (UNVERIFIED on a runner)
 
-Local: full Go suite 1 min 16 s (was 1 min 15 s for the six-suite subset on CI per delivery-ci); interop target about 1 min 30 s (two dotnet builds, one go build, 6 tests). Server Security was projected at 4-5 min before; Server Delivery at about 2 min 45 s plus sidecar and collab-http-contract, now plus setup-go and interop. Both must be checked against the 7-minute budget on the first main run; split interop to its own job only if the 20-job cap allows (19 jobs today).
+Local: full Go suite 1 min 16 s, full C# suite 1 min 40 s, interop 40 s (was 1 min 15 s for the six-suite subset on CI per delivery-ci); Server Security was projected at 4-5 min before; Server Delivery at about 2 min 45 s plus sidecar and collab-http-contract, now plus setup-go and interop. Both must be checked against the 7-minute budget on the first main run; split interop to its own job only if the 20-job cap allows (19 jobs today).
 
 ## C# bugs
 

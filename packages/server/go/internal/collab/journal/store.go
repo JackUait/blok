@@ -556,10 +556,10 @@ func (i *journalIndex) clear() {
 
 // scanForward walks every record written since the last scan. Corruption
 // fails: no linear reader can find the record after an invalid one. A torn
-// tail is cut only when confirm is set (the paths about to write), and only
-// after confirm says this session still holds the fence: the cut is a bulk
+// tail is cut only when confirmFence is set (the paths about to write), and only
+// after confirmFence says this session still holds the fence: the cut is a bulk
 // delete decided from bytes read a moment ago.
-func scanForward(journal *os.File, index *journalIndex, docID string, confirm func() error) ([]operation.Record, error) {
+func scanForward(journal *os.File, index *journalIndex, docID string, confirmFence func() error) ([]operation.Record, error) {
 	info, err := journal.Stat()
 	if err != nil {
 		return nil, err
@@ -580,8 +580,8 @@ func scanForward(journal *os.File, index *journalIndex, docID string, confirm fu
 	for offset < len(pending) {
 		status, record, consumed, message := DecodeRecord(pending[offset:])
 		if status == StatusIncomplete {
-			if confirm != nil {
-				if err := confirm(); err != nil {
+			if confirmFence != nil {
+				if err := confirmFence(); err != nil {
 					return nil, err
 				}
 				if err := journal.Truncate(index.scannedThrough + int64(offset)); err != nil {
@@ -1142,11 +1142,11 @@ func (s *Session) refresh(repair bool) error {
 	if s.journal == nil {
 		return nil
 	}
-	var confirm func() error
+	var confirmFence func() error
 	if repair {
-		confirm = s.requireFence
+		confirmFence = s.requireFence
 	}
-	_, err := scanForward(s.journal, s.index, s.docID, confirm)
+	_, err := scanForward(s.journal, s.index, s.docID, confirmFence)
 	return err
 }
 

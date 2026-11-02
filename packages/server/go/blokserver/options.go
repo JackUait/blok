@@ -6,6 +6,7 @@ package blokserver
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -77,6 +78,10 @@ type Options struct {
 	// Clock is the TimeProvider override: tickets, the rate limit window and
 	// S3 signing read it. Nil is the system clock.
 	Clock func() time.Time
+
+	// Logger receives the server's warnings, each with a "category"
+	// attribute (CollabLogCategory for the rooms). Nil discards them.
+	Logger *slog.Logger
 }
 
 // DefaultOptions returns the C# BlokServerOptions defaults.

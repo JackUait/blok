@@ -77,5 +77,7 @@ func applyConformance(server *blokserver.Server, parsed conformanceArguments) {
 	if parsed.origin != "" {
 		server.UseConformanceOrigin(parsed.origin, parsed.port)
 	}
-	server.UseConformanceRooms(standInRooms{})
+	if parsed.journal {
+		server.UseConformanceJournal()
+	}
 }

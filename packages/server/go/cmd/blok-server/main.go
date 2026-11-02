@@ -102,9 +102,10 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 const maxUpgradedConnections = 1024
 
 // configureCollab is HostCollab.Configure.
-func configureCollab(options *blokserver.Options) {
+func configureCollab(options *blokserver.Options, stderr io.Writer) {
 	if options.CollabEnabled {
 		options.CollabMaxConnections = maxUpgradedConnections
+		options.Logger = newCollabLogger(stderr)
 	}
 }
 
@@ -127,7 +128,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 	options := parsed.options
 	options.Version = version
-	configureCollab(&options)
+	configureCollab(&options, stderr)
 	server, err := blokserver.New(options)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)

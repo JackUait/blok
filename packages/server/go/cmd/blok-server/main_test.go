@@ -474,12 +474,12 @@ func TestAnswersAreFramedLikeKestrel(t *testing.T) {
 // service refuses 503 before a room is seeded.
 func TestTheHostCapsSyncConnectionsOnlyWhenCollaborating(t *testing.T) {
 	options := blokserver.DefaultOptions()
-	configureCollab(&options)
+	configureCollab(&options, io.Discard)
 	if options.CollabMaxConnections != 0 {
 		t.Fatalf("without --collab: %d", options.CollabMaxConnections)
 	}
 	options.CollabEnabled = true
-	configureCollab(&options)
+	configureCollab(&options, io.Discard)
 	if options.CollabMaxConnections != 1024 {
 		t.Fatalf("with --collab: %d", options.CollabMaxConnections)
 	}

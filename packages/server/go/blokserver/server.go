@@ -32,9 +32,11 @@ type Server struct {
 	store     blob.Store
 	storeErr  error
 
-	// rooms is nil until the room lane lands; /sync is mapped only with it.
-	rooms       collab.Rooms
-	connections *synchttp.ConnectionTable
+	// rooms is set when collaboration is on; /sync is mapped only with it.
+	rooms              collab.Rooms
+	collab             *collabRooms
+	conformanceJournal bool
+	connections        *synchttp.ConnectionTable
 }
 
 // New validates o and returns a server. Like AddBlokServer, nothing heavy is
@@ -64,12 +66,26 @@ func New(o Options) (*Server, error) {
 	}
 	s.limiter = newRateLimiter(o.RateLimitPerMinute, func() time.Time { return s.clock() })
 	s.connections = synchttp.NewConnectionTable(o.CollabMaxConnections, o.CollabMaxConnectionsPerUserPerDoc)
+	if o.CollabEnabled {
+		s.collab = &collabRooms{server: s}
+		s.rooms = s.collab
+	}
 	return s, nil
 }
 
 // Drain stops the server's long-lived work before the HTTP server shuts
-// down. Without collaboration there is none.
-func (s *Server) Drain(context.Context) error { return nil }
+// down: new upgrades get 503, every room flushes, members close 1001.
+// Without collaboration there is none.
+func (s *Server) Drain(ctx context.Context) error {
+	if s.collab == nil {
+		return nil
+	}
+	manager, err := s.collab.get()
+	if err != nil {
+		return err
+	}
+	return manager.Drain(ctx)
+}
 
 // Handler is MapBlokServer: the routes the options switch on under prefix
 // ("" for the root), every other path in the group answered 404, and local
@@ -118,6 +134,7 @@ func (s *Server) syncEndpoint() *synchttp.Endpoint {
 		Clock:             func() time.Time { return s.clock() },
 		Authorization:     o.Authorization,
 		Rooms:             s.rooms,
+		HasOperationStore: s.hasJournal(),
 		MaxMessageBytes:   o.CollabMaxMessageBytes,
 		KeepAliveInterval: o.CollabKeepAliveInterval,
 		Connections:       s.connections,

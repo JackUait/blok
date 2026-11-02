@@ -3,7 +3,6 @@
 package blokserver
 
 import (
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
 	"github.com/JackUait/blok/packages/server/go/internal/outbound"
 )
 
@@ -14,6 +13,7 @@ func (s *Server) UseConformanceOrigin(origin string, port int) {
 	s.fetcher = outbound.NewFetcher(outbound.ExactOriginPolicy{Origin: origin, Port: port})
 }
 
-// UseConformanceRooms puts rooms behind GET /sync/{doc}. Until the room lane
-// lands, the conformance binary is the only one that maps the sync door.
-func (s *Server) UseConformanceRooms(rooms collab.Rooms) { s.rooms = rooms }
+// UseConformanceJournal puts the built-in journal behind collaboration
+// without CollabJournal, so the conformance runner keeps its own switch.
+// Call it before the first request.
+func (s *Server) UseConformanceJournal() { s.conformanceJournal = true }

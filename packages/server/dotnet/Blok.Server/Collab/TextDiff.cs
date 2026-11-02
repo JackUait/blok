@@ -427,11 +427,10 @@ internal static partial class TextDiff
   private struct ConjunctState
   {
     internal int ClusterStart;
-    private bool stopped;
     private bool stopIsConsonant;
     private bool linkedAfterStop;
 
-    internal readonly bool Joins => stopped && stopIsConsonant && linkedAfterStop;
+    internal readonly bool Joins => stopIsConsonant && linkedAfterStop;
 
     /// <summary>
     /// Adds the text element [<paramref name="start"/>, <paramref name="end"/>),
@@ -459,7 +458,6 @@ internal static partial class TextDiff
         }
         else if (points[i] == ClusterStart || InRanges(ConjunctBreakers, code))
         {
-          stopped = true;
           stopIsConsonant = InRanges(ConjunctConsonants, code);
           linkedAfterStop = false;
         }

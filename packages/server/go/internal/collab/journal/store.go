@@ -21,6 +21,9 @@ import (
 	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
 )
 
+// syncJournal is the append's flush; tests swap it to stage a failed fsync.
+var syncJournal = func(file *os.File) error { return file.Sync() }
+
 // DefaultMaxUpdateBytes matches the default CollabMaxMessageBytes. The codec's
 // 32 MiB ceiling is only a backstop; the wire limit is the policy.
 const DefaultMaxUpdateBytes = 1 << 20
@@ -1210,7 +1213,7 @@ func (s *Session) Append(ctx context.Context, candidate operation.Candidate) (op
 	lengthBefore := info.Size()
 	_, err = s.journal.WriteAt(encoded, lengthBefore)
 	if err == nil {
-		err = s.journal.Sync()
+		err = syncJournal(s.journal)
 	}
 	if err != nil {
 		// After a failed fsync Linux marks the pages clean, so the retry

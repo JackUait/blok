@@ -430,3 +430,57 @@ func TestACancelledCallWritesNothing(t *testing.T) {
 		t.Fatal("journal changed")
 	}
 }
+
+// A failed fsync undoes its record, so the retry the caller must make is not
+// told Duplicate for bytes no disk holds.
+func TestAnAppendWhoseFlushFailsIsUndone(t *testing.T) {
+	store := newTwinStore(t)
+	session := store.open(t)
+	twinReset(t, session, 1, twinLineage(1))
+	journalPath := store.path("journal.1.1")
+	failed := errors.New("injected fsync failure")
+	defer func(saved func(*os.File) error) { syncJournal = saved }(syncJournal)
+	syncJournal = func(*os.File) error { return failed }
+
+	if _, err := twinAppend(t, session, 1, 0x01); !errors.Is(err, failed) {
+		t.Fatal(err)
+	}
+	if info, _ := os.Stat(journalPath); info.Size() != 0 {
+		t.Fatalf("%d bytes left", info.Size())
+	}
+	syncJournal = func(file *os.File) error { return file.Sync() }
+	digest := sha256.Sum256([]byte{0x01})
+	if lookup, err := session.FindCommitted(context.Background(), twinOpID(1), digest[:]); err != nil || lookup.Outcome != operation.NotCommitted {
+		t.Fatalf("%v %v", lookup, err)
+	}
+	if result, err := twinAppend(t, session, 1, 0x01); err != nil || result.Outcome != operation.Committed || result.Sequence != 1 {
+		t.Fatalf("%v %v", result, err)
+	}
+}
+
+// When the fence moved before the undo, the cut could delete the new holder's
+// records, so the session leaves the bytes and stops answering.
+func TestAnAppendThatCannotBeUndoneFaultsTheSession(t *testing.T) {
+	store := newTwinStore(t)
+	session := store.open(t)
+	twinReset(t, session, 1, twinLineage(1))
+	defer func(saved func(*os.File) error) { syncJournal = saved }(syncJournal)
+	syncJournal = func(*os.File) error {
+		if err := os.Remove(store.path(lockName)); err != nil {
+			t.Fatal(err)
+		}
+		store.open(t)
+		return errors.New("injected fsync failure")
+	}
+	if _, err := twinAppend(t, session, 1, 0x01); err == nil {
+		t.Fatal("append answered")
+	}
+	syncJournal = func(file *os.File) error { return file.Sync() }
+	if info, _ := os.Stat(store.path("journal.1.1")); info.Size() == 0 {
+		t.Fatal("the record was cut after the fence moved")
+	}
+	_, err := session.FindCommitted(context.Background(), twinOpID(1), make([]byte, 32))
+	if err == nil || errors.Is(err, ErrFenceLost) || !strings.Contains(err.Error(), "could not be flushed") {
+		t.Fatal(err)
+	}
+}

@@ -1,0 +1,812 @@
+{
+  "$comment": "CollabVersionTimeline.Group as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Times are .NET UTC ticks; windowMinutes null is the default 2 min gap and 10 min span.",
+  "cases": [
+    {
+      "name": "a lineage with no records is only its baseline",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": []
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a baseline without a created-at has no times",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": null,
+          "headers": []
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": null,
+          "savedAt": null,
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a gap of exactly the idle gap stays in the group",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269713200000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a gap one tick over the idle gap starts a group",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000001",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269713200000001",
+          "savedAt": "639269713200000001",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a span of exactly the max span starts a group at that record",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000",
+              "actor": null
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269714400000000",
+              "actor": null
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269715600000000",
+              "actor": null
+            },
+            {
+              "sequence": "5",
+              "committedAt": "639269716800000000",
+              "actor": null
+            },
+            {
+              "sequence": "6",
+              "committedAt": "639269718000000000",
+              "actor": null
+            },
+            {
+              "sequence": "7",
+              "committedAt": "639269718600000000",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "7",
+          "startedAt": "639269718000000000",
+          "savedAt": "639269718600000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "5",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269716800000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a span one tick under the max span stays in the group",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269713200000000",
+              "actor": null
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269714400000000",
+              "actor": null
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269715600000000",
+              "actor": null
+            },
+            {
+              "sequence": "5",
+              "committedAt": "639269716800000000",
+              "actor": null
+            },
+            {
+              "sequence": "6",
+              "committedAt": "639269717999999999",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "6",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269717999999999",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a negative gap counts as no gap",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269715000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712000000000",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269715000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "actors are distinct, first seen first, nulls skipped",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": "bob"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269712000000000",
+              "actor": "alice"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269712000000000",
+              "actor": "bob"
+            },
+            {
+              "sequence": "5",
+              "committedAt": "639269712000000000",
+              "actor": "carol"
+            },
+            {
+              "sequence": "6",
+              "committedAt": "639269712000000000",
+              "actor": ""
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "6",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": [
+            "bob",
+            "alice",
+            "carol",
+            ""
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "actors belong to their own group",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": "bob"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269715000000000",
+              "actor": "alice"
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269715000000000",
+          "savedAt": "639269715000000000",
+          "actors": [
+            "alice"
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": [
+            "bob"
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "newest lineage first",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "old",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269715000000000",
+              "actor": null
+            }
+          ]
+        },
+        {
+          "lineage": "new",
+          "createdAt": "639269748000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269748000000000",
+              "actor": "\u00E9\uD83D\uDE00"
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "new",
+          "sequence": "1",
+          "startedAt": "639269748000000000",
+          "savedAt": "639269748000000000",
+          "actors": [
+            "\u00E9\uD83D\uDE00"
+          ]
+        },
+        {
+          "lineage": "new",
+          "sequence": "0",
+          "startedAt": "639269748000000000",
+          "savedAt": "639269748000000000",
+          "actors": []
+        },
+        {
+          "lineage": "old",
+          "sequence": "2",
+          "startedAt": "639269715000000000",
+          "savedAt": "639269715000000000",
+          "actors": []
+        },
+        {
+          "lineage": "old",
+          "sequence": "1",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        },
+        {
+          "lineage": "old",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "each lineage groups on its own",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "old",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            }
+          ]
+        },
+        {
+          "lineage": "new",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712600000000",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "new",
+          "sequence": "1",
+          "startedAt": "639269712600000000",
+          "savedAt": "639269712600000000",
+          "actors": []
+        },
+        {
+          "lineage": "new",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        },
+        {
+          "lineage": "old",
+          "sequence": "1",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        },
+        {
+          "lineage": "old",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a 15 minute window is both the gap and the span",
+      "windowMinutes": 15,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269720400000000",
+              "actor": null
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269721000000000",
+              "actor": null
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269730000000000",
+              "actor": null
+            },
+            {
+              "sequence": "5",
+              "committedAt": "639269739000000001",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "5",
+          "startedAt": "639269739000000001",
+          "savedAt": "639269739000000001",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "4",
+          "startedAt": "639269730000000000",
+          "savedAt": "639269730000000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "startedAt": "639269721000000000",
+          "savedAt": "639269721000000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269720400000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a 1 minute window splits what the default keeps",
+      "windowMinutes": 1,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712900000000",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269712900000000",
+          "savedAt": "639269712900000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "1",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "the default keeps 90 seconds together",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": null
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269712900000000",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712900000000",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "a 60 minute window",
+      "windowMinutes": 60,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "639269712000000000",
+          "headers": [
+            {
+              "sequence": "1",
+              "committedAt": "639269712000000000",
+              "actor": "a"
+            },
+            {
+              "sequence": "2",
+              "committedAt": "639269747400000000",
+              "actor": "b"
+            },
+            {
+              "sequence": "3",
+              "committedAt": "639269748000000000",
+              "actor": "c"
+            },
+            {
+              "sequence": "4",
+              "committedAt": "639269787000000000",
+              "actor": null
+            },
+            {
+              "sequence": "5",
+              "committedAt": "639269787000000000",
+              "actor": "a"
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "5",
+          "startedAt": "639269787000000000",
+          "savedAt": "639269787000000000",
+          "actors": [
+            "a"
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": "3",
+          "startedAt": "639269748000000000",
+          "savedAt": "639269748000000000",
+          "actors": [
+            "c"
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": "2",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269747400000000",
+          "actors": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "639269712000000000",
+          "savedAt": "639269712000000000",
+          "actors": []
+        }
+      ]
+    },
+    {
+      "name": "big sequences and the far ends of time",
+      "windowMinutes": null,
+      "lineages": [
+        {
+          "lineage": "L1",
+          "createdAt": "0",
+          "headers": [
+            {
+              "sequence": "18446744073709551614",
+              "committedAt": "0",
+              "actor": null
+            },
+            {
+              "sequence": "18446744073709551615",
+              "committedAt": "3155378975999999999",
+              "actor": null
+            }
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "lineage": "L1",
+          "sequence": "18446744073709551615",
+          "startedAt": "3155378975999999999",
+          "savedAt": "3155378975999999999",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "18446744073709551614",
+          "startedAt": "0",
+          "savedAt": "0",
+          "actors": []
+        },
+        {
+          "lineage": "L1",
+          "sequence": "0",
+          "startedAt": "0",
+          "savedAt": "0",
+          "actors": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,815 @@
+{
+  "$comment": "CollabVersionChanges.ReplayAsync as C# answers it. Captured by CollabHistoryCaptureTests; do not edit by hand. Updates are base64 Yjs v1 updates; times are .NET UTC ticks.",
+  "cases": [
+    {
+      "name": "update, insert, remove",
+      "baseline": [
+        "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA29uZScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgBBHJvb3QBdwFhAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": "actor-1",
+          "update": "AQEHC0QHBQJ0dwEHAQYC"
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": "actor-2",
+          "update": "AQkHDScBBmJsb2NrcwFiASgABw0CaWQBdwFiKAAHDQR0eXBlAXcJcGFyYWdyYXBoJwAHDQRkYXRhAScABxAEdGV4dAYEAAcRAWInAAcNBXR1bmVzAScABw0KY29udGVudElkcwCIBwoBdwFiAA=="
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": "actor-3",
+          "update": "AAEHAgAGCAU="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": "actor-1",
+          "blocks": [
+            {
+              "id": "a",
+              "type": "paragraph",
+              "kind": "changed",
+              "before": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "one"
+                    }
+                  ]
+                }
+              },
+              "after": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "two"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": "actor-2",
+          "blocks": [
+            {
+              "id": "b",
+              "type": "paragraph",
+              "kind": "added",
+              "before": null,
+              "after": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "b"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": "actor-3",
+          "blocks": [
+            {
+              "id": "a",
+              "type": "paragraph",
+              "kind": "removed",
+              "before": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "two"
+                    }
+                  ]
+                }
+              },
+              "after": null
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
+      "name": "from the first record",
+      "baseline": [
+        "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA29uZScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgBBHJvb3QBdwFhAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHC0QHBQJ0dwEHAQYC"
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "update": "AQkHDScBBmJsb2NrcwFiASgABw0CaWQBdwFiKAAHDQR0eXBlAXcJcGFyYWdyYXBoJwAHDQRkYXRhAScABxAEdGV4dAYEAAcRAWInAAcNBXR1bmVzAScABw0KY29udGVudElkcwCIBwoBdwFiAA=="
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "update": "AAEHAgAGCAU="
+        }
+      ],
+      "firstBefore": "1",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "b",
+              "type": "paragraph",
+              "kind": "added",
+              "before": null,
+              "after": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "b"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "a",
+              "type": "paragraph",
+              "kind": "removed",
+              "before": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "two"
+                    }
+                  ]
+                }
+              },
+              "after": null
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
+      "name": "the byte budget keeps the newest",
+      "baseline": [
+        "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA29uZScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgBBHJvb3QBdwFhAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHC0QHBQJ0dwEHAQYC"
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "update": "AQkHDScBBmJsb2NrcwFiASgABw0CaWQBdwFiKAAHDQR0eXBlAXcJcGFyYWdyYXBoJwAHDQRkYXRhAScABxAEdGV4dAYEAAcRAWInAAcNBXR1bmVzAScABw0KY29udGVudElkcwCIBwoBdwFiAA=="
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "update": "AAEHAgAGCAU="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "1",
+      "changes": [
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "a",
+              "type": "paragraph",
+              "kind": "removed",
+              "before": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "two"
+                    }
+                  ]
+                }
+              },
+              "after": null
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
+      "name": "the byte budget drops the oldest past it",
+      "baseline": [
+        "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA29uZScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgBBHJvb3QBdwFhAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHC0QHBQJ0dwEHAQYC"
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "update": "AQkHDScBBmJsb2NrcwFiASgABw0CaWQBdwFiKAAHDQR0eXBlAXcJcGFyYWdyYXBoJwAHDQRkYXRhAScABxAEdGV4dAYEAAcRAWInAAcNBXR1bmVzAScABw0KY29udGVudElkcwCIBwoBdwFiAA=="
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "update": "AAEHAgAGCAU="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "200",
+      "changes": [
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "b",
+              "type": "paragraph",
+              "kind": "added",
+              "before": null,
+              "after": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "b"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "a",
+              "type": "paragraph",
+              "kind": "removed",
+              "before": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "two"
+                    }
+                  ]
+                }
+              },
+              "after": null
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
+      "name": "a missing first-before record yields no rows",
+      "baseline": [
+        "AQkHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEA29uZScABwAFdHVuZXMBJwAHAApjb250ZW50SWRzAAgBBHJvb3QBdwFhAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHC0QHBQJ0dwEHAQYC"
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "update": "AAEHAgAGCAU="
+        }
+      ],
+      "firstBefore": "2",
+      "maxBytes": "9223372036854775807",
+      "changes": []
+    },
+    {
+      "name": "remove, reinsert and data",
+      "baseline": [
+        "ASwHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBdAEoAAcIAmlkAXcBdCgABwgEdHlwZQF3BnRvZ2dsZScABwgEZGF0YQEnAAcLBHRleHQGBAAHDAF0JwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAAHDwF3AWsnAQZibG9ja3MBawEoAAcRAmlkAXcBaygABxEEdHlwZQF3CXBhcmFncmFwaCcABxEEZGF0YQEnAAcUBHRleHQGBAAHFQFrJwAHEQV0dW5lcwEoAAcRCHBhcmVudElkAXcBdCcABxEKY29udGVudElkcwAnAQZibG9ja3MBYgEoAAcaAmlkAXcBYigABxoEdHlwZQF3CXBhcmFncmFwaCcABxoEZGF0YQEnAAcdBHRleHQGBAAHHgFiJwAHGgV0dW5lcwEnAAcaCmNvbnRlbnRJZHMAJwEGYmxvY2tzAWMBKAAHIgJpZAF3AWMoAAciBHR5cGUBdwZoZWFkZXInAAciBGRhdGEBJwAHJQR0ZXh0BgQAByYBYygAByUFbGV2ZWwBfQInAAciBXR1bmVzAScAByIKY29udGVudElkcwAIAQRyb290BHcBYXcBdHcBYncBYwA="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": "u",
+          "update": "AAEHAhoILQE="
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": "u",
+          "update": "AQkHL6cHGgEoAAcvAmlkAXcBYigABy8EdHlwZQF3CXBhcmFncmFwaCcABy8EZGF0YQEnAAcyBHRleHQGBAAHMwFiJwAHLwV0dW5lcwEnAAcvCmNvbnRlbnRJZHMASAcrAXcBYgA="
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": "u",
+          "update": "AAEHARAK"
+        },
+        {
+          "sequence": "4",
+          "committedAt": "639269714400000004",
+          "actor": "u",
+          "update": "AQkHOKcHEQEoAAc4AmlkAXcBaygABzgEdHlwZQF3CXBhcmFncmFwaCcABzgEZGF0YQEnAAc7BHRleHQGBAAHPAJrMicABzgFdHVuZXMBJwAHOApjb250ZW50SWRzAMgHKwcsAXcBawA="
+        },
+        {
+          "sequence": "5",
+          "committedAt": "639269715000000005",
+          "actor": "u",
+          "update": "AQEHQqgHKAF9AwEHASgB"
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": "u",
+          "blocks": [
+            {
+              "id": "b",
+              "type": "paragraph",
+              "kind": "removed",
+              "before": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "b"
+                    }
+                  ]
+                }
+              },
+              "after": null
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": "u",
+          "blocks": [
+            {
+              "id": "b",
+              "type": "paragraph",
+              "kind": "added",
+              "before": null,
+              "after": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "b"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": "u",
+          "blocks": [
+            {
+              "id": "k",
+              "type": "paragraph",
+              "kind": "removed",
+              "before": {
+                "id": "k",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "k"
+                    }
+                  ]
+                },
+                "parent": "t"
+              },
+              "after": null
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "4",
+          "committedAt": "639269714400000004",
+          "actor": "u",
+          "blocks": [
+            {
+              "id": "k",
+              "type": "paragraph",
+              "kind": "added",
+              "before": null,
+              "after": {
+                "id": "k",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "k2"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "5",
+          "committedAt": "639269715000000005",
+          "actor": "u",
+          "blocks": [
+            {
+              "id": "c",
+              "type": "header",
+              "kind": "changed",
+              "before": {
+                "id": "c",
+                "type": "header",
+                "data": {
+                  "text": [
+                    {
+                      "text": "c"
+                    }
+                  ],
+                  "level": 2
+                }
+              },
+              "after": {
+                "id": "c",
+                "type": "header",
+                "data": {
+                  "text": [
+                    {
+                      "text": "c"
+                    }
+                  ],
+                  "level": 3
+                }
+              }
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
+      "name": "moves and reparents",
+      "baseline": [
+        "ASsHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBdAEoAAcIAmlkAXcBdCgABwgEdHlwZQF3BnRvZ2dsZScABwgEZGF0YQEnAAcLBHRleHQGBAAHDAF0JwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAAHDwF3AWsnAQZibG9ja3MBawEoAAcRAmlkAXcBaygABxEEdHlwZQF3CXBhcmFncmFwaCcABxEEZGF0YQEnAAcUBHRleHQGBAAHFQFrJwAHEQV0dW5lcwEoAAcRCHBhcmVudElkAXcBdCcABxEKY29udGVudElkcwAnAQZibG9ja3MBYgEoAAcaAmlkAXcBYigABxoEdHlwZQF3CXBhcmFncmFwaCcABxoEZGF0YQEnAAcdBHRleHQGBAAHHgFiJwAHGgV0dW5lcwEnAAcaCmNvbnRlbnRJZHMAJwEGYmxvY2tzAWMBKAAHIgJpZAF3AWMoAAciBHR5cGUBdwlwYXJhZ3JhcGgnAAciBGRhdGEBJwAHJQR0ZXh0BgQAByYBYycAByIFdHVuZXMBJwAHIgpjb250ZW50SWRzAAgBBHJvb3QEdwFhdwF0dwFidwFjAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHLkgHKgF3AWMBBwEtAQ=="
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "update": "AQEHL8gHLActAXcBawEHAhABGAE="
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "update": "AQIHMCgABwAIcGFyZW50SWQBdwF0SAcQAXcBYQEHASoB"
+        },
+        {
+          "sequence": "4",
+          "committedAt": "639269714400000004",
+          "actor": null,
+          "update": "AQEHMsgHKwcsAXcBYgEHASwB"
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "c",
+              "type": "paragraph",
+              "kind": "moved",
+              "before": {
+                "id": "c",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "c"
+                    }
+                  ]
+                }
+              },
+              "after": {
+                "id": "c",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "c"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "k",
+              "type": "paragraph",
+              "kind": "moved",
+              "before": {
+                "id": "k",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "k"
+                    }
+                  ]
+                },
+                "parent": "t"
+              },
+              "after": {
+                "id": "k",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "k"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "a",
+              "type": "paragraph",
+              "kind": "moved",
+              "before": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "a"
+                    }
+                  ]
+                }
+              },
+              "after": {
+                "id": "a",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "a"
+                    }
+                  ]
+                },
+                "parent": "t"
+              }
+            }
+          ],
+          "page": []
+        },
+        {
+          "sequence": "4",
+          "committedAt": "639269714400000004",
+          "actor": null,
+          "blocks": [],
+          "page": []
+        }
+      ]
+    },
+    {
+      "name": "page and values keys",
+      "baseline": [
+        "AQEBACgBBHBhZ2UFdGl0bGUBdwFBAA=="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEBAagBAAF3AUIBAQEAAQ=="
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "update": "AQEBAigBBnZhbHVlcwFrAXgA"
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "update": "AQUBAygBBnZhbHVlcwF6AX0BKAEGdmFsdWVzA\u002B\u002B9oQF3BGhhbGYoAQZ2YWx1ZXME8J\u002BYgAF3BmFzdHJhbCgBBHBhZ2UEaWNvbgF3AXgoAQRwYWdlBVRpdGxlAXcFdXBwZXIA"
+        },
+        {
+          "sequence": "4",
+          "committedAt": "639269714400000004",
+          "actor": null,
+          "update": "AQEBCKgBAwF9AQEBAQMB"
+        },
+        {
+          "sequence": "5",
+          "committedAt": "639269715000000005",
+          "actor": null,
+          "update": "AQIBCScBBnZhbHVlcwZuZXN0ZWQBKAABCQFhAX0BAQECAgEGAQ=="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "blocks": [],
+          "page": [
+            "title"
+          ]
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "blocks": [],
+          "page": [
+            "values.k"
+          ]
+        },
+        {
+          "sequence": "3",
+          "committedAt": "639269713800000003",
+          "actor": null,
+          "blocks": [],
+          "page": [
+            "Title",
+            "icon",
+            "values.z",
+            "values.\uD83D\uDE00",
+            "values.\uFF61"
+          ]
+        },
+        {
+          "sequence": "4",
+          "committedAt": "639269714400000004",
+          "actor": null,
+          "blocks": [],
+          "page": []
+        },
+        {
+          "sequence": "5",
+          "committedAt": "639269715000000005",
+          "actor": null,
+          "blocks": [],
+          "page": [
+            "icon",
+            "values.k",
+            "values.nested"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a record with nothing visible is still a row",
+      "baseline": [],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEBAYQBAAFiAA=="
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "update": "AQEBAAQBAXQBYQA="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "blocks": [],
+          "page": []
+        },
+        {
+          "sequence": "2",
+          "committedAt": "639269713200000002",
+          "actor": null,
+          "blocks": [],
+          "page": []
+        }
+      ]
+    }
+  ]
+}

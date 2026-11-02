@@ -1,0 +1,4990 @@
+{
+  "$comment": "Captured from C# by YDocConverterEditCaptureTests. Do not edit by hand.",
+  "seedClient": 1,
+  "editClient": 2,
+  "cases": [
+    {
+      "name": "insert-first",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "seedUpdate": "AREBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmQA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022header\u0022,\u0022data\u0022:{}}}]}",
+      "updates": [
+        "AQcCACcBBmJsb2NrcwNuZXcBKAACAAJpZAF3A25ldygAAgAEdHlwZQF3BmhlYWRlcicAAgAEZGF0YQEnAAIABXR1bmVzAScAAgAKY29udGVudElkcwBIARABdwNuZXcA"
+      ],
+      "export": [
+        {
+          "id": "new",
+          "type": "header",
+          "data": {}
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "insert-after-a-sibling",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "seedUpdate": "AREBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmQA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022header\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022n\u0022,\u0022level\u0022:2}}}]}",
+      "html": [
+        {
+          "html": "n",
+          "segments": [
+            {
+              "text": "n"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQoCACcBBmJsb2NrcwNuZXcBKAACAAJpZAF3A25ldygAAgAEdHlwZQF3BmhlYWRlcicAAgAEZGF0YQEnAAIDBHRleHQGBAACBAFuKAACAwVsZXZlbAF9AicAAgAFdHVuZXMBJwACAApjb250ZW50SWRzAMgBEAERAXcDbmV3AA=="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "new",
+          "type": "header",
+          "data": {
+            "text": [
+              {
+                "text": "n"
+              }
+            ],
+            "level": 2
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "insert-under-a-parent-after-a-child",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022tg\u0022,\u0022after\u0022:\u0022k1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022n\u0022}}}]}",
+      "html": [
+        {
+          "html": "n",
+          "segments": [
+            {
+              "text": "n"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQoCACcBBmJsb2NrcwNuZXcBKAACAAJpZAF3A25ldygAAgAEdHlwZQF3CXBhcmFncmFwaCcAAgAEZGF0YQEnAAIDBHRleHQGBAACBAFuJwACAAV0dW5lcwEoAAIACHBhcmVudElkAXcCdGcnAAIACmNvbnRlbnRJZHMAyAEIAQkBdwNuZXcA"
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "k1",
+            "new",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "new",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "n"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "insert-under-a-parent-first",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022tg\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022n\u0022}}}]}",
+      "html": [
+        {
+          "html": "n",
+          "segments": [
+            {
+              "text": "n"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQoCACcBBmJsb2NrcwNuZXcBKAACAAJpZAF3A25ldygAAgAEdHlwZQF3CXBhcmFncmFwaCcAAgAEZGF0YQEnAAIDBHRleHQGBAACBAFuJwACAAV0dW5lcwEoAAIACHBhcmVudElkAXcCdGcnAAIACmNvbnRlbnRJZHMASAEIAXcDbmV3AA=="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "new",
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "new",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "n"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "insert-with-tunes-and-co-authors",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022x\u0022},\u0022tunes\u0022:{\u0022align\u0022:\u0022center\u0022},\u0022lastEditedBy\u0022:\u0022u1\u0022,\u0022lastEditedAt\u0022:5}}]}",
+      "html": [
+        {
+          "html": "x",
+          "segments": [
+            {
+              "text": "x"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQwCACcBBmJsb2NrcwNuZXcBKAACAAJpZAF3A25ldygAAgAEdHlwZQF3CXBhcmFncmFwaCcAAgAEZGF0YQEnAAIDBHRleHQGBAACBAF4JwACAAV0dW5lcwEoAAIGBWFsaWduAXcGY2VudGVyJwACAApjb250ZW50SWRzACgAAgAMbGFzdEVkaXRlZEF0AX0FKAACAAxsYXN0RWRpdGVkQnkBdwJ1MYgBCAF3A25ldwA="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "new",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "x"
+              }
+            ]
+          },
+          "tunes": {
+            "align": "center"
+          },
+          "lastEditedAt": 5,
+          "lastEditedBy": "u1"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "insert-a-table",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022t2\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022table\u0022,\u0022data\u0022:{\u0022content\u0022:[[{\u0022rowId\u0022:\u0022x\u0022,\u0022text\u0022:\u00221\u0022}]]}}}]}",
+      "updates": [
+        "AQ8CACcBBmJsb2NrcwJ0MgEoAAIAAmlkAXcCdDIoAAIABHR5cGUBdwV0YWJsZScAAgAEZGF0YQEnAAIDB2NvbnRlbnQBJwACBAZfX3Jvd3MBJwACBQF4AAcAAgYBKAACBwVyb3dJZAF3AXgoAAIHBHRleHQBdwExJwACBAlfX3Jvd0tleXMACAACCgF3AXgnAAIABXR1bmVzAScAAgAKY29udGVudElkcwCIAQgBdwJ0MgA="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "t2",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "x",
+                  "text": "1"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "later-ops-see-earlier-ones",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022a\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022toggle\u0022,\u0022data\u0022:{}}},{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022b\u0022,\u0022parent\u0022:\u0022a\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}},{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022b\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022bee\u0022}},{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022c\u0022,\u0022parent\u0022:\u0022a\u0022,\u0022after\u0022:\u0022b\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022c\u0022}}}]}",
+      "html": [
+        {
+          "html": "bee",
+          "segments": [
+            {
+              "text": "bee"
+            }
+          ]
+        },
+        {
+          "html": "c",
+          "segments": [
+            {
+              "text": "c"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "ARsCACcBBmJsb2NrcwFhASgAAgACaWQBdwFhKAACAAR0eXBlAXcGdG9nZ2xlJwACAARkYXRhAScAAgAFdHVuZXMBJwACAApjb250ZW50SWRzAIgBCAF3AWEnAQZibG9ja3MBYgEoAAIHAmlkAXcBYigAAgcEdHlwZQF3CXBhcmFncmFwaCcAAgcEZGF0YQEnAAIKBHRleHQGJwACBwV0dW5lcwEoAAIHCHBhcmVudElkAXcBYScAAgcKY29udGVudElkcwAIAAIFAXcBYgQAAgsDYmVlJwEGYmxvY2tzAWMBKAACEwJpZAF3AWMoAAITBHR5cGUBdwlwYXJhZ3JhcGgnAAITBGRhdGEBJwACFgR0ZXh0BgQAAhcBYycAAhMFdHVuZXMBKAACEwhwYXJlbnRJZAF3AWEnAAITCmNvbnRlbnRJZHMAiAIPAXcBYwA="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "a",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "b",
+            "c"
+          ]
+        },
+        {
+          "id": "b",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "bee"
+              }
+            ]
+          },
+          "parent": "a"
+        },
+        {
+          "id": "c",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "c"
+              }
+            ]
+          },
+          "parent": "a"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "insert-after-a-number-slot",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "shape": "order-holds-a-number-first",
+      "seedUpdate": "ARIBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmRIARABfQEA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022second\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "updates": [
+        "AQgCACcBBmJsb2NrcwNuZXcBKAACAAJpZAF3A25ldygAAgAEdHlwZQF3CXBhcmFncmFwaCcAAgAEZGF0YQEnAAIDBHRleHQGJwACAAV0dW5lcwEnAAIACmNvbnRlbnRJZHMAiAERAXcDbmV3AA=="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        },
+        {
+          "id": "new",
+          "type": "paragraph",
+          "data": {
+            "text": []
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-insert-duplicate-id",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: the document already has a block \u0022root\u0022."
+      }
+    },
+    {
+      "name": "refuse-insert-unknown-parent",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022nope\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: there is no block \u0022nope\u0022 to insert under."
+      }
+    },
+    {
+      "name": "refuse-insert-unknown-after",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022nope\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: there is no block \u0022nope\u0022 to insert after."
+      }
+    },
+    {
+      "name": "refuse-insert-after-not-a-child",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022tg\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022root\u0022 is not a child of \u0022tg\u0022."
+      }
+    },
+    {
+      "name": "refuse-insert-after-a-child-at-the-root",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022k1\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022k1\u0022 is not a child of the document root."
+      }
+    },
+    {
+      "name": "refuse-insert-after-outside-the-order",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "order-emptied",
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwABAQRyb290AQEBAQgB",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022root\u0022 is not in the document order, so nothing can be placed after it."
+      }
+    },
+    {
+      "name": "refuse-insert-under-a-parent-without-a-list",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "bare-block-without-content-ids",
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdCcBBmJsb2NrcwRiYXJlASgAAQkCaWQBdwRiYXJlKAABCQR0eXBlAXcGdG9nZ2xlJwABCQRkYXRhAQA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022bare\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022bare\u0022 has no children list, so nothing can be placed under it."
+      }
+    },
+    {
+      "name": "refuse-insert-under-junk",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "junk-entry-in-blocks",
+      "seedUpdate": "AQoBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdCgBBmJsb2NrcwRqdW5rAXcLbm90IGEgYmxvY2sA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022junk\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: \u0022junk\u0022 is in the document but is not a block."
+      }
+    },
+    {
+      "name": "refuse-a-later-invalid-op-writes-nothing",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022after\u0022:\u0022root\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}},{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022ghost\u0022}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 1: there is no block \u0022ghost\u0022 to remove."
+      }
+    },
+    {
+      "name": "update-reads-html",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022r \u003Cb\u003Ebold\u003C/b\u003E \u0026amp; more\u0022}}]}",
+      "html": [
+        {
+          "html": "r \u003Cb\u003Ebold\u003C/b\u003E \u0026amp; more",
+          "segments": [
+            {
+              "text": "r "
+            },
+            {
+              "text": "bold",
+              "marks": {
+                "bold": true
+              }
+            },
+            {
+              "text": " \u0026 more"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQUCAIQBBQEghgIABGJvbGQEdHJ1ZYQCAQRib2xkhgIFBGJvbGQEbnVsbIQCBgcgJiBtb3JlAA=="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r "
+              },
+              {
+                "text": "bold",
+                "marks": {
+                  "bold": true
+                }
+              },
+              {
+                "text": " \u0026 more"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-replaces-the-data",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "seedUpdate": "AREBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmQA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022x\u0022,\u0022level\u0022:2}}]}",
+      "html": [
+        {
+          "html": "x",
+          "segments": [
+            {
+              "text": "x"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQICAEQBBQF4KAABAwVsZXZlbAF9AgEBAQUB"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "x"
+              }
+            ],
+            "level": 2
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-normalizes-empty-paragraph-data",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{}}]}",
+      "updates": [
+        "AAEBAQUB"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": []
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-with-the-same-text-writes-nothing",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022r\u0022}}]}",
+      "html": [
+        {
+          "html": "r",
+          "segments": [
+            {
+              "text": "r"
+            }
+          ]
+        }
+      ],
+      "updates": [],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-edits-rich-text-in-place",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "hello world"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEC2hlbGxvIHdvcmxkJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3BHJvb3QA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:[{\u0022text\u0022:\u0022hello \u0022},{\u0022text\u0022:\u0022brave\u0022,\u0022bold\u0022:true},{\u0022text\u0022:\u0022 world\u0022}]}}]}",
+      "updates": [
+        "AQECAMQBCgELBmJyYXZlIAA="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "hello brave world"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-replaces-legacy-plain-text-with-rich-text",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "legacy-plain-text-under-rich-key",
+      "seedUpdate": "AQsBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhASEAAQMEdGV4dAEAAScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwRyb290pwEEAgQAAQkMbGVnYWN5IHdvcmRzAQEBBAI=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022legacy words!\u0022}}]}",
+      "html": [
+        {
+          "html": "legacy words!",
+          "segments": [
+            {
+              "text": "legacy words!"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQICAKcBCQYEAAIADWxlZ2FjeSB3b3JkcyEBAQEJDQ=="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "legacy words!"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-diffs-a-plain-ytext",
+      "seed": [
+        {
+          "id": "img",
+          "type": "image",
+          "data": {
+            "url": "https://x.test/a.png",
+            "caption": "a fox"
+          }
+        }
+      ],
+      "shape": "legacy-ytext-caption",
+      "seedUpdate": "AQwBACcBBmJsb2NrcwNpbWcBKAABAAJpZAF3A2ltZygAAQAEdHlwZQF3BWltYWdlJwABAARkYXRhASgAAQMDdXJsAXcUaHR0cHM6Ly94LnRlc3QvYS5wbmchAAEDB2NhcHRpb24BAAUnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcDaW1npwEFAgQAAQ4JYSByZWQgZm94AQEBBQY=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022img\u0022,\u0022data\u0022:{\u0022url\u0022:\u0022https://x.test/a.png\u0022,\u0022caption\u0022:\u0022a quick red fox\u0022}}]}",
+      "updates": [
+        "AQECAMQBEAERBnF1aWNrIAA="
+      ],
+      "export": [
+        {
+          "id": "img",
+          "type": "image",
+          "data": {
+            "url": "https://x.test/a.png",
+            "caption": "a quick red fox"
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-caption-becomes-a-ytext",
+      "seed": [
+        {
+          "id": "img",
+          "type": "image",
+          "data": {
+            "url": "https://x.test/a.png",
+            "caption": "a fox"
+          }
+        }
+      ],
+      "seedUpdate": "AQoBACcBBmJsb2NrcwNpbWcBKAABAAJpZAF3A2ltZygAAQAEdHlwZQF3BWltYWdlJwABAARkYXRhASgAAQMDdXJsAXcUaHR0cHM6Ly94LnRlc3QvYS5wbmcnAAEDB2NhcHRpb24CBAABBQVhIGZveCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwNpbWcA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022img\u0022,\u0022data\u0022:{\u0022url\u0022:\u0022https://x.test/b.png\u0022,\u0022caption\u0022:\u0022a fox!\u0022}}]}",
+      "updates": [
+        "AQICAKgBBAF3FGh0dHBzOi8veC50ZXN0L2IucG5nhAEKASEBAQEEAQ=="
+      ],
+      "export": [
+        {
+          "id": "img",
+          "type": "image",
+          "data": {
+            "url": "https://x.test/b.png",
+            "caption": "a fox!"
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-drops-omitted-keys",
+      "seed": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhAScAAQMIc2V0dGluZ3MBKAABBARpY29uAXcEc3RhcigAAQQGY29sb3VyAXcEYmx1ZSgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNiAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022}}}]}",
+      "updates": [
+        "AAEBAQYE"
+      ],
+      "export": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star"
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-over-data-that-is-not-a-map",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "data-is-not-a-map",
+      "seedUpdate": "AQoBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoIQABAARkYXRhAQABAAEnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdKgBAwF3BG9vcHMBAQEDAw==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022x\u0022}}]}",
+      "html": [
+        {
+          "html": "x",
+          "segments": [
+            {
+              "text": "x"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQMCAKcBCQEnAAIABHRleHQGBAACAQF4AQEBCQE="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "x"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "update-over-a-foreign-xml-value",
+      "seed": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "shape": "foreign-xml-under-data",
+      "seedUpdate": "AQ8BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhASEAAQMIc2V0dGluZ3MBAAEAASgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNipwEEBgQAAQ0HZm9yZWlnbgEBAQQD",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022moon\u0022},\u0022count\u0022:1,\u0022ratio\u0022:0.1,\u0022big\u0022:9007199254740992}}]}",
+      "updates": [
+        "AQICAKcBDQEoAAIABGljb24BdwRtb29uAQEBDQg="
+      ],
+      "export": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "moon"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-update-unknown-block",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022nope\u0022,\u0022data\u0022:{}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: there is no block \u0022nope\u0022 to update."
+      }
+    },
+    {
+      "name": "refuse-update-junk",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "junk-entry-in-blocks",
+      "seedUpdate": "AQoBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdCgBBmJsb2NrcwRqdW5rAXcLbm90IGEgYmxvY2sA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022junk\u0022,\u0022data\u0022:{}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: \u0022junk\u0022 is in the document but is not a block."
+      }
+    },
+    {
+      "name": "refuse-update-nested-too-deep",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022x\u0022:[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: collab: a data value is nested deeper than 256 levels."
+      }
+    },
+    {
+      "name": "numbers-equal-by-value-write-nothing",
+      "seed": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhAScAAQMIc2V0dGluZ3MBKAABBARpY29uAXcEc3RhcigAAQQGY29sb3VyAXcEYmx1ZSgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNiAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022,\u0022colour\u0022:\u0022blue\u0022},\u0022count\u0022:1.0,\u0022ratio\u0022:0.10000000000000001,\u0022big\u0022:9007199254740993}}]}",
+      "updates": [
+        "AQECAKgBCQF8WgAAAAEBAQkB"
+      ],
+      "export": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "numbers-that-differ-in-decimal-are-written",
+      "seed": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhAScAAQMIc2V0dGluZ3MBKAABBARpY29uAXcEc3RhcigAAQQGY29sb3VyAXcEYmx1ZSgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNiAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022,\u0022colour\u0022:\u0022blue\u0022},\u0022count\u0022:1.0000000000000000001,\u0022ratio\u0022:1e2,\u0022big\u0022:1e400}}]}",
+      "updates": [
+        "AQMCAKgBBwF9AagBCAF9pAGoAQkBfH\u002BAAAABAQEHAw=="
+      ],
+      "export": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 100,
+            "big": null
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "numbers-in-exponent-form",
+      "seed": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 9007199254740992
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJjYgEoAAEAAmlkAXcCY2IoAAEABHR5cGUBdwdjYWxsb3V0JwABAARkYXRhAScAAQMIc2V0dGluZ3MBKAABBARpY29uAXcEc3RhcigAAQQGY29sb3VyAXcEYmx1ZSgAAQMFY291bnQBfQEoAAEDBXJhdGlvAXs/uZmZmZmZmigAAQMDYmlnAXxaAAAAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmNiAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cb\u0022,\u0022data\u0022:{\u0022settings\u0022:{\u0022icon\u0022:\u0022star\u0022,\u0022colour\u0022:\u0022blue\u0022},\u0022count\u0022:1e0,\u0022ratio\u0022:1E-1,\u0022big\u0022:-0}}]}",
+      "updates": [
+        "AQECAKgBCQF9QAEBAQkB"
+      ],
+      "export": [
+        {
+          "id": "cb",
+          "type": "callout",
+          "data": {
+            "settings": {
+              "icon": "star",
+              "colour": "blue"
+            },
+            "count": 1,
+            "ratio": 0.1,
+            "big": 0
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-takes-the-subtree",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022tg\u0022}]}",
+      "updates": [
+        "AAEBAgAgKAE="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-a-child-unlinks-it",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022k1\u0022}]}",
+      "updates": [
+        "AAEBAggBCgs="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "k2"
+          ]
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-takes-an-unlisted-child",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {},
+          "content": []
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {},
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ARcBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMAJwEGYmxvY2tzAmsxASgAAQYCaWQBdwJrMSgAAQYEdHlwZQF3CXBhcmFncmFwaCcAAQYEZGF0YQEnAAEJBHRleHQGJwABBgV0dW5lcwEoAAEGCHBhcmVudElkAXcCdGcnAAEGCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABDgJpZAF3BHJvb3QoAAEOBHR5cGUBdwlwYXJhZ3JhcGgnAAEOBGRhdGEBJwABEQR0ZXh0BgQAARIBcicAAQ4FdHVuZXMBJwABDgpjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022tg\u0022}]}",
+      "updates": [
+        "AAEBAgAOFgE="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-keeps-a-listed-block-naming-another-parent",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "k1"
+          ]
+        },
+        {
+          "id": "other",
+          "type": "toggle",
+          "data": {},
+          "content": []
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {},
+          "parent": "other"
+        }
+      ],
+      "seedUpdate": "ARYBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAABBQF3AmsxJwEGYmxvY2tzBW90aGVyASgAAQcCaWQBdwVvdGhlcigAAQcEdHlwZQF3BnRvZ2dsZScAAQcEZGF0YQEnAAEHBXR1bmVzAScAAQcKY29udGVudElkcwAnAQZibG9ja3MCazEBKAABDQJpZAF3AmsxKAABDQR0eXBlAXcJcGFyYWdyYXBoJwABDQRkYXRhAScAARAEdGV4dAYnAAENBXR1bmVzASgAAQ0IcGFyZW50SWQBdwVvdGhlcicAAQ0KY29udGVudElkcwAIAQRyb290AncCdGd3BW90aGVyAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022tg\u0022}]}",
+      "updates": [
+        "AAEBAgAHFQE="
+      ],
+      "export": [
+        {
+          "id": "other",
+          "type": "toggle",
+          "data": {}
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": []
+          },
+          "parent": "other"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-clears-a-non-parent-listing",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {},
+          "content": [
+            "kid"
+          ]
+        },
+        {
+          "id": "other",
+          "type": "toggle",
+          "data": {},
+          "content": []
+        },
+        {
+          "id": "kid",
+          "type": "paragraph",
+          "data": {},
+          "parent": "tg"
+        }
+      ],
+      "shape": "listed-by-a-non-parent",
+      "seedUpdate": "ARcBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAABBQF3A2tpZCcBBmJsb2NrcwVvdGhlcgEoAAEHAmlkAXcFb3RoZXIoAAEHBHR5cGUBdwZ0b2dnbGUnAAEHBGRhdGEBJwABBwV0dW5lcwEnAAEHCmNvbnRlbnRJZHMAJwEGYmxvY2tzA2tpZAEoAAENAmlkAXcDa2lkKAABDQR0eXBlAXcJcGFyYWdyYXBoJwABDQRkYXRhAScAARAEdGV4dAYnAAENBXR1bmVzASgAAQ0IcGFyZW50SWQBdwJ0ZycAAQ0KY29udGVudElkcwAIAQRyb290AncCdGd3BW90aGVyCAABDAF3A2tpZAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022kid\u0022}]}",
+      "updates": [
+        "AAEBAwYBDQgXAQ=="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {}
+        },
+        {
+          "id": "other",
+          "type": "toggle",
+          "data": {}
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-then-reinsert-the-same-id",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "seedUpdate": "AREBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmQA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022root\u0022},{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022root\u0022,\u0022after\u0022:\u0022second\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022again\u0022}}}]}",
+      "html": [
+        {
+          "html": "again",
+          "segments": [
+            {
+              "text": "again"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQkCAKcBAAEoAAIAAmlkAXcEcm9vdCgAAgAEdHlwZQF3CXBhcmFncmFwaCcAAgAEZGF0YQEnAAIDBHRleHQGBAACBAVhZ2FpbicAAgAFdHVuZXMBJwACAApjb250ZW50SWRzAIgBEQF3BHJvb3QBAQIACBAB"
+      ],
+      "export": [
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "again"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-a-block-inserted-earlier",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022new\u0022,\u0022parent\u0022:\u0022tg\u0022,\u0022after\u0022:\u0022k2\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{}}},{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022new\u0022}]}",
+      "updates": [
+        "AQkCACEBBmJsb2NrcwNuZXcBAAEAAQABAAEAAQABAAGBAQkBAQIBAAk="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-a-parent-spares-a-child-reinserted-elsewhere",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022k1\u0022},{\u0022op\u0022:\u0022insert\u0022,\u0022id\u0022:\u0022k1\u0022,\u0022after\u0022:\u0022tg\u0022,\u0022block\u0022:{\u0022type\u0022:\u0022paragraph\u0022,\u0022data\u0022:{\u0022text\u0022:\u0022moved\u0022}}},{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022tg\u0022}]}",
+      "html": [
+        {
+          "html": "moved",
+          "segments": [
+            {
+              "text": "moved"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQkCAKcBCgEoAAIAAmlkAXcCazEoAAIABHR5cGUBdwlwYXJhZ3JhcGgnAAIABGRhdGEBJwACAwR0ZXh0BgQAAgQFbW92ZWQnAAIABXR1bmVzAScAAgAKY29udGVudElkcwCIASABdwJrMQEBAQAh"
+      ],
+      "export": [
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "moved"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-with-a-number-in-the-order",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "shape": "order-holds-a-number-first",
+      "seedUpdate": "ARIBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmRIARABfQEA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022root\u0022}]}",
+      "updates": [
+        "AAEBAgAIEAE="
+      ],
+      "export": [
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-every-duplicate-order-entry",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "shape": "order-lists-root-twice",
+      "seedUpdate": "ARIBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmSIAREBdwRyb290AA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022root\u0022}]}",
+      "updates": [
+        "AAEBAwAIEAESAQ=="
+      ],
+      "export": [
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "s"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "remove-junk",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "junk-entry-in-blocks",
+      "seedUpdate": "AQoBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdCgBBmJsb2NrcwRqdW5rAXcLbm90IGEgYmxvY2sA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022junk\u0022}]}",
+      "updates": [
+        "AAEBAQkB"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-remove-unknown",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022remove\u0022,\u0022id\u0022:\u0022nope\u0022}]}",
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: there is no block \u0022nope\u0022 to remove."
+      }
+    },
+    {
+      "name": "table-edit-one-cell",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022a1\u0022,\u0022blocks\u0022:[\u0022p1\u0022]},{\u0022text\u0022:\u0022b1 host\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022a2\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AQECAKgBDQF3B2IxIGhvc3QBAQENAQ=="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1 host",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-add-a-block-to-a-cell",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022a1\u0022,\u0022blocks\u0022:[\u0022p1\u0022,\u0022p3\u0022]},{\u0022text\u0022:\u0022b1\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022a2\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AQECAIgBCwF3AnAzAA=="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1",
+                    "p3"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-swap-rows",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022a2\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022a1\u0022,\u0022blocks\u0022:[\u0022p1\u0022]},{\u0022text\u0022:\u0022b1\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AQECAEgBFwJ3CnMwMDAwMDAwMDR3CnMwMDAwMDAwMDMBAQEXAg=="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-remove-a-row",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022a2\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AAEBAgcIFwE="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-add-a-row-mints-a-key",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022a1\u0022,\u0022blocks\u0022:[\u0022p1\u0022]},{\u0022text\u0022:\u0022b1\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022new\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022row\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022a2\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AQgCACcAAQYKZTAwMDAwMDAwNwAHAAIAASgAAgEEdGV4dAF3A25ldycAAgEGYmxvY2tzAIcCAQEoAAIEBHRleHQBdwNyb3cnAAIEBmJsb2NrcwDIARcBGAF3CmUwMDAwMDAwMDcA"
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "new",
+                  "blocks": []
+                },
+                {
+                  "text": "row",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-insert-a-column",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022x\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022a1\u0022,\u0022blocks\u0022:[\u0022p1\u0022]},{\u0022text\u0022:\u0022b1\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022y\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022a2\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AQYCAEcBCAEoAAIABHRleHQBdwF4JwACAAZibG9ja3MARwEQASgAAgMEdGV4dAF3AXknAAIDBmJsb2NrcwAA"
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "x",
+                  "blocks": []
+                },
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "y",
+                  "blocks": []
+                },
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-delete-a-column",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022b1\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AAEBAggEEAM="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-change-a-row-and-insert-above-it",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[[{\u0022text\u0022:\u0022a1\u0022,\u0022blocks\u0022:[\u0022p1\u0022]},{\u0022text\u0022:\u0022b1\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022n\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022m\u0022,\u0022blocks\u0022:[]}],[{\u0022text\u0022:\u0022a2 edited\u0022,\u0022blocks\u0022:[]},{\u0022text\u0022:\u0022b2\u0022,\u0022blocks\u0022:[]}]]}}]}",
+      "updates": [
+        "AQkCACcAAQYKZTAwMDAwMDAwNwAHAAIAASgAAgEEdGV4dAF3AW4nAAIBBmJsb2NrcwCHAgEBKAACBAR0ZXh0AXcBbScAAgQGYmxvY2tzAKgBEQF3CWEyIGVkaXRlZMgBFwEYAXcKZTAwMDAwMDAwNwEBAREB"
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "n",
+                  "blocks": []
+                },
+                {
+                  "text": "m",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2 edited",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "table-emptied",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": [
+              [
+                {
+                  "text": "a1",
+                  "blocks": [
+                    "p1"
+                  ]
+                },
+                {
+                  "text": "b1",
+                  "blocks": []
+                }
+              ],
+              [
+                {
+                  "text": "a2",
+                  "blocks": []
+                },
+                {
+                  "text": "b2",
+                  "blocks": []
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARsBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEoAAEDDHdpdGhIZWFkaW5ncwF5JwABAwdjb250ZW50AScAAQUGX19yb3dzAScAAQYKczAwMDAwMDAwMwAHAAEHASgAAQgEdGV4dAF3AmExJwABCAZibG9ja3MACAABCgF3AnAxhwEIASgAAQwEdGV4dAF3AmIxJwABDAZibG9ja3MAJwABBgpzMDAwMDAwMDA0AAcAAQ8BKAABEAR0ZXh0AXcCYTInAAEQBmJsb2NrcwCHARABKAABEwR0ZXh0AXcCYjInAAETBmJsb2NrcwAnAAEFCV9fcm93S2V5cwAIAAEWAncKczAwMDAwMDAwM3cKczAwMDAwMDAwNCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022withHeadings\u0022:false,\u0022content\u0022:[]}}]}",
+      "updates": [
+        "AQECAKgBBQF1AAEBAQUU"
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "withHeadings": false,
+            "content": []
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "row-id-table-add-a-row",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARkBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEnAAEDB2NvbnRlbnQBJwABBAZfX3Jvd3MBJwABBQJyMQAHAAEGASgAAQcFcm93SWQBdwJyMSgAAQcEdGV4dAF3AmExhwEHASgAAQoFcm93SWQBdwJyMSgAAQoEdGV4dAF3AmIxJwABBQJyMgAHAAENASgAAQ4Fcm93SWQBdwJyMigAAQ4EdGV4dAF3AmEyhwEOASgAAREFcm93SWQBdwJyMigAAREEdGV4dAF3AmIyJwABBAlfX3Jvd0tleXMACAABFAJ3AnIxdwJyMicAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022content\u0022:[[{\u0022rowId\u0022:\u0022r1\u0022,\u0022text\u0022:\u0022a1\u0022},{\u0022rowId\u0022:\u0022r1\u0022,\u0022text\u0022:\u0022b1\u0022}],[{\u0022rowId\u0022:\u0022r3\u0022,\u0022text\u0022:\u0022a3\u0022},{\u0022rowId\u0022:\u0022r3\u0022,\u0022text\u0022:\u0022b3\u0022}],[{\u0022rowId\u0022:\u0022r2\u0022,\u0022text\u0022:\u0022a2\u0022},{\u0022rowId\u0022:\u0022r2\u0022,\u0022text\u0022:\u0022b2\u0022}]]}}]}",
+      "updates": [
+        "AQgCACcAAQUCcjMABwACAAEoAAIBBXJvd0lkAXcCcjMoAAIBBHRleHQBdwJhM4cCAQEoAAIEBXJvd0lkAXcCcjMoAAIEBHRleHQBdwJiM8gBFQEWAXcCcjMA"
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ],
+              [
+                {
+                  "rowId": "r3",
+                  "text": "a3"
+                },
+                {
+                  "rowId": "r3",
+                  "text": "b3"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "row-id-table-reorder-and-edit",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARkBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEnAAEDB2NvbnRlbnQBJwABBAZfX3Jvd3MBJwABBQJyMQAHAAEGASgAAQcFcm93SWQBdwJyMSgAAQcEdGV4dAF3AmExhwEHASgAAQoFcm93SWQBdwJyMSgAAQoEdGV4dAF3AmIxJwABBQJyMgAHAAENASgAAQ4Fcm93SWQBdwJyMigAAQ4EdGV4dAF3AmEyhwEOASgAAREFcm93SWQBdwJyMigAAREEdGV4dAF3AmIyJwABBAlfX3Jvd0tleXMACAABFAJ3AnIxdwJyMicAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022content\u0022:[[{\u0022rowId\u0022:\u0022r2\u0022,\u0022text\u0022:\u0022a2!\u0022},{\u0022rowId\u0022:\u0022r2\u0022,\u0022text\u0022:\u0022b2\u0022}],[{\u0022rowId\u0022:\u0022r1\u0022,\u0022text\u0022:\u0022a1\u0022},{\u0022rowId\u0022:\u0022r1\u0022,\u0022text\u0022:\u0022b1\u0022}]]}}]}",
+      "updates": [
+        "AQICAKgBEAF3A2EyIUgBFQJ3AnIydwJyMQEBAhABFQI="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2!"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ],
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "row-id-table-reuses-a-freed-key",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARkBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEnAAEDB2NvbnRlbnQBJwABBAZfX3Jvd3MBJwABBQJyMQAHAAEGASgAAQcFcm93SWQBdwJyMSgAAQcEdGV4dAF3AmExhwEHASgAAQoFcm93SWQBdwJyMSgAAQoEdGV4dAF3AmIxJwABBQJyMgAHAAENASgAAQ4Fcm93SWQBdwJyMigAAQ4EdGV4dAF3AmEyhwEOASgAAREFcm93SWQBdwJyMigAAREEdGV4dAF3AmIyJwABBAlfX3Jvd0tleXMACAABFAJ3AnIxdwJyMicAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022content\u0022:[[{\u0022rowId\u0022:\u0022r1\u0022,\u0022text\u0022:\u0022z\u0022},{\u0022rowId\u0022:\u0022r1\u0022,\u0022text\u0022:\u0022z\u0022}],[{\u0022rowId\u0022:\u0022r2\u0022,\u0022text\u0022:\u0022a2\u0022},{\u0022rowId\u0022:\u0022r2\u0022,\u0022text\u0022:\u0022b2\u0022}]]}}]}",
+      "updates": [
+        "AQICAKgBCQF3AXqoAQwBdwF6AQECCQEMAQ=="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "z"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "z"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "grid-becomes-an-identity-list",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARkBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEnAAEDB2NvbnRlbnQBJwABBAZfX3Jvd3MBJwABBQJyMQAHAAEGASgAAQcFcm93SWQBdwJyMSgAAQcEdGV4dAF3AmExhwEHASgAAQoFcm93SWQBdwJyMSgAAQoEdGV4dAF3AmIxJwABBQJyMgAHAAENASgAAQ4Fcm93SWQBdwJyMigAAQ4EdGV4dAF3AmEyhwEOASgAAREFcm93SWQBdwJyMigAAREEdGV4dAF3AmIyJwABBAlfX3Jvd0tleXMACAABFAJ3AnIxdwJyMicAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022content\u0022:[{\u0022id\u0022:\u0022e1\u0022,\u0022v\u0022:1},{\u0022id\u0022:\u0022e2\u0022,\u0022v\u0022:2}]}}]}",
+      "updates": [
+        "AQcCACcAAQUCZTEBKAACAAJpZAF3AmUxKAACAAF2AX0BJwABBQJlMgEoAAIDAmlkAXcCZTIoAAIDAXYBfQJIARUCdwJlMXcCZTIBAQIGDhUC"
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              {
+                "id": "e1",
+                "v": 1
+              },
+              {
+                "id": "e2",
+                "v": 2
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "grid-becomes-a-leaf",
+      "seed": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": [
+              [
+                {
+                  "rowId": "r1",
+                  "text": "a1"
+                },
+                {
+                  "rowId": "r1",
+                  "text": "b1"
+                }
+              ],
+              [
+                {
+                  "rowId": "r2",
+                  "text": "a2"
+                },
+                {
+                  "rowId": "r2",
+                  "text": "b2"
+                }
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARkBACcBBmJsb2NrcwJ0YgEoAAEAAmlkAXcCdGIoAAEABHR5cGUBdwV0YWJsZScAAQAEZGF0YQEnAAEDB2NvbnRlbnQBJwABBAZfX3Jvd3MBJwABBQJyMQAHAAEGASgAAQcFcm93SWQBdwJyMSgAAQcEdGV4dAF3AmExhwEHASgAAQoFcm93SWQBdwJyMSgAAQoEdGV4dAF3AmIxJwABBQJyMgAHAAENASgAAQ4Fcm93SWQBdwJyMigAAQ4EdGV4dAF3AmEyhwEOASgAAREFcm93SWQBdwJyMigAAREEdGV4dAF3AmIyJwABBAlfX3Jvd0tleXMACAABFAJ3AnIxdwJyMicAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJ0YgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022tb\u0022,\u0022data\u0022:{\u0022content\u0022:\u0022flat\u0022}}]}",
+      "updates": [
+        "AQECAKgBBAF3BGZsYXQBAQEEEw=="
+      ],
+      "export": [
+        {
+          "id": "tb",
+          "type": "table",
+          "data": {
+            "content": "flat"
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "database-rename-a-property",
+      "seed": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ASkBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEnAAEDBnNjaGVtYQEnAAEEBl9fcm93cwEnAAEFAnAxASgAAQYCaWQBdwJwMSgAAQYEbmFtZQF3BE5hbWUoAAEGBHR5cGUBdwV0aXRsZScAAQUCcDIBKAABCgJpZAF3AnAyKAABCgRuYW1lAXcGU3RhdHVzKAABCgR0eXBlAXcGc2VsZWN0JwABCgdvcHRpb25zAScAAQ4GX19yb3dzAScAAQ8CbzEBKAABEAJpZAF3Am8xKAABEARuYW1lAXcEVG9kbycAAQ4JX19yb3dLZXlzAAgAARMBdwJvMScAAQQJX19yb3dLZXlzAAgAARUCdwJwMXcCcDInAAEDBXZpZXdzAScAARgGX19yb3dzAScAARkCdjEBKAABGgJpZAF3AnYxKAABGgR0eXBlAXcFdGFibGUnAAEaB2ZpbHRlcnMAJwABGgVzb3J0cwAnAAEaDGNhbGN1bGF0aW9ucwAnAAEYCV9fcm93S2V5cwAIAAEgAXcCdjEnAAEDCnByb3BlcnRpZXMBJwABIgR0YWdzAScAASMGX19yb3dzAScAASMJX19yb3dLZXlzACgAASIGcGVvcGxlAXUBdwJ1MScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJkYgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022db\u0022,\u0022data\u0022:{\u0022schema\u0022:[{\u0022id\u0022:\u0022p1\u0022,\u0022name\u0022:\u0022Title\u0022,\u0022type\u0022:\u0022title\u0022},{\u0022id\u0022:\u0022p2\u0022,\u0022name\u0022:\u0022Status\u0022,\u0022type\u0022:\u0022select\u0022,\u0022options\u0022:[{\u0022id\u0022:\u0022o1\u0022,\u0022name\u0022:\u0022Todo\u0022}]}],\u0022views\u0022:[{\u0022id\u0022:\u0022v1\u0022,\u0022type\u0022:\u0022table\u0022,\u0022filters\u0022:[],\u0022sorts\u0022:[],\u0022calculations\u0022:[]}],\u0022properties\u0022:{\u0022tags\u0022:[],\u0022people\u0022:[\u0022u1\u0022]}}}]}",
+      "updates": [
+        "AQECAKgBCAF3BVRpdGxlAQEBCAE="
+      ],
+      "export": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Title",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "database-reorder-properties",
+      "seed": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ASkBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEnAAEDBnNjaGVtYQEnAAEEBl9fcm93cwEnAAEFAnAxASgAAQYCaWQBdwJwMSgAAQYEbmFtZQF3BE5hbWUoAAEGBHR5cGUBdwV0aXRsZScAAQUCcDIBKAABCgJpZAF3AnAyKAABCgRuYW1lAXcGU3RhdHVzKAABCgR0eXBlAXcGc2VsZWN0JwABCgdvcHRpb25zAScAAQ4GX19yb3dzAScAAQ8CbzEBKAABEAJpZAF3Am8xKAABEARuYW1lAXcEVG9kbycAAQ4JX19yb3dLZXlzAAgAARMBdwJvMScAAQQJX19yb3dLZXlzAAgAARUCdwJwMXcCcDInAAEDBXZpZXdzAScAARgGX19yb3dzAScAARkCdjEBKAABGgJpZAF3AnYxKAABGgR0eXBlAXcFdGFibGUnAAEaB2ZpbHRlcnMAJwABGgVzb3J0cwAnAAEaDGNhbGN1bGF0aW9ucwAnAAEYCV9fcm93S2V5cwAIAAEgAXcCdjEnAAEDCnByb3BlcnRpZXMBJwABIgR0YWdzAScAASMGX19yb3dzAScAASMJX19yb3dLZXlzACgAASIGcGVvcGxlAXUBdwJ1MScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJkYgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022db\u0022,\u0022data\u0022:{\u0022schema\u0022:[{\u0022id\u0022:\u0022p2\u0022,\u0022name\u0022:\u0022Status\u0022,\u0022type\u0022:\u0022select\u0022,\u0022options\u0022:[{\u0022id\u0022:\u0022o1\u0022,\u0022name\u0022:\u0022Todo\u0022}]},{\u0022id\u0022:\u0022p1\u0022,\u0022name\u0022:\u0022Name\u0022,\u0022type\u0022:\u0022title\u0022}],\u0022views\u0022:[{\u0022id\u0022:\u0022v1\u0022,\u0022type\u0022:\u0022table\u0022,\u0022filters\u0022:[],\u0022sorts\u0022:[],\u0022calculations\u0022:[]}],\u0022properties\u0022:{\u0022tags\u0022:[],\u0022people\u0022:[\u0022u1\u0022]}}}]}",
+      "updates": [
+        "AQECAEgBFgJ3AnAydwJwMQEBARYC"
+      ],
+      "export": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              },
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "database-add-a-filter-and-a-sort",
+      "seed": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ASkBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEnAAEDBnNjaGVtYQEnAAEEBl9fcm93cwEnAAEFAnAxASgAAQYCaWQBdwJwMSgAAQYEbmFtZQF3BE5hbWUoAAEGBHR5cGUBdwV0aXRsZScAAQUCcDIBKAABCgJpZAF3AnAyKAABCgRuYW1lAXcGU3RhdHVzKAABCgR0eXBlAXcGc2VsZWN0JwABCgdvcHRpb25zAScAAQ4GX19yb3dzAScAAQ8CbzEBKAABEAJpZAF3Am8xKAABEARuYW1lAXcEVG9kbycAAQ4JX19yb3dLZXlzAAgAARMBdwJvMScAAQQJX19yb3dLZXlzAAgAARUCdwJwMXcCcDInAAEDBXZpZXdzAScAARgGX19yb3dzAScAARkCdjEBKAABGgJpZAF3AnYxKAABGgR0eXBlAXcFdGFibGUnAAEaB2ZpbHRlcnMAJwABGgVzb3J0cwAnAAEaDGNhbGN1bGF0aW9ucwAnAAEYCV9fcm93S2V5cwAIAAEgAXcCdjEnAAEDCnByb3BlcnRpZXMBJwABIgR0YWdzAScAASMGX19yb3dzAScAASMJX19yb3dLZXlzACgAASIGcGVvcGxlAXUBdwJ1MScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJkYgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022db\u0022,\u0022data\u0022:{\u0022schema\u0022:[{\u0022id\u0022:\u0022p1\u0022,\u0022name\u0022:\u0022Name\u0022,\u0022type\u0022:\u0022title\u0022},{\u0022id\u0022:\u0022p2\u0022,\u0022name\u0022:\u0022Status\u0022,\u0022type\u0022:\u0022select\u0022,\u0022options\u0022:[{\u0022id\u0022:\u0022o1\u0022,\u0022name\u0022:\u0022Todo\u0022}]}],\u0022views\u0022:[{\u0022id\u0022:\u0022v1\u0022,\u0022type\u0022:\u0022table\u0022,\u0022filters\u0022:[{\u0022id\u0022:\u0022f1\u0022,\u0022property\u0022:\u0022p2\u0022}],\u0022sorts\u0022:[\u0022p1\u0022],\u0022calculations\u0022:[]}],\u0022properties\u0022:{\u0022tags\u0022:[],\u0022people\u0022:[\u0022u1\u0022]}}}]}",
+      "updates": [
+        "AQQCAAcAAR0BKAACAAJpZAF3AmYxKAACAAhwcm9wZXJ0eQF3AnAyCAABHgF3AnAxAA=="
+      ],
+      "export": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [
+                  {
+                    "id": "f1",
+                    "property": "p2"
+                  }
+                ],
+                "sorts": [
+                  "p1"
+                ],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "database-list-slots",
+      "seed": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ASkBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEnAAEDBnNjaGVtYQEnAAEEBl9fcm93cwEnAAEFAnAxASgAAQYCaWQBdwJwMSgAAQYEbmFtZQF3BE5hbWUoAAEGBHR5cGUBdwV0aXRsZScAAQUCcDIBKAABCgJpZAF3AnAyKAABCgRuYW1lAXcGU3RhdHVzKAABCgR0eXBlAXcGc2VsZWN0JwABCgdvcHRpb25zAScAAQ4GX19yb3dzAScAAQ8CbzEBKAABEAJpZAF3Am8xKAABEARuYW1lAXcEVG9kbycAAQ4JX19yb3dLZXlzAAgAARMBdwJvMScAAQQJX19yb3dLZXlzAAgAARUCdwJwMXcCcDInAAEDBXZpZXdzAScAARgGX19yb3dzAScAARkCdjEBKAABGgJpZAF3AnYxKAABGgR0eXBlAXcFdGFibGUnAAEaB2ZpbHRlcnMAJwABGgVzb3J0cwAnAAEaDGNhbGN1bGF0aW9ucwAnAAEYCV9fcm93S2V5cwAIAAEgAXcCdjEnAAEDCnByb3BlcnRpZXMBJwABIgR0YWdzAScAASMGX19yb3dzAScAASMJX19yb3dLZXlzACgAASIGcGVvcGxlAXUBdwJ1MScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJkYgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022db\u0022,\u0022data\u0022:{\u0022schema\u0022:[{\u0022id\u0022:\u0022p1\u0022,\u0022name\u0022:\u0022Name\u0022,\u0022type\u0022:\u0022title\u0022},{\u0022id\u0022:\u0022p2\u0022,\u0022name\u0022:\u0022Status\u0022,\u0022type\u0022:\u0022select\u0022,\u0022options\u0022:[{\u0022id\u0022:\u0022o1\u0022,\u0022name\u0022:\u0022Todo\u0022}]}],\u0022views\u0022:[{\u0022id\u0022:\u0022v1\u0022,\u0022type\u0022:\u0022table\u0022,\u0022filters\u0022:[],\u0022sorts\u0022:[],\u0022calculations\u0022:[]}],\u0022properties\u0022:{\u0022tags\u0022:[{\u0022id\u0022:\u0022t1\u0022,\u0022name\u0022:\u0022red\u0022}],\u0022people\u0022:[],\u0022fresh\u0022:[]}}}]}",
+      "updates": [
+        "AQoCACcAASQCdDEBKAACAAJpZAF3AnQxKAACAARuYW1lAXcDcmVkCAABJQF3AnQxpwEmAScAAgQGX19yb3dzAScAAgQJX19yb3dLZXlzACcAASIFZnJlc2gBJwACBwZfX3Jvd3MBJwACBwlfX3Jvd0tleXMAAQEBJgE="
+      ],
+      "export": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [
+                {
+                  "id": "t1",
+                  "name": "red"
+                }
+              ],
+              "people": [],
+              "fresh": []
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "database-delete-a-property-and-add-one",
+      "seed": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p2",
+                "name": "Status",
+                "type": "select",
+                "options": [
+                  {
+                    "id": "o1",
+                    "name": "Todo"
+                  }
+                ]
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ASkBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEnAAEDBnNjaGVtYQEnAAEEBl9fcm93cwEnAAEFAnAxASgAAQYCaWQBdwJwMSgAAQYEbmFtZQF3BE5hbWUoAAEGBHR5cGUBdwV0aXRsZScAAQUCcDIBKAABCgJpZAF3AnAyKAABCgRuYW1lAXcGU3RhdHVzKAABCgR0eXBlAXcGc2VsZWN0JwABCgdvcHRpb25zAScAAQ4GX19yb3dzAScAAQ8CbzEBKAABEAJpZAF3Am8xKAABEARuYW1lAXcEVG9kbycAAQ4JX19yb3dLZXlzAAgAARMBdwJvMScAAQQJX19yb3dLZXlzAAgAARUCdwJwMXcCcDInAAEDBXZpZXdzAScAARgGX19yb3dzAScAARkCdjEBKAABGgJpZAF3AnYxKAABGgR0eXBlAXcFdGFibGUnAAEaB2ZpbHRlcnMAJwABGgVzb3J0cwAnAAEaDGNhbGN1bGF0aW9ucwAnAAEYCV9fcm93S2V5cwAIAAEgAXcCdjEnAAEDCnByb3BlcnRpZXMBJwABIgR0YWdzAScAASMGX19yb3dzAScAASMJX19yb3dLZXlzACgAASIGcGVvcGxlAXUBdwJ1MScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJkYgA=",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022db\u0022,\u0022data\u0022:{\u0022schema\u0022:[{\u0022id\u0022:\u0022p1\u0022,\u0022name\u0022:\u0022Name\u0022,\u0022type\u0022:\u0022title\u0022},{\u0022id\u0022:\u0022p3\u0022,\u0022name\u0022:\u0022Due\u0022,\u0022type\u0022:\u0022date\u0022}],\u0022views\u0022:[{\u0022id\u0022:\u0022v1\u0022,\u0022type\u0022:\u0022table\u0022,\u0022filters\u0022:[],\u0022sorts\u0022:[],\u0022calculations\u0022:[]}],\u0022properties\u0022:{\u0022tags\u0022:[],\u0022people\u0022:[\u0022u1\u0022]}}}]}",
+      "updates": [
+        "AQUCACcAAQUCcDMBKAACAAJpZAF3AnAzKAACAARuYW1lAXcDRHVlKAACAAR0eXBlAXcEZGF0ZcgBFgEXAXcCcDMBAQIKCxcB"
+      ],
+      "export": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "schema": [
+              {
+                "id": "p1",
+                "name": "Name",
+                "type": "title"
+              },
+              {
+                "id": "p3",
+                "name": "Due",
+                "type": "date"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "type": "table",
+                "filters": [],
+                "sorts": [],
+                "calculations": []
+              }
+            ],
+            "properties": {
+              "tags": [],
+              "people": [
+                "u1"
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "top-level-blocks-keep-the-generic-rule",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "blocks": [
+              "a",
+              "b"
+            ],
+            "items": [
+              {
+                "k": 1
+              },
+              {
+                "k": 2
+              },
+              {
+                "k": 3
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQ8BACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBKAABAwZibG9ja3MBdQJ3AWF3AWInAAEDBWl0ZW1zAAcAAQUBKAABBgFrAX0BhwEGASgAAQgBawF9AocBCAEoAAEKAWsBfQMnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcCY3UA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022blocks\u0022:[\u0022a\u0022,\u0022c\u0022,\u0022b\u0022],\u0022items\u0022:[{\u0022k\u0022:1},{\u0022k\u0022:9},{\u0022k\u0022:2},{\u0022k\u0022:3}]}}]}",
+      "updates": [
+        "AQMCAKgBBAF1A3cBYXcBY3cBYscBBgEIASgAAgEBawF9CQEBAQQB"
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "blocks": [
+              "a",
+              "c",
+              "b"
+            ],
+            "items": [
+              {
+                "k": 1
+              },
+              {
+                "k": 9
+              },
+              {
+                "k": 2
+              },
+              {
+                "k": 3
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-pair-elements-by-similarity",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1,
+                "b": 2,
+                "c": 3
+              },
+              {
+                "a": 4,
+                "b": 5,
+                "c": 6
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARABACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBYQF9ASgAAQUBYgF9AigAAQUBYwF9A4cBBQEoAAEJAWEBfQQoAAEJAWIBfQUoAAEJAWMBfQYnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcCY3UA",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022a\u0022:1,\u0022b\u0022:2,\u0022c\u0022:30},{\u0022a\u0022:7,\u0022b\u0022:8,\u0022c\u0022:9},{\u0022a\u0022:4,\u0022b\u0022:5,\u0022c\u0022:6}]}}]}",
+      "updates": [
+        "AQUCAKgBCAF9HscBBQEJASgAAgEBYQF9BygAAgEBYgF9CCgAAgEBYwF9CQEBAQgB"
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1,
+                "b": 2,
+                "c": 30
+              },
+              {
+                "a": 7,
+                "b": 8,
+                "c": 9
+              },
+              {
+                "a": 4,
+                "b": 5,
+                "c": 6
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-reorder-splices",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 1
+              },
+              {
+                "a": 2
+              },
+              {
+                "a": 3
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQ4BACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwAHAAEEASgAAQUBYQF9AYcBBQEoAAEHAWEBfQKHAQcBKAABCQFhAX0DJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmN1AA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[{\u0022a\u0022:3},{\u0022a\u0022:1}]}}]}",
+      "updates": [
+        "AQQCAEcBBQEoAAIAAWEBfQPHAgABBQEoAAICAWEBfQEBAQEFBg=="
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              {
+                "a": 3
+              },
+              {
+                "a": 1
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "arrays-numbers-pair-by-value",
+      "seed": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              [
+                1,
+                2
+              ],
+              [
+                3,
+                4
+              ]
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJjdQEoAAEAAmlkAXcCY3UoAAEABHR5cGUBdwZjdXN0b20nAAEABGRhdGEBJwABAwVpdGVtcwEnAAEEBl9fcm93cwEoAAEFCnMwMDAwMDAwMDMBdQJ9AX0CKAABBQpzMDAwMDAwMDA0AXUCfQN9BCcAAQQJX19yb3dLZXlzAAgAAQgCdwpzMDAwMDAwMDAzdwpzMDAwMDAwMDA0JwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmN1AA==",
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022cu\u0022,\u0022data\u0022:{\u0022items\u0022:[[1.0,2.0],[5,6],[3e0,4]]}}]}",
+      "updates": [
+        "AQICACgAAQUKZTAwMDAwMDAwNwF1An0FfQbIAQkBCgF3CmUwMDAwMDAwMDcA"
+      ],
+      "export": [
+        {
+          "id": "cu",
+          "type": "custom",
+          "data": {
+            "items": [
+              [
+                1,
+                2
+              ],
+              [
+                5,
+                6
+              ],
+              [
+                3,
+                4
+              ]
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "move-into-a-parent-first",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "agent": [
+        {
+          "op": "move",
+          "id": "root",
+          "parent": "tg"
+        }
+      ],
+      "updates": [
+        "AQICACgAASAIcGFyZW50SWQBdwJ0Z0gBCAF3BHJvb3QBAQEpAQ=="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "root",
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "move-a-child-to-the-root-after",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "agent": [
+        {
+          "op": "move",
+          "id": "k1",
+          "after": "root"
+        }
+      ],
+      "updates": [
+        "AQECAIgBKQF3AmsxAQECCAETAQ=="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "k2"
+          ]
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "move-within-a-parent",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "agent": [
+        {
+          "op": "move",
+          "id": "k1",
+          "parent": "tg",
+          "after": "k2"
+        }
+      ],
+      "updates": [
+        "AQICAKgBEwF3AnRniAEJAXcCazEBAQIIARMB"
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "k2",
+            "k1"
+          ]
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "move-then-anchor-on-it",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "agent": [
+        {
+          "op": "move",
+          "id": "k2",
+          "after": "root"
+        },
+        {
+          "op": "insert",
+          "id": "new",
+          "after": "k2",
+          "block": {
+            "type": "paragraph",
+            "data": {}
+          }
+        }
+      ],
+      "updates": [
+        "AQkCAIgBKQF3AmsyJwEGYmxvY2tzA25ldwEoAAIBAmlkAXcDbmV3KAACAQR0eXBlAXcJcGFyYWdyYXBoJwACAQRkYXRhAScAAgQEdGV4dAYnAAIBBXR1bmVzAScAAgEKY29udGVudElkcwCIAgABdwNuZXcBAQIJAR4B"
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ]
+          },
+          "content": [
+            "k1"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          }
+        },
+        {
+          "id": "new",
+          "type": "paragraph",
+          "data": {
+            "text": []
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "move-survives-its-old-parents-removal",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "agent": [
+        {
+          "op": "move",
+          "id": "k1",
+          "after": "root"
+        },
+        {
+          "op": "remove",
+          "id": "tg"
+        }
+      ],
+      "updates": [
+        "AQECAIgBKQF3AmsxAQEEAAoTARULKAE="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-move-inside-itself",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "agent": [
+        {
+          "op": "move",
+          "id": "tg",
+          "parent": "k1"
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022tg\u0022 cannot move inside itself."
+      }
+    },
+    {
+      "name": "refuse-move-after-itself",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        },
+        {
+          "id": "second",
+          "type": "paragraph",
+          "data": {
+            "text": "s"
+          }
+        }
+      ],
+      "seedUpdate": "AREBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MGc2Vjb25kASgAAQgCaWQBdwZzZWNvbmQoAAEIBHR5cGUBdwlwYXJhZ3JhcGgnAAEIBGRhdGEBJwABCwR0ZXh0BgQAAQwBcycAAQgFdHVuZXMBJwABCApjb250ZW50SWRzAAgBBHJvb3QCdwRyb290dwZzZWNvbmQA",
+      "agent": [
+        {
+          "op": "move",
+          "id": "root",
+          "after": "root"
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022root\u0022 is not a child of the document root, so nothing can be placed after it."
+      }
+    },
+    {
+      "name": "refuse-move-unknown",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "move",
+          "id": "nope"
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: there is no block \u0022nope\u0022 to move."
+      }
+    },
+    {
+      "name": "refuse-move-under-a-parent-without-a-list",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "bare-block-without-content-ids",
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdCcBBmJsb2NrcwRiYXJlASgAAQkCaWQBdwRiYXJlKAABCQR0eXBlAXcGdG9nZ2xlJwABCQRkYXRhAQA=",
+      "agent": [
+        {
+          "op": "move",
+          "id": "root",
+          "parent": "bare"
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: block \u0022bare\u0022 has no children list, so nothing can be placed under it."
+      }
+    },
+    {
+      "name": "lift-then-remove-keeps-the-children",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "ASQBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMAJwEGYmxvY2tzBHJvb3QBKAABIAJpZAF3BHJvb3QoAAEgBHR5cGUBdwlwYXJhZ3JhcGgnAAEgBGRhdGEBJwABIwR0ZXh0BgQAASQBcicAASAFdHVuZXMBJwABIApjb250ZW50SWRzAAgBBHJvb3QCdwJ0Z3cEcm9vdAA=",
+      "agent": [
+        {
+          "op": "lift",
+          "id": "tg"
+        },
+        {
+          "op": "remove",
+          "id": "tg"
+        }
+      ],
+      "updates": [
+        "AQICAMgBKAEpAXcCazHIAgABKQF3AmsyAQEEAAoTAR4BKAE="
+      ],
+      "export": [
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          }
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          }
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "lift-unlisted-children-in-key-order",
+      "seed": [
+        {
+          "id": "holder",
+          "type": "toggle",
+          "data": {},
+          "content": []
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "children-re-added-out-of-order",
+      "seedUpdate": "ASMBACcBBmJsb2NrcwZob2xkZXIBKAABAAJpZAF3BmhvbGRlcigAAQAEdHlwZQF3BnRvZ2dsZScAAQAEZGF0YQEnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAnAQZibG9ja3MEcm9vdAEoAAEGAmlkAXcEcm9vdCgAAQYEdHlwZQF3CXBhcmFncmFwaCcAAQYEZGF0YQEnAAEJBHRleHQGBAABCgFyJwABBgV0dW5lcwEnAAEGCmNvbnRlbnRJZHMACAEEcm9vdAJ3BmhvbGRlcncEcm9vdCEBBmJsb2NrcwJjMgEAAQABAAEAAScBBmJsb2NrcwJjMQEoAAEVAmlkAXcCYzEoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBKAABFQhwYXJlbnRJZAF3BmhvbGRlcicBBmJsb2NrcwJjMwEoAAEaAmlkAXcCYzMoAAEaBHR5cGUBdwlwYXJhZ3JhcGgnAAEaBGRhdGEBKAABGghwYXJlbnRJZAF3BmhvbGRlcqcBEAEoAAEfAmlkAXcCYzIoAAEfBHR5cGUBdwlwYXJhZ3JhcGgnAAEfBGRhdGEBKAABHwhwYXJlbnRJZAF3BmhvbGRlcgEBARAF",
+      "agent": [
+        {
+          "op": "lift",
+          "id": "holder"
+        }
+      ],
+      "updates": [
+        "AQMCAMgBDgEPAXcCYzLIAgABDwF3AmMxyAIBAQ8BdwJjMwEBAxkBHgEjAQ=="
+      ],
+      "export": [
+        {
+          "id": "holder",
+          "type": "toggle",
+          "data": {}
+        },
+        {
+          "id": "c2",
+          "type": "paragraph",
+          "data": {}
+        },
+        {
+          "id": "c1",
+          "type": "paragraph",
+          "data": {}
+        },
+        {
+          "id": "c3",
+          "type": "paragraph",
+          "data": {}
+        },
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "retype-keeps-the-block-and-its-children",
+      "seed": [
+        {
+          "id": "tg",
+          "type": "toggle",
+          "data": {
+            "text": "t"
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": "one"
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": "two"
+          },
+          "parent": "tg"
+        }
+      ],
+      "seedUpdate": "ARwBACcBBmJsb2NrcwJ0ZwEoAAEAAmlkAXcCdGcoAAEABHR5cGUBdwZ0b2dnbGUnAAEABGRhdGEBJwABAwR0ZXh0BgQAAQQBdCcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgAAQcCdwJrMXcCazInAQZibG9ja3MCazEBKAABCgJpZAF3AmsxKAABCgR0eXBlAXcJcGFyYWdyYXBoJwABCgRkYXRhAScAAQ0EdGV4dAYEAAEOA29uZScAAQoFdHVuZXMBKAABCghwYXJlbnRJZAF3AnRnJwABCgpjb250ZW50SWRzACcBBmJsb2NrcwJrMgEoAAEVAmlkAXcCazIoAAEVBHR5cGUBdwlwYXJhZ3JhcGgnAAEVBGRhdGEBJwABGAR0ZXh0BgQAARkDdHdvJwABFQV0dW5lcwEoAAEVCHBhcmVudElkAXcCdGcnAAEVCmNvbnRlbnRJZHMACAEEcm9vdAF3AnRnAA==",
+      "agent": [
+        {
+          "op": "retype",
+          "id": "tg",
+          "type": "header",
+          "data": {
+            "text": "t",
+            "level": 2
+          }
+        }
+      ],
+      "html": [
+        {
+          "html": "t",
+          "segments": [
+            {
+              "text": "t"
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQICAKgBAgF3BmhlYWRlcigAAQMFbGV2ZWwBfQIBAQECAQ=="
+      ],
+      "export": [
+        {
+          "id": "tg",
+          "type": "header",
+          "data": {
+            "text": [
+              {
+                "text": "t"
+              }
+            ],
+            "level": 2
+          },
+          "content": [
+            "k1",
+            "k2"
+          ]
+        },
+        {
+          "id": "k1",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "one"
+              }
+            ]
+          },
+          "parent": "tg"
+        },
+        {
+          "id": "k2",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "two"
+              }
+            ]
+          },
+          "parent": "tg"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-retype-with-a-nul-type",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "retype",
+          "id": "root",
+          "type": "a\u0000b",
+          "data": {}
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: collab: a block type contains a NUL character, which this endpoint does not accept."
+      }
+    },
+    {
+      "name": "set-tunes",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setTunes",
+          "id": "root",
+          "tunes": {
+            "align": "right",
+            "colour": {
+              "bg": "red"
+            }
+          }
+        }
+      ],
+      "updates": [
+        "AQMCACgAAQYFYWxpZ24BdwVyaWdodCcAAQYGY29sb3VyASgAAgECYmcBdwNyZWQA"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          },
+          "tunes": {
+            "align": "right",
+            "colour": {
+              "bg": "red"
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "set-tunes-in-place-and-delete-one",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {},
+          "tunes": {
+            "align": "left",
+            "colour": {
+              "bg": "red",
+              "fg": "blue"
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AQwBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYnAAEABXR1bmVzASgAAQUFYWxpZ24BdwRsZWZ0JwABBQZjb2xvdXIBKAABBwJiZwF3A3JlZCgAAQcCZmcBdwRibHVlJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwRyb290AA==",
+      "agent": [
+        {
+          "op": "setTunes",
+          "id": "root",
+          "tunes": {
+            "align": null,
+            "colour": {
+              "bg": "green",
+              "fg": "blue"
+            }
+          }
+        }
+      ],
+      "updates": [
+        "AQECAKgBCAF3BWdyZWVuAQECBgEIAQ=="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": []
+          },
+          "tunes": {
+            "colour": {
+              "bg": "green",
+              "fg": "blue"
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "set-metadata-with-a-co-editor",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setMetadata",
+          "id": "root",
+          "lastEditedAt": 1700000000000.5,
+          "lastEditedBy": "u1",
+          "lastEditedWith": "agent"
+        }
+      ],
+      "updates": [
+        "AQMCACgAAQAMbGFzdEVkaXRlZEF0AXtCeLz\u002BVoAIACgAAQAMbGFzdEVkaXRlZEJ5AXcCdTEoAAEADmxhc3RFZGl0ZWRXaXRoAXcFYWdlbnQA"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          },
+          "lastEditedAt": 1700000000000.5,
+          "lastEditedBy": "u1",
+          "lastEditedWith": "agent"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "set-metadata-without-a-co-editor-removes-it",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setMetadata",
+          "id": "root",
+          "lastEditedAt": 1,
+          "lastEditedBy": "u1",
+          "lastEditedWith": "agent"
+        },
+        {
+          "op": "setMetadata",
+          "id": "root",
+          "lastEditedAt": 2,
+          "lastEditedBy": "u2"
+        }
+      ],
+      "updates": [
+        "AQUCACEAAQAMbGFzdEVkaXRlZEF0ASEAAQAMbGFzdEVkaXRlZEJ5ASEAAQAObGFzdEVkaXRlZFdpdGgBqAIAAX0CqAIBAXcCdTIBAgEAAw=="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          },
+          "lastEditedAt": 2,
+          "lastEditedBy": "u2"
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-set-metadata-on-junk",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "shape": "junk-entry-in-blocks",
+      "seedUpdate": "AQoBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdCgBBmJsb2NrcwRqdW5rAXcLbm90IGEgYmxvY2sA",
+      "agent": [
+        {
+          "op": "setMetadata",
+          "id": "junk",
+          "lastEditedAt": 1,
+          "lastEditedBy": "u1"
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: \u0022junk\u0022 is in the document but is not a block."
+      }
+    },
+    {
+      "name": "set-page-title-and-icon",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "title",
+          "value": "Plan\u0000s"
+        },
+        {
+          "op": "setPageField",
+          "key": "icon",
+          "value": {
+            "type": "emoji",
+            "value": "x\u0000y"
+          }
+        }
+      ],
+      "updates": [
+        "AQICACgBBHBhZ2UFdGl0bGUBdwVQbGFucygBBHBhZ2UEaWNvbgF2AgR0eXBldwVlbW9qaQV2YWx1ZXcCeHkA"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {
+        "title": "Plans",
+        "icon": {
+          "type": "emoji",
+          "value": "xy"
+        }
+      }
+    },
+    {
+      "name": "clear-page-title",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "page": {
+        "title": "Old",
+        "icon": {
+          "type": "emoji",
+          "value": "o"
+        }
+      },
+      "seedUpdate": "AQsBACgBBHBhZ2UFdGl0bGUBdwNPbGQoAQRwYWdlBGljb24BdgIEdHlwZXcFZW1vamkFdmFsdWV3AW8nAQZibG9ja3MEcm9vdAEoAAECAmlkAXcEcm9vdCgAAQIEdHlwZQF3CXBhcmFncmFwaCcAAQIEZGF0YQEnAAEFBHRleHQGBAABBgFyJwABAgV0dW5lcwEnAAECCmNvbnRlbnRJZHMACAEEcm9vdAF3BHJvb3QA",
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "title",
+          "value": ""
+        },
+        {
+          "op": "setPageField",
+          "key": "icon",
+          "value": null
+        }
+      ],
+      "updates": [
+        "AAEBAQAC"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "refuse-a-bad-page-icon",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "icon",
+          "value": {
+            "type": "emoji"
+          }
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: a page icon is { type: \u0022emoji\u0022, value } or { type: \u0022image\u0022, url }."
+      }
+    },
+    {
+      "name": "refuse-an-unknown-page-field",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "cover",
+          "value": "x"
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: \u0022cover\u0022 is not a page field."
+      }
+    },
+    {
+      "name": "refuse-a-page-title-that-is-not-a-string",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "setPageField",
+          "key": "title",
+          "value": 5
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: a page title is a string."
+      }
+    },
+    {
+      "name": "patch-maps",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "patchMaps",
+          "patches": [
+            {
+              "map": "values",
+              "key": "k",
+              "value": {
+                "a": [
+                  1,
+                  "b",
+                  true,
+                  null
+                ]
+              }
+            },
+            {
+              "map": "page",
+              "key": "title",
+              "value": "T"
+            },
+            {
+              "map": "values",
+              "key": "gone",
+              "remove": true
+            }
+          ]
+        }
+      ],
+      "updates": [
+        "AQICACgBBnZhbHVlcwFrAXYBAWF1BH0BdwFieH4oAQRwYWdlBXRpdGxlAXcBVAA="
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "r"
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {
+        "title": "T"
+      }
+    },
+    {
+      "name": "refuse-patch-of-an-unknown-map",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "agent": [
+        {
+          "op": "patchMaps",
+          "patches": [
+            {
+              "map": "blocks",
+              "key": "k",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "refused": {
+        "kind": "edit",
+        "message": "collab: op 0: \u0022blocks\u0022 is not a map a patch may write."
+      }
+    }
+  ]
+}

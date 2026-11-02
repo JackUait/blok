@@ -80,6 +80,12 @@ internal static class YDocConverter
   private const string GridRowsKey = "__rows";
   private const string GridOrderKey = "__rowKeys";
   private const int RowKeyLength = 10;
+
+  /// <summary>
+  /// Test seam: mints grid row keys in place of the random source, for this
+  /// async flow only, so a capture can pin the bytes of an edit that adds a row.
+  /// </summary>
+  internal static readonly AsyncLocal<Func<string>?> RowKeySource = new();
   private const double MaxSafeInteger = 9007199254740992d;
 
   /// <summary>The client's built-in title/icon map and its history.track map (document-store.ts).</summary>
@@ -3397,7 +3403,8 @@ internal static class YDocConverter
 
     internal static string GenerateRowKey()
     {
-      return new string(RandomNumberGenerator.GetItems<char>(RowKeyAlphabet, RowKeyLength));
+      return RowKeySource.Value?.Invoke() ??
+          new string(RandomNumberGenerator.GetItems<char>(RowKeyAlphabet, RowKeyLength));
     }
 
     /// <summary>

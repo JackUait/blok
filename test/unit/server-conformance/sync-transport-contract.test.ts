@@ -29,9 +29,8 @@ import { startServer, type RunningServer } from './run-against';
 /**
  * The sync door and socket as raw bytes: what is answered before the
  * upgrade, and every close code and reason after it. Each case asserts only
- * the transport outcome, never the room's frames, so it holds for C#'s real
- * room and for the conformance build of the Go server, whose room is an
- * echo stand-in until the room lands.
+ * the transport outcome, never the room's frames. The last block pins the
+ * two closes the room itself decides on a frame's content.
  *
  * Message type 105 is unassigned, so a room ignores it: it is the payload
  * for every frame that must reach the room and do nothing there.
@@ -548,6 +547,48 @@ describe('sync transport: a served socket', () => {
       awareness[0] = 1;
       socket.sendFrame(FIN | OP_BINARY, awareness);
       expect(await socket.closed()).toMatchObject({ code: 1008, reason: 'inbound rate exceeded' });
+    });
+  }, TEST_TIMEOUT_MS);
+});
+
+describe('sync transport: closes the room decides', () => {
+  // [sync, SyncStep2, an empty Yjs update] and [sync, Update, the same].
+  const rawWrites = [Buffer.from([0, 1, 2, 0, 0]), Buffer.from([0, 2, 2, 0, 0])];
+
+  it('closes a v2 member that sends a raw write 1008, and serves the same frame from a v1 member', async () => {
+    await withServer({ journal: true }, async ({ open }) => {
+      for (const write of rawWrites) {
+        const v2 = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', V2]] });
+
+        v2.sendFrame(FIN | OP_BINARY, write);
+        expect(await v2.closed()).toMatchObject({ code: 1008, reason: 'raw write on a v2 session' });
+
+        const v1 = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', V1]] });
+
+        v1.sendFrame(FIN | OP_BINARY, write);
+        await expectStillServed(v1);
+      }
+    });
+  }, TEST_TIMEOUT_MS);
+
+  it('closes the third malformed awareness frame 1008, and never counts one over the client cap', async () => {
+    // [awareness, length 1, a count of 5 with no entries]; then a count of 257.
+    const malformed = Buffer.from([1, 1, 5]);
+    const overCap = Buffer.from([1, 2, 0x81, 0x02]);
+
+    await useServer('none', async ({ open }) => {
+      const two = await open('/sync/doc-awareness');
+
+      two.sendFrames([
+        ...Array.from({ length: 5 }, () => ({ first: FIN | OP_BINARY, payload: overCap })),
+        ...Array.from({ length: 2 }, () => ({ first: FIN | OP_BINARY, payload: malformed })),
+      ]);
+      await expectStillServed(two);
+
+      const three = await open('/sync/doc-awareness');
+
+      three.sendFrames(Array.from({ length: 3 }, () => ({ first: FIN | OP_BINARY, payload: malformed })));
+      expect(await three.closed()).toMatchObject({ code: 1008, reason: 'malformed awareness' });
     });
   }, TEST_TIMEOUT_MS);
 });

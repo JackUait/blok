@@ -29,6 +29,15 @@ type (
 // fails instead of retrying.
 var ErrFenceLost = journal.ErrFenceLost
 
+// ArgumentError is ArgumentException; with OutOfRange it is
+// ArgumentOutOfRangeException. InvalidDataError is InvalidDataException.
+// A checkpoint that fails with ErrFenceLost, an out-of-range ArgumentError
+// or an InvalidDataError fails the room at once; any other error is retried.
+type (
+	ArgumentError    = journal.ArgumentError
+	InvalidDataError = journal.InvalidDataError
+)
+
 // OpenOutcome is CollabDocumentOpenOutcome. A session comes back only with
 // Opened.
 type OpenOutcome = journal.OpenOutcome

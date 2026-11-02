@@ -2,9 +2,11 @@ package blokserver_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -107,7 +109,7 @@ func hostServer(t *testing.T, configure func(*blokserver.Options)) *httptest.Ser
 func edit(t *testing.T, base, doc, key string) *http.Response {
 	t.Helper()
 	request, _ := http.NewRequest(http.MethodPost, base+"/sync/"+doc+"/edit",
-		strings.NewReader(`{"ops":[{"op":"insert","id":"a","block":{"type":"paragraph","data":{"text":"x"}}}]}`))
+		strings.NewReader(`{"ops":[{"op":"insert","id":"`+key+`","block":{"type":"paragraph","data":{"text":"x"}}}]}`))
 	request.Header.Set("Blok-Idempotency-Key", key)
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -188,5 +190,58 @@ func TestAHostActivityObserverHearsAnEdit(t *testing.T) {
 	}
 	if got := strings.Join(observer.seen(), ","); got != "doc u1 Edited" {
 		t.Fatalf("observed %q", got)
+	}
+}
+
+// failingCheckpoints wraps each session so its checkpoint fails with err.
+type failingCheckpoints struct {
+	inner room.LocalJournal
+	err   error
+}
+
+func (f failingCheckpoints) Open(ctx context.Context, docID string) (collabstore.OpenOutcome, collabstore.OperationSession, error) {
+	outcome, session, err := f.inner.Open(ctx, docID)
+	if session == nil {
+		return outcome, nil, err
+	}
+	return outcome, failingSession{session, f.err}, err
+}
+
+type failingSession struct {
+	collabstore.OperationSession
+	err error
+}
+
+func (s failingSession) WriteCheckpoint(context.Context, collabstore.Checkpoint) error { return s.err }
+
+// T4: a host store fails a checkpoint with the same error values the
+// built-in journal uses. Unreadable data fails the room, so the next edit
+// is refused; any other error is retried and edits go on.
+func TestAHostStoresCheckpointErrorDecidesBetweenFailAndRetry(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		err    error
+		status int
+	}{
+		{"invalid data", &collabstore.InvalidDataError{Message: "unreadable"}, http.StatusServiceUnavailable},
+		{"out of range", &collabstore.ArgumentError{Message: "sequence", OutOfRange: true}, http.StatusServiceUnavailable},
+		{"fence lost", collabstore.ErrFenceLost, http.StatusServiceUnavailable},
+		{"other", errors.New("disk busy"), http.StatusNoContent},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			store := failingCheckpoints{localJournal(t), c.err}
+			host := hostServer(t, func(o *blokserver.Options) { o.CollabOperationStore = store })
+			// 64 operations since the last checkpoint publish the next one.
+			for i := 1; i <= 64; i++ {
+				if response := edit(t, host.URL, "doc", "k"+strconv.Itoa(i)); response.StatusCode != http.StatusNoContent {
+					t.Fatalf("edit %d: %d", i, response.StatusCode)
+				}
+			}
+			// The checkpoint is queued behind edit 64, so it runs before this one.
+			status := edit(t, host.URL, "doc", "after").StatusCode
+			if status != c.status {
+				t.Fatalf("the edit after the checkpoint answered %d, want %d", status, c.status)
+			}
+		})
 	}
 }

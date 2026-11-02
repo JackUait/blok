@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -73,6 +75,22 @@ func (t *trackingWriter) Write(b []byte) (int, error) {
 	}
 	t.wrote = true
 	return t.ResponseWriter.Write(b)
+}
+
+// Hijack marks the writer done before handing the conn over, so the
+// deadline never writes a 504 onto a WebSocket. ResponseController finds
+// this method before it unwraps.
+func (t *trackingWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.timedOut {
+		return nil, nil, http.ErrHandlerTimeout
+	}
+	conn, buffered, err := http.NewResponseController(t.ResponseWriter).Hijack()
+	if err == nil {
+		t.wrote = true
+	}
+	return conn, buffered, err
 }
 
 // Unwrap lets http.ResponseController reach Flush and the deadlines.

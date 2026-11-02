@@ -126,10 +126,16 @@ func (s *Server) Handler(prefix string) http.Handler {
 			Authorization:   o.Authorization,
 			Rooms:           s.collab.get,
 			MaxMessageBytes: o.CollabMaxMessageBytes,
+			CorruptLog:      s.corruptLog,
 		})
 		s.shell(router, prefix+"/sync/{doc}/reset", "POST", routes.Reset)
 		s.shell(router, prefix+"/sync/{doc}/edit", "POST", routes.Edit)
 		s.shell(router, prefix+"/sync/{doc}/state", "GET", routes.State)
+		s.shell(router, prefix+"/sync/{doc}/history", "GET", routes.HistoryList)
+		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}", "GET", routes.HistoryRead)
+		s.shell(router, prefix+"/sync/{doc}/history/{lineage}", "DELETE", routes.HistoryDelete)
+		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}/restore", "POST", routes.HistoryRestore)
+		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}/changes", "GET", routes.HistoryChanges)
 	}
 	return router
 }

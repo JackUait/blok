@@ -309,8 +309,7 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     });
   });
 
-  // The Go host does not serve these routes yet.
-  describe.skipIf(skipOnGo)('a host with unfurl and collab routes', () => {
+  describe.skipIf(noServer)('a host with unfurl and collab routes', () => {
     let server: RunningServer;
     let endpoint: FixtureDocEndpoint;
     let collabDirectory: string;

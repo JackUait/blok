@@ -6,6 +6,7 @@ package room
 
 import (
 	"context"
+	"iter"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
@@ -99,4 +100,15 @@ func (k ActivityKind) String() string {
 // lane, one at a time per room, in the order the room produced them.
 type ActivityObserver interface {
 	Record(ctx context.Context, docID, actorID string, at time.Time, kind ActivityKind) error
+}
+
+// HistoryStore is ICollabOperationHistoryStore: the reads behind the history
+// routes. LocalJournal is one.
+type HistoryStore interface {
+	IsPurged(ctx context.Context, docID string) (bool, error)
+	ListLineages(ctx context.Context, docID string) ([]journal.LineageInfo, error)
+	ReadBaseline(ctx context.Context, docID, lineage string) ([][]byte, bool, error)
+	ReadHeaders(ctx context.Context, docID, lineage string) iter.Seq2[journal.RecordHeader, error]
+	ReadRecords(ctx context.Context, docID, lineage string, through uint64) iter.Seq2[operation.Record, error]
+	DeleteLineage(ctx context.Context, docID, lineage string) (journal.LineageDeleteOutcome, error)
 }

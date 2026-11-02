@@ -26,6 +26,9 @@ type Config struct {
 	// Rooms builds the room manager on first use.
 	Rooms           func() (*room.Manager, error)
 	MaxMessageBytes int
+	// CorruptLog reports an unreadable stored version: C# logs it at Error,
+	// event id 3 (CollabHistoryCorrupt).
+	CorruptLog func(doc string)
 }
 
 // Handlers serves the routes.

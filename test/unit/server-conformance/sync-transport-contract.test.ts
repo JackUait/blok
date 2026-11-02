@@ -40,9 +40,6 @@ const unset = (name: string): boolean =>
   process.env[name] === undefined || process.env[name] === '';
 
 const it = baseIt.skipIf(unset('BLOK_CONFORMANCE_SERVER'));
-const onGo = process.env.BLOK_CONFORMANCE_TARGET === 'go';
-/** The Go room stand-in has no operation store, so it never selects v2. */
-const itNeedsAStore = baseIt.skipIf(unset('BLOK_CONFORMANCE_SERVER') || onGo);
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
 const V1 = 'blok-sync.v1';
@@ -349,7 +346,7 @@ describe('sync transport: subprotocol', () => {
     });
   }, TEST_TIMEOUT_MS);
 
-  itNeedsAStore('selects blok-sync.v2 when the server keeps a journal', async () => {
+  it('selects blok-sync.v2 when the server keeps a journal', async () => {
     await withServer({ journal: true }, async ({ open }) => {
       const both = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', `${V1}, ${V2}`]] });
 

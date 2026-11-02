@@ -58,6 +58,12 @@ func (s *Server) collabLog(message string) {
 	}
 }
 
+func (s *Server) corruptLog(doc string) {
+	if logger := s.options.Logger; logger != nil {
+		logger.Error(`collab: a stored version of "`+doc+`" could not be read`, slog.String("category", CollabLogCategory))
+	}
+}
+
 func (s *Server) buildRoomManager() (*room.Manager, error) {
 	o := &s.options
 	var store room.WorkingSetStore

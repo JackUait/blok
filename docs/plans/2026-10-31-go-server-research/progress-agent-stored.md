@@ -92,7 +92,7 @@ W1-W9 DONE: host.json pins each request byte for byte (W1 option combos, W2 room
 ## Decisions
 
 - **T5 runtime name: Go reports what C# reports; no bundle change.** The bundle reads `input.runtime` only as a capability switch: `src/view/server-runtime.ts:497-498` (`csharp-live` or else `jint` + `carriesHistory`), used by `src/shared/tool-manifest.ts:376-378` (`PREPARES_INSERT`), `:392` and `:535` (`UNDO_RUNNERS`), `:423`/`:534` (editor-only commands) and `:434` (comments). The name never appears in an answer: the contract's `runtime` field is the command's own `'any'|'editor'` (`tool-manifest.ts:547,566`). Go sends the same input bytes as C# (host.json pins the stored inputs with no `runtime` and the room contract with `csharp-live`), so every answer matches. A `go-live` name would only copy `csharp-live`'s capabilities and change the shared bundle, whose bytes the bundle law ties to the C# copy (U9).
-- **T3 `group: 15.0`: DEFERRED to the room lane.** It is read only in `RunVersionReadAsync` (`BlokAgentExecutor.cs:938-941`), a room-only path. C# `TryGetValue<int>` refuses `15.0`, so the list falls back to no grouping. The room lane needs a jsjson integer read that refuses number text with a fraction or exponent (`15.0`, `1.5e1`).
+- **T3 `group: 15.0`: DEFERRED to the room lane.** It is read only in `RunVersionReadAsync` (`BlokAgentExecutor.cs:938-941`), a room-only path. C# `TryGetValue<int>` refuses `15.0` (per the ledger's probe `probe2.fsx`, not re-run this round), so the list falls back to no grouping. The room lane needs a jsjson integer read that refuses number text with a fraction or exponent (`15.0`, `1.5e1`).
 - **T21 failure key order**: host.json pins the exact failure bytes (`ok, error, warnings, revision`, no empty `revision`).
 - **Observation (bundle, not ported code)**: a session batch `{"name":"history.undo"}` with no `args` makes the bundle throw, and Go returns `*blokdocs.ConversionError` (InvalidDocument) rather than an INVALID_ARGS result. Same bundle bytes run in Jint; that C# answers the same is UNVERIFIED.
 
@@ -102,7 +102,7 @@ All of these run on the live-room path, which needs a Go `CollabEditOp` applier 
 
 - 2e-2h (dispatch order, room undo/redo, translator, version history) and F9-F28.
 - The room CORPUS runner (52 cases with the `room` expectations).
-- MOVES (`agent-moves.json`) and PFIELDS (`agent-page-fields.json`): `AgentRoomOpsTests` applies `CollabEditOp.Move`/`SetPageField` to a YDoc through `RichTextRuntime.ApplyOps`; they test room ops, not the stored executor.
+- MOVES (`agent-moves.json`) and PFIELDS (`agent-page-fields.json`): `AgentRoomOpsTests` applies `CollabEditOp.Move`/`SetPageField` to a YDoc through `RichTextRuntime.ApplyOps`; they test room ops, not the stored executor. Owner: collab ledger row E10 (`collab.md:214`, agent-only ops, fixtures `agent-moves.json` and `agent-page-fields.json`).
 - T2, T4, T6-T14, T17, T18, T20 (room traps). T3 as above.
 - 2i shared lanes (collab/http-host).
 

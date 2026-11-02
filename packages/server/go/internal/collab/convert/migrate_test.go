@@ -69,7 +69,15 @@ func TestMigrateRichTextWritesWhatCSharpWrites(t *testing.T) {
 			fields := BuiltInRichTextFields()
 			if c.CustomFields != nil {
 				var err error
-				if fields, err = NewRichTextFields(c.CustomFields); err != nil {
+				// One type per case, so the map's order does not matter.
+				if len(c.CustomFields) > 1 {
+					t.Fatal("a case with several custom types needs their order")
+				}
+				var custom []RichTextFieldEntry
+				for kind, list := range c.CustomFields {
+					custom = append(custom, RichTextFieldEntry{kind, list})
+				}
+				if fields, err = NewRichTextFields(custom); err != nil {
 					t.Fatal(err)
 				}
 			}

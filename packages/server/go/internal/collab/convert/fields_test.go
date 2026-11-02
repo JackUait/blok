@@ -31,7 +31,7 @@ func TestBuiltInRichTextFieldsEqualTheClientTable(t *testing.T) {
 }
 
 func TestCustomRichTextFieldsAddToTheBuiltIns(t *testing.T) {
-	fields, err := NewRichTextFields(map[string][]string{"callout": {"title", "body"}, "paragraph": {"note"}})
+	fields, err := NewRichTextFields([]RichTextFieldEntry{{"callout", []string{"title", "body"}}, {"paragraph", []string{"note"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestCustomRichTextFieldsAddToTheBuiltIns(t *testing.T) {
 		!fields.IsRich("paragraph", "note") || fields.IsRich("callout", "text") || BuiltInRichTextFields().IsRich("callout", "title") {
 		t.Fatal("custom fields did not add to the built-ins")
 	}
-	empty, err := NewRichTextFields(map[string][]string{"divider": {}})
+	empty, err := NewRichTextFields([]RichTextFieldEntry{{"divider", []string{}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,9 +47,18 @@ func TestCustomRichTextFieldsAddToTheBuiltIns(t *testing.T) {
 	if got, ok := empty.Table()["divider"]; !ok || len(got) != 0 {
 		t.Fatalf("divider: %v %v", got, ok)
 	}
-	for _, bad := range []map[string][]string{{"": {"text"}}, {"callout": {""}}, {"call\x00out": {"text"}}, {"callout": {"ti\x00tle"}}, {"callout": nil}} {
-		if _, err := NewRichTextFields(bad); err == nil {
+	for _, bad := range []RichTextFieldEntry{{"", []string{"text"}}, {"callout", []string{""}}, {"call\x00out", []string{"text"}}, {"callout", []string{"ti\x00tle"}}, {"callout", nil}} {
+		if _, err := NewRichTextFields([]RichTextFieldEntry{bad}); err == nil {
 			t.Errorf("%q accepted", bad)
 		}
+	}
+}
+
+// C# walks the custom list in its given order and refuses the first bad
+// entry (RichTextFields.With), so Go must report that one too.
+func TestTheFirstBadEntryInInputOrderIsReported(t *testing.T) {
+	_, err := NewRichTextFields([]RichTextFieldEntry{{Type: "z", Fields: nil}, {Type: "", Fields: []string{"text"}}})
+	if err == nil || err.Error() != `rich text fields: block type "z" has a null field list.` {
+		t.Fatal(err)
 	}
 }

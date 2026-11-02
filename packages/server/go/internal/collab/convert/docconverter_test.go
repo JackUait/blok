@@ -125,7 +125,7 @@ func TestExportReadsLegacyHtmlTextAsSegments(t *testing.T) {
 }
 
 func TestCustomRichFieldsComeFromTheConstructor(t *testing.T) {
-	fields, err := NewRichTextFields(map[string][]string{"callout": {"title"}})
+	fields, err := NewRichTextFields([]RichTextFieldEntry{{"callout", []string{"title"}}})
 	if err != nil {
 		t.Fatal(err)
 	}

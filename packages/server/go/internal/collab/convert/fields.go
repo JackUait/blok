@@ -30,27 +30,29 @@ func BuiltInRichTextFields() *RichTextFields {
 	return &RichTextFields{table: builtInFields()}
 }
 
+// RichTextFieldEntry is one custom block type and its rich fields.
+type RichTextFieldEntry struct {
+	Type   string
+	Fields []string
+}
+
 // NewRichTextFields adds custom fields to the built-ins; an empty or NUL
-// name, or a nil list, is refused as C# refuses it at startup.
-func NewRichTextFields(custom map[string][]string) (*RichTextFields, error) {
+// name, or a nil list, is refused as C# refuses it at startup. The entries are
+// read in order, so the first bad one is the one reported, as in C#.
+func NewRichTextFields(custom []RichTextFieldEntry) (*RichTextFields, error) {
 	table := builtInFields()
-	types := make([]string, 0, len(custom))
-	for kind := range custom {
-		types = append(types, kind)
-	}
-	sort.Strings(types)
-	for _, kind := range types {
+	for _, entry := range custom {
+		kind := entry.Type
 		if err := checkFieldName(kind, "block type"); err != nil {
 			return nil, err
 		}
-		fields := custom[kind]
-		if fields == nil {
+		if entry.Fields == nil {
 			return nil, fmt.Errorf("rich text fields: block type \"%s\" has a null field list.", kind)
 		}
 		if _, ok := table[kind]; !ok {
 			table[kind] = []string{}
 		}
-		for _, field := range fields {
+		for _, field := range entry.Fields {
 			if err := checkFieldName(field, fmt.Sprintf("field of \"%s\"", kind)); err != nil {
 				return nil, err
 			}

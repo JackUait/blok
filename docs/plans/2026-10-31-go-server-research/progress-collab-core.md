@@ -1,4 +1,4 @@
-# Progress: collab-core lane (round 1, 2026-10-31)
+# Progress: collab-core lane (round 2, 2026-11-02)
 
 Branch `go/collab-core`, worktree `/Users/jackuait/Packages/.blok-go/collab-core`. Read this first next round.
 
@@ -40,6 +40,9 @@ fixture is stale), or a Go twin of a C# test.
 | D1-D7 doc endpoint client | DONE | Go twins of all `DocEndpointClientTests` (`internal/collab/docendpoint`), plus .NET probes: STJ write and read depth 512 ok / 513 refused, `1E+21`, default-encoder escapes, `0.###` seconds. The default transport sends only Host and Accept on a GET, like C# (probed with a raw listener): no User-Agent, compression off so the cap counts raw bytes; pinned by an httptest test. Known gap: net/http has no pooled-connection lifetime (C# 5 min); IdleConnTimeout 5 min instead. SC black-box oracle needs the room (collab-room lane) |
 | P4r local working-set store | DONE | Go twins of all `LocalCollabStoreTests` + `LocalCollabStoreDirectoryModeTests` (`workingset/local_test.go`); the file is exactly `EncodeDocument`, which `codecs.json` pins, so C# and Go read each other's files; mutation-checked |
 | P5r S3 working-set store | DONE | Go twins of `S3CollabStoreTests` against the `ObjectStore` seam that `blob.S3` satisfies (compile-time check); SigV4, 404 and 403 handling are `internal/blob`'s own tests |
+| X4 apply ops | DONE | `fixtures/collab-edits/cases.json` (C# `YDocConverterEditCaptureTests`, 106 cases): seed bytes as client 1, ops as client 2; Go `apply_test.go` emits the SAME update bytes, export and page, or the same refusal with nothing written. Covers insert/update/remove, every agent op, odd peer shapes (number slot in the order, duplicate order entries, junk entry, block without contentIds, legacy Y.Text, data that is not a map, foreign XmlText), grids (rowId and minted keys), identity lists, list slots, ordered ids, element pairing, numbers. Mutation-checked (12 mutants; 2 judged equivalent, see Decisions). Go twins: `TestRemovalVisitsOnlyTheSubtree` (Visited), `TestAStepThatFailsMidWriteIsAServerError` |
+| T15 number equality | DONE | probed .NET 10 `JsonNode.DeepEquals`: a live integer within 2^53 (NumberNode long) compares to the request text by exact decimal value; any other live number by GetDouble. Go `numberEqual`/`decimalIsInteger`; fixture cases `numbers-*`, `arrays-numbers-pair-by-value` |
+| E9 HTML field cap | DONE | Go twins of `AnEditHtmlFieldPastTheCapIsRefusedAsTooLargeBeforeAnyRead`, `AnEditThatOnlyRespellsTheHtmlWritesNothing`, `AnEditReadsHtmlForTheBlocksTypeInTheDoc`, the edit half of `SeedAndMigrationReadWithTheOneTimeBudget`, plus UTF-16 counting and the read-failure mapping (retry / refusal / cancel) |
 | X5 / P5 / T7 key lists | DONE | `fixtures/converter-keys.json`; client tests, C# `ConverterKeysFixtureTests`, Go `keys_test.go` |
 
 ## Section 3 constants and section 6 traps
@@ -47,27 +50,35 @@ fixture is stale), or a Go twin of a C# test.
 - Section 3 DONE: MaxEditHtmlChars/MaxCallChars (32768 units, reader tests), MigrationReadTimeout 60 s, MaxValueDepth/JsonMaxDepth 256/512, TextDiff 64/3/32, journal 32 MiB / 4 KiB, doc endpoint 64 MiB / 512 B / 10 s connect / 30 s request (option). Pool lifetime 5 min: documented gap.
 - Section 3 OPEN: local op store DefaultMaxUpdateBytes 1 MiB (P14r).
 - Section 6 DONE: T2, T3, T5 (runtime reader), T6, T7, T16.
-- Section 6 OPEN: T1 and T21 (wait on the op store, P8r), T15 (`DeepEquals(1, 1.0)` in RowSimilarity, part of X4).
+- Section 6 OPEN: T1 and T21 (wait on the op store, P8r).
 
 ## Partial rows (counted as remaining)
 
 - E2: the parse half (key -> op id) is DONE; the header handling belongs to the edit endpoint (collab-room).
-- E9: the 32768-unit refusal before any read waits for DocConverter.ApplyOps (X4).
 - X3: page fields done both ways; ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure not ported.
 
 ## Remaining (next round, in this order)
 
-1. X4 ApplyOps (`YDocConverter.cs:390-480`, `EditPlanner` `:870-1630`, `EditStep` `:1630-1980`, the diff-merge `Entry/Map/Array/Element/Grid/Identity` `:1982-2880`). Needs a new C# capture `{seed, ops} -> export` (no /edit oracle); `agent-moves.json` and `agent-page-fields.json` cover the agent ops.
-2. DocConverter.ApplyOps (E9 cap before any read, transient/edit error mapping) once X4 lands; then X6 migration (`fixtures/collab-format1`) + MigrateRichText.
-4. P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, X12 replay.
-5. X3 rest: ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure.
+1. X6 migration (`fixtures/collab-format1`) + `MigrateRichText` / `CollectLegacyRichText` + `DocConverter.MigrateRichText` (the migration half of the one-time-budget twin).
+2. X12 history replay (`CollabHistoryReplay.cs`, 101 lines, on the journal codecs already ported).
+3. X3 rest: ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure.
+4. P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, then T1/T21.
+
+## Decisions (round 2)
+
+- X4 oracle is update BYTES, not export: the yjs lane proved both engines encode the same. A test-only seam `YDocConverter.RowKeySource` (AsyncLocal, so parallel xunit classes are untouched) mints grid row keys from a counter in the capture; Go swaps `GenerateRowKey`. The Go test calls `CollectOpsHTML` before `ApplyOps`, as the room does: both plan, and planning mints keys (Screen builds the grids), so the call order shows in the bytes.
+- HTML in the edit cases is read by C#'s runtime and recorded with its segments in the fixture; Go builds `Converting` from them, so the apply test needs no runtime.
+- Edit values keep each number's text (`sourceNumber`, from `editValue`); `atomicValue` turns it into a float64 on write. Seed values stay float64.
+- Equivalent mutants left: unlinking a doomed holder (the holder's map is already gone, so the step is a no-op), and reading the freed-key set before the row removals (a removed key can never be a new row's id: pairing by id would have claimed it).
+- C# `AnyCodec.Write` refuses a map-patch value only when it runs out of stack; Go has no such limit, so a patch nested past 4096 levels is accepted by Go and could fail C#'s decode at apply time. Unreachable from restore (values come from the doc).
+- Map key order: both engines list live keys in first-set order (C# `Dictionary` never removes a key, Go keeps entries). Pinned by `lift-unlisted-children-in-key-order` (a key deleted and re-set keeps its first place); this settles the round-1 UNVERIFIED note.
 
 ## Decisions (round 1, second run)
 
 - Converter values are JS values (`*jsjson.Object`, `[]any`, `jsjson.Str`, float64, bool, nil), plus int64 for a peer bigint on export. Seed input is `jsjson.Node`, read strictly per block: a lone-surrogate escape fails as `ErrNotUnicode` (C#: InvalidOperationException from GetValue<string>, probed with dotnet fsi), not as a `DataError`.
 - Block ids are kept as UTF-16 unit keys internally, so ordinal order and lone surrogates match C# exactly.
 - Probed (.NET 10, dotnet fsi): `JsonElement.GetDouble` reads `1e400` as +Infinity; `JsonObject` set on an existing key keeps its place; `EnumerateRunes` gives U+FFFD for a lone surrogate.
-- UNVERIFIED: that Go `yjs.Map.Keys` order equals C# `YMap.Keys` (a Dictionary) after deletes. Export key order reaches the doc-endpoint PUT body; the fixture compare ignores key order.
+- Map key order after deletes: now pinned by the collab-edits bytes (see round 2).
 
 ## C# bugs fixed
 

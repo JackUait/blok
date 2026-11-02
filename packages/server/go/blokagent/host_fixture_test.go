@@ -109,11 +109,13 @@ func pinned(text *string) any {
 }
 
 type recorder struct {
-	t       *testing.T
-	events  []any
-	cancel  context.CancelFunc
-	host    fixtureHost
-	creates int
+	t      *testing.T
+	events []any
+	cancel context.CancelFunc
+	// What the scripted host and runtime throw for "cancel".
+	cancelErr error
+	host      fixtureHost
+	creates   int
 }
 
 var errHostFailure = errors.New("The host's page store is down.")
@@ -124,7 +126,7 @@ func (r *recorder) hook(name string) error {
 	}
 	switch r.host.ThrowOn[name] {
 	case "cancel":
-		return context.Canceled
+		return r.cancelErr
 	case "error":
 		return errHostFailure
 	}
@@ -211,7 +213,7 @@ func (f *fixtureRuntime) Invoke(ctx context.Context, op, input string, timeout t
 	switch step.Throw {
 	case "":
 	case "cancel":
-		return "", context.Canceled
+		return "", f.r.cancelErr
 	default:
 		kinds := map[string]jsruntime.Kind{
 			"Unknown":          jsruntime.KindUnknown,
@@ -231,13 +233,13 @@ func (f *fixtureRuntime) Invoke(ctx context.Context, op, input string, timeout t
 	return scripted(f.r.t, step.Answer), nil
 }
 
-func errorShape(err error) map[string]any {
+func errorShape(err, cancelErr error) map[string]any {
 	var conversion *blokdocs.ConversionError
 	var argument *ArgumentError
 	var syntax *JSONError
 	var invalid *InvalidOperationError
 	switch {
-	case errors.Is(err, context.Canceled):
+	case errors.Is(err, cancelErr):
 		return map[string]any{"error": map[string]any{"kind": "cancelled"}}
 	case errors.As(err, &conversion):
 		return map[string]any{"error": map[string]any{"kind": "conversion", "reason": conversion.Reason.String()}}
@@ -261,10 +263,16 @@ func executionShape(execution Execution) map[string]any {
 	}
 }
 
-func runHostCase(t *testing.T, c hostCase) ([]any, []any) {
+func runHostCase(t *testing.T, c hostCase, deadline bool) ([]any, []any) {
+	var ctx context.Context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	r := &recorder{t: t, cancel: cancel, host: c.Host, events: []any{}}
+	var cancelErr error = context.Canceled
+	if deadline {
+		ctx = deadlineContext{ctx}
+		cancelErr = context.DeadlineExceeded
+	}
+	r := &recorder{t: t, cancel: cancel, cancelErr: cancelErr, host: c.Host, events: []any{}}
 	runtime := &fixtureRuntime{r: r, script: c.Runtime}
 	executor := newExecutor(runtime)
 	actor := Actor{ID: c.Actor.ID, Name: c.Actor.Name, OnBehalfOf: c.Actor.OnBehalfOf}
@@ -328,7 +336,7 @@ func runHostCase(t *testing.T, c hostCase) ([]any, []any) {
 		}
 		switch {
 		case err != nil:
-			results = append(results, errorShape(err))
+			results = append(results, errorShape(err, cancelErr))
 		case strings.HasSuffix(c.Call, "Contract"):
 			results = append(results, map[string]any{"contract": contract})
 		default:
@@ -370,7 +378,7 @@ func TestMatchesTheSharedHostFixture(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			events, results := runHostCase(t, c)
+			events, results := runHostCase(t, c, false)
 			if got, want := normal(t, events), normal(t, c.Events); !reflect.DeepEqual(got, want) {
 				t.Errorf("events\n got %s\nwant %s", mustJSON(got), mustJSON(want))
 			}
@@ -384,4 +392,69 @@ func TestMatchesTheSharedHostFixture(t *testing.T) {
 func mustJSON(value any) string {
 	raw, _ := json.Marshal(value)
 	return string(raw)
+}
+
+// deadlineContext reports a cancel as a passed deadline. blokagent derives
+// no context of its own, so its Err is what the executor sees.
+type deadlineContext struct{ context.Context }
+
+func (c deadlineContext) Err() error {
+	if c.Context.Err() != nil {
+		return context.DeadlineExceeded
+	}
+	return nil
+}
+
+// C# has one cancel exception, a timeout included, so the fixture cannot
+// tell a deadline from a cancel. Each cancel case is replayed with the
+// caller's deadline passing instead, and must answer the same.
+func TestACallerDeadlineAnswersAsACancel(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "test/unit/server-conformance/fixtures/agent/host.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []hostCase
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	stranded := 0
+	for _, c := range cases {
+		if !cancels(c) {
+			continue
+		}
+		t.Run(c.Name, func(t *testing.T) {
+			events, results := runHostCase(t, c, true)
+			if got, want := normal(t, events), normal(t, c.Events); !reflect.DeepEqual(got, want) {
+				t.Errorf("events\n got %s\nwant %s", mustJSON(got), mustJSON(want))
+			}
+			if got, want := normal(t, results), normal(t, c.Results); !reflect.DeepEqual(got, want) {
+				t.Errorf("results\n got %s\nwant %s", mustJSON(got), mustJSON(want))
+			}
+		})
+		if strings.Contains(mustJSON(c.Results), "ORPHANED_SIDE_EFFECT") {
+			stranded++
+		}
+	}
+	// A cancel after pages were made is where a deadline could turn into a
+	// retryable APPLY_FAILED.
+	if stranded == 0 {
+		t.Fatal("no replayed case cancels after pages were made")
+	}
+}
+
+func cancels(c hostCase) bool {
+	if c.Cancelled || c.Host.CancelOn != "" {
+		return true
+	}
+	for _, how := range c.Host.ThrowOn {
+		if how == "cancel" {
+			return true
+		}
+	}
+	for _, step := range c.Runtime {
+		if step.Throw == "cancel" || step.CancelAfter {
+			return true
+		}
+	}
+	return false
 }

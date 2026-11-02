@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 )
 
 // recordingHandler keeps every record with its category.
@@ -110,5 +111,44 @@ func TestPurgeDocumentRefusesThenTombstones(t *testing.T) {
 	}
 	if _, err := s.PurgeDocument(context.Background(), "x", nil); !errors.Is(err, ErrNoAuthorize) {
 		t.Fatal("a nil authorize callback was accepted")
+	}
+}
+
+// Shutdown does not wait for hijacked sockets, so Drain does: a member's
+// 1001 close is only queued when the rooms are closed, and the process
+// must not exit before its pump writes it (Kestrel waits for upgraded
+// connections up to the shutdown timeout).
+func TestDrainWaitsForOpenSyncConnectionsUpToItsContext(t *testing.T) {
+	s, err := New(collabOptions(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	slot := s.connections.TryEnter()
+	done := make(chan error, 1)
+	go func() { done <- s.Drain(context.Background()) }()
+	select {
+	case err := <-done:
+		t.Fatalf("Drain returned with a connection still open: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	slot.Release()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Drain did not return once the connection ended")
+	}
+
+	// Past its context the wait gives up quietly, as Kestrel aborts what is
+	// left at the shutdown timeout without a warning of its own.
+	held := s.connections.TryEnter()
+	defer held.Release()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	if err := s.Drain(ctx); err != nil || time.Since(started) > time.Second {
+		t.Fatalf("a drain cut off by its context: %v after %s", err, time.Since(started))
 	}
 }

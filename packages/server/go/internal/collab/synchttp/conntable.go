@@ -37,6 +37,9 @@ func (s *Slot) Release() {
 	}
 }
 
+// Live is the number of sync connections whose request has not ended.
+func (t *ConnectionTable) Live() int64 { return t.live.Load() }
+
 // TryEnter is nil when the process is at its ceiling.
 func (t *ConnectionTable) TryEnter() *Slot {
 	if t.live.Add(1) > t.ceiling && t.ceiling > 0 {

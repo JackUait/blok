@@ -85,7 +85,20 @@ func (s *Server) Drain(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return manager.Drain(ctx)
+	if err := manager.Drain(ctx); err != nil {
+		return err
+	}
+	// http.Server.Shutdown does not wait for hijacked sockets, and each
+	// member's close is only queued: wait for the sockets, as Kestrel waits
+	// for upgraded connections, until ctx ends.
+	for s.connections.Live() > 0 {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	return nil
 }
 
 // Handler is MapBlokServer: the routes the options switch on under prefix

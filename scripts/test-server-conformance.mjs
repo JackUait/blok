@@ -133,7 +133,7 @@ async function requireExecutedTests(reportPath, testNamePattern) {
   );
 }
 
-async function buildCsharp(options, temporaryDirectory, executableSuffix) {
+async function buildCsharp(options, temporaryDirectory, executableSuffix, withOrdinary = true) {
   const ordinaryDirectory = join(temporaryDirectory, 'csharp-ordinary');
   const conformanceDirectory = join(temporaryDirectory, 'csharp-conformance');
   const hostProject = join(
@@ -143,16 +143,18 @@ async function buildCsharp(options, temporaryDirectory, executableSuffix) {
 
   announceConfigurations(options.configuration);
 
-  await run('dotnet', [
-    'build',
-    hostProject,
-    '--configuration',
-    ORDINARY_CONFIGURATION,
-    '--output',
-    ordinaryDirectory,
-  ], {
-    cwd: repositoryRoot,
-  });
+  if (withOrdinary) {
+    await run('dotnet', [
+      'build',
+      hostProject,
+      '--configuration',
+      ORDINARY_CONFIGURATION,
+      '--output',
+      ordinaryDirectory,
+    ], {
+      cwd: repositoryRoot,
+    });
+  }
   await run('dotnet', [
     'build',
     hostProject,
@@ -211,9 +213,9 @@ function announce(options) {
   }
 }
 
-/** Both conformance builds, each under its own name. */
+/** Both conformance builds, each under its own name; no suite here needs an ordinary host. */
 async function buildBoth(options, temporaryDirectory, executableSuffix) {
-  const csharp = await buildCsharp(options, temporaryDirectory, executableSuffix);
+  const csharp = await buildCsharp(options, temporaryDirectory, executableSuffix, false);
   const go = await buildGo(temporaryDirectory, executableSuffix);
 
   return {

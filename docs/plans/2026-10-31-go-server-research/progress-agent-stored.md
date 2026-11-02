@@ -13,10 +13,10 @@ The room path (2e-2h, F9-F28, the room CORPUS runner, MOVES, PFIELDS) is a later
 
 | Oracle | Read by | Proves |
 |---|---|---|
-| `test/unit/server-conformance/fixtures/agent/host.json` (100 cases) | xunit `AgentHostFixtureTests`, Go `TestMatchesTheSharedHostFixture` | The wire byte for byte over a scripted runtime and page host: every runtime request, host call, answer and thrown error. C# writes it with `BLOK_CAPTURE_AGENT_FIXTURE=1`. |
+| `test/unit/server-conformance/fixtures/agent/host.json` (115 cases) | xunit `AgentHostFixtureTests`, Go `TestMatchesTheSharedHostFixture` | The wire byte for byte over a scripted runtime and page host: every runtime request, host call, answer and thrown error. C# writes it with `BLOK_CAPTURE_AGENT_FIXTURE=1`. |
 | `test/fixtures/agent-server-scenarios/*.json` (36) | xunit `AgentServerScenarioTests`, Go `TestMatchesTheAgentServerScenarios` | The real bundle through the stored executor: sessions, page actions, page create, contracts, options, and (`bundle-*`) the C# bundle tests. Expectations are C#'s answers. |
 | CORPUS `test/fixtures/agent-commands` (52 stored cases) + `normalizer-cases.json` (9) | xunit `JintAgentParityTests`, `AgentParityNormalizerTests`; Go `TestMatchesTheAgentCommandCorpus`, `TestNormalizerMatchesTheTypeScriptNormalizer` | The stored runner with the `jint` expectations, through a Go twin of `AgentParityNormalizer.cs`. |
-| `test/unit/server-conformance/fixtures/agent/formula-dates.json` | xunit `AgentFormulaDatesFixtureTests`, Go `TestReadsFormulaDatesInTheHostZoneAsJintDoes` | Formula dates per host zone (six zones, one property with a named zone `Asia/Yekaterinburg`). goja has no Intl and answers as Jint does. |
+| `test/unit/server-conformance/fixtures/agent/formula-dates.json` | xunit `AgentFormulaDatesFixtureTests`, Go `TestReadsFormulaDatesInTheHostZoneAsJintDoes` | Formula dates per host zone (ten zones, among them Pacific/Chatham +13:45 and America/St_Johns -2:30; one property with a named zone `Asia/Yekaterinburg`). goja has no Intl and answers as Jint does. C# checks only the host zone, and fails when the fixture lacks it (macOS here reports `Asia/Saigon`; CI's `UTC`/`Etc/UTC` are listed). |
 
 Re-checked this round: `dotnet test Blok.Server.Tests --filter "AgentHostFixtureTests|AgentServerScenarioTests|AgentFormulaDatesFixtureTests|JintFormulaLimitsTests"` passed 131/131; `go test ./blokagent` passed.
 
@@ -25,6 +25,7 @@ Re-checked this round: `dotnet test Blok.Server.Tests --filter "AgentHostFixture
 - `TestNewRefusesLimitsBelowTheirFloorsBeforeLoading`: `BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints` (3 rows).
 - `TestRoomsPlugIntoExecuteInRoomAndTheRoomContract`: the room seam, and `RoomCommon` (`BlokAgentExecutor.cs:1205-1219`) with history. Mutation-checked: dropping the `HasHistory` branch turns it red.
 - `TestConcurrentCallsAnswerAsTheyDoAlone`: six sessions on one executor, `-race`.
+- `TestACallerDeadlineAnswersAsACancel`: replays the 11 cancel cases of host.json with a passed deadline (`context.DeadlineExceeded`) in place of a cancel; same answers. C# has one cancel exception (`StoppedAfterCreating`, `BlokAgentExecutor.cs:181`), so the fixture cannot say this. Mutation-checked: dropping `DeadlineExceeded` from `isCancel` fails the three stranded page-create cases.
 - `formula_limits_test.go`: `JintFormulaLimitsTests` (T19), same wall-clock bounds. goja finishes each in under 0.4 s.
 - `TestAFullReadOfALargeDatabaseFinishes`: `JintComputedReadTests.AFullReadOfALargeDatabaseFinishes` (1500 rows inside the 10 s default; goja 0.6 s).
 
@@ -84,7 +85,7 @@ W1-W9 DONE: host.json pins each request byte for byte (W1 option combos, W2 room
 | S5 | DONE | host.json `page action: in a session…`; scenario `session-page-action` |
 | S6, S7 | DONE | host.json `page create:*`; scenarios `page-create-*` |
 | S8 | DONE | scenario `page-create-forged-id` (bundle) |
-| S9 | DONE | host.json `session: too many steps…`, `the char cap counts escaped UTF-16 units` (T1), `keeps the newest step…`; scenario `session-cap` |
+| S9 | DONE | host.json `session: too many steps…`, `the char cap counts escaped UTF-16 units` (T1), `a null newest step counts no chars toward the cap`, `the char cap drops older steps and keeps a newest step alone over the cap`; scenario `session-cap`. Mutation-checked in both languages: `> 1` → `> 0` in the bounded loop fails the last case on C# (`BlokAgentSession.cs:65`) and on Go (`session.go`). |
 | S10 | DONE | host.json `page create: in a session…keeps the steps`, `page action: in a session a failed action keeps the steps` |
 | S11 | DONE | scenario `session-foreign-save` |
 | S12 OpenSession(null) | N/A | `Actor` is a Go value type; a nil actor cannot be passed. |
@@ -94,7 +95,9 @@ W1-W9 DONE: host.json pins each request byte for byte (W1 option combos, W2 room
 - **T5 runtime name: Go reports what C# reports; no bundle change.** The bundle reads `input.runtime` only as a capability switch: `src/view/server-runtime.ts:497-498` (`csharp-live` or else `jint` + `carriesHistory`), used by `src/shared/tool-manifest.ts:376-378` (`PREPARES_INSERT`), `:392` and `:535` (`UNDO_RUNNERS`), `:423`/`:534` (editor-only commands) and `:434` (comments). The name never appears in an answer: the contract's `runtime` field is the command's own `'any'|'editor'` (`tool-manifest.ts:547,566`). Go sends the same input bytes as C# (host.json pins the stored inputs with no `runtime` and the room contract with `csharp-live`), so every answer matches. A `go-live` name would only copy `csharp-live`'s capabilities and change the shared bundle, whose bytes the bundle law ties to the C# copy (U9).
 - **T3 `group: 15.0`: DEFERRED to the room lane.** It is read only in `RunVersionReadAsync` (`BlokAgentExecutor.cs:938-941`), a room-only path. C# `TryGetValue<int>` refuses `15.0` (per the ledger's probe `probe2.fsx`, not re-run this round), so the list falls back to no grouping. The room lane needs a jsjson integer read that refuses number text with a fraction or exponent (`15.0`, `1.5e1`).
 - **T21 failure key order**: host.json pins the exact failure bytes (`ok, error, warnings, revision`, no empty `revision`).
-- **Observation (bundle, not ported code)**: a session batch `{"name":"history.undo"}` with no `args` makes the bundle throw, and Go returns `*blokdocs.ConversionError` (InvalidDocument) rather than an INVALID_ARGS result. Same bundle bytes run in Jint; that C# answers the same is UNVERIFIED.
+- **history.undo with no args (bundle, not ported code)**: a session batch `{"name":"history.undo"}` with no `args` makes the bundle throw. Go returns `*blokdocs.ConversionError` (InvalidDocument). C# answers the same: an fsi probe over `Blok.Server.dll` (session `block.update`, then that batch) threw `BlokDocumentConversionException` "This is not a usable Blok document." (re-run in round 2).
+- **Strict reads of runtime answers (round 2)**: C# reads answers with the JsonNode indexers. On a node of the wrong kind they throw `InvalidOperationException` ("The node must be of type 'JsonObject'." / "'JsonArray, JsonObject'."), `[0]` on an empty list or object throws `ArgumentOutOfRangeException` (param `index`), `[0]` on an object reads its first member, and `TryGetValue<string>`/`GetValue<string>` on a lone surrogate escape throws (all probed in fsi). Go's `field`/`first` (`wire.go`) and `text` now do the same in `run` (`output["result"]`, `result["ok"]`), `runPageAction` (`output["result"]`, the planned command, the planned `pageId`) and `hasCommand`. Before, a planned pageId of `"\ud800"` or an empty `view.blocks` answered a page failure in Go where C# throws. Only hostile or fake runtimes send these; the shipped bundle does not (UNVERIFIED for every bundle path, but host.json pins both languages either way). `ErrInvalidUTF8` still reads as "not a string": C# runtime answers come from a .NET string and cannot carry invalid UTF-8.
+- **T3**: `intValue` (`wire.go`, `ParseInt(raw, 10, 32)`) already refuses `1.0` and `1e0` and reads `-0` as 0, as `GetValue<int>` does (review fsi probe). The room lane can reuse it for `group`.
 
 ## Deferred to the room lane (with the reason)
 
@@ -106,6 +109,12 @@ All of these run on the live-room path, which needs a Go `CollabEditOp` applier 
 - T2, T4, T6-T14, T17, T18, T20 (room traps). T3 as above.
 - 2i shared lanes (collab/http-host).
 
+## Open for other lanes
+
+- **Room seam and the engine pool (room lane decides)**: `Rooms.ExecuteInRoom` gets `(ctx, docID, batchJSON, actor, options)` only. The executor's runtime (`invoker`) is unexported, so a room runner outside package blokagent would load a second goja pool. C# `ExecuteInRoomAsync` (`BlokAgentExecutor.cs:380` on) calls the executor's own `runtime.InvokeAsync("agentExecute", …)`. Either put the room runner inside blokagent or widen the seam to hand it an invoke function.
+- **`mcp-agent-participant` on Go (collab/room lane)**: `node scripts/test-server-conformance.mjs --target go --suite mcp-agent-participant` fails 5/5 (timeouts waiting for "human connected"/"status offline", READ_ONLY shape); `--target csharp` passes 5/5 (review run). This lane changes no server or collab Go code, and CI runs Go conformance only for harness/server/routing/host-cli/http-host (`.github/workflows/ci.yml:385`).
+
 ## Round log
 
 - Round 1: committed the factory/room-seam/concurrency tests; re-proved the C# side (131/131, then 138/138 with the new cases); added the T15 host case and nine `bundle-*` scenarios (36/36 on C#, all pass on Go); hand-ported the large read; full `go test -race -p 2 ./blokagent` passed (777 s).
+- Round 2 (review fixes): S9 newest-step case + rename of the null-step case; deadline replay test; strict answer reads (15 new host.json cases captured from C#, 13 red on Go before the fix); formula-dates fails on a missing zone, four zones added; history.undo probe re-run on C#. No C# production change.

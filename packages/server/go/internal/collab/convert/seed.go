@@ -715,25 +715,17 @@ func CollectSeedHTML(blocks []*jsjson.Node, fields *RichTextFields) ([]RichTextH
 
 // Seed replaces the doc's blocks with blocks: every block becomes a map
 // entry, and each one with no parent key joins the root order in input order.
-// A non-nil page replaces the page map's title and icon; values is never
-// touched. Everything that can refuse runs before the transaction opens, so
-// a refused document leaves the doc as it was.
-func Seed(doc *yjs.Doc, blocks []*jsjson.Node, input *RichTextInput, page *jsjson.Node) error {
+// A non-nil page (JS values, read strictly) replaces the page map's title and
+// icon; values is never touched. Everything that can refuse runs before the
+// transaction opens, so a refused document leaves the doc as it was.
+func Seed(doc *yjs.Doc, blocks []*jsjson.Node, input *RichTextInput, page *jsjson.Object) error {
 	prepared, topLevel, err := compose(blocks, input)
 	if err != nil {
 		return err
 	}
 	var pageFields []entry
 	if page != nil {
-		v, err := strictValue(page)
-		if err != nil {
-			return err
-		}
-		object, ok := v.(*jsjson.Object)
-		if !ok {
-			return dataError("collab: the page is not an object.")
-		}
-		if pageFields, err = composePage(object); err != nil {
+		if pageFields, err = composePage(page); err != nil {
 			return err
 		}
 	}

@@ -106,7 +106,11 @@ func TestSeedingThePageExportsTheCanonicalPage(t *testing.T) {
 		pages++
 		blocks := nodeOf(t, "collab/"+c.name+"/input.json").Items
 		doc := yjs.NewDoc(yjs.Options{})
-		if err := Seed(doc, blocks, converting(t, blocks), nodeOf(t, "collab/"+c.name+"/page.json")); err != nil {
+		page, err := strictValue(nodeOf(t, "collab/"+c.name+"/page.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := Seed(doc, blocks, converting(t, blocks), page.(*jsjson.Object)); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}
 		if got, want := canonical(t, ExportPage(doc)), canonical(t, c.pageCanon); got != want {

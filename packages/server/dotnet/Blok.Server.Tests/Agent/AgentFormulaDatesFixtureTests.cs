@@ -12,7 +12,7 @@ namespace Blok.Server.Tests.Agent;
 /// Reads test/unit/server-conformance/fixtures/agent/formula-dates.json, which the
 /// Go blokagent package reads too. An agent read computes formula dates in the
 /// host's own zone, so the fixture holds Jint's answer per zone. This test checks
-/// the zone it runs in when the fixture has it. To add a zone, run with
+/// the zone it runs in, and fails when the fixture lacks it. To add a zone, run with
 /// <c>TZ=&lt;zone&gt; BLOK_CAPTURE_AGENT_FIXTURE=1</c>.
 /// </summary>
 public sealed class AgentFormulaDatesFixtureTests
@@ -42,9 +42,11 @@ public sealed class AgentFormulaDatesFixtureTests
       return;
     }
 
-    if (zones[zone] is JsonNode expected)
-    {
-      Assert.True(JsonNode.DeepEquals(expected, computed), $"{zone}: {computed?.ToJsonString()}");
-    }
+    // A zone the fixture lacks would pass without checking anything.
+    var expected = zones[zone]
+        ?? throw new Xunit.Sdk.XunitException(
+            $"formula-dates.json has no answer for the host zone {zone}. Add it with TZ={zone} BLOK_CAPTURE_AGENT_FIXTURE=1.");
+
+    Assert.True(JsonNode.DeepEquals(expected, computed), $"{zone}: {computed?.ToJsonString()}");
   }
 }

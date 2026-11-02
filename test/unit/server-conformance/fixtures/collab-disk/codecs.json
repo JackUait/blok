@@ -3,31 +3,31 @@
   "docKeys": [
     {
       "docId": "a",
-      "key": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
+      "sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
     },
     {
       "docId": "doc-1",
-      "key": "bb0e4f49443794d901e8969ff11bd112e34208a0dcdf0e1eedb480cc9b3c7293"
+      "sha256": "bb0e4f49443794d901e8969ff11bd112e34208a0dcdf0e1eedb480cc9b3c7293"
     },
     {
       "docId": "\u00E9",
-      "key": "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c"
+      "sha256": "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c"
     },
     {
       "docId": "\uD83D\uDE00",
-      "key": "f0443a342c5ef54783a111b51ba56c938e474c32324d90c3a60c9c8e3a37e2d9"
+      "sha256": "f0443a342c5ef54783a111b51ba56c938e474c32324d90c3a60c9c8e3a37e2d9"
     },
     {
       "docId": "a/b",
-      "key": "c14cddc033f64b9dea80ea675cf280a015e672516090a5626781153dc68fea11"
+      "sha256": "c14cddc033f64b9dea80ea675cf280a015e672516090a5626781153dc68fea11"
     },
     {
       "docId": "A",
-      "key": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
+      "sha256": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
     },
     {
       "docId": " ",
-      "key": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068"
+      "sha256": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068"
     }
   ],
   "workingSet": {

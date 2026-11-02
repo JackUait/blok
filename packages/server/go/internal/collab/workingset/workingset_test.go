@@ -21,7 +21,7 @@ type frameCase struct {
 type codecs struct {
 	DocKeys []struct {
 		DocID string `json:"docId"`
-		Key   string `json:"key"`
+		Key   string `json:"sha256"`
 	} `json:"docKeys"`
 	WorkingSet struct {
 		Encode  []frameCase `json:"encode"`

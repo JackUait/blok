@@ -60,7 +60,8 @@ public sealed class CollabDiskCaptureTests
 
     foreach (var docId in new[] { "a", "doc-1", "é", "😀", "a/b", "A", " " })
     {
-      keys.Add(new JsonObject { ["docId"] = docId, ["key"] = CollabDocKey.For(docId) });
+      // "sha256", not "key": gitleaks reads a hex value under a "key" name as a credential.
+      keys.Add(new JsonObject { ["docId"] = docId, ["sha256"] = CollabDocKey.For(docId) });
     }
 
     return keys;

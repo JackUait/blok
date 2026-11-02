@@ -48,7 +48,7 @@ const fullGoRuns = (workflowText: string): string[] => {
 
 type RunnerResult = { status: number | null; stdout: string; stderr: string };
 
-const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go' };
+const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go', interop: 'dotnet' };
 
 /**
  * With no PATH the build spawn fails, so a runner that accepted the target
@@ -93,11 +93,16 @@ describe('server Go and C# parity law', () => {
     expect(targets).toContain('go');
   });
 
+  // U8: one collaboration directory, written by one server and served by the other.
+  it('runs the journal interop suite in CI', () => {
+    expect(conformanceTargets(read('.github/workflows/ci.yml'))).toContain('interop');
+  });
+
   it('runs every conformance suite on Go in CI, unfiltered', () => {
     expect(fullGoRuns(read('.github/workflows/ci.yml'))).toHaveLength(1);
   });
 
-  it.each(['csharp', 'go'])('lets the runner accept --target %s', (target) => {
+  it.each(['csharp', 'go', 'interop'])('lets the runner accept --target %s', (target) => {
     expect(runnerAccepts(target, runRunner(runnerPath, ['--target', target]))).toBe(true);
   });
 

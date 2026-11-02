@@ -35,7 +35,11 @@ function run(command, args, options = {}) {
 const ORDINARY_CONFIGURATION = 'Release';
 const JOURNAL_CONFIGURATIONS = ['Debug', 'Release'];
 
-const TARGETS = ['csharp', 'go'];
+// interop builds both servers and runs only INTEROP_SUITES: one directory,
+// written by one server and served by the other.
+const TARGETS = ['csharp', 'go', 'interop'];
+
+const INTEROP_SUITES = ['journal-interop-contract'];
 
 const SUITES = [
   'harness-contract',
@@ -66,21 +70,23 @@ function selectedOptions(args) {
   const configuration = configurationIndex >= 0 ? args[configurationIndex + 1] : 'Debug';
   const suites = args.flatMap((arg, index) => (arg === '--suite' ? [args[index + 1]] : []));
 
+  const allowed = target === 'interop' ? INTEROP_SUITES : SUITES;
+
   // Go has no Debug or Release build, so --configuration would mean nothing.
   if (
     !TARGETS.includes(target) ||
     (target === 'go' && configurationIndex >= 0) ||
     (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === '')) ||
     !JOURNAL_CONFIGURATIONS.includes(configuration) ||
-    suites.some((suite) => !SUITES.includes(suite))
+    suites.some((suite) => !allowed.includes(suite))
   ) {
     throw new Error(
-      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go] ' +
-      '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]',
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go|interop] ' +
+      '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp and interop)]',
     );
   }
 
-  return { target, testNamePattern, configuration, suites: suites.length > 0 ? suites : SUITES };
+  return { target, testNamePattern, configuration, suites: suites.length > 0 ? suites : allowed };
 }
 
 /**
@@ -191,16 +197,33 @@ async function buildGo(temporaryDirectory, executableSuffix) {
 }
 
 function announceSuites(options) {
-  console.log(`Conformance suites: ${options.suites === SUITES ? 'all' : options.suites.join(', ')}.`);
+  const all = options.suites === SUITES || options.suites === INTEROP_SUITES;
+  console.log(`Conformance suites: ${all ? 'all' : options.suites.join(', ')}.`);
 }
 
 function announce(options) {
   announceSuites(options);
-  if (options.target === 'go') {
+  if (options.target !== 'csharp') {
     announceGo();
-  } else {
+  }
+  if (options.target !== 'go') {
     announceConfigurations(options.configuration);
   }
+}
+
+/** Both conformance builds, each under its own name. */
+async function buildBoth(options, temporaryDirectory, executableSuffix) {
+  const csharp = await buildCsharp(options, temporaryDirectory, executableSuffix);
+  const go = await buildGo(temporaryDirectory, executableSuffix);
+
+  return {
+    ordinary: csharp.ordinary,
+    conformance: csharp.conformance,
+    interop: {
+      BLOK_CONFORMANCE_CSHARP_SERVER: csharp.conformance,
+      BLOK_CONFORMANCE_GO_SERVER: go.conformance,
+    },
+  };
 }
 
 async function main() {
@@ -210,9 +233,8 @@ async function main() {
   const executableSuffix = process.platform === 'win32' ? '.exe' : '';
 
   try {
-    const binaries = options.target === 'go'
-      ? await buildGo(temporaryDirectory, executableSuffix)
-      : await buildCsharp(options, temporaryDirectory, executableSuffix);
+    const build = { csharp: buildCsharp, go: (_options, ...rest) => buildGo(...rest), interop: buildBoth };
+    const binaries = await build[options.target](options, temporaryDirectory, executableSuffix);
 
     const vitestArgs = [
       join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
@@ -239,6 +261,7 @@ async function main() {
         BLOK_CONFORMANCE_ORDINARY_SERVER: binaries.ordinary,
         BLOK_CONFORMANCE_SERVER: binaries.conformance,
         BLOK_CONFORMANCE_TARGET: options.target,
+        ...binaries.interop,
       },
     });
 

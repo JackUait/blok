@@ -396,6 +396,17 @@ jobs:
       - name: Test C# conformance
         run: node scripts/test-server-conformance.mjs --target csharp
 
+      # Here, not in Server Security: that job already carries the full Go
+      # suite, and this one has the minutes.
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.sum
+
+      - name: Test journal interop between C# and Go
+        run: node scripts/test-server-conformance.mjs --target interop
+
       - name: Dry-run server artifacts
         run: |
           node scripts/publish-server.mjs --version 1.10.1 --dry-run

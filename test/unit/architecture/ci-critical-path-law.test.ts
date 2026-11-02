@@ -361,6 +361,18 @@ describe('CI critical-path law', () => {
         run: 'node scripts/test-server-conformance.mjs --target csharp',
       },
       {
+        name: 'Setup Go',
+        uses: 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16',
+        with: {
+          'go-version-file': 'packages/server/go/go.mod',
+          'cache-dependency-path': 'packages/server/go/go.sum',
+        },
+      },
+      {
+        name: 'Test journal interop between C# and Go',
+        run: 'node scripts/test-server-conformance.mjs --target interop',
+      },
+      {
         name: 'Dry-run server artifacts',
         run: [
           'node scripts/publish-server.mjs --version 1.10.1 --dry-run',

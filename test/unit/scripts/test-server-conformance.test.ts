@@ -82,8 +82,8 @@ describe('test-server-conformance', () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
     expect(result.stderr).toBe(
-      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go] ' +
-      '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp only)]\n',
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go|interop] ' +
+      '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp and interop)]\n',
     );
   });
 
@@ -115,6 +115,25 @@ describe('test-server-conformance', () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
-    expect(result.stderr).toContain('[--target csharp|go]');
+    expect(result.stderr).toContain('[--target csharp|go|interop]');
+  });
+
+  // interop builds both servers for the journal handover suite and nothing else.
+  it('runs only the interop suites for --target interop', () => {
+    const result = runWithoutDotnet(['--target', 'interop']);
+
+    expect(result.stdout).toContain('Conformance suites: all.');
+    expect(result.stderr).toContain('spawn dotnet ENOENT');
+    expect(runWithoutDotnet(['--target', 'interop', '--suite', 'journal-interop-contract']).stdout)
+      .toContain('Conformance suites: journal-interop-contract.');
+  });
+
+  it('refuses a single-server suite for --target interop, and the interop suite for one server', () => {
+    for (const args of [['--target', 'interop', '--suite', 'server-contract'], ['--target', 'go', '--suite', 'journal-interop-contract']]) {
+      const result = runWithoutDotnet(args);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('[--suite NAME]...');
+    }
   });
 });

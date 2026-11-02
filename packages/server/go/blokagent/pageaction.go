@@ -21,11 +21,11 @@ func (e *Executor) runPageAction(ctx context.Context, input *jsjson.Node, actor 
 	if !present(output) {
 		return Execution{}, noAnswer("host plan")
 	}
-	source, err := object(output, "result")
+	source, err := field(output, "result")
 	if err != nil {
 		return Execution{}, err
 	}
-	if source == nil {
+	if source == nil || source.Kind != jsjson.KindObject {
 		return Execution{}, noAnswer("source result")
 	}
 	if ok, err := isTrue(source, "ok"); err != nil || !ok {
@@ -188,40 +188,44 @@ func (e *Executor) runPageAction(ctx context.Context, input *jsjson.Node, actor 
 
 // firstCommand is output["batch"]?["commands"]?[0] as JsonObject.
 func firstCommand(output *jsjson.Node) (*jsjson.Node, error) {
-	batch, err := get(output, "batch")
-	if err != nil || batch == nil {
+	batch, err := field(output, "batch")
+	if err != nil {
 		return nil, err
 	}
-	commands, err := get(batch, "commands")
-	if err != nil || commands == nil || commands.Kind != jsjson.KindArray || len(commands.Items) == 0 {
+	commands, err := field(batch, "commands")
+	if err != nil {
 		return nil, err
 	}
-	if command := commands.Items[0]; command.Kind == jsjson.KindObject {
-		return command, nil
+	command, err := first(commands)
+	if err != nil || command == nil || command.Kind != jsjson.KindObject {
+		return nil, err
 	}
-	return nil, nil
+	return command, nil
 }
 
 // plannedPageID is output["view"]?["blocks"]?[0]?["data"]?["pageId"] read as a string.
 func plannedPageID(output *jsjson.Node) (string, bool, error) {
-	view, err := get(output, "view")
-	if err != nil || view == nil {
-		return "", false, err
-	}
-	blocks, err := get(view, "blocks")
-	if err != nil || blocks == nil || blocks.Kind != jsjson.KindArray || len(blocks.Items) == 0 {
-		return "", false, err
-	}
-	data, err := get(blocks.Items[0], "data")
-	if err != nil || data == nil {
-		return "", false, err
-	}
-	value, err := get(data, "pageId")
+	view, err := field(output, "view")
 	if err != nil {
 		return "", false, err
 	}
-	id, ok := text(value)
-	return id, ok, nil
+	blocks, err := field(view, "blocks")
+	if err != nil {
+		return "", false, err
+	}
+	block, err := first(blocks)
+	if err != nil {
+		return "", false, err
+	}
+	data, err := field(block, "data")
+	if err != nil {
+		return "", false, err
+	}
+	value, err := field(data, "pageId")
+	if err != nil {
+		return "", false, err
+	}
+	return text(value)
 }
 
 // cloneOrNull is `source[key]?.DeepClone()` as a value to set: JSON null when absent.

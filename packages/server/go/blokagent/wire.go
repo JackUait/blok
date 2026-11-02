@@ -1,6 +1,7 @@
 package blokagent
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -31,6 +32,45 @@ func get(node *jsjson.Node, key string) (*jsjson.Node, error) {
 	return found, nil
 }
 
+// field is `node?[key]`. Unlike get, it fails on a node that is not an
+// object, as the JsonObject indexer throws.
+func field(node *jsjson.Node, key string) (*jsjson.Node, error) {
+	if !present(node) {
+		return nil, nil
+	}
+	if node.Kind != jsjson.KindObject {
+		return nil, &InvalidOperationError{Message: "The node must be of type 'JsonObject'."}
+	}
+	return get(node, key)
+}
+
+// first is `node?[0]`: a list's first item, or an object's first member.
+// Both throw when empty, and any other kind throws.
+func first(node *jsjson.Node) (*jsjson.Node, error) {
+	if !present(node) {
+		return nil, nil
+	}
+	var item *jsjson.Node
+	switch node.Kind {
+	case jsjson.KindArray:
+		if len(node.Items) == 0 {
+			return nil, &ArgumentError{Param: "index", Message: "Index was out of range. Must be non-negative and less than the size of the collection."}
+		}
+		item = node.Items[0]
+	case jsjson.KindObject:
+		if len(node.Members) == 0 {
+			return nil, &ArgumentError{Param: "index", Message: "Specified argument was out of the range of valid values."}
+		}
+		item = node.Members[0].Value
+	default:
+		return nil, &InvalidOperationError{Message: "The node must be of type 'JsonArray, JsonObject'."}
+	}
+	if !present(item) {
+		return nil, nil
+	}
+	return item, nil
+}
+
 // object is `node[key] as JsonObject`.
 func object(node *jsjson.Node, key string) (*jsjson.Node, error) {
 	found, err := get(node, key)
@@ -52,16 +92,20 @@ func write(node *jsjson.Node) (string, error) {
 	return string(out), nil
 }
 
-// text is `TryGetValue<string>`: a string's value, or false.
-func text(node *jsjson.Node) (string, bool) {
+// text is `TryGetValue<string>`: a string's value, or false. A lone
+// surrogate escape throws there, as it does here.
+func text(node *jsjson.Node) (string, bool, error) {
 	if node == nil || node.Kind != jsjson.KindString {
-		return "", false
+		return "", false, nil
 	}
 	value, err := node.Text()
-	if err != nil {
-		return "", false
+	if errors.Is(err, jsjson.ErrLoneSurrogate) {
+		return "", false, fromJSON(err)
 	}
-	return value.String(), true
+	if err != nil {
+		return "", false, nil
+	}
+	return value.String(), true, nil
 }
 
 // stringValue is `?.GetValue<string>()`: "" for null, an error for a non-string.
@@ -69,7 +113,10 @@ func stringValue(node *jsjson.Node) (string, error) {
 	if node == nil {
 		return "", nil
 	}
-	value, ok := text(node)
+	value, ok, err := text(node)
+	if err != nil {
+		return "", err
+	}
 	if !ok {
 		return "", &InvalidOperationError{Message: "The Blok runtime answered a value that is not a string."}
 	}
@@ -78,7 +125,7 @@ func stringValue(node *jsjson.Node) (string, error) {
 
 // isTrue is `?["ok"]?.GetValue<bool>() == true`.
 func isTrue(node *jsjson.Node, key string) (bool, error) {
-	found, err := get(node, key)
+	found, err := field(node, key)
 	if err != nil || found == nil {
 		return false, err
 	}

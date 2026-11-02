@@ -145,7 +145,7 @@ func (e *Executor) run(ctx context.Context, documentJSON, batchJSON string, acto
 		}
 		return Execution{}, nil, err
 	}
-	result, err := get(output, "result")
+	result, err := field(output, "result")
 	if err != nil {
 		return Execution{}, nil, err
 	}
@@ -228,7 +228,10 @@ func hasCommand(batch *jsjson.Node, names ...string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		value, ok := text(name)
+		value, ok, err := text(name)
+		if err != nil {
+			return false, err
+		}
 		if !ok {
 			continue
 		}

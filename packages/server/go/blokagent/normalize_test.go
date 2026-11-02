@@ -51,7 +51,10 @@ func lookup(node *jsjson.Node, key string) *jsjson.Node {
 	return found
 }
 
-func stringOf(node *jsjson.Node) (string, bool) { return text(node) }
+func stringOf(node *jsjson.Node) (string, bool) {
+	value, ok, err := text(node)
+	return value, ok && err == nil
+}
 
 func setMember(node *jsjson.Node, key string, value *jsjson.Node) { _ = node.Set(key, value) }
 
@@ -84,8 +87,8 @@ func deepEquals(a, b *jsjson.Node) bool {
 		y, _ := strconv.ParseFloat(string(b.Raw()), 64)
 		return x == y
 	case jsjson.KindString:
-		x, _ := text(a)
-		y, _ := text(b)
+		x, _ := stringOf(a)
+		y, _ := stringOf(b)
 		return x == y
 	case jsjson.KindArray:
 		return slices.EqualFunc(a.Items, b.Items, deepEquals)

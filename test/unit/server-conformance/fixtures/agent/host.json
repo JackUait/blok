@@ -1487,7 +1487,7 @@
     ]
   },
   {
-    "name": "session: the char cap keeps the newest step even alone over the cap",
+    "name": "session: a null newest step counts no chars toward the cap",
     "call": "Session",
     "actor": {
       "id": "agent-cs",
@@ -1540,6 +1540,687 @@
         "result": "{\"ok\":true,\"revision\":\"h1\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]}",
         "document": "{\"blocks\":[]}",
         "revision": "h1"
+      }
+    ]
+  },
+  {
+    "name": "session: the char cap drops older steps and keeps a newest step alone over the cap",
+    "call": "Session",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello\"}]}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"One\"}}]}"
+      },
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello\"}]}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"Two\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": {
+          "template": "{\"result\":{\"ok\":true,\"revision\":\"h1\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"blocks\":[]},\"edits\":[],\"history\":{\"past\":[{\"title\":\"small\"},{\"title\":\"T0\",\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"@BIG@\"}]}}]}],\"future\":[],\"revision\":\"h1\"}}",
+          "fill": [
+            {
+              "marker": "@BIG@",
+              "unit": "<",
+              "count": 800000
+            }
+          ]
+        }
+      },
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"h1\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"blocks\":[]},\"edits\":[],\"history\":{\"past\":[\"other\"],\"future\":[],\"revision\":\"h1\"}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello\"}]}}]},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"One\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"},\"history\":{}}"
+      },
+      {
+        "op": "agentExecute",
+        "input": {
+          "length": 4800372,
+          "sha256": "b95894f74b44a87300db4053ced9c6504fb7d05e0f914a93b1d4e8414f533111"
+        }
+      }
+    ],
+    "results": [
+      {
+        "result": "{\"ok\":true,\"revision\":\"h1\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]}",
+        "document": "{\"blocks\":[]}",
+        "revision": "h1"
+      },
+      {
+        "result": "{\"ok\":true,\"revision\":\"h1\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]}",
+        "document": "{\"blocks\":[]}",
+        "revision": "h1"
+      }
+    ]
+  },
+  {
+    "name": "page action: a planned pageId with a lone surrogate escape is an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"view\":{\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"\\ud800\"}}]}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "Cannot read incomplete UTF-16 JSON text as string with missing low surrogate."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: a plan that is not an object is an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "[1]"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonObject'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: a view that is not an object is an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"view\":\"pg\"}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonObject'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: an empty view block list is an index error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"view\":{\"blocks\":[]}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "argument",
+          "param": "index",
+          "message": "Index was out of range. Must be non-negative and less than the size of the collection."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: an empty view block object is an index error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"view\":{\"blocks\":{}}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "argument",
+          "param": "index",
+          "message": "Specified argument was out of the range of valid values."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: view blocks that are a number are an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"view\":{\"blocks\":1}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonArray, JsonObject'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: an empty planned command list is an index error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[]},\"view\":{\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "argument",
+          "param": "index",
+          "message": "Index was out of range. Must be non-negative and less than the size of the collection."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: planned commands that are a string are an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":\"x\"},\"view\":{\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonArray, JsonObject'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "page action: a view block object is read by its first member",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"view\":{\"blocks\":{\"first\":{\"data\":{\"pageId\":\"page-2\"}}}}}"
+      },
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"htgt\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"id\":\"target\",\"title\":\"New\",\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "resolve",
+        "pageId": "page-2",
+        "actor": {
+          "id": "agent-cs",
+          "name": "Server agent",
+          "onBehalfOf": null
+        }
+      },
+      {
+        "host": "load"
+      },
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "save",
+        "document": "{\"id\":\"target\",\"title\":\"New\",\"blocks\":[]}"
+      }
+    ],
+    "results": [
+      {
+        "result": "{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{\"pageId\":\"page-2\",\"applied\":true}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]}",
+        "document": null,
+        "revision": "hsrc"
+      }
+    ]
+  },
+  {
+    "name": "page action: a planned command object is read by its first member",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"plan\":{\"touched\":[\"pg\"]},\"batch\":{\"commands\":{\"c\":{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}}},\"view\":{\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}}"
+      },
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":\"htgt\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"id\":\"target\",\"title\":\"New\",\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPlanHost",
+        "input": "{\"services\":[\"pageBackend\"],\"document\":{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]},\"batch\":{\"commands\":[{\"name\":\"page.rename\",\"args\":{\"id\":\"pg\",\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "resolve",
+        "pageId": "page-2",
+        "actor": {
+          "id": "agent-cs",
+          "name": "Server agent",
+          "onBehalfOf": null
+        }
+      },
+      {
+        "host": "load"
+      },
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"doc.setTitle\",\"args\":{\"title\":\"New\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "save",
+        "document": "{\"id\":\"target\",\"title\":\"New\",\"blocks\":[]}"
+      }
+    ],
+    "results": [
+      {
+        "result": "{\"ok\":true,\"revision\":\"hsrc\",\"results\":[{\"pageId\":\"page-2\",\"applied\":true}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]}",
+        "document": null,
+        "revision": "hsrc"
+      }
+    ]
+  },
+  {
+    "name": "page action: a command name with a lone surrogate escape is an error before any run",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "plain"
+    },
+    "host": {
+      "pages": {
+        "page-2": {
+          "stored": "{\"id\":\"target\",\"title\":\"Target title\",\"blocks\":[]}"
+        }
+      }
+    },
+    "calls": [
+      {
+        "document": "{\"id\":\"source\",\"title\":\"Source title\",\"blocks\":[{\"id\":\"pg\",\"type\":\"page\",\"data\":{\"pageId\":\"page-2\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"x\\ud800\",\"args\":{}}]}"
+      }
+    ],
+    "runtime": [],
+    "events": [],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "Cannot read incomplete UTF-16 JSON text as string with missing low surrogate."
+        }
+      }
+    ]
+  },
+  {
+    "name": "execute: a result that is a string is an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":\"x\",\"document\":{\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonObject'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "execute: a result that is a list is an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":[],\"document\":{\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonObject'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "execute: an answer that is a list is an error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "[]"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonObject'."
+        }
       }
     ]
   },

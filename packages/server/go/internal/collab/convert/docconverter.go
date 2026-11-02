@@ -3,6 +3,7 @@ package convert
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -74,6 +75,39 @@ func (c *DocConverter) Seed(ctx context.Context, doc *yjs.Doc, outputData *jsjso
 		put(page, key, v)
 	}
 	return Seed(doc, blocks.Items, Converting(c.fields(), read), page)
+}
+
+// ApplyOps applies edit ops, reading their HTML first. Collecting plans the
+// whole request, so a refusal comes before any read; ApplyOps plans again
+// against the doc as it is after the read.
+func (c *DocConverter) ApplyOps(ctx context.Context, doc *yjs.Doc, ops []EditOp) error {
+	found, err := CollectOpsHTML(doc, ops, c.fields())
+	if err != nil {
+		return err
+	}
+	for _, html := range found {
+		if len(html.HTML) > MaxEditHTMLChars {
+			// The room answers 413 only for this inner failure.
+			return &EditError{
+				Message: fmt.Sprintf("collab: rich text field \"%s.%s\" holds %d HTML characters; an edit may send at most %d.", html.Type, html.Field, len(html.HTML), MaxEditHTMLChars),
+				Err:     &jsruntime.Failure{Kind: jsruntime.KindDocumentTooLarge, Err: errors.New("the HTML is past the edit cap")},
+			}
+		}
+	}
+	read, err := c.read(ctx, found, 0)
+	if err != nil {
+		if IsTransient(ctx, err) && !IsTooLarge(err) {
+			// Nothing is written yet: the room retries this one request.
+			return &TransientError{"collab: reading the rich text HTML in this edit ran past the runtime's limits: " + err.Error(), err}
+		}
+		if (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) && ctx.Err() != nil {
+			return err
+		}
+		// Any other error here would read as a half-written commit and close
+		// the room, so it refuses this one request instead.
+		return &EditError{Message: "collab: the rich text HTML in this edit could not be read: " + err.Error(), Err: err}
+	}
+	return ApplyOps(doc, ops, Converting(c.fields(), read))
 }
 
 // Export is {time, blocks, title?, icon?}, the legacy HTML slots read to segments.

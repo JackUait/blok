@@ -16,12 +16,15 @@ import (
 )
 
 // EditError is a refused edit request (C# CollabEditException): a 422 whose
-// body is the message.
+// body is the message, or a 413 when Err is the runtime's memory budget
+// (IsTooLarge).
 type EditError struct {
 	Message string
+	Err     error
 }
 
 func (e *EditError) Error() string { return e.Message }
+func (e *EditError) Unwrap() error { return e.Err }
 
 // EditOp is one block-level operation. Only Insert, Update and Remove come
 // from POST /edit; the rest are built by restore and the agent.
@@ -104,7 +107,7 @@ func (SetMetadata) editOp()  {}
 // JSONMaxDepth is YDocConverter.JsonMaxDepth, the reader bound for edits and the doc endpoint.
 const JSONMaxDepth = 512
 
-var errNotUnicode = &EditError{"collab: the request body holds text that is not valid Unicode."}
+var errNotUnicode = &EditError{Message: "collab: the request body holds text that is not valid Unicode."}
 
 // ParseEditOps reads POST /edit: {"ops":[…]} with at least one op, each a
 // closed schema, and no NUL in any string of any op.
@@ -131,7 +134,7 @@ func refusal(err error, invalidJSON string) error {
 	case errors.Is(err, jsjson.ErrLoneSurrogate) || errors.Is(err, jsjson.ErrInvalidUTF8):
 		return errNotUnicode
 	case invalidJSON != "":
-		return &EditError{invalidJSON}
+		return &EditError{Message: invalidJSON}
 	}
 	return err
 }
@@ -142,7 +145,7 @@ func parseOps(root *jsjson.Node) ([]EditOp, error) {
 		return nil, err
 	}
 	if root.Kind != jsjson.KindObject || requested == nil || requested.Kind != jsjson.KindArray || len(requested.Items) == 0 {
-		return nil, &EditError{`collab: the request body must be an object with a non-empty "ops" array.`}
+		return nil, &EditError{Message: `collab: the request body must be an object with a non-empty "ops" array.`}
 	}
 	ops := make([]EditOp, 0, len(requested.Items))
 	for index, item := range requested.Items {
@@ -388,7 +391,7 @@ func nulRefused(index int) error {
 }
 
 func refused(index int, reason string) error {
-	return &EditError{fmt.Sprintf("collab: op %d: %s.", index, reason)}
+	return &EditError{Message: fmt.Sprintf("collab: op %d: %s.", index, reason)}
 }
 
 // NormalizeIdempotencyKey maps a printable key of 1–128 chars to a 32-hex op id.

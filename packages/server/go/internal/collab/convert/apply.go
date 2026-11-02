@@ -121,7 +121,7 @@ func newPlanner(doc *yjs.Doc, input *RichTextInput) *planner {
 }
 
 func where(index int, message string) error {
-	return &EditError{fmt.Sprintf("collab: op %d: %s", index, message)}
+	return &EditError{Message: fmt.Sprintf("collab: op %d: %s", index, message)}
 }
 
 func (p *planner) plan(ops []EditOp) ([]step, error) {

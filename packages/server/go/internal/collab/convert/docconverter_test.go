@@ -208,9 +208,8 @@ func (r *recordingReader) Read(_ context.Context, fields []RichTextHTML, timeout
 	return read, nil
 }
 
-// The ApplyOps and migration halves of SeedAndMigrationReadWithTheOneTimeBudget
-// wait for those ports.
-func TestSeedReadsWithTheOneTimeBudgetAndExportWithTheDefault(t *testing.T) {
+// The migration half of SeedAndMigrationReadWithTheOneTimeBudget waits for that port.
+func TestSeedReadsWithTheOneTimeBudgetAndExportAndEditWithTheDefault(t *testing.T) {
 	reader := &recordingReader{}
 	c := converter(t, reader)
 	if err := c.Seed(context.Background(), yjs.NewDoc(yjs.Options{}), parseNode(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"<b>x</b>"}}]}`)); err != nil {
@@ -219,8 +218,125 @@ func TestSeedReadsWithTheOneTimeBudgetAndExportWithTheDefault(t *testing.T) {
 	if _, err := c.Export(context.Background(), legacyHTMLDoc()); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(reader.timeouts, []time.Duration{MigrationReadTimeout, 0}) || MigrationReadTimeout != time.Minute {
+	if err := c.ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, `{"op":"update","id":"a","data":{"text":"<i>y</i>"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(reader.timeouts, []time.Duration{MigrationReadTimeout, 0, 0}) || MigrationReadTimeout != time.Minute {
 		t.Fatal(reader.timeouts)
+	}
+}
+
+func editOps(t *testing.T, ops ...string) []EditOp {
+	t.Helper()
+	parsed, err := ParseEditOps([]byte(`{"ops":[` + strings.Join(ops, ",") + `]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return parsed
+}
+
+// Twin of AnEditThatOnlyRespellsTheHtmlWritesNothing. The C# edit holds a
+// literal U+00A0 where the seed spells &nbsp;.
+func TestAnEditThatOnlyRespellsTheHTMLWritesNothing(t *testing.T) {
+	c := converter(t, nil)
+	doc := yjs.NewDoc(yjs.Options{})
+	if err := c.Seed(context.Background(), doc, parseNode(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"<strong>x</strong>&nbsp;<a href=\"h\" target=\"_blank\">y</a>"}}]}`)); err != nil {
+		t.Fatal(err)
+	}
+	updates := 0
+	doc.OnUpdate(func(yjs.UpdateEvent) { updates++ })
+	if err := c.ApplyOps(context.Background(), doc, editOps(t, `{"op":"update","id":"a","data":{"text":"<b>x</b>\u00a0<a target=\"_blank\" href=\"h\">y</a><br>"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	if updates != 0 {
+		t.Fatalf("%d updates", updates)
+	}
+}
+
+// Twin of AnEditReadsHtmlForTheBlocksTypeInTheDoc.
+func TestAnEditReadsHTMLForTheBlocksTypeInTheDoc(t *testing.T) {
+	c := converter(t, nil)
+	doc := yjs.NewDoc(yjs.Options{})
+	if err := c.Seed(context.Background(), doc, parseNode(t, `{"blocks":[{"id":"a","type":"header","data":{"text":"x","level":2}}]}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.ApplyOps(context.Background(), doc, editOps(t, `{"op":"update","id":"a","data":{"text":"x <i>y</i>","level":2}}`)); err != nil {
+		t.Fatal(err)
+	}
+	exported, err := c.Export(context.Background(), doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, err := jsjson.Stringify(path(exported, "blocks", 0, "data", "text"))
+	if err != nil || text != `[{"text":"x "},{"text":"y","marks":{"italic":true}}]` {
+		t.Fatal(text, err)
+	}
+}
+
+// Twin of AnEditHtmlFieldPastTheCapIsRefusedAsTooLargeBeforeAnyRead.
+func TestAnEditHTMLFieldPastTheCapIsRefusedAsTooLargeBeforeAnyRead(t *testing.T) {
+	reader := &recordingReader{}
+	c := converter(t, reader)
+	atCap := strings.Repeat("x", MaxEditHTMLChars)
+	if err := c.ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, `{"op":"update","id":"a","data":{"text":"`+atCap+`"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	err := c.ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, `{"op":"update","id":"a","data":{"text":"`+atCap+`y"}}`))
+	var edit *EditError
+	// The room maps exactly this inner failure to 413.
+	if !errors.As(err, &edit) || !IsTooLarge(edit.Err) {
+		t.Fatalf("got %v", err)
+	}
+	if edit.Message != `collab: rich text field "paragraph.text" holds 32769 HTML characters; an edit may send at most 32768.` {
+		t.Fatal(edit.Message)
+	}
+	if len(reader.timeouts) != 1 {
+		t.Fatal(reader.timeouts)
+	}
+}
+
+// The cap counts UTF-16 units, as string.Length does.
+func TestTheEditCapCountsUTF16Units(t *testing.T) {
+	c := converter(t, &recordingReader{})
+	astral := strings.Repeat("😀", MaxEditHTMLChars/2)
+	if err := c.ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, `{"op":"update","id":"a","data":{"text":"`+astral+`"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	err := c.ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, `{"op":"update","id":"a","data":{"text":"`+astral+`x"}}`))
+	var edit *EditError
+	if !errors.As(err, &edit) || !IsTooLarge(edit.Err) {
+		t.Fatalf("got %v", err)
+	}
+}
+
+// ApplyOpsAsync's catches: a runtime limit is a retry (except the memory
+// budget, which the same body hits again), anything else refuses this one
+// request, and a cancel by the caller stays a cancel.
+func TestAnEditReadFailureIsARetryOrARefusal(t *testing.T) {
+	update := `{"op":"update","id":"a","data":{"text":"<i>y</i>"}}`
+	timedOut := &jsruntime.Failure{Kind: jsruntime.KindTimedOut, Err: errors.New("slow")}
+	err := converter(t, failingReader{timedOut}).ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, update))
+	var transient *TransientError
+	if !errors.As(err, &transient) || transient.Err != timedOut || transient.Message != "collab: reading the rich text HTML in this edit ran past the runtime's limits: "+timedOut.Error() {
+		t.Fatalf("timed out: %v", err)
+	}
+	for _, failure := range []error{
+		&jsruntime.Failure{Kind: jsruntime.KindDocumentTooLarge, Err: errors.New("budget")},
+		&jsruntime.Failure{Kind: jsruntime.KindInvalidDocument, Err: errors.New("TypeError")},
+		errors.New("anything else"),
+	} {
+		err := converter(t, failingReader{failure}).ApplyOps(context.Background(), legacyHTMLDoc(), editOps(t, update))
+		var edit *EditError
+		if !errors.As(err, &edit) || edit.Err != failure || edit.Message != "collab: the rich text HTML in this edit could not be read: "+failure.Error() {
+			t.Errorf("%v: %v", failure, err)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err = converter(t, failingReader{ctx.Err()}).ApplyOps(ctx, legacyHTMLDoc(), editOps(t, update))
+	var edit *EditError
+	if !errors.Is(err, context.Canceled) || errors.As(err, &edit) || errors.As(err, &transient) {
+		t.Fatalf("cancelled: %v", err)
 	}
 }
 

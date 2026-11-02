@@ -37,10 +37,23 @@ fixture is stale), or a Go twin of a C# test.
 | X11 HTML reader | DONE | Go twins of `RuntimeRichTextHtmlReaderTests` + a boundary test (fields that exactly fill a call share it) + UTF-16 counting |
 | RichTextInput (orphan) | DONE | Refusing/Collecting/Converting ported (`richtextinput.go`); exercised by the seed tests. No fixture input carries HTML, so the Converting path with real HTML is covered only by the reader twins (gap: add a seed case with HTML) |
 | E9 / X11 doc converter (seed + export half) | DONE (partial) | Go twins of `CollabDocConverterTests` for seed, export, warnings, refusals, legacy HTML slots (incl. database-row nested docs), custom fields, transient vs repeating vs cancelled failures, the 60 s seed budget; mutation-checked. The 32768-unit edit cap and ApplyOpsAsync/MigrateRichTextAsync wait for X4/X6 |
-| D1-D7 doc endpoint client | DONE | Go twins of all `DocEndpointClientTests` (`internal/collab/docendpoint`), plus .NET probes: STJ write and read depth 512 ok / 513 refused, `1E+21`, default-encoder escapes, `0.###` seconds. Known gap: net/http has no pooled-connection lifetime (C# 5 min); IdleConnTimeout 5 min instead. SC black-box oracle needs the room (collab-room lane) |
+| D1-D7 doc endpoint client | DONE | Go twins of all `DocEndpointClientTests` (`internal/collab/docendpoint`), plus .NET probes: STJ write and read depth 512 ok / 513 refused, `1E+21`, default-encoder escapes, `0.###` seconds. The default transport sends only Host and Accept on a GET, like C# (probed with a raw listener): no User-Agent, compression off so the cap counts raw bytes; pinned by an httptest test. Known gap: net/http has no pooled-connection lifetime (C# 5 min); IdleConnTimeout 5 min instead. SC black-box oracle needs the room (collab-room lane) |
 | P4r local working-set store | DONE | Go twins of all `LocalCollabStoreTests` + `LocalCollabStoreDirectoryModeTests` (`workingset/local_test.go`); the file is exactly `EncodeDocument`, which `codecs.json` pins, so C# and Go read each other's files; mutation-checked |
 | P5r S3 working-set store | DONE | Go twins of `S3CollabStoreTests` against the `ObjectStore` seam that `blob.S3` satisfies (compile-time check); SigV4, 404 and 403 handling are `internal/blob`'s own tests |
 | X5 / P5 / T7 key lists | DONE | `fixtures/converter-keys.json`; client tests, C# `ConverterKeysFixtureTests`, Go `keys_test.go` |
+
+## Section 3 constants and section 6 traps
+
+- Section 3 DONE: MaxEditHtmlChars/MaxCallChars (32768 units, reader tests), MigrationReadTimeout 60 s, MaxValueDepth/JsonMaxDepth 256/512, TextDiff 64/3/32, journal 32 MiB / 4 KiB, doc endpoint 64 MiB / 512 B / 10 s connect / 30 s request (option). Pool lifetime 5 min: documented gap.
+- Section 3 OPEN: local op store DefaultMaxUpdateBytes 1 MiB (P14r).
+- Section 6 DONE: T2, T3, T5 (runtime reader), T6, T7, T16.
+- Section 6 OPEN: T1 and T21 (wait on the op store, P8r), T15 (`DeepEquals(1, 1.0)` in RowSimilarity, part of X4).
+
+## Partial rows (counted as remaining)
+
+- E2: the parse half (key -> op id) is DONE; the header handling belongs to the edit endpoint (collab-room).
+- E9: the 32768-unit refusal before any read waits for DocConverter.ApplyOps (X4).
+- X3: page fields done both ways; ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure not ported.
 
 ## Remaining (next round, in this order)
 
@@ -49,7 +62,7 @@ fixture is stale), or a Go twin of a C# test.
 4. P8r/P11r-P14r LocalCollabOperationStore (with C#<->Go cross-reading dirs), P12r import, X12 replay.
 5. X3 rest: ReadPageMaps, PlainPageMaps, PlainMapValuesEqual, DescribeStructure.
 
-## Decisions (round 2)
+## Decisions (round 1, second run)
 
 - Converter values are JS values (`*jsjson.Object`, `[]any`, `jsjson.Str`, float64, bool, nil), plus int64 for a peer bigint on export. Seed input is `jsjson.Node`, read strictly per block: a lone-surrogate escape fails as `ErrNotUnicode` (C#: InvalidOperationException from GetValue<string>, probed with dotnet fsi), not as a `DataError`.
 - Block ids are kept as UTF-16 unit keys internally, so ordinal order and lone surrogates match C# exactly.

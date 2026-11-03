@@ -3407,11 +3407,24 @@
   margin: 0;
   transition: none;
   color: inherit;
-  padding: calc(var(--blok-space-14) + var(--blok-space-1)) var(--blok-space-4) var(--blok-space-10);
-  overflow: auto;
+  padding: calc(var(--blok-space-14) + var(--blok-space-1)) 0 0 var(--blok-space-4);
+  overflow: hidden auto;
   background-color: var(--blok-bg-primary);
   border-radius: var(--blok-radius-dialog);
   box-shadow: 0 0 0 1px var(--blok-border-subtle), 0 30px 80px -20px var(--blok-table-fullscreen-shadow);
+}
+
+[data-blok-table-fullscreen] > [data-blok-table-root] {
+  margin-bottom: 0;
+  padding-inline-end: 0;
+}
+
+[data-blok-table-fullscreen] [data-blok-table-scroll] {
+  padding-inline-end: calc(var(--_blok-table-pill-room) + 36px);
+}
+
+[data-blok-table-fullscreen] > [data-blok-table-root]::after {
+  content: none;
 }
 
 [data-blok-table-fullscreen-backdrop] {

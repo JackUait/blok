@@ -248,7 +248,18 @@ export class TableAddControls {
       const paddingEnd = parseFloat(isRtl ? wrapperStyle.paddingLeft : wrapperStyle.paddingRight) || 0;
 
       setInlineInsets(this.addRowBtn, isRtl, '0px', `${paddingEnd}px`);
-      setInlineInsets(this.addColBtn, isRtl, '', `${paddingEnd - 36}px`);
+
+      const scrollContainer = this.grid.parentElement;
+      const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
+
+      // From the grid's end, not the wrapper padding: full screen moves the bar's room into the scroller.
+      if (isInsideScrollContainer && this.wrapper.getBoundingClientRect().width > 0) {
+        const visibleWidth = this.computeVisibleWidth(this.grid.offsetWidth, true, scrollContainer, direction);
+
+        setInlineInsets(this.addColBtn, isRtl, `${visibleWidth + 4}px`, '');
+      } else {
+        setInlineInsets(this.addColBtn, isRtl, '', `${paddingEnd - 36}px`);
+      }
     }
 
     // Pin both buttons' positions to the grid's rendered rect to prevent

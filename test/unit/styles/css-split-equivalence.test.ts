@@ -1451,6 +1451,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // [data-blok-top-layer], and the full-screen box inherits its colour, so neither
     // opening nor closing restyles every cell (net of the dropped closing-width rule).
     const TOP_LAYER_RESTYLE_BYTES = 407;
+    // tables.css: the full-screen table runs to the bottom and end edges; its add bars keep their room.
+    const TABLE_FULLSCREEN_EDGES_BYTES = 779;
     // embed.css: the click-to-load gate a generic embed shows before the reader loads it.
     const EMBED_GENERIC_GATE_BYTES = 1_636;
     // embed.css: the host line above a loaded generic frame, and the toolbar moved below it.
@@ -1823,6 +1825,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FILE_PREVIEW_GUTTER_BYTES
       + TABLE_FULLSCREEN_BYTES
       + TOP_LAYER_RESTYLE_BYTES
+      + TABLE_FULLSCREEN_EDGES_BYTES
       + EMBED_GENERIC_GATE_BYTES
       + EMBED_GENERIC_HOST_BYTES;
     const counted = new Set<string>();

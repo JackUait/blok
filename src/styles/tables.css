@@ -319,14 +319,34 @@
   /* The UA popover color is CanvasText. Chrome counts that as a new inherited
      color even when it matches, and restyles every cell on open and close. */
   color: inherit;
-  /* Top: the header, then a small gap; the table keeps its own room for the column grips. */
-  padding: calc(var(--blok-space-14) + var(--blok-space-1)) var(--blok-space-4) var(--blok-space-10);
-  overflow: auto;
+  /* Top: the header, then a small gap; the table keeps its own room for the column grips.
+     Bottom and end: none, the table runs to the edge. */
+  padding: calc(var(--blok-space-14) + var(--blok-space-1)) 0 0 var(--blok-space-4);
+  /* The grid scrolls sideways itself. The add-column bar pokes past the box, and a
+     sideways scrollbar here would cover the table's bottom. */
+  overflow: hidden auto;
   background-color: var(--blok-bg-primary);
   border-radius: var(--blok-radius-dialog);
   box-shadow: 0 0 0 1px var(--blok-border-subtle), 0 30px 80px -20px var(--blok-table-fullscreen-shadow);
 }
 
+/*
+  The page room around the table. Keyed on data-blok-table-root: every block in the
+  cells has data-blok-tool, so a rule on that restyles them all on open and close.
+*/
+[data-blok-table-fullscreen] > [data-blok-table-root] {
+  margin-bottom: 0;
+  padding-inline-end: 0;
+}
+
+/* The add-column bar's room moves into the scroll end: its 32px + 4px gap (table-add-controls.ts). */
+[data-blok-table-fullscreen] [data-blok-table-scroll] {
+  padding-inline-end: calc(var(--_blok-table-pill-room) + 36px);
+}
+
+[data-blok-table-fullscreen] > [data-blok-table-root]::after {
+  content: none;
+}
 
 [data-blok-table-fullscreen-backdrop] {
   position: fixed;

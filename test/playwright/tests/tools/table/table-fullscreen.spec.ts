@@ -497,6 +497,88 @@ test.describe('Table full screen', () => {
     expect(gaps?.end).toBeLessThanOrEqual(16 + 20);
   });
 
+  test('the modal never scrolls sideways, so no scrollbar strip cuts off the table bottom', async ({ page }) => {
+    await createBlok(page, false, wideData);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+
+    // Headless Chromium hides scrollbars, so the box's own overflow is what decides it.
+    expect(await modal.evaluate(el => getComputedStyle(el).overflowX)).not.toMatch(/auto|scroll/);
+  });
+
+  test('a tall table scrolled to its end reaches the modal bottom, with room only for the add-row bar', async ({ page }) => {
+    const tallData: OutputData = {
+      blocks: [{
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: true, content: Array.from({ length: 40 }, (_, r) => [`R${r}`, 'x']) },
+      }],
+    };
+
+    await createBlok(page, false, tallData);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    const gap = await modal.evaluate((el) => {
+      el.scrollTo(0, el.scrollHeight);
+      const grid = el.querySelector('[data-blok-table-scroll]')?.getBoundingClientRect();
+      const addRow = el.querySelector('[data-blok-table-add-row]')?.getBoundingClientRect();
+
+      return grid === undefined || addRow === undefined
+        ? null
+        : { below: el.getBoundingClientRect().top + el.clientTop + el.clientHeight - grid.bottom, bar: addRow.bottom - grid.bottom };
+    });
+
+    expect(gap).not.toBeNull();
+    // The add-row bar stays reachable; nothing else sits under the table.
+    expect(gap?.below).toBeLessThanOrEqual(Math.ceil(gap?.bar ?? 0) + 1);
+  });
+
+  test('a wide table runs to the modal end edge, keeps its start gap, and shows the add-column bar at its scroll end', async ({ page }) => {
+    await createBlok(page, false, wideData);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    const edges = await modal.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const innerEnd = box.left + el.clientLeft + el.clientWidth;
+      const sc = el.querySelector<HTMLElement>('[data-blok-table-scroll]');
+      const cell = el.querySelector('[data-blok-table-cell]')?.getBoundingClientRect();
+
+      if (sc === null || cell === undefined) {
+        return null;
+      }
+      const y = cell.top + cell.height / 2;
+      const atEdge = document.elementFromPoint(innerEnd - 2, y)?.closest('[data-blok-table-cell]') !== null;
+      const start = sc.getBoundingClientRect().left - box.left;
+
+      sc.scrollLeft = sc.scrollWidth;
+      sc.dispatchEvent(new Event('scroll'));
+
+      return { atEdge, start };
+    });
+
+    expect(edges).not.toBeNull();
+    expect(edges?.atEdge).toBe(true);
+    expect(edges?.start).toBe(16);
+
+    const end = await modal.evaluate((el) => {
+      const innerEnd = el.getBoundingClientRect().left + el.clientLeft + el.clientWidth;
+      const grid = el.querySelector('[data-blok-table-scroll] > table')?.getBoundingClientRect();
+      const bar = el.querySelector('[data-blok-table-add-col]')?.getBoundingClientRect();
+
+      return grid === undefined || bar === undefined ? null : { innerEnd, gridEnd: grid.right, barStart: bar.left, barEnd: bar.right };
+    });
+
+    expect(end).not.toBeNull();
+    expect(end?.barStart ?? 0).toBeGreaterThanOrEqual(end?.gridEnd ?? Infinity);
+    expect(end?.barEnd ?? Infinity).toBeLessThanOrEqual((end?.innerEnd ?? 0) + 1);
+  });
+
   test('with reduced motion the modal opens and closes at once', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await createBlok(page);

@@ -83,6 +83,13 @@ const canAnimate = (el: HTMLElement): boolean =>
   typeof el.animate === 'function'
   && !(typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+/** The width a scroll container gives its grid: its client width less its padding. */
+const contentWidth = (el: HTMLElement): number => {
+  const style = getComputedStyle(el);
+
+  return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+};
+
 /** The clip-path inset that shows only `inner` of `outer`. */
 const insetOf = (outer: DOMRect, inner: DOMRect): string =>
   `inset(${inner.top - outer.top}px ${outer.right - inner.right}px ${outer.bottom - inner.bottom}px ${inner.left - outer.left}px round 4px)`;
@@ -157,8 +164,8 @@ export class TableFullscreen {
   private origin: DOMRect | null = null;
   /** The table's own visible box at open: the scroll container runs past a narrow grid. */
   private shape: DOMRect | null = null;
-  /** The tool root's width on the page. A fluid table takes it back the moment close starts. */
-  private inlineWidth = 0;
+  /** The grid's room on the page. A fluid table takes it back the moment close starts. */
+  private inlineGridWidth = 0;
   /** The holder, held at its inline height so the page under the modal does not reflow. */
   private holder: HTMLElement | null = null;
   private closing: { host: HTMLElement; backdrop: HTMLElement | null; animations: Animation[] } | null = null;
@@ -298,7 +305,7 @@ export class TableFullscreen {
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]') ?? host;
     const origin = source.getBoundingClientRect();
     const shape = visibleGrid(source, origin);
-    const inlineWidth = source.parentElement?.offsetWidth ?? 0;
+    const inlineGridWidth = contentWidth(source);
     const holder = host.parentElement;
     const flowBefore = holder === null ? 0 : flowEdge(holder);
     const room = holder === null ? 0 : flowBefore - (window.scrollY + holder.getBoundingClientRect().top);
@@ -344,7 +351,7 @@ export class TableFullscreen {
     this.host = host;
     this.origin = origin;
     this.shape = shape;
-    this.inlineWidth = inlineWidth;
+    this.inlineGridWidth = inlineGridWidth;
     this.syncButton();
     this.animateOpen(host, backdrop, source, origin, shape);
   }
@@ -475,7 +482,12 @@ export class TableFullscreen {
     // motion a fluid table's columns would snap narrower at rest. Held by an
     // animation on the root alone: an attribute or custom property on the host
     // restyles every cell, and a style write on the root counts as an edit.
-    const width = source?.parentElement?.animate([{ width: `${this.inlineWidth}px` }], { duration: 0, fill: 'forwards' });
+    // Full screen gives the grid other end room than the page (tables.css), so
+    // the root is held at the width that leaves the grid its page width.
+    const root = source?.parentElement ?? null;
+    const width = source === null || root === null
+      ? undefined
+      : root.animate([{ width: `${this.inlineGridWidth + root.offsetWidth - contentWidth(source)}px` }], { duration: 0, fill: 'forwards' });
 
     this.options.onRelayout();
 

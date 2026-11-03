@@ -630,6 +630,8 @@ export class Table implements BlockTool {
 
     wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES);
     wrapper.setAttribute(DATA_ATTR.tool, 'table');
+    // Full-screen CSS targets the root by this, see tables.css.
+    wrapper.setAttribute('data-blok-table-root', '');
 
     if (this.readOnly) {
       wrapper.setAttribute('data-blok-table-readonly', '');

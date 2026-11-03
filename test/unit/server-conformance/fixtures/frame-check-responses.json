@@ -357,6 +357,195 @@
     }
   },
   {
+    "name": "oembed-full for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-full\",\"oembed\":{\"title\":\"A talk\",\"provider_name\":\"VideoSite\",\"thumbnail_url\":\"https://img.example/t.jpg\",\"width\":4096,\"height\":360}}\n"
+    }
+  },
+  {
+    "name": "oembed-escaped for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-escaped\",\"oembed\":{\"title\":\"Caf\\u00E9 \\u003Cb\\u003E\\u0026amp;\\u003C/b\\u003E \\u2028\",\"provider_name\":\"P\\u00E4ge\"}}\n"
+    }
+  },
+  {
+    "name": "oembed-http-thumbnail for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-http-thumbnail\",\"oembed\":{\"title\":\"t\"}}\n"
+    }
+  },
+  {
+    "name": "oembed-html-only for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-html-only\"}\n"
+    }
+  },
+  {
+    "name": "oembed-not-json for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-not-json\"}\n"
+    }
+  },
+  {
+    "name": "oembed-missing for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-missing\"}\n"
+    }
+  },
+  {
+    "name": "oembed-redirect for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-redirect\",\"oembed\":{\"title\":\"A talk\",\"provider_name\":\"VideoSite\",\"thumbnail_url\":\"https://img.example/t.jpg\",\"width\":4096,\"height\":360}}\n"
+    }
+  },
+  {
+    "name": "oembed-blocked for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-blocked\"}\n"
+    }
+  },
+  {
+    "name": "oembed-oversized for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/oembed-oversized\"}\n"
+    }
+  },
+  {
     "name": "xfo-deny with no Origin",
     "response": {
       "status": 200,

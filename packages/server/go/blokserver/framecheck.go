@@ -1,6 +1,7 @@
 package blokserver
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -9,7 +10,10 @@ import (
 	"github.com/JackUait/blok/packages/server/go/internal/framecheck"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/internal/unfurl"
 )
+
+const maxOEmbedBytes = 64 << 10
 
 // 256 KiB of page is enough for the head. Truncated, never failed.
 var frameCheckLimits = outbound.Limits{Timeout: 10 * time.Second, MaxBytes: 256 << 10, MaxRedirects: 5, Truncate: true}
@@ -30,6 +34,7 @@ func (s *Server) frameCheck(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, []byte("{\"verdict\":\"unknown\"}\n"))
 		return
 	}
+	started := time.Now()
 	limits := frameCheckLimits
 	limits.Hop = s.hopBudget(r)
 	response, err := s.fetcher.Get(r.Context(), target, limits)
@@ -56,7 +61,41 @@ func (s *Server) frameCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	body := []byte(`{"verdict":"` + framecheck.Verdict(response.FinalURL, embedder, headers) + `","link":`)
 	body = jsjson.AppendQuoted(body, jsjson.FromString(response.FinalURL))
+	oEmbedURL := unfurl.Parse(response.Body, response.FinalURL).OEmbed
+	redirects := response.Redirects
+	// The page's slot is free again before the oEmbed fetch takes one.
+	response.Release()
+	oEmbed, ok := s.fetchOEmbed(r.Context(), oEmbedURL, limits.Timeout-time.Since(started),
+		limits.MaxRedirects-redirects, limits.Hop)
+	if ok {
+		body = append(body, `,"oembed":`...)
+		body = oEmbed.AppendJSON(body)
+	}
+	if r.Context().Err() != nil {
+		return
+	}
 	writeJSON(w, http.StatusOK, append(body, "}\n"...))
+}
+
+// fetchOEmbed sends the discovered URL through the same guarded fetcher, on
+// what is left of the page's deadline and redirect budget, for one more hop.
+func (s *Server) fetchOEmbed(ctx context.Context, url string, remaining time.Duration, redirects int,
+	hop func() bool) (framecheck.OEmbed, bool) {
+	if url == "" || remaining <= 0 || redirects < 0 || hop != nil && !hop() {
+		return framecheck.OEmbed{}, false
+	}
+	response, err := s.fetcher.Get(ctx, url, outbound.Limits{
+		Timeout: remaining, MaxBytes: maxOEmbedBytes, MaxRedirects: redirects, Hop: hop,
+	})
+	if err != nil {
+		return framecheck.OEmbed{}, false
+	}
+	defer response.Release()
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		return framecheck.OEmbed{}, false
+	}
+	answer := framecheck.ParseOEmbed(response.Body)
+	return answer, !answer.Empty()
 }
 
 func headerHas(h http.Header, name, value string) bool {

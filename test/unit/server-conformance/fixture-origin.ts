@@ -57,6 +57,25 @@ const FRAMING: Record<string, Array<[string, string]>> = {
   'csp-self': [['Content-Security-Policy', "frame-ancestors 'self'"]],
 };
 
+// /frame/oembed-NAME links to the oEmbed endpoint named here; /oembed/NAME answers it.
+const OEMBED: Record<string, { body: string; href?: string; status?: number }> = {
+  'full': {
+    body: JSON.stringify({
+      type: 'video', version: '1.0', title: 'A talk', author_name: 'Someone', provider_name: 'VideoSite',
+      thumbnail_url: 'https://img.example/t.jpg', thumbnail_width: 480, thumbnail_height: 360,
+      width: 9000, height: 360, html: '<iframe src="https://evil.example"></iframe><script>alert(1)</script>',
+    }),
+  },
+  'escaped': { body: JSON.stringify({ title: 'Caf\u00e9 <b>&amp;</b> \u2028', provider_name: 'P\u00e4ge' }) },
+  'http-thumbnail': { body: JSON.stringify({ title: 't', thumbnail_url: 'http://img.example/t.jpg', width: '640' }) },
+  'html-only': { body: JSON.stringify({ html: '<script>alert(1)</script>' }) },
+  'not-json': { body: '<html>not json</html>' },
+  'missing': { body: '{"title":"gone"}', status: 404 },
+  'redirect': { body: '', href: '/oembed/redirect' },
+  'blocked': { body: '', href: 'http://127.0.0.2/o.json' },
+  'oversized': { body: JSON.stringify({ title: 'big', padding: 'x'.repeat(70 * 1024) }) },
+};
+
 // Each body is PRECEDENCE_HTML under the Content-Encoding lines named here.
 const ENCODED: Record<string, { body: () => Buffer; encoding: string[] }> = {
   'gzip': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['gzip'] },
@@ -180,6 +199,16 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
       const name = path.slice('/frame/'.length);
       const framing = FRAMING[name];
 
+      if (name.startsWith('oembed-') && OEMBED[name.slice('oembed-'.length)] !== undefined) {
+        const key = name.slice('oembed-'.length);
+        const href = OEMBED[key].href ?? `/oembed/${key}`;
+
+        response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'X-Frame-Options': 'DENY' });
+        response.end(`<html><head><title>t</title><link rel="alternate" type="application/json+oembed" href="${href}"></head></html>`);
+
+        return;
+      }
+
       if (name === 'redirect') {
         // A refusal on a redirect hop must not count; only the final response does.
         response.writeHead(302, { Location: '/frame/plain', 'X-Frame-Options': 'DENY' });
@@ -191,6 +220,23 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
       if (framing !== undefined) {
         response.writeHead(200, [['Content-Type', 'text/html; charset=utf-8'], ...framing].flat());
         response.end(PRECEDENCE_HTML);
+
+        return;
+      }
+    }
+
+    if (path === '/oembed/redirect') {
+      response.writeHead(302, { Location: '/oembed/full' });
+      response.end();
+
+      return;
+    }
+
+    if (path.startsWith('/oembed/')) {
+      const answer = OEMBED[path.slice('/oembed/'.length)];
+
+      if (answer !== undefined) {
+        send(response, answer.status ?? 200, 'application/json', answer.body);
 
         return;
       }

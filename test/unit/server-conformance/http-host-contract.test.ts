@@ -763,7 +763,8 @@ const FRAME_PAGES = [
   'plain', 'xfo-deny', 'xfo-sameorigin', 'xfo-allowall', 'xfo-allowall-and-invalid-lines',
   'xfo-invalid-and-invalid-lines', 'xfo-allow-from', 'csp-none', 'csp-two-lines', 'csp-comma-policies',
   'csp-duplicate-directive', 'csp-report-only', 'csp-overrides-xfo', 'csp-http-embedder',
-  'csp-https-embedder', 'csp-self', 'redirect',
+  'csp-https-embedder', 'csp-self', 'redirect', 'oembed-full', 'oembed-escaped', 'oembed-http-thumbnail',
+  'oembed-html-only', 'oembed-not-json', 'oembed-missing', 'oembed-redirect', 'oembed-blocked', 'oembed-oversized',
 ];
 
 // Conformance pages are http, so an allowed page reads "insecure"; "blocked" wins over it.
@@ -804,6 +805,28 @@ it('rates whether an outbound page lets the editor frame it', async () => {
   }
 
   compareGolden('frame-check-responses.json', actual);
+}, 60_000);
+
+// The oEmbed fetch is one more outbound GET, so it takes one more from the rate limit.
+it('charges the oEmbed fetch to the rate limit', async () => {
+  const origin = await startFixtureOrigin();
+  const page = `${origin.baseUrl}/frame/oembed-full`;
+
+  try {
+    for (const [limit, oembed] of [['1', false], ['2', true]] as const) {
+      origin.received.length = 0;
+      await withServer(['--storage-dir', '', '--conformance-origin', origin.baseUrl, '--rate-limit', limit], async (server) => {
+        const response = await server.request('GET', `/frame-check?url=${encodeURIComponent(page)}`);
+
+        expect(response.status).toBe(200);
+        expect(response.text.includes('"oembed"')).toBe(oembed);
+        expect(origin.received.map((request) => request.path))
+          .toEqual(oembed ? ['/frame/oembed-full', '/oembed/full'] : ['/frame/oembed-full']);
+      });
+    }
+  } finally {
+    await origin.stop();
+  }
 }, 60_000);
 
 it('keeps frame-check closed when unfurl is off', async () => {

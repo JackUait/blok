@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Blok.Server.FrameCheck;
+using Blok.Server.Metadata;
 using Blok.Server.Outbound;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,8 @@ internal static class FrameCheckEndpoint
       256L << 10,
       5,
       TruncateBody: true);
+
+  private const long MaximumOEmbedBytes = 64L << 10;
 
   private static readonly string[] FramingHeaders =
   [
@@ -46,14 +50,16 @@ internal static class FrameCheckEndpoint
     }
 
     GuardedResponse response;
+    var started = Stopwatch.GetTimestamp();
+    var allowHop = context.Features.Get<HopBudgetFeature>()?.AllowHop;
+    var fetcher = context.RequestServices
+        .GetRequiredService<IGuardedOutboundFetcher>();
 
     try
     {
-      var fetcher = context.RequestServices
-          .GetRequiredService<IGuardedOutboundFetcher>();
       response = await fetcher.GetAsync(
           target,
-          Limits with { AllowHop = context.Features.Get<HopBudgetFeature>()?.AllowHop },
+          Limits with { AllowHop = allowHop },
           context.RequestAborted);
     }
     catch (GuardedFetchException)
@@ -65,33 +71,89 @@ internal static class FrameCheckEndpoint
       return;
     }
 
-    await using var ownedResponse = response;
+    string verdict;
+    string finalUrl;
+    string oEmbedUrl;
+    int redirects;
 
-    if (response.StatusCode is < 200 or > 299)
+    await using (response)
     {
-      await WriteAsync(
-          context,
-          StatusCodes.Status200OK,
-          new FrameCheckResponse(FrameCheckVerdict.Unknown));
-      return;
+      if (response.StatusCode is < 200 or > 299)
+      {
+        await WriteAsync(
+            context,
+            StatusCodes.Status200OK,
+            new FrameCheckResponse(FrameCheckVerdict.Unknown));
+        return;
+      }
+
+      var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
+      var origin = BlokServerCors.RequestOrigin(context.Request);
+      var embedder = BlokServerCors.IsAllowed(origin, options.AllowedOrigins)
+        ? origin
+        : null;
+      var headers = FramingHeaders
+          .SelectMany(name => response.HeaderValues(name)
+              .Select(value => new KeyValuePair<string, string>(name, value)))
+          .ToList();
+
+      verdict = FrameCheckVerdict.Evaluate(response.FinalUrl, embedder, headers);
+      finalUrl = response.FinalUrl;
+      redirects = response.Redirects;
+      oEmbedUrl = UnfurlMetadataParser.Parse(response.Body.Span, response.FinalUrl).OEmbed;
     }
 
-    var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
-    var origin = BlokServerCors.RequestOrigin(context.Request);
-    var embedder = BlokServerCors.IsAllowed(origin, options.AllowedOrigins)
-      ? origin
-      : null;
-    var headers = FramingHeaders
-        .SelectMany(name => response.HeaderValues(name)
-            .Select(value => new KeyValuePair<string, string>(name, value)))
-        .ToList();
+    // The page's slot is free again before the oEmbed fetch takes one.
+    var oEmbed = await FetchOEmbedAsync(
+        fetcher,
+        oEmbedUrl,
+        Limits.TotalTimeout - Stopwatch.GetElapsedTime(started),
+        Limits.MaximumRedirects - redirects,
+        allowHop,
+        context.RequestAborted);
 
     await WriteAsync(
         context,
         StatusCodes.Status200OK,
-        new FrameCheckResponse(
-            FrameCheckVerdict.Evaluate(response.FinalUrl, embedder, headers),
-            response.FinalUrl));
+        new FrameCheckResponse(verdict, finalUrl, oEmbed));
+  }
+
+  // The discovered URL goes through the same guarded fetcher, on what is left
+  // of the page's deadline and redirect budget, and costs one more hop.
+  private static async Task<OEmbedAnswer?> FetchOEmbedAsync(
+      IGuardedOutboundFetcher fetcher,
+      string url,
+      TimeSpan remaining,
+      int redirects,
+      Func<bool>? allowHop,
+      CancellationToken cancellationToken)
+  {
+    if (url == "" ||
+        remaining <= TimeSpan.Zero ||
+        redirects < 0 ||
+        (allowHop is not null && !allowHop()))
+    {
+      return null;
+    }
+
+    try
+    {
+      await using var response = await fetcher.GetAsync(
+          url,
+          new GuardedFetchLimits(remaining, MaximumOEmbedBytes, redirects, allowHop),
+          cancellationToken);
+      if (response.StatusCode is < 200 or > 299)
+      {
+        return null;
+      }
+
+      var answer = OEmbedAnswer.Parse(response.Body.Span);
+      return answer.IsEmpty ? null : answer;
+    }
+    catch (GuardedFetchException)
+    {
+      return null;
+    }
   }
 
   private static Task WriteAsync(
@@ -111,5 +173,8 @@ internal static class FrameCheckEndpoint
       string Verdict,
       [property: JsonPropertyName("link")]
       [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-      string? Link = null);
+      string? Link = null,
+      [property: JsonPropertyName("oembed")]
+      [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+      OEmbedAnswer? OEmbed = null);
 }

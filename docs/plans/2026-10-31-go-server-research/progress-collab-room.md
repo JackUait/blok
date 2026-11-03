@@ -18,7 +18,7 @@ Every row is DONE or DEFERRED with a reason. Nothing is left as "IMPL, no oracle
 | `blokserver/server.go` | `/sync/{doc}` plus reset, edit, state and five history routes, only when collab is on |
 | `cmd/blok-server/collablog.go`, `conformance.go` | stderr filter for `Blok.Server.Collab`; `--conformance-journal` |
 
-## Final runs on `70f192f2` (this round, rebased tree)
+## Final runs on `70f192f2` (this round, rebased tree; ST re-run in full on Go after `49d38b29`: 38/38)
 
 - `go vet ./...` clean; `gofmt -l` empty; `go.mod`/`go.sum` identical to `origin/main`.
 - `go test -p 2 ./internal/collab/... ./blokserver/... ./cmd/blok-server/...`: all ok. `go test -race -count=3 ./internal/collab/room/`: ok.
@@ -34,6 +34,8 @@ Every row is DONE or DEFERRED with a reason. Nothing is left as "IMPL, no oracle
 - `b9bd1d14` CI: the interop step's `setup-go` now uses main's v7.0.0 pin (main bumped it during the rebase); `ci-critical-path-law` updated, 34/34 with `server-go-parity-law`.
 - `52980bde` P13 gaps: two new scenarios in C# `CollabJournalStoreCaptureTests` (`a-stale-session-closing-releases-nothing`, `every-call-after-close-is-disposed`); Go reads the same `scenarios.json`. Mutant (drop the closed check in `requireFence`) failed it.
 - `d997a6ca` G1: new C# theory `ACallQueuedBehindAClosingRoomIsRetriedOnAFreshOne` (join, state, reset; a C# mutant that stops the join retry fails it; a reset leaves 0 live rooms, measured). Go twin over all four loops (join, edit, state, reset): each `m.forget(r)` retry mutated in turn, each failed. Go also pins the check order on join, edit and state: purging before draining (purge, drain, call → Purged) and draining before the cooldown (failed append → Unavailable; drain → Draining). All six order swaps failed it. C# order read at `CollabRoomManager.cs:264-283,431-447,949-962`. 16 attempts run out only with a hook; the count is pinned by `collab-room-constants.json`.
+- `49d38b29` http-host R22: one limiter, black-box on both targets (above).
+- `aac62c7f` http-host L2: no engine pool before an HTML read (above).
 - `70f192f2` H38: routing-contract, health-only host: a WebSocket upgrade on `/sync/x`, and `/sync/x/state`, `/sync/x/edit`, `/sync/x/history` get the 404 catch-all on both servers (C# maps them only under `CollabEnabled`, `BlokServerEndpointRouteBuilderExtensions.cs:98`; `UseWebSockets` only with collab, `HostCollab.cs:55-64`).
 
 ## Ledger rows
@@ -88,14 +90,16 @@ SC = sync-contract, PV = protocol-v2-contract, BC = blok-client-contract, ST = s
 | H35 | DONE | BC |
 | H38 | DONE | RC `70f192f2` |
 | L1 (collab part) | DONE | T6; `ICollabWorkingSetStore` is internal in C#, so no working-set seam |
-| L2 | DONE | lazy pool, by code (`blokserver/collab.go`) |
+| L2 (http-host: does not warm documents) | DONE | `TestTheCollabRuntimeIsBuiltOnlyOnTheFirstHTMLRead` `aac62c7f`: no pool for health or a null doc, one after two HTML reads; eager-build mutant fails it. C#: `AddBlokDocuments(warmUp: false)`, `BlokServerServiceCollectionExtensions.cs:78-85` |
 | L4 | DONE | CH fake-S3 `114576d2` |
 | L5, L16 | DONE | `--conformance-journal` runs PV and JI |
 | L9 | DONE | Go unit `6922a720` |
 | L13 | DONE | `Options.CollabOperationStore`, `Options.CollabActivityObserver` `25dd5f3c` |
 | L14 | DONE elsewhere | documents-runtime H1 (floors checked up front), R8 (pool), H3 (warm-up); host wiring H2/H4 is that lane's hand-off to http-host |
 | L15 | DONE elsewhere | documents-runtime H3 (`TestWarmsUpOffTheStartupPathWithALongArticle`, `TestIgnoresAWarmUpThatFails`) |
-| R22 | DONE | one limiter shared by `syncEndpoint` and `guard`, by code |
+| http-host R4 (sync route set) | DONE | RC collab host (every route, its Allow list and preflight), SC, CH |
+| http-host R8 (HEAD on sync GET routes is 405) | DONE | RC `collabHost.methodNotAllowed` (`HEAD /sync/x` → 405 `GET`, `HEAD /sync/x/state` → 405 `GET, OPTIONS`) |
+| http-host R22 (one limiter with sync) | DONE | ST `shares one rate limit between the HTTP routes and the sync upgrade` `49d38b29`, both targets; a Go mutant with its own sync limiter fails it. C#: `BlokServerServiceCollectionExtensions.cs:142-146` |
 | U8 | DONE | JI both directions `8ad745a4` |
 
 ## P13: the store contract, case by case

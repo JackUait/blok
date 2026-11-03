@@ -73,8 +73,13 @@ describe('indexedDBStorage', () => {
       expect(await resolvedType(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), 'file')).toBe('text/plain');
     });
 
-    it('keeps SVG stored as an image, since <img> needs the type and runs no script', async () => {
-      expect(await resolvedType(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), 'image')).toBe('image/svg+xml');
+    it('gives SVG stored as an image a data: URL, never a blob that would run as the host page', async () => {
+      const spy = vi.spyOn(URL, 'createObjectURL');
+      const uploader = indexedDBStorage({ dbName: 'blok-assets-test' });
+      const { url } = await requireUploadByFile(uploader)(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), { kind: 'image' });
+
+      expect(await resolveBlokObjectUrl(url, { dbName: 'blok-assets-test' })).toBe(`data:image/svg+xml;base64,${btoa('<svg/>')}`);
+      expect(spy).not.toHaveBeenCalled();
     });
 
     it('keeps a safe type such as PNG', async () => {

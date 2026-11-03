@@ -1,5 +1,5 @@
 import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
-import { createSafeObjectUrl } from '../../../src/shared/safe-object-url';
+import { createSafeObjectUrl, localImageUrl } from '../../../src/shared/safe-object-url';
 
 export interface IndexedDBStorageOptions {
   dbName?: string;
@@ -59,9 +59,13 @@ export async function resolveBlokObjectUrl(url: string, options: IndexedDBStorag
   const db = await openDb(options.dbName ?? DEFAULT_DB);
   const record = await readRecord(db, url.slice(PREFIX.length));
 
-  // Same rule as core: SVG keeps its type only for an image, which <img> shows.
-  // Records saved before `kind` was stored lose SVG too.
-  return record ? createSafeObjectUrl(record.blob, { svgImage: record.kind === 'image' }) : null;
+  // Same rule as core: an image SVG becomes a data: URL, since an SVG blob
+  // opened in a tab runs as the host. Records saved before `kind` was stored lose SVG.
+  if (record === undefined) {
+    return null;
+  }
+
+  return record.kind === 'image' ? localImageUrl(record.blob) : createSafeObjectUrl(record.blob);
 }
 
 interface StoredRecord {

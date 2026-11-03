@@ -313,4 +313,53 @@ describe('CopyLinkTune', () => {
 
     expect(notifier.show).not.toHaveBeenCalled();
   });
+
+  it('shares one document keydown listener across every tune', () => {
+    const addSpy = vi.spyOn(document, 'addEventListener');
+    const removeSpy = vi.spyOn(document, 'removeEventListener');
+    const tunes = Array.from({ length: 20 }, (_unused, i) => {
+      const { api } = createMocks();
+
+      return new CopyLinkTune({ api, block: { id: `b${i}` } as unknown as BlockAPI });
+    });
+
+    tunes.forEach((tune) => tune.destroy());
+
+    const keydownAdds = addSpy.mock.calls.filter(([type]) => type === 'keydown').length;
+    const keydownRemoves = removeSpy.mock.calls.filter(([type]) => type === 'keydown').length;
+
+    expect(keydownAdds).toBeLessThanOrEqual(1);
+    expect(keydownRemoves).toBeLessThanOrEqual(1);
+  });
+
+  it('copies only the selected block link when many tunes are live', async () => {
+    const writeTextMock = vi.fn<(url: string) => Promise<void>>().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: { href: 'https://example.com/' },
+      writable: true,
+    });
+
+    const tunes = ['one', 'two', 'three'].map((id) => {
+      const { api } = createMocks();
+
+      return new CopyLinkTune({ api, block: { id, selected: id === 'two' } as unknown as BlockAPI });
+    });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { metaKey: true, ctrlKey: true, code: 'KeyL' }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    tunes.forEach((tune) => tune.destroy());
+
+    // Earlier tests leave selected tunes alive, so only check these three.
+    const copied = writeTextMock.mock.calls.map(([url]) => url);
+
+    expect(copied).toContain('https://example.com/#two');
+    expect(copied).not.toContain('https://example.com/#one');
+    expect(copied).not.toContain('https://example.com/#three');
+  });
 });

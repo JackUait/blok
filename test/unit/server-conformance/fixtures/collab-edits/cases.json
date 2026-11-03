@@ -32367,6 +32367,1216 @@
         }
       ],
       "exportPage": {}
+    },
+    {
+      "name": "relation-two-peers-relate-different-rows",
+      "seed": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "z"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ARABACcBBmJsb2NrcwJyMQEoAAEAAmlkAXcCcjEoAAEABHR5cGUBdwxkYXRhYmFzZS1yb3cnAAEABGRhdGEBJwABAwV0aXRsZQIEAAEEBUFscGhhJwABAwpwcm9wZXJ0aWVzAScAAQoDcmVsAScAAQsGX19yb3dzAScAAQwBegEoAAENAmlkAXcBeicAAQsJX19yb3dLZXlzAAgAAQ8BdwF6JwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AnIxAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022r1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Alpha\u0022, \u0022properties\u0022: { \u0022rel\u0022: [{ \u0022id\u0022: \u0022z\u0022 }, { \u0022id\u0022: \u0022b\u0022 }] } } }]}",
+      "updates": [
+        "AQMCACcAAQwBYgEoAAIAAmlkAXcBYogBEAF3AWIA"
+      ],
+      "export": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "z"
+                },
+                {
+                  "id": "b"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQMDACcAAQwBYwEoAAMAAmlkAXcBY4gBEAF3AWMA",
+      "mergedExport": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "z"
+                },
+                {
+                  "id": "b"
+                },
+                {
+                  "id": "c"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "relation-a-removal-and-an-add-keep-the-add",
+      "seed": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "z"
+                },
+                {
+                  "id": "y"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ARIBACcBBmJsb2NrcwJyMQEoAAEAAmlkAXcCcjEoAAEABHR5cGUBdwxkYXRhYmFzZS1yb3cnAAEABGRhdGEBJwABAwV0aXRsZQIEAAEEBUFscGhhJwABAwpwcm9wZXJ0aWVzAScAAQoDcmVsAScAAQsGX19yb3dzAScAAQwBegEoAAENAmlkAXcBeicAAQwBeQEoAAEPAmlkAXcBeScAAQsJX19yb3dLZXlzAAgAARECdwF6dwF5JwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AnIxAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022r1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Alpha\u0022, \u0022properties\u0022: { \u0022rel\u0022: [{ \u0022id\u0022: \u0022y\u0022 }] } } }]}",
+      "updates": [
+        "AAEBAg0CEgE="
+      ],
+      "export": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "y"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQMDACcAAQwBYwEoAAMAAmlkAXcBY4gBEwF3AWMA",
+      "mergedExport": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "y"
+                },
+                {
+                  "id": "c"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "relation-two-peers-relate-the-first-row-of-an-empty-list",
+      "seed": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": []
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AQ0BACcBBmJsb2NrcwJyMQEoAAEAAmlkAXcCcjEoAAEABHR5cGUBdwxkYXRhYmFzZS1yb3cnAAEABGRhdGEBJwABAwV0aXRsZQIEAAEEBUFscGhhJwABAwpwcm9wZXJ0aWVzAScAAQoDcmVsAScAAQsGX19yb3dzAScAAQsJX19yb3dLZXlzACcAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJyMQA=",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022r1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Alpha\u0022, \u0022properties\u0022: { \u0022rel\u0022: [{ \u0022id\u0022: \u0022b\u0022 }] } } }]}",
+      "updates": [
+        "AQMCACcAAQwBYgEoAAIAAmlkAXcBYggAAQ0BdwFiAA=="
+      ],
+      "export": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "b"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQMDACcAAQwBYwEoAAMAAmlkAXcBYwgAAQ0BdwFjAA==",
+      "mergedExport": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "b"
+                },
+                {
+                  "id": "c"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "relation-a-clear-and-an-add-keep-the-add",
+      "seed": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "z"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "ARABACcBBmJsb2NrcwJyMQEoAAEAAmlkAXcCcjEoAAEABHR5cGUBdwxkYXRhYmFzZS1yb3cnAAEABGRhdGEBJwABAwV0aXRsZQIEAAEEBUFscGhhJwABAwpwcm9wZXJ0aWVzAScAAQoDcmVsAScAAQsGX19yb3dzAScAAQwBegEoAAENAmlkAXcBeicAAQsJX19yb3dLZXlzAAgAAQ8BdwF6JwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AnIxAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022r1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Alpha\u0022, \u0022properties\u0022: { \u0022rel\u0022: [] } } }]}",
+      "updates": [
+        "AAEBAg0CEAE="
+      ],
+      "export": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": []
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQMDACcAAQwBYwEoAAMAAmlkAXcBY4gBEAF3AWMA",
+      "mergedExport": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "title": "Alpha",
+            "properties": {
+              "rel": [
+                {
+                  "id": "c"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "relation-an-empty-list-under-properties-is-keyed",
+      "seed": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "properties": {
+              "rel": [],
+              "tags": [
+                "a"
+              ]
+            },
+            "other": {
+              "x": []
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AQ4BACcBBmJsb2NrcwJyMQEoAAEAAmlkAXcCcjEoAAEABHR5cGUBdwxkYXRhYmFzZS1yb3cnAAEABGRhdGEBJwABAwpwcm9wZXJ0aWVzAScAAQQDcmVsAScAAQUGX19yb3dzAScAAQUJX19yb3dLZXlzACgAAQQEdGFncwF1AXcBYScAAQMFb3RoZXIBKAABCQF4AXUAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AnIxAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022r1\u0022, \u0022data\u0022: { \u0022properties\u0022: { \u0022rel\u0022: [], \u0022tags\u0022: [\u0022a\u0022, \u0022b\u0022] }, \u0022other\u0022: { \u0022x\u0022: [] } } }]}",
+      "updates": [
+        "AQECAKgBCAF1AncBYXcBYgEBAQgB"
+      ],
+      "export": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "properties": {
+              "rel": [],
+              "tags": [
+                "a",
+                "b"
+              ]
+            },
+            "other": {
+              "x": []
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "relation-an-update-that-adds-an-empty-list",
+      "seed": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "properties": {
+              "n": 1
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwJyMQEoAAEAAmlkAXcCcjEoAAEABHR5cGUBdwxkYXRhYmFzZS1yb3cnAAEABGRhdGEBJwABAwpwcm9wZXJ0aWVzASgAAQQBbgF9AScAAQAFdHVuZXMBJwABAApjb250ZW50SWRzAAgBBHJvb3QBdwJyMQA=",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022r1\u0022, \u0022data\u0022: { \u0022properties\u0022: { \u0022n\u0022: 1, \u0022rel\u0022: [] } } }]}",
+      "updates": [
+        "AQMCACcAAQQDcmVsAScAAgAGX19yb3dzAScAAgAJX19yb3dLZXlzAAA="
+      ],
+      "export": [
+        {
+          "id": "r1",
+          "type": "database-row",
+          "data": {
+            "properties": {
+              "n": 1,
+              "rel": []
+            }
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
+      "name": "structure-two-peers-add-the-first-button-action",
+      "seed": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "activeViewId": "v",
+            "views": [],
+            "schema": [
+              {
+                "id": "btn",
+                "name": "Act",
+                "type": "button",
+                "position": "a0",
+                "button": {
+                  "buttonActions": []
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "seedUpdate": "ARQBACcBBmJsb2NrcwJkYgEoAAEAAmlkAXcCZGIoAAEABHR5cGUBdwhkYXRhYmFzZScAAQAEZGF0YQEoAAEDDGFjdGl2ZVZpZXdJZAF3AXYoAAEDBXZpZXdzAXUAJwABAwZzY2hlbWEBJwABBgZfX3Jvd3MBJwABBwNidG4BKAABCAJpZAF3A2J0bigAAQgEbmFtZQF3A0FjdCgAAQgEdHlwZQF3BmJ1dHRvbigAAQgIcG9zaXRpb24BdwJhMCcAAQgGYnV0dG9uAScAAQ0NYnV0dG9uQWN0aW9ucwAnAAEGCV9fcm93S2V5cwAIAAEPAXcDYnRuJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3AmRiAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022db\u0022, \u0022data\u0022: { \u0022activeViewId\u0022: \u0022v\u0022, \u0022views\u0022: [], \u0022schema\u0022: [{ \u0022id\u0022: \u0022btn\u0022, \u0022name\u0022: \u0022Act\u0022, \u0022type\u0022: \u0022button\u0022, \u0022position\u0022: \u0022a0\u0022, \u0022button\u0022: { \u0022buttonActions\u0022: [{ \u0022id\u0022: \u0022x1\u0022, \u0022type\u0022: \u0022openPage\u0022 }] } }] } }]}",
+      "updates": [
+        "AQMCAAcAAQ4BKAACAAJpZAF3AngxKAACAAR0eXBlAXcIb3BlblBhZ2UA"
+      ],
+      "export": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "activeViewId": "v",
+            "views": [],
+            "schema": [
+              {
+                "id": "btn",
+                "name": "Act",
+                "type": "button",
+                "position": "a0",
+                "button": {
+                  "buttonActions": [
+                    {
+                      "id": "x1",
+                      "type": "openPage"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQMDAAcAAQ4BKAADAAJpZAF3AngyKAADAAR0eXBlAXcIY2FsbGJhY2sA",
+      "mergedExport": [
+        {
+          "id": "db",
+          "type": "database",
+          "data": {
+            "activeViewId": "v",
+            "views": [],
+            "schema": [
+              {
+                "id": "btn",
+                "name": "Act",
+                "type": "button",
+                "position": "a0",
+                "button": {
+                  "buttonActions": [
+                    {
+                      "id": "x1",
+                      "type": "openPage"
+                    },
+                    {
+                      "id": "x2",
+                      "type": "callback"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure-two-peers-add-the-first-automation",
+      "seed": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": []
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AUQBACcBBmJsb2NrcwNkYjEBKAABAAJpZAF3A2RiMSgAAQAEdHlwZQF3CGRhdGFiYXNlJwABAARkYXRhAScAAQMFdGl0bGUCBAABBAZJbnRha2UnAAEDBnNjaGVtYQEnAAELBl9fcm93cwEnAAEMB3AtdGl0bGUBKAABDQJpZAF3B3AtdGl0bGUoAAENBG5hbWUBdwROYW1lKAABDQR0eXBlAXcFdGl0bGUoAAENCHBvc2l0aW9uAXcCYTAnAAEMB3Atd2hlcmUBKAABEgJpZAF3B3Atd2hlcmUoAAESBG5hbWUBdwVXaGVyZSgAARIEdHlwZQF3BXBsYWNlKAABEghwb3NpdGlvbgF3AmExJwABDAdwLWNoZWNrASgAARcCaWQBdwdwLWNoZWNrKAABFwRuYW1lAXcIVmVyaWZpZWQoAAEXBHR5cGUBdwx2ZXJpZmljYXRpb24oAAEXCHBvc2l0aW9uAXcCYTInAAEMBXAtc3VtASgAARwCaWQBdwVwLXN1bSgAARwEbmFtZQF3B1N1bW1hcnkoAAEcBHR5cGUBdwR0ZXh0KAABHAhwb3NpdGlvbgF3AmEzJwABCwlfX3Jvd0tleXMACAABIQR3B3AtdGl0bGV3B3Atd2hlcmV3B3AtY2hlY2t3BXAtc3VtJwABAwV2aWV3cwEnAAEmBl9fcm93cwEnAAEnAnYxASgAASgCaWQBdwJ2MSgAASgEbmFtZQF3BEZvcm0oAAEoBHR5cGUBdwRmb3JtKAABKAhwb3NpdGlvbgF3AmEwJwABKAVzb3J0cwAnAAEoB2ZpbHRlcnMAKAABKBF2aXNpYmxlUHJvcGVydGllcwF1ACcAASgKcHJvcGVydGllcwEnAAEwBl9fcm93cwEnAAExB3AtdGl0bGUBKAABMgJpZAF3B3AtdGl0bGUoAAEyB3Zpc2libGUBeCcAATEHcC13aGVyZQEoAAE1AmlkAXcHcC13aGVyZSgAATUHdmlzaWJsZQF4JwABMQdwLWNoZWNrASgAATgCaWQBdwdwLWNoZWNrKAABOAd2aXNpYmxlAXgnAAExBXAtc3VtASgAATsCaWQBdwVwLXN1bSgAATsHdmlzaWJsZQF4JwABMAlfX3Jvd0tleXMACAABPgR3B3AtdGl0bGV3B3Atd2hlcmV3B3AtY2hlY2t3BXAtc3VtJwABKARmb3JtAScAASYJX19yb3dLZXlzAAgAAUQBdwJ2MSgAAQMMYWN0aXZlVmlld0lkAXcCdjEnAAEDC2F1dG9tYXRpb25zASgAAUcHdmVyc2lvbgF9AScAAUcLZGVmaW5pdGlvbnMBJwABSQZfX3Jvd3MBJwABSQlfX3Jvd0tleXMAJwABAAV0dW5lcwEnAAEACmNvbnRlbnRJZHMACAEEcm9vdAF3A2RiMQA=",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022db1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Intake\u0022,\n  \u0022schema\u0022: [\n    { \u0022id\u0022: \u0022p-title\u0022, \u0022name\u0022: \u0022Name\u0022, \u0022type\u0022: \u0022title\u0022, \u0022position\u0022: \u0022a0\u0022 },\n    { \u0022id\u0022: \u0022p-where\u0022, \u0022name\u0022: \u0022Where\u0022, \u0022type\u0022: \u0022place\u0022, \u0022position\u0022: \u0022a1\u0022 },\n    { \u0022id\u0022: \u0022p-check\u0022, \u0022name\u0022: \u0022Verified\u0022, \u0022type\u0022: \u0022verification\u0022, \u0022position\u0022: \u0022a2\u0022 },\n    { \u0022id\u0022: \u0022p-sum\u0022, \u0022name\u0022: \u0022Summary\u0022, \u0022type\u0022: \u0022text\u0022, \u0022position\u0022: \u0022a3\u0022 }\n  ],\n  \u0022views\u0022: [{\n    \u0022id\u0022: \u0022v1\u0022, \u0022name\u0022: \u0022Form\u0022, \u0022type\u0022: \u0022form\u0022, \u0022position\u0022: \u0022a0\u0022,\n    \u0022sorts\u0022: [], \u0022filters\u0022: [], \u0022visibleProperties\u0022: [],\n    \u0022properties\u0022: [\n      { \u0022id\u0022: \u0022p-title\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022p-where\u0022, \u0022visible\u0022: true },\n      { \u0022id\u0022: \u0022p-check\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022p-sum\u0022, \u0022visible\u0022: true }\n    ],\n    \u0022form\u0022: {}\n  }],\n  \u0022activeViewId\u0022: \u0022v1\u0022,\n  \u0022automations\u0022: { \u0022version\u0022: 1, \u0022definitions\u0022: [{ \u0022id\u0022: \u0022auto-a\u0022, \u0022name\u0022: \u0022First\u0022, \u0022status\u0022: \u0022paused\u0022, \u0022scope\u0022: { \u0022type\u0022: \u0022database\u0022 }, \u0022triggerMode\u0022: \u0022any\u0022, \u0022triggers\u0022: [], \u0022actions\u0022: [] }] } } }]}",
+      "updates": [
+        "AQ4CACcAAUoGYXV0by1hASgAAgACaWQBdwZhdXRvLWEoAAIABG5hbWUBdwVGaXJzdCgAAgAGc3RhdHVzAXcGcGF1c2VkJwACAAVzY29wZQEoAAIEBHR5cGUBdwhkYXRhYmFzZSgAAgALdHJpZ2dlck1vZGUBdwNhbnknAAIACHRyaWdnZXJzAScAAgcGX19yb3dzAScAAgcJX19yb3dLZXlzACcAAgAHYWN0aW9ucwEnAAIKBl9fcm93cwEnAAIKCV9fcm93S2V5cwAIAAFLAXcGYXV0by1hAA=="
+      ],
+      "export": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-a",
+                  "name": "First",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": []
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQ4DACcAAUoGYXV0by1iASgAAwACaWQBdwZhdXRvLWIoAAMABG5hbWUBdwZTZWNvbmQoAAMABnN0YXR1cwF3BnBhdXNlZCcAAwAFc2NvcGUBKAADBAR0eXBlAXcIZGF0YWJhc2UoAAMAC3RyaWdnZXJNb2RlAXcDYW55JwADAAh0cmlnZ2VycwEnAAMHBl9fcm93cwEnAAMHCV9fcm93S2V5cwAnAAMAB2FjdGlvbnMBJwADCgZfX3Jvd3MBJwADCglfX3Jvd0tleXMACAABSwF3BmF1dG8tYgA=",
+      "mergedExport": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-a",
+                  "name": "First",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": []
+                },
+                {
+                  "id": "auto-b",
+                  "name": "Second",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure-two-peers-add-the-first-trigger",
+      "seed": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-1",
+                  "name": "Draft",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": []
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AVIBACcBBmJsb2NrcwNkYjEBKAABAAJpZAF3A2RiMSgAAQAEdHlwZQF3CGRhdGFiYXNlJwABAARkYXRhAScAAQMFdGl0bGUCBAABBAZJbnRha2UnAAEDBnNjaGVtYQEnAAELBl9fcm93cwEnAAEMB3AtdGl0bGUBKAABDQJpZAF3B3AtdGl0bGUoAAENBG5hbWUBdwROYW1lKAABDQR0eXBlAXcFdGl0bGUoAAENCHBvc2l0aW9uAXcCYTAnAAEMB3Atd2hlcmUBKAABEgJpZAF3B3Atd2hlcmUoAAESBG5hbWUBdwVXaGVyZSgAARIEdHlwZQF3BXBsYWNlKAABEghwb3NpdGlvbgF3AmExJwABDAdwLWNoZWNrASgAARcCaWQBdwdwLWNoZWNrKAABFwRuYW1lAXcIVmVyaWZpZWQoAAEXBHR5cGUBdwx2ZXJpZmljYXRpb24oAAEXCHBvc2l0aW9uAXcCYTInAAEMBXAtc3VtASgAARwCaWQBdwVwLXN1bSgAARwEbmFtZQF3B1N1bW1hcnkoAAEcBHR5cGUBdwR0ZXh0KAABHAhwb3NpdGlvbgF3AmEzJwABCwlfX3Jvd0tleXMACAABIQR3B3AtdGl0bGV3B3Atd2hlcmV3B3AtY2hlY2t3BXAtc3VtJwABAwV2aWV3cwEnAAEmBl9fcm93cwEnAAEnAnYxASgAASgCaWQBdwJ2MSgAASgEbmFtZQF3BEZvcm0oAAEoBHR5cGUBdwRmb3JtKAABKAhwb3NpdGlvbgF3AmEwJwABKAVzb3J0cwAnAAEoB2ZpbHRlcnMAKAABKBF2aXNpYmxlUHJvcGVydGllcwF1ACcAASgKcHJvcGVydGllcwEnAAEwBl9fcm93cwEnAAExB3AtdGl0bGUBKAABMgJpZAF3B3AtdGl0bGUoAAEyB3Zpc2libGUBeCcAATEHcC13aGVyZQEoAAE1AmlkAXcHcC13aGVyZSgAATUHdmlzaWJsZQF4JwABMQdwLWNoZWNrASgAATgCaWQBdwdwLWNoZWNrKAABOAd2aXNpYmxlAXgnAAExBXAtc3VtASgAATsCaWQBdwVwLXN1bSgAATsHdmlzaWJsZQF4JwABMAlfX3Jvd0tleXMACAABPgR3B3AtdGl0bGV3B3Atd2hlcmV3B3AtY2hlY2t3BXAtc3VtJwABKARmb3JtAScAASYJX19yb3dLZXlzAAgAAUQBdwJ2MSgAAQMMYWN0aXZlVmlld0lkAXcCdjEnAAEDC2F1dG9tYXRpb25zASgAAUcHdmVyc2lvbgF9AScAAUcLZGVmaW5pdGlvbnMBJwABSQZfX3Jvd3MBJwABSgZhdXRvLTEBKAABSwJpZAF3BmF1dG8tMSgAAUsEbmFtZQF3BURyYWZ0KAABSwZzdGF0dXMBdwZwYXVzZWQnAAFLBXNjb3BlASgAAU8EdHlwZQF3CGRhdGFiYXNlKAABSwt0cmlnZ2VyTW9kZQF3A2FueScAAUsIdHJpZ2dlcnMBJwABUgZfX3Jvd3MBJwABUglfX3Jvd0tleXMAJwABSwdhY3Rpb25zAScAAVUGX19yb3dzAScAAVUJX19yb3dLZXlzACcAAUkJX19yb3dLZXlzAAgAAVgBdwZhdXRvLTEnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcDZGIxAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022db1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Intake\u0022,\n  \u0022schema\u0022: [\n    { \u0022id\u0022: \u0022p-title\u0022, \u0022name\u0022: \u0022Name\u0022, \u0022type\u0022: \u0022title\u0022, \u0022position\u0022: \u0022a0\u0022 },\n    { \u0022id\u0022: \u0022p-where\u0022, \u0022name\u0022: \u0022Where\u0022, \u0022type\u0022: \u0022place\u0022, \u0022position\u0022: \u0022a1\u0022 },\n    { \u0022id\u0022: \u0022p-check\u0022, \u0022name\u0022: \u0022Verified\u0022, \u0022type\u0022: \u0022verification\u0022, \u0022position\u0022: \u0022a2\u0022 },\n    { \u0022id\u0022: \u0022p-sum\u0022, \u0022name\u0022: \u0022Summary\u0022, \u0022type\u0022: \u0022text\u0022, \u0022position\u0022: \u0022a3\u0022 }\n  ],\n  \u0022views\u0022: [{\n    \u0022id\u0022: \u0022v1\u0022, \u0022name\u0022: \u0022Form\u0022, \u0022type\u0022: \u0022form\u0022, \u0022position\u0022: \u0022a0\u0022,\n    \u0022sorts\u0022: [], \u0022filters\u0022: [], \u0022visibleProperties\u0022: [],\n    \u0022properties\u0022: [\n      { \u0022id\u0022: \u0022p-title\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022p-where\u0022, \u0022visible\u0022: true },\n      { \u0022id\u0022: \u0022p-check\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022p-sum\u0022, \u0022visible\u0022: true }\n    ],\n    \u0022form\u0022: {}\n  }],\n  \u0022activeViewId\u0022: \u0022v1\u0022,\n  \u0022automations\u0022: { \u0022version\u0022: 1, \u0022definitions\u0022: [{ \u0022id\u0022: \u0022auto-1\u0022, \u0022name\u0022: \u0022Draft\u0022, \u0022status\u0022: \u0022paused\u0022, \u0022scope\u0022: { \u0022type\u0022: \u0022database\u0022 }, \u0022triggerMode\u0022: \u0022any\u0022, \u0022triggers\u0022: [{ \u0022id\u0022: \u0022trigger-a\u0022, \u0022type\u0022: \u0022pageAdded\u0022 }], \u0022actions\u0022: [] }] } } }]}",
+      "updates": [
+        "AQQCACcAAVMJdHJpZ2dlci1hASgAAgACaWQBdwl0cmlnZ2VyLWEoAAIABHR5cGUBdwlwYWdlQWRkZWQIAAFUAXcJdHJpZ2dlci1hAA=="
+      ],
+      "export": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-1",
+                  "name": "Draft",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [
+                    {
+                      "id": "trigger-a",
+                      "type": "pageAdded"
+                    }
+                  ],
+                  "actions": []
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQUDACcAAVMJdHJpZ2dlci1iASgAAwACaWQBdwl0cmlnZ2VyLWIoAAMABHR5cGUBdw5wcm9wZXJ0eUVkaXRlZCgAAwAKcHJvcGVydHlJZAF3BXAtc3VtCAABVAF3CXRyaWdnZXItYgA=",
+      "mergedExport": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-1",
+                  "name": "Draft",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [
+                    {
+                      "id": "trigger-a",
+                      "type": "pageAdded"
+                    },
+                    {
+                      "id": "trigger-b",
+                      "type": "propertyEdited",
+                      "propertyId": "p-sum"
+                    }
+                  ],
+                  "actions": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure-two-peers-add-the-first-action",
+      "seed": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-1",
+                  "name": "Draft",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": []
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "seedUpdate": "AVIBACcBBmJsb2NrcwNkYjEBKAABAAJpZAF3A2RiMSgAAQAEdHlwZQF3CGRhdGFiYXNlJwABAARkYXRhAScAAQMFdGl0bGUCBAABBAZJbnRha2UnAAEDBnNjaGVtYQEnAAELBl9fcm93cwEnAAEMB3AtdGl0bGUBKAABDQJpZAF3B3AtdGl0bGUoAAENBG5hbWUBdwROYW1lKAABDQR0eXBlAXcFdGl0bGUoAAENCHBvc2l0aW9uAXcCYTAnAAEMB3Atd2hlcmUBKAABEgJpZAF3B3Atd2hlcmUoAAESBG5hbWUBdwVXaGVyZSgAARIEdHlwZQF3BXBsYWNlKAABEghwb3NpdGlvbgF3AmExJwABDAdwLWNoZWNrASgAARcCaWQBdwdwLWNoZWNrKAABFwRuYW1lAXcIVmVyaWZpZWQoAAEXBHR5cGUBdwx2ZXJpZmljYXRpb24oAAEXCHBvc2l0aW9uAXcCYTInAAEMBXAtc3VtASgAARwCaWQBdwVwLXN1bSgAARwEbmFtZQF3B1N1bW1hcnkoAAEcBHR5cGUBdwR0ZXh0KAABHAhwb3NpdGlvbgF3AmEzJwABCwlfX3Jvd0tleXMACAABIQR3B3AtdGl0bGV3B3Atd2hlcmV3B3AtY2hlY2t3BXAtc3VtJwABAwV2aWV3cwEnAAEmBl9fcm93cwEnAAEnAnYxASgAASgCaWQBdwJ2MSgAASgEbmFtZQF3BEZvcm0oAAEoBHR5cGUBdwRmb3JtKAABKAhwb3NpdGlvbgF3AmEwJwABKAVzb3J0cwAnAAEoB2ZpbHRlcnMAKAABKBF2aXNpYmxlUHJvcGVydGllcwF1ACcAASgKcHJvcGVydGllcwEnAAEwBl9fcm93cwEnAAExB3AtdGl0bGUBKAABMgJpZAF3B3AtdGl0bGUoAAEyB3Zpc2libGUBeCcAATEHcC13aGVyZQEoAAE1AmlkAXcHcC13aGVyZSgAATUHdmlzaWJsZQF4JwABMQdwLWNoZWNrASgAATgCaWQBdwdwLWNoZWNrKAABOAd2aXNpYmxlAXgnAAExBXAtc3VtASgAATsCaWQBdwVwLXN1bSgAATsHdmlzaWJsZQF4JwABMAlfX3Jvd0tleXMACAABPgR3B3AtdGl0bGV3B3Atd2hlcmV3B3AtY2hlY2t3BXAtc3VtJwABKARmb3JtAScAASYJX19yb3dLZXlzAAgAAUQBdwJ2MSgAAQMMYWN0aXZlVmlld0lkAXcCdjEnAAEDC2F1dG9tYXRpb25zASgAAUcHdmVyc2lvbgF9AScAAUcLZGVmaW5pdGlvbnMBJwABSQZfX3Jvd3MBJwABSgZhdXRvLTEBKAABSwJpZAF3BmF1dG8tMSgAAUsEbmFtZQF3BURyYWZ0KAABSwZzdGF0dXMBdwZwYXVzZWQnAAFLBXNjb3BlASgAAU8EdHlwZQF3CGRhdGFiYXNlKAABSwt0cmlnZ2VyTW9kZQF3A2FueScAAUsIdHJpZ2dlcnMBJwABUgZfX3Jvd3MBJwABUglfX3Jvd0tleXMAJwABSwdhY3Rpb25zAScAAVUGX19yb3dzAScAAVUJX19yb3dLZXlzACcAAUkJX19yb3dLZXlzAAgAAVgBdwZhdXRvLTEnAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcDZGIxAA==",
+      "body": "{\u0022ops\u0022:[{ \u0022op\u0022: \u0022update\u0022, \u0022id\u0022: \u0022db1\u0022, \u0022data\u0022: { \u0022title\u0022: \u0022Intake\u0022,\n  \u0022schema\u0022: [\n    { \u0022id\u0022: \u0022p-title\u0022, \u0022name\u0022: \u0022Name\u0022, \u0022type\u0022: \u0022title\u0022, \u0022position\u0022: \u0022a0\u0022 },\n    { \u0022id\u0022: \u0022p-where\u0022, \u0022name\u0022: \u0022Where\u0022, \u0022type\u0022: \u0022place\u0022, \u0022position\u0022: \u0022a1\u0022 },\n    { \u0022id\u0022: \u0022p-check\u0022, \u0022name\u0022: \u0022Verified\u0022, \u0022type\u0022: \u0022verification\u0022, \u0022position\u0022: \u0022a2\u0022 },\n    { \u0022id\u0022: \u0022p-sum\u0022, \u0022name\u0022: \u0022Summary\u0022, \u0022type\u0022: \u0022text\u0022, \u0022position\u0022: \u0022a3\u0022 }\n  ],\n  \u0022views\u0022: [{\n    \u0022id\u0022: \u0022v1\u0022, \u0022name\u0022: \u0022Form\u0022, \u0022type\u0022: \u0022form\u0022, \u0022position\u0022: \u0022a0\u0022,\n    \u0022sorts\u0022: [], \u0022filters\u0022: [], \u0022visibleProperties\u0022: [],\n    \u0022properties\u0022: [\n      { \u0022id\u0022: \u0022p-title\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022p-where\u0022, \u0022visible\u0022: true },\n      { \u0022id\u0022: \u0022p-check\u0022, \u0022visible\u0022: true }, { \u0022id\u0022: \u0022p-sum\u0022, \u0022visible\u0022: true }\n    ],\n    \u0022form\u0022: {}\n  }],\n  \u0022activeViewId\u0022: \u0022v1\u0022,\n  \u0022automations\u0022: { \u0022version\u0022: 1, \u0022definitions\u0022: [{ \u0022id\u0022: \u0022auto-1\u0022, \u0022name\u0022: \u0022Draft\u0022, \u0022status\u0022: \u0022paused\u0022, \u0022scope\u0022: { \u0022type\u0022: \u0022database\u0022 }, \u0022triggerMode\u0022: \u0022any\u0022, \u0022triggers\u0022: [], \u0022actions\u0022: [{ \u0022id\u0022: \u0022action-a\u0022, \u0022type\u0022: \u0022editProperty\u0022, \u0022target\u0022: \u0022triggerRow\u0022, \u0022propertyId\u0022: \u0022p-sum\u0022, \u0022value\u0022: \u0022first\u0022 }] }] } } }]}",
+      "updates": [
+        "AQcCACcAAVYIYWN0aW9uLWEBKAACAAJpZAF3CGFjdGlvbi1hKAACAAR0eXBlAXcMZWRpdFByb3BlcnR5KAACAAZ0YXJnZXQBdwp0cmlnZ2VyUm93KAACAApwcm9wZXJ0eUlkAXcFcC1zdW0oAAIABXZhbHVlAXcFZmlyc3QIAAFXAXcIYWN0aW9uLWEA"
+      ],
+      "export": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-1",
+                  "name": "Draft",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": [
+                    {
+                      "id": "action-a",
+                      "type": "editProperty",
+                      "target": "triggerRow",
+                      "propertyId": "p-sum",
+                      "value": "first"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "exportPage": {},
+      "peerUpdate": "AQcDACcAAVYIYWN0aW9uLWIBKAADAAJpZAF3CGFjdGlvbi1iKAADAAR0eXBlAXcMZWRpdFByb3BlcnR5KAADAAZ0YXJnZXQBdwp0cmlnZ2VyUm93KAADAApwcm9wZXJ0eUlkAXcHcC10aXRsZSgAAwAFdmFsdWUBdwZzZWNvbmQIAAFXAXcIYWN0aW9uLWIA",
+      "mergedExport": [
+        {
+          "id": "db1",
+          "type": "database",
+          "data": {
+            "title": "Intake",
+            "schema": [
+              {
+                "id": "p-title",
+                "name": "Name",
+                "type": "title",
+                "position": "a0"
+              },
+              {
+                "id": "p-where",
+                "name": "Where",
+                "type": "place",
+                "position": "a1"
+              },
+              {
+                "id": "p-check",
+                "name": "Verified",
+                "type": "verification",
+                "position": "a2"
+              },
+              {
+                "id": "p-sum",
+                "name": "Summary",
+                "type": "text",
+                "position": "a3"
+              }
+            ],
+            "views": [
+              {
+                "id": "v1",
+                "name": "Form",
+                "type": "form",
+                "position": "a0",
+                "sorts": [],
+                "filters": [],
+                "visibleProperties": [],
+                "properties": [
+                  {
+                    "id": "p-title",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-where",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-check",
+                    "visible": true
+                  },
+                  {
+                    "id": "p-sum",
+                    "visible": true
+                  }
+                ],
+                "form": {}
+              }
+            ],
+            "activeViewId": "v1",
+            "automations": {
+              "version": 1,
+              "definitions": [
+                {
+                  "id": "auto-1",
+                  "name": "Draft",
+                  "status": "paused",
+                  "scope": {
+                    "type": "database"
+                  },
+                  "triggerMode": "any",
+                  "triggers": [],
+                  "actions": [
+                    {
+                      "id": "action-a",
+                      "type": "editProperty",
+                      "target": "triggerRow",
+                      "propertyId": "p-sum",
+                      "value": "first"
+                    },
+                    {
+                      "id": "action-b",
+                      "type": "editProperty",
+                      "target": "triggerRow",
+                      "propertyId": "p-title",
+                      "value": "second"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

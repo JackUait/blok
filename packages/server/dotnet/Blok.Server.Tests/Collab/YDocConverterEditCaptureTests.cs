@@ -304,6 +304,15 @@ public sealed class YDocConverterEditCaptureTests
           [ { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] }, { "id": "c2", "rowId": "r0", "blocks": ["p01"] }, { "id": "c3", "rowId": "r0", "blocks": [] } ],
           [ { "id": "c0", "rowId": "r1", "blocks": ["p10", "p11"] }, { "id": "c1", "rowId": "r1", "blocks": ["p12"] }, { "id": "c2", "rowId": "r1", "blocks": [] }, { "id": "c3", "rowId": "r1", "blocks": [] } ] ] } }
         """)),
+    ["relates-rows-z-and-c"] = peer => PeerEdit(peer, Edit(RelationUpdate("""[{ "id": "z" }, { "id": "c" }]"""))),
+    ["relates-rows-z-y-and-c"] = peer => PeerEdit(peer, Edit(RelationUpdate("""[{ "id": "z" }, { "id": "y" }, { "id": "c" }]"""))),
+    ["relates-row-c"] = peer => PeerEdit(peer, Edit(RelationUpdate("""[{ "id": "c" }]"""))),
+    ["adds-button-action-x2"] = peer => PeerEdit(peer, Edit(ButtonUpdate("""[{ "id": "x2", "type": "callback" }]"""))),
+    ["adds-automation-auto-b"] = peer => PeerEdit(peer, Edit(AutomationUpdate(AutomationDefinition("auto-b", "Second")))),
+    ["adds-automation-trigger-b"] = peer => PeerEdit(peer, Edit(AutomationUpdate(AutomationDefinition("auto-1", "Draft",
+        triggers: """[{ "id": "trigger-b", "type": "propertyEdited", "propertyId": "p-sum" }]""")))),
+    ["adds-automation-action-b"] = peer => PeerEdit(peer, Edit(AutomationUpdate(AutomationDefinition("auto-1", "Draft",
+        actions: """[{ "id": "action-b", "type": "editProperty", "target": "triggerRow", "propertyId": "p-title", "value": "second" }]""")))),
     ["moves-column-c2-first"] = peer => PeerEdit(peer, Edit("""
         { "op": "update", "id": "tb", "data": { "content": [
           [ { "id": "c2", "rowId": "r0", "blocks": ["p01"] }, { "id": "c0", "rowId": "r0", "blocks": ["p00"] }, { "id": "c1", "rowId": "r0", "blocks": [] } ],
@@ -981,5 +990,79 @@ public sealed class YDocConverterEditCaptureTests
     yield return new("merge-an-update-drops-the-omitted-keys",
         ["""{ "id": "p", "type": "note", "data": { "text": "old", "level": 3 } }"""],
         Edit("""{ "op": "update", "id": "p", "data": { "text": "new" } }"""));
+
+    // YDocConverterDatabaseRelationTests.
+    yield return new("relation-two-peers-relate-different-rows", [RelationRow("""[{ "id": "z" }]""")],
+        Edit(RelationUpdate("""[{ "id": "z" }, { "id": "b" }]""")), Peer: "relates-rows-z-and-c");
+    yield return new("relation-a-removal-and-an-add-keep-the-add", [RelationRow("""[{ "id": "z" }, { "id": "y" }]""")],
+        Edit(RelationUpdate("""[{ "id": "y" }]""")), Peer: "relates-rows-z-y-and-c");
+    yield return new("relation-two-peers-relate-the-first-row-of-an-empty-list", [RelationRow("[]")],
+        Edit(RelationUpdate("""[{ "id": "b" }]""")), Peer: "relates-row-c");
+    yield return new("relation-a-clear-and-an-add-keep-the-add", [RelationRow("""[{ "id": "z" }]""")],
+        Edit(RelationUpdate("[]")), Peer: "relates-rows-z-and-c");
+    yield return new("relation-an-empty-list-under-properties-is-keyed",
+        ["""{ "id": "r1", "type": "database-row", "data": { "properties": { "rel": [], "tags": ["a"] }, "other": { "x": [] } } }"""],
+        Edit("""{ "op": "update", "id": "r1", "data": { "properties": { "rel": [], "tags": ["a", "b"] }, "other": { "x": [] } } }"""));
+    yield return new("relation-an-update-that-adds-an-empty-list",
+        ["""{ "id": "r1", "type": "database-row", "data": { "properties": { "n": 1 } } }"""],
+        Edit("""{ "op": "update", "id": "r1", "data": { "properties": { "n": 1, "rel": [] } } }"""));
+
+    // YDocConverterDatabaseStructureTests.
+    yield return new("structure-two-peers-add-the-first-button-action", [ButtonDatabase],
+        Edit(ButtonUpdate("""[{ "id": "x1", "type": "openPage" }]""")), Peer: "adds-button-action-x2");
+    yield return new("structure-two-peers-add-the-first-automation", [AutomationDatabase("[]")],
+        Edit(AutomationUpdate(AutomationDefinition("auto-a", "First"))), Peer: "adds-automation-auto-b");
+    yield return new("structure-two-peers-add-the-first-trigger", [AutomationDatabase($"[{AutomationDefinition("auto-1", "Draft")}]")],
+        Edit(AutomationUpdate(AutomationDefinition("auto-1", "Draft", triggers: """[{ "id": "trigger-a", "type": "pageAdded" }]"""))),
+        Peer: "adds-automation-trigger-b");
+    yield return new("structure-two-peers-add-the-first-action", [AutomationDatabase($"[{AutomationDefinition("auto-1", "Draft")}]")],
+        Edit(AutomationUpdate(AutomationDefinition("auto-1", "Draft",
+            actions: """[{ "id": "action-a", "type": "editProperty", "target": "triggerRow", "propertyId": "p-sum", "value": "first" }]"""))),
+        Peer: "adds-automation-action-b");
   }
+
+  private static string RelationRow(string relation) =>
+      $$"""{ "id": "r1", "type": "database-row", "data": { "title": "Alpha", "properties": { "rel": {{relation}} } } }""";
+
+  private static string RelationUpdate(string relation) =>
+      $$"""{ "op": "update", "id": "r1", "data": { "title": "Alpha", "properties": { "rel": {{relation}} } } }""";
+
+  private static string ButtonData(string actions) =>
+      $$"""{ "activeViewId": "v", "views": [], "schema": [{ "id": "btn", "name": "Act", "type": "button", "position": "a0", "button": { "buttonActions": {{actions}} } }] }""";
+
+  private static readonly string ButtonDatabase = $$"""{ "id": "db", "type": "database", "data": {{ButtonData("[]")}} }""";
+
+  private static string ButtonUpdate(string actions) =>
+      $$"""{ "op": "update", "id": "db", "data": {{ButtonData(actions)}} }""";
+
+  private static string AutomationDefinition(string id, string name, string triggers = "[]", string actions = "[]") =>
+      $$"""{ "id": "{{id}}", "name": "{{name}}", "status": "paused", "scope": { "type": "database" }, "triggerMode": "any", "triggers": {{triggers}}, "actions": {{actions}} }""";
+
+  /// <summary>The database of YDocConverterDatabaseStructureTests.AutomationDoc.</summary>
+  private static string AutomationData(string definitions) => $$"""
+      { "title": "Intake",
+        "schema": [
+          { "id": "p-title", "name": "Name", "type": "title", "position": "a0" },
+          { "id": "p-where", "name": "Where", "type": "place", "position": "a1" },
+          { "id": "p-check", "name": "Verified", "type": "verification", "position": "a2" },
+          { "id": "p-sum", "name": "Summary", "type": "text", "position": "a3" }
+        ],
+        "views": [{
+          "id": "v1", "name": "Form", "type": "form", "position": "a0",
+          "sorts": [], "filters": [], "visibleProperties": [],
+          "properties": [
+            { "id": "p-title", "visible": true }, { "id": "p-where", "visible": true },
+            { "id": "p-check", "visible": true }, { "id": "p-sum", "visible": true }
+          ],
+          "form": {}
+        }],
+        "activeViewId": "v1",
+        "automations": { "version": 1, "definitions": {{definitions}} } }
+      """;
+
+  private static string AutomationDatabase(string definitions) =>
+      $$"""{ "id": "db1", "type": "database", "data": {{AutomationData(definitions)}} }""";
+
+  private static string AutomationUpdate(string definition) =>
+      $$"""{ "op": "update", "id": "db1", "data": {{AutomationData($"[{definition}]")}} }""";
 }

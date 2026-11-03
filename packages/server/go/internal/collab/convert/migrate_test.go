@@ -2,6 +2,7 @@ package convert
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -10,8 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
+	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/internal/yjs"
 )
 
@@ -128,6 +131,89 @@ func TestMigrateRichTextWritesWhatCSharpWrites(t *testing.T) {
 			if left := CollectLegacyRichText(doc, fields); len(left) != 0 {
 				t.Errorf("left %v", left)
 			}
+			// Twin of YDocConverterMigrationTests.MigrationKeepsEveryCharacterAndMark
+			// and StringLeafRoomsMigrateToTheSameSegments: an oracle that is not
+			// C#'s, what the format-1 client read from the same room.
+			if c.Room != nil && c.CustomFields == nil && c.ShapeUpdate == nil {
+				// RichTextRuntime.Export: nested HTML the plain export leaves is read too.
+				full, err := (&DocConverter{Now: time.Now, HTML: runtimeReader(t)}).Export(context.Background(), doc)
+				if err != nil {
+					t.Fatal(err)
+				}
+				read := withSegments(t, format1Canonical(t, *c.Room))
+				if got, want := canonical(t, mustGet(full, "blocks")), canonical(t, read); got != want {
+					t.Errorf("format-1 canonical\n got %s\nwant %s", got, want)
+				}
+			}
 		})
 	}
+}
+
+func format1Canonical(t *testing.T, room string) []any {
+	raw, err := os.ReadFile(filepath.Join(collabtest.Path(t, "collab-format1"), room, "canonical.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return jsValue(t, raw).([]any)
+}
+
+// withSegments is RichTextRuntime.WithSegments: every HTML string in a
+// built-in rich field, top level or in a database-row's nested documents,
+// read to segments by the client's reader in the runtime.
+func withSegments(t *testing.T, blocks []any) []any {
+	type slot struct {
+		data *jsjson.Object
+		key  jsjson.Str
+	}
+	var slots []slot
+	var found []RichTextHTML
+	fields := BuiltInRichTextFields()
+	var collect func(blocks []any)
+	collect = func(blocks []any) {
+		for _, block := range blocks {
+			entry, ok := block.(*jsjson.Object)
+			if !ok {
+				continue
+			}
+			kind, _ := entry.Get(str("type"))
+			value, _ := entry.Get(str("data"))
+			typeName, isString := kind.(jsjson.Str)
+			data, isObject := value.(*jsjson.Object)
+			if !isString || !isObject {
+				continue
+			}
+			for _, member := range data.Members() {
+				if html, isHTML := member.Value.(jsjson.Str); isHTML && fields.IsRich(typeName.String(), member.Key.String()) {
+					slots = append(slots, slot{data, member.Key})
+					found = append(found, RichTextHTML{Type: "paragraph", Field: "text", HTML: html})
+				}
+			}
+			if properties, ok := mustGet(data, "properties").(*jsjson.Object); ok && typeName.String() == "database-row" {
+				for _, property := range properties.Members() {
+					if document, ok := property.Value.(*jsjson.Object); ok {
+						if nested, ok := mustGet(document, "blocks").([]any); ok {
+							collect(nested)
+						}
+					}
+				}
+			}
+		}
+	}
+	collect(blocks)
+	if len(found) == 0 {
+		return blocks
+	}
+	read, err := runtimeReader(t).Read(context.Background(), found, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, s := range slots {
+		s.data.Set(s.key, read[i])
+	}
+	return blocks
+}
+
+func mustGet(object *jsjson.Object, key string) any {
+	value, _ := object.Get(str(key))
+	return value
 }

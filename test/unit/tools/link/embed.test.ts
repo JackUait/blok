@@ -1863,3 +1863,64 @@ describe('Embed — the URL input follows the same generic-embed rules as render
     expect(tool.save().source).toBe('');
   });
 });
+
+describe('Embed — two frame profiles, picked by the registry', () => {
+  const REGISTRY_SANDBOX = 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation';
+  const GENERIC_SANDBOX = 'allow-scripts allow-forms allow-popups';
+  const FORBIDDEN = [
+    'allow-same-origin',
+    'allow-top-navigation',
+    'allow-top-navigation-by-user-activation',
+    'allow-downloads',
+    'allow-modals',
+    'allow-popups-to-escape-sandbox',
+  ];
+
+  const genericFrame = (data: Partial<EmbedData>, overrides: { allowGenericEmbed?: boolean; allowedEmbedOrigins?: string[] }): HTMLIFrameElement | null =>
+    new Embed(createOptions(data, overrides)).render().querySelector('iframe');
+
+  it('keeps the provider profile for a registry embed', () => {
+    const frame = new Embed(createOptions(iframeData())).render().querySelector('iframe');
+
+    expect(frame?.getAttribute('sandbox')).toBe(REGISTRY_SANDBOX);
+    expect(frame?.getAttribute('allow')).toBe('encrypted-media; fullscreen; picture-in-picture');
+    expect(frame?.getAttribute('referrerpolicy')).toBe('strict-origin-when-cross-origin');
+    expect(frame?.hasAttribute('credentialless')).toBe(false);
+  });
+
+  it.each([
+    ['the generic flag', { allowGenericEmbed: true }],
+    ['the allowlist', { allowedEmbedOrigins: ['dash.example.org'] }],
+  ])('gives a generic embed allowed by %s the strict profile', (_name, overrides) => {
+    const frame = genericFrame(
+      { service: '', source: 'https://dash.example.org/x', embed: 'https://dash.example.org/x', kind: 'iframe' },
+      overrides
+    );
+    const tokens = (frame?.getAttribute('sandbox') ?? '').split(/\s+/);
+
+    expect(frame?.getAttribute('sandbox')).toBe(GENERIC_SANDBOX);
+    FORBIDDEN.forEach(token => expect(tokens).not.toContain(token));
+    expect(frame?.hasAttribute('allow')).toBe(false);
+    expect(frame?.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(frame?.getAttribute('loading')).toBe('lazy');
+    expect(frame?.hasAttribute('credentialless')).toBe(true);
+  });
+
+  it('gives a pasted allowlisted URL the strict profile', () => {
+    const tool = new Embed(createOptions({}, { allowedEmbedOrigins: ['dash.example.org'] }));
+    const root = tool.render();
+
+    tool.onPaste(patternEvent('embed', 'https://dash.example.org/x'));
+
+    expect(root.querySelector('iframe')?.getAttribute('sandbox')).toBe(GENERIC_SANDBOX);
+  });
+
+  it('never gives a saved non-registry service the provider profile', () => {
+    const frame = genericFrame(
+      { service: 'not-a-provider', source: 'https://dash.example.org/x', embed: 'https://dash.example.org/x', kind: 'iframe' },
+      { allowGenericEmbed: true }
+    );
+
+    expect(frame?.getAttribute('sandbox')).toBe(GENERIC_SANDBOX);
+  });
+});

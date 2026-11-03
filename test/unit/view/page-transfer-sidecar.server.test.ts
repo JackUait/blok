@@ -129,7 +129,11 @@ const move: PageTransferRequest = {
   place: { parentId: null, afterId: 't' },
 };
 
-describe('sidecar transfer host against the real server', () => {
+// Each test starts its own server and runs a whole saga. Next to the other
+// conformance suites a C# host's cold start alone can pass vitest's 5 s default.
+const TIMEOUT_MS = 30_000;
+
+describe('sidecar transfer host against the real server', { timeout: TIMEOUT_MS }, () => {
   it('moves a subtree with its data unchanged and two journal receipts', async () => {
     await withServer(async (harness) => {
       seed(harness.endpoint);

@@ -6,6 +6,7 @@ import {
   type LinkPasteMenu,
 } from '../../../../tools/link/paste-menu/controller';
 import { isOwnHostLink, type PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
+import { genericEmbedPolicy } from '../../../../tools/link/generic-embed-policy';
 import type { PageConfig } from '../../../../tools/page/types';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
@@ -90,7 +91,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       }
 
       // Bookmark's catch-all pattern would claim it; let the text handler take it.
-      if (!pattern || (pattern.tool.name === 'bookmark' && isOwnHostLink(data, this.ownHosts()))) {
+      if (!pattern || (pattern.tool.name === 'bookmark' && isOwnHostLink(data, genericEmbedPolicy(this.config?.linkPaste).ownHosts))) {
         return false;
       }
     }
@@ -188,15 +189,6 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     }
   }
 
-  /** The page's hostname plus the configured `linkPaste.hostAliases`. */
-  private ownHosts(): string[] {
-    const aliases = this.config?.linkPaste?.hostAliases ?? [];
-    // Empty under file:// and about:blank; it must not count as a host.
-    const current = typeof window === 'undefined' ? '' : window.location.hostname;
-
-    return current === '' ? [...aliases] : [current, ...aliases];
-  }
-
   private getCaretRect(): DOMRect | null {
     const selection = window.getSelection();
 
@@ -229,9 +221,10 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const hasSelection = this.hasSelection();
-    const allowGenericEmbed = this.config?.linkPaste?.allowGenericEmbed === true;
-    const allowedEmbedOrigins = this.config?.linkPaste?.allowedEmbedOrigins ?? [];
-    const ownHosts = this.ownHosts();
+    const policy = genericEmbedPolicy(this.config?.linkPaste);
+    const allowGenericEmbed = policy.allowGeneric;
+    const allowedEmbedOrigins = policy.allowedOrigins;
+    const ownHosts = policy.ownHosts;
     const pageId = this.pageIdFor(url);
     const page = pageId === undefined ? {} : { pageId };
     const gate = { hasSelection, allowGenericEmbed, allowedEmbedOrigins, ownHosts, ...page };

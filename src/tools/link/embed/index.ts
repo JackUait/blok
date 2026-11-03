@@ -35,8 +35,7 @@ import { brandMarkElement } from '../../../components/utils/brand-mark-services'
 import { embedTypeIcon } from '../paste-menu/items';
 import { createUrlMirror } from '../../../components/utils/url-mirror';
 import { createEmbedWindow } from './empty-window';
-import { isAllowedEmbedOrigin } from './allowed-origins';
-import { isSameSiteHost, pageHosts } from '../host-pattern';
+import { canFrameGeneric, genericEmbedPolicy, type GenericEmbedPolicy } from '../generic-embed-policy';
 import { renderEmbedPreview } from './preview';
 import { overrideStatic } from '../../../components/utils/override-static';
 import type { LazySheet } from '../../../components/utils/lazy-styles';
@@ -89,24 +88,6 @@ interface EmbedRenderDecision {
   src: string;
   /** The registry service the source matched; '' for a generic embed. */
   service: string;
-}
-
-interface GenericEmbedPolicy {
-  allowGeneric: boolean;
-  allowedOrigins?: readonly string[];
-  /** The page host and `linkPaste.hostAliases`. */
-  ownHosts: readonly string[];
-}
-
-/**
- * Whether a non-registry URL may be framed. The URL input and render both ask this.
- * The host's own site is never framed, even when allowlisted: its pages would load
- * with the reader's cookies, and HTML served there could lift the sandbox.
- */
-function canFrameGeneric(url: string, opts: GenericEmbedPolicy): boolean {
-  return isHttpsUrl(url)
-    && !isSameSiteHost(hostnameOf(url), opts.ownHosts)
-    && (opts.allowGeneric || isAllowedEmbedOrigin(url, opts.allowedOrigins));
 }
 
 /**
@@ -327,13 +308,7 @@ export class Embed implements BlockTool {
   }
 
   private genericPolicy(): GenericEmbedPolicy {
-    const linkPaste = this.api.config?.linkPaste;
-
-    return {
-      allowGeneric: linkPaste?.allowGenericEmbed === true,
-      allowedOrigins: linkPaste?.allowedEmbedOrigins,
-      ownHosts: pageHosts(linkPaste?.hostAliases),
-    };
+    return genericEmbedPolicy(this.api.config?.linkPaste);
   }
 
   /** The only URL this block is allowed to hand to a live frame/widget sink. */

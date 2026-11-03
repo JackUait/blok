@@ -10,19 +10,10 @@ import {
   type PasteMenuOption,
 } from './options';
 
-export interface PasteMenuOpenParams {
+/** Extends the menu context, so a new policy key reaches the options with no copy step. */
+export interface PasteMenuOpenParams extends PasteMenuContext {
   /** The pasted URL the menu acts on. */
   url: string;
-  /** Whether the paste landed on a non-collapsed selection. */
-  hasSelection: boolean;
-  /** When true, unmatched URLs also offer a generic embed. */
-  allowGenericEmbed?: boolean;
-  /** Hosts whose https URLs may get a generic embed. */
-  allowedEmbedOrigins?: readonly string[];
-  /** Hostnames that count as the editor's own site; their links get no bookmark. */
-  ownHosts?: readonly string[];
-  /** The page the URL links to; offers a page mention. */
-  pageId?: string;
   /** Caret rect to anchor the popover at, or null to let the popover self-place. */
   position: DOMRect | null;
   /**
@@ -97,13 +88,7 @@ export class PasteMenuController implements LinkPasteMenu {
   public open(params: PasteMenuOpenParams): void {
     this.closeExisting();
 
-    const options = buildLivePasteMenuOptions(params.url, {
-      hasSelection: params.hasSelection,
-      allowGenericEmbed: params.allowGenericEmbed === true,
-      ...(params.allowedEmbedOrigins ? { allowedEmbedOrigins: params.allowedEmbedOrigins } : {}),
-      ...(params.ownHosts ? { ownHosts: params.ownHosts } : {}),
-      ...(params.pageId !== undefined ? { pageId: params.pageId } : {}),
-    });
+    const options = buildLivePasteMenuOptions(params.url, params);
 
     // Mutable flags held on a const object (the lint config forbids `let`).
     const state = { picked: false, closed: false };

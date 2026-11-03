@@ -1,4 +1,4 @@
-import { isAllowedEmbedOrigin } from '../embed/allowed-origins';
+import { canFrameGeneric } from '../generic-embed-policy';
 import { matchesHostPattern } from '../host-pattern';
 import { isHttpUrl, matchEmbedService } from '../registry';
 
@@ -38,44 +38,13 @@ export function isOwnHostLink(url: string, ownHosts: readonly string[] | undefin
   }
 }
 
-/**
- * Whether `hostname` is one of `ownHosts`, or a subdomain or parent domain of
- * one, on dot boundaries. A `*.` wildcard counts as its bare suffix.
- */
-function isOwnSiteRelated(hostname: string, ownHosts: readonly string[]): boolean {
-  // `new URL` keeps a trailing dot, which names the same host.
-  const host = hostname.toLowerCase().replace(/\.$/, '');
-
-  return ownHosts.some((pattern) => {
-    const own = pattern.toLowerCase().replace(/^\*\./, '');
-
-    return own !== '' && (host === own || host.endsWith(`.${own}`) || own.endsWith(`.${host}`));
+/** The embed tool's own rule, so the menu never offers a frame that render refuses. */
+const canEmbedGeneric = (url: string, context: PasteMenuContext): boolean =>
+  canFrameGeneric(url, {
+    allowGeneric: context.allowGenericEmbed === true,
+    allowedOrigins: context.allowedEmbedOrigins ?? [],
+    ownHosts: context.ownHosts ?? [],
   });
-}
-
-/**
- * A generic (non-registry) embed frames an arbitrary page, so it is offered
- * only for https, never for the own site, and only when the host opted in.
- */
-function canEmbedGeneric(url: string, context: PasteMenuContext): boolean {
-  const parsed = ((): URL | null => {
-    try {
-      return new URL(url);
-    } catch {
-      return null;
-    }
-  })();
-
-  if (parsed === null || parsed.protocol !== 'https:') {
-    return false;
-  }
-
-  if (isOwnSiteRelated(parsed.hostname, context.ownHosts ?? [])) {
-    return false;
-  }
-
-  return context.allowGenericEmbed === true || isAllowedEmbedOrigin(url, context.allowedEmbedOrigins);
-}
 
 /**
  * Decides which paste-menu options apply to a pasted URL.

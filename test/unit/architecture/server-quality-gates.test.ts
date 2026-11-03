@@ -85,7 +85,7 @@ describe('server quality gates', () => {
       .join('\n');
     const uses = steps.flatMap(step => step.uses === undefined ? [] : [step.uses]);
 
-    expect(uses).toContain('actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16');
+    expect(uses).toContain('actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e');
     expect(runs).toContain('gofmt -l packages/server/go test/fixtures/go-server-consumer');
     expect(runs).toContain('go vet ./...');
     // Pinned: @latest would let a new release change what fails the gate.
@@ -166,7 +166,7 @@ describe('server quality gates', () => {
     expect(legs('.github/workflows/codeql.yml')).toContainEqual({ language: 'go', 'build-mode': 'manual' });
     expect(legs('.github/workflows/ci.yml').map(leg => leg.language)).not.toContain('go');
     expect(steps.find(step => step.name === 'Setup Go')?.uses)
-      .toBe('actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16');
+      .toBe('actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e');
     expect(steps.find(step => step.name === 'Build Go server')?.run)
       .toBe('go build ./...');
   });

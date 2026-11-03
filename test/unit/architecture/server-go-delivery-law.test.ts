@@ -19,7 +19,7 @@ const repoRoot = resolve(import.meta.dirname, '../../..');
 const read = (path: string): string => readFileSync(resolve(repoRoot, path), 'utf8');
 const RELEASE_WORKFLOW = '.github/workflows/release-server.yml';
 const WRAPPER = 'packages/server/bin/blok-server.mjs';
-const SETUP_GO_ACTION = 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16';
+const SETUP_GO_ACTION = 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e';
 const GO_ARCHIVES = [
   'blok-server-go_darwin_amd64.tar.gz',
   'blok-server-go_darwin_arm64.tar.gz',

@@ -143,6 +143,30 @@ func TestStepsGoAfterAnHourWithoutACall(t *testing.T) {
 	}
 }
 
+// C# RoomAgentHistoryTests.StepsGoAfterAnHourWithoutACall: both add and top
+// count as a call.
+func TestTopAndAddKeepTheStepsForAnotherHour(t *testing.T) {
+	now := time.Now()
+	h := newRoomHistory(func() time.Time { return now })
+	first, second := &roomStep{}, &roomStep{}
+	h.add("d", roomAgent, first)
+	for _, want := range []*roomStep{first, first} {
+		now = now.Add(roomIdleLimit)
+		if got := h.top("d", roomAgent, true); got != want {
+			t.Fatalf("top %p, want %p", got, want)
+		}
+	}
+	h.add("d", roomAgent, second)
+	now = now.Add(roomIdleLimit)
+	if got := h.top("d", roomAgent, true); got != second {
+		t.Fatalf("top %p, want the second step", got)
+	}
+	now = now.Add(roomIdleLimit + time.Millisecond)
+	if got := h.top("d", roomAgent, true); got != nil {
+		t.Fatalf("top %p after the idle limit", got)
+	}
+}
+
 // T2: the room trims done steps only, so with the redo side full, a page
 // action (which keeps the redo side) evicts the very step it adds.
 func TestTheRoomTrimsOnlyDoneSteps(t *testing.T) {

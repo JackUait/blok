@@ -1,4 +1,5 @@
 using Blok.Server.Agent;
+using Blok.Server.Tests.Collab;
 using Xunit;
 
 namespace Blok.Server.Tests.Agent;
@@ -33,6 +34,30 @@ public sealed class RoomAgentHistoryTests
 
     Assert.Same(kept, history.Top("d", Actor, undo: true));
     Assert.Null(history.Top("d", Actor, undo: false));
+  }
+
+  // H7/T18: steps go after an hour with no call. Exactly an hour is not past it, and both
+  // Add and Top count as a call. The Go executor has the same test.
+  [Fact]
+  public void StepsGoAfterAnHourWithoutACall()
+  {
+    var time = new ManualTimeProvider();
+    var history = new RoomAgentHistory(time);
+    var first = new RoomAgentHistory.Step();
+
+    history.Add("d", Actor, first);
+    time.Advance(RoomAgentHistory.IdleLimit);
+    Assert.Same(first, history.Top("d", Actor, undo: true));
+    time.Advance(RoomAgentHistory.IdleLimit);
+    Assert.Same(first, history.Top("d", Actor, undo: true));
+
+    var second = new RoomAgentHistory.Step();
+    history.Add("d", Actor, second);
+    time.Advance(RoomAgentHistory.IdleLimit);
+    Assert.Same(second, history.Top("d", Actor, undo: true));
+
+    time.Advance(RoomAgentHistory.IdleLimit + TimeSpan.FromMilliseconds(1));
+    Assert.Null(history.Top("d", Actor, undo: true));
   }
 
   // T1: the char cap counts the escaped JSON text in UTF-16 units. The Go room history has the same test.

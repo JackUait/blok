@@ -290,6 +290,37 @@ public sealed class BlokAgentRoomHistoryTests
     Assert.Equal(["p", "q", "a"], await IdsAsync(room));
   }
 
+  // H1: an undo retries the head it pinned itself when a peer writes before its lane, at most three
+  // tries in all; the caller's own expectRevision is never retried. The Go executor has the same test.
+  [Theory]
+  [InlineData(1, false, null, 2)]
+  [InlineData(99, false, "STALE", 3)]
+  [InlineData(99, true, "STALE", 1)]
+  public async Task AnUndoRetriesItsOwnStaleHeadThreeTimes(int writes, bool expect, string? code, int calls)
+  {
+    await using var room = Open();
+    var executor = (BlokAgentExecutor)room.Executor;
+
+    var inserted = await OkAsync(room, Insert("a", "Agent"));
+    var tries = 0;
+    executor.BeforeHistoryLane = async () =>
+    {
+      tries++;
+      if (tries <= writes)
+      {
+        await PeerWritesAsync(room, "q", $"Peer {tries}");
+      }
+    };
+
+    var batch = expect
+        ? $$$"""{"expectRevision":"{{{inserted["revision"]!.GetValue<string>()}}}","commands":[{"name":"history.undo","args":{}}]}"""
+        : Undo;
+    var result = await RunAsync(room, batch);
+
+    Assert.Equal(code, result["ok"]!.GetValue<bool>() ? null : Code(result));
+    Assert.Equal(calls, tries);
+  }
+
   /// <summary>Answers a history batch as a contract without history.* would; everything else runs for real.</summary>
   private sealed class NoHistoryRuntime(IBlokRuntime inner) : IBlokRuntime
   {

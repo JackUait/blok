@@ -255,6 +255,42 @@ public sealed class BlokAgentPageCreateTests
     Assert.Empty(JsonNode.Parse((await rooms.StateAsync(RoomId)).Json)!["blocks"]!.AsArray());
   }
 
+  // R11/T10: the room read that decides whether the made pages are orphans ignores the
+  // caller's cancel, so a cancelled call still lists them. The Go executor has the same test.
+  [Fact]
+  public async Task TheOrphanCheckReadsTheRoomAfterTheCallerCancels()
+  {
+    var endpoint = new FakeDocEndpoint();
+    endpoint.HoldsDocument(RoomId, JsonNode.Parse(Empty)!.AsObject());
+    var time = new ManualTimeProvider();
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+    var rooms = new CollabRoomManager(new FakeWorkingSetStore(), endpoint, converter, new CollabRoomOptions(), time, _ => { }, new FakeCollabOperationStore());
+    using var caller = new CancellationTokenSource();
+    var executor = new BlokAgentExecutor(new CancelOnExecute(Runtime.Value, caller), rooms, converter);
+    var pages = new Creator();
+
+    var execution = await executor.ExecuteInRoomAsync(RoomId, InsertPage, Actor, Options(pages), caller.Token);
+
+    Assert.True(caller.IsCancellationRequested);
+    Assert.Equal(["host-1"], pages.Created);
+    AssertOrphaned(execution, "CANCELLED");
+  }
+
+  /// <summary>Lets the page count run, then cancels the caller's token when the batch runs.</summary>
+  private sealed class CancelOnExecute(IBlokRuntime inner, CancellationTokenSource caller) : IBlokRuntime
+  {
+    public ValueTask<string> InvokeAsync(string operation, string inputJson, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+      if (operation != "agentExecute")
+      {
+        return inner.InvokeAsync(operation, inputJson, timeout, cancellationToken);
+      }
+
+      caller.Cancel();
+      throw new OperationCanceledException(caller.Token);
+    }
+  }
+
   [Theory]
   [InlineData(true)]
   [InlineData(false)]

@@ -15,6 +15,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
   internal RoomAgentHistory RoomHistory => roomHistory;
 
+  /// <summary>Runs between an undo's head read and its room lane, for tests.</summary>
+  internal Func<ValueTask>? BeforeHistoryLane { get; set; }
+
   /// <summary>With rooms, <see cref="ExecuteInRoomAsync"/> edits live documents.</summary>
   internal BlokAgentExecutor(IBlokRuntime runtime, CollabRoomManager? rooms, ICollabDocConverter? converter)
       : this(runtime)
@@ -694,6 +697,11 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     if (lineage is not null && expect is not null && expect.Lineage != lineage)
     {
       return lineageChanged;
+    }
+
+    if (BeforeHistoryLane is { } beforeLane)
+    {
+      await beforeLane();
     }
 
     try

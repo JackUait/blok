@@ -150,7 +150,8 @@ export interface BlocksToHtmlOptions {
    * BEFORE the unsafe-scheme strip. See {@link ViewUrlTransform}.
    *
    * An embed iframe is sandboxed but may run scripts, so a rewritten embed
-   * src must stay on another origin than the page.
+   * src must stay on another origin than the page. Blok drops the frame
+   * unless the rewritten src is absolute https; the origin is the host's job.
    */
   transformUrl?: ViewUrlTransform;
   /**

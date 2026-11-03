@@ -45,6 +45,7 @@ describe('blocksToViewNodes', () => {
           attrs: {
             src: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
             sandbox: 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation',
+            referrerpolicy: 'strict-origin-when-cross-origin',
           },
           children: [],
         }],

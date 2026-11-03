@@ -65,6 +65,8 @@ export interface EmitterEnv {
    * to an unsafe scheme.
    */
   url(name: 'href' | 'src', value: unknown, blockType: string): string;
+  /** Like {@link EmitterEnv.url} for an iframe src, but empty unless the result is absolute https. */
+  frameSrc(value: unknown, blockType: string): string;
   /**
    * Build a page or page-link href from `pageHref`, gated like
    * {@link EmitterEnv.url}. Empty for an absent callback, invalid id or unsafe URL.
@@ -755,13 +757,13 @@ export const builtinEmitters: Record<string, Emitter> = {
     }
 
     // Script widgets (X, Telegram, Threads) need the provider's script; the view has none.
-    const srcAttr = match.kind === 'iframe' ? env.url('src', match.embedUrl, block.type) : '';
+    const srcAttr = match.kind === 'iframe' ? env.frameSrc(match.embedUrl, block.type) : '';
 
     if (srcAttr === '') {
       return link();
     }
 
-    return trail(`<figure><iframe${srcAttr} sandbox="${IFRAME_SANDBOX}"></iframe>${figcaption(block, env)}</figure>`, block, env);
+    return trail(`<figure><iframe${srcAttr} sandbox="${IFRAME_SANDBOX}" referrerpolicy="strict-origin-when-cross-origin"></iframe>${figcaption(block, env)}</figure>`, block, env);
   },
 
   table: emitTable,

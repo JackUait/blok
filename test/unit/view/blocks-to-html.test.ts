@@ -466,13 +466,14 @@ describe('blocksToHtml', () => {
 
   describe('embed', () => {
     const SANDBOX = 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation';
+    const FRAME = `sandbox="${SANDBOX}" referrerpolicy="strict-origin-when-cross-origin"`;
 
     it('derives a registry iframe src from the source and sandboxes it, with caption', () => {
       const html = blocksToHtml(doc([
         { type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x', caption: 'Vid' } },
       ]));
 
-      expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/x" sandbox="${SANDBOX}"></iframe><figcaption>Vid</figcaption></figure>`);
+      expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/x" ${FRAME}></iframe><figcaption>Vid</figcaption></figure>`);
     });
 
     it('never frames a stored embed URL that differs from the one the source derives', () => {
@@ -484,7 +485,7 @@ describe('blocksToHtml', () => {
       ]));
 
       expect(html).not.toContain('attacker.example');
-      expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" sandbox="${SANDBOX}"></iframe></figure>`);
+      expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" ${FRAME}></iframe></figure>`);
     });
 
     it('renders a non-registry https embed as a link to its source, never an iframe', () => {
@@ -520,7 +521,22 @@ describe('blocksToHtml', () => {
       );
 
       expect(transformUrl).toHaveBeenCalledWith('https://www.youtube.com/embed/x', { attr: 'src', blockType: 'embed' });
-      expect(html).toBe(`<figure><iframe src="https://proxy.test/?u=https%3A%2F%2Fwww.youtube.com%2Fembed%2Fx" sandbox="${SANDBOX}"></iframe></figure>`);
+      expect(html).toBe(`<figure><iframe src="https://proxy.test/?u=https%3A%2F%2Fwww.youtube.com%2Fembed%2Fx" ${FRAME}></iframe></figure>`);
+    });
+
+    it.each([
+      ['http', 'http://proxy.test/x'],
+      ['relative', '/proxy?u=x'],
+      ['protocol-relative', '//proxy.test/x'],
+      ['javascript', 'javascript:alert(1)'],
+    ])('falls back to the source link when transformUrl makes the iframe src %s', (_, rewritten) => {
+      const html = blocksToHtml(
+        doc([{ type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x' } }]),
+        { transformUrl: (url, ctx) => (ctx.attr === 'src' ? rewritten : url) }
+      );
+
+      expect(html).not.toContain('<iframe');
+      expect(html).toBe('<a href="https://youtu.be/x">youtube</a>');
     });
 
     it('falls back to the source link when transformUrl drops the iframe src', () => {

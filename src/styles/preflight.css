@@ -364,8 +364,15 @@
 
   Reaches `outline` only. A box-shadow or border-color ring must carry the
   modality guard in its own selector. Text-entry fields are the law's exception.
+
+  Under [data-blok-top-layer] the target lists focusable kinds instead of any
+  element. promoteToTopLayer sets that attribute on live subtrees (the full-screen
+  table), and a bare :focus-visible target makes Chrome restyle the whole subtree
+  each time it changes: seconds on a large table.
 */
-:root[data-blok-modality="pointer"] :is([data-blok-interface], [data-blok-popover], [data-blok-top-layer])
-  :focus-visible:not(:is([contenteditable], input, textarea)) {
+:root[data-blok-modality="pointer"] :is([data-blok-interface], [data-blok-popover])
+  :focus-visible:not(:is([contenteditable], input, textarea)),
+:root[data-blok-modality="pointer"] [data-blok-top-layer]
+  :is(a, area, button, select, summary, iframe, dialog, [tabindex], [role]):focus-visible:not(:is([contenteditable], input, textarea)) {
   outline: none !important;
 }

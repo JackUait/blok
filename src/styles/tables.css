@@ -316,6 +316,9 @@
   margin: 0;
   /* The box's transition-colors covers inherited color: each frame would restyle every cell. */
   transition: none;
+  /* The UA popover color is CanvasText. Chrome counts that as a new inherited
+     color even when it matches, and restyles every cell on open and close. */
+  color: inherit;
   /* Top: the header, then a small gap; the table keeps its own room for the column grips. */
   padding: calc(var(--blok-space-14) + var(--blok-space-1)) var(--blok-space-4) var(--blok-space-10);
   overflow: auto;

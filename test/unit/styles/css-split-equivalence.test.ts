@@ -1447,6 +1447,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // the page width a closing table takes back, the note on the tighter padding,
     // and the size card with its steppers, note and Done button (replacing the two fields).
     const TABLE_FULLSCREEN_BYTES = 7_915;
+    // preflight.css + tables.css: the pointer focus reset lists focusable kinds under
+    // [data-blok-top-layer], and the full-screen box inherits its colour, so neither
+    // opening nor closing restyles every cell (net of the dropped closing-width rule).
+    const TOP_LAYER_RESTYLE_BYTES = 407;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1813,7 +1817,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROUND18_TOOLBAR_FOLD_BYTES
       + PAGE_MENTION_QUERY_PILL_BYTES
       + FILE_PREVIEW_GUTTER_BYTES
-      + TABLE_FULLSCREEN_BYTES;
+      + TABLE_FULLSCREEN_BYTES
+      + TOP_LAYER_RESTYLE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

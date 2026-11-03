@@ -104,6 +104,45 @@ const createBlok = async (page: Page, readOnly = false, data: OutputData = table
   await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 };
 
+/** A 40×30 table; returns how many elements the table box holds. */
+const createLargeTable = async (page: Page): Promise<number> => {
+  const rows = 40;
+  const cols = 30;
+
+  await page.setViewportSize({ width: 1400, height: 800 });
+  await createBlok(page, false, {
+    blocks: [{
+      id: 'tbl',
+      type: 'table',
+      data: { withHeadings: true, content: Array.from({ length: rows }, () => Array.from({ length: cols }, () => '')) },
+    }],
+  });
+
+  return page.locator(TABLE_SELECTOR).evaluate(el => el.closest('[data-blok-element-content]')?.querySelectorAll('*').length ?? 0);
+};
+
+/**
+ * How many element styles Chrome computes while `action` runs, read from a
+ * trace. Chromium only, which is all this spec runs in.
+ */
+const countStyled = async (page: Page, action: () => Promise<void>): Promise<number> => {
+  const cdp = await page.context().newCDPSession(page);
+  const events: Array<{ name: string; args?: { elementCount?: number } }> = [];
+
+  cdp.on('Tracing.dataCollected', ({ value }) => events.push(...(value as typeof events)));
+  const done = new Promise(resolve => cdp.once('Tracing.tracingComplete', resolve));
+
+  await cdp.send('Tracing.start', { categories: 'devtools.timeline', transferMode: 'ReportEvents' });
+  await action();
+  await cdp.send('Tracing.end');
+  await done;
+  await cdp.detach();
+
+  return events
+    .filter(e => e.name === 'UpdateLayoutTree')
+    .reduce((sum, e) => sum + (e.args?.elementCount ?? 0), 0);
+};
+
 const openWithButton = async (page: Page): Promise<void> => {
   await page.locator(TABLE_SELECTOR).hover();
   await page.getByRole('button', { name: OPEN_LABEL }).click();
@@ -398,43 +437,31 @@ test.describe('Table full screen', () => {
     }
   });
 
-  // Counts styled elements through a Chrome trace: this spec runs in Chromium only.
-  test('closing restyles only the table box, not every cell', async ({ page }) => {
-    const rows = 40;
-    const cols = 30;
-
-    await page.setViewportSize({ width: 1400, height: 800 });
-    await createBlok(page, false, {
-      blocks: [{
-        id: 'tbl',
-        type: 'table',
-        data: { withHeadings: true, content: Array.from({ length: rows }, () => Array.from({ length: cols }, () => '')) },
-      }],
+  test('opening restyles only the table box, not every cell', async ({ page }) => {
+    const tableElements = await createLargeTable(page);
+    const styled = await countStyled(page, async () => {
+      await page.evaluate(() => document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click());
     });
+
+    // A restyle of every cell styles each element several times over (its
+    // pseudo-elements and highlights) and freezes a large table for seconds.
+    expect(styled).toBeLessThan(tableElements);
+  });
+
+  test('closing restyles only the table box, not every cell, through the landing', async ({ page }) => {
+    const tableElements = await createLargeTable(page);
+
     await openWithButton(page);
-    const modal = page.locator('[data-blok-table-fullscreen]');
+    await expect.poll(() => page.locator('[data-blok-table-fullscreen]').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
 
-    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    const styled = await countStyled(page, async () => {
+      await page.evaluate(() => document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click());
+      await expect(page.locator('[data-blok-table-fullscreen]')).toHaveCount(0);
+    });
 
-    const tableElements = await modal.evaluate(el => el.querySelectorAll('*').length);
-    const cdp = await page.context().newCDPSession(page);
-    const events: Array<{ name: string; args?: { elementCount?: number } }> = [];
-
-    cdp.on('Tracing.dataCollected', ({ value }) => events.push(...(value as typeof events)));
-    const done = new Promise(resolve => cdp.once('Tracing.tracingComplete', resolve));
-
-    await cdp.send('Tracing.start', { categories: 'devtools.timeline', transferMode: 'ReportEvents' });
-    await page.evaluate(() => document.querySelector<HTMLElement>('[data-blok-table-fullscreen-toggle]')?.click());
-    await cdp.send('Tracing.end');
-    await done;
-
-    const styled = events
-      .filter(e => e.name === 'UpdateLayoutTree')
-      .reduce((sum, e) => sum + (e.args?.elementCount ?? 0), 0);
-
-    // The grips and heading cells restyle as the dialog role goes. A restyle of
-    // every cell's elements freezes a large table for seconds.
-    expect(styled).toBeLessThan(tableElements / 2);
+    // The grips and heading cells restyle as the dialog role goes and as the
+    // table relays out; that scales with rows and columns, not with cells.
+    expect(styled).toBeLessThan(tableElements);
   });
 
   test('the table sits close to the header and to the modal sides', async ({ page }) => {

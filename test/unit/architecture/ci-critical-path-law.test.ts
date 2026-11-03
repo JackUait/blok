@@ -448,18 +448,30 @@ describe('CI critical-path law', () => {
         'working-directory': 'packages/server/go',
         run: 'go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...',
       },
+      // One step, two processes: each is a single serial tail (the blokagent
+      // package, server-contract), so they share the runner's four cores
+      // instead of adding up past 7 minutes.
       {
-        name: 'Test Go server with coverage',
-        'working-directory': 'packages/server/go',
+        name: 'Test Go server with coverage, and Go conformance',
         run: [
-          'go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...',
-          'go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1',
-          'node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"',
+          'set +e',
+          '(',
+          '  set -e',
+          '  cd packages/server/go',
+          '  go test -p 2 -covermode=atomic -coverprofile="$RUNNER_TEMP/go-coverage.out" ./...',
+          '  go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1',
+          '  node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"',
+          ') > "$RUNNER_TEMP/go-test.log" 2>&1 &',
+          'unit=$!',
+          'node scripts/test-server-conformance.mjs --target go',
+          'conformance=$?',
+          'wait "$unit"',
+          'unit=$?',
+          'echo "--- Go server tests (exit $unit) ---"',
+          'cat "$RUNNER_TEMP/go-test.log"',
+          'echo "--- Go conformance exit $conformance ---"',
+          'test "$unit" -eq 0 && test "$conformance" -eq 0',
         ].join('\n'),
-      },
-      {
-        name: 'Test Go conformance',
-        run: 'node scripts/test-server-conformance.mjs --target go',
       },
       {
         name: 'Test Go module consumer and release build',

@@ -93,6 +93,7 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,
 	}
+	restoreTargets(server)
 	limitRequestHeaders(server, headerTimeout, keepAliveTimeout)
 	return server
 }

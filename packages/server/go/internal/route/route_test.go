@@ -19,6 +19,12 @@ type routingFixture struct {
 		EncodedNUL       []request  `json:"encodedNul"`
 		RawNonASCII      []string   `json:"rawNonAscii"`
 		NotRefused       []routedAs `json:"notRefused"`
+		RawNUL           []request  `json:"rawNul"`
+		UnparsedTargets  []struct {
+			Method string `json:"method"`
+			Path   string `json:"path"`
+			Status int    `json:"status"`
+		} `json:"unparsedTargets"`
 	} `json:"healthHost"`
 	CollabHost struct {
 		MethodNotAllowed []refusal `json:"methodNotAllowed"`
@@ -31,6 +37,10 @@ type routingFixture struct {
 			Path string `json:"path"`
 			Doc  string `json:"doc"`
 		} `json:"decodedDoc"`
+		UnparsedDoc []struct {
+			Path string `json:"path"`
+			Doc  string `json:"doc"`
+		} `json:"unparsedDoc"`
 	} `json:"collabHost"`
 }
 
@@ -273,6 +283,43 @@ func TestEncodedNULInThePathIsABadRequest(t *testing.T) {
 	for _, c := range fixture.HealthHost.NotRefused {
 		if got := serve(t, router, "GET", c.Path); got.status != c.Status {
 			t.Errorf("GET %s: %d, want %d", c.Path, got.status, c.Status)
+		}
+	}
+}
+
+// serveRaw builds the request the host hands over for a target that Go's
+// url parser refuses: RequestURI as sent, URL parsed from a stand-in.
+func serveRaw(t *testing.T, router http.Handler, method, target string) answer {
+	t.Helper()
+	request := httptest.NewRequest(method, "/stand-in", nil)
+	request.RequestURI = target
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	result := recorder.Result()
+	body, _ := io.ReadAll(result.Body)
+	return answer{result.StatusCode, result.Header, string(body)}
+}
+
+// The router reads the target as sent, so a malformed escape or a raw
+// control byte routes the way Kestrel routes it.
+func TestUnparsedTargetsRouteLikeKestrel(t *testing.T) {
+	fixture := loadFixture(t)
+	router := testRouter()
+	for _, c := range fixture.HealthHost.UnparsedTargets {
+		want := map[int]string{200: "health|", 404: "404 page not found\n"}[c.Status]
+		if got := serveRaw(t, router, c.Method, c.Path); got.status != c.Status || got.body != want {
+			t.Errorf("%s %q: %d %q, want %d %q", c.Method, c.Path, got.status, got.body, c.Status, want)
+		}
+	}
+	for _, c := range fixture.CollabHost.UnparsedDoc {
+		if got := serveRaw(t, router, "GET", c.Path); got.status != 200 || got.body != "state|"+c.Doc {
+			t.Errorf("GET %q: %d %q, want state|%q", c.Path, got.status, got.body, c.Doc)
+		}
+	}
+	for _, c := range fixture.HealthHost.RawNUL {
+		got := serveRaw(t, router, c.Method, c.Path)
+		if got.status != 400 || got.body != "" || got.header.Get("Content-Length") != "0" || got.header.Get("Connection") != "close" {
+			t.Errorf("%s %q: %d %q %v", c.Method, c.Path, got.status, got.body, got.header)
 		}
 	}
 }

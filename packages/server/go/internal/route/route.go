@@ -65,10 +65,10 @@ func (r *Router) Handle(pattern string, methods []string, h http.Handler) {
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	decoded := decodeKeepingSlash(req.URL.EscapedPath())
-	// Kestrel refuses a decoded NUL in the path, and any raw byte of 0x80 or
-	// above in the target (path or query), before routing.
-	if strings.IndexByte(decoded, 0) >= 0 || !isASCII(req.RequestURI) {
+	decoded := decodeKeepingSlash(rawPath(req))
+	// Kestrel refuses a decoded NUL in the path, and a raw NUL or any raw
+	// byte of 0x80 or above in the target (path or query), before routing.
+	if strings.IndexByte(decoded, 0) >= 0 || strings.IndexByte(req.RequestURI, 0) >= 0 || !isASCII(req.RequestURI) {
 		badRequest(w)
 		return
 	}
@@ -182,6 +182,17 @@ func decodeKeepingSlash(s string) string {
 		b.WriteString(s[i : i+3])
 		s = s[i+3:]
 	}
+}
+
+// rawPath is the path as sent. URL.EscapedPath re-escapes the whole path when
+// it holds a byte like "|", which turns "%Ff" into "%FF", another doc id. The
+// host also puts a target Go's url parser refuses back in RequestURI.
+func rawPath(req *http.Request) string {
+	if strings.HasPrefix(req.RequestURI, "/") {
+		path, _, _ := strings.Cut(req.RequestURI, "?")
+		return path
+	}
+	return req.URL.EscapedPath()
 }
 
 func isASCII(s string) bool {

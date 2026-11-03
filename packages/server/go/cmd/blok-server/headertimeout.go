@@ -66,6 +66,7 @@ func (l headerListener) Accept() (net.Conn, error) {
 		return nil, err
 	}
 	conn := &headerConn{Conn: c, timeout: l.timeout, armed: true}
+	conn.targets = &targetStream{src: rawConn{conn}}
 	conn.timer = time.AfterFunc(l.idle, func() { _ = c.Close() })
 	return conn, nil
 }
@@ -76,9 +77,23 @@ type headerConn struct {
 	mu      sync.Mutex
 	armed   bool
 	timer   *time.Timer
+	targets *targetStream
 }
 
 func (c *headerConn) Read(p []byte) (int, error) {
+	if c.targets != nil {
+		return c.targets.Read(p)
+	}
+	return c.readRaw(p)
+}
+
+// rawConn is the socket under targetStream. The header clock arms on its
+// bytes, so a request line held back for its end still times out.
+type rawConn struct{ c *headerConn }
+
+func (r rawConn) Read(p []byte) (int, error) { return r.c.readRaw(p) }
+
+func (c *headerConn) readRaw(p []byte) (int, error) {
 	n, err := c.Conn.Read(p)
 	if n > 0 {
 		c.mu.Lock()

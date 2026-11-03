@@ -104,6 +104,15 @@ const parseHtml = (html: string): DocumentFragment => {
  */
 const EDIT_CLASSES = ['outline-hidden'];
 
+/** Merged once: the inputs are fixed and a big table renders thousands of paragraphs. */
+const viewClassName: { value?: string } = {};
+
+const getViewClassName = (): string => {
+  viewClassName.value ??= twMerge(PARAGRAPH_CLASSES, EDIT_CLASSES, getPlaceholderClasses('focus'));
+
+  return viewClassName.value;
+};
+
 /**
  * Paragraph block for the Blok Editor.
  * Represents a regular text block
@@ -257,11 +266,7 @@ export class Paragraph implements BlockTool {
   private drawView(): HTMLDivElement {
     const div = document.createElement('DIV') as HTMLDivElement;
 
-    div.className = twMerge(
-      PARAGRAPH_CLASSES,
-      EDIT_CLASSES,
-      getPlaceholderClasses('focus')
-    );
+    div.className = getViewClassName();
     div.setAttribute(DATA_ATTR.tool, 'paragraph');
     div.contentEditable = 'false';
 

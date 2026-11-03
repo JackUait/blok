@@ -1,4 +1,4 @@
-# Progress: agent-room lane (round 1, 2026-11-03)
+# Progress: agent-room lane (round 2, 2026-11-03)
 
 Branch `go/agent-room`, worktree `/Users/jackuait/Packages/.blok-go/agent-room`, from `origin/main` at `68290c4e`. Not pushed. Read this first in the next round.
 
@@ -35,6 +35,15 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 - **T6 was a real race. Fixed.** `409edc4c`. A room step was added to the shared history inside the lane, and its `Lineage` was set after the lane, outside the history lock (`BlokAgentExecutor.cs:542-544` vs `:575-578`). An undo from another call in that gap read `Lineage == null`, skipped the lineage pin, and in the lane met a set lineage against a null expect, so it answered CONFLICT for a step it could undo. Red first: new `BlokAgentRoomHistoryTests.AStepCarriesItsLineageWhenItIsAdded` saw `[null]`. Fix: `CollabRoom` hands the edit's receipt to the `applied` callback, and the executor sets the lineage before `Add`. Go matches (`room.Applied` gets the receipt; Go twin `TestAStepCarriesItsLineageWhenItIsAdded`). New internal test seams: `RoomAgentHistory.Added`, `BlokAgentExecutor.RoomHistory`.
 - New C# tests with Go twins: `RoomAgentHistoryTests.AFullRedoSideEvictsThePageActionJustAdded` (T2), `BlokAgentRoomRefusalTests` (R10 refusal after a page was made, F26 refused restore).
 - `AgentServerScenarioTests` reads room scenarios. No other C# production change.
+
+## Round 2 (this round)
+
+- Rebased onto `origin/main` (`8844385f`, 40 commits: frame-check, outbound, embed bundle rebuilds). No conflicts; scenarios + room corpus re-run green on Go after it.
+- F25, F27 DONE (below).
+- T1 probe re-run and the ledger record corrected (critique.md): `dotnet fsi` prints `{"t":"\uD83D\uDE80\u003Ca\u003E\u0026\u0027\u002B\u00E9"} len=57`. New C# `RoomAgentHistoryTests.AStepCountsItsEscapedJsonText` and Go twin `TestAStepCountsItsEscapedJSONText` pin the room step's char count (59). The session cap was already pinned by host.json (stored lane).
+- Section 5 traps owned by the stored lane, with their oracles (`progress-agent-stored.md`): T1 host.json `the char cap counts escaped UTF-16 units` (+ the room twin above); T5 decision (Go sends what C# sends; no `go-live`); T15 host.json `page action: the target runs with no options…`; T16 `DisableBuiltInComments` + host.json options cases; T19 `formula_limits_test.go`; T21 host.json exact failure bytes.
+- critique.md orphans: `RichTextInput.cs` is collab (done by collab-core); `CollabWorkingSetLaw` and the converter seams are collab; none is in the agent area.
+- The cached build error of `Server.AgentExecutor()` (round 1 "known difference") is not observable: it only re-reads `collabRooms.get()`, which already keeps its error, and every error `buildRoomManager` returns comes from the options (S3 client, rich-text fields), so a retry would fail the same way. Decision, not a row.
 
 ## Ledger rows
 
@@ -90,7 +99,17 @@ T-1..T-9 DONE: Go twins of the 3 `RoomEditTranslatorTests` plus `TestRefusesAnEd
 
 ### 2c failures F9-F28
 
-F9-F24, F26, F28 DONE (rows above). **F25 and F27 DEFERRED**: they need the history store to fail a read (`Corrupt`, `ExportFailed`) or a purge between the state read and the load. The C# fake store cannot fail a read, and there is no hook between the two reads on either server. The Go code writes the same message templates (`versions.go`) and the status mapping is pinned (V6). Next round: a Go test that corrupts a journal record on disk, plus a C# test over `LocalCollabOperationStore` in a temp dir, to share the captured messages.
+F9-F28 all DONE. F25 and F27 (round 2, `1354300e`): a new scenario step `failListings` (`after`: N) makes the journal's lineage listing throw a corrupt-store error after N more listings, for the next run only. C#: `FakeCollabOperationStore.FailListings` throwing `InvalidDataException`; Go: `failingJournal` in `scenario_room_test.go` returning `*journal.InvalidDataError` (it keeps `OperationStore`, `HistoryStore`, `PurgeStore`, asserted). Both servers list once per history read: list (`CollabRoomManager.cs:498` / `history.go:86`), each named version (`:877` / `replayPoint` `:167`), and once more inside the restore. Six scenarios, answers captured from C#:
+
+| Scenario | Fails at | Answer |
+| --- | --- | --- |
+| `version-load-failed-list` | listing 1 of `history.versions` | F27 `The version history failed: The version history could not be read (Corrupt).`, not retryable, revision = head |
+| `version-load-failed-read` | listing 1 of `history.read` | F27 `Version "<v>" could not be read (Corrupt).` |
+| `version-load-failed-changes-second` | listing 2 (the `to` version) | F27 naming the `to` version |
+| `version-restore-failed-list` / `-read` | listing 1 / 2 of a restore | F27 list / version message, `committed: 0`, blocks unchanged |
+| `version-restore-failed-corrupt` | listing 3, inside the restore | F25 `the restore could not run (Corrupt).`, not retryable, no `revision`, no `path`; the next restore (healed store) commits |
+
+110/110 on C# and Go. Go passed at the first run (the port was already right); mutants killed: F25 retryable → true (1 case), the list template (2), the version template (3).
 
 ### 2i shared lanes
 
@@ -112,19 +131,25 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 
 ## Known differences (no row changes)
 
-- `Server.AgentExecutor()` keeps a room-manager build error (`sync.Once`), as the collab lane's `collabRooms.get` already does. C# DI does not cache a throwing singleton factory, so it would try again on the next resolve.
-- agent.md T1's probe (`scratchpad/agent/probe.fsx`) is gone from the scratchpad, so the mis-transcribed output critique.md names could not be re-run or corrected.
+- `Server.AgentExecutor()` keeps a room-manager build error; not observable (see Round 2).
+- T1 probe: re-run in round 2 (`scratchpad/agent-room/probe.fsx`); agent.md T1 now quotes the escaped output.
 
 ## Scenario source
 
 `scripts/generate-agent-room-scenarios.py` writes every `room-*`/`version-*` scenario. A rerun leaves git clean (checked this round); nothing checks that automatically. Edit the script, rerun it, then run both readers.
 
-## Open for later rounds
+## Open for later rounds (none blocks the lane)
 
-- F25, F27 (above).
 - The scenario runner's `peer` uses `human-2`; the history-gate retry (H1) and two-undo race have Go twins only, not C# tests.
 
-## Runs this round (final)
+## Runs round 2 (final)
+
+- C#: `AgentServerScenarioTests` 110/110; `RoomAgentHistoryTests` 2/2; `FullyQualifiedName~Agent` 527/527.
+- Go: `go test -p 2 ./blokagent ./blokserver` ok (scenarios 110/110, room corpus 52/52); `go vet ./...` clean; `gofmt -l` empty.
+- Conformance: `--target go --suite mcp-agent-participant` 5/5. No blok-server left running.
+- No C# production change this round, so the C# conformance and the `-race` run of round 1 still hold for production code; the Go change is test-only (harness `newTestRoomOn`, `failingJournal`).
+
+## Runs round 1
 
 - C#: `AgentServerScenarioTests` + `RoomAgentHistoryTests` + `BlokAgentRoom*` 142/142; `FullyQualifiedName~Agent` 503/503 after the T6 fix; `FullyQualifiedName~Collab` 1646/1646; `dotnet build -c Release Blok.Server` clean.
 - Go: scenarios 104/104 and room corpus 52/52 in one run; `go test -race -p 2` on blokagent, blokserver, convert, room, collabhttp, dotnet: ok (blokagent 1546 s); coverage gate 81.38%; `go vet ./...` clean; `gofmt -l` empty.

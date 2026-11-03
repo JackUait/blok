@@ -110,13 +110,24 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 - `Server.AgentExecutor()` shares the server's lazy engine pool with the rooms' HTML reader, as C# shares one `IBlokRuntime`. `TestTheCollabRuntimeIsBuiltOnlyOnTheFirstHTMLRead` still passes (no pool before first use).
 - Test seams added in production code: Go `roomHistory.added`, `Executor.beforeHistoryLane`; C# `RoomAgentHistory.Added`, `BlokAgentExecutor.RoomHistory`.
 
+## Known differences (no row changes)
+
+- `Server.AgentExecutor()` keeps a room-manager build error (`sync.Once`), as the collab lane's `collabRooms.get` already does. C# DI does not cache a throwing singleton factory, so it would try again on the next resolve.
+- agent.md T1's probe (`scratchpad/agent/probe.fsx`) is gone from the scratchpad, so the mis-transcribed output critique.md names could not be re-run or corrected.
+
+## Scenario source
+
+`scripts/generate-agent-room-scenarios.py` writes every `room-*`/`version-*` scenario. A rerun leaves git clean (checked this round); nothing checks that automatically. Edit the script, rerun it, then run both readers.
+
 ## Open for later rounds
 
 - F25, F27 (above).
 - The scenario runner's `peer` uses `human-2`; the history-gate retry (H1) and two-undo race have Go twins only, not C# tests.
 
-## Runs this round
+## Runs this round (final)
 
-- C#: `AgentServerScenarioTests` 104/104 (after the last fixture); `FullyQualifiedName~Agent` 503/503 after the T6 fix; `FullyQualifiedName~Collab` 1646/1646; `RoomAgentHistoryTests`, `BlokAgentRoomRefusalTests` pass.
-- Go: scenarios 104/104, room corpus 52/52; `go vet ./...` clean; `gofmt -l` empty.
-- `--suite mcp-agent-participant --target go`: 5/5.
+- C#: `AgentServerScenarioTests` + `RoomAgentHistoryTests` + `BlokAgentRoom*` 142/142; `FullyQualifiedName~Agent` 503/503 after the T6 fix; `FullyQualifiedName~Collab` 1646/1646; `dotnet build -c Release Blok.Server` clean.
+- Go: scenarios 104/104 and room corpus 52/52 in one run; `go test -race -p 2` on blokagent, blokserver, convert, room, collabhttp, dotnet: ok (blokagent 1546 s); coverage gate 81.38%; `go vet ./...` clean; `gofmt -l` empty.
+- Conformance: `--target go` unfiltered 378 passed, 1 skipped (the known routing skip); `--target csharp` sync, collab-http, protocol-v2, mcp-agent-participant all pass; `--target interop` 8/8. No blok-server left running after.
+- Architecture laws (ci-critical-path, server-go-parity, runtime-bundle, delivery, release-wiring, quality-gates): 90/90.
+- Process note: after the first MCP run this session I killed blok-server processes whose binary was in my run's temp dir, but their parents were another session's vitest (`.blok-undo/emb-server`). That was a mistake; later runs left nothing to kill.

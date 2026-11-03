@@ -83,8 +83,18 @@ func (s *targetStream) Read(p []byte) (int, error) {
 		s.err = err
 	}
 	n := copy(p, s.out)
-	s.out = s.out[n:]
+	if s.out = s.out[n:]; len(s.out) == 0 {
+		s.out = nil
+	}
 	return n, nil
+}
+
+// take hands on the first n bytes of in. An emptied in is dropped: even an
+// empty tail would keep the whole array a big head grew.
+func (s *targetStream) take(n int) {
+	if s.out, s.in = s.in[:n], s.in[n:]; len(s.in) == 0 {
+		s.in = nil
+	}
 }
 
 func isTimeout(err error) bool {
@@ -109,7 +119,7 @@ func (s *targetStream) step() bool {
 		if n > s.body {
 			n = s.body
 		}
-		s.out, s.in = s.in[:n], s.in[n:]
+		s.take(int(n))
 		if s.body -= n; s.body == 0 {
 			s.state = streamLine
 		}
@@ -127,20 +137,20 @@ func (s *targetStream) step() bool {
 			skip++
 		}
 		if skip > 0 {
-			s.out, s.in = s.in[:skip], s.in[skip:]
+			s.take(skip)
 			return true
 		}
 	}
 	end := bytes.IndexByte(s.in, '\n')
 	if end < 0 || len(s.head)+end+1 > maxRequestHead {
 		if len(s.head)+len(s.in) > maxRequestHead {
-			s.state = streamPass
+			s.state, s.head = streamPass, nil
 			return true
 		}
 		return false
 	}
 	line := s.in[:end+1]
-	s.out, s.in = line, s.in[end+1:]
+	s.take(end + 1)
 	if s.state == streamLine {
 		s.push(swapRequestLine(line))
 		s.state = streamHead
@@ -157,6 +167,9 @@ func (s *targetStream) step() bool {
 func (s *targetStream) endHead() {
 	request, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(s.head)))
 	s.head = s.head[:0]
+	if cap(s.head) > 4096 {
+		s.head = nil
+	}
 	s.state = streamPass
 	if err != nil || request.Method == "CONNECT" || request.Method == "PRI" ||
 		len(request.TransferEncoding) > 0 || request.Header.Get("Upgrade") != "" ||

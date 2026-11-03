@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -527,6 +528,37 @@ func TestATimeoutAfterAPostKeepsTheCRLFSkip(t *testing.T) {
 			if got != want {
 				t.Errorf("%s, reads of %d: got %q", c.name, size, got)
 			}
+		}
+	}
+}
+
+// An idle keep-alive connection must not hold on to the buffers of a big
+// head it already handed on.
+func TestAnIdleStreamDropsABigHeadsBuffers(t *testing.T) {
+	heapInUse := func() uint64 {
+		runtime.GC()
+		var stats runtime.MemStats
+		runtime.ReadMemStats(&stats)
+		return stats.HeapAlloc
+	}
+	cases := map[string]string{
+		"a big head":            "GET /a HTTP/1.1\r\nX: " + strings.Repeat("v", 900<<10) + "\r\n\r\n",
+		"a head over the limit": "GET /a HTTP/1.1\r\nX: " + strings.Repeat("v", maxRequestHead) + "\r\n\r\n",
+	}
+	for name, input := range cases {
+		const streams = 16
+		before := heapInUse()
+		held := make([]*targetStream, streams)
+		for i := range held {
+			held[i] = &targetStream{src: &stutter{parts: []string{input, ""}}}
+			if got := readMarkingTimeouts(t, held[i], 4096); len(got) != len(input)+len("<T>") {
+				t.Fatalf("%s: read %d bytes", name, len(got))
+			}
+		}
+		after := heapInUse()
+		runtime.KeepAlive(held)
+		if retained := int64(after) - int64(before); retained > streams*64<<10 {
+			t.Errorf("%s: %d idle streams retain %d KiB", name, streams, retained>>10)
 		}
 	}
 }

@@ -815,6 +815,7 @@
   "tools.embed.urlPlaceholder": "الصق رابطًا للتضمين…",
   "tools.embed.urlSubmit": "تضمين الرابط",
   "tools.embed.invalidUrl": "تعذّر تضمين هذا الرابط",
+  "tools.embed.loadFrom": "تحميل المحتوى من {host}",
   "tools.linkPaste.plain": "الإبقاء عليه كرابط",
   "tools.linkPaste.bookmark": "إنشاء إشارة مرجعية",
   "tools.linkPaste.embed": "إنشاء تضمين",

@@ -820,6 +820,7 @@
   "tools.embed.urlPlaceholder": "Tampal pautan untuk membenam…",
   "tools.embed.urlSubmit": "Benamkan pautan",
   "tools.embed.invalidUrl": "Pautan itu tidak boleh dibenamkan",
+  "tools.embed.loadFrom": "Muatkan kandungan daripada {host}",
   "tools.linkPaste.plain": "Kekalkan sebagai pautan",
   "tools.linkPaste.bookmark": "Cipta penanda halaman",
   "tools.linkPaste.embed": "Cipta benaman",

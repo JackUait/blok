@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "קלעפּ אַרײַן אַ לינק צו עמבעדן…",
   "tools.embed.urlSubmit": "עמבעד דעם לינק",
   "tools.embed.invalidUrl": "מען קען נישט עמבעדן דעם לינק",
+  "tools.embed.loadFrom": "לאָדן אינהאַלט פֿון {host}",
   "tools.linkPaste.plain": "האַלט ווי אַ לינק",
   "tools.linkPaste.bookmark": "שאַף אַ בוכצייכן",
   "tools.linkPaste.embed": "שאַף אַן עמבעד",

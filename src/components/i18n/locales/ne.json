@@ -820,6 +820,7 @@
   "tools.embed.urlPlaceholder": "इम्बेड गर्न लिङ्क टाँस्नुहोस्…",
   "tools.embed.urlSubmit": "लिङ्क इम्बेड गर्नुहोस्",
   "tools.embed.invalidUrl": "त्यो लिङ्क इम्बेड गर्न मिल्दैन",
+  "tools.embed.loadFrom": "{host} बाट सामग्री लोड गर्नुहोस्",
   "tools.linkPaste.plain": "लिङ्कको रूपमा राख्नुहोस्",
   "tools.linkPaste.bookmark": "बुकमार्क बनाउनुहोस्",
   "tools.linkPaste.embed": "इम्बेड बनाउनुहोस्",

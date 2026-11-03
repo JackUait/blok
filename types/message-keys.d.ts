@@ -2325,6 +2325,7 @@ export type BlokMessageKey =
   | 'tools.embed.captionPlaceholder'
   | 'tools.embed.empty'
   | 'tools.embed.invalidUrl'
+  | 'tools.embed.loadFrom'
   | 'tools.embed.openOriginal'
   | 'tools.embed.replace'
   | 'tools.embed.urlPlaceholder'

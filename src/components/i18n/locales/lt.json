@@ -824,6 +824,7 @@
   "tools.embed.urlPlaceholder": "Įklijuokite norimą įterpti nuorodą…",
   "tools.embed.urlSubmit": "Įterpti nuorodą",
   "tools.embed.invalidUrl": "Šios nuorodos įterpti negalima",
+  "tools.embed.loadFrom": "Įkelti turinį iš {host}",
   "tools.linkPaste.plain": "Palikti kaip nuorodą",
   "tools.linkPaste.bookmark": "Sukurti žymę",
   "tools.linkPaste.embed": "Sukurti įterpinį",

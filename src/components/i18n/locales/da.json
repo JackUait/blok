@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "Indsæt et link til indlejring…",
   "tools.embed.urlSubmit": "Indlejr link",
   "tools.embed.invalidUrl": "Linket kan ikke indlejres",
+  "tools.embed.loadFrom": "Indlæs indhold fra {host}",
   "tools.linkPaste.plain": "Behold som link",
   "tools.linkPaste.bookmark": "Opret bogmærke",
   "tools.linkPaste.embed": "Opret indlejring",

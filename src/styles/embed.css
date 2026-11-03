@@ -575,3 +575,60 @@
   color: var(--blok-text-primary);
 }
 .blok-embed-linkcard__action svg { width: 16px; height: 16px; }
+
+/* Click-to-load gate — stands in for a generic frame until the reader clicks. */
+.blok-embed-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-2);
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+  padding: var(--blok-space-3);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  background: var(--blok-bg-secondary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-radius-block);
+}
+.blok-embed-gate__glyph {
+  display: inline-flex;
+  color: var(--blok-text-tertiary);
+}
+.blok-embed-gate__glyph svg { width: 20px; height: 20px; }
+.blok-embed-gate__host {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blok-text-primary);
+}
+.blok-embed-gate__button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: var(--blok-line-height-option);
+  height: 28px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 var(--blok-space-3);
+  color: var(--blok-text-primary);
+  background: var(--blok-bg-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-border-subtle);
+  border-radius: var(--blok-radius-control-sm);
+  transition: background .15s ease;
+}
+.blok-embed-gate__button:hover { background: var(--blok-item-hover-bg); }
+:where(:root:not([data-blok-modality="pointer"])) .blok-embed-gate__button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
+}

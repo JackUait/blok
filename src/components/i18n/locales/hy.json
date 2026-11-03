@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "Տեղադրեք ներդրման հղումը…",
   "tools.embed.urlSubmit": "Ներդնել հղումը",
   "tools.embed.invalidUrl": "Այս հղումը հնարավոր չէ ներդնել",
+  "tools.embed.loadFrom": "Բեռնել բովանդակությունը {host}-ից",
   "tools.linkPaste.plain": "Թողնել որպես հղում",
   "tools.linkPaste.bookmark": "Ստեղծել էջանիշ",
   "tools.linkPaste.embed": "Ստեղծել ներդրում",

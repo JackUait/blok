@@ -822,6 +822,7 @@
   "tools.embed.urlPlaceholder": "بەستەرێک بلکێنە بۆ جێگیرکردن…",
   "tools.embed.urlSubmit": "جێگیرکردنی بەستەر",
   "tools.embed.invalidUrl": "ئەو بەستەرە ناتوانرێت جێگیر بکرێت",
+  "tools.embed.loadFrom": "بارکردنی ناوەڕۆک لە {host}",
   "tools.linkPaste.plain": "وەک بەستەر بیهێڵەرەوە",
   "tools.linkPaste.bookmark": "دروستکردنی نیشانە",
   "tools.linkPaste.embed": "دروستکردنی جێگیرکراو",

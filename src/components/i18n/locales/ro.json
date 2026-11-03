@@ -812,6 +812,7 @@
   "tools.embed.urlPlaceholder": "Lipiți un link pentru încorporare…",
   "tools.embed.urlSubmit": "Încorporează linkul",
   "tools.embed.invalidUrl": "Acel link nu poate fi încorporat",
+  "tools.embed.loadFrom": "Încarcă conținutul de pe {host}",
   "tools.linkPaste.plain": "Păstrează ca link",
   "tools.linkPaste.bookmark": "Creează marcaj",
   "tools.linkPaste.embed": "Creează conținut încorporat",

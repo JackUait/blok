@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "برای جاسازی یک پیوند بچسبانید…",
   "tools.embed.urlSubmit": "جاسازی پیوند",
   "tools.embed.invalidUrl": "این پیوند قابل جاسازی نیست",
+  "tools.embed.loadFrom": "بارگیری محتوا از {host}",
   "tools.linkPaste.plain": "نگه‌داشتن به‌صورت پیوند",
   "tools.linkPaste.bookmark": "ساخت نشانک",
   "tools.linkPaste.embed": "جاسازی",

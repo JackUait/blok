@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "ایمبیڈ کرنے کے لیے لنک پیسٹ کریں…",
   "tools.embed.urlSubmit": "لنک ایمبیڈ کریں",
   "tools.embed.invalidUrl": "یہ لنک ایمبیڈ نہیں کیا جا سکتا",
+  "tools.embed.loadFrom": "{host} سے مواد لوڈ کریں",
   "tools.linkPaste.plain": "بطور لنک رکھیں",
   "tools.linkPaste.bookmark": "بک مارک بنائیں",
   "tools.linkPaste.embed": "ایمبیڈ بنائیں",

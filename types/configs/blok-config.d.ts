@@ -1107,6 +1107,18 @@ export interface BlokMountOptions {
     blockedEmbedOrigins?: string[];
 
     /**
+     * When true, a generic (non-registry) embed shows a placeholder with the
+     * site's host and a "Load content from <host>" button. No iframe exists
+     * and no request reaches the site until the reader clicks, so the site
+     * does not learn the reader's IP address just because they opened the
+     * document. The click is not saved; each reader decides. Registry
+     * providers (YouTube, Figma, …) load at once either way.
+     * Set to false to frame generic embeds as soon as they render.
+     * @default true
+     */
+    genericEmbedClickToLoad?: boolean;
+
+    /**
      * Other hostnames that count as the editor's own site, next to the page's
      * own hostname. Entries are hostnames (`example.com`) or wildcard subdomain
      * patterns (`*.example.com` — any subdomain depth, never the bare suffix).

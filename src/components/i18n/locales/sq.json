@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "Ngjit një lidhje për ta ngulitur…",
   "tools.embed.urlSubmit": "Ngulit lidhjen",
   "tools.embed.invalidUrl": "Kjo lidhje nuk mund të ngulitet",
+  "tools.embed.loadFrom": "Ngarko përmbajtjen nga {host}",
   "tools.linkPaste.plain": "Mbaje si lidhje",
   "tools.linkPaste.bookmark": "Krijo faqerojtës",
   "tools.linkPaste.embed": "Krijo ngulitje",

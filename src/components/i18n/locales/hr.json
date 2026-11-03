@@ -810,6 +810,7 @@
   "tools.embed.urlPlaceholder": "Zalijepi poveznicu za ugradnju…",
   "tools.embed.urlSubmit": "Ugradi poveznicu",
   "tools.embed.invalidUrl": "Ta se poveznica ne može ugraditi",
+  "tools.embed.loadFrom": "Učitaj sadržaj s {host}",
   "tools.linkPaste.plain": "Zadrži kao poveznicu",
   "tools.linkPaste.bookmark": "Stvori knjižnu oznaku",
   "tools.linkPaste.embed": "Ugradi",

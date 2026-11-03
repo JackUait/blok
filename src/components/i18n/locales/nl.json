@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "Plak een link om in te sluiten…",
   "tools.embed.urlSubmit": "Link insluiten",
   "tools.embed.invalidUrl": "Die link kan niet worden ingesloten",
+  "tools.embed.loadFrom": "Inhoud van {host} laden",
   "tools.linkPaste.plain": "Als link behouden",
   "tools.linkPaste.bookmark": "Bladwijzer maken",
   "tools.linkPaste.embed": "Insluiting maken",

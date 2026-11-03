@@ -812,6 +812,7 @@
   "tools.embed.urlPlaceholder": "Zalijepite vezu za ugradnju…",
   "tools.embed.urlSubmit": "Ugradi vezu",
   "tools.embed.invalidUrl": "Ovu vezu nije moguće ugraditi",
+  "tools.embed.loadFrom": "Učitaj sadržaj sa {host}",
   "tools.linkPaste.plain": "Zadrži kao vezu",
   "tools.linkPaste.bookmark": "Napravi knjižnu oznaku",
   "tools.linkPaste.embed": "Ugradi sadržaj",

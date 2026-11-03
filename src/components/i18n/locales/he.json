@@ -810,6 +810,7 @@
   "tools.embed.urlPlaceholder": "הדבק קישור להטמעה…",
   "tools.embed.urlSubmit": "הטמע קישור",
   "tools.embed.invalidUrl": "לא ניתן להטמיע את הקישור הזה",
+  "tools.embed.loadFrom": "טעינת תוכן מ-{host}",
   "tools.linkPaste.plain": "השאר כקישור",
   "tools.linkPaste.bookmark": "צור סימנייה",
   "tools.linkPaste.embed": "הטמע",

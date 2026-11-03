@@ -820,6 +820,7 @@
   "tools.embed.urlPlaceholder": "എംബെഡ് ചെയ്യാൻ ലിങ്ക് ഒട്ടിക്കുക…",
   "tools.embed.urlSubmit": "ലിങ്ക് എംബെഡ് ചെയ്യുക",
   "tools.embed.invalidUrl": "ആ ലിങ്ക് എംബെഡ് ചെയ്യാനാകില്ല",
+  "tools.embed.loadFrom": "{host}-ൽ നിന്ന് ഉള്ളടക്കം ലോഡ് ചെയ്യുക",
   "tools.linkPaste.plain": "ലിങ്കായി നിലനിർത്തുക",
   "tools.linkPaste.bookmark": "ബുക്ക്മാർക്ക് സൃഷ്ടിക്കുക",
   "tools.linkPaste.embed": "എംബെഡ് സൃഷ്ടിക്കുക",

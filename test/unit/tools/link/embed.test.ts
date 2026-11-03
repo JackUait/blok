@@ -11,7 +11,8 @@ const createMockAPI = (
   ({
     i18n: { t: (key: string) => key, has: () => false, getLocale: () => 'en' },
     blocks: { delete: blocksDelete ?? ((): void => undefined) },
-    config: { linkPaste: { allowGenericEmbed, allowedEmbedOrigins } },
+    // These tests are about which URLs frame; the click-to-load gate has its own tests.
+    config: { linkPaste: { allowGenericEmbed, allowedEmbedOrigins, genericEmbedClickToLoad: false } },
   }) as unknown as API;
 
 const createOptions = (

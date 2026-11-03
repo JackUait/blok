@@ -813,6 +813,7 @@
   "tools.embed.urlPlaceholder": "Вставьте ссылку для встраивания…",
   "tools.embed.urlSubmit": "Встроить ссылку",
   "tools.embed.invalidUrl": "Эту ссылку нельзя встроить",
+  "tools.embed.loadFrom": "Загрузить содержимое с {host}",
   "tools.linkPaste.plain": "Оставить ссылкой",
   "tools.linkPaste.bookmark": "Создать закладку",
   "tools.linkPaste.embed": "Встроить содержимое",

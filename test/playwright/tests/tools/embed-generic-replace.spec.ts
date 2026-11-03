@@ -98,7 +98,25 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(embedItem).toBeVisible();
     await expect(embedItem).toContainText('Create embed');
+
+    const siteRequests: string[] = [];
+
+    page.on('request', (request) => {
+      if (new URL(request.url()).hostname === 'example.com') {
+        siteRequests.push(request.url());
+      }
+    });
+
     await embedItem.click();
+
+    // Click-to-load: nothing reaches the site until the reader asks for it.
+    const load = page.getByRole('button', { name: 'Load content from example.com' });
+
+    await expect(load).toBeVisible();
+    await expect(page.locator('[data-blok-testid="embed-frame"]')).toHaveCount(0);
+    expect(siteRequests).toEqual([]);
+
+    await load.click();
 
     const iframe = page.locator('[data-blok-testid="embed-frame"]');
 
@@ -119,6 +137,7 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(embedItem).toBeVisible();
     await embedItem.click();
+    await page.getByRole('button', { name: 'Load content from example.com' }).click();
 
     const iframe = page.locator('[data-blok-testid="embed-frame"]');
 
@@ -169,6 +188,7 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(embedItem).toBeVisible();
     await embedItem.click();
+    await page.getByRole('button', { name: 'Load content from example.com' }).click();
 
     await expect(page.locator('[data-blok-testid="embed-frame"]')).toBeVisible();
 
@@ -208,6 +228,7 @@ test.describe('Generic embed + replace source', () => {
     await target.click();
     await pasteText(target, 'https://example.com/page');
     await page.locator('[data-blok-item-name="paste-menu-embed"]').click();
+    await page.getByRole('button', { name: 'Load content from example.com' }).click();
     await expect(page.locator('[data-blok-testid="embed-frame"]')).toBeVisible();
 
     await page.getByText('Latte').click();

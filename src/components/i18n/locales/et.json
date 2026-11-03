@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "Kleebi link manustamiseks…",
   "tools.embed.urlSubmit": "Manusta link",
   "tools.embed.invalidUrl": "Seda linki ei saa manustada",
+  "tools.embed.loadFrom": "Laadi sisu saidilt {host}",
   "tools.linkPaste.plain": "Jäta lingiks",
   "tools.linkPaste.bookmark": "Loo järjehoidja",
   "tools.linkPaste.embed": "Manusta",

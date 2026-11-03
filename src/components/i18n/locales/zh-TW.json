@@ -927,6 +927,7 @@
   "tools.embed.urlPlaceholder": "貼上要嵌入的連結…",
   "tools.embed.urlSubmit": "嵌入連結",
   "tools.embed.invalidUrl": "無法嵌入此連結",
+  "tools.embed.loadFrom": "從 {host} 載入內容",
   "tools.linkPaste.plain": "保留為連結",
   "tools.linkPaste.bookmark": "建立書籤",
   "tools.linkPaste.embed": "建立嵌入內容",

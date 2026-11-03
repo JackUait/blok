@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "Lim inn en lenke for å bygge inn…",
   "tools.embed.urlSubmit": "Bygg inn lenke",
   "tools.embed.invalidUrl": "Den lenken kan ikke bygges inn",
+  "tools.embed.loadFrom": "Last inn innhold fra {host}",
   "tools.linkPaste.plain": "Behold som lenke",
   "tools.linkPaste.bookmark": "Opprett bokmerke",
   "tools.linkPaste.embed": "Opprett innbygging",

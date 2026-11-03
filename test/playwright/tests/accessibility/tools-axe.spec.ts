@@ -112,7 +112,7 @@ const TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAA
  * its link card.
  */
 const FRAMED_EMBED_URL = 'https://dashboard.example.com/widget/42';
-const FRAMED_EMBED_CONFIG = { linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'] } };
+const FRAMED_EMBED_CONFIG = { linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'], genericEmbedClickToLoad: false } };
 
 /**
  * The inline tools whose rendered markup is clean today. Split from
@@ -482,6 +482,25 @@ const TOOL_CASES: ToolCase[] = [
     tool: 'embed',
     count: 1,
     config: FRAMED_EMBED_CONFIG,
+    blocks: [
+      {
+        type: 'embed',
+        data: {
+          service: '',
+          source: FRAMED_EMBED_URL,
+          embed: FRAMED_EMBED_URL,
+          kind: 'iframe',
+          width: 580,
+          height: 320,
+        },
+      },
+    ],
+  },
+  {
+    name: 'embed (click to load)',
+    tool: 'embed',
+    count: 1,
+    config: { linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'] } },
     blocks: [
       {
         type: 'embed',

@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "បិទភ្ជាប់តំណដើម្បីបង្កប់…",
   "tools.embed.urlSubmit": "បង្កប់តំណ",
   "tools.embed.invalidUrl": "មិនអាចបង្កប់តំណនេះបានទេ",
+  "tools.embed.loadFrom": "ផ្ទុកមាតិកាពី {host}",
   "tools.linkPaste.plain": "រក្សាជាតំណ",
   "tools.linkPaste.bookmark": "បង្កើតចំណាំ",
   "tools.linkPaste.embed": "បង្កើតការបង្កប់",

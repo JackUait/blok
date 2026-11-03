@@ -820,6 +820,7 @@
   "tools.embed.urlPlaceholder": "မြှုပ်သွင်းရန် လင့်ခ်ကို ကူးထည့်ပါ…",
   "tools.embed.urlSubmit": "လင့်ခ်ကို မြှုပ်သွင်းရန်",
   "tools.embed.invalidUrl": "ထိုလင့်ခ်ကို မြှုပ်သွင်း၍မရပါ",
+  "tools.embed.loadFrom": "{host} မှ အကြောင်းအရာကို ဖွင့်ရန်",
   "tools.linkPaste.plain": "လင့်ခ်အဖြစ် ထားရှိရန်",
   "tools.linkPaste.bookmark": "စာညှပ် ဖန်တီးရန်",
   "tools.linkPaste.embed": "မြှုပ်သွင်းမှု ဖန်တီးရန်",

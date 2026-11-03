@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "ਇੰਬੈੱਡ ਕਰਨ ਲਈ ਲਿੰਕ ਚਿਪਕਾਓ…",
   "tools.embed.urlSubmit": "ਲਿੰਕ ਇੰਬੈੱਡ ਕਰੋ",
   "tools.embed.invalidUrl": "ਉਹ ਲਿੰਕ ਇੰਬੈੱਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ",
+  "tools.embed.loadFrom": "{host} ਤੋਂ ਸਮੱਗਰੀ ਲੋਡ ਕਰੋ",
   "tools.linkPaste.plain": "ਲਿੰਕ ਵਜੋਂ ਰੱਖੋ",
   "tools.linkPaste.bookmark": "ਬੁੱਕਮਾਰਕ ਬਣਾਓ",
   "tools.linkPaste.embed": "ਇੰਬੈੱਡ ਬਣਾਓ",

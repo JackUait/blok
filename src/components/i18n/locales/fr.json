@@ -810,6 +810,7 @@
   "tools.embed.urlPlaceholder": "Collez un lien à intégrer…",
   "tools.embed.urlSubmit": "Intégrer le lien",
   "tools.embed.invalidUrl": "Ce lien ne peut pas être intégré",
+  "tools.embed.loadFrom": "Charger le contenu de {host}",
   "tools.linkPaste.plain": "Conserver comme lien",
   "tools.linkPaste.bookmark": "Créer un signet",
   "tools.linkPaste.embed": "Intégrer",

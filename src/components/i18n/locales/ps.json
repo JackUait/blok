@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "د ځای پر ځای کولو لپاره لینک پیسټ کړئ…",
   "tools.embed.urlSubmit": "لینک ځای پر ځای کړئ",
   "tools.embed.invalidUrl": "دا لینک نه شي ځای پر ځای کېدای",
+  "tools.embed.loadFrom": "له {host} څخه منځپانګه پورته کړئ",
   "tools.linkPaste.plain": "د لینک په توګه وساتئ",
   "tools.linkPaste.bookmark": "لیکنښه جوړه کړئ",
   "tools.linkPaste.embed": "ځای پر ځای یې کړئ",

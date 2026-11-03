@@ -810,6 +810,7 @@
   "tools.embed.urlPlaceholder": "Pega un enlace para insertar…",
   "tools.embed.urlSubmit": "Insertar enlace",
   "tools.embed.invalidUrl": "Ese enlace no se puede insertar",
+  "tools.embed.loadFrom": "Cargar contenido de {host}",
   "tools.linkPaste.plain": "Mantener como enlace",
   "tools.linkPaste.bookmark": "Crear marcador",
   "tools.linkPaste.embed": "Insertar contenido",

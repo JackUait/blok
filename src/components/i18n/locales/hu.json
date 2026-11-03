@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "Illesszen be egy beágyazandó hivatkozást…",
   "tools.embed.urlSubmit": "Hivatkozás beágyazása",
   "tools.embed.invalidUrl": "Ez a hivatkozás nem ágyazható be",
+  "tools.embed.loadFrom": "Tartalom betöltése innen: {host}",
   "tools.linkPaste.plain": "Megtartás hivatkozásként",
   "tools.linkPaste.bookmark": "Könyvjelző létrehozása",
   "tools.linkPaste.embed": "Beágyazás létrehozása",

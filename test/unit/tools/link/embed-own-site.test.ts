@@ -5,6 +5,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 interface LinkPaste {
   allowGenericEmbed?: boolean;
+  genericEmbedClickToLoad?: boolean;
   allowedEmbedOrigins?: string[];
   hostAliases?: string[];
 }
@@ -14,7 +15,7 @@ const mount = (source: string, linkPaste: LinkPaste): HTMLElement => {
     api: {
       i18n: { t: (key: string) => key, has: () => false, getLocale: () => 'en' },
       blocks: { delete: (): void => undefined },
-      config: { linkPaste },
+      config: { linkPaste: { genericEmbedClickToLoad: false, ...linkPaste } },
     } as unknown as API,
     block: { id: 'embed-block', dispatchChange: (): void => undefined } as never,
     config: {},

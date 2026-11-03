@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "粘贴要嵌入的链接…",
   "tools.embed.urlSubmit": "嵌入链接",
   "tools.embed.invalidUrl": "无法嵌入该链接",
+  "tools.embed.loadFrom": "从 {host} 加载内容",
   "tools.linkPaste.plain": "保留为链接",
   "tools.linkPaste.bookmark": "创建书签",
   "tools.linkPaste.embed": "创建嵌入",

@@ -809,6 +809,7 @@
   "tools.embed.urlPlaceholder": "Yerleştirmek için bağlantı yapıştırın…",
   "tools.embed.urlSubmit": "Bağlantıyı yerleştir",
   "tools.embed.invalidUrl": "Bu bağlantı yerleştirilemiyor",
+  "tools.embed.loadFrom": "{host} içeriğini yükle",
   "tools.linkPaste.plain": "Bağlantı olarak tut",
   "tools.linkPaste.bookmark": "Yer işareti oluştur",
   "tools.linkPaste.embed": "Yerleştirme oluştur",

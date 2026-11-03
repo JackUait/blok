@@ -1451,6 +1451,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // [data-blok-top-layer], and the full-screen box inherits its colour, so neither
     // opening nor closing restyles every cell (net of the dropped closing-width rule).
     const TOP_LAYER_RESTYLE_BYTES = 407;
+    // embed.css: the click-to-load gate a generic embed shows before the reader loads it.
+    const EMBED_GENERIC_GATE_BYTES = 1_636;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1818,7 +1820,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + PAGE_MENTION_QUERY_PILL_BYTES
       + FILE_PREVIEW_GUTTER_BYTES
       + TABLE_FULLSCREEN_BYTES
-      + TOP_LAYER_RESTYLE_BYTES;
+      + TOP_LAYER_RESTYLE_BYTES
+      + EMBED_GENERIC_GATE_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

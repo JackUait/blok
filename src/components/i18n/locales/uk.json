@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "Вставте посилання для вбудовування…",
   "tools.embed.urlSubmit": "Вбудувати посилання",
   "tools.embed.invalidUrl": "Це посилання не можна вбудувати",
+  "tools.embed.loadFrom": "Завантажити вміст із {host}",
   "tools.linkPaste.plain": "Залишити як посилання",
   "tools.linkPaste.bookmark": "Створити закладку",
   "tools.linkPaste.embed": "Вбудувати",

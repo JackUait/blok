@@ -92,7 +92,7 @@ test.describe('Embed link-card fallback and origin allowlist', () => {
 
   test('an allowlisted origin is framed for real — no card', async ({ page }) => {
     await createBlok(page, storedGenericEmbed('https://dashboard.example.com/widget/42'), {
-      linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'] },
+      linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'], genericEmbedClickToLoad: false },
     });
 
     const iframe = page.locator('[data-blok-testid="embed-frame"]');
@@ -104,7 +104,7 @@ test.describe('Embed link-card fallback and origin allowlist', () => {
 
   test('one Escape closes the align popover and keeps focus on its trigger; the next enters navigation mode', async ({ page }) => {
     await createBlok(page, storedGenericEmbed('https://dashboard.example.com/widget/42'), {
-      linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'] },
+      linkPaste: { allowedEmbedOrigins: ['dashboard.example.com'], genericEmbedClickToLoad: false },
     });
 
     const iframe = page.locator('[data-blok-testid="embed-frame"]');

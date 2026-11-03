@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "ايمبيڊ ڪرڻ لاءِ لنڪ پيسٽ ڪريو…",
   "tools.embed.urlSubmit": "لنڪ ايمبيڊ ڪريو",
   "tools.embed.invalidUrl": "اهو لنڪ ايمبيڊ نٿو ڪري سگهجي",
+  "tools.embed.loadFrom": "{host} تان مواد لوڊ ڪريو",
   "tools.linkPaste.plain": "لنڪ طور رکو",
   "tools.linkPaste.bookmark": "بُڪ مارڪ ٺاهيو",
   "tools.linkPaste.embed": "ايمبيڊ ٺاهيو",

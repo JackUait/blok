@@ -813,6 +813,7 @@
   "tools.embed.urlPlaceholder": "Vložte odkaz pro vložený obsah…",
   "tools.embed.urlSubmit": "Vložit odkaz",
   "tools.embed.invalidUrl": "Tento odkaz nelze vložit",
+  "tools.embed.loadFrom": "Načíst obsah z {host}",
   "tools.linkPaste.plain": "Ponechat jako odkaz",
   "tools.linkPaste.bookmark": "Vytvořit záložku",
   "tools.linkPaste.embed": "Vložit obsah",

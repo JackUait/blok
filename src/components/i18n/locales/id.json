@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "Tempel tautan untuk disematkan…",
   "tools.embed.urlSubmit": "Sematkan tautan",
   "tools.embed.invalidUrl": "Tautan ini tidak dapat disematkan",
+  "tools.embed.loadFrom": "Muat konten dari {host}",
   "tools.linkPaste.plain": "Pertahankan sebagai tautan",
   "tools.linkPaste.bookmark": "Buat markah",
   "tools.linkPaste.embed": "Buat sematan",

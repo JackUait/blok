@@ -821,6 +821,7 @@
   "tools.embed.urlPlaceholder": "Ielīmējiet saiti, lai iegultu…",
   "tools.embed.urlSubmit": "Iegult saiti",
   "tools.embed.invalidUrl": "Šo saiti nevar iegult",
+  "tools.embed.loadFrom": "Ielādēt saturu no {host}",
   "tools.linkPaste.plain": "Paturēt kā saiti",
   "tools.linkPaste.bookmark": "Izveidot grāmatzīmi",
   "tools.linkPaste.embed": "Iegult saturu",

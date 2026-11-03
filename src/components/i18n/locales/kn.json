@@ -822,6 +822,7 @@
   "tools.embed.urlPlaceholder": "ಎಂಬೆಡ್ ಮಾಡಲು ಲಿಂಕ್ ಅಂಟಿಸಿ…",
   "tools.embed.urlSubmit": "ಲಿಂಕ್ ಎಂಬೆಡ್ ಮಾಡಿ",
   "tools.embed.invalidUrl": "ಈ ಲಿಂಕ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಲಾಗದು",
+  "tools.embed.loadFrom": "{host} ನಿಂದ ವಿಷಯ ಲೋಡ್ ಮಾಡಿ",
   "tools.linkPaste.plain": "ಲಿಂಕ್ ಆಗಿ ಉಳಿಸಿ",
   "tools.linkPaste.bookmark": "ಬುಕ್‌ಮಾರ್ಕ್ ರಚಿಸಿ",
   "tools.linkPaste.embed": "ಎಂಬೆಡ್ ರಚಿಸಿ",

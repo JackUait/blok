@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "ለማስገባት አገናኝ ይለጥፉ…",
   "tools.embed.urlSubmit": "አገናኝ አስገባ",
   "tools.embed.invalidUrl": "ይህ አገናኝ ሊገባ አይችልም",
+  "tools.embed.loadFrom": "ከ{host} ይዘት ጫን",
   "tools.linkPaste.plain": "እንደ አገናኝ አቆይ",
   "tools.linkPaste.bookmark": "ዕልባት ፍጠር",
   "tools.linkPaste.embed": "ማስገቢያ ፍጠር",

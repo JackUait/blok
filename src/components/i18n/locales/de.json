@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "Link zum Einbetten einfügen…",
   "tools.embed.urlSubmit": "Link einbetten",
   "tools.embed.invalidUrl": "Dieser Link kann nicht eingebettet werden",
+  "tools.embed.loadFrom": "Inhalt von {host} laden",
   "tools.linkPaste.plain": "Als Link behalten",
   "tools.linkPaste.bookmark": "Lesezeichen erstellen",
   "tools.linkPaste.embed": "Einbettung erstellen",

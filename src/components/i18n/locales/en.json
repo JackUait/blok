@@ -927,6 +927,7 @@
   "tools.embed.urlPlaceholder": "Paste a link to embed…",
   "tools.embed.urlSubmit": "Embed link",
   "tools.embed.invalidUrl": "That link can’t be embedded",
+  "tools.embed.loadFrom": "Load content from {host}",
   "tools.linkPaste.plain": "Keep as link",
   "tools.linkPaste.bookmark": "Create bookmark",
   "tools.linkPaste.embed": "Create embed",

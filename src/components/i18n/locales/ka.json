@@ -811,6 +811,7 @@
   "tools.embed.urlPlaceholder": "ჩასვით ჩასაშენებელი ბმული…",
   "tools.embed.urlSubmit": "ბმულის ჩაშენება",
   "tools.embed.invalidUrl": "ამ ბმულის ჩაშენება ვერ ხერხდება",
+  "tools.embed.loadFrom": "კონტენტის ჩატვირთვა {host}-დან",
   "tools.linkPaste.plain": "დატოვება ბმულად",
   "tools.linkPaste.bookmark": "სანიშნის შექმნა",
   "tools.linkPaste.embed": "ჩაშენების შექმნა",

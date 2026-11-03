@@ -812,6 +812,7 @@
   "tools.embed.urlPlaceholder": "Incolla un link da incorporare…",
   "tools.embed.urlSubmit": "Incorpora link",
   "tools.embed.invalidUrl": "Impossibile incorporare questo link",
+  "tools.embed.loadFrom": "Carica contenuto da {host}",
   "tools.linkPaste.plain": "Mantieni come link",
   "tools.linkPaste.bookmark": "Crea segnalibro",
   "tools.linkPaste.embed": "Crea incorporamento",

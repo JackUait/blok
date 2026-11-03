@@ -197,6 +197,8 @@ export class Embed implements BlockTool {
   private data: Partial<EmbedData>;
   private root: HTMLElement | null = null;
   private resizeDetach: (() => void)[] = [];
+  /** Whether the reader clicked to load this generic embed. Lives only here, never in saved data. */
+  private genericLoaded = false;
   /** Stable id linking the URL input to its inline error via aria-describedby. */
   private readonly urlErrorId = `blok-embed-url-error-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -929,7 +931,7 @@ export class Embed implements BlockTool {
       aspect.style.aspectRatio = `${w} / ${h}`;
     }
 
-    aspect.appendChild(this.buildIframe());
+    aspect.appendChild(this.waitsForClick() ? this.buildLoadGate() : this.buildIframe());
     figure.appendChild(aspect);
 
     return figure;
@@ -948,6 +950,59 @@ export class Embed implements BlockTool {
     const provider = registered !== undefined ? registered.title : hostnameOf(this.data.source ?? '');
 
     return provider === '' ? label : `${label}: ${provider}`;
+  }
+
+  /**
+   * A generic embed loads only after the reader clicks, so no request (and no
+   * reader IP) reaches the site before that. Registry embeds load at once.
+   */
+  private waitsForClick(): boolean {
+    return this.embedRender().service === ''
+      && this.api.config?.linkPaste?.genericEmbedClickToLoad !== false
+      && !this.genericLoaded;
+  }
+
+  /** Stands in for a generic frame until the reader clicks. Holds no URL of the site. */
+  private buildLoadGate(): HTMLElement {
+    // `host` is punycode for IDN and keeps the port, so a lookalike name shows as what it is.
+    const host = ((): string => {
+      try {
+        return new URL(this.embedSrc()).host;
+      } catch {
+        return '';
+      }
+    })();
+    const gate = document.createElement('div');
+
+    gate.setAttribute('data-role', 'embed-load-gate');
+    gate.className = 'blok-embed-gate';
+
+    const glyph = document.createElement('span');
+
+    glyph.className = 'blok-embed-gate__glyph';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconGlobe;
+
+    const hostLabel = document.createElement('span');
+
+    hostLabel.setAttribute('data-role', 'embed-load-host');
+    hostLabel.className = 'blok-embed-gate__host';
+    hostLabel.textContent = host;
+
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('data-role', 'embed-load');
+    button.className = 'blok-embed-gate__button';
+    button.textContent = this.api.i18n.t('tools.embed.loadFrom', { host });
+    button.addEventListener('click', () => {
+      this.genericLoaded = true;
+      gate.replaceWith(this.buildIframe());
+    });
+
+    gate.append(glyph, hostLabel, button);
+
+    return gate;
   }
 
   private buildIframe(): HTMLIFrameElement {

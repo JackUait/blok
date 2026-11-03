@@ -1924,3 +1924,31 @@ describe('Embed — two frame profiles, picked by the registry', () => {
     expect(frame?.getAttribute('sandbox')).toBe(GENERIC_SANDBOX);
   });
 });
+
+describe('Embed — save() keeps a generic embed on one URL', () => {
+  it('writes the https source into embed, so a block with only source survives validate', () => {
+    const tool = new Embed(createOptions(
+      { service: '', source: 'https://dash.example.org/x', embed: '' },
+      { allowGenericEmbed: true }
+    ));
+
+    tool.render();
+    const saved = tool.save();
+
+    expect(saved.embed).toBe('https://dash.example.org/x');
+    expect(tool.validate(saved)).toBe(true);
+  });
+
+  it('heals a split block on save', () => {
+    const tool = new Embed(createOptions({
+      service: '',
+      source: 'https://trusted.bank.example/',
+      embed: 'https://dash.internal.example/',
+      kind: 'iframe',
+    }));
+
+    tool.render();
+
+    expect(tool.save().embed).toBe('https://trusted.bank.example/');
+  });
+});

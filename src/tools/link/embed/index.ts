@@ -355,10 +355,15 @@ export class Embed implements BlockTool {
   }
 
   public save(): EmbedData {
+    const service = this.data.service ?? '';
+    const genericSrc = EMBED_SERVICES[service] === undefined ? toSafeEmbedSrc(this.data.source) : '';
+
     return {
-      service: this.data.service ?? '',
+      service,
       source: this.data.source ?? '',
-      embed: this.data.embed ?? '',
+      // A generic embed frames `source`; keeping `embed` equal stops saved data
+      // from splitting the two, and lets validate() keep the block.
+      embed: genericSrc !== '' ? genericSrc : this.data.embed ?? '',
       kind: this.embedRender().mode === 'script' ? 'script' : 'iframe',
       width: this.data.width ?? DEFAULT_WIDTH,
       height: this.data.height ?? DEFAULT_HEIGHT,

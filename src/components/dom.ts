@@ -43,28 +43,12 @@ export class Dom {
 
   /**
    * Checks if a class name is valid for use with classList.add()
-   * classList.add() throws if class contains whitespace, is empty, or contains invalid characters
+   * Per the DOM spec, classList.add() throws only for an empty token or one with whitespace
    * @param className - class name to validate
    * @returns {boolean} - true if valid for classList.add()
    */
   private static isValidClassName(className: string): boolean {
-    if (className === '' || /\s/.test(className)) {
-      return false;
-    }
-
-    /**
-     * Try to validate by creating a temporary element and using classList.add
-     * This is more reliable than regex because it follows the actual browser implementation
-     */
-    try {
-      const testEl = document.createElement('div');
-
-      testEl.classList.add(className);
-
-      return true;
-    } catch {
-      return false;
-    }
+    return className !== '' && !/\s/.test(className);
   }
 
   /**

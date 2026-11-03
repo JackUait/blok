@@ -33,6 +33,15 @@ describe('Dom helper utilities', () => {
       expect((input as HTMLInputElement).value).toBe('Hello');
     });
 
+    it('creates only the requested element, however many classes it gets', () => {
+      const createSpy = vi.spyOn(document, 'createElement');
+
+      const el = Dom.make('div', 'a b c [x:y] w-[calc(100%-1px)]');
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect([...el.classList]).toStrictEqual(['a', 'b', 'c', '[x:y]', 'w-[calc(100%-1px)]']);
+    });
+
     it('handles Tailwind arbitrary value class names without throwing', () => {
       /**
        * Tailwind CSS arbitrary values like py-2 contain parentheses

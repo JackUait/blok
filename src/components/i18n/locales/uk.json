@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "Вбудувати посилання",
   "tools.embed.invalidUrl": "Це посилання не можна вбудувати",
   "tools.embed.loadFrom": "Завантажити вміст із {host}",
+  "tools.embed.checkBlocked": "Цей сайт не можна безпечно вбудувати. Додано як закладку.",
   "tools.linkPaste.plain": "Залишити як посилання",
   "tools.linkPaste.bookmark": "Створити закладку",
   "tools.linkPaste.embed": "Вбудувати",

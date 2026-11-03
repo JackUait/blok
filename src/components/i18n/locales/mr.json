@@ -821,6 +821,7 @@
   "tools.embed.urlSubmit": "लिंक एम्बेड करा",
   "tools.embed.invalidUrl": "ती लिंक एम्बेड करता येत नाही",
   "tools.embed.loadFrom": "{host} वरून सामग्री लोड करा",
+  "tools.embed.checkBlocked": "ही साइट सुरक्षितपणे एम्बेड करता येत नाही. बुकमार्क म्हणून जोडली.",
   "tools.linkPaste.plain": "दुवा म्हणून ठेवा",
   "tools.linkPaste.bookmark": "बुकमार्क तयार करा",
   "tools.linkPaste.embed": "एम्बेड तयार करा",

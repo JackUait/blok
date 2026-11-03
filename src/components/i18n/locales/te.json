@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "లింక్‌ను పొందుపరచు",
   "tools.embed.invalidUrl": "ఆ లింక్‌ను పొందుపరచలేరు",
   "tools.embed.loadFrom": "{host} నుండి కంటెంట్‌ను లోడ్ చేయండి",
+  "tools.embed.checkBlocked": "ఈ సైట్‌ను సురక్షితంగా ఎంబెడ్ చేయలేము. బుక్‌మార్క్‌గా జోడించబడింది.",
   "tools.linkPaste.plain": "లింక్‌గానే ఉంచు",
   "tools.linkPaste.bookmark": "బుక్‌మార్క్ సృష్టించు",
   "tools.linkPaste.embed": "ఎంబెడ్ సృష్టించు",

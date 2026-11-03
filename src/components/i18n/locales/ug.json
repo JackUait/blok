@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "ئۇلانمىنى سىڭدۈرۈش",
   "tools.embed.invalidUrl": "بۇ ئۇلانمىنى سىڭدۈرگىلى بولمايدۇ",
   "tools.embed.loadFrom": "{host} دىن مەزمۇن يۈكلەش",
+  "tools.embed.checkBlocked": "بۇ تور بېكەتنى بىخەتەر سىڭدۈرگىلى بولمايدۇ. خەتكۈچ سۈپىتىدە قوشۇلدى.",
   "tools.linkPaste.plain": "ئۇلانما پېتى ساقلاش",
   "tools.linkPaste.bookmark": "خەتكۈش قۇرۇش",
   "tools.linkPaste.embed": "سىڭدۈرۈش قۇرۇش",

@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "Indlejr link",
   "tools.embed.invalidUrl": "Linket kan ikke indlejres",
   "tools.embed.loadFrom": "Indlæs indhold fra {host}",
+  "tools.embed.checkBlocked": "Dette websted kan ikke indlejres sikkert. Det er tilføjet som bogmærke.",
   "tools.linkPaste.plain": "Behold som link",
   "tools.linkPaste.bookmark": "Opret bogmærke",
   "tools.linkPaste.embed": "Opret indlejring",

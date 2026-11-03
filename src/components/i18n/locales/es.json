@@ -811,6 +811,7 @@
   "tools.embed.urlSubmit": "Insertar enlace",
   "tools.embed.invalidUrl": "Ese enlace no se puede insertar",
   "tools.embed.loadFrom": "Cargar contenido de {host}",
+  "tools.embed.checkBlocked": "Este sitio no se puede insertar de forma segura. Se añadió como marcador.",
   "tools.linkPaste.plain": "Mantener como enlace",
   "tools.linkPaste.bookmark": "Crear marcador",
   "tools.linkPaste.embed": "Insertar contenido",

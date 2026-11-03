@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "લિંક એમ્બેડ કરો",
   "tools.embed.invalidUrl": "આ લિંક એમ્બેડ કરી શકાતી નથી",
   "tools.embed.loadFrom": "{host} પરથી સામગ્રી લોડ કરો",
+  "tools.embed.checkBlocked": "આ સાઇટને સુરક્ષિત રીતે એમ્બેડ કરી શકાતી નથી. બુકમાર્ક તરીકે ઉમેરી.",
   "tools.linkPaste.plain": "લિંક તરીકે રાખો",
   "tools.linkPaste.bookmark": "બુકમાર્ક બનાવો",
   "tools.linkPaste.embed": "એમ્બેડ કરો",

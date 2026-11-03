@@ -813,6 +813,7 @@
   "tools.embed.urlSubmit": "Ugradi vezu",
   "tools.embed.invalidUrl": "Ovu vezu nije moguće ugraditi",
   "tools.embed.loadFrom": "Učitaj sadržaj sa {host}",
+  "tools.embed.checkBlocked": "Ova stranica se ne može sigurno ugraditi. Dodana je kao oznaka.",
   "tools.linkPaste.plain": "Zadrži kao vezu",
   "tools.linkPaste.bookmark": "Napravi knjižnu oznaku",
   "tools.linkPaste.embed": "Ugradi sadržaj",

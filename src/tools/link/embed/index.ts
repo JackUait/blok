@@ -36,6 +36,7 @@ import { embedTypeIcon } from '../paste-menu/items';
 import { createUrlMirror } from '../../../components/utils/url-mirror';
 import { createEmbedWindow } from './empty-window';
 import { canFrameGeneric, genericEmbedPolicy, type GenericEmbedPolicy } from '../generic-embed-policy';
+import { embedCheckRefuses, type CheckEmbed } from '../check-embed';
 import { renderEmbedPreview } from './preview';
 import { overrideStatic } from '../../../components/utils/override-static';
 import type { LazySheet } from '../../../components/utils/lazy-styles';
@@ -838,7 +839,18 @@ export class Embed implements BlockTool {
     form.addEventListener('submit', (event) => {
       event.preventDefault();
 
-      if (!this.submitUrl(input.value.trim(), el)) {
+      const url = input.value.trim();
+      const check = this.api.config?.linkPaste?.checkEmbed;
+
+      // Only a URL the rules already accept as generic is checked; the
+      // answer can turn it into a bookmark, never let more through.
+      if (check !== undefined && url !== '' && this.resolveTarget(url)?.match === null) {
+        void this.submitAfterCheck(url, check, input, el);
+
+        return;
+      }
+
+      if (!this.submitUrl(url, el)) {
         embedWindow.play('rejected');
       }
     });
@@ -862,6 +874,32 @@ export class Embed implements BlockTool {
     }
 
     return isHttpUrl(value) || /^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value);
+  }
+
+  /** Submits a generic URL once the host's frame check answers. */
+  private async submitAfterCheck(url: string, check: CheckEmbed, input: HTMLInputElement, container: HTMLElement): Promise<void> {
+    const refused = await embedCheckRefuses(check, url);
+
+    // The answer is stale once the form is gone or holds another URL.
+    if (!container.isConnected || input.value.trim() !== url) {
+      return;
+    }
+
+    if (!refused) {
+      this.submitUrl(url, container);
+
+      return;
+    }
+
+    const index = this.api.blocks.getBlockIndex(this.block.id);
+
+    try {
+      this.api.blocks.insert('bookmark', { url }, undefined, index, true, true);
+      this.api.notifier.show({ message: this.api.i18n.t('tools.embed.checkBlocked') });
+    } catch {
+      // No bookmark tool: keep the form and say the link can't be embedded.
+      this.submitUrl('', container);
+    }
   }
 
   /** Returns whether the URL was accepted. */

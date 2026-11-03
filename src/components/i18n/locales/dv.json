@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "ލިންކް އެމްބެޑް ކުރޭ",
   "tools.embed.invalidUrl": "މި ލިންކް އެމްބެޑެއް ނުކުރެވޭ",
   "tools.embed.loadFrom": "{host} ން ކޮންޓެންޓް ލޯޑްކުރޭ",
+  "tools.embed.checkBlocked": "މި ސައިޓް ރައްކާތެރިކޮށް އެމްބެޑެއް ނުކުރެވޭ. ބުކްމާކެއްގެ ގޮތުގައި އިތުރުކުރެވިއްޖެ.",
   "tools.linkPaste.plain": "ލިންކެއް ގޮތުގައި ބަހައްޓާ",
   "tools.linkPaste.bookmark": "ބުކްމާކެއް ހަދާ",
   "tools.linkPaste.embed": "އެމްބެޑެއް ހަދާ",

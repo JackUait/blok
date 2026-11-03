@@ -2,6 +2,7 @@ import type { BlokConfig } from '../../../types';
 import type { InternalToolSettings } from '../../../types/tools';
 import { createPassSource } from './access-pass';
 import { createFetchUploader } from './fetch-uploader';
+import { createFrameCheck } from './frame-check-fetcher';
 
 type ToolEntry = NonNullable<BlokConfig['tools']>[string];
 
@@ -81,6 +82,13 @@ export function expandServerConfig(config: BlokConfig): BlokConfig {
     expanded.link = {
       ...config.link,
       unfurl: { endpoint: `${base}/unfurl`, ...(headers === undefined ? {} : { headers }) },
+    };
+  }
+
+  if (config.linkPaste?.checkEmbed === undefined) {
+    expanded.linkPaste = {
+      ...config.linkPaste,
+      checkEmbed: createFrameCheck({ endpoint: `${base}/frame-check`, ...(headers === undefined ? {} : { headers }) }),
     };
   }
 

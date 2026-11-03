@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "עמבעד דעם לינק",
   "tools.embed.invalidUrl": "מען קען נישט עמבעדן דעם לינק",
   "tools.embed.loadFrom": "לאָדן אינהאַלט פֿון {host}",
+  "tools.embed.checkBlocked": "מען קען נישט זיכער עמבעדן דעם זייטל. צוגעגעבן ווי אַ בוקמאַרק.",
   "tools.linkPaste.plain": "האַלט ווי אַ לינק",
   "tools.linkPaste.bookmark": "שאַף אַ בוכצייכן",
   "tools.linkPaste.embed": "שאַף אַן עמבעד",

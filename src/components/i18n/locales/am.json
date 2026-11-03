@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "አገናኝ አስገባ",
   "tools.embed.invalidUrl": "ይህ አገናኝ ሊገባ አይችልም",
   "tools.embed.loadFrom": "ከ{host} ይዘት ጫን",
+  "tools.embed.checkBlocked": "ይህን ጣቢያ በደህንነት መክተት አይቻልም። እንደ ዕልባት ታክሏል።",
   "tools.linkPaste.plain": "እንደ አገናኝ አቆይ",
   "tools.linkPaste.bookmark": "ዕልባት ፍጠር",
   "tools.linkPaste.embed": "ማስገቢያ ፍጠር",

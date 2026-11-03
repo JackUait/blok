@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Pachika kiungo",
   "tools.embed.invalidUrl": "Kiungo hicho hakiwezi kupachikwa",
   "tools.embed.loadFrom": "Pakia maudhui kutoka {host}",
+  "tools.embed.checkBlocked": "Tovuti hii haiwezi kupachikwa kwa usalama. Imeongezwa kama alamisho.",
   "tools.linkPaste.plain": "Weka kama kiungo",
   "tools.linkPaste.bookmark": "Unda alamisho",
   "tools.linkPaste.embed": "Pachika",

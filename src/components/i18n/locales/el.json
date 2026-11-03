@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "Ενσωμάτωση συνδέσμου",
   "tools.embed.invalidUrl": "Αυτός ο σύνδεσμος δεν μπορεί να ενσωματωθεί",
   "tools.embed.loadFrom": "Φόρτωση περιεχομένου από {host}",
+  "tools.embed.checkBlocked": "Αυτός ο ιστότοπος δεν μπορεί να ενσωματωθεί με ασφάλεια. Προστέθηκε ως σελιδοδείκτης.",
   "tools.linkPaste.plain": "Διατήρηση ως σύνδεσμος",
   "tools.linkPaste.bookmark": "Δημιουργία σελιδοδείκτη",
   "tools.linkPaste.embed": "Δημιουργία ενσωμάτωσης",

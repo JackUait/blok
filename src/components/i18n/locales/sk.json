@@ -814,6 +814,7 @@
   "tools.embed.urlSubmit": "Vložiť odkaz",
   "tools.embed.invalidUrl": "Tento odkaz sa nedá vložiť",
   "tools.embed.loadFrom": "Načítať obsah z {host}",
+  "tools.embed.checkBlocked": "Túto stránku nemožno bezpečne vložiť. Pridala sa ako záložka.",
   "tools.linkPaste.plain": "Ponechať ako odkaz",
   "tools.linkPaste.bookmark": "Vytvoriť záložku",
   "tools.linkPaste.embed": "Vložiť obsah",

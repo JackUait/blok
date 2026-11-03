@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "嵌入链接",
   "tools.embed.invalidUrl": "无法嵌入该链接",
   "tools.embed.loadFrom": "从 {host} 加载内容",
+  "tools.embed.checkBlocked": "无法安全嵌入此网站，已改为书签。",
   "tools.linkPaste.plain": "保留为链接",
   "tools.linkPaste.bookmark": "创建书签",
   "tools.linkPaste.embed": "创建嵌入",

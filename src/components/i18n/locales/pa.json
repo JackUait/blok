@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "ਲਿੰਕ ਇੰਬੈੱਡ ਕਰੋ",
   "tools.embed.invalidUrl": "ਉਹ ਲਿੰਕ ਇੰਬੈੱਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ",
   "tools.embed.loadFrom": "{host} ਤੋਂ ਸਮੱਗਰੀ ਲੋਡ ਕਰੋ",
+  "tools.embed.checkBlocked": "ਇਸ ਸਾਈਟ ਨੂੰ ਸੁਰੱਖਿਅਤ ਢੰਗ ਨਾਲ ਏਮਬੈੱਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ। ਬੁੱਕਮਾਰਕ ਵਜੋਂ ਜੋੜਿਆ ਗਿਆ।",
   "tools.linkPaste.plain": "ਲਿੰਕ ਵਜੋਂ ਰੱਖੋ",
   "tools.linkPaste.bookmark": "ਬੁੱਕਮਾਰਕ ਬਣਾਓ",
   "tools.linkPaste.embed": "ਇੰਬੈੱਡ ਬਣਾਓ",

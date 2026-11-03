@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "Вгради връзката",
   "tools.embed.invalidUrl": "Тази връзка не може да се вгради",
   "tools.embed.loadFrom": "Зареди съдържание от {host}",
+  "tools.embed.checkBlocked": "Този сайт не може да се вгради безопасно. Добавен е като отметка.",
   "tools.linkPaste.plain": "Запази като връзка",
   "tools.linkPaste.bookmark": "Създай отметка",
   "tools.linkPaste.embed": "Създай вграждане",

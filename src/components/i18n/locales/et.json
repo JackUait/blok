@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Manusta link",
   "tools.embed.invalidUrl": "Seda linki ei saa manustada",
   "tools.embed.loadFrom": "Laadi sisu saidilt {host}",
+  "tools.embed.checkBlocked": "Seda saiti ei saa turvaliselt manustada. See lisati järjehoidjana.",
   "tools.linkPaste.plain": "Jäta lingiks",
   "tools.linkPaste.bookmark": "Loo järjehoidja",
   "tools.linkPaste.embed": "Manusta",

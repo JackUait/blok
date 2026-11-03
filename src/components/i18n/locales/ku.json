@@ -823,6 +823,7 @@
   "tools.embed.urlSubmit": "جێگیرکردنی بەستەر",
   "tools.embed.invalidUrl": "ئەو بەستەرە ناتوانرێت جێگیر بکرێت",
   "tools.embed.loadFrom": "بارکردنی ناوەڕۆک لە {host}",
+  "tools.embed.checkBlocked": "ئەم ماڵپەڕە ناتوانرێت بە سەلامەتی جێگیر بکرێت. وەک نیشانە زیادکرا.",
   "tools.linkPaste.plain": "وەک بەستەر بیهێڵەرەوە",
   "tools.linkPaste.bookmark": "دروستکردنی نیشانە",
   "tools.linkPaste.embed": "دروستکردنی جێگیرکراو",

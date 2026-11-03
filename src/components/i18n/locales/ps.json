@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "لینک ځای پر ځای کړئ",
   "tools.embed.invalidUrl": "دا لینک نه شي ځای پر ځای کېدای",
   "tools.embed.loadFrom": "له {host} څخه منځپانګه پورته کړئ",
+  "tools.embed.checkBlocked": "دا سایټ په خوندي ډول نه شي ځای پر ځای کېدای. د نښې په توګه زیات شو.",
   "tools.linkPaste.plain": "د لینک په توګه وساتئ",
   "tools.linkPaste.bookmark": "لیکنښه جوړه کړئ",
   "tools.linkPaste.embed": "ځای پر ځای یې کړئ",

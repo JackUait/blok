@@ -2323,6 +2323,7 @@ export type BlokMessageKey =
   | 'tools.database.viewTypeTimeline'
   | 'tools.database.viewTypeTimelineDescription'
   | 'tools.embed.captionPlaceholder'
+  | 'tools.embed.checkBlocked'
   | 'tools.embed.empty'
   | 'tools.embed.invalidUrl'
   | 'tools.embed.loadFrom'

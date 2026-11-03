@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "لنک ایمبیڈ کریں",
   "tools.embed.invalidUrl": "یہ لنک ایمبیڈ نہیں کیا جا سکتا",
   "tools.embed.loadFrom": "{host} سے مواد لوڈ کریں",
+  "tools.embed.checkBlocked": "اس سائٹ کو محفوظ طریقے سے ایمبیڈ نہیں کیا جا سکتا۔ بُک مارک کے طور پر شامل کر دیا گیا۔",
   "tools.linkPaste.plain": "بطور لنک رکھیں",
   "tools.linkPaste.bookmark": "بک مارک بنائیں",
   "tools.linkPaste.embed": "ایمبیڈ بنائیں",

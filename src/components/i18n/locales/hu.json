@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Hivatkozás beágyazása",
   "tools.embed.invalidUrl": "Ez a hivatkozás nem ágyazható be",
   "tools.embed.loadFrom": "Tartalom betöltése innen: {host}",
+  "tools.embed.checkBlocked": "Ez a webhely nem ágyazható be biztonságosan. Könyvjelzőként lett hozzáadva.",
   "tools.linkPaste.plain": "Megtartás hivatkozásként",
   "tools.linkPaste.bookmark": "Könyvjelző létrehozása",
   "tools.linkPaste.embed": "Beágyazás létrehozása",

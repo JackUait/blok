@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Link insluiten",
   "tools.embed.invalidUrl": "Die link kan niet worden ingesloten",
   "tools.embed.loadFrom": "Inhoud van {host} laden",
+  "tools.embed.checkBlocked": "Deze site kan niet veilig worden ingesloten. Toegevoegd als bladwijzer.",
   "tools.linkPaste.plain": "Als link behouden",
   "tools.linkPaste.bookmark": "Bladwijzer maken",
   "tools.linkPaste.embed": "Insluiting maken",

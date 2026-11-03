@@ -813,6 +813,7 @@
   "tools.embed.urlSubmit": "Угради везу",
   "tools.embed.invalidUrl": "Та веза не може да се угради",
   "tools.embed.loadFrom": "Учитај садржај са {host}",
+  "tools.embed.checkBlocked": "Овај сајт не може безбедно да се угради. Додат је као обележивач.",
   "tools.linkPaste.plain": "Задржи као везу",
   "tools.linkPaste.bookmark": "Направи обележивач",
   "tools.linkPaste.embed": "Угради",

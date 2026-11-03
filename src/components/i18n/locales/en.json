@@ -928,6 +928,7 @@
   "tools.embed.urlSubmit": "Embed link",
   "tools.embed.invalidUrl": "That link can’t be embedded",
   "tools.embed.loadFrom": "Load content from {host}",
+  "tools.embed.checkBlocked": "This site can’t be embedded safely. Added as a bookmark.",
   "tools.linkPaste.plain": "Keep as link",
   "tools.linkPaste.bookmark": "Create bookmark",
   "tools.linkPaste.embed": "Create embed",

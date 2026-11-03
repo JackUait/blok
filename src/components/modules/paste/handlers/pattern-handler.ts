@@ -1,5 +1,6 @@
 import type { BlokConfig } from '../../../../../types/configs/blok-config';
-import { isHttpUrl, isSamePageLink } from '../../../../tools/link/registry';
+import { isHttpUrl, isSamePageLink, matchEmbedService } from '../../../../tools/link/registry';
+import { embedCheckRefuses } from '../../../../tools/link/check-embed';
 import {
   PasteMenuController,
   buildLivePasteMenuOptions,
@@ -311,6 +312,22 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     canReplace: boolean,
     pageId?: string
   ): Promise<void> {
+    if (type === 'embed' && matchEmbedService(url) === null && this.config?.linkPaste?.checkEmbed !== undefined) {
+      const refused = await embedCheckRefuses(this.config.linkPaste.checkEmbed, url);
+
+      // The wait can outlast the link: the user may have undone or deleted it.
+      if (linkBlock?.holder !== undefined && !linkBlock.holder.isConnected) {
+        return;
+      }
+
+      if (refused) {
+        this.Blok.NotifierAPI.show({ message: this.Blok.I18n.t('tools.embed.checkBlocked') });
+        await this.applyMenuAction('bookmark', url, linkBlock, canReplace, pageId);
+
+        return;
+      }
+    }
+
     switch (type) {
       case 'bookmark':
       case 'embed':

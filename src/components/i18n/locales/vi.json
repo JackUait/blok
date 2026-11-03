@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Nhúng liên kết",
   "tools.embed.invalidUrl": "Không thể nhúng liên kết này",
   "tools.embed.loadFrom": "Tải nội dung từ {host}",
+  "tools.embed.checkBlocked": "Không thể nhúng trang này một cách an toàn. Đã thêm dưới dạng dấu trang.",
   "tools.linkPaste.plain": "Giữ làm liên kết",
   "tools.linkPaste.bookmark": "Tạo dấu trang",
   "tools.linkPaste.embed": "Nhúng nội dung",

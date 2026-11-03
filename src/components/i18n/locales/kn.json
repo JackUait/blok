@@ -823,6 +823,7 @@
   "tools.embed.urlSubmit": "ಲಿಂಕ್ ಎಂಬೆಡ್ ಮಾಡಿ",
   "tools.embed.invalidUrl": "ಈ ಲಿಂಕ್ ಅನ್ನು ಎಂಬೆಡ್ ಮಾಡಲಾಗದು",
   "tools.embed.loadFrom": "{host} ನಿಂದ ವಿಷಯ ಲೋಡ್ ಮಾಡಿ",
+  "tools.embed.checkBlocked": "ಈ ಸೈಟ್ ಅನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಎಂಬೆಡ್ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ. ಬುಕ್‌ಮಾರ್ಕ್ ಆಗಿ ಸೇರಿಸಲಾಗಿದೆ.",
   "tools.linkPaste.plain": "ಲಿಂಕ್ ಆಗಿ ಉಳಿಸಿ",
   "tools.linkPaste.bookmark": "ಬುಕ್‌ಮಾರ್ಕ್ ರಚಿಸಿ",
   "tools.linkPaste.embed": "ಎಂಬೆಡ್ ರಚಿಸಿ",

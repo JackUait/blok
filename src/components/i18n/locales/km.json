@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "បង្កប់តំណ",
   "tools.embed.invalidUrl": "មិនអាចបង្កប់តំណនេះបានទេ",
   "tools.embed.loadFrom": "ផ្ទុកមាតិកាពី {host}",
+  "tools.embed.checkBlocked": "មិនអាចបង្កប់គេហទំព័រនេះដោយសុវត្ថិភាពបានទេ។ បានបន្ថែមជាចំណាំ។",
   "tools.linkPaste.plain": "រក្សាជាតំណ",
   "tools.linkPaste.bookmark": "បង្កើតចំណាំ",
   "tools.linkPaste.embed": "បង្កើតការបង្កប់",

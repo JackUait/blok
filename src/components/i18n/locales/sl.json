@@ -814,6 +814,7 @@
   "tools.embed.urlSubmit": "Vdelaj povezavo",
   "tools.embed.invalidUrl": "Te povezave ni mogoče vdelati",
   "tools.embed.loadFrom": "Naloži vsebino s {host}",
+  "tools.embed.checkBlocked": "Tega spletnega mesta ni mogoče varno vdelati. Dodano je kot zaznamek.",
   "tools.linkPaste.plain": "Ohrani kot povezavo",
   "tools.linkPaste.bookmark": "Ustvari zaznamek",
   "tools.linkPaste.embed": "Ustvari vdelavo",

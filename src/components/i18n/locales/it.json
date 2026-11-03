@@ -813,6 +813,7 @@
   "tools.embed.urlSubmit": "Incorpora link",
   "tools.embed.invalidUrl": "Impossibile incorporare questo link",
   "tools.embed.loadFrom": "Carica contenuto da {host}",
+  "tools.embed.checkBlocked": "Questo sito non può essere incorporato in sicurezza. Aggiunto come segnalibro.",
   "tools.linkPaste.plain": "Mantieni come link",
   "tools.linkPaste.bookmark": "Crea segnalibro",
   "tools.linkPaste.embed": "Crea incorporamento",

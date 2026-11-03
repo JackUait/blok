@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "ბმულის ჩაშენება",
   "tools.embed.invalidUrl": "ამ ბმულის ჩაშენება ვერ ხერხდება",
   "tools.embed.loadFrom": "კონტენტის ჩატვირთვა {host}-დან",
+  "tools.embed.checkBlocked": "ამ საიტის უსაფრთხოდ ჩაშენება შეუძლებელია. დაემატა სანიშნედ.",
   "tools.linkPaste.plain": "დატოვება ბმულად",
   "tools.linkPaste.bookmark": "სანიშნის შექმნა",
   "tools.linkPaste.embed": "ჩაშენების შექმნა",

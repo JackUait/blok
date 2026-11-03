@@ -644,8 +644,9 @@ export interface BlokMountOptions {
    * Base URL of a service speaking Blok's upload and unfurl contracts, e.g.
    * `https://blok.myapp.com` or a same-origin path like `/api/blok`.
    *
-   * Shorthand only: it fills in `uploader` and the bookmark tool's `endpoint`
-   * if you have not set them yourself. Anything you set explicitly wins, so
+   * Shorthand only: it fills in `uploader`, the bookmark tool's `endpoint`
+   * and `linkPaste.checkEmbed` (the server's `GET /frame-check`) if you have
+   * not set them yourself. Anything you set explicitly wins, so
    * taking the service for link previews while uploading into your own S3 needs
    * no extra wiring.
    *
@@ -1117,6 +1118,26 @@ export interface BlokMountOptions {
      * @default true
      */
     genericEmbedClickToLoad?: boolean;
+
+    /**
+     * Asks your backend whether a page may be shown in a frame, before a
+     * generic (non-registry) embed is inserted from the paste menu or the
+     * embed URL input. Registry providers are never checked.
+     *
+     * - `blocked` or `insecure`: Blok inserts a bookmark instead and shows a
+     *   short notice.
+     * - `allowed`, `unknown`, an error, or no answer within 3 seconds: the
+     *   generic embed is inserted as usual.
+     *
+     * The verdict is a hint for the UI only. It is never saved in block data,
+     * and `allowed` never lifts any other rule: the own site,
+     * `blockedEmbedOrigins`, the https check and the strict sandbox still
+     * apply. When `server` is set and this is not, Blok calls the server's
+     * `GET /frame-check`.
+     *
+     * @param url - the pasted or typed URL
+     */
+    checkEmbed?: (url: string) => Promise<{ verdict: 'allowed' | 'blocked' | 'insecure' | 'unknown' }>;
 
     /**
      * Other hostnames that count as the editor's own site, next to the page's

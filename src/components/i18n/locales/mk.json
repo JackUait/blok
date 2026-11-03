@@ -821,6 +821,7 @@
   "tools.embed.urlSubmit": "Вгради врска",
   "tools.embed.invalidUrl": "Таа врска не може да се вгради",
   "tools.embed.loadFrom": "Вчитај содржина од {host}",
+  "tools.embed.checkBlocked": "Оваа страница не може безбедно да се вгради. Додадена е како обележувач.",
   "tools.linkPaste.plain": "Задржи како врска",
   "tools.linkPaste.bookmark": "Создај обележувач",
   "tools.linkPaste.embed": "Создај вградена содржина",

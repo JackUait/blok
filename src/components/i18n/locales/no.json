@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Bygg inn lenke",
   "tools.embed.invalidUrl": "Den lenken kan ikke bygges inn",
   "tools.embed.loadFrom": "Last inn innhold fra {host}",
+  "tools.embed.checkBlocked": "Dette nettstedet kan ikke bygges inn trygt. Lagt til som bokmerke.",
   "tools.linkPaste.plain": "Behold som lenke",
   "tools.linkPaste.bookmark": "Opprett bokmerke",
   "tools.linkPaste.embed": "Opprett innbygging",

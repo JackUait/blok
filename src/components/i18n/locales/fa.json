@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "جاسازی پیوند",
   "tools.embed.invalidUrl": "این پیوند قابل جاسازی نیست",
   "tools.embed.loadFrom": "بارگیری محتوا از {host}",
+  "tools.embed.checkBlocked": "این سایت را نمی‌توان به‌صورت امن جاسازی کرد. به‌عنوان نشانک افزوده شد.",
   "tools.linkPaste.plain": "نگه‌داشتن به‌صورت پیوند",
   "tools.linkPaste.bookmark": "ساخت نشانک",
   "tools.linkPaste.embed": "جاسازی",

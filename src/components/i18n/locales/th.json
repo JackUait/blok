@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "ฝังลิงก์",
   "tools.embed.invalidUrl": "ไม่สามารถฝังลิงก์นั้นได้",
   "tools.embed.loadFrom": "โหลดเนื้อหาจาก {host}",
+  "tools.embed.checkBlocked": "ไม่สามารถฝังเว็บไซต์นี้ได้อย่างปลอดภัย จึงเพิ่มเป็นบุ๊กมาร์กแล้ว",
   "tools.linkPaste.plain": "เก็บเป็นลิงก์",
   "tools.linkPaste.bookmark": "สร้างบุ๊กมาร์ก",
   "tools.linkPaste.embed": "สร้างการฝัง",

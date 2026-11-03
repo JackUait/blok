@@ -814,6 +814,7 @@
   "tools.embed.urlSubmit": "Osadź link",
   "tools.embed.invalidUrl": "Tego linku nie można osadzić",
   "tools.embed.loadFrom": "Wczytaj treść z {host}",
+  "tools.embed.checkBlocked": "Tej witryny nie można bezpiecznie osadzić. Dodano ją jako zakładkę.",
   "tools.linkPaste.plain": "Zachowaj jako link",
   "tools.linkPaste.bookmark": "Utwórz zakładkę",
   "tools.linkPaste.embed": "Osadź zawartość",

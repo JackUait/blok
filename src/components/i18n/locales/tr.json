@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Bağlantıyı yerleştir",
   "tools.embed.invalidUrl": "Bu bağlantı yerleştirilemiyor",
   "tools.embed.loadFrom": "{host} içeriğini yükle",
+  "tools.embed.checkBlocked": "Bu site güvenli şekilde yerleştirilemiyor. Yer işareti olarak eklendi.",
   "tools.linkPaste.plain": "Bağlantı olarak tut",
   "tools.linkPaste.bookmark": "Yer işareti oluştur",
   "tools.linkPaste.embed": "Yerleştirme oluştur",

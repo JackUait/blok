@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "लिंक एम्बेड करें",
   "tools.embed.invalidUrl": "यह लिंक एम्बेड नहीं किया जा सकता",
   "tools.embed.loadFrom": "{host} से सामग्री लोड करें",
+  "tools.embed.checkBlocked": "इस साइट को सुरक्षित रूप से एम्बेड नहीं किया जा सकता। बुकमार्क के रूप में जोड़ा गया।",
   "tools.linkPaste.plain": "लिंक के रूप में रखें",
   "tools.linkPaste.bookmark": "बुकमार्क बनाएं",
   "tools.linkPaste.embed": "एम्बेड करें",

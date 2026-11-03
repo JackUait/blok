@@ -928,6 +928,7 @@
   "tools.embed.urlSubmit": "嵌入連結",
   "tools.embed.invalidUrl": "無法嵌入此連結",
   "tools.embed.loadFrom": "從 {host} 載入內容",
+  "tools.embed.checkBlocked": "無法安全嵌入此網站，已改為書籤。",
   "tools.linkPaste.plain": "保留為連結",
   "tools.linkPaste.bookmark": "建立書籤",
   "tools.linkPaste.embed": "建立嵌入內容",

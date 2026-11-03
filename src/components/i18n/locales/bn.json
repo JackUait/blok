@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "লিঙ্ক এম্বেড করুন",
   "tools.embed.invalidUrl": "এই লিঙ্কটি এম্বেড করা যাবে না",
   "tools.embed.loadFrom": "{host} থেকে কনটেন্ট লোড করুন",
+  "tools.embed.checkBlocked": "এই সাইটটি নিরাপদে এম্বেড করা যায় না। বুকমার্ক হিসেবে যোগ করা হয়েছে।",
   "tools.linkPaste.plain": "লিঙ্ক হিসেবে রাখুন",
   "tools.linkPaste.bookmark": "বুকমার্ক তৈরি করুন",
   "tools.linkPaste.embed": "এম্বেড তৈরি করুন",

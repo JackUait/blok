@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "Sematkan tautan",
   "tools.embed.invalidUrl": "Tautan ini tidak dapat disematkan",
   "tools.embed.loadFrom": "Muat konten dari {host}",
+  "tools.embed.checkBlocked": "Situs ini tidak dapat disematkan dengan aman. Ditambahkan sebagai bookmark.",
   "tools.linkPaste.plain": "Pertahankan sebagai tautan",
   "tools.linkPaste.bookmark": "Buat markah",
   "tools.linkPaste.embed": "Buat sematan",

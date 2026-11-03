@@ -810,6 +810,7 @@
   "tools.embed.urlSubmit": "Bädda in länk",
   "tools.embed.invalidUrl": "Den länken kan inte bäddas in",
   "tools.embed.loadFrom": "Läs in innehåll från {host}",
+  "tools.embed.checkBlocked": "Den här webbplatsen kan inte bäddas in säkert. Den lades till som bokmärke.",
   "tools.linkPaste.plain": "Behåll som länk",
   "tools.linkPaste.bookmark": "Skapa bokmärke",
   "tools.linkPaste.embed": "Skapa inbäddning",

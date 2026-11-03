@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "Ներդնել հղումը",
   "tools.embed.invalidUrl": "Այս հղումը հնարավոր չէ ներդնել",
   "tools.embed.loadFrom": "Բեռնել բովանդակությունը {host}-ից",
+  "tools.embed.checkBlocked": "Այս կայքը հնարավոր չէ անվտանգ ներկառուցել։ Ավելացվեց որպես էջանիշ։",
   "tools.linkPaste.plain": "Թողնել որպես հղում",
   "tools.linkPaste.bookmark": "Ստեղծել էջանիշ",
   "tools.linkPaste.embed": "Ստեղծել ներդրում",

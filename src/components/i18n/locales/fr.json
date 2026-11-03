@@ -811,6 +811,7 @@
   "tools.embed.urlSubmit": "Intégrer le lien",
   "tools.embed.invalidUrl": "Ce lien ne peut pas être intégré",
   "tools.embed.loadFrom": "Charger le contenu de {host}",
+  "tools.embed.checkBlocked": "Ce site ne peut pas être intégré en toute sécurité. Ajouté comme signet.",
   "tools.linkPaste.plain": "Conserver comme lien",
   "tools.linkPaste.bookmark": "Créer un signet",
   "tools.linkPaste.embed": "Intégrer",

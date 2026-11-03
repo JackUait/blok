@@ -816,6 +816,7 @@
   "tools.embed.urlSubmit": "تضمين الرابط",
   "tools.embed.invalidUrl": "تعذّر تضمين هذا الرابط",
   "tools.embed.loadFrom": "تحميل المحتوى من {host}",
+  "tools.embed.checkBlocked": "لا يمكن تضمين هذا الموقع بأمان. أُضيف كإشارة مرجعية.",
   "tools.linkPaste.plain": "الإبقاء عليه كرابط",
   "tools.linkPaste.bookmark": "إنشاء إشارة مرجعية",
   "tools.linkPaste.embed": "إنشاء تضمين",

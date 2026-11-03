@@ -811,6 +811,7 @@
   "tools.embed.urlSubmit": "Ugradi poveznicu",
   "tools.embed.invalidUrl": "Ta se poveznica ne može ugraditi",
   "tools.embed.loadFrom": "Učitaj sadržaj s {host}",
+  "tools.embed.checkBlocked": "Ova se stranica ne može sigurno ugraditi. Dodana je kao oznaka.",
   "tools.linkPaste.plain": "Zadrži kao poveznicu",
   "tools.linkPaste.bookmark": "Stvori knjižnu oznaku",
   "tools.linkPaste.embed": "Ugradi",

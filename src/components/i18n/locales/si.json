@@ -812,6 +812,7 @@
   "tools.embed.urlSubmit": "සබැඳිය එබ්බවන්න",
   "tools.embed.invalidUrl": "එම සබැඳිය එබ්බවිය නොහැක",
   "tools.embed.loadFrom": "{host} වෙතින් අන්තර්ගතය පූරණය කරන්න",
+  "tools.embed.checkBlocked": "මෙම අඩවිය ආරක්ෂිතව කාවැද්දිය නොහැක. පිටු සලකුණක් ලෙස එක් කළා.",
   "tools.linkPaste.plain": "සබැඳිය ලෙස තබන්න",
   "tools.linkPaste.bookmark": "පිටු සලකුණක් සාදන්න",
   "tools.linkPaste.embed": "කාවැද්දීමක් සාදන්න",

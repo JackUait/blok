@@ -115,11 +115,15 @@ internal sealed class RoomAgentHistory(TimeProvider time)
     }
   }
 
+  /// <summary>Called inside <see cref="Add"/> with the step, for tests.</summary>
+  internal Action<Step>? Added { get; set; }
+
   /// <summary>A new batch: drops the redo side and the oldest steps past the caps.</summary>
   internal void Add(string docId, BlokAgentActor actor, Step step)
   {
     lock (rooms)
     {
+      Added?.Invoke(step);
       Prune();
 
       if (!rooms.TryGetValue(Key(docId, actor), out var steps))

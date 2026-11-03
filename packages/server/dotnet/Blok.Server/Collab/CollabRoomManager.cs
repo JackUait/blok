@@ -406,7 +406,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       ReadOnlyMemory<byte> digest,
       string? actorId,
       CollabEditPrecondition? expect,
-      Func<YDoc, CancellationToken, ValueTask>? applied = null,
+      Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);

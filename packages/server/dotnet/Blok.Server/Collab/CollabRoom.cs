@@ -556,7 +556,7 @@ internal sealed class CollabRoom : IDisposable
       ReadOnlyMemory<byte> digest,
       string? actorId,
       CollabEditPrecondition? expect,
-      Func<YDoc, CancellationToken, ValueTask>? applied,
+      Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(planOps);
@@ -601,7 +601,7 @@ internal sealed class CollabRoom : IDisposable
       ReadOnlyMemory<byte> digest,
       string? actorId,
       CollabEditPrecondition? expect,
-      Func<YDoc, CancellationToken, ValueTask>? applied,
+      Func<YDoc, CollabEditReceipt?, CancellationToken, ValueTask>? applied,
       CancellationToken cancellationToken)
   {
     return RunAsync<CollabEditResult?>(
@@ -764,7 +764,7 @@ internal sealed class CollabRoom : IDisposable
 
             if (applied is not null)
             {
-              await applied(doc!, lifetime.Token);
+              await applied(doc!, null, lifetime.Token);
             }
 
             return new CollabEditResult(CollabEditStatus.Applied, null);
@@ -782,15 +782,14 @@ internal sealed class CollabRoom : IDisposable
             {
               UpdateEvictionLocked();
 
+              var unchanged = new CollabEditReceipt(tag, committedThrough);
+
               if (applied is not null)
               {
-                await applied(doc!, lifetime.Token);
+                await applied(doc!, unchanged, lifetime.Token);
               }
 
-              return new CollabEditResult(
-                  CollabEditStatus.Applied,
-                  null,
-                  new CollabEditReceipt(tag, committedThrough));
+              return new CollabEditResult(CollabEditStatus.Applied, null, unchanged);
             }
 
             // One update is what the append journals; zero with a moved doc,
@@ -849,16 +848,15 @@ internal sealed class CollabRoom : IDisposable
           MarkDirtyLocked();
           UpdateEvictionLocked();
 
+          var receipt = new CollabEditReceipt(tag, sequence.Value);
+
           // In the lane, so no peer write lands between the edit and what the caller reads here.
           if (applied is not null)
           {
-            await applied(doc!, lifetime.Token);
+            await applied(doc!, receipt, lifetime.Token);
           }
 
-          return new CollabEditResult(
-              CollabEditStatus.Applied,
-              null,
-              new CollabEditReceipt(tag, sequence.Value));
+          return new CollabEditResult(CollabEditStatus.Applied, null, receipt);
         },
         cancellationToken);
   }

@@ -13,6 +13,8 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   private readonly ICollabDocConverter? converter;
   private readonly RoomAgentHistory roomHistory = new(TimeProvider.System);
 
+  internal RoomAgentHistory RoomHistory => roomHistory;
+
   /// <summary>With rooms, <see cref="ExecuteInRoomAsync"/> edits live documents.</summary>
   internal BlokAgentExecutor(IBlokRuntime runtime, CollabRoomManager? rooms, ICollabDocConverter? converter)
       : this(runtime)
@@ -492,7 +494,6 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     JsonObject? before = null;
     CollabPageMaps? beforeMaps = null;
     var wrote = false;
-    RoomAgentHistory.Step? recorded = null;
     var operationId = Guid.NewGuid().ToString("N");
     var digest = System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes($"agent\n{actor.Id}\n{batchJson}"));
@@ -534,12 +535,15 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         wrote = output["edits"] is JsonArray { Count: > 0 };
 
         return ops;
-      }, operationId, digest, actor.Id, expect, async (doc, token) =>
+      }, operationId, digest, actor.Id, expect, async (doc, receipt, token) =>
       {
         if (wrote && before is not null && beforeMaps is not null
             && await converter.ExportAsync(doc, token) is JsonObject after)
         {
-          recorded = RoomAgentHistory.Between(before, beforeMaps, after, YDocConverter.ReadPageMaps(doc));
+          var recorded = RoomAgentHistory.Between(before, beforeMaps, after, YDocConverter.ReadPageMaps(doc));
+
+          // Set before the step is shared: an undo from another call reads it at once.
+          recorded.Lineage = receipt?.Tag.Lineage;
           roomHistory.Add(docId, actor, recorded);
         }
       }, cancellationToken);
@@ -572,11 +576,6 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     switch (edit.Status)
     {
       case CollabEditStatus.Applied when planned is not null:
-        if (recorded is not null)
-        {
-          recorded.Lineage = edit.Receipt?.Tag.Lineage;
-        }
-
         return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, head), head);
       default:
         return await RoomRefusalAsync(edit, docId, input, head, cancellationToken);
@@ -757,7 +756,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         ];
       }, Guid.NewGuid().ToString("N"), System.Security.Cryptography.SHA256.HashData(
           System.Text.Encoding.UTF8.GetBytes($"agent-{verb}\n{actor.Id}\n{Guid.NewGuid():N}")), actor.Id, expect,
-      async (doc, token) =>
+      async (doc, _, token) =>
       {
         if (step is null || await converter!.ExportAsync(doc, token) is not JsonObject now)
         {

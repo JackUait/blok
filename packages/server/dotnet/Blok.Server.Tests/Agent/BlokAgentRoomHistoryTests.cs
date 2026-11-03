@@ -320,4 +320,20 @@ public sealed class BlokAgentRoomHistoryTests
     Assert.Contains("T4", await TextAsync(room, "p"), StringComparison.Ordinal);
     Assert.Equal("NOTHING_TO_UNDO", Code(await RunAsync(room, Undo)));
   }
+
+  // A step is shared the moment it is added: an undo from another call can read it before
+  // this call returns, so its lineage must be set by then, not after the room lane.
+  [Fact]
+  public async Task AStepCarriesItsLineageWhenItIsAdded()
+  {
+    await using var room = Open();
+    var history = ((BlokAgentExecutor)room.Executor).RoomHistory;
+    var added = new List<string?>();
+    history.Added = step => added.Add(step.Lineage);
+
+    var result = await OkAsync(room, Insert("a", "Agent"));
+
+    var revision = result["revision"]!.GetValue<string>();
+    Assert.Equal([revision[..revision.LastIndexOf(':')]], added);
+  }
 }

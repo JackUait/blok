@@ -1,10 +1,12 @@
 package convert
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -342,5 +344,21 @@ func TestAMoveOrRetypeKeepsAPeersConcurrentTyping(t *testing.T) {
 				row.check(t, agExported(t, doc))
 			}
 		})
+	}
+}
+
+// C# AgentRoomOpsTests.SeedCarriesTitleAndIconIntoThePageRoot.
+func TestSeedCarriesTitleAndIconIntoThePageRoot(t *testing.T) {
+	converter := &DocConverter{Now: time.Now}
+	doc := yjs.NewDoc(yjs.Options{})
+	if err := converter.Seed(context.Background(), doc, node(t, []byte(`{"title":"T","icon":{"type":"emoji","value":"x"},"blocks":[]}`))); err != nil {
+		t.Fatal(err)
+	}
+	exported, err := converter.Export(context.Background(), doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonical(t, agField(exported, "title")) != `"T"` || canonical(t, agField(agField(exported, "icon"), "value")) != `"x"` {
+		t.Fatalf("export %s", canonical(t, exported))
 	}
 }

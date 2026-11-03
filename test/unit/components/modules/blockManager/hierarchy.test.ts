@@ -2328,6 +2328,39 @@ describe('BlockHierarchy', () => {
     });
   });
 
+  describe('setBlockParent() — cost', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('places a block with no children without mapping every parented block in the document', () => {
+      const mapReads = (before: number): number => {
+        const repo = createRepositoryWithBlocks([
+          { id: 'q', contentIds: Array.from({ length: before }, (_, i) => `p${i}`) },
+          ...Array.from({ length: before }, (_, i) => ({ id: `p${i}`, parentId: 'q' })),
+          { id: 'parent', contentIds: ['cell'] },
+          { id: 'cell', parentId: 'parent' },
+          { id: 'leaf' },
+        ]);
+        const leaf = repo.getBlockById('leaf');
+
+        if (leaf === undefined) {
+          throw new Error('no leaf');
+        }
+        const reads = vi.spyOn(Map.prototype, 'get');
+
+        hierarchyOf(repo).setBlockParent(leaf, 'parent');
+        const count = reads.mock.calls.length;
+
+        reads.mockRestore();
+
+        return count;
+      };
+
+      expect(mapReads(500)).toBe(mapReads(2));
+    });
+  });
+
   describe('setBlockParent() — where the block lands in the model', () => {
     beforeEach(() => {
       vi.clearAllMocks();

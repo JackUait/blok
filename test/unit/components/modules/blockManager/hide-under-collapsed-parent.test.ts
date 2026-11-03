@@ -81,4 +81,15 @@ describe('hideUnderCollapsedParent', () => {
 
     expect(lookups(500)).toBe(lookups(2));
   });
+
+  it('does not search a table for a toggle marker: its cells hold every one inside it', () => {
+    const { child, getBlock } = family([block('a', 'parent')]);
+    const parent = getBlock('parent') as unknown as FakeBlock & { name: string };
+    const search = vi.spyOn(parent.holder, 'querySelector');
+
+    parent.name = 'table';
+
+    expect(run(child, getBlock)).toBe(false);
+    expect(search).not.toHaveBeenCalled();
+  });
 });

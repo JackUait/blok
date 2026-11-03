@@ -7,10 +7,17 @@ import type { LegacyCellContent } from './types';
 
 export const ROW_ATTR = 'data-blok-table-row';
 
-/** This table's own rows; a nested table's rows are descendants too, so query direct children only. */
-export const ownRows = (grid: HTMLElement): NodeListOf<HTMLElement> =>
-  grid.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
+/**
+ * This table's own rows, the direct children of the grid or its tbody. Read
+ * from children: a `:scope >` query still walks every cell's content.
+ */
+export const ownRows = (grid: HTMLElement): HTMLElement[] =>
+  Array.from(grid.children).flatMap(child => (child.tagName === 'TBODY' ? Array.from(child.children) : [child]))
+    .filter((child): child is HTMLElement => child instanceof HTMLElement && child.hasAttribute(ROW_ATTR));
 export const CELL_ATTR = 'data-blok-table-cell';
+/** A row's own cells, read from its children: a `:scope >` query walks every cell's content. */
+export const rowCells = (row: Element): HTMLTableCellElement[] =>
+  Array.from(row.children).filter((child): child is HTMLTableCellElement => child instanceof HTMLElement && child.hasAttribute(CELL_ATTR));
 /** Grid-relative selector for this table's own cells; a nested table's cells sit inside ours. */
 export const ownCells = (tail = ''): string =>
   `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}, :scope > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}`;
@@ -510,7 +517,7 @@ export class TableGrid {
     const colCount = this.getColumnCount(table);
 
     this.getRows(table).forEach(row => {
-      row.querySelectorAll<HTMLTableCellElement>(`:scope > [${CELL_ATTR}]`).forEach(cell => {
+      rowCells(row).forEach(cell => {
         const r = Number(cell.getAttribute(CELL_ROW_ATTR));
         const c = Number(cell.getAttribute(CELL_COL_ATTR));
         const isTop = r === 0;
@@ -561,8 +568,7 @@ export class TableGrid {
   }
 
   private getRows(table: HTMLElement): HTMLElement[] {
-    return Array.from(table.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`))
-      .filter(row => row.closest('table') === table);
+    return ownRows(table);
   }
 
   /**

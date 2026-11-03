@@ -655,8 +655,20 @@ export class BlockInsertion {
   ): void {
     const parent = block.parentId === null ? undefined : this.getBlock(block.parentId);
 
+    // A table keeps its children out of contentIds order, so the sibling to
+    // follow comes from the flat order. Walking back from the block stops at
+    // the nearest one: a flat index in the doc would walk the whole document.
     if (parent !== undefined && isSelfPlacedParent(parent, this.getBlock)) {
-      this.dependencies.YjsManager.addBlock({ ...blockData, parent: parent.id }, index);
+      const blocks = this.repository.blocks;
+      const start = blocks[index] === block ? index : blocks.indexOf(block);
+
+      if (start === -1) {
+        this.dependencies.YjsManager.addBlock({ ...blockData, parent: parent.id }, index);
+
+        return;
+      }
+
+      this.dependencies.YjsManager.addBlockAt(blockData, { parentId: parent.id, afterId: this.docSiblingBefore(start, parent) });
 
       return;
     }
@@ -668,6 +680,29 @@ export class BlockInsertion {
     const afterId = [...before].reverse().find(id => this.dependencies.YjsManager.getBlockById(id) !== undefined);
 
     this.dependencies.YjsManager.addBlockAt(blockData, { parentId: block.parentId, afterId: afterId ?? null });
+  }
+
+  /**
+   * The nearest earlier child of `parent` that the doc has, walking back from
+   * flat index `start` and stopping at the parent.
+   * @param start - the new block's flat index
+   * @param parent - its parent
+   */
+  private docSiblingBefore(start: number, parent: Block): string | null {
+    const blocks = this.repository.blocks;
+    const cursor = { index: start - 1 };
+
+    while (cursor.index >= 0 && blocks[cursor.index] !== parent) {
+      const candidate = blocks[cursor.index];
+
+      // The doc must hold it under the same parent, or the slot falls to the end.
+      if (candidate.parentId === parent.id && this.dependencies.YjsManager.getBlockById(candidate.id)?.get('parentId') === parent.id) {
+        return candidate.id;
+      }
+      cursor.index--;
+    }
+
+    return null;
   }
 
   /**

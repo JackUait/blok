@@ -124,7 +124,11 @@ export const hideUnderCollapsedParent = (block: Block, getBlock: GetBlock): void
 
     return counted.any;
   };
-  const collapsed = findOwn(parent.holder, '[data-blok-toggle-open="false"]') !== null || otherChildrenAllHidden();
+  // A table or database has no marker of its own, and searching its whole
+  // grid for one costs a walk over every cell per new cell.
+  const hasClosedMarker = (): boolean =>
+    !SELF_PLACING_PARENTS.has(parent.name) && findOwn(parent.holder, '[data-blok-toggle-open="false"]') !== null;
+  const collapsed = hasClosedMarker() || otherChildrenAllHidden();
 
   if (collapsed) {
     block.holder.classList.add('hidden');

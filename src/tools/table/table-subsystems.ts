@@ -359,10 +359,6 @@ export class TableSubsystems {
       applyPixelWidths(gridEl, newWidths);
       populateNewCells(gridEl, this.host.cellBlocks);
       updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
-
-      if (this.host.scrollContainer) {
-        scrollToInlineEnd(this.host.scrollContainer);
-      }
     });
   }
 
@@ -414,6 +410,8 @@ export class TableSubsystems {
    * Shrinking stops at the first row or column that has content.
    */
   public setSize(gridEl: HTMLElement, rows: number, cols: number): void {
+    const startCols = this.host.model.cols;
+
     this.openDragTransaction();
     this.resize?.destroy();
     this.resize = null;
@@ -433,6 +431,11 @@ export class TableSubsystems {
 
       return true;
     }, () => this.removeLastColumnIfEmpty(gridEl), () => this.host.model.cols, cols);
+
+    // Once, not per column: each scroll lays out the whole table.
+    if (this.host.model.cols > startCols && this.host.scrollContainer) {
+      scrollToInlineEnd(this.host.scrollContainer);
+    }
 
     this.initResize(gridEl);
     this.rowColControls?.refresh();
@@ -524,6 +527,10 @@ export class TableSubsystems {
       onDragRemoveRow: () => this.removeLastRowIfEmpty(gridEl),
       onDragAddCol: () => {
         this.addColumnAtEnd(gridEl);
+
+        if (this.host.scrollContainer) {
+          scrollToInlineEnd(this.host.scrollContainer);
+        }
         dragState.addedCols++;
 
         return true;

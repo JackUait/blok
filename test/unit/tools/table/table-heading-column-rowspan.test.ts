@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TableGrid, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from '../../../../src/tools/table/table-core';
 import { TableModel } from '../../../../src/tools/table/table-model';
 import { updateHeadingColumnStyles } from '../../../../src/tools/table/table-operations';
@@ -57,5 +57,22 @@ describe('updateHeadingColumnStyles under a rowspan', () => {
     updateHeadingColumnStyles(gridEl, false);
 
     expect(gridEl.querySelectorAll(`[${HEADING_COL_ATTR}]`)).toHaveLength(0);
+  });
+});
+
+describe('updateHeadingColumnStyles cost', () => {
+  it('reads each row\'s cells as its children, without searching the cells\' content', () => {
+    const gridEl = new TableGrid({ readOnly: false }).createGrid(3, 3);
+    const rowSearches = [
+      vi.spyOn(HTMLTableRowElement.prototype, 'querySelectorAll'),
+      vi.spyOn(HTMLTableRowElement.prototype, 'querySelector'),
+    ];
+
+    updateHeadingColumnStyles(gridEl, true);
+
+    rowSearches.forEach(search => expect(search).not.toHaveBeenCalled());
+    expect(gridEl.querySelectorAll('[data-blok-table-heading-col]')).toHaveLength(3);
+    expect(gridEl.querySelectorAll('[role="rowheader"]')).toHaveLength(3);
+    vi.restoreAllMocks();
   });
 });

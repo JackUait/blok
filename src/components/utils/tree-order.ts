@@ -202,7 +202,13 @@ export const placementImpliedByFlat = (
     throw new Error(`block "${block.id}" is not in the block array`);
   }
 
-  const previous = tree.blocks.slice(0, index).filter(candidate => effectiveParentId(tree, candidate) === parentId).pop();
+  // Back from the block to the nearest sibling: a filter over every earlier
+  // block made each new table cell cost the whole document.
+  const cursor = { index: index - 1 };
 
-  return { parentId, afterId: previous?.id ?? null };
+  while (cursor.index >= 0 && effectiveParentId(tree, tree.blocks[cursor.index]) !== parentId) {
+    cursor.index--;
+  }
+
+  return { parentId, afterId: cursor.index >= 0 ? tree.blocks[cursor.index].id : null };
 };

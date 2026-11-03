@@ -178,6 +178,13 @@ export class BlockHierarchy {
    */
   private subtreeOf(block: Block): Block[] {
     const blocks = this.repository.blocks;
+
+    // A new table cell has no children; mapping every block for it made each
+    // added cell cost the whole document three times over.
+    if (!blocks.some(candidate => candidate.parentId === block.id)) {
+      return [block];
+    }
+
     // One pass by parentId, then a walk down from `block`: a parent walk up
     // from every block cost the whole document per placement.
     const children = new Map<string, string[]>();

@@ -300,6 +300,26 @@ describe('tree-order', () => {
     it('throws for a block the array does not hold', () => {
       expect(() => placementImpliedByFlat(view, { id: 'z', parentId: null, contentIds: [] })).toThrow(/"z"/);
     });
+
+    it('reads back only to the nearest sibling, not every block before it', () => {
+      const lookups = (before: number): number => {
+        const specs: Spec[] = [
+          { id: 'q' },
+          ...Array.from({ length: before }, (_, i) => ({ id: `p${i}`, parentId: 'q' })),
+          { id: 't', contentIds: ['x', 'y'] },
+          { id: 'x', parentId: 't' },
+          { id: 'y', parentId: 't' },
+        ];
+        const view = tree(specs);
+        const getById = vi.fn(view.getById);
+
+        placementImpliedByFlat({ blocks: view.blocks, getById }, at(view, 'y'));
+
+        return getById.mock.calls.length;
+      };
+
+      expect(lookups(500)).toBe(lookups(2));
+    });
   });
 
   describe('seeded random trees', () => {

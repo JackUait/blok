@@ -5,7 +5,7 @@ import { insertedColumnWidth } from '../../shared/table/column-widths';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
+import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR, ownRows, rowCells } from './table-core';
 import type { TableGrid } from './table-core';
 import type { CellContent, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
@@ -793,7 +793,7 @@ const applyHeaderCellRoles = (gridEl: HTMLElement): void => {
   ownRows(gridEl).forEach(row => {
     const isInHeadingRow = row.hasAttribute(HEADING_ROW_ATTR);
 
-    row.querySelectorAll(`:scope > [${CELL_ATTR}]`).forEach(cell => {
+    rowCells(row).forEach(cell => {
       const role = headerCellRole(cell, isInHeadingRow);
 
       if (role === null) {
@@ -909,7 +909,7 @@ export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadin
   const rows = ownRows(gridEl);
 
   rows.forEach(row => {
-    row.querySelectorAll(`:scope > [${CELL_ATTR}]`).forEach(cell => {
+    rowCells(row).forEach(cell => {
       cell.removeAttribute(HEADING_COL_ATTR);
     });
   });
@@ -921,7 +921,7 @@ export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadin
     // and would get the heading shading painted on the wrong cell.
     // Same rule as applyCellColors.
     rows.forEach(row => {
-      const firstCell = row.querySelector(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="0"]`);
+      const firstCell = rowCells(row).find(cell => cell.getAttribute(CELL_COL_ATTR) === '0');
 
       if (firstCell) {
         firstCell.setAttribute(HEADING_COL_ATTR, '');

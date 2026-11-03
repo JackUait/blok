@@ -298,7 +298,7 @@ export class TableRowColDrag {
     }
   }
 
-  private highlightRowCells(rows: NodeListOf<Element>): void {
+  private highlightRowCells(rows: readonly Element[]): void {
     const row = rows[this.dragFromIndex];
 
     if (!row) {
@@ -317,7 +317,7 @@ export class TableRowColDrag {
     });
   }
 
-  private highlightColumnCells(rows: NodeListOf<Element>): void {
+  private highlightColumnCells(rows: readonly Element[]): void {
     const dragBg = this.getDragSourceBg();
 
     rows.forEach(row => {

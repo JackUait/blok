@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { TableGrid } from '../../../../src/tools/table/table-core';
+import { TableGrid, ownRows } from '../../../../src/tools/table/table-core';
 import { TableModel } from '../../../../src/tools/table/table-model';
 
 /**
@@ -1235,4 +1235,59 @@ describe('TableGrid', () => {
     });
   });
 
+});
+
+describe('ownRows', () => {
+  const row = (): HTMLElement => {
+    const el = document.createElement('tr');
+
+    el.setAttribute('data-blok-table-row', '');
+
+    return el;
+  };
+
+  it('lists the grid\'s own rows in order, skipping a nested table\'s rows', () => {
+    const grid = document.createElement('table');
+    const body = document.createElement('tbody');
+    const [first, second, divRow] = [row(), row(), row()];
+    const nested = document.createElement('table');
+
+    nested.appendChild(row());
+    first.appendChild(nested);
+    body.append(first, second);
+    grid.append(body, divRow);
+
+    expect(ownRows(grid)).toStrictEqual([first, second, divRow]);
+  });
+
+  it('reads the grid\'s children instead of searching every cell', () => {
+    const grid = document.createElement('div');
+    const search = vi.spyOn(grid, 'querySelectorAll');
+
+    grid.append(row(), row());
+
+    expect(ownRows(grid)).toHaveLength(2);
+    expect(search).not.toHaveBeenCalled();
+  });
+});
+
+describe('TableGrid adding a column', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reaches its rows and cells through children, never by searching the cells\' content', () => {
+    const grid = new TableGrid({ readOnly: false });
+    const element = grid.createGrid(3, 3);
+    const rowSearch = vi.spyOn(HTMLTableRowElement.prototype, 'querySelectorAll');
+    const tableSearch = vi.spyOn(element, 'querySelectorAll');
+
+    grid.addColumn(element);
+
+    expect(rowSearch).not.toHaveBeenCalled();
+    expect(tableSearch.mock.calls.filter(([selector]) => selector.includes('data-blok-table-row'))).toHaveLength(0);
+    expect(grid.getRowCount(element)).toBe(3);
+    expect(element.querySelectorAll('[data-blok-table-corner~="top-end"]')).toHaveLength(1);
+    expect(element.querySelector('[data-blok-table-cell-row="0"][data-blok-table-cell-col="3"]')?.getAttribute('data-blok-table-corner')).toBe('top-end');
+  });
 });

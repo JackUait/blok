@@ -11,4 +11,8 @@ paths = ['''^test/unit/server-conformance/fixtures/tickets\.json$''']
 # generic-api-key rule reads as a credential once the constant holding it has
 # "key" in its name. Matched on the value rather than on the file, so a real
 # secret in the same test still fails the scan.
-regexes = ['''(?:0123456789abcdef){2}''']
+#
+# The sync tests send the sample nonce from RFC 6455 section 1.3, base64 of
+# "the sample nonce", which the same rule reads as a key after
+# "Sec-WebSocket-Key".
+regexes = ['''(?:0123456789abcdef){2}''', '''dGhlIHNhbXBsZSBub25jZQ''']

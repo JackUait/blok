@@ -1,0 +1,67 @@
+{
+  "name": "options-custom-tools",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "options": {
+    "customTools": "{\"formatVersion\": 1, \"blocks\": [{\"name\": \"quiz\", \"statics\": {\"toolbox\": [], \"richTextFields\": [], \"acceptsChildren\": false, \"ownsChildren\": false, \"isLayout\": false, \"deletesChildren\": false, \"selfPlacesChildren\": false, \"restrictedInTableCell\": false, \"conversion\": {}, \"convertible\": {\"import\": false, \"export\": false}, \"hasPrepareInsert\": false}, \"description\": {\"summary\": \"A quiz.\", \"data\": {\"type\": \"object\", \"properties\": {\"score\": {\"type\": \"integer\"}}, \"required\": [\"score\"], \"additionalProperties\": false}, \"actions\": [{\"name\": \"grade\", \"summary\": \"Grade the quiz.\", \"target\": \"block\", \"args\": {\"type\": \"object\"}}]}}]}"
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "q",
+              "type": "quiz",
+              "data": {
+                "score": 1
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/1/type": "quiz",
+          "/blocks/1/data/score": 1,
+          "/blocks/1/lastEditedBy": "human-1",
+          "/blocks/1/lastEditedWith": "agent-cs"
+        }
+      }
+    },
+    {
+      "run": "contract:plain",
+      "expect": {
+        "commands": {
+          "quiz.grade": {
+            "available": false,
+            "unavailableReason": "runtime"
+          }
+        },
+        "blocks": {
+          "quiz": {
+            "level": "described"
+          }
+        }
+      }
+    }
+  ]
+}

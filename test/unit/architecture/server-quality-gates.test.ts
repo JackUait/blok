@@ -134,6 +134,8 @@ describe('server quality gates', () => {
     expect(gitleaksConfig).toContain(
       '^test/unit/server-conformance/fixtures/tickets\\.json$',
     );
+    // The sync tests send the sample nonce from RFC 6455 section 1.3.
+    expect(gitleaksConfig).toContain('dGhlIHNhbXBsZSBub25jZQ');
     expect(securityUses.filter(use => use ===
       'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25'))
       .toHaveLength(2);

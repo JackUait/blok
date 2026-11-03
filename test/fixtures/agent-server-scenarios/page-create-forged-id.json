@@ -1,0 +1,42 @@
+{
+  "name": "page-create-forged-id",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": [
+      "host-1"
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "data": {
+                "pageId": "someone-elses"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/0/data/pageId": "host-1"
+        }
+      }
+    }
+  ]
+}

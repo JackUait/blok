@@ -32,6 +32,21 @@ public sealed class SyncSocketMemberTests
   }
 
   [Fact]
+  public void ABacklogExactlyAtTheBudgetStillAdmitsTheNextFrame()
+  {
+    var member = new SyncSocketMember(canWrite: true, acceptsControlFrames: true, maxQueuedBytes: 10);
+
+    member.Send(new byte[10]);
+    member.Send(new byte[1]);
+
+    Assert.Null(member.RequestedClose);
+
+    member.Send(new byte[1]);
+
+    Assert.Equal(SyncClose.SlowConsumer, member.RequestedClose);
+  }
+
+  [Fact]
   public void TheFirstNonForbiddenCloseWinsAndMapsTheRoomReasons()
   {
     var reset = new SyncSocketMember(canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 10);

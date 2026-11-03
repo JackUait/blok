@@ -1,0 +1,32 @@
+{
+  "name": "contract-page-insertable-creator",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "steps": [
+    {
+      "run": "contract:plain",
+      "expect": {
+        "blocks": {
+          "page": {
+            "insertable": true
+          }
+        }
+      }
+    },
+    {
+      "run": "contract:session",
+      "expect": {
+        "blocks": {
+          "page": {
+            "insertable": true
+          }
+        }
+      }
+    }
+  ]
+}

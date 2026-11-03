@@ -1066,9 +1066,10 @@ internal static class SyncWire
           format = formatValue;
         }
         else if (isLineage && lineage is null &&
-            reader.TokenType == JsonTokenType.String)
+            reader.TokenType == JsonTokenType.String &&
+            TryGetText(ref reader, out var lineageValue))
         {
-          lineage = reader.GetString();
+          lineage = lineageValue;
         }
         else
         {
@@ -1258,9 +1259,10 @@ internal static class SyncWire
       }
       else if (isActorId && actorId is null &&
           reader.TokenType == JsonTokenType.String &&
-          !string.IsNullOrEmpty(reader.GetString()))
+          TryGetText(ref reader, out var actorIdValue) &&
+          actorIdValue.Length > 0)
       {
-        actorId = reader.GetString();
+        actorId = actorIdValue;
       }
       else
       {
@@ -1288,6 +1290,27 @@ internal static class SyncWire
     error = "";
 
     return true;
+  }
+
+  /// <summary>
+  /// GetString throws InvalidOperationException, which no JsonException
+  /// catch sees, on invalid UTF-8 or a lone-surrogate escape. Such a string
+  /// is ill-typed, so the frame is refused like any other bad property.
+  /// </summary>
+  private static bool TryGetText(ref Utf8JsonReader reader, out string text)
+  {
+    try
+    {
+      text = reader.GetString() ?? "";
+
+      return true;
+    }
+    catch (InvalidOperationException)
+    {
+      text = "";
+
+      return false;
+    }
   }
 
   private static bool TryDecodeOperationMetadata(

@@ -14,21 +14,14 @@ import {
 } from '../../../src/components/modules/yjs/serializer';
 import type { YjsOutputBlockData } from '../../../src/components/modules/yjs/serializer';
 
-const CONVERTER_PATH = resolve(
-  process.cwd(),
-  'packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs'
-);
-
-/** The keys a C# `private static readonly string[] Name = [...]` line names. */
-const csharpKeyList = (source: string, field: string): string[] => {
-  const line = new RegExp(`${field}\\s*=\\s*\\[([^\\]]*)\\]`).exec(source);
-
-  if (line === null) {
-    throw new Error(`no ${field} array in YDocConverter.cs`);
-  }
-
-  return Array.from(line[1].matchAll(/"([^"]*)"/g), (match) => match[1]);
-};
+/**
+ * The key sets the client, the C# server and the Go server share. Each side
+ * checks its own copy against this file (C# ConverterKeysFixtureTests, Go
+ * internal/collab/convert keys_test.go).
+ */
+const CONVERTER_KEYS = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'test/unit/server-conformance/fixtures/converter-keys.json'), 'utf8')
+) as { diffableTextKeys: string[]; orderedIdArrayKeys: string[] };
 
 const store = (): DocumentStore => new DocumentStore(new YBlockSerializer());
 
@@ -179,30 +172,29 @@ describe('client deep-assign under concurrency (the contract the server must mat
  * in each file. A silent divergence makes a server-seeded field a different
  * CRDT type from a client-seeded one, which loses a peer's edit with no error.
  */
-describe('key-set lockstep with the C# converter', () => {
-  const source = readFileSync(CONVERTER_PATH, 'utf8');
+describe('key-set lockstep with the server converters', () => {
 
   it('names the same diffable text keys on both sides', () => {
-    const csharp = csharpKeyList(source, 'DiffableTextKeys');
+    const csharp = CONVERTER_KEYS.diffableTextKeys;
 
     expect(csharp.length).toBeGreaterThan(0);
     expect(csharp.filter((key) => !isDiffableTextKey(key))).toEqual([]);
 
     for (const key of ['text', 'code', 'caption', 'title', 'alt', 'artist']) {
       expect(isDiffableTextKey(key), `TS is missing ${key}`).toBe(true);
-      expect(csharp, `C# is missing ${key}`).toContain(key);
+      expect(csharp, `the servers are missing ${key}`).toContain(key);
     }
   });
 
   it('names the same ordered id array keys on both sides', () => {
-    const csharp = csharpKeyList(source, 'OrderedIdArrayKeys');
+    const csharp = CONVERTER_KEYS.orderedIdArrayKeys;
 
     expect(csharp.length).toBeGreaterThan(0);
     expect(csharp.filter((key) => !isOrderedIdArrayKey(key))).toEqual([]);
 
     for (const key of ['blocks', 'filters', 'sorts', 'calculations', 'hiddenGroups', 'collapsedGroups', 'filterRules', 'colorRules', 'pageLayoutPlacements', 'pageLayoutSections']) {
       expect(isOrderedIdArrayKey(key), `TS is missing ${key}`).toBe(true);
-      expect(csharp, `C# is missing ${key}`).toContain(key);
+      expect(csharp, `the servers are missing ${key}`).toContain(key);
     }
   });
 });

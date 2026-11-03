@@ -71,6 +71,25 @@ public sealed class TextDiffGraphemeTests
   }
 
   /// <summary>
+  /// One long conjunct is one growing character. Joining each consonant must
+  /// not walk back to the character's start, or a field of this text costs
+  /// seconds of CPU per edit. 16000 pairs fit the 32768-unit HTML cap.
+  /// </summary>
+  [Fact]
+  public void ALongConjunctRunDiffsInLinearTime()
+  {
+    var run = string.Concat(Enumerable.Repeat("\u0915\u094D", 16000));
+    var clock = System.Diagnostics.Stopwatch.StartNew();
+
+    var atoms = TextDiff.Atomize(run + "\u0915");
+    var edits = TextDiff.Diff(run, run.Insert(16000, "x"));
+
+    Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), clock.Elapsed.ToString());
+    Assert.Single(atoms);
+    Assert.NotEmpty(edits);
+  }
+
+  /// <summary>
   /// A LONE surrogate is an atom of its own, as it is on the client: dropping
   /// or replacing it would rewrite text the caller never changed. Not a
   /// theory case — xUnit serializes theory arguments through UTF-8, which

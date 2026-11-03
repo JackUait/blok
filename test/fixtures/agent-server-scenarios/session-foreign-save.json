@@ -1,0 +1,60 @@
+{
+  "name": "session-foreign-save",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "session:a",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Mine"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "session:a",
+      "document": {
+        "from": "@last",
+        "set": {
+          "/title": "Theirs"
+        }
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "CONFLICT",
+        "saved": false
+      }
+    }
+  ]
+}

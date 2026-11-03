@@ -1,0 +1,864 @@
+{
+  "$comment": "Captured from C# by CollabDiskCaptureTests. Do not edit by hand. Ticks and sequences are strings: they do not fit a double.",
+  "docKeys": [
+    {
+      "docId": "a",
+      "sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
+    },
+    {
+      "docId": "doc-1",
+      "sha256": "bb0e4f49443794d901e8969ff11bd112e34208a0dcdf0e1eedb480cc9b3c7293"
+    },
+    {
+      "docId": "\u00E9",
+      "sha256": "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c"
+    },
+    {
+      "docId": "\uD83D\uDE00",
+      "sha256": "f0443a342c5ef54783a111b51ba56c938e474c32324d90c3a60c9c8e3a37e2d9"
+    },
+    {
+      "docId": "a/b",
+      "sha256": "c14cddc033f64b9dea80ea675cf280a015e672516090a5626781153dc68fea11"
+    },
+    {
+      "docId": "A",
+      "sha256": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd"
+    },
+    {
+      "docId": " ",
+      "sha256": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068"
+    }
+  ],
+  "workingSet": {
+    "encode": [
+      {
+        "format": 1,
+        "epoch": "0",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "frames": [],
+        "hex": "424b5732010000000000000000000000fedcba9876543210fedcba9876543210"
+      },
+      {
+        "format": 2,
+        "epoch": "5",
+        "lineage": "00000000000000000000000000000000",
+        "frames": [
+          "010203",
+          "ff"
+        ],
+        "hex": "424b5732020000000500000000000000000000000000000000000000000000000300000001020301000000ff"
+      },
+      {
+        "format": 2147483647,
+        "epoch": "9223372036854775807",
+        "lineage": "ffffffffffffffffffffffffffffffff",
+        "frames": [
+          "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "hex": "424b5732ffffff7fffffffffffffff7fffffffffffffffffffffffffffffffff2c010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ],
+    "refused": [
+      {
+        "name": "empty",
+        "hex": "",
+        "error": "the header is truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (the header is truncated); treating it as absent"
+      },
+      {
+        "name": "header one byte short",
+        "hex": "424b5732020000000100000000000000fedcba9876543210fedcba98765432",
+        "error": "the header is truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (the header is truncated); treating it as absent"
+      },
+      {
+        "name": "pre-lineage magic",
+        "hex": "424b5753020000000100000000000000fedcba9876543210fedcba9876543210",
+        "error": "the magic bytes do not match",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (the magic bytes do not match); treating it as absent"
+      },
+      {
+        "name": "format zero",
+        "hex": "424b5732000000000100000000000000fedcba9876543210fedcba9876543210",
+        "error": "the tag (0, 1) is invalid",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (the tag (0, 1) is invalid); treating it as absent"
+      },
+      {
+        "name": "format negative",
+        "hex": "424b5732ffffffff0100000000000000fedcba9876543210fedcba9876543210",
+        "error": "the tag (-1, 1) is invalid",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (the tag (-1, 1) is invalid); treating it as absent"
+      },
+      {
+        "name": "epoch negative",
+        "hex": "424b573202000000fffffffffffffffffedcba9876543210fedcba9876543210",
+        "error": "the tag (2, -1) is invalid",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (the tag (2, -1) is invalid); treating it as absent"
+      },
+      {
+        "name": "frame prefix truncated",
+        "hex": "424b5732020000000100000000000000fedcba9876543210fedcba9876543210010000",
+        "error": "an update frame is empty or truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (an update frame is empty or truncated); treating it as absent"
+      },
+      {
+        "name": "frame length zero",
+        "hex": "424b5732020000000100000000000000fedcba9876543210fedcba987654321000000000",
+        "error": "an update frame is empty or truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (an update frame is empty or truncated); treating it as absent"
+      },
+      {
+        "name": "frame length negative",
+        "hex": "424b5732020000000100000000000000fedcba9876543210fedcba9876543210ffffffff01",
+        "error": "an update frame is empty or truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (an update frame is empty or truncated); treating it as absent"
+      },
+      {
+        "name": "frame body truncated",
+        "hex": "424b5732020000000100000000000000fedcba9876543210fedcba98765432100200000007",
+        "error": "an update frame is empty or truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (an update frame is empty or truncated); treating it as absent"
+      },
+      {
+        "name": "frame length past the end",
+        "hex": "424b5732020000000100000000000000fedcba9876543210fedcba98765432100500000001020304",
+        "error": "an update frame is empty or truncated",
+        "log": "collab: the working set for \u0022doc-1\u0022 is unreadable (an update frame is empty or truncated); treating it as absent"
+      }
+    ],
+    "encodeRefusals": [
+      {
+        "format": 0,
+        "epoch": "0",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "frames": []
+      },
+      {
+        "format": 1,
+        "epoch": "-1",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "frames": []
+      },
+      {
+        "format": 1,
+        "epoch": "0",
+        "lineage": "FEDCBA9876543210FEDCBA9876543210",
+        "frames": []
+      },
+      {
+        "format": 1,
+        "epoch": "0",
+        "lineage": "fedcba9876543210fedcba987654321",
+        "frames": []
+      },
+      {
+        "format": 1,
+        "epoch": "0",
+        "lineage": "",
+        "frames": []
+      },
+      {
+        "format": 1,
+        "epoch": "0",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "frames": [
+          ""
+        ]
+      }
+    ],
+    "law": [
+      {
+        "stored": "3",
+        "next": "2",
+        "write": "collab: refusing to lower the working-set epoch for \u0022doc \u00221\u0022\u0022 from 3 to 2.",
+        "reset": "collab: a reset must raise the working-set epoch for \u0022doc \u00221\u0022\u0022 above 3 (got 2)."
+      },
+      {
+        "stored": "3",
+        "next": "3",
+        "write": null,
+        "reset": "collab: a reset must raise the working-set epoch for \u0022doc \u00221\u0022\u0022 above 3 (got 3)."
+      },
+      {
+        "stored": "3",
+        "next": "4",
+        "write": null,
+        "reset": null
+      },
+      {
+        "stored": "0",
+        "next": "0",
+        "write": null,
+        "reset": "collab: a reset must raise the working-set epoch for \u0022doc \u00221\u0022\u0022 above 0 (got 0)."
+      },
+      {
+        "stored": "9223372036854775807",
+        "next": "0",
+        "write": "collab: refusing to lower the working-set epoch for \u0022doc \u00221\u0022\u0022 from 9223372036854775807 to 0.",
+        "reset": "collab: a reset must raise the working-set epoch for \u0022doc \u00221\u0022\u0022 above 9223372036854775807 (got 0)."
+      }
+    ]
+  },
+  "journal": {
+    "encode": [
+      {
+        "operationId": "0123456789abcdef0123456789abcdef",
+        "sequence": "1",
+        "ticks": "0",
+        "actor": null,
+        "source": 0,
+        "update": "00",
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "hex": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdef01000000000000000000000000000000ffffffff0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28401000000004b507167e885b7eb4dcf2de960266963b7031cf2ad6cd076b6bdc652cb99a2d4"
+      },
+      {
+        "operationId": "0123456789abcdef0123456789abcdef",
+        "sequence": "18446744073709551615",
+        "ticks": "3155378975999999999",
+        "actor": "alice",
+        "source": 1,
+        "update": "010203",
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "hex": "70000000010136adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14e60123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2"
+      },
+      {
+        "operationId": "ffffffffffffffffffffffffffffffff",
+        "sequence": "42",
+        "ticks": "639290468967891234",
+        "actor": "",
+        "source": 2,
+        "update": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hex": "a8000000010285950d75856bacc08d270bbaae93e98a60210033abc641313948ff5bd3113f1effffffffffffffffffffffffffffffff2a0000000000000022c11f5f4b37df080000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a03b87515296f4162571e198fa9cdb0fc3985c8dcb23f24dfa2cc397fd708834"
+      },
+      {
+        "operationId": "0123456789abcdef0123456789abcdef",
+        "sequence": "7",
+        "ticks": "621355968000000000",
+        "actor": "\u00E9\uD83D\uDE00 user",
+        "source": 0,
+        "update": "ff",
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "hex": "740000000100d502dc975d95160fdd99ab18a0c9a3344b330349fd168fd44d208a3abe807ee10123456789abcdef0123456789abcdef07000000000000000080b5f7f57f9f080b000000c3a9f09f988020757365720bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28401000000ff8b3c8863f53fa3c6a832680ced7ce95a69c0cddfcec6433077a45fdb95465cd3"
+      }
+    ],
+    "decode": [
+      {
+        "name": "two records back to back",
+        "hex": "70000000010136adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14e60123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdef01000000000000000000000000000000ffffffff0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28401000000004b507167e885b7eb4dcf2de960266963b7031cf2ad6cd076b6bdc652cb99a2d4",
+        "status": "Ok",
+        "consumed": 150,
+        "error": "",
+        "sequence": "18446744073709551615"
+      },
+      {
+        "name": "empty",
+        "hex": "",
+        "status": "Incomplete",
+        "consumed": 0,
+        "error": "",
+        "sequence": null
+      },
+      {
+        "name": "header one byte short",
+        "hex": "70000000010136adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14",
+        "status": "Incomplete",
+        "consumed": 0,
+        "error": "",
+        "sequence": null
+      },
+      {
+        "name": "body one byte short",
+        "hex": "70000000010136adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14e60123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31",
+        "status": "Incomplete",
+        "consumed": 0,
+        "error": "",
+        "sequence": null
+      },
+      {
+        "name": "header checksum flipped",
+        "hex": "70000000010137adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14e60123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the header checksum does not match its content",
+        "sequence": null
+      },
+      {
+        "name": "body length flipped",
+        "hex": "71000000010136adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14e60123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the header checksum does not match its content",
+        "sequence": null
+      },
+      {
+        "name": "version 2",
+        "hex": "7000000002009b263c142670b12db90c6aca3fd94168a3392d0e6a7c25c82e77a51ed20cea7b0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "unsupported codec version 2",
+        "sequence": null
+      },
+      {
+        "name": "version 0",
+        "hex": "700000000000f2557130fdc52cb35ca78a3ec6df23d02d527caed11d94888ded922a498156b00123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "unsupported codec version 0",
+        "sequence": null
+      },
+      {
+        "name": "source 3",
+        "hex": "700000000103b7da0e1e6473d95e2aa4ff335ad9bb535c185683e14a4672765866635e02259d0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "unknown operation source 3",
+        "sequence": null
+      },
+      {
+        "name": "source 255",
+        "hex": "7000000001ff60622782f9acdb2ec21683a059990b5079633d60ea79dd2b8dd2323b25f3ab1a0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "unknown operation source 255",
+        "sequence": null
+      },
+      {
+        "name": "body length below the minimum",
+        "hex": "680000000100b1545b73013cb6bc41b17d6d341966f3fd75ae0ed155a6afe14da49f96f20fe5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000834a709ba2534ebe3ee1397fd4f7bd288b2acc1d20a08d6c862dcd99b6f04400",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the body length 104 is out of range",
+        "sequence": null
+      },
+      {
+        "name": "body length above the maximum",
+        "hex": "691000020100e0775fb73a06b42cb4a9b6132df737958dec3d2b224ab384a30161e2f5384b29",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the body length 33558633 is out of range",
+        "sequence": null
+      },
+      {
+        "name": "body length negative",
+        "hex": "ffffffff0100ae4f532f7787792b16f1adf91622551a017a2d859f255d5bd11ba106c05595d7",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the body length -1 is out of range",
+        "sequence": null
+      },
+      {
+        "name": "body checksum flipped",
+        "hex": "70000000010136adf035d93e1cb0eed9728b7d7ecd5acd6ced0fdb5001c150cf04c9c0da14e60123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e3",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the body checksum does not match its content",
+        "sequence": null
+      },
+      {
+        "name": "sequence zero",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdef0000000000000000ff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203e81fc964ed8efe222b3556fef513c85c1d46e2607d584f19ae44e812f8c06bc6",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "server sequence 0 means nothing was committed on this lineage",
+        "sequence": null
+      },
+      {
+        "name": "ticks negative",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffffffffffffffffff05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203d49ba0cabba6867908374fc0b477f893f7eef5ff55197c8acbb18d9981b0620a",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "committedAt is out of range",
+        "sequence": null
+      },
+      {
+        "name": "ticks past the maximum",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffff004037f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284030000000102037cd8e5369184cddebdd55e30448ba2d0f8f6b22639f021e3ed7fa3da5cbd4e73",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "committedAt is out of range",
+        "sequence": null
+      },
+      {
+        "name": "ticks at the maximum",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203091b0f2fc6b2e64a6cbebf838f0acfcb42bce9011e7316526b5e42b6d80b31e2",
+        "status": "Ok",
+        "consumed": 150,
+        "error": "",
+        "sequence": "18446744073709551615"
+      },
+      {
+        "name": "actor length -2",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2bfeffffff616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f2840300000001020368c1cc82e0d773457e319c16620695d69b58178ca4c95dd67704a4439aa5870a",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the actor id length is invalid",
+        "sequence": null
+      },
+      {
+        "name": "actor length past the body",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2ba00f0000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f2840300000001020323af7245392d4111b83df28dce7cbf2e52d7343d3917e12abdb45419bebb054c",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the actor id length is invalid",
+        "sequence": null
+      },
+      {
+        "name": "actor length past the cap",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b01100000616c6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284030000000102036d30a7b07ecba5e8de29d5e07af70073d26f27c38025f9f146e343f5da2e9119",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the actor id length is invalid",
+        "sequence": null
+      },
+      {
+        "name": "actor not UTF-8",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000c3286963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203be41ea101c38c74dc2b15d77aedbf27088500ff00e29824339c54d9a46aed1d8",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the actor id is not valid UTF-8",
+        "sequence": null
+      },
+      {
+        "name": "actor lone surrogate as UTF-8",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000eda08063650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284030000000102039a77bdd5f9a1fbd5ad727feff52cf61b5caae91cd446037ae5ef853dcff1c41d",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the actor id is not valid UTF-8",
+        "sequence": null
+      },
+      {
+        "name": "actor overlong",
+        "hex": "700000000100bc583d1eb3f927534879619c9cbcfec1169be50d2e99a5203767ca9a34c6f49e0123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b05000000c0af6963650bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28403000000010203d67e4f238cce886f64ca5209ecde1b4fb210fe0c591fc290eb03126ec384606b",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the actor id is not valid UTF-8",
+        "sequence": null
+      },
+      {
+        "name": "digest truncated",
+        "hex": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b25000000616161616161616161616161616161616161616161616161616161616161616161616161610c7c4b349b572a0b1a4f21eb84d0679321a18c490986c6cc3178ced6e69ea939",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the digest is truncated",
+        "sequence": null
+      },
+      {
+        "name": "update length missing",
+        "hex": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2b0500000061616161610bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28430cbe27e4cbd2984516ed126b4854d25c4f2a056f8b6f38ff9c00fd66202bb9c",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the update length is missing",
+        "sequence": null
+      },
+      {
+        "name": "update length zero",
+        "hex": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2bffffffff0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284000000000969ec1010b3e38f5c5cb1653d8aec7d2378f2a227303e61f9685b619df0d7debb",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the update length is invalid",
+        "sequence": null
+      },
+      {
+        "name": "update length past the body",
+        "hex": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2bffffffff0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f2840200000009dabf2953bc766070fa38161b67ea820b74fb2d2ae958d26c8e6fe812a8f7eafa",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the update length is invalid",
+        "sequence": null
+      },
+      {
+        "name": "update length past the cap",
+        "hex": "690000000100a3eadd46e18d5344cd808041587f6361fc2ca4c79afee865d2532d256f402ce10123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2bffffffff0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f2840100000209028926abba8b567dd81347d2ddf2f6330a44a5c3d6726c005aff1a8e3671f831",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "the update length is invalid",
+        "sequence": null
+      },
+      {
+        "name": "trailing bytes in the body",
+        "hex": "6b00000001002e574a4b36c249bf5453e0fb2b461a0cd2cc602d6619d17889a3fbec9c7218270123456789abcdef0123456789abcdefffffffffffffffffff3f37f47528ca2bffffffff0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f28401000000090807392b2d3989d5c08ec2be707e3f8018fceb77779a6f984afff50c7c4c10e64ea5",
+        "status": "Invalid",
+        "consumed": 0,
+        "error": "2 trailing byte(s) inside the record body",
+        "sequence": null
+      },
+      {
+        "name": "honest header, little body",
+        "hex": "40420f0001006c01d5dcd759e3fb0885ac282f5ea583f7f6ffe612c50b0dbe23f7111147838c00000000000000000000",
+        "status": "Incomplete",
+        "consumed": 0,
+        "error": "",
+        "sequence": null
+      }
+    ]
+  },
+  "ledger": {
+    "encode": [
+      {
+        "kind": 1,
+        "generation": "1",
+        "generationFence": "0",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "epoch": "0",
+        "format": 2,
+        "ticks": "639290016000000005",
+        "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df0822ae7c843573ebdb"
+      },
+      {
+        "kind": 2,
+        "generation": "18446744073709551615",
+        "generationFence": "18446744073709551615",
+        "lineage": "00000000000000000000000000000000",
+        "epoch": "9223372036854775807",
+        "format": 2147483647,
+        "ticks": null,
+        "hex": "02ffffffffffffffffffffffffffffffff00000000000000000000000000000000ffffffffffffff7fffffff7f0000000000000080bdfc42694f0c33cd"
+      },
+      {
+        "kind": 1,
+        "generation": "2",
+        "generationFence": "3",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "epoch": "-1",
+        "format": -5,
+        "ticks": "0",
+        "hex": "0102000000000000000300000000000000fedcba9876543210fedcba9876543210fffffffffffffffffbffffff00000000000000003383a56bda7bdb0b"
+      },
+      {
+        "kind": 1,
+        "generation": "2",
+        "generationFence": "3",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "epoch": "4",
+        "format": 1,
+        "ticks": "3155378975999999999",
+        "hex": "0102000000000000000300000000000000fedcba9876543210fedcba9876543210040000000000000001000000ff3f37f47528ca2bbf044d6aafff0ae1"
+      }
+    ],
+    "refused": [
+      {
+        "name": "short",
+        "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df0822ae7c843573eb"
+      },
+      {
+        "name": "long",
+        "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df0822ae7c843573ebdb00"
+      },
+      {
+        "name": "checksum flipped",
+        "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df0822ae7c843573ebda"
+      },
+      {
+        "name": "kind 0",
+        "hex": "0001000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df085c28afa2352b1f87"
+      },
+      {
+        "name": "kind 3",
+        "hex": "0301000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df087163d8eb0a533607"
+      },
+      {
+        "name": "ticks negative",
+        "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000ffffffffffffffffb66f7169efc33d6e"
+      },
+      {
+        "name": "ticks past the maximum",
+        "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000004037f47528ca2b07cff0056c4eb603"
+      }
+    ],
+    "file": {
+      "hex": "0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df0822ae7c843573ebdb0101000000000000000000000000000000fedcba9876543210fedcba9876543210000000000000000002000000054022e8e136df0822ae7c843573ebda02ffffffffffffffffffffffffffffffff00000000000000000000000000000000ffffffffffffff7fffffff7f0000000000000080bdfc42694f0c33cd01010000000000000000",
+      "generations": [
+        "1",
+        "18446744073709551615"
+      ],
+      "warnings": [
+        "collab: skipped a bad entry at byte 61 of {path}.",
+        "collab: skipped a torn entry at byte 183 of {path}."
+      ]
+    }
+  },
+  "manifest": {
+    "encode": [
+      {
+        "writeCounter": "1",
+        "fence": "2",
+        "generation": "3",
+        "seeded": true,
+        "format": 2,
+        "epoch": "4",
+        "lineage": "fedcba9876543210fedcba9876543210",
+        "checkpointThrough": "5",
+        "generationFence": "6",
+        "checkpointFence": "7",
+        "hex": "424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c"
+      },
+      {
+        "writeCounter": "2",
+        "fence": "0",
+        "generation": "0",
+        "seeded": false,
+        "format": 0,
+        "epoch": "0",
+        "lineage": "00000000000000000000000000000000",
+        "checkpointThrough": "0",
+        "generationFence": "0",
+        "checkpointFence": "0",
+        "hex": "424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd06739"
+      },
+      {
+        "writeCounter": "18446744073709551615",
+        "fence": "18446744073709551615",
+        "generation": "18446744073709551615",
+        "seeded": true,
+        "format": -2147483648,
+        "epoch": "-9223372036854775808",
+        "lineage": "ffffffffffffffffffffffffffffffff",
+        "checkpointThrough": "18446744073709551615",
+        "generationFence": "18446744073709551615",
+        "checkpointFence": "18446744073709551615",
+        "hex": "424b4a4d02010000ffffffffffffffffffffffffffffffffffffffffffffffff000000800000000000000080ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000003234246e1c5e0664ed842689cf56accefec820bc8625410659d4d9f89fda432a"
+      }
+    ],
+    "read": [
+      {
+        "name": "empty",
+        "hex": "",
+        "manifest": null
+      },
+      {
+        "name": "both slots, second newer",
+        "hex": "424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd06739",
+        "manifest": {
+          "writeCounter": "2",
+          "fence": "0",
+          "generation": "0",
+          "seeded": false,
+          "format": 0,
+          "epoch": "0",
+          "lineage": "00000000000000000000000000000000",
+          "checkpointThrough": "0",
+          "generationFence": "0",
+          "checkpointFence": "0"
+        }
+      },
+      {
+        "name": "both slots, first newer",
+        "hex": "424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd06739424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c",
+        "manifest": {
+          "writeCounter": "2",
+          "fence": "0",
+          "generation": "0",
+          "seeded": false,
+          "format": 0,
+          "epoch": "0",
+          "lineage": "00000000000000000000000000000000",
+          "checkpointThrough": "0",
+          "generationFence": "0",
+          "checkpointFence": "0"
+        }
+      },
+      {
+        "name": "equal counters keep the first",
+        "hex": "424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02010000010000000000000009000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba987654321005000000000000000600000000000000070000000000000000000000000000000000000052622a1a1f58da0f467e150239b0a0e0cf58d25c91e9f9867805c6c999edaf99",
+        "manifest": {
+          "writeCounter": "1",
+          "fence": "2",
+          "generation": "3",
+          "seeded": true,
+          "format": 2,
+          "epoch": "4",
+          "lineage": "fedcba9876543210fedcba9876543210",
+          "checkpointThrough": "5",
+          "generationFence": "6",
+          "checkpointFence": "7"
+        }
+      },
+      {
+        "name": "first slot corrupt",
+        "hex": "424b4a4d02010000010000000000000002000000010000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd06739",
+        "manifest": {
+          "writeCounter": "2",
+          "fence": "0",
+          "generation": "0",
+          "seeded": false,
+          "format": 0,
+          "epoch": "0",
+          "lineage": "00000000000000000000000000000000",
+          "checkpointThrough": "0",
+          "generationFence": "0",
+          "checkpointFence": "0"
+        }
+      },
+      {
+        "name": "second slot corrupt",
+        "hex": "424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02010000010000000000000002000000010000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c",
+        "manifest": {
+          "writeCounter": "1",
+          "fence": "2",
+          "generation": "3",
+          "seeded": true,
+          "format": 2,
+          "epoch": "4",
+          "lineage": "fedcba9876543210fedcba9876543210",
+          "checkpointThrough": "5",
+          "generationFence": "6",
+          "checkpointFence": "7"
+        }
+      },
+      {
+        "name": "bad magic",
+        "hex": "424b4a5802010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd06739",
+        "manifest": {
+          "writeCounter": "2",
+          "fence": "0",
+          "generation": "0",
+          "seeded": false,
+          "format": 0,
+          "epoch": "0",
+          "lineage": "00000000000000000000000000000000",
+          "checkpointThrough": "0",
+          "generationFence": "0",
+          "checkpointFence": "0"
+        }
+      },
+      {
+        "name": "both corrupt",
+        "hex": "424b4a4d02010000010000000000000002000000010000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02010000010000000000000002000000010000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c",
+        "error": "collab: neither manifest slot for \u0022doc-1\u0022 decodes."
+      },
+      {
+        "name": "foreign version beside a good slot",
+        "hex": "424b4a4d03010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba9876543210050000000000000006000000000000000700000000000000000000000000000000000000fd374bcc207c76cd3b69438ba3b7afb7ed969a4bc5fbbffdb31e76bfd0ed80c6424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd06739",
+        "manifest": {
+          "writeCounter": "2",
+          "fence": "0",
+          "generation": "0",
+          "seeded": false,
+          "format": 0,
+          "epoch": "0",
+          "lineage": "00000000000000000000000000000000",
+          "checkpointThrough": "0",
+          "generationFence": "0",
+          "checkpointFence": "0"
+        }
+      },
+      {
+        "name": "foreign version only",
+        "hex": "424b4a4d03010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba9876543210050000000000000006000000000000000700000000000000000000000000000000000000fd374bcc207c76cd3b69438ba3b7afb7ed969a4bc5fbbffdb31e76bfd0ed80c6424b4a4d02010000010000000000000002000000010000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c",
+        "error": "collab: the manifest for \u0022doc-1\u0022 is version 3, and this build writes version 2."
+      },
+      {
+        "name": "one byte short",
+        "hex": "424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c424b4a4d02000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a2ead305cbcfb3ab451d8fd066a33b3d09940a99e46099f119de3466fd067",
+        "error": "collab: the manifest for \u0022doc-1\u0022 is 255 bytes, not 256."
+      },
+      {
+        "name": "one slot",
+        "hex": "424b4a4d02010000010000000000000002000000000000000300000000000000020000000400000000000000fedcba9876543210fedcba98765432100500000000000000060000000000000007000000000000000000000000000000000000004df90109ebf7ebfb9f0bee49575cead40bae1fb8ebc7b6d60df7e62aa828717c",
+        "error": "collab: the manifest for \u0022doc-1\u0022 is 128 bytes, not 256."
+      },
+      {
+        "name": "zeroes",
+        "hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "error": "collab: neither manifest slot for \u0022doc-1\u0022 decodes."
+      }
+    ]
+  },
+  "sealed": {
+    "encode": [
+      {
+        "magic": "BKJB",
+        "tag": "0",
+        "content": "0100000007",
+        "hex": "424b4a42010000000000000000000000050000000000000001000000075744c5f37d1f6211b7d1e49cdcc21dee6f983fa898aef724e9c28a0dd6bdc917"
+      },
+      {
+        "magic": "BKJC",
+        "tag": "5",
+        "content": "0000",
+        "hex": "424b4a430100000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987"
+      },
+      {
+        "magic": "BKJC",
+        "tag": "18446744073709551615",
+        "content": "",
+        "hex": "424b4a4301000000ffffffffffffffff000000000000000023addf09490b444767cb41b007ffb76be7f6a94f997c718075e163ddf54a3ca3"
+      }
+    ],
+    "read": [
+      {
+        "name": "good",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430100000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987",
+        "tag": "5",
+        "content": "0000"
+      },
+      {
+        "name": "missing",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": null,
+        "error": "collab: \u0022doc-1\u0022 names checkpoint.1.5.2, which is not there."
+      },
+      {
+        "name": "other magic",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJB",
+        "hex": "424b4a430100000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 is not a readable record."
+      },
+      {
+        "name": "short",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430100000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a396",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 is not a readable record."
+      },
+      {
+        "name": "version 2",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430200000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 is not a readable record."
+      },
+      {
+        "name": "length one more",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430100000005000000000000000300000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 declares 3 content bytes, which is not what it holds."
+      },
+      {
+        "name": "length negative",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a43010000000500000000000000ffffffffffffffff000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 declares -1 content bytes, which is not what it holds."
+      },
+      {
+        "name": "checksum flipped",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430100000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a986",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 fails its checksum."
+      },
+      {
+        "name": "content flipped",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430100000005000000000000000200000000000000010040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a987",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 fails its checksum."
+      },
+      {
+        "name": "trailing byte",
+        "fileName": "checkpoint.1.5.2",
+        "magic": "BKJC",
+        "hex": "424b4a430100000005000000000000000200000000000000000040f2d1ae86f71870760a80ebb893b23e5bca12f07f9100c14a66c8a39621a98700",
+        "error": "collab: checkpoint.1.5.2 for \u0022doc-1\u0022 declares 2 content bytes, which is not what it holds."
+      }
+    ]
+  }
+}

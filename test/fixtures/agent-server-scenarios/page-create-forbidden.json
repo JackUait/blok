@@ -1,0 +1,48 @@
+{
+  "name": "page-create-forbidden",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "create": [
+    null
+  ],
+  "host": {
+    "created": []
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "FORBIDDEN",
+        "saved": false,
+        "result": {
+          "/error/retryable": false,
+          "/warnings": {
+            "length": 0
+          },
+          "/revision": {
+            "absent": true
+          }
+        }
+      }
+    }
+  ]
+}

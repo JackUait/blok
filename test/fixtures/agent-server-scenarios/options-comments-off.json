@@ -1,0 +1,91 @@
+{
+  "name": "options-comments-off",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [
+          "r"
+        ],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v1",
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            }
+          ]
+        }
+      },
+      {
+        "id": "r",
+        "type": "database-row",
+        "parent": "db",
+        "content": [
+          "th"
+        ],
+        "data": {
+          "position": "a0",
+          "properties": {
+            "t": "Row"
+          }
+        }
+      },
+      {
+        "id": "th",
+        "type": "database-comment",
+        "parent": "r",
+        "content": [],
+        "data": {
+          "text": "Please fix",
+          "createdAt": 1,
+          "authorId": "u1"
+        }
+      }
+    ]
+  },
+  "options": {
+    "builtInComments": false
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "database.replyToComment",
+            "args": {
+              "id": "db",
+              "threadId": "th",
+              "text": "Hidden"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "COMMAND_UNAVAILABLE",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "host"
+        }
+      }
+    }
+  ]
+}

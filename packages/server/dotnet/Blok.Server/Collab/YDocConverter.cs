@@ -80,6 +80,12 @@ internal static class YDocConverter
   private const string GridRowsKey = "__rows";
   private const string GridOrderKey = "__rowKeys";
   private const int RowKeyLength = 10;
+
+  /// <summary>
+  /// Test seam: mints grid row keys in place of the random source, for this
+  /// async flow only, so a capture can pin the bytes of an edit that adds a row.
+  /// </summary>
+  internal static readonly AsyncLocal<Func<string>?> RowKeySource = new();
   private const double MaxSafeInteger = 9007199254740992d;
 
   /// <summary>The client's built-in title/icon map and its history.track map (document-store.ts).</summary>
@@ -92,13 +98,15 @@ internal static class YDocConverter
   ///
   /// LOCKSTEP: it must name exactly what <c>DIFFABLE_TEXT_KEYS</c> names in
   /// src/components/modules/yjs/serializer.ts. Widening the set is one entry
-  /// there and one entry here — and nowhere else in this file.
+  /// there, one here and one in fixtures/converter-keys.json (which the client
+  /// test, ConverterKeysFixtureTests and the Go port each check) — and nowhere
+  /// else in this file.
   ///
   /// Top-level block data ONLY, exactly like the client: a nested <c>text</c>
   /// (a table cell's) goes through the generic value walk and stays a leaf, and
   /// so does a <c>text</c> under <c>tunes</c>.
   /// </summary>
-  private static readonly string[] DiffableTextKeys = ["text", "code", "caption", "title", "alt", "artist"];
+  internal static readonly string[] DiffableTextKeys = ["text", "code", "caption", "title", "alt", "artist"];
 
   /// <summary>
   /// THE list of NESTED data keys whose value is stored as a <see cref="YArray"/>
@@ -108,7 +116,9 @@ internal static class YDocConverter
   ///
   /// LOCKSTEP: it must name exactly what <c>EAGER_ARRAY_KEYS</c> names in
   /// src/components/modules/yjs/serializer.ts. Widening the set is one entry
-  /// there and one entry here — and nowhere else in this file.
+  /// there, one here and one in fixtures/converter-keys.json (which the client
+  /// test, ConverterKeysFixtureTests and the Go port each check) — and nowhere
+  /// else in this file.
   ///
   /// NESTED block data ONLY, exactly like the client: <c>BlockDataEntries</c>
   /// (the TOP level) does not consult it, so a custom tool's top-level
@@ -121,7 +131,7 @@ internal static class YDocConverter
   /// reason <c>contentIds</c> is: a later promotion runs on two peers at once
   /// and map-set is last-writer-wins, so the loser's ids are discarded.
   /// </summary>
-  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations", "hiddenGroups", "collapsedGroups", "filterRules", "colorRules", "tableProperties", "buttonActions", "pageLayoutPlacements", "pageLayoutSections"];
+  internal static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts", "calculations", "hiddenGroups", "collapsedGroups", "filterRules", "colorRules", "tableProperties", "buttonActions", "pageLayoutPlacements", "pageLayoutSections"];
 
   /// <summary>
   /// The one TOP-LEVEL data key whose map holds list slots: a database row's
@@ -3393,7 +3403,8 @@ internal static class YDocConverter
 
     internal static string GenerateRowKey()
     {
-      return new string(RandomNumberGenerator.GetItems<char>(RowKeyAlphabet, RowKeyLength));
+      return RowKeySource.Value?.Invoke() ??
+          new string(RandomNumberGenerator.GetItems<char>(RowKeyAlphabet, RowKeyLength));
     }
 
     /// <summary>

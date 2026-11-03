@@ -1,0 +1,53 @@
+{
+  "name": "page-action-unresolved",
+  "seed": {
+    "id": "source",
+    "title": "Source title",
+    "blocks": [
+      {
+        "id": "pg",
+        "type": "page",
+        "data": {
+          "pageId": "page-2"
+        }
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "pages": {},
+  "host": {
+    "saved": [],
+    "resolved": [
+      "page-2"
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "page.rename",
+            "args": {
+              "id": "pg",
+              "title": "Roadmap"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "PRECONDITION_FAILED",
+        "saved": false,
+        "result": {
+          "/error/details/pageId": "page-2"
+        },
+        "revisionEqualsRead": true
+      }
+    }
+  ]
+}

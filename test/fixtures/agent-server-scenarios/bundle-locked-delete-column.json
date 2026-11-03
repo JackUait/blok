@@ -1,0 +1,127 @@
+{
+  "name": "bundle-locked-delete-column",
+  "seed": {
+    "blocks": [
+      {
+        "id": "cl",
+        "type": "column_list",
+        "content": [
+          "c1",
+          "c2",
+          "c3"
+        ],
+        "data": {}
+      },
+      {
+        "id": "c1",
+        "type": "column",
+        "parent": "cl",
+        "content": [
+          "L"
+        ],
+        "data": {}
+      },
+      {
+        "id": "c2",
+        "type": "column",
+        "parent": "cl",
+        "content": [
+          "p2"
+        ],
+        "data": {}
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "parent": "c2",
+        "content": [],
+        "data": {
+          "text": "two"
+        }
+      },
+      {
+        "id": "c3",
+        "type": "column",
+        "parent": "cl",
+        "content": [
+          "p3"
+        ],
+        "data": {}
+      },
+      {
+        "id": "p3",
+        "type": "paragraph",
+        "parent": "c3",
+        "content": [],
+        "data": {
+          "text": "three"
+        }
+      },
+      {
+        "id": "L",
+        "type": "database",
+        "parent": "c1",
+        "content": [
+          "L-row"
+        ],
+        "data": {
+          "schema": [
+            {
+              "id": "Lt",
+              "name": "Name",
+              "type": "title",
+              "position": "a0",
+              "databaseLocked": true
+            }
+          ],
+          "views": [
+            {
+              "id": "Lv",
+              "name": "Table",
+              "type": "table",
+              "position": "a0"
+            }
+          ],
+          "activeViewId": "Lv"
+        }
+      },
+      {
+        "id": "L-row",
+        "type": "database-row",
+        "parent": "L",
+        "content": [],
+        "data": {
+          "properties": {
+            "Lt": "Row"
+          },
+          "position": "a0"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "column_list.removeColumn",
+            "args": {
+              "id": "cl",
+              "index": 0
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "PRECONDITION_FAILED",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "locked"
+        }
+      }
+    }
+  ]
+}

@@ -2,7 +2,10 @@
 
 package blokserver
 
-import "github.com/JackUait/blok/packages/server/go/internal/outbound"
+import (
+	"github.com/JackUait/blok/packages/server/go/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+)
 
 // UseConformanceOrigin swaps the outbound policy for one that reaches only
 // origin, so the conformance suite can unfurl from a loopback fixture. It
@@ -10,3 +13,7 @@ import "github.com/JackUait/blok/packages/server/go/internal/outbound"
 func (s *Server) UseConformanceOrigin(origin string, port int) {
 	s.fetcher = outbound.NewFetcher(outbound.ExactOriginPolicy{Origin: origin, Port: port})
 }
+
+// UseConformanceRooms puts rooms behind GET /sync/{doc}. Until the room lane
+// lands, the conformance binary is the only one that maps the sync door.
+func (s *Server) UseConformanceRooms(rooms collab.Rooms) { s.rooms = rooms }

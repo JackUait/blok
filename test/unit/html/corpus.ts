@@ -57,9 +57,10 @@ export const storedFields = (): string[] => {
     join(ROOT, 'playground-document.json'),
     join(ROOT, 'playground-pages.json'),
     // unfurl-html.json holds a 10,000-deep nesting case for the unfurl scanner,
-    // which overflows the recursive tree walks in these tests.
+    // which overflows the recursive tree walks in these tests. text-diff/cases.json
+    // holds adjacent lone low surrogates on purpose, and parse5 (the oracle) throws on them.
     ...listFiles(join(ROOT, 'test', 'unit', 'server-conformance', 'fixtures'), '.json')
-      .filter((file) => !file.endsWith('unfurl-html.json')),
+      .filter((file) => !file.endsWith('unfurl-html.json') && !file.endsWith(join('text-diff', 'cases.json'))),
     ...listFiles(join(ROOT, 'test', 'fixtures', 'notion'), '.json'),
   ];
   const out: string[] = [];

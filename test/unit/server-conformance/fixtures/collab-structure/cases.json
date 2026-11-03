@@ -1,0 +1,1796 @@
+{
+  "$comment": "Captured from C# by YDocConverterStructureCaptureTests. Do not edit by hand. A room names a fixtures/collab case or carries its own update.",
+  "cases": [
+    {
+      "name": "array-kinds",
+      "room": "array-kinds",
+      "structure": {
+        "keys": [
+          {
+            "id": "a1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "a1"
+        ],
+        "reached": [
+          "a1"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "cell-block-ids",
+      "room": "cell-block-ids",
+      "structure": {
+        "keys": [
+          {
+            "id": "p1",
+            "isBlock": true,
+            "storedParent": "tb1",
+            "listed": []
+          },
+          {
+            "id": "p2",
+            "isBlock": true,
+            "storedParent": "tb1",
+            "listed": []
+          },
+          {
+            "id": "p3",
+            "isBlock": true,
+            "storedParent": "tb1",
+            "listed": []
+          },
+          {
+            "id": "tb1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "tb2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "tb1",
+          "tb2"
+        ],
+        "reached": [
+          "tb1",
+          "tb2"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "content-string-code-points",
+      "room": "content-string-code-points",
+      "structure": {
+        "keys": [
+          {
+            "id": "cp",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "a",
+              "\uD83D\uDE00",
+              "e",
+              "\u0301"
+            ]
+          }
+        ],
+        "rootOrder": [
+          "cp"
+        ],
+        "reached": [
+          "cp"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "cycle",
+      "room": "cycle",
+      "structure": {
+        "keys": [
+          {
+            "id": "anchor",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "q"
+            ]
+          },
+          {
+            "id": "c3-a",
+            "isBlock": true,
+            "storedParent": "c3-b",
+            "listed": [
+              "c3-c"
+            ]
+          },
+          {
+            "id": "c3-b",
+            "isBlock": true,
+            "storedParent": "c3-c",
+            "listed": [
+              "c3-a"
+            ]
+          },
+          {
+            "id": "c3-c",
+            "isBlock": true,
+            "storedParent": "c3-a",
+            "listed": [
+              "c3-b"
+            ]
+          },
+          {
+            "id": "p",
+            "isBlock": true,
+            "storedParent": "q",
+            "listed": [
+              "q"
+            ]
+          },
+          {
+            "id": "q",
+            "isBlock": true,
+            "storedParent": "p",
+            "listed": [
+              "p"
+            ]
+          },
+          {
+            "id": "selfie",
+            "isBlock": true,
+            "storedParent": "selfie",
+            "listed": [
+              "selfie"
+            ]
+          },
+          {
+            "id": "tail",
+            "isBlock": true,
+            "storedParent": "p",
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "anchor"
+        ],
+        "reached": [
+          "anchor"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "dangling",
+      "room": "dangling",
+      "structure": {
+        "keys": [
+          {
+            "id": "d-root",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "present",
+              "missing-child"
+            ]
+          },
+          {
+            "id": "present",
+            "isBlock": true,
+            "storedParent": "d-root",
+            "listed": []
+          },
+          {
+            "id": "stray",
+            "isBlock": true,
+            "storedParent": "not-yet-arrived",
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "d-root"
+        ],
+        "reached": [
+          "d-root",
+          "present"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "database-rows",
+      "room": "database-rows",
+      "structure": {
+        "keys": [
+          {
+            "id": "db",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "row-1",
+              "row-2"
+            ]
+          },
+          {
+            "id": "row-1",
+            "isBlock": true,
+            "storedParent": "db",
+            "listed": [
+              "row-1-body"
+            ]
+          },
+          {
+            "id": "row-1-body",
+            "isBlock": true,
+            "storedParent": "row-1",
+            "listed": []
+          },
+          {
+            "id": "row-2",
+            "isBlock": true,
+            "storedParent": "db",
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "db"
+        ],
+        "reached": [
+          "db",
+          "row-1",
+          "row-1-body",
+          "row-2"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "duplicate-id",
+      "room": "duplicate-id",
+      "structure": {
+        "keys": [
+          {
+            "id": "dup-root",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "late",
+            "isBlock": true,
+            "storedParent": "pb",
+            "listed": []
+          },
+          {
+            "id": "pa",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "late",
+              "shared",
+              "twice",
+              "twice"
+            ]
+          },
+          {
+            "id": "pb",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "shared",
+              "late"
+            ]
+          },
+          {
+            "id": "shared",
+            "isBlock": true,
+            "storedParent": "pa",
+            "listed": []
+          },
+          {
+            "id": "twice",
+            "isBlock": true,
+            "storedParent": "pa",
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pa",
+          "pb",
+          "dup-root",
+          "dup-root"
+        ],
+        "reached": [
+          "dup-root",
+          "late",
+          "pa",
+          "pb",
+          "shared",
+          "twice"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "edit-metadata",
+      "room": "edit-metadata",
+      "structure": {
+        "keys": [
+          {
+            "id": "m1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "m2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "m3",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "m4",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "m1",
+          "m2",
+          "m3",
+          "m4"
+        ],
+        "reached": [
+          "m1",
+          "m2",
+          "m3",
+          "m4"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "empty-doc",
+      "room": "empty-doc",
+      "structure": {
+        "keys": [],
+        "rootOrder": [],
+        "reached": []
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "grid-normalization",
+      "room": "grid-normalization",
+      "structure": {
+        "keys": [
+          {
+            "id": "grid",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "grid"
+        ],
+        "reached": [
+          "grid"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "hierarchy-3-deep",
+      "room": "hierarchy-3-deep",
+      "structure": {
+        "keys": [
+          {
+            "id": "child-a",
+            "isBlock": true,
+            "storedParent": "toggle-1",
+            "listed": [
+              "grand-1",
+              "grand-2"
+            ]
+          },
+          {
+            "id": "child-b",
+            "isBlock": true,
+            "storedParent": "toggle-1",
+            "listed": []
+          },
+          {
+            "id": "grand-1",
+            "isBlock": true,
+            "storedParent": "child-a",
+            "listed": []
+          },
+          {
+            "id": "grand-2",
+            "isBlock": true,
+            "storedParent": "child-a",
+            "listed": [
+              "great-1"
+            ]
+          },
+          {
+            "id": "great-1",
+            "isBlock": true,
+            "storedParent": "grand-2",
+            "listed": []
+          },
+          {
+            "id": "root-1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "root-2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "toggle-1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "child-a",
+              "child-b"
+            ]
+          }
+        ],
+        "rootOrder": [
+          "root-1",
+          "toggle-1",
+          "root-2"
+        ],
+        "reached": [
+          "child-a",
+          "child-b",
+          "grand-1",
+          "grand-2",
+          "great-1",
+          "root-1",
+          "root-2",
+          "toggle-1"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "keyed-grid",
+      "room": "keyed-grid",
+      "structure": {
+        "keys": [
+          {
+            "id": "g1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "g2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "g3",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "g4",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "g5",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "g1",
+          "g2",
+          "g3",
+          "g4",
+          "g5"
+        ],
+        "reached": [
+          "g1",
+          "g2",
+          "g3",
+          "g4",
+          "g5"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "legacy-bare-grid",
+      "room": "legacy-bare-grid",
+      "structure": {
+        "keys": [
+          {
+            "id": "legacy",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "legacy"
+        ],
+        "reached": [
+          "legacy"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "lenient-seed",
+      "room": "lenient-seed",
+      "structure": {
+        "keys": [
+          {
+            "id": "l-content-null",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-content-string",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
+          {
+            "id": "l-data-array",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-data-boolean",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-data-empty-array",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-data-number",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-data-string",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-para-empty-array",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-para-number",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-tunes-array",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-tunes-number",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "l-tunes-string",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "l-data-array",
+          "l-data-string",
+          "l-data-number",
+          "l-data-boolean",
+          "l-data-empty-array",
+          "l-para-number",
+          "l-para-empty-array",
+          "l-tunes-array",
+          "l-tunes-string",
+          "l-tunes-number",
+          "l-content-string",
+          "l-content-null"
+        ],
+        "reached": [
+          "l-content-null",
+          "l-content-string",
+          "l-data-array",
+          "l-data-boolean",
+          "l-data-empty-array",
+          "l-data-number",
+          "l-data-string",
+          "l-para-empty-array",
+          "l-para-number",
+          "l-tunes-array",
+          "l-tunes-number",
+          "l-tunes-string"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "malformed-blocks",
+      "room": "malformed-blocks",
+      "structure": {
+        "keys": [
+          {
+            "id": "keeper",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "kid"
+            ]
+          },
+          {
+            "id": "kid",
+            "isBlock": true,
+            "storedParent": "keeper",
+            "listed": []
+          },
+          {
+            "id": "num-parent",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "keeper"
+        ],
+        "reached": [
+          "keeper",
+          "kid"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "malformed-doc-blocks",
+      "room": "malformed-doc-blocks",
+      "structure": {
+        "keys": [
+          {
+            "id": "deep",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "keeper-1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "keeper-2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "numeric-id",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "numeric-type",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "string-data",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "keeper-1",
+          "string-data",
+          "numeric-id",
+          "numeric-type",
+          "deep",
+          "keeper-2"
+        ],
+        "reached": [
+          "deep",
+          "keeper-1",
+          "keeper-2",
+          "numeric-id",
+          "numeric-type",
+          "string-data"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "nested-data-maps",
+      "room": "nested-data-maps",
+      "structure": {
+        "keys": [
+          {
+            "id": "n1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "n2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "n1",
+          "n2"
+        ],
+        "reached": [
+          "n1",
+          "n2"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "orphans",
+      "room": "orphans",
+      "structure": {
+        "keys": [
+          {
+            "id": "aa-kid",
+            "isBlock": true,
+            "storedParent": "zz-orphan",
+            "listed": []
+          },
+          {
+            "id": "held",
+            "isBlock": true,
+            "storedParent": "holder",
+            "listed": [
+              "held-kid"
+            ]
+          },
+          {
+            "id": "held-kid",
+            "isBlock": true,
+            "storedParent": "held",
+            "listed": []
+          },
+          {
+            "id": "holder",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "root-x",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "z-kid",
+            "isBlock": true,
+            "storedParent": "z-top",
+            "listed": []
+          },
+          {
+            "id": "z-top",
+            "isBlock": true,
+            "storedParent": "ghost-1",
+            "listed": [
+              "z-kid"
+            ]
+          },
+          {
+            "id": "zz-orphan",
+            "isBlock": true,
+            "storedParent": "holder",
+            "listed": [
+              "aa-kid"
+            ]
+          },
+          {
+            "id": "\u00E9-top",
+            "isBlock": true,
+            "storedParent": "ghost-2",
+            "listed": []
+          },
+          {
+            "id": "\uD83D\uDE00-top",
+            "isBlock": true,
+            "storedParent": "ghost-3",
+            "listed": []
+          },
+          {
+            "id": "\uFF21-top",
+            "isBlock": true,
+            "storedParent": "ghost-4",
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "holder",
+          "root-x"
+        ],
+        "reached": [
+          "holder",
+          "root-x"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "page-icon-extra-key",
+      "room": "page-icon-extra-key",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt7",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt7"
+        ],
+        "reached": [
+          "pt7"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Extra",
+            "icon": {
+              "type": "image",
+              "url": "https://example.com/i.png",
+              "alt": "logo"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "image",
+              "url": "https://example.com/i.png",
+              "alt": "logo"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-icon-malformed",
+      "room": "page-icon-malformed",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt6",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt6"
+        ],
+        "reached": [
+          "pt6"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Bad icon",
+            "icon": {
+              "type": "emoji",
+              "url": "https://example.com/x.png"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "url": "https://example.com/x.png"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-title-emoji",
+      "room": "page-title-emoji",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt1"
+        ],
+        "reached": [
+          "pt1"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Plan",
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83D\uDE80"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83D\uDE80"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-title-empty-string",
+      "room": "page-title-empty-string",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt3",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt3"
+        ],
+        "reached": [
+          "pt3"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83D\uDCC4"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83D\uDCC4"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-title-image-icon",
+      "room": "page-title-image-icon",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt2"
+        ],
+        "reached": [
+          "pt2"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object",
+          "title": "string"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": "Roadmap",
+            "icon": {
+              "type": "image",
+              "url": "https://example.com/icon.png"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "image",
+              "url": "https://example.com/icon.png"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-title-non-string",
+      "room": "page-title-non-string",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt5",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt5"
+        ],
+        "reached": [
+          "pt5"
+        ]
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object",
+          "title": "number"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "title": 42,
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83E\uDDED"
+            }
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "type": "emoji",
+              "value": "\uD83E\uDDED"
+            }
+          }
+        }
+      ],
+      "equalPairs": []
+    },
+    {
+      "name": "page-title-null",
+      "room": "page-title-null",
+      "structure": {
+        "keys": [
+          {
+            "id": "pt4",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pt4"
+        ],
+        "reached": [
+          "pt4"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "paragraph-normalization",
+      "room": "paragraph-normalization",
+      "structure": {
+        "keys": [
+          {
+            "id": "h-empty",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "p-empty",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "p-other",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "p-text",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "p-empty",
+          "h-empty",
+          "p-text",
+          "p-other"
+        ],
+        "reached": [
+          "h-empty",
+          "p-empty",
+          "p-other",
+          "p-text"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "parent-null",
+      "room": "parent-null",
+      "structure": {
+        "keys": [
+          {
+            "id": "first",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "last",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "nullish",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "first",
+          "last"
+        ],
+        "reached": [
+          "first",
+          "last"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "proto-key",
+      "room": "proto-key",
+      "structure": {
+        "keys": [
+          {
+            "id": "pk1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "pk2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "pk3",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "pk1",
+          "pk2",
+          "pk3"
+        ],
+        "reached": [
+          "pk1",
+          "pk2",
+          "pk3"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "table-row-ids",
+      "room": "table-row-ids",
+      "structure": {
+        "keys": [
+          {
+            "id": "tr1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "tr1"
+        ],
+        "reached": [
+          "tr1"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "tunes",
+      "room": "tunes",
+      "structure": {
+        "keys": [
+          {
+            "id": "t1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "t2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "t3",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "t1",
+          "t2",
+          "t3"
+        ],
+        "reached": [
+          "t1",
+          "t2",
+          "t3"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "unicode-text",
+      "room": "unicode-text",
+      "structure": {
+        "keys": [
+          {
+            "id": "u-\uD83D\uDE42",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "u1",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          },
+          {
+            "id": "u2",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": []
+          }
+        ],
+        "rootOrder": [
+          "u1",
+          "u2",
+          "u-\uD83D\uDE42"
+        ],
+        "reached": [
+          "u-\uD83D\uDE42",
+          "u1",
+          "u2"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "page-map-values",
+      "roomUpdate": "ARMBACcBBHBhZ2UFdGl0bGUCBAABAAZzaGFyZWQoAQRwYWdlBGljb24BdgIBYX0BAWJ9AigBBHBhZ2UJdW5kZWZpbmVkAX8oAQZ2YWx1ZXMHb3JkZXJlZAF2AwFifQEBMn0CATF9AygBBnZhbHVlcwJvMgF2AgFifQIBYX0BKAEGdmFsdWVzAm8zAXYCAWF9AQFifQIoAQZ2YWx1ZXMCbjEBfQEoAQZ2YWx1ZXMCbjIBfD/AAAAoAQZ2YWx1ZXMBcwF3BHRleHQoAQZ2YWx1ZXMCczIBdwR0ZXh0KAEGdmFsdWVzBGZsYWcBeCgBBnZhbHVlcwdub3RoaW5nAX4oAQZ2YWx1ZXMFYXJyYXkBdQJ3AXh\u002BIwEGdmFsdWVzBWJ5dGVzAgECJwEGdmFsdWVzA21hcAEoAAEUAWsBdwF2JwEGdmFsdWVzBGxpc3QACAABFgF3AWEA",
+      "structure": {
+        "keys": [],
+        "rootOrder": [],
+        "reached": []
+      },
+      "pageMaps": {
+        "page": {
+          "icon": "object",
+          "title": "YText",
+          "undefined": "undefined"
+        },
+        "values": {
+          "array": "array",
+          "bytes": "bytes",
+          "flag": "bool",
+          "list": "YArray",
+          "map": "YMap",
+          "n1": "number",
+          "n2": "number",
+          "nothing": "null",
+          "o2": "object",
+          "o3": "object",
+          "ordered": "object",
+          "s": "string",
+          "s2": "string"
+        }
+      },
+      "plainPageMaps": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "a": 1,
+              "b": 2
+            }
+          }
+        },
+        {
+          "name": "values",
+          "map": {
+            "ordered": {
+              "1": 3,
+              "2": 2,
+              "b": 1
+            },
+            "o2": {
+              "b": 2,
+              "a": 1
+            },
+            "o3": {
+              "a": 1,
+              "b": 2
+            },
+            "n1": 1,
+            "n2": 1.5,
+            "s": "text",
+            "s2": "text",
+            "flag": true,
+            "nothing": null,
+            "array": [
+              "x",
+              null
+            ]
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "page",
+          "map": {
+            "icon": {
+              "a": 1,
+              "b": 2
+            }
+          }
+        },
+        {
+          "name": "values",
+          "map": {
+            "ordered": {
+              "1": 3,
+              "2": 2,
+              "b": 1
+            },
+            "o2": {
+              "b": 2,
+              "a": 1
+            },
+            "o3": {
+              "a": 1,
+              "b": 2
+            },
+            "n1": 1,
+            "n2": 1.5,
+            "s": "text",
+            "s2": "text",
+            "flag": true,
+            "nothing": null,
+            "array": [
+              "x",
+              null
+            ]
+          }
+        }
+      ],
+      "equalPairs": [
+        [
+          "page.icon",
+          "values.o3"
+        ],
+        [
+          "values.s",
+          "values.s2"
+        ]
+      ]
+    },
+    {
+      "name": "empty-page-maps",
+      "roomUpdate": "AQIBACcBBHBhZ2UFdGl0bGUCBAABAAtvbmx5IHNoYXJlZAA=",
+      "structure": {
+        "keys": [],
+        "rootOrder": [],
+        "reached": []
+      },
+      "pageMaps": {
+        "page": {
+          "title": "YText"
+        },
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    },
+    {
+      "name": "odd-block-entries",
+      "roomUpdate": "AScBACgBBmJsb2NrcwRqdW5rAXcLbm90IGEgYmxvY2snAQZibG9ja3MEc2VsZgEoAAEBAmlkAXcEc2VsZigAAQEEdHlwZQF3AXAnAAEBBGRhdGEBKAABAQhwYXJlbnRJZAF3BHNlbGYnAQZibG9ja3MHcmVuYW1lZAEoAAEGAmlkAXcFb3RoZXIoAAEGBHR5cGUBdwFwJwABBgRkYXRhAScBBmJsb2Nrcwd1bnR5cGVkASgAAQoCaWQBdwd1bnR5cGVkJwABCgRkYXRhAScBBmJsb2NrcwlmbGF0LWRhdGEBKAABDQJpZAF3CWZsYXQtZGF0YSgAAQ0EdHlwZQF3AXAoAAENBGRhdGEBdwF4JwEGYmxvY2tzBW1peGVkASgAARECaWQBdwVtaXhlZCgAAREEdHlwZQF3BnRvZ2dsZScAAREEZGF0YQEnAAERCmNvbnRlbnRJZHMACAABFQN3A2tpZH0BdwVnaG9zdCcBBmJsb2NrcwNraWQBKAABGQJpZAF3A2tpZCgAARkEdHlwZQF3AXAnAAEZBGRhdGEBKAABGQhwYXJlbnRJZAF3BW1peGVkJwEGYmxvY2tzAWEBKAABHgJpZAF3AWEoAAEeBHR5cGUBdwFwJwABHgRkYXRhASgAAR4IcGFyZW50SWQBdwFiJwEGYmxvY2tzAWIBKAABIwJpZAF3AWIoAAEjBHR5cGUBdwFwJwABIwRkYXRhASgAASMIcGFyZW50SWQBdwFhCAEEcm9vdAZ3BW1peGVkfQJ3BHNlbGZ3B3JlbmFtZWR3B21pc3Npbmd3BW1peGVkAA==",
+      "structure": {
+        "keys": [
+          {
+            "id": "a",
+            "isBlock": true,
+            "storedParent": "b",
+            "listed": null
+          },
+          {
+            "id": "b",
+            "isBlock": true,
+            "storedParent": "a",
+            "listed": null
+          },
+          {
+            "id": "flat-data",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": null
+          },
+          {
+            "id": "junk",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": null
+          },
+          {
+            "id": "kid",
+            "isBlock": true,
+            "storedParent": "mixed",
+            "listed": null
+          },
+          {
+            "id": "mixed",
+            "isBlock": true,
+            "storedParent": null,
+            "listed": [
+              "kid",
+              "ghost"
+            ]
+          },
+          {
+            "id": "renamed",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": null
+          },
+          {
+            "id": "self",
+            "isBlock": true,
+            "storedParent": "self",
+            "listed": null
+          },
+          {
+            "id": "untyped",
+            "isBlock": false,
+            "storedParent": null,
+            "listed": null
+          }
+        ],
+        "rootOrder": [
+          "mixed",
+          "self",
+          "renamed",
+          "missing",
+          "mixed"
+        ],
+        "reached": [
+          "kid",
+          "mixed",
+          "renamed",
+          "self"
+        ]
+      },
+      "pageMaps": {
+        "page": {},
+        "values": {}
+      },
+      "plainPageMaps": [],
+      "plainPageMapsSkippingTitle": [],
+      "equalPairs": []
+    }
+  ]
+}

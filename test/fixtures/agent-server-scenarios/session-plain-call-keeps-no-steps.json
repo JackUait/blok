@@ -1,0 +1,59 @@
+{
+  "name": "session-plain-call-keeps-no-steps",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "A"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "plain",
+      "document": "@last",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "COMMAND_UNAVAILABLE",
+        "saved": false,
+        "result": {
+          "/error/details/reason": "runtime",
+          "/error/retryable": false
+        }
+      }
+    }
+  ]
+}

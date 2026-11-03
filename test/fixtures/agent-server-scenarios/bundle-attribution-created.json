@@ -1,0 +1,82 @@
+{
+  "name": "bundle-attribution-created",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v1",
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "cb",
+              "name": "Creator",
+              "type": "createdBy",
+              "position": "a1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "n1",
+              "type": "paragraph",
+              "data": {
+                "text": "new"
+              },
+              "position": "end"
+            }
+          },
+          {
+            "name": "database.addRow",
+            "args": {
+              "id": "db",
+              "values": {
+                "t": "Row"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true,
+        "document": {
+          "/blocks/1/type": "database-row",
+          "/blocks/1/createdBy": "human-1",
+          "/blocks/1/createdWith": "agent-cs",
+          "/blocks/2/id": "n1",
+          "/blocks/2/createdBy": "human-1",
+          "/blocks/2/createdWith": "agent-cs"
+        }
+      }
+    }
+  ]
+}

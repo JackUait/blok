@@ -104,17 +104,34 @@ internal static class CollabEditOps
 
     JsonNode? root;
 
+    // Text that is valid JSON but not a .NET string (a lone-surrogate escape,
+    // raw bytes that are not UTF-8) throws InvalidOperationException when it
+    // is first read: a key during the duplicate check, anything else below.
     try
     {
-      root = JsonNode.Parse(body, documentOptions: ReaderOptions);
+      try
+      {
+        root = JsonNode.Parse(body, documentOptions: ReaderOptions);
+      }
+      catch (JsonException error)
+      {
+        throw new CollabEditException(
+            "collab: the request body is not valid JSON.",
+            error);
+      }
+
+      return ParseOps(root);
     }
-    catch (JsonException error)
+    catch (InvalidOperationException error)
     {
       throw new CollabEditException(
-          "collab: the request body is not valid JSON.",
+          "collab: the request body holds text that is not valid Unicode.",
           error);
     }
+  }
 
+  private static List<CollabEditOp> ParseOps(JsonNode? root)
+  {
     if (root is not JsonObject request ||
         request["ops"] is not JsonArray requested ||
         requested.Count == 0)

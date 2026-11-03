@@ -349,6 +349,33 @@ public sealed class SyncWireTests
   }
 
   /// <summary>A control frame carrying <paramref name="json"/> verbatim (payloads here stay under 128 bytes).</summary>
+  // GetString throws InvalidOperationException, not JsonException, on a
+  // lone-surrogate escape or invalid UTF-8. A client can send any type, so
+  // the room must get a refusal it can drop, never an exception.
+  [Theory]
+  [InlineData(100, "{\"epoch\":0,\"format\":1,\"lineage\":\"\\ud800123456789abcdef0123456789abcdef\"}")]
+  [InlineData(107, "{\"identities\":[{\"clientId\":1,\"actorId\":\"\\ud800\"}]}")]
+  public void RefusesAStringThatIsNotUnicodeInsteadOfThrowing(int type, string json)
+  {
+    var payload = Encoding.UTF8.GetBytes(json);
+    byte[] frame = [(byte)type, (byte)payload.Length, .. payload];
+
+    Assert.False(SyncWire.TryDecode(frame, out _, out var error));
+    Assert.Contains("ill-typed property", error, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData(100, "{\"epoch\":0,\"format\":1,\"lineage\":\"", "123456789abcdef0123456789abcdef\"}")]
+  [InlineData(107, "{\"identities\":[{\"clientId\":1,\"actorId\":\"", "\"}]}")]
+  public void RefusesInvalidUtf8InAStringInsteadOfThrowing(int type, string before, string after)
+  {
+    byte[] payload = [.. Encoding.UTF8.GetBytes(before), 0xff, .. Encoding.UTF8.GetBytes(after)];
+    byte[] frame = [(byte)type, (byte)payload.Length, .. payload];
+
+    Assert.False(SyncWire.TryDecode(frame, out _, out var error));
+    Assert.Contains("ill-typed property", error, StringComparison.Ordinal);
+  }
+
   private static byte[] ControlFrame(string json)
   {
     var payload = Encoding.UTF8.GetBytes(json);

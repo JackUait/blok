@@ -11,6 +11,8 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/internal/outbound"
@@ -29,6 +31,10 @@ type Server struct {
 	storeOnce sync.Once
 	store     blob.Store
 	storeErr  error
+
+	// rooms is nil until the room lane lands; /sync is mapped only with it.
+	rooms       collab.Rooms
+	connections *synchttp.ConnectionTable
 }
 
 // New validates o and returns a server. Like AddBlokServer, nothing heavy is
@@ -57,6 +63,7 @@ func New(o Options) (*Server, error) {
 		fetcher:    outbound.NewFetcher(outbound.DefaultPolicy{}),
 	}
 	s.limiter = newRateLimiter(o.RateLimitPerMinute, func() time.Time { return s.clock() })
+	s.connections = synchttp.NewConnectionTable(o.CollabMaxConnections, o.CollabMaxConnectionsPerUserPerDoc)
 	return s, nil
 }
 
@@ -92,7 +99,35 @@ func (s *Server) Handler(prefix string) http.Handler {
 			s.shell(router, prefix+"/upload-by-url", "POST", s.uploadByURL)
 		}
 	}
+	if o.CollabEnabled && s.rooms != nil {
+		// Not behind the guard: the handshake is its own door, and a live
+		// socket outlasts any request deadline.
+		router.Handle(prefix+"/sync/{doc}", []string{"GET"}, withoutRequestTimeout(s.syncEndpoint()))
+		router.Handle(prefix+"/sync/{doc}", nil, route.MethodNotAllowed("GET"))
+	}
 	return router
+}
+
+func (s *Server) syncEndpoint() *synchttp.Endpoint {
+	o := &s.options
+	return synchttp.NewEndpoint(synchttp.Config{
+		Auth:              o.Auth,
+		Secret:            o.Secret,
+		OriginAllowed:     s.originAllowed,
+		RateLimit:         s.limiter.allow,
+		Clock:             func() time.Time { return s.clock() },
+		Authorization:     o.Authorization,
+		Rooms:             s.rooms,
+		MaxMessageBytes:   o.CollabMaxMessageBytes,
+		KeepAliveInterval: o.CollabKeepAliveInterval,
+		Connections:       s.connections,
+		Budget: synchttp.BudgetOptions{
+			FramesPerSecond:         o.CollabInboundFramesPerSecond,
+			BurstFrames:             o.CollabInboundBurstFrames,
+			ResyncsPerMinute:        o.CollabInboundResyncsPerMinute,
+			AwarenessBytesPerSecond: o.CollabInboundAwarenessBytesPerSecond,
+		},
+	})
 }
 
 // shell maps one guarded route with its preflight and its 405 answer.

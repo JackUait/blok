@@ -240,6 +240,7 @@ describe('server release wiring', () => {
       'host-cli-contract',
       'http-host-contract',
       'page-transfer-sidecar',
+      'sync-transport-contract',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }

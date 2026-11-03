@@ -17,8 +17,8 @@ import (
 // The Go analogue of OutboundClientArchitectureTests: outbound networking
 // may only be owned by the guarded fetcher. The S3 store reaches only the
 // operator's endpoint, never a caller's URL, so it is exempt for exactly one
-// client, one transport and one dialer. The doc-endpoint client will get
-// the same pinned exemption when collab adds it.
+// client, one transport and one dialer. The doc-endpoint client reaches only
+// the operator's doc endpoint and has the same exemption.
 
 // restricted names what opens a connection, by import path.
 var restricted = map[string]map[string]bool{
@@ -34,7 +34,8 @@ const guardOwner = "internal/outbound/fetcher.go"
 
 // pinned owners may make one of each, and nothing else restricted.
 var pinned = map[string]map[string]int{
-	"internal/blob/s3.go": {"http.Client": 1, "http.Transport": 1, "net.Dialer": 1},
+	"internal/blob/s3.go":                   {"http.Client": 1, "http.Transport": 1, "net.Dialer": 1},
+	"internal/collab/docendpoint/client.go": {"http.Client": 1, "http.Transport": 1, "net.Dialer": 1},
 }
 
 type use struct {
@@ -164,28 +165,32 @@ func TestOnlyTheGuardedFetcherOwnsOutboundClients(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(found) > 0 {
-		t.Fatalf("outbound networking may only be owned by the guarded fetcher or the pinned S3 store:\n%s",
+		t.Fatalf("outbound networking may only be owned by the guarded fetcher, the pinned S3 store or the doc-endpoint client:\n%s",
 			strings.Join(found, "\n"))
 	}
 }
 
 func TestTheLawCatchesPlantedViolations(t *testing.T) {
 	cases := map[string]string{
-		"a client literal":        "package p\nimport \"net/http\"\nvar c = &http.Client{}",
-		"an aliased transport":    "package p\nimport h \"net/http\"\nvar t = h.Transport{}",
-		"the default client":      "package p\nimport \"net/http\"\nfunc f() { http.Get(\"x\") }",
-		"a raw dial":              "package p\nimport \"net\"\nfunc f() { net.Dial(\"tcp\", \"x\") }",
-		"a TLS dial":              "package p\nimport \"crypto/tls\"\nfunc f() { tls.Dial(\"tcp\", \"x\", nil) }",
-		"a dot import":            "package p\nimport . \"net/http\"\nvar c = Client{}",
-		"a second client in S3":   "package blob\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
-		"a new restricted name":   "package p\nimport \"net/http\"\nvar c = new(http.Client)",
-		"a client in a new place": "package p\nimport \"net/http\"\nvar c http.Client",
-		"a pointer then a call":   "package p\nimport \"net/http\"\nvar c *http.Client = http.DefaultClient",
+		"a client literal":             "package p\nimport \"net/http\"\nvar c = &http.Client{}",
+		"an aliased transport":         "package p\nimport h \"net/http\"\nvar t = h.Transport{}",
+		"the default client":           "package p\nimport \"net/http\"\nfunc f() { http.Get(\"x\") }",
+		"a raw dial":                   "package p\nimport \"net\"\nfunc f() { net.Dial(\"tcp\", \"x\") }",
+		"a TLS dial":                   "package p\nimport \"crypto/tls\"\nfunc f() { tls.Dial(\"tcp\", \"x\", nil) }",
+		"a dot import":                 "package p\nimport . \"net/http\"\nvar c = Client{}",
+		"a second client in S3":        "package blob\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
+		"a second doc endpoint client": "package docendpoint\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
+		"a new restricted name":        "package p\nimport \"net/http\"\nvar c = new(http.Client)",
+		"a client in a new place":      "package p\nimport \"net/http\"\nvar c http.Client",
+		"a pointer then a call":        "package p\nimport \"net/http\"\nvar c *http.Client = http.DefaultClient",
 	}
 	for name, source := range cases {
 		path := "internal/somewhere/x.go"
 		if strings.Contains(name, "S3") {
 			path = "internal/blob/s3.go"
+		}
+		if strings.Contains(name, "doc endpoint") {
+			path = "internal/collab/docendpoint/client.go"
 		}
 		found, err := violations(map[string][]byte{path: []byte(source)})
 		if err != nil {

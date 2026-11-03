@@ -115,9 +115,9 @@ internal sealed class LocalCollabOperationStore :
   private const int ReadOnlyFlags = 0;
 
   private const byte ManifestVersion = 2;
-  private const int ManifestSlotSize = 128;
+  internal const int ManifestSlotSize = 128;
   private const int ManifestSlotContentSize = 96;
-  private const int ManifestSize = ManifestSlotSize * 2;
+  internal const int ManifestSize = ManifestSlotSize * 2;
 
   private const byte SealedVersion = 1;
 
@@ -137,6 +137,7 @@ internal sealed class LocalCollabOperationStore :
   private readonly string directory;
   private readonly long maxUpdateBytes;
   private readonly Action<string>? log;
+  private readonly TimeProvider time;
 
   // One ledger writer per document, in this process only. Two processes on one
   // directory are not supported: the lock file refuses the second for writes,
@@ -147,7 +148,8 @@ internal sealed class LocalCollabOperationStore :
   internal LocalCollabOperationStore(
       string directory,
       long maxUpdateBytes = DefaultMaxUpdateBytes,
-      Action<string>? log = null)
+      Action<string>? log = null,
+      TimeProvider? time = null)
   {
     ArgumentException.ThrowIfNullOrEmpty(directory);
     ArgumentOutOfRangeException.ThrowIfLessThan(maxUpdateBytes, 1);
@@ -162,15 +164,16 @@ internal sealed class LocalCollabOperationStore :
     this.directory = directory;
     this.maxUpdateBytes = maxUpdateBytes;
     this.log = log;
+    this.time = time ?? TimeProvider.System;
   }
 
   internal long MaxUpdateBytes => maxUpdateBytes;
 
-  private static ReadOnlySpan<byte> ManifestMagic => "BKJM"u8;
+  internal static ReadOnlySpan<byte> ManifestMagic => "BKJM"u8;
 
-  private static ReadOnlySpan<byte> BaselineMagic => "BKJB"u8;
+  internal static ReadOnlySpan<byte> BaselineMagic => "BKJB"u8;
 
-  private static ReadOnlySpan<byte> CheckpointMagic => "BKJC"u8;
+  internal static ReadOnlySpan<byte> CheckpointMagic => "BKJC"u8;
 
   public ValueTask<CollabDocumentOpen> OpenAsync(
       string documentId,
@@ -1103,7 +1106,7 @@ internal sealed class LocalCollabOperationStore :
   /// slot decodes: a document whose identity is unreadable must not be handed
   /// back as a fresh one.
   /// </summary>
-  private static Manifest? ReadManifest(string path, string documentId, FileShare share = FileShare.Read)
+  internal static Manifest? ReadManifest(string path, string documentId, FileShare share = FileShare.Read)
   {
     byte[] bytes;
 
@@ -1176,7 +1179,7 @@ internal sealed class LocalCollabOperationStore :
       : $"collab: neither manifest slot for \"{documentId}\" decodes.");
   }
 
-  private static void EncodeSlot(Manifest manifest, Span<byte> slot)
+  internal static void EncodeSlot(Manifest manifest, Span<byte> slot)
   {
     slot.Clear();
     ManifestMagic.CopyTo(slot);
@@ -1405,7 +1408,7 @@ internal sealed class LocalCollabOperationStore :
     return new CollabOperationCheckpoint(through, state);
   }
 
-  private static void WriteSealed(
+  internal static void WriteSealed(
       string path,
       ReadOnlySpan<byte> magic,
       ulong tag,
@@ -1429,7 +1432,7 @@ internal sealed class LocalCollabOperationStore :
     file.Flush(flushToDisk: true);
   }
 
-  private static byte[] ReadSealed(
+  internal static byte[] ReadSealed(
       string path,
       ReadOnlySpan<byte> magic,
       string documentId,
@@ -1610,7 +1613,7 @@ internal sealed class LocalCollabOperationStore :
   /// The fence held by the session that wrote the published checkpoint, for the
   /// same reason.
   /// </param>
-  private readonly record struct Manifest(
+  internal readonly record struct Manifest(
       ulong WriteCounter,
       ulong Fence,
       ulong Generation,
@@ -1837,7 +1840,7 @@ internal sealed class LocalCollabOperationStore :
       var bytes = CollabJournalCodec.EncodeRecord(new CollabOperationRecord(
           candidate.OperationId,
           sequence,
-          DateTimeOffset.UtcNow,
+          store.time.GetUtcNow(),
           candidate.ActorId,
           candidate.Source,
           candidate.Update,
@@ -2071,7 +2074,7 @@ internal sealed class LocalCollabOperationStore :
       // Only after the publication returned: a delete that finds this entry
       // must also read a manifest naming it as current, or it would remove
       // the live generation.
-      store.RecordLineage(docDirectory, documentId, manifest, DateTimeOffset.UtcNow);
+      store.RecordLineage(docDirectory, documentId, manifest, store.time.GetUtcNow());
 
       return ValueTask.FromResult(
           new CollabDocumentHead(reset.Format, reset.Epoch, reset.Lineage, DurableThrough: 0));

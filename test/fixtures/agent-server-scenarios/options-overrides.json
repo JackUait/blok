@@ -1,0 +1,77 @@
+{
+  "name": "options-overrides",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "options": {
+    "overrides": "{\"spacer\":{\"hidden\":true},\"column_list\":{\"hiddenActions\":[\"create\"],\"guidance\":\"Use the host layout.\"}}"
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "spacer",
+              "data": {}
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "UNKNOWN_TOOL",
+        "saved": false
+      }
+    },
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "column_list.create",
+            "args": {
+              "count": 2
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "UNKNOWN_COMMAND",
+        "saved": false
+      }
+    },
+    {
+      "run": "contract:plain",
+      "expect": {
+        "commands": {
+          "column_list.create": {
+            "absent": true
+          }
+        },
+        "blocks": {
+          "spacer": {
+            "absent": true
+          }
+        }
+      }
+    }
+  ]
+}

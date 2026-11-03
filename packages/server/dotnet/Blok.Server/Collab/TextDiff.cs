@@ -201,9 +201,11 @@ internal static partial class TextDiff
   /// test/unit/server-conformance/server-concurrent-loss-wave2.test.ts, which
   /// re-derives all three from the live segmenter: it demands this file cover
   /// everything that engine derives, and exact equality once the engine is on
-  /// the target version.
+  /// the target version. The test reads the sets from
+  /// fixtures/converter-keys.json; ConverterKeysFixtureTests holds this file
+  /// to it, and the Go port reads the same file.
   /// </summary>
-  private static readonly int[] ConjunctLinkers =
+  internal static readonly int[] ConjunctLinkers =
   [
       0x094D, 0x094D, 0x09CD, 0x09CD, 0x0ACD, 0x0ACD, 0x0B4D, 0x0B4D,
       0x0C4D, 0x0C4D, 0x0D4D, 0x0D4D, 0x1039, 0x1039, 0x17D2, 0x17D2,
@@ -213,7 +215,7 @@ internal static partial class TextDiff
   ];
 
   /// <summary>InCB=Consonant, the characters a linker joins. See <see cref="ConjunctLinkers"/>.</summary>
-  private static readonly int[] ConjunctConsonants =
+  internal static readonly int[] ConjunctConsonants =
   [
       0x0915, 0x0939, 0x0958, 0x095F, 0x0978, 0x097F, 0x0995, 0x09A8,
       0x09AA, 0x09B0, 0x09B2, 0x09B2, 0x09B6, 0x09B9, 0x09DC, 0x09DD,
@@ -240,7 +242,7 @@ internal static partial class TextDiff
   /// Extenders that are NOT InCB=Extend, so one of them between a consonant
   /// and its linker ends the conjunct. See <see cref="ConjunctLinkers"/>.
   /// </summary>
-  private static readonly int[] ConjunctBreakers =
+  internal static readonly int[] ConjunctBreakers =
   [
       0x0903, 0x0903, 0x093B, 0x093B, 0x093E, 0x0940, 0x0949, 0x094C,
       0x094E, 0x094F, 0x0982, 0x0983, 0x09BF, 0x09C0, 0x09C7, 0x09C8,
@@ -368,7 +370,7 @@ internal static partial class TextDiff
   /// set, so the scanner can walk to that character's end one unit at a time.
   ///
   /// <see cref="StringInfo"/> answers every UAX #29 rule but GB9c, so the
-  /// conjunct join is applied on top of it — see <see cref="JoinsConjunct"/>.
+  /// conjunct join is applied on top of it — see <see cref="ConjunctState"/>.
   /// </summary>
   private static HashSet<int> ClusterInteriors(string text)
   {
@@ -381,7 +383,7 @@ internal static partial class TextDiff
     }
 
     var inside = new HashSet<int>();
-    var clusterStart = 0;
+    var conjunct = new ConjunctState();
 
     for (var index = 0; index < starts.Count; index++)
     {
@@ -390,14 +392,16 @@ internal static partial class TextDiff
 
       // The boundary disappears, and the joined character keeps its original
       // start so a second conjunct chains onto the same one.
-      if (index > 0 && JoinsConjunct(text, clusterStart, start))
+      if (index > 0 && InRanges(ConjunctConsonants, CodePointAt(text, start)) && conjunct.Joins)
       {
         inside.Add(start);
       }
       else
       {
-        clusterStart = start;
+        conjunct = new ConjunctState { ClusterStart = start };
       }
+
+      conjunct.Take(text, start, end);
 
       for (var at = start + 1; at < end; at++)
       {
@@ -411,47 +415,54 @@ internal static partial class TextDiff
   /// <summary>
   /// UAX #29 GB9c: a consonant, a linker and the consonant after it are ONE
   /// character — <c>Consonant (Extend | Linker)* Linker (Extend | Linker)*
-  /// × Consonant</c>. Walks back from the boundary over the previous
-  /// character, which <see cref="StringInfo"/> has already closed, so every
-  /// code point in it past the first is an extender.
+  /// × Consonant</c>. Read backwards from the boundary over the character so
+  /// far, the first code point that is not a linker and is either the
+  /// character's first or a breaker decides it: it must be a consonant, with a
+  /// linker after it. Every other code point counts as an extender.
+  ///
+  /// The state keeps that stop and its linker as each piece is added, so a
+  /// long run joins in linear time. Walking back to the start at every
+  /// boundary was quadratic: one edit of a long conjunct run took seconds.
   /// </summary>
-  private static bool JoinsConjunct(string text, int clusterStart, int boundary)
+  private struct ConjunctState
   {
-    if (!InRanges(ConjunctConsonants, CodePointAt(text, boundary)))
+    internal int ClusterStart;
+    private bool stopIsConsonant;
+    private bool linkedAfterStop;
+
+    internal readonly bool Joins => stopIsConsonant && linkedAfterStop;
+
+    /// <summary>
+    /// Adds the text element [<paramref name="start"/>, <paramref name="end"/>),
+    /// cut into code points from the end, as the backward read cuts them.
+    /// </summary>
+    internal void Take(string text, int start, int end)
     {
-      return false;
-    }
+      var points = new List<int>();
+      var at = end;
 
-    var at = boundary;
-    var linked = false;
-
-    while (at > clusterStart)
-    {
-      var start = at - (at - 1 > clusterStart && char.IsLowSurrogate(text[at - 1]) &&
-          char.IsHighSurrogate(text[at - 2]) ? 2 : 1);
-      var code = CodePointAt(text, start);
-
-      if (InRanges(ConjunctLinkers, code))
+      while (at > start)
       {
-        linked = true;
-        at = start;
-
-        continue;
+        at -= at - 1 > ClusterStart && char.IsLowSurrogate(text[at - 1]) &&
+            char.IsHighSurrogate(text[at - 2]) ? 2 : 1;
+        points.Add(at);
       }
 
-      // Anything else inside the character is an extender, and it keeps the
-      // conjunct only when it is an InCB=Extend one.
-      if (start > clusterStart && !InRanges(ConjunctBreakers, code))
+      for (var i = points.Count - 1; i >= 0; i--)
       {
-        at = start;
+        var code = CodePointAt(text, points[i]);
 
-        continue;
+        if (InRanges(ConjunctLinkers, code))
+        {
+          linkedAfterStop = true;
+        }
+        else if (points[i] == ClusterStart || InRanges(ConjunctBreakers, code))
+        {
+          stopIsConsonant = InRanges(ConjunctConsonants, code);
+          linkedAfterStop = false;
+        }
       }
-
-      return linked && InRanges(ConjunctConsonants, code);
     }
-
-    return false;
   }
 
   /// <summary>Whether <paramref name="ranges"/> holds <paramref name="code"/>.</summary>

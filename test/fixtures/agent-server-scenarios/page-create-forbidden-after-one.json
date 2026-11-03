@@ -1,0 +1,52 @@
+{
+  "name": "page-create-forbidden-after-one",
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "create": [
+    "host-1",
+    null
+  ],
+  "host": {
+    "created": [
+      "host-1"
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "a"
+            }
+          },
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "b"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "ORPHANED_SIDE_EFFECT",
+        "saved": false,
+        "result": {
+          "/error/details/cause/code": "FORBIDDEN",
+          "/error/details/orphaned/0/prepared/pageId": "host-1"
+        }
+      }
+    }
+  ]
+}

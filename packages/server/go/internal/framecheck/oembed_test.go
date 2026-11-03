@@ -21,6 +21,9 @@ func TestOEmbedAnswersMatchTheCSharpFixture(t *testing.T) {
 			Name       string  `json:"name"`
 			JSON       *string `json:"json"`
 			JSONBase64 string  `json:"jsonBase64"`
+			// Set where C# writes a host a browser may decode to a refused
+			// one. Go drops the thumbnail; C# is still to be fixed.
+			GoDrops string `json:"goDropsPendingCSharpFix"`
 		} `json:"cases"`
 		Answers []struct {
 			Title        *string `json:"title"`
@@ -57,6 +60,9 @@ func TestOEmbedAnswersMatchTheCSharpFixture(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := f.Answers[i]
+		if c.GoDrops != "" {
+			want.ThumbnailURL, want.Wire = nil, ""
+		}
 		got := ParseOEmbed(body)
 		wire := ""
 		if !got.Empty() {

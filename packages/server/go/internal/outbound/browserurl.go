@@ -60,15 +60,32 @@ func publicHost(u *dotnet.URI) (string, bool) {
 	case "Dns":
 		name := u.IdnHost
 		dot := strings.LastIndexByte(name, '.')
-		// .NET's IdnHost throws when the mapped name holds a URL delimiter,
-		// as "a／b" mapping to "a/b"; C# then drops the URL.
-		if strings.ContainsAny(name, `#/:?@[\]`) || dot < 0 || dot == len(name)-1 || strings.HasSuffix(name, ".localhost") ||
+		if !plainName(name) || dot < 0 || dot == len(name)-1 || strings.HasSuffix(name, ".localhost") ||
 			'0' <= name[dot+1] && name[dot+1] <= '9' {
 			return "", false
 		}
 		return name, true
 	}
 	return "", false
+}
+
+// plainName allows only letters, digits, '-', '_' and '.', with no label
+// starting with '-' or '_'. A fullwidth character can map to a URL
+// delimiter ("a／b" to "a/b", where .NET's IdnHost throws) or to '%', and a
+// browser percent-decodes a host: "127.0.0.％31" loads 127.0.0.1. .NET
+// reads a label starting with '-' or '_' as a Basic host and drops it.
+// C# BrowserUrl still writes the '%' forms; frame-check-oembed.json marks
+// them.
+func plainName(name string) bool {
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		start := i == 0 || name[i-1] == '.'
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '.' ||
+			(c == '-' || c == '_') && !start) {
+			return false
+		}
+	}
+	return true
 }
 
 // hasEncodedControl finds %00-%1F, %7F or a C1 control in UTF-8

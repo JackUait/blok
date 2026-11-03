@@ -43,7 +43,8 @@ export function isOwnHostLink(url: string, ownHosts: readonly string[] | undefin
  * one, on dot boundaries. A `*.` wildcard counts as its bare suffix.
  */
 function isOwnSiteRelated(hostname: string, ownHosts: readonly string[]): boolean {
-  const host = hostname.toLowerCase();
+  // `new URL` keeps a trailing dot, which names the same host.
+  const host = hostname.toLowerCase().replace(/\.$/, '');
 
   return ownHosts.some((pattern) => {
     const own = pattern.toLowerCase().replace(/^\*\./, '');

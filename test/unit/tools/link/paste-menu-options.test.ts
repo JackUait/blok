@@ -157,6 +157,10 @@ describe('buildPasteMenuOptions — safe generic embed', () => {
     expect(offersEmbed('https://corp.example/doc', own)).toBe(false);
   });
 
+  it('offers no generic embed for the own site written with a trailing dot', () => {
+    expect(offersEmbed('https://app.example.com./doc', { allowGenericEmbed: true, ownHosts: ['app.example.com'] })).toBe(false);
+  });
+
   it('still offers a generic embed for a host that only shares a suffix with the own site', () => {
     const own = { allowGenericEmbed: true, ownHosts: ['example.com'] };
 

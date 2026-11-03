@@ -66,8 +66,7 @@ func (s *targetStream) Read(p []byte) (int, error) {
 		if s.err != nil {
 			err := s.err
 			s.err = nil
-			var netErr net.Error
-			if !errors.As(err, &netErr) || !netErr.Timeout() {
+			if !isTimeout(err) {
 				// The stream ends: hand on a partial line as it came.
 				s.state = streamPass
 				if len(s.in) > 0 {
@@ -86,6 +85,11 @@ func (s *targetStream) Read(p []byte) (int, error) {
 	n := copy(p, s.out)
 	s.out = s.out[n:]
 	return n, nil
+}
+
+func isTimeout(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
 // step moves what it can from in to out. It reports whether it did anything.
@@ -112,7 +116,9 @@ func (s *targetStream) step() bool {
 		return true
 	}
 	if s.state == streamLine && s.afterPost {
-		if len(s.in) < 4 && s.err == nil {
+		// A timeout is net/http's aborted background read, not the end:
+		// the CR/LF to skip may still come.
+		if len(s.in) < 4 && (s.err == nil || isTimeout(s.err)) {
 			return false
 		}
 		s.afterPost = false

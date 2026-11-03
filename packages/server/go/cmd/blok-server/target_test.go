@@ -196,7 +196,11 @@ func (s *stutter) Read(p []byte) (int, error) {
 	if part == "" {
 		return 0, timeoutError{}
 	}
-	return copy(p, part), nil
+	n := copy(p, part)
+	if n < len(part) {
+		s.parts = append([]string{part[n:]}, s.parts...)
+	}
+	return n, nil
 }
 
 // net/http aborts its background read with a past deadline. The error must
@@ -334,9 +338,7 @@ func TestTheHeadLimitIsTheSameForAnUnparsedTarget(t *testing.T) {
 	}
 }
 
-// FuzzTheStreamFollowsNetHTTP reads the rewritten stream the way net/http's
-// conn loop does. Every request it parses must match the queue in order, and
-// every changed byte must sit on one of those request lines.
+// FuzzTheStreamFollowsNetHTTP checks the stream on input it reads whole.
 func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add("POST /a%zz HTTP/1.1\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
 	f.Add("GET /a HTTP/1.1\r\nUpgrade: x\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
@@ -349,53 +351,99 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 		if err != nil || len(out) != len(in) {
 			t.Fatalf("%q: %d bytes, %v", in, len(out), err)
 		}
-		source := bytes.NewReader(out)
-		reader := bufio.NewReader(source)
-		consumed := func() int { return len(out) - source.Len() - reader.Buffered() }
-		onLine := make([]bool, len(out))
-		// net/http closes the connection on the first head it refuses, so
-		// nothing from there on is read as HTTP.
-		stop := len(out)
-		lastPost := false
-		for {
-			if lastPost {
-				peek, _ := reader.Peek(4)
-				for _, b := range peek {
-					if b != '\r' && b != '\n' {
-						break
-					}
-					_, _ = reader.ReadByte()
-				}
-			}
-			start := consumed()
-			request, err := http.ReadRequest(reader)
-			if err != nil {
-				stop = start
-				break
-			}
-			end := start + bytes.IndexByte(out[start:], '\n')
-			for i := start; i <= end; i++ {
-				onLine[i] = true
-			}
-			entry, ok := stream.pop()
-			if !ok || entry.sent != request.RequestURI {
-				t.Fatalf("%q: net/http read %q, the queue had %q", in, request.RequestURI, entry.sent)
-			}
-			if request.Method == "CONNECT" || request.Method == "PRI" || len(request.TransferEncoding) > 0 ||
-				request.Header.Get("Upgrade") != "" || strings.Contains(strings.ToLower(request.Header.Get("Connection")), "upgrade") {
-				break
-			}
-			if _, err := io.Copy(io.Discard, request.Body); err != nil {
-				break
-			}
-			lastPost = request.Method == "POST"
-		}
-		for i := range out {
-			if out[i] != in[i] && !onLine[i] && i < stop {
-				t.Fatalf("%q: byte %d changed off a request line: %q", in, i, out)
-			}
-		}
+		checkTheStreamFollowsNetHTTP(t, in, out, stream)
 	})
+}
+
+// FuzzTheStreamFollowsNetHTTPThroughTimeouts cuts the input into pieces with
+// a timeout after each, the way net/http aborts its background read.
+func FuzzTheStreamFollowsNetHTTPThroughTimeouts(f *testing.F) {
+	f.Add("POST /a%zz HTTP/1.1\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n", []byte{30, 5, 2}, uint8(7))
+	f.Add("GET /a HTTP/1.1\r\n\r\nGET /b%zz HTTP/1.1\r\nX: y\r\n\r\n", []byte{3, 17, 1}, uint8(1))
+	f.Add("POST /c HTTP/1.1\r\nContent-Length: 1\r\n\r\nz\r\nGET /d%zz HTTP/1.1\r\n\r\n", []byte{40, 1}, uint8(3))
+	f.Add("POST /000 HTTP/0.0\r\nContent-Length:07 \n\r\n0000000\n0 * HTTP/0.0\n\n", []byte("00"), uint8(7))
+	f.Fuzz(func(t *testing.T, in string, cuts []byte, size uint8) {
+		var pieces []string
+		rest := in
+		for _, c := range cuts {
+			if n := int(c); n > 0 && n < len(rest) {
+				pieces, rest = append(pieces, rest[:n], ""), rest[n:]
+			}
+		}
+		if rest != "" {
+			pieces = append(pieces, rest)
+		}
+		stream := &targetStream{src: &stutter{parts: pieces}}
+		var out []byte
+		buffer := make([]byte, max(int(size), 1))
+		for {
+			n, err := stream.Read(buffer)
+			out = append(out, buffer[:n]...)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil && !isTimeout(err) {
+				t.Fatalf("%q: %v", in, err)
+			}
+		}
+		if len(out) != len(in) {
+			t.Fatalf("%q: %d bytes out", in, len(out))
+		}
+		checkTheStreamFollowsNetHTTP(t, in, out, stream)
+	})
+}
+
+// checkTheStreamFollowsNetHTTP reads out the way net/http's conn loop does.
+// Every request it parses must match the queue in order, and every changed
+// byte must sit on one of those request lines.
+func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *targetStream) {
+	t.Helper()
+	source := bytes.NewReader(out)
+	reader := bufio.NewReader(source)
+	consumed := func() int { return len(out) - source.Len() - reader.Buffered() }
+	onLine := make([]bool, len(out))
+	// net/http closes the connection on the first head it refuses, so
+	// nothing from there on is read as HTTP.
+	stop := len(out)
+	lastPost := false
+	for {
+		if lastPost {
+			peek, _ := reader.Peek(4)
+			for _, b := range peek {
+				if b != '\r' && b != '\n' {
+					break
+				}
+				_, _ = reader.ReadByte()
+			}
+		}
+		start := consumed()
+		request, err := http.ReadRequest(reader)
+		if err != nil {
+			stop = start
+			break
+		}
+		end := start + bytes.IndexByte(out[start:], '\n')
+		for i := start; i <= end; i++ {
+			onLine[i] = true
+		}
+		entry, ok := stream.pop()
+		if !ok || entry.sent != request.RequestURI {
+			t.Fatalf("%q: net/http read %q, the queue had %q", in, request.RequestURI, entry.sent)
+		}
+		if request.Method == "CONNECT" || request.Method == "PRI" || len(request.TransferEncoding) > 0 ||
+			request.Header.Get("Upgrade") != "" || strings.Contains(strings.ToLower(request.Header.Get("Connection")), "upgrade") {
+			break
+		}
+		if _, err := io.Copy(io.Discard, request.Body); err != nil {
+			break
+		}
+		lastPost = request.Method == "POST"
+	}
+	for i := range out {
+		if out[i] != in[i] && !onLine[i] && i < stop {
+			t.Fatalf("%q: byte %d changed off a request line: %q", in, i, out)
+		}
+	}
 }
 
 // net/http's one-byte background read takes the next request's first byte
@@ -421,5 +469,93 @@ func TestARequestLineThatTricklesInDuringAHandler(t *testing.T) {
 	answer, _ := io.ReadAll(conn)
 	if !strings.Contains(string(answer), `"/slow"`) || !strings.Contains(string(answer), `"/b%zz\x01"`) {
 		t.Fatalf("got %q", answer)
+	}
+}
+
+// readMarkingTimeouts reads r size bytes at a time and writes "<T>" where a
+// read returned a timeout.
+func readMarkingTimeouts(t *testing.T, r io.Reader, size int) string {
+	t.Helper()
+	var out strings.Builder
+	buffer := make([]byte, size)
+	for {
+		n, err := r.Read(buffer)
+		out.Write(buffer[:n])
+		var netErr net.Error
+		switch {
+		case errors.Is(err, io.EOF):
+			return out.String()
+		case errors.As(err, &netErr) && netErr.Timeout():
+			out.WriteString("<T>")
+		case err != nil:
+			t.Fatalf("after %q: %v", out.String(), err)
+		}
+	}
+}
+
+func queuedSent(stream *targetStream) []string {
+	var sent []string
+	for {
+		entry, ok := stream.pop()
+		if !ok {
+			return sent
+		}
+		sent = append(sent, entry.sent)
+	}
+}
+
+// net/http aborts its background read after a POST with a timeout. That is
+// not the end of input: the CR/LF it skips after a POST may still come, and
+// must not be queued as a request line of its own.
+func TestATimeoutAfterAPostKeepsTheCRLFSkip(t *testing.T) {
+	post := "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz"
+	cases := []struct {
+		name  string
+		parts []string
+	}{
+		{"timeout before the CRLF", []string{post, "", "\r\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n"}},
+		{"timeout inside the CRLF", []string{post, "\r", "", "\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n"}},
+	}
+	want := post + "<T>\r\nGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n"
+	for _, c := range cases {
+		for _, size := range []int{1, 3, 64} {
+			stream := &targetStream{src: &stutter{parts: append([]string(nil), c.parts...)}}
+			got := readMarkingTimeouts(t, stream, size)
+			if queued := queuedSent(stream); fmt.Sprint(queued) != "[/ /c_zz]" {
+				t.Errorf("%s, reads of %d: queued %q", c.name, size, queued)
+			}
+			if got != want {
+				t.Errorf("%s, reads of %d: got %q", c.name, size, got)
+			}
+		}
+	}
+}
+
+// End to end: net/http's abort lands between the POST and its CRLF.
+func TestACRLFAfterAPostOnAKeptAliveConnection(t *testing.T) {
+	address := startHost(t, echoTarget, time.Minute)
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+	reader := bufio.NewReader(conn)
+	_, _ = io.WriteString(conn, "POST /p HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nabcd")
+	response, err := http.ReadResponse(reader, nil)
+	if err != nil || response.StatusCode != 200 {
+		t.Fatalf("POST: %v %v", response, err)
+	}
+	_, _ = io.Copy(io.Discard, response.Body)
+	// net/http writes the answer before it aborts its background read.
+	time.Sleep(50 * time.Millisecond)
+	_, _ = io.WriteString(conn, "\r\nGET /ok HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+	response, err = http.ReadResponse(reader, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(response.Body)
+	if response.StatusCode != 200 || !strings.Contains(string(body), `"/ok"`) {
+		t.Fatalf("GET after the CRLF: %d %q", response.StatusCode, body)
 	}
 }

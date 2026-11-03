@@ -112,7 +112,18 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
       throw Blocked();
     }
 
-    var host = url.IdnHost;
+    string host;
+
+    try
+    {
+      // Throws when the IDN form of the host holds # / : ? @ [ \ ].
+      host = url.IdnHost;
+    }
+    catch (UriFormatException)
+    {
+      throw Blocked();
+    }
+
     var literalAddress =
         url.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6 &&
         IPAddress.TryParse(host, out var parsedAddress)

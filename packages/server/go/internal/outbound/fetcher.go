@@ -174,6 +174,9 @@ func isRedirect(status int) bool {
 // roundTrip sends one GET through a transport that dials only the vetted
 // addresses, uses no proxy, sends no Accept-Encoding and follows nothing.
 func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []netip.Addr) (*http.Response, error) {
+	if !target.Literal.IsValid() && !plainHostName(target.Host) {
+		return nil, fail(Blocked)
+	}
 	dialer := &net.Dialer{}
 	transport := &http.Transport{
 		Proxy:              nil,
@@ -233,6 +236,19 @@ func (f *Fetcher) tlsConfig(target Target) *tls.Config {
 		config.ServerName = target.Host
 	}
 	return config
+}
+
+// plainHostName reports whether host holds only letters, digits, '-', '.'
+// and '_'. .NET's HttpClient refuses any other name before it connects, and
+// Go would parse one like "a%c3%bcb.com" back into a different host.
+func plainHostName(host string) bool {
+	for i := 0; i < len(host); i++ {
+		c := host[i]
+		if !(c == '-' || c == '.' || c == '_' || '0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z') {
+			return false
+		}
+	}
+	return host != ""
 }
 
 func hostHeader(target Target) string {

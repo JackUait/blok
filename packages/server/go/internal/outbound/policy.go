@@ -84,6 +84,11 @@ func (DefaultPolicy) Validate(raw string, base *dotnet.URI) (Target, error) {
 	if url.Port != 80 && url.Port != 443 {
 		return Target{}, fail(Blocked)
 	}
+	// .NET's IdnHost throws when the mapped name holds a URL delimiter, as
+	// "a／b" mapping to "a/b". Go would put a different host on the wire.
+	if url.HostType == "Dns" && strings.ContainsAny(url.IdnHost, `#/:?@[\]`) {
+		return Target{}, fail(Blocked)
+	}
 	target := Target{URL: url, Host: url.IdnHost, Port: url.Port}
 	if url.HostType == "IPv4" || url.HostType == "IPv6" {
 		literal, ok := dotnet.ParseIP(url.IdnHost)

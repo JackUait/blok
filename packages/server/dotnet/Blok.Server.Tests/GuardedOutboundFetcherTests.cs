@@ -189,6 +189,28 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal("/exact", origin.LastRequest?.Target);
   }
 
+  // Go reads these Host values back as another host, so both servers must
+  // refuse them. HttpClient does: "a%c3%bcb.com" and "a(1).com" never send.
+  [Theory]
+  [InlineData("a％ｃ３％ｂｃb.com")]
+  [InlineData("a⑴.com")]
+  public async Task NeverSendsAHostWhoseIdnFormIsNotAPlainName(string host)
+  {
+    await using var origin = new LoopbackOrigin();
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(host, origin.Port, IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]));
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://{host}:{origin.Port}/exact",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
+    Assert.Null(origin.LastRequest);
+  }
+
   [Fact]
   public async Task ConnectsToTheNextValidatedAddressWhenTheFirstIsUnavailable()
   {

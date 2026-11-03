@@ -33,7 +33,7 @@ func (p *fixturePolicy) Validate(raw string, base *dotnet.URI) (Target, error) {
 	if !ok || url.Host != p.host || url.Port != p.port {
 		return Target{}, fail(Blocked)
 	}
-	return Target{URL: url, Host: url.Host, Port: url.Port}, nil
+	return Target{URL: url, Host: url.IdnHost, Port: url.Port}, nil
 }
 
 func (p *fixturePolicy) AddressAllowed(address netip.Addr) bool {
@@ -189,6 +189,24 @@ func TestResolvesOnceAndConnectsToTheExactFirstValidatedAddress(t *testing.T) {
 	// the dial used the vetted address; one dial means no second attempt.
 	if len(dialed) != 1 {
 		t.Fatalf("dialed %v", dialed)
+	}
+}
+
+// Go would read these Host values back as another host ("aüb.com"), and
+// .NET's HttpClient refuses them, so neither server sends them.
+func TestNeverSendsAHostWhoseIDNFormIsNotAPlainName(t *testing.T) {
+	for _, host := range []string{"a％ｃ３％ｂｃb.com", "a⑴.com"} {
+		o := startOrigin(t, "tcp4", "127.0.0.1:0")
+		policy := &fixturePolicy{host: host, port: o.port, allowed: addrs("127.0.0.1")}
+		f := newTestFetcher(policy, &countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
+
+		_, err := f.Get(context.Background(), "http://"+host+":"+strconv.Itoa(o.port)+"/exact", testLimits)
+		if !IsFailure(err, Blocked) {
+			t.Errorf("%s: got %v, want Blocked", host, err)
+		}
+		if o.lastHost != "" {
+			t.Errorf("%s: origin saw Host %q", host, o.lastHost)
+		}
 	}
 }
 

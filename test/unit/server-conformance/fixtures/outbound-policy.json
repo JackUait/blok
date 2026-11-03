@@ -166,7 +166,20 @@
     "https://8.8.8.8/",
     "http://[2606:4700::1111]/",
     "http://example.com/%7Efoo/%2e%2e/bar",
-    " http://example.com/ "
+    " http://example.com/ ",
+    "http://evil.com＠127.0.0.1/",
+    "http://a／b.com/",
+    "http://a：b.com/",
+    "http://a？b.com/",
+    "http://a＃b.com/",
+    "http://a［b.com/",
+    "http://a＼b.com/",
+    "http://a］b.com/",
+    "http://evil﹫127.0.0.1/",
+    "http://a℅b.com/",
+    "http://a⑴.com/",
+    "http://a.com。/",
+    "http://a％ｃ３％ｂｃb.com/"
   ],
   "relative": [
     [
@@ -208,6 +221,10 @@
     [
       "http://example.com/a/b",
       "../../../x?y#z"
+    ],
+    [
+      "http://example.com/a/b",
+      "//evil＠127.0.0.1/"
     ]
   ],
   "answers": {
@@ -556,6 +573,57 @@
         "host": "example.com",
         "port": 80,
         "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://a⑴.com/",
+        "host": "a(1).com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://a.com。/",
+        "host": "a.com.",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://a％ｃ３％ｂｃb.com/",
+        "host": "a%c3%bcb.com",
+        "port": 80,
+        "literal": null
       }
     ],
     "relative": [
@@ -612,6 +680,9 @@
         "host": "example.com",
         "port": 80,
         "literal": null
+      },
+      {
+        "allowed": false
       }
     ]
   }

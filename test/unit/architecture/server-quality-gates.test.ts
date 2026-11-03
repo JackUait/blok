@@ -111,9 +111,6 @@ describe('server quality gates', () => {
     expect(securityRuns).toContain(
       'dotnet restore packages/server/dotnet/Blok.Server.slnx',
     );
-    expect(securityRuns).toContain(
-      'docker build --tag blok-server:ci --file packages/server/Dockerfile .',
-    );
     expect(securityUses).toContain(
       'gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e',
     );
@@ -136,13 +133,25 @@ describe('server quality gates', () => {
     );
     // The sync tests send the sample nonce from RFC 6455 section 1.3.
     expect(gitleaksConfig).toContain('dGhlIHNhbXBsZSBub25jZQ');
-    expect(securityUses.filter(use => use ===
-      'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25'))
-      .toHaveLength(2);
     expect(securitySteps.find(step =>
-      step.name === 'Scan server container image')?.with).toMatchObject({
+      step.name === 'Scan repository vulnerabilities and configuration')?.uses)
+      .toBe('aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25');
+    // The image is built and scanned in Workflow Lint, which is idle for
+    // minutes: Server Security's Go tests need the time.
+    const imageSteps = ci.jobs['workflow-lint']?.steps ?? [];
+    expect(imageSteps.find(step =>
+      step.name === 'Build server container image')?.run).toBe(
+      'docker build --tag blok-server:ci --file packages/server/Dockerfile .',
+    );
+    const imageScan = imageSteps.find(step => step.name === 'Scan server container image');
+    expect(imageScan?.uses).toBe(
+      'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25',
+    );
+    expect(imageScan?.with).toMatchObject({
       'scan-type': 'image',
       'image-ref': 'blok-server:ci',
+      severity: 'HIGH,CRITICAL',
+      'exit-code': '1',
     });
     expect(codeqlUses).toContain(
       'github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370',

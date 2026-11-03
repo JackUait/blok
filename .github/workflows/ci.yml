@@ -120,6 +120,23 @@ jobs:
       - name: Check nested action pins
         run: node scripts/check-action-pins.mjs
 
+      # Here, not in Server Security: this job is done in seconds, and Server
+      # Security's Go tests need the minutes. Still built and scanned on every
+      # push and pull request.
+      - name: Build server container image
+        run: docker build --tag blok-server:ci --file packages/server/Dockerfile .
+
+      - name: Scan server container image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        with:
+          scan-type: image
+          image-ref: blok-server:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: 'false'
+          format: table
+          exit-code: '1'
+
   frontend-coverage:
     name: Frontend Coverage
     needs: [unit-tests]
@@ -276,22 +293,8 @@ jobs:
           format: table
           exit-code: '1'
 
-      - name: Build server container image
-        run: docker build --tag blok-server:ci --file packages/server/Dockerfile .
-
-      - name: Scan server container image
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
-        with:
-          scan-type: image
-          image-ref: blok-server:ci
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: 'false'
-          format: table
-          exit-code: '1'
-
-      # The Go gates live here, not in a job of their own: this job has minutes
-      # to spare, and a new job would take the 20th slot at t=0 on main.
+      # The Go gates live here, not in a job of their own: a new job would take
+      # the 20th slot at t=0 on main.
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 

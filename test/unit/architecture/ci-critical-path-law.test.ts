@@ -399,9 +399,8 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  // The Go gates ride in Server Security, which has minutes to spare, so they
-  // take no extra job slot under the 20-job cap and leave Server Delivery
-  // well under 7 minutes.
+  // The Go gates ride in Server Security, so they take no extra job slot under
+  // the 20-job cap. The container image moved to Workflow Lint to make room.
   it('formats, vets, tests, audits and conformance-tests the Go server beside the security scans', () => {
     const security = getJob(ci, 'server-security');
     const steps = (security.steps ?? []).map(normalizeStep);
@@ -415,8 +414,6 @@ describe('CI critical-path law', () => {
       'Audit NuGet dependencies',
       'Scan committed secrets',
       'Scan repository vulnerabilities and configuration',
-      'Build server container image',
-      'Scan server container image',
     ]);
     expect(steps.slice(goStart)).toEqual([
       setupNodeDependencies,

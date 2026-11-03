@@ -3,6 +3,7 @@ import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
 import { Typo } from "../common/Typo";
 import { assertEditorModulesComplete } from "./assertEditorModules";
+import { safeObjectUrl } from "./safe-object-url";
 import {
   buildEditorSettingsProps,
   DEFAULT_EDITOR_SETTINGS,
@@ -27,11 +28,12 @@ type BlokToolsModule = Record<string, unknown>;
 /**
  * Fake uploader for the media tools: the docs site has no upload backend, so
  * files are kept in-memory as object URLs — enough to try every media block.
+ * safeObjectUrl re-types HTML, SVG and XML so the URL never runs as this page.
  */
 const objectUrlUploader = {
   uploader: {
     uploadByFile: async (file: File) => ({
-      url: URL.createObjectURL(file),
+      url: safeObjectUrl(file),
       fileName: file.name,
       size: file.size,
       mimeType: file.type,

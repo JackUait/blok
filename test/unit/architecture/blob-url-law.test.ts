@@ -106,3 +106,29 @@ describe('Blob URL law', () => {
     ]).toEqual([]);
   });
 });
+
+/**
+ * Hosts copy these uploaders as examples, and the presets package ships to
+ * them, so they follow the same rule as src/.
+ */
+describe('Blob URL law outside src/', () => {
+  const ROOT = resolve(__dirname, '../../..');
+  const SAMPLES = ['index.html', 'docs/src/components/demo/EditorWrapper.tsx'];
+  const PRESETS_DIR = join(ROOT, 'packages/presets/src');
+
+  it('never hands Blok a blob: URL of the raw uploaded file in a sample uploader', () => {
+    const violations = SAMPLES.flatMap((file) => readFileSync(join(ROOT, file), 'utf8').split('\n').flatMap((text, index) => (
+      /\bcreateObjectURL\(\s*file\s*\)/.test(text) ? [`${file}:${index + 1} passes the raw file; re-type it like createSafeObjectUrl`] : []
+    )));
+
+    expect(violations).toEqual([]);
+  });
+
+  it('makes every blob: URL in the presets package through createSafeObjectUrl', () => {
+    const violations = walk(PRESETS_DIR).flatMap((path) => readFileSync(path, 'utf8').split('\n').flatMap((text, index) => (
+      !isCommentLine(text) && /\bcreateObjectURL\b/.test(text) ? [`${relative(ROOT, path)}:${index + 1}`] : []
+    )));
+
+    expect(violations).toEqual([]);
+  });
+});

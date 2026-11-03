@@ -1815,6 +1815,8 @@
     import enMessagesModule from './src/components/i18n/locales/en.json';
     import * as BuiltInTools from './src/tools/index.ts';
     import { slowImageRetries } from './src/playground/slow-image-retry.ts';
+    // Re-types HTML, SVG, XML and unknown files to text/plain, so the blob: URL never runs as this page.
+    import { createSafeObjectUrl } from './src/shared/safe-object-url.ts';
     import { BRAND_MARK_SLUGS, brandMarkSvg } from './src/components/utils/brand-marks.ts';
     const BRAND_MARK_GROUP = 'Brand marks';
     const BRAND_MARK_ICONS = Object.fromEntries(BRAND_MARK_SLUGS.map((slug) => [slug, brandMarkSvg(slug)]));
@@ -1972,7 +1974,7 @@
         config: {
           uploader: {
             uploadByFile: async (file) => ({
-              url: URL.createObjectURL(file),
+              url: createSafeObjectUrl(file),
               fileName: file.name,
               size: file.size,
               mimeType: file.type,
@@ -1985,7 +1987,7 @@
         config: {
           uploader: {
             uploadByFile: async (file) => ({
-              url: URL.createObjectURL(file),
+              url: createSafeObjectUrl(file),
               fileName: file.name,
             }),
           },
@@ -1996,7 +1998,7 @@
         config: {
           uploader: {
             uploadByFile: async (file) => ({
-              url: URL.createObjectURL(file),
+              url: createSafeObjectUrl(file),
               fileName: file.name,
             }),
           },
@@ -5168,7 +5170,7 @@
             config: {
               uploader: {
                 uploadByFile: async (file) => ({
-                  url: URL.createObjectURL(file),
+                  url: createSafeObjectUrl(file),
                   fileName: file.name,
                 }),
               },
@@ -5179,7 +5181,7 @@
             config: {
               uploader: {
                 uploadByFile: async (file) => ({
-                  url: URL.createObjectURL(file),
+                  url: createSafeObjectUrl(file),
                   fileName: file.name,
                 }),
               },
@@ -5190,7 +5192,7 @@
             config: {
               uploader: {
                 uploadByFile: async (file) => ({
-                  url: URL.createObjectURL(file),
+                  url: createSafeObjectUrl(file),
                   fileName: file.name,
                   size: file.size,
                   mimeType: file.type,

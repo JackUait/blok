@@ -1,0 +1,114 @@
+{
+  "name": "room-undo-nothing-to-replay",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "NOTHING_TO_UNDO",
+        "revision": "",
+        "result": {
+          "/error/message": "This session has no step to undo.",
+          "/error/retryable": false
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "NOTHING_TO_REDO",
+        "result": {
+          "/error/message": "This session has no undone step to redo."
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "a",
+              "type": "paragraph",
+              "data": {
+                "text": "first"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-2",
+        "name": "Other"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "NOTHING_TO_UNDO"
+      }
+    }
+  ]
+}

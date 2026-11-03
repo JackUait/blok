@@ -1,0 +1,71 @@
+{
+  "name": "room-unreadable-page-action",
+  "room": {
+    "held": {
+      "broken": {
+        "blocks": "not a list"
+      }
+    }
+  },
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "page.rename",
+            "args": {
+              "id": "pg",
+              "title": "X"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPLY_FAILED",
+        "result": {
+          "/error/message": "The room could not be read. Nothing was written."
+        }
+      },
+      "doc": "broken"
+    }
+  ]
+}

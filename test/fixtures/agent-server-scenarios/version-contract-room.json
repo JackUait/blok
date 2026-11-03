@@ -1,0 +1,62 @@
+{
+  "name": "version-contract-room",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "contract:room",
+      "expect": {
+        "commands": {
+          "history.versions": {
+            "available": true
+          },
+          "history.read": {
+            "available": true
+          },
+          "history.changes": {
+            "available": true
+          },
+          "history.restore": {
+            "available": true
+          }
+        }
+      }
+    },
+    {
+      "run": "contract:plain",
+      "expect": {
+        "commands": {
+          "history.versions": {
+            "unavailableReason": "service"
+          },
+          "history.read": {
+            "unavailableReason": "service"
+          },
+          "history.changes": {
+            "unavailableReason": "service"
+          },
+          "history.restore": {
+            "unavailableReason": "service"
+          }
+        }
+      }
+    }
+  ]
+}

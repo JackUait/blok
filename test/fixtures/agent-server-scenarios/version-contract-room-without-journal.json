@@ -1,0 +1,45 @@
+{
+  "name": "version-contract-room-without-journal",
+  "room": {
+    "journal": false
+  },
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "contract:room",
+      "expect": {
+        "commands": {
+          "history.versions": {
+            "unavailableReason": "service"
+          },
+          "history.read": {
+            "unavailableReason": "service"
+          },
+          "history.changes": {
+            "unavailableReason": "service"
+          },
+          "history.restore": {
+            "unavailableReason": "service"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "name": "room-edit-and-retype-3",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello world"
+            }
+          ]
+        }
+      },
+      {
+        "id": "h",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Head"
+            }
+          ],
+          "level": 2
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "text.format",
+            "args": {
+              "id": "h",
+              "range": {
+                "find": "Head"
+              },
+              "set": {
+                "bold": true
+              }
+            }
+          },
+          {
+            "name": "block.convert",
+            "args": {
+              "id": "h",
+              "type": "paragraph"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "text.format",
+            "args": {
+              "id": "h",
+              "range": {
+                "find": "Head"
+              },
+              "set": {
+                "bold": true
+              }
+            }
+          },
+          {
+            "name": "block.convert",
+            "args": {
+              "id": "h",
+              "type": "paragraph"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "stateMatchesSaved": 0
+      }
+    }
+  ]
+}

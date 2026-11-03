@@ -1,0 +1,48 @@
+{
+  "name": "version-without-history-journal",
+  "room": {
+    "journal": false
+  },
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.versions",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "COMMAND_UNAVAILABLE",
+        "result": {
+          "/error/details/reason": "service"
+        }
+      }
+    }
+  ]
+}

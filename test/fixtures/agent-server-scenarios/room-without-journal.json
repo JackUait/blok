@@ -1,0 +1,90 @@
+{
+  "name": "room-without-journal",
+  "room": {
+    "journal": false
+  },
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Plain"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "revision": "",
+        "state": {
+          "/title": "Plain"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "No"
+            }
+          }
+        ],
+        "expectRevision": "abc:1"
+      },
+      "expect": {
+        "ok": false,
+        "code": "INVALID_ARGS",
+        "revision": "",
+        "state": {
+          "/title": "Plain"
+        },
+        "result": {
+          "/error/message": "This room keeps no journal, so expectRevision cannot be checked. Send the batch without it."
+        }
+      }
+    }
+  ]
+}

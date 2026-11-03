@@ -1,0 +1,102 @@
+{
+  "name": "version-restore",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.replace",
+            "args": {
+              "id": "p",
+              "with": "Changed"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.restore",
+            "args": {
+              "version": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 1,
+        "revision": "@head",
+        "result": {
+          "/results/0/previous": "{rev:0}",
+          "/revision": "@head"
+        },
+        "state": {
+          "/blocks/0/data/text/0/text": "Hello world",
+          "/blocks/0/lastEditedWith": {
+            "absent": true
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.versions",
+            "args": {
+              "group": 1
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "result": {
+          "/results/0/versions/0/actors": [
+            "agent-cs"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "name": "room-undo-with-args-takes-the-edit-path",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "a",
+              "type": "paragraph",
+              "data": {
+                "text": "Agent"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {
+              "steps": 1
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "INVALID_ARGS",
+        "committed": 0
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {},
+            "ref": "u"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "committed": 0
+      }
+    }
+  ]
+}

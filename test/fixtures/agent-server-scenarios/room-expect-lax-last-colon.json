@@ -1,0 +1,58 @@
+{
+  "name": "room-expect-lax-last-colon",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Lax"
+            }
+          }
+        ],
+        "expectRevision": "a:{lineage}:0"
+      },
+      "expect": {
+        "ok": false,
+        "code": "STALE",
+        "committed": 0
+      }
+    }
+  ]
+}

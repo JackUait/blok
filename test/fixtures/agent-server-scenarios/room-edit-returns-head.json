@@ -1,0 +1,81 @@
+{
+  "name": "room-edit-returns-head",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.format",
+            "args": {
+              "id": "p",
+              "range": {
+                "find": "world"
+              },
+              "set": {
+                "bold": true
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": false,
+        "revision": "@head",
+        "committed": 1,
+        "result": {
+          "/revision": "@head"
+        },
+        "state": {
+          "/blocks/0/lastEditedBy": "agent-cs",
+          "/blocks/0/data/text": [
+            {
+              "text": "Hello "
+            },
+            {
+              "text": "world",
+              "marks": {
+                "bold": true
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

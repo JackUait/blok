@@ -1,0 +1,134 @@
+{
+  "name": "version-list-read-changes",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.replace",
+            "args": {
+              "id": "p",
+              "with": "Changed"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.versions",
+            "args": {
+              "group": 1
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 0,
+        "result": {
+          "/results/0/versions/0/version": "{rev:0}",
+          "/results/0/versions/0/actors": [
+            "agent-cs"
+          ]
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.read",
+            "args": {
+              "version": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "result": {
+          "/results/0/version": "{lineage}:0",
+          "/results/0/blocks/0/text": "Hello world",
+          "/results/0/revision": {
+            "absent": true
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.changes",
+            "args": {
+              "from": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 0,
+        "state": {
+          "/blocks/0/data/text/0/text": "Changed"
+        },
+        "result": {
+          "/results/0/changed": {
+            "length": 1
+          },
+          "/results/0/changed/0/id": "p",
+          "/results/0/changed/0/before/text": "Hello world",
+          "/results/0/changed/0/after/text": "Changed",
+          "/results/0/added": {
+            "length": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Agent;
+using Blok.Server.Collab;
 using Blok.Server.Runtime;
+using Blok.Server.Tests.Collab;
 using Blok.Server.Tests.Yjs;
 using Xunit;
 
@@ -19,12 +21,24 @@ namespace Blok.Server.Tests.Agent;
 /// <item><c>times</c> repeats a step; <c>{i}</c> in the batch's strings is the repeat index.</item>
 /// <item>Expected pointer values: a JSON value, <c>{"absent":true}</c> or <c>{"length":n}</c>.</item>
 /// </list>
+/// A scenario with <c>room</c> runs on a live room (real converter, fake journal unless
+/// <c>room.journal</c> is false), and every run uses the executor over it:
+/// <list type="bullet">
+/// <item><c>room.doc</c> (default <c>agent-room</c>) holds <c>seed</c>; <c>room.held</c> holds more documents.</item>
+/// <item><c>run</c> also takes <c>room</c> (<c>doc</c>, <c>actor</c>), <c>peer</c> (an /edit body in <c>ops</c>,
+/// written as <c>human-2</c>), <c>reset</c>, <c>purge</c> and <c>restore</c> (<c>version</c>).</item>
+/// <item>Strings take <c>{lineage}</c> (the room's journal lineage) and <c>{rev:N}</c> (step N's revision).</item>
+/// <item>The string <c>@head</c> in an expected value is the room's head after the step. <c>expect.revision</c>
+/// is <c>@head</c> or <c>""</c>; <c>expect.state</c> holds pointers into the room's export;
+/// <c>expect.committed</c> is how far the head sequence moved; <c>expect.blocksUnchanged</c> compares /blocks.</item>
+/// </list>
 /// </summary>
 public sealed class AgentServerScenarioTests
 {
   private const string RelativeRoot = "test/fixtures/agent-server-scenarios";
   private static readonly BlokAgentActor Actor = new("agent-cs", "Server agent", "human-1");
-  private static readonly Lazy<BlokAgentExecutor> Executor = new(() => new BlokAgentExecutor(JintBlokRuntime.FromEmbeddedResource(poolSize: 1)));
+  private static readonly Lazy<JintBlokRuntime> Runtime = new(() => JintBlokRuntime.FromEmbeddedResource(poolSize: 1));
+  private static readonly Lazy<BlokAgentExecutor> StoredExecutor = new(() => new BlokAgentExecutor(Runtime.Value));
   private static readonly string ReadBatch = """{"commands":[{"name":"doc.read","args":{"detail":"outline"}}]}""";
 
   private static string Root => Path.Combine(YjsEngineFixtures.RepositoryRoot, RelativeRoot);
@@ -46,6 +60,9 @@ public sealed class AgentServerScenarioTests
   public async Task MatchesTheScenario(string name)
   {
     var scenario = JsonNode.Parse(File.ReadAllText(Path.Combine(Root, name + ".json")))!.AsObject();
+    await using var live = scenario["room"] is JsonObject roomSpec ? Live.Open(roomSpec, scenario["seed"]!.AsObject()) : null;
+    var executor = live?.Executor ?? StoredExecutor.Value;
+    var revisions = new Dictionary<int, string>();
     var host = new Host(scenario);
     var options = Options(scenario["options"], host);
     var seed = scenario["seed"]!.ToJsonString();
@@ -58,7 +75,7 @@ public sealed class AgentServerScenarioTests
     {
       var step = steps[index]!.AsObject();
       var run = step["run"]!.GetValue<string>();
-      var expect = step["expect"]!.AsObject();
+      var expect = step["expect"] as JsonObject ?? [];
       var times = step["times"]?.GetValue<int>() ?? 1;
 
       for (var repeat = 0; repeat < times; repeat++)
@@ -69,45 +86,87 @@ public sealed class AgentServerScenarioTests
         {
           var contract = run switch
           {
-            "contract:plain" => await Executor.Value.GetContractAsync(options),
-            "contract:session" => await Executor.Value.OpenSession(Actor, options).GetContractAsync(),
-            "contract:room" => await Executor.Value.GetRoomContractAsync(options),
+            "contract:plain" => await executor.GetContractAsync(options),
+            "contract:session" => await executor.OpenSession(Actor, options).GetContractAsync(),
+            "contract:room" => await executor.GetRoomContractAsync(options),
             _ => throw new InvalidDataException(run),
           };
           CheckContract(where, JsonNode.Parse(contract)!.AsObject(), expect);
           continue;
         }
 
-        var document = Document(step["document"]!, seed, last, byStep);
-        var batch = Indexed(step["batch"]!, repeat).ToJsonString();
-        var execution = run == "plain"
-            ? await Executor.Value.ExecuteAsync(document, batch, Actor, options)
-            : await Session(sessions, run, options).ExecuteAsync(document, batch);
-        var result = JsonNode.Parse(execution.ResultJson)!.AsObject();
+        var current = live is null ? null : await live.HeadAsync(live.DocId);
+        string Fill(string text) => live is null ? text : Live.Fill(text, revisions, current!);
 
-        if (expect["ok"] is JsonNode ok)
+        if (run is "peer" or "reset" or "purge" or "restore")
+        {
+          await live!.HostStepAsync(where, run, step, Fill);
+          continue;
+        }
+
+        var doc = step["doc"]?.GetValue<string>() ?? live?.DocId;
+        var beforeHead = live is null ? null : await live.HeadAsync(doc!);
+        var beforeBlocks = live is null ? null : (await live.ExportAsync(doc!))?["blocks"]?.ToJsonString();
+        var batch = Fill(Indexed(step["batch"]!, repeat).ToJsonString());
+        var execution = run switch
+        {
+          "room" => await executor.ExecuteInRoomAsync(doc!, batch, StepActor(step), options),
+          "plain" => await executor.ExecuteAsync(Document(step["document"]!, seed, last, byStep), batch, Actor, options),
+          _ => await Session(sessions, executor, run, options).ExecuteAsync(Document(step["document"]!, seed, last, byStep), batch),
+        };
+        var result = JsonNode.Parse(execution.ResultJson)!.AsObject();
+        revisions[index] = execution.Revision;
+        var head = live is null ? null : await live.HeadAsync(doc!);
+
+        var want = live is null ? expect : JsonNode.Parse(Fill(expect.ToJsonString()))!.AsObject();
+
+        if (want["ok"] is JsonNode ok)
         {
           Assert.True(ok.GetValue<bool>() == result["ok"]!.GetValue<bool>(), $"{where}: ok\n{execution.ResultJson}");
         }
-        if (expect["code"] is JsonNode code)
+        if (want["code"] is JsonNode code)
         {
           Assert.True(code.GetValue<string>() == result["error"]?["code"]?.GetValue<string>(), $"{where}: code\n{execution.ResultJson}");
         }
-        if (expect["saved"] is JsonNode saved)
+        if (want["saved"] is JsonNode saved)
         {
           Assert.True(saved.GetValue<bool>() == execution.DocumentJson is not null, $"{where}: saved\n{execution.ResultJson}");
         }
         Assert.Equal(result["revision"]?.GetValue<string>() ?? string.Empty, execution.Revision);
-        CheckPointers($"{where} result", result, expect["result"] as JsonObject);
-        if (expect["document"] is JsonObject pointers)
+        CheckPointers($"{where} result", result, Headed(want["result"]?.DeepClone(), head) as JsonObject);
+        if (want["document"] is JsonObject pointers)
         {
           CheckPointers($"{where} document", JsonNode.Parse(execution.DocumentJson!)!, pointers);
         }
-        if (expect["revisionEqualsRead"]?.GetValue<bool>() == true)
+        if (want["revisionEqualsRead"]?.GetValue<bool>() == true)
         {
-          var read = await Executor.Value.ExecuteAsync(document, ReadBatch, Actor);
+          var read = await executor.ExecuteAsync(Document(step["document"]!, seed, last, byStep), ReadBatch, Actor);
 
           Assert.Equal(read.Revision, execution.Revision);
+        }
+        if (want["revision"] is JsonNode wantRevision)
+        {
+          Assert.True((wantRevision.GetValue<string>() == "@head" ? head : wantRevision.GetValue<string>()) == execution.Revision, $"{where}: revision {execution.Revision}, head {head}\n{execution.ResultJson}");
+        }
+        if (want["committed"] is JsonNode committed)
+        {
+          Assert.True(committed.GetValue<int>() == Sequence(head) - Sequence(beforeHead), $"{where}: committed {Sequence(head) - Sequence(beforeHead)}\n{execution.ResultJson}");
+        }
+        if (want["blocksUnchanged"]?.GetValue<bool>() == true)
+        {
+          Assert.True(beforeBlocks == (await live!.ExportAsync(doc!))?["blocks"]?.ToJsonString(), $"{where}: the blocks changed\n{execution.ResultJson}");
+        }
+        if (want["state"] is JsonObject statePointers)
+        {
+          var stateDoc = want["stateDoc"]?.GetValue<string>() ?? doc!;
+          CheckPointers($"{where} state", (await live!.ExportAsync(stateDoc))!, Headed(statePointers.DeepClone(), head)!.AsObject());
+        }
+        if (want["stateMatchesSaved"] is JsonNode savedStep)
+        {
+          var ids = new HashSet<string>(scenario["seed"]!["blocks"]!.AsArray().Select(block => block!["id"]!.GetValue<string>()), StringComparer.Ordinal);
+          Assert.Equal(
+              AgentParityNormalizer.Stable(AgentParityNormalizer.Normalize(JsonNode.Parse(byStep[savedStep.GetValue<int>()])!.AsObject(), ids)),
+              AgentParityNormalizer.Stable(AgentParityNormalizer.Normalize((await live!.ExportAsync(doc!))!, ids)));
         }
 
         if (execution.DocumentJson is { } next)
@@ -121,11 +180,50 @@ public sealed class AgentServerScenarioTests
     host.Check(name, scenario["host"] as JsonObject);
   }
 
-  private static BlokAgentSession Session(Dictionary<string, BlokAgentSession> sessions, string run, BlokAgentOptions? options)
+  private static BlokAgentActor StepActor(JsonObject step) => step["actor"] is JsonObject actor
+      ? new BlokAgentActor(actor["id"]!.GetValue<string>(), actor["name"]!.GetValue<string>(), actor["onBehalfOf"]?.GetValue<string>())
+      : Actor;
+
+  private static long Sequence(string? head) =>
+      string.IsNullOrEmpty(head) ? 0 : long.Parse(head[(head.LastIndexOf(':') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+
+  /// <summary>Puts the room head in place of every "@head" string.</summary>
+  private static JsonNode? Headed(JsonNode? node, string? head)
+  {
+    switch (node)
+    {
+      case JsonObject obj:
+        foreach (var key in obj.Select(pair => pair.Key).ToList())
+        {
+          if (Headed(obj[key], head) is var replaced && !ReferenceEquals(replaced, obj[key]))
+          {
+            obj[key] = replaced;
+          }
+        }
+
+        return obj;
+      case JsonArray array:
+        for (var i = 0; i < array.Count; i++)
+        {
+          if (Headed(array[i], head) is var replaced && !ReferenceEquals(replaced, array[i]))
+          {
+            array[i] = replaced;
+          }
+        }
+
+        return array;
+      case JsonValue value when value.TryGetValue<string>(out var text) && text == "@head":
+        return JsonValue.Create(head ?? string.Empty);
+      default:
+        return node;
+    }
+  }
+
+  private static BlokAgentSession Session(Dictionary<string, BlokAgentSession> sessions, BlokAgentExecutor executor, string run, BlokAgentOptions? options)
   {
     if (!sessions.TryGetValue(run, out var session))
     {
-      session = Executor.Value.OpenSession(Actor, options);
+      session = executor.OpenSession(Actor, options);
       sessions[run] = session;
     }
 
@@ -201,6 +299,10 @@ public sealed class AgentServerScenarioTests
       if (want is JsonObject spec && spec["absent"] is not null)
       {
         Assert.False(exists, $"{where}: {pointer} should be absent, got {got?.ToJsonString()}");
+      }
+      else if (want is JsonObject spec2 && spec2["present"] is not null)
+      {
+        Assert.True(exists && got is not null, $"{where}: {pointer} should be present");
       }
       else if (want is JsonObject length && length["length"] is JsonNode count)
       {
@@ -348,5 +450,101 @@ public sealed class AgentServerScenarioTests
 
       return ValueTask.FromResult(pageId);
     }
+  }
+
+  /// <summary>A live room for a scenario: the real converter, fake stores, and an executor over them.</summary>
+  private sealed class Live : IAsyncDisposable
+  {
+    private Live(string docId, CollabRoomManager manager, BlokAgentExecutor executor)
+    {
+      DocId = docId;
+      Manager = manager;
+      Executor = executor;
+    }
+
+    internal string DocId { get; }
+
+    internal CollabRoomManager Manager { get; }
+
+    internal BlokAgentExecutor Executor { get; }
+
+    internal static Live Open(JsonObject spec, JsonObject seed)
+    {
+      var docId = spec["doc"]?.GetValue<string>() ?? "agent-room";
+      var endpoint = new FakeDocEndpoint();
+      endpoint.HoldsDocument(docId, (JsonObject)seed.DeepClone());
+
+      foreach (var (held, document) in spec["held"] as JsonObject ?? [])
+      {
+        endpoint.HoldsDocument(held, (JsonObject)document!.DeepClone());
+      }
+
+      var converter = new CollabDocConverter(TimeProvider.System, new RuntimeRichTextHtmlReader(Runtime.Value));
+      var manager = new CollabRoomManager(
+          new FakeWorkingSetStore(),
+          endpoint,
+          converter,
+          new CollabRoomOptions(),
+          TimeProvider.System,
+          operationStore: spec["journal"]?.GetValue<bool>() == false ? null : new FakeCollabOperationStore());
+
+      return new Live(docId, manager, new BlokAgentExecutor(Runtime.Value, manager, converter));
+    }
+
+    internal async Task<string> HeadAsync(string docId)
+    {
+      var state = await Manager.StateAsync(docId);
+
+      return state.Head is { } head ? $"{head.Tag.Lineage}:{head.ServerSequence}" : string.Empty;
+    }
+
+    internal async Task<JsonObject?> ExportAsync(string docId)
+    {
+      var state = await Manager.StateAsync(docId);
+
+      return state.Status == CollabStateStatus.Ready ? JsonNode.Parse(state.Json)!.AsObject() : null;
+    }
+
+    internal static string Fill(string text, Dictionary<int, string> revisions, string head)
+    {
+      if (text.Contains("{lineage}", StringComparison.Ordinal))
+      {
+        text = text.Replace("{lineage}", head[..head.LastIndexOf(':')], StringComparison.Ordinal);
+      }
+
+      return System.Text.RegularExpressions.Regex.Replace(text, @"\{rev:(\d+)\}",
+          match => revisions[int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)]);
+    }
+
+    internal async Task HostStepAsync(string where, string run, JsonObject step, Func<string, string> fill)
+    {
+      var docId = step["doc"]?.GetValue<string>() ?? DocId;
+
+      switch (run)
+      {
+        case "peer":
+          var ops = CollabEditOps.Parse(System.Text.Encoding.UTF8.GetBytes(fill(step["ops"]!.ToJsonString())));
+          var edit = await Manager.EditAsync(docId, ops, Guid.NewGuid().ToString("N"), Guid.NewGuid().ToByteArray(), "human-2");
+
+          Assert.True(edit.Status == CollabEditStatus.Applied, $"{where}: peer edit {edit.Status}");
+          break;
+        case "reset":
+          await Manager.ResetAsync(docId);
+          break;
+        case "purge":
+          await Manager.PurgeDocumentAsync(docId, _ => ValueTask.FromResult(true));
+          break;
+        case "restore":
+          var version = fill(step["version"]!.GetValue<string>());
+          var colon = version.LastIndexOf(':');
+          var restored = await Manager.RestoreAsync(docId, version[..colon],
+              ulong.Parse(version[(colon + 1)..], System.Globalization.CultureInfo.InvariantCulture), Guid.NewGuid().ToString("N"), "human-2");
+
+          Assert.True(restored.Edit?.Status == CollabEditStatus.Applied, $"{where}: restore {restored.History} {restored.Edit?.Status}");
+          break;
+      }
+    }
+
+    public ValueTask DisposeAsync() => Manager.DrainAsync();
   }
 }

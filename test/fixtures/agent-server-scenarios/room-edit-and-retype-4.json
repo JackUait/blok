@@ -1,0 +1,106 @@
+{
+  "name": "room-edit-and-retype-4",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "Hello world"
+            }
+          ]
+        }
+      },
+      {
+        "id": "h",
+        "type": "header",
+        "data": {
+          "text": [
+            {
+              "text": "Head"
+            }
+          ],
+          "level": 2
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": "@seed",
+      "batch": {
+        "commands": [
+          {
+            "name": "text.insert",
+            "args": {
+              "id": "p",
+              "at": 0,
+              "text": "> "
+            }
+          },
+          {
+            "name": "block.convert",
+            "args": {
+              "id": "p",
+              "type": "quote"
+            }
+          },
+          {
+            "name": "text.delete",
+            "args": {
+              "id": "p",
+              "range": {
+                "start": 0,
+                "end": 2
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": true
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "text.insert",
+            "args": {
+              "id": "p",
+              "at": 0,
+              "text": "> "
+            }
+          },
+          {
+            "name": "block.convert",
+            "args": {
+              "id": "p",
+              "type": "quote"
+            }
+          },
+          {
+            "name": "text.delete",
+            "args": {
+              "id": "p",
+              "range": {
+                "start": 0,
+                "end": 2
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "stateMatchesSaved": 0
+      }
+    }
+  ]
+}

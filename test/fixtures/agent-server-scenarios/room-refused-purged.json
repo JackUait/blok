@@ -1,0 +1,76 @@
+{
+  "name": "room-refused-purged",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "One"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "purge"
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Two"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPLY_FAILED",
+        "revision": "",
+        "result": {
+          "/error/retryable": false,
+          "/error/details": {
+            "status": "Purged"
+          },
+          "/error/message": "The room refused the edit (Purged). Nothing was written."
+        }
+      }
+    }
+  ]
+}

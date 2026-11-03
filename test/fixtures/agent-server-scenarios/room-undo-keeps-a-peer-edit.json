@@ -1,0 +1,89 @@
+{
+  "name": "room-undo-keeps-a-peer-edit",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.replace",
+            "args": {
+              "id": "p",
+              "with": "Agent"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "peer",
+      "ops": {
+        "ops": [
+          {
+            "op": "update",
+            "id": "q",
+            "data": {
+              "text": "Peer"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/data/text": [
+            {
+              "text": "Hello"
+            }
+          ],
+          "/blocks/1/data/text": [
+            {
+              "text": "Peer"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

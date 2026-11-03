@@ -1,0 +1,140 @@
+{
+  "name": "room-undo-move-and-title",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.move",
+            "args": {
+              "id": "q",
+              "position": {
+                "before": "p"
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/id": "q",
+          "/blocks/1/id": "p"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/id": "p",
+          "/blocks/1/id": "q"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Agent title"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/title": "Agent title"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/title": {
+            "absent": true
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/title": "Agent title"
+        }
+      }
+    }
+  ]
+}

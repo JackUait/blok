@@ -1,0 +1,62 @@
+{
+  "name": "room-expect-malformed-h123",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "expectRevision": "h123",
+        "commands": [
+          {
+            "name": "doc.read",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "INVALID_ARGS",
+        "committed": 0,
+        "revision": "",
+        "result": {
+          "/revision": {
+            "absent": true
+          }
+        }
+      }
+    }
+  ]
+}

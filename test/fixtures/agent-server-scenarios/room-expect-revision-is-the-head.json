@@ -1,0 +1,81 @@
+{
+  "name": "room-expect-revision-is-the-head",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "One"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "revision": "@head"
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Two"
+            }
+          }
+        ],
+        "expectRevision": "{rev:0}"
+      },
+      "expect": {
+        "ok": true,
+        "committed": 1,
+        "state": {
+          "/title": "Two"
+        }
+      }
+    }
+  ]
+}

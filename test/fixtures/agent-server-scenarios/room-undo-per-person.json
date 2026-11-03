@@ -1,0 +1,99 @@
+{
+  "name": "room-undo-per-person",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent",
+        "onBehalfOf": "person-a"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "a",
+              "type": "paragraph",
+              "data": {
+                "text": "For A"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent",
+        "onBehalfOf": "person-b"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "NOTHING_TO_UNDO",
+        "state": {
+          "/blocks": {
+            "length": 3
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent",
+        "onBehalfOf": "person-a"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks": {
+            "length": 2
+          }
+        }
+      }
+    }
+  ]
+}

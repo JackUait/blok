@@ -1,0 +1,79 @@
+{
+  "name": "room-page-rename-writes-a-target-room",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "pages": {
+    "page-2": {
+      "room": "agent-room"
+    }
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": {
+        "from": "@seed",
+        "set": {
+          "/blocks": [
+            {
+              "id": "pg",
+              "type": "page",
+              "data": {
+                "pageId": "page-2"
+              }
+            }
+          ]
+        }
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "page.rename",
+            "args": {
+              "id": "pg",
+              "title": "Roadmap"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "saved": false,
+        "state": {
+          "/title": "Roadmap"
+        }
+      }
+    }
+  ]
+}

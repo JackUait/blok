@@ -1,0 +1,66 @@
+{
+  "name": "room-stale-carries-current",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "expectRevision": "ffffffffffffffffffffffffffffffff:99",
+        "commands": [
+          {
+            "name": "text.insert",
+            "args": {
+              "id": "p",
+              "at": 0,
+              "text": "x"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "STALE",
+        "committed": 0,
+        "result": {
+          "/error/details/revision": "@head",
+          "/error/details/current": {
+            "present": true
+          }
+        }
+      }
+    }
+  ]
+}

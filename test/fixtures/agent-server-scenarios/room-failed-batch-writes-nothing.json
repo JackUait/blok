@@ -1,0 +1,65 @@
+{
+  "name": "room-failed-batch-writes-nothing",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "p"
+            }
+          },
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "missing"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "BLOCK_NOT_FOUND",
+        "committed": 0,
+        "blocksUnchanged": true,
+        "revision": ""
+      }
+    }
+  ]
+}

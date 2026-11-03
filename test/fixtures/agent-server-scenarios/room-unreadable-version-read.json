@@ -1,0 +1,55 @@
+{
+  "name": "room-unreadable-version-read",
+  "room": {
+    "held": {
+      "broken": {
+        "blocks": "not a list"
+      }
+    }
+  },
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.versions",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPLY_FAILED",
+        "revision": "",
+        "result": {
+          "/error/retryable": true,
+          "/error/message": "The room could not be read. Nothing was written."
+        }
+      },
+      "doc": "broken"
+    }
+  ]
+}

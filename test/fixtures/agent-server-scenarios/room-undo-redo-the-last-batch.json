@@ -1,0 +1,137 @@
+{
+  "name": "room-undo-redo-the-last-batch",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "a",
+              "type": "paragraph",
+              "data": {
+                "text": "first"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "b",
+              "type": "paragraph",
+              "data": {
+                "text": "second"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "revision": "@head",
+        "committed": 1,
+        "state": {
+          "/blocks": {
+            "length": 3
+          },
+          "/blocks/2/id": "a"
+        },
+        "result": {
+          "/results": [
+            {}
+          ],
+          "/refs": {},
+          "/changed": {
+            "created": [],
+            "updated": [],
+            "moved": [],
+            "removed": []
+          },
+          "/warnings": []
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks": {
+            "length": 4
+          },
+          "/blocks/3/id": "b"
+        }
+      }
+    }
+  ]
+}

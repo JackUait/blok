@@ -1,0 +1,45 @@
+{
+  "name": "version-stored-has-none",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "plain",
+      "document": {
+        "from": "@seed",
+        "set": {
+          "/blocks": []
+        }
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.versions",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "COMMAND_UNAVAILABLE"
+      }
+    }
+  ]
+}

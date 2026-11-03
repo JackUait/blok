@@ -1,0 +1,95 @@
+{
+  "name": "room-undo-other-document",
+  "room": {
+    "held": {
+      "source-room": {
+        "blocks": [
+          {
+            "id": "pg",
+            "type": "page",
+            "data": {
+              "pageId": "page-2"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "t",
+        "type": "toggle",
+        "data": {
+          "text": "T"
+        },
+        "content": [
+          "k"
+        ]
+      },
+      {
+        "id": "k",
+        "type": "paragraph",
+        "data": {
+          "text": "kid"
+        },
+        "parent": "t"
+      }
+    ]
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "plain"
+  },
+  "pages": {
+    "page-2": {
+      "room": "agent-room"
+    }
+  },
+  "steps": [
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "page.rename",
+            "args": {
+              "id": "pg",
+              "title": "Roadmap"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "doc": "source-room"
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "UNDO_OTHER_DOCUMENT",
+        "result": {
+          "/error/retryable": false
+        }
+      },
+      "doc": "source-room"
+    }
+  ]
+}

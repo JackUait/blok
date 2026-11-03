@@ -1,0 +1,78 @@
+{
+  "name": "version-restore-failed-list",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.replace",
+            "args": {
+              "id": "p",
+              "with": "Changed"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "failListings",
+      "after": 0
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.restore",
+            "args": {
+              "version": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "TOOL_ACTION_FAILED",
+        "committed": 0,
+        "revision": "@head",
+        "result": {
+          "/error/message": "The version history failed: The version history could not be read (Corrupt).",
+          "/error/retryable": false,
+          "/error/path": "/commands/0/args"
+        },
+        "blocksUnchanged": true
+      }
+    }
+  ]
+}

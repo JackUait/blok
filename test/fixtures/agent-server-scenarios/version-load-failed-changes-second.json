@@ -1,0 +1,97 @@
+{
+  "name": "version-load-failed-changes-second",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "One"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.setTitle",
+            "args": {
+              "title": "Two"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "failListings",
+      "after": 1
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.changes",
+            "args": {
+              "from": "{rev:0}",
+              "to": "{rev:1}"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "TOOL_ACTION_FAILED",
+        "committed": 0,
+        "revision": "@head",
+        "result": {
+          "/error/message": "The version history failed: Version \"{rev:1}\" could not be read (Corrupt).",
+          "/error/retryable": false,
+          "/error/path": "/commands/0/args"
+        }
+      }
+    }
+  ]
+}

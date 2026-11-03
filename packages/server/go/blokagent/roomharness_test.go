@@ -108,17 +108,28 @@ func newTestRoom(t *testing.T, noJournal bool, wrap func(invoker) invoker) *test
 // real one.
 func newTestRoomWith(t *testing.T, noJournal bool, wrap func(invoker) invoker, wrapConverter func(*convert.DocConverter) room.Converter) *testRoom {
 	t.Helper()
+	var operations room.OperationStore
+	if !noJournal {
+		operations = newLocalJournal(t)
+	}
+	return newTestRoomOn(t, operations, wrap, wrapConverter)
+}
+
+func newLocalJournal(t *testing.T) room.LocalJournal {
+	t.Helper()
+	store, err := journal.NewStore(t.TempDir(), journal.StoreOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return room.LocalJournal{Store: store}
+}
+
+// newTestRoomOn is rooms over the given journal (nil: none).
+func newTestRoomOn(t *testing.T, operations room.OperationStore, wrap func(invoker) invoker, wrapConverter func(*convert.DocConverter) room.Converter) *testRoom {
+	t.Helper()
 	runtime := sharedExecutor(t).runtime
 	sets := &memorySets{sets: map[string]*workingset.Set{}}
 	docs := &heldDocs{docs: map[string]string{}}
-	var operations room.OperationStore
-	if !noJournal {
-		store, err := journal.NewStore(t.TempDir(), journal.StoreOptions{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		operations = room.LocalJournal{Store: store}
-	}
 	var converter room.Converter = &convert.DocConverter{Now: time.Now, HTML: convert.RuntimeHTMLReader{Runtime: runtime}}
 	if wrapConverter != nil {
 		converter = wrapConverter(converter.(*convert.DocConverter))

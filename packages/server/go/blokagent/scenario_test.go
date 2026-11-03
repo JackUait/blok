@@ -314,7 +314,7 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 						return fillScenario(text, revisions, current)
 					}
 					switch run {
-					case "peer", "reset", "purge", "restore", "drain":
+					case "peer", "reset", "purge", "restore", "drain", "failListings":
 						live.hostStep(t, where, run, step, fill)
 						continue
 					}
@@ -350,6 +350,7 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 					var err error
 					if run == "room" {
 						execution, err = executor.ExecuteInRoom(ctx, doc, batch, stepActor(step), options)
+						live.healListings()
 					} else if run == "plain" {
 						execution, err = executor.Execute(ctx, document, batch, scenarioActor, options)
 					} else {

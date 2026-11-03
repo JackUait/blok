@@ -189,6 +189,25 @@ scen("version-undo-after-restore", VER_SEED, [room(replace("p", "Changed"), {"ok
     room(b(c("history.restore", {"version": "{lineage}:0"})), {"ok": True}),
     room(UNDO, {"ok": False, "code": "NOTHING_TO_UNDO", "committed": 0, "state": {"/blocks/0/data/text/0/text": "Hello world"}})])
 
+# F25, F27: the journal cannot list lineages after "after" more listings
+# (a corrupt store). A read lists once per version, a restore lists, reads the
+# version, then lists again inside the restore.
+def failListings(after): return {"run": "failListings", "after": after}
+scen("version-load-failed-list", VER_SEED, [room(setTitle("One"), {"ok": True}), failListings(0),
+    room(b(c("history.versions", {})), {"ok": False, "code": "TOOL_ACTION_FAILED", "committed": 0, "revision": "@head", "result": {"/error/message": "The version history failed: The version history could not be read (Corrupt).", "/error/retryable": False, "/error/path": "/commands/0/args"}})])
+scen("version-load-failed-read", VER_SEED, [room(setTitle("One"), {"ok": True}), failListings(0),
+    room(b(c("history.read", {"version": "{rev:0}"})), {"ok": False, "code": "TOOL_ACTION_FAILED", "committed": 0, "revision": "@head", "result": {"/error/message": "The version history failed: Version \"{rev:0}\" could not be read (Corrupt).", "/error/retryable": False, "/error/path": "/commands/0/args"}})])
+scen("version-load-failed-changes-second", VER_SEED, [room(setTitle("One"), {"ok": True}), room(setTitle("Two"), {"ok": True}), failListings(1),
+    room(b(c("history.changes", {"from": "{rev:0}", "to": "{rev:1}"})), {"ok": False, "code": "TOOL_ACTION_FAILED", "committed": 0, "revision": "@head", "result": {"/error/message": "The version history failed: Version \"{rev:1}\" could not be read (Corrupt).", "/error/retryable": False, "/error/path": "/commands/0/args"}})])
+scen("version-restore-failed-list", VER_SEED, [room(replace("p", "Changed"), {"ok": True}), failListings(0),
+    room(b(c("history.restore", {"version": "{lineage}:0"})), {"ok": False, "code": "TOOL_ACTION_FAILED", "committed": 0, "revision": "@head", "result": {"/error/message": "The version history failed: The version history could not be read (Corrupt).", "/error/retryable": False, "/error/path": "/commands/0/args"}} | {"blocksUnchanged": True})])
+scen("version-restore-failed-read", VER_SEED, [room(replace("p", "Changed"), {"ok": True}), failListings(1),
+    room(b(c("history.restore", {"version": "{lineage}:0"})), {"ok": False, "code": "TOOL_ACTION_FAILED", "committed": 0, "revision": "@head", "result": {"/error/message": "The version history failed: Version \"{lineage}:0\" could not be read (Corrupt).", "/error/retryable": False, "/error/path": "/commands/0/args"}} | {"blocksUnchanged": True})])
+scen("version-restore-failed-corrupt", VER_SEED, [room(replace("p", "Changed"), {"ok": True}), failListings(2),
+    room(b(c("history.restore", {"version": "{lineage}:0"})), {"ok": False, "code": "TOOL_ACTION_FAILED", "committed": 0, "revision": "", "blocksUnchanged": True,
+        "result": {"/error/message": "The version history failed: the restore could not run (Corrupt).", "/error/retryable": False, "/revision": {"absent": True}, "/error/path": {"absent": True}}}),
+    room(b(c("history.restore", {"version": "{lineage}:0"})), {"ok": True, "committed": 1, "state": {"/blocks/0/data/text/0/text": "Hello world"}})])
+
 # Page pre-create in a room (BlokAgentPageCreateTests).
 EMPTY = {"blocks": []}
 INSERT_PAGE = b(c("block.insert", {"type": "page", "id": "np", "position": "end"}))

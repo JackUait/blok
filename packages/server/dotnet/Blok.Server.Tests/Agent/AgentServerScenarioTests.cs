@@ -26,7 +26,9 @@ namespace Blok.Server.Tests.Agent;
 /// <list type="bullet">
 /// <item><c>room.doc</c> (default <c>agent-room</c>) holds <c>seed</c>; <c>room.held</c> holds more documents.</item>
 /// <item><c>run</c> also takes <c>room</c> (<c>doc</c>, <c>actor</c>), <c>peer</c> (an /edit body in <c>ops</c>,
-/// written as <c>human-2</c>), <c>reset</c>, <c>purge</c>, <c>restore</c> (<c>version</c>) and <c>drain</c>.</item>
+/// written as <c>human-2</c>), <c>reset</c>, <c>purge</c>, <c>restore</c> (<c>version</c>), <c>drain</c> and
+/// <c>failListings</c>: during the next run only, the journal lists lineages <c>after</c> more times, then
+/// every listing throws InvalidDataException (a corrupt store).</item>
 /// <item>Strings take <c>{lineage}</c> (the room's journal lineage) and <c>{rev:N}</c> (step N's revision).</item>
 /// <item>The string <c>@head</c> in an expected value is the room's head after the step. <c>expect.revision</c>
 /// is <c>@head</c> or <c>""</c>; <c>expect.state</c> holds pointers into the room's export;
@@ -98,7 +100,7 @@ public sealed class AgentServerScenarioTests
         var current = live is null ? null : await live.HeadAsync(live.DocId);
         string Fill(string text) => live is null ? text : Live.Fill(text, revisions, current!);
 
-        if (run is "peer" or "reset" or "purge" or "restore" or "drain")
+        if (run is "peer" or "reset" or "purge" or "restore" or "drain" or "failListings")
         {
           await live!.HostStepAsync(where, run, step, Fill);
           continue;
@@ -114,6 +116,7 @@ public sealed class AgentServerScenarioTests
           "plain" => await executor.ExecuteAsync(Document(step["document"]!, seed, last, byStep), batch, Actor, options),
           _ => await Session(sessions, executor, run, options).ExecuteAsync(Document(step["document"]!, seed, last, byStep), batch),
         };
+        live?.HealListings();
         var result = JsonNode.Parse(execution.ResultJson)!.AsObject();
         revisions[index] = execution.Revision;
         var head = live is null ? null : await live.HeadAsync(doc!);
@@ -455,11 +458,14 @@ public sealed class AgentServerScenarioTests
   /// <summary>A live room for a scenario: the real converter, fake stores, and an executor over them.</summary>
   private sealed class Live : IAsyncDisposable
   {
-    private Live(string docId, CollabRoomManager manager, BlokAgentExecutor executor)
+    private readonly FakeCollabOperationStore? journal;
+
+    private Live(string docId, CollabRoomManager manager, BlokAgentExecutor executor, FakeCollabOperationStore? journal)
     {
       DocId = docId;
       Manager = manager;
       Executor = executor;
+      this.journal = journal;
     }
 
     internal string DocId { get; }
@@ -480,15 +486,16 @@ public sealed class AgentServerScenarioTests
       }
 
       var converter = new CollabDocConverter(TimeProvider.System, new RuntimeRichTextHtmlReader(Runtime.Value));
+      var journal = spec["journal"]?.GetValue<bool>() == false ? null : new FakeCollabOperationStore();
       var manager = new CollabRoomManager(
           new FakeWorkingSetStore(),
           endpoint,
           converter,
           new CollabRoomOptions(),
           TimeProvider.System,
-          operationStore: spec["journal"]?.GetValue<bool>() == false ? null : new FakeCollabOperationStore());
+          operationStore: journal);
 
-      return new Live(docId, manager, new BlokAgentExecutor(Runtime.Value, manager, converter));
+      return new Live(docId, manager, new BlokAgentExecutor(Runtime.Value, manager, converter), journal);
     }
 
     internal async Task<string> HeadAsync(string docId)
@@ -534,6 +541,12 @@ public sealed class AgentServerScenarioTests
         case "drain":
           await Manager.DrainAsync();
           break;
+        case "failListings":
+          var left = step["after"]!.GetValue<int>();
+          journal!.FailListings = _ => Interlocked.Decrement(ref left) >= 0
+              ? null
+              : new InvalidDataException("The scenario's journal cannot list lineages.");
+          break;
         case "purge":
           await Manager.PurgeDocumentAsync(docId, _ => ValueTask.FromResult(true));
           break;
@@ -545,6 +558,14 @@ public sealed class AgentServerScenarioTests
 
           Assert.True(restored.Edit?.Status == CollabEditStatus.Applied, $"{where}: restore {restored.History} {restored.Edit?.Status}");
           break;
+      }
+    }
+
+    internal void HealListings()
+    {
+      if (journal is not null)
+      {
+        journal.FailListings = null;
       }
     }
 

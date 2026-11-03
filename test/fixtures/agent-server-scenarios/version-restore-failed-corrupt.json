@@ -1,0 +1,107 @@
+{
+  "name": "version-restore-failed-corrupt",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello world"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Second"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.replace",
+            "args": {
+              "id": "p",
+              "with": "Changed"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "failListings",
+      "after": 2
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.restore",
+            "args": {
+              "version": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "TOOL_ACTION_FAILED",
+        "committed": 0,
+        "revision": "",
+        "blocksUnchanged": true,
+        "result": {
+          "/error/message": "The version history failed: the restore could not run (Corrupt).",
+          "/error/retryable": false,
+          "/revision": {
+            "absent": true
+          },
+          "/error/path": {
+            "absent": true
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.restore",
+            "args": {
+              "version": "{lineage}:0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 1,
+        "state": {
+          "/blocks/0/data/text/0/text": "Hello world"
+        }
+      }
+    }
+  ]
+}

@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 )
@@ -18,13 +20,60 @@ import (
 
 type scenarioRoom struct {
 	*testRoom
-	doc string
+	doc     string
+	journal *failingJournal
+}
+
+// failingJournal is the scenario's journal with the failListings knob.
+type failingJournal struct {
+	room.LocalJournal
+	mu    sync.Mutex
+	armed bool
+	left  int
+}
+
+var (
+	_ room.OperationStore = (*failingJournal)(nil)
+	_ room.HistoryStore   = (*failingJournal)(nil)
+	_ room.PurgeStore     = (*failingJournal)(nil)
+)
+
+func (j *failingJournal) ListLineages(ctx context.Context, docID string) ([]journal.LineageInfo, error) {
+	j.mu.Lock()
+	fail := j.armed && j.left <= 0
+	if j.armed {
+		j.left--
+	}
+	j.mu.Unlock()
+	if fail {
+		return nil, &journal.InvalidDataError{Message: "The scenario's journal cannot list lineages."}
+	}
+	return j.LocalJournal.ListLineages(ctx, docID)
+}
+
+func (j *failingJournal) arm(after int) {
+	j.mu.Lock()
+	j.armed, j.left = true, after
+	j.mu.Unlock()
+}
+
+func (r *scenarioRoom) healListings() {
+	if r != nil && r.journal != nil {
+		r.journal.mu.Lock()
+		r.journal.armed = false
+		r.journal.mu.Unlock()
+	}
 }
 
 func openScenarioRoom(t *testing.T, spec, seed *jsjson.Node) *scenarioRoom {
 	t.Helper()
-	noJournal := lookup(spec, "journal") != nil && lookup(spec, "journal").Kind == jsjson.KindFalse
-	rooms := newTestRoom(t, noJournal, nil)
+	var store *failingJournal
+	var operations room.OperationStore
+	if given := lookup(spec, "journal"); given == nil || given.Kind != jsjson.KindFalse {
+		store = &failingJournal{LocalJournal: newLocalJournal(t)}
+		operations = store
+	}
+	rooms := newTestRoomOn(t, operations, nil, nil)
 	doc := "agent-room"
 	if value, ok := stringOf(lookup(spec, "doc")); ok {
 		doc = value
@@ -38,7 +87,7 @@ func openScenarioRoom(t *testing.T, spec, seed *jsjson.Node) *scenarioRoom {
 			rooms.docs.hold(key.String(), text)
 		}
 	}
-	return &scenarioRoom{testRoom: rooms, doc: doc}
+	return &scenarioRoom{testRoom: rooms, doc: doc, journal: store}
 }
 
 func (r *scenarioRoom) stepDoc(step *jsjson.Node) string {
@@ -155,6 +204,9 @@ func (r *scenarioRoom) hostStep(t *testing.T, where, run string, step *jsjson.No
 		if err := r.manager.Drain(ctx); err != nil {
 			t.Fatalf("%s: %v", where, err)
 		}
+	case "failListings":
+		after, _ := strconv.Atoi(string(lookup(step, "after").Raw()))
+		r.journal.arm(after)
 	case "purge":
 		if _, err := r.manager.Purge(ctx, doc, func(context.Context) (bool, error) { return true, nil }); err != nil {
 			t.Fatalf("%s: %v", where, err)

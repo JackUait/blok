@@ -8,25 +8,27 @@ import { matchesHostPattern } from '../host-pattern';
  * never the bare suffix itself, and matching is done on the hostname parsed by
  * `new URL` — never on the raw string — so `evilfoo.com` can't satisfy
  * `*.foo.com` and a listed hostname buried in a path or query can't match.
+ * An entry may be an https origin (`https://a.com:8443`); see
+ * {@link matchesHostPattern} for what such an entry allows.
  */
 export function isAllowedEmbedOrigin(url: string, patterns: readonly string[] | undefined): boolean {
   if (patterns === undefined || patterns.length === 0) {
     return false;
   }
 
-  const hostname = ((): string | null => {
+  const parsed = ((): URL | null => {
     try {
-      const parsed = new URL(url);
+      const candidate = new URL(url);
 
-      return parsed.protocol === 'https:' ? parsed.hostname : null;
+      return candidate.protocol === 'https:' ? candidate : null;
     } catch {
       return null;
     }
   })();
 
-  if (hostname === null) {
+  if (parsed === null) {
     return false;
   }
 
-  return matchesHostPattern(hostname, patterns);
+  return matchesHostPattern(parsed.hostname, patterns, parsed.port);
 }

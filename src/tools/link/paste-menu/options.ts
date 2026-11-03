@@ -1,5 +1,5 @@
 import { canFrameGeneric } from '../generic-embed-policy';
-import { matchesHostPattern } from '../host-pattern';
+import { matchesDenyHostPattern } from '../host-pattern';
 import { isHttpUrl, matchEmbedService } from '../registry';
 
 /** The four outputs Notion offers for a pasted URL. */
@@ -34,7 +34,7 @@ export function isOwnHostLink(url: string, ownHosts: readonly string[] | undefin
   }
 
   try {
-    return matchesHostPattern(new URL(url).hostname, ownHosts);
+    return matchesDenyHostPattern(new URL(url).hostname, ownHosts);
   } catch {
     return false;
   }

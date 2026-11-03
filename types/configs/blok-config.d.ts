@@ -1089,6 +1089,10 @@ export interface BlokMountOptions {
      * framed; any other generic embed renders as a safe link card instead.
      * `allowGenericEmbed: true` subsumes this list. The host's own site (see
      * `hostAliases`) is never framed, even when listed here.
+     *
+     * An entry may also be an https origin (`https://a.com`, `https://*.a.com`,
+     * `https://a.com:8443`). An origin with a port allows only that port. An
+     * entry with a path, another scheme or a user name allows nothing.
      */
     allowedEmbedOrigins?: string[];
 
@@ -1097,8 +1101,9 @@ export interface BlokMountOptions {
      * or a matching `allowedEmbedOrigins` entry. Same syntax as
      * `allowedEmbedOrigins`: a hostname (`ads.example.com`) or a wildcard
      * (`*.example.com`). A wildcard does not cover the bare domain, so list
-     * both to block a whole site. Entries may be written in Unicode; a
-     * trailing dot, letter case and the port are ignored.
+     * both to block a whole site. Entries may be written in Unicode or as an
+     * origin (`https://ads.example.com:8443/`); a trailing dot, letter case,
+     * the scheme, the port and any path are ignored.
      *
      * Checked at render from this config, never from saved data: a stored
      * generic embed of a blocked host shows as a link card, and the paste menu
@@ -1145,7 +1150,9 @@ export interface BlokMountOptions {
      * patterns (`*.example.com` — any subdomain depth, never the bare suffix).
      * Pasting a link to the own site never offers "Create bookmark". A generic
      * embed of the own site, or of a subdomain or parent domain of it, is never
-     * framed; it renders as a link card.
+     * framed; it renders as a link card. Entries may be written in Unicode or
+     * as an origin (`https://example.com:8443`); a trailing dot, letter case,
+     * the scheme, the port and any path are ignored.
      */
     hostAliases?: string[];
   };

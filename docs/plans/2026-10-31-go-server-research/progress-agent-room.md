@@ -43,6 +43,8 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 - T1 probe re-run and the ledger record corrected (critique.md): `dotnet fsi` prints `{"t":"\uD83D\uDE80\u003Ca\u003E\u0026\u0027\u002B\u00E9"} len=57`. New C# `RoomAgentHistoryTests.AStepCountsItsEscapedJsonText` and Go twin `TestAStepCountsItsEscapedJSONText` pin the room step's char count (59). The session cap was already pinned by host.json (stored lane).
 - Section 5 traps owned by the stored lane, with their oracles (`progress-agent-stored.md`): T1 host.json `the char cap counts escaped UTF-16 units` (+ the room twin above); T5 decision (Go sends what C# sends; no `go-live`); T15 host.json `page action: the target runs with no options…`; T16 `DisableBuiltInComments` + host.json options cases; T19 `formula_limits_test.go`; T21 host.json exact failure bytes.
 - critique.md orphans: `RichTextInput.cs` is collab (done by collab-core); `CollabWorkingSetLaw` and the converter seams are collab; none is in the agent area.
+- Generator now a zero-dep `.mjs` with a freshness test (CI has no Python step), see Scenario source.
+- Sweep: every agent.md row ID (2a-2i, F1-F28, T1-T21, sections 3 and 4) is DONE in this file or in `progress-agent-stored.md`; no OPEN or PARTIAL row is left in either.
 - The cached build error of `Server.AgentExecutor()` (round 1 "known difference") is not observable: it only re-reads `collabRooms.get()`, which already keeps its error, and every error `buildRoomManager` returns comes from the options (S3 client, rich-text fields), so a retry would fail the same way. Decision, not a row.
 
 ## Ledger rows
@@ -136,7 +138,7 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 
 ## Scenario source
 
-`scripts/generate-agent-room-scenarios.py` writes every `room-*`/`version-*` scenario. A rerun leaves git clean (checked this round); nothing checks that automatically. Edit the script, rerun it, then run both readers.
+`scripts/generate-agent-room-scenarios.mjs` writes every `room-*`/`version-*` scenario (round 2: ported from the Python script, which is gone; the port writes all 74 files byte for byte). `test/unit/server-conformance/agent-room-scenarios.freshness.test.ts` fails when a committed file differs or a file is missing or extra (red checked by editing one file). Edit the script, rerun it, then run both readers. The expectations are captured from the C# run, never written by hand.
 
 ## Open for later rounds (none blocks the lane)
 
@@ -147,6 +149,8 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 - C#: `AgentServerScenarioTests` 110/110; `RoomAgentHistoryTests` 2/2; `FullyQualifiedName~Agent` 527/527.
 - Go: `go test -p 2 ./blokagent ./blokserver` ok (scenarios 110/110, room corpus 52/52); `go vet ./...` clean; `gofmt -l` empty.
 - Conformance: `--target go --suite mcp-agent-participant` 5/5. No blok-server left running.
+- `go test -race -p 2 -timeout 60m ./blokagent -run 'TestMatchesTheAgentServerScenarios|TestAStepCountsItsEscapedJSONText|Room|Undo|Lineage'` ok (1332 s), after the harness change and the `failingJournal` mutex.
+- vitest `agent-room-scenarios.freshness.test.ts` 1/1 (red first with one file edited); eslint on the two new files clean.
 - No C# production change this round, so the C# conformance and the `-race` run of round 1 still hold for production code; the Go change is test-only (harness `newTestRoomOn`, `failingJournal`).
 
 ## Runs round 1

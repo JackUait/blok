@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validateAgainst } from '../../../../src/shared/schema/validate';
 import { BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
-import { LINK_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/link';
+import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
 import { describeEmbed } from '../../../../src/shared/tool-descriptions/embed';
 import { createFakeCtx, docOf, FakeFailure } from './fake-ctx';
 
@@ -42,5 +42,20 @@ describe('embed.setUrl', () => {
     expect(validateAgainst(action?.args ?? {}, { url: URL })).toEqual([]);
     expect(validateAgainst(action?.args ?? {}, { url: 'javascript:alert(1)' }).length).toBeGreaterThan(0);
     expect(BUILT_IN_TOOL_RUNTIMES.get('embed')?.actions.setUrl).toBe(LINK_ACTION_HANDLERS.embed.setUrl);
+  });
+});
+
+describe('embed writes from the agent', () => {
+  it('turns a forged script kind on a generic embed into iframe', () => {
+    const data = { service: '', source: 'https://evil.example/x', embed: 'https://evil.example/x', kind: 'script' };
+
+    expect(normalizeEmbed(data)).toMatchObject({ kind: 'iframe' });
+    expect(rejectEmbedWrite(normalizeEmbed(data), ['kind'])).toBeUndefined();
+  });
+
+  it('leaves a generic embed without a kind as it is', () => {
+    const data = { service: '', source: 'https://a.example/x', embed: 'https://a.example/x' };
+
+    expect(normalizeEmbed(data)).toEqual(data);
   });
 });

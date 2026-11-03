@@ -61,11 +61,18 @@ const createEmbed: ToolActionImpl<CreateArgs, undefined, { id: string; childIds:
 
 const sourceOf = (data: Record<string, unknown>): string => typeof data.source === 'string' ? data.source : '';
 
-/** Agent writes only: a source the registry knows decides service, embed and kind. */
+/**
+ * Agent writes only: a source the registry knows decides service, embed and kind.
+ * Any other embed is a frame or a link, never a widget script.
+ */
 export const normalizeEmbed = (data: Record<string, unknown>): Record<string, unknown> => {
   const match = matchEmbedService(sourceOf(data));
 
-  return match === null ? data : { ...data, ...providerFields(match) };
+  if (match !== null) {
+    return { ...data, ...providerFields(match) };
+  }
+
+  return data.kind === undefined || data.kind === 'iframe' ? data : { ...data, kind: 'iframe' };
 };
 
 const URL_FIELDS = ['service', 'source', 'embed'];

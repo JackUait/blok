@@ -95,11 +95,13 @@ function hostnameOf(url: string): string {
  * frame off the provider. Anything else is a generic embed and needs the host
  * opt-in. Unresolvable data yields '' and renders the inert empty state.
  */
-type EmbedRenderMode = 'iframe' | 'link' | 'empty';
+type EmbedRenderMode = 'iframe' | 'script' | 'link' | 'empty';
 
 interface EmbedRenderDecision {
   mode: EmbedRenderMode;
   src: string;
+  /** The registry service the source matched; '' for a generic embed. */
+  service: string;
 }
 
 function resolveEmbedRender(
@@ -115,24 +117,29 @@ function resolveEmbedRender(
     // A registry block whose source no longer matches its claimed service is
     // tampered data — it stays fully inert (no link card either): a clickable
     // card would lend the trusted service's framing to an arbitrary URL.
-    return { mode: src === '' ? 'empty' : 'iframe', src };
+    // The kind comes from the match: a saved `kind` must never pick the script path.
+    if (match === null || src === '') {
+      return { mode: 'empty', src: '', service: '' };
+    }
+
+    return { mode: match.kind === 'script' ? 'script' : 'iframe', src, service };
   }
 
   if (opts.allowGeneric || isAllowedEmbedOrigin(data.embed ?? '', opts.allowedOrigins)) {
     const src = toSafeEmbedSrc(data.embed);
 
     if (src !== '') {
-      return { mode: 'iframe', src };
+      return { mode: 'iframe', src, service: '' };
     }
   }
 
   // Not allowed to frame — degrade to a safe link card so the stored URL
   // stays visible instead of vanishing into the empty state.
   if (data.source !== undefined && isHttpUrl(data.source)) {
-    return { mode: 'link', src: '' };
+    return { mode: 'link', src: '', service: '' };
   }
 
-  return { mode: 'empty', src: '' };
+  return { mode: 'empty', src: '', service: '' };
 }
 
 const DEFAULT_WIDTH = 580;
@@ -310,7 +317,7 @@ export class Embed implements BlockTool {
   private embedSrc(): string {
     const render = this.embedRender();
 
-    return render.mode === 'iframe' ? render.src : '';
+    return render.mode === 'iframe' || render.mode === 'script' ? render.src : '';
   }
 
   public render(): HTMLElement {
@@ -329,7 +336,7 @@ export class Embed implements BlockTool {
       service: this.data.service ?? '',
       source: this.data.source ?? '',
       embed: this.data.embed ?? '',
-      kind: this.data.kind ?? 'iframe',
+      kind: this.embedRender().mode === 'script' ? 'script' : 'iframe',
       width: this.data.width ?? DEFAULT_WIDTH,
       height: this.data.height ?? DEFAULT_HEIGHT,
       ...(this.data.widthPercent !== undefined ? { widthPercent: this.data.widthPercent } : {}),
@@ -427,7 +434,7 @@ export class Embed implements BlockTool {
 
     this.detachResizers();
 
-    const { mode } = this.embedRender();
+    const { mode, service } = this.embedRender();
 
     // A generic embed the host hasn't allowed degrades to a safe link card —
     // the URL stays visible but is never framed.
@@ -445,8 +452,8 @@ export class Embed implements BlockTool {
       return;
     }
 
-    if (this.data.kind === 'script') {
-      this.root.replaceChildren(this.buildScript());
+    if (mode === 'script') {
+      this.root.replaceChildren(this.buildScript(service));
 
       return;
     }
@@ -473,14 +480,15 @@ export class Embed implements BlockTool {
     }
   }
 
-  private buildScript(): HTMLElement {
+  /** Only reached for a registry match whose kind is 'script'. */
+  private buildScript(service: string): HTMLElement {
     const container = document.createElement('div');
 
     container.setAttribute('data-blok-testid', 'embed-script');
 
     const remoteId = this.data.source ? matchEmbedService(this.data.source)?.remoteId ?? '' : '';
 
-    if (this.data.service === 'telegram') {
+    if (service === 'telegram') {
       const script = document.createElement('script');
 
       script.async = true;
@@ -492,7 +500,7 @@ export class Embed implements BlockTool {
       return container;
     }
 
-    if (this.data.service === 'threads') {
+    if (service === 'threads') {
       // Threads: text-post-media blockquote scanned and replaced by embed.js.
       // The permalink uses the canonical .com embed URL so pasted .net links
       // still produce the official markup.
@@ -518,7 +526,12 @@ export class Embed implements BlockTool {
       return container;
     }
 
-    // Twitter / X: blockquote scanned and replaced by widgets.js.
+    if (service !== 'twitter') {
+      return container;
+    }
+
+    // Twitter / X: blockquote scanned and replaced by widgets.js. The source
+    // matched the X registry pattern, which pins the host to x.com/twitter.com.
     const blockquote = document.createElement('blockquote');
 
     blockquote.className = 'twitter-tweet';

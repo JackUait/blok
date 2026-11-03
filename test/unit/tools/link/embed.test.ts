@@ -1748,3 +1748,49 @@ describe('Embed tool — link-card fallback and origin allowlist', () => {
     }
   });
 });
+
+describe('Embed — the render kind comes from the registry, never from saved data', () => {
+  it('frames a youtube block saved with a forged script kind, without any script', () => {
+    const root = new Embed(createOptions(iframeData({ kind: 'script' }))).render();
+
+    expect(root.querySelector('script')).toBeNull();
+    expect(root.querySelector('blockquote')).toBeNull();
+    expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+  });
+
+  it('never runs a widget script for a generic block saved with a script kind', () => {
+    const root = new Embed(createOptions(
+      { service: '', source: 'https://evil.example/x', embed: 'https://evil.example/x', kind: 'script' },
+      { allowGenericEmbed: true }
+    )).render();
+
+    expect(root.querySelector('script')).toBeNull();
+    expect(root.querySelector('blockquote')).toBeNull();
+  });
+
+  it('renders the X widget for a twitter block even when its saved kind says iframe', () => {
+    const root = new Embed(createOptions({
+      service: 'twitter',
+      source: 'https://x.com/user/status/1234567890',
+      embed: 'https://twitter.com/i/status/1234567890',
+      kind: 'iframe',
+    })).render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('blockquote.twitter-tweet a')?.getAttribute('href')).toBe('https://x.com/user/status/1234567890');
+  });
+
+  it('does not persist a forged kind', () => {
+    const youtube = new Embed(createOptions(iframeData({ kind: 'script' })));
+    const generic = new Embed(createOptions(
+      { service: '', source: 'https://evil.example/x', embed: 'https://evil.example/x', kind: 'script' },
+      { allowGenericEmbed: true }
+    ));
+
+    youtube.render();
+    generic.render();
+
+    expect(youtube.save().kind).toBe('iframe');
+    expect(generic.save().kind).toBe('iframe');
+  });
+});

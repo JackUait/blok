@@ -1,0 +1,523 @@
+{
+  "_comment": "oEmbed JSON answers: only title, provider_name, an https thumbnail_url and capped integer width/height ever leave the server; html never does. Answers are captured from C# (FrameCheckOEmbedFixtureTests, BLOK_WRITE_FIXTURES=1); Go's internal/framecheck reads the same file.",
+  "cases": [
+    {
+      "name": "a full video answer",
+      "json": "{\"type\": \"video\", \"version\": \"1.0\", \"title\": \"A talk\", \"author_name\": \"Someone\", \"provider_name\": \"VideoSite\", \"thumbnail_url\": \"https://img.example/t.jpg\", \"thumbnail_width\": 480, \"thumbnail_height\": 360, \"width\": 640, \"height\": 360, \"html\": \"<iframe src=\\\"https://evil.example\\\"></iframe><script>alert(1)</script>\"}"
+    },
+    {
+      "name": "html alone gives nothing",
+      "json": "{\"html\":\"<script>alert(1)</script>\"}"
+    },
+    {
+      "name": "an http thumbnail is dropped",
+      "json": "{\"title\":\"t\",\"thumbnail_url\":\"http://img.example/t.jpg\"}"
+    },
+    {
+      "name": "a javascript thumbnail is dropped",
+      "json": "{\"thumbnail_url\":\"javascript:alert(1)\"}"
+    },
+    {
+      "name": "a relative thumbnail is dropped",
+      "json": "{\"thumbnail_url\":\"/t.jpg\"}"
+    },
+    {
+      "name": "a thumbnail with userinfo",
+      "json": "{\"thumbnail_url\":\"https://u:p@img.example/t.jpg\"}"
+    },
+    {
+      "name": "a thumbnail with spaces and case",
+      "json": "{\"thumbnail_url\":\"  HTTPS://IMG.Example/a b.jpg  \"}"
+    },
+    {
+      "name": "a thumbnail over 2048 characters",
+      "json": "{\"thumbnail_url\": \"https://img.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+    },
+    {
+      "name": "a thumbnail at 2048 characters",
+      "json": "{\"thumbnail_url\": \"https://img.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+    },
+    {
+      "name": "a long title is cut at 256 UTF-16 units",
+      "json": "{\"title\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+    },
+    {
+      "name": "a cut never splits a surrogate pair",
+      "json": "{\"title\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\uD83D\uDE00y\"}"
+    },
+    {
+      "name": "a title of exactly 256 units",
+      "json": "{\"title\": \"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"}"
+    },
+    {
+      "name": "non-ASCII and HTML-sensitive text",
+      "json": "{\"title\": \"Café <b>&amp;</b> 'q' +1 \u2028\", \"provider_name\": \"Видео\"}"
+    },
+    {
+      "name": "an empty title is absent",
+      "json": "{\"title\":\"\",\"provider_name\":\"p\"}"
+    },
+    {
+      "name": "a numeric title is absent",
+      "json": "{\"title\":5,\"provider_name\":[\"p\"]}"
+    },
+    {
+      "name": "the last duplicate wins",
+      "json": "{\"title\":\"first\",\"title\":\"second\",\"width\":10,\"width\":20}"
+    },
+    {
+      "name": "a later invalid duplicate clears the field",
+      "json": "{\"title\":\"first\",\"title\":7}"
+    },
+    {
+      "name": "width and height are capped at 4096",
+      "json": "{\"width\":99999,\"height\":4096}"
+    },
+    {
+      "name": "a width as a string is absent",
+      "json": "{\"width\":\"640\",\"height\":\"360\"}"
+    },
+    {
+      "name": "a fractional width is absent",
+      "json": "{\"width\":640.5,\"height\":480.0}"
+    },
+    {
+      "name": "an exponent width is absent",
+      "json": "{\"width\":4.8e2,\"height\":1E3}"
+    },
+    {
+      "name": "a negative or zero width is absent",
+      "json": "{\"width\":-640,\"height\":0}"
+    },
+    {
+      "name": "a huge width is absent",
+      "json": "{\"width\":12345678901234567890}"
+    },
+    {
+      "name": "a nine-digit width is capped",
+      "json": "{\"width\":123456789}"
+    },
+    {
+      "name": "a ten-digit width is absent",
+      "json": "{\"width\":1234567890}"
+    },
+    {
+      "name": "escaped key names match",
+      "json": "{\"t\\u0069tle\":\"escaped key\"}"
+    },
+    {
+      "name": "key names are case-sensitive",
+      "json": "{\"Title\":\"x\",\"PROVIDER_NAME\":\"y\"}"
+    },
+    {
+      "name": "a lone surrogate in the title",
+      "json": "{\"title\":\"a\\ud800b\",\"provider_name\":\"ok\"}"
+    },
+    {
+      "name": "an escaped pair in the title",
+      "json": "{\"title\":\"\\ud83d\\ude00\"}"
+    },
+    {
+      "name": "not an object",
+      "json": "[\"title\",\"x\"]"
+    },
+    {
+      "name": "a string root",
+      "json": "\"title\""
+    },
+    {
+      "name": "not JSON",
+      "json": "<html>not json</html>"
+    },
+    {
+      "name": "trailing comma",
+      "json": "{\"title\":\"x\",}"
+    },
+    {
+      "name": "comments",
+      "json": "{\"title\":\"x\"/* c */}"
+    },
+    {
+      "name": "data after the value",
+      "json": "{\"title\":\"x\"} {\"title\":\"y\"}"
+    },
+    {
+      "name": "nested too deep",
+      "json": "{\"title\":\"x\",\"a\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    {
+      "name": "nested within depth",
+      "json": "{\"title\":\"x\",\"a\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"
+    },
+    {
+      "name": "empty body",
+      "json": ""
+    },
+    {
+      "name": "whitespace around the object",
+      "json": " \n\t{\"title\":\"x\"}\r\n "
+    },
+    {
+      "name": "a BOM before the object",
+      "jsonBase64": "77u/eyJ0aXRsZSI6ImJvbSJ9"
+    },
+    {
+      "name": "invalid UTF-8 in the title",
+      "jsonBase64": "eyJ0aXRsZSI6ImH/YiIsInByb3ZpZGVyX25hbWUiOiJvayJ9"
+    },
+    {
+      "name": "invalid UTF-8 in a key",
+      "jsonBase64": "eyJ0af90bGUiOiJ4IiwicHJvdmlkZXJfbmFtZSI6Im9rIn0="
+    },
+    {
+      "name": "invalid UTF-8 in another value",
+      "jsonBase64": "eyJvdGhlciI6Iv8iLCJ0aXRsZSI6Im9rIn0="
+    }
+  ],
+  "answers": [
+    {
+      "title": "A talk",
+      "provider_name": "VideoSite",
+      "thumbnail_url": "https://img.example/t.jpg",
+      "width": 640,
+      "height": 360,
+      "wire": "{\"title\":\"A talk\",\"provider_name\":\"VideoSite\",\"thumbnail_url\":\"https://img.example/t.jpg\",\"width\":640,\"height\":360}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": "t",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"t\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://img.example/a%20b.jpg",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://img.example/a%20b.jpg\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://img.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://img.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+    },
+    {
+      "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+    },
+    {
+      "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+    },
+    {
+      "title": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"}"
+    },
+    {
+      "title": "Café <b>&amp;</b> 'q' +1 \u2028",
+      "provider_name": "Видео",
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"Caf\\u00E9 \\u003Cb\\u003E\\u0026amp;\\u003C/b\\u003E \\u0027q\\u0027 \\u002B1 \\u2028\",\"provider_name\":\"\\u0412\\u0438\\u0434\\u0435\\u043E\"}"
+    },
+    {
+      "title": null,
+      "provider_name": "p",
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"provider_name\":\"p\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": "second",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": 20,
+      "height": null,
+      "wire": "{\"title\":\"second\",\"width\":20}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": 4096,
+      "height": 4096,
+      "wire": "{\"width\":4096,\"height\":4096}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": 4096,
+      "height": null,
+      "wire": "{\"width\":4096}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": "escaped key",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"escaped key\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": "ok",
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"provider_name\":\"ok\"}"
+    },
+    {
+      "title": "\uD83D\uDE00",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"\\uD83D\\uDE00\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": "x",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"x\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": "x",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"x\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": "ok",
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"provider_name\":\"ok\"}"
+    },
+    {
+      "title": null,
+      "provider_name": "ok",
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"provider_name\":\"ok\"}"
+    },
+    {
+      "title": "ok",
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": "{\"title\":\"ok\"}"
+    }
+  ]
+}

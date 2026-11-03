@@ -13,6 +13,23 @@ interface ToolConfigWithPlaceholder {
   placeholder?: string | false;
 }
 
+/** Wrapper and content element every block copies. Built once: parsing their classes per block is slow. */
+const scaffold: { wrapper?: HTMLDivElement; content?: HTMLElement } = {};
+
+const getScaffold = (): { wrapper: HTMLDivElement; content: HTMLElement } => {
+  if (scaffold.wrapper === undefined || scaffold.content === undefined) {
+    scaffold.wrapper = $.make('div', StyleManager.wrapperStyles) as HTMLDivElement;
+    scaffold.wrapper.setAttribute(DATA_ATTR.element, '');
+    scaffold.wrapper.setAttribute(DATA_ATTR.testid, TEST_ID.blockWrapper);
+
+    scaffold.content = $.make('div', StyleManager.contentStyles);
+    scaffold.content.setAttribute(DATA_ATTR.elementContent, '');
+    scaffold.content.setAttribute('data-blok-testid', 'block-content');
+  }
+
+  return { wrapper: scaffold.wrapper, content: scaffold.content };
+};
+
 /**
  * Handles tool element composition, rendering, and DOM lifecycle.
  * Manages the wrapper, content element, and tool rendered element.
@@ -102,17 +119,11 @@ export class ToolRenderer {
    * @returns The wrapper div element
    */
   public compose(): HTMLDivElement {
-    const wrapper = $.make('div', this.getWrapperStyles()) as HTMLDivElement;
-    const contentNode = $.make('div', this.getContentStyles());
+    const template = getScaffold();
+    const wrapper = template.wrapper.cloneNode(false) as HTMLDivElement;
+    const contentNode = template.content.cloneNode(false) as HTMLElement;
 
     this.contentElementInternal = contentNode;
-
-    // Set data attributes for block element and content
-    wrapper.setAttribute(DATA_ATTR.element, '');
-    contentNode.setAttribute(DATA_ATTR.elementContent, '');
-    contentNode.setAttribute('data-blok-testid', 'block-content');
-
-    wrapper.setAttribute(DATA_ATTR.testid, TEST_ID.blockWrapper);
 
     if (this.name && !wrapper.hasAttribute('data-blok-component')) {
       wrapper.setAttribute('data-blok-component', this.name);
@@ -281,19 +292,5 @@ export class ToolRenderer {
     if (placeholder === false && element.hasAttribute(placeholderAttribute)) {
       element.removeAttribute(placeholderAttribute);
     }
-  }
-
-  /**
-   * Get wrapper element styles
-   */
-  private getWrapperStyles(): string {
-    return StyleManager.wrapperStyles;
-  }
-
-  /**
-   * Get content element styles
-   */
-  private getContentStyles(): string {
-    return StyleManager.contentStyles;
   }
 }

@@ -75,6 +75,18 @@ describe('ToolRenderer', () => {
       expect(contentElement?.contains(mockRenderedElement)).toBe(true);
     });
 
+    it('builds each block scaffold as a copy of the first, without re-parsing classes', () => {
+      const first = toolRenderer.compose();
+      const firstHtml = first.outerHTML;
+      const createSpy = vi.spyOn(document, 'createElement');
+      const second = new ToolRenderer(toolInstance, 'paragraph', 'second-id', tunesManager, {}).compose();
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(second.outerHTML).toBe(firstHtml.replace('test-block-id', 'second-id'));
+      expect(second.firstElementChild === first.firstElementChild).toBe(false);
+      createSpy.mockRestore();
+    });
+
     it('resolves ready promise for sync render', async () => {
       toolRenderer.compose();
 

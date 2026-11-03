@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/blokagent"
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
@@ -34,8 +35,14 @@ type Server struct {
 	storeErr  error
 
 	// rooms is set when collaboration is on; /sync is mapped only with it.
-	rooms              collab.Rooms
-	collab             *collabRooms
+	rooms  collab.Rooms
+	collab *collabRooms
+	// runtime is the engine pool the rooms and the agent share, built on
+	// first use.
+	runtime            *lazyRuntime
+	agentOnce          sync.Once
+	agent              *blokagent.Executor
+	agentErr           error
 	conformanceJournal bool
 	connections        *synchttp.ConnectionTable
 }
@@ -64,6 +71,7 @@ func New(o Options) (*Server, error) {
 		publicPath: publicPath,
 		clock:      clock,
 		fetcher:    outbound.NewFetcher(outbound.DefaultPolicy{}),
+		runtime:    &lazyRuntime{},
 	}
 	s.limiter = newRateLimiter(o.RateLimitPerMinute, func() time.Time { return s.clock() })
 	s.connections = synchttp.NewConnectionTable(o.CollabMaxConnections, o.CollabMaxConnectionsPerUserPerDoc)

@@ -25,6 +25,17 @@ type Rooms struct{ manager *room.Manager }
 // manager.
 func NewRooms(manager *room.Manager) *Rooms { return &Rooms{manager: manager} }
 
+// NewOnRuntime is for blokserver: an executor over the server's own engine
+// pool, the one its rooms read HTML with, as a C# host shares one
+// IBlokRuntime. rooms may be nil.
+func NewOnRuntime(runtime convert.Invoker, rooms *Rooms) *Executor {
+	executor := newExecutor(runtime)
+	if rooms != nil {
+		executor.attach(rooms)
+	}
+	return executor
+}
+
 // attach is C#'s rooms constructor: the room steps forget a document the
 // room replaced (a reset, an applied restore, a purge).
 func (e *Executor) attach(rooms *Rooms) {

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/blokagent"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
@@ -101,7 +102,7 @@ func (s *Server) buildRoomManager() (*room.Manager, error) {
 	}
 	converter := &convert.DocConverter{
 		Now:    func() time.Time { return s.clock() },
-		HTML:   convert.RuntimeHTMLReader{Runtime: &lazyRuntime{}},
+		HTML:   convert.RuntimeHTMLReader{Runtime: s.runtime},
 		Fields: fields,
 		Log:    s.collabLog,
 	}
@@ -146,8 +147,9 @@ func richTextFieldEntries(fields map[string][]string) []convert.RichTextFieldEnt
 	return entries
 }
 
-// lazyRuntime builds the engine pool on the first HTML read: C# registers
-// the runtime but does not warm it for a collaboration host.
+// lazyRuntime builds the engine pool on its first use (an HTML read or an
+// agent call): C# registers the runtime but does not warm it for a
+// collaboration host.
 type lazyRuntime struct {
 	once sync.Once
 	pool *jsruntime.Pool
@@ -238,4 +240,24 @@ func (s *Server) warnOpenSyncRoutes(prefix string) {
 		`/sync/{doc}/reset, POST `+prefix+`/sync/{doc}/edit, GET `+prefix+`/sync/{doc}/state and `+strings.Join(history, ", ")+
 		` are open to anyone who can reach this app unless the host puts its own auth in front; set Options.Authorization or set Auth to "ticket"`,
 		slog.String("category", "Blok.Server.AspNetCore"))
+}
+
+// AgentExecutor is the server's IBlokAgentExecutor: one executor over the
+// server's engine pool that edits its live rooms when collaboration is on,
+// as C# AddBlokDocuments registers it. No route calls it; a host embedding
+// the server does. Nothing is built until the first call.
+func (s *Server) AgentExecutor() (*blokagent.Executor, error) {
+	s.agentOnce.Do(func() {
+		var rooms *blokagent.Rooms
+		if s.collab != nil {
+			manager, err := s.collab.get()
+			if err != nil {
+				s.agentErr = err
+				return
+			}
+			rooms = blokagent.NewRooms(manager)
+		}
+		s.agent = blokagent.NewOnRuntime(s.runtime, rooms)
+	})
+	return s.agent, s.agentErr
 }

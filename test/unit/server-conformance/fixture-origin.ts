@@ -37,6 +37,26 @@ function send(response: ServerResponse, status: number, contentType: string, bod
   response.end(body);
 }
 
+// /frame/NAME serves PRECEDENCE_HTML under these header lines, one line per pair.
+const FRAMING: Record<string, Array<[string, string]>> = {
+  'plain': [],
+  'xfo-deny': [['X-Frame-Options', 'DENY']],
+  'xfo-sameorigin': [['X-Frame-Options', 'SAMEORIGIN']],
+  'xfo-allowall': [['X-Frame-Options', 'ALLOWALL']],
+  'xfo-allowall-and-invalid-lines': [['X-Frame-Options', 'ALLOWALL'], ['X-Frame-Options', 'INVALID']],
+  'xfo-invalid-and-invalid-lines': [['X-Frame-Options', 'INVALID'], ['X-Frame-Options', 'INVALID']],
+  'xfo-allow-from': [['X-Frame-Options', 'ALLOW-FROM http://editor.example']],
+  'csp-none': [['Content-Security-Policy', "frame-ancestors 'none'"]],
+  'csp-two-lines': [['Content-Security-Policy', 'frame-ancestors *'], ['Content-Security-Policy', "frame-ancestors 'none'"]],
+  'csp-comma-policies': [['Content-Security-Policy', "default-src *, frame-ancestors 'none'"]],
+  'csp-duplicate-directive': [['Content-Security-Policy', "frame-ancestors *; frame-ancestors 'none'"]],
+  'csp-report-only': [['Content-Security-Policy-Report-Only', "frame-ancestors 'none'"]],
+  'csp-overrides-xfo': [['Content-Security-Policy', 'frame-ancestors *'], ['X-Frame-Options', 'DENY']],
+  'csp-http-embedder': [['Content-Security-Policy', 'frame-ancestors http://editor.example']],
+  'csp-https-embedder': [['Content-Security-Policy', 'frame-ancestors https://editor.example']],
+  'csp-self': [['Content-Security-Policy', "frame-ancestors 'self'"]],
+};
+
 // Each body is PRECEDENCE_HTML under the Content-Encoding lines named here.
 const ENCODED: Record<string, { body: () => Buffer; encoding: string[] }> = {
   'gzip': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['gzip'] },
@@ -154,6 +174,26 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
       }
 
       return;
+    }
+
+    if (path.startsWith('/frame/')) {
+      const name = path.slice('/frame/'.length);
+      const framing = FRAMING[name];
+
+      if (name === 'redirect') {
+        // A refusal on a redirect hop must not count; only the final response does.
+        response.writeHead(302, { Location: '/frame/plain', 'X-Frame-Options': 'DENY' });
+        response.end();
+
+        return;
+      }
+
+      if (framing !== undefined) {
+        response.writeHead(200, [['Content-Type', 'text/html; charset=utf-8'], ...framing].flat());
+        response.end(PRECEDENCE_HTML);
+
+        return;
+      }
     }
 
     // /big-header/N pads the response head with an N KiB header.

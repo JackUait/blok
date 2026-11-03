@@ -86,8 +86,9 @@ public sealed class BlokServerOptions
   public long RateLimitPerMinute { get; set; }
 
   /// <summary>
-  /// Closes <c>GET /unfurl</c> and <c>POST /upload-by-url</c>, and defaults to
-  /// closed. Both make this server fetch a URL its caller chose, which is
+  /// Closes <c>GET /unfurl</c>, <c>GET /frame-check</c> and
+  /// <c>POST /upload-by-url</c>, and defaults to closed. All three make this
+  /// server fetch a URL its caller chose, which is
   /// reachability the caller does not otherwise have; the guarded outbound
   /// policy is the only thing keeping that off the internal network. The
   /// standalone host opens them and takes that trade deliberately.

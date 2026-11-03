@@ -1,0 +1,533 @@
+[
+  {
+    "name": "plain for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/plain\"}\n"
+    }
+  },
+  {
+    "name": "xfo-deny for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/xfo-deny\"}\n"
+    }
+  },
+  {
+    "name": "xfo-sameorigin for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/xfo-sameorigin\"}\n"
+    }
+  },
+  {
+    "name": "xfo-allowall for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/xfo-allowall\"}\n"
+    }
+  },
+  {
+    "name": "xfo-allowall-and-invalid-lines for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/xfo-allowall-and-invalid-lines\"}\n"
+    }
+  },
+  {
+    "name": "xfo-invalid-and-invalid-lines for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/xfo-invalid-and-invalid-lines\"}\n"
+    }
+  },
+  {
+    "name": "xfo-allow-from for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/xfo-allow-from\"}\n"
+    }
+  },
+  {
+    "name": "csp-none for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-none\"}\n"
+    }
+  },
+  {
+    "name": "csp-two-lines for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-two-lines\"}\n"
+    }
+  },
+  {
+    "name": "csp-comma-policies for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-comma-policies\"}\n"
+    }
+  },
+  {
+    "name": "csp-duplicate-directive for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-duplicate-directive\"}\n"
+    }
+  },
+  {
+    "name": "csp-report-only for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-report-only\"}\n"
+    }
+  },
+  {
+    "name": "csp-overrides-xfo for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-overrides-xfo\"}\n"
+    }
+  },
+  {
+    "name": "csp-http-embedder for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-http-embedder\"}\n"
+    }
+  },
+  {
+    "name": "csp-https-embedder for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-https-embedder\"}\n"
+    }
+  },
+  {
+    "name": "csp-self for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
+    "name": "redirect for the editor",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/plain\"}\n"
+    }
+  },
+  {
+    "name": "xfo-deny with no Origin",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/xfo-deny\"}\n"
+    }
+  },
+  {
+    "name": "plain with no Origin",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/plain\"}\n"
+    }
+  },
+  {
+    "name": "a refused Origin",
+    "response": {
+      "status": 403,
+      "headers": {
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "origin not allowed\n"
+    }
+  },
+  {
+    "name": "a 503 page",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"unknown\"}\n"
+    }
+  },
+  {
+    "name": "a blocked destination",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"unknown\"}\n"
+    }
+  },
+  {
+    "name": "six redirects",
+    "response": {
+      "status": 200,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"unknown\"}\n"
+    }
+  },
+  {
+    "name": "no url",
+    "response": {
+      "status": 400,
+      "headers": {
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"unknown\"}\n"
+    }
+  },
+  {
+    "name": "a preflight",
+    "response": {
+      "status": 204,
+      "headers": {
+        "access-control-allow-methods": [
+          "GET, OPTIONS"
+        ],
+        "access-control-allow-origin": [
+          "http://editor.example"
+        ],
+        "access-control-max-age": [
+          "600"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": ""
+    }
+  },
+  {
+    "name": "a POST",
+    "response": {
+      "status": 405,
+      "headers": {
+        "allow": [
+          "GET, HEAD, OPTIONS"
+        ],
+        "content-type": [
+          "text/plain; charset=utf-8"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "Method Not Allowed\n"
+    }
+  }
+]

@@ -82,6 +82,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
     if (!options.UnfurlDisabled)
     {
       MapShell(routes, "/unfurl", "GET");
+      MapShell(routes, "/frame-check", "GET");
     }
 
     if (options.HasStorage)
@@ -154,6 +155,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
     RequestDelegate handler = pattern switch
     {
       "/unfurl" => UnfurlEndpoint.HandleAsync,
+      "/frame-check" => FrameCheckEndpoint.HandleAsync,
       "/sync/{doc}/state" => StateEndpoint.HandleAsync,
       "/upload" => UploadEndpoint.HandleAsync,
       "/delete" => DeleteEndpoint.HandleAsync,

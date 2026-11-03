@@ -89,6 +89,8 @@ func testRouter() *Router {
 	router.Handle("/sync/{doc}/history/{lineage}", nil, MethodNotAllowed("DELETE, OPTIONS"))
 	router.Handle("/unfurl", []string{"GET", "OPTIONS"}, named("unfurl"))
 	router.Handle("/unfurl", nil, MethodNotAllowed("GET, HEAD, OPTIONS"))
+	router.Handle("/frame-check", []string{"GET", "OPTIONS"}, named("frame-check"))
+	router.Handle("/frame-check", nil, MethodNotAllowed("GET, HEAD, OPTIONS"))
 	return router
 }
 
@@ -149,8 +151,8 @@ func TestUnmatchedPathsGetTheCatchAll(t *testing.T) {
 	fixture := loadFixture(t)
 	targets := fixture.CollabHost.NotFound
 	for _, r := range fixture.HealthHost.NotFound {
-		// testRouter serves /unfurl; the health-only host does not.
-		if r.Path != "/unfurl" {
+		// testRouter serves /unfurl and /frame-check; the health-only host does not.
+		if r.Path != "/unfurl" && r.Path != "/frame-check" {
 			targets = append(targets, r.Path)
 		}
 	}

@@ -121,6 +121,7 @@ func (s *Server) Handler(prefix string) http.Handler {
 	router.Handle(prefix+"/health", nil, route.MethodNotAllowed("GET, HEAD"))
 	if o.UnfurlEnabled {
 		s.shell(router, prefix+"/unfurl", "GET", s.unfurl)
+		s.shell(router, prefix+"/frame-check", "GET", s.frameCheck)
 	}
 	if o.hasStorage() {
 		s.shell(router, prefix+"/upload", "POST", s.upload)

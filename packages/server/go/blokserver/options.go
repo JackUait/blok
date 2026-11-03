@@ -40,9 +40,9 @@ type Options struct {
 	// RateLimitPerMinute is requests a minute per caller; 0 is off.
 	RateLimitPerMinute int64
 
-	// UnfurlEnabled opens GET /unfurl and POST /upload-by-url. Both make the
-	// server fetch a URL the caller chose, so the zero value keeps them
-	// closed, like C#'s UnfurlDisabled = true.
+	// UnfurlEnabled opens GET /unfurl, GET /frame-check and POST
+	// /upload-by-url. All three make the server fetch a URL the caller chose,
+	// so the zero value keeps them closed, like C#'s UnfurlDisabled = true.
 	UnfurlEnabled bool
 
 	S3Endpoint   string

@@ -759,6 +759,61 @@ it('counts every outbound redirect hop against the rate limit', async () => {
   }
 }, 60_000);
 
+const FRAME_PAGES = [
+  'plain', 'xfo-deny', 'xfo-sameorigin', 'xfo-allowall', 'xfo-allowall-and-invalid-lines',
+  'xfo-invalid-and-invalid-lines', 'xfo-allow-from', 'csp-none', 'csp-two-lines', 'csp-comma-policies',
+  'csp-duplicate-directive', 'csp-report-only', 'csp-overrides-xfo', 'csp-http-embedder',
+  'csp-https-embedder', 'csp-self', 'redirect',
+];
+
+// Conformance pages are http, so an allowed page reads "insecure"; "blocked" wins over it.
+it('rates whether an outbound page lets the editor frame it', async () => {
+  const origin = await startFixtureOrigin();
+  const editor = 'http://editor.example';
+  const actual: Array<{ name: string; response: GoldenResponse }> = [];
+  const record = (name: string, response: HttpResponse): void => {
+    const recorded = golden(response);
+
+    recorded.body = recorded.body.split(origin.baseUrl).join('<origin>');
+    delete recorded.headers['content-length'];
+    actual.push({ name, response: recorded });
+  };
+
+  try {
+    await withServer(['--storage-dir', '', '--conformance-origin', origin.baseUrl, '--allow-origin', editor], async (server) => {
+      const check = (target: string, headers: Record<string, string> = { Origin: editor }): Promise<HttpResponse> =>
+        server.request('GET', `/frame-check?url=${encodeURIComponent(target)}`, { headers });
+
+      for (const page of FRAME_PAGES) {
+        record(`${page} for the editor`, await check(`${origin.baseUrl}/frame/${page}`));
+      }
+      record('xfo-deny with no Origin', await check(`${origin.baseUrl}/frame/xfo-deny`, {}));
+      record('plain with no Origin', await check(`${origin.baseUrl}/frame/plain`, {}));
+      record('a refused Origin', await check(`${origin.baseUrl}/frame/plain`, { Origin: 'http://other.example' }));
+      record('a 503 page', await check(origin.errorUrl));
+      record('a blocked destination', await check('http://127.0.0.2/'));
+      record('six redirects', await check(`${origin.baseUrl}/chain/6/page.html`));
+      record('no url', await server.request('GET', '/frame-check', { headers: { Origin: editor } }));
+      record('a preflight', await server.request('OPTIONS', '/frame-check', {
+        headers: { Origin: editor, 'Access-Control-Request-Method': 'GET' },
+      }));
+      record('a POST', await server.request('POST', '/frame-check', { headers: { Origin: editor } }));
+    });
+  } finally {
+    await origin.stop();
+  }
+
+  compareGolden('frame-check-responses.json', actual);
+}, 60_000);
+
+it('keeps frame-check closed when unfurl is off', async () => {
+  await withServer(['--storage-dir', '', '--no-unfurl'], async (server) => {
+    const response = await server.request('GET', '/frame-check?url=http%3A%2F%2Fexample.com%2F');
+
+    expect(response.status).toBe(404);
+  });
+}, 60_000);
+
 it('shares four outbound fetches between unfurl and upload-by-url', async () => {
   const origin = await startFixtureOrigin();
   const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-permits-'));

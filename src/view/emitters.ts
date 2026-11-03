@@ -65,6 +65,12 @@ export interface EmitterEnv {
    * to an unsafe scheme.
    */
   url(name: 'href' | 'src', value: unknown, blockType: string): string;
+  /**
+   * Like {@link EmitterEnv.url} for an image's ` src`, but it also keeps
+   * data:image/svg+xml, which an <img> draws without running its script.
+   * Only for `<img>`: never a srcset, a frame, a video or a link.
+   */
+  imageSrc(value: unknown, blockType: string): string;
   /** Like {@link EmitterEnv.url} for an iframe src, but empty unless the result is absolute https. */
   frameSrc(value: unknown, blockType: string): string;
   /**
@@ -501,7 +507,7 @@ const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
   const allowed = info !== null && info !== undefined && info.access !== 'none';
   const icon = allowed && isRecord(info.icon) ? info.icon : null;
   const emoji = icon?.type === 'emoji' ? str(icon, 'value') : '';
-  const src = icon?.type === 'image' ? env.url('src', icon.url, block.type) : '';
+  const src = icon?.type === 'image' ? env.imageSrc(icon.url, block.type) : '';
   const pageFallback = emoji === '' ? PAGE_FALLBACK_ICON.trim() : env.escape(emoji);
   const fallback = info?.access === 'none' ? PAGE_LOCK_ICON.trim() : pageFallback;
   const glyph = src === '' ? fallback : `<img${src} alt="">`;
@@ -680,10 +686,12 @@ export const builtinEmitters: Record<string, Emitter> = {
   },
 
   image: (block, env) => {
-    const img = `<img${env.url('src', block.data.url, block.type)} alt="${env.escape(str(block.data, 'alt'))}">`;
+    const img = `<img${env.imageSrc(block.data.url, block.type)} alt="${env.escape(str(block.data, 'alt'))}">`;
     const sources = (readVariants(block.data.variants, block.data.url) ?? [])
       .filter((variant) => variant.url !== block.data.url)
       .map((variant) => {
+        // Not imageSrc: a srcset splits at whitespace, which an SVG data: URL may hold,
+        // and readVariants drops SVG data variants anyway.
         const src = env.url('src', variant.url, block.type);
 
         // env.url only speaks src/href; a single-URL srcset takes the same value.

@@ -493,7 +493,7 @@ describe('markdownToBlocks — unsafe URL schemes', () => {
   });
 
   it('reports an image dropped for an executable data: media type', async () => {
-    const { warnings } = await markdownToBlocksWithReport('![x](data:image/svg+xml,<svg/>)');
+    const { warnings } = await markdownToBlocksWithReport('![x](data:text/xml,<svg/>)');
 
     expect(warnings).toEqual([
       { construct: 'image', action: 'dropped', detail: expect.stringContaining('data:') },

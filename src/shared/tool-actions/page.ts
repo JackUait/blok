@@ -26,7 +26,7 @@ const setIcon: ToolActionImpl<{ id: string; icon: PageIcon | null }> = {
   prepare: ({ services }, args) => {
     assertPageBackend(services.pageBackend);
     if (args.icon?.type === 'image' && !isSafeImageUrl(args.icon.url)) {
-      throw failure('INVALID_ARGS', 'Pass an http(s), relative or raster data: image URL.');
+      throw failure('INVALID_ARGS', 'Pass an http(s), relative, raster data: or SVG data: image URL.');
     }
 
     return services.pageBackend.setIcon({ blockId: args.id, icon: args.icon });

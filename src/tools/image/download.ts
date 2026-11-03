@@ -1,4 +1,4 @@
-import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { safeDownloadHref, stripIgnoredUrlChars } from '../../components/utils/sanitize-url';
 import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 /**
@@ -14,6 +14,12 @@ import { createSafeObjectUrl } from '../../shared/safe-object-url';
  * carry a persisted `javascript:` URL straight into a click (stored XSS).
  */
 export async function downloadImage(url: string, fileName?: string): Promise<void> {
+  if (SVG_DATA.test(stripIgnoredUrlChars(url))) {
+    downloadSvgData(url, fileName);
+
+    return;
+  }
+
   const safeUrl = safeDownloadHref(url);
 
   if (safeUrl === null) {
@@ -29,6 +35,32 @@ export async function downloadImage(url: string, fileName?: string): Promise<voi
     URL.revokeObjectURL(objectUrl);
   } catch {
     triggerAnchorDownload(safeUrl, fileName);
+  }
+}
+
+const SVG_DATA = /^data:image\/svg\+xml[;,]/i;
+
+/**
+ * A no-uploader SVG is a data: URL (see localImageUrl). It must never sit on
+ * an anchor: opened as a page it runs its script. So its bytes go into a
+ * blob that only a plain `download` click uses. Decoded here, not fetched,
+ * so a host CSP without `connect-src data:` still downloads it.
+ */
+function downloadSvgData(url: string, fileName?: string): void {
+  const clean = stripIgnoredUrlChars(url);
+  const comma = clean.indexOf(',');
+  const payload = clean.slice(comma + 1);
+
+  try {
+    const bytes = /;base64$/i.test(clean.slice(0, comma))
+      ? Uint8Array.from(atob(payload), (char) => char.charCodeAt(0))
+      : new TextEncoder().encode(decodeURIComponent(payload));
+    const objectUrl = createSafeObjectUrl(new Blob([bytes], { type: 'image/svg+xml' }), { svgImage: true });
+
+    triggerAnchorDownload(objectUrl, fileName);
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    // Bytes that do not decode: nothing to save.
   }
 }
 

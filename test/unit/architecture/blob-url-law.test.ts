@@ -26,16 +26,14 @@ const RAW_EXEMPTIONS: Record<string, string> = {
     'dev playground only, not in the published bundle; Blok\'s own icon SVG, downloaded by a plain click',
 };
 
-/** `svgImage: true` users, keyed by file. The URL must never open as a page. */
+/**
+ * `svgImage: true` users, keyed by file. The URL must never reach an element
+ * a person can open in a tab: "Open image in new tab" on an <img> runs the
+ * SVG as the host. So a stored image URL never keeps SVG — a no-uploader SVG
+ * is a data: URL (localImageUrl) — and only short-lived, unseen URLs do.
+ */
 const SVG_IMAGE_USERS: Record<string, string> = {
-  'tools/image/uploader.ts':
-    'the image block shows it in <img>; download goes through tools/image/download.ts. ' +
-    'KNOWN RISK: opened in its own tab, the SVG runs script in the host origin; only an uploader avoids it',
-  'tools/image/index.ts': 'the failed-upload thumbnail is an <img>',
-  'tools/image/download.ts': 'a plain programmatic click on an <a download>, which downloads in all three browsers',
-  'components/utils/asset-uploader.ts':
-    'only for kind "image", whose tools show it in <img>; every other kind is re-typed. ' +
-    'Same known risk as tools/image/uploader.ts',
+  'tools/image/download.ts': 'a plain programmatic click on an <a download>, which downloads in all three browsers, then revoked',
   'tools/database/database-chart-view.ts': 'the chart SVG is drawn into an <img> to rasterize it, then revoked',
   'tools/database/database-download.ts': 'a plain programmatic click on an <a download>, then revoked',
 };

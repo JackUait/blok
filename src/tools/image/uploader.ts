@@ -8,7 +8,7 @@ import { uploadImageVariants, type VariantRole } from '../../components/media-va
 import { compressImage } from './compress';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
-import { createSafeObjectUrl } from '../../shared/safe-object-url';
+import { localImageUrl } from '../../shared/safe-object-url';
 
 export interface UploadResult {
   url: string;
@@ -140,11 +140,7 @@ export class Uploader {
       return this.config.uploader.uploadByFile(file, { onProgress });
     }
 
-    // Known risk with no uploader: this blob keeps image/svg+xml, and opened
-    // in its own tab it runs the SVG's script in the host origin (measured in
-    // Chromium, Firefox and WebKit). A data: URL would be safe, but
-    // url-policy refuses data:image/svg+xml in every src. An uploader removes the risk.
-    return { url: createSafeObjectUrl(file, { svgImage: true }), fileName: file.name };
+    return { url: await localImageUrl(file), fileName: file.name };
   }
 
   private async handleDataUrl(raw: string, options: UploadOptions): Promise<UploadResult> {

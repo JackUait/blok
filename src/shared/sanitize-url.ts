@@ -25,6 +25,13 @@ const SAFE_HREF_SCHEME = /^(?:https?|mailto|tel|sms):/i;
 const SAFE_IMAGE_DATA = /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp|x-icon|vnd\.microsoft\.icon)[;,]/i;
 
 /**
+ * An SVG data: URL. Safe ONLY as an image source: <img> never runs its script.
+ * Opened as a page it runs (in an opaque origin), so href, window.open,
+ * frame src and CSS sinks must keep refusing it.
+ */
+const SVG_IMAGE_DATA = /^data:image\/svg\+xml[;,]/i;
+
+/**
  * Remove the characters a browser ignores when resolving a URL scheme, so
  * scheme checks see the URL the way the browser will ("java\nscript:" →
  * "javascript:"). Single source of truth for the ignored-character set.
@@ -77,9 +84,10 @@ export function safeHref(url: string): string | null {
 }
 
 /**
- * Sanitize a URL for use as an <img> src.
- * Allows http(s), relative URLs, and raster data: images. Rejects svg/xml and
- * html data: URLs (which can execute script) and all script-capable schemes.
+ * Sanitize a URL for use as an <img> src. Never use it for a link, a window,
+ * a frame or CSS: it keeps data:image/svg+xml.
+ * Allows http(s), relative URLs, raster data: images and SVG data: images.
+ * Rejects other xml and html data: URLs and all script-capable schemes.
  */
 export function safeImageSrc(url: string): string | null {
   const stripped = stripIgnoredUrlChars(url);
@@ -88,7 +96,7 @@ export function safeImageSrc(url: string): string | null {
     return url;
   }
 
-  if (/^https?:/i.test(stripped) || SAFE_IMAGE_DATA.test(stripped)) {
+  if (/^https?:/i.test(stripped) || SAFE_IMAGE_DATA.test(stripped) || SVG_IMAGE_DATA.test(stripped)) {
     return url;
   }
 

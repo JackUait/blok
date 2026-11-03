@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { blocksToHtml, blocksToViewNodes, defineBlokSchema } from '../../../src/view';
+import { blocksToHtml, blocksToViewNodes, defineBlokSchema, htmlToBlocks } from '../../../src/view';
 import { TableModel } from '../../../src/tools/table/table-model';
 import { CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 import {
@@ -1921,5 +1921,44 @@ describe('blocksToHtml with title: true', () => {
 
     expect(blocksToHtml(data)).toBe('<p>Body</p>');
     expect(blocksToHtml(data, { root: true })).toBe('<div data-blok-interface="view"><p>Body</p></div>');
+  });
+});
+
+describe('SVG data images (no-uploader SVG uploads)', () => {
+  const SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg"/>')}`;
+
+  it('renders a saved SVG data: URL in <img>', () => {
+    expect(blocksToHtml(doc([{ type: 'image', data: { url: SVG, caption: '' } }]))).toContain(`<img src="${SVG}" alt="">`);
+  });
+
+  it('reads the <img> back into an image block with the same URL', () => {
+    const [block] = htmlToBlocks(blocksToHtml(doc([{ type: 'image', data: { url: SVG } }])));
+
+    expect(block).toMatchObject({ type: 'image', data: { url: SVG } });
+  });
+
+  it('runs transformUrl first, then the image check', () => {
+    const html = blocksToHtml(doc([{ type: 'image', data: { url: 'https://x/a.svg' } }]), { transformUrl: () => SVG });
+    const unsafe = blocksToHtml(doc([{ type: 'image', data: { url: SVG } }]), { transformUrl: () => 'data:text/html,<b>' });
+
+    expect(html).toContain(`<img src="${SVG}"`);
+    expect(unsafe).toContain('<img alt="">');
+  });
+
+  it('shows an SVG data: page icon in a page block <img>', () => {
+    const html = blocksToHtml(doc([{ type: 'page', data: { pageId: 'p1' } }]), {
+      pageInfo: () => ({ title: 'P', icon: { type: 'image', url: SVG } }),
+    });
+
+    expect(html).toContain(`<img src="${SVG}" alt="">`);
+  });
+
+  it.each([
+    ['video', { url: SVG }],
+    ['audio', { url: SVG }],
+    ['file', { url: SVG, fileName: 'a.svg' }],
+    ['bookmark', { url: SVG }],
+  ])('still refuses it outside an image: %s', (type, data) => {
+    expect(blocksToHtml(doc([{ type, data }]))).not.toContain(`="${SVG}"`);
   });
 });

@@ -91,6 +91,8 @@ function prefersReducedMotion(): boolean {
     && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 }
 
+const isSvgFile = (file: File): boolean => file.type.split(';')[0].trim().toLowerCase() === 'image/svg+xml';
+
 const mergeToolActionHandlers = () => ({ ...MEDIA_ACTION_HANDLERS.image, ...IMAGE_ACTION_HANDLERS });
 
 type ImageToolActionHandlers = ReturnType<typeof mergeToolActionHandlers>;
@@ -668,7 +670,9 @@ export class ImageTool implements BlockTool {
       // The same file keeps its URL: a new one is decoded again and the tile blinks.
       if (source.file === undefined || source.file !== this.failurePreviewFile) {
         this.releaseFailurePreview();
-        this.failurePreview = source.file === undefined ? null : createSafeObjectUrl(source.file, { svgImage: true });
+        // No SVG thumbnail: an SVG blob opened in a tab runs as the host, and a
+        // data: URL needs an async read this sync render path does not have.
+        this.failurePreview = source.file === undefined || isSvgFile(source.file) ? null : createSafeObjectUrl(source.file);
         this.failurePreviewFile = source.file ?? null;
       }
     }

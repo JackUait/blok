@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep, PLAINTEXT } from '../../../src/components/utils/sanitizer';
+import { imageSanitize } from '../../../src/shared/tool-descriptions/sanitize/blocks';
 import { MarkerInlineTool } from '../../../src/components/inline-tools/inline-tool-marker';
 import type { SanitizerConfig, SanitizerRule } from '../../../types';
 import type { SavedData } from '../../../types/data-formats';
@@ -1675,5 +1676,14 @@ describe('stripUnsafeUrlsDeep namespaced URL attributes', () => {
     const text = '<svg><a xlink:href="https://example.com"><text>x</text></a></svg>';
 
     expect((stripUnsafeUrlsDeep({ text }) as { text: string }).text).toBe(text);
+  });
+});
+
+describe('sanitizeBlocks — a no-uploader SVG image', () => {
+  it('keeps the data:image/svg+xml url of an image block through the save sanitizer', () => {
+    const url = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg"/>')}`;
+    const [saved] = sanitizeBlocks([{ tool: 'image', data: { url, caption: '' } }], imageSanitize());
+
+    expect(saved.data).toMatchObject({ url });
   });
 });

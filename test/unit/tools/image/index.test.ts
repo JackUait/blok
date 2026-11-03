@@ -2643,6 +2643,24 @@ describe('ImageTool — failure reporting', () => {
     expect(card?.querySelector('.blok-image-error__title')?.textContent).toBe('p.png');
   });
 
+  it('shows no thumbnail for a failed SVG upload, so no SVG blob opens as the host', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview');
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }));
+    const root = tool.render();
+    const file = new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'logo.svg', { type: 'image/svg+xml' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const card = root.querySelector('[data-role="error-state"]');
+
+    expect(card?.querySelector('.blok-image-error__title')?.textContent).toBe('logo.svg');
+    expect(card?.querySelector('.blok-image-error__icon img')).toBeNull();
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
   it('keeps a broken image in the shape it was saved with', () => {
     const options = createOptions({ url: 'https://x/y.png', width: 40, naturalWidth: 1200, naturalHeight: 800 }, { reloadAttempts: 0 });
     const root = new ImageTool(options).render();

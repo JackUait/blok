@@ -35,6 +35,15 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
+import {
+  hasUnsafeScheme,
+  isSafeRasterImageDataUrl,
+  safeDownloadHref,
+  safeHref,
+  safeImageSrc,
+} from '../../../src/shared/sanitize-url';
+import { hasUnsafeUrlProtocol, isSafeImageUrl, isScriptCarryingAttribute } from '../../../src/shared/url-policy';
+import { blocksToHtml } from '../../../src/view/blocks-to-html';
 
 const REPO_DIR = resolve(__dirname, '../../..');
 const SRC_DIR = join(REPO_DIR, 'src');
@@ -54,11 +63,16 @@ const LINK_DIR = join(SRC_DIR, 'tools', 'link');
 const SAFE_HELPERS = [
   'safeDownloadHref(',
   'safeHref(',
-  'safeImageSrc(',
   'safeHttpHref(',
   'safePreviewSrc(',
   'toSafeEmbedSrc(',
 ];
+
+/**
+ * Gates only for an image source (`src`, `poster`). safeImageSrc keeps
+ * data:image/svg+xml, which runs as a page in a link, a window or CSS.
+ */
+const IMAGE_SRC_HELPERS = ['safeImageSrc('];
 
 /** pptx fills come from StyleResolver.ts, which emits only colours (via safeHexColor) and gradients, never url(). */
 const PPTX_FILL = 'pptx fill CSS from resolveFill/resolveColorToCss/resolveGradientForText: colours and gradients only, never url()';
@@ -265,8 +279,9 @@ function walk(dir: string): string[] {
   });
 }
 
-const isSafeCall = (expression: string): boolean =>
-  SAFE_HELPERS.some((helper) => expression.includes(helper));
+const isSafeCall = (expression: string, imageSource = false): boolean =>
+  SAFE_HELPERS.some((helper) => expression.includes(helper))
+  || (imageSource && IMAGE_SRC_HELPERS.some((helper) => expression.includes(helper)));
 
 const textOf = (node: ts.Node): string => node.getText().replace(/\s+/g, ' ').trim();
 
@@ -319,11 +334,11 @@ const methodName = (callee: ts.Node): string | undefined =>
  * Names this file declares from a scheme gate, e.g.
  * `const href = safeHttpHref(data.url)` — the sink `a.href = href` is then gated.
  */
-function safeIdentifiers(source: ts.SourceFile): Set<string> {
+function safeIdentifiers(source: ts.SourceFile, imageSource: boolean): Set<string> {
   const names = new Set<string>();
   const visit = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
-      && node.initializer !== undefined && isSafeCall(node.initializer.getText())) {
+      && node.initializer !== undefined && isSafeCall(node.initializer.getText(), imageSource)) {
       names.add(node.name.text);
     }
     ts.forEachChild(node, visit);
@@ -335,14 +350,18 @@ function safeIdentifiers(source: ts.SourceFile): Set<string> {
 }
 
 /** Every URL sink in one file, before gate and exemption checks. */
-function rawSinks(source: ts.SourceFile, inLinkDir: boolean): Array<{ node: ts.Node; form: SinkForm; value: ts.Node }> {
-  const found: Array<{ node: ts.Node; form: SinkForm; value: ts.Node }> = [];
-  const add = (node: ts.Node, form: SinkForm, value: ts.Node | undefined): void => {
+type RawSink = { node: ts.Node; form: SinkForm; value: ts.Node; imageSource: boolean };
+
+const IMAGE_SOURCE_ATTRIBUTES = new Set(['src', 'poster']);
+
+function rawSinks(source: ts.SourceFile, inLinkDir: boolean): RawSink[] {
+  const found: RawSink[] = [];
+  const add = (node: ts.Node, form: SinkForm, value: ts.Node | undefined, attribute: string = form): void => {
     // The link law owns these three forms inside src/tools/link.
     if (value === undefined || (inLinkDir && (form === 'href' || form === 'src' || form === 'setAttribute'))) {
       return;
     }
-    found.push({ node, form, value });
+    found.push({ node, form, value, imageSource: IMAGE_SOURCE_ATTRIBUTES.has(attribute) });
   };
 
   // Object.assign(el, { href }) and Object.assign(el.style, { backgroundImage }).
@@ -383,9 +402,9 @@ function rawSinks(source: ts.SourceFile, inLinkDir: boolean): Array<{ node: ts.N
       const target = ts.isPropertyAccessExpression(node.expression) ? node.expression.expression : undefined;
 
       if (method === 'setAttribute' && URL_ATTRIBUTES.has(literalText(first) ?? '')) {
-        add(node, 'setAttribute', second);
+        add(node, 'setAttribute', second, literalText(first));
       } else if (method === 'setAttributeNS' && URL_ATTRIBUTES.has(literalText(second) ?? '')) {
-        add(node, 'setAttributeNS', third);
+        add(node, 'setAttributeNS', third, literalText(second));
       } else if (isWindowOpen(node.expression)) {
         add(node, 'window.open', first);
       } else if ((method === 'assign' || method === 'replace') && target !== undefined && isLocation(target)) {
@@ -409,11 +428,13 @@ function rawSinks(source: ts.SourceFile, inLinkDir: boolean): Array<{ node: ts.N
 /** The ungated URL sinks in one file. `file` is the path the exemption keys use. */
 function scanSource(file: string, text: string, inLinkDir = false): Sink[] {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-  const safeNames = safeIdentifiers(source);
+  const safeNames = safeIdentifiers(source, false);
+  const safeImageNames = safeIdentifiers(source, true);
 
   return rawSinks(source, inLinkDir)
-    .map(({ node, form, value }) => ({ node, form, value, rhs: textOf(value) }))
-    .filter(({ value, rhs }) => !isConstant(value) && !isSafeCall(rhs) && !safeNames.has(rhs))
+    .map(({ node, form, value, imageSource }) => ({ node, form, value, imageSource, rhs: textOf(value) }))
+    .filter(({ value, rhs, imageSource }) => !isConstant(value) && !isSafeCall(rhs, imageSource)
+      && !(imageSource ? safeImageNames : safeNames).has(rhs))
     .map(({ node, form, rhs }) => ({
       file,
       line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
@@ -498,7 +519,7 @@ const FIXTURES: Array<[SinkForm, string, string[]]> = [
   ['setAttribute', 'a.setAttribute("href", data.url);', ['a.setAttribute("href", "#");', 'a.setAttribute("href", safeHref(u));']],
   ['setAttribute', 'a.setAttribute(`href`,\n  data.url);', ['a.setAttribute(`href`, `#`);']],
   ['setAttribute', 'a.setAttribute(\'xlink:href\', data.url);', ['a.setAttribute(\'title\', data.url);']],
-  ['setAttributeNS', 'i.setAttributeNS(XLINK, \'href\', data.url);', ['i.setAttributeNS(XLINK, \'href\', \'#a\');', 'i.setAttributeNS(null, \'href\', safeImageSrc(u));']],
+  ['setAttributeNS', 'i.setAttributeNS(XLINK, \'href\', data.url);', ['i.setAttributeNS(XLINK, \'href\', \'#a\');', 'i.setAttributeNS(null, \'href\', safeHref(u));']],
   ['window.open', 'window.open(data.url, \'_blank\');', ['window.open(\'https://blok.dev\');', 'window.open(safeHref(u) ?? \'\');']],
   ['location', 'window.location.assign(data.url);', ['window.location.assign(\'/\');', 'location.assign(safeHref(u) ?? \'/\');']],
   ['location', 'location.replace(data.url);', ['location.replace(\'/\');', 'history.replace(data.url);']],
@@ -528,7 +549,61 @@ describe('URL Sink Law scanner (fixtures)', () => {
     expect(scanSource('fixture.ts', '// a.href = data.url;\n/* window.open(url) */\nlink.href = \'https://cdn.example/k.css\';')).toEqual([]);
   });
 
+  // safeImageSrc keeps data:image/svg+xml, which runs as a page once navigated to.
+  it.each<[SinkForm, string]>([
+    ['href', 'a.href = safeImageSrc(u);'],
+    ['href', 'const s = safeImageSrc(u);\na.href = s;'],
+    ['setAttribute', 'a.setAttribute(\'href\', safeImageSrc(u));'],
+    ['setAttributeNS', 'i.setAttributeNS(XLINK, \'href\', safeImageSrc(u));'],
+    ['window.open', 'window.open(safeImageSrc(u) ?? \'\');'],
+    ['location', 'location.assign(safeImageSrc(u) ?? \'/\');'],
+    ['Object.assign', 'Object.assign(a, { href: safeImageSrc(u) });'],
+    ['style', 'el.style.backgroundImage = `url(${safeImageSrc(u)})`;'],
+  ])('does not take safeImageSrc as a gate for a %s sink: %s', (form, code) => {
+    expect(scanSource('fixture.ts', code).map((sink) => sink.form)).toEqual([form]);
+  });
+
+  it.each([
+    'img.src = safeImageSrc(u);',
+    'img.setAttribute(\'src\', safeImageSrc(u));',
+    'video.poster = safeImageSrc(u);',
+  ])('takes safeImageSrc as a gate for an image source: %s', (code) => {
+    expect(scanSource('fixture.ts', code)).toEqual([]);
+  });
+
   it('leaves the src/href/setAttribute forms to the link law inside src/tools/link', () => {
     expect(scanSource('fixture.ts', 'a.href = data.url;\nwindow.open(data.url);', true).map((sink) => sink.form)).toEqual(['window.open']);
+  });
+});
+
+/**
+ * data:image/svg+xml is kept ONLY as an image source. In an <img> its script
+ * never runs; opened as a page it runs (in an opaque origin), so every other
+ * sink refuses it. Each row is one sink and whether it keeps the URL.
+ */
+describe('data:image/svg+xml only in image src', () => {
+  const SVG = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4=';
+  const html = (type: string, data: Record<string, unknown>): string => blocksToHtml({ blocks: [{ id: 'a', type, data }] });
+  // A label may show the URL as text; only an attribute value loads or navigates.
+  const asAttr = `="${SVG}"`;
+
+  it.each<[string, () => boolean, boolean]>([
+    ['safeImageSrc', () => safeImageSrc(SVG) === SVG, true],
+    ['isSafeImageUrl (agent icon writes)', () => isSafeImageUrl(SVG), true],
+    ['blocksToHtml image <img src>', () => html('image', { url: SVG }).includes(`<img src="${SVG}"`), true],
+    ['blocksToHtml page title icon <img src>', () => blocksToHtml({ title: 'T', icon: { type: 'image', url: SVG }, blocks: [] }, { title: true }).includes(`src="${SVG}"`), true],
+    ['safeHref', () => safeHref(SVG) !== null, false],
+    ['hasUnsafeScheme (link insert)', () => !hasUnsafeScheme(SVG), false],
+    ['safeDownloadHref', () => safeDownloadHref(SVG) !== null, false],
+    ['hasUnsafeUrlProtocol href', () => !hasUnsafeUrlProtocol(SVG, 'href'), false],
+    ['hasUnsafeUrlProtocol src (iframe, inline HTML)', () => !hasUnsafeUrlProtocol(SVG, 'src'), false],
+    ['isScriptCarryingAttribute poster', () => !isScriptCarryingAttribute('poster', SVG), false],
+    ['isRasterImageDataUrl', () => isSafeRasterImageDataUrl(SVG), false],
+    ['blocksToHtml file <a href>', () => html('file', { url: SVG, fileName: 'a.svg' }).includes(asAttr), false],
+    ['blocksToHtml video <video src>', () => html('video', { url: SVG }).includes(asAttr), false],
+    ['blocksToHtml embed iframe src / link', () => html('embed', { source: SVG, embed: SVG, service: 'youtube' }).includes(asAttr), false],
+    ['blocksToHtml bookmark <a href>', () => html('bookmark', { url: SVG }).includes(asAttr), false],
+  ])('%s keeps it: %s', (_sink, keeps, expected) => {
+    expect(keeps()).toBe(expected);
   });
 });

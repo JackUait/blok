@@ -1,7 +1,7 @@
 import type { AssetKind } from '@/types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '@/types/configs/uploader';
 import type { OrphanSweep } from './orphan-sweep';
-import { createSafeObjectUrl } from '../../shared/safe-object-url';
+import { createSafeObjectUrl, localImageUrl } from '../../shared/safe-object-url';
 
 /**
  * Where uploaders can come from, in the order they are consulted.
@@ -193,7 +193,8 @@ function recordForSweep(
  *
  * With no uploader configured the file becomes an in-memory `blob:` URL — the
  * same fallback the media tools have always used, kept so the editor stays
- * usable with zero configuration.
+ * usable with zero configuration. An SVG image becomes a data: URL instead
+ * (see localImageUrl).
  * @param file - the file to store
  * @param ctx - what is being uploaded and on whose behalf
  * @param sources - candidate uploaders
@@ -214,9 +215,8 @@ export async function uploadAssetFile(
     return asset;
   }
 
-  // Same known SVG risk as the image tool's fallback; see tools/image/uploader.ts.
   return {
-    url: createSafeObjectUrl(file, { svgImage: ctx.kind === 'image' }),
+    url: ctx.kind === 'image' ? await localImageUrl(file) : createSafeObjectUrl(file),
     fileName: file.name,
   };
 }

@@ -64,8 +64,18 @@ describe('safeImageSrc', () => {
     expect(safeImageSrc('data:image/webp;base64,UklGR=')).toBe('data:image/webp;base64,UklGR=');
   });
 
-  it('rejects script-capable data: images (svg/xml) and html', () => {
-    expect(safeImageSrc('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toBeNull();
+  // An <img> runs no SVG script. Every navigable sink still refuses it (see the URL sink law).
+  it('keeps a data:image/svg+xml image, which <img> draws without running its script', () => {
+    expect(safeImageSrc('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toBe('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=');
+    expect(safeImageSrc('DATA:IMAGE/SVG+XML,%3Csvg%2F%3E')).toBe('DATA:IMAGE/SVG+XML,%3Csvg%2F%3E');
+    expect(safeImageSrc('data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E')).toBe('data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E');
+  });
+
+  it('rejects other script-capable data: types and look-alikes of svg+xml', () => {
+    expect(safeImageSrc('data:image/svg+xmlfoo,<x/>')).toBeNull();
+    expect(safeImageSrc('data:image/svg,<svg/>')).toBeNull();
+    expect(safeImageSrc('data:image/foo+xml,<x/>')).toBeNull();
+    expect(safeImageSrc('data:text/xml,<x/>')).toBeNull();
     expect(safeImageSrc('data:application/xhtml+xml,<x/>')).toBeNull();
     expect(safeImageSrc('data:text/html,<script>alert(1)</script>')).toBeNull();
   });

@@ -12,7 +12,7 @@ import type { BlokViewSchema } from '../shared/sanitize-schema';
 import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-scaffolding';
 import { classesFor } from '../shared/tool-classes';
 import { ownEntry } from '../shared/own-entry';
-import { hasUnsafeUrlProtocol } from '../shared/url-policy';
+import { hasUnsafeUrlProtocol, isSafeImageUrl } from '../shared/url-policy';
 import { firstStrongDirection } from '../shared/text-direction';
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../shared/page-reference';
@@ -478,6 +478,17 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
       return ` ${name}="${escapeHtml(resolved)}"`;
     },
+    imageSrc: (value, blockType) => {
+      if (typeof value !== 'string' || value === '') {
+        return '';
+      }
+
+      const resolved = transformUrl === undefined ? value : transformUrl(value, { attr: 'src', blockType });
+
+      return typeof resolved === 'string' && resolved !== '' && isSafeImageUrl(resolved)
+        ? ` src="${escapeHtml(resolved)}"`
+        : '';
+    },
     frameSrc: (value, blockType) => {
       const attr = env.url('src', value, blockType);
 
@@ -699,8 +710,8 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
 /**
  * The page title as an `<h1>`, or '' when the document has none. An image
- * icon's URL takes the same path as a block URL: transform, then the
- * unsafe-scheme strip.
+ * icon's URL takes the same path as an image block URL: transform, then the
+ * image-source check.
  * @param data - saved document
  * @param options - render options
  */
@@ -717,7 +728,7 @@ const titleHtml = (data: OutputData | LooseOutputData | null | undefined, option
   const src = rawSrc === '' || options.transformUrl === undefined
     ? rawSrc
     : options.transformUrl(rawSrc, { attr: 'src', blockType: undefined });
-  const safeSrc = typeof src === 'string' && src !== '' && !hasUnsafeUrlProtocol(src, 'src') ? src : '';
+  const safeSrc = typeof src === 'string' && src !== '' && isSafeImageUrl(src) ? src : '';
   const imageHtml = safeSrc === '' ? '' : `<img alt="" src="${escapeHtml(safeSrc)}"> `;
   const iconHtml = emoji === '' ? imageHtml : `<span aria-hidden="true">${escapeHtml(emoji)}</span> `;
 

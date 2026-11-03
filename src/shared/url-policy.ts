@@ -55,7 +55,7 @@ export const hasUnsafeUrlProtocol = (value: string | null, attribute: string): b
 };
 
 /**
- * Whether an image URL is one Blok renders: http(s), relative, or raster data.
+ * Whether an image URL is one Blok renders: http(s), relative, raster data or SVG data.
  * The same check as the renderers' `safeImageSrc`, so a write never stores a URL that shows blank.
  * @param url - image source
  */

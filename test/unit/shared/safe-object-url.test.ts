@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSafeObjectUrl } from '../../../src/shared/safe-object-url';
+import { createSafeObjectUrl, localImageUrl, SVG_DATA_URL_CAP_BYTES } from '../../../src/shared/safe-object-url';
 
 const HTML = '<script>alert(document.domain)</script>';
 
@@ -86,5 +86,54 @@ describe('createSafeObjectUrl', () => {
 
   it('returns the object URL', () => {
     expect(createSafeObjectUrl(new Blob(['x'], { type: 'image/png' }))).toBe('blob:https://host.test/1');
+  });
+});
+
+describe('localImageUrl', () => {
+  const made: Blob[] = [];
+  const SVG = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(document.domain)</script></svg>';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    made.length = 0;
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
+      if (obj instanceof Blob) {
+        made.push(obj);
+      }
+
+      return 'blob:https://host.test/1';
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each(['image/svg+xml', 'IMAGE/SVG+XML; charset=utf-8'])('turns a %s file into a base64 data: URL, never a blob', async (type) => {
+    const url = await localImageUrl(new File([SVG], 'a.svg', { type }));
+
+    expect(url.startsWith('data:image/svg+xml;base64,')).toBe(true);
+    expect(new TextDecoder().decode(Uint8Array.from(atob(url.slice(url.indexOf(',') + 1)), (ch) => ch.charCodeAt(0)))).toBe(SVG);
+    expect(made).toEqual([]);
+  });
+
+  it('keeps an SVG exactly at the cap as a data: URL', async () => {
+    const url = await localImageUrl(new File([new Uint8Array(SVG_DATA_URL_CAP_BYTES)], 'a.svg', { type: 'image/svg+xml' }));
+
+    expect(url.startsWith('data:image/svg+xml;base64,')).toBe(true);
+  });
+
+  it('gives an SVG over the cap a text/plain blob, which <img> does not draw', async () => {
+    const url = await localImageUrl(new File([new Uint8Array(SVG_DATA_URL_CAP_BYTES + 1)], 'a.svg', { type: 'image/svg+xml' }));
+
+    expect(url).toBe('blob:https://host.test/1');
+    expect(made.map((blob) => blob.type)).toEqual(['text/plain']);
+  });
+
+  it('keeps a raster image as a blob of its own type', async () => {
+    const url = await localImageUrl(new File([new Uint8Array(4)], 'a.png', { type: 'image/png' }));
+
+    expect(url).toBe('blob:https://host.test/1');
+    expect(made.map((blob) => blob.type)).toEqual(['image/png']);
   });
 });

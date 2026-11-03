@@ -17,6 +17,7 @@ import {
   uploadAssetUrl,
 } from '../../../../src/components/utils/asset-uploader';
 import { Uploader } from '../../../../src/tools/image/uploader';
+import { safeHref, safeImageSrc } from '../../../../src/components/utils/sanitize-url';
 import { compressImage } from '../../../../src/tools/image/compress';
 import { produceImageVariants } from '../../../../src/components/media-variants/image-variants';
 
@@ -175,6 +176,17 @@ describe('Uploader', () => {
         url: expect.stringMatching(/^blob:/),
         fileName: 'y.avif',
       });
+    });
+
+    it('stores an SVG with no uploader as a data: URL that <img> shows, not a blob that would run as the host', async () => {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>';
+      const result = await new Uploader({}).handleFile(new File([svg], 'logo.svg', { type: 'image/svg+xml' }));
+
+      expect(result.url).toBe(`data:image/svg+xml;base64,${btoa(svg)}`);
+      expect(result.fileName).toBe('logo.svg');
+      expect(URL.createObjectURL).not.toHaveBeenCalled();
+      expect(safeImageSrc(result.url)).toBe(result.url);
+      expect(safeHref(result.url)).toBeNull();
     });
   });
 

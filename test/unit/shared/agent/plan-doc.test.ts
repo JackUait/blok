@@ -288,13 +288,14 @@ describe('document field planning', () => {
     ' JaVa\tScRiPt:alert(1)',
     'vbscript:msgbox(1)',
     'data:text/html,<script>alert(1)</script>',
-    'data:image/svg+xml,<svg onload=alert(1)>',
+    'data:application/xhtml+xml,<x/>',
   ])('refuses the unsafe image icon URL %j, as the icon renderer would blank it', url => {
     expect(failOf(() => planOn(doc, [{ name: 'doc.setIcon', args: { icon: { type: 'image', url } } }])))
       .toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/icon/url' });
   });
 
-  it.each(['https://example.test/i.png', '/icons/i.png', 'data:image/png;base64,AAAA'])('keeps the image icon URL %j that the renderer shows', url => {
+  // An icon is only ever an <img>, which never runs an SVG's script.
+  it.each(['https://example.test/i.png', '/icons/i.png', 'data:image/png;base64,AAAA', 'data:image/svg+xml;base64,PHN2Zy8+'])('keeps the image icon URL %j that the renderer shows', url => {
     expect(planOn(doc, [{ name: 'doc.setIcon', args: { icon: { type: 'image', url } } }]).draft.toOutput().icon)
       .toEqual({ type: 'image', url });
   });

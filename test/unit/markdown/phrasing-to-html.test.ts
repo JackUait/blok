@@ -192,13 +192,15 @@ describe('phrasingToHtml', () => {
     expect(toHtml(nodes)).not.toContain('javascript');
   });
 
-  it('drops a data:image/svg+xml image (SVG can execute script)', () => {
-    const nodes: PhrasingContent[] = [{
-      type: 'image',
-      url: 'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+',
-      title: null,
-      alt: 'x',
-    }];
+  it('keeps a data:image/svg+xml image: an <img> never runs its script', () => {
+    const url = 'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+';
+    const nodes: PhrasingContent[] = [{ type: 'image', url, title: null, alt: 'x' }];
+
+    expect(toHtml(nodes)).toContain(`<img src="${url}"`);
+  });
+
+  it('still drops other xml data: images', () => {
+    const nodes: PhrasingContent[] = [{ type: 'image', url: 'data:application/xhtml+xml,<x/>', title: null, alt: 'x' }];
 
     expect(toHtml(nodes)).not.toContain('<img');
   });

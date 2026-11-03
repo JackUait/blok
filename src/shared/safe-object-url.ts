@@ -55,3 +55,38 @@ export function createSafeObjectUrl(blob: Blob, options: SafeObjectUrlOptions = 
 
   return URL.createObjectURL(keep ? blob : new Blob([blob], { type: 'text/plain' }));
 }
+
+/**
+ * Largest SVG kept as a data: URL. Its base64 (4/3 larger) stays well under
+ * the 1 MiB default collab message limit, with room for the rest of the update.
+ */
+export const SVG_DATA_URL_CAP_BYTES = 256 * 1024;
+
+/** Base64 in slices: one String.fromCharCode call over a large array overflows the stack. */
+const toBase64 = (bytes: Uint8Array): string => {
+  const SLICE = 0x8000;
+  const parts = Array.from({ length: Math.ceil(bytes.length / SLICE) }, (_, index) => (
+    String.fromCharCode(...bytes.subarray(index * SLICE, (index + 1) * SLICE))
+  ));
+
+  return btoa(parts.join(''));
+};
+
+/**
+ * The URL for an image file when no uploader stores it. An SVG becomes a
+ * data: URL: <img> draws it, and opened in a tab it runs in an opaque origin
+ * (or does not open), never as the host the way an SVG blob does. An SVG over
+ * {@link SVG_DATA_URL_CAP_BYTES} gets a text/plain blob instead, which runs no
+ * script and which <img> does not draw. Any other image gets a safe blob.
+ */
+export async function localImageUrl(file: Blob): Promise<string> {
+  if (file.type.split(';')[0].trim().toLowerCase() !== SVG) {
+    return createSafeObjectUrl(file);
+  }
+
+  if (file.size > SVG_DATA_URL_CAP_BYTES) {
+    return createSafeObjectUrl(file);
+  }
+
+  return `data:${SVG};base64,${toBase64(new Uint8Array(await file.arrayBuffer()))}`;
+}

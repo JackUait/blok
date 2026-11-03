@@ -133,7 +133,7 @@ export const planSetIcon = (state: PlanState, args: Record<string, unknown>): un
     state.fail('INVALID_ARGS', 'Expected a PageIcon or null to clear it.', '/icon');
   }
   if (icon?.type === 'image' && !isSafeImageUrl(icon.url)) {
-    state.fail('INVALID_ARGS', 'Pass an http(s), relative or raster data: image URL.', '/icon/url');
+    state.fail('INVALID_ARGS', 'Pass an http(s), relative, raster data: or SVG data: image URL.', '/icon/url');
   }
   state.emit({ op: 'setPageField', key: 'icon', value: icon === null ? null : cleanPageField(icon) });
 

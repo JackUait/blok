@@ -183,10 +183,7 @@ describe('uploadAssetFile', () => {
       .resolves.toEqual({ url: 'blob:fake', fileName: 'cover.png' });
   });
 
-  it.each([
-    ['file', 'text/plain'],
-    ['image', 'image/svg+xml'],
-  ] as const)('gives a kind "%s" SVG blob the type %s: only an image keeps SVG, which runs script when opened', async (kind, expected) => {
+  it('gives a kind "file" SVG a text/plain blob, which runs no script when opened', async () => {
     const made: Blob[] = [];
 
     vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
@@ -195,9 +192,17 @@ describe('uploadAssetFile', () => {
       return 'blob:fake';
     });
 
-    await uploadAssetFile(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), { kind }, sources());
+    await uploadAssetFile(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), { kind: 'file' }, sources());
 
-    expect(made.map((blob) => blob.type)).toEqual([expected]);
+    expect(made.map((blob) => blob.type)).toEqual(['text/plain']);
+  });
+
+  it('gives a kind "image" SVG a data: URL and makes no blob, so no SVG ever runs in the host origin', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+
+    await expect(uploadAssetFile(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), { kind: 'image' }, sources()))
+      .resolves.toEqual({ url: `data:image/svg+xml;base64,${btoa('<svg/>')}`, fileName: 'a.svg' });
+    expect(createObjectURL).not.toHaveBeenCalled();
   });
 
   it('re-types an HTML file for every kind', async () => {

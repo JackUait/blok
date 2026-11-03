@@ -52,6 +52,57 @@ describe('downloadImage', () => {
     restore();
   });
 
+  it('downloads a no-uploader SVG data: image from a blob made of its bytes', async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"/>';
+    const url = `data:image/svg+xml;base64,${btoa(svg)}`;
+    const made: Blob[] = [];
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('no fetch for data:'); }));
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
+      if (obj instanceof Blob) made.push(obj);
+
+      return 'blob:fake';
+    });
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const { attrs, restore } = captureAnchors();
+
+    await downloadImage(url, 'logo.svg');
+
+    expect(attrs).toEqual([{ href: 'blob:fake', download: 'logo.svg', target: null, rel: 'noopener' }]);
+    expect(made.map((blob) => blob.type)).toEqual(['image/svg+xml']);
+    expect(await made[0].text()).toBe(svg);
+    expect(fetch).not.toHaveBeenCalled();
+
+    restore();
+  });
+
+  it('keeps the UTF-8 bytes of a percent-encoded SVG data: image', async () => {
+    const made: Blob[] = [];
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
+      if (obj instanceof Blob) made.push(obj);
+
+      return 'blob:fake';
+    });
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const { restore } = captureAnchors();
+
+    await downloadImage('data:image/svg+xml,%3Csvg%3E%C3%A9%3C%2Fsvg%3E', 'e.svg');
+
+    expect(await made[0].text()).toBe('<svg>é</svg>');
+
+    restore();
+  });
+
+  it('never puts an SVG data: URL on an anchor, even when it cannot be decoded', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const { attrs, restore } = captureAnchors();
+
+    await downloadImage('data:image/svg+xml;base64,%%%', 'logo.svg');
+
+    expect(attrs).toEqual([]);
+
+    restore();
+  });
+
   it('falls back to a direct anchor (no new tab) when the fetch is blocked by CORS', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
     const { attrs, restore } = captureAnchors();

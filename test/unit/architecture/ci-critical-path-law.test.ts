@@ -400,8 +400,9 @@ describe('CI critical-path law', () => {
   });
 
   // The Go gates ride in Server Security, so they take no extra job slot under
-  // the 20-job cap. The container image moved to Workflow Lint to make room.
-  it('formats, vets, tests, audits and conformance-tests the Go server beside the security scans', () => {
+  // the 20-job cap. The container image (Workflow Lint) and Go conformance
+  // (Validate Spec File Coverage) moved out to make room.
+  it('formats, vets, tests and audits the Go server beside the security scans', () => {
     const security = getJob(ci, 'server-security');
     const steps = (security.steps ?? []).map(normalizeStep);
     const goStart = steps.findIndex((step) => step.name === 'Setup Node.js and Dependencies');
@@ -453,10 +454,6 @@ describe('CI critical-path law', () => {
           'go tool cover -func="$RUNNER_TEMP/go-coverage.out" | tail -n 1',
           'node ../../../scripts/check-server-coverage.mjs --go "$RUNNER_TEMP/go-coverage.out"',
         ].join('\n'),
-      },
-      {
-        name: 'Test Go conformance',
-        run: 'node scripts/test-server-conformance.mjs --target go',
       },
       {
         name: 'Test Go module consumer and release build',
@@ -643,6 +640,20 @@ describe('CI critical-path law', () => {
       {
         name: 'Validate test categories',
         run: 'yarn e2e:validate-categories',
+      },
+      // Here, not in Server Security: this job is done in a minute, and the Go
+      // unit tests fill Server Security.
+      {
+        name: 'Setup Go',
+        uses: 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e',
+        with: {
+          'go-version-file': 'packages/server/go/go.mod',
+          'cache-dependency-path': 'packages/server/go/go.sum',
+        },
+      },
+      {
+        name: 'Test Go conformance',
+        run: 'node scripts/test-server-conformance.mjs --target go',
       },
     ]);
 

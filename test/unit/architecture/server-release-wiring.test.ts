@@ -194,7 +194,8 @@ describe('server release wiring', () => {
   it('keeps every Node, C# and Go server gate in final CI', () => {
     const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
     const jobs = [workflow.jobs.server, workflow.jobs['server-delivery']];
-    const steps = [...jobs, workflow.jobs['server-security']].flatMap((job) => job?.steps ?? []);
+    const steps = [...jobs, workflow.jobs['server-security'], workflow.jobs['validate-spec-coverage']]
+      .flatMap((job) => job?.steps ?? []);
     const runs = steps.map((step) => step.run ?? '').join('\n');
 
     // The two jobs run in parallel; each builds the server, so each needs both toolchains.

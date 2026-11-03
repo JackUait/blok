@@ -135,7 +135,7 @@ describe('produceVideoVariant', () => {
     expect(mb.state.initOptions[0].video).not.toHaveProperty('quality');
     expect(mb.state.initOptions[0].audio).not.toHaveProperty('quality');
     expect(mb.state.initOptions[0].video).not.toHaveProperty('forceTranscode');
-    expect(mb.state.initOptions[0]).not.toHaveProperty('copy');
+    expect(mb.state.initOptions[0]).toMatchObject({ copy: { mode: 'preferred' } });
     expect(out?.mimeType).toBe('video/mp4; codecs="avc1.64001f, mp4a.40.2"');
     expect(out?.file.type).toBe(out?.mimeType);
     expect(out?.file.size).toBe(8);

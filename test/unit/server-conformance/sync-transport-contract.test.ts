@@ -295,6 +295,24 @@ describe('sync transport: before the upgrade', () => {
     });
   }, TEST_TIMEOUT_MS);
 
+  // One limiter serves the HTTP guard and the sync door, so a request spends
+  // what the upgrade would have had.
+  it('shares one rate limit between the HTTP routes and the sync upgrade', async () => {
+    await withServer({ auth: 'ticket', rateLimit: 1 }, async ({ open, server: running }) => {
+      const state = await fetch(`${running.baseUrl}/sync/${TICKET_DOC}/state`, {
+        headers: { Origin: ALLOWED_ORIGIN, Authorization: `Bearer ${tickets.compatible}` },
+      });
+
+      expect(state.status).not.toBe(429);
+      await state.arrayBuffer();
+
+      const limited = await open(`/sync/${TICKET_DOC}`, { headers: ticketHeaders(V1, tickets.compatible) });
+
+      expect(limited.response.status).toBe(429);
+      expect(limited.response.body).toBe('rate limit exceeded\n');
+    });
+  }, TEST_TIMEOUT_MS);
+
   it('caps one user at 8 sockets per document with 429, and frees the slot before answering a close', async () => {
     await withServer({ auth: 'ticket' }, async ({ open }) => {
       const sockets: RawSocket[] = [];

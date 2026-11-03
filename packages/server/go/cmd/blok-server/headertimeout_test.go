@@ -132,6 +132,7 @@ func TestAHeadReadBeforeIdleStillGets408(t *testing.T) {
 		first, later string
 	}{
 		{"split after a handler", "GET /slow HTTP/1.1\r\nHost: x\r\n\r\n", "GET /b HTTP/1.1\r\nHost: x\r\n"},
+		{"half a line after a handler", "GET /slow HTTP/1.1\r\nHost: x\r\n\r\n", "GET /b"},
 		{"same packet", "GET /slow HTTP/1.1\r\nHost: x\r\n\r\nGET /b HTTP/1.1\r\nHost: x\r\n", ""},
 		{"after a chunked body", "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /b HTTP/1.1\r\nHost: x\r\n", ""},
 	}
@@ -157,6 +158,35 @@ func TestAHeadReadBeforeIdleStillGets408(t *testing.T) {
 			answer, _ := io.ReadAll(conn)
 			if !strings.Contains(string(answer), "HTTP/1.1 408 Request Timeout\r\n") {
 				t.Fatalf("no 408 within 2s: %q", answer)
+			}
+		})
+	}
+}
+
+// The idle checks above must not cut a keep-alive connection that holds
+// nothing of a next request, on the host's own stack.
+func TestAnIdleKeepAliveIsNotCutByTheHeaderClock(t *testing.T) {
+	cases := map[string]string{
+		"after a GET":                  "GET /a HTTP/1.1\r\nHost: x\r\n\r\n",
+		"after a POST":                 "POST /a HTTP/1.1\r\nHost: x\r\nContent-Length: 2\r\n\r\nhi",
+		"after a POST and its CRLF":    "POST /a HTTP/1.1\r\nHost: x\r\nContent-Length: 2\r\n\r\nhi\r\n",
+		"after an unread chunked body": "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nhi\r\n0\r\n\r\n",
+	}
+	for name, first := range cases {
+		t.Run(name, func(t *testing.T) {
+			address := startHost(t, echoTarget, 100*time.Millisecond)
+			conn, err := net.Dial("tcp", address)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			_, _ = io.WriteString(conn, first)
+			time.Sleep(300 * time.Millisecond)
+			_, _ = io.WriteString(conn, "GET /b HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			answer, _ := io.ReadAll(conn)
+			if strings.Count(string(answer), "HTTP/1.1 200 OK\r\n") != 2 {
+				t.Fatalf("got %q", answer)
 			}
 		})
 	}

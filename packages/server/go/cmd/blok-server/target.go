@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/JackUait/blok/packages/server/go/internal/route"
 )
@@ -56,9 +57,14 @@ type targetStream struct {
 
 	mu     sync.Mutex
 	queued []queuedTarget
+	// held is set when Read returns with bytes of a request still in in or
+	// out. The after-POST wait is left out: it holds at most three bytes,
+	// which may be a trailing CRLF and not a request.
+	held atomic.Bool
 }
 
 func (s *targetStream) Read(p []byte) (int, error) {
+	defer func() { s.held.Store(len(s.out) > 0 || len(s.in) > 0 && !s.afterPost) }()
 	for len(s.out) == 0 {
 		if s.state == streamPass && len(s.in) == 0 && s.err == nil {
 			return s.src.Read(p)

@@ -156,10 +156,15 @@ func (c *headerConn) expire() {
 	_ = c.Conn.Close()
 }
 
+// arm runs at StateIdle. Bytes the stream holds came in while the clock was
+// off, and the stream may block on the socket for the rest of their line.
 func (c *headerConn) arm() {
 	c.mu.Lock()
 	c.armed = true
 	c.idle, c.idleDeadlines = true, 0
+	if c.targets != nil && c.targets.held.Load() {
+		c.startLocked()
+	}
 	c.mu.Unlock()
 }
 

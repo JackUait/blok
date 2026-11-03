@@ -762,3 +762,79 @@ func joinSynced(t *testing.T, manager *Manager, doc string, member *fakeMember) 
 	}
 	return result.Membership
 }
+
+// controlTag is the tag the room announced to member.
+func controlTag(t *testing.T, member *fakeMember) wire.Tag {
+	t.Helper()
+	for _, message := range member.messages(t) {
+		if control, ok := message.(wire.BlokControl); ok {
+			return control.Tag
+		}
+	}
+	t.Fatal("no control frame")
+	return wire.Tag{}
+}
+
+// sendOperation is C# Operation: a v2 write under the member's lineage.
+func sendOperation(t *testing.T, membership collab.Membership, member *fakeMember, operationID string, update []byte) {
+	t.Helper()
+	frame := syncFrame(t, wire.Operation{Lineage: controlTag(t, member).Lineage, OperationID: operationID, Update: update})
+	if err := membership.Receive(context.Background(), frame); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// probeStep2 joins a read-only probe, asks with vector and answers the
+// room's SyncStep2 update.
+func probeStep2(t *testing.T, manager *Manager, doc string, vector []byte) []byte {
+	t.Helper()
+	probe := &fakeMember{source: collab.SourceClientV1}
+	result, err := manager.Join(context.Background(), doc, probe)
+	if err != nil || result.Status != collab.JoinJoined {
+		t.Fatalf("probe join = %v, %v", result.Status, err)
+	}
+	if err := result.Membership.Receive(context.Background(), syncFrame(t, wire.SyncStep1{StateVector: vector})); err != nil {
+		t.Fatal(err)
+	}
+	result.Membership.Leave()
+	for _, message := range probe.messages(t) {
+		if step2, ok := message.(wire.SyncStep2); ok {
+			return step2.Update
+		}
+	}
+	t.Fatal("the probe got no SyncStep2")
+	return nil
+}
+
+// syncedClient is C# SyncedClientAsync: a client doc holding the room's
+// state, checked against expected.
+func syncedClient(t *testing.T, manager *Manager, doc, expected string) *yjs.Doc {
+	t.Helper()
+	client := newClient()
+	if _, err := client.ApplyUpdate(probeStep2(t, manager, doc, client.EncodeStateVector())); err != nil {
+		t.Fatal(err)
+	}
+	if got := docText(client); got != expected {
+		t.Fatalf("the synced client reads %q, want %q", got, expected)
+	}
+	return client
+}
+
+// exportedText is C# ExportedTextAsync.
+func exportedText(t *testing.T, manager *Manager, doc string) string {
+	t.Helper()
+	replica := newClient()
+	if _, err := replica.ApplyUpdate(probeStep2(t, manager, doc, []byte{0})); err != nil {
+		t.Fatal(err)
+	}
+	return docText(replica)
+}
+
+func strPtr(s string) *string { return &s }
+
+func versionOf(save recordedSave) string {
+	if save.version == nil {
+		return "<nil>"
+	}
+	return *save.version
+}

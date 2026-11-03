@@ -113,6 +113,9 @@ internal sealed class BlokServerRequestGuard
       return false;
     }
 
+    var key = rateLimitKey;
+    context.Features.Set(new HopBudgetFeature(() => _rateLimiter.Allow(key)));
+
     return true;
   }
 
@@ -131,6 +134,9 @@ internal sealed class BlokServerRequestGuard
     await context.Response.WriteAsync(body);
   }
 }
+
+/// <summary>Charges each outbound redirect hop to the key the guard charged for the request.</summary>
+internal sealed record HopBudgetFeature(Func<bool> AllowHop);
 
 /// <summary>The verified ticket of the current request; set only in ticket mode, after the guard passed it.</summary>
 internal sealed record TicketClaimsFeature(TicketClaims Claims);

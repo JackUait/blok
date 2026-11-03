@@ -32,6 +32,9 @@ type Limits struct {
 	Timeout      time.Duration
 	MaxBytes     int64
 	MaxRedirects int
+	// Hop, when set, is asked before every redirect hop. A false answer
+	// fails the fetch as RateLimited, so one request cannot fan out.
+	Hop func() bool
 }
 
 // Response is GuardedResponse. Release frees the concurrency slot; callers
@@ -151,6 +154,9 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 			}
 			if target.URL.Scheme == "https" && next.URL.Scheme != "https" {
 				return nil, fail(Blocked)
+			}
+			if limits.Hop != nil && !limits.Hop() {
+				return nil, fail(RateLimited)
 			}
 			raw = next.URL.AbsoluteURI
 			redirects++

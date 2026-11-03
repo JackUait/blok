@@ -10,6 +10,7 @@ internal enum GuardedFetchFailure
   TimedOut,
   TooManyRedirects,
   UnsupportedContentEncoding,
+  RateLimited,
 }
 
 internal sealed class GuardedFetchException : Exception

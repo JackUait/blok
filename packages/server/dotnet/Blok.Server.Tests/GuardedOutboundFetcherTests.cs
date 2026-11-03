@@ -803,6 +803,34 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task AsksTheHopBudgetBeforeEveryRedirect()
+  {
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var response = "HTTP/1.1 302 Found\r\n" +
+              $"Location: /{requestCount}\r\n" +
+              "Content-Length: 0\r\n" +
+              "Connection: close\r\n\r\n";
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(response),
+              cancellationToken);
+        });
+    var asked = 0;
+    var fetcher = CreateFixtureFetcher(origin, "hop.example");
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://hop.example:{origin.Port}/0",
+            Limits with { AllowHop = () => ++asked < 3 },
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.RateLimited, error.Failure);
+    Assert.Equal(3, origin.RequestCount);
+    Assert.Equal(3, asked);
+  }
+
+  [Fact]
   public async Task RejectsCredentialsIntroducedByARedirect()
   {
     await using var origin = new LoopbackOrigin(

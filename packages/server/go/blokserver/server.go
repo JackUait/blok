@@ -333,7 +333,16 @@ func (s *Server) guard(w http.ResponseWriter, r *http.Request, requireWrite bool
 		writeText(w, http.StatusTooManyRequests, "rate limit exceeded\n")
 		return r, false
 	}
-	return r, true
+	return r.WithContext(context.WithValue(r.Context(), rateKey{}, key)), true
+}
+
+type rateKey struct{}
+
+// hopBudget charges each outbound redirect hop to the caller's rate limit
+// key, the one the guard charged for the request itself.
+func (s *Server) hopBudget(r *http.Request) func() bool {
+	key, _ := r.Context().Value(rateKey{}).(string)
+	return func() bool { return s.limiter.allow(key) }
 }
 
 // remoteAddress is Connection.RemoteIpAddress: the peer IP without the port.

@@ -6,10 +6,13 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Blok.Server.Outbound;
 
+// AllowHop is asked before every redirect hop. False fails the fetch as
+// RateLimited, so one request cannot fan out.
 internal readonly record struct GuardedFetchLimits(
     TimeSpan TotalTimeout,
     long MaximumResponseBytes,
-    int MaximumRedirects);
+    int MaximumRedirects,
+    Func<bool>? AllowHop = null);
 
 internal sealed class GuardedResponse : IAsyncDisposable
 {
@@ -227,6 +230,12 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
             redirect.Url.Scheme != Uri.UriSchemeHttps)
         {
           throw Blocked();
+        }
+
+        if (limits.AllowHop is { } allowHop && !allowHop())
+        {
+          throw new GuardedFetchException(
+              GuardedFetchFailure.RateLimited);
         }
 
         rawUrl = redirect.Url.AbsoluteUri;

@@ -450,3 +450,26 @@ func TestRefusesAResponseHeadOverSixtyFourKiB(t *testing.T) {
 		wantBlocked(t, err)
 	}
 }
+
+func TestAsksTheHopBudgetBeforeEveryRedirect(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Location", "/"+strconv.Itoa(int(requests.Add(1))))
+		w.WriteHeader(http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+	port := server.Listener.Addr().(*net.TCPAddr).Port
+	f := newTestFetcher(&fixturePolicy{host: "hop.example", port: port, allowed: addrs("127.0.0.1")},
+		&countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
+	asked := 0
+	limits := testLimits
+	limits.Hop = func() bool { asked++; return asked < 3 }
+
+	_, err := f.Get(context.Background(), "http://hop.example:"+strconv.Itoa(port)+"/0", limits)
+	if !IsFailure(err, RateLimited) {
+		t.Fatalf("got %v, want RateLimited", err)
+	}
+	if requests.Load() != 3 || asked != 3 {
+		t.Fatalf("%d requests and %d asks, want 3 and 3", requests.Load(), asked)
+	}
+}

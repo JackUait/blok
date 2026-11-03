@@ -30,7 +30,9 @@ func (s *Server) unfurl(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, []byte("{\"success\":0}\n"))
 		return
 	}
-	response, err := s.fetcher.Get(r.Context(), target, unfurlLimits)
+	limits := unfurlLimits
+	limits.Hop = s.hopBudget(r)
+	response, err := s.fetcher.Get(r.Context(), target, limits)
 	if err != nil {
 		if r.Context().Err() == nil {
 			writeJSON(w, http.StatusOK, []byte("{\"success\":0}\n"))
@@ -147,7 +149,7 @@ func (s *Server) uploadByURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response, err := s.fetcher.Get(r.Context(), target, outbound.Limits{
-		Timeout: 2 * time.Minute, MaxBytes: s.options.MaxUploadBytes, MaxRedirects: 5,
+		Timeout: 2 * time.Minute, MaxBytes: s.options.MaxUploadBytes, MaxRedirects: 5, Hop: s.hopBudget(r),
 	})
 	if err != nil {
 		if r.Context().Err() == nil {

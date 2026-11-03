@@ -724,6 +724,41 @@ it('refuses an outbound response head over 64 KiB', async () => {
   compareGolden('outbound-header-size.json', actual);
 }, 60_000);
 
+// The guard counts the request; each redirect hop takes one more from the same budget.
+it('counts every outbound redirect hop against the rate limit', async () => {
+  const origin = await startFixtureOrigin();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-hops-'));
+
+  try {
+    await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl, '--rate-limit', '3'], async (server) => {
+      const page = await server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/chain/5/page.html`)}`);
+
+      expect(origin.received.map((request) => request.path)).toEqual([
+        '/chain/5/page.html', '/chain/4/page.html', '/chain/3/page.html',
+      ]);
+      expect([page.status, page.text]).toEqual([200, '{"success":0}\n']);
+
+      const refused = await server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/chain/0/page.html`)}`);
+
+      expect([refused.status, refused.text]).toEqual([429, 'rate limit exceeded\n']);
+      expect(origin.received).toHaveLength(3);
+    });
+    await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl, '--rate-limit', '2'], async (server) => {
+      origin.received.length = 0;
+      const media = await server.request('POST', '/upload-by-url', {
+        body: JSON.stringify({ url: `${origin.baseUrl}/chain/5/photo.png` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(origin.received.map((request) => request.path)).toEqual(['/chain/5/photo.png', '/chain/4/photo.png']);
+      expect([media.status, media.text]).toEqual([400, 'the URL could not be fetched\n']);
+    });
+  } finally {
+    await origin.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 60_000);
+
 it('shares four outbound fetches between unfurl and upload-by-url', async () => {
   const origin = await startFixtureOrigin();
   const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-permits-'));

@@ -22,6 +22,7 @@ const (
 	TimedOut
 	TooManyRedirects
 	UnsupportedContentEncoding
+	RateLimited
 )
 
 // Error is GuardedFetchException.

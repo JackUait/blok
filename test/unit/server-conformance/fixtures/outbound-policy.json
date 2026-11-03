@@ -210,7 +210,11 @@
     "  https://example.com/a  ",
     "https://example.com/a%00b",
     "https://example.com/café",
-    "https://example.com/\u00A0"
+    "https://example.com/\u00A0",
+    "https://-a.example/",
+    "https://_a.example/",
+    "https://a.-b.example/",
+    "http://-a.example/"
   ],
   "relative": [
     [
@@ -767,6 +771,34 @@
         "url": "https://example.com/%C2%A0",
         "host": "example.com",
         "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://-a.example/",
+        "host": "-a.example",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://_a.example/",
+        "host": "_a.example",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://a.-b.example/",
+        "host": "a.-b.example",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://-a.example/",
+        "host": "-a.example",
+        "port": 80,
         "literal": null
       }
     ],

@@ -246,7 +246,7 @@ function assertPackageMetadata(packageId, nuspec) {
         .map(({ id, version, exclude }) => ({ id, version, exclude }))
         .sort((left, right) => left.id.localeCompare(right.id)),
       [
-        { id: 'AngleSharp', version: '1.8.6', exclude: 'Build,Analyzers' },
+        { id: 'AngleSharp', version: '1.9.0', exclude: 'Build,Analyzers' },
         { id: 'BouncyCastle.Cryptography', version: '2.7.0', exclude: 'Compile,Build,Analyzers' },
         { id: 'Jint', version: '4.17.0', exclude: 'Compile,Build,Analyzers' },
       ],

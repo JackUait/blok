@@ -891,15 +891,17 @@ export class Embed implements BlockTool {
       return;
     }
 
-    const index = this.api.blocks.getBlockIndex(this.block.id);
-
-    try {
-      this.api.blocks.insert('bookmark', { url }, undefined, index, true, true);
-      this.api.notifier.show({ message: this.api.i18n.t('tools.embed.checkBlocked') });
-    } catch {
-      // No bookmark tool: keep the form and say the link can't be embedded.
+    // Checked first: insert would stop this block's mutation watch before
+    // it finds out the tool is missing.
+    if (!this.api.tools.getBlockTools().some((tool) => tool.name === 'bookmark')) {
       this.submitUrl('', container);
+
+      return;
     }
+
+    // A replace keeps the block's parent, so a bookmark in a toggle stays there.
+    this.api.blocks.insert('bookmark', { url }, undefined, this.api.blocks.getBlockIndex(this.block.id), true, true);
+    this.api.notifier.show({ message: this.api.i18n.t('tools.embed.checkBlocked') });
   }
 
   /** Returns whether the URL was accepted. */

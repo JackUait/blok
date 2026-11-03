@@ -18,17 +18,25 @@ const pasteMock = vi.fn();
 const notifyMock = vi.fn();
 const state: { menu: PasteMenuOpenParams | null; holder: HTMLElement | null } = { menu: null, holder: null };
 
-const createBlok = (): BlokModules => {
+/** A connected block holder that shows `html`, like the link block the paste inserts. */
+const makeHolder = (html: string): HTMLElement => {
   const holder = document.createElement('div');
 
+  holder.innerHTML = html;
   document.body.appendChild(holder);
   state.holder = holder;
+
+  return holder;
+};
+
+const createBlok = (current?: HTMLElement): BlokModules => {
+  const holder = makeHolder(`<a href="${GENERIC_URL}">${GENERIC_URL}</a>`);
 
   return {
     BlockManager: {
       paste: pasteMock.mockResolvedValue({ id: 'b1' }),
       insert: vi.fn().mockReturnValue({ id: 'link1', holder, dispatchChange: vi.fn() }),
-      currentBlock: { holder: document.createElement('div'), dispatchChange: vi.fn() },
+      currentBlock: { holder: current ?? document.createElement('div'), dispatchChange: vi.fn() },
       setCurrentBlockByChildNode: vi.fn(),
       beginToolTransaction: vi.fn(),
       endToolTransaction: vi.fn(),
@@ -51,10 +59,14 @@ const menu: LinkPasteMenu = {
 
 const context: HandlerContext = { canReplaceCurrentBlock: true, currentBlock: undefined };
 
-const pickEmbed = async (url: string, linkPaste: NonNullable<BlokConfig['linkPaste']>): Promise<void> => {
-  const handler = new PatternHandler(createBlok(), registry, {} as SanitizerConfigBuilder, { linkPaste }, menu);
+const pickEmbed = async (
+  url: string,
+  linkPaste: NonNullable<BlokConfig['linkPaste']>,
+  target: { context: HandlerContext; current?: HTMLElement } = { context }
+): Promise<void> => {
+  const handler = new PatternHandler(createBlok(target.current), registry, {} as SanitizerConfigBuilder, { linkPaste }, menu);
 
-  await handler.handle(url, context);
+  await handler.handle(url, target.context);
   state.menu?.onSelect('embed');
   await vi.advanceTimersByTimeAsync(CHECK_EMBED_TIMEOUT_MS + 10);
 };
@@ -123,4 +135,39 @@ describe('PatternHandler — the host frame check before a generic embed', () =>
     expect(pasteMock).not.toHaveBeenCalled();
   });
 
+
+  it('keeps the link when the user typed into its block during the check', async () => {
+    const checkEmbed = vi.fn(async () => {
+      state.holder?.append(' and more text');
+
+      return { verdict: 'blocked' as const };
+    });
+
+    await pickEmbed(GENERIC_URL, { allowGenericEmbed: true, checkEmbed });
+
+    expect(pasteMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('never removes another link when the pasted one went away during the check', async () => {
+    const current = document.createElement('div');
+
+    current.innerHTML = `<a href="https://other.test/">other</a> text <a href="${GENERIC_URL}">${GENERIC_URL}</a>`;
+    document.body.appendChild(current);
+
+    const checkEmbed = vi.fn(async () => {
+      current.querySelector(`a[href="${GENERIC_URL}"]`)?.remove();
+
+      return { verdict: 'allowed' as const };
+    });
+
+    await pickEmbed(GENERIC_URL, { allowGenericEmbed: true, checkEmbed }, {
+      context: { canReplaceCurrentBlock: false, currentBlock: undefined },
+      current,
+    });
+
+    expect(current.querySelector('a[href="https://other.test/"]')).not.toBeNull();
+    expect(pasteMock).not.toHaveBeenCalled();
+    current.remove();
+  });
 });

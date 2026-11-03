@@ -315,8 +315,9 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     if (type === 'embed' && matchEmbedService(url) === null && this.config?.linkPaste?.checkEmbed !== undefined) {
       const refused = await embedCheckRefuses(this.config.linkPaste.checkEmbed, url);
 
-      // The wait can outlast the link: the user may have undone or deleted it.
-      if (linkBlock?.holder !== undefined && !linkBlock.holder.isConnected) {
+      // The wait can outlast the link: the user may have undone, deleted or
+      // edited it. Acting then would replace their text or drop another link.
+      if (!this.linkStillPasted(linkBlock, url, canReplace)) {
         return;
       }
 
@@ -359,6 +360,26 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
         }
         break;
     }
+  }
+
+  /**
+   * Whether the pasted link is still in its block as pasted: an anchor with
+   * exactly this href and, when the block is to be replaced, nothing else.
+   */
+  private linkStillPasted(block: TargetBlock, url: string, canReplace: boolean): boolean {
+    const holder = block?.holder;
+
+    if (holder === undefined) {
+      return true;
+    }
+
+    const anchor = Array.from(holder.querySelectorAll('a')).find((link) => link.getAttribute('href') === url);
+
+    if (!holder.isConnected || anchor === undefined) {
+      return false;
+    }
+
+    return !canReplace || (holder.textContent ?? '').trim() === (anchor.textContent ?? '').trim();
   }
 
   /**

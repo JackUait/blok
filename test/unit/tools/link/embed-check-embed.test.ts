@@ -11,12 +11,13 @@ const insertMock = vi.fn();
 const notifyMock = vi.fn();
 const roots: HTMLElement[] = [];
 
-const mount = (linkPaste: LinkPaste): { tool: Embed; root: HTMLElement } => {
+const mount = (linkPaste: LinkPaste, blockTools: string[] = ['embed', 'bookmark']): { tool: Embed; root: HTMLElement } => {
   const options = {
     api: {
       i18n: { t: (key: string) => key, has: () => false, getLocale: () => 'en' },
       blocks: { delete: (): void => undefined, insert: insertMock, getBlockIndex: () => 4 },
       notifier: { show: notifyMock },
+      tools: { getBlockTools: () => blockTools.map((name) => ({ name })) },
       config: { linkPaste },
     } as unknown as API,
     block: { id: 'embed-block', dispatchChange: (): void => undefined } as never,
@@ -133,5 +134,16 @@ describe('Embed URL input — the host frame check', () => {
 
     expect(insertMock).not.toHaveBeenCalled();
     expect(tool.save().source).toBe('');
+  });
+
+  it('keeps the form and says the link cannot be embedded when there is no bookmark tool', async () => {
+    const { tool, root } = mount({ allowGenericEmbed: true, checkEmbed: async () => ({ verdict: 'blocked' }) }, ['embed']);
+
+    await submit(root, 'https://dash.example.org/q3');
+
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(tool.save().source).toBe('');
+    expect(root.querySelector('[data-role="embed-url-error"]')).not.toBeNull();
   });
 });

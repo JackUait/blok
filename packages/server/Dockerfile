@@ -6,6 +6,8 @@ FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS runtime-build
 WORKDIR /workspace
 
 COPY package.json yarn.lock .yarnrc.yml ./
+# yarn.lock names patch files that the install reads.
+COPY .yarn/patches/ .yarn/patches/
 COPY packages/angular/package.json packages/angular/package.json
 COPY packages/cli/package.json packages/cli/package.json
 COPY packages/mcp/package.json packages/mcp/package.json

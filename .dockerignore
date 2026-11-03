@@ -5,6 +5,7 @@
 node_modules
 **/node_modules
 .yarn
+!.yarn/patches
 .venv
 storybook-static
 dist

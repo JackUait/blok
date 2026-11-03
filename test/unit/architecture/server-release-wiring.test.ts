@@ -659,6 +659,19 @@ describe('server release wiring', () => {
     expect(localTargets.filter((target) => !beforeInstall.includes(`COPY ${target}/ ${target}/`))).toEqual([]);
   });
 
+  it('copies every yarn patch before the immutable yarn install', () => {
+    const dockerfile = read('packages/server/Dockerfile');
+    const beforeInstall = dockerfile.slice(0, dockerfile.indexOf('yarn install --immutable'));
+    const dockerignore = read('.dockerignore').split('\n');
+    const patchDirs = [...read('yarn.lock').matchAll(/#~\/([^":]+)\/[^/":]+\.patch/g)]
+      .map((match) => match[1])
+      .filter((dir, index, all) => all.indexOf(dir) === index);
+
+    // yarn reads each patch file while resolving; without it --immutable fails with ENOENT.
+    expect(patchDirs.filter((dir) => !beforeInstall.includes(`COPY ${dir}/ ${dir}/`))).toEqual([]);
+    expect(patchDirs.filter((dir) => !dockerignore.includes(`!${dir}`))).toEqual([]);
+  });
+
   it('builds the C# host from the root context into .NET 10 runtime-deps', () => {
     const dockerfile = read('packages/server/Dockerfile');
     const workflow = read(RELEASE_WORKFLOW);

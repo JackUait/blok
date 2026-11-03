@@ -48,6 +48,68 @@ describe('indexedDBStorage', () => {
     expect(resolved).toMatch(/^blob:/);
   });
 
+  describe('blob type on read', () => {
+    async function resolvedType(file: File, kind: 'image' | 'file'): Promise<string> {
+      const spy = vi.spyOn(URL, 'createObjectURL');
+      const uploader = indexedDBStorage({ dbName: 'blok-assets-test' });
+      const { url } = await requireUploadByFile(uploader)(file, { kind });
+
+      await resolveBlokObjectUrl(url, { dbName: 'blok-assets-test' });
+
+      const blob = spy.mock.calls.at(-1)?.[0];
+
+      if (!(blob instanceof Blob)) {
+        throw new Error('expected createObjectURL to get a Blob');
+      }
+
+      return blob.type;
+    }
+
+    it('re-types an HTML file to text/plain, so the blob: URL never runs as the host page', async () => {
+      expect(await resolvedType(new File(['<script>1</script>'], 'a.html', { type: 'text/html' }), 'file')).toBe('text/plain');
+    });
+
+    it('re-types an SVG stored as a file, since it would run script when opened', async () => {
+      expect(await resolvedType(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), 'file')).toBe('text/plain');
+    });
+
+    it('keeps SVG stored as an image, since <img> needs the type and runs no script', async () => {
+      expect(await resolvedType(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), 'image')).toBe('image/svg+xml');
+    });
+
+    it('keeps a safe type such as PNG', async () => {
+      expect(await resolvedType(new File(['bytes'], 'a.png', { type: 'image/png' }), 'image')).toBe('image/png');
+    });
+
+    it('re-types SVG from a record saved before the kind was stored', async () => {
+      const spy = vi.spyOn(URL, 'createObjectURL');
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('blok-assets-test', 1);
+
+        request.onupgradeneeded = (): void => {
+          request.result.createObjectStore('assets');
+        };
+        request.onsuccess = (): void => resolve(request.result);
+        request.onerror = (): void => reject(request.error);
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const request = db.transaction('assets', 'readwrite').objectStore('assets')
+          .put({ blob: new Blob(['<svg/>'], { type: 'image/svg+xml' }), name: 'old.svg', type: 'image/svg+xml' }, 'old');
+
+        request.onsuccess = (): void => resolve();
+        request.onerror = (): void => reject(request.error);
+      });
+      db.close();
+
+      await resolveBlokObjectUrl('blok:asset/old', { dbName: 'blok-assets-test' });
+
+      const blob = spy.mock.calls.at(-1)?.[0];
+
+      expect(blob instanceof Blob ? blob.type : null).toBe('text/plain');
+    });
+  });
+
   it('returns null for a reference that is not stored', async () => {
     expect(await resolveBlokObjectUrl('blok:asset/missing', { dbName: 'blok-assets-test' })).toBeNull();
   });

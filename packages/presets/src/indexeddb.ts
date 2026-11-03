@@ -1,4 +1,5 @@
 import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
+import { createSafeObjectUrl } from '../../../src/shared/safe-object-url';
 
 export interface IndexedDBStorageOptions {
   dbName?: string;
@@ -33,12 +34,12 @@ export function indexedDBStorage(options: IndexedDBStorageOptions = {}): BlokUpl
   const dbName = options.dbName ?? DEFAULT_DB;
 
   return {
-    async uploadByFile(file: File, _ctx: UploadContext): Promise<UploadedAsset> {
+    async uploadByFile(file: File, ctx: UploadContext): Promise<UploadedAsset> {
       const key = crypto.randomUUID();
       const db = await openDb(dbName);
 
       try {
-        await tx(db, 'readwrite', (store) => store.put({ blob: file, name: file.name, type: file.type }, key));
+        await tx(db, 'readwrite', (store) => store.put({ blob: file, name: file.name, type: file.type, kind: ctx.kind }, key));
       } finally {
         db.close();
       }
@@ -58,15 +59,22 @@ export async function resolveBlokObjectUrl(url: string, options: IndexedDBStorag
   const db = await openDb(options.dbName ?? DEFAULT_DB);
   const record = await readRecord(db, url.slice(PREFIX.length));
 
-  return record ? URL.createObjectURL(record.blob) : null;
+  // Same rule as core: SVG keeps its type only for an image, which <img> shows.
+  // Records saved before `kind` was stored lose SVG too.
+  return record ? createSafeObjectUrl(record.blob, { svgImage: record.kind === 'image' }) : null;
 }
 
-function readRecord(db: IDBDatabase, key: string): Promise<{ blob: Blob } | undefined> {
-  return tx<{ blob: Blob } | undefined>(
+interface StoredRecord {
+  blob: Blob;
+  kind?: string;
+}
+
+function readRecord(db: IDBDatabase, key: string): Promise<StoredRecord | undefined> {
+  return tx<StoredRecord | undefined>(
     db,
     'readonly',
     // IDBObjectStore.get() returns IDBRequest<any> per lib.dom.d.ts — the cast
     // narrows it to what this store actually holds.
-    (store) => store.get(key) as IDBRequest<{ blob: Blob } | undefined>
+    (store) => store.get(key) as IDBRequest<StoredRecord | undefined>
   ).finally(() => db.close());
 }

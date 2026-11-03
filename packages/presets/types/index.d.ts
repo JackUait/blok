@@ -191,5 +191,10 @@ export function indexedDBStorage(options?: IndexedDBStorageOptions): BlokUploade
  * anything else — is returned unchanged; validating that a URL is safe to
  * render remains the host's job. Resolves `null` when the reference is not
  * (or no longer) stored.
+ *
+ * The `blob:` URL gets a safe type, like Blok's own blob URLs. HTML, XML and
+ * other types that could run as a page become `text/plain`. The bytes stay the
+ * same. SVG keeps its type only when it was stored as an image. Read the real
+ * type from the block's `mimeType`.
  */
 export function resolveBlokObjectUrl(url: string, options?: IndexedDBStorageOptions): Promise<string | null>;

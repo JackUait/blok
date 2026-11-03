@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
 )
@@ -155,7 +156,7 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 			if redirects >= limits.MaxRedirects {
 				return nil, fail(TooManyRedirects)
 			}
-			next, err := f.Policy.Validate(location, target.URL)
+			next, err := f.Policy.Validate(headerText(location), target.URL)
 			if err != nil {
 				return nil, err
 			}
@@ -388,4 +389,18 @@ func (b *boundedReader) Read(p []byte) (int, error) {
 	n, err := b.r.Read(p)
 	b.remaining -= int64(n)
 	return n, err
+}
+
+// headerText reads a Location value as .NET does: UTF-8 when the bytes are
+// valid UTF-8, else one byte per character (Latin-1). So a raw 0xE9 is "é"
+// and a raw 0x85 is the C1 control the policy refuses.
+func headerText(value string) string {
+	if utf8.ValidString(value) {
+		return value
+	}
+	runes := make([]rune, len(value))
+	for i := 0; i < len(value); i++ {
+		runes[i] = rune(value[i])
+	}
+	return string(runes)
 }

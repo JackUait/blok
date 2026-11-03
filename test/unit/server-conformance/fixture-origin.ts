@@ -24,6 +24,7 @@ export interface FixtureOrigin {
   readonly errorUrl: string;
   readonly mediaFinalUrl: string;
   readonly mediaRedirectUrl: string;
+  readonly latin1RedirectUrl: string;
   readonly metadataFinalUrl: string;
   readonly metadataRedirectUrl: string;
   readonly oversizedUrl: string;
@@ -272,6 +273,15 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
       case '/metadata/final/page.html':
         send(response, 200, 'text/html; charset=utf-8', PRECEDENCE_HTML);
         break;
+      // Node writes header text as Latin-1, so the "é" goes out as one raw
+      // 0xE9 byte: not valid UTF-8.
+      case '/latin1/redirect':
+        response.writeHead(302, { Location: '/latin1/caf\u00e9' });
+        response.end();
+        break;
+      case '/latin1/caf%C3%A9':
+        send(response, 200, 'text/html; charset=utf-8', PRECEDENCE_HTML);
+        break;
       case '/media/redirect':
         response.writeHead(302, { Location: '/media/final/photo.jpeg?download=1' });
         response.end();
@@ -323,6 +333,7 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
     errorUrl: `${baseUrl}/error`,
     mediaFinalUrl: `${baseUrl}/media/final/photo.jpeg?download=1`,
     mediaRedirectUrl: `${baseUrl}/media/redirect`,
+    latin1RedirectUrl: `${baseUrl}/latin1/redirect`,
     metadataFinalUrl: `${baseUrl}/metadata/final/page.html?from=redirect`,
     metadataRedirectUrl: `${baseUrl}/metadata/redirect`,
     oversizedUrl: `${baseUrl}/oversized`,

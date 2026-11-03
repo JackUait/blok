@@ -1449,6 +1449,30 @@ it('unfurls redirected metadata with stable precedence and drops image and favic
   }
 });
 
+it('reads a redirect Location that is not valid UTF-8 as Latin-1', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withServer(serverArgs(
+      '--storage-dir',
+      '',
+      '--conformance-origin',
+      origin.baseUrl,
+    ), async (server) => {
+      const response = await server.request(
+        'GET',
+        `/unfurl?url=${encodeURIComponent(origin.latin1RedirectUrl)}`,
+        { parseJson: true },
+      );
+
+      expect(origin.received.map(({ path }) => path)).toEqual(['/latin1/redirect', '/latin1/caf%C3%A9']);
+      expect(response.json).toMatchObject({ success: 1, link: `${origin.baseUrl}/latin1/caf%C3%A9` });
+    });
+  } finally {
+    await origin.stop();
+  }
+});
+
 it('distinguishes a missing unfurl URL from fetch and upstream failures', async () => {
   const origin = await startFixtureOrigin();
 

@@ -226,3 +226,11 @@ describe('markdownToHtml', () => {
     expect(html).toContain('id="dup-1"');
   });
 });
+
+describe('markdownToHtml SVG data: images', () => {
+  it('keeps a data:image/svg+xml image in <img>', async () => {
+    const url = 'data:image/svg+xml;base64,PHN2Zy8+';
+
+    expect(await markdownToHtml(`![x](${url})`)).toContain(`src="${url}"`);
+  });
+});

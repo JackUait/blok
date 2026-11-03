@@ -37,8 +37,10 @@ const SVG = 'image/svg+xml';
 
 export interface SafeObjectUrlOptions {
   /**
-   * Keep image/svg+xml. Only for a URL that reaches `<img>`, CSS or a plain
-   * programmatic download click: an SVG opened as a page runs its script.
+   * Keep image/svg+xml. Only for a short-lived URL nobody can open in a tab:
+   * an off-screen `<img>` for rasterizing, or a programmatic download click.
+   * Never a stored or on-screen URL: "Open image in new tab" runs the SVG as
+   * the host. Use localImageUrl for those.
    */
   svgImage?: boolean;
 }

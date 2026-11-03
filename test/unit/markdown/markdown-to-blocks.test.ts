@@ -613,3 +613,13 @@ describe('markdownToBlocks with large input', () => {
   }, 60_000);
 });
 
+
+describe('SVG data: images', () => {
+  it('keeps a data:image/svg+xml image as an image block', async () => {
+    const url = 'data:image/svg+xml;base64,PHN2Zy8+';
+    const { blocks, warnings } = await markdownToBlocksWithReport(`![x](${url})`);
+
+    expect(warnings).toEqual([]);
+    expect(JSON.stringify(blocks)).toContain(url);
+  });
+});

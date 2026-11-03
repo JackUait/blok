@@ -97,6 +97,17 @@ describe('agent-written media URLs', () => {
     expect(plan.edits).toHaveLength(1);
   });
 
+  // Allowed: an image block url reaches only <img> (editor and view), and download
+  // decodes the bytes. No href, frame or CSS sink takes data:image/svg+xml.
+  it('writes an SVG data: image url into an image block, and the host hook still decides', () => {
+    const svg = 'data:image/svg+xml;base64,PHN2Zy8+';
+    const { draft } = planOn(doc, [insert('image', { url: svg })], { tools });
+    const media = gate();
+
+    expect(draft.toOutput().blocks.find((block) => block.type === 'image')?.data).toMatchObject({ url: svg });
+    expect(refusal([insert('image', { url: svg })], media)).toMatchObject({ code: 'DATA_REJECTED', details: { url: svg } });
+  });
+
   it('lists every refused URL in one failure', () => {
     const error = refusal([insert('image', { url: BAD }), insert('file', { url: `${BAD}2` })]);
 

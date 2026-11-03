@@ -98,6 +98,13 @@ func (j *fakeJournal) setFailCheckpoints(f func(string) error) {
 	j.failCheckpoints = f
 }
 
+// StealFence: another process takes the fence while a session is live.
+func (j *fakeJournal) StealFence(id string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.doc(id).fence++
+}
+
 func (j *fakeJournal) Head(id string) *operation.Head {
 	j.mu.Lock()
 	defer j.mu.Unlock()
@@ -446,8 +453,15 @@ type fakeEndpoint struct {
 	loads     int
 
 	loadGate        chan struct{}
+	saveGate        chan struct{}
 	nextSaveVersion *string
 	echoesSaves     bool
+}
+
+func (e *fakeEndpoint) setSaveGate(gate chan struct{}) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.saveGate = gate
 }
 
 func newFakeEndpoint() *fakeEndpoint {
@@ -542,8 +556,14 @@ func (e *fakeEndpoint) Save(_ context.Context, doc string, outputData any, versi
 		return nil, err
 	}
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.saves = append(e.saves, recordedSave{doc: doc, data: data, version: version, projection: projection})
+	gate := e.saveGate
+	e.mu.Unlock()
+	if gate != nil {
+		<-gate
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	answer := e.nextSaveVersion
 	e.nextSaveVersion = nil
 	if e.echoesSaves {

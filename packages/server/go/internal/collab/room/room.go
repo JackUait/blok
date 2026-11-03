@@ -197,10 +197,15 @@ func (r *Room) run(ctx context.Context, operation func() error) error {
 	return operation()
 }
 
-// post is fire-and-forget lane entry for timers and observers.
+// post is fire-and-forget lane entry for timers and observers. Its place in
+// line is taken now, not when the goroutine runs: a checkpoint posted inside
+// a commit must run before the next frame's work.
 func (r *Room) post(operation func() error) {
+	turn := r.lane.reserve()
 	go func() {
-		if err := r.run(context.Background(), operation); err != nil {
+		<-turn
+		defer r.lane.leave()
+		if err := operation(); err != nil {
 			r.logf(`collab: room "` + r.docID + `" background work failed: ` + err.Error())
 		}
 	}()

@@ -49,6 +49,21 @@ func (l *lane) enter(ctx context.Context) error {
 	}
 }
 
+// reserve takes a place in line at the call, as SemaphoreSlim.WaitAsync
+// does when it is called; the channel closes on that place's turn.
+func (l *lane) reserve() <-chan struct{} {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	turn := make(chan struct{})
+	if !l.held {
+		l.held = true
+		close(turn)
+		return turn
+	}
+	l.waiters = append(l.waiters, turn)
+	return turn
+}
+
 func (l *lane) leave() {
 	l.mu.Lock()
 	defer l.mu.Unlock()

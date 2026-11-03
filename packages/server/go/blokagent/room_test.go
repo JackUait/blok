@@ -582,6 +582,13 @@ func TestAStepCountsItsEscapedJSONText(t *testing.T) {
 	if err := s.measure(); err != nil {
 		t.Fatal(err)
 	}
+	written, err := serialized(before)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"t":"\uD83D\uDE80\u003Ca\u003E\u0026\u0027\u002B\u00E9"}`; string(written) != want {
+		t.Fatalf("written %s, want %s", written, want)
+	}
 	if s.chars != 57+2 {
 		t.Fatalf("chars %d", s.chars)
 	}

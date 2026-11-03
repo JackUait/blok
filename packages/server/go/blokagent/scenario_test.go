@@ -350,7 +350,6 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 					var err error
 					if run == "room" {
 						execution, err = executor.ExecuteInRoom(ctx, doc, batch, stepActor(step), options)
-						live.healListings()
 					} else if run == "plain" {
 						execution, err = executor.Execute(ctx, document, batch, scenarioActor, options)
 					} else {
@@ -361,6 +360,7 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 						}
 						execution, err = session.Execute(ctx, document, batch)
 					}
+					live.healListings()
 					if err != nil {
 						t.Fatalf("%s: %v", where, err)
 					}

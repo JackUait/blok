@@ -346,7 +346,7 @@ An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, 
 
 `edit`, `state` and the history `restore` add `Blok-Doc-Lineage`, `Blok-Doc-Sequence` and `ETag` to `Access-Control-Expose-Headers` for an allowed origin, so a browser page can read them. Headers your app already exposes are kept.
 
-Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
+Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. It also refuses a URL whose raw text holds a control character (C0, DEL or C1), anywhere and in every redirect `Location`. Spaces at the ends are trimmed. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
 Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` is refused. A response head over 64 KiB is refused. When a rate limit is on, each redirect hop counts as one more request for the caller.
 

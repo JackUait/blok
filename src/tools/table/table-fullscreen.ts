@@ -30,7 +30,6 @@ const stepperRow = (axis: 'cols' | 'rows'): string =>
   + '<input role="spinbutton" inputmode="numeric" autocomplete="off">'
   + `<button type="button" ${STEP_ATTR}="1" data-axis="${axis}" tabindex="-1" aria-hidden="true">+</button></span>`;
 const NEAR_ATTR = 'data-blok-table-fullscreen-near';
-const CLOSING_ATTR = 'data-blok-table-fullscreen-closing';
 
 /** How far the button sits in from the table's inline-end edge. */
 const CORNER_INSET = 6;
@@ -416,9 +415,6 @@ export class TableFullscreen {
     this.closing = null;
     this.origin = null;
     this.shape = null;
-    closing.host.removeAttribute(CLOSING_ATTR);
-    closing.host.style.removeProperty('--blok-table-inline-width');
-
     closing.animations.forEach(a => a.cancel());
     this.header.replaceChildren();
     removeFromTopLayer(closing.host);
@@ -473,15 +469,18 @@ export class TableFullscreen {
     if (origin === null || shape === null || !host.isConnected || !canAnimate(host)) {
       return [];
     }
-    // The table takes its page width back now, while it moves: after the
-    // motion a fluid table's columns would snap narrower at rest.
-    host.style.setProperty('--blok-table-inline-width', `${this.inlineWidth}px`);
-    host.setAttribute(CLOSING_ATTR, '');
-    this.options.onRelayout();
-
     const source = host.querySelector<HTMLElement>('[data-blok-table-scroll]');
     const timing = { duration: CLOSE_MS, easing: SPRING, fill: 'forwards' as const };
+    // The table takes its page width back now, while it moves: after the
+    // motion a fluid table's columns would snap narrower at rest. Held by an
+    // animation on the root alone: an attribute or custom property on the host
+    // restyles every cell, and a style write on the root counts as an edit.
+    const width = source?.parentElement?.animate([{ width: `${this.inlineWidth}px` }], { duration: 0, fill: 'forwards' });
+
+    this.options.onRelayout();
+
     const animations = [
+      ...(width === undefined ? [] : [width]),
       host.animate([{ clipPath: SHEET_CLIP }, { clipPath: insetOf(host.getBoundingClientRect(), shape) }], timing),
     ];
 

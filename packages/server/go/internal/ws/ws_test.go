@@ -500,3 +500,62 @@ func TestGuessedPongsDoNotAnswerAnUnwrittenPing(t *testing.T) {
 		t.Fatalf("aborted after %v, before the timeout", elapsed)
 	}
 }
+
+// gatedPingConn holds each ping's Write open after the bytes went out until
+// the gate opens, so the peer's pong lands before the write returns.
+type gatedPingConn struct {
+	net.Conn
+	gate chan struct{}
+}
+
+func (c gatedPingConn) Write(b []byte) (int, error) {
+	n, err := c.Conn.Write(b)
+	if len(b) > 0 && b[0] == 0x89 {
+		<-c.gate
+	}
+	return n, err
+}
+
+// An honest pong can beat the ping's write back: it still answers the ping.
+func TestAPongThatBeatsThePingWriteStillAnswersIt(t *testing.T) {
+	raw, client := net.Pipe()
+	defer client.Close()
+	gate := make(chan struct{})
+	server := NewServerConn(gatedPingConn{raw, gate}, nil, Options{KeepAliveInterval: 20 * time.Millisecond, KeepAliveTimeout: 150 * time.Millisecond})
+	defer server.Abort()
+	go func() {
+		buf := make([]byte, 16)
+		for {
+			if _, _, _, err := server.Receive(buf); err != nil {
+				return
+			}
+		}
+	}()
+	_, payload := serverFrame(t, client)
+	send(t, client, frame(0x8a, payload))
+	// Let Receive handle the pong before the ping's write returns.
+	time.Sleep(30 * time.Millisecond)
+	close(gate)
+	go func() {
+		for {
+			head := make([]byte, 2)
+			if _, err := io.ReadFull(client, head); err != nil {
+				return
+			}
+			body := make([]byte, head[1]&0x7f)
+			if _, err := io.ReadFull(client, body); err != nil {
+				return
+			}
+			if head[0] == 0x89 {
+				if _, err := client.Write(frame(0x8a, body)); err != nil {
+					return
+				}
+			}
+		}
+	}()
+	select {
+	case <-server.Done():
+		t.Fatal("an answered ping timed out")
+	case <-time.After(400 * time.Millisecond):
+	}
+}

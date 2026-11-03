@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.8.6" />
+    <PackageReference Include="AngleSharp" Version="1.9.0" />
     <!--
       5 MB that only macOS ever loads, and only for an outbound link preview
       over https. It cannot be made optional: the assembly has to be present

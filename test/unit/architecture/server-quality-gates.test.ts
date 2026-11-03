@@ -75,7 +75,7 @@ describe('server quality gates', () => {
     expect(runs).toContain('dotnet tool restore');
     expect(runs).toContain('dotnet reportgenerator');
     expect(runs).toContain('node scripts/check-server-coverage.mjs');
-    expect(tools.tools['dotnet-reportgenerator-globaltool']?.version).toBe('5.5.11');
+    expect(tools.tools['dotnet-reportgenerator-globaltool']?.version).toBe('5.5.12');
   });
 
   it('formats, vets, audits, tests and measures the Go server in CI', () => {

@@ -223,6 +223,20 @@ describe('routing contract: health, unknown routes and ported routes', () => {
       expect(response.body).toBe('404 page not found\n');
     });
 
+    // Without --collab there is no sync route and no WebSocket accept.
+    it.each([
+      ['GET', '/sync/x', { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==' }],
+      ['GET', '/sync/x/state', {}],
+      ['POST', '/sync/x/edit', { 'Content-Length': '0' }],
+      ['GET', '/sync/x/history', {}],
+    ])('answers %s %s with the 404 catch-all when collab is off', async (method, path, headers: Record<string, string>) => {
+      const response = await rawRequest(server.baseUrl, method, path, headers);
+
+      expectNotFound(response, method);
+      expect(response.headers.upgrade).toBeUndefined();
+      expect(response.body).toBe('404 page not found\n');
+    });
+
     it('answers HEAD on an unknown route with 404 and no body', async () => {
       const response = await rawRequest(server.baseUrl, 'HEAD', '/nope');
 

@@ -1,6 +1,6 @@
 # Progress: agent-room lane (round 2, 2026-11-03)
 
-Branch `go/agent-room`, worktree `/Users/jackuait/Packages/.blok-go/agent-room`, from `origin/main` at `68290c4e`. Not pushed. Read this first in the next round.
+Branch `go/agent-room`, worktree `/Users/jackuait/Packages/.blok-go/agent-room`, from `origin/main` at `68290c4e`, rebased in round 2 onto `8844385f`. Not pushed. Read this first in the next round.
 
 Scope: agent.md 2e (room dispatch), 2f (room undo/redo), 2g (translator), 2h (version history), 2i (shared lanes), F9-F28, the traps left by the agent-stored lane (T2, T4, T6-T14, T17, T18, T20, T3), section 3 room test files, MOVES and PFIELDS.
 
@@ -32,7 +32,7 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 
 ## C# changes (C# first, test first)
 
-- **T6 was a real race. Fixed.** `409edc4c`. A room step was added to the shared history inside the lane, and its `Lineage` was set after the lane, outside the history lock (`BlokAgentExecutor.cs:542-544` vs `:575-578`). An undo from another call in that gap read `Lineage == null`, skipped the lineage pin, and in the lane met a set lineage against a null expect, so it answered CONFLICT for a step it could undo. Red first: new `BlokAgentRoomHistoryTests.AStepCarriesItsLineageWhenItIsAdded` saw `[null]`. Fix: `CollabRoom` hands the edit's receipt to the `applied` callback, and the executor sets the lineage before `Add`. Go matches (`room.Applied` gets the receipt; Go twin `TestAStepCarriesItsLineageWhenItIsAdded`). New internal test seams: `RoomAgentHistory.Added`, `BlokAgentExecutor.RoomHistory`.
+- **T6 was a real race. Fixed.** `f680574e`. A room step was added to the shared history inside the lane, and its `Lineage` was set after the lane, outside the history lock (`BlokAgentExecutor.cs:542-544` vs `:575-578`). An undo from another call in that gap read `Lineage == null`, skipped the lineage pin, and in the lane met a set lineage against a null expect, so it answered CONFLICT for a step it could undo. Red first: new `BlokAgentRoomHistoryTests.AStepCarriesItsLineageWhenItIsAdded` saw `[null]`. Fix: `CollabRoom` hands the edit's receipt to the `applied` callback, and the executor sets the lineage before `Add`. Go matches (`room.Applied` gets the receipt; Go twin `TestAStepCarriesItsLineageWhenItIsAdded`). New internal test seams: `RoomAgentHistory.Added`, `BlokAgentExecutor.RoomHistory`.
 - New C# tests with Go twins: `RoomAgentHistoryTests.AFullRedoSideEvictsThePageActionJustAdded` (T2), `BlokAgentRoomRefusalTests` (R10 refusal after a page was made, F26 refused restore).
 - `AgentServerScenarioTests` reads room scenarios. No other C# production change.
 
@@ -44,7 +44,7 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 - Section 5 traps owned by the stored lane, with their oracles (`progress-agent-stored.md`): T1 host.json `the char cap counts escaped UTF-16 units` (+ the room twin above); T5 decision (Go sends what C# sends; no `go-live`); T15 host.json `page action: the target runs with no options…`; T16 `DisableBuiltInComments` + host.json options cases; T19 `formula_limits_test.go`; T21 host.json exact failure bytes.
 - critique.md orphans: `RichTextInput.cs` is collab (done by collab-core); `CollabWorkingSetLaw` and the converter seams are collab; none is in the agent area.
 - Generator now a zero-dep `.mjs` with a freshness test (CI has no Python step), see Scenario source.
-- Sweep: every agent.md row ID (2a-2i, F1-F28, T1-T21, sections 3 and 4) is DONE in this file or in `progress-agent-stored.md`; no OPEN or PARTIAL row is left in either.
+- Sweep: every agent.md row ID (2a-2i, F1-F28, T1-T21, sections 3 and 4) is DONE in this file or in `progress-agent-stored.md`. One non-row item was still open there in round 2 (wrong-type messages); round 3 closes it (below).
 - The cached build error of `Server.AgentExecutor()` (round 1 "known difference") is not observable: it only re-reads `collabRooms.get()`, which already keeps its error, and every error `buildRoomManager` returns comes from the options (S3 client, rich-text fields), so a retry would fail the same way. Decision, not a row.
 
 ## Ledger rows
@@ -79,7 +79,7 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 | H6 | DONE | SCEN `room-undo-per-person`, `room-undo-nothing-to-replay` (other actor) |
 | H7, T18 | DONE (Go twin) | `TestStepsGoAfterAnHourWithoutACall` (clock seam; exactly one hour is not past it) |
 | H8, T2 | DONE | SCEN `room-undo-cap` (105 edits, 100 undos); C#+Go `AFullRedoSideEvictsThePageActionJustAdded` / `TestTheRoomTrimsOnlyDoneSteps` |
-| H9, T8 | DONE (Go twin, -race) | `TestTwoUndosAtOnceTakeTheStepBackOnce` |
+| H9, T8 | DONE | C# `BlokAgentRoomHistoryTests.TwoUndosAtOnceTakeTheStepBackOnce` and Go twin `TestTwoUndosAtOnceTakeTheStepBackOnce` (-race) |
 | H10, T20 | DONE | SCEN `room-undo-forget-{purge,restore,reset}`, `version-undo-after-restore` (mutant without the listener fails all four) |
 | H11-H16 | DONE | exercised by every undo scenario; H14 `room-undo-unlock`, H15 `room-undo-share-*`, H16 `room-undo-move-and-title` |
 | H17, T12 | DONE | SCEN `room-undo-restores-the-stamp` (mutant without Stamps fails) |

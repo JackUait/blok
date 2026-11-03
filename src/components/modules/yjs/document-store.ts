@@ -791,6 +791,41 @@ export class DocumentStore {
   }
 
   /**
+   * `addBlockAt` for a run of blocks that follow each other under one parent:
+   * the first goes right after `placement.afterId`, each next one after the
+   * one before it. One order lookup and one insert for the whole run.
+   * @param blockDatas - Blocks to add, in order
+   * @param placement - Target parent and the sibling the first block follows
+   */
+  public addBlocksAt(blockDatas: YjsOutputBlockData[], placement: BlockPlacement): void {
+    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+    const entries = blockDatas.flatMap((blockData) => {
+      const unparented = { ...blockData };
+
+      delete unparented.parent;
+
+      const id = typeof blockData.id === 'string' ? stripNul(blockData.id) : blockData.id;
+
+      return typeof id === 'string' ? [{ id, yblock: this.serializer.outputDataToYBlock(unparented) }] : [];
+    });
+    const placed = entries.filter(({ id }) => parentId === null || !this.wouldFormCycle(id, parentId));
+
+    this.transact(() => {
+      entries.forEach(({ id, yblock }) => this.yBlocksMap.set(id, yblock));
+
+      if (parentId !== null) {
+        placed.forEach(({ yblock }) => yblock.set('parentId', parentId));
+      }
+
+      const target = this.resolveTargetOrder(parentId ?? undefined);
+
+      if (target !== null && placed.length > 0) {
+        target.insert(this.placementSlot(target, placement.afterId), placed.map(({ id }) => id));
+      }
+    }, 'local');
+  }
+
+  /**
    * Remove a block by id: delete its map entry and remove the id string
    * from the root order and every contentIds array containing it.
    * @param id - Block id to remove

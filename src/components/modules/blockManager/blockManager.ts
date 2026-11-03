@@ -876,10 +876,7 @@ export class BlockManager extends Module {
       this.isRenderingDocument = false;
     }
 
-    for (const [block, placement] of underExistingParents) {
-      this.hierarchy.placeBlock(block, placement);
-      hideUnderCollapsedParent(block, (id) => this.getBlockById(id));
-    }
+    this.placeUnderExistingParents(underExistingParents);
 
     // Apply indentation for blocks with parentId (hierarchical structure).
     blocks.forEach(block => {
@@ -945,27 +942,70 @@ export class BlockManager extends Module {
       return { parentId: blockData.parent, afterId: afterId ?? null };
     };
 
-    this.Blok.YjsManager.transact(() => {
-      blockDataArray.forEach((blockData) => {
-        const id = blockData.id;
+    // Blocks that follow each other under one parent go in as one run.
+    const runs: Array<{ placement: TreePlacement; blocks: OutputBlockData[] }> = [];
 
-        if (id === undefined) {
-          return;
-        }
+    blockDataArray.forEach((blockData) => {
+      const id = blockData.id;
 
-        const placement = placementOf(blockData, id);
-        const content = blockData.content?.filter((childId) => !idsInBatch.has(childId));
-        const unparented = { ...blockData, ...(content !== undefined && { content }) };
+      if (id === undefined) {
+        return;
+      }
 
-        delete unparented.parent;
-        this.Blok.YjsManager.addBlockAt(unparented, placement);
-        written.add(id);
+      const placement = placementOf(blockData, id);
+      const content = blockData.content?.filter((childId) => !idsInBatch.has(childId));
+      const unparented = { ...blockData, ...(content !== undefined && { content }) };
+      const run = runs.at(-1);
 
-        if (placement.parentId === null) {
-          previous.root = id;
-        }
-      });
+      delete unparented.parent;
+
+      if (run !== undefined && run.placement.parentId === placement.parentId && run.blocks.at(-1)?.id === placement.afterId) {
+        run.blocks.push(unparented);
+      } else {
+        runs.push({ placement, blocks: [unparented] });
+      }
+      written.add(id);
+
+      if (placement.parentId === null) {
+        previous.root = id;
+      }
     });
+
+    this.Blok.YjsManager.transact(() => {
+      runs.forEach(({ placement, blocks }) => this.Blok.YjsManager.addBlocksAt(blocks, placement));
+    });
+  }
+
+  /**
+   * insertMany helper: puts each batch block under its parent outside the
+   * batch. A run under a table or database that already sits in its flat slot
+   * is written in one go; everything else is placed block by block.
+   * @param placements - batch blocks whose parent is outside the batch, in batch order
+   */
+  private placeUnderExistingParents(placements: ReadonlyMap<Block, TreePlacement>): void {
+    const runs: Array<{ placement: TreePlacement; blocks: Block[] }> = [];
+
+    for (const [block, placement] of placements) {
+      const run = runs.at(-1);
+
+      if (run !== undefined && run.placement.parentId === placement.parentId && run.blocks.at(-1)?.id === placement.afterId) {
+        run.blocks.push(block);
+      } else {
+        runs.push({ placement, blocks: [block] });
+      }
+    }
+
+    for (const { placement, blocks } of runs) {
+      if (this.hierarchy.placeRunInPlace(blocks, placement)) {
+        continue;
+      }
+
+      blocks.forEach((block, i) => {
+        this.hierarchy.placeBlock(block, i === 0 ? placement : { parentId: placement.parentId, afterId: blocks[i - 1].id });
+        this.hierarchy.mountOutsidersInFirstSlot(block);
+        hideUnderCollapsedParent(block, (id) => this.getBlockById(id));
+      });
+    }
   }
 
   /**
@@ -2326,8 +2366,8 @@ export class BlockManager extends Module {
    * editor (not in the batch) goes. Under that parent, after its last child
    * before `index`; later batch blocks under the same parent follow the
    * earlier ones. Left out, so the block falls back to the root as before:
-   * a table/database parent (it places its own children), a parent that owns
-   * its children, and one whose childTools refuse the block. `insertAt`
+   * a parent that owns its children (but a table or database, which places
+   * its own), and one whose childTools refuse the block. `insertAt`
    * demotes a refused tool instead, but a batch block is already built with
    * its tool and data.
    * @param blocks - blocks being inserted
@@ -2344,8 +2384,8 @@ export class BlockManager extends Module {
 
       if (
         parent === undefined
-        || isSelfPlacedParent(parent, getBlock)
-        || parent.tool.ownsChildren
+        // A table or database owns its children, yet takes new ones the way insert() gives them.
+        || (parent.tool.ownsChildren && !isSelfPlacedParent(parent, getBlock))
         || !isChildToolAllowed(parent, block.name)
       ) {
         continue;

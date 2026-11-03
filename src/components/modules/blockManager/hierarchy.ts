@@ -570,7 +570,6 @@ export class BlockHierarchy {
   private placeUnderParent(block: Block, sanitizedParentId: string | null): void {
     const placement = this.placementForParent(block, sanitizedParentId);
 
-    const newParent = sanitizedParentId !== null ? this.repository.getBlockById(sanitizedParentId) : undefined;
     const withDom = this.mayMountHolder(block, sanitizedParentId);
 
     // Tables and databases too: they order children by their own model, but
@@ -582,34 +581,90 @@ export class BlockHierarchy {
       this.reindentSubtree(block);
     }
 
-    // Public API contract: a block given a table from outside its cells goes
-    // into the first cell, where the table adopts it into its grid. Left at
-    // root, save() rejects it as a child no cell references.
-    const firstSlot = newParent !== undefined && SELF_PLACING_PARENTS.has(newParent.name) && !newParent.holder.contains(block.holder)
-      ? this.findHomeSlot(newParent.id)
+    if (withDom) {
+      this.mountOutsidersInFirstSlot(block);
+    }
+  }
+
+  /**
+   * Public API contract: a block given a table or database from outside its
+   * cells goes into the first cell, where the tool adopts it into its grid.
+   * Left at root, save() rejects it as a child no cell references.
+   * @param block - a block just placed under its parent
+   */
+  public mountOutsidersInFirstSlot(block: Block): void {
+    const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
+    const firstSlot = parent !== undefined && SELF_PLACING_PARENTS.has(parent.name) && !parent.holder.contains(block.holder)
+      ? this.findHomeSlot(parent.id)
       : null;
 
-    if (withDom && firstSlot !== null && this.blocksStore !== undefined) {
-      const store = this.blocksStore;
-      // A slotless block's children sit flat after it, so they come along.
-      const subtree = this.subtreeOf(block);
-      const carried = subtree.filter(member =>
-        !subtree.some(other => other !== member && other.holder.contains(member.holder)));
-
-      // A peer's child: the cell it belongs to comes with the table's own
-      // data write, and the table mounts it then. Shown in the first cell
-      // meanwhile, it would take typing that no cell reference keeps.
-      if (this.isApplyingRemoteChange?.() === true) {
-        carried.forEach(member => member.holder.remove());
-      } else {
-        // Last first: each mount anchors on the holders after it.
-        [...carried].reverse().forEach(member => {
-          store.mount(member, this.repository.getBlockIndex(member), firstSlot);
-        });
-        carried.forEach(member => this.updateBlockIndentation(member));
-      }
+    if (firstSlot === null || this.blocksStore === undefined) {
+      return;
     }
 
+    const store = this.blocksStore;
+    // A slotless block's children sit flat after it, so they come along.
+    const subtree = this.subtreeOf(block);
+    const carried = subtree.filter(member =>
+      !subtree.some(other => other !== member && other.holder.contains(member.holder)));
+
+    // A peer's child: the cell it belongs to comes with the table's own
+    // data write, and the table mounts it then. Shown in the first cell
+    // meanwhile, it would take typing that no cell reference keeps.
+    if (this.isApplyingRemoteChange?.() === true) {
+      carried.forEach(member => member.holder.remove());
+
+      return;
+    }
+
+    // Last first: each mount anchors on the holders after it.
+    [...carried].reverse().forEach(member => {
+      store.mount(member, this.repository.getBlockIndex(member), firstSlot);
+    });
+    carried.forEach(member => this.updateBlockIndentation(member));
+  }
+
+  /**
+   * Puts a run of new childless blocks under a table or database in one
+   * write, when the flat array already holds them where `placement` puts
+   * them: right after `placement.afterId`'s subtree, each after the one
+   * before. Otherwise changes nothing and returns false.
+   * @param run - the blocks, in flat order
+   * @param placement - the parent and the sibling the first block follows
+   * @returns whether the run was placed
+   */
+  public placeRunInPlace(run: Block[], placement: TreePlacement): boolean {
+    const { parentId, afterId } = placement;
+    const parent = parentId === null ? undefined : this.repository.getBlockById(parentId);
+    const blocks = this.repository.blocks;
+    const start = run.length > 0 ? blocks.indexOf(run[0]) : -1;
+
+    if (parent === undefined || !SELF_PLACING_PARENTS.has(parent.name) || start === -1) {
+      return false;
+    }
+
+    const contiguousLeaves = run.every((block, i) =>
+      blocks[start + i] === block && block.contentIds.length === 0 && block.parentId === parentId);
+    const runIds = new Set(run.map(block => block.id));
+    const rest = [...blocks.slice(0, start), ...blocks.slice(start + run.length)];
+    const getById = (id: string): Block | undefined => runIds.has(id) ? undefined : this.repository.getBlockById(id);
+    const tree = { blocks: rest, getById };
+
+    if (!contiguousLeaves || (afterId !== null && runIds.has(afterId)) || flatIndexForPlacement(tree, placement) !== start) {
+      return false;
+    }
+
+    // A stale list that misses afterId is first completed in tree order (see placeBlock).
+    const listed = afterId === null || parent.contentIds.includes(afterId)
+      ? parent.contentIds
+      : childrenInTreeOrder(tree, parent).map(child => child.id);
+    const siblings = listed.filter(id => !runIds.has(id));
+    const slot = afterId === null ? 0 : siblings.indexOf(afterId) + 1;
+
+    parent.contentIds = [...siblings.slice(0, slot), ...run.map(block => block.id), ...siblings.slice(slot)];
+    run.forEach(block => this.mountOutsidersInFirstSlot(block));
+
+    return true;
   }
 
   /**

@@ -522,6 +522,17 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Add a run of blocks at a placement (see `DocumentStore.addBlocksAt`).
+   * @param blockDatas - Blocks to add, in order
+   * @param placement - Target parent (null = root) and the sibling the first block follows
+   */
+  public addBlocksAt(blockDatas: YjsOutputBlockData[], placement: BlockPlacement): void {
+    this.flushPendingBlockWrites();
+    this.undoHistory.markCaretBeforeChange();
+    this.documentStore.addBlocksAt(blockDatas.map(blockData => this.withCreationStamp(blockData, placement.parentId)), placement);
+  }
+
+  /**
    * Remove a block by id.
    * @param id - Block id to remove
    */

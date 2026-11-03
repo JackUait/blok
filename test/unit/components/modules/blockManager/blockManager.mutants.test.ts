@@ -96,6 +96,7 @@ type YjsStub = {
   removeBlock: Mock;
   addBlock: Mock;
   addBlockAt: Mock;
+  addBlocksAt: Mock;
   stopCapturing: Mock;
   holdCapture: Mock;
   releaseCapture: Mock;
@@ -184,6 +185,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     removeBlock: vi.fn(),
     addBlock: vi.fn(),
     addBlockAt: vi.fn(),
+    addBlocksAt: vi.fn(),
     stopCapturing: vi.fn(),
     holdCapture: vi.fn(),
     releaseCapture: vi.fn(),
@@ -1597,8 +1599,8 @@ describe('BlockManager.insertMany serialization and side effects', () => {
     addHarness.blockManager.insertMany([added], 2, { yjsSync: 'add' });
 
     expect(addHarness.yjs.fromJSON).not.toHaveBeenCalled();
-    expect(addHarness.yjs.addBlockAt).toHaveBeenCalledWith(
-      { id: 'added', type: 'paragraph', data: {} },
+    expect(addHarness.yjs.addBlocksAt).toHaveBeenCalledWith(
+      [{ id: 'added', type: 'paragraph', data: {} }],
       { parentId: null, afterId: null }
     );
   });

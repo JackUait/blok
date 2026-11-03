@@ -368,6 +368,9 @@ Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` i
 - The answer sends `Vary: Origin`.
 - `link` is the final URL after redirects.
 - `oembed` appears when the page links a JSON oEmbed endpoint. It holds only `title`, `provider_name`, an `https` `thumbnail_url`, and `width` and `height` capped at 4096. The oEmbed `html` field is never returned.
+  - `thumbnail_url` is dropped when it holds a control character, raw or escaped (`%00`–`%1F`, `%7F`).
+  - It is also dropped when its host is a loopback, private or metadata address, `localhost`, or a name with no dot. A Unicode host comes back as punycode.
+  - The server never fetches the thumbnail. Treat it as untrusted input.
 
 The verdict is a hint for your UI, not a security check. The server cannot see the reader's cookies, the full chain of frames above your editor, or scripts that break out of frames.
 

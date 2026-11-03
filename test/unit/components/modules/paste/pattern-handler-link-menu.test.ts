@@ -252,6 +252,14 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(menuOpen?.allowedEmbedOrigins).toEqual(['dash.example.org']);
   });
 
+  it('hands the blocked embed origins to the menu', async () => {
+    const handler = makeHandler({ linkPaste: { allowGenericEmbed: true, blockedEmbedOrigins: ['evil.example'] } });
+
+    await handler.handle('https://evil.example/x', context);
+
+    expect(menuOpen?.blockedEmbedOrigins).toEqual(['evil.example']);
+  });
+
   describe('link to the editor\'s own host', () => {
     // jsdom serves the page from localhost.
     const ownUrl = `${window.location.origin}/doc/1`;

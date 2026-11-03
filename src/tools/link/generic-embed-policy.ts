@@ -8,6 +8,8 @@ import { isHttpsUrl } from './registry';
 export interface GenericEmbedPolicy {
   allowGeneric: boolean;
   allowedOrigins: readonly string[];
+  /** `linkPaste.blockedEmbedOrigins`; beats both allow settings. */
+  blockedOrigins: readonly string[];
   /** The page host and `linkPaste.hostAliases`. */
   ownHosts: readonly string[];
 }
@@ -17,6 +19,7 @@ export function genericEmbedPolicy(linkPaste: BlokConfig['linkPaste']): GenericE
   return {
     allowGeneric: linkPaste?.allowGenericEmbed === true,
     allowedOrigins: linkPaste?.allowedEmbedOrigins ?? [],
+    blockedOrigins: linkPaste?.blockedEmbedOrigins ?? [],
     ownHosts: pageHosts(linkPaste?.hostAliases),
   };
 }
@@ -29,6 +32,37 @@ const hostnameOf = (url: string): string => {
   }
 };
 
+/** A hostname in the form `new URL` gives: lower case, punycode, no trailing dot. */
+const canonicalHost = (name: string): string => {
+  const bare = name.trim().replace(/\.$/, '');
+
+  try {
+    return new URL(`https://${bare}`).hostname.replace(/\.$/, '');
+  } catch {
+    return bare.toLowerCase();
+  }
+};
+
+/**
+ * Whether `url`'s host matches a deny-list entry. Unlike the allow list, a
+ * miss here lets a frame through, so both sides are made canonical first:
+ * a trailing dot or a Unicode entry must not slip past.
+ */
+function isBlockedHost(url: string, patterns: readonly string[]): boolean {
+  const host = canonicalHost(hostnameOf(url));
+
+  return host !== '' && patterns.some((pattern) => {
+    const wildcard = pattern.trim().startsWith('*.');
+    const entry = canonicalHost(wildcard ? pattern.trim().slice(2) : pattern);
+
+    if (entry === '') {
+      return false;
+    }
+
+    return wildcard ? host.endsWith(`.${entry}`) : host === entry;
+  });
+}
+
 /**
  * Whether a non-registry URL may be framed. The paste menu, the embed URL
  * input and render all ask this, so the menu never offers what render refuses.
@@ -38,5 +72,6 @@ const hostnameOf = (url: string): string => {
 export function canFrameGeneric(url: string, policy: GenericEmbedPolicy): boolean {
   return isHttpsUrl(url)
     && !isSameSiteHost(hostnameOf(url), policy.ownHosts)
+    && !isBlockedHost(url, policy.blockedOrigins)
     && (policy.allowGeneric || isAllowedEmbedOrigin(url, policy.allowedOrigins));
 }

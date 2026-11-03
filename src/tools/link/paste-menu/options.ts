@@ -16,6 +16,8 @@ export interface PasteMenuContext {
   allowGenericEmbed?: boolean;
   /** Hosts (`linkPaste.allowedEmbedOrigins`) whose https URLs may get a generic embed. */
   allowedEmbedOrigins?: readonly string[];
+  /** Hosts (`linkPaste.blockedEmbedOrigins`) never offered a generic embed. */
+  blockedEmbedOrigins?: readonly string[];
   /**
    * Hostnames (or `*.` wildcards) that count as the editor's own site. A
    * bookmark of the site the reader is already on adds nothing.
@@ -43,6 +45,7 @@ const canEmbedGeneric = (url: string, context: PasteMenuContext): boolean =>
   canFrameGeneric(url, {
     allowGeneric: context.allowGenericEmbed === true,
     allowedOrigins: context.allowedEmbedOrigins ?? [],
+    blockedOrigins: context.blockedEmbedOrigins ?? [],
     ownHosts: context.ownHosts ?? [],
   });
 

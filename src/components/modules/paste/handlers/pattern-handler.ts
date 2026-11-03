@@ -224,10 +224,11 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     const policy = genericEmbedPolicy(this.config?.linkPaste);
     const allowGenericEmbed = policy.allowGeneric;
     const allowedEmbedOrigins = policy.allowedOrigins;
+    const blockedEmbedOrigins = policy.blockedOrigins;
     const ownHosts = policy.ownHosts;
     const pageId = this.pageIdFor(url);
     const page = pageId === undefined ? {} : { pageId };
-    const gate = { hasSelection, allowGenericEmbed, allowedEmbedOrigins, ownHosts, ...page };
+    const gate = { hasSelection, allowGenericEmbed, allowedEmbedOrigins, blockedEmbedOrigins, ownHosts, ...page };
 
     // The link is already in; a menu offering only "keep it" is noise.
     if (buildLivePasteMenuOptions(url, gate).every((o) => o.type === 'plain')) {

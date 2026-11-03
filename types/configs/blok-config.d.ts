@@ -1092,6 +1092,21 @@ export interface BlokMountOptions {
     allowedEmbedOrigins?: string[];
 
     /**
+     * Hosts that never get a generic embed, even with `allowGenericEmbed: true`
+     * or a matching `allowedEmbedOrigins` entry. Same syntax as
+     * `allowedEmbedOrigins`: a hostname (`ads.example.com`) or a wildcard
+     * (`*.example.com`). A wildcard does not cover the bare domain, so list
+     * both to block a whole site. Entries may be written in Unicode; a
+     * trailing dot, letter case and the port are ignored.
+     *
+     * Checked at render from this config, never from saved data: a stored
+     * generic embed of a blocked host shows as a link card, and the paste menu
+     * does not offer "Create embed" for it. Registry providers (YouTube,
+     * Figma, …) are not affected.
+     */
+    blockedEmbedOrigins?: string[];
+
+    /**
      * Other hostnames that count as the editor's own site, next to the page's
      * own hostname. Entries are hostnames (`example.com`) or wildcard subdomain
      * patterns (`*.example.com` — any subdomain depth, never the bare suffix).

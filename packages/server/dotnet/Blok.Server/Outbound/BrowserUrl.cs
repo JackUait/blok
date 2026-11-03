@@ -96,7 +96,8 @@ internal static class BrowserUrl
     }
   }
 
-  // %00-%1F or %7F, in either hex case.
+  // %00-%1F, %7F or a C1 control in UTF-8 (%C2%80-%C2%9F), in any hex
+  // case.
   private static bool HasEncodedControl(string url)
   {
     for (var i = 0; i + 2 < url.Length; i++)
@@ -109,6 +110,12 @@ internal static class BrowserUrl
       var high = (char)(url[i + 1] | 0x20);
       var low = (char)(url[i + 2] | 0x20);
       if (high is '0' or '1' || (high == '7' && low == 'f'))
+      {
+        return true;
+      }
+
+      if (high == 'c' && low == '2' && i + 5 < url.Length &&
+          url[i + 3] == '%' && url[i + 4] is '8' or '9')
       {
         return true;
       }

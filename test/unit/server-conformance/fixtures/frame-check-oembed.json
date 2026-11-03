@@ -444,6 +444,58 @@
     {
       "name": "a Unicode host and a Unicode path",
       "json": "{\"thumbnail_url\":\"https://b\\u00fccher.de/\\u00fc.png\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C1 U+0080",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%C2%80b\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C1 U+0085",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%C2%85b\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C1 U+009F",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%C2%9Fb\"}"
+    },
+    {
+      "name": "a thumbnail with a lowercase encoded C1",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%c2%9fb\"}"
+    },
+    {
+      "name": "a thumbnail with a mixed-case encoded C1",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%c2%9Fb\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C1 in the query",
+      "json": "{\"thumbnail_url\": \"https://x.com/?q=%C2%85\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C1 in the fragment",
+      "json": "{\"thumbnail_url\": \"https://x.com/#%C2%85\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C1 after a lone C2",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%C2%C2%85b\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded NBSP is kept",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%C2%A0b\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded e-acute is kept",
+      "json": "{\"thumbnail_url\": \"https://x.com/caf%C3%A9\"}"
+    },
+    {
+      "name": "a thumbnail with encoded U+2005 is kept",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%E2%80%85b\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded C2 then 7E is kept",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%C2%7Eb\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded percent before C2 is kept",
+      "json": "{\"thumbnail_url\": \"https://x.com/a%25C2%2585b\"}"
     }
   ],
   "answers": [
@@ -1334,6 +1386,110 @@
       "width": null,
       "height": null,
       "wire": "{\"thumbnail_url\":\"https://xn--bcher-kva.de/%C3%BC.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%C2%A0b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%C2%A0b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/caf%C3%A9",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/caf%C3%A9\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%E2%80%85b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%E2%80%85b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%C2~b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%C2~b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%25C2%2585b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%25C2%2585b\"}"
     }
   ]
 }

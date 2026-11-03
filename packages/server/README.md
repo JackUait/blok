@@ -355,7 +355,7 @@ Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` i
 - `link` is the final URL after redirects.
 - `image.url` and `favicon` are URLs a reader's browser loads. They pass the same filter as the `/frame-check` `thumbnail_url` below:
   - They must be `https`, with no user name or password, and at most 2048 characters.
-  - A control character, raw or escaped, drops the URL.
+  - A control character, raw or escaped (`%00`–`%1F`, `%7F`, `%C2%80`–`%C2%9F`), drops the URL.
   - A loopback, private or metadata address, `localhost`, a name with no dot, a name ending in a dot and a name whose last label starts with a digit are dropped. A Unicode host comes back as punycode.
 - When a candidate is dropped, the next one is tried: `og:image`, then `twitter:image`; `rel="icon"`, then `apple-touch-icon`, then `/favicon.ico` on the final page.
 - So a page served over `http` gets no favicon, unless it names an `https` one.
@@ -378,7 +378,7 @@ Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` i
 - The answer sends `Vary: Origin`.
 - `link` is the final URL after redirects.
 - `oembed` appears when the page links a JSON oEmbed endpoint. It holds only `title`, `provider_name`, an `https` `thumbnail_url`, and `width` and `height` capped at 4096. The oEmbed `html` field is never returned.
-  - `thumbnail_url` is dropped when it holds a control character, raw or escaped (`%00`–`%1F`, `%7F`).
+  - `thumbnail_url` is dropped when it holds a control character, raw or escaped (`%00`–`%1F`, `%7F`, `%C2%80`–`%C2%9F`).
   - It is also dropped when its host is a loopback, private or metadata address, `localhost`, or a name with no dot. A Unicode host comes back as punycode.
   - The server never fetches the thumbnail. Treat it as untrusted input.
 

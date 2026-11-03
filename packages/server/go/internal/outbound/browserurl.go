@@ -69,7 +69,8 @@ func publicHost(u *dotnet.URI) (string, bool) {
 	return "", false
 }
 
-// hasEncodedControl finds %00-%1F or %7F, in either hex case.
+// hasEncodedControl finds %00-%1F, %7F or a C1 control in UTF-8
+// (%C2%80-%C2%9F), in any hex case.
 func hasEncodedControl(url string) bool {
 	for i := 0; i+2 < len(url); i++ {
 		if url[i] != '%' {
@@ -77,6 +78,10 @@ func hasEncodedControl(url string) bool {
 		}
 		hi, lo := url[i+1]|0x20, url[i+2]|0x20
 		if hi == '0' || hi == '1' || hi == '7' && lo == 'f' {
+			return true
+		}
+		if hi == 'c' && lo == '2' && i+5 < len(url) && url[i+3] == '%' &&
+			(url[i+4] == '8' || url[i+4] == '9') {
 			return true
 		}
 	}

@@ -51,8 +51,8 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 
 - Doc fixes: T6 commit is `f680574e` (the old `409edc4c` was from before the rebase); header names the rebase base; H9 cites its C# test; the sweep line no longer claims nothing is open. Every other hash in this file was checked with `git merge-base --is-ancestor`.
 - C# tests for H1, H7/T18 and R11/T10 (rows below), each red under a mutant first, since the behaviour already existed. Commit `50454a16`.
-- **Wrong-type messages (stored lane's open item) closed.** `stringValue`, `isTrue` and `intValue` (`wire.go`) now throw .NET's own text by node kind: object or list gives "The node must be of type 'JsonValue'.", anything else "An element of type '<Number|String|True|False>' cannot be converted to a 'System.<String|Boolean|Int32>'.". Oracle: nine new host.json cases `wrong type: *`, captured from C# with `BLOK_CAPTURE_AGENT_FIXTURE=1` (the capture added only those cases); seven were red on Go before the fix. Two show that C# never reads a failure's `code` or `message` there. A JSON null node now reads as null in `stringValue`/`intValue`, as `?.` does. The room call sites (`errorCode`, `roomLinksNone`, the lane and page-action `ok`) share these helpers but have no direct case: the host fixture has no rooms. Commit `c851b283`.
-- Fuzz: `FuzzParseHead` (matches an independent ParseHead and round-trips) and `FuzzBatchCommands` (historyCommand, versionCommand, hasCommand never panic; history and version never overlap), seeded from the `room-expect-*` texts. 45 s each: 876,484 and 905,588 execs, no failure. Commit `261f5e70`.
+- **Wrong-type messages (stored lane's open item) closed.** `stringValue`, `isTrue` and `intValue` (`wire.go`) now throw .NET's own text by node kind: object or list gives "The node must be of type 'JsonValue'.", anything else "An element of type '<Number|String|True|False>' cannot be converted to a 'System.<String|Boolean|Int32>'.". Oracle: nine new host.json cases `wrong type: *`, captured from C# with `BLOK_CAPTURE_AGENT_FIXTURE=1` (the capture added only those cases); seven were red on Go before the fix. Two show that C# never reads a failure's `code` or `message` there. A JSON null node now reads as null in `stringValue`/`intValue`, as `?.` does. Not observable today (untested): every caller but one gets its node through `get`/`field`, which drop null already, and the one (`room.go` roomLinksNone over the made page ids) only sees host-made ids, never null. The room call sites (`errorCode`, `roomLinksNone`, the lane and page-action `ok`) share these helpers but have no direct case: the host fixture has no rooms. Commit `c851b283`.
+- Fuzz: `FuzzParseHead` (matches a reference written apart from `dotnet.ParseUInt64None`, and round-trips through `headOf`) and `FuzzBatchCommands` (historyCommand, versionCommand, hasCommand never panic; history and version never overlap), seeded from the `room-expect-*` texts. 45 s each: 876,484 and 905,588 execs, no failure. Commit `261f5e70`.
 
 ## Ledger rows
 
@@ -149,6 +149,7 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 
 ## Open for later rounds (none blocks the lane)
 
+- Two more Go-written wrong-type texts remain in `roomhistory.go`: `netString` ("…holding a String, not %T.", prints a Go type) and `locked` ("…holding a Boolean."). They read room projections, so a peer can reach them (for example a schema property with `databaseLocked: "yes"` before an undo). The kind (`InvalidOperationError`) matches; the C# text is not captured. Next: a room scenario that pins C#'s text.
 - The scenario runner's `peer` uses `human-2`. (Round 3: H1, H7 and R11 now have C# tests; H9 always had one.)
 
 ## Runs round 3

@@ -1,10 +1,10 @@
 package blokagent
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 )
 
@@ -22,7 +22,7 @@ func FuzzParseHead(f *testing.F) {
 			}
 			return
 		}
-		sequence, ok := dotnet.ParseUInt64None(head[colon+1:])
+		sequence, ok := referenceSequence(head[colon+1:])
 		if !ok {
 			if got != nil {
 				t.Fatalf("%q parsed a bad sequence", head)
@@ -37,6 +37,17 @@ func FuzzParseHead(f *testing.F) {
 			t.Fatalf("%q does not round trip: %+v", head, again)
 		}
 	})
+}
+
+// referenceSequence is ulong.TryParse with NumberStyles.None, written
+// apart from dotnet.ParseUInt64None: digits only, trailing NULs skipped.
+func referenceSequence(s string) (uint64, bool) {
+	s = strings.TrimRight(s, "\x00")
+	if s == "" || strings.Trim(s, "0123456789") != "" {
+		return 0, false
+	}
+	value, err := strconv.ParseUint(s, 10, 64)
+	return value, err == nil
 }
 
 // The batch readers must never panic on hostile JSON, and history and

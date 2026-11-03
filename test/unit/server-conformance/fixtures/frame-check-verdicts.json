@@ -1,0 +1,1330 @@
+{
+  "_comment": "Frame-check verdicts. Expected values come from the HTML X-Frame-Options processing model and CSP3 frame-ancestors, with the embedder as the only ancestor. Precedence: blocked, then insecure (final URL not https), then unknown (no embedder), then allowed. Go (internal/framecheck) and C# (FrameCheckVerdictFixtureTests) both read this file.",
+  "cases": [
+    {
+      "name": "no framing headers",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO DENY",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO SAMEORIGIN from another origin",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO SAMEORIGIN from the same origin",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO INVALID",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "INVALID"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO ALLOWALL",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "ALLOWALL"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO ALLOW-FROM is obsolete",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "ALLOW-FROM=https://example.com/"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO ALLOW-FROM naming the embedder is still obsolete",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "ALLOW-FROM https://editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO deny in lower case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "deny"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO with surrounding tabs and spaces",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          " \tDeNy\t "
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO empty value",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          ""
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO SAMEORIGIN, SAMEORIGIN from the same origin",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN, SAMEORIGIN"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO SAMEORIGIN, SAMEORIGIN from another origin",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN, SAMEORIGIN"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO SAMEORIGIN, DENY",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN, DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO SAMEORIGIN, (trailing comma)",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN,"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO SAMEORIGIN, ALLOWALL",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN, ALLOWALL"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO SAMEORIGIN, INVALID",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN, INVALID"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO ALLOWALL, INVALID",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "ALLOWALL, INVALID"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO ALLOWALL, (trailing comma)",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "ALLOWALL,"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO INVALID, INVALID",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "INVALID, INVALID"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO INVALID, OTHER",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "INVALID, OTHER"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO two lines SAMEORIGIN and DENY",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO two lines SAMEORIGIN and SAMEORIGIN",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN"
+        ],
+        [
+          "X-Frame-Options",
+          "SAMEORIGIN"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO two lines INVALID and INVALID",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "INVALID"
+        ],
+        [
+          "X-Frame-Options",
+          "INVALID"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO two lines ALLOWALL and an empty line",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "ALLOWALL"
+        ],
+        [
+          "X-Frame-Options",
+          ""
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO header name in lower case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "x-frame-options",
+          "DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "XFO quoted comma stays in one value",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "\"DENY,DENY\""
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "XFO DENY with a quoted second value",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY, \"x\""
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "frame-ancestors * overrides XFO DENY",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "frame-ancestors naming the embedder overrides XFO DENY",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "report-only frame-ancestors does not override XFO",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy-Report-Only",
+          "frame-ancestors *"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "report-only frame-ancestors 'none' never blocks",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy-Report-Only",
+          "frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "CSP without frame-ancestors leaves XFO in force",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'none'"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "default-src 'none' does not stand in for frame-ancestors",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'none'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "frame-ancestors 'none'",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "frame-ancestors 'NONE' in upper case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'NONE'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "empty frame-ancestors blocks",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "empty frame-ancestors before a semicolon blocks",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors ; img-src *"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "'none' beside a matching host has no effect",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none' https://editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "'none' beside another host",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none' https://other.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "directive name in upper case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "FRAME-ANCESTORS 'none'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "duplicate directive: the first wins (allow)",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *; frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "duplicate directive: the first wins (block)",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none'; frame-ancestors *"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "a non-ASCII directive token is skipped",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none' café.example; img-src *"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "a non-ASCII token does not hide a later frame-ancestors",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "img-src café.example; frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "comma-joined policies: the second blocks",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src *, frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "comma-joined policies: each must allow",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *, frame-ancestors https://other.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "comma-joined policies: both allow",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *, frame-ancestors https://editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "two CSP lines: the second blocks",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *"
+        ],
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "two CSP lines: both allow",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https:"
+        ],
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "an enforced allow plus a report-only block",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *"
+        ],
+        [
+          "Content-Security-Policy-Report-Only",
+          "frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "whitespace runs between sources",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors\t 'none' \f https://editor.example "
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "CSP header name in lower case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "content-security-policy",
+          "frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "unknown keywords never match",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'unsafe-inline' 'nonce-abc'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "'self' from another origin",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "'self' from the same origin",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "'SELF' in upper case",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'SELF'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "'self' with an https embedder of an http page",
+      "url": "http://site.example/page",
+      "embedder": "https://site.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "insecure"
+    },
+    {
+      "name": "'self' with an http embedder of an https page",
+      "url": "https://site.example/page",
+      "embedder": "http://site.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "'self' with the embedder on another port",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example:8443",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "'self' with an explicit default port",
+      "url": "https://site.example/page",
+      "embedder": "https://site.example:443",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "'self' with a host in another case",
+      "url": "https://site.example/page",
+      "embedder": "https://SITE.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'self'"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "host-source matches the embedder",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "host-source in another case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors HTTPS://EDITOR.EXAMPLE"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "schemeless host-source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "schemeless host-source with an http embedder of an https page",
+      "url": "https://site.example/page",
+      "embedder": "http://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors editor.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "schemeless host-source with an http embedder of an http page",
+      "url": "http://site.example/page",
+      "embedder": "http://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors editor.example"
+        ]
+      ],
+      "verdict": "insecure"
+    },
+    {
+      "name": "http host-source allows the https embedder",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors http://editor.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "https host-source refuses the http embedder",
+      "url": "https://site.example/page",
+      "embedder": "http://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "another host",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://other.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "wildcard host matches a subdomain",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://*.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "wildcard host never matches the apex",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://*.editor.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "wildcard host matches a deeper subdomain",
+      "url": "https://site.example/page",
+      "embedder": "https://a.b.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *.example"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "star host",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://*"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "star source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "trailing dot on the host-source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example."
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "IP-literal embedder never matches a host-source",
+      "url": "https://site.example/page",
+      "embedder": "https://127.0.0.1",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://127.0.0.1"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "IP-literal embedder never matches a wildcard host",
+      "url": "https://site.example/page",
+      "embedder": "https://127.0.0.1",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://*"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "IP-literal embedder still matches a scheme-source",
+      "url": "https://site.example/page",
+      "embedder": "https://127.0.0.1",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https:"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "IP-literal embedder still matches *",
+      "url": "https://site.example/page",
+      "embedder": "https://127.0.0.1",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors *"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "IPv6 embedder never matches a host-source",
+      "url": "https://site.example/page",
+      "embedder": "https://[::1]",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://[::1]"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "scheme-source https:",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https:"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "scheme-source http: allows https",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors http:"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "scheme-source https: refuses http",
+      "url": "https://site.example/page",
+      "embedder": "http://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https:"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "scheme-source in upper case",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors HTTPS:"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "scheme-source ws: allows https",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors ws:"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "scheme-source wss: allows https",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors wss:"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "scheme-source data: never matches",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors data:"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "embedder on a non-default port without a port-part",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example:8443",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "embedder on a non-default port with its port-part",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example:8443",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example:8443"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "embedder on a non-default port with a star port",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example:8443",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example:*"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "default port spelled out in the source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example:443"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "leading zeros in the port-part",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example:0443"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "another port in the source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example:444"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "http port-part 80 against an https embedder",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors http://editor.example:80"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "localhost dev embedder with its port",
+      "url": "https://site.example/page",
+      "embedder": "http://localhost:3000",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors http://localhost:3000"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "path-part / matches",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example/"
+        ]
+      ],
+      "verdict": "allowed"
+    },
+    {
+      "name": "path-part /app does not match",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example/app"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "path-part /app/ does not match",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example/app/"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "a source with a query is not a source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://editor.example/?x"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "a source with userinfo is not a source",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors https://u@editor.example"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "http final URL",
+      "url": "http://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [],
+      "verdict": "insecure"
+    },
+    {
+      "name": "http final URL that blocks",
+      "url": "http://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "blocked"
+    },
+    {
+      "name": "http final URL with no embedder",
+      "url": "http://site.example/page",
+      "embedder": null,
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "insecure"
+    },
+    {
+      "name": "no embedder",
+      "url": "https://site.example/page",
+      "embedder": null,
+      "headers": [],
+      "verdict": "unknown"
+    },
+    {
+      "name": "no embedder and XFO DENY",
+      "url": "https://site.example/page",
+      "embedder": null,
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "unknown"
+    },
+    {
+      "name": "no embedder and frame-ancestors 'none'",
+      "url": "https://site.example/page",
+      "embedder": null,
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "frame-ancestors 'none'"
+        ]
+      ],
+      "verdict": "unknown"
+    },
+    {
+      "name": "a Link header is ignored",
+      "url": "https://site.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "Link",
+          "<https://x.example>; rel=alternate"
+        ]
+      ],
+      "verdict": "allowed"
+    }
+  ]
+}

@@ -496,3 +496,79 @@ func TestTheOrphanCheckReadsTheRoomAfterTheCallerCancels(t *testing.T) {
 		t.Fatalf("%s", execution.ResultJSON)
 	}
 }
+
+// hookedCreator makes host-1, host-2, ... and runs during inside each create.
+type hookedCreator struct {
+	pageCreator
+	during func()
+}
+
+func (c *hookedCreator) Create(ctx context.Context, actor Actor) (string, error) {
+	if c.during != nil {
+		c.during()
+	}
+	return c.pageCreator.Create(ctx, actor)
+}
+
+// C# ARoomThatRefusesTheEditAfterThePageWasMadeListsIt (R10).
+func TestARoomThatRefusesTheEditAfterThePageWasMadeListsIt(t *testing.T) {
+	r := newTestRoom(t, false, nil)
+	r.docs.hold("d", `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"P"}}]}`)
+	head := r.head(t, "d")
+	pages := &hookedCreator{during: func() {
+		edit, err := r.manager.Edit(context.Background(), "d", []convert.EditOp{
+			convert.Update{ID: "p", Data: mustParse(t, `{"text":"Peer"}`)}}, newGUID(), make([]byte, 32), "human-2", nil)
+		if err != nil || edit.Status != room.EditApplied {
+			t.Errorf("peer %v %v", edit.Status, err)
+		}
+	}}
+	execution, err := r.executor.ExecuteInRoom(context.Background(), "d",
+		`{"expectRevision":"`+head+`","commands":[{"name":"block.insert","args":{"type":"page","id":"np","position":"end"}}]}`,
+		roomAgent, &Options{PageTitles: true, PageTarget: pages})
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, cause := orphanedCause(t, execution)
+	orphaned, _ := write(lookup(lookup(lookup(mustParse(t, execution.ResultJSON), "error"), "details"), "orphaned"))
+	if code != "ORPHANED_SIDE_EFFECT" || cause != "STALE" || orphaned != `[{"command":"block.insert","type":"page","prepared":{"pageId":"host-1"}}]` {
+		t.Fatalf("%s", execution.ResultJSON)
+	}
+	if len(pages.created) != 1 {
+		t.Fatalf("created %v", pages.created)
+	}
+}
+
+// drainAfterRestoreCheck drains the rooms right after the bundle answers a
+// restore, before the room restores.
+type drainAfterRestoreCheck struct {
+	inner invoker
+	drain func()
+}
+
+func (d *drainAfterRestoreCheck) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+	output, err := d.inner.Invoke(ctx, op, input, timeout)
+	if drain := d.drain; drain != nil && op == "agentExecute" && strings.Contains(output, `"restore":`) {
+		d.drain = nil
+		drain()
+	}
+	return output, err
+}
+
+// C# ARestoreTheRoomRefusesIsApplyFailedWithItsStatus (F26).
+func TestARestoreTheRoomRefusesIsApplyFailedWithItsStatus(t *testing.T) {
+	var hook *drainAfterRestoreCheck
+	r := newTestRoom(t, false, func(inner invoker) invoker { hook = &drainAfterRestoreCheck{inner: inner}; return hook })
+	r.docs.hold("d", `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"P"}}]}`)
+	edit := okIn(t, r, "d", `{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}`)
+	lineage := edit.Revision[:strings.LastIndexByte(edit.Revision, ':')]
+	hook.drain = func() {
+		if err := r.manager.Drain(context.Background()); err != nil {
+			t.Error(err)
+		}
+	}
+	execution, _ := runIn(t, r, "d", `{"commands":[{"name":"history.restore","args":{"version":"`+lineage+`:0"}}]}`, roomAgent)
+	want := `{"ok":false,"error":{"code":"APPLY_FAILED","message":"The room refused the restore (Draining). Nothing was written.","retryable":true,"details":{"status":"Draining"}},"warnings":[]}`
+	if execution.ResultJSON != want || execution.Revision != "" {
+		t.Fatalf("%s %q", execution.ResultJSON, execution.Revision)
+	}
+}

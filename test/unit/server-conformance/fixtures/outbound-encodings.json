@@ -1,6 +1,9 @@
 [
   {
     "name": "gzip",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -16,6 +19,9 @@
   },
   {
     "name": "upper-gzip",
+    "encoding": [
+      "GZIP"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -31,6 +37,9 @@
   },
   {
     "name": "br",
+    "encoding": [
+      "br"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -46,6 +55,9 @@
   },
   {
     "name": "deflate",
+    "encoding": [
+      "deflate"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -61,6 +73,9 @@
   },
   {
     "name": "raw-deflate",
+    "encoding": [
+      "deflate"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -76,6 +91,9 @@
   },
   {
     "name": "identity",
+    "encoding": [
+      "identity"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -91,6 +109,9 @@
   },
   {
     "name": "empty",
+    "encoding": [
+      ""
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -106,6 +127,9 @@
   },
   {
     "name": "two-in-one",
+    "encoding": [
+      "gzip, gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -121,6 +145,10 @@
   },
   {
     "name": "two-lines",
+    "encoding": [
+      "gzip",
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -136,6 +164,9 @@
   },
   {
     "name": "unknown",
+    "encoding": [
+      "x-unknown"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -151,6 +182,9 @@
   },
   {
     "name": "compress",
+    "encoding": [
+      "compress"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -166,6 +200,9 @@
   },
   {
     "name": "corrupt-gzip",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -181,6 +218,9 @@
   },
   {
     "name": "trailing-garbage",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -196,6 +236,9 @@
   },
   {
     "name": "bomb",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -211,6 +254,9 @@
   },
   {
     "name": "spaced",
+    "encoding": [
+      " gzip "
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -226,6 +272,9 @@
   },
   {
     "name": "truncated-gzip",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -241,6 +290,9 @@
   },
   {
     "name": "truncated-deflate",
+    "encoding": [
+      "deflate"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -256,6 +308,9 @@
   },
   {
     "name": "truncated-br",
+    "encoding": [
+      "br"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -271,6 +326,9 @@
   },
   {
     "name": "two-gzip-members",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -286,6 +344,9 @@
   },
   {
     "name": "gzip-zero-padding",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -301,6 +362,9 @@
   },
   {
     "name": "gzip-then-bad-member",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -316,6 +380,9 @@
   },
   {
     "name": "gzip-then-one-magic-byte",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -331,6 +398,9 @@
   },
   {
     "name": "gzip-bad-crc",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -346,6 +416,9 @@
   },
   {
     "name": "deflate-bad-adler",
+    "encoding": [
+      "deflate"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -361,6 +434,9 @@
   },
   {
     "name": "deflate-trailing-garbage",
+    "encoding": [
+      "deflate"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -376,6 +452,9 @@
   },
   {
     "name": "br-trailing-garbage",
+    "encoding": [
+      "br"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -391,6 +470,9 @@
   },
   {
     "name": "empty-gzip-body",
+    "encoding": [
+      "gzip"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -406,6 +488,9 @@
   },
   {
     "name": "empty-br-body",
+    "encoding": [
+      "br"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -421,6 +506,9 @@
   },
   {
     "name": "empty-deflate-body",
+    "encoding": [
+      "deflate"
+    ],
     "response": {
       "status": 200,
       "headers": {
@@ -432,6 +520,187 @@
         ]
       },
       "body": "{\"success\":1,\"link\":\"<origin>/encoded/empty-deflate-body\",\"meta\":{\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "param",
+    "encoding": [
+      "gzip;q=1"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/param\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "quoted",
+    "encoding": [
+      "\"gzip\""
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/quoted\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "two-words",
+    "encoding": [
+      "gzip x"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/two-words\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "slash",
+    "encoding": [
+      "gzip/1"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/slash\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "parens",
+    "encoding": [
+      "gzip(x)"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/parens\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "good-then-bad-item",
+    "encoding": [
+      "gzip, x y"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/good-then-bad-item\",\"meta\":{\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "bad-line-then-good-line",
+    "encoding": [
+      "gzip;q=1",
+      "gzip"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/bad-line-then-good-line\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "trailing-comma",
+    "encoding": [
+      "gzip,"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/trailing-comma\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "only-commas",
+    "encoding": [
+      " , ,"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/only-commas\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "tab-spaced",
+    "encoding": [
+      "\tgzip\t"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/tab-spaced\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
     }
   }
 ]

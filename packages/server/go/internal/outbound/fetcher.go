@@ -316,11 +316,7 @@ func readBounded(response *http.Response, max int64, truncate bool) ([]byte, err
 	}
 	var encodings []string
 	for _, value := range response.Header.Values("Content-Encoding") {
-		for _, encoding := range strings.Split(value, ",") {
-			if encoding = strings.TrimSpace(encoding); encoding != "" {
-				encodings = append(encodings, encoding)
-			}
-		}
+		encodings = append(encodings, encodingTokens(value)...)
 	}
 	if len(encodings) > 1 {
 		return nil, fail(UnsupportedContentEncoding)
@@ -355,6 +351,35 @@ func readBounded(response *http.Response, max int64, truncate bool) ([]byte, err
 		return nil, err
 	}
 	return body, nil
+}
+
+// encodingTokens is .NET's typed ContentEncoding for one header line: the
+// comma-separated tokens, or none when any item is not a token. C# then
+// reads the body as identity.
+func encodingTokens(line string) []string {
+	var tokens []string
+	for _, item := range strings.Split(line, ",") {
+		item = strings.Trim(item, " \t")
+		if item == "" {
+			continue
+		}
+		if !isToken(item) {
+			return nil
+		}
+		tokens = append(tokens, item)
+	}
+	return tokens
+}
+
+func isToken(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' ||
+			strings.IndexByte("!#$%&'*+-.^_`|~", c) >= 0) {
+			return false
+		}
+	}
+	return true
 }
 
 func readAll(r io.Reader, max int64) ([]byte, error) {

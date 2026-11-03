@@ -130,7 +130,23 @@ const ENCODED: Record<string, { body: () => Buffer; encoding: string[] }> = {
   'empty-gzip-body': { body: () => Buffer.alloc(0), encoding: ['gzip'] },
   'empty-br-body': { body: () => Buffer.alloc(0), encoding: ['br'] },
   'empty-deflate-body': { body: () => Buffer.alloc(0), encoding: ['deflate'] },
+  // .NET drops a Content-Encoding line it cannot parse as tokens.
+  'param': { body: () => PRECEDENCE_HTML, encoding: ['gzip;q=1'] },
+  'quoted': { body: () => PRECEDENCE_HTML, encoding: ['"gzip"'] },
+  'two-words': { body: () => PRECEDENCE_HTML, encoding: ['gzip x'] },
+  'slash': { body: () => PRECEDENCE_HTML, encoding: ['gzip/1'] },
+  'parens': { body: () => PRECEDENCE_HTML, encoding: ['gzip(x)'] },
+  'good-then-bad-item': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['gzip, x y'] },
+  'bad-line-then-good-line': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['gzip;q=1', 'gzip'] },
+  'trailing-comma': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['gzip,'] },
+  'only-commas': { body: () => PRECEDENCE_HTML, encoding: [' , ,'] },
+  'tab-spaced': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['\tgzip\t'] },
 };
+
+/** The Content-Encoding lines the origin sends for /encoded/{name}. */
+export function encodedContentEncoding(name: string): string[] | undefined {
+  return ENCODED[name]?.encoding;
+}
 
 function cut(bytes: Buffer): Buffer {
   return bytes.subarray(0, Math.floor(bytes.length / 2));

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 import { expect, it as baseIt } from 'vitest';
 
-import { startFixtureOrigin } from './fixture-origin';
+import { encodedContentEncoding, startFixtureOrigin } from './fixture-origin';
 import { startServer, type RunningServer } from './run-against';
 import type { HttpResponse } from './http-client';
 
@@ -614,11 +614,14 @@ const ENCODINGS = [
   'truncated-gzip', 'truncated-deflate', 'truncated-br', 'two-gzip-members', 'gzip-zero-padding',
   'gzip-then-bad-member', 'gzip-then-one-magic-byte', 'gzip-bad-crc', 'deflate-bad-adler',
   'deflate-trailing-garbage', 'br-trailing-garbage', 'empty-gzip-body', 'empty-br-body', 'empty-deflate-body',
+  'param', 'quoted', 'two-words', 'slash', 'parens', 'good-then-bad-item', 'bad-line-then-good-line',
+  'trailing-comma', 'only-commas', 'tab-spaced',
 ];
 
 it('decodes outbound bodies by the C# content-encoding rules', async () => {
   const origin = await startFixtureOrigin();
-  const actual: Array<{ name: string; response: GoldenResponse }> = [];
+  // Go's internal/outbound reads `encoding` from the golden.
+  const actual: Array<{ name: string; encoding: string[]; response: GoldenResponse }> = [];
 
   try {
     await withServer(['--storage-dir', '', '--conformance-origin', origin.baseUrl], async (server) => {
@@ -629,7 +632,7 @@ it('decodes outbound bodies by the C# content-encoding rules', async () => {
         recorded.body = recorded.body.split(origin.baseUrl).join('<origin>');
         // The body carries the origin's port, so its length is not stable.
         delete recorded.headers['content-length'];
-        actual.push({ name, response: recorded });
+        actual.push({ name, encoding: encodedContentEncoding(name) ?? [], response: recorded });
       }
     });
   } finally {

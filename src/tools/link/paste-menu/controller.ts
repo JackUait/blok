@@ -17,6 +17,8 @@ export interface PasteMenuOpenParams {
   hasSelection: boolean;
   /** When true, unmatched URLs also offer a generic embed. */
   allowGenericEmbed?: boolean;
+  /** Hosts whose https URLs may get a generic embed. */
+  allowedEmbedOrigins?: readonly string[];
   /** Hostnames that count as the editor's own site; their links get no bookmark. */
   ownHosts?: readonly string[];
   /** The page the URL links to; offers a page mention. */
@@ -98,6 +100,7 @@ export class PasteMenuController implements LinkPasteMenu {
     const options = buildLivePasteMenuOptions(params.url, {
       hasSelection: params.hasSelection,
       allowGenericEmbed: params.allowGenericEmbed === true,
+      ...(params.allowedEmbedOrigins ? { allowedEmbedOrigins: params.allowedEmbedOrigins } : {}),
       ...(params.ownHosts ? { ownHosts: params.ownHosts } : {}),
       ...(params.pageId !== undefined ? { pageId: params.pageId } : {}),
     });

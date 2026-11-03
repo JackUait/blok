@@ -244,6 +244,14 @@ describe('PatternHandler — link paste menu gating', () => {
     });
   });
 
+  it('hands the allowed embed origins to the menu', async () => {
+    const handler = makeHandler({ linkPaste: { allowedEmbedOrigins: ['dash.example.org'] } });
+
+    await handler.handle('https://dash.example.org/x', context);
+
+    expect(menuOpen?.allowedEmbedOrigins).toEqual(['dash.example.org']);
+  });
+
   describe('link to the editor\'s own host', () => {
     // jsdom serves the page from localhost.
     const ownUrl = `${window.location.origin}/doc/1`;
@@ -267,12 +275,20 @@ describe('PatternHandler — link paste menu gating', () => {
       expect(fakeMenu.open).not.toHaveBeenCalled();
     });
 
-    it('still opens the menu when an embed applies', async () => {
+    it('opens no menu even with generic embeds on, since the own site is never embedded', async () => {
       const handler = makeHandler({ linkPaste: { allowGenericEmbed: true } });
 
       await handler.handle(ownUrl, context);
 
-      expect(fakeMenu.open).toHaveBeenCalledTimes(1);
+      expect(fakeMenu.open).not.toHaveBeenCalled();
+    });
+
+    it('opens no menu for an allowed embed origin that is the own site', async () => {
+      const handler = makeHandler({ linkPaste: { allowedEmbedOrigins: [window.location.hostname] } });
+
+      await handler.handle(ownUrl, context);
+
+      expect(fakeMenu.open).not.toHaveBeenCalled();
     });
 
     it('does not fall back to a bookmark when the selection cannot be linked', async () => {

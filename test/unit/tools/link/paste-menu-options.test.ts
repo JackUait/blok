@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPasteMenuOptions } from '../../../../src/tools/link/paste-menu/options';
+import { buildPasteMenuOptions, type PasteMenuContext } from '../../../../src/tools/link/paste-menu/options';
 import { buildLivePasteMenuOptions } from '../../../../src/tools/link/paste-menu/controller';
 
 const types = (url: string, hasSelection = false): string[] =>
@@ -87,8 +87,8 @@ describe('buildPasteMenuOptions — own host', () => {
     expect(typesOwnHosts('https://evilexample.com/doc', ['example.com'])).toContain('bookmark');
   });
 
-  it('keeps embed for an own-host link when embeds apply', () => {
-    expect(typesOwnHosts('https://app.example.com/doc', ['app.example.com'], true)).toEqual(['embed', 'mention', 'plain']);
+  it('offers no generic embed for an own-host link, even with generic embeds on', () => {
+    expect(typesOwnHosts('https://app.example.com/doc', ['app.example.com'], true)).toEqual(['mention', 'plain']);
   });
 });
 
@@ -108,5 +108,63 @@ describe('page links', () => {
   it('offers only the plain link when the page link is pasted over a selection', () => {
     expect(buildLivePasteMenuOptions('https://example.com/editor/page/p1', { hasSelection: true, pageId: 'p1' })
       .map((option) => option.type)).toEqual(['plain']);
+  });
+});
+
+describe('buildPasteMenuOptions — safe generic embed', () => {
+  const offersEmbed = (url: string, context: Omit<PasteMenuContext, 'hasSelection'>): boolean =>
+    buildPasteMenuOptions(url, { hasSelection: false, ...context }).some((o) => o.type === 'embed');
+
+  it('offers no generic embed for a plain http URL, even with generic embeds on', () => {
+    expect(offersEmbed('http://plain.example/', { allowGenericEmbed: true })).toBe(false);
+  });
+
+  it('offers a generic embed for an https URL with generic embeds on', () => {
+    expect(offersEmbed('https://plain.example/', { allowGenericEmbed: true })).toBe(true);
+  });
+
+  it('offers a generic embed for an https URL on an allowed embed origin', () => {
+    expect(offersEmbed('https://dash.example.org/x', { allowedEmbedOrigins: ['dash.example.org'] })).toBe(true);
+    expect(offersEmbed('https://a.b.example.org/x', { allowedEmbedOrigins: ['*.example.org'] })).toBe(true);
+  });
+
+  it('offers no generic embed for a host off the allowed list', () => {
+    expect(offersEmbed('https://other.example.org/x', { allowedEmbedOrigins: ['dash.example.org'] })).toBe(false);
+    expect(offersEmbed('https://example.org/x', { allowedEmbedOrigins: ['*.example.org'] })).toBe(false);
+  });
+
+  it('offers no generic embed for an http URL on an allowed embed origin', () => {
+    expect(offersEmbed('http://dash.example.org/x', { allowedEmbedOrigins: ['dash.example.org'] })).toBe(false);
+  });
+
+  it('offers no generic embed for the own site, even when allowed', () => {
+    const allowed = { allowGenericEmbed: true, allowedEmbedOrigins: ['app.example.com'] };
+
+    expect(offersEmbed('https://app.example.com/doc', { ...allowed, ownHosts: ['app.example.com'] })).toBe(false);
+  });
+
+  it('offers no generic embed for a subdomain or a parent domain of the own site', () => {
+    const own = { allowGenericEmbed: true, ownHosts: ['app.example.com'] };
+
+    expect(offersEmbed('https://x.app.example.com/doc', own)).toBe(false);
+    expect(offersEmbed('https://example.com/doc', own)).toBe(false);
+  });
+
+  it('offers no generic embed for a subdomain or a parent domain of a wildcard alias', () => {
+    const own = { allowGenericEmbed: true, ownHosts: ['*.corp.example'] };
+
+    expect(offersEmbed('https://a.corp.example/doc', own)).toBe(false);
+    expect(offersEmbed('https://corp.example/doc', own)).toBe(false);
+  });
+
+  it('still offers a generic embed for a host that only shares a suffix with the own site', () => {
+    const own = { allowGenericEmbed: true, ownHosts: ['example.com'] };
+
+    expect(offersEmbed('https://evilexample.com/doc', own)).toBe(true);
+    expect(offersEmbed('https://sibling.example.net/doc', { allowGenericEmbed: true, ownHosts: ['app.example.net'] })).toBe(true);
+  });
+
+  it('keeps the embed for a registry provider whatever the generic rules say', () => {
+    expect(offersEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { ownHosts: ['www.youtube.com'] })).toBe(true);
   });
 });

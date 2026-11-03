@@ -133,3 +133,37 @@ describe('PasteMenuController teardown', () => {
     expect(onDismiss).not.toHaveBeenCalled();
   });
 });
+
+describe('PasteMenuController generic embed gate', () => {
+  afterEach(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    document.body.innerHTML = '';
+  });
+
+  const openFor = (url: string, allowedEmbedOrigins: string[]): void => {
+    new PasteMenuController({ t: (key) => key }).open({
+      url,
+      hasSelection: false,
+      allowedEmbedOrigins,
+      position: null,
+      onSelect: vi.fn(),
+      onDismiss: vi.fn(),
+    });
+  };
+
+  const menuText = (): string =>
+    document.querySelector('[data-blok-popover-opened]')?.textContent ?? '';
+
+  it('offers an embed for a URL on an allowed embed origin', () => {
+    openFor('https://dash.example.org/x', ['dash.example.org']);
+
+    expect(menuText()).toContain('tools.linkPaste.embed');
+  });
+
+  it('offers no embed for a URL off the allowed embed origins', () => {
+    openFor('https://other.example.org/x', ['dash.example.org']);
+
+    expect(menuText()).toContain('tools.linkPaste.bookmark');
+    expect(menuText()).not.toContain('tools.linkPaste.embed');
+  });
+});

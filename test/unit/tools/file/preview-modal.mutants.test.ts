@@ -157,6 +157,7 @@ afterEach(() => {
   teardown?.();
   teardown = null;
   restoreOffsets();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   document.body.innerHTML = '';
   document.body.style.overflow = '';
@@ -255,17 +256,27 @@ describe('openFilePreview — modal chrome', () => {
     expect(dialog.getAttribute('aria-label')).toBe('report.pdf');
   });
 
-  it('renders the pdf iframe with its class, title and src', () => {
-    teardown = openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'report.pdf', labels: FULL_LABELS });
+  const stubPdfBlob = (): void => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['%PDF'], { type: 'application/pdf' }) }));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:https://example.com/wrapped');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  };
+
+  it('renders the pdf iframe with its class, title and src', async () => {
+    stubPdfBlob();
+    teardown = openFilePreview({ url: 'blob:https://example.com/raw', fileName: 'report.pdf', labels: FULL_LABELS });
+    await flush();
 
     const frame = find(document.body, '[data-role="file-preview-frame"]');
     expect(frame.className).toBe('blok-file-preview-frame');
     expect(frame.getAttribute('title')).toBe('report.pdf');
-    expect(frame.getAttribute('src')).toBe('https://example.com/a.pdf');
+    expect(frame.getAttribute('src')).toBe('blob:https://example.com/wrapped');
   });
 
-  it('titles the pdf iframe with the close label when there is no file name', () => {
-    teardown = openFilePreview({ url: 'https://example.com/a.pdf', labels: FULL_LABELS });
+  it('titles the pdf iframe with the close label when there is no file name', async () => {
+    stubPdfBlob();
+    teardown = openFilePreview({ url: 'blob:https://example.com/raw', mimeType: 'application/pdf', labels: FULL_LABELS });
+    await flush();
 
     expect(find(document.body, '[data-role="file-preview-frame"]').getAttribute('title')).toBe('Close preview');
   });

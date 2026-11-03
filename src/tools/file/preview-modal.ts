@@ -33,6 +33,7 @@ interface PreviewElements {
   backdrop: HTMLElement;
   dialog: HTMLElement;
   header: HTMLElement;
+  actions: HTMLElement;
   closeButton: HTMLButtonElement;
   body: HTMLElement;
   kind: PreviewKind | null;
@@ -52,14 +53,24 @@ function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
 
       return body;
     }
-    const frame = document.createElement('iframe');
-    frame.className = 'blok-file-preview-frame';
-    frame.setAttribute('data-role', 'file-preview-frame');
-    frame.setAttribute('title', opts.fileName ?? opts.labels.close);
-    frame.src = src;
-    body.appendChild(frame);
+    // Chrome blocks its PDF viewer in any sandboxed frame, and an unsandboxed
+    // http(s) frame runs whatever HTML the server sends. So no http(s) frame.
+    if (!src.startsWith('blob:')) {
+      const notice = document.createElement('div');
+      notice.className = 'blok-file-preview-error';
+      notice.setAttribute('data-role', 'file-preview-external');
+      const link = document.createElement('a');
+      link.className = 'blok-file-preview-download';
+      link.setAttribute('data-action', 'preview-open-external');
+      link.href = src;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = opts.labels.openInNewTab ?? 'Open in new tab';
+      notice.appendChild(link);
+      body.appendChild(notice);
 
-    return body;
+      return body;
+    }
   }
 
   const loading = document.createElement('div');
@@ -69,6 +80,57 @@ function buildBody(opts: FilePreviewOptions, kind: PreviewKind): HTMLElement {
   body.appendChild(loading);
 
   return body;
+}
+
+function buildOpenTabLink(opts: FilePreviewOptions): HTMLAnchorElement {
+  const open = document.createElement('a');
+  open.className = 'blok-file-preview-open';
+  open.setAttribute('data-action', 'preview-open-tab');
+  open.target = '_blank';
+  open.rel = 'noopener noreferrer';
+  if (opts.labels.openInNewTab) {
+    open.setAttribute('aria-label', opts.labels.openInNewTab);
+    open.title = opts.labels.openInNewTab;
+  }
+  open.innerHTML = IconLinkExternal;
+
+  return open;
+}
+
+/**
+ * Frames a blob: pdf. A blob url has the editor's origin, so a text/html blob
+ * would run as the editor, framed or opened in a tab. Re-typing the bytes as
+ * application/pdf makes the browser parse them only as a PDF. No sandbox:
+ * Chrome blocks its PDF viewer in every sandboxed frame.
+ */
+async function fillPdfBlobBody(
+  body: HTMLElement,
+  actions: HTMLElement,
+  opts: FilePreviewOptions,
+  isClosed: () => boolean,
+  onRelease: (release: () => void) => void,
+): Promise<void> {
+  const response = await fetch(opts.url);
+  if (!response.ok) {
+    throw new Error(`blob read failed: ${response.status}`);
+  }
+  const bytes = await response.blob();
+  if (isClosed()) {
+    return;
+  }
+  const src = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  onRelease(() => URL.revokeObjectURL(src));
+
+  const frame = document.createElement('iframe');
+  frame.className = 'blok-file-preview-frame';
+  frame.setAttribute('data-role', 'file-preview-frame');
+  frame.setAttribute('title', opts.fileName ?? opts.labels.close);
+  frame.setAttribute('referrerpolicy', 'no-referrer');
+  frame.src = src;
+  body.replaceChildren(frame);
+  const open = buildOpenTabLink(opts);
+  open.href = src;
+  actions.prepend(open);
 }
 
 function renderPlainText(body: HTMLElement, text: string): void {
@@ -299,21 +361,12 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 
   const kind = getPreviewKind({ url: opts.url, fileName: opts.fileName, mimeType: opts.mimeType });
 
-  // The PDF iframe is not sandboxed and has no browser chrome of its own — give
-  // readers a one-click escape into a full browser tab with native zoom/print.
+  // PDFs have no browser chrome of their own here, so give readers a one-click
+  // escape into a full tab. A blob link is added once its bytes are re-typed.
   const openHref = kind === 'pdf' ? safePreviewSrc(opts.url) : null;
-  if (openHref !== null) {
-    const open = document.createElement('a');
-    open.className = 'blok-file-preview-open';
-    open.setAttribute('data-action', 'preview-open-tab');
+  if (openHref !== null && !openHref.startsWith('blob:')) {
+    const open = buildOpenTabLink(opts);
     open.href = openHref;
-    open.target = '_blank';
-    open.rel = 'noopener noreferrer';
-    if (opts.labels.openInNewTab) {
-      open.setAttribute('aria-label', opts.labels.openInNewTab);
-      open.title = opts.labels.openInNewTab;
-    }
-    open.innerHTML = IconLinkExternal;
     actions.appendChild(open);
   }
   actions.appendChild(closeButton);
@@ -324,11 +377,11 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
   dialog.append(header, body);
   backdrop.appendChild(dialog);
 
-  return { backdrop, dialog, header, closeButton, body, kind };
+  return { backdrop, dialog, header, actions, closeButton, body, kind };
 }
 
 export function openFilePreview(opts: FilePreviewOptions): () => void {
-  const { backdrop, dialog, header, closeButton, body, kind } = buildElements(opts);
+  const { backdrop, dialog, header, actions, closeButton, body, kind } = buildElements(opts);
   const officeKind = isOfficeKind(kind) ? kind : null;
   const textualKind = kind === null || kind === 'pdf' || officeKind !== null ? null : kind;
 
@@ -369,6 +422,9 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   document.body.style.overflow = 'hidden';
 
   const startFill = (): Promise<void> => {
+    if (kind === 'pdf' && safePreviewSrc(opts.url)?.startsWith('blob:') === true) {
+      return fillPdfBlobBody(body, actions, opts, () => state.closed, (release) => releases.push(release));
+    }
     if (officeKind !== null) {
       return fillOfficeBody(body, opts, officeKind, () => state.closed, (release) => releases.push(release));
     }

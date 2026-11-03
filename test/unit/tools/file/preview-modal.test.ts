@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { openFilePreview } from '../../../../src/tools/file/preview-modal';
 
 vi.mock('../../../../src/tools/file/text-preview', () => ({
@@ -52,6 +52,102 @@ afterEach(() => {
   document.body.style.overflow = '';
 });
 
+describe('openFilePreview — pdf isolation', () => {
+  const RAW = 'blob:https://example.com/raw';
+  const WRAPPED = 'blob:https://example.com/wrapped';
+
+  const flush = async (): Promise<void> => {
+    for (let i = 0; i < 5; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  };
+
+  const stubBlobFetch = (type: string): void => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['<script>x</script>'], { type }) }));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(WRAPPED);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('shows an open-in-new-tab link instead of framing an http(s) pdf', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'a.pdf', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+
+    expect(document.body.querySelector('iframe')).toBeNull();
+    const link = document.body.querySelector<HTMLAnchorElement>('[data-action="preview-open-external"]');
+    expect(link?.getAttribute('href')).toBe('https://example.com/a.pdf');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toBe('noopener noreferrer');
+    expect(link?.textContent).toBe('Open in new tab');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('frames a blob pdf only after re-typing its bytes as application/pdf', async () => {
+    stubBlobFetch('text/html');
+    openFilePreview({ url: RAW, fileName: 'a.pdf', labels });
+    await flush();
+
+    const created = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0];
+    expect(created instanceof Blob && created.type).toBe('application/pdf');
+    const frame = document.body.querySelector<HTMLIFrameElement>('[data-role="file-preview-frame"]');
+    expect(frame?.getAttribute('src')).toBe(WRAPPED);
+    expect(frame?.getAttribute('referrerpolicy')).toBe('no-referrer');
+  });
+
+  it('never frames or links the raw blob url', async () => {
+    stubBlobFetch('text/html');
+    openFilePreview({ url: RAW, fileName: 'a.pdf', labels: { ...labels, openInNewTab: 'Open in new tab' } });
+
+    expect(document.body.querySelector(`[src="${RAW}"], [href="${RAW}"]`)).toBeNull();
+    await flush();
+
+    expect(document.body.querySelector(`[src="${RAW}"], [href="${RAW}"]`)).toBeNull();
+    expect(document.body.querySelector('[data-action="preview-open-tab"]')?.getAttribute('href')).toBe(WRAPPED);
+  });
+
+  it('shows the error fallback and no frame when the blob cannot be read', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    openFilePreview({ url: RAW, fileName: 'a.pdf', labels });
+    await flush();
+
+    expect(document.body.querySelector('[data-role="file-preview-frame"]')).toBeNull();
+    expect(document.body.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('creates no url when closed before the blob is read', async () => {
+    const pending: { resolve: (value: unknown) => void } = { resolve: () => undefined };
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise((resolve) => { pending.resolve = resolve; })));
+    const teardown = openFilePreview({ url: RAW, fileName: 'a.pdf', labels });
+
+    teardown();
+    pending.resolve({ ok: true, blob: async () => new Blob(['%PDF'], { type: 'application/pdf' }) });
+    await flush();
+
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('revokes its own url, not the saved one, on close', async () => {
+    stubBlobFetch('application/pdf');
+    const teardown = openFilePreview({ url: RAW, fileName: 'a.pdf', labels });
+    await flush();
+
+    teardown();
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(WRAPPED);
+    expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(RAW);
+  });
+});
+
 describe('openFilePreview', () => {
   it('takes the direction of the block that opened it', () => {
     const block = document.createElement('div');
@@ -63,23 +159,11 @@ describe('openFilePreview', () => {
     expect(document.body.querySelector('[data-role="file-preview-backdrop"]')?.getAttribute('dir')).toBe('rtl');
   });
 
-  it('appends a dialog and an iframe with the given http(s) src', () => {
+  it('appends a dialog and frames no http(s) url', () => {
     openFilePreview({ url: 'https://example.com/a.pdf', fileName: 'a.pdf', labels });
 
-    const dialog = getDialog();
-    expect(dialog).not.toBeNull();
-
-    const frame = document.body.querySelector<HTMLIFrameElement>('[data-role="file-preview-frame"]');
-    expect(frame).not.toBeNull();
-    expect(frame?.getAttribute('src')).toBe('https://example.com/a.pdf');
-  });
-
-  it('accepts a blob: url as the iframe src', () => {
-    openFilePreview({ url: 'blob:https://example.com/abc-123', mimeType: 'application/pdf', labels });
-
-    const frame = document.body.querySelector<HTMLIFrameElement>('[data-role="file-preview-frame"]');
-    expect(frame).not.toBeNull();
-    expect(frame?.getAttribute('src')).toBe('blob:https://example.com/abc-123');
+    expect(getDialog()).not.toBeNull();
+    expect(document.body.querySelector('[data-role="file-preview-frame"]')).toBeNull();
   });
 
   it('renders an error fallback and no iframe for a data: url', () => {
@@ -98,13 +182,6 @@ describe('openFilePreview', () => {
     expect(open?.target).toBe('_blank');
     expect(open?.rel).toContain('noopener');
     expect(open?.getAttribute('aria-label')).toBe('Open in new tab');
-  });
-
-  it('renders the open-in-new-tab anchor for a blob: pdf', () => {
-    openFilePreview({ url: 'blob:https://example.com/abc-123', mimeType: 'application/pdf', labels: { ...labels, openInNewTab: 'Open in new tab' } });
-
-    const open = document.body.querySelector<HTMLAnchorElement>('[data-action="preview-open-tab"]');
-    expect(open?.getAttribute('href')).toBe('blob:https://example.com/abc-123');
   });
 
   it('omits the open-in-new-tab anchor for a text file', () => {

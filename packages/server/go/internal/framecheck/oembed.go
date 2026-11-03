@@ -3,10 +3,12 @@ package framecheck
 import (
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode/utf16"
 
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/outbound"
 )
 
 // In UTF-16 units, like every other cap in the server.
@@ -88,11 +90,43 @@ func secureURL(value *jsjson.Node) string {
 		return ""
 	}
 	u, ok := dotnet.ParseAbsoluteURI(s.String())
-	if !ok || u.Scheme != "https" || u.Host == "" || u.UserInfo != "" ||
-		hasEncodedControl(u.AbsoluteURI) || len(jsjson.FromString(u.AbsoluteURI)) > maxURLLength {
+	if !ok || u.Scheme != "https" || u.Host == "" || u.UserInfo != "" {
 		return ""
 	}
-	return u.AbsoluteURI
+	host, ok := publicHost(u)
+	prefix := "https://" + u.Host
+	if !ok || !strings.HasPrefix(u.AbsoluteURI, prefix) {
+		return ""
+	}
+	url := "https://" + host + u.AbsoluteURI[len(prefix):]
+	if hasEncodedControl(url) || len(jsjson.FromString(url)) > maxURLLength {
+		return ""
+	}
+	return url
+}
+
+// publicHost is the host to write, punycode for a name, or false when the
+// host is an address the outbound policy refuses, a zoned IPv6 literal,
+// localhost, a single label, a trailing-dot name or a name ending in a
+// number (a browser reads "１２７.0.0.1" as 127.0.0.1). No DNS lookup.
+func publicHost(u *dotnet.URI) (string, bool) {
+	switch u.HostType {
+	case "IPv4", "IPv6":
+		address, ok := dotnet.ParseIP(u.IdnHost)
+		if strings.Contains(u.IdnHost, "%") || !ok || !(outbound.DefaultPolicy{}).AddressAllowed(address) {
+			return "", false
+		}
+		return u.Host, true
+	case "Dns":
+		name := u.IdnHost
+		dot := strings.LastIndexByte(name, '.')
+		if dot < 0 || dot == len(name)-1 || strings.HasSuffix(name, ".localhost") ||
+			'0' <= name[dot+1] && name[dot+1] <= '9' {
+			return "", false
+		}
+		return name, true
+	}
+	return "", false
 }
 
 // hasControl finds a C0, DEL or C1 character. Go's parser trims them at the

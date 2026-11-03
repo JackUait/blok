@@ -1,6 +1,8 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Blok.Server.Outbound;
 
 namespace Blok.Server.FrameCheck;
 
@@ -31,6 +33,8 @@ internal sealed partial record OEmbedAnswer(
   private const int MaximumTextLength = 256;
   private const int MaximumUrlLength = 2048;
   private const int MaximumSize = 4096;
+
+  private static readonly GuardedOutboundPolicy AddressPolicy = new();
 
   [JsonIgnore]
   internal bool IsEmpty =>
@@ -148,14 +152,59 @@ internal sealed partial record OEmbedAnswer(
         !Uri.TryCreate(text, UriKind.Absolute, out var url) ||
         url.Scheme != Uri.UriSchemeHttps ||
         url.Host == "" ||
-        url.UserInfo != "" ||
-        HasEncodedControl(url.AbsoluteUri) ||
-        url.AbsoluteUri.Length > MaximumUrlLength)
+        url.UserInfo != "")
     {
       return null;
     }
 
-    return url.AbsoluteUri;
+    var host = PublicHost(url);
+    var prefix = "https://" + url.Host;
+    if (host is null ||
+        !url.AbsoluteUri.StartsWith(prefix, StringComparison.Ordinal))
+    {
+      return null;
+    }
+
+    var secured = "https://" + host + url.AbsoluteUri[prefix.Length..];
+    return HasEncodedControl(secured) || secured.Length > MaximumUrlLength
+      ? null
+      : secured;
+  }
+
+  // The host to write, punycode for a name, or null when the host is an
+  // address the outbound policy refuses, a zoned IPv6 literal, localhost, a
+  // single label, a trailing-dot name or a name ending in a number (a
+  // browser reads "１２７.0.0.1" as 127.0.0.1). No DNS lookup.
+  private static string? PublicHost(Uri url)
+  {
+    string name;
+    try
+    {
+      name = url.IdnHost;
+    }
+    catch (UriFormatException)
+    {
+      return null;
+    }
+
+    switch (url.HostNameType)
+    {
+      case UriHostNameType.IPv4 or UriHostNameType.IPv6:
+        return !name.Contains('%') &&
+          IPAddress.TryParse(name, out var address) &&
+          AddressPolicy.IsAddressAllowed(address)
+          ? url.Host
+          : null;
+      case UriHostNameType.Dns:
+        var dot = name.LastIndexOf('.');
+        return dot < 0 || dot == name.Length - 1 ||
+          name.EndsWith(".localhost", StringComparison.Ordinal) ||
+          char.IsAsciiDigit(name[dot + 1])
+          ? null
+          : name;
+      default:
+        return null;
+    }
   }
 
   // A C0, DEL or C1 character. .NET escapes them and Go's parser trims them

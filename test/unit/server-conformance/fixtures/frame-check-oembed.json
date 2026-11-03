@@ -288,6 +288,162 @@
     {
       "name": "a thumbnail with an ideographic space around it",
       "json": "{\"thumbnail_url\":\"\\u3000https://x.com/\\u3000\"}"
+    },
+    {
+      "name": "a loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://127.0.0.1/a.png\"}"
+    },
+    {
+      "name": "a short loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://127.1/a.png\"}"
+    },
+    {
+      "name": "a decimal loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://2130706433/a.png\"}"
+    },
+    {
+      "name": "a hex loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://0x7f000001/a.png\"}"
+    },
+    {
+      "name": "an octal loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://0177.0.0.1/a.png\"}"
+    },
+    {
+      "name": "a private 10/8 thumbnail",
+      "json": "{\"thumbnail_url\":\"https://10.0.0.1/a.png\"}"
+    },
+    {
+      "name": "a private 192.168/16 thumbnail",
+      "json": "{\"thumbnail_url\":\"https://192.168.1.1/a.png\"}"
+    },
+    {
+      "name": "a metadata thumbnail",
+      "json": "{\"thumbnail_url\":\"https://169.254.169.254/latest/meta-data\"}"
+    },
+    {
+      "name": "an any-address thumbnail",
+      "json": "{\"thumbnail_url\":\"https://0.0.0.0/a.png\"}"
+    },
+    {
+      "name": "an IPv6 loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://[::1]/a.png\"}"
+    },
+    {
+      "name": "an IPv6 any-address thumbnail",
+      "json": "{\"thumbnail_url\":\"https://[::]/a.png\"}"
+    },
+    {
+      "name": "an IPv4-mapped loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://[::ffff:127.0.0.1]/a.png\"}"
+    },
+    {
+      "name": "an IPv4-mapped hex loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://[::ffff:7f00:1]/a.png\"}"
+    },
+    {
+      "name": "an IPv6 unique-local thumbnail",
+      "json": "{\"thumbnail_url\":\"https://[fc00::1]/a.png\"}"
+    },
+    {
+      "name": "an IPv6 link-local thumbnail with a zone",
+      "json": "{\"thumbnail_url\":\"https://[fe80::1%25eth0]/a.png\"}"
+    },
+    {
+      "name": "a public IPv6 thumbnail with a zone",
+      "json": "{\"thumbnail_url\":\"https://[2606:4700:4700::1111%25eth0]/a.png\"}"
+    },
+    {
+      "name": "a public IPv4 thumbnail is kept",
+      "json": "{\"thumbnail_url\":\"https://8.8.8.8/a.png\"}"
+    },
+    {
+      "name": "a public IPv4 thumbnail with a port is kept",
+      "json": "{\"thumbnail_url\":\"https://8.8.8.8:8443/a.png\"}"
+    },
+    {
+      "name": "a public IPv6 thumbnail is kept",
+      "json": "{\"thumbnail_url\":\"https://[2606:4700:4700::1111]/a.png\"}"
+    },
+    {
+      "name": "a fullwidth-digit loopback thumbnail",
+      "json": "{\"thumbnail_url\":\"https://\\uff11\\uff12\\uff17.0.0.1/a.png\"}"
+    },
+    {
+      "name": "a localhost thumbnail",
+      "json": "{\"thumbnail_url\":\"https://localhost/a.png\"}"
+    },
+    {
+      "name": "an uppercase localhost thumbnail with a dot",
+      "json": "{\"thumbnail_url\":\"https://LOCALHOST./a.png\"}"
+    },
+    {
+      "name": "a localhost subdomain thumbnail",
+      "json": "{\"thumbnail_url\":\"https://img.localhost/a.png\"}"
+    },
+    {
+      "name": "a single-label thumbnail",
+      "json": "{\"thumbnail_url\":\"https://intranet/a.png\"}"
+    },
+    {
+      "name": "a trailing-dot thumbnail",
+      "json": "{\"thumbnail_url\":\"https://img.example.com./a.png\"}"
+    },
+    {
+      "name": "an underscore host thumbnail",
+      "json": "{\"thumbnail_url\":\"https://img_1.example.com/a.png\"}"
+    },
+    {
+      "name": "a thumbnail with a port is kept",
+      "json": "{\"thumbnail_url\":\"https://img.example.com:8443/a.png\"}"
+    },
+    {
+      "name": "a Cyrillic lookalike thumbnail",
+      "json": "{\"thumbnail_url\":\"https://\\u0430\\u0440\\u0440\\u04cf\\u0435.com/a.png\"}"
+    },
+    {
+      "name": "a German umlaut thumbnail",
+      "json": "{\"thumbnail_url\":\"https://b\\u00fccher.de/a.png\"}"
+    },
+    {
+      "name": "an uppercase umlaut thumbnail",
+      "json": "{\"thumbnail_url\":\"https://B\\u00dcCHER.de/a.png\"}"
+    },
+    {
+      "name": "a sharp s thumbnail",
+      "json": "{\"thumbnail_url\":\"https://stra\\u00dfe.de/a.png\"}"
+    },
+    {
+      "name": "a final sigma thumbnail",
+      "json": "{\"thumbnail_url\":\"https://\\u03b1\\u03c2.gr/a.png\"}"
+    },
+    {
+      "name": "a zero-width joiner thumbnail",
+      "json": "{\"thumbnail_url\":\"https://a\\u200db.com/a.png\"}"
+    },
+    {
+      "name": "a fullwidth thumbnail",
+      "json": "{\"thumbnail_url\":\"https://\\uff45\\uff58\\uff41\\uff4d\\uff50\\uff4c\\uff45.com/a.png\"}"
+    },
+    {
+      "name": "an ideographic full stop thumbnail",
+      "json": "{\"thumbnail_url\":\"https://example\\u3002com/a.png\"}"
+    },
+    {
+      "name": "an emoji thumbnail",
+      "json": "{\"thumbnail_url\":\"https://\\ud83d\\ude00.com/a.png\"}"
+    },
+    {
+      "name": "a punycode thumbnail is kept",
+      "json": "{\"thumbnail_url\":\"https://xn--bcher-kva.de/a.png\"}"
+    },
+    {
+      "name": "a Unicode host with a port",
+      "json": "{\"thumbnail_url\":\"https://b\\u00fccher.de:8443/a.png\"}"
+    },
+    {
+      "name": "a Unicode host and a Unicode path",
+      "json": "{\"thumbnail_url\":\"https://b\\u00fccher.de/\\u00fc.png\"}"
     }
   ],
   "answers": [
@@ -866,6 +1022,318 @@
       "width": null,
       "height": null,
       "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://8.8.8.8/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://8.8.8.8/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://8.8.8.8:8443/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://8.8.8.8:8443/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://[2606:4700:4700::1111]/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://[2606:4700:4700::1111]/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://img_1.example.com/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://img_1.example.com/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://img.example.com:8443/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://img.example.com:8443/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--80ak6aa92e.com/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--80ak6aa92e.com/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--bcher-kva.de/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--bcher-kva.de/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--bcher-kva.de/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--bcher-kva.de/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--strae-oqa.de/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--strae-oqa.de/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--mxa8a.gr/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--mxa8a.gr/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://example.com/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://example.com/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://example.com/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://example.com/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--e28h.com/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--e28h.com/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--bcher-kva.de/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--bcher-kva.de/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--bcher-kva.de:8443/a.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--bcher-kva.de:8443/a.png\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://xn--bcher-kva.de/%C3%BC.png",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://xn--bcher-kva.de/%C3%BC.png\"}"
     }
   ]
 }

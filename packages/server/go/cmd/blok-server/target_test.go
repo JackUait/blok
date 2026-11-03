@@ -567,10 +567,10 @@ func TestASlowLineCostsLinearTime(t *testing.T) {
 		}
 		return best
 	}
-	// Linear is 8x, quadratic 64x.
-	small, big := fastest(32<<10), fastest(256<<10)
-	if ratio := float64(big) / float64(small); ratio > 24 {
-		t.Fatalf("8x the line took %.0fx the time (%v vs %v)", ratio, big, small)
+	// Linear is 16x, quadratic 256x.
+	small, big := fastest(32<<10), fastest(512<<10)
+	if ratio := float64(big) / float64(small); ratio > 64 {
+		t.Fatalf("16x the line took %.0fx the time (%v vs %v)", ratio, big, small)
 	}
 }
 

@@ -1,6 +1,7 @@
 package outbound
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -35,6 +36,9 @@ type Limits struct {
 	// Hop, when set, is asked before every redirect hop. A false answer
 	// fails the fetch as RateLimited, so one request cannot fan out.
 	Hop func() bool
+	// Truncate keeps the first MaxBytes of the body instead of failing past
+	// them. Content-Length is not checked.
+	Truncate bool
 }
 
 // Response is GuardedResponse. Release frees the concurrency slot; callers
@@ -44,7 +48,10 @@ type Response struct {
 	Body        []byte
 	ContentType string
 	FinalURL    string
-	release     func()
+	// Header is the final response's header lines as received.
+	Header    http.Header
+	Redirects int
+	release   func()
 }
 
 // Release frees the fetch slot. It is safe to call twice.
@@ -162,7 +169,7 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 			redirects++
 			continue
 		}
-		body, err := readBounded(response, limits.MaxBytes)
+		body, err := readBounded(response, limits.MaxBytes, limits.Truncate)
 		_ = response.Body.Close()
 		if err != nil {
 			return nil, err
@@ -172,6 +179,8 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 			Body:        body,
 			ContentType: contentType(response.Header.Get("Content-Type")),
 			FinalURL:    target.URL.AbsoluteURI,
+			Header:      response.Header,
+			Redirects:   redirects,
 		}, nil
 	}
 }
@@ -300,8 +309,8 @@ func contentType(header string) string {
 	return b.String()
 }
 
-func readBounded(response *http.Response, max int64) ([]byte, error) {
-	if response.ContentLength > max {
+func readBounded(response *http.Response, max int64, truncate bool) ([]byte, error) {
+	if !truncate && response.ContentLength > max {
 		return nil, fail(TooLarge)
 	}
 	var encodings []string
@@ -315,8 +324,22 @@ func readBounded(response *http.Response, max int64) ([]byte, error) {
 	if len(encodings) > 1 {
 		return nil, fail(UnsupportedContentEncoding)
 	}
+	identity := len(encodings) == 0 || strings.EqualFold(encodings[0], "identity")
+	if truncate {
+		// The first max raw bytes decode as a truncated stream, which both
+		// decoders already accept; the output is cut at max too.
+		prefix, err := io.ReadAll(io.LimitReader(response.Body, max))
+		if err != nil || identity {
+			return prefix, err
+		}
+		decoded, ok := decoder(strings.ToLower(encodings[0]), bytes.NewReader(prefix))
+		if !ok {
+			return nil, fail(UnsupportedContentEncoding)
+		}
+		return io.ReadAll(io.LimitReader(decoded, max))
+	}
 	raw := &boundedReader{r: response.Body, remaining: max}
-	if len(encodings) == 0 || strings.EqualFold(encodings[0], "identity") {
+	if identity {
 		return readAll(raw, max)
 	}
 	decoded, ok := decoder(strings.ToLower(encodings[0]), raw)

@@ -1332,6 +1332,76 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task TruncatesTheBodyAtTheCapWhenAskedAndKeepsTheFinalHeaders()
+  {
+    var body = string.Concat(Enumerable.Repeat("0123456789", 100));
+    var compressed = Compress(Encoding.ASCII.GetBytes(body));
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          if (request.Target == "/start")
+          {
+            await stream.WriteAsync(
+                Encoding.ASCII.GetBytes(
+                    "HTTP/1.1 302 Found\r\n" +
+                    "Content-Security-Policy: frame-ancestors 'none'\r\n" +
+                    "Location: /final\r\n" +
+                    "Content-Length: 0\r\n" +
+                    "Connection: close\r\n\r\n"),
+                cancellationToken);
+            return;
+          }
+
+          var gzip = request.Target == "/final/gzip";
+          var payload = gzip ? compressed : Encoding.ASCII.GetBytes(body);
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(
+                  "HTTP/1.1 200 OK\r\n" +
+                  "Content-Security-Policy: default-src 'self'\r\n" +
+                  "Content-Security-Policy: frame-ancestors https://a.example, img-src *\r\n" +
+                  "X-Frame-Options: DENY\r\n" +
+                  (gzip ? "Content-Encoding: gzip\r\n" : "") +
+                  $"Content-Length: {payload.Length}\r\n" +
+                  "Connection: close\r\n\r\n"),
+              cancellationToken);
+          await stream.WriteAsync(payload, cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "cut.example");
+    var limits = new GuardedFetchLimits(
+        TimeSpan.FromSeconds(5), 25, 5, TruncateBody: true);
+    var baseUrl = $"http://cut.example:{origin.Port}";
+
+    await using (var response = await fetcher.GetAsync(
+        $"{baseUrl}/start", limits, CancellationToken.None))
+    {
+      Assert.Equal(body[..25], Encoding.ASCII.GetString(response.Body.Span));
+      Assert.Equal(1, response.Redirects);
+      Assert.Equal($"{baseUrl}/final", response.FinalUrl);
+      Assert.Equal(
+          ["default-src 'self'", "frame-ancestors https://a.example, img-src *"],
+          response.HeaderValues("Content-Security-Policy"));
+      Assert.Equal(["DENY"], response.HeaderValues("x-frame-options"));
+      Assert.Empty(response.HeaderValues("Link"));
+    }
+
+    await using (var response = await fetcher.GetAsync(
+        $"{baseUrl}/final/gzip",
+        limits with { MaximumResponseBytes = 100 },
+        CancellationToken.None))
+    {
+      Assert.Equal(body[..100], Encoding.ASCII.GetString(response.Body.Span));
+      Assert.Equal(0, response.Redirects);
+    }
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"{baseUrl}/final",
+            limits with { TruncateBody = false },
+            CancellationToken.None));
+    Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
+  }
+
+  [Fact]
   public async Task AppliesTheBodyCapAfterGzipDecompression()
   {
     var compressed = Compress(Encoding.UTF8.GetBytes(

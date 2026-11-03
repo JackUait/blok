@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -7,15 +8,18 @@ using System.Security.Cryptography.X509Certificates;
 namespace Blok.Server.Outbound;
 
 // AllowHop is asked before every redirect hop. False fails the fetch as
-// RateLimited, so one request cannot fan out.
+// RateLimited, so one request cannot fan out. TruncateBody keeps the first
+// MaximumResponseBytes of the body instead of failing past them.
 internal readonly record struct GuardedFetchLimits(
     TimeSpan TotalTimeout,
     long MaximumResponseBytes,
     int MaximumRedirects,
-    Func<bool>? AllowHop = null);
+    Func<bool>? AllowHop = null,
+    bool TruncateBody = false);
 
 internal sealed class GuardedResponse : IAsyncDisposable
 {
+  private readonly Dictionary<string, List<string>> headers;
   private SemaphoreSlim? concurrencyPermit;
 
   internal GuardedResponse(
@@ -23,13 +27,25 @@ internal sealed class GuardedResponse : IAsyncDisposable
       string contentType,
       string finalUrl,
       int statusCode,
-      SemaphoreSlim? concurrencyPermit = null)
+      SemaphoreSlim? concurrencyPermit = null,
+      Dictionary<string, List<string>>? headers = null,
+      int redirects = 0)
   {
     Body = body;
     ContentType = contentType;
     FinalUrl = finalUrl;
     StatusCode = statusCode;
+    Redirects = redirects;
     this.concurrencyPermit = concurrencyPermit;
+    this.headers = headers ?? new(StringComparer.OrdinalIgnoreCase);
+  }
+
+  internal int Redirects { get; }
+
+  /// <summary>The final response's header lines named so, as received.</summary>
+  internal IReadOnlyList<string> HeaderValues(string name)
+  {
+    return headers.TryGetValue(name, out var values) ? values : [];
   }
 
   internal ReadOnlyMemory<byte> Body { get; }
@@ -246,6 +262,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       var body = await ReadBoundedAsync(
           response.Content,
           limits.MaximumResponseBytes,
+          limits.TruncateBody,
           cancellationToken);
 
       return new GuardedResponse(
@@ -253,8 +270,41 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
           response.Content?.Headers.ContentType?.ToString() ?? "",
           target.Url.AbsoluteUri,
           (int)response.StatusCode,
-          concurrencyPermit);
+          concurrencyPermit,
+          RawHeaders(response),
+          redirects);
     }
+  }
+
+  // NonValidated: .NET must not parse, merge or split the lines.
+  private static Dictionary<string, List<string>> RawHeaders(
+      HttpResponseMessage response)
+  {
+    var headers = new Dictionary<string, List<string>>(
+        StringComparer.OrdinalIgnoreCase);
+    void Add(HttpHeadersNonValidated lines)
+    {
+      foreach (var (name, values) in lines)
+      {
+        if (!headers.TryGetValue(name, out var list))
+        {
+          headers[name] = list = [];
+        }
+
+        foreach (var value in values)
+        {
+          list.Add(value);
+        }
+      }
+    }
+
+    Add(response.Headers.NonValidated);
+    if (response.Content is not null)
+    {
+      Add(response.Content.Headers.NonValidated);
+    }
+
+    return headers;
   }
 
   private static bool IsRedirect(HttpStatusCode statusCode)
@@ -270,6 +320,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
   private static async ValueTask<ReadOnlyMemory<byte>> ReadBoundedAsync(
       HttpContent? content,
       long maximumBytes,
+      bool truncate,
       CancellationToken cancellationToken)
   {
     if (content is null)
@@ -277,7 +328,8 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       return ReadOnlyMemory<byte>.Empty;
     }
 
-    if (content.Headers.ContentLength is long contentLength &&
+    if (!truncate &&
+        content.Headers.ContentLength is long contentLength &&
         contentLength > maximumBytes)
     {
       throw ResponseTooLarge();
@@ -296,11 +348,27 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
     var boundedRaw = new BoundedReadStream(
         raw,
         maximumBytes);
-    if (encoding is null ||
+    var identity = encoding is null ||
         string.Equals(
             encoding,
             "identity",
-            StringComparison.OrdinalIgnoreCase))
+            StringComparison.OrdinalIgnoreCase);
+    if (truncate)
+    {
+      // The first max raw bytes decode as a truncated stream, which both
+      // decoders already accept; the output is cut at max too.
+      var prefix = await ReadPrefixAsync(raw, maximumBytes, cancellationToken);
+      if (identity)
+      {
+        return prefix;
+      }
+
+      await using var prefixStream = new MemoryStream(prefix.ToArray(), writable: false);
+      await using var decodedPrefix = Decoder(encoding!, prefixStream);
+      return await ReadPrefixAsync(decodedPrefix, maximumBytes, cancellationToken);
+    }
+
+    if (identity || encoding is null)
     {
       return await ReadDecodedAsync(
           boundedRaw,
@@ -308,23 +376,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
           cancellationToken);
     }
 
-    Stream decoded = encoding.ToLowerInvariant() switch
-    {
-      "gzip" => new GZipStream(
-          boundedRaw,
-          CompressionMode.Decompress,
-          leaveOpen: true),
-      "br" => new BrotliStream(
-          boundedRaw,
-          CompressionMode.Decompress,
-          leaveOpen: true),
-      "deflate" => new ZLibStream(
-          boundedRaw,
-          CompressionMode.Decompress,
-          leaveOpen: true),
-      _ => throw new GuardedFetchException(
-          GuardedFetchFailure.UnsupportedContentEncoding),
-    };
+    var decoded = Decoder(encoding, boundedRaw);
 
     ReadOnlyMemory<byte> body;
     await using (decoded)
@@ -377,6 +429,51 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       output.Write(buffer, 0, read);
       total += read;
     }
+  }
+
+  private static Stream Decoder(string encoding, Stream raw)
+  {
+    return encoding.ToLowerInvariant() switch
+    {
+      "gzip" => new GZipStream(
+          raw,
+          CompressionMode.Decompress,
+          leaveOpen: true),
+      "br" => new BrotliStream(
+          raw,
+          CompressionMode.Decompress,
+          leaveOpen: true),
+      "deflate" => new ZLibStream(
+          raw,
+          CompressionMode.Decompress,
+          leaveOpen: true),
+      _ => throw new GuardedFetchException(
+          GuardedFetchFailure.UnsupportedContentEncoding),
+    };
+  }
+
+  private static async ValueTask<ReadOnlyMemory<byte>> ReadPrefixAsync(
+      Stream stream,
+      long maximumBytes,
+      CancellationToken cancellationToken)
+  {
+    var buffer = new byte[checked((int)maximumBytes)];
+    var total = 0;
+
+    while (total < buffer.Length)
+    {
+      var read = await stream.ReadAsync(
+          buffer.AsMemory(total),
+          cancellationToken);
+      if (read == 0)
+      {
+        break;
+      }
+
+      total += read;
+    }
+
+    return buffer.AsMemory(0, total);
   }
 
   private static async ValueTask DrainAsync(

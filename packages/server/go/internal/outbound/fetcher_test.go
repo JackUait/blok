@@ -1,6 +1,7 @@
 package outbound
 
 import (
+	"compress/gzip"
 	"context"
 	"net"
 	"net/http"
@@ -471,5 +472,65 @@ func TestAsksTheHopBudgetBeforeEveryRedirect(t *testing.T) {
 	}
 	if requests.Load() != 3 || asked != 3 {
 		t.Fatalf("%d requests and %d asks, want 3 and 3", requests.Load(), asked)
+	}
+}
+
+func TestTruncatesTheBodyAtTheCapWhenAskedAndKeepsTheFinalHeaders(t *testing.T) {
+	body := strings.Repeat("0123456789", 100)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+			w.Header().Set("Location", "/final")
+			w.WriteHeader(http.StatusFound)
+			return
+		}
+		w.Header().Add("Content-Security-Policy", "default-src 'self'")
+		w.Header().Add("Content-Security-Policy", "frame-ancestors https://a.example, img-src *")
+		w.Header().Set("X-Frame-Options", "DENY")
+		if r.URL.Path == "/final/gzip" {
+			w.Header().Set("Content-Encoding", "gzip")
+			zw := gzip.NewWriter(w)
+			_, _ = zw.Write([]byte(body))
+			_ = zw.Close()
+			return
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+	port := server.Listener.Addr().(*net.TCPAddr).Port
+	f := newTestFetcher(&fixturePolicy{host: "cut.example", port: port, allowed: addrs("127.0.0.1")},
+		&countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
+	limits := Limits{Timeout: 5 * time.Second, MaxBytes: 25, MaxRedirects: 5, Truncate: true}
+	base := "http://cut.example:" + strconv.Itoa(port)
+
+	response, err := f.Get(context.Background(), base+"/start", limits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Release()
+	if string(response.Body) != body[:25] || response.Redirects != 1 || response.FinalURL != base+"/final" {
+		t.Fatalf("body %q redirects %d final %q", response.Body, response.Redirects, response.FinalURL)
+	}
+	if got := response.Header.Values("Content-Security-Policy"); len(got) != 2 || got[1] != "frame-ancestors https://a.example, img-src *" {
+		t.Fatalf("csp %q", got)
+	}
+	if got := response.Header.Values("X-Frame-Options"); len(got) != 1 || got[0] != "DENY" {
+		t.Fatalf("xfo %q", got)
+	}
+
+	gzipLimits := limits
+	gzipLimits.MaxBytes = 100
+	response, err = f.Get(context.Background(), base+"/final/gzip", gzipLimits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Release()
+	if string(response.Body) != body[:100] || response.Redirects != 0 {
+		t.Fatalf("gzip body %q redirects %d", response.Body, response.Redirects)
+	}
+
+	limits.Truncate = false
+	if _, err = f.Get(context.Background(), base+"/final", limits); !IsFailure(err, TooLarge) {
+		t.Fatalf("without Truncate got %v, want TooLarge", err)
 	}
 }

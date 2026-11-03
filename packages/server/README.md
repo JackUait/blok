@@ -302,6 +302,7 @@ Passes are needed whenever the routes run with `Auth = "ticket"`, including rout
 | --- | --- |
 | `GET /health` | Reports liveness and the running version |
 | `GET /unfurl?url=…` | Reads title, description, and image metadata |
+| `GET /frame-check?url=…` | Says whether the page would let your editor show it in a frame, plus safe oEmbed details |
 | `POST /upload` | Stores an uploaded file |
 | `POST /upload-by-url` | Fetches and stores a remote file; the request media type must be `application/json` |
 | `GET /sync/{doc}` | WebSocket; the editor's live collaboration connection to one document (with `--collab`) |
@@ -347,9 +348,23 @@ An edit may also send `If-Match: "<lineage>:<sequence>"`. It is one quoted tag, 
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
+Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` is refused. A response head over 64 KiB is refused. When a rate limit is on, each redirect hop counts as one more request for the caller.
+
+`GET /frame-check?url=…` is open whenever `/unfurl` is. It answers `{"verdict": …, "link": …, "oembed": {…}}`.
+
+- `verdict` is `allowed`, `blocked`, `insecure` or `unknown`.
+- `blocked` means the final page's enforced `Content-Security-Policy: frame-ancestors`, or its `X-Frame-Options`, refuses your editor. Report-only policies and `<meta>` tags do not count. Redirect hops do not count.
+- `insecure` means the final page is not `https`. `blocked` wins over it.
+- `unknown` means the request had no `Origin`, or the page could not be fetched or did not answer 2xx.
+- Your editor is the request's `Origin`, used only when it is an allowed origin. The answer sends `Vary: Origin`.
+- `link` is the final URL after redirects.
+- `oembed` appears when the page links a JSON oEmbed endpoint. It holds only `title`, `provider_name`, an `https` `thumbnail_url`, and `width` and `height` capped at 4096. The oEmbed `html` field is never returned.
+
+The verdict is a hint for your UI, not a security check. The server cannot see the reader's cookies, the full chain of frames above your editor, or scripts that break out of frames.
+
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
-A ticket with `write: false` may call `GET /unfurl`, `GET /sync/{doc}/state`, the three `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the three history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A ticket with `write: false` may call `GET /unfurl`, `GET /frame-check`, `GET /sync/{doc}/state`, the three `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the three history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ### Version history
 

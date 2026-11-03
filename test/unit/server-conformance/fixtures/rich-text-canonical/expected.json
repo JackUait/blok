@@ -331,7 +331,145 @@
         }
       }
     ],
-    "empty": []
+    "empty": [],
+    "malformed-tag-record-keeps-only-strings": [
+      {
+        "text": "x",
+        "marks": {
+          "tag:b": {}
+        }
+      }
+    ],
+    "malformed-tag-record-drops-null-and-object-members": [
+      {
+        "text": "x",
+        "marks": {
+          "tag:b": {
+            "y": "1"
+          }
+        }
+      }
+    ],
+    "malformed-tag-string-dropped": [
+      {
+        "text": "x",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "malformed-tag-array-dropped": [
+      {
+        "text": "x"
+      }
+    ],
+    "malformed-tag-number-dropped": [
+      {
+        "text": "x"
+      }
+    ],
+    "malformed-color-object-and-background-number-dropped": [
+      {
+        "text": "x",
+        "marks": {
+          "bold": true
+        }
+      }
+    ],
+    "malformed-background-array-dropped": [
+      {
+        "text": "x",
+        "marks": {
+          "color": "red"
+        }
+      }
+    ],
+    "malformed-equation-number-expression-dropped": [
+      {
+        "text": "ab"
+      }
+    ],
+    "malformed-equation-null-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-page-object-id-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-html-number-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-html-object-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-empty-embed-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-unknown-embed-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-two-shape-embed-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-equation-extra-key-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-page-array-id-dropped": [
+      {
+        "text": "b"
+      }
+    ],
+    "malformed-extra-segment-keys-dropped": [
+      {
+        "text": "a"
+      },
+      {
+        "embed": {
+          "html": "h"
+        }
+      }
+    ],
+    "malformed-string-marks-dropped": [
+      {
+        "text": "a"
+      }
+    ],
+    "malformed-three-valid-embeds-kept": [
+      {
+        "embed": {
+          "equation": {
+            "expression": "e"
+          }
+        }
+      },
+      {
+        "embed": {
+          "page": {
+            "id": "p"
+          }
+        }
+      },
+      {
+        "embed": {
+          "html": "<b>h</b>"
+        }
+      }
+    ]
   },
   "deltas": {
     "string-runs-with-equal-marks-merge": [
@@ -388,6 +526,24 @@
     "foreign-false-mark-reads-absent": [
       {
         "text": "ab"
+      }
+    ],
+    "malformed-embeds-and-marks-read-as-the-valid-segments": [
+      {
+        "text": "a",
+        "marks": {
+          "tag:b": {
+            "y": "1"
+          }
+        }
+      },
+      {
+        "embed": {
+          "html": "<i>h</i>"
+        }
+      },
+      {
+        "text": "b"
       }
     ]
   }

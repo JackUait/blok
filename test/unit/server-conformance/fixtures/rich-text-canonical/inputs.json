@@ -31,7 +31,27 @@
     { "name": "embed-with-marks", "input": [{ "embed": { "html": "<img src=\"x.png\">" }, "marks": { "italic": true, "bold": true } }, { "text": "b", "marks": { "bold": true } }] },
     { "name": "newlines-and-markup-characters-stay-text", "input": [{ "text": "a < b && \"c\"\n" }, { "text": "<b>x</b>", "marks": { "code": true } }] },
     { "name": "marks-key-before-text-key", "input": [{ "marks": { "bold": true }, "text": "a" }] },
-    { "name": "empty", "input": [] }
+    { "name": "empty", "input": [] },
+    { "name": "malformed-tag-record-keeps-only-strings", "input": [{"text":"x","marks":{"tag:b":{"x":1}}}] },
+    { "name": "malformed-tag-record-drops-null-and-object-members", "input": [{"text":"x","marks":{"tag:b":{"x":null,"y":"1","z":{"a":"b"}}}}] },
+    { "name": "malformed-tag-string-dropped", "input": [{"text":"x","marks":{"tag:b":"str","bold":true}}] },
+    { "name": "malformed-tag-array-dropped", "input": [{"text":"x","marks":{"tag:b":[1]}}] },
+    { "name": "malformed-tag-number-dropped", "input": [{"text":"x","marks":{"tag:b":5}}] },
+    { "name": "malformed-color-object-and-background-number-dropped", "input": [{"text":"x","marks":{"color":{},"background":5,"bold":true}}] },
+    { "name": "malformed-background-array-dropped", "input": [{"text":"x","marks":{"color":"red","background":["b"]}}] },
+    { "name": "malformed-equation-number-expression-dropped", "input": [{"text":"a"},{"embed":{"equation":{"expression":5}}},{"text":"b"}] },
+    { "name": "malformed-equation-null-dropped", "input": [{"embed":{"equation":null}},{"text":"b"}] },
+    { "name": "malformed-page-object-id-dropped", "input": [{"embed":{"page":{"id":{}}}},{"text":"b"}] },
+    { "name": "malformed-html-number-dropped", "input": [{"embed":{"html":5}},{"text":"b"}] },
+    { "name": "malformed-html-object-dropped", "input": [{"embed":{"html":{"a":"b"}}},{"text":"b"}] },
+    { "name": "malformed-empty-embed-dropped", "input": [{"embed":{}},{"text":"b"}] },
+    { "name": "malformed-unknown-embed-dropped", "input": [{"embed":{"glow":"x"}},{"text":"b"}] },
+    { "name": "malformed-two-shape-embed-dropped", "input": [{"embed":{"equation":{"expression":"e"},"page":{"id":"p"}}},{"text":"b"}] },
+    { "name": "malformed-equation-extra-key-dropped", "input": [{"embed":{"equation":{"expression":"e","extra":"1"}}},{"text":"b"}] },
+    { "name": "malformed-page-array-id-dropped", "input": [{"embed":{"page":{"id":["p"]}}},{"text":"b"}] },
+    { "name": "malformed-extra-segment-keys-dropped", "input": [{"text":"a","checked":true},{"embed":{"html":"h"},"glow":1}] },
+    { "name": "malformed-string-marks-dropped", "input": [{"text":"a","marks":"bold"}] },
+    { "name": "malformed-three-valid-embeds-kept", "input": [{"embed":{"equation":{"expression":"e"}}},{"embed":{"page":{"id":"p"}}},{"embed":{"html":"<b>h</b>"}}] }
   ],
   "deltas": [
     { "name": "string-runs-with-equal-marks-merge", "input": [{ "insert": "ab", "attributes": { "bold": true } }, { "insert": "c", "attributes": { "bold": true } }, { "insert": "d" }] },
@@ -39,6 +59,7 @@
     { "name": "non-object-inserts-skipped", "input": [{ "insert": "a" }, { "insert": [1, 2] }, { "insert": 5 }, { "insert": null }, { "insert": true }, { "insert": "b" }] },
     { "name": "empty-attributes-is-unmarked", "input": [{ "insert": "a", "attributes": {} }, { "insert": "b" }] },
     { "name": "stored-sorted-link-reads-canonical", "input": [{ "insert": "a", "attributes": { "link": { "href": "h", "rel": "r", "target": "t" } } }] },
-    { "name": "foreign-false-mark-reads-absent", "input": [{ "insert": "a", "attributes": { "bold": false } }, { "insert": "b" }] }
+    { "name": "foreign-false-mark-reads-absent", "input": [{ "insert": "a", "attributes": { "bold": false } }, { "insert": "b" }] },
+    { "name": "malformed-embeds-and-marks-read-as-the-valid-segments", "input": [{"insert":"a","attributes":{"tag:b":{"x":1,"y":"1"},"color":{}}},{"insert":{"equation":{"expression":5}}},{"insert":{"page":null}},{"insert":{"html":"<i>h</i>"}},{"insert":"b"}] }
   ]
 }

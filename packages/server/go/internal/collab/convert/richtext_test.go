@@ -2,6 +2,7 @@ package convert
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
@@ -63,6 +64,28 @@ func TestCanonicalizesRichTextLikeTheClient(t *testing.T) {
 	}
 	if count < 30 {
 		t.Fatalf("only %d cases", count)
+	}
+}
+
+// Twin of RichTextMalformedTests: host and peer input is normalised the same
+// way the canonical form is, never thrown on.
+func TestReadInputNormalisesMalformedValuesLikeCanonicalize(t *testing.T) {
+	inputs := engine(t, "rich-text-canonical/inputs.json")
+	expected := engine(t, "rich-text-canonical/expected.json")
+	count := 0
+	for _, entry := range field(inputs, "segments").([]any) {
+		name := field(entry, "name").(jsjson.Str).String()
+		if !strings.HasPrefix(name, "malformed-") {
+			continue
+		}
+		want := stringify(t, field(field(expected, "segments"), name))
+		if got := stringify(t, ReadInput(field(entry, "input").([]any))); got != want {
+			t.Errorf("segments %s:\n got %s\nwant %s", name, got, want)
+		}
+		count++
+	}
+	if count < 20 {
+		t.Fatalf("only %d malformed cases", count)
 	}
 }
 

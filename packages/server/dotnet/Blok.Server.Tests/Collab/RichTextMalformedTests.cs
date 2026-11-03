@@ -8,93 +8,56 @@ namespace Blok.Server.Tests.Collab;
 /// Host, peer and stored rich text is never trusted: a malformed mark or
 /// embed is normalised away, never thrown on, and never kept for a client to
 /// choke on. Same rules as the TS converters (final-fix-rules.md).
+/// The cases are the "malformed-" ones in rich-text-canonical, which the Go
+/// server reads too; RichTextCanonicalTests runs them through Canonicalize
+/// and FromDelta.
 /// </summary>
 public sealed class RichTextMalformedTests
 {
-  public static TheoryData<string, string> Segments()
+  private const string Prefix = "malformed-";
+
+  public static TheoryData<string> Segments()
   {
-    return new TheoryData<string, string>
-    {
-      // tag:* records keep only string attributes; a non-record drops the mark.
-      { """[{"text":"x","marks":{"tag:b":{"x":1}}}]""", """[{"text":"x","marks":{"tag:b":{}}}]""" },
-      { """[{"text":"x","marks":{"tag:b":{"x":null,"y":"1","z":{"a":"b"}}}}]""", """[{"text":"x","marks":{"tag:b":{"y":"1"}}}]""" },
-      { """[{"text":"x","marks":{"tag:b":"str","bold":true}}]""", """[{"text":"x","marks":{"bold":true}}]""" },
-      { """[{"text":"x","marks":{"tag:b":[1]}}]""", """[{"text":"x"}]""" },
-      { """[{"text":"x","marks":{"tag:b":5}}]""", """[{"text":"x"}]""" },
-
-      // color and background are strings or absent.
-      { """[{"text":"x","marks":{"color":{},"background":5,"bold":true}}]""", """[{"text":"x","marks":{"bold":true}}]""" },
-      { """[{"text":"x","marks":{"color":"red","background":["b"]}}]""", """[{"text":"x","marks":{"color":"red"}}]""" },
-
-      // An embed is exactly one of three shapes, or the segment is dropped.
-      { """[{"text":"a"},{"embed":{"equation":{"expression":5}}},{"text":"b"}]""", """[{"text":"ab"}]""" },
-      { """[{"embed":{"equation":null}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"page":{"id":{}}}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"html":5}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"html":{"a":"b"}}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"glow":"x"}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"equation":{"expression":"e"},"page":{"id":"p"}}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"equation":{"expression":"e","extra":"1"}}},{"text":"b"}]""", """[{"text":"b"}]""" },
-      { """[{"embed":{"page":{"id":["p"]}}},{"text":"b"}]""", """[{"text":"b"}]""" },
-
-      // Only the content and the marks survive; other keys are dropped.
-      { """[{"text":"a","checked":true},{"embed":{"html":"h"},"glow":1}]""", """[{"text":"a"},{"embed":{"html":"h"}}]""" },
-      { """[{"text":"a","marks":"bold"}]""", """[{"text":"a"}]""" },
-
-      // The three valid shapes stay as written.
-      {
-        """[{"embed":{"equation":{"expression":"e"}}},{"embed":{"page":{"id":"p"}}},{"embed":{"html":"<b>h</b>"}}]""",
-        """[{"embed":{"equation":{"expression":"e"}}},{"embed":{"page":{"id":"p"}}},{"embed":{"html":"<b>h</b>"}}]"""
-      },
-    };
-  }
-
-  [Theory]
-  [MemberData(nameof(Segments))]
-  public void CanonicalizeNormalisesMalformedValues(string input, string expected)
-  {
-    Assert.Equal(expected, JsJson.Stringify(RichText.Canonicalize((AnyArray)JsJson.Parse(input)!)));
-  }
-
-  [Theory]
-  [MemberData(nameof(Segments))]
-  public void ReadInputNormalisesMalformedValues(string input, string expected)
-  {
-    Assert.Equal(expected, JsJson.Stringify(RichText.ReadInput((AnyArray)JsJson.Parse(input)!)));
+    return new TheoryData<string>(Cases("inputs.json", "segments").Select(entry => entry.Name));
   }
 
   [Fact]
-  public void ADeltaWithMalformedEmbedsAndMarksReadsAsTheValidSegments()
+  public void TheSharedFixtureHoldsTheMalformedCases()
   {
-    var delta = new List<YTextDelta>
-    {
-      new("a", Marks(("tag:b", Record(("x", 1d), ("y", "1"))), ("color", new AnyObject()))),
-      new(Record(("equation", Record(("expression", 5d)))), null),
-      new(Record(("page", null)), null),
-      new(Record(("html", "<i>h</i>")), null),
-      new("b", null),
-    };
-
-    Assert.Equal(
-        """[{"text":"a","marks":{"tag:b":{"y":"1"}}},{"embed":{"html":"<i>h</i>"}},{"text":"b"}]""",
-        JsJson.Stringify(RichText.FromDelta(delta)));
+    Assert.True(Cases("inputs.json", "segments").Count() >= 20);
+    Assert.NotEmpty(Cases("inputs.json", "deltas"));
   }
 
-  private static AnyObject Marks(params (string Key, object? Value)[] entries)
+  [Theory]
+  [MemberData(nameof(Segments))]
+  public void ReadInputNormalisesMalformedValues(string name)
   {
-    return Record(entries);
+    var input = (AnyArray)Cases("inputs.json", "segments").Single(entry => entry.Name == name).Input!;
+    var expected = (AnyObject)RichTextFixtures.ReadEngine("rich-text-canonical/expected.json")!;
+
+    expected.TryGet("segments", out var segments);
+    ((AnyObject)segments!).TryGet(name, out var value);
+
+    Assert.Equal(JsJson.Stringify(value), JsJson.Stringify(RichText.ReadInput(input)));
   }
 
-  private static AnyObject Record(params (string Key, object? Value)[] entries)
+  private static IEnumerable<(string Name, object? Input)> Cases(string file, string group)
   {
-    var record = new AnyObject();
+    var inputs = (AnyObject)RichTextFixtures.ReadEngine($"rich-text-canonical/{file}")!;
 
-    foreach (var (key, value) in entries)
+    inputs.TryGet(group, out var cases);
+
+    foreach (var entry in (AnyArray)cases!)
     {
-      record.Add(key, value);
+      var item = (AnyObject)entry!;
+
+      item.TryGet("name", out var name);
+      item.TryGet("input", out var input);
+
+      if (((string)name!).StartsWith(Prefix, StringComparison.Ordinal))
+      {
+        yield return ((string)name!, input);
+      }
     }
-
-    return record;
   }
 }

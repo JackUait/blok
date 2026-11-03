@@ -88,6 +88,8 @@ interface EmbedRenderDecision {
   src: string;
   /** The registry service the source matched; '' for a generic embed. */
   service: string;
+  /** Where the link card points in 'link' mode; '' otherwise. */
+  href: string;
 }
 
 /**
@@ -120,10 +122,17 @@ function resolveEmbedRender(
     // card would lend the trusted service's framing to an arbitrary URL.
     // The kind comes from the match: a saved `kind` must never pick the script path.
     if (match === null || src === '') {
-      return { mode: 'empty', src: '', service: '' };
+      return { mode: 'empty', src: '', service: '', href: '' };
     }
 
-    return { mode: match.kind === 'script' ? 'script' : 'iframe', src, service };
+    // widgets.js reads the post from the anchor, which carries `source`. A
+    // source with no scheme or http would give it an empty anchor, so it gets
+    // a card for the registry's https post URL instead.
+    if (service === 'twitter' && !isHttpsUrl(data.source ?? '')) {
+      return { mode: 'link', src: '', service: '', href: src };
+    }
+
+    return { mode: match.kind === 'script' ? 'script' : 'iframe', src, service, href: '' };
   }
 
   // One field for a generic embed: the frame, the origin checks, the title and
@@ -132,16 +141,16 @@ function resolveEmbedRender(
   const src = toSafeEmbedSrc(data.source);
 
   if (src !== '' && canFrameGeneric(src, opts)) {
-    return { mode: 'iframe', src, service: '' };
+    return { mode: 'iframe', src, service: '', href: '' };
   }
 
   // Not allowed to frame — degrade to a safe link card so the stored URL
   // stays visible instead of vanishing into the empty state.
   if (data.source !== undefined && isHttpUrl(data.source)) {
-    return { mode: 'link', src: '', service: '' };
+    return { mode: 'link', src: '', service: '', href: data.source };
   }
 
-  return { mode: 'empty', src: '', service: '' };
+  return { mode: 'empty', src: '', service: '', href: '' };
 }
 
 const DEFAULT_WIDTH = 580;
@@ -562,7 +571,7 @@ export class Embed implements BlockTool {
    * link is always visible and can never be silently lost or overwritten.
    */
   private buildLinkCard(): HTMLElement {
-    const source = this.data.source ?? '';
+    const source = this.embedRender().href;
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-testid', 'embed-link-card');
@@ -1107,10 +1116,11 @@ export class Embed implements BlockTool {
 
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
-    const source = this.data.source ?? '';
+    const render = this.embedRender();
+    const source = render.href;
 
     return [
-      ...(this.embedRender().mode === 'link' ? [{
+      ...(render.mode === 'link' ? [{
         icon: IconLinkExternal,
         title: i18n.t('tools.embed.openOriginal'),
         name: 'embed-open-original',

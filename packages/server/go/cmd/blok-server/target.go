@@ -47,6 +47,9 @@ type targetStream struct {
 	state int
 	head  []byte // the current head, as handed on
 	body  int64  // Content-Length bytes left
+	buf   []byte // one read buffer for the stream's life
+	// scanned is how much of in has no LF, so a slow line is scanned once.
+	scanned int
 	// afterPost: net/http drops up to four leading CR or LF from the request
 	// after a POST (conn.readRequest).
 	afterPost bool
@@ -77,9 +80,11 @@ func (s *targetStream) Read(p []byte) (int, error) {
 			}
 			return 0, err
 		}
-		buffer := make([]byte, 4096)
-		n, err := s.src.Read(buffer)
-		s.in = append(s.in, buffer[:n]...)
+		if s.buf == nil {
+			s.buf = make([]byte, 4096)
+		}
+		n, err := s.src.Read(s.buf)
+		s.in = append(s.in, s.buf[:n]...)
 		s.err = err
 	}
 	n := copy(p, s.out)
@@ -92,6 +97,7 @@ func (s *targetStream) Read(p []byte) (int, error) {
 // take hands on the first n bytes of in. An emptied in is dropped: even an
 // empty tail would keep the whole array a big head grew.
 func (s *targetStream) take(n int) {
+	s.scanned = 0
 	if s.out, s.in = s.in[:n], s.in[n:]; len(s.in) == 0 {
 		s.in = nil
 	}
@@ -141,7 +147,12 @@ func (s *targetStream) step() bool {
 			return true
 		}
 	}
-	end := bytes.IndexByte(s.in, '\n')
+	end := bytes.IndexByte(s.in[s.scanned:], '\n')
+	if end < 0 {
+		s.scanned = len(s.in)
+	} else {
+		end += s.scanned
+	}
 	if end < 0 || len(s.head)+end+1 > maxRequestHead {
 		if len(s.head)+len(s.in) > maxRequestHead {
 			s.state, s.head = streamPass, nil

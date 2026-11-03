@@ -532,6 +532,48 @@ func TestATimeoutAfterAPostKeepsTheCRLFSkip(t *testing.T) {
 	}
 }
 
+// dribble is a request line that never ends, one byte per Read.
+type dribble struct{ left int }
+
+func (d *dribble) Read(p []byte) (int, error) {
+	if d.left == 0 {
+		return 0, io.EOF
+	}
+	d.left--
+	p[0] = 'a'
+	return 1, nil
+}
+
+func readDribbledLine(size int) {
+	stream := &targetStream{src: io.MultiReader(strings.NewReader("GET /"), &dribble{left: size})}
+	_, _ = io.Copy(io.Discard, stream)
+}
+
+// A line that comes a byte at a time costs no buffer per read.
+func TestASlowLineDoesNotAllocatePerRead(t *testing.T) {
+	if allocs := testing.AllocsPerRun(3, func() { readDribbledLine(4096) }); allocs > 100 {
+		t.Fatalf("%v allocations for a 4096-byte line in 1-byte reads", allocs)
+	}
+}
+
+// A line that comes a byte at a time is scanned once, not on every read.
+func TestASlowLineCostsLinearTime(t *testing.T) {
+	fastest := func(size int) time.Duration {
+		best := time.Duration(1 << 62)
+		for i := 0; i < 3; i++ {
+			start := time.Now()
+			readDribbledLine(size)
+			best = min(best, time.Since(start))
+		}
+		return best
+	}
+	// Linear is 8x, quadratic 64x.
+	small, big := fastest(32<<10), fastest(256<<10)
+	if ratio := float64(big) / float64(small); ratio > 24 {
+		t.Fatalf("8x the line took %.0fx the time (%v vs %v)", ratio, big, small)
+	}
+}
+
 // An idle keep-alive connection must not hold on to the buffers of a big
 // head it already handed on.
 func TestAnIdleStreamDropsABigHeadsBuffers(t *testing.T) {

@@ -551,10 +551,11 @@ func (e *fakeEndpoint) Load(ctx context.Context, doc string) (*docendpoint.Loade
 }
 
 func (e *fakeEndpoint) Save(_ context.Context, doc string, outputData any, version *string, projection *docendpoint.Projection) (*string, error) {
-	data, err := jsjson.Stringify(outputData)
+	encoded, err := docendpoint.Serialize(outputData)
 	if err != nil {
 		return nil, err
 	}
+	data := string(encoded)
 	e.mu.Lock()
 	e.saves = append(e.saves, recordedSave{doc: doc, data: data, version: version, projection: projection})
 	gate := e.saveGate

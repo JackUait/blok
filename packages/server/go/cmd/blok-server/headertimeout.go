@@ -76,8 +76,11 @@ type headerConn struct {
 	timeout time.Duration
 	mu      sync.Mutex
 	armed   bool
-	timer   *time.Timer
-	targets *targetStream
+	// idle is set at StateIdle; idleDeadlines counts SetReadDeadline calls since.
+	idle          bool
+	idleDeadlines int
+	timer         *time.Timer
+	targets       *targetStream
 }
 
 func (c *headerConn) Read(p []byte) (int, error) {
@@ -97,16 +100,38 @@ func (c *headerConn) readRaw(p []byte) (int, error) {
 	n, err := c.Conn.Read(p)
 	if n > 0 {
 		c.mu.Lock()
-		if c.armed {
-			c.armed = false
-			if c.timer != nil {
-				c.timer.Stop()
-			}
-			c.timer = time.AfterFunc(c.timeout, c.expire)
-		}
+		c.startLocked()
 		c.mu.Unlock()
 	}
 	return n, err
+}
+
+func (c *headerConn) startLocked() {
+	if c.armed {
+		c.armed = false
+		if c.timer != nil {
+			c.timer.Stop()
+		}
+		c.timer = time.AfterFunc(c.timeout, c.expire)
+	}
+}
+
+// SetReadDeadline starts the clock on net/http's second call after
+// StateIdle, the one after its Peek(4), if no socket byte started it: the
+// next head was then read before idle and sits in a buffer (the stream's,
+// or net/http's own), so no socket read will come for it. This relies on
+// net/http's serve loop setting a deadline just before and just after
+// that Peek; TestAHeadReadBeforeIdleStillGets408 fails if that changes.
+func (c *headerConn) SetReadDeadline(t time.Time) error {
+	c.mu.Lock()
+	if c.idle && c.armed {
+		if c.idleDeadlines++; c.idleDeadlines == 2 {
+			c.idle = false
+			c.startLocked()
+		}
+	}
+	c.mu.Unlock()
+	return c.Conn.SetReadDeadline(t)
 }
 
 // CloseWrite and ReadFrom keep what net/http asserts on the raw conn: the
@@ -134,12 +159,14 @@ func (c *headerConn) expire() {
 func (c *headerConn) arm() {
 	c.mu.Lock()
 	c.armed = true
+	c.idle, c.idleDeadlines = true, 0
 	c.mu.Unlock()
 }
 
 func (c *headerConn) stop() {
 	c.mu.Lock()
 	c.armed = false
+	c.idle = false
 	if c.timer != nil {
 		c.timer.Stop()
 		c.timer = nil

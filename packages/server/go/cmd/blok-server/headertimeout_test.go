@@ -121,3 +121,43 @@ func TestEarlierConnHooksStillRun(t *testing.T) {
 		t.Fatal("the earlier ConnState hook never ran")
 	}
 }
+
+// Bytes of the next head can arrive before the connection goes idle: during
+// a handler, in the same packet as the last request, or after a chunked body
+// (net/http's own buffer then holds them). Its idle Peek is then answered
+// without a socket read, so the clock must start anyway.
+func TestAHeadReadBeforeIdleStillGets408(t *testing.T) {
+	cases := []struct {
+		name         string
+		first, later string
+	}{
+		{"split after a handler", "GET /slow HTTP/1.1\r\nHost: x\r\n\r\n", "GET /b HTTP/1.1\r\nHost: x\r\n"},
+		{"same packet", "GET /slow HTTP/1.1\r\nHost: x\r\n\r\nGET /b HTTP/1.1\r\nHost: x\r\n", ""},
+		{"after a chunked body", "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /b HTTP/1.1\r\nHost: x\r\n", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			address := startHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/slow" {
+					time.Sleep(150 * time.Millisecond)
+				}
+				_, _ = io.WriteString(w, "ok")
+			}), 100*time.Millisecond)
+			conn, err := net.Dial("tcp", address)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			_, _ = io.WriteString(conn, c.first)
+			if c.later != "" {
+				time.Sleep(50 * time.Millisecond)
+				_, _ = io.WriteString(conn, c.later)
+			}
+			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			answer, _ := io.ReadAll(conn)
+			if !strings.Contains(string(answer), "HTTP/1.1 408 Request Timeout\r\n") {
+				t.Fatalf("no 408 within 2s: %q", answer)
+			}
+		})
+	}
+}

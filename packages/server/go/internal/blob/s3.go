@@ -323,7 +323,9 @@ func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Rea
 	}
 	ctx, cancel := context.WithTimeout(ctx, s.requestTimeout)
 	defer cancel()
-	if body == nil {
+	// net/http reads length 0 with a real body as unknown and sends it
+	// chunked; C# sends Content-Length: 0.
+	if body == nil || length == 0 {
 		body = http.NoBody
 	}
 	request, err := http.NewRequestWithContext(ctx, method, url.AbsoluteURI, body)

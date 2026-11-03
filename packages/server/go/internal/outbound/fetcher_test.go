@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -421,5 +422,31 @@ func TestHostHeaderBracketsEveryIPv6Literal(t *testing.T) {
 		if got := hostHeader(target); got != want {
 			t.Errorf("%s: got %q, want %q", raw, got, want)
 		}
+	}
+}
+
+// .NET's SocketsHttpHandler defaults MaxResponseHeadersLength to 64 KiB.
+func TestRefusesAResponseHeadOverSixtyFourKiB(t *testing.T) {
+	for _, tc := range []struct {
+		kib     int
+		allowed bool
+	}{{48, true}, {80, false}} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("X-Padding", strings.Repeat("a", tc.kib<<10))
+			_, _ = w.Write([]byte("ok"))
+		}))
+		port := server.Listener.Addr().(*net.TCPAddr).Port
+		f := newTestFetcher(&fixturePolicy{host: "head.example", port: port, allowed: addrs("127.0.0.1")},
+			&countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
+		response, err := f.Get(context.Background(), "http://head.example:"+strconv.Itoa(port)+"/", testLimits)
+		server.Close()
+		if tc.allowed {
+			if err != nil {
+				t.Fatalf("%d KiB: %v", tc.kib, err)
+			}
+			response.Release()
+			continue
+		}
+		wantBlocked(t, err)
 	}
 }

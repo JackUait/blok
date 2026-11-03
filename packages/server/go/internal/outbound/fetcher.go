@@ -21,6 +21,10 @@ const UserAgent = "blok-server (+https://blokeditor.com)"
 
 const connectAttemptTimeout = time.Second
 
+// maxResponseHeaderBytes is .NET's default MaxResponseHeadersLength, 64 KiB;
+// C# sets the same value explicitly.
+const maxResponseHeaderBytes = 64 << 10
+
 var errMappedAddress = errors.New("address family not supported by protocol family")
 
 // Limits are GuardedFetchLimits.
@@ -186,9 +190,10 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 		DisableCompression: true,
 		// No pooling, and no "Connection: close" header, which
 		// DisableKeepAlives would add and .NET does not send.
-		MaxIdleConnsPerHost: -1,
-		ForceAttemptHTTP2:   false,
-		TLSClientConfig:     f.tlsConfig(target),
+		MaxIdleConnsPerHost:    -1,
+		ForceAttemptHTTP2:      false,
+		MaxResponseHeaderBytes: maxResponseHeaderBytes,
+		TLSClientConfig:        f.tlsConfig(target),
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 			if f.dialHook != nil {
 				f.dialHook(network, address)

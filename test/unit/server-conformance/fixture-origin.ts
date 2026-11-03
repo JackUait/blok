@@ -156,6 +156,19 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
       return;
     }
 
+    // /big-header/N pads the response head with an N KiB header.
+    const bigHeader = /^\/big-header\/(\d+)$/.exec(path);
+
+    if (bigHeader !== null) {
+      response.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'X-Padding': 'a'.repeat(Number(bigHeader[1]) * 1024),
+      });
+      response.end(PRECEDENCE_HTML);
+
+      return;
+    }
+
     if (path.startsWith('/hold/')) {
       held.current++;
       held.peak = Math.max(held.peak, held.current);

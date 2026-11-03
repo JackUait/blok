@@ -416,6 +416,8 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
               useManagedTls,
               cancellationToken),
       MaxResponseDrainSize = 0,
+      // In KiB. The .NET default, pinned: Go's fetcher sets the same cap.
+      MaxResponseHeadersLength = 64,
       UseCookies = false,
       UseProxy = false,
     };

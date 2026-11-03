@@ -701,6 +701,29 @@ it('follows five outbound redirects and refuses the sixth', async () => {
   compareGolden('outbound-redirect-cap.json', actual);
 }, 60_000);
 
+// .NET's SocketsHttpHandler defaults to 64 KiB of response head; Go is set to match.
+it('refuses an outbound response head over 64 KiB', async () => {
+  const origin = await startFixtureOrigin();
+  const actual: Array<{ name: string; response: GoldenResponse }> = [];
+
+  try {
+    await withServer(['--storage-dir', '', '--conformance-origin', origin.baseUrl], async (server) => {
+      for (const kib of [16, 48, 80, 256]) {
+        const target = `${origin.baseUrl}/big-header/${kib}`;
+        const recorded = golden(await server.request('GET', `/unfurl?url=${encodeURIComponent(target)}`));
+
+        recorded.body = recorded.body.split(origin.baseUrl).join('<origin>');
+        delete recorded.headers['content-length'];
+        actual.push({ name: `a ${kib} KiB header`, response: recorded });
+      }
+    });
+  } finally {
+    await origin.stop();
+  }
+
+  compareGolden('outbound-header-size.json', actual);
+}, 60_000);
+
 it('shares four outbound fetches between unfurl and upload-by-url', async () => {
   const origin = await startFixtureOrigin();
   const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-permits-'));

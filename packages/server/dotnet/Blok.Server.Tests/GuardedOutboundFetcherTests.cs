@@ -939,6 +939,42 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
   }
 
+  [Theory]
+  [InlineData(48, true)]
+  [InlineData(80, false)]
+  public async Task RefusesAResponseHeadOverSixtyFourKiB(int kib, bool allowed)
+  {
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var response = "HTTP/1.1 200 OK\r\n" +
+              $"X-Padding: {new string('a', kib * 1024)}\r\n" +
+              "Content-Length: 2\r\n" +
+              "Connection: close\r\n\r\nok";
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(response),
+              cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "fixture.example");
+
+    if (allowed)
+    {
+      await using var response = await fetcher.GetAsync(
+          $"http://fixture.example:{origin.Port}/",
+          Limits,
+          CancellationToken.None);
+      Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
+      return;
+    }
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://fixture.example:{origin.Port}/",
+            Limits,
+            CancellationToken.None));
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
+  }
+
   [Fact]
   public async Task KeepsABodyExactlyAtTheConfiguredCap()
   {

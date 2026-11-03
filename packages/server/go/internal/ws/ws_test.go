@@ -450,3 +450,53 @@ func TestAStuckSendDoesNotPileUpPongs(t *testing.T) {
 		t.Fatalf("%d goroutines after 100 ticks, %d before", n, before)
 	}
 }
+
+// A peer that stops reading and sends pongs for guessed counters must not
+// answer a ping that was never written: the stuck socket still times out,
+// and no ping goroutine piles up behind the stuck send.
+func TestGuessedPongsDoNotAnswerAnUnwrittenPing(t *testing.T) {
+	raw, client := net.Pipe()
+	defer client.Close()
+	server := NewServerConn(raw, nil, Options{KeepAliveInterval: 10 * time.Millisecond, KeepAliveTimeout: 400 * time.Millisecond})
+	stop := time.AfterFunc(10*time.Second, server.Abort)
+	defer stop.Stop()
+	errs := make(chan error, 1)
+	go func() {
+		buf := make([]byte, 16)
+		for {
+			if _, _, _, err := server.Receive(buf); err != nil {
+				errs <- err
+				return
+			}
+		}
+	}()
+	go func() { _ = server.SendBinary(make([]byte, 64*1024)) }()
+	// Any frame pushes the next ping back, so the peer goes quiet for more
+	// than the interval, then answers the ping it guesses was sent.
+	go func() {
+		for v := uint64(1); ; v++ {
+			time.Sleep(25 * time.Millisecond)
+			if _, err := client.Write(frame(0x8a, binary.BigEndian.AppendUint64(nil, v))); err != nil {
+				return
+			}
+		}
+	}()
+	started := time.Now()
+	time.Sleep(50 * time.Millisecond)
+	before := runtime.NumGoroutine()
+	time.Sleep(250 * time.Millisecond)
+	if n := runtime.NumGoroutine(); n > before+2 {
+		t.Errorf("%d goroutines after 10 guessed pongs, %d before", n, before)
+	}
+	select {
+	case err := <-errs:
+		if !errors.Is(err, ErrKeepAliveTimeout) {
+			t.Fatalf("got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("socket still open 2s later")
+	}
+	if elapsed := time.Since(started); elapsed < 350*time.Millisecond {
+		t.Fatalf("aborted after %v, before the timeout", elapsed)
+	}
+}

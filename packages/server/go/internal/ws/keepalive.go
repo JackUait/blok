@@ -12,9 +12,12 @@ type keepAlive struct {
 	delay, timeout time.Duration
 	payload        int64
 	pingSent       bool
-	pingDeadline   time.Time
-	nextPing       time.Time
-	fault          error
+	// A pong answers only a ping that was written; one that races ahead of
+	// the write is held until the write returns.
+	pingWritten, earlyPong bool
+	pingDeadline           time.Time
+	nextPing               time.Time
+	fault                  error
 }
 
 // startKeepAlive runs the heartbeat every max(min(delay, timeout)/4, 1ms);
@@ -69,6 +72,7 @@ func (c *Conn) heartbeat() {
 		}
 	} else if now.After(k.nextPing) {
 		k.pingSent = true
+		k.pingWritten, k.earlyPong = false, false
 		k.pingDeadline = now.Add(k.timeout)
 		k.payload++
 		send = true
@@ -77,23 +81,34 @@ func (c *Conn) heartbeat() {
 	c.stateMu.Unlock()
 	// Off the heartbeat: a send stuck on a peer that stops reading holds
 	// sendMu, and the timeout check above must keep running to abort it.
-	// pingSent allows one ping in flight.
+	// pingSent stays set until the ping is written, so one ping is in flight.
 	if send {
-		go c.sendKeepAliveFrame(opPing, binary.BigEndian.AppendUint64(nil, uint64(payload)))
+		go func() {
+			if !c.sendKeepAliveFrame(opPing, binary.BigEndian.AppendUint64(nil, uint64(payload))) {
+				return
+			}
+			c.stateMu.Lock()
+			defer c.stateMu.Unlock()
+			if k.pingSent && k.payload == payload {
+				k.pingWritten = true
+				if k.earlyPong {
+					k.pingSent = false
+					k.pingDeadline = time.Time{}
+				}
+			}
+		}()
 	}
 }
 
 // sendKeepAliveFrame is TrySendKeepAliveFrameAsync: nothing once our close
-// went out.
-func (c *Conn) sendKeepAliveFrame(opcode byte, payload []byte) {
+// went out. It reports whether the frame was written.
+func (c *Conn) sendKeepAliveFrame(opcode byte, payload []byte) bool {
 	c.sendMu.Lock()
 	defer c.sendMu.Unlock()
 	c.stateMu.Lock()
 	valid := c.validSendState()
 	c.stateMu.Unlock()
-	if valid {
-		_ = c.writeFrame(opcode, payload)
-	}
+	return valid && c.writeFrame(opcode, payload) == nil
 }
 
 func (c *Conn) onDataReceived() {
@@ -107,8 +122,14 @@ func (c *Conn) onDataReceived() {
 func (c *Conn) onPong(payload int64) {
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
-	if k := c.keepAlive; k != nil && k.pingSent && payload == k.payload {
-		k.pingSent = false
-		k.pingDeadline = time.Time{}
+	k := c.keepAlive
+	if k == nil || !k.pingSent || payload != k.payload {
+		return
 	}
+	if !k.pingWritten {
+		k.earlyPong = true
+		return
+	}
+	k.pingSent = false
+	k.pingDeadline = time.Time{}
 }

@@ -1,5 +1,7 @@
 # Progress: collab-room lane (round 2, 2026-11-02)
 
+Read the "Round 2" list first; the "Ledger rows" section below it is round 1's and is superseded where they differ (see "Status after round 2").
+
 Branch `go/collab-room`, worktree `/Users/jackuait/Packages/.blok-go/collab-room`. Read this first next round.
 
 Scope: collab.md 2.R, 2.M, 2.G, 2.E, 2.S, 2.Y, 2.O, 2.T, section 3, and the collab rows http-host deferred (H18-H21, H33-H38, H41, L1 collab part, L2, L4, L5, L9, L13-L16, R4, R8, R22).
@@ -28,6 +30,13 @@ Scope: collab.md 2.R, 2.M, 2.G, 2.E, 2.S, 2.Y, 2.O, 2.T, section 3, and the coll
 - CI: the Go step runs every suite (`--target go`, no `--suite`); `server-go-parity-law` fails if it is narrowed again, and requires an `--target interop` step (Server Delivery job, with setup-go).
 
 ## Round 2 (newest first)
+
+- `f75e5103` M15 (second half): with an observer stuck forever and CommitTimeout 50 ms, the drain returns and logs `the observer is past its bound` (C# `CollabRoom.cs:1337-1350`); a 60x timeout mutant fails it.
+- `976a8346` M18, S3 (room half): a state read whose export fails transiently is Overloaded, any other failure ExportFailed (C# `CollabRoom.cs:965-970`, `error is CollabTransientException`). The HTTP texts for both were read side by side with `StateEndpoint.cs:78-113`; no black-box case can make the converter fail on demand.
+- `c41b8dec` E7: `WriteEditResult` table with C#'s status, text, head and Retry-After for every result (texts from `EditEndpoint.cs:137-228`; Draining and SeedFailed fall to C#'s default 503). Purged on every door: a purged id answers 403 `forbidden` on state, reset, edit and all five history routes (Go `blokserver` test; the C# side by reading `HistoryEndpoint.cs:497-546` and the three endpoints, not run).
+- `188fccc0` G5: `OnDocumentReplaced` fires on reset, an applied restore and purge, not on an edit, a restore with no point, or a restore refused by If-Match (C# `CollabRoomManager.cs:333,832,1088`; C# has no unit test for it). Mutant (fire on every restore) killed.
+- `d974ed93` M28: Go twins of `ATransientExportFailureThatNeverHealsIsGivenUp` (no-journal room: exactly 8 attempts, then none) and `PermanentProjectionFailureReleasesTheHold…` (journal room: refused at once, logged once, 2 exports counting the eviction flush, as C# counts them, and the room is evicted). Mutants killed: `>` for `>=`, no refusal, refusal not sticky.
+- `1c70dfbc` M15: Go twin of `TheActivityQueueDropsItsOldestPastTheBound` (258 queued against 256, 257 delivered, user-1's pair gone, `the activity observer is behind` logged).
 
 - `f27f34a4` M31: Go twins of the C# compaction-on-load cases (frame count, bytes, small set left alone) plus the exact threshold (C# `CollabRoom.cs:2530` compacts at `frameCount >= threshold`); `<=` mutant killed only by the boundary case.
 - `2bc206a1` M3: Go twins of `ASeedFailureReportsSeedFailed…`, `ForbiddenFirstJoinDoesNotLoadOrRetainARoom`, `AStoredUpdateThatCannotBeAppliedFailsTheJoinClosed` and the purged-doc doors (join, edit, reset, checkpoint). The `isPurging` check at the top of `Manager.Join` is an equivalent mutant: `roomFor` answers nil for a purged id, which is also Purged.

@@ -1,4 +1,4 @@
-# Progress: collab-room lane (after round 2, 2026-11-03)
+# Progress: collab-room lane (after round 3, 2026-11-03)
 
 Branch `go/collab-room`, worktree `/Users/jackuait/Packages/.blok-go/collab-room`, rebased onto `origin/main` at `5aef1d9e`. Not pushed. Hashes below are the rebased ones (`git log origin/main..HEAD`).
 
@@ -18,12 +18,33 @@ Every row is DONE or DEFERRED with a reason. Nothing is left as "IMPL, no oracle
 | `blokserver/server.go` | `/sync/{doc}` plus reset, edit, state and five history routes, only when collab is on |
 | `cmd/blok-server/collablog.go`, `conformance.go` | stderr filter for `Blok.Server.Collab`; `--conformance-journal` |
 
-## Final runs on `70f192f2` (this round, rebased tree; ST re-run in full on Go after `49d38b29`: 38/38)
+## Round 3: review findings
+
+| Finding | Outcome | Commit, oracle |
+| --- | --- | --- |
+| 1 (major) history query read with net/url | FIXED | `6cd2e3e2`. New `dotnet.QueryAll` shares one pair loop with `QueryFirst`. `queryNumber` reads `r.URL.RawQuery` with it, and `parseUnsigned` skips trailing NULs. That is `ulong.TryParse(NumberStyles.None)`, measured with `dotnet fsi`: `"1\0"`, `"1\0\0"` and `"01\0"` are ok; `"\0"`, `"\01"`, `"1\0x"` and `"1\0 "` are refused. CH runs 15 new cases on both targets: `GROUP=7`, `group=1&Group=15`, `group=1;x=1`, `group=%zz`, `group=1%00x` → 400; `GROUP=15`, `group=%31`, `group=1%00`, `group=60%00%00` → 200; `SINCE=5`, `since=0;x`, `since=0&Since=0`, `since=%zz` → 400; `SINCE=1`, `since=1%00` → 200 with records [2, 3]. Before the fix: 16/16 on C#, 12 failed on Go. Go unit: `query_test.go`. |
+| 4 (minor) `since == sequence` untested | FIXED | `6cd2e3e2`. CH `answers an empty window when since is the sequence itself`: `/3/changes?since=3` → 200 `{"changes":[]}` on both targets. Mutant M1 (`>` → `>=`) now fails it. |
+| 2 (major) `%FF` doc id: a different document on each server | FIXED in the shared router | `47986128`. `internal/route` now decodes with `dotnet.UnescapeDataString` and keeps `%2F` as sent. Kestrel's rule was measured on a C# host. I sent 39 paths, and the doc endpoint logged the id each one loaded. The rule: an escape that is not part of valid UTF-8 stays as written, case kept (`%Ff`). That covers a lone byte, a bad continuation, a truncated sequence, overlong forms, surrogates and anything above U+10FFFF. Valid sequences around it still decode. 29 of these are in `routing.json` `collabHost.decodedDoc`. RC `loads the document $doc` checks them on both targets: 29/29 on C#, all failing on Go before the fix. `route_test.go` reads the same list. JI `finds a document whose id has an escape that is not UTF-8` failed in both directions before the fix and passes after. `doc-endpoint.ts` now records `gets`, and it keeps a bad escape instead of throwing. NOT fixed: `d%C3%`, `d%%41` and `d%4` (a malformed escape) still get 400 from Go's net/http before any handler runs, while Kestrel answers 200. That is the known http-host trap with the accepted routing-contract skip. It refuses the request and never loads the wrong document. The router belongs to the http-host lane. That lane must keep the `decodedDoc` list. |
+| 3 (major) full C# conformance flake | Test-only fix | `ef9a6621`. `page-transfer-sidecar` gets an explicit 30 s per-test timeout. Every test starts its own server, and vitest's 5 s default was too tight under the full run's load. After the fix, two full C# runs: 374/374 and 374/374 (93 s and 96 s wall). I did not reproduce the failure before the fix this session; the reviewer saw 2 of 3 runs fail. |
+| 5 (minor) Go-only oracles | G5 FIXED; the others relabelled | `be64af29`. C# `CollabHistoryManagerTests.DocumentReplacedFiresOnAResetAnAppliedRestoreAndAPurgeOnly` checks the same list as Go `replaced_test.go`. Removing any one of `CollabRoomManager.cs:333`, `:832` or `:1088` fails it (3/3 mutants). M14/M22/M30, M18 and M28 are Go twins of C# tests, not one shared oracle (see the table). |
+| 6 (minor) CI time budget | Measured in part, still UNVERIFIED | Run 41603336042's Server Security log shows `Cache hit for: setup-go-…` (the key is the go.sum hash), and 18 of 23 packages printed `(cached)`. So main's 8 s Go test step was a cache hit. Any change to a package re-runs that package. Locally, main's six-suite Go conformance takes 76 s wall and the full suite 78 s. Making the step unfiltered adds about 2 s, because the six suites already set the wall time. Estimates against the 7 min budget (UNVERIFIED): Server Security 4:28 + up to ~1-2 min when the Go test cache misses; Server Delivery 4:40 + about 1 min for setup-go, two Go builds, a Debug C# build and interop (18 s locally). Check both jobs on the first main run. |
+
+Also run this round:
+- `go vet ./...` clean, `gofmt -l` empty.
+- `go test -race -p 2` on route, dotnet, collabhttp and blokserver: ok.
+- Coverage gate 81.38%.
+- `--target go` unfiltered: 373 passed, 1 skipped (the same routing skip).
+- `--target interop`: 8/8.
+- `CollabHistoryManagerTests`: 32/32.
+- eslint on the five changed TS files: clean.
+- Probe servers killed. Only the user's dev `Blok.Server.Host` (pid 33153) is left running.
+
+## Round 2 runs on `70f192f2` (this round, rebased tree; ST re-run in full on Go after `49d38b29`: 38/38)
 
 - `go vet ./...` clean; `gofmt -l` empty; `go.mod`/`go.sum` identical to `origin/main`.
 - `go test -p 2 ./internal/collab/... ./blokserver/... ./cmd/blok-server/...`: all ok. `go test -race -count=3 ./internal/collab/room/`: ok.
 - `--target go` (unfiltered): 12 files, 327 passed, 1 skipped, 1 min 16 s. The skip is routing-contract's malformed-escape case (Go's http.Server answers 400 before any handler; reason at the skip site, http-host lane).
-- `--target csharp`: 12 files, 328 passed, 1 min 33 s.
+- `--target csharp`: 12 files, 328 passed, 1 min 33 s, in one run. The reviewer later saw `page-transfer-sidecar` time out in 2 of 3 runs. Round 3 above has the fix.
 - `--target interop`: 6 passed, 18 s.
 - Collab fixture files (`server-concurrent-loss*`, `collab-fixtures*`, `collab-format1-fixtures`): 366 passed, 48 skipped by their own per-case gates, none target-keyed.
 - C# `CollabRoomManagerTests` + `CollabJournalStoreCaptureTests`: 61 passed.
@@ -48,23 +69,23 @@ SC = sync-contract, PV = protocol-v2-contract, BC = blok-client-contract, ST = s
 | R2, R7, R8 | DONE | ST |
 | R3, R4, R5 | DONE | RC collab host (preflights, 405 Allow lists), `4e8dc0ea` |
 | R6 | DONE | Go unit, L9 warning `6922a720` |
-| R9 | DONE | Go unit `9f9c6000` (Retry-After shape); no black-box: an overloaded runtime cannot be staged |
+| R9 | DONE | Go unit `9f9c6000` (Retry-After shape); C# counterparts `StateEndpointTests.cs:212`, `EditEndpointTests.cs:660` (2 s Retry-After). No black-box: an overloaded runtime cannot be staged |
 | M1, M2, M4, M6, M7, M9, M10, M16, M20, M21, M23-M27, M29 | DONE | SC, PV, BC, CH (round 1, `4e8dc0ea`, `2fd86b1e`) |
 | M3 | DONE | Go twins `1ef1b82d` |
 | M5, M11 | DONE | ST both targets `69e46cf9` |
 | M8, M19 | DONE | PV |
 | M12, M13 | DONE | Go twins of 20 `CollabRoomTests` cases `54800466` |
-| M14, M22, M30 | DONE | Go unit `4a2584ea` |
+| M14, M22, M30 | DONE (Go twin) | Go twins of the C# activity tests `4a2584ea`; no shared oracle |
 | M15 | DONE | Go twins `f974886e`, `df75a445` |
 | M17 | DONE | CH 413 restore `2d98dcc8` |
-| M18 | DONE | Go unit `e8590e20` |
-| M28 | DONE | Go twins `86b33c35` |
+| M18 | DONE (Go twin) | Go twin of the C# Overloaded/ExportFailed tests `e8590e20`; no shared oracle |
+| M28 | DONE (Go twin) | Go twins of C# tests `86b33c35`; no shared oracle |
 | M31 | DONE | Go twins + threshold `199ad357` |
 | M32 | DONE | Go twin `a02efed4` |
 | G1 | DONE | `d997a6ca` (C# theory + Go twins, retry and check order) |
 | G2 | DONE | PV |
 | G3, G4, G6, G7, G8, G10, G11 | DONE | CH |
-| G5 | DONE | Go unit `a2d592a8` (C# by reading `CollabRoomManager.cs:333,832,1088`) |
+| G5 | DONE | Go `replaced_test.go` `a2d592a8` + C# `DocumentReplacedFiresOnAResetAnAppliedRestoreAndAPurgeOnly` `be64af29`, same cases |
 | G9 | DONE | CH truncation `2d98dcc8` |
 | G12 | DONE | Go twin `a02efed4` |
 | E1, E2 (header), E3, E4, E8 | DONE | CH |
@@ -72,7 +93,7 @@ SC = sync-contract, PV = protocol-v2-contract, BC = blok-client-contract, ST = s
 | E7 | DONE | CH + `5bd5639f` result table |
 | S1, S2, S4 | DONE | CH |
 | S3 | DONE | CH (Purged, Unavailable) + `e8590e20` (Overloaded, ExportFailed) |
-| Y1-Y3, Y5, Y6, Y8-Y10 | DONE | CH |
+| Y1-Y3, Y5, Y6, Y8-Y10 | DONE | CH; Y3 and `since` query parsing as ASP.NET does `6cd2e3e2` |
 | Y4, Y12, Y13 | DONE | C# capture `collab-history/*.json` + Go twins `305c8e1e` |
 | Y7, Y11 | DONE | CH `2d98dcc8` |
 | O1, O7, O10 | DONE | CH / host runs |
@@ -100,7 +121,7 @@ SC = sync-contract, PV = protocol-v2-contract, BC = blok-client-contract, ST = s
 | http-host R4 (sync route set) | DONE | RC collab host (every route, its Allow list and preflight), SC, CH |
 | http-host R8 (HEAD on sync GET routes is 405) | DONE | RC `collabHost.methodNotAllowed` (`HEAD /sync/x` → 405 `GET`, `HEAD /sync/x/state` → 405 `GET, OPTIONS`) |
 | http-host R22 (one limiter with sync) | DONE | ST `shares one rate limit between the HTTP routes and the sync upgrade` `49d38b29`, both targets; a Go mutant with its own sync limiter fails it. C#: `BlokServerServiceCollectionExtensions.cs:142-146` |
-| U8 | DONE | JI both directions `8ad745a4` |
+| U8 | DONE | JI both directions `8ad745a4`; a doc id with a non-UTF-8 escape `47986128` (JI + RC `decodedDoc`) |
 
 ## P13: the store contract, case by case
 
@@ -130,10 +151,13 @@ C#'s `FakeCollabOperationStoreTests` is the source. Each case against the real s
 
 - P13 as an exported Go helper (`collabtest.RunStoreContract(t, store)`): C# ships no such suite, so it would be new public Go API with no C# counterpart. Every case it would run is pinned against both real stores above.
 - P7 (a conformance-only activity sink printing each record to stderr): M14, M15 and T5 are pinned by Go twins of the C# activity tests (`4a2584ea`, `f974886e`, `df75a445`) and by `collabstore_test.go` (an observer hears `doc u1 Edited`). A black-box sink adds a flag to both hosts for no new fact.
-- CI time on a runner: UNVERIFIED. Local: full Go suite 1 min 16 s, full C# suite 1 min 33 s, interop 18 s. The Go step runs the unfiltered suite in Server Security; interop runs in Server Delivery with its own `setup-go`. Check both jobs against the 7-minute budget on the first main run; move interop to its own job only if the 20-job cap allows (19 jobs per delivery-ci).
+- CI time on a runner: UNVERIFIED. Round 3 has the measurements and the estimates. Interop runs in Server Delivery with its own `setup-go`. Check both jobs against the 7-minute budget on the first main run. Move interop to its own job only if the 20-job cap allows (19 jobs per delivery-ci).
 - `-race` in CI: delivery-ci's call (its progress file, G1). Run locally on `internal/collab/room` every round.
 
 ## Decisions
+
+- This lane changed the shared router `internal/route` (http-host's): path decoding now goes through `dotnet.UnescapeDataString`, pinned by `routing.json` `decodedDoc`.
+- `dotnet.QueryAll` is the multi-value form of `QueryFirst`; use it for any query rule that needs every value.
 
 - C# passes no `MaxUpdateBytes` to the built-in journal (`CollabOperationStoreSource.cs:26-28`); Go matches.
 - The lane is FIFO. UNVERIFIED that SemaphoreSlim's async waiters are strictly FIFO; the posted checkpoint relies only on running after the current holder.

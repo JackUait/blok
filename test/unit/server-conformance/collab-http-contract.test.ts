@@ -70,6 +70,7 @@ const updateBody = (id: string, text: string): string => JSON.stringify({
 interface ParseCase {
   name: string;
   body?: string;
+  bodyHex?: string;
   error?: string;
 }
 
@@ -81,6 +82,10 @@ const digestFixture = JSON.parse(readFileSync(
 /** Every captured parser refusal small enough to send. */
 const refusals = digestFixture.parse.filter((entry): entry is Required<Pick<ParseCase, 'name' | 'body' | 'error'>> & ParseCase =>
   entry.body !== undefined && entry.error !== undefined && Buffer.byteLength(entry.body) <= MAX_MESSAGE_BYTES);
+
+/** The refusals whose body is not valid UTF-8, so the fixture keeps the bytes as hex. */
+const hexRefusals = digestFixture.parse.filter((entry): entry is Required<Pick<ParseCase, 'name' | 'bodyHex' | 'error'>> & ParseCase =>
+  entry.bodyHex !== undefined && entry.error !== undefined);
 
 interface Host {
   server: RunningServer;
@@ -180,6 +185,17 @@ suite('collab HTTP routes without a journal', () => {
   it('answers every captured parser refusal with 422 and the parser\'s words', async () => {
     for (const refusal of refusals) {
       const answer = await send(base, 'POST', '/sync/doc-parse/edit', [[KEY, 'k1']], Buffer.from(refusal.body, 'utf8'));
+
+      expect({ name: refusal.name, status: answer.status, body: answer.body })
+        .toEqual({ name: refusal.name, status: 422, body: `${refusal.error}\n` });
+    }
+  });
+
+  it('answers every captured raw-bytes parser refusal with 422 and the parser\'s words', async () => {
+    expect(hexRefusals.length).toBeGreaterThan(0);
+
+    for (const refusal of hexRefusals) {
+      const answer = await send(base, 'POST', '/sync/doc-parse/edit', [[KEY, 'k1']], Buffer.from(refusal.bodyHex, 'hex'));
 
       expect({ name: refusal.name, status: answer.status, body: answer.body })
         .toEqual({ name: refusal.name, status: 422, body: `${refusal.error}\n` });
@@ -310,6 +326,25 @@ suite('collab HTTP routes on a journal', () => {
     const reuse = await send(base, 'POST', '/sync/doc-noop/edit', [[KEY, 'k2']], updateBody('b1', 'changed'));
 
     expect([reuse.status, reuse.headers['blok-doc-sequence']]).toEqual([204, '2']);
+  });
+
+  it('refuses an HTML field past 32768 characters with 413 and writes nothing, and takes one at the cap', async () => {
+    const tooLarge = await send(base, 'POST', '/sync/doc-html-cap/edit', [[KEY, 'k1']], insertBody('big', 'x'.repeat(32769)));
+
+    expect([tooLarge.status, tooLarge.body, tooLarge.headers['retry-after']]).toEqual([
+      413,
+      'collab: rich text field "paragraph.text" holds 32769 HTML characters; an edit may send at most 32768.\n',
+      undefined,
+    ]);
+
+    const untouched = await send(base, 'GET', '/sync/doc-html-cap/state');
+
+    expect(blocksOf(untouched.body)).toEqual([]);
+
+    // Sequence 1 proves the refused edit journalled nothing.
+    const atCap = await send(base, 'POST', '/sync/doc-html-cap/edit', [[KEY, 'k2']], insertBody('big', 'x'.repeat(32768)));
+
+    expect([atCap.status, atCap.headers['blok-doc-sequence']]).toEqual([204, '1']);
   });
 
   describe('history', () => {

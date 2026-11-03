@@ -127,9 +127,9 @@ const createLargeTable = async (page: Page): Promise<number> => {
  */
 const countStyled = async (page: Page, action: () => Promise<void>): Promise<number> => {
   const cdp = await page.context().newCDPSession(page);
-  const events: Array<{ name: string; args?: { elementCount?: number } }> = [];
+  const events: unknown[] = [];
 
-  cdp.on('Tracing.dataCollected', ({ value }) => events.push(...(value as typeof events)));
+  cdp.on('Tracing.dataCollected', ({ value }) => events.push(...value));
   const done = new Promise(resolve => cdp.once('Tracing.tracingComplete', resolve));
 
   await cdp.send('Tracing.start', { categories: 'devtools.timeline', transferMode: 'ReportEvents' });
@@ -138,9 +138,19 @@ const countStyled = async (page: Page, action: () => Promise<void>): Promise<num
   await done;
   await cdp.detach();
 
-  return events
-    .filter(e => e.name === 'UpdateLayoutTree')
-    .reduce((sum, e) => sum + (e.args?.elementCount ?? 0), 0);
+  return events.reduce<number>((sum, event) => sum + styledIn(event), 0);
+};
+
+/** The element count of a style recalc trace event, 0 for any other event. */
+const styledIn = (event: unknown): number => {
+  if (typeof event !== 'object' || event === null || !('name' in event) || event.name !== 'UpdateLayoutTree' || !('args' in event)) {
+    return 0;
+  }
+  const { args } = event;
+
+  return typeof args === 'object' && args !== null && 'elementCount' in args && typeof args.elementCount === 'number'
+    ? args.elementCount
+    : 0;
 };
 
 const openWithButton = async (page: Page): Promise<void> => {

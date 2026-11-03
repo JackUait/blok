@@ -65,6 +65,9 @@ func NewS3(s *S3) (*S3, error) {
 			// Counts from the end of the body, like the PayloadContent
 			// callback in S3BlobStore.SendAsync.
 			ResponseHeaderTimeout: s.headerTimeout,
+			// SocketsHttpHandler neither asks for gzip nor decodes it, so a
+			// gzip-encoded object reads back as stored.
+			DisableCompression: true,
 		},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
@@ -279,6 +282,8 @@ func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Rea
 		return nil, err
 	}
 	request.ContentLength = length
+	// C# sends no User-Agent; nil stops Go's default one.
+	request.Header["User-Agent"] = nil
 	if method == http.MethodPut {
 		request.Header.Set("Content-Disposition", "attachment")
 	}

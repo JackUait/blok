@@ -81,20 +81,6 @@ function hostnameOf(url: string): string {
   }
 }
 
-/**
- * Resolves the URL a STORED block may put into a live sink, re-establishing the
- * tool's invariant ("only registry-matched URLs are ever embedded") at render
- * time. The scheme check alone is not enough: stored JSON is attacker-
- * controllable in host apps, so a crafted block with an https URL on any origin
- * would otherwise frame arbitrary content for every reader (phishing/spoofing
- * inside the trusted page), and a generic embed would render even for hosts
- * that never opted into `linkPaste.allowGenericEmbed`.
- *
- * For a registry service the src is DERIVED from the stored `source` — the
- * stored `embed` field is never trusted — so tampering with it cannot move the
- * frame off the provider. Anything else is a generic embed and needs the host
- * opt-in. Unresolvable data yields '' and renders the inert empty state.
- */
 type EmbedRenderMode = 'iframe' | 'script' | 'link' | 'empty';
 
 interface EmbedRenderDecision {
@@ -104,9 +90,34 @@ interface EmbedRenderDecision {
   service: string;
 }
 
+interface GenericEmbedPolicy {
+  allowGeneric: boolean;
+  allowedOrigins?: readonly string[];
+}
+
+/** Whether a non-registry URL may be framed. The URL input and render both ask this. */
+function canFrameGeneric(url: string, opts: GenericEmbedPolicy): boolean {
+  return isHttpsUrl(url) && (opts.allowGeneric || isAllowedEmbedOrigin(url, opts.allowedOrigins));
+}
+
+/**
+ * Resolves the URL a STORED block may put into a live sink, re-establishing the
+ * tool's invariant ("only registry-matched URLs are ever embedded") at render
+ * time. The scheme check alone is not enough: stored JSON is attacker-
+ * controllable in host apps, so a crafted block with an https URL on any origin
+ * would otherwise frame arbitrary content for every reader (phishing/spoofing
+ * inside the trusted page), and a generic embed would render even for hosts
+ * that never opted into `linkPaste.allowGenericEmbed`.
+ *
+ * The src is always DERIVED from the stored `source` — the stored `embed`
+ * field is never trusted — so tampering with it cannot move the frame off the
+ * provider or away from the URL the block shows. Anything outside the registry
+ * is a generic embed and needs the host opt-in. Unresolvable data yields '' and
+ * renders the inert empty state.
+ */
 function resolveEmbedRender(
   data: Partial<EmbedData>,
-  opts: { allowGeneric: boolean; allowedOrigins?: readonly string[] }
+  opts: GenericEmbedPolicy
 ): EmbedRenderDecision {
   const service = data.service ?? '';
 
@@ -125,12 +136,13 @@ function resolveEmbedRender(
     return { mode: match.kind === 'script' ? 'script' : 'iframe', src, service };
   }
 
-  if (opts.allowGeneric || isAllowedEmbedOrigin(data.embed ?? '', opts.allowedOrigins)) {
-    const src = toSafeEmbedSrc(data.embed);
+  // One field for a generic embed: the frame, the origin checks, the title and
+  // the link card all read `source`, so a block can't frame one host while
+  // labelled as another. The stored `embed` is never framed.
+  const src = toSafeEmbedSrc(data.source);
 
-    if (src !== '') {
-      return { mode: 'iframe', src, service: '' };
-    }
+  if (src !== '' && canFrameGeneric(src, opts)) {
+    return { mode: 'iframe', src, service: '' };
   }
 
   // Not allowed to frame — degrade to a safe link card so the stored URL

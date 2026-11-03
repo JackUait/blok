@@ -1439,7 +1439,7 @@ describe('Embed toolbar integration', () => {
 describe('Embed stored-data URL safety (stored XSS guard)', () => {
   // Saved documents are attacker-controllable in host apps: the embed target
   // must be re-derived and re-validated at RENDER time, not only when a URL is
-  // pasted. Registry blocks derive from `source`, generic ones from `embed`.
+  // pasted. Every embed derives from `source`; the stored `embed` is never framed.
   it.each([
     ['javascript:alert(1)'],
     ['data:text/html,<script>alert(1)</script>'],
@@ -1792,5 +1792,32 @@ describe('Embed — the render kind comes from the registry, never from saved da
 
     expect(youtube.save().kind).toBe('iframe');
     expect(generic.save().kind).toBe('iframe');
+  });
+});
+
+describe('Embed — a generic embed frames, checks and labels one URL', () => {
+  // Saved data can split the two fields: frame one host, label another.
+  const split = (): Partial<EmbedData> => ({
+    service: '',
+    source: 'https://trusted.bank.example/',
+    embed: 'https://dash.internal.example/',
+    kind: 'iframe',
+  });
+
+  it('checks the allowlist against the source, so a split block is not framed', () => {
+    const root = new Embed(createOptions(split(), { allowedEmbedOrigins: ['dash.internal.example'] })).render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.innerHTML).not.toContain('dash.internal.example');
+    expect(root.querySelector('[data-role="embed-link-card-anchor"]')?.getAttribute('href')).toBe('https://trusted.bank.example/');
+  });
+
+  it('frames the same host its title names', () => {
+    const root = new Embed(createOptions(split(), { allowGenericEmbed: true })).render();
+    const frame = root.querySelector('iframe');
+
+    expect(frame?.getAttribute('src')).toBe('https://trusted.bank.example/');
+    expect(frame?.getAttribute('title')).toBe('toolNames.embed: trusted.bank.example');
+    expect(root.innerHTML).not.toContain('dash.internal.example');
   });
 });

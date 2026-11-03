@@ -26,6 +26,10 @@ type routingFixture struct {
 			Path string `json:"path"`
 			Doc  string `json:"doc"`
 		} `json:"encodedSeparator"`
+		DecodedDoc []struct {
+			Path string `json:"path"`
+			Doc  string `json:"doc"`
+		} `json:"decodedDoc"`
 	} `json:"collabHost"`
 }
 
@@ -55,7 +59,7 @@ func loadFixture(t *testing.T) routingFixture {
 	if err := json.Unmarshal(bytes, &fixture); err != nil {
 		t.Fatalf("shared routing fixture: %v", err)
 	}
-	if len(fixture.HealthHost.MatchesHealth) == 0 || len(fixture.CollabHost.EncodedSeparator) == 0 {
+	if len(fixture.HealthHost.MatchesHealth) == 0 || len(fixture.CollabHost.EncodedSeparator) == 0 || len(fixture.CollabHost.DecodedDoc) == 0 {
 		t.Fatal("shared routing fixture has empty lists")
 	}
 	return fixture
@@ -116,6 +120,11 @@ func TestMatchesLikeKestrel(t *testing.T) {
 		cases = append(cases, struct{ method, target, body string }{"GET", path, "health|"})
 	}
 	for _, c := range fixture.CollabHost.EncodedSeparator {
+		cases = append(cases, struct{ method, target, body string }{"GET", c.Path, "state|" + c.Doc})
+	}
+	// An escape that is not valid UTF-8 stays as written, as in Kestrel.
+	// Decoded to raw bytes instead, the doc id hashes to another journal.
+	for _, c := range fixture.CollabHost.DecodedDoc {
 		cases = append(cases, struct{ method, target, body string }{"GET", c.Path, "state|" + c.Doc})
 	}
 	router := testRouter()

@@ -74,6 +74,37 @@
       { "path": "/sync/a%2fb/state", "doc": "a%2fb" },
       { "path": "/sync/a%5Cb/state", "doc": "a\\b" },
       { "path": "/sync/a%252Fb/state", "doc": "a%2Fb" }
+    ],
+    "decodedDoc": [
+      { "path": "/sync/u0%80/state", "doc": "u0%80" },
+      { "path": "/sync/u1%C3%28/state", "doc": "u1%C3(" },
+      { "path": "/sync/u2%E2%82/state", "doc": "u2%E2%82" },
+      { "path": "/sync/u3%E2%82x/state", "doc": "u3%E2%82x" },
+      { "path": "/sync/u4%C0%AF/state", "doc": "u4%C0%AF" },
+      { "path": "/sync/u5%ED%A0%80/state", "doc": "u5%ED%A0%80" },
+      { "path": "/sync/u6%F4%90%80%80/state", "doc": "u6%F4%90%80%80" },
+      { "path": "/sync/u7%FF%C3%A9/state", "doc": "u7%FF\u00e9" },
+      { "path": "/sync/u8%C3%A9/state", "doc": "u8\u00e9" },
+      { "path": "/sync/u9%E2%82%AC/state", "doc": "u9\u20ac" },
+      { "path": "/sync/u10%F0%9F%98%80/state", "doc": "u10\ud83d\ude00" },
+      { "path": "/sync/u11%C3/state", "doc": "u11%C3" },
+      { "path": "/sync/u12%E2%82%FF/state", "doc": "u12%E2%82%FF" },
+      { "path": "/sync/u13%C3%A9%FF/state", "doc": "u13\u00e9%FF" },
+      { "path": "/sync/u14%F0%9F%98/state", "doc": "u14%F0%9F%98" },
+      { "path": "/sync/u15%F8%88%80%80%80/state", "doc": "u15%F8%88%80%80%80" },
+      { "path": "/sync/u16%C3%C3%A9/state", "doc": "u16%C3\u00e9" },
+      { "path": "/sync/u17%E2%C3%A9/state", "doc": "u17%E2\u00e9" },
+      { "path": "/sync/u18%E0%80%80/state", "doc": "u18%E0%80%80" },
+      { "path": "/sync/u19%F0%80%80%80/state", "doc": "u19%F0%80%80%80" },
+      { "path": "/sync/u20%EF%BF%BF/state", "doc": "u20\uffff" },
+      { "path": "/sync/u21%F4%8F%BF%BF/state", "doc": "u21\udbff\udfff" },
+      { "path": "/sync/u22%E2%82%41/state", "doc": "u22%E2%82A" },
+      { "path": "/sync/u23%C3%A9%C3/state", "doc": "u23\u00e9%C3" },
+      { "path": "/sync/u24%25C3%25A9/state", "doc": "u24%C3%A9" },
+      { "path": "/sync/u25%FF/state", "doc": "u25%FF" },
+      { "path": "/sync/u26%c3%28/state", "doc": "u26%c3(" },
+      { "path": "/sync/u27%Ff%c3%A9/state", "doc": "u27%Ff\u00e9" },
+      { "path": "/sync/u28%c3%a9/state", "doc": "u28\u00e9" }
     ]
   }
 }

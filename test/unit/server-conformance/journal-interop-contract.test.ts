@@ -214,6 +214,28 @@ describe.each([
     await second.stop();
   }, TIMEOUT_MS);
 
+  // Kestrel keeps an escape that is not valid UTF-8 as written, so this id
+  // is "d%FF". Read as the byte 0xFF, it would hash to another directory.
+  it('finds a document whose id has an escape that is not UTF-8', async () => {
+    const collabDirectory = await directory();
+    const docs = await endpoint();
+    const first = await host(writer, collabDirectory, docs, true);
+
+    expect((await post(first, '/sync/d%FF/edit', 'k1', insertBody('b1', 'kept'))).status).toBe(204);
+
+    const stateBefore = await get(first, '/sync/d%FF/state');
+
+    await first.stop();
+
+    const second = await host(reader, collabDirectory, docs, true);
+    const stateAfter = await get(second, '/sync/d%FF/state');
+
+    expect(content(stateAfter)).toBe(content(stateBefore));
+    expect(stateAfter.headers.etag).toBe(stateBefore.headers.etag);
+
+    await second.stop();
+  }, TIMEOUT_MS);
+
   it('serves a working set the other wrote without a journal', async () => {
     const collabDirectory = await directory();
     const docs = await endpoint();

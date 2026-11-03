@@ -24,6 +24,7 @@ const skipOnGo = noServer || target === 'go';
 
 interface RoutingFixture {
   collabHost: {
+    decodedDoc: { doc: string; path: string }[];
     encodedSeparator: { doc: string; path: string }[];
     methodNotAllowed: { allow: string; method: string; path: string }[];
     notFound: string[];
@@ -387,6 +388,16 @@ describe('routing contract: health, unknown routes and ported routes', () => {
         expect(response.body).toBe('document ids must be a single path segment\n');
       },
     );
+
+    // Kestrel keeps an escape that is not valid UTF-8 as written. The doc id
+    // names the journal directory, so a server that decodes it another way
+    // reads another document out of the same collab directory.
+    it.each(routing.collabHost.decodedDoc)('loads the document $doc for GET $path', async ({ path, doc }) => {
+      const response = await rawRequest(server.baseUrl, 'GET', path);
+
+      expect(endpoint.gets).toContain(doc);
+      expect(response.status).toBe(200);
+    });
 
     it('answers a preflight on /UNFURL/ with the exact CORS headers', async () => {
       const response = await rawRequest(server.baseUrl, 'OPTIONS', '/UNFURL/', {

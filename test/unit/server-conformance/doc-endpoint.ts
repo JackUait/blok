@@ -15,6 +15,8 @@ export interface FixtureDocEndpoint {
   /** The `--doc-endpoint` value; documents live one path segment below it. */
   readonly url: string;
   readonly puts: readonly RecordedPut[];
+  /** The doc id of every GET, in order. */
+  readonly gets: readonly string[];
   /** Answer GETs for `docId` with `document` (bare OutputData or a `{data, version}` envelope). */
   serve(docId: string, document: unknown): void;
   stop(): Promise<void>;
@@ -53,9 +55,20 @@ function sendJson(response: ServerResponse, status: number, body: string): void 
   response.end(body);
 }
 
+// A server that escapes a doc id badly must fail an assertion, not throw
+// inside the request handler.
+function decodeDocId(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
   const documents = new Map<string, unknown>();
   const puts: RecordedPut[] = [];
+  const gets: string[] = [];
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
 
@@ -64,9 +77,10 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
       return;
     }
 
-    const docId = decodeURIComponent(path.slice(DOCUMENTS_PATH.length));
+    const docId = decodeDocId(path.slice(DOCUMENTS_PATH.length));
 
     if (request.method === 'GET') {
+      gets.push(docId);
       // A literal `null` body is the endpoint's "nothing saved yet". An
       // empty body or a 404 makes the room fail its seed closed instead.
       sendJson(response, 200, JSON.stringify(documents.has(docId) ? documents.get(docId) : null));
@@ -102,6 +116,7 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
   return {
     url: `http://127.0.0.1:${address.port}${DOCUMENTS_PATH.slice(0, -1)}`,
     puts,
+    gets,
     serve: (docId, document) => {
       documents.set(docId, document);
     },

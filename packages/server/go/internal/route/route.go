@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 )
 
 // Router picks a route like ASP.NET endpoint routing does with the C# host's
@@ -158,38 +160,35 @@ func pathSegments(decoded string) ([]string, bool) {
 	return strings.Split(path[1:], "/"), true
 }
 
-// decodeKeepingSlash decodes every %XX except %2F, which stays as sent so a
-// decoded slash can never split a segment. A malformed escape stays literal.
+// decodeKeepingSlash decodes the path like Kestrel: %2F stays as sent, so a
+// decoded slash can never split a segment, and an escape that is not part of
+// valid UTF-8 (or is malformed) stays as written. The doc id names the
+// journal directory, so decoding "%FF" to a raw byte would split one
+// document into two across the C# and Go servers.
 func decodeKeepingSlash(s string) string {
 	if !strings.Contains(s, "%") {
 		return s
 	}
 	var b strings.Builder
-	for i := 0; i < len(s); i++ {
-		if s[i] == '%' && i+2 < len(s) {
-			hi, okHi := unhex(s[i+1])
-			lo, okLo := unhex(s[i+2])
-			if okHi && okLo && hi<<4|lo != '/' {
-				b.WriteByte(hi<<4 | lo)
-				i += 2
-				continue
-			}
+	for {
+		i := indexEncodedSlash(s)
+		if i < 0 {
+			b.WriteString(dotnet.UnescapeDataString(s))
+			return b.String()
 		}
-		b.WriteByte(s[i])
+		b.WriteString(dotnet.UnescapeDataString(s[:i]))
+		b.WriteString(s[i : i+3])
+		s = s[i+3:]
 	}
-	return b.String()
 }
 
-func unhex(c byte) (byte, bool) {
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0', true
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10, true
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10, true
+func indexEncodedSlash(s string) int {
+	for i := 0; i+2 < len(s); i++ {
+		if s[i] == '%' && s[i+1] == '2' && (s[i+2] == 'F' || s[i+2] == 'f') {
+			return i
+		}
 	}
-	return 0, false
+	return -1
 }
 
 // removeDotSegments is RFC 3986 section 5.2.4 for a path that starts with

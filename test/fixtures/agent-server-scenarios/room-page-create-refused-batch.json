@@ -1,0 +1,43 @@
+{
+  "name": "room-page-create-refused-batch",
+  "room": {},
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": []
+  },
+  "steps": [
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          },
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "missing"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "BLOCK_NOT_FOUND",
+        "committed": 0,
+        "revision": ""
+      }
+    }
+  ]
+}

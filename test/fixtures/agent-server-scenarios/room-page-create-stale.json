@@ -1,0 +1,80 @@
+{
+  "name": "room-page-create-stale",
+  "room": {},
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": []
+  },
+  "steps": [
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "paragraph",
+              "id": "p1",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "paragraph",
+              "id": "p2",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ],
+        "expectRevision": "{rev:0}"
+      },
+      "expect": {
+        "ok": false,
+        "code": "STALE",
+        "committed": 0,
+        "revision": "@head",
+        "result": {
+          "/error/details/revision": "@head",
+          "/error/details/current": {
+            "present": true
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "room-page-create-forbidden",
+  "room": {},
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "create": [
+    ""
+  ],
+  "host": {
+    "created": []
+  },
+  "steps": [
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "FORBIDDEN",
+        "committed": 0,
+        "revision": "",
+        "result": {
+          "/error/message": "The host does not let this agent create a page here. Nothing was written."
+        }
+      }
+    }
+  ]
+}

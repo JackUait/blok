@@ -1,0 +1,63 @@
+{
+  "name": "room-page-create-forbidden-after-one",
+  "room": {},
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "create": [
+    "host-1",
+    ""
+  ],
+  "host": {
+    "created": [
+      "host-1"
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "a",
+              "position": "end"
+            }
+          },
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "b",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "ORPHANED_SIDE_EFFECT",
+        "committed": 0,
+        "revision": "",
+        "result": {
+          "/error/details/cause/code": "FORBIDDEN",
+          "/error/details/orphaned": [
+            {
+              "command": "block.insert",
+              "type": "page",
+              "prepared": {
+                "pageId": "host-1"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

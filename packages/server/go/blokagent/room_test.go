@@ -2,6 +2,7 @@ package blokagent
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/yjs"
 )
 
 // Go twins of the C# room tests a scenario cannot express: timing,
@@ -312,5 +315,184 @@ func TestAnUndoRetriesItsOwnStaleHeadThreeTimes(t *testing.T) {
 				t.Fatalf("code %q after %d tries, want %q after %d", code, calls, row.code, row.calls)
 			}
 		})
+	}
+}
+
+// pageCreator makes host-1, host-2, ... and records them.
+type pageCreator struct {
+	mu      sync.Mutex
+	created []string
+}
+
+func (c *pageCreator) Resolve(context.Context, string, Actor) (PageLocation, error) { return nil, nil }
+
+func (c *pageCreator) Create(context.Context, Actor) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	id := "host-" + strconv.Itoa(len(c.created)+1)
+	c.created = append(c.created, id)
+	return id, nil
+}
+
+const insertPageBatch = `{"commands":[{"name":"block.insert","args":{"type":"page","id":"np","position":"end"}}]}`
+
+// failingExecute lets the page count run, then fails the batch run itself.
+type failingExecute struct {
+	inner invoker
+	err   error
+}
+
+func (f failingExecute) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+	if op == "agentExecute" {
+		return "", f.err
+	}
+	return f.inner.Invoke(ctx, op, input, timeout)
+}
+
+func orphanedCause(t *testing.T, execution Execution) (string, string) {
+	t.Helper()
+	result := mustParse(t, execution.ResultJSON)
+	code, _ := stringOf(lookup(lookup(result, "error"), "code"))
+	cause, _ := stringOf(lookup(lookup(lookup(lookup(result, "error"), "details"), "cause"), "code"))
+	return code, cause
+}
+
+// C# ARoomRunThatStopsAfterTheHostMadePagesListsThem (cancel, error).
+func TestARoomRunThatStopsAfterTheHostMadePagesListsThem(t *testing.T) {
+	for _, row := range []struct {
+		err   error
+		cause string
+	}{{context.Canceled, "CANCELLED"}, {errors.New("The engine broke."), "APPLY_FAILED"}} {
+		r := newTestRoom(t, false, func(inner invoker) invoker { return failingExecute{inner, row.err} })
+		r.docs.hold("d", `{"blocks":[]}`)
+		pages := &pageCreator{}
+		execution, err := r.executor.ExecuteInRoom(context.Background(), "d", insertPageBatch, roomAgent, &Options{PageTitles: true, PageTarget: pages})
+		if err != nil {
+			t.Fatal(err)
+		}
+		code, cause := orphanedCause(t, execution)
+		if code != "ORPHANED_SIDE_EFFECT" || cause != row.cause || !strings.Contains(execution.ResultJSON, "host-1") || execution.DocumentJSON != nil {
+			t.Fatalf("%s", execution.ResultJSON)
+		}
+		if len(pages.created) != 1 || ids(t, r, "d") != "" {
+			t.Fatalf("created %v, blocks %q", pages.created, ids(t, r, "d"))
+		}
+	}
+}
+
+// throwsAfterApply writes the ops into the doc, then fails, as an error
+// after the room changed would.
+type throwsAfterApply struct{ *convert.DocConverter }
+
+func (c throwsAfterApply) ApplyOps(ctx context.Context, doc *yjs.Doc, ops []convert.EditOp) error {
+	if err := c.DocConverter.ApplyOps(ctx, doc, ops); err != nil {
+		return err
+	}
+	return errors.New("The disk filled after the write.")
+}
+
+// C# APageTheRoomLinksIsNeverReportedOrphanedWhenTheEditThrowsAfterWriting.
+func TestAPageTheRoomLinksIsNeverReportedOrphanedWhenTheEditThrowsAfterWriting(t *testing.T) {
+	for _, noJournal := range []bool{false, true} {
+		r := newTestRoomWith(t, noJournal, nil, func(inner *convert.DocConverter) room.Converter { return throwsAfterApply{inner} })
+		r.docs.hold("d", `{"blocks":[]}`)
+		pages := &pageCreator{}
+		execution, err := r.executor.ExecuteInRoom(context.Background(), "d", insertPageBatch, roomAgent, &Options{PageTitles: true, PageTarget: pages})
+		result := ""
+		if err == nil {
+			result = execution.ResultJSON
+		}
+		state, stateErr := r.manager.State(context.Background(), "d")
+		if stateErr != nil {
+			t.Fatal(stateErr)
+		}
+		linked := state.Status == room.StateReady && strings.Contains(string(state.JSON), "host-1")
+		orphaned := strings.Contains(result, `"orphaned":[`) && strings.Contains(result, "host-1")
+		if len(pages.created) != 1 {
+			t.Fatalf("created %v", pages.created)
+		}
+		if linked && orphaned {
+			t.Fatalf("journal %v: the room links host-1, yet the result lists it orphaned: %s", !noJournal, result)
+		}
+		if !linked && err == nil && !orphaned {
+			t.Fatalf("journal %v: the room does not link host-1, so the result must list it: %s", !noJournal, result)
+		}
+	}
+}
+
+// throwsOnExport fails the nth export (counted from 1).
+type throwsOnExport struct {
+	*convert.DocConverter
+	mu    *sync.Mutex
+	count *int
+	nth   int
+}
+
+func (c throwsOnExport) Export(ctx context.Context, doc *yjs.Doc) (*jsjson.Object, error) {
+	c.mu.Lock()
+	*c.count++
+	hit := *c.count == c.nth
+	c.mu.Unlock()
+	if hit {
+		return nil, errors.New("Post-processing failed.")
+	}
+	return c.DocConverter.Export(ctx, doc)
+}
+
+// C# AThrowAfterTheRoomCommitNeverReportsTheLinkedPageOrphaned: the export
+// after the commit fails. Go's executor exports through the room's
+// converter, so the state read before the page is made counts first:
+// state (1), the plan (2), after the commit (3).
+func TestAThrowAfterTheRoomCommitNeverReportsTheLinkedPageOrphaned(t *testing.T) {
+	var mu sync.Mutex
+	count := 0
+	r := newTestRoomWith(t, false, nil, func(inner *convert.DocConverter) room.Converter {
+		return throwsOnExport{inner, &mu, &count, 3}
+	})
+	r.docs.hold("d", `{"blocks":[]}`)
+	pages := &pageCreator{}
+	execution, err := r.executor.ExecuteInRoom(context.Background(), "d", insertPageBatch, roomAgent, &Options{PageTitles: true, PageTarget: pages})
+	if err == nil && strings.Contains(execution.ResultJSON, "orphaned") {
+		t.Fatalf("%s", execution.ResultJSON)
+	}
+	if err == nil {
+		t.Fatalf("the failed export was not passed on: %s", execution.ResultJSON)
+	}
+	page, _ := stringOf(lookup(lookup(records(lookup(r.export(t, "d"), "blocks"))[0], "data"), "pageId"))
+	if page != "host-1" {
+		t.Fatalf("page %q", page)
+	}
+}
+
+// cancelOnExecute cancels the caller's context when the batch runs.
+type cancelOnExecute struct {
+	inner  invoker
+	cancel context.CancelFunc
+}
+
+func (c cancelOnExecute) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+	if op == "agentExecute" {
+		// The plan runs on the room's own context, so the caller's cancel
+		// reaches it as this error.
+		c.cancel()
+		return "", context.Canceled
+	}
+	return c.inner.Invoke(ctx, op, input, timeout)
+}
+
+// T10: the room read that decides whether the made pages are orphans
+// ignores the caller's cancel, so a cancelled call still lists them.
+func TestTheOrphanCheckReadsTheRoomAfterTheCallerCancels(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r := newTestRoom(t, false, func(inner invoker) invoker { return cancelOnExecute{inner, cancel} })
+	r.docs.hold("d", `{"blocks":[]}`)
+	pages := &pageCreator{}
+	execution, err := r.executor.ExecuteInRoom(ctx, "d", insertPageBatch, roomAgent, &Options{PageTitles: true, PageTarget: pages})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code, cause := orphanedCause(t, execution); code != "ORPHANED_SIDE_EFFECT" || cause != "CANCELLED" {
+		t.Fatalf("%s", execution.ResultJSON)
 	}
 }

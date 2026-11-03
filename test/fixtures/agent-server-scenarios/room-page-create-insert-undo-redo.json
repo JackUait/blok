@@ -1,0 +1,98 @@
+{
+  "name": "room-page-create-insert-undo-redo",
+  "room": {},
+  "seed": {
+    "blocks": []
+  },
+  "options": {
+    "pageTitles": true,
+    "target": "creator"
+  },
+  "host": {
+    "created": [
+      "host-1"
+    ],
+    "resolved": []
+  },
+  "steps": [
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "type": "page",
+              "id": "np",
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "revision": "@head",
+        "state": {
+          "/blocks/0/data/pageId": "host-1"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks": {
+            "length": 0
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/data/pageId": "host-1"
+        }
+      }
+    },
+    {
+      "run": "room",
+      "batch": {
+        "commands": [
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "np"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks": {
+            "length": 0
+          }
+        }
+      }
+    }
+  ]
+}

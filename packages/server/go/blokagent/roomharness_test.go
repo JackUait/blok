@@ -101,6 +101,13 @@ type testRoom struct {
 // noJournal. wrap puts a test runtime in front of the real one.
 func newTestRoom(t *testing.T, noJournal bool, wrap func(invoker) invoker) *testRoom {
 	t.Helper()
+	return newTestRoomWith(t, noJournal, wrap, nil)
+}
+
+// newTestRoomWith also lets a test put its own converter in front of the
+// real one.
+func newTestRoomWith(t *testing.T, noJournal bool, wrap func(invoker) invoker, wrapConverter func(*convert.DocConverter) room.Converter) *testRoom {
+	t.Helper()
 	runtime := sharedExecutor(t).runtime
 	sets := &memorySets{sets: map[string]*workingset.Set{}}
 	docs := &heldDocs{docs: map[string]string{}}
@@ -112,10 +119,14 @@ func newTestRoom(t *testing.T, noJournal bool, wrap func(invoker) invoker) *test
 		}
 		operations = room.LocalJournal{Store: store}
 	}
+	var converter room.Converter = &convert.DocConverter{Now: time.Now, HTML: convert.RuntimeHTMLReader{Runtime: runtime}}
+	if wrapConverter != nil {
+		converter = wrapConverter(converter.(*convert.DocConverter))
+	}
 	manager := room.NewManager(room.ManagerOptions{
 		Store:      sets,
 		Endpoint:   docs,
-		Converter:  &convert.DocConverter{Now: time.Now, HTML: convert.RuntimeHTMLReader{Runtime: runtime}},
+		Converter:  converter,
 		Operations: operations,
 	})
 	t.Cleanup(func() { _ = manager.Drain(context.Background()) })

@@ -43,6 +43,9 @@ type S3 struct {
 	// S3BlobStoreOptions.RequestTimeout and ResponseHeaderTimeout; zero is
 	// the default. Only tests set them.
 	requestTimeout, headerTimeout time.Duration
+	// SocketsHttpHandler.ConnectTimeout; zero is the default. Only tests
+	// set it.
+	connectTimeout time.Duration
 }
 
 // NewS3 checks the target the way S3TargetResolver does and builds the client.
@@ -56,12 +59,17 @@ func NewS3(s *S3) (*S3, error) {
 	if s.headerTimeout <= 0 {
 		s.headerTimeout = s3ResponseHeaderTimeout
 	}
-	s.dialer = &net.Dialer{Timeout: s3ConnectTimeout}
+	if s.connectTimeout <= 0 {
+		s.connectTimeout = s3ConnectTimeout
+	}
+	s.dialer = &net.Dialer{Timeout: s.connectTimeout}
 	s.client = &http.Client{
 		Transport: &http.Transport{
 			// SocketsHttpHandler's default: the environment proxy.
 			Proxy:       osProxy(),
 			DialContext: s.dialer.DialContext,
+			// ConnectTimeout bounds the TLS handshake too.
+			TLSHandshakeTimeout: s.connectTimeout,
 			// Counts from the end of the body, like the PayloadContent
 			// callback in S3BlobStore.SendAsync.
 			ResponseHeaderTimeout: s.headerTimeout,

@@ -1073,8 +1073,9 @@ export interface BlokMountOptions {
   linkPaste?: {
     /**
      * When true, pasting a URL that matches no registered embed provider still
-     * offers "Create embed", framing it in a sandboxed iframe. Default false keeps
-     * blok's registry-only embed guarantee.
+     * offers "Create embed", framing it in a strict sandboxed iframe (no cookies
+     * or storage of its own, no `allow` permissions, no referrer). Default false
+     * keeps blok's registry-only embed guarantee.
      * @default false
      */
     allowGenericEmbed?: boolean;
@@ -1085,7 +1086,8 @@ export interface BlokMountOptions {
      * (`*.internal.example.dev` — matches any subdomain depth, never the bare
      * suffix). A stored generic embed whose https URL matches an entry is
      * framed; any other generic embed renders as a safe link card instead.
-     * `allowGenericEmbed: true` subsumes this list.
+     * `allowGenericEmbed: true` subsumes this list. The host's own site (see
+     * `hostAliases`) is never framed, even when listed here.
      */
     allowedEmbedOrigins?: string[];
 
@@ -1093,7 +1095,9 @@ export interface BlokMountOptions {
      * Other hostnames that count as the editor's own site, next to the page's
      * own hostname. Entries are hostnames (`example.com`) or wildcard subdomain
      * patterns (`*.example.com` — any subdomain depth, never the bare suffix).
-     * Pasting a link to the own site never offers "Create bookmark".
+     * Pasting a link to the own site never offers "Create bookmark". A generic
+     * embed of the own site, or of a subdomain or parent domain of it, is never
+     * framed; it renders as a link card.
      */
     hostAliases?: string[];
   };

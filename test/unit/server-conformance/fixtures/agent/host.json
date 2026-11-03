@@ -5151,5 +5151,346 @@
         "revision": "h1"
       }
     ]
+  },
+  {
+    "name": "wrong type: an ok that is a string is .NET's conversion error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"Héllo <wörld> & 'q' + \uD83D\uDE80\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":\"yes\",\"revision\":\"h41\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[\"p\"],\"moved\":[],\"removed\":[]},\"lastRange\":{\"blockId\":\"p\",\"field\":\"text\",\"start\":6,\"end\":11},\"warnings\":[{\"code\":\"SANITIZED\",\"message\":\"Removed <unsafe> markup é.\",\"commandIndex\":0}]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello \"},{\"text\":\"wörld\",\"marks\":{\"bold\":true}}]},\"lastEditedBy\":\"agent-cs\",\"lastEditedAt\":1234}]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"H\\u00E9llo \\u003Cw\\u00F6rld\\u003E \\u0026 \\u0027q\\u0027 \\u002B \\uD83D\\uDE80\"}}]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "An element of type 'String' cannot be converted to a 'System.Boolean'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: an ok that is an object is .NET's node error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"Héllo <wörld> & 'q' + \uD83D\uDE80\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":{},\"revision\":\"h41\",\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[\"p\"],\"moved\":[],\"removed\":[]},\"lastRange\":{\"blockId\":\"p\",\"field\":\"text\",\"start\":6,\"end\":11},\"warnings\":[{\"code\":\"SANITIZED\",\"message\":\"Removed <unsafe> markup é.\",\"commandIndex\":0}]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello \"},{\"text\":\"wörld\",\"marks\":{\"bold\":true}}]},\"lastEditedBy\":\"agent-cs\",\"lastEditedAt\":1234}]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"H\\u00E9llo \\u003Cw\\u00F6rld\\u003E \\u0026 \\u0027q\\u0027 \\u002B \\uD83D\\uDE80\"}}]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonValue'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a revision that is a number is .NET's conversion error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"Héllo <wörld> & 'q' + \uD83D\uDE80\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":7,\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[\"p\"],\"moved\":[],\"removed\":[]},\"lastRange\":{\"blockId\":\"p\",\"field\":\"text\",\"start\":6,\"end\":11},\"warnings\":[{\"code\":\"SANITIZED\",\"message\":\"Removed <unsafe> markup é.\",\"commandIndex\":0}]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello \"},{\"text\":\"wörld\",\"marks\":{\"bold\":true}}]},\"lastEditedBy\":\"agent-cs\",\"lastEditedAt\":1234}]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"H\\u00E9llo \\u003Cw\\u00F6rld\\u003E \\u0026 \\u0027q\\u0027 \\u002B \\uD83D\\uDE80\"}}]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "An element of type 'Number' cannot be converted to a 'System.String'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a revision that is true is .NET's conversion error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"Héllo <wörld> & 'q' + \uD83D\uDE80\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":true,\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[\"p\"],\"moved\":[],\"removed\":[]},\"lastRange\":{\"blockId\":\"p\",\"field\":\"text\",\"start\":6,\"end\":11},\"warnings\":[{\"code\":\"SANITIZED\",\"message\":\"Removed <unsafe> markup é.\",\"commandIndex\":0}]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello \"},{\"text\":\"wörld\",\"marks\":{\"bold\":true}}]},\"lastEditedBy\":\"agent-cs\",\"lastEditedAt\":1234}]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"H\\u00E9llo \\u003Cw\\u00F6rld\\u003E \\u0026 \\u0027q\\u0027 \\u002B \\uD83D\\uDE80\"}}]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "An element of type 'True' cannot be converted to a 'System.String'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a revision that is a list is .NET's node error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"Héllo <wörld> & 'q' + \uD83D\uDE80\"}}]}",
+        "batch": "{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"result\":{\"ok\":true,\"revision\":[],\"results\":[{}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[\"p\"],\"moved\":[],\"removed\":[]},\"lastRange\":{\"blockId\":\"p\",\"field\":\"text\",\"start\":6,\"end\":11},\"warnings\":[{\"code\":\"SANITIZED\",\"message\":\"Removed <unsafe> markup é.\",\"commandIndex\":0}]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"Hello \"},{\"text\":\"wörld\",\"marks\":{\"bold\":true}}]},\"lastEditedBy\":\"agent-cs\",\"lastEditedAt\":1234}]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"H\\u00E9llo \\u003Cw\\u00F6rld\\u003E \\u0026 \\u0027q\\u0027 \\u002B \\uD83D\\uDE80\"}}]},\"batch\":{\"commands\":[{\"name\":\"doc.read\",\"args\":{\"detail\":\"full\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "The node must be of type 'JsonValue'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a page count that is a string is .NET's conversion error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "creator"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"count\":\"1\"}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPagesNeeded",
+        "input": "{\"services\":[\"pageBackend\"],\"prepares\":[\"page\"],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "An element of type 'String' cannot be converted to a 'System.Int32'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a page count with a fraction is .NET's conversion error",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "creator"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"count\":1.5}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPagesNeeded",
+        "input": "{\"services\":[\"pageBackend\"],\"prepares\":[\"page\"],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      }
+    ],
+    "results": [
+      {
+        "error": {
+          "kind": "invalidOperation",
+          "message": "An element of type 'Number' cannot be converted to a 'System.Int32'."
+        }
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a failure code that is a number passes through unread",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "creator"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"count\":1}"
+      },
+      {
+        "answer": "{\"result\":{\"ok\":false,\"revision\":\"h2\",\"error\":{\"code\":7,\"message\":\"Jint said so.\",\"retryable\":false,\"details\":{\"orphaned\":[]}},\"warnings\":[]},\"document\":{\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPagesNeeded",
+        "input": "{\"services\":[\"pageBackend\"],\"prepares\":[\"page\"],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "create",
+        "actor": {
+          "id": "agent-cs",
+          "name": "Server agent",
+          "onBehalfOf": null
+        }
+      },
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[\"pageBackend\"],\"prepares\":[\"page\"],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"},\"createdPages\":[\"host-1\"]}"
+      }
+    ],
+    "results": [
+      {
+        "result": "{\"ok\":false,\"revision\":\"h2\",\"error\":{\"code\":7,\"message\":\"Jint said so.\",\"retryable\":false,\"details\":{\"orphaned\":[]}},\"warnings\":[]}",
+        "document": null,
+        "revision": "h2"
+      }
+    ]
+  },
+  {
+    "name": "wrong type: a failure message that is false passes through unread",
+    "call": "Execute",
+    "actor": {
+      "id": "agent-cs",
+      "name": "Server agent"
+    },
+    "options": {
+      "pageTitles": true,
+      "target": "creator"
+    },
+    "calls": [
+      {
+        "document": "{\"blocks\":[]}",
+        "batch": "{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]}"
+      }
+    ],
+    "runtime": [
+      {
+        "answer": "{\"count\":1}"
+      },
+      {
+        "answer": "{\"result\":{\"ok\":false,\"revision\":\"h2\",\"error\":{\"code\":\"APPLY_FAILED\",\"message\":false,\"retryable\":false,\"details\":{\"orphaned\":[]}},\"warnings\":[]},\"document\":{\"blocks\":[]},\"edits\":[]}"
+      }
+    ],
+    "events": [
+      {
+        "op": "agentPagesNeeded",
+        "input": "{\"services\":[\"pageBackend\"],\"prepares\":[\"page\"],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"}}"
+      },
+      {
+        "host": "create",
+        "actor": {
+          "id": "agent-cs",
+          "name": "Server agent",
+          "onBehalfOf": null
+        }
+      },
+      {
+        "op": "agentExecute",
+        "input": "{\"services\":[\"pageBackend\"],\"prepares\":[\"page\"],\"document\":{\"blocks\":[]},\"batch\":{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"a\"}},{\"name\":\"block.insert\",\"args\":{\"type\":\"page\",\"id\":\"b\"}}]},\"actor\":{\"id\":\"agent-cs\",\"name\":\"Server agent\",\"kind\":\"agent\"},\"createdPages\":[\"host-1\"]}"
+      }
+    ],
+    "results": [
+      {
+        "result": "{\"ok\":false,\"revision\":\"h2\",\"error\":{\"code\":\"APPLY_FAILED\",\"message\":false,\"retryable\":false,\"details\":{\"orphaned\":[]}},\"warnings\":[]}",
+        "document": null,
+        "revision": "h2"
+      }
+    ]
   }
 ]

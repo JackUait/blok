@@ -110,7 +110,7 @@ func text(node *jsjson.Node) (string, bool, error) {
 
 // stringValue is `?.GetValue<string>()`: "" for null, an error for a non-string.
 func stringValue(node *jsjson.Node) (string, error) {
-	if node == nil {
+	if !present(node) {
 		return "", nil
 	}
 	value, ok, err := text(node)
@@ -118,7 +118,7 @@ func stringValue(node *jsjson.Node) (string, error) {
 		return "", err
 	}
 	if !ok {
-		return "", &InvalidOperationError{Message: "The Blok runtime answered a value that is not a string."}
+		return "", wrongType(node, "String")
 	}
 	return value, nil
 }
@@ -135,12 +135,12 @@ func isTrue(node *jsjson.Node, key string) (bool, error) {
 	case jsjson.KindFalse:
 		return false, nil
 	}
-	return false, &InvalidOperationError{Message: "The Blok runtime answered a value that is not a boolean."}
+	return false, wrongType(found, "Boolean")
 }
 
 // intValue is `?.GetValue<int>() ?? 0`.
 func intValue(node *jsjson.Node) (int, error) {
-	if node == nil {
+	if !present(node) {
 		return 0, nil
 	}
 	if node.Kind == jsjson.KindNumber {
@@ -148,7 +148,25 @@ func intValue(node *jsjson.Node) (int, error) {
 			return int(value), nil
 		}
 	}
-	return 0, &InvalidOperationError{Message: "The Blok runtime answered a value that is not an int."}
+	return 0, wrongType(node, "Int32")
+}
+
+// wrongType is what GetValue<T> throws on a parsed node of another kind.
+func wrongType(node *jsjson.Node, target string) error {
+	kind := ""
+	switch node.Kind {
+	case jsjson.KindArray, jsjson.KindObject:
+		return &InvalidOperationError{Message: "The node must be of type 'JsonValue'."}
+	case jsjson.KindFalse:
+		kind = "False"
+	case jsjson.KindTrue:
+		kind = "True"
+	case jsjson.KindNumber:
+		kind = "Number"
+	case jsjson.KindString:
+		kind = "String"
+	}
+	return &InvalidOperationError{Message: "An element of type '" + kind + "' cannot be converted to a 'System." + target + "'."}
 }
 
 func str(value string) *jsjson.Node { return jsjson.NewString(jsjson.FromString(value)) }

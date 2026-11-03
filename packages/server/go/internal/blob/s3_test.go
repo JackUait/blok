@@ -52,6 +52,36 @@ func TestResolvesTheFrozenAddressingContract(t *testing.T) {
 	}
 }
 
+// An operator prefix with '?' or '#' must stay in the path. The rows and
+// paths are S3TargetResolverTests.EscapesTheKeyInThePath.
+func TestEscapesTheKeyInThePath(t *testing.T) {
+	for _, c := range []struct{ key, path string }{
+		{"a?b/c", "/bucket/a%3Fb/c"},
+		{"a#b/c", "/bucket/a%23b/c"},
+		{"a b/c", "/bucket/a%20b/c"},
+		{"é/c", "/bucket/%C3%A9/c"},
+		{"a%2Fb/c", "/bucket/a%2Fb/c"},
+		{"a%zz/c", "/bucket/a%25zz/c"},
+		{"../c", "/c"},
+		{`a\b/c`, "/bucket/a/b/c"},
+		{"a?b#c/d", "/bucket/a%3Fb%23c/d"},
+	} {
+		url, _, err := testS3("http://127.0.0.1:9000", "bucket", "").target(c.key)
+		if err != nil {
+			t.Errorf("%q: %v", c.key, err)
+			continue
+		}
+		request, err := http.NewRequest(http.MethodGet, url.AbsoluteURI, nil)
+		if err != nil {
+			t.Errorf("%q: %v", c.key, err)
+			continue
+		}
+		if url.AbsolutePath != c.path || request.URL.RequestURI() != c.path {
+			t.Errorf("%q: got %s, on the wire %s; want %s", c.key, url.AbsolutePath, request.URL.RequestURI(), c.path)
+		}
+	}
+}
+
 func TestRefusesAnUnusableTarget(t *testing.T) {
 	for _, c := range []struct{ endpoint, bucket, addressing string }{
 		{"", "media", ""},

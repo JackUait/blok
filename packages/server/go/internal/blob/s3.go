@@ -108,6 +108,9 @@ func (s *S3) target(key string) (*dotnet.URI, string, error) {
 	if path := endpointPath(s.Endpoint, authorityStart); strings.Trim(dotnet.UnescapeDataString(path), "/") != "" {
 		return nil, "", fmt.Errorf("blobstore: s3 endpoint %q must have no path", s.Endpoint)
 	}
+	// UriBuilder.Path escapes these; joined raw they start a query or a
+	// fragment and address another object.
+	key = strings.NewReplacer("?", "%3F", "#", "%23").Replace(key)
 	host, path := endpoint.Host, "/"+s.Bucket+"/"+key
 	if s.virtual(endpoint.Host) {
 		host, path = s.Bucket+"."+endpoint.Host, "/"+key

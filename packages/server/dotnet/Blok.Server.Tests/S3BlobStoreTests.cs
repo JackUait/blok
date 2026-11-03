@@ -108,6 +108,27 @@ public sealed class S3TargetResolverTests
     Assert.Equal(expectedHost, target.Host);
   }
 
+  // An operator prefix with '?' or '#' must stay in the path. Go's
+  // s3_test.go holds the same rows.
+  [Theory]
+  [InlineData("a?b/c", "/bucket/a%3Fb/c")]
+  [InlineData("a#b/c", "/bucket/a%23b/c")]
+  [InlineData("a b/c", "/bucket/a%20b/c")]
+  [InlineData("é/c", "/bucket/%C3%A9/c")]
+  [InlineData("a%2Fb/c", "/bucket/a%2Fb/c")]
+  [InlineData("a%zz/c", "/bucket/a%25zz/c")]
+  [InlineData("../c", "/c")]
+  [InlineData("a\\b/c", "/bucket/a/b/c")]
+  [InlineData("a?b#c/d", "/bucket/a%3Fb%23c/d")]
+  public void EscapesTheKeyInThePath(string key, string expectedPath)
+  {
+    var target = S3TargetResolver.Resolve(
+        CreateOptions("http://127.0.0.1:9000", "bucket", ""),
+        key);
+
+    Assert.Equal(expectedPath, target.Url.AbsolutePath);
+  }
+
   public static TheoryData<string, string, string> InvalidTargetCases =>
       new()
       {

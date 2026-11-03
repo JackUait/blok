@@ -182,6 +182,37 @@ describe('uploadAssetFile', () => {
     await expect(uploadAssetFile(file, { kind: 'image' }, sources()))
       .resolves.toEqual({ url: 'blob:fake', fileName: 'cover.png' });
   });
+
+  it.each([
+    ['file', 'text/plain'],
+    ['image', 'image/svg+xml'],
+  ] as const)('gives a kind "%s" SVG blob the type %s: only an image keeps SVG, which runs script when opened', async (kind, expected) => {
+    const made: Blob[] = [];
+
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
+      if (obj instanceof Blob) made.push(obj);
+
+      return 'blob:fake';
+    });
+
+    await uploadAssetFile(new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }), { kind }, sources());
+
+    expect(made.map((blob) => blob.type)).toEqual([expected]);
+  });
+
+  it('re-types an HTML file for every kind', async () => {
+    const made: Blob[] = [];
+
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
+      if (obj instanceof Blob) made.push(obj);
+
+      return 'blob:fake';
+    });
+
+    await uploadAssetFile(new File(['<script></script>'], 'a.html', { type: 'text/html' }), { kind: 'image' }, sources());
+
+    expect(made.map((blob) => blob.type)).toEqual(['text/plain']);
+  });
 });
 
 describe('uploadAssetUrl', () => {

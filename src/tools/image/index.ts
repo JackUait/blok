@@ -78,6 +78,7 @@ import { renderImagePreview } from './preview';
 import { figureInsets } from './figure-insets';
 import { overrideStatic } from '../../components/utils/override-static';
 import type { LazySheet } from '../../components/utils/lazy-styles';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -426,7 +427,7 @@ export class ImageTool implements BlockTool {
       const res = await upload(file, { onProgress: this.reportProgress });
       return res.url;
     }
-    return URL.createObjectURL(file);
+    return createSafeObjectUrl(file);
   }
 
   /**
@@ -667,7 +668,7 @@ export class ImageTool implements BlockTool {
       // The same file keeps its URL: a new one is decoded again and the tile blinks.
       if (source.file === undefined || source.file !== this.failurePreviewFile) {
         this.releaseFailurePreview();
-        this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+        this.failurePreview = source.file === undefined ? null : createSafeObjectUrl(source.file, { svgImage: true });
         this.failurePreviewFile = source.file ?? null;
       }
     }

@@ -4,6 +4,7 @@ import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { normalizeAudioShareLink } from './share-links';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 export interface UploadResult {
   url: string;
@@ -86,7 +87,7 @@ export class Uploader {
       return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
     }
 
-    return { url: URL.createObjectURL(file), fileName: file.name };
+    return { url: createSafeObjectUrl(file), fileName: file.name };
   }
 
   private validateUrl(raw: string): void {

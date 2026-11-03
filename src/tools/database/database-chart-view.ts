@@ -6,6 +6,7 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { ChartColorTheme } from './types';
 import { hide as hideHint, show as showHint } from '../../components/utils/tooltip';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -304,7 +305,7 @@ export class DatabaseChartView implements DatabaseViewRenderer {
     if (svg === null || svg === undefined || text === '') return null;
     const width = Number(svg.getAttribute('width'));
     const height = Number(svg.getAttribute('height'));
-    const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+    const url = createSafeObjectUrl(new Blob([text], { type: 'image/svg+xml' }), { svgImage: true });
     const src = safeDownloadHref(url);
 
     try {

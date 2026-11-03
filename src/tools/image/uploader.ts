@@ -8,6 +8,7 @@ import { uploadImageVariants, type VariantRole } from '../../components/media-va
 import { compressImage } from './compress';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 export interface UploadResult {
   url: string;
@@ -139,7 +140,7 @@ export class Uploader {
       return this.config.uploader.uploadByFile(file, { onProgress });
     }
 
-    return { url: URL.createObjectURL(file), fileName: file.name };
+    return { url: createSafeObjectUrl(file, { svgImage: true }), fileName: file.name };
   }
 
   private async handleDataUrl(raw: string, options: UploadOptions): Promise<UploadResult> {

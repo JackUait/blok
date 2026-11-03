@@ -3,6 +3,7 @@ import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 export interface UploadResult {
   url: string;
@@ -66,7 +67,7 @@ export class Uploader {
       return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
     }
 
-    return { url: URL.createObjectURL(file), fileName: file.name };
+    return { url: createSafeObjectUrl(file), fileName: file.name };
   }
 
   /**
@@ -83,7 +84,7 @@ export class Uploader {
       return this.config.uploader.uploadByFile(file);
     }
 
-    return { url: URL.createObjectURL(file) };
+    return { url: createSafeObjectUrl(file) };
   }
 
   private validateUrl(raw: string): void {

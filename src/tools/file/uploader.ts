@@ -3,6 +3,7 @@ import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { DEFAULT_MAX_SIZE } from './constants';
 import { FileToolError } from './errors';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 export interface UploadOptions {
   onProgress?: (percent: number) => void;
@@ -52,7 +53,7 @@ export class Uploader {
     }
 
     return {
-      url: URL.createObjectURL(file),
+      url: createSafeObjectUrl(file),
       fileName: file.name,
       size: file.size,
       mimeType: file.type || undefined,

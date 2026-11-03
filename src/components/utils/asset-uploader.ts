@@ -1,6 +1,7 @@
 import type { AssetKind } from '@/types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '@/types/configs/uploader';
 import type { OrphanSweep } from './orphan-sweep';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 /**
  * Where uploaders can come from, in the order they are consulted.
@@ -214,7 +215,7 @@ export async function uploadAssetFile(
   }
 
   return {
-    url: URL.createObjectURL(file),
+    url: createSafeObjectUrl(file, { svgImage: ctx.kind === 'image' }),
     fileName: file.name,
   };
 }

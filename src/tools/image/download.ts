@@ -1,4 +1,5 @@
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 /**
  * Trigger a browser download for an image.
@@ -23,7 +24,7 @@ export async function downloadImage(url: string, fileName?: string): Promise<voi
     const response = await fetch(safeUrl);
     if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
     const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
+    const objectUrl = createSafeObjectUrl(blob, { svgImage: true });
     triggerAnchorDownload(objectUrl, fileName);
     URL.revokeObjectURL(objectUrl);
   } catch {

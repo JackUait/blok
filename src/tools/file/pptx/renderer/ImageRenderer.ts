@@ -29,6 +29,7 @@ import {
   buildStaticShape3DPlan,
   type StaticShape3DPlan,
 } from './Shape3DRenderer';
+import { createSafeObjectUrl } from '../../../../shared/safe-object-url';
 
 /**
  * Check if a file extension is an unsupported legacy format (WMF only now; EMF is handled).
@@ -1066,7 +1067,7 @@ function renderEmfBitmap(
   const task = new Promise<void>((resolve) => {
     canvas.toBlob((blob) => {
       if (blob && !ctx.signal?.aborted) {
-        const url = ctx.mediaUrlCache.get(cacheKey) ?? URL.createObjectURL(blob);
+        const url = ctx.mediaUrlCache.get(cacheKey) ?? createSafeObjectUrl(blob);
         ctx.mediaUrlCache.set(cacheKey, url);
         wrapper.appendChild(createFillImage(url, alt));
       }

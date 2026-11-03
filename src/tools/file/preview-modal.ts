@@ -10,6 +10,7 @@ import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 export interface FilePreviewOptions {
   url: string;
@@ -118,7 +119,7 @@ async function fillPdfBlobBody(
   if (isClosed()) {
     return;
   }
-  const src = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  const src = createSafeObjectUrl(new Blob([bytes], { type: 'application/pdf' }));
   onRelease(() => URL.revokeObjectURL(src));
 
   const frame = document.createElement('iframe');

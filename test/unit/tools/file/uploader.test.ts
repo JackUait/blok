@@ -16,6 +16,18 @@ describe('Uploader.handleFile', () => {
     expect(result).toEqual({ url: 'blob:abc', fileName: 'a.pdf', size: 2048, mimeType: 'application/pdf' });
   });
 
+  it('re-types an HTML file\'s blob as text/plain, so opening it never runs script as the page', async () => {
+    const made: Blob[] = [];
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((obj) => {
+      if (obj instanceof Blob) made.push(obj);
+      return 'blob:html';
+    });
+    const result = await new Uploader({}).handleFile(new File(['<script>x()</script>'], 'a.html', { type: 'text/html' }));
+    expect(made.map((blob) => blob.type)).toEqual(['text/plain']);
+    expect(await made[0].text()).toBe('<script>x()</script>');
+    expect(result.mimeType).toBe('text/html');
+  });
+
   it('delegates to config.uploader.uploadByFile when present', async () => {
     const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/a.pdf' });
     const result = await new Uploader({ uploader: { uploadByFile } }).handleFile(makeFile());

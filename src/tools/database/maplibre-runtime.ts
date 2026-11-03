@@ -1,6 +1,7 @@
 import * as maplibre from 'maplibre-gl';
 import css from 'maplibre-gl/dist/maplibre-gl.css?inline';
 import workerSource from 'maplibre-gl/dist/maplibre-gl-worker.mjs?raw';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 /** The attribute on a map's host element. MapLibre's rules apply only below it. */
 export const MAPLIBRE_SCOPE = 'data-blok-maplibre';
@@ -9,7 +10,7 @@ const STYLE_ID = 'blok-maplibre-styles';
 const SOURCE_MAP = /\s*\/\/# sourceMappingURL=\S*\s*$/;
 
 const scriptUrl = (code: string): string =>
-  URL.createObjectURL(new Blob([code.replace(SOURCE_MAP, '')], { type: 'text/javascript' }));
+  createSafeObjectUrl(new Blob([code.replace(SOURCE_MAP, '')], { type: 'text/javascript' }));
 
 /** Splits a selector list on its top-level commas only: `:not(.a, .b)` stays whole. */
 const splitSelectors = (list: string): string[] => {

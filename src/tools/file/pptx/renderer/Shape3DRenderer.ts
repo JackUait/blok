@@ -32,6 +32,7 @@ import {
   projectiveTransformToCssMatrix3d,
   type ProjectedPoint,
 } from './shape3d/CameraProjection';
+import { createSafeObjectUrl } from '../../../../shared/safe-object-url';
 
 type StaticShape3DSurface = 'shape' | 'picture';
 type StaticShape3DGeometry = 'donut' | 'ellipse' | 'rect' | 'roundrect';
@@ -1595,7 +1596,7 @@ async function renderDistanceFieldLighting(
   if (!blob || ctx.signal?.aborted) return;
 
   const existingUrl = ctx.mediaUrlCache.get(cacheKey);
-  const url = existingUrl ?? URL.createObjectURL(blob);
+  const url = existingUrl ?? createSafeObjectUrl(blob);
   const ownsUrl = !existingUrl;
   if (ownsUrl) ctx.mediaUrlCache.set(cacheKey, url);
   const decoded = await waitForImageDecode(url, ctx.signal);

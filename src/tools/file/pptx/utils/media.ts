@@ -4,6 +4,8 @@
  * Media utilities — MIME type detection, path resolution, and blob URL management.
  */
 
+import { createSafeObjectUrl } from '../../../../shared/safe-object-url';
+
 export interface ResolvedMedia {
   mediaPath: string;
   data: Uint8Array;
@@ -132,7 +134,7 @@ export function getOrCreateBlobUrl(
     // its scripts. A data: URL gets an opaque origin instead.
     url = mime === 'image/svg+xml'
       ? `data:${mime};base64,${toBase64(data instanceof Uint8Array ? data : new Uint8Array(data))}`
-      : URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: mime }));
+      : createSafeObjectUrl(new Blob([data as unknown as BlobPart], { type: mime }));
     cache.set(mediaPath, url);
   }
   return url;

@@ -1,4 +1,5 @@
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { createSafeObjectUrl } from '../../shared/safe-object-url';
 
 /**
  * Saves a file through a same-origin object URL, where `download` is honored.
@@ -6,7 +7,7 @@ import { safeDownloadHref } from '../../components/utils/sanitize-url';
  * takes the click and no download starts.
  */
 export const downloadBlob = (blob: Blob, fileName: string): void => {
-  const url = URL.createObjectURL(blob);
+  const url = createSafeObjectUrl(blob, { svgImage: true });
   const href = safeDownloadHref(url);
 
   if (href !== null) {

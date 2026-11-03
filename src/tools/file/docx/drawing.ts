@@ -2,6 +2,7 @@ import type { RenderContext } from './context';
 import { nested } from './context';
 import { sniffImageType } from './package';
 import { attr, emuToPx, find, kid, round } from './xml';
+import { createSafeObjectUrl } from '../../../shared/safe-object-url';
 
 interface Size {
   width: number | null;
@@ -59,7 +60,7 @@ async function imageUrl(path: string, ctx: RenderContext): Promise<string | null
   if (bytes === null || type === null) {
     return null;
   }
-  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const url = createSafeObjectUrl(new Blob([bytes], { type }));
   ctx.resources.urls.push(url);
 
   return url;

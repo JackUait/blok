@@ -24,17 +24,19 @@ func listen(address string) ([]net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	port, err := strconv.Atoi(portText)
+	// Validate refuses these too; parsing as 16 bits keeps listen safe alone.
+	parsed, err := strconv.ParseUint(portText, 10, 16)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listen tcp: address %s: invalid port", portText)
 	}
+	port := uint16(parsed)
 	switch {
 	case host == "":
-		return bindOne("tcp4", netip.AddrPortFrom(netip.IPv4Unspecified(), uint16(port)))
+		return bindOne("tcp4", netip.AddrPortFrom(netip.IPv4Unspecified(), port))
 	case host == "*" || host == "+":
-		listeners, err := bindOne("tcp", netip.AddrPortFrom(netip.IPv6Unspecified(), uint16(port)))
+		listeners, err := bindOne("tcp", netip.AddrPortFrom(netip.IPv6Unspecified(), port))
 		if err != nil && !isAddressInUse(err) {
-			return bindOne("tcp4", netip.AddrPortFrom(netip.IPv4Unspecified(), uint16(port)))
+			return bindOne("tcp4", netip.AddrPortFrom(netip.IPv4Unspecified(), port))
 		}
 		return listeners, err
 	case dotnet.EqualsOrdinalIgnoreCase(host, "localhost"):
@@ -46,22 +48,22 @@ func listen(address string) ([]net.Listener, error) {
 	}
 	switch {
 	case ip.Is4():
-		return bindOne("tcp4", netip.AddrPortFrom(ip, uint16(port)))
+		return bindOne("tcp4", netip.AddrPortFrom(ip, port))
 	case ip.Is4In6():
 		// An IPv6 socket cannot bind a mapped address; Go would bind IPv4.
 		return nil, errors.New("Can't assign requested address")
 	case ip.IsUnspecified():
 		// Kestrel sets DualMode on an IPv6 any socket.
-		return bindOne("tcp", netip.AddrPortFrom(ip, uint16(port)))
+		return bindOne("tcp", netip.AddrPortFrom(ip, port))
 	}
 	// ParseIP drops the scope id; net.Listen needs it for a link-local address.
 	if zoned, err := netip.ParseAddr(host); err == nil {
 		ip = zoned
 	}
-	return bindOne("tcp6", netip.AddrPortFrom(ip, uint16(port)))
+	return bindOne("tcp6", netip.AddrPortFrom(ip, port))
 }
 
-func bindLocalhost(port int) ([]net.Listener, error) {
+func bindLocalhost(port uint16) ([]net.Listener, error) {
 	if port == 0 {
 		return nil, errors.New("Dynamic port binding is not supported when binding to localhost. " +
 			"You must either bind to 127.0.0.1:0 or [::1]:0, or both.")
@@ -71,7 +73,7 @@ func bindLocalhost(port int) ([]net.Listener, error) {
 		network string
 		ip      netip.Addr
 	}{{"tcp4", netip.AddrFrom4([4]byte{127, 0, 0, 1})}, {"tcp6", netip.IPv6Loopback()}} {
-		bound, err := bindOne(bind.network, netip.AddrPortFrom(bind.ip, uint16(port)))
+		bound, err := bindOne(bind.network, netip.AddrPortFrom(bind.ip, port))
 		if isAddressInUse(err) {
 			closeAll(listeners)
 			return nil, err

@@ -183,12 +183,28 @@ func dnsCompatibleBucket(bucket string) bool {
 	return true
 }
 
-// Put spools content to learn its length and hash, then PUTs it.
+// Put learns content's length and hash, then PUTs it. Like C#'s
+// PreparedPayload, a seekable body is hashed in place, with no spool cap;
+// any other body is spooled.
 func (s *S3) Put(ctx context.Context, extension, mimeType string, content io.Reader) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
 	key := NewKey(extension)
+	if seeker, ok := content.(io.ReadSeeker); ok {
+		if start, err := seeker.Seek(0, io.SeekCurrent); err == nil {
+			length, hash, err := hashInPlace(ctx, seeker, start)
+			if err != nil {
+				return "", err
+			}
+			// Hides Close: net/http would close a caller's file.
+			body := struct{ io.Reader }{seeker}
+			if _, err := s.send(ctx, http.MethodPut, key, sanitizeS3MediaType(mimeType), body, length, hash, false, false); err != nil {
+				return "", err
+			}
+			return strings.TrimRight(s.PublicURL, "/") + "/" + key, nil
+		}
+	}
 	spool, length, hash, err := s.spool(ctx, content)
 	if err != nil {
 		return "", err
@@ -203,12 +219,37 @@ func (s *S3) Put(ctx context.Context, extension, mimeType string, content io.Rea
 	return strings.TrimRight(s.PublicURL, "/") + "/" + key, nil
 }
 
+func hashInPlace(ctx context.Context, seeker io.ReadSeeker, start int64) (int64, string, error) {
+	end, err := seeker.Seek(0, io.SeekEnd)
+	if err != nil {
+		return 0, "", err
+	}
+	if _, err := seeker.Seek(start, io.SeekStart); err != nil {
+		return 0, "", err
+	}
+	if end < start {
+		return 0, "", errors.New("blobstore: s3 payload ends before its current position")
+	}
+	hash := sha256.New()
+	_, err = io.Copy(hash, readerWithContext{ctx, seeker})
+	if _, seekErr := seeker.Seek(start, io.SeekStart); err == nil {
+		err = seekErr
+	}
+	if err != nil {
+		return 0, "", err
+	}
+	return end - start, hex.EncodeToString(hash.Sum(nil)), nil
+}
+
 func (s *S3) spool(ctx context.Context, content io.Reader) (*os.File, int64, string, error) {
 	var random [16]byte
 	_, _ = rand.Read(random[:])
 	dir := s.TempDir
 	if dir == "" {
 		dir = os.TempDir()
+	}
+	if err := os.MkdirAll(dir, 0o777); err != nil {
+		return nil, 0, "", err
 	}
 	file, err := os.OpenFile(filepath.Join(dir, "blok-s3-"+hex.EncodeToString(random[:])+".tmp"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {

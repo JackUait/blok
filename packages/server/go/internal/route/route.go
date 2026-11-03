@@ -66,7 +66,9 @@ func (r *Router) Handle(pattern string, methods []string, h http.Handler) {
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	decoded := decodeKeepingSlash(req.URL.EscapedPath())
-	if strings.IndexByte(decoded, 0) >= 0 {
+	// Kestrel refuses a decoded NUL in the path, and any raw byte of 0x80 or
+	// above in the target (path or query), before routing.
+	if strings.IndexByte(decoded, 0) >= 0 || !isASCII(req.RequestURI) {
 		badRequest(w)
 		return
 	}
@@ -180,6 +182,15 @@ func decodeKeepingSlash(s string) string {
 		b.WriteString(s[i : i+3])
 		s = s[i+3:]
 	}
+}
+
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			return false
+		}
+	}
+	return true
 }
 
 func indexEncodedSlash(s string) int {

@@ -35,6 +35,7 @@ interface RoutingFixture {
     methodNotAllowed: { allow: string; method: string; path: string }[];
     notFound: { method: string; path: string }[];
     notRefused: { path: string; status: number }[];
+    rawNonAscii: string[];
   };
 }
 
@@ -262,6 +263,17 @@ describe('routing contract: health, unknown routes and ported routes', () => {
     // Kestrel refuses a decoded NUL in the path before routing, on any method.
     it.each(routing.healthHost.encodedNul)('answers $method $path with an empty 400', async ({ method, path }) => {
       const response = await rawRequest(server.baseUrl, method, path);
+
+      expect(response.status).toBe(400);
+      expect(response.headers['content-length']).toEqual(['0']);
+      expect(response.headers['content-type']).toBeUndefined();
+      expect(response.body).toBe('');
+    });
+
+    // Kestrel also refuses any raw byte of 0x80 or above in the request
+    // target, path or query. rawRequest sends the fixture's text as UTF-8.
+    it.each(routing.healthHost.rawNonAscii)('answers GET %s, sent unescaped, with an empty 400', async (path) => {
+      const response = await rawRequest(server.baseUrl, 'GET', path);
 
       expect(response.status).toBe(400);
       expect(response.headers['content-length']).toEqual(['0']);

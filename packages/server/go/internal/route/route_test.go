@@ -17,6 +17,7 @@ type routingFixture struct {
 		MethodNotAllowed []refusal  `json:"methodNotAllowed"`
 		NotFound         []request  `json:"notFound"`
 		EncodedNUL       []request  `json:"encodedNul"`
+		RawNonASCII      []string   `json:"rawNonAscii"`
 		NotRefused       []routedAs `json:"notRefused"`
 	} `json:"healthHost"`
 	CollabHost struct {
@@ -95,6 +96,14 @@ type answer struct {
 	status int
 	header http.Header
 	body   string
+}
+
+func fixtureRequests(paths []string) []request {
+	requests := make([]request, len(paths))
+	for i, path := range paths {
+		requests[i] = request{"GET", path}
+	}
+	return requests
 }
 
 func serve(t *testing.T, router http.Handler, method, target string) answer {
@@ -249,6 +258,14 @@ func TestEncodedNULInThePathIsABadRequest(t *testing.T) {
 			got.header.Get("Connection") != "close" ||
 			got.header.Get("Content-Type") != "" {
 			t.Errorf("%s %s: %d %q %v", c.Method, c.Path, got.status, got.body, got.header)
+		}
+	}
+	// Kestrel refuses a raw byte of 0x80 or above anywhere in the target.
+	raw := append([]request{{"GET", "/sync/d\xff/state"}, {"GET", "/health?x=\x80"}}, fixtureRequests(fixture.HealthHost.RawNonASCII)...)
+	for _, c := range raw {
+		got := serve(t, router, c.Method, c.Path)
+		if got.status != 400 || got.body != "" || got.header.Get("Content-Length") != "0" || got.header.Get("Content-Type") != "" {
+			t.Errorf("%s %q: %d %q %v", c.Method, c.Path, got.status, got.body, got.header)
 		}
 	}
 	for _, c := range fixture.HealthHost.NotRefused {

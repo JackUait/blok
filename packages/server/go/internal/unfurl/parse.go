@@ -19,6 +19,8 @@ const maxOpenElementDepth = 512
 // Metadata is UnfurlMetadata. Empty fields are absent.
 type Metadata struct {
 	Title, Description, Image, Favicon, Domain string
+	// OEmbed is the first JSON oEmbed discovery link, resolved.
+	OEmbed string
 }
 
 // Parse reads body as UTF-8, whatever charset the page names.
@@ -27,13 +29,13 @@ func Parse(body []byte, finalURL string) Metadata {
 	if !ok || base.Host == "" {
 		base = nil
 	}
-	var title, ogTitle, twitterTitle, ogDescription, twitterDescription, description, ogImage, twitterImage, icon, appleIcon string
+	var title, ogTitle, twitterTitle, ogDescription, twitterDescription, description, ogImage, twitterImage, icon, appleIcon, oEmbed string
 	// .NET decodes invalid UTF-8 to U+FFFD, one per maximal bad sequence.
 	text := jsjson.FromString(string(body)).String()
 	// AngleSharp parses with scripting off, so <noscript> holds markup.
 	document, err := html.ParseWithOptions(strings.NewReader(text), html.ParseOptionEnableScripting(false))
 	if err != nil {
-		return build(base, "", "", "", "")
+		return build(base, "", "", "", "", "")
 	}
 	type frame struct {
 		node  *html.Node
@@ -48,7 +50,7 @@ func Parse(body []byte, finalURL string) Metadata {
 		node := top.node
 		if node.Type == html.ElementNode {
 			if top.depth > maxOpenElementDepth {
-				return build(base, "", "", "", "")
+				return build(base, "", "", "", "", "")
 			}
 			tag := node.Data
 			if top.sel.drops() {
@@ -89,6 +91,10 @@ func Parse(body []byte, finalURL string) Metadata {
 				}
 				for _, relation := range strings.FieldsFunc(attribute(node, "rel"), unicode.IsSpace) {
 					relation = asciiLower(relation)
+					// oEmbed JSON discovery only; XML discovery is ignored.
+					if relation == "alternate" && asciiLower(attribute(node, "type")) == "application/json+oembed" {
+						keepFirst(&oEmbed, href)
+					}
 					if relation == "icon" {
 						keepFirst(&icon, href)
 					} else if strings.HasPrefix(relation, "apple-touch-icon") {
@@ -123,7 +129,7 @@ func Parse(body []byte, finalURL string) Metadata {
 		firstNonEmpty(ogTitle, twitterTitle, title),
 		firstNonEmpty(ogDescription, twitterDescription, description),
 		firstNonEmpty(ogImage, twitterImage),
-		firstNonEmpty(icon, appleIcon))
+		firstNonEmpty(icon, appleIcon), oEmbed)
 }
 
 // selectState stands in for AngleSharp 1.9.0's "in select" mode, which x/net
@@ -152,7 +158,7 @@ func asciiLower(s string) string {
 	return string(b)
 }
 
-func build(base *dotnet.URI, title, description, image, favicon string) Metadata {
+func build(base *dotnet.URI, title, description, image, favicon, oEmbed string) Metadata {
 	domain := ""
 	if base != nil {
 		domain = strings.TrimPrefix(strings.ToLower(base.IdnHost), "www.")
@@ -166,6 +172,7 @@ func build(base *dotnet.URI, title, description, image, favicon string) Metadata
 		Image:       resolveURL(base, image),
 		Favicon:     resolveURL(base, favicon),
 		Domain:      domain,
+		OEmbed:      resolveURL(base, oEmbed),
 	}
 }
 

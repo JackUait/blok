@@ -26,6 +26,7 @@ internal static class UnfurlMetadataParser
     var twitterImage = "";
     var iconHref = "";
     var appleIconHref = "";
+    var oEmbedHref = "";
 
     try
     {
@@ -95,6 +96,16 @@ internal static class UnfurlMetadataParser
                                StringSplitOptions.RemoveEmptyEntries))
               {
                 var normalized = relation.ToLowerInvariant();
+                // oEmbed JSON discovery only; XML discovery is ignored.
+                // ToLowerInvariant, not OrdinalIgnoreCase: U+0131 must not
+                // match "i", as Go's ASCII lowering does not.
+                var type = Attribute(element, "type").ToLowerInvariant();
+                if (normalized == "alternate" &&
+                    string.Equals(type, "application/json+oembed", StringComparison.Ordinal))
+                {
+                  KeepFirst(ref oEmbedHref, href);
+                }
+
                 if (normalized == "icon")
                 {
                   KeepFirst(ref iconHref, href);
@@ -137,7 +148,8 @@ internal static class UnfurlMetadataParser
             twitterImage),
         FirstNonEmpty(
             iconHref,
-            appleIconHref));
+            appleIconHref),
+        oEmbedHref);
   }
 
   private static UnfurlMetadata Build(
@@ -145,7 +157,8 @@ internal static class UnfurlMetadataParser
       string title = "",
       string description = "",
       string image = "",
-      string favicon = "")
+      string favicon = "",
+      string oEmbed = "")
   {
     var domain = "";
     if (baseUrl is not null)
@@ -167,7 +180,8 @@ internal static class UnfurlMetadataParser
         description,
         ResolveUrl(baseUrl, image),
         ResolveUrl(baseUrl, favicon),
-        domain);
+        domain,
+        ResolveUrl(baseUrl, oEmbed));
   }
 
   private static Uri? TryParseBaseUrl(string value)

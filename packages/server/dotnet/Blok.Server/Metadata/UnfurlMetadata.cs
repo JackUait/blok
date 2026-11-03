@@ -5,4 +5,5 @@ internal sealed record UnfurlMetadata(
     string Description,
     string Image,
     string Favicon,
-    string Domain);
+    string Domain,
+    string OEmbed = "");

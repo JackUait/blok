@@ -37,6 +37,7 @@ public sealed class UnfurlHtmlFixtureTests
             ["image"] = metadata.Image,
             ["favicon"] = metadata.Favicon,
             ["domain"] = metadata.Domain,
+            ["oembed"] = metadata.OEmbed,
           };
         })
         .ToArray());

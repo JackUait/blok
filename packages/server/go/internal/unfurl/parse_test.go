@@ -29,6 +29,7 @@ func TestParseMatchesTheCSharpParser(t *testing.T) {
 			Image       string `json:"image"`
 			Favicon     string `json:"favicon"`
 			Domain      string `json:"domain"`
+			OEmbed      string `json:"oembed"`
 		} `json:"answers"`
 	}
 	if err := json.Unmarshal(raw, &f); err != nil {
@@ -46,7 +47,7 @@ func TestParseMatchesTheCSharpParser(t *testing.T) {
 		}
 		want := f.Answers[i]
 		got := Parse(body, c.URL)
-		if got != (Metadata{want.Title, want.Description, want.Image, want.Favicon, want.Domain}) {
+		if got != (Metadata{want.Title, want.Description, want.Image, want.Favicon, want.Domain, want.OEmbed}) {
 			t.Errorf("%s:\n got %+v\nwant %+v", c.Name, got, want)
 		}
 	}

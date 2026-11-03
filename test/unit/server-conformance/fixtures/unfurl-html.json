@@ -834,6 +834,51 @@
       "name": "domain 16",
       "url": "https://www.xn--bcher-kva.example/x",
       "html": "<title>d</title>"
+    },
+    {
+      "name": "oembed discovery",
+      "url": "https://example.com/watch?v=1",
+      "html": "<html><head><link rel=\"alternate\" type=\"application/json+oembed\" href=\"/oembed?url=x&amp;format=json\"></head></html>"
+    },
+    {
+      "name": "oembed discovery takes the first link",
+      "url": "https://example.com/a",
+      "html": "<head><link rel=\"alternate\" type=\"application/json+oembed\" href=\"https://one.example/o.json\"><link rel=\"alternate\" type=\"application/json+oembed\" href=\"https://two.example/o.json\"></head>"
+    },
+    {
+      "name": "oembed type and rel in upper case",
+      "url": "https://example.com/a",
+      "html": "<head><link rel=\"ALTERNATE nofollow\" type=\"Application/JSON+oEmbed\" href=\"/o.json\"></head>"
+    },
+    {
+      "name": "oembed xml discovery is ignored",
+      "url": "https://example.com/a",
+      "html": "<head><link rel=\"alternate\" type=\"text/xml+oembed\" href=\"/o.xml\"></head>"
+    },
+    {
+      "name": "oembed link without rel alternate",
+      "url": "https://example.com/a",
+      "html": "<head><link type=\"application/json+oembed\" href=\"/o.json\"></head>"
+    },
+    {
+      "name": "oembed link with a javascript href",
+      "url": "https://example.com/a",
+      "html": "<head><link rel=\"alternate\" type=\"application/json+oembed\" href=\"javascript:alert(1)\"></head>"
+    },
+    {
+      "name": "oembed link in the body",
+      "url": "https://example.com/a",
+      "html": "<body><p>x</p><link rel=\"alternate\" type=\"application/json+oembed\" href=\"/late.json\"></body>"
+    },
+    {
+      "name": "oembed link without href",
+      "url": "https://example.com/a",
+      "html": "<head><link rel=\"alternate\" type=\"application/json+oembed\"></head>"
+    },
+    {
+      "name": "oembed link with spaces around the type",
+      "url": "https://example.com/a",
+      "html": "<head><link rel=\"alternate\" type=\" application/json+oembed \" href=\"/o.json\"></head>"
     }
   ],
   "answers": [
@@ -842,1169 +887,1408 @@
       "description": "Plain description",
       "image": "https://example.com/img/cover.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Only Title",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Twitter Title",
       "description": "Twitter description",
       "image": "https://example.com/og.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Real Page",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Real Page",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "After",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Inside",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://cdn.example.com/i.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "http://cdn.example.com/i.png",
       "favicon": "http://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/real.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/real.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/apple.png",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/pre.png",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/tab.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/nbsp.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/trimmed.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/a%20b.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/first.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/later.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/svg.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/up.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://cdn.example.com/abs.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Unclosed",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Real",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Real",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Boundary Title",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Inner",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Boundary Title",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Inner",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Boundary Title",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Span",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Bold",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Svg",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Span",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Bold",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "P",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "Still Parsed",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "Still Parsed",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "Still Parsed",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "Still Parsed",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "Still Parsed",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://cdn.example.com/i.png",
       "favicon": "http://cdn.example.com/icon.ico",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "Real Title",
       "description": "Real description",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "A & B",
       "description": "D & E",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/article/image.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "�(",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a��b",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a���b",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a�",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "�z",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "caf�",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "bom",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a�b",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a\nb\nc",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "A <b>B</b>",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "X",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "X",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "​X",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "<tag> © ¬it; � �",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "In Body",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "svg meta",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "noscript",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "body noscript",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "table",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "tab\there",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "wide",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "lower",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/t.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "both",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "T",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "<![CDATA[x]]>",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "a&b",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "x",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/img.png?a=1#frag",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/x?q=1",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/x#top",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "http://[::1]/i.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://user:pw@cdn.example.com/i.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://cdn.example.com/I.PNG",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://bücher.example/i.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/caf%C3%A9.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "https://example.com/%25zz.png",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "option",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "after",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "textarea closes",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "input closes",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "keygen closes",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "og",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "second select",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "svg template",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "outside",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "",
       "description": "",
       "image": "",
       "favicon": "https://example.com/ns.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://www.example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://bücher.example/favicon.ico",
-      "domain": "xn--bcher-kva.example"
+      "domain": "xn--bcher-kva.example",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://www.www.example.com/favicon.ico",
-      "domain": "www.example.com"
+      "domain": "www.example.com",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://www./favicon.ico",
-      "domain": ""
+      "domain": "",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "http://127.0.0.1:8080/favicon.ico",
-      "domain": "127.0.0.1"
+      "domain": "127.0.0.1",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "http://[::1]/favicon.ico",
-      "domain": "::1"
+      "domain": "::1",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "http://[2001:db8::1]/favicon.ico",
-      "domain": "2001:db8::1"
+      "domain": "2001:db8::1",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "http://www/favicon.ico",
-      "domain": "www"
+      "domain": "www",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://xn--bcher-kva.example/favicon.ico",
-      "domain": "xn--bcher-kva.example"
+      "domain": "xn--bcher-kva.example",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://ΕΛΛΗΝΙΚΆ.example/favicon.ico",
-      "domain": "xn--hxargifdar.example"
+      "domain": "xn--hxargifdar.example",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://example.com./favicon.ico",
-      "domain": "example.com."
+      "domain": "example.com.",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://user:pw@www.example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://www.bücher.example/favicon.ico",
-      "domain": "xn--bcher-kva.example"
+      "domain": "xn--bcher-kva.example",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "http://localhost/favicon.ico",
-      "domain": "localhost"
+      "domain": "localhost",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://example.com/favicon.ico",
-      "domain": "example.com"
+      "domain": "example.com",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "http://127.0.0.1/favicon.ico",
-      "domain": "127.0.0.1"
+      "domain": "127.0.0.1",
+      "oembed": ""
     },
     {
       "title": "d",
       "description": "",
       "image": "",
       "favicon": "https://www.xn--bcher-kva.example/favicon.ico",
-      "domain": "xn--bcher-kva.example"
+      "domain": "xn--bcher-kva.example",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": "https://example.com/oembed?url=x&format=json"
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": "https://one.example/o.json"
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": "https://example.com/o.json"
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": "https://example.com/late.json"
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": "https://example.com/o.json"
     }
   ]
 }

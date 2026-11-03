@@ -14,8 +14,16 @@ export interface FrameCheckOptions {
   headers?: Record<string, string> | (() => Promise<Record<string, string>>);
 }
 
+// A same-origin GET sends no Origin header, so the page names its own origin.
+// The server trusts it only for a same-origin request or an allowed origin.
+const embedderQuery = (): string => {
+  const origin: unknown = globalThis.location?.origin;
+
+  return typeof origin === 'string' && origin !== 'null' ? `&embedder=${encodeURIComponent(origin)}` : '';
+};
+
 /**
- * A `linkPaste.checkEmbed` that asks Blok's server: `GET <endpoint>?url=<url>`,
+ * A `linkPaste.checkEmbed` that asks Blok's server: `GET <endpoint>?url=<url>&embedder=<page origin>`,
  * answering `{ verdict, link, oembed }`. Only `verdict` is used. Any failure
  * answers `unknown`, which lets the embed go ahead.
  */
@@ -23,7 +31,7 @@ export function createFrameCheck(options: FrameCheckOptions): CheckEmbed {
   return async (url) => {
     try {
       const headers = typeof options.headers === 'function' ? await options.headers() : options.headers;
-      const response = await fetch(`${options.endpoint}?url=${encodeURIComponent(url)}`, { headers });
+      const response = await fetch(`${options.endpoint}?url=${encodeURIComponent(url)}${embedderQuery()}`, { headers });
 
       if (!response.ok) {
         return { verdict: 'unknown' };

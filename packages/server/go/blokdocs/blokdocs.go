@@ -80,6 +80,15 @@ func New(options Options) (*Converter, error) {
 	return converter, nil
 }
 
+// Runtime runs one bundle operation; blokserver's shared engine pool is one.
+type Runtime interface {
+	Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error)
+}
+
+// NewOnRuntime builds a converter over an engine pool the caller holds, as
+// C#'s BlokDocumentConverter takes the registered IBlokRuntime.
+func NewOnRuntime(runtime Runtime) *Converter { return newConverter(runtime) }
+
 func newConverter(runtime invoker) *Converter {
 	return &Converter{runtime: runtime}
 }

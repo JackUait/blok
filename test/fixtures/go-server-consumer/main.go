@@ -22,19 +22,19 @@ func main() {
 	listen := flag.String("listen", "127.0.0.1:4000", "address to listen on")
 	flag.Parse()
 
-	if err := convertOnce(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
 	options := blokserver.DefaultOptions()
 	options.AllowedOrigins = []string{"https://app.example.test"}
 	options.UnfurlEnabled = true
 	options.Version = "package-fixture"
 	options.CollabActivityObserver = lastSeen{}
 	options.CollabOperationStore = elsewhere{}
+	options.Documents.PoolSize = 1
 	server, err := blokserver.New(options)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if err := convertOnce(server.DocumentConverter()); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -47,12 +47,9 @@ func main() {
 	}
 }
 
-// convertOnce proves the embedded document runtime loads in a consumer build.
-func convertOnce() error {
-	converter, err := blokdocs.New(blokdocs.Options{PoolSize: 1})
-	if err != nil {
-		return err
-	}
+// convertOnce proves the embedded document runtime loads in a consumer build,
+// on the engine pool the server's rooms and agent share.
+func convertOnce(converter *blokdocs.Converter) error {
 	const document = `{"blocks":[{"id":"p1","type":"paragraph","data":{"text":"Ships <b>today</b>"}}]}`
 	converted, err := converter.ToMarkdown(context.Background(), document)
 	if err != nil {

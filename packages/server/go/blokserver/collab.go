@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/blokagent"
+	"github.com/JackUait/blok/packages/server/go/blokdocs"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
@@ -151,16 +152,17 @@ func richTextFieldEntries(fields map[string][]string) []convert.RichTextFieldEnt
 // agent call): C# registers the runtime but does not warm it for a
 // collaboration host.
 type lazyRuntime struct {
-	once sync.Once
-	pool *jsruntime.Pool
-	err  error
+	options jsruntime.Options
+	once    sync.Once
+	pool    *jsruntime.Pool
+	err     error
 }
 
 // newCollabRuntime is a variable so a test can count the builds.
-var newCollabRuntime = func() (*jsruntime.Pool, error) { return jsruntime.NewPool(jsruntime.Options{}) }
+var newCollabRuntime = jsruntime.NewPool
 
 func (l *lazyRuntime) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
-	l.once.Do(func() { l.pool, l.err = newCollabRuntime() })
+	l.once.Do(func() { l.pool, l.err = newCollabRuntime(l.options) })
 	if l.err != nil {
 		return "", l.err
 	}
@@ -257,6 +259,14 @@ func (s *Server) warnOpenSyncRoutes(prefix string) {
 		`/sync/{doc}/reset, POST `+prefix+`/sync/{doc}/edit, GET `+prefix+`/sync/{doc}/state and `+strings.Join(history, ", ")+
 		` are open to anyone who can reach this app unless the host puts its own auth in front; set Options.Authorization or set Auth to "ticket"`,
 		slog.String("category", "Blok.Server.AspNetCore"))
+}
+
+// DocumentConverter is the server's IBlokDocumentConverter: one converter
+// over the engine pool AgentExecutor and the rooms use, as C# AddBlokServer
+// registers it. Nothing is built until the first conversion.
+func (s *Server) DocumentConverter() *blokdocs.Converter {
+	s.documentsOnce.Do(func() { s.documents = blokdocs.NewOnRuntime(s.runtime) })
+	return s.documents
 }
 
 // AgentExecutor is the server's IBlokAgentExecutor: one executor over the

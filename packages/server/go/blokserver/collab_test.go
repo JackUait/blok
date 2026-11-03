@@ -205,7 +205,7 @@ func TestAPurgedDocumentAnswersForbiddenOnEveryDoor(t *testing.T) {
 func TestTheCollabRuntimeIsBuiltOnlyOnTheFirstHTMLRead(t *testing.T) {
 	builds := 0
 	previous := newCollabRuntime
-	newCollabRuntime = func() (*jsruntime.Pool, error) {
+	newCollabRuntime = func(jsruntime.Options) (*jsruntime.Pool, error) {
 		builds++
 		return nil, errors.New("no engine in this test")
 	}

@@ -13,9 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/blokdocs"
 	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
 )
 
 // MinimumSecretLength is the shortest ticket secret, in UTF-16 code units.
@@ -71,6 +73,11 @@ type Options struct {
 
 	// RichTextFields lists custom tools' rich text fields by block type.
 	RichTextFields map[string][]string
+
+	// Documents sizes the one engine pool DocumentConverter, AgentExecutor
+	// and the rooms share, as a host's own AddBlokDocuments call does in C#.
+	// Zero values take the defaults; WarmUp is off, as AddBlokServer leaves it.
+	Documents blokdocs.Options
 
 	// Authorization narrows document access. Nil allows what the ticket
 	// allows.
@@ -150,6 +157,14 @@ func (o *Options) validate() (string, error) {
 	}
 	if o.RateLimitPerMinute < 0 {
 		return fail("--rate-limit must be zero or greater (got %d)", o.RateLimitPerMinute)
+	}
+	// C# AddBlokDocuments refuses these in the call, not at the first
+	// conversion.
+	if err := jsruntime.ValidateConstraints(o.Documents.Timeout, o.Documents.MemoryBudget); err != nil {
+		return "", err
+	}
+	if o.Documents.PoolSize < 0 {
+		return "", &blokdocs.ConstraintError{Param: "PoolSize", Value: fmt.Sprint(o.Documents.PoolSize), Floor: "1"}
 	}
 	if err := o.validateCollab(); err != nil {
 		return "", err

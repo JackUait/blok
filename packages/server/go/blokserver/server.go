@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/blokagent"
+	"github.com/JackUait/blok/packages/server/go/blokdocs"
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
 	"github.com/JackUait/blok/packages/server/go/internal/blob"
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
@@ -17,6 +18,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
 	"github.com/JackUait/blok/packages/server/go/internal/outbound"
 	"github.com/JackUait/blok/packages/server/go/internal/route"
 	"github.com/JackUait/blok/packages/server/go/internal/ticket"
@@ -39,7 +41,11 @@ type Server struct {
 	collab *collabRooms
 	// runtime is the engine pool the rooms and the agent share, built on
 	// first use.
-	runtime            *lazyRuntime
+	runtime       *lazyRuntime
+	documentsOnce sync.Once
+	documents     *blokdocs.Converter
+	// warmed closes when the warm-up New started has finished.
+	warmed             <-chan struct{}
 	agentOnce          sync.Once
 	agent              *blokagent.Executor
 	agentErr           error
@@ -71,7 +77,22 @@ func New(o Options) (*Server, error) {
 		publicPath: publicPath,
 		clock:      clock,
 		fetcher:    outbound.NewFetcher(outbound.DefaultPolicy{}),
-		runtime:    &lazyRuntime{},
+		runtime: &lazyRuntime{options: jsruntime.Options{
+			PoolSize:     o.Documents.PoolSize,
+			Timeout:      o.Documents.Timeout,
+			MemoryBudget: o.Documents.MemoryBudget,
+		}},
+	}
+	if o.Documents.WarmUp {
+		// In the background, as C#'s BlokDocumentWarmUp: a failed or slow
+		// warm-up never fails or delays New.
+		done := make(chan struct{})
+		s.warmed = done
+		converter := s.DocumentConverter()
+		go func() {
+			defer close(done)
+			_ = converter.WarmUp(context.Background())
+		}()
 	}
 	s.limiter = newRateLimiter(o.RateLimitPerMinute, func() time.Time { return s.clock() })
 	s.connections = synchttp.NewConnectionTable(o.CollabMaxConnections, o.CollabMaxConnectionsPerUserPerDoc)

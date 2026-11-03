@@ -19,9 +19,9 @@ import (
 func TestTheAgentExecutorEditsTheServersOwnRoomsOnOneEnginePool(t *testing.T) {
 	builds := 0
 	previous := newCollabRuntime
-	newCollabRuntime = func() (*jsruntime.Pool, error) {
+	newCollabRuntime = func(o jsruntime.Options) (*jsruntime.Pool, error) {
 		builds++
-		return previous()
+		return previous(o)
 	}
 	t.Cleanup(func() { newCollabRuntime = previous })
 	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -313,10 +313,9 @@ export class Embed implements BlockTool {
       return { match };
     }
 
-    // Generic embeds must be https: the render path refuses anything else,
-    // so rejecting here surfaces the error at input time instead of silently
-    // rendering an empty block.
-    if (this.genericPolicy().allowGeneric && isHttpsUrl(url)) {
+    // Same rule as render, so the input never accepts a URL that then
+    // renders as a link card or an empty block.
+    if (canFrameGeneric(url, this.genericPolicy())) {
       return { match: null };
     }
 

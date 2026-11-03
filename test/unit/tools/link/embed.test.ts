@@ -1821,3 +1821,45 @@ describe('Embed — a generic embed frames, checks and labels one URL', () => {
     expect(root.innerHTML).not.toContain('dash.internal.example');
   });
 });
+
+describe('Embed — the URL input follows the same generic-embed rules as render', () => {
+  it('accepts a URL on an allowlisted origin without the generic flag', () => {
+    const tool = new Embed(createOptions({}, { allowedEmbedOrigins: ['dashboard.example.com'] }));
+    const root = tool.render();
+
+    tool.onPaste(patternEvent('embed', 'https://dashboard.example.com/widget/42'));
+
+    expect(tool.save()).toMatchObject({ service: '', source: 'https://dashboard.example.com/widget/42' });
+    expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://dashboard.example.com/widget/42');
+  });
+
+  // The paste menu offers "Embed" for an allowlisted origin; submit must keep the URL.
+  it('saves a pasted URL on an allowlisted origin in both fields', () => {
+    const tool = new Embed(createOptions({}, { allowedEmbedOrigins: ['dash.example.org'] }));
+    const root = tool.render();
+
+    tool.onPaste(patternEvent('embed', 'https://dash.example.org/x'));
+
+    expect(tool.save()).toMatchObject({ service: '', source: 'https://dash.example.org/x', embed: 'https://dash.example.org/x' });
+    expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://dash.example.org/x');
+  });
+
+  it.each([
+    ['an origin missing from the allowlist', 'https://other.example.com/x'],
+    ['an http URL on an allowlisted origin', 'http://dashboard.example.com/widget/42'],
+  ])('refuses %s', (_name, url) => {
+    const tool = new Embed(createOptions({}, { allowedEmbedOrigins: ['dashboard.example.com'] }));
+
+    tool.onPaste(patternEvent('embed', url));
+
+    expect(tool.save().source).toBe('');
+  });
+
+  it('refuses the page\'s own site even with the generic flag', () => {
+    const tool = new Embed(createOptions({}, { allowGenericEmbed: true }));
+
+    tool.onPaste(patternEvent('embed', `https://${window.location.hostname}/settings`));
+
+    expect(tool.save().source).toBe('');
+  });
+});

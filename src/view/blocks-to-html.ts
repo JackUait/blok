@@ -481,9 +481,10 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     frameSrc: (value, blockType) => {
       const attr = env.url('src', value, blockType);
 
-      // The page origin is unknown here, so only the scheme is checked: a
-      // rewritten frame src must stay absolute https.
-      return /^ src="https:/i.test(attr) ? attr : '';
+      // The page origin is unknown here (and Jint has no URL), so the src
+      // must start with `https://` and a host. `https:/x` or `https:x` would
+      // resolve against the page and frame it same-origin.
+      return /^ src="https:\/\/[a-z0-9[\u0080-\uffff]/i.test(attr) ? attr : '';
     },
     pageHrefAttr: (pageId, blockType) => (
       pageHref === undefined || typeof pageId !== 'string' || pageId === ''

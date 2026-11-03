@@ -537,6 +537,12 @@ describe('blocksToHtml', () => {
       ['relative', '/proxy?u=x'],
       ['protocol-relative', '//proxy.test/x'],
       ['javascript', 'javascript:alert(1)'],
+      // These resolve against the page, so the frame would be same-origin with it.
+      ['https: with one slash', 'https:/proxy?u=x'],
+      ['https: with no slash', 'https:proxy.test/x'],
+      ['https: with a backslash', 'https:\\proxy'],
+      ['https:// with no host', 'https:///proxy'],
+      ['https:// with an empty host', 'https://?u=x'],
     ])('falls back to the source link when transformUrl makes the iframe src %s', (_, rewritten) => {
       const html = blocksToHtml(
         doc([{ type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/x', embed: 'https://www.youtube.com/embed/x' } }]),

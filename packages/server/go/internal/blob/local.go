@@ -12,6 +12,9 @@ import (
 	"strings"
 )
 
+// link is a seam for tests.
+var link = os.Link
+
 // Local is LocalBlobStore: files in one directory, served under PublicURL.
 type Local struct {
 	Directory string
@@ -55,12 +58,23 @@ func (l *Local) Put(ctx context.Context, extension, _ string, content io.Reader)
 	if err := file.Close(); err != nil {
 		return "", err
 	}
-	// File.Move refuses to overwrite; a hard link does too.
-	if err := os.Link(temporaryPath, finalPath); err != nil {
+	// File.Move refuses to overwrite; a hard link does too. Where linking
+	// fails (FAT, some network mounts) File.Move still succeeds, so fall
+	// back to a rename after checking the key is free.
+	if err := link(temporaryPath, finalPath); err == nil {
+		committed = true
+		_ = os.Remove(temporaryPath)
+	} else if errors.Is(err, fs.ErrExist) {
 		return "", err
+	} else {
+		if _, statErr := os.Lstat(finalPath); !errors.Is(statErr, fs.ErrNotExist) {
+			return "", &fs.PathError{Op: "move", Path: finalPath, Err: fs.ErrExist}
+		}
+		if err := os.Rename(temporaryPath, finalPath); err != nil {
+			return "", err
+		}
+		committed = true
 	}
-	committed = true
-	_ = os.Remove(temporaryPath)
 	return strings.TrimRight(l.PublicURL, "/") + "/" + key, nil
 }
 

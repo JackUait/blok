@@ -3,6 +3,7 @@ package collabhttp
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
@@ -12,6 +13,7 @@ import (
 	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
 	"github.com/JackUait/blok/packages/server/go/internal/route"
 )
@@ -376,8 +378,10 @@ func historyLineage(w http.ResponseWriter, r *http.Request) (string, bool) {
 	return lineage, true
 }
 
-// parseUnsigned is ulong.TryParse with NumberStyles.None: digits only.
+// parseUnsigned is ulong.TryParse with NumberStyles.None: digits only, but
+// .NET also skips any NULs after the last digit ("1\x00" is 1).
 func parseUnsigned(digits string) (uint64, bool) {
+	digits = strings.TrimRight(digits, "\x00")
 	if !isDigits(digits) {
 		return 0, false
 	}
@@ -386,9 +390,10 @@ func parseUnsigned(digits string) (uint64, bool) {
 }
 
 // queryNumber: absent is nil; a repeated, empty or signed value is false.
+// The query is read the ASP.NET way, not with net/url.
 func queryNumber(r *http.Request, name string) (*uint64, bool) {
-	values, present := r.URL.Query()[name]
-	if !present {
+	values := dotnet.QueryAll(r.URL.RawQuery, name)
+	if len(values) == 0 {
 		return nil, true
 	}
 	if len(values) != 1 {

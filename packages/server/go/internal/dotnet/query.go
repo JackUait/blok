@@ -9,6 +9,16 @@ import "strings"
 // rawQuery is the text after the first '?', which is QueryString with its
 // one leading '?' already stripped.
 func QueryFirst(rawQuery, key string) string {
+	if values := QueryAll(rawQuery, key); len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}
+
+// QueryAll is every value HttpRequest.Query[key] holds, in order, parsed as
+// QueryFirst says. Names that differ only in ASCII case share one list.
+func QueryAll(rawQuery, key string) []string {
+	var values []string
 	for rawQuery != "" {
 		pair := rawQuery
 		if i := strings.IndexByte(rawQuery, '&'); i >= 0 {
@@ -23,10 +33,10 @@ func QueryFirst(rawQuery, key string) string {
 			continue
 		}
 		if asciiEqualFold(decodeQueryPart(name), key) {
-			return decodeQueryPart(value)
+			values = append(values, decodeQueryPart(value))
 		}
 	}
-	return ""
+	return values
 }
 
 func decodeQueryPart(s string) string {

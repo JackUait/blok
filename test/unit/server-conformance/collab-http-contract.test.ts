@@ -356,6 +356,23 @@ suite('collab HTTP routes on a journal', () => {
       expect([answer.status, answer.body]).toEqual([400, 'group must be 1, 15 or 60\n']);
     });
 
+    // ASP.NET's query: '&' splits pairs (';' is data), names match ignoring
+    // case, a bad escape stays as written, and ulong.TryParse takes trailing NULs.
+    it.each(['GROUP=7', 'group=1&Group=15', 'group=1;x=1', 'group=%zz', 'group=1%00x'])(
+      'reads the group query like ASP.NET: refuses ?%s',
+      async (query) => {
+        const answer = await send(base, 'GET', `/sync/doc-history/history?${query}`);
+
+        expect([answer.status, answer.body]).toEqual([400, 'group must be 1, 15 or 60\n']);
+      },
+    );
+
+    it.each(['GROUP=15', 'group=%31', 'group=1%00', 'group=60%00%00'])('reads the group query like ASP.NET: accepts ?%s', async (query) => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history?${query}`);
+
+      expect(answer.status).toBe(200);
+    });
+
     it('reads one point with its own time and the history head', async () => {
       const answer = await send(base, 'GET', `/sync/doc-history/history/${lineage}/1`, [['Origin', ALLOWED_ORIGIN]]);
       const body = JSON.parse(answer.body) as { time: number };
@@ -404,6 +421,25 @@ suite('collab HTTP routes on a journal', () => {
       const answer = await send(base, 'GET', `/sync/doc-history/history/${lineage}/1/changes?since=2`);
 
       expect([answer.status, answer.body]).toEqual([400, 'since must be a whole number no greater than the sequence\n']);
+    });
+
+    it('answers an empty window when since is the sequence itself', async () => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/${lineage}/3/changes?since=3`);
+
+      expect([answer.status, answer.body]).toEqual([200, '{"changes":[]}']);
+    });
+
+    it.each(['SINCE=5', 'since=0;x', 'since=0&Since=0', 'since=%zz'])('reads the since query like ASP.NET: refuses ?%s', async (query) => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/${lineage}/1/changes?${query}`);
+
+      expect([answer.status, answer.body]).toEqual([400, 'since must be a whole number no greater than the sequence\n']);
+    });
+
+    it.each(['SINCE=1', 'since=1%00'])('reads the since query like ASP.NET: accepts ?%s', async (query) => {
+      const answer = await send(base, 'GET', `/sync/doc-history/history/${lineage}/3/changes?${query}`);
+      const body = JSON.parse(answer.body) as { changes: { sequence: number }[] };
+
+      expect([answer.status, body.changes.map((change) => change.sequence)]).toEqual([200, [2, 3]]);
     });
 
     it('restores a point as one journalled edit, needs the key, and dedupes a retry', async () => {

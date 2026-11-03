@@ -64,7 +64,10 @@
       "expect": {
         "ok": false,
         "code": "INVALID_ARGS",
-        "committed": 0
+        "committed": 0,
+        "result": {
+          "/error/path": "/commands/0/args/steps"
+        }
       }
     },
     {
@@ -84,7 +87,14 @@
       },
       "expect": {
         "ok": false,
-        "committed": 0
+        "code": "NOTHING_TO_UNDO",
+        "committed": 0,
+        "revision": "",
+        "state": {
+          "/blocks": {
+            "length": 3
+          }
+        }
       }
     }
   ]

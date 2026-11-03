@@ -2,11 +2,13 @@ package blokagent
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
 )
 
@@ -266,5 +268,49 @@ func TestARoomChangeBetweenTheRestoreCheckAndTheRestoreIsStale(t *testing.T) {
 	second, _ := stringOf(lookup(lookup(lookup(blocks.Items[1], "data"), "text").Items[0], "text"))
 	if first != "Changed" || second != "Peer" || r.head(t, "d") != afterPeer {
 		t.Fatalf("p %q q %q head %s, after the peer %s", first, second, r.head(t, "d"), afterPeer)
+	}
+}
+
+// H1/T9: an undo that pinned the head itself tries again, three times in
+// all, when a peer writes between its read and its lane; one that sent its
+// own expectRevision is never retried.
+func TestAnUndoRetriesItsOwnStaleHeadThreeTimes(t *testing.T) {
+	for _, row := range []struct {
+		name   string
+		writes int
+		expect bool
+		code   string
+		calls  int
+	}{
+		{"one peer write", 1, false, "", 2},
+		{"a peer write every time", 99, false, "STALE", 3},
+		{"the caller's own head", 99, true, "STALE", 1},
+	} {
+		t.Run(row.name, func(t *testing.T) {
+			r := newTestRoom(t, false, nil)
+			r.docs.hold("d", historySeed)
+			okIn(t, r, "d", insertBatch("a", "Agent"))
+			calls := 0
+			r.executor.beforeHistoryLane = func() {
+				calls++
+				if calls <= row.writes {
+					digest := make([]byte, 32)
+					edit, err := r.manager.Edit(context.Background(), "d", []convert.EditOp{
+						convert.Update{ID: "q", Data: mustParse(t, `{"text":"Peer `+strconv.Itoa(calls)+`"}`)},
+					}, newGUID(), digest, "human-2", nil)
+					if err != nil || edit.Status != room.EditApplied {
+						t.Fatalf("peer %v %v", edit.Status, err)
+					}
+				}
+			}
+			batch := undoBatch
+			if row.expect {
+				batch = `{"expectRevision":"` + r.head(t, "d") + `","commands":[{"name":"history.undo","args":{}}]}`
+			}
+			_, code := runIn(t, r, "d", batch, roomAgent)
+			if code != row.code || calls != row.calls {
+				t.Fatalf("code %q after %d tries, want %q after %d", code, calls, row.code, row.calls)
+			}
+		})
 	}
 }

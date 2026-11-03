@@ -90,6 +90,9 @@ func (e *Executor) runRoomHistoryOnce(ctx context.Context, docID string, undo bo
 		return failure("CONFLICT", lineageChanged, true, nil, "")
 	}
 
+	if e.beforeHistoryLane != nil {
+		e.beforeHistoryLane()
+	}
 	var step *roomStep
 	digest := sha256.Sum256([]byte("agent-" + verb + "\n" + actor.ID + "\n" + newGUID()))
 	edit, err := e.rooms.manager.AgentEdit(ctx, docID, func(ctx context.Context, doc *yjs.Doc) ([]convert.EditOp, error) {

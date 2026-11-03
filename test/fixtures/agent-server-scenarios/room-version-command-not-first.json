@@ -40,7 +40,11 @@
       },
       "expect": {
         "ok": false,
-        "committed": 0
+        "code": "INVALID_ARGS",
+        "committed": 0,
+        "result": {
+          "/error/path": "/commands/1/name"
+        }
       }
     }
   ]

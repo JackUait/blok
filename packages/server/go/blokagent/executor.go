@@ -20,6 +20,9 @@ type Executor struct {
 	runtime invoker
 	rooms   *Rooms
 	history *roomHistory
+	// beforeHistoryLane runs between an undo's head read and its room lane,
+	// for tests.
+	beforeHistoryLane func()
 }
 
 // FactoryOptions configure New. Zero values take the defaults, as in

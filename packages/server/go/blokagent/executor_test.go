@@ -29,38 +29,26 @@ func TestNewRefusesLimitsBelowTheirFloorsBeforeLoading(t *testing.T) {
 	}
 }
 
-type fakeRooms struct {
-	history bool
-	calls   []string
-}
-
-func (f *fakeRooms) ExecuteInRoom(_ context.Context, docID, batchJSON string, _ Actor, _ *Options) (Execution, error) {
-	f.calls = append(f.calls, docID+" "+batchJSON)
-	return Execution{ResultJSON: `{"ok":true}`, Revision: "lin:1"}, nil
-}
-
-func (f *fakeRooms) HasHistory() bool { return f.history }
-
-// The room seam: a Rooms runner takes ExecuteInRoom, and its history adds
-// versionHistory and restores to the room contract, as C# RoomCommon does
-// (BlokAgentExecutor.cs:1205-1219: services gets versionHistory last, then
-// restores after runtime).
-func TestRoomsPlugIntoExecuteInRoomAndTheRoomContract(t *testing.T) {
+// RoomCommon (BlokAgentExecutor.cs:1205-1219): rooms whose journal keeps
+// history add versionHistory last to services, then restores after
+// runtime. Rooms with no journal add neither.
+func TestARoomContractOffersTheHistoryOnlyWithAHistoryJournal(t *testing.T) {
 	ctx := context.Background()
-	runtime := &recordingRuntime{answer: `{"contract":{}}`}
-	rooms := &fakeRooms{history: true}
-	executor := newExecutor(runtime)
-	executor.rooms = rooms
-
-	execution, err := executor.ExecuteInRoom(ctx, "doc", `{"commands":[]}`, Actor{ID: "a", Name: "A"}, nil)
-	if err != nil || execution.Revision != "lin:1" || len(rooms.calls) != 1 || rooms.calls[0] != `doc {"commands":[]}` {
-		t.Fatalf("execution %+v, err %v, calls %v", execution, err, rooms.calls)
-	}
-	if _, err := executor.RoomContract(ctx, nil); err != nil {
-		t.Fatal(err)
-	}
-	if want := `{"services":["versionHistory"],"runtime":"csharp-live","restores":true}`; runtime.input != want {
-		t.Fatalf("room contract input %s, want %s", runtime.input, want)
+	for _, row := range []struct {
+		noJournal bool
+		want      string
+	}{
+		{false, `{"services":["versionHistory"],"runtime":"csharp-live","restores":true}`},
+		{true, `{"services":[],"runtime":"csharp-live"}`},
+	} {
+		runtime := &recordingRuntime{answer: `{"contract":{}}`}
+		rooms := newTestRoom(t, row.noJournal, func(invoker) invoker { return runtime })
+		if _, err := rooms.executor.RoomContract(ctx, nil); err != nil {
+			t.Fatal(err)
+		}
+		if runtime.input != row.want {
+			t.Fatalf("room contract input %s, want %s", runtime.input, row.want)
+		}
 	}
 }
 

@@ -188,3 +188,59 @@ func TestMatchesTheAgentCommandCorpus(t *testing.T) {
 		})
 	}
 }
+
+// The live-room Go runner over the same corpus, as C# RoomAgentParityTests:
+// a real room on the real converter and journal, the "room" expectation,
+// and the stored golden when the case succeeds everywhere.
+func TestMatchesTheAgentCommandCorpusInARoom(t *testing.T) {
+	loadRichFields(t)
+	corpus := loadCorpus(t)
+	if len(corpus) != 52 {
+		t.Fatalf("corpus has %d runnable cases, want 52", len(corpus))
+	}
+	onBehalfOf := "human-1"
+	actor := Actor{ID: "agent-test", Name: "Parity", OnBehalfOf: &onBehalfOf}
+	for _, c := range corpus {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			rooms := newTestRoom(t, false, nil)
+			seed, err := write(c.seed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			doc := "parity-" + newGUID()
+			rooms.docs.hold(doc, seed)
+			code := ""
+			for _, batch := range c.batches {
+				batchJSON, err := write(batch)
+				if err != nil {
+					t.Fatal(err)
+				}
+				execution, err := rooms.executor.ExecuteInRoom(ctx, doc, batchJSON, actor, nil)
+				if err != nil {
+					t.Fatalf("execute: %v", err)
+				}
+				result := mustParse(t, execution.ResultJSON)
+				if ok, _ := isTrue(result, "ok"); !ok {
+					code, _ = stringOf(lookup(lookup(result, "error"), "code"))
+					break
+				}
+			}
+			if want := expectedError(c, "room"); code != want {
+				t.Fatalf("error %q, want %q", code, want)
+			}
+			// Same gate as the stored runner: content only.
+			if code != "" || expectedError(c, "json") != "" {
+				return
+			}
+			want := golden(t, c.name)
+			if want == nil {
+				t.Fatal("no golden")
+			}
+			got := normalizeDocument(rooms.export(t, doc), callerChosenIDs(c))
+			if stable(t, got) != stable(t, want) {
+				t.Fatalf("document\n got %s\nwant %s", stable(t, got), stable(t, want))
+			}
+		})
+	}
+}

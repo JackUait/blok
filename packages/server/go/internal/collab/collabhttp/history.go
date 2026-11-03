@@ -3,7 +3,6 @@ package collabhttp
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
@@ -380,14 +379,7 @@ func historyLineage(w http.ResponseWriter, r *http.Request) (string, bool) {
 
 // parseUnsigned is ulong.TryParse with NumberStyles.None: digits only, but
 // .NET also skips any NULs after the last digit ("1\x00" is 1).
-func parseUnsigned(digits string) (uint64, bool) {
-	digits = strings.TrimRight(digits, "\x00")
-	if !isDigits(digits) {
-		return 0, false
-	}
-	value, err := strconv.ParseUint(digits, 10, 64)
-	return value, err == nil
-}
+func parseUnsigned(digits string) (uint64, bool) { return dotnet.ParseUInt64None(digits) }
 
 // queryNumber: absent is nil; a repeated, empty or signed value is false.
 // The query is read the ASP.NET way, not with net/url.

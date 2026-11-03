@@ -814,3 +814,7 @@ func isStr(v any) bool {
 	_, ok := v.(jsjson.Str)
 	return ok
 }
+
+// PlainJSON is C# RichText.ToJsonNode: a plain page map value as JSON,
+// keys in JS order and undefined members dropped.
+func PlainJSON(v any) (any, error) { return toJSONNode(v) }

@@ -429,3 +429,6 @@ func (m *Manager) forget(r *Room) {
 }
 
 var _ collab.Rooms = (*Manager)(nil)
+
+// Converter is the converter the rooms use, which the agent exports with.
+func (m *Manager) Converter() Converter { return m.converter }

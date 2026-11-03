@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
@@ -56,8 +57,9 @@ type EditResult struct {
 // PlanOps plans an edit against the live doc, inside the lane.
 type PlanOps func(ctx context.Context, doc *yjs.Doc) ([]convert.EditOp, error)
 
-// Applied runs in the lane after an edit lands.
-type Applied func(ctx context.Context, doc *yjs.Doc) error
+// Applied runs in the lane after an edit lands. receipt is the answer the
+// edit gets, nil in a room without a journal.
+type Applied func(ctx context.Context, doc *yjs.Doc, receipt *Receipt) error
 
 func refusalStatus(refusal *convert.EditError) EditStatus {
 	if convert.IsTooLarge(refusal.Err) {
@@ -170,7 +172,7 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 		}
 		r.markDirtyLocked()
 		if applied != nil {
-			if err := applied(r.lifetime, r.doc); err != nil {
+			if err := applied(r.lifetime, r.doc, nil); err != nil {
 				return nil, err
 			}
 		}
@@ -197,12 +199,13 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 	// An edit that changed nothing wrote no bytes: applied, nothing to append.
 	if len(r.localUpdates) == 0 && bytes.Equal(r.doc.EncodeStateVector(), stateBefore) {
 		r.updateEvictionLocked(-1)
+		receipt := &Receipt{r.tag, r.committedThrough}
 		if applied != nil {
-			if err := applied(r.lifetime, r.doc); err != nil {
+			if err := applied(r.lifetime, r.doc, receipt); err != nil {
 				return nil, err
 			}
 		}
-		return &EditResult{Status: EditApplied, Receipt: &Receipt{r.tag, r.committedThrough}}, nil
+		return &EditResult{Status: EditApplied, Receipt: receipt}, nil
 	}
 	// One update is what the append journals; anything else is bytes the
 	// journal would never see.
@@ -222,12 +225,13 @@ func (r *Room) editLocked(plan PlanOps, gateFrameSize bool, operationID string, 
 	r.schedulePersistLocked()
 	r.markDirtyLocked()
 	r.updateEvictionLocked(-1)
+	receipt := &Receipt{r.tag, sequence}
 	if applied != nil {
-		if err := applied(r.lifetime, r.doc); err != nil {
+		if err := applied(r.lifetime, r.doc, receipt); err != nil {
 			return nil, err
 		}
 	}
-	return &EditResult{Status: EditApplied, Receipt: &Receipt{r.tag, sequence}}, nil
+	return &EditResult{Status: EditApplied, Receipt: receipt}, nil
 }
 
 // fitsOneFrameLocked: the limit is the announced cap (1 MiB when none),
@@ -581,4 +585,14 @@ func (r *Room) drain(ctx context.Context) {
 	case <-ctx.Done():
 		r.logf(`collab: room "` + r.docID + `" abandoned its activity dispatch while draining: the drain was cancelled`)
 	}
+}
+
+// String is the C# CollabEditStatus name, which agent answers print.
+func (s EditStatus) String() string {
+	names := [...]string{"Applied", "Conflict", "Draining", "Invalid", "Overloaded", "TooLarge", "Purged",
+		"SeedFailed", "Unavailable", "PreconditionFailed", "PreconditionRequired"}
+	if int(s) < len(names) && s >= 0 {
+		return names[s]
+	}
+	return strconv.Itoa(int(s))
 }

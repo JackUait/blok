@@ -62,3 +62,11 @@ func fromRuntime(err error) error {
 	}
 	return err
 }
+
+// InvalidDataError is a runtime answer the room path cannot translate, as
+// C# InvalidDataException. The shipped bundle never gives one.
+type InvalidDataError struct{ Message string }
+
+func (e *InvalidDataError) Error() string { return e.Message }
+
+func invalidData(message string) error { return &InvalidDataError{Message: message} }

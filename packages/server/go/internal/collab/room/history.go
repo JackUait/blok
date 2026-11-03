@@ -462,3 +462,12 @@ func (m *Manager) Restore(ctx context.Context, docID, lineage string, sequence u
 }
 
 func itoa64(n uint64) string { return strconv.FormatUint(n, 10) }
+
+// String is the C# CollabHistoryStatus name, which agent answers print.
+func (s HistoryStatus) String() string {
+	names := [...]string{"Ready", "NoHistory", "NotFound", "Purged", "Unavailable", "ExportFailed", "Corrupt"}
+	if int(s) < len(names) && s >= 0 {
+		return names[s]
+	}
+	return strconv.Itoa(int(s))
+}

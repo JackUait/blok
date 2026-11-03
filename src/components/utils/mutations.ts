@@ -26,13 +26,17 @@ const isToolboxComboboxWrite = ({ type, attributeName, target }: MutationRecord)
 
 /**
  * Own technical mutations: data-blok-empty, data-blok-toggle-open, the Show
- * spotlight (utils/reveal-block.ts) and the toolbox's combobox attributes.
+ * spotlight (utils/reveal-block.ts), the placeholder attributes
+ * (utils/placeholder.ts; set on the editable host, which tools save by its
+ * innerHTML) and the toolbox's combobox attributes.
  */
 const isTechnicalMutation = (mutationRecord: MutationRecord): boolean => {
   if (mutationRecord.type === 'attributes' && (
     mutationRecord.attributeName === 'data-blok-empty'
     || mutationRecord.attributeName === 'data-blok-toggle-open'
     || mutationRecord.attributeName === DATA_ATTR.spotlight
+    || mutationRecord.attributeName === DATA_ATTR.placeholderActive
+    || mutationRecord.attributeName === 'data-blok-placeholder-visible'
   )) {
     return true;
   }
@@ -78,14 +82,19 @@ export const isMutationBelongsToElement = (mutationRecord: MutationRecord, eleme
 };
 
 /**
- * The records of one batch for every element they belong to, by the same rule
- * as {@link isMutationBelongsToElement}: the target and all its ancestors, plus
- * a node a childList record added or removed. One pass over the batch instead
- * of one per block.
+ * The records of one batch for each watched element they belong to, by the
+ * same rule as {@link isMutationBelongsToElement}: the target and all its
+ * ancestors, plus a node a childList record added or removed.
+ *
+ * Each node's watched ancestors are found once per batch and reused, so a
+ * batch costs one step per record plus one per distinct node.
  * @param mutations - one MutationObserver batch
+ * @param watched - the elements anyone will look up; others are skipped
  */
-export const groupMutationsByElement = (mutations: MutationRecord[]): Map<Node, MutationRecord[]> => {
+export const groupMutationsByElement = (mutations: MutationRecord[], watched: ReadonlySet<Node>): Map<Node, MutationRecord[]> => {
   const byElement = new Map<Node, MutationRecord[]>();
+  const none: Node[] = [];
+  const watchedAbove = new Map<Node, Node[]>();
   const add = (node: Node, mutationRecord: MutationRecord): void => {
     const list = byElement.get(node);
 
@@ -95,13 +104,30 @@ export const groupMutationsByElement = (mutations: MutationRecord[]): Map<Node, 
       list.push(mutationRecord);
     }
   };
-  const addWithAncestors = (node: Node | null, mutationRecord: MutationRecord): void => {
+  const watchedAtOrAbove = (node: Node | null): Node[] => {
     if (node === null) {
-      return;
+      return none;
     }
 
-    add(node, mutationRecord);
-    addWithAncestors(node.parentNode, mutationRecord);
+    const cached = watchedAbove.get(node);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const above = watchedAtOrAbove(node.parentNode);
+    const found = watched.has(node) ? [node, ...above] : above;
+
+    watchedAbove.set(node, found);
+
+    return found;
+  };
+  const addIfWatched = (nodes: NodeList, mutationRecord: MutationRecord): void => {
+    for (const node of nodes) {
+      if (watched.has(node)) {
+        add(node, mutationRecord);
+      }
+    }
   };
 
   for (const mutationRecord of mutations) {
@@ -109,13 +135,13 @@ export const groupMutationsByElement = (mutations: MutationRecord[]): Map<Node, 
       continue;
     }
 
-    const { type, target, addedNodes, removedNodes } = mutationRecord;
+    for (const element of watchedAtOrAbove(mutationRecord.target)) {
+      add(element, mutationRecord);
+    }
 
-    addWithAncestors(target, mutationRecord);
-
-    if (type === 'childList') {
-      Array.from(addedNodes).forEach(node => add(node, mutationRecord));
-      Array.from(removedNodes).forEach(node => add(node, mutationRecord));
+    if (mutationRecord.type === 'childList') {
+      addIfWatched(mutationRecord.addedNodes, mutationRecord);
+      addIfWatched(mutationRecord.removedNodes, mutationRecord);
     }
   }
 

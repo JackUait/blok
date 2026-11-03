@@ -3,24 +3,64 @@ import type { BlokEventMap } from '../events';
 import { RedactorDomChanged } from '../events';
 import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
 import type { EventsDispatcher } from '../utils/events';
-import { groupMutationsByElement } from '../utils/mutations';
+import { groupMutationsByElement, isMutationBelongsToElement } from '../utils/mutations';
+
+/**
+ * Tool element getters of the handlers watching each bus. Keyed by the bus so
+ * a dropped editor's blocks are not kept alive here.
+ */
+const watchedToolsByBus = new WeakMap<EventsDispatcher<BlokEventMap>, Set<() => HTMLElement | null>>();
 
 /**
  * Every block's handler receives the same batch array, so the batch is
- * grouped once and each block looks up its own records.
+ * grouped once, for the tool elements watched when the first handler ran.
  */
-const groupedBatches = new WeakMap<MutationRecord[], Map<Node, MutationRecord[]>>();
+const groupedBatches = new WeakMap<MutationRecord[], { watched: Set<Node>; grouped: Map<Node, MutationRecord[]> }>();
 
-const recordsOf = (mutations: MutationRecord[], toolElement: HTMLElement): MutationRecord[] => {
+const groupBatch = (mutations: MutationRecord[], bus: EventsDispatcher<BlokEventMap>): { watched: Set<Node>; grouped: Map<Node, MutationRecord[]> } => {
   const cached = groupedBatches.get(mutations);
-  const grouped = cached ?? groupMutationsByElement(mutations);
 
-  if (cached === undefined) {
-    groupedBatches.set(mutations, grouped);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const watched = new Set<Node>();
+
+  for (const getToolElement of watchedToolsByBus.get(bus) ?? []) {
+    const element = getToolElement();
+
+    if (element !== null) {
+      watched.add(element);
+    }
+  }
+
+  const batch = { watched, grouped: groupMutationsByElement(mutations, watched) };
+
+  groupedBatches.set(mutations, batch);
+
+  return batch;
+};
+
+const recordsOf = (mutations: MutationRecord[], toolElement: HTMLElement, bus: EventsDispatcher<BlokEventMap>): MutationRecord[] => {
+  const batch = groupBatch(mutations, bus);
+
+  // Swapped in by an earlier handler of this batch: the grouping never saw it.
+  if (!batch.watched.has(toolElement)) {
+    return mutations.filter(mutation => isMutationBelongsToElement(mutation, toolElement));
   }
 
   // A copy: the receiver owns the array it gets, as it did with filter().
-  return [...(grouped.get(toolElement) ?? [])];
+  return [...(batch.grouped.get(toolElement) ?? [])];
+};
+
+const includesNode = (list: NodeList, node: Node): boolean => {
+  for (const item of list) {
+    if (item === node) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**
@@ -72,22 +112,33 @@ export class MutationHandler {
       return;
     }
 
+    const bus = this.blokEventBus;
+
     this.redactorDomChangedCallback = (payload) => {
       const { mutations } = payload;
       const toolElement = this.getToolElement();
 
-      if (toolElement === null) {
+      if (toolElement === null || bus === null) {
         return;
       }
 
-      const blockMutations = recordsOf(mutations, toolElement);
+      const blockMutations = recordsOf(mutations, toolElement, bus);
 
       if (blockMutations.length > 0) {
         this.onMutation(blockMutations);
       }
     };
 
-    this.blokEventBus?.on(RedactorDomChanged, this.redactorDomChangedCallback);
+    if (bus === null) {
+      return;
+    }
+
+    bus.on(RedactorDomChanged, this.redactorDomChangedCallback);
+
+    const watched = watchedToolsByBus.get(bus) ?? new Set();
+
+    watched.add(this.getToolElement);
+    watchedToolsByBus.set(bus, watched);
   }
 
   /**
@@ -97,6 +148,9 @@ export class MutationHandler {
     if (this.redactorDomChangedCallback) {
       this.blokEventBus?.off(RedactorDomChanged, this.redactorDomChangedCallback);
       this.redactorDomChangedCallback = null;
+      if (this.blokEventBus !== null) {
+        watchedToolsByBus.get(this.blokEventBus)?.delete(this.getToolElement);
+      }
     }
   }
 
@@ -131,9 +185,7 @@ export class MutationHandler {
     }
 
     for (const record of mutations) {
-      const toolRootHasBeenUpdated = Array.from(record.removedNodes).includes(toolElement);
-
-      if (!toolRootHasBeenUpdated) {
+      if (record.type !== 'childList' || !includesNode(record.removedNodes, toolElement)) {
         continue;
       }
 

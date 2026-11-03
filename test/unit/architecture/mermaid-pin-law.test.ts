@@ -43,6 +43,8 @@ describe('mermaid pin', () => {
 // Mindmap (via cytoscape-cose-bilkent) and architecture (via cytoscape-fcose)
 // share one cose-base/layout-base major. A second major ships ~71 KB of the
 // same layout engine twice. The mindmap positions were checked identical on v2.
+// One copy means fcose's constants leak into cose-bilkent; the yarn patch on
+// cytoscape-cose-bilkent resets them (test/unit/tools/code/mermaid-layout-engine.test.ts).
 describe('mermaid layout engine', () => {
   it.each(['cose-base', 'layout-base'])('resolves to one %s copy in yarn.lock', (name) => {
     expect(lockEntries(name).map((entry) => entry.version)).toHaveLength(1)

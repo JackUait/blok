@@ -1,0 +1,23 @@
+diff --git a/cytoscape-cose-bilkent.js b/cytoscape-cose-bilkent.js
+index 1f138a8970f4cdf939993e2d5d8eeaaf7d756807..9d0847bf9126943c965a09db62ab6970a8065e98 100644
+--- a/cytoscape-cose-bilkent.js
++++ b/cytoscape-cose-bilkent.js
+@@ -186,6 +186,18 @@ var getUserOptions = function getUserOptions(options) {
+   CoSEConstants.DEFAULT_INCREMENTAL = FDLayoutConstants.DEFAULT_INCREMENTAL = LayoutConstants.DEFAULT_INCREMENTAL = !options.randomize;
+   CoSEConstants.ANIMATE = FDLayoutConstants.ANIMATE = LayoutConstants.ANIMATE = options.animate;
+   CoSEConstants.TILE = options.tile;
++  // cytoscape-fcose shares this cose-base and leaves these set. Put back the
++  // cose-base load-time values, or a mindmap drawn after an architecture
++  // diagram on the same page gets a different layout.
++  CoSEConstants.MIN_REPULSION_DIST = FDLayoutConstants.MIN_REPULSION_DIST = 50 / 10.0;
++  CoSEConstants.DEFAULT_RADIAL_SEPARATION = 50;
++  CoSEConstants.TRANSFORM_ON_CONSTRAINT_HANDLING = true;
++  CoSEConstants.ENFORCE_CONSTRAINTS = true;
++  CoSEConstants.APPLY_LAYOUT = true;
++  CoSEConstants.TREE_REDUCTION_ON_INCREMENTAL = true;
++  CoSEConstants.PURE_INCREMENTAL = false;
++  CoSEConstants.TILING_COMPARE_BY = undefined;
++  LayoutConstants.DEFAULT_UNIFORM_LEAF_NODE_SIZES = false;
+   CoSEConstants.TILING_PADDING_VERTICAL = typeof options.tilingPaddingVertical === 'function' ? options.tilingPaddingVertical.call() : options.tilingPaddingVertical;
+   CoSEConstants.TILING_PADDING_HORIZONTAL = typeof options.tilingPaddingHorizontal === 'function' ? options.tilingPaddingHorizontal.call() : options.tilingPaddingHorizontal;
+ };

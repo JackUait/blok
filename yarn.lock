@@ -7223,7 +7223,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cytoscape-cose-bilkent@npm:^4.1.0":
+"cytoscape-cose-bilkent@npm:4.1.0":
   version: 4.1.0
   resolution: "cytoscape-cose-bilkent@npm:4.1.0"
   dependencies:
@@ -7231,6 +7231,17 @@ __metadata:
   peerDependencies:
     cytoscape: ^3.2.0
   checksum: 10c0/5e2480ddba9da1a68e700ed2c674cbfd51e9efdbd55788f1971a68de4eb30708e3b3a5e808bf5628f7a258680406bbe6586d87a9133e02a9bdc1ab1a92f512f2
+  languageName: node
+  linkType: hard
+
+"cytoscape-cose-bilkent@patch:cytoscape-cose-bilkent@npm%3A4.1.0#~/.yarn/patches/cytoscape-cose-bilkent-npm-4.1.0-30566f1cf4.patch":
+  version: 4.1.0
+  resolution: "cytoscape-cose-bilkent@patch:cytoscape-cose-bilkent@npm%3A4.1.0#~/.yarn/patches/cytoscape-cose-bilkent-npm-4.1.0-30566f1cf4.patch::version=4.1.0&hash=e7506b"
+  dependencies:
+    cose-base: "npm:^1.0.0"
+  peerDependencies:
+    cytoscape: ^3.2.0
+  checksum: 10c0/1d10dff2061df8885799fad4b853dd87057969477141fb993a8e61630879b3ee12d97bc87e596716b7ef08662b579f082ec1050569ab35d31c60954763e68a1f
   languageName: node
   linkType: hard
 

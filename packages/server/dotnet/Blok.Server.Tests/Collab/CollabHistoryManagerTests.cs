@@ -450,6 +450,35 @@ public sealed class CollabHistoryManagerTests
     Assert.Equal(broadcast, measured);
   }
 
+  // Agent undo steps drop their plans on this event; Go pins the same list in
+  // room/replaced_test.go.
+  [Fact]
+  public async Task DocumentReplacedFiresOnAResetAnAppliedRestoreAndAPurgeOnly()
+  {
+    var manager = CreateManager();
+    var fired = new List<string>();
+    manager.DocumentReplaced += fired.Add;
+    await LoadAsync(manager);
+    await EditAsync(manager, Update("a", "A"));
+    await EditAsync(manager, Update("a", "B"));
+    var lineage = Lineage();
+
+    Assert.Empty(fired);
+    Assert.Equal(CollabHistoryStatus.NotFound, (await manager.RestoreAsync(DocId, lineage, 9, "op-missing", null)).History);
+    var stale = await manager.RestoreAsync(DocId, lineage, 1, "op-stale", null, new CollabEditPrecondition(lineage, 1));
+    Assert.Equal(CollabEditStatus.PreconditionFailed, stale.Edit!.Status);
+    Assert.Empty(fired);
+
+    Assert.Equal(CollabEditStatus.Applied, (await manager.RestoreAsync(DocId, lineage, 1, "op-restore", null)).Edit!.Status);
+    Assert.Equal([DocId], fired);
+
+    await ResetAsync(manager);
+    Assert.Equal([DocId, DocId], fired);
+
+    await manager.PurgeDocumentAsync(DocId, _ => ValueTask.FromResult(true));
+    Assert.Equal([DocId, DocId, DocId], fired);
+  }
+
   [Fact]
   public async Task AStalePreconditionRefusesTheRestore()
   {

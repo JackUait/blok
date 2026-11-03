@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Blok.Server.AspNetCore;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Builder;
@@ -103,7 +105,8 @@ internal sealed class CollabDrainService(IServiceProvider services) : IHostedLif
     {
       // Rooms log their own flush failures; this is the drain as a whole
       // (typically the shutdown timeout). Kestrel still stops below.
-      Console.Error.WriteLine($"warning: collab: the shutdown drain did not complete: {error.Message}");
+      Console.Error.WriteLine(
+          CollabStandardErrorLoggerProvider.Line("warning", $"collab: the shutdown drain did not complete: {error.Message}"));
     }
   }
 
@@ -127,18 +130,62 @@ internal sealed class CollabStandardErrorLoggerProvider : ILoggerProvider
 {
   private const string Category = "Blok.Server.Collab";
 
-  private static readonly StandardErrorLogger Logger = new();
+  private readonly StandardErrorLogger logger;
+
+  /// <param name="output">Tests pass a writer; null reads Console.Error at each write.</param>
+  internal CollabStandardErrorLoggerProvider(TextWriter? output = null)
+  {
+    logger = new StandardErrorLogger(output);
+  }
 
   public ILogger CreateLogger(string categoryName)
   {
-    return categoryName == Category ? Logger : NullLogger.Instance;
+    return categoryName == Category ? logger : NullLogger.Instance;
+  }
+
+  /// <summary>
+  /// "kind: message" with the message on one line. Messages carry doc ids
+  /// from the URL, so a raw newline could forge a record. \n, \r and \t
+  /// become those two-character escapes; every other C0 control, DEL, C1
+  /// control (U+0080-U+009F), U+2028 and U+2029 becomes \uXXXX in upper hex.
+  /// Backslashes stay as they are. The Go host's collablog.go follows the
+  /// same rule (fixture host-log-lines.json).
+  /// </summary>
+  internal static string Line(string kind, string message)
+  {
+    var line = new StringBuilder(kind.Length + 2 + message.Length);
+    line.Append(kind).Append(": ");
+
+    foreach (var character in message)
+    {
+      switch (character)
+      {
+        case '\n':
+          line.Append("\\n");
+          break;
+        case '\r':
+          line.Append("\\r");
+          break;
+        case '\t':
+          line.Append("\\t");
+          break;
+        case < '\u0020' or (>= '\u007F' and <= '\u009F') or '\u2028' or '\u2029':
+          line.Append("\\u").Append(((int)character).ToString("X4", CultureInfo.InvariantCulture));
+          break;
+        default:
+          line.Append(character);
+          break;
+      }
+    }
+
+    return line.ToString();
   }
 
   public void Dispose()
   {
   }
 
-  private sealed class StandardErrorLogger : ILogger
+  private sealed class StandardErrorLogger(TextWriter? output) : ILogger
   {
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
@@ -163,7 +210,7 @@ internal sealed class CollabStandardErrorLoggerProvider : ILoggerProvider
       }
 
       var kind = logLevel >= LogLevel.Error ? "error" : "warning";
-      Console.Error.WriteLine($"{kind}: {formatter(state, exception)}");
+      (output ?? Console.Error).WriteLine(Line(kind, formatter(state, exception)));
     }
   }
 }

@@ -3,11 +3,15 @@
 // The host's flag, environment and startup-refusal contract, black-box, for
 // every target. Messages come from HostArguments and BlokServerOptions.
 
-import { get } from 'node:http';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer as createHttpServer, get } from 'node:http';
 import { createServer, type Server } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { expect, it as baseIt } from 'vitest';
 
+import { sendRequest } from './http-client';
 import { allocateLoopbackPort, runServerCommand } from './run-against';
 import { startServerProcess } from './server-process';
 
@@ -293,5 +297,54 @@ it.each(['127.0.0.1:', 'localhost:'])('names the address already in use for %s',
     );
   } finally {
     holder?.close();
+  }
+});
+
+// A doc id is attacker text, and %0A in the URL decodes to a newline. The
+// room's warning must stay one line, or the id could forge an "error:" record.
+it('keeps a room warning on one line when the doc id holds a newline', async () => {
+  const endpoint = createHttpServer((_request, response) => {
+    response.writeHead(500);
+    response.end();
+  });
+
+  await new Promise<void>((resolve) => endpoint.listen(0, '127.0.0.1', resolve));
+
+  const address = endpoint.address();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-host-log-'));
+  const port = await allocateLoopbackPort();
+
+  if (address === null || typeof address === 'string') {
+    throw new Error('Could not allocate a doc-endpoint port');
+  }
+
+  const server = await startServerProcess({
+    command: process.env.BLOK_CONFORMANCE_SERVER ?? '',
+    args: [
+      '--listen', `127.0.0.1:${port}`,
+      '--auth', 'none',
+      '--storage-dir', '',
+      '--rate-limit', '0',
+      '--collab',
+      '--collab-dir', directory,
+      '--doc-endpoint', `http://127.0.0.1:${address.port}/docs`,
+    ],
+    baseUrl: `http://127.0.0.1:${port}`,
+    env: process.env,
+  });
+
+  try {
+    await sendRequest('POST', new URL(`http://127.0.0.1:${port}/sync/a%0Aerror:%20forged/edit`), {
+      headers: { 'Content-Type': 'application/json', 'Blok-Idempotency-Key': 'k1' },
+      body: JSON.stringify({ ops: [{ op: 'insert', id: 'a', block: { type: 'paragraph', data: { text: 'x' } } }] }),
+    });
+    await expect.poll(() => server.stderr, { timeout: 10_000 }).toContain('could not load');
+
+    expect(server.stderr).toContain('warning: collab: room "a\\nerror: forged" could not load: ');
+    expect(server.stderr).not.toMatch(/^error: forged/m);
+  } finally {
+    await server.stop();
+    await new Promise<void>((resolve) => endpoint.close(() => resolve()));
+    await rm(directory, { recursive: true, force: true });
   }
 });

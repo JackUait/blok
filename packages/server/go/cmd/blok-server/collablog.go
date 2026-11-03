@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/JackUait/blok/packages/server/go/blokserver"
 )
@@ -46,7 +48,38 @@ func (h collabStderr) Handle(_ context.Context, record slog.Record) error {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	_, err := fmt.Fprintf(h.out, "%s: %s\n", kind, record.Message)
+	return writeLogLine(h.out, kind, record.Message)
+}
+
+// writeLogLine writes "<kind>: <message>\n" with the message on one line.
+// Messages carry doc ids from the URL, so a raw newline could forge a record.
+// \n, \r and \t become those two-character escapes; every other C0 control,
+// DEL, C1 control (U+0080-U+009F), U+2028 and U+2029 becomes \uXXXX in upper
+// hex. Backslashes stay as they are. HostCollab.cs follows the same rule
+// (fixture host-log-lines.json).
+func writeLogLine(out io.Writer, kind, message string) error {
+	var line strings.Builder
+	line.WriteString(kind)
+	line.WriteString(": ")
+	for i := 0; i < len(message); {
+		r, size := utf8.DecodeRuneInString(message[i:])
+		switch {
+		case r == '\n':
+			line.WriteString(`\n`)
+		case r == '\r':
+			line.WriteString(`\r`)
+		case r == '\t':
+			line.WriteString(`\t`)
+		case r < 0x20 || (r >= 0x7f && r <= 0x9f) || r == 0x2028 || r == 0x2029:
+			fmt.Fprintf(&line, `\u%04X`, r)
+		default:
+			// Raw bytes, so an invalid byte is not turned into U+FFFD.
+			line.WriteString(message[i : i+size])
+		}
+		i += size
+	}
+	line.WriteByte('\n')
+	_, err := io.WriteString(out, line.String())
 	return err
 }
 

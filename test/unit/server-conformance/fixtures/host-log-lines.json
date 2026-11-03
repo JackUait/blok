@@ -1,0 +1,13 @@
+[
+  { "name": "plain text", "level": "warning", "message": "collab: room \"doc-1\" could not load", "line": "warning: collab: room \"doc-1\" could not load\n" },
+  { "name": "an error record", "level": "error", "message": "collab: a stored version of \"d\" could not be read", "line": "error: collab: a stored version of \"d\" could not be read\n" },
+  { "name": "a forged line", "level": "warning", "message": "collab: room \"a\nerror: forged\" could not load", "line": "warning: collab: room \"a\\nerror: forged\" could not load\n" },
+  { "name": "carriage return and tab", "level": "warning", "message": "a\rb\tc\r\n", "line": "warning: a\\rb\\tc\\r\\n\n" },
+  { "name": "NUL and other C0", "level": "warning", "message": "\u0000\u0001\u0008\u000b\u000c\u001b[31m\u001f", "line": "warning: \\u0000\\u0001\\u0008\\u000B\\u000C\\u001B[31m\\u001F\n" },
+  { "name": "DEL", "level": "warning", "message": "a\u007fb", "line": "warning: a\\u007Fb\n" },
+  { "name": "C1 controls", "level": "warning", "message": "\u0080\u0085\u009b\u009f", "line": "warning: \\u0080\\u0085\\u009B\\u009F\n" },
+  { "name": "line and paragraph separators", "level": "warning", "message": "a\u2028b\u2029c", "line": "warning: a\\u2028b\\u2029c\n" },
+  { "name": "printable neighbours stay", "level": "warning", "message": "~ \u00a0é\u2027\u202a😀", "line": "warning: ~ \u00a0é\u2027\u202a😀\n" },
+  { "name": "a backslash stays", "level": "warning", "message": "C:\\data\\n", "line": "warning: C:\\data\\n\n" },
+  { "name": "empty", "level": "error", "message": "", "line": "error: \n" }
+]

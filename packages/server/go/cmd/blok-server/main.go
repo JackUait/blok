@@ -167,7 +167,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	shutdown, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
 	if err := server.Drain(shutdown); err != nil {
-		fmt.Fprintf(stderr, "warning: collab: the shutdown drain did not complete: %v\n", err)
+		_ = writeLogLine(stderr, "warning", "collab: the shutdown drain did not complete: "+err.Error())
 	}
 	_ = httpServer.Shutdown(shutdown)
 	return 0

@@ -50,6 +50,8 @@ export class BlockHierarchy {
   private readonly getIsSyncingFromYjs?: () => boolean;
   private readonly blocksStore?: Pick<Blocks, 'mount'>;
   private readonly isApplyingRemoteChange?: () => boolean;
+  /** The subtree of the block setBlockParent is placing, while it places it. */
+  private subtreeMemo: { block: Block; members: Block[] } | null = null;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
@@ -177,6 +179,10 @@ export class BlockHierarchy {
    * @param block - the subtree root
    */
   private subtreeOf(block: Block): Block[] {
+    if (this.subtreeMemo?.block === block) {
+      return this.subtreeMemo.members;
+    }
+
     const blocks = this.repository.blocks;
 
     // A new table cell has no children; mapping every block for it made each
@@ -542,6 +548,26 @@ export class BlockHierarchy {
     const sanitizedParentId = parentExists ? newParentId : null;
 
     const oldParentId = block.parentId;
+    // The steps below each need the block's subtree, and none changes it: one
+    // scan of the document instead of one per step, per new table cell.
+    this.subtreeMemo = { block, members: this.subtreeOf(block) };
+
+    try {
+      this.placeUnderParent(block, sanitizedParentId);
+    } finally {
+      this.subtreeMemo = null;
+    }
+
+    this.syncVisibilityWithParent(block, oldParentId);
+    this.announceChildPlaced(sanitizedParentId);
+  }
+
+  /**
+   * The placement half of setBlockParent: model, flat array and DOM.
+   * @param block - the block to place
+   * @param sanitizedParentId - its new parent, already checked to exist
+   */
+  private placeUnderParent(block: Block, sanitizedParentId: string | null): void {
     const placement = this.placementForParent(block, sanitizedParentId);
 
     const newParent = sanitizedParentId !== null ? this.repository.getBlockById(sanitizedParentId) : undefined;
@@ -584,8 +610,6 @@ export class BlockHierarchy {
       }
     }
 
-    this.syncVisibilityWithParent(block, oldParentId);
-    this.announceChildPlaced(sanitizedParentId);
   }
 
   /**

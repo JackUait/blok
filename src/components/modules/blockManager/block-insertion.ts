@@ -1100,7 +1100,43 @@ export class BlockInsertion {
    * @param index - the index the caller asked for
    */
   private clampIntoSubtree(parent: Block, index: number): number {
-    return Math.min(Math.max(index, this.repository.blocks.indexOf(parent) + 1), this.subtreeEnd(parent));
+    const blocks = this.repository.blocks;
+    const first = blocks.indexOf(parent) + 1;
+
+    if (index <= first) {
+      return first;
+    }
+
+    // The flat array is a depth-first walk, so an index whose predecessor is
+    // the parent or under it is inside the run. Measuring the run's end walks
+    // every child, which made each new table cell cost the whole table.
+    const before = index <= blocks.length ? blocks[index - 1] : undefined;
+
+    if (before !== undefined && this.isAtOrUnder(before, parent.id)) {
+      return index;
+    }
+
+    return Math.min(index, this.subtreeEnd(parent));
+  }
+
+  /**
+   * Whether `block` is `ancestorId` or sits under it. Cycle-safe.
+   * @param block - the block to test
+   * @param ancestorId - the possible ancestor
+   */
+  private isAtOrUnder(block: Block, ancestorId: string): boolean {
+    const seen = new Set<string>();
+    const cursor: { block: Block | undefined } = { block };
+
+    while (cursor.block !== undefined && !seen.has(cursor.block.id)) {
+      if (cursor.block.id === ancestorId) {
+        return true;
+      }
+      seen.add(cursor.block.id);
+      cursor.block = cursor.block.parentId === null ? undefined : this.getBlock(cursor.block.parentId);
+    }
+
+    return false;
   }
 
   /**

@@ -126,6 +126,42 @@ describe('blocks.insert with a parentId', () => {
     expect(long).toBeLessThan(short + 50);
   });
 
+  it('places a table child at the end without walking the table\'s other children', async () => {
+    const ids = Array.from({ length: 60 }, (_, i) => `c${i}`);
+    const editor = await bootWith([
+      { id: 't', type: 'table', data: { withHeadings: false, content: [ids.map(id => ({ blocks: [id] }))] }, content: ids },
+      ...ids.map(id => ({ id, type: 'paragraph', data: { text: id }, parent: 't' })),
+      { id: 'z', type: 'paragraph', data: { text: 'after' } },
+    ]);
+    const middle = editor.moduleGraph?.BlockManager.getBlockById('c30');
+
+    if (middle === undefined) {
+      throw new Error('no middle cell');
+    }
+    const reads = { count: 0 };
+    const value = { parentId: middle.parentId };
+
+    Object.defineProperty(middle, 'parentId', {
+      configurable: true,
+      get: () => {
+        // The dev-only invariant checks read every block; production drops them.
+        if (!(new Error().stack ?? '').includes('InDev')) {
+          reads.count++;
+        }
+
+        return value.parentId;
+      },
+      set: (next: string | null) => {
+        value.parentId = next;
+      },
+    });
+
+    editor.blocks.insert('paragraph', { text: '' }, {}, editor.blocks.getBlockIndex('z'), false, false, undefined, undefined, undefined, 't');
+
+    // One read: the scan for children of the new block. A walk over the table's run reads it again.
+    expect(reads.count).toBeLessThanOrEqual(1);
+  });
+
   it('writes table children into the table in the order the editor holds them', async () => {
     const editor = await boot();
     const afterA = (editor.blocks.getBlockIndex('a') ?? -1) + 1;

@@ -680,20 +680,21 @@ export class TableCellBlocks {
       return count;
     }
 
+    // Walked, not listed: a list of every later index cost the whole document per new cell.
     const inside = new Set<string>([blockId]);
-    const firstOutside = Array.from({ length: count - rootIndex - 1 }, (_, i) => rootIndex + 1 + i)
-      .find(index => {
-        const block = this.api.blocks.getBlockByIndex(index);
+    const cursor = { index: rootIndex + 1 };
 
-        if (block?.parentId == null || !inside.has(block.parentId)) {
-          return true;
-        }
-        inside.add(block.id);
+    while (cursor.index < count) {
+      const block = this.api.blocks.getBlockByIndex(cursor.index);
 
-        return false;
-      });
+      if (block?.parentId == null || !inside.has(block.parentId)) {
+        return cursor.index;
+      }
+      inside.add(block.id);
+      cursor.index++;
+    }
 
-    return firstOutside ?? count;
+    return count;
   }
 
   /**

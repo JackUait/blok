@@ -2357,7 +2357,40 @@ describe('BlockHierarchy', () => {
         return count;
       };
 
-      expect(mapReads(500)).toBe(mapReads(2));
+      // A bound, not equality: the test runner's own module lookups also read maps.
+      expect(mapReads(500) - mapReads(2)).toBeLessThan(50);
+    });
+
+    it('finds the moving block\'s subtree once per placement, not once per step', () => {
+      const repo = createRepositoryWithBlocks([
+        ...Array.from({ length: 50 }, (_, i) => ({ id: `p${i}` })),
+        { id: 'parent', contentIds: ['cell'] },
+        { id: 'cell', parentId: 'parent' },
+        { id: 'leaf' },
+      ]);
+      const leaf = repo.getBlockById('leaf');
+      const watched = repo.getBlockById('p0');
+
+      if (leaf === undefined || watched === undefined) {
+        throw new Error('missing block');
+      }
+      const reads = { count: 0 };
+      const value = { parentId: watched.parentId };
+
+      Object.defineProperty(watched, 'parentId', {
+        get: () => {
+          reads.count++;
+
+          return value.parentId;
+        },
+        set: (next: string | null) => {
+          value.parentId = next;
+        },
+      });
+
+      hierarchyOf(repo).setBlockParent(leaf, 'parent');
+
+      expect(reads.count).toBeLessThanOrEqual(1);
     });
   });
 

@@ -1514,6 +1514,61 @@ describe('TableCellBlocks', () => {
       expect(container.contains(mockBlockHolder)).toBe(true);
     });
 
+    it('places a new cell\'s block after the previous cell without listing the rest of the document', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+      const flat = [
+        { id: 't1', parentId: null },
+        { id: 'c1', parentId: 't1' },
+        ...Array.from({ length: 2000 }, (_, i) => ({ id: `p${i}`, parentId: null })),
+      ];
+      const mockInsert = vi.fn().mockReturnValue({ id: 'new-p', holder: document.createElement('div') });
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlocksCount: vi.fn(() => flat.length),
+          getBlockIndex: vi.fn((id: string) => {
+            const index = flat.findIndex(block => block.id === id);
+
+            return index === -1 ? undefined : index;
+          }),
+          getBlockByIndex: vi.fn((index: number) => flat[index]),
+          setBlockParent: vi.fn(),
+          transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cells = ['0', '1'].map(col => {
+        const cell = document.createElement('div');
+        const container = document.createElement('div');
+
+        cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('data-blok-table-cell-col', col);
+        container.setAttribute(CELL_BLOCKS_ATTR, '');
+        cell.appendChild(container);
+        row.appendChild(cell);
+
+        return { cell, container };
+      });
+      const filled = document.createElement('div');
+
+      filled.setAttribute('data-blok-id', 'c1');
+      cells[0].container.appendChild(filled);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+      const lists = vi.spyOn(Array, 'from');
+
+      cellBlocks.ensureCellHasBlock(cells[1].cell);
+
+      expect(mockInsert.mock.calls[0]?.[3]).toBe(2);
+      expect(lists.mock.calls.filter(([source]) => (source as ArrayLike<unknown>).length > 100)).toHaveLength(0);
+      lists.mockRestore();
+    });
+
     it('inserts the first cell\'s block right after the table, before later cells\' blocks and not at the end of the document', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

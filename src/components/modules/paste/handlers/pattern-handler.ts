@@ -12,6 +12,7 @@ import type { PageConfig } from '../../../../tools/page/types';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../../../utils/resolve-link-attributes';
+import { ownClone } from '../../../utils/own-element';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -373,13 +374,15 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       return true;
     }
 
-    const anchor = Array.from(holder.querySelectorAll('a')).find((link) => link.getAttribute('href') === url);
+    // Nested blocks and chrome are not the block's own content.
+    const own = ownClone(holder);
+    const anchor = Array.from(own.querySelectorAll('a')).find((link) => link.getAttribute('href') === url);
 
     if (!holder.isConnected || anchor === undefined) {
       return false;
     }
 
-    return !canReplace || (holder.textContent ?? '').trim() === (anchor.textContent ?? '').trim();
+    return !canReplace || (own.textContent ?? '').trim() === (anchor.textContent ?? '').trim();
   }
 
   /**

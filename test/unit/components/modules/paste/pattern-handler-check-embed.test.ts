@@ -149,6 +149,22 @@ describe('PatternHandler — the host frame check before a generic embed', () =>
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  it('still replaces the link block when only nested blocks and chrome were added during the check', async () => {
+    const checkEmbed = vi.fn(async () => {
+      state.holder?.insertAdjacentHTML(
+        'beforeend',
+        '<span data-blok-chrome>Empty toggle</span><div data-blok-element><div contenteditable="true">child text</div></div>'
+      );
+
+      return { verdict: 'blocked' as const };
+    });
+
+    await pickEmbed(GENERIC_URL, { allowGenericEmbed: true, checkEmbed });
+
+    expect(pasteMock).toHaveBeenCalledTimes(1);
+    expect(insertedTool()).toBe('bookmark');
+  });
+
   it('never removes another link when the pasted one went away during the check', async () => {
     const current = document.createElement('div');
 

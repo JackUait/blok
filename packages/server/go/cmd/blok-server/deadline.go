@@ -33,11 +33,15 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		defer timer.Stop()
 		// A route that opts out (GET /sync/{doc}) lifts all of it. The read
 		// deadline must go too: net/http's background read fails at it and
-		// cancels the request context.
+		// cancels the request context. A request with a body keeps it:
+		// net/http drains an unread body after the handler, and a trickled
+		// one would pin the connection. The sync door refuses any body.
 		lift := func() {
 			if tracked.exempt() {
 				timer.Stop()
-				_ = controller.SetReadDeadline(time.Time{})
+				if r.ContentLength == 0 {
+					_ = controller.SetReadDeadline(time.Time{})
+				}
 			}
 		}
 		next.ServeHTTP(tracked, r.WithContext(blokserver.WithRequestTimeoutLift(ctx, lift)))

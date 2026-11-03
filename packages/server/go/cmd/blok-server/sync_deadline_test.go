@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/blokserver"
 	"github.com/JackUait/blok/packages/server/go/internal/ws"
 )
 
@@ -80,4 +81,49 @@ func TestAnUpgradedSocketOutlivesTheRequestDeadline(t *testing.T) {
 	if text := serverLog.String(); text != "" {
 		t.Fatalf("the server logged: %s", text)
 	}
+}
+
+// A sync request the door refuses never upgrades, so its lifted deadline
+// must not leave the body unbounded: net/http drains the unread body after
+// the handler, and a trickled one would pin the connection forever.
+func TestARefusedSyncRequestStillEndsATrickledBodyAtTheDeadline(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const short = 150 * time.Millisecond
+	// What the sync door does for a request with a body: lift, then refuse.
+	server := newHTTPServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		blokserver.LiftRequestTimeout(r.Context())
+		w.WriteHeader(http.StatusUpgradeRequired)
+	}), short)
+	go func() { _ = server.Serve(headerListener{listener, headerTimeout, keepAliveTimeout}) }()
+	t.Cleanup(func() { _ = server.Close() })
+
+	client, err := net.Dial("tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	_, _ = io.WriteString(client, "GET /sync/doc HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n"+
+		"Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nContent-Length: 1000\r\n\r\nx")
+	closed := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(io.Discard, client)
+		close(closed)
+	}()
+	started := time.Now()
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for time.Since(started) < 2*time.Second {
+		select {
+		case <-closed:
+			return
+		case <-ticker.C:
+			if _, err := client.Write([]byte{'x'}); err != nil {
+				return
+			}
+		}
+	}
+	t.Fatalf("the connection was still open %v after a %v deadline", time.Since(started), short)
 }

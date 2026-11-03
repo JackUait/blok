@@ -63,4 +63,33 @@ describe("embed safety guide", () => {
     expect(text).toContain("`GET /frame-check`");
     expect(text).toContain("`linkPaste.checkEmbed`");
   });
+
+  it.each([en, ru])("says only media players let popups escape, and COOP still matters for them", (bundle) => {
+    const text = body(bundle as Bundle, "popups");
+
+    expect(text).toContain("YouTube");
+    expect(text).toContain("CodePen");
+    expect(text).toContain("`allow-popups-to-escape-sandbox`");
+  });
+
+  it.each([en, ru])("says a generic embed source must be an absolute https:// URL", (bundle) => {
+    const text = body(bundle as Bundle, "whatBlokDoes");
+
+    expect(text).toContain("`https://`");
+    expect(text).toContain("`https:/x`");
+  });
+
+  it.each([en, ru])("says a no-uploader SVG image is a data: URL shown only in <img>", (bundle) => {
+    expect(body(bundle as Bundle, "whatBlokDoes")).toContain("`data:image/svg+xml`");
+    expect(body(bundle as Bundle, "uploads")).toContain("`data:image/svg+xml`");
+    expect(body(bundle as Bundle, "measured")).toContain("SVG");
+  });
+
+  it.each([en, ru])("lists the host list entry forms on the linkPaste option", (bundle) => {
+    const text = at(bundle as Bundle, "api.configuration.table.linkPaste.description") ?? "";
+
+    expect(text).toContain("`https://good.com:8443`");
+    expect(text).toContain("`bücher.de`");
+    expect(text).toContain("`::1`");
+  });
 });

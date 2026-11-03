@@ -80,7 +80,7 @@
     "date": "2026-10-05"
   },
   "/docs/config": {
-    "hash": "69855a0576a6318d",
+    "hash": "e637d8592c6c9726",
     "date": "2026-11-03"
   },
   "/docs/core": {
@@ -116,7 +116,7 @@
     "date": "2026-11-03"
   },
   "/docs/embed-safety": {
-    "hash": "5784761e6e076d42",
+    "hash": "16d6c88dbb76700b",
     "date": "2026-11-03"
   },
   "/docs/equation": {
@@ -144,8 +144,8 @@
     "date": "2026-09-08"
   },
   "/docs/image": {
-    "hash": "a52f50af0ea1cd1a",
-    "date": "2026-10-02"
+    "hash": "9abbb72f21e4f03e",
+    "date": "2026-11-03"
   },
   "/docs/inline-toolbar-api": {
     "hash": "84f4b5d434a66c9a",
@@ -300,7 +300,7 @@
     "date": "2026-10-07"
   },
   "/docs/uploader-api": {
-    "hash": "8583c7ff67431152",
+    "hash": "d00048de68e5d5c0",
     "date": "2026-11-03"
   },
   "/docs/use-blocks": {
@@ -336,7 +336,7 @@
     "date": "2026-09-08"
   },
   "/presets": {
-    "hash": "7bb0d44e6213d5c4",
+    "hash": "f9723209f9e06bcb",
     "date": "2026-11-03"
   },
   "/ru": {
@@ -416,7 +416,7 @@
     "date": "2026-10-05"
   },
   "/ru/docs/config": {
-    "hash": "f3dc043fe8098ec8",
+    "hash": "1835157860f2a756",
     "date": "2026-11-03"
   },
   "/ru/docs/core": {
@@ -452,7 +452,7 @@
     "date": "2026-11-03"
   },
   "/ru/docs/embed-safety": {
-    "hash": "074e7b8751c246f7",
+    "hash": "894be6b7d8f65d2f",
     "date": "2026-11-03"
   },
   "/ru/docs/equation": {
@@ -480,8 +480,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/image": {
-    "hash": "8f9b535959974b16",
-    "date": "2026-10-02"
+    "hash": "f3dff373f63fafa8",
+    "date": "2026-11-03"
   },
   "/ru/docs/inline-toolbar-api": {
     "hash": "6b4597ab28d605c5",
@@ -636,7 +636,7 @@
     "date": "2026-10-07"
   },
   "/ru/docs/uploader-api": {
-    "hash": "cb9730461bd96c39",
+    "hash": "2228298c53e53839",
     "date": "2026-11-03"
   },
   "/ru/docs/use-blocks": {
@@ -672,7 +672,7 @@
     "date": "2026-09-08"
   },
   "/ru/presets": {
-    "hash": "95a5a09c4a85497c",
+    "hash": "b71c16a137473a2c",
     "date": "2026-11-03"
   },
   "/ru/server": {

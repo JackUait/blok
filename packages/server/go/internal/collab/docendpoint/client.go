@@ -32,9 +32,12 @@ const (
 	DefaultMaxResponseBytes = 64 << 20
 	errorBodyPrefixBytes    = 512
 	// JSONMaxDepth is YDocConverter.JsonMaxDepth, both ways.
-	JSONMaxDepth   = 512
-	connectTimeout = 10 * time.Second
+	JSONMaxDepth = 512
 )
+
+// connectTimeout is SocketsHttpHandler.ConnectTimeout. A var so tests can
+// lower it.
+var connectTimeout = 10 * time.Second
 
 // Options configure a Client. Endpoint is the operator's URL, already parsed.
 type Options struct {
@@ -84,9 +87,11 @@ type Client struct {
 func New(options Options, transport http.RoundTripper) *Client {
 	if transport == nil {
 		transport = &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			DialContext:     (&net.Dialer{Timeout: connectTimeout}).DialContext,
-			IdleConnTimeout: 5 * time.Minute,
+			Proxy:       http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{Timeout: connectTimeout}).DialContext,
+			// ConnectTimeout bounds the TLS handshake too.
+			TLSHandshakeTimeout: connectTimeout,
+			IdleConnTimeout:     5 * time.Minute,
 			// C# asks for no compression, and caps the raw body.
 			DisableCompression: true,
 		}
@@ -216,7 +221,10 @@ func (c *Client) send(ctx context.Context, request *http.Request) ([]byte, error
 	}
 	response, err := c.http.Do(request.WithContext(timeout))
 	if err != nil {
-		if ctx.Err() == nil && timeout.Err() != nil {
+		// A connect or handshake timeout is an OperationCanceledException
+		// in C#, so it reads as timed out too.
+		var netError net.Error
+		if ctx.Err() == nil && (timeout.Err() != nil || errors.As(err, &netError) && netError.Timeout()) {
 			return nil, c.timedOut(request.Method, err)
 		}
 		if ctx.Err() != nil {

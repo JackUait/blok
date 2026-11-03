@@ -191,7 +191,26 @@
     "http://a℅b.com/",
     "http://a⑴.com/",
     "http://a.com。/",
-    "http://a％ｃ３％ｂｃb.com/"
+    "http://a％ｃ３％ｂｃb.com/",
+    "\u0000https://example.com/",
+    "https://example.com/\u0000",
+    "https://example.com/a\u0000b",
+    "\thttps://example.com/",
+    "https://example.com/\t",
+    "https://example.com/\n",
+    "https://example.com/a\r\nb",
+    "https://exa\tmple.com/",
+    "\u0001https://example.com/",
+    "https://example.com/\u001F",
+    "https://example.com/\u007F",
+    "https://example.com/\u0085",
+    "\u0085https://example.com/",
+    "https://example.com/\u009F",
+    "https://example.com/\u0080x",
+    "  https://example.com/a  ",
+    "https://example.com/a%00b",
+    "https://example.com/café",
+    "https://example.com/\u00A0"
   ],
   "relative": [
     [
@@ -237,6 +256,34 @@
     [
       "http://example.com/a/b",
       "//evil＠127.0.0.1/"
+    ],
+    [
+      "http://example.com/a/b",
+      "/c\u0000"
+    ],
+    [
+      "http://example.com/a/b",
+      "\u0000/c"
+    ],
+    [
+      "http://example.com/a/b",
+      "/c\t"
+    ],
+    [
+      "http://example.com/a/b",
+      "/c\u0085"
+    ],
+    [
+      "http://example.com/a/b",
+      "/cÑ\u0080"
+    ],
+    [
+      "http://example.com/a/b",
+      " /c "
+    ],
+    [
+      "http://example.com/a/b",
+      "/café"
     ]
   ],
   "answers": {
@@ -648,6 +695,79 @@
         "host": "a%c3%bcb.com",
         "port": 80,
         "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com/a",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com/a%00b",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com/caf%C3%A9",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "https://example.com/%C2%A0",
+        "host": "example.com",
+        "port": 443,
+        "literal": null
       }
     ],
     "relative": [
@@ -707,6 +827,35 @@
       },
       {
         "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/c",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
+      },
+      {
+        "allowed": true,
+        "url": "http://example.com/caf%C3%A9",
+        "host": "example.com",
+        "port": 80,
+        "literal": null
       }
     ]
   }

@@ -87,7 +87,10 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
       ? Uri.TryCreate(rawUrl, UriKind.Absolute, out var url)
       : Uri.TryCreate(baseUrl, rawUrl, out url);
 
+    // A raw control character anywhere is refused: .NET keeps some as %00
+    // and Go's parser trims them at the ends.
     if (string.IsNullOrWhiteSpace(rawUrl) ||
+        BrowserUrl.HasControl(rawUrl) ||
         !parsed ||
         url is null ||
         (url.Scheme != Uri.UriSchemeHttp &&

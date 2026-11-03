@@ -75,10 +75,11 @@ func resolve(raw string, base *dotnet.URI) (*dotnet.URI, bool) {
 }
 
 // Validate allows http and https on port 80 or 443 with a host and no
-// userinfo. An IP literal must parse.
+// userinfo. An IP literal must parse. A raw control character anywhere is
+// refused: Go's parser trims them at the ends and .NET's keeps some as %00.
 func (DefaultPolicy) Validate(raw string, base *dotnet.URI) (Target, error) {
 	url, ok := resolve(raw, base)
-	if strings.TrimSpace(raw) == "" || !ok || !url.IsHTTP() || url.Host == "" || url.UserInfo != "" ||
+	if strings.TrimSpace(raw) == "" || HasControl(raw) || !ok || !url.IsHTTP() || url.Host == "" || url.UserInfo != "" ||
 		authorityHasAt(url) {
 		return Target{}, fail(Blocked)
 	}

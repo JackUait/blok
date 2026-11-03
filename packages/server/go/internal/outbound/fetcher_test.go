@@ -151,6 +151,21 @@ func TestRejectsSiteLocalDNSAnswersBeforeOpeningASocket(t *testing.T) {
 	}
 }
 
+func TestNeverResolvesAURLWithARawControlCharacter(t *testing.T) {
+	for _, raw := range []string{"\x00http://example.com/", "http://example.com/\x00", "\x85http://example.com/"} {
+		resolver := &countingResolver{answers: [][]netip.Addr{addrs("93.184.216.34")}}
+		f := newTestFetcher(DefaultPolicy{}, resolver)
+		f.dialHook = func(string, string) { t.Errorf("%q: dialed", raw) }
+
+		if _, err := f.Get(context.Background(), raw, testLimits); !IsFailure(err, Blocked) {
+			t.Fatalf("%q: got %v, want Blocked", raw, err)
+		}
+		if resolver.calls.Load() != 0 {
+			t.Fatalf("%q: resolved %d times", raw, resolver.calls.Load())
+		}
+	}
+}
+
 // GuardedOutboundFetcher.cs:174-184: an empty answer blocks, as a forbidden one does.
 func TestAnEmptyDNSAnswerIsBlocked(t *testing.T) {
 	resolver := &countingResolver{answers: [][]netip.Addr{nil}}

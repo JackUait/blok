@@ -202,6 +202,8 @@ func rawPath(req *http.Request) string {
 // SetRawTarget gives req the target as sent, for one Go's url parser
 // refused: a bad escape in the path, or a raw control byte. Path gets a bad
 // escape as a literal '%', so http.StripPrefix still finds the prefix in it.
+// Path keeps dot segments and turns %2F into '/', as net/http's own parse
+// does, so it is not the path the router matches: never authorize on it.
 func SetRawTarget(req *http.Request, target string) {
 	path, query, hasQuery := strings.Cut(target, "?")
 	req.RequestURI = target

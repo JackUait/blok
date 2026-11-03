@@ -60,7 +60,9 @@ func publicHost(u *dotnet.URI) (string, bool) {
 	case "Dns":
 		name := u.IdnHost
 		dot := strings.LastIndexByte(name, '.')
-		if dot < 0 || dot == len(name)-1 || strings.HasSuffix(name, ".localhost") ||
+		// .NET's IdnHost throws when the mapped name holds a URL delimiter,
+		// as "a／b" mapping to "a/b"; C# then drops the URL.
+		if strings.ContainsAny(name, `#/:?@[\]`) || dot < 0 || dot == len(name)-1 || strings.HasSuffix(name, ".localhost") ||
 			'0' <= name[dot+1] && name[dot+1] <= '9' {
 			return "", false
 		}

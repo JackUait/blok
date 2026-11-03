@@ -496,6 +496,38 @@
     {
       "name": "a thumbnail with an encoded percent before C2 is kept",
       "json": "{\"thumbnail_url\": \"https://x.com/a%25C2%2585b\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: a／b.example/x",
+      "json": "{\"thumbnail_url\": \"https://a／b.example/x\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: 127.0.0.1／x.example/a.png",
+      "json": "{\"thumbnail_url\": \"https://127.0.0.1／x.example/a.png\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: localhost＃.example/a.png",
+      "json": "{\"thumbnail_url\": \"https://localhost＃.example/a.png\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: evil.example＠bank.example/a.png",
+      "json": "{\"thumbnail_url\": \"https://evil.example＠bank.example/a.png\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: a？b.example/",
+      "json": "{\"thumbnail_url\": \"https://a？b.example/\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: a：b.example/",
+      "json": "{\"thumbnail_url\": \"https://a：b.example/\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: a＼b.example/",
+      "json": "{\"thumbnail_url\": \"https://a＼b.example/\"}"
+    },
+    {
+      "name": "a thumbnail whose IDN host maps to a delimiter: a［b］.example/",
+      "json": "{\"thumbnail_url\": \"https://a［b］.example/\"}"
     }
   ],
   "answers": [
@@ -1490,6 +1522,70 @@
       "width": null,
       "height": null,
       "wire": "{\"thumbnail_url\":\"https://x.com/a%25C2%2585b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
     }
   ]
 }

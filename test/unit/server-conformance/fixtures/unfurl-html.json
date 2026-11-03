@@ -1024,6 +1024,26 @@
       "name": "browser url: escaped NBSP is kept",
       "url": "https://example.com/x",
       "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a%C2%A0.png\">"
+    },
+    {
+      "name": "og:image and icon whose IDN host maps to a delimiter: a／b.example/x",
+      "url": "https://example.com/x",
+      "html": "<html><head><meta property=\"og:image\" content=\"https://a／b.example/x\"><link rel=\"icon\" href=\"https://a／b.example/x\"></head></html>"
+    },
+    {
+      "name": "og:image and icon whose IDN host maps to a delimiter: 127.0.0.1／x.example/a.png",
+      "url": "https://example.com/x",
+      "html": "<html><head><meta property=\"og:image\" content=\"https://127.0.0.1／x.example/a.png\"><link rel=\"icon\" href=\"https://127.0.0.1／x.example/a.png\"></head></html>"
+    },
+    {
+      "name": "og:image and icon whose IDN host maps to a delimiter: localhost＃.example/a.png",
+      "url": "https://example.com/x",
+      "html": "<html><head><meta property=\"og:image\" content=\"https://localhost＃.example/a.png\"><link rel=\"icon\" href=\"https://localhost＃.example/a.png\"></head></html>"
+    },
+    {
+      "name": "og:image and icon whose IDN host maps to a delimiter: evil.example＠bank.example/a.png",
+      "url": "https://example.com/x",
+      "html": "<html><head><meta property=\"og:image\" content=\"https://evil.example＠bank.example/a.png\"><link rel=\"icon\" href=\"https://evil.example＠bank.example/a.png\"></head></html>"
     }
   ],
   "answers": [
@@ -2663,6 +2683,38 @@
       "title": "",
       "description": "",
       "image": "https://cdn.example.com/a%C2%A0.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""

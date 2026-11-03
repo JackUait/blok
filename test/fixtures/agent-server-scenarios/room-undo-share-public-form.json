@@ -1,0 +1,112 @@
+{
+  "name": "room-undo-share-public-form",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v",
+          "views": [
+            {
+              "id": "v",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            },
+            {
+              "id": "f",
+              "name": "Signup",
+              "type": "form",
+              "position": "a1",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": [],
+              "form": {
+                "public": true
+              }
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "database.deleteView",
+            "args": {
+              "id": "db",
+              "viewId": "f"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/data/views": {
+            "length": 1
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPROVAL_REQUIRED",
+        "committed": 0,
+        "state": {
+          "/blocks/0/data/views": {
+            "length": 1
+          }
+        },
+        "result": {
+          "/error/details": {
+            "reason": "no-channel",
+            "approval": {
+              "kind": "database.share",
+              "blockId": "db",
+              "viewId": "f"
+            }
+          },
+          "/error/message": "This undo would change who can see or fill out view \"f\" of database \"db\". That needs a person's explicit approval, and nothing here can ask one. Nothing was written. Ask the person to do it themselves."
+        }
+      }
+    }
+  ]
+}

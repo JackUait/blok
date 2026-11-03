@@ -1,0 +1,114 @@
+{
+  "name": "room-refused-draining",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "a",
+              "type": "paragraph",
+              "data": {
+                "text": "Agent"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "drain"
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ],
+        "expectRevision": "{rev:0}"
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPLY_FAILED",
+        "revision": "",
+        "result": {
+          "/error/retryable": true,
+          "/error/details": {
+            "status": "Draining"
+          },
+          "/error/message": "The room refused the undo (Draining). Nothing was written."
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "b",
+              "type": "paragraph",
+              "data": {
+                "text": "Late"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPLY_FAILED",
+        "revision": "",
+        "result": {
+          "/error/retryable": true,
+          "/error/details": {
+            "status": "Draining"
+          },
+          "/error/message": "The room refused the edit (Draining). Nothing was written."
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "name": "room-undo-lineage-changed",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.insert",
+            "args": {
+              "id": "a",
+              "type": "paragraph",
+              "data": {
+                "text": "Agent"
+              },
+              "position": "end"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ],
+        "expectRevision": "ffffffffffffffffffffffffffffffff:1"
+      },
+      "expect": {
+        "ok": false,
+        "code": "CONFLICT",
+        "committed": 0,
+        "revision": "",
+        "result": {
+          "/error/retryable": true,
+          "/error/message": "The room was reset or reloaded since this step, so it can no longer be undone. Re-read the document."
+        }
+      }
+    }
+  ]
+}

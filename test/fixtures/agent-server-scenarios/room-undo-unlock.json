@@ -1,0 +1,96 @@
+{
+  "name": "room-undo-unlock",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v",
+          "views": [
+            {
+              "id": "v",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "database.setLock",
+            "args": {
+              "id": "db",
+              "locked": true
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/data/schema/0/databaseLocked": true
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPROVAL_REQUIRED",
+        "committed": 0,
+        "state": {
+          "/blocks/0/data/schema/0/databaseLocked": true
+        },
+        "result": {
+          "/error/retryable": false,
+          "/error/details": {
+            "reason": "no-channel",
+            "approval": {
+              "kind": "database.unlock",
+              "blockId": "db"
+            }
+          },
+          "/error/message": "This undo would unlock database \"db\". Unlocking needs a person's explicit approval, and nothing here can ask one. Nothing was written. Ask the person to unlock it themselves."
+        }
+      }
+    }
+  ]
+}

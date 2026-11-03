@@ -1,0 +1,113 @@
+{
+  "name": "room-undo-share-no-id",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "P"
+        }
+      },
+      {
+        "id": "db",
+        "type": "database",
+        "content": [],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v",
+          "views": [
+            {
+              "id": "v",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            },
+            {
+              "name": "Signup",
+              "type": "form",
+              "position": "a1",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": [],
+              "form": {
+                "public": true
+              }
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "db"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks": {
+            "length": 1
+          }
+        }
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "APPROVAL_REQUIRED",
+        "committed": 0,
+        "state": {
+          "/blocks": {
+            "length": 1
+          }
+        },
+        "result": {
+          "/error/details/approval": {
+            "kind": "database.share",
+            "blockId": "db",
+            "viewId": ""
+          }
+        }
+      }
+    }
+  ]
+}

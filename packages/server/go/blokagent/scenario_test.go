@@ -314,7 +314,7 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 						return fillScenario(text, revisions, current)
 					}
 					switch run {
-					case "peer", "reset", "purge", "restore":
+					case "peer", "reset", "purge", "restore", "drain":
 						live.hostStep(t, where, run, step, fill)
 						continue
 					}

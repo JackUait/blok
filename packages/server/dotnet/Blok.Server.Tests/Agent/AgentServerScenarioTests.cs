@@ -26,7 +26,7 @@ namespace Blok.Server.Tests.Agent;
 /// <list type="bullet">
 /// <item><c>room.doc</c> (default <c>agent-room</c>) holds <c>seed</c>; <c>room.held</c> holds more documents.</item>
 /// <item><c>run</c> also takes <c>room</c> (<c>doc</c>, <c>actor</c>), <c>peer</c> (an /edit body in <c>ops</c>,
-/// written as <c>human-2</c>), <c>reset</c>, <c>purge</c> and <c>restore</c> (<c>version</c>).</item>
+/// written as <c>human-2</c>), <c>reset</c>, <c>purge</c>, <c>restore</c> (<c>version</c>) and <c>drain</c>.</item>
 /// <item>Strings take <c>{lineage}</c> (the room's journal lineage) and <c>{rev:N}</c> (step N's revision).</item>
 /// <item>The string <c>@head</c> in an expected value is the room's head after the step. <c>expect.revision</c>
 /// is <c>@head</c> or <c>""</c>; <c>expect.state</c> holds pointers into the room's export;
@@ -98,7 +98,7 @@ public sealed class AgentServerScenarioTests
         var current = live is null ? null : await live.HeadAsync(live.DocId);
         string Fill(string text) => live is null ? text : Live.Fill(text, revisions, current!);
 
-        if (run is "peer" or "reset" or "purge" or "restore")
+        if (run is "peer" or "reset" or "purge" or "restore" or "drain")
         {
           await live!.HostStepAsync(where, run, step, Fill);
           continue;
@@ -530,6 +530,9 @@ public sealed class AgentServerScenarioTests
           break;
         case "reset":
           await Manager.ResetAsync(docId);
+          break;
+        case "drain":
+          await Manager.DrainAsync();
           break;
         case "purge":
           await Manager.PurgeDocumentAsync(docId, _ => ValueTask.FromResult(true));

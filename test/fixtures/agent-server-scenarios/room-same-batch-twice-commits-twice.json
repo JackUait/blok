@@ -1,0 +1,73 @@
+{
+  "name": "room-same-batch-twice-commits-twice",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "Hello"
+        }
+      },
+      {
+        "id": "q",
+        "type": "paragraph",
+        "data": {
+          "text": "Other"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "text.insert",
+            "args": {
+              "id": "p",
+              "at": 0,
+              "text": "x"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "committed": 1
+      },
+      "times": 2
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "doc.read",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "state": {
+          "/blocks/0/data/text": [
+            {
+              "text": "xxHello"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

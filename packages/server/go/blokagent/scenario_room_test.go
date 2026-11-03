@@ -151,6 +151,10 @@ func (r *scenarioRoom) hostStep(t *testing.T, where, run string, step *jsjson.No
 		if _, err := r.manager.Reset(ctx, doc); err != nil {
 			t.Fatalf("%s: %v", where, err)
 		}
+	case "drain":
+		if err := r.manager.Drain(ctx); err != nil {
+			t.Fatalf("%s: %v", where, err)
+		}
 	case "purge":
 		if _, err := r.manager.Purge(ctx, doc, func(context.Context) (bool, error) { return true, nil }); err != nil {
 			t.Fatalf("%s: %v", where, err)

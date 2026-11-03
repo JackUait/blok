@@ -13,7 +13,7 @@
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
 import { isSafeCssColor } from '../shared/css-color';
-import { IFRAME_SANDBOX } from '../shared/embed-frame';
+import { registryIframeSandbox } from '../shared/embed-frame';
 import { EMBED_SERVICES, matchEmbedService } from '../shared/embed-registry';
 import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
@@ -763,7 +763,7 @@ export const builtinEmitters: Record<string, Emitter> = {
       return link();
     }
 
-    return trail(`<figure><iframe${srcAttr} sandbox="${IFRAME_SANDBOX}" referrerpolicy="strict-origin-when-cross-origin"></iframe>${figcaption(block, env)}</figure>`, block, env);
+    return trail(`<figure><iframe${srcAttr} sandbox="${registryIframeSandbox(EMBED_SERVICES[service])}" referrerpolicy="strict-origin-when-cross-origin"></iframe>${figcaption(block, env)}</figure>`, block, env);
   },
 
   table: emitTable,

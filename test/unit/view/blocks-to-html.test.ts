@@ -476,6 +476,14 @@ describe('blocksToHtml', () => {
       expect(html).toBe(`<figure><iframe src="https://www.youtube.com/embed/x" ${FRAME}></iframe><figcaption>Vid</figcaption></figure>`);
     });
 
+    it('keeps popups of a code provider inside the sandbox', () => {
+      const html = blocksToHtml(doc([
+        { type: 'embed', data: { service: 'codepen', source: 'https://codepen.io/team/pen/AbCdEf', embed: '' } },
+      ]));
+
+      expect(html).toContain('sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"');
+    });
+
     it('never frames a stored embed URL that differs from the one the source derives', () => {
       const html = blocksToHtml(doc([
         {

@@ -1880,6 +1880,16 @@ describe('Embed — two frame profiles, picked by the registry', () => {
   const genericFrame = (data: Partial<EmbedData>, overrides: { allowGenericEmbed?: boolean; allowedEmbedOrigins?: string[] }): HTMLIFrameElement | null =>
     new Embed(createOptions(data, overrides)).render().querySelector('iframe');
 
+  it('keeps popups of a code provider inside the sandbox', () => {
+    const frame = new Embed(createOptions({
+      service: 'codepen',
+      source: 'https://codepen.io/team/pen/AbCdEf',
+      embed: 'https://codepen.io/team/embed/AbCdEf?default-tab=result',
+    })).render().querySelector('iframe');
+
+    expect(frame?.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin allow-popups allow-presentation');
+  });
+
   it('keeps the provider profile for a registry embed', () => {
     const frame = new Embed(createOptions(iframeData())).render().querySelector('iframe');
 

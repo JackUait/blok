@@ -20,7 +20,7 @@ import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { figureInsets } from '../../image/figure-insets';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
-import { GENERIC_IFRAME_SANDBOX, IFRAME_SANDBOX } from '../../../shared/embed-frame';
+import { GENERIC_IFRAME_SANDBOX, registryIframeSandbox } from '../../../shared/embed-frame';
 import {
   EMBED_SERVICES,
   matchEmbedService,
@@ -1120,8 +1120,10 @@ export class Embed implements BlockTool {
     iframe.style.border = '0';
 
     // The profile follows the registry decision, never saved data.
-    if (this.embedRender().service !== '') {
-      iframe.setAttribute('sandbox', IFRAME_SANDBOX);
+    const { service } = this.embedRender();
+
+    if (service !== '') {
+      iframe.setAttribute('sandbox', registryIframeSandbox(EMBED_SERVICES[service]));
       iframe.setAttribute('allow', IFRAME_ALLOW);
       iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     } else {

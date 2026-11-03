@@ -74,6 +74,14 @@ export interface EmbedService {
    * value) instead of an aspect-ratio box, and gets a bottom resize handle.
    */
   resizableHeight?: boolean;
+  /**
+   * Lets popups from the frame leave the sandbox, so the player's "Watch on
+   * <provider>" page loads (some providers refuse a sandboxed tab). Set it
+   * only for a media player on the provider's own fixed host: in Firefox an
+   * escaped popup can move the host tab, which any author of code or pages on
+   * the provider could then do. The iframe-sandbox law pins this.
+   */
+  popupsEscapeSandbox?: boolean;
 }
 
 export interface EmbedMatch {
@@ -134,6 +142,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   youtube: {
     title: 'YouTube',
     type: 'video',
+    popupsEscapeSandbox: true,
     regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]+)(\S*)/,
     embedUrl: 'https://www.youtube.com/embed/<%= remote_id %>',
     id: (groups) => {
@@ -148,6 +157,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   youtubeplaylist: {
     title: 'YouTube',
     type: 'video',
+    popupsEscapeSandbox: true,
     regex: /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?youtube\.com\/playlist\?(?:.*&)?list=([\w-]+)\S*/,
     embedUrl: 'https://www.youtube.com/embed/videoseries?list=<%= remote_id %>',
     width: 580,
@@ -157,6 +167,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   vimeo: {
     title: 'Vimeo',
     type: 'video',
+    popupsEscapeSandbox: true,
     regex: /^(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:(?:groups\/[\w-]+\/videos|album\/\d+\/video|showcase\/\d+\/video|video)\/)?(\d+)(?:\/([0-9a-f]+))?\S*/,
     embedUrl: 'https://player.vimeo.com/video/<%= remote_id %>',
     id: (groups) => (groups[1] !== undefined ? `${groups[0]}?h=${groups[1]}` : groups[0] ?? ''),
@@ -167,6 +178,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   vimeoshowcase: {
     title: 'Vimeo',
     type: 'video',
+    popupsEscapeSandbox: true,
     regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/showcase\/(\d+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://vimeo.com/showcase/<%= remote_id %>/embed',
     width: 580,
@@ -176,6 +188,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   vimeoevent: {
     title: 'Vimeo',
     type: 'video',
+    popupsEscapeSandbox: true,
     regex: /^(?:https?:\/\/)?(?:www\.)?vimeo\.com\/event\/(\d+)\S*/,
     embedUrl: 'https://vimeo.com/event/<%= remote_id %>/embed',
     width: 580,
@@ -185,6 +198,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   rutube: {
     title: 'RUTUBE',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Rutube ids are 32-char hex hashes; the length guard keeps listing pages
     // (/video/category/..., /video/person/...) from being claimed.
     regex: /^(?:https?:\/\/)?(?:www\.)?rutube\.ru\/(?:video\/private\/|(?:video|shorts|play\/embed)\/|live\/video\/)([0-9a-f]{32})\/?(?:\?(?:.*&)?p=([\w-]+))?\S*/,
@@ -197,6 +211,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   vkvideo: {
     title: 'VK Video',
     type: 'video',
+    popupsEscapeSandbox: true,
     // NOTE: VK normally also needs a `hash` param that is not derivable from the
     // pasted URL (it IS kept when a video_ext.php iframe src is pasted directly).
     // Public videos usually render without it.
@@ -232,6 +247,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   loom: {
     title: 'Loom',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Loom video ids are 32-char hex; folder links (loom.com/share/folder/...)
     // are not embeddable and must fall through to the bookmark tool.
     regex: /^(?:https?:\/\/)?(?:www\.)?loom\.com\/(?:share|embed)\/([0-9a-f]{32})\S*/,
@@ -253,6 +269,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   spotify: {
     title: 'Spotify',
     type: 'audio',
+    popupsEscapeSandbox: true,
     regex: /^(?:https?:\/\/)?open\.spotify\.com\/(?:intl-[\w-]+\/)?(?:embed\/)?(track|album|playlist|episode|show|artist)\/([^/?#]+)\S*/,
     embedUrl: 'https://open.spotify.com/embed/<%= remote_id %>',
     id: (groups) => `${groups[0]}/${groups[1]}`,
@@ -377,6 +394,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   bilibili: {
     title: 'bilibili',
     type: 'video',
+    popupsEscapeSandbox: true,
     // BV ids are base58 (no 0/O/I/l); legacy av ids are numeric. Opaque b23.tv
     // shortcodes resolve only via redirect and are excluded; literal-id b23.tv
     // links carry the id in the path and are claimed. Player autoplays by
@@ -391,6 +409,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   niconico: {
     title: 'niconico',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Ids keep their sm/nm/so prefix; nico.ms short links carry the id in the
     // path. so (official channel) videos may refuse embedding per-publisher.
     regex: /^(?:https?:\/\/)?(?:(?:www|sp)\.nicovideo\.jp\/watch|nico\.ms)\/((?:sm|nm|so)\d+)\S*/,
@@ -402,6 +421,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   youku: {
     title: 'Youku',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Ids are base64-ish (may end in = padding, sometimes %3D-encoded when
     // copied). Playback of many videos is mainland-China-only at stream level.
     regex: /^(?:https?:\/\/)?(?:v|m)\.youku\.com\/(?:v_show|video|alipay_video)\/id_((?:%3D|[A-Za-z0-9+=])+)\.html?\S*/,
@@ -414,6 +434,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   navertv: {
     title: 'Naver TV',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Param is camelCase autoPlay; the embed host is the same tv.naver.com.
     regex: /^(?:https?:\/\/)?tv\.naver\.com\/(?:v|embed)\/(\d+)\S*/,
     embedUrl: 'https://tv.naver.com/embed/<%= remote_id %>?autoPlay=false',
@@ -424,6 +445,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   kakaotv: {
     title: 'KakaoTV',
     type: 'video',
+    popupsEscapeSandbox: true,
     // tv.kakao.com itself sends X-Frame-Options: DENY — only the
     // play-tv.kakao.com embed host is frameable.
     regex: /^(?:https?:\/\/)?tv\.kakao\.com\/(?:v|channel\/\d+\/cliplink)\/(\d+)\S*/,
@@ -435,6 +457,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   dailymotion: {
     title: 'Dailymotion',
     type: 'video',
+    popupsEscapeSandbox: true,
     // dai.ly short links carry the video id literally in the path.
     regex: /^(?:https?:\/\/)?(?:(?:www\.)?dailymotion\.com\/video|dai\.ly)\/([a-z0-9]+)\S*/,
     embedUrl: 'https://geo.dailymotion.com/player.html?video=<%= remote_id %>',
@@ -445,6 +468,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   okru: {
     title: 'OK.ru',
     type: 'video',
+    popupsEscapeSandbox: true,
     // m.ok.ru pages send X-Frame-Options: DENY — always rewrite onto the
     // ok.ru/videoembed endpoint. Ids may carry a -N suffix.
     regex: /^(?:https?:\/\/)?(?:(?:www|m|mobile)\.)?(?:ok\.ru|odnoklassniki\.ru)\/(?:video|videoembed|live)\/(\d+(?:-\d+)?)\S*/,
@@ -456,6 +480,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   yandexmusic: {
     title: 'Yandex Music',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // The iframe widget reverses the share-URL slot order for tracks:
     // /album/<albumId>/track/<trackId> embeds as /iframe/track/<trackId>/<albumId>.
     regex: /^(?:https?:\/\/)?music\.yandex\.(?:ru|com|kz|by|uz)\/(?:album\/(\d+)(?:\/track\/(\d+))?|users\/([\w.-]+)\/playlists\/(\d+))\S*/,
@@ -480,6 +505,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   arte: {
     title: 'ARTE',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Program ids are NNNNNN-NNN-L; geo-rights vary per program inside the player.
     regex: /^(?:https?:\/\/)?(?:www\.)?arte\.tv\/(fr|de|en|es|pl|it)\/videos\/(\d{6}-\d{3}-[A-Z])\S*/,
     embedUrl: 'https://www.arte.tv/embeds/<%= remote_id %>',
@@ -491,6 +517,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   deezer: {
     title: 'Deezer',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // link.deezer.com short links are opaque redirects and excluded.
     regex: /^(?:https?:\/\/)?(?:www\.)?deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist|episode)\/(\d+)\S*/,
     embedUrl: 'https://widget.deezer.com/widget/auto/<%= remote_id %>',
@@ -502,6 +529,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   soundcloud: {
     title: 'SoundCloud',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // The widget takes the whole permalink percent-encoded in ?url=. Profile
     // tab pages (tracks/albums/likes/...) and opaque on.soundcloud.com short
     // links are excluded; the latter resolve only via redirect.
@@ -516,6 +544,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   mixcloud: {
     title: 'Mixcloud',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Only shows have widget feeds; playlist pages are excluded.
     regex: /^(?:https?:\/\/)?(?:(?:www|m)\.)?mixcloud\.com\/([\w-]+)\/(?!playlists(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
     embedUrl: 'https://www.mixcloud.com/widget/iframe/?feed=<%= remote_id %>&hide_cover=1',
@@ -527,6 +556,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   applemusic: {
     title: 'Apple Music',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Pure host swap onto embed.music.apple.com; ?i= selects a single track
     // inside an album embed and must be preserved.
     regex: /^(?:https?:\/\/)?music\.apple\.com\/([a-z]{2}\/(?:album|playlist|song)\/[^\s/?]+\/(?:pl\.[\w-]+|\d+))(?:\?(\S*))?$/,
@@ -543,6 +573,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   applepodcasts: {
     title: 'Apple Podcasts',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Pure host swap onto embed.podcasts.apple.com; ?i= selects an episode.
     regex: /^(?:https?:\/\/)?podcasts\.apple\.com\/([a-z]{2}\/podcast\/[^\s/?]+\/id\d+)(?:\?(\S*))?$/,
     embedUrl: 'https://embed.podcasts.apple.com/<%= remote_id %>',
@@ -558,6 +589,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   audiomack: {
     title: 'Audiomack',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Share path /<artist>/<type>/<slug> rearranges to /embed/<type>/<artist>/<slug>.
     regex: /^(?:https?:\/\/)?(?:www\.)?audiomack\.com\/([\w-]+)\/(song|album|playlist)\/([\w-]+)\S*/,
     embedUrl: 'https://audiomack.com/embed/<%= remote_id %>',
@@ -569,6 +601,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   anghami: {
     title: 'Anghami',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // play.anghami.com/embed/... sends X-Frame-Options: DENY on its redirect —
     // only the widget.anghami.com host is frameable.
     regex: /^(?:https?:\/\/)?play\.anghami\.com\/(song|album|playlist|artist)\/(\d+)\S*/,
@@ -581,6 +614,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   streamable: {
     title: 'Streamable',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Codes are short lowercase alnum, so common site pages must be excluded
     // explicitly to keep them on the bookmark fallback.
     regex: /^(?:https?:\/\/)?(?:www\.)?streamable\.com\/(?:e\/)?(?!(?:login|signup|recover|documentation)(?:[/?#]|$))([a-z0-9]+)\/?(?:[?#]\S*)?$/,
@@ -592,6 +626,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   tiktok: {
     title: 'TikTok',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Opaque vm./vt. short links resolve only via redirect and are excluded;
     // photo posts render inconsistently in embed/v2 and are excluded too.
     regex: /^(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@[\w.-]+\/video\/(\d+)\S*/,
@@ -604,6 +639,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   wistia: {
     title: 'Wistia',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Account subdomains are arbitrary; both wistia.com and wistia.net occur.
     regex: /^(?:https?:\/\/)?(?:[\w-]+\.)?wistia\.(?:com|net)\/(?:medias|embed\/iframe)\/([A-Za-z0-9]+)\S*/,
     embedUrl: 'https://fast.wistia.net/embed/iframe/<%= remote_id %>',
@@ -614,6 +650,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   vidyard: {
     title: 'Vidyard',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Share hosts are per-customer subdomains, optionally with one path segment
     // before /watch/. The embed host returns 200 even for bogus ids.
     regex: /^(?:https?:\/\/)?[\w-]+\.vidyard\.com\/(?:[\w-]+\/)?watch\/([\w-]+)\S*/,
@@ -753,6 +790,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   facebookvideo: {
     title: 'Facebook',
     type: 'video',
+    popupsEscapeSandbox: true,
     // The plugin takes the canonical watch URL percent-encoded in ?href=.
     // Opaque fb.watch short links resolve only via redirect and are excluded.
     regex: /^(?:https?:\/\/)?(?:(?:www|m|web|mbasic)\.)?facebook\.com\/(?:([\w.-]+)\/videos\/(?:[\w.-]+\/)?(\d+)|watch\/?\?(?:\S*?&)?v=(\d+)|reel\/(\d+))\S*/,
@@ -873,6 +911,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   ted: {
     title: 'TED',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Slug is required — the bare /talks index page must fall through to bookmark.
     regex: /^(?:https?:\/\/)?(?:www\.)?ted\.com\/talks\/([\w-]+)\S*/,
     embedUrl: 'https://embed.ted.com/talks/<%= remote_id %>',
@@ -883,6 +922,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   internetarchive: {
     title: 'Internet Archive',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Identifiers are case-sensitive and may contain dots; deep links
     // (/details/<id>/<file>) keep only the first path segment — the embed
     // player takes the bare item identifier.
@@ -895,6 +935,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   kick: {
     title: 'Kick',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Live channel pages are single-segment, so /<channel>/videos/... VODs and
     // reserved site paths fall through to the bookmark tool. player.kick.com
     // needs no parent param (unlike twitch). Cloudflare bot-walls curl/headless
@@ -921,6 +962,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   odysee: {
     title: 'Odysee',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Claim paths carry @ and : (colons sometimes %3A-encoded when copied) and
     // are passed through to $/embed verbatim. $/... app paths and channel-only
     // URLs (single @segment, no video) are excluded; the anonymous single-segment
@@ -935,6 +977,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   soop: {
     title: 'SOOP',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Legacy afreecatv.com and Korean sooplive.co.kr hosts normalize onto the
     // global sooplive.com player. The player page itself is frameable;
     // gated/missing VODs error gracefully inside the frame.
@@ -947,6 +990,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   coub: {
     title: 'Coub',
     type: 'video',
+    popupsEscapeSandbox: true,
     // /embed serves X-Frame-Options: ALLOWALL.
     regex: /^(?:https?:\/\/)?(?:www\.)?coub\.com\/view\/(\w+)\S*/,
     embedUrl: 'https://coub.com/embed/<%= remote_id %>',
@@ -957,6 +1001,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   bitchute: {
     title: 'BitChute',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Ids may contain - and _; the embed path keeps the trailing slash.
     regex: /^(?:https?:\/\/)?(?:www\.)?bitchute\.com\/video\/([\w-]+)\/?\S*/,
     embedUrl: 'https://www.bitchute.com/embed/<%= remote_id %>/',
@@ -967,6 +1012,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   tidal: {
     title: 'TIDAL',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Numeric ids for track/album/video, UUID for playlist; the embed host
     // pluralizes the type segment (track -> tracks). Mix pages have no verified
     // embed.tidal.com mapping and are excluded. Natural player heights differ
@@ -982,6 +1028,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   spotifypodcasters: {
     title: 'Spotify for Creators',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Spotify for Creators (ex Podcasters, ex Anchor). All three hosts carry the
     // same <show>/episodes/<slug>-<episodeId> shape; the embed form inserts
     // /embed before /episodes on the current creators.spotify.com host.
@@ -995,6 +1042,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   pocketcasts: {
     title: 'Pocket Casts',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Share codes are short opaque tokens in the root path, so known site pages
     // must be excluded explicitly to keep them on the bookmark fallback.
     regex: /^(?:https?:\/\/)?pca\.st\/(?!(?:discover|search|podcasts?|episode|support|sign-in|register|get|plus|about|privacy|terms)(?:[/?#]|$))([\w-]+)\/?(?:[?#]\S*)?$/,
@@ -1006,6 +1054,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   iheart: {
     title: 'iHeart',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Podcast shows, episodes and live stations all embed as the original page
     // path with ?embed=true appended; ids are the trailing -<digits> of each slug.
     regex: /^(?:https?:\/\/)?(?:www\.)?iheart\.com\/(podcast\/[\w-]+-\d+(?:\/episode\/[\w-]+-\d+)?|live\/[\w-]+-\d+)\/?(?:[?#]\S*)?$/,
@@ -1017,6 +1066,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   acast: {
     title: 'Acast',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Episode pages live at shows.acast.com/<show>/episodes/<episode> (the
     // /episodes/ segment is optional on older links); the embed host drops it.
     // Bare show pages and the /episodes listing are excluded.
@@ -1030,6 +1080,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   podbean: {
     title: 'Podbean',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Only /ew/pb-... share links carry the player key; per-show subdomain
     // episode pages (myshow.podbean.com/e/...) have no derivable key and fall
     // through to the bookmark tool. The player-v2 widget rejects the share
@@ -1044,6 +1095,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   spreaker: {
     title: 'Spreaker',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // The widget wants the numeric episode id: trailing --<id> on current slug
     // URLs, the whole segment on legacy /episode/<id> links.
     regex: /^(?:https?:\/\/)?(?:www\.)?spreaker\.com\/episode\/(?:[\w-]*?--)?(\d+)\/?(?:[?#]\S*)?$/,
@@ -1055,6 +1107,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   buzzsprout: {
     title: 'Buzzsprout',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Episode pages embed as-is with the small-player query appended; the
     // /episodes/ segment is optional and the -slug suffix may be absent.
     regex: /^(?:https?:\/\/)?(?:www\.)?buzzsprout\.com\/(\d+\/(?:episodes\/)?\d+(?:-[\w-]+)?)\/?(?:[?#]\S*)?$/,
@@ -1066,6 +1119,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   castbox: {
     title: 'Castbox',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Ids are the trailing -id<channel>-id<episode> (episode) or -id<channel>
     // (channel) of the slug; slugs may carry percent-encoded punctuation, so the
     // slug part is consumed lazily and only the trailing id pair is captured.
@@ -1079,6 +1133,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   transistor: {
     title: 'Transistor',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // /s/ share pages send frame-ancestors 'self' — the rewrite onto the /e/
     // embed path is mandatory, not cosmetic.
     regex: /^(?:https?:\/\/)?share\.transistor\.fm\/(?:s|e)\/([0-9a-f]+)\S*/,
@@ -1090,6 +1145,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   audioboom: {
     title: 'Audioboom',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // The numeric post id leads the slug; the v4 player lives on the
     // embeds.audioboom.com subdomain.
     regex: /^(?:https?:\/\/)?(?:www\.)?audioboom\.com\/posts\/(\d+)\S*/,
@@ -1101,6 +1157,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   tunein: {
     title: 'TuneIn',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Stations only: the trailing s<digits> of the slug is the station id.
     // Program/podcast pages use p-ids and have no station player — excluded.
     regex: /^(?:https?:\/\/)?(?:www\.)?tunein\.com\/radio\/(?:[\w-]+-)?s(\d+)\/?(?:[?#]\S*)?$/,
@@ -1112,6 +1169,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   beatport: {
     title: 'Beatport',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // The numeric id after the slug feeds the embed player query.
     regex: /^(?:https?:\/\/)?(?:www\.)?beatport\.com\/track\/[^/?#\s]+\/(\d+)\S*/,
     embedUrl: 'https://embed.beatport.com/?id=<%= remote_id %>&type=track',
@@ -1122,6 +1180,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   netease: {
     title: 'NetEase Cloud Music',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Song pages are SPA hash routes (#/song?id=) but share links also occur
     // without the hash; both carry id= in the query. type=2 is the song player.
     regex: /^(?:https?:\/\/)?music\.163\.com\/(?:#\/)?song\?(?:.*&)?id=(\d+)\S*/,
@@ -1133,6 +1192,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   suno: {
     title: 'Suno',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Song ids are full UUIDs; the strict shape keeps other /song-ish pages out.
     regex: /^(?:https?:\/\/)?(?:www\.)?suno\.com\/song\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*/,
     embedUrl: 'https://suno.com/embed/<%= remote_id %>',
@@ -1143,6 +1203,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   hearthis: {
     title: 'hearthis.at',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Tracks are exactly /<user>/<slug>/; the player is the same path + /embed/.
     // Known two-segment site sections are excluded; profile pages (one segment)
     // and set pages (three segments) never fit the shape.
@@ -1156,6 +1217,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   boomplay: {
     title: 'Boomplay',
     type: 'audio',
+    popupsEscapeSandbox: true,
     // Songs only; the /MUSIC suffix is the player's content-type discriminator.
     regex: /^(?:https?:\/\/)?(?:www\.)?boomplay\.com\/songs\/(\d+)\S*/,
     embedUrl: 'https://www.boomplay.com/embed/<%= remote_id %>/MUSIC',
@@ -1484,6 +1546,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   tencentvideo: {
     title: 'Tencent Video',
     type: 'video',
+    popupsEscapeSandbox: true,
     // vid is the last path token on both cover and page URLs; mobile pages
     // carry it in ?vid=. Like youku, many streams play mainland-China-only
     // at stream level; the txp player itself frames anywhere.
@@ -1497,6 +1560,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   douyin: {
     title: 'Douyin',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Official no-permission iframe player (developer.open-douyin.com).
     // Opaque v.douyin.com / iesdouyin.com short links resolve only via
     // redirect and are excluded.
@@ -1510,6 +1574,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   kinescope: {
     title: 'Kinescope',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Video ids are long base62 tokens; the length guard keeps site pages
     // (kinescope.io/pricing, /blog, ...) on the bookmark fallback. Per-video
     // domain-allowlist/DRM are customer options — restricted videos error
@@ -1523,6 +1588,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   vidio: {
     title: 'Vidio',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Watch pages are /watch/<numericId>-<slug>; only the numeric id feeds
     // the embed. The embed host sends X-Frame-Options: ALLOWALL; premium/DRM
     // titles show an upsell inside the frame.
@@ -1535,6 +1601,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   mailru: {
     title: 'Mail.ru',
     type: 'video',
+    popupsEscapeSandbox: true,
     // Portal pages send X-Frame-Options: DENY — only the /video/embed/ form
     // is frameable (insert embed/ after /video/, drop .html). Legacy
     // videoapi.my.mail.ru embed links 301 onto this same form.
@@ -1548,6 +1615,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   smotrim: {
     title: 'Smotrim',
     type: 'video',
+    popupsEscapeSandbox: true,
     // The player shell 200s for any id (invalid ids error inside the frame);
     // many streams are RU/CIS-geo-locked at stream level.
     regex: /^(?:https?:\/\/)?(?:www\.)?smotrim\.ru\/video\/(\d+)\S*/,

@@ -788,6 +788,27 @@ it('rates whether an outbound page lets the editor frame it', async () => {
       for (const page of FRAME_PAGES) {
         record(`${page} for the editor`, await check(`${origin.baseUrl}/frame/${page}`));
       }
+      // csp-self blocks every embedder but the page's own origin, so a used
+      // embedder reads "blocked" and none reads "insecure".
+      const claim = (embedder: string, headers: Record<string, string>): Promise<HttpResponse> =>
+        server.request('GET', `/frame-check?url=${encodeURIComponent(`${origin.baseUrl}/frame/csp-self`)}` +
+          `&embedder=${encodeURIComponent(embedder)}`, { headers });
+      const sameOrigin = { 'Sec-Fetch-Site': 'same-origin' };
+      const claims: Array<[string, Promise<HttpResponse>, string]> = [
+        ['same-origin with its own embedder', claim(server.baseUrl, sameOrigin), 'blocked'],
+        ['same-origin with another embedder', claim('http://other.example', sameOrigin), 'insecure'],
+        ['same-site with its own embedder', claim(server.baseUrl, { 'Sec-Fetch-Site': 'same-site' }), 'insecure'],
+        ['its own embedder with no Sec-Fetch-Site', claim(server.baseUrl, {}), 'insecure'],
+        ['an allowed embedder with no Origin', claim(editor, {}), 'blocked'],
+        ['a refused embedder with no Origin', claim('http://other.example', {}), 'insecure'],
+      ];
+
+      for (const [name, pending, verdict] of claims) {
+        const response = await pending;
+
+        expect([name, response.status, JSON.parse(response.text).verdict]).toEqual([name, 200, verdict]);
+        record(name, response);
+      }
       record('xfo-deny with no Origin', await check(`${origin.baseUrl}/frame/xfo-deny`, {}));
       record('plain with no Origin', await check(`${origin.baseUrl}/frame/plain`, {}));
       record('a refused Origin', await check(`${origin.baseUrl}/frame/plain`, { Origin: 'http://other.example' }));

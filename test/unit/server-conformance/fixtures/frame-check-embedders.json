@@ -1,0 +1,184 @@
+{
+  "_comment": "Which embedder GET /frame-check rates a page for. An Origin header, when sent, decides alone: allowed gives it, anything else gives none. With no Origin, the embedder query value counts when Sec-Fetch-Site is same-origin and it equals the server's own origin (scheme://Host), or when it is an allowed origin. Origins compare like the CORS check: ordinal, ignoring case, allowed entries trimmed. null means no embedder, so the verdict is unknown. Go (internal/framecheck) and C# (FrameCheckEmbedderFixtureTests) both read this file.",
+  "cases": [
+    {
+      "name": "an allowed Origin",
+      "origin": "https://editor.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": "https://editor.example"
+    },
+    {
+      "name": "an allowed Origin wins over a different embedder",
+      "origin": "https://editor.example",
+      "secFetchSite": "same-origin",
+      "embedder": "https://blok.example",
+      "allowedOrigins": ["https://editor.example", "https://other.example"],
+      "self": "https://blok.example",
+      "want": "https://editor.example"
+    },
+    {
+      "name": "a refused Origin never falls through to the embedder",
+      "origin": "https://evil.example",
+      "secFetchSite": "same-origin",
+      "embedder": "https://blok.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "an empty Origin is still an Origin",
+      "origin": "",
+      "embedder": "https://editor.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "same-origin with the server's own origin",
+      "secFetchSite": "same-origin",
+      "embedder": "https://blok.example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": "https://blok.example"
+    },
+    {
+      "name": "same-origin with a port",
+      "secFetchSite": "same-origin",
+      "embedder": "http://127.0.0.1:8080",
+      "allowedOrigins": [],
+      "self": "http://127.0.0.1:8080",
+      "want": "http://127.0.0.1:8080"
+    },
+    {
+      "name": "same-origin compares without case",
+      "secFetchSite": "Same-Origin",
+      "embedder": "HTTPS://Blok.Example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": "HTTPS://Blok.Example"
+    },
+    {
+      "name": "same-origin with another origin",
+      "secFetchSite": "same-origin",
+      "embedder": "https://other.example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "same-origin with another scheme",
+      "secFetchSite": "same-origin",
+      "embedder": "https://blok.example",
+      "allowedOrigins": [],
+      "self": "http://blok.example",
+      "want": null
+    },
+    {
+      "name": "same-origin with another port",
+      "secFetchSite": "same-origin",
+      "embedder": "https://blok.example:8443",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "same-origin with a path after the origin",
+      "secFetchSite": "same-origin",
+      "embedder": "https://blok.example/",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "same-site is not same-origin",
+      "secFetchSite": "same-site",
+      "embedder": "https://blok.example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "cross-site is not same-origin",
+      "secFetchSite": "cross-site",
+      "embedder": "https://blok.example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "a typed-in address is not same-origin",
+      "secFetchSite": "none",
+      "embedder": "https://blok.example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "no Sec-Fetch-Site is not same-origin",
+      "embedder": "https://blok.example",
+      "allowedOrigins": [],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "same-origin with an empty embedder",
+      "secFetchSite": "same-origin",
+      "embedder": "",
+      "allowedOrigins": [],
+      "self": "",
+      "want": null
+    },
+    {
+      "name": "same-origin with no Host",
+      "secFetchSite": "same-origin",
+      "embedder": "http://",
+      "allowedOrigins": [],
+      "self": "",
+      "want": null
+    },
+    {
+      "name": "an allowed embedder with no Origin",
+      "embedder": "https://editor.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": "https://editor.example"
+    },
+    {
+      "name": "an allowed embedder from a cross-site fetch with no Origin",
+      "secFetchSite": "cross-site",
+      "embedder": "https://editor.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": "https://editor.example"
+    },
+    {
+      "name": "an allowed embedder compares like the CORS check",
+      "embedder": "https://EDITOR.example",
+      "allowedOrigins": ["  https://editor.example  "],
+      "self": "https://blok.example",
+      "want": "https://EDITOR.example"
+    },
+    {
+      "name": "same-origin with an allowed embedder that is not its own",
+      "secFetchSite": "same-origin",
+      "embedder": "https://editor.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": "https://editor.example"
+    },
+    {
+      "name": "a refused embedder with no Origin",
+      "embedder": "https://evil.example",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": null
+    },
+    {
+      "name": "no Origin and no embedder",
+      "allowedOrigins": ["https://editor.example"],
+      "self": "https://blok.example",
+      "want": null
+    }
+  ]
+}

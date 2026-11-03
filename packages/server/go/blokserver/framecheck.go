@@ -49,10 +49,7 @@ func (s *Server) frameCheck(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, []byte("{\"verdict\":\"unknown\"}\n"))
 		return
 	}
-	embedder := requestOrigin(r)
-	if !s.originAllowed(embedder) {
-		embedder = ""
-	}
+	embedder := framecheck.Embedder(frameCheckRequest(r), s.originAllowed)
 	var headers []framecheck.Header
 	for _, name := range framingHeaders {
 		for _, value := range response.Header.Values(name) {
@@ -75,6 +72,27 @@ func (s *Server) frameCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, append(body, "}\n"...))
+}
+
+// frameCheckRequest reads what framecheck.Embedder needs. Self is the
+// connection's own view, like C#'s Request.Scheme and Request.Host without
+// forwarded-header middleware.
+func frameCheckRequest(r *http.Request) framecheck.Request {
+	_, hasOrigin := r.Header["Origin"]
+	self := ""
+	if r.Host != "" {
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		self = scheme + "://" + r.Host
+	}
+	return framecheck.Request{
+		Origin: requestOrigin(r), HasOrigin: hasOrigin,
+		SecFetchSite: firstValue(r.Header, "Sec-Fetch-Site"),
+		Embedder:     dotnet.QueryFirst(r.URL.RawQuery, "embedder"),
+		Self:         self,
+	}
 }
 
 // fetchOEmbed sends the discovered URL through the same guarded fetcher, on

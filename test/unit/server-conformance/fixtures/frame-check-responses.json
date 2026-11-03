@@ -546,6 +546,114 @@
     }
   },
   {
+    "name": "same-origin with its own embedder",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
+    "name": "same-origin with another embedder",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
+    "name": "same-site with its own embedder",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
+    "name": "its own embedder with no Sec-Fetch-Site",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
+    "name": "an allowed embedder with no Origin",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"blocked\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
+    "name": "a refused embedder with no Origin",
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ],
+        "vary": [
+          "Origin"
+        ]
+      },
+      "body": "{\"verdict\":\"insecure\",\"link\":\"<origin>/frame/csp-self\"}\n"
+    }
+  },
+  {
     "name": "xfo-deny with no Origin",
     "response": {
       "status": 200,

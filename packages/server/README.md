@@ -302,7 +302,7 @@ Passes are needed whenever the routes run with `Auth = "ticket"`, including rout
 | --- | --- |
 | `GET /health` | Reports liveness and the running version |
 | `GET /unfurl?url=…` | Reads title, description, and image metadata |
-| `GET /frame-check?url=…` | Says whether the page would let your editor show it in a frame, plus safe oEmbed details |
+| `GET /frame-check?url=…&embedder=…` | Says whether the page would let your editor show it in a frame, plus safe oEmbed details |
 | `POST /upload` | Stores an uploaded file |
 | `POST /upload-by-url` | Fetches and stores a remote file; the request media type must be `application/json` |
 | `GET /sync/{doc}` | WebSocket; the editor's live collaboration connection to one document (with `--collab`) |
@@ -350,13 +350,22 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` is refused. A response head over 64 KiB is refused. When a rate limit is on, each redirect hop counts as one more request for the caller.
 
-`GET /frame-check?url=…` is open whenever `/unfurl` is. It answers `{"verdict": …, "link": …, "oembed": {…}}`.
+`GET /frame-check?url=…&embedder=…` is open whenever `/unfurl` is. It answers `{"verdict": …, "link": …, "oembed": {…}}`.
 
 - `verdict` is `allowed`, `blocked`, `insecure` or `unknown`.
 - `blocked` means the final page's enforced `Content-Security-Policy: frame-ancestors`, or its `X-Frame-Options`, refuses your editor. Report-only policies and `<meta>` tags do not count. Redirect hops do not count.
 - `insecure` means the final page is not `https`. `blocked` wins over it.
-- `unknown` means the request had no `Origin`, or the page could not be fetched or did not answer 2xx.
-- Your editor is the request's `Origin`, used only when it is an allowed origin. The answer sends `Vary: Origin`.
+- `unknown` means the server could not tell who your editor is, or the page could not be fetched or did not answer 2xx.
+- `embedder` is your editor page's origin, such as `https://app.example`. The editor's default check sends it. A browser sends no `Origin` on a same-origin `GET`, so this is how a service mounted on your app's own origin (say `/api/blok`) learns who is asking.
+- The server picks your editor like this:
+  1. A request that sends `Origin` uses it, when it is an allowed origin. Any other `Origin` is refused with 403 before the check runs. `embedder` is ignored.
+  2. With no `Origin`, `embedder` is used when the request carries `Sec-Fetch-Site: same-origin` and `embedder` equals the service's own origin: the request's scheme and `Host` header.
+  3. Otherwise `embedder` is used only when it is an allowed origin.
+  4. Otherwise there is no editor, and the verdict is `unknown`.
+- A page cannot set `Sec-Fetch-Site`, so a page on an unlisted site cannot get a verdict through the service. Origins compare without case, and must match exactly: no path, no trailing `/`.
+- Behind a proxy that ends TLS, the service sees `http`, not `https`. Rule 2 then fails, so add your editor's origin to the allowed origins. The Go server reads the scheme from the connection and `Host` from the request. ASP.NET Core reads `Request.Scheme` and `Request.Host`, so it follows your app if your app rewrites them.
+- In `ticket` mode every request needs an allowed `Origin`, so a same-origin check gets 403 and the editor shows `unknown`. Rule 2 helps in `none` and `proxy` modes.
+- The answer sends `Vary: Origin`.
 - `link` is the final URL after redirects.
 - `oembed` appears when the page links a JSON oEmbed endpoint. It holds only `title`, `provider_name`, an `https` `thumbnail_url`, and `width` and `height` capped at 4096. The oEmbed `html` field is never returned.
 

@@ -88,10 +88,15 @@ internal static class FrameCheckEndpoint
       }
 
       var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
-      var origin = BlokServerCors.RequestOrigin(context.Request);
-      var embedder = BlokServerCors.IsAllowed(origin, options.AllowedOrigins)
-        ? origin
-        : null;
+      var request = context.Request;
+      // Self is the request's own view; forwarded-header middleware, when the
+      // host adds it, changes it here but not in Go.
+      var embedder = FrameCheckEmbedder.Choose(
+          request.Headers.ContainsKey("Origin") ? BlokServerCors.RequestOrigin(request) : null,
+          request.Headers["Sec-Fetch-Site"].FirstOrDefault() ?? "",
+          request.Query["embedder"].FirstOrDefault() ?? "",
+          request.Host.HasValue ? $"{request.Scheme}://{request.Host.Value}" : "",
+          origin => BlokServerCors.IsAllowed(origin, options.AllowedOrigins));
       var headers = FramingHeaders
           .SelectMany(name => response.HeaderValues(name)
               .Select(value => new KeyValuePair<string, string>(name, value)))

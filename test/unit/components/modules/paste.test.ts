@@ -711,6 +711,57 @@ describe('Paste module', () => {
       expect(blockHolder.hasAttribute('data-drop-indicator')).toBe(false);
     });
 
+    it('leaves a URL-only drop to the browser, so it never becomes an embed', async () => {
+      const { paste, mocks } = createPaste();
+      const patternCheck = vi.spyOn(PatternHandler.prototype, 'canHandle');
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      mocks.BlockManager.currentBlock = { tool: { isDefault: true }, isEmpty: true, name: 'paragraph' };
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(mocks.BlockManager.currentBlock);
+
+      const url = 'http://plain.example/';
+      const dropDt = new MockDataTransfer(
+        { 'text/uri-list': url, 'text/plain': url },
+        { length: 0 } as FileList,
+        ['text/uri-list', 'text/plain']
+      );
+      const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(drop, 'dataTransfer', { value: dropDt });
+      mocks.holder.dispatchEvent(drop);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(drop.defaultPrevented).toBe(false);
+      expect(patternCheck).not.toHaveBeenCalled();
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.BlockManager.insert).not.toHaveBeenCalled();
+    });
+
+    it('routes a URL in a file drop through the same pattern handler as a paste', async () => {
+      const { paste, mocks } = createPaste();
+      const patternCheck = vi.spyOn(PatternHandler.prototype, 'canHandle');
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      mocks.BlockManager.currentBlock = { tool: { isDefault: true }, isEmpty: true, name: 'paragraph' };
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(mocks.BlockManager.currentBlock);
+
+      const url = 'http://plain.example/';
+      const dropDt = new MockDataTransfer({ 'text/plain': url }, { length: 0 } as FileList, ['Files', 'text/plain']);
+      const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(drop, 'dataTransfer', { value: dropDt });
+      mocks.holder.dispatchEvent(drop);
+
+      await vi.waitFor(() => {
+        expect(patternCheck).toHaveBeenCalledWith(url);
+      });
+    });
+
     it('ignores drop during internal block drag', async () => {
       const { paste, mocks } = createPaste();
 

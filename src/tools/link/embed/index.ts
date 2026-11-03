@@ -931,7 +931,12 @@ export class Embed implements BlockTool {
       aspect.style.aspectRatio = `${w} / ${h}`;
     }
 
-    aspect.appendChild(this.waitsForClick() ? this.buildLoadGate() : this.buildIframe());
+    if (this.waitsForClick()) {
+      aspect.appendChild(this.buildLoadGate());
+    } else {
+      aspect.appendChild(this.buildIframe());
+      this.appendHostLabel(figure);
+    }
     figure.appendChild(aspect);
 
     return figure;
@@ -962,16 +967,48 @@ export class Embed implements BlockTool {
       && !this.genericLoaded;
   }
 
+  /** The framed URL's host as `new URL` gives it: punycode for IDN, port kept. */
+  private framedHost(): string {
+    try {
+      return new URL(this.embedSrc()).host;
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Names the real host of a generic frame in Blok's own chrome, above the
+   * frame, so nothing drawn inside the frame can claim another origin.
+   * Must stay outside the aspect box: that box holds only the frame.
+   */
+  private appendHostLabel(figure: HTMLElement): void {
+    if (this.embedRender().service !== '') {
+      return;
+    }
+
+    const label = document.createElement('div');
+
+    label.setAttribute('data-role', 'embed-host');
+    label.className = 'blok-embed-host';
+
+    const glyph = document.createElement('span');
+
+    glyph.className = 'blok-embed-host__glyph';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconGlobe;
+
+    const name = document.createElement('span');
+
+    name.className = 'blok-embed-host__name';
+    name.textContent = this.framedHost();
+    label.append(glyph, name);
+    figure.prepend(label);
+  }
+
   /** Stands in for a generic frame until the reader clicks. Holds no URL of the site. */
   private buildLoadGate(): HTMLElement {
-    // `host` is punycode for IDN and keeps the port, so a lookalike name shows as what it is.
-    const host = ((): string => {
-      try {
-        return new URL(this.embedSrc()).host;
-      } catch {
-        return '';
-      }
-    })();
+    // Punycode for IDN, so a lookalike name shows as what it is.
+    const host = this.framedHost();
     const gate = document.createElement('div');
 
     gate.setAttribute('data-role', 'embed-load-gate');
@@ -997,7 +1034,14 @@ export class Embed implements BlockTool {
     button.textContent = this.api.i18n.t('tools.embed.loadFrom', { host });
     button.addEventListener('click', () => {
       this.genericLoaded = true;
+
+      const figure = gate.closest<HTMLElement>('[data-role="embed-figure"]');
+
       gate.replaceWith(this.buildIframe());
+
+      if (figure) {
+        this.appendHostLabel(figure);
+      }
     });
 
     gate.append(glyph, hostLabel, button);

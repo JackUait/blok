@@ -632,3 +632,32 @@
   outline: none;
   box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
+
+/* Real host of a loaded generic frame — Blok chrome above the frame, so the
+   framed page cannot fake where it comes from. */
+[data-blok-tool="embed"] .blok-embed-host {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  min-width: 0;
+  height: 18px;
+  margin-bottom: var(--blok-space-1-5);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--blok-text-secondary);
+}
+.blok-embed-host__glyph {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--blok-text-tertiary);
+}
+.blok-embed-host__glyph svg { width: 14px; height: 14px; }
+.blok-embed-host__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Keeps the hover toolbar on the frame, below the host line (18px + 6px gap). */
+[data-blok-tool="embed"] .blok-embed-host ~ .blok-embed-toolbar { top: calc(10px + 24px); }

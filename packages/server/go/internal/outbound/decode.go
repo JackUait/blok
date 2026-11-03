@@ -42,7 +42,7 @@ func (q quietEnd) Read(p []byte) (int, error) {
 }
 
 // brotliReader is BrotliStream, which ignores bytes after the stream ends.
-// andybalholm/brotli v1.2.6 reports them as this unexported error.
+// andybalholm/brotli v1.2.7 reports them as this unexported error.
 type brotliReader struct{ r io.Reader }
 
 func (b brotliReader) Read(p []byte) (int, error) {

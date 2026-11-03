@@ -126,7 +126,7 @@ func Parse(body []byte, finalURL string) Metadata {
 		firstNonEmpty(icon, appleIcon))
 }
 
-// selectState stands in for AngleSharp 1.8.6's "in select" mode, which x/net
+// selectState stands in for AngleSharp 1.9.0's "in select" mode, which x/net
 // does not have: x/net builds <select> by the customizable-select spec and
 // keeps any element inside. AngleSharp drops a start tag (title, meta, link,
 // div...) whose current node is the select itself, builds normally inside

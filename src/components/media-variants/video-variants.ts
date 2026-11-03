@@ -85,7 +85,9 @@ export const produceVideoVariant = async (
         };
       },
       audio: { codec: target.audio },
-      ...(copyOnly ? { copy: { mode: 'forced' as const } } : {}),
+      // Mediabunny 1.64+ starts Opus at a negative time. Without a shift, a
+      // preferred copy into WebM re-encodes or drops the audio. A/V sync holds.
+      copy: copyOnly ? { mode: 'forced' } : { mode: 'preferred', shiftTolerance: Infinity },
     });
 
     // A dropped track (often audio with no encoder) would ship a broken file.

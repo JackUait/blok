@@ -1,0 +1,270 @@
+package blokagent
+
+import (
+	"context"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
+)
+
+// Go twins of the C# room tests a scenario cannot express: timing,
+// concurrency, a clock, and runtimes that answer for the bundle.
+
+const historySeed = `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"Hello"}},{"id":"q","type":"paragraph","data":{"text":"Other"}}]}`
+
+var roomAgent = Actor{ID: "agent-cs", Name: "Agent"}
+
+func runIn(t *testing.T, r *testRoom, doc, batch string, actor Actor) (Execution, string) {
+	t.Helper()
+	execution, err := r.executor.ExecuteInRoom(context.Background(), doc, batch, actor, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, _ := stringOf(lookup(lookup(mustParse(t, execution.ResultJSON), "error"), "code"))
+	return execution, code
+}
+
+func okIn(t *testing.T, r *testRoom, doc, batch string) Execution {
+	t.Helper()
+	execution, code := runIn(t, r, doc, batch, roomAgent)
+	if code != "" {
+		t.Fatalf("%s: %s", batch, execution.ResultJSON)
+	}
+	return execution
+}
+
+func ids(t *testing.T, r *testRoom, doc string) string {
+	t.Helper()
+	var out []string
+	for _, block := range records(lookup(r.export(t, doc), "blocks")) {
+		id, _ := idOf(block)
+		out = append(out, id)
+	}
+	return strings.Join(out, ",")
+}
+
+const (
+	undoBatch = `{"commands":[{"name":"history.undo","args":{}}]}`
+	redoBatch = `{"commands":[{"name":"history.redo","args":{}}]}`
+)
+
+func insertBatch(id, text string) string {
+	return `{"commands":[{"name":"block.insert","args":{"id":"` + id + `","type":"paragraph","data":{"text":"` + text + `"},"position":"end"}}]}`
+}
+
+// T6 (C# AStepCarriesItsLineageWhenItIsAdded): a step is shared the moment
+// it is added, so its lineage is set by then.
+func TestAStepCarriesItsLineageWhenItIsAdded(t *testing.T) {
+	r := newTestRoom(t, false, nil)
+	r.docs.hold("d", historySeed)
+	var added []string
+	r.executor.history.added = func(step *roomStep) {
+		if step.lineage == nil {
+			added = append(added, "<nil>")
+		} else {
+			added = append(added, *step.lineage)
+		}
+	}
+	execution := okIn(t, r, "d", insertBatch("a", "Agent"))
+	lineage := execution.Revision[:strings.LastIndexByte(execution.Revision, ':')]
+	if len(added) != 1 || added[0] != lineage {
+		t.Fatalf("added %v, want [%s]", added, lineage)
+	}
+}
+
+// C# TwoUndosAtOnceTakeTheStepBackOnce. Run with -race.
+func TestTwoUndosAtOnceTakeTheStepBackOnce(t *testing.T) {
+	r := newTestRoom(t, false, nil)
+	r.docs.hold("d", historySeed)
+	okIn(t, r, "d", insertBatch("a", "Agent"))
+	codes := make([]string, 2)
+	var wg sync.WaitGroup
+	for i := range codes {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			execution, err := r.executor.ExecuteInRoom(context.Background(), "d", undoBatch, roomAgent, nil)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			codes[i], _ = stringOf(lookup(lookup(mustParse(t, execution.ResultJSON), "error"), "code"))
+		}()
+	}
+	wg.Wait()
+	won := 0
+	for _, code := range codes {
+		switch code {
+		case "":
+			won++
+		case "NOTHING_TO_UNDO", "CONFLICT":
+		default:
+			t.Fatalf("codes %v", codes)
+		}
+	}
+	if won != 1 {
+		t.Fatalf("codes %v, want one undo", codes)
+	}
+	if got := ids(t, r, "d"); got != "p,q" {
+		t.Fatalf("blocks %s", got)
+	}
+	okIn(t, r, "d", redoBatch)
+	if got := ids(t, r, "d"); got != "p,q,a" {
+		t.Fatalf("blocks after redo %s", got)
+	}
+}
+
+// T18: the idle limit is lazy, on top and add, against the clock.
+func TestStepsGoAfterAnHourWithoutACall(t *testing.T) {
+	r := newTestRoom(t, false, nil)
+	r.docs.hold("d", historySeed)
+	now := time.Now()
+	var mu sync.Mutex
+	r.executor.history.now = func() time.Time { mu.Lock(); defer mu.Unlock(); return now }
+	advance := func(d time.Duration) { mu.Lock(); defer mu.Unlock(); now = now.Add(d) }
+	okIn(t, r, "d", insertBatch("a", "One"))
+	advance(time.Hour)
+	// Exactly the limit is not past it, and the call touches the steps.
+	okIn(t, r, "d", insertBatch("b", "Two"))
+	advance(time.Hour + time.Millisecond)
+	if _, code := runIn(t, r, "d", undoBatch, roomAgent); code != "NOTHING_TO_UNDO" {
+		t.Fatalf("code %q after the idle limit", code)
+	}
+	if got := ids(t, r, "d"); got != "p,q,a,b" {
+		t.Fatalf("blocks %s", got)
+	}
+}
+
+// T2: the room trims done steps only, so with the redo side full, a page
+// action (which keeps the redo side) evicts the very step it adds.
+func TestTheRoomTrimsOnlyDoneSteps(t *testing.T) {
+	h := newRoomHistory(time.Now)
+	step := func(other bool) *roomStep {
+		s := &roomStep{other: other}
+		if err := s.measure(); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	for range maxSteps {
+		h.add("d", roomAgent, step(false))
+	}
+	for range maxSteps {
+		top := h.top("d", roomAgent, true)
+		if ok, err := h.replayed("d", roomAgent, top, true, nil); err != nil || !ok {
+			t.Fatal(ok, err)
+		}
+	}
+	h.add("d", roomAgent, step(true))
+	steps := h.rooms[keyOf("d", roomAgent)]
+	if len(steps.done) != 0 || len(steps.undone) != maxSteps {
+		t.Fatalf("done %d undone %d", len(steps.done), len(steps.undone))
+	}
+	// A batch clears the redo side and stays.
+	kept := step(false)
+	h.add("d", roomAgent, kept)
+	if len(steps.done) != 1 || steps.done[0] != kept || len(steps.undone) != 0 {
+		t.Fatalf("done %d undone %d", len(steps.done), len(steps.undone))
+	}
+}
+
+// historyRuntime answers a history batch as a contract without history.*
+// would (C# NoHistoryRuntime).
+type historyRuntime struct{ inner invoker }
+
+func (r historyRuntime) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+	if op == "agentExecute" && (strings.Contains(input, `"name":"history.undo"`) || strings.Contains(input, `"name":"history.redo"`)) {
+		return `{"result":{"ok":false,"error":{"code":"COMMAND_UNAVAILABLE","message":"\"history.undo\" is not available here.","retryable":false,"details":{"reason":"runtime"}},"warnings":[],"revision":"h1"},"document":{"blocks":[]},"edits":[]}`, nil
+	}
+	return r.inner.Invoke(ctx, op, input, timeout)
+}
+
+// F28 (C# RefusesUndoTheContractDoesNotOffer): the gate's refusal goes back
+// as the bundle wrote it, without its revision, and nothing is replayed.
+func TestRefusesUndoTheContractDoesNotOffer(t *testing.T) {
+	r := newTestRoom(t, false, func(inner invoker) invoker { return historyRuntime{inner} })
+	r.docs.hold("d", historySeed)
+	okIn(t, r, "d", insertBatch("a", "Agent"))
+	execution, code := runIn(t, r, "d", undoBatch, roomAgent)
+	if code != "COMMAND_UNAVAILABLE" || execution.Revision != "" || strings.Contains(execution.ResultJSON, `"revision"`) {
+		t.Fatalf("%s %q", execution.ResultJSON, execution.Revision)
+	}
+	if got := ids(t, r, "d"); got != "p,q,a" {
+		t.Fatalf("blocks %s", got)
+	}
+}
+
+// C# AFailedRestoreIsRetryableOnlyWhenTheSharedRuntimeWouldSaySo.
+func TestAFailedRestoreIsRetryableOnlyWhenTheSharedRuntimeWouldSaySo(t *testing.T) {
+	for status, want := range map[room.HistoryStatus]bool{
+		room.HistoryExportFailed: false, room.HistoryCorrupt: false, room.HistoryNone: false,
+		room.HistoryPurged: false, room.HistoryUnavailable: true,
+	} {
+		if got := restoreRetryable(status); got != want {
+			t.Errorf("%s: %v", status, got)
+		}
+	}
+}
+
+// C# AReadWithoutAJournalWritesNothingBack.
+func TestAReadWithoutAJournalWritesNothingBack(t *testing.T) {
+	r := newTestRoom(t, true, nil)
+	r.docs.hold("d", historySeed)
+	r.export(t, "d")
+	writes := r.sets.writeCount()
+	okIn(t, r, "d", `{"commands":[{"name":"doc.read","args":{}}]}`)
+	if got := r.sets.writeCount(); got != writes {
+		t.Fatalf("writes %d, want %d", got, writes)
+	}
+}
+
+// peerAfterRestoreCheck runs a peer's write right after the bundle answers
+// a restore, before the room restores (C# PeerWriteAfterRestoreCheck).
+type peerAfterRestoreCheck struct {
+	inner invoker
+	mu    sync.Mutex
+	peer  func()
+}
+
+func (r *peerAfterRestoreCheck) Invoke(ctx context.Context, op, input string, timeout time.Duration) (string, error) {
+	output, err := r.inner.Invoke(ctx, op, input, timeout)
+	r.mu.Lock()
+	peer := r.peer
+	if peer != nil && op == "agentExecute" && strings.Contains(output, `"restore":`) {
+		r.peer = nil
+	} else {
+		peer = nil
+	}
+	r.mu.Unlock()
+	if peer != nil {
+		peer()
+	}
+	return output, err
+}
+
+// C# ARoomChangeBetweenTheRestoreCheckAndTheRestoreIsStaleAndWritesNothing.
+func TestARoomChangeBetweenTheRestoreCheckAndTheRestoreIsStale(t *testing.T) {
+	var hook *peerAfterRestoreCheck
+	r := newTestRoom(t, false, func(inner invoker) invoker { hook = &peerAfterRestoreCheck{inner: inner}; return hook })
+	r.docs.hold("d", `{"blocks":[{"id":"p","type":"paragraph","data":{"text":"Hello world"}},{"id":"q","type":"paragraph","data":{"text":"Second"}}]}`)
+	edit := okIn(t, r, "d", `{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}`)
+	lineage := edit.Revision[:strings.LastIndexByte(edit.Revision, ':')]
+	var afterPeer string
+	hook.peer = func() {
+		okIn(t, r, "d", `{"commands":[{"name":"text.replace","args":{"id":"q","with":"Peer"}}]}`)
+		afterPeer = r.head(t, "d")
+	}
+	_, code := runIn(t, r, "d", `{"commands":[{"name":"history.restore","args":{"version":"`+lineage+`:0"}}]}`, roomAgent)
+	if code != "STALE" {
+		t.Fatalf("code %q", code)
+	}
+	blocks := lookup(r.export(t, "d"), "blocks")
+	first, _ := stringOf(lookup(lookup(lookup(blocks.Items[0], "data"), "text").Items[0], "text"))
+	second, _ := stringOf(lookup(lookup(lookup(blocks.Items[1], "data"), "text").Items[0], "text"))
+	if first != "Changed" || second != "Peer" || r.head(t, "d") != afterPeer {
+		t.Fatalf("p %q q %q head %s, after the peer %s", first, second, r.head(t, "d"), afterPeer)
+	}
+}

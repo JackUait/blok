@@ -83,6 +83,8 @@ type roomHistory struct {
 	now   func() time.Time
 	mu    sync.Mutex
 	rooms map[roomKey]*roomSteps
+	// added runs inside add with the step, for tests.
+	added func(*roomStep)
 }
 
 func newRoomHistory(now func() time.Time) *roomHistory {
@@ -156,6 +158,9 @@ func (h *roomHistory) forget(docID string) {
 func (h *roomHistory) add(docID string, actor Actor, step *roomStep) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.added != nil {
+		h.added(step)
+	}
 	h.prune()
 	key := keyOf(docID, actor)
 	steps := h.rooms[key]

@@ -49,20 +49,11 @@ const findFlatIndexById = (reader: IndexReader, id: string): number | undefined 
 };
 
 /**
- * Constructs new BlockAPI object
- * @class
- * @param {Block} block - Block to expose
- * @param {ApiModules} api - editor API module backing the connection methods
- *   (getChildren/setParent/insertChild/moveChild). REQUIRED: an instance built
- *   without it answers `[]` from getChildren() and no-ops on every mutation,
- *   silently orphaning content. Keeping it mandatory makes tsc — not vigilance
- *   — reject a new detached construction site.
+ * Getters and methods of a block's handle, reading `block` and `api` live.
+ * @param block - Block to expose
+ * @param api - editor API module
  */
-const BlockAPIConstructor = function BlockAPI(
-  this: BlockAPIInterface,
-  block: Block,
-  api: ApiModules
-): BlockAPIInterface {
+const buildSurface = (block: Block, api: ApiModules): BlockAPIInterface => {
   const blockAPI: BlockAPIInterface = {
     /**
      * Block id
@@ -439,26 +430,58 @@ const BlockAPIConstructor = function BlockAPI(
     value: (): BlockToolData => api.blockDataForHost(block.tool, block.preservedData),
   });
 
-  Object.setPrototypeOf(this, blockAPI);
+  return blockAPI;
+};
 
-  Object.defineProperties(this, {
-    id: {
-      get(): string {
-        return block.id;
-      },
-      enumerable: true,
-      configurable: true,
+/** Own enumerable props of every handle: `{ ...handle }` and Object.keys see only these. */
+const ownProps = (block: Block): PropertyDescriptorMap => ({
+  id: {
+    get(): string {
+      return block.id;
     },
-    name: {
-      get(): string {
-        return block.name;
-      },
-      enumerable: true,
-      configurable: true,
+    enumerable: true,
+    configurable: true,
+  },
+  name: {
+    get(): string {
+      return block.name;
     },
-  });
+    enumerable: true,
+    configurable: true,
+  },
+});
 
-  return this;
+/**
+ * The surface only reads `block` and `api` live, so one per block serves every
+ * handle. Rebuilt when the api differs, since the surface closes over it.
+ */
+const surfaces = new WeakMap<Block, { api: ApiModules; surface: BlockAPIInterface; own: PropertyDescriptorMap }>();
+
+/**
+ * Constructs new BlockAPI object
+ * @class
+ * @param {Block} block - Block to expose
+ * @param {ApiModules} api - editor API module backing the connection methods
+ *   (getChildren/setParent/insertChild/moveChild). REQUIRED: an instance built
+ *   without it answers `[]` from getChildren() and no-ops on every mutation,
+ *   silently orphaning content. Keeping it mandatory makes tsc — not vigilance
+ *   — reject a new detached construction site.
+ */
+const BlockAPIConstructor = function BlockAPI(
+  block: Block,
+  api: ApiModules
+): BlockAPIInterface {
+  const cached = surfaces.get(block);
+  const entry = cached !== undefined && cached.api === api
+    ? cached
+    : { api, surface: buildSurface(block, api), own: ownProps(block) };
+
+  if (entry !== cached) {
+    surfaces.set(block, entry);
+  }
+
+  // A new object per call: callers may hold or compare handles.
+  return Object.create(entry.surface, entry.own) as BlockAPIInterface;
 };
 
 // Export BlockAPI with proper constructor type

@@ -151,6 +151,30 @@ describe('BlockAPI', () => {
     expect(blockAPI.stretched).toBe(shape.stretched);
   });
 
+  it('builds the method surface once per block, not once per handle', () => {
+    const { block, shape } = createMockBlock();
+    const first = new BlockAPIConstructor(block, apiStub);
+    const second = new BlockAPIConstructor(block, apiStub);
+
+    expect(Object.getPrototypeOf(first) === Object.getPrototypeOf(second)).toBe(true);
+    expect(first === second).toBe(false);
+    expect(Object.keys(second)).toStrictEqual(['id', 'name']);
+
+    shape.id = 'renamed-id';
+
+    expect(first.id).toBe('renamed-id');
+    expect(second.id).toBe('renamed-id');
+  });
+
+  it('builds a fresh method surface for a different editor API', () => {
+    const { block } = createMockBlock();
+    const otherApi = { ...apiStub } as ApiModules;
+    const first = new BlockAPIConstructor(block, apiStub);
+    const second = new BlockAPIConstructor(block, otherApi);
+
+    expect(Object.getPrototypeOf(first) === Object.getPrototypeOf(second)).toBe(false);
+  });
+
   it('updates stretch state through setter and reflects changes', () => {
     const { block, shape, mocks } = createMockBlock();
     const blockAPI = new BlockAPIConstructor(block, apiStub);

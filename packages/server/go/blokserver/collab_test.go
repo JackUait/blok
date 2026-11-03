@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
 )
 
 // recordingHandler keeps every record with its category.
@@ -195,5 +197,56 @@ func TestAPurgedDocumentAnswersForbiddenOnEveryDoor(t *testing.T) {
 		if response.StatusCode != http.StatusForbidden || string(body) != "forbidden\n" {
 			t.Errorf("%s %s: %d %q", c.method, c.path, response.StatusCode, body)
 		}
+	}
+}
+
+// L2: like AddBlokServer's AddBlokDocuments(warmUp: false), a collab host
+// builds no engine pool until a conversion first needs one.
+func TestTheCollabRuntimeIsBuiltOnlyOnTheFirstHTMLRead(t *testing.T) {
+	builds := 0
+	previous := newCollabRuntime
+	newCollabRuntime = func() (*jsruntime.Pool, error) {
+		builds++
+		return nil, errors.New("no engine in this test")
+	}
+	t.Cleanup(func() { newCollabRuntime = previous })
+
+	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/rich") {
+			_, _ = io.WriteString(w, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"<b>x</b>"}}]}`)
+			return
+		}
+		_, _ = io.WriteString(w, `null`)
+	}))
+	defer endpoint.Close()
+	o := collabOptions(t)
+	o.Auth = "none"
+	o.StorageDirectory = ""
+	o.DocEndpoint = endpoint.URL + "/docs"
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := httptest.NewServer(s.Handler(""))
+	defer host.Close()
+	get := func(path string) {
+		response, err := http.Get(host.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, response.Body)
+		response.Body.Close()
+	}
+
+	get("/health")
+	get("/sync/plain/state")
+	if builds != 0 {
+		t.Fatalf("%d pools built before any HTML read, want 0", builds)
+	}
+	get("/sync/rich/state")
+	get("/sync/rich/state")
+	if builds != 1 {
+		t.Fatalf("%d pools built after HTML reads, want 1", builds)
 	}
 }

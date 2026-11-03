@@ -172,6 +172,122 @@
     {
       "name": "invalid UTF-8 in another value",
       "jsonBase64": "eyJvdGhlciI6Iv8iLCJ0aXRsZSI6Im9rIn0="
+    },
+    {
+      "name": "a thumbnail ending in NUL",
+      "json": "{\"thumbnail_url\":\"https://x.com/\\u0000\"}"
+    },
+    {
+      "name": "a thumbnail with NUL inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u0000b\"}"
+    },
+    {
+      "name": "a thumbnail starting with NUL",
+      "json": "{\"thumbnail_url\":\"\\u0000https://x.com/\"}"
+    },
+    {
+      "name": "a thumbnail with U+0001",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u0001b\"}"
+    },
+    {
+      "name": "a thumbnail with a tab inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\tb\"}"
+    },
+    {
+      "name": "a thumbnail with a line feed inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\nb\"}"
+    },
+    {
+      "name": "a thumbnail with a carriage return inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\rb\"}"
+    },
+    {
+      "name": "a thumbnail ending in a line feed",
+      "json": "{\"thumbnail_url\":\"https://x.com/\\n\"}"
+    },
+    {
+      "name": "a thumbnail starting with a tab",
+      "json": "{\"thumbnail_url\":\"\\thttps://x.com/\"}"
+    },
+    {
+      "name": "a thumbnail with U+001F",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u001fb\"}"
+    },
+    {
+      "name": "a thumbnail with DEL",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u007fb\"}"
+    },
+    {
+      "name": "a thumbnail with a C1 control",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u0085b\"}"
+    },
+    {
+      "name": "a thumbnail with U+009F",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u009fb\"}"
+    },
+    {
+      "name": "a thumbnail with a control in the host",
+      "json": "{\"thumbnail_url\":\"https://x\\u0001.com/\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded NUL",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%00b\"}"
+    },
+    {
+      "name": "a thumbnail with a lowercase encoded line feed",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%0ab\"}"
+    },
+    {
+      "name": "a thumbnail with encoded U+001F",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%1Fb\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded DEL",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%7fb\"}"
+    },
+    {
+      "name": "a thumbnail with encoded CR LF in the query",
+      "json": "{\"thumbnail_url\":\"https://x.com/?q=%0D%0A\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded NUL in the fragment",
+      "json": "{\"thumbnail_url\":\"https://x.com/#%00\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded NUL in the host",
+      "json": "{\"thumbnail_url\":\"https://x.com%00/\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded space is kept",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%20b\"}"
+    },
+    {
+      "name": "a thumbnail with an encoded percent is kept",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%2500b\"}"
+    },
+    {
+      "name": "a thumbnail with encoded U+0020 neighbours is kept",
+      "json": "{\"thumbnail_url\":\"https://x.com/a%21%7Eb\"}"
+    },
+    {
+      "name": "a thumbnail with a space inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a b\"}"
+    },
+    {
+      "name": "a thumbnail with spaces around it",
+      "json": "{\"thumbnail_url\":\"   https://x.com/a   \"}"
+    },
+    {
+      "name": "a thumbnail with a no-break space inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u00a0b\"}"
+    },
+    {
+      "name": "a thumbnail with a line separator inside",
+      "json": "{\"thumbnail_url\":\"https://x.com/a\\u2028b\"}"
+    },
+    {
+      "name": "a thumbnail with an ideographic space around it",
+      "json": "{\"thumbnail_url\":\"\\u3000https://x.com/\\u3000\"}"
     }
   ],
   "answers": [
@@ -518,6 +634,238 @@
       "width": null,
       "height": null,
       "wire": "{\"title\":\"ok\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%20b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%20b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%2500b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%2500b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%21~b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%21~b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%20b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%20b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%C2%A0b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%C2%A0b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": "https://x.com/a%E2%80%A8b",
+      "width": null,
+      "height": null,
+      "wire": "{\"thumbnail_url\":\"https://x.com/a%E2%80%A8b\"}"
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
     }
   ]
 }

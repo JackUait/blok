@@ -144,16 +144,54 @@ internal sealed partial record OEmbedAnswer(
   {
     var text = String(value);
     if (text is null ||
+        HasControl(text) ||
         !Uri.TryCreate(text, UriKind.Absolute, out var url) ||
         url.Scheme != Uri.UriSchemeHttps ||
         url.Host == "" ||
         url.UserInfo != "" ||
+        HasEncodedControl(url.AbsoluteUri) ||
         url.AbsoluteUri.Length > MaximumUrlLength)
     {
       return null;
     }
 
     return url.AbsoluteUri;
+  }
+
+  // A C0, DEL or C1 character. .NET escapes them and Go's parser trims them
+  // at the ends, so a URL with one is dropped before parsing.
+  private static bool HasControl(string text)
+  {
+    foreach (var c in text)
+    {
+      if (c < 0x20 || c is >= '\u007f' and <= '\u009f')
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // %00-%1F or %7F, in either hex case.
+  private static bool HasEncodedControl(string url)
+  {
+    for (var i = 0; i + 2 < url.Length; i++)
+    {
+      if (url[i] != '%')
+      {
+        continue;
+      }
+
+      var high = (char)(url[i + 1] | 0x20);
+      var low = (char)(url[i + 2] | 0x20);
+      if (high is '0' or '1' || (high == '7' && low == 'f'))
+      {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private static int? Size(JsonElement value)

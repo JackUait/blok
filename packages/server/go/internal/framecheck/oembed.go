@@ -84,15 +84,40 @@ func text(value *jsjson.Node) jsjson.Str {
 
 func secureURL(value *jsjson.Node) string {
 	s, ok := str(value)
-	if !ok {
+	if !ok || hasControl(s) {
 		return ""
 	}
 	u, ok := dotnet.ParseAbsoluteURI(s.String())
 	if !ok || u.Scheme != "https" || u.Host == "" || u.UserInfo != "" ||
-		len(jsjson.FromString(u.AbsoluteURI)) > maxURLLength {
+		hasEncodedControl(u.AbsoluteURI) || len(jsjson.FromString(u.AbsoluteURI)) > maxURLLength {
 		return ""
 	}
 	return u.AbsoluteURI
+}
+
+// hasControl finds a C0, DEL or C1 character. Go's parser trims them at the
+// ends and .NET's escapes them, so a URL with one is dropped before parsing.
+func hasControl(s jsjson.Str) bool {
+	for _, c := range s {
+		if c < 0x20 || 0x7f <= c && c <= 0x9f {
+			return true
+		}
+	}
+	return false
+}
+
+// hasEncodedControl finds %00-%1F or %7F, in either hex case.
+func hasEncodedControl(url string) bool {
+	for i := 0; i+2 < len(url); i++ {
+		if url[i] != '%' {
+			continue
+		}
+		hi, lo := url[i+1]|0x20, url[i+2]|0x20
+		if hi == '0' || hi == '1' || hi == '7' && lo == 'f' {
+			return true
+		}
+	}
+	return false
 }
 
 func size(value *jsjson.Node) int {

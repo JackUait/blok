@@ -116,7 +116,7 @@
     "date": "2026-11-03"
   },
   "/docs/embed-safety": {
-    "hash": "3951c52447e27bcd",
+    "hash": "5784761e6e076d42",
     "date": "2026-11-03"
   },
   "/docs/equation": {
@@ -128,7 +128,7 @@
     "date": "2026-09-08"
   },
   "/docs/file": {
-    "hash": "9bb03f3e220c2fa7",
+    "hash": "d433d8b05b4fa9ce",
     "date": "2026-11-03"
   },
   "/docs/header": {
@@ -300,7 +300,7 @@
     "date": "2026-10-07"
   },
   "/docs/uploader-api": {
-    "hash": "e8c880d1693d3afa",
+    "hash": "8583c7ff67431152",
     "date": "2026-11-03"
   },
   "/docs/use-blocks": {
@@ -336,7 +336,7 @@
     "date": "2026-09-08"
   },
   "/presets": {
-    "hash": "1d7bfb32d2092410",
+    "hash": "7bb0d44e6213d5c4",
     "date": "2026-11-03"
   },
   "/ru": {
@@ -452,7 +452,7 @@
     "date": "2026-11-03"
   },
   "/ru/docs/embed-safety": {
-    "hash": "eb77f648b42a074d",
+    "hash": "074e7b8751c246f7",
     "date": "2026-11-03"
   },
   "/ru/docs/equation": {
@@ -464,7 +464,7 @@
     "date": "2026-09-08"
   },
   "/ru/docs/file": {
-    "hash": "ba1ae0c4c2846d65",
+    "hash": "7143a076565ce692",
     "date": "2026-11-03"
   },
   "/ru/docs/header": {
@@ -636,7 +636,7 @@
     "date": "2026-10-07"
   },
   "/ru/docs/uploader-api": {
-    "hash": "024258fc78a5f1ce",
+    "hash": "cb9730461bd96c39",
     "date": "2026-11-03"
   },
   "/ru/docs/use-blocks": {
@@ -672,7 +672,7 @@
     "date": "2026-09-08"
   },
   "/ru/presets": {
-    "hash": "e825b4e4b04494f5",
+    "hash": "95a5a09c4a85497c",
     "date": "2026-11-03"
   },
   "/ru/server": {

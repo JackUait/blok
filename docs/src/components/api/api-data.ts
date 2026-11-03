@@ -3909,13 +3909,13 @@ class Report {
     badge: "Uploader",
     title: "Uploader API",
     description:
-      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`. That is why an audio block's cover art reaches your image pipeline, instead of the audio endpoint that would reject it.\n\nResolution order for a kind: first the tool whose static `assetKind` matches (for example `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback. The fallback is a `blob:` URL for files, and the URL verbatim for links.\n\nThe fallback `blob:` URL gets a safe type. HTML, XML and unknown types become `text/plain`, and SVG keeps its type only for images. Read a file's real type from the block's `mimeType`.\n\nSee the storage presets page for ready-made `uploader` implementations: Supabase, S3-compatible storage, Cloudinary, and IndexedDB. None of them need a backend of your own.",
+      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`. That is why an audio block's cover art reaches your image pipeline, instead of the audio endpoint that would reject it.\n\nResolution order for a kind: first the tool whose static `assetKind` matches (for example `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback. The fallback is a `blob:` URL for files, and the URL verbatim for links.\n\nThe fallback `blob:` URL gets a safe type. Any type outside a short safe list becomes `text/plain`, including HTML, XML, zip, Office files and untyped files. SVG keeps its type only for images. Read a file's real type from the block's `mimeType`.\n\nSee the storage presets page for ready-made `uploader` implementations: Supabase, S3-compatible storage, Cloudinary, and IndexedDB. None of them need a backend of your own.",
     methods: [
       {
         name: "uploader.uploadByFile(file, ctx)",
         returnType: "Promise<{ url: string; fileName?: string }>",
         description:
-          "Store a file and return its URL. `ctx` is `{ kind, tool?, onProgress? }`, where `kind` is the ASSET kind, not the requesting tool. The two differ whenever a tool holds an asset outside its own media family.\n\nWith no uploader for the kind, it returns a `blob:` URL with a safe type. HTML, XML and unknown types become `text/plain`.",
+          "Store a file and return its URL. `ctx` is `{ kind, tool?, onProgress? }`, where `kind` is the ASSET kind, not the requesting tool. The two differ whenever a tool holds an asset outside its own media family.\n\nWith no uploader for the kind, it returns a `blob:` URL with a safe type. Any type outside a short safe list becomes `text/plain`, such as HTML, XML, zip or Office files.",
         example: `// Inside a custom block tool that holds a thumbnail
 const { url } = await this.api.uploader.uploadByFile(file, {
   kind: 'image',

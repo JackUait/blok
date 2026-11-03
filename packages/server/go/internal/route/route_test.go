@@ -288,16 +288,39 @@ func TestEncodedNULInThePathIsABadRequest(t *testing.T) {
 }
 
 // serveRaw builds the request the host hands over for a target that Go's
-// url parser refuses: RequestURI as sent, URL parsed from a stand-in.
+// url parser refuses: parsed from a stand-in, then given the target as sent.
 func serveRaw(t *testing.T, router http.Handler, method, target string) answer {
 	t.Helper()
 	request := httptest.NewRequest(method, "/stand-in", nil)
-	request.RequestURI = target
+	SetRawTarget(request, target)
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 	result := recorder.Result()
 	body, _ := io.ReadAll(result.Body)
 	return answer{result.StatusCode, result.Header, string(body)}
+}
+
+// A consumer may mount the handler under http.StripPrefix, which trims
+// URL.Path and URL.RawPath but leaves RequestURI as sent.
+func TestRoutesUnderStripPrefix(t *testing.T) {
+	router := http.StripPrefix("/api", testRouter())
+	for target, want := range map[string]string{
+		"/api/health":             "health|",
+		"/api/sync/u37%Ff|/state": "state|u37%Ff|",
+		"/api/sync/a%2Fb/state":   "state|a%2Fb",
+	} {
+		if got := serve(t, router, "GET", target); got.status != 200 || got.body != want {
+			t.Errorf("GET %s: %d %q, want %q", target, got.status, got.body, want)
+		}
+	}
+	for target, want := range map[string]string{
+		"/api/sync/u29%zz/state":   "state|u29%zz",
+		"/api/sync/u33\x01x/state": "state|u33\x01x",
+	} {
+		if got := serveRaw(t, router, "GET", target); got.status != 200 || got.body != want {
+			t.Errorf("GET %q: %d %q, want %q", target, got.status, got.body, want)
+		}
+	}
 }
 
 // The router reads the target as sent, so a malformed escape or a raw

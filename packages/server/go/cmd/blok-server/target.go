@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/JackUait/blok/packages/server/go/internal/route"
 )
 
 // Kestrel routes a target that Go's url parser refuses: a bad escape in the
@@ -249,9 +251,6 @@ func restoreTarget(w http.ResponseWriter, r *http.Request, stream *targetStream)
 		w.WriteHeader(http.StatusBadRequest)
 		return false
 	}
-	r.RequestURI = entry.original
-	if _, query, found := strings.Cut(entry.original, "?"); found {
-		r.URL.RawQuery = query
-	}
+	route.SetRawTarget(r, entry.original)
 	return true
 }

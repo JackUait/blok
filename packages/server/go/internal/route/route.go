@@ -5,6 +5,7 @@ package route
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
@@ -184,15 +185,42 @@ func decodeKeepingSlash(s string) string {
 	}
 }
 
-// rawPath is the path as sent. URL.EscapedPath re-escapes the whole path when
-// it holds a byte like "|", which turns "%Ff" into "%FF", another doc id. The
-// host also puts a target Go's url parser refuses back in RequestURI.
+// rawPath is the path as sent. net/url keeps it in RawPath whenever
+// re-escaping Path would change it; EscapedPath then re-escapes the whole
+// path for a byte like "|", which turns "%Ff" into "%FF", another doc id.
+// RawPath, not RequestURI, so a mount under http.StripPrefix still routes.
+// A RawPath that does not decode is one SetRawTarget wrote.
 func rawPath(req *http.Request) string {
-	if strings.HasPrefix(req.RequestURI, "/") {
-		path, _, _ := strings.Cut(req.RequestURI, "?")
-		return path
+	if raw := req.URL.RawPath; raw != "" {
+		if decoded, err := url.PathUnescape(raw); err != nil || decoded == req.URL.Path {
+			return raw
+		}
 	}
 	return req.URL.EscapedPath()
+}
+
+// SetRawTarget gives req the target as sent, for one Go's url parser
+// refused: a bad escape in the path, or a raw control byte. Path gets a bad
+// escape as a literal '%', so http.StripPrefix still finds the prefix in it.
+func SetRawTarget(req *http.Request, target string) {
+	path, query, hasQuery := strings.Cut(target, "?")
+	req.RequestURI = target
+	req.URL.RawPath = path
+	var kept strings.Builder
+	for i := 0; i < len(path); i++ {
+		kept.WriteByte(path[i])
+		if path[i] == '%' && (i+2 >= len(path) || !isHex(path[i+1]) || !isHex(path[i+2])) {
+			kept.WriteString("25")
+		}
+	}
+	req.URL.Path, _ = url.PathUnescape(kept.String())
+	if hasQuery {
+		req.URL.RawQuery = query
+	}
+}
+
+func isHex(c byte) bool {
+	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
 }
 
 func isASCII(s string) bool {

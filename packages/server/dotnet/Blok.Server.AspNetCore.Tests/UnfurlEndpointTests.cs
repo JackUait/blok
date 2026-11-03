@@ -73,6 +73,34 @@ public sealed class UnfurlEndpointTests
     Assert.Equal(5, fetcher.Limits.MaximumRedirects);
   }
 
+  // The body echoes the asked URL and page metadata. The encoder must keep
+  // < > & ' as \uXXXX so it never holds markup, even if opened as a page.
+  // Go's jsjson.AppendQuoted matches this.
+  [Fact]
+  public async Task NeverEchoesMarkup()
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = new GuardedResponse(
+          """
+          <title>&lt;/title&gt;&lt;script&gt;alert('t')&lt;/script&gt;</title>
+          <meta property="og:description" content="&lt;img src=x onerror=alert(&quot;d&quot;)&gt;">
+          """u8.ToArray(),
+          "text/html",
+          "https://example.com/?q=<script>alert('q')</script>&r=1",
+          StatusCodes.Status200OK),
+    };
+    await using var app = await BuildApplication(fetcher);
+    using var response = await app.GetTestClient().GetAsync(
+        "/unfurl?url=https%3A%2F%2Fexample.com%2F%3Fq%3D%3Cscript%3E");
+
+    var body = await response.Content.ReadAsStringAsync();
+    Assert.DoesNotMatch("[<>&']", body);
+    Assert.Equal(
+        "application/json",
+        response.Content.Headers.ContentType?.ToString());
+  }
+
   [Fact]
   public async Task FetchFailureReturnsTheExactOpaqueWire()
   {

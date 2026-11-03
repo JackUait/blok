@@ -173,6 +173,19 @@ var ErrCollabDisabled = errors.New("Collaboration is disabled.")
 // ErrNoAuthorize: PurgeDocument needs its authorize callback.
 var ErrNoAuthorize = errors.New("collab: document purge needs an authorize callback.")
 
+// PurgeDocument's and RecheckAccess's refusals, matched with errors.Is.
+// They stand in for C#'s exception types:
+//   - ErrEmptyDocID and ErrNotSingleSegment: ArgumentException;
+//   - ErrPurgeNotAuthorized: UnauthorizedAccessException;
+//   - ErrPurgeUnsupported: NotSupportedException (a CollabOperationStore
+//     that is not also a collabstore.PurgeStore).
+var (
+	ErrEmptyDocID         = room.ErrEmptyDocID
+	ErrNotSingleSegment   = room.ErrNotSingleSegment
+	ErrPurgeNotAuthorized = room.ErrPurgeNotAuthorized
+	ErrPurgeUnsupported   = room.ErrPurgeUnsupported
+)
+
 // PurgeOutcome is CollabDocumentPurgeOutcome.
 type PurgeOutcome int
 
@@ -204,6 +217,10 @@ func (s *Server) RecheckAccess(ctx context.Context, doc string) (int, error) {
 func (s *Server) PurgeDocument(ctx context.Context, doc string, authorize func(context.Context) (bool, error)) (PurgeOutcome, error) {
 	if s.collab == nil {
 		return 0, ErrCollabDisabled
+	}
+	// C# checks the id before the callback.
+	if doc == "" {
+		return 0, ErrEmptyDocID
 	}
 	if authorize == nil {
 		return 0, ErrNoAuthorize

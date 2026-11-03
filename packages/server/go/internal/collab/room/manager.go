@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -238,6 +239,9 @@ func (m *Manager) State(ctx context.Context, docID string) (StateResult, error) 
 
 // RecheckAccess rechecks only a loaded room and answers the expelled count.
 func (m *Manager) RecheckAccess(ctx context.Context, docID string) (int, error) {
+	if docID == "" {
+		return 0, ErrEmptyDocID
+	}
 	m.mu.Lock()
 	r := m.rooms[docID]
 	m.mu.Unlock()
@@ -259,17 +263,31 @@ func (m *Manager) Checkpoint(ctx context.Context, docID string) (bool, error) {
 	return r.checkpoint(ctx)
 }
 
-// ErrNotSingleSegment, ErrPurgeNotAuthorized and ErrPurgeUnsupported are
-// PurgeDocumentAsync's refusals.
+// ErrEmptyDocID, ErrNotSingleSegment, ErrPurgeNotAuthorized and
+// ErrPurgeUnsupported are PurgeDocumentAsync's refusals.
 var (
+	// ErrEmptyDocID is ArgumentException.ThrowIfNullOrEmpty(documentId).
+	ErrEmptyDocID         = errors.New("The value cannot be an empty string. (Parameter 'documentId')")
 	ErrNotSingleSegment   = errors.New("collab: document ids must be a single path segment.")
 	ErrPurgeNotAuthorized = errors.New("collab: document purge was not authorized.")
-	ErrPurgeUnsupported   = errors.New("the operation journal cannot purge documents: the registered operation store must also implement purge")
+	ErrPurgeUnsupported   = errors.New("the operation journal cannot purge documents")
 )
+
+// purgeUnsupported names the registered store, as C#'s NotSupportedException does.
+type purgeUnsupported struct{ store OperationStore }
+
+func (e purgeUnsupported) Error() string {
+	return fmt.Sprintf("%s: the registered collabstore.OperationStore (%T) must also implement collabstore.PurgeStore", ErrPurgeUnsupported, e.store)
+}
+
+func (e purgeUnsupported) Is(target error) bool { return target == ErrPurgeUnsupported }
 
 // Purge is PurgeDocumentAsync. A purged id is refused for the life of the
 // process: purge lanes are never removed.
 func (m *Manager) Purge(ctx context.Context, docID string, authorize func(context.Context) (bool, error)) (journal.PurgeOutcome, error) {
+	if docID == "" {
+		return 0, ErrEmptyDocID
+	}
 	if docID == "." || docID == ".." || strings.ContainsAny(docID, `/\`) ||
 		strings.Contains(strings.ToLower(docID), "%2f") || strings.Contains(strings.ToLower(docID), "%5c") {
 		return 0, ErrNotSingleSegment
@@ -283,7 +301,7 @@ func (m *Manager) Purge(ctx context.Context, docID string, authorize func(contex
 	}
 	purger, canPurge := m.operations.(PurgeStore)
 	if m.operations != nil && !canPurge {
-		return 0, ErrPurgeUnsupported
+		return 0, purgeUnsupported{m.operations}
 	}
 
 	m.mu.Lock()

@@ -214,6 +214,7 @@ export async function uploadAssetFile(
     return asset;
   }
 
+  // Same known SVG risk as the image tool's fallback; see tools/image/uploader.ts.
   return {
     url: createSafeObjectUrl(file, { svgImage: ctx.kind === 'image' }),
     fileName: file.name,

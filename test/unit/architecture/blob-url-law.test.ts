@@ -28,11 +28,14 @@ const RAW_EXEMPTIONS: Record<string, string> = {
 
 /** `svgImage: true` users, keyed by file. The URL must never open as a page. */
 const SVG_IMAGE_USERS: Record<string, string> = {
-  'tools/image/uploader.ts': 'the image block shows it in <img>; download goes through tools/image/download.ts',
+  'tools/image/uploader.ts':
+    'the image block shows it in <img>; download goes through tools/image/download.ts. ' +
+    'KNOWN RISK: opened in its own tab, the SVG runs script in the host origin; only an uploader avoids it',
   'tools/image/index.ts': 'the failed-upload thumbnail is an <img>',
   'tools/image/download.ts': 'a plain programmatic click on an <a download>, which downloads in all three browsers',
   'components/utils/asset-uploader.ts':
-    'only for kind "image", whose tools show it in <img>; every other kind is re-typed',
+    'only for kind "image", whose tools show it in <img>; every other kind is re-typed. ' +
+    'Same known risk as tools/image/uploader.ts',
   'tools/database/database-chart-view.ts': 'the chart SVG is drawn into an <img> to rasterize it, then revoked',
   'tools/database/database-download.ts': 'a plain programmatic click on an <a download>, then revoked',
 };

@@ -140,6 +140,10 @@ export class Uploader {
       return this.config.uploader.uploadByFile(file, { onProgress });
     }
 
+    // Known risk with no uploader: this blob keeps image/svg+xml, and opened
+    // in its own tab it runs the SVG's script in the host origin (measured in
+    // Chromium, Firefox and WebKit). A data: URL would be safe, but
+    // url-policy refuses data:image/svg+xml in every src. An uploader removes the risk.
     return { url: createSafeObjectUrl(file, { svgImage: true }), fileName: file.name };
   }
 

@@ -26,6 +26,8 @@ import {
   matchEmbedService,
   isHttpUrl,
   isHttpsUrl,
+  toCanonicalHttpUrl,
+  toCanonicalHttpsUrl,
   resolveEmbedServiceTitle,
   setSafeLinkHref,
   type EmbedKind,
@@ -70,7 +72,15 @@ const THREADS_WIDGET_SRC = 'https://www.threads.com/embed.js';
  * allow-same-origin` inherit the embedder origin for javascript: URLs).
  */
 function toSafeEmbedSrc(value: string | undefined): string {
-  return value !== undefined && isHttpsUrl(value) ? value : '';
+  return value === undefined ? '' : toCanonicalHttpsUrl(value);
+}
+
+function hasHttpsScheme(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /** Host of a stored URL, or '' when it cannot be parsed. */
@@ -147,8 +157,10 @@ function resolveEmbedRender(
 
   // Not allowed to frame — degrade to a safe link card so the stored URL
   // stays visible instead of vanishing into the empty state.
-  if (data.source !== undefined && isHttpUrl(data.source)) {
-    return { mode: 'link', src: '', service: '', href: data.source };
+  const href = toCanonicalHttpUrl(data.source ?? '');
+
+  if (href !== '') {
+    return { mode: 'link', src: '', service: '', href };
   }
 
   return { mode: 'empty', src: '', service: '', href: '' };
@@ -278,10 +290,12 @@ export class Embed implements BlockTool {
     }
 
     if (target) {
+      const href = toSafeEmbedSrc(url);
+
       this.data = {
         service: '',
-        source: url,
-        embed: url,
+        source: href,
+        embed: href,
         kind: 'iframe',
         width: DEFAULT_WIDTH,
         height: DEFAULT_HEIGHT,
@@ -343,11 +357,15 @@ export class Embed implements BlockTool {
 
   public save(): EmbedData {
     const service = this.data.service ?? '';
-    const genericSrc = EMBED_SERVICES[service] === undefined ? toSafeEmbedSrc(this.data.source) : '';
+    const generic = EMBED_SERVICES[service] === undefined;
+    const genericSrc = generic ? toSafeEmbedSrc(this.data.source) : '';
+    const genericHref = generic ? toCanonicalHttpUrl(this.data.source ?? '') : '';
 
     return {
       service,
-      source: this.data.source ?? '',
+      // A generic source is stored in canonical form. A value that is not an
+      // absolute http(s):// URL is kept as it was; it renders inert.
+      source: genericHref !== '' ? genericHref : this.data.source ?? '',
       // A generic embed frames `source`; keeping `embed` equal stops saved data
       // from splitting the two, and lets validate() keep the block.
       embed: genericSrc !== '' ? genericSrc : this.data.embed ?? '',
@@ -365,7 +383,9 @@ export class Embed implements BlockTool {
   public validate(data: EmbedData): boolean {
     // An unsafe embed URL is rejected outright so save() drops the block
     // instead of persisting a payload that every future render must dodge.
-    return Boolean(data.source) && isHttpsUrl(data.embed);
+    // Only the scheme is checked here, not the `//`: a block saved before
+    // sinks required `https://` stays in the document instead of being lost.
+    return Boolean(data.source) && hasHttpsScheme(data.embed);
   }
 
   /**
@@ -992,7 +1012,7 @@ export class Embed implements BlockTool {
     const label = this.api.i18n.t('toolNames.embed');
     const service = this.data.service ?? '';
     const registered = EMBED_SERVICES[service];
-    const provider = registered !== undefined ? registered.title : hostnameOf(this.data.source ?? '');
+    const provider = registered !== undefined ? registered.title : hostnameOf(this.embedSrc());
 
     return provider === '' ? label : `${label}: ${provider}`;
   }

@@ -47,7 +47,7 @@ const WIDGET_SRC_CONSTANTS = new Set([
  * Every entry MUST carry a reason.
  */
 const EXEMPT_SINKS: Record<string, string> = {
-  'registry.ts » url': 'definition site of setSafeLinkHref — the assignment is behind its isHttpUrl guard',
+  'registry.ts » href': 'definition site of setSafeLinkHref — it writes only the canonical href toCanonicalHttpUrl returned',
   'embed/index.ts » toSafeEmbedSrc(this.data.source)':
     'TEMPORARY. X/Twitter widget anchor. buildScript runs only after resolveEmbedRender matched this source ' +
     'to the X registry entry, which pins the host to x.com/twitter.com. Route it through the render decision ' +

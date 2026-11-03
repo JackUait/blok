@@ -2,7 +2,7 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 
 import { isAllowedEmbedOrigin } from './embed/allowed-origins';
 import { isSameSiteHost, pageHosts } from './host-pattern';
-import { isHttpsUrl } from './registry';
+import { toCanonicalHttpsUrl } from './registry';
 
 /** What decides whether a non-registry URL may be framed. Read from live config, never from block data. */
 export interface GenericEmbedPolicy {
@@ -70,8 +70,10 @@ function isBlockedHost(url: string, patterns: readonly string[]): boolean {
  * with the reader's cookies, and HTML served there could lift the sandbox.
  */
 export function canFrameGeneric(url: string, policy: GenericEmbedPolicy): boolean {
-  return isHttpsUrl(url)
-    && !isSameSiteHost(hostnameOf(url), policy.ownHosts)
-    && !isBlockedHost(url, policy.blockedOrigins)
-    && (policy.allowGeneric || isAllowedEmbedOrigin(url, policy.allowedOrigins));
+  const href = toCanonicalHttpsUrl(url);
+
+  return href !== ''
+    && !isSameSiteHost(hostnameOf(href), policy.ownHosts)
+    && !isBlockedHost(href, policy.blockedOrigins)
+    && (policy.allowGeneric || isAllowedEmbedOrigin(href, policy.allowedOrigins));
 }

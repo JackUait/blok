@@ -20,8 +20,9 @@ import (
 
 // memoryStore is a working-set store in memory.
 type memoryStore struct {
-	mu   sync.Mutex
-	sets map[string]*workingset.Set
+	mu    sync.Mutex
+	sets  map[string]*workingset.Set
+	reads int
 }
 
 func newMemoryStore() *memoryStore { return &memoryStore{sets: map[string]*workingset.Set{}} }
@@ -29,6 +30,7 @@ func newMemoryStore() *memoryStore { return &memoryStore{sets: map[string]*worki
 func (s *memoryStore) Read(_ context.Context, doc string) (*workingset.Set, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.reads++
 	if set := s.sets[doc]; set != nil {
 		return &workingset.Set{Updates: append([]byte(nil), set.Updates...), Tag: set.Tag}, nil
 	}
@@ -61,6 +63,8 @@ type memoryEndpoint struct {
 	saves   []string
 	loads   int
 	failure error
+	// gate, when set, holds every save until it is closed.
+	gate chan struct{}
 }
 
 func (e *memoryEndpoint) Load(context.Context, string) (*docendpoint.Loaded, error) {
@@ -87,8 +91,12 @@ func (e *memoryEndpoint) loaded() int {
 
 func (e *memoryEndpoint) Save(_ context.Context, doc string, _ any, _ *string, _ *docendpoint.Projection) (*string, error) {
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.saves = append(e.saves, doc)
+	gate := e.gate
+	e.mu.Unlock()
+	if gate != nil {
+		<-gate
+	}
 	return nil, nil
 }
 

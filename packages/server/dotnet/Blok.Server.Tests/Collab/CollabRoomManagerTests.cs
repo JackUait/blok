@@ -478,6 +478,55 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(1, manager.LiveRoomCount);
   }
 
+  /// <summary>
+  /// Join, state and reset have their own retry loops, so each is pinned the
+  /// way the edit above is: queued behind a mid-flush eviction, it lands on a
+  /// fresh room hydrated from the blob the eviction wrote.
+  /// </summary>
+  [Theory]
+  [InlineData("join")]
+  [InlineData("state")]
+  [InlineData("reset")]
+  public async Task ACallQueuedBehindAClosingRoomIsRetriedOnAFreshOne(string call)
+  {
+    endpoint.Holds(DocId, "a");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateManager(new CollabRoomOptions
+    {
+      ExportDebounce = TimeSpan.FromMinutes(5),
+      ExportMaxDelay = TimeSpan.FromMinutes(5),
+    });
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "b"))),
+        CancellationToken.None);
+    await Waits.UntilAsync(() => store.FramesOf(DocId).Count == 2, "the working set to catch up");
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the eviction's export to start");
+
+    Task<string> pending = call switch
+    {
+      "join" => manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None).AsTask()
+          .ContinueWith(t => t.Result.Status.ToString(), TaskScheduler.Default),
+      "state" => manager.StateAsync(DocId, CancellationToken.None).AsTask()
+          .ContinueWith(t => t.Result.Status.ToString(), TaskScheduler.Default),
+      _ => manager.ResetForHttpAsync(DocId, CancellationToken.None).AsTask()
+          .ContinueWith(t => t.Result.Status.ToString(), TaskScheduler.Default),
+    };
+    endpoint.SaveGate.SetResult();
+    endpoint.SaveGate = null;
+    var status = await pending;
+
+    Assert.Equal(call switch { "join" => "Joined", "state" => "Ready", _ => "Reset" }, status);
+    Assert.Equal(1, endpoint.Loads);
+    Assert.Equal(2, store.Reads);
+    // A reset closes the room it ran on.
+    Assert.Equal(call == "reset" ? 0 : 1, manager.LiveRoomCount);
+  }
+
   [Fact]
   public async Task LegacyManagerCannotSilentlyIgnoreAnAccessRecheck()
   {

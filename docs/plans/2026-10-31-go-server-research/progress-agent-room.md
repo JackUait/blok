@@ -47,6 +47,13 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 - Sweep: every agent.md row ID (2a-2i, F1-F28, T1-T21, sections 3 and 4) is DONE in this file or in `progress-agent-stored.md`. One non-row item was still open there in round 2 (wrong-type messages); round 3 closes it (below).
 - The cached build error of `Server.AgentExecutor()` (round 1 "known difference") is not observable: it only re-reads `collabRooms.get()`, which already keeps its error, and every error `buildRoomManager` returns comes from the options (S3 client, rich-text fields), so a retry would fail the same way. Decision, not a row.
 
+## Round 3 (review fixes, 2026-11-03)
+
+- Doc fixes: T6 commit is `f680574e` (the old `409edc4c` was from before the rebase); header names the rebase base; H9 cites its C# test; the sweep line no longer claims nothing is open. Every other hash in this file was checked with `git merge-base --is-ancestor`.
+- C# tests for H1, H7/T18 and R11/T10 (rows below), each red under a mutant first, since the behaviour already existed. Commit `50454a16`.
+- **Wrong-type messages (stored lane's open item) closed.** `stringValue`, `isTrue` and `intValue` (`wire.go`) now throw .NET's own text by node kind: object or list gives "The node must be of type 'JsonValue'.", anything else "An element of type '<Number|String|True|False>' cannot be converted to a 'System.<String|Boolean|Int32>'.". Oracle: nine new host.json cases `wrong type: *`, captured from C# with `BLOK_CAPTURE_AGENT_FIXTURE=1` (the capture added only those cases); seven were red on Go before the fix. Two show that C# never reads a failure's `code` or `message` there. A JSON null node now reads as null in `stringValue`/`intValue`, as `?.` does. The room call sites (`errorCode`, `roomLinksNone`, the lane and page-action `ok`) share these helpers but have no direct case: the host fixture has no rooms. Commit `c851b283`.
+- Fuzz: `FuzzParseHead` (matches an independent ParseHead and round-trips) and `FuzzBatchCommands` (historyCommand, versionCommand, hasCommand never panic; history and version never overlap), seeded from the `room-expect-*` texts. 45 s each: 876,484 and 905,588 execs, no failure. Commit `261f5e70`.
+
 ## Ledger rows
 
 ### 2e dispatch
@@ -63,7 +70,7 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 | R8 | DONE (internal) | Not observable beyond T7: SCEN `room-same-batch-twice-commits-twice` |
 | R9 | DONE | SCEN `room-failed-batch-writes-nothing`, `room-without-journal`; Go twins `TestARoomRunThatStops…`, `TestAPageTheRoomLinks…`, `TestAThrowAfterTheRoomCommit…` (C# `BlokAgentPageCreateTests` room cases) |
 | R10 | DONE | SCEN `room-stale-*`, `room-without-journal` (F13), `room-refused-purged`, `room-refused-draining` (F14); C#+Go `ARoomThatRefusesTheEditAfterThePageWasMadeListsIt` |
-| R11 | DONE | Go `TestTheOrphanCheckReadsTheRoomAfterTheCallerCancels` (T10; mutant with the caller ctx fails it) + the three R9 twins |
+| R11 | DONE | C# `BlokAgentPageCreateTests.TheOrphanCheckReadsTheRoomAfterTheCallerCancels` + Go twin of the same name (T10; on both, a mutant that passes the caller's token fails it) + the three R9 twins |
 | R12 | DONE | SCEN pointers on `/revision`, `/results/0/revision`, `/error/details/revision` |
 | R13 | DONE | SCEN `@head` everywhere |
 
@@ -71,13 +78,13 @@ The old public `blokagent.Rooms` interface (stored lane) is replaced by the opaq
 
 | Row | State | Oracle |
 | --- | --- | --- |
-| H1 | DONE (Go twin) | `TestAnUndoRetriesItsOwnStaleHeadThreeTimes` (test hook `beforeHistoryLane`; mutant `attempt == 1` fails). C# has no test of the retry; behaviour read at `BlokAgentExecutor.cs:647-660`. |
+| H1 | DONE | C# `BlokAgentRoomHistoryTests.AnUndoRetriesItsOwnStaleHeadThreeTimes` (seam `BeforeHistoryLane`) + Go twin `TestAnUndoRetriesItsOwnStaleHeadThreeTimes` (hook `beforeHistoryLane`), same three rows. C# mutants killed: `attempt == 1`, dropping `expect is not null ||`. |
 | H2 | DONE | SCEN `room-undo-nothing-to-replay`, `room-undo-lineage-changed` (F16) |
 | H3 | DONE | SCEN `room-undo-other-document` (F17), `room-undo-peer-conflict` (F18), `room-undo-unlock` (F19), `room-undo-share-*` (F20, 4) |
 | H4 | DONE | SCEN `room-undo-redo-the-last-batch`, `room-undo-move-and-title` |
 | H5 | DONE (internal) | digest never dedups (T7 scenario) |
 | H6 | DONE | SCEN `room-undo-per-person`, `room-undo-nothing-to-replay` (other actor) |
-| H7, T18 | DONE (Go twin) | `TestStepsGoAfterAnHourWithoutACall` (clock seam; exactly one hour is not past it) |
+| H7, T18 | DONE | C# `RoomAgentHistoryTests.StepsGoAfterAnHourWithoutACall` (`ManualTimeProvider`) + Go twin `TestTopAndAddKeepTheStepsForAnotherHour`, same sequence; Go `TestStepsGoAfterAnHourWithoutACall` through the executor. Mutants killed on both: `>` to `>=`, no touch in Top, no touch in Add. |
 | H8, T2 | DONE | SCEN `room-undo-cap` (105 edits, 100 undos); C#+Go `AFullRedoSideEvictsThePageActionJustAdded` / `TestTheRoomTrimsOnlyDoneSteps` |
 | H9, T8 | DONE | C# `BlokAgentRoomHistoryTests.TwoUndosAtOnceTakeTheStepBackOnce` and Go twin `TestTwoUndosAtOnceTakeTheStepBackOnce` (-race) |
 | H10, T20 | DONE | SCEN `room-undo-forget-{purge,restore,reset}`, `version-undo-after-restore` (mutant without the listener fails all four) |
@@ -129,7 +136,7 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 
 - The room runner lives in `blokagent` (it needs the executor's runtime); helpers stay unexported there instead of `internal/agent/*`.
 - `Server.AgentExecutor()` shares the server's lazy engine pool with the rooms' HTML reader, as C# shares one `IBlokRuntime`. `TestTheCollabRuntimeIsBuiltOnlyOnTheFirstHTMLRead` still passes (no pool before first use).
-- Test seams added in production code: Go `roomHistory.added`, `Executor.beforeHistoryLane`; C# `RoomAgentHistory.Added`, `BlokAgentExecutor.RoomHistory`.
+- Test seams added in production code: Go `roomHistory.added`, `Executor.beforeHistoryLane`; C# `RoomAgentHistory.Added`, `BlokAgentExecutor.RoomHistory`, `BlokAgentExecutor.BeforeHistoryLane` (round 3, `Func<ValueTask>?`, internal; no BREAKING).
 
 ## Known differences (no row changes)
 
@@ -142,7 +149,14 @@ T1 (stored lane), T2 DONE, T3 DONE, T4 DONE, T5 (stored lane), T6 DONE (C# fixed
 
 ## Open for later rounds (none blocks the lane)
 
-- The scenario runner's `peer` uses `human-2`; the history-gate retry (H1) and two-undo race have Go twins only, not C# tests.
+- The scenario runner's `peer` uses `human-2`. (Round 3: H1, H7 and R11 now have C# tests; H9 always had one.)
+
+## Runs round 3
+
+- C#: `FullyQualifiedName~Agent` 541/541 (host fixture 125/125 with the nine new cases).
+- Go: `go test -p 2 ./blokagent ./blokserver` ok (111.5 s, includes the host fixture, scenarios, room corpus, fuzz seeds); `go vet ./...` clean; `gofmt -l .` empty.
+- Conformance: `--target go --suite mcp-agent-participant` 5/5. No blok-server left running.
+- No `-race` run this round: the Go production change is `wire.go` only (no locking); the new Go tests are single-goroutine.
 
 ## Runs round 2 (final)
 

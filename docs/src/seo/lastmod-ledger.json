@@ -12,12 +12,12 @@
     "date": "2026-09-04"
   },
   "/demo": {
-    "hash": "d263719e55000758",
-    "date": "2026-10-07"
+    "hash": "44ebbffc841aa054",
+    "date": "2026-11-03"
   },
   "/docs": {
-    "hash": "37a4bdd8f010e04a",
-    "date": "2026-10-18"
+    "hash": "40bfac5b60fa63f9",
+    "date": "2026-11-03"
   },
   "/docs/agent-api": {
     "hash": "340097e99ef61e80",
@@ -112,7 +112,11 @@
     "date": "2026-09-08"
   },
   "/docs/embed": {
-    "hash": "c2ccc44795cc3e76",
+    "hash": "d9e600fd3d805b1b",
+    "date": "2026-11-03"
+  },
+  "/docs/embed-safety": {
+    "hash": "3951c52447e27bcd",
     "date": "2026-11-03"
   },
   "/docs/equation": {
@@ -124,8 +128,8 @@
     "date": "2026-09-08"
   },
   "/docs/file": {
-    "hash": "aff5f767a7bdba26",
-    "date": "2026-09-28"
+    "hash": "9bb03f3e220c2fa7",
+    "date": "2026-11-03"
   },
   "/docs/header": {
     "hash": "d4308f91508dc24c",
@@ -296,8 +300,8 @@
     "date": "2026-10-07"
   },
   "/docs/uploader-api": {
-    "hash": "b0438b8842dd8e56",
-    "date": "2026-09-08"
+    "hash": "e8c880d1693d3afa",
+    "date": "2026-11-03"
   },
   "/docs/use-blocks": {
     "hash": "61c1c6d5d3786e78",
@@ -312,8 +316,8 @@
     "date": "2026-09-28"
   },
   "/docs/view-api": {
-    "hash": "9eaaaf2bfebf1c85",
-    "date": "2026-10-30"
+    "hash": "e5dd0393c98d4c3a",
+    "date": "2026-11-03"
   },
   "/docs/view-state-api": {
     "hash": "1981c1ecf65077dc",
@@ -332,8 +336,8 @@
     "date": "2026-09-08"
   },
   "/presets": {
-    "hash": "eaf065e5eb3c1d30",
-    "date": "2026-09-08"
+    "hash": "1d7bfb32d2092410",
+    "date": "2026-11-03"
   },
   "/ru": {
     "hash": "9589849dc9e05a7b",
@@ -344,12 +348,12 @@
     "date": "2026-09-04"
   },
   "/ru/demo": {
-    "hash": "a6c83c6b9d48cce3",
-    "date": "2026-10-07"
+    "hash": "b5a068c40bf33591",
+    "date": "2026-11-03"
   },
   "/ru/docs": {
-    "hash": "f513305bc66be2fd",
-    "date": "2026-10-18"
+    "hash": "338c12e0be76ca1a",
+    "date": "2026-11-03"
   },
   "/ru/docs/agent-api": {
     "hash": "10591acaaa9d238f",
@@ -444,7 +448,11 @@
     "date": "2026-09-08"
   },
   "/ru/docs/embed": {
-    "hash": "9358c483eacc9803",
+    "hash": "155f31fac2bda743",
+    "date": "2026-11-03"
+  },
+  "/ru/docs/embed-safety": {
+    "hash": "eb77f648b42a074d",
     "date": "2026-11-03"
   },
   "/ru/docs/equation": {
@@ -456,8 +464,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/file": {
-    "hash": "591252babf52e8bb",
-    "date": "2026-09-28"
+    "hash": "ba1ae0c4c2846d65",
+    "date": "2026-11-03"
   },
   "/ru/docs/header": {
     "hash": "c8fe07e03a951b9d",
@@ -628,8 +636,8 @@
     "date": "2026-10-07"
   },
   "/ru/docs/uploader-api": {
-    "hash": "7a3925bf82fe77d5",
-    "date": "2026-09-08"
+    "hash": "024258fc78a5f1ce",
+    "date": "2026-11-03"
   },
   "/ru/docs/use-blocks": {
     "hash": "a4ca56c964e0e9fa",
@@ -644,8 +652,8 @@
     "date": "2026-09-28"
   },
   "/ru/docs/view-api": {
-    "hash": "4d37ab75d3964774",
-    "date": "2026-10-30"
+    "hash": "bf1a90ce2737f945",
+    "date": "2026-11-03"
   },
   "/ru/docs/view-state-api": {
     "hash": "b0418f22b56273c5",
@@ -664,20 +672,20 @@
     "date": "2026-09-08"
   },
   "/ru/presets": {
-    "hash": "ad6285fa77895440",
-    "date": "2026-09-08"
+    "hash": "e825b4e4b04494f5",
+    "date": "2026-11-03"
   },
   "/ru/server": {
-    "hash": "81a5778727d2b6ae",
-    "date": "2026-10-30"
+    "hash": "1b7f854c4c390355",
+    "date": "2026-11-03"
   },
   "/ru/tools": {
     "hash": "2b0fddd440ba58c4",
     "date": null
   },
   "/server": {
-    "hash": "7658ca2b00fa3c54",
-    "date": "2026-10-30"
+    "hash": "c5277145b0f5234d",
+    "date": "2026-11-03"
   },
   "/tools": {
     "hash": "8ae406d370e08ec0",

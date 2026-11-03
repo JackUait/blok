@@ -6,6 +6,7 @@ import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { DevOverrideSeamContent } from "./DevOverrideSeamContent";
 import { TabSyncContent } from "./TabSyncContent";
+import { EmbedSafetyContent } from "./EmbedSafetyContent";
 import { EditorAccessNote } from "./EditorAccessNote";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
@@ -51,6 +52,7 @@ const EDIT_PATH_BY_CUSTOM_TYPE: Record<NonNullable<ApiSectionType["customType"]>
   concepts: "docs/src/components/api/ConceptsContent.tsx",
   "how-to-custom-tool": "docs/src/components/api/HowToCustomToolContent.tsx",
   "tab-sync": "docs/src/components/api/TabSyncContent.tsx",
+  "embed-safety": "docs/src/components/api/EmbedSafetyContent.tsx",
   "dev-override-seam": "docs/src/components/api/DevOverrideSeamContent.tsx",
 };
 
@@ -332,6 +334,17 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <SectionHeader section={section} />
         </div>
         <TabSyncContent />
+      </section>
+    );
+  }
+
+  if (section.customType === "embed-safety") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <EmbedSafetyContent />
       </section>
     );
   }

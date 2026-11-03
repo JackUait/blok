@@ -97,6 +97,7 @@
       "tools": "Tools",
       "uploader": "Uploader",
       "devOverrideSeam": "Dev override seam",
+      "embedSafety": "Embedding any URL safely",
       "outputData": "OutputData",
       "blockData": "BlockData",
       "everythingIsABlock": "Everything is a block",
@@ -1070,6 +1071,43 @@
         "body": "To remove the branch from your bundle entirely, alias each entry to its implementation module. Use an exact-match (regex) alias. A plain string key like `'@bloklabs/core'` also prefix-matches every subpath.\n\nFor Vite/Rollup: `resolve: { alias: [{ find: /^@bloklabs\\/core$/, replacement: '@bloklabs/core/dist/blok-impl.mjs' }] }`. Each subpath entry (`/tools`, `/full`, …) gets its own pair pointing at its `-impl` module."
       }
     },
+    "embedSafety": {
+      "title": "Embedding any URL safely",
+      "badge": "Security",
+      "description": "What Blok enforces when it frames a link, and the headers your app must send.",
+      "whatBlokDoes": {
+        "title": "What Blok enforces",
+        "body": "Blok frames only links it trusts, and gives each frame as little power as it can.\n\n- Registry providers, such as YouTube and Figma, get the provider sandbox and `referrerpolicy=\"strict-origin-when-cross-origin\"`.\n- A generic embed needs `linkPaste.allowGenericEmbed` or a matching `allowedEmbedOrigins` entry, and an https link.\n  - It gets `sandbox=\"allow-scripts allow-forms allow-popups\"`, no `allow` list, no referrer, and `credentialless` (Chrome only).\n  - By default it loads only after the reader clicks. Its real host shows above the frame.\n- A generic embed never frames your own site. The page host, `hostAliases`, and their subdomains and parent domains get a link card.\n- `blockedEmbedOrigins` beats both allow settings.\n- The headless view frames registry embeds only. After `transformUrl`, the frame src must still be absolute https, or the view prints a link.\n\nThe file tool frames only `blob:` PDFs, re-typed as `application/pdf`. A remote http(s) PDF gets an \"Open in new tab\" link instead.\n\nWith no uploader, every `blob:` URL Blok makes gets a safe type. HTML, SVG, XML and unknown types become `text/plain`. Read a file's real type from the block's `mimeType`.\n\nThe rest of this guide is up to your app. Blok is a library, so it cannot send headers for your pages."
+      },
+      "frameSrc": {
+        "title": "Limit frames with CSP",
+        "body": "Send a `Content-Security-Policy` with a `frame-src` directive. The browser checks it for every frame on your page, so it still holds if a check in Blok has a bug.\n\n- To allow any https site, as `allowGenericEmbed` does, use `frame-src https:`.\n- To allow only some sites, list them. Match the list to `allowedEmbedOrigins` and the registry providers you use.\n- The inline PDF preview frames a `blob:` URL and reads it with `fetch`. A strict policy may need `blob:` in `frame-src` and `connect-src`. We have not measured this."
+      },
+      "ownPages": {
+        "title": "Keep your own pages out of frames",
+        "body": "Send `frame-ancestors 'self'` or `frame-ancestors 'none'` on your own pages, such as settings and sharing. Then another site cannot frame them to trick a signed-in reader into a click.\n\nBlok refuses to frame your own host, its aliases, and their subdomains and parent domains. It does not catch a sibling subdomain, such as `cdn.example.com` next to `app.example.com`. That would need the public suffix list. List such hosts in `hostAliases` or `blockedEmbedOrigins`."
+      },
+      "popups": {
+        "title": "Cut the link to popups with COOP",
+        "body": "A framed page can open a popup. A registry embed keeps `allow-popups-to-escape-sandbox`, because YouTube's \"Watch on YouTube\" needs an unsandboxed tab. A generic embed does not get it, so its popups stay sandboxed.\n\nAn escaped popup is a normal page of the framed site. In Firefox it could send your editor's tab to another address through `window.opener.top`. Chrome and WebKit refused.\n\nSend `Cross-Origin-Opener-Policy: same-origin` on the page that hosts the editor. The popup then had no `window.opener`, and the tab stayed put in all three browsers. `same-origin-allow-popups` did not help: in Firefox the popup still moved the tab.\n\n`same-origin` may also break popups your app opens on other sites and talks to through `window.opener`, such as a sign-in window. Test those flows before you turn it on."
+      },
+      "permissions": {
+        "title": "Cap powerful features",
+        "body": "A generic embed gets no `allow` list, so it gets no camera, microphone, geolocation or payment. A registry embed gets only `encrypted-media`, `fullscreen` and `picture-in-picture`.\n\nTo cap the whole page, send a `Permissions-Policy` header. Give each feature your app does not use an empty list:\n\n- `camera=(), microphone=(), geolocation=(), payment=(), usb=()`\n\nBrowser compatibility data says only Chrome enforces this header. Firefox and Safari ignore it, so the `allow` attribute stays the main lever. We have not measured this."
+      },
+      "uploads": {
+        "title": "Serve user files from another site",
+        "body": "An uploaded HTML or SVG file runs script as the site that serves it. On your app's own host it acts as one of your pages. Serve uploads from a separate host, such as an S3 bucket's own address.\n\nA separate site is safer than a subdomain of your app, because browsers treat subdomains as the same site for `SameSite` cookies. If you use a subdomain, list it in `hostAliases` or `blockedEmbedOrigins`, so it never gets a generic embed.\n\nA `blob:` URL has your page's origin too. Blok re-types the blobs it makes, but a `blob:` URL from your own uploader keeps the type you give it. Re-type HTML, SVG, XML and unknown files to `text/plain` before you call `URL.createObjectURL`."
+      },
+      "frameCheck": {
+        "title": "Check a link before it is framed",
+        "body": "Many sites refuse to be framed, and the reader then sees an empty frame. Your backend can tell first. Pass `linkPaste.checkEmbed`, or set `server` and Blok calls the server's `GET /frame-check`.\n\n- `blocked` or `insecure` inserts a bookmark instead, with a short notice.\n- `allowed`, `unknown`, an error, or no answer within 3 seconds inserts the embed.\n\nThe verdict is a hint for the interface, not a security check. It never lifts another rule. The browser still enforces the framed site's own `X-Frame-Options` and `frame-ancestors`."
+      },
+      "measured": {
+        "title": "What we measured",
+        "body": "The popup and PDF results above come from runs on 3 November 2026, on a local test server. The browsers were Chrome 156 and Playwright's own builds of Firefox 146 and WebKit 26. Those two builds are patched, so stock Firefox and Safari may differ.\n\n- A frame sandboxed without `allow-popups-to-escape-sandbox` opened popups that kept the sandbox. They could not move the editor's tab in any browser.\n- With that token, the Firefox popup moved the editor's tab. `same-origin-allow-popups` did not stop it. `same-origin` did, in all three browsers.\n- An HTML page framed with no sandbox ran its script and could move the editor's tab. A `.pdf` address proves nothing, because the server's `Content-Type` decides.\n- A `text/html` blob opened in a new tab ran as the page that made it, even with `rel=\"noopener\"`.\n- Chrome blocks its PDF viewer in every sandboxed frame, `sandbox=\"\"` included. That is why remote PDFs open in a new tab."
+      }
+    },
     "uiApi": {
       "title": "UI API",
       "badge": "UI",
@@ -1391,7 +1429,7 @@
                 "description": "Custom renderers for INLINE elements, keyed by lowercase tag name. They are the inline counterpart of renderers, for marks whose display is not their stored markup: an inline equation stores only its LaTeX source, a mention only an id.\n\nEach one runs after sanitization, over the elements that survived it, and REPLACES the element with what it returns. Return undefined to keep the element as sanitized, or '' to drop it.\n\nThe returned markup is inserted as-is and is NOT re-sanitized. That is the same trust contract as a block renderer's output, so it may carry markup the inline allowlist would strip (KaTeX spans, for instance).\n\nelement is { tag, attrs, html, text }. This affects rendered HTML only: blocksToPlainText reads a mark's stored source, not its rendering."
               },
               "transformUrl": {
-                "description": "Pure URL rewrite hook. It runs on every block URL (image/video/audio/embed src, file/bookmark/embed href) and on every inline anchor href, so you can rewrite hrefs or route CDN image URLs.\n\nctx is { attr: 'href' | 'src', blockType?: string }, and blockType is undefined for inline anchors. The hook runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink. Return '' to drop the URL."
+                "description": "Pure URL rewrite hook. It runs on every block URL (image/video/audio/embed src, file/bookmark/embed href) and on every inline anchor href, so you can rewrite hrefs or route CDN image URLs.\n\nctx is { attr: 'href' | 'src', blockType?: string }, and blockType is undefined for inline anchors. The hook runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink. Return '' to drop the URL.\n\nAn embed frame src must still be an absolute https URL after the rewrite. An http, relative or protocol-relative result prints the source link instead of a frame. Embed frames send `referrerpolicy=\"strict-origin-when-cross-origin\"`."
               },
               "root": {
                 "description": "Wrap the output in <div data-blok-interface=\"view\">. This is not cosmetic.\n\nThe scoped preflight and the token/colour layers key on the bare [data-blok-interface] attribute, so emitted classes compute differently without the wrapper and @bloklabs/core/view.css cannot reproduce the editor's appearance.\n\nIt is opt-in because it adds an element to existing output. <BlokView> stamps the attribute on its own wrapper, so React consumers never set this."
@@ -1672,7 +1710,7 @@
       "intro": "Guides, the full API reference, and every built-in block and inline tool. New here? Start with the quick start and have an editor running in five minutes."
     },
     "uploaderApi": {
-      "description": "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`. That is why an audio block's cover art reaches your image pipeline, instead of the audio endpoint that would reject it.\n\nResolution order for a kind: first the tool whose static `assetKind` matches (for example `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback. The fallback is a `blob:` URL for files, and the URL verbatim for links.\n\nSee the storage presets page for ready-made `uploader` implementations: Supabase, S3-compatible storage, Cloudinary, and IndexedDB. None of them need a backend of your own."
+      "description": "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`. That is why an audio block's cover art reaches your image pipeline, instead of the audio endpoint that would reject it.\n\nResolution order for a kind: first the tool whose static `assetKind` matches (for example `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback. The fallback is a `blob:` URL for files, and the URL verbatim for links.\n\nThe fallback `blob:` URL gets a safe type. HTML, XML and unknown types become `text/plain`, and SVG keeps its type only for images. Read a file's real type from the block's `mimeType`.\n\nSee the storage presets page for ready-made `uploader` implementations: Supabase, S3-compatible storage, Cloudinary, and IndexedDB. None of them need a backend of your own."
     }
   },
   "home": {
@@ -2510,7 +2548,7 @@
         "description": "A single tab inside a tabs block. It is not user-insertable on its own. The parent `tabs` block creates and manages its tabs.\n\nThe tab saves its `title` and an optional emoji `icon`, both as plain text. An empty icon is not saved. Child blocks are nested inside the tab via `contentIds`. A tab cannot hold another tabs block.\n\nAn empty tab shows \"Empty tab. Click or drop blocks inside.\" Clicking it adds a paragraph to the tab."
       },
       "embed": {
-        "description": "A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion's \"Create embed\". It works purely on the client: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL.\n\nBy default only registry-matched URLs are embedded. Set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). Such an embed shows a \"Load content from <host>\" button and loads only after the reader clicks it; set `linkPaste.genericEmbedClickToLoad: false` to load it at once.\n\nIt supports resizing, alignment (left/center/right), and an optional caption. A document-style provider such as Google Docs, Sheets, Slides, Forms or Drive also gets a bottom handle for adjusting the embed height."
+        "description": "A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion's \"Create embed\". It works purely on the client: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL.\n\nBy default only registry-matched URLs are embedded. Set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). Such an embed shows a \"Load content from <host>\" button and loads only after the reader clicks it; set `linkPaste.genericEmbedClickToLoad: false` to load it at once.\n\nIt supports resizing, alignment (left/center/right), and an optional caption. A document-style provider such as Google Docs, Sheets, Slides, Forms or Drive also gets a bottom handle for adjusting the embed height.\n\nThe \"Embedding any URL safely\" guide lists what Blok enforces for every frame, and the headers your app should send."
       },
       "bookmark": {
         "description": "A static OpenGraph card for a pasted link, like Notion's \"Create bookmark\". It shows the page title, description, preview image, favicon, and domain.\n\nThe metadata comes from an unfurl endpoint that you supply. A backend is mandatory because of CORS. Blok ships only the contract.",
@@ -2567,7 +2605,7 @@
         }
       },
       "file": {
-        "description": "An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.",
+        "description": "An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.\n\nThe fallback blob URL gets a safe type. HTML, SVG, XML and unknown types become `text/plain`, and the bytes stay the same. Read the file's type from `mimeType`, not from the blob.\n\nThe PDF preview frames only a `blob:` PDF, re-typed as `application/pdf`. A remote http(s) PDF gets an \"Open in new tab\" link instead, because the preview never frames a remote page. With a strict CSP, the preview may need `blob:` in `connect-src`, since it reads the blob with `fetch`.",
         "options": {
           "uploader": {
             "description": "An uploader you supply. It has two optional methods, `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)`, and each one resolves to `{ url, fileName?, size?, mimeType? }`. The `ctx.onProgress(percent)` callback reports upload progress.\n\nWhen you omit the uploader, files fall back to a blob URL or the pasted URL."
@@ -2777,7 +2815,8 @@
         "storageSetup": {
           "0": "None. This preset needs no external service, which is the point.",
           "1": "Call the exported resolveBlokObjectUrl(url) helper wherever you render an uploaded asset. uploadByFile returns a blok:asset/… reference, not a URL you can use directly. Nothing resolves it back into a blob: URL for you automatically.",
-          "2": "If you pass a custom dbName to indexedDBStorage(), pass that same dbName to resolveBlokObjectUrl(url, { dbName }). A mismatch looks up the wrong database. It resolves to null with no error, and does not throw an exception."
+          "2": "If you pass a custom dbName to indexedDBStorage(), pass that same dbName to resolveBlokObjectUrl(url, { dbName }). A mismatch looks up the wrong database. It resolves to null with no error, and does not throw an exception.",
+          "3": "The blob: URL from resolveBlokObjectUrl gets a safe type, like Blok's own blob: URLs. HTML, XML and other types that could run as a page become text/plain, and SVG keeps its type only for images. Read the real file type from the block's mimeType."
         }
       }
     }
@@ -3062,6 +3101,14 @@
       "upload-by-url-json": {
         "title": "Remote uploads accept JSON requests only",
         "body": "POST /upload-by-url requires Content-Type: application/json. Parameters such as charset=utf-8 are allowed. Other media types, including application/problem+json, receive 415 before the service fetches the URL."
+      },
+      "frame-check": {
+        "title": "GET /frame-check says whether a page lets your editor frame it",
+        "body": "GET /frame-check?url=… is open whenever /unfurl is. It answers `{\"verdict\": …, \"link\": …, \"oembed\": {…}}`. The editor calls it before a generic embed when `server` is set and `linkPaste.checkEmbed` is not.\n\n- blocked means the final page's enforced `frame-ancestors` or `X-Frame-Options` refuses your editor. Report-only policies, `<meta>` tags and redirect hops do not count.\n- insecure means the final page is not https. blocked wins over it.\n- unknown means the request had no Origin, or the page could not be fetched or did not answer 2xx.\n\nYour editor is the request's Origin, used only when it is an allowed origin. `link` is the final URL after redirects. `oembed` holds only `title`, `provider_name`, an https `thumbnail_url`, and `width` and `height` capped at 4096.\n\nThe verdict is a hint for your interface, not a security check. The service cannot see the reader's cookies, the frames above your editor, or scripts that break out of frames."
+      },
+      "outbound-redirects": {
+        "title": "Remote fetches follow five redirects at most, and never from https to http",
+        "body": "When the service fetches a URL for you, it follows at most 5 redirects. A redirect from https to http is refused. So is a response head over 64 KiB.\n\nWhen a rate limit is on, each redirect hop counts as one more request for the caller. A long chain can then end in `{\"success\":0}` from /unfurl or 400 from /upload-by-url, and later requests reach 429 sooner. Raise --rate-limit if real traffic hits it."
       },
       "proxy-rate-limit": {
         "title": "Behind your own app, the rate limit is one allowance for everybody",

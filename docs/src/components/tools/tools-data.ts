@@ -1015,14 +1015,14 @@ const editor = new Blok({
     type: 'block',
     title: 'Embed',
     description:
-      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion\'s "Create embed". It works purely on the client: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL.\n\nBy default only registry-matched URLs are embedded. Set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). Such an embed shows a \"Load content from <host>\" button and loads only after the reader clicks it; set `linkPaste.genericEmbedClickToLoad: false` to load it at once.\n\nIt supports resizing, alignment (left/center/right), and an optional caption. A document-style provider such as Google Docs, Sheets, Slides, Forms or Drive also gets a bottom handle for adjusting the embed height.',
+      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion\'s "Create embed". It works purely on the client: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL.\n\nBy default only registry-matched URLs are embedded. Set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). Such an embed shows a \"Load content from <host>\" button and loads only after the reader clicks it; set `linkPaste.genericEmbedClickToLoad: false` to load it at once.\n\nIt supports resizing, alignment (left/center/right), and an optional caption. A document-style provider such as Google Docs, Sheets, Slides, Forms or Drive also gets a bottom handle for adjusting the embed height.\n\nThe "Embedding any URL safely" guide lists what Blok enforces for every frame, and the headers your app should send.',
     importExample: `import { Embed } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface EmbedData {
   service: string;        // Registry service key, e.g. "youtube"
   source: string;         // Original pasted URL
-  embed: string;          // Resolved provider iframe URL
-  kind?: 'iframe' | 'script'; // How the embed is rendered
+  embed: string;          // Resolved provider iframe URL; a generic embed frames source instead
+  kind?: 'iframe' | 'script'; // Written on save; render takes it from the registry, not from here
   width?: number;         // Intrinsic width in pixels
   height?: number;        // Intrinsic height in pixels (user-adjustable for document-style providers)
   widthPercent?: number;  // Rendered width as % of the editor column (default 100)
@@ -1283,7 +1283,7 @@ const editor = new Blok({
     type: 'block',
     title: 'File',
     description:
-      'An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
+      'An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption.\n\nFiles are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.\n\nThe fallback blob URL gets a safe type. HTML, SVG, XML and unknown types become `text/plain`, and the bytes stay the same. Read the file\'s type from `mimeType`, not from the blob.\n\nThe PDF preview frames only a `blob:` PDF, re-typed as `application/pdf`. A remote http(s) PDF gets an "Open in new tab" link instead, because the preview never frames a remote page. With a strict CSP, the preview may need `blob:` in `connect-src`, since it reads the blob with `fetch`.',
     importExample: `import { File } from '@bloklabs/core/tools';`,
     configOptions: [
       {

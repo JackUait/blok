@@ -28,6 +28,7 @@ export const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'inline-toolbar-api': 'api.inlineToolbarApi',
   'notifier-api': 'api.notifierApi',
   'sanitizer-api': 'api.sanitizerApi',
+  'embed-safety': 'api.embedSafety',
   'dev-override-seam': 'api.devOverrideSeam',
   'tooltip-api': 'api.tooltipApi',
   'theme-api': 'api.themeApi',

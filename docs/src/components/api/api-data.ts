@@ -75,7 +75,7 @@ export interface ApiSection {
     default: string;
     description: string;
   }[];
-  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool" | "tab-sync" | "dev-override-seam";
+  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool" | "tab-sync" | "embed-safety" | "dev-override-seam";
   example?: string;
 }
 
@@ -3909,13 +3909,13 @@ class Report {
     badge: "Uploader",
     title: "Uploader API",
     description:
-      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`. That is why an audio block's cover art reaches your image pipeline, instead of the audio endpoint that would reject it.\n\nResolution order for a kind: first the tool whose static `assetKind` matches (for example `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback. The fallback is a `blob:` URL for files, and the URL verbatim for links.\n\nSee the storage presets page for ready-made `uploader` implementations: Supabase, S3-compatible storage, Cloudinary, and IndexedDB. None of them need a backend of your own.",
+      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`. That is why an audio block's cover art reaches your image pipeline, instead of the audio endpoint that would reject it.\n\nResolution order for a kind: first the tool whose static `assetKind` matches (for example `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback. The fallback is a `blob:` URL for files, and the URL verbatim for links.\n\nThe fallback `blob:` URL gets a safe type. HTML, XML and unknown types become `text/plain`, and SVG keeps its type only for images. Read a file's real type from the block's `mimeType`.\n\nSee the storage presets page for ready-made `uploader` implementations: Supabase, S3-compatible storage, Cloudinary, and IndexedDB. None of them need a backend of your own.",
     methods: [
       {
         name: "uploader.uploadByFile(file, ctx)",
         returnType: "Promise<{ url: string; fileName?: string }>",
         description:
-          "Store a file and return its URL. `ctx` is `{ kind, tool?, onProgress? }`, where `kind` is the ASSET kind, not the requesting tool. The two differ whenever a tool holds an asset outside its own media family.",
+          "Store a file and return its URL. `ctx` is `{ kind, tool?, onProgress? }`, where `kind` is the ASSET kind, not the requesting tool. The two differ whenever a tool holds an asset outside its own media family.\n\nWith no uploader for the kind, it returns a `blob:` URL with a safe type. HTML, XML and unknown types become `text/plain`.",
         example: `// Inside a custom block tool that holds a thumbnail
 const { url } = await this.api.uploader.uploadByFile(file, {
   kind: 'image',
@@ -5130,7 +5130,7 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
             type: "(url, ctx) => string",
             required: false,
             description:
-              "Pure URL rewrite hook. It runs on every block URL (image/video/audio/embed src, file/bookmark/embed href) and on every inline anchor href, so you can rewrite hrefs or route CDN image URLs.\n\nctx is { attr: 'href' | 'src', blockType?: string }, and blockType is undefined for inline anchors. The hook runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink. Return '' to drop the URL.",
+              "Pure URL rewrite hook. It runs on every block URL (image/video/audio/embed src, file/bookmark/embed href) and on every inline anchor href, so you can rewrite hrefs or route CDN image URLs.\n\nctx is { attr: 'href' | 'src', blockType?: string }, and blockType is undefined for inline anchors. The hook runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink. Return '' to drop the URL.\n\nAn embed frame src must still be an absolute https URL after the rewrite. An http, relative or protocol-relative result prints the source link instead of a frame. Embed frames send `referrerpolicy=\"strict-origin-when-cross-origin\"`.",
           },
           {
             name: "options.root",
@@ -5422,7 +5422,7 @@ const html = blocksToHtml(savedData, {
             name: "transformUrl",
             type: "(url, ctx) => string",
             required: false,
-            description: "URL rewrite hook for block URLs and inline anchors, run before the unsafe-scheme strip. Forwards to blocksToHtml.",
+            description: "URL rewrite hook for block URLs and inline anchors, run before the unsafe-scheme strip. Forwards to blocksToHtml. An embed frame src must stay absolute https, or the embed prints as a link.",
           },
           {
             name: "inlineRenderers",
@@ -5474,6 +5474,14 @@ function RowLabel({ saved }: { saved: OutputData }) {
 }`,
       },
     ],
+  },
+  {
+    id: "embed-safety",
+    badge: "Security",
+    title: "Embedding any URL safely",
+    description:
+      "What Blok enforces when it frames a link, and the headers your app must send.",
+    customType: "embed-safety",
   },
   {
     id: "dev-override-seam",

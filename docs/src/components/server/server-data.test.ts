@@ -451,7 +451,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty-three service limits the design refuses to bury', () => {
+  it('states the thirty-five service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -469,6 +469,8 @@ describe('server docs data', () => {
       's3-untested',
       'cors-preflight',
       'upload-by-url-json',
+      'frame-check',
+      'outbound-redirects',
       'proxy-rate-limit',
       'ticket-not-scoped',
       'collab-pass-lifetime',
@@ -491,6 +493,28 @@ describe('server docs data', () => {
       expect(limit.title.length).toBeGreaterThan(0);
       expect(limit.body.length).toBeGreaterThan(0);
     }
+  });
+
+  it('describes GET /frame-check: its verdicts, what counts, and that it is only a hint', () => {
+    const body = serverLimits.find((l) => l.id === 'frame-check')?.body ?? '';
+
+    expect(body).toMatch(inOrder('GET /frame-check', '/unfurl'));
+    expect(body).toMatch(inOrder('blocked', 'frame-ancestors', 'X-Frame-Options'));
+    expect(body).toMatch(/Report-only/);
+    expect(body).toMatch(inOrder('insecure', 'https'));
+    expect(body).toMatch(inOrder('unknown', 'Origin'));
+    expect(body).toMatch(/linkPaste\.checkEmbed/);
+    expect(body).toMatch(/not a security check/);
+  });
+
+  it('prices the outbound fetch limits: five redirects, no https to http, each hop rate-limited', () => {
+    const body = serverLimits.find((l) => l.id === 'outbound-redirects')?.body ?? '';
+
+    expect(body).toMatch(/5 redirects/);
+    expect(body).toMatch(inOrder('https', 'http', 'refused'));
+    expect(body).toMatch(/64 KiB/);
+    expect(body).toMatch(inOrder('each redirect hop', 'rate'));
+    expect(body).toMatch(/--rate-limit/);
   });
 
   it('prices version history: points, the five routes, the journal and trimming', () => {

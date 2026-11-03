@@ -665,6 +665,16 @@ export const serverLimits: ServerLimit[] = [
     body: 'POST /upload-by-url requires Content-Type: application/json. Parameters such as charset=utf-8 are allowed. Other media types, including application/problem+json, receive 415 before the service fetches the URL.',
   },
   {
+    id: 'frame-check',
+    title: 'GET /frame-check says whether a page lets your editor frame it',
+    body: 'GET /frame-check?url=… is open whenever /unfurl is. It answers `{"verdict": …, "link": …, "oembed": {…}}`. The editor calls it before a generic embed when `server` is set and `linkPaste.checkEmbed` is not.\n\n- blocked means the final page\'s enforced `frame-ancestors` or `X-Frame-Options` refuses your editor. Report-only policies, `<meta>` tags and redirect hops do not count.\n- insecure means the final page is not https. blocked wins over it.\n- unknown means the request had no Origin, or the page could not be fetched or did not answer 2xx.\n\nYour editor is the request\'s Origin, used only when it is an allowed origin. `link` is the final URL after redirects. `oembed` holds only `title`, `provider_name`, an https `thumbnail_url`, and `width` and `height` capped at 4096.\n\nThe verdict is a hint for your interface, not a security check. The service cannot see the reader\'s cookies, the frames above your editor, or scripts that break out of frames.',
+  },
+  {
+    id: 'outbound-redirects',
+    title: 'Remote fetches follow five redirects at most, and never from https to http',
+    body: 'When the service fetches a URL for you, it follows at most 5 redirects. A redirect from https to http is refused. So is a response head over 64 KiB.\n\nWhen a rate limit is on, each redirect hop counts as one more request for the caller. A long chain can then end in `{"success":0}` from /unfurl or 400 from /upload-by-url, and later requests reach 429 sooner. Raise --rate-limit if real traffic hits it.',
+  },
+  {
     id: 'proxy-rate-limit',
     title: 'Behind your own app, the rate limit is one allowance for everybody',
     body: 'The service limits how often a caller may make it fetch a URL.\n\n- When --rate-limit is omitted, ticket mode allows 60 requests a minute per caller.\n- Otherwise the limit is 0, which turns it off.\n- Any explicit value must be zero or greater.\n\nThe service tells callers apart by the address the request came from. When your app forwards every request, every request arrives from the same address. So the whole deployment shares one allowance, and one busy user can use it up.\n\nLimiting per user belongs in your own app, on the forwarding route, where you already know who is signed in. This does not apply on the third path, where the pass names the user and each user is counted separately.',

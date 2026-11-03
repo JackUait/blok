@@ -26,6 +26,7 @@ const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'inline-toolbar-api': 'api.links.inlineToolbar',
   'notifier-api': 'api.links.notifier',
   'sanitizer-api': 'api.links.sanitizer',
+  'embed-safety': 'api.links.embedSafety',
   'dev-override-seam': 'api.links.devOverrideSeam',
   'tooltip-api': 'api.links.tooltip',
   'theme-api': 'api.links.theme',

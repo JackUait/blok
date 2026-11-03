@@ -111,6 +111,7 @@ describe("API_SECTIONS", () => {
       "use-blocks",
       "use-blok-ready",
       "view-api",
+      "embed-safety",
       "dev-override-seam",
     ];
 

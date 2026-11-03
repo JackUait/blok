@@ -76,6 +76,7 @@ export const API_PAGE_FILES: Record<string, string[]> = {
   config: ['docs/src/components/common/framework-snippets.ts'],
   concepts: ['docs/src/components/api/ConceptsContent.tsx'],
   'custom-block-tool': ['docs/src/components/api/HowToCustomToolContent.tsx'],
+  'embed-safety': ['docs/src/components/api/EmbedSafetyContent.tsx'],
   'dev-override-seam': ['docs/src/components/api/DevOverrideSeamContent.tsx'],
 };
 

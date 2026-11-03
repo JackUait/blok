@@ -173,6 +173,15 @@ describe('ApiPage tab sync guide', () => {
   });
 });
 
+describe('ApiPage embed safety guide', () => {
+  it('renders the guide with the headers a host sets', () => {
+    renderAt('/docs/embed-safety');
+
+    expect(screen.getByRole('heading', { level: 1, name: /embedding any url safely/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Cross-Origin-Opener-Policy: same-origin/).length).toBeGreaterThan(0);
+  });
+});
+
 describe('ApiPage on-this-page fallback', () => {
   it('renders a TOC dropdown affordance for the lg breakpoint range instead of hiding it entirely', () => {
     renderAt('/docs/caret-api');

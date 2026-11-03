@@ -13,7 +13,9 @@
  * `href` sink unless it goes through one of the sanctioned safe helpers:
  *
  * - `toSafeEmbedSrc(...)` (embed/index.ts) — https-only, for iframe src and
- *   embed-widget hrefs;
+ *   embed-widget hrefs. Inside embed/ its argument must not be raw saved data
+ *   (`this.data.*` / `data.*`): the scheme check alone lets any https origin
+ *   through;
  * - `this.embedSrc()` (embed/index.ts) — the stricter resolver: https-only AND
  *   registry-derived (or host-opted-in generic), so a stored block can never
  *   frame an origin the embed registry does not sanction;
@@ -46,6 +48,10 @@ const WIDGET_SRC_CONSTANTS = new Set([
  */
 const EXEMPT_SINKS: Record<string, string> = {
   'registry.ts » url': 'definition site of setSafeLinkHref — the assignment is behind its isHttpUrl guard',
+  'embed/index.ts » toSafeEmbedSrc(this.data.source)':
+    'TEMPORARY. X/Twitter widget anchor. buildScript runs only after resolveEmbedRender matched this source ' +
+    'to the X registry entry, which pins the host to x.com/twitter.com. Route it through the render decision ' +
+    'and delete this entry (the link lane owns that change).',
   'mention/mention.ts » input.favicon':
     'HTMLImageElement src — <img> is not a script-execution sink (javascript: URLs do not run in img)',
   'bookmark/index.ts » this.data.favicon':
@@ -95,8 +101,31 @@ function collectSinks(): Sink[] {
   return sinks;
 }
 
+/** `toSafeEmbedSrc(arg)` → `arg`, or null for any other right-hand side. */
+function safeEmbedSrcArgument(rhs: string): string | null {
+  const match = /^toSafeEmbedSrc\((.*)\)$/.exec(rhs);
+
+  return match === null ? null : match[1].trim();
+}
+
+/**
+ * Inside embed/, toSafeEmbedSrc only checks the scheme. Its argument must come
+ * from the registry match or the render decision, never straight from saved
+ * data: `this.data.source` passes https for any origin the registry never
+ * matched.
+ */
+function isRawSavedData(arg: string): boolean {
+  return /^(?:this\.)?data\b/.test(arg);
+}
+
 function isSanctioned(sink: Sink): boolean {
-  if (sink.rhs.startsWith('toSafeEmbedSrc(') || sink.rhs === 'this.embedSrc()') {
+  if (sink.rhs === 'this.embedSrc()') {
+    return true;
+  }
+
+  const embedArg = safeEmbedSrcArgument(sink.rhs);
+
+  if (embedArg !== null && !(sink.file.startsWith('embed/') && isRawSavedData(embedArg))) {
     return true;
   }
 
@@ -114,7 +143,7 @@ describe('Link URL Sink Law', () => {
     // iframe.src, twitter anchor, threads anchor, 3 widget scripts, registry
     // helper, 3 img sinks — the law is meaningless if the walk finds nothing.
     expect(sinks.length).toBeGreaterThanOrEqual(9);
-    expect(sinks.some((s) => s.rhs.startsWith('toSafeEmbedSrc('))).toBe(true);
+    expect(sinks.some((s) => s.rhs === 'this.embedSrc()')).toBe(true);
   });
 
   it('routes every src/href sink in src/tools/link through a safe helper or a reasoned exemption', () => {
@@ -122,11 +151,25 @@ describe('Link URL Sink Law', () => {
       .filter((sink) => !isSanctioned(sink))
       .map(
         (sink) =>
-          `${sink.file}:${sink.line} assigns .${sink.attribute} = ${sink.rhs} — wrap it in ` +
-          'toSafeEmbedSrc(...) / setSafeLinkHref(...), or add an EXEMPT_SINKS entry with a reason'
+          `${sink.file}:${sink.line} assigns .${sink.attribute} = ${sink.rhs} — use this.embedSrc() / ` +
+          'toSafeEmbedSrc(<registry or render output>) / setSafeLinkHref(...), or add an EXEMPT_SINKS entry with a reason'
       );
 
     expect(violations).toEqual([]);
+  });
+
+  it('lets each exemption cover one sink (a copy of an exempt line is a new sink to review)', () => {
+    const counts = new Map<string, number>();
+
+    sinks.forEach((sink) => {
+      const key = `${sink.file} » ${sink.rhs}`;
+
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+
+    const shared = Object.keys(EXEMPT_SINKS).filter((key) => (counts.get(key) ?? 0) > 1);
+
+    expect(shared).toEqual([]);
   });
 
   it('keeps every exemption alive (a stale entry means the sink moved — re-verify it)', () => {

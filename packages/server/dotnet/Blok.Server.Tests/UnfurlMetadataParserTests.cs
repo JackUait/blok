@@ -91,7 +91,7 @@ public sealed class UnfurlMetadataParserTests
 
   [Theory]
   [InlineData("https://example.com/article", "https://cdn.example.com/i.png")]
-  [InlineData("http://example.com/article", "http://cdn.example.com/i.png")]
+  [InlineData("http://example.com/article", "")]
   public void ResolvesProtocolRelativeImages(
       string finalUrl,
       string expected)
@@ -232,7 +232,7 @@ public sealed class UnfurlMetadataParserTests
   }
 
   [Fact]
-  public void KeepsAbsoluteHttpUrlsWithoutAUsableFinalUrl()
+  public void KeepsOnlyAbsoluteHttpsUrlsWithoutAUsableFinalUrl()
   {
     var metadata = Parse(
         """
@@ -242,7 +242,7 @@ public sealed class UnfurlMetadataParserTests
         ":");
 
     Assert.Equal("https://cdn.example.com/i.png", metadata.Image);
-    Assert.Equal("http://cdn.example.com/icon.ico", metadata.Favicon);
+    Assert.Equal("", metadata.Favicon);
   }
 
   [Fact]
@@ -265,7 +265,7 @@ public sealed class UnfurlMetadataParserTests
   }
 
   [Fact]
-  public void DropsNonHttpImageAndFaviconUrls()
+  public void DropsNonHttpImageAndFaviconUrlsForTheDefaultFavicon()
   {
     var metadata = Parse(
         """
@@ -275,7 +275,7 @@ public sealed class UnfurlMetadataParserTests
         "https://example.com/x");
 
     Assert.Equal("", metadata.Image);
-    Assert.Equal("", metadata.Favicon);
+    Assert.Equal("https://example.com/favicon.ico", metadata.Favicon);
   }
 
   [Fact]

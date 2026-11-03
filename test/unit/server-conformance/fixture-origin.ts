@@ -24,9 +24,7 @@ export interface FixtureOrigin {
   readonly errorUrl: string;
   readonly mediaFinalUrl: string;
   readonly mediaRedirectUrl: string;
-  readonly metadataFaviconUrl: string;
   readonly metadataFinalUrl: string;
-  readonly metadataImageUrl: string;
   readonly metadataRedirectUrl: string;
   readonly oversizedUrl: string;
   stop(): Promise<void>;
@@ -325,9 +323,7 @@ export async function startFixtureOrigin(): Promise<FixtureOrigin> {
     errorUrl: `${baseUrl}/error`,
     mediaFinalUrl: `${baseUrl}/media/final/photo.jpeg?download=1`,
     mediaRedirectUrl: `${baseUrl}/media/redirect`,
-    metadataFaviconUrl: `${baseUrl}/metadata/final/favicon.svg`,
     metadataFinalUrl: `${baseUrl}/metadata/final/page.html?from=redirect`,
-    metadataImageUrl: `${baseUrl}/metadata/images/cover.png?size=2`,
     metadataRedirectUrl: `${baseUrl}/metadata/redirect`,
     oversizedUrl: `${baseUrl}/oversized`,
     stop: () => new Promise<void>((resolve, reject) => {

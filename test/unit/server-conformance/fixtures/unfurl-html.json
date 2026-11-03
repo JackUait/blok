@@ -879,6 +879,136 @@
       "name": "oembed link with spaces around the type",
       "url": "https://example.com/a",
       "html": "<head><link rel=\"alternate\" type=\" application/json+oembed \" href=\"/o.json\"></head>"
+    },
+    {
+      "name": "browser url: protocol-relative https",
+      "url": "https://example.com/article",
+      "html": "<meta property=\"og:image\" content=\"//cdn.example.com/i.png\">"
+    },
+    {
+      "name": "browser url: http og:image gives way to https twitter:image",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"http://cdn.example.com/a.png\">\n<meta name=\"twitter:image\" content=\"https://cdn.example.com/b.png\">"
+    },
+    {
+      "name": "browser url: http icon gives way to https apple-touch-icon",
+      "url": "https://example.com/x",
+      "html": "<link rel=\"icon\" href=\"http://cdn.example.com/a.ico\">\n<link rel=\"apple-touch-icon\" href=\"https://cdn.example.com/b.png\">"
+    },
+    {
+      "name": "browser url: loopback icon falls back to /favicon.ico",
+      "url": "https://example.com/x",
+      "html": "<link rel=\"icon\" href=\"https://127.0.0.1/i.ico\">"
+    },
+    {
+      "name": "browser url: javascript icon falls back to /favicon.ico",
+      "url": "https://example.com/x",
+      "html": "<link rel=\"icon\" href=\"javascript:alert(1)\">"
+    },
+    {
+      "name": "browser url: http page gets no favicon",
+      "url": "http://example.com/x",
+      "html": "<title>t</title>"
+    },
+    {
+      "name": "browser url: private address",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://10.0.0.1/a.png\">"
+    },
+    {
+      "name": "browser url: metadata address",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://169.254.169.254/a.png\">"
+    },
+    {
+      "name": "browser url: short ipv4",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://0x7f.1/a.png\">"
+    },
+    {
+      "name": "browser url: public ipv4",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://8.8.8.8/a.png\">"
+    },
+    {
+      "name": "browser url: localhost",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://localhost/a.png\">"
+    },
+    {
+      "name": "browser url: sub.localhost",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://a.localhost/a.png\">"
+    },
+    {
+      "name": "browser url: single label",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://intranet/a.png\">"
+    },
+    {
+      "name": "browser url: trailing dot",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com./a.png\">"
+    },
+    {
+      "name": "browser url: last label a number",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.123/a.png\">"
+    },
+    {
+      "name": "browser url: userinfo",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://user@cdn.example.com/a.png\">"
+    },
+    {
+      "name": "browser url: homograph host",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://аррӏе.com/a.png\">"
+    },
+    {
+      "name": "browser url: raw C0 in path",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a\u0001.png\">"
+    },
+    {
+      "name": "browser url: raw tab in path",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a\t.png\">"
+    },
+    {
+      "name": "browser url: raw DEL in path",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a\u007F.png\">"
+    },
+    {
+      "name": "browser url: raw C1 in path",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a\u0085b.png\">"
+    },
+    {
+      "name": "browser url: escaped C0",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a%01.png\">"
+    },
+    {
+      "name": "browser url: escaped DEL",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/a%7F.png\">"
+    },
+    {
+      "name": "browser url: relative path with a raw C0",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"/a\u0002.png\">"
+    },
+    {
+      "name": "browser url: too long",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\">"
+    },
+    {
+      "name": "browser url: long enough",
+      "url": "https://example.com/x",
+      "html": "<meta property=\"og:image\" content=\"https://cdn.example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\">"
     }
   ],
   "answers": [
@@ -965,8 +1095,8 @@
     {
       "title": "",
       "description": "",
-      "image": "http://cdn.example.com/i.png",
-      "favicon": "http://example.com/favicon.ico",
+      "image": "",
+      "favicon": "",
       "domain": "example.com",
       "oembed": ""
     },
@@ -1118,7 +1248,7 @@
       "title": "",
       "description": "",
       "image": "",
-      "favicon": "",
+      "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""
     },
@@ -1470,7 +1600,7 @@
       "title": "",
       "description": "",
       "image": "https://cdn.example.com/i.png",
-      "favicon": "http://cdn.example.com/icon.ico",
+      "favicon": "",
       "domain": "",
       "oembed": ""
     },
@@ -1486,7 +1616,7 @@
       "title": "",
       "description": "",
       "image": "",
-      "favicon": "",
+      "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""
     },
@@ -1885,7 +2015,7 @@
     {
       "title": "",
       "description": "",
-      "image": "http://[::1]/i.png",
+      "image": "",
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""
@@ -1893,7 +2023,7 @@
     {
       "title": "",
       "description": "",
-      "image": "https://user:pw@cdn.example.com/i.png",
+      "image": "",
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""
@@ -1909,7 +2039,7 @@
     {
       "title": "",
       "description": "",
-      "image": "https://bücher.example/i.png",
+      "image": "https://xn--bcher-kva.example/i.png",
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""
@@ -2094,7 +2224,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "https://bücher.example/favicon.ico",
+      "favicon": "https://xn--bcher-kva.example/favicon.ico",
       "domain": "xn--bcher-kva.example",
       "oembed": ""
     },
@@ -2110,7 +2240,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "https://www./favicon.ico",
+      "favicon": "",
       "domain": "",
       "oembed": ""
     },
@@ -2118,7 +2248,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "http://127.0.0.1:8080/favicon.ico",
+      "favicon": "",
       "domain": "127.0.0.1",
       "oembed": ""
     },
@@ -2126,7 +2256,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "http://[::1]/favicon.ico",
+      "favicon": "",
       "domain": "::1",
       "oembed": ""
     },
@@ -2134,7 +2264,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "http://[2001:db8::1]/favicon.ico",
+      "favicon": "",
       "domain": "2001:db8::1",
       "oembed": ""
     },
@@ -2142,7 +2272,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "http://www/favicon.ico",
+      "favicon": "",
       "domain": "www",
       "oembed": ""
     },
@@ -2158,7 +2288,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "https://ΕΛΛΗΝΙΚΆ.example/favicon.ico",
+      "favicon": "https://xn--hxargifdar.example/favicon.ico",
       "domain": "xn--hxargifdar.example",
       "oembed": ""
     },
@@ -2166,7 +2296,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "https://example.com./favicon.ico",
+      "favicon": "",
       "domain": "example.com.",
       "oembed": ""
     },
@@ -2174,7 +2304,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "https://user:pw@www.example.com/favicon.ico",
+      "favicon": "",
       "domain": "example.com",
       "oembed": ""
     },
@@ -2182,7 +2312,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "https://www.bücher.example/favicon.ico",
+      "favicon": "https://www.xn--bcher-kva.example/favicon.ico",
       "domain": "xn--bcher-kva.example",
       "oembed": ""
     },
@@ -2190,7 +2320,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "http://localhost/favicon.ico",
+      "favicon": "",
       "domain": "localhost",
       "oembed": ""
     },
@@ -2206,7 +2336,7 @@
       "title": "d",
       "description": "",
       "image": "",
-      "favicon": "http://127.0.0.1/favicon.ico",
+      "favicon": "",
       "domain": "127.0.0.1",
       "oembed": ""
     },
@@ -2289,6 +2419,214 @@
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": "https://example.com/o.json"
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "https://cdn.example.com/i.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "https://cdn.example.com/b.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://cdn.example.com/b.png",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "t",
+      "description": "",
+      "image": "",
+      "favicon": "",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "https://8.8.8.8/a.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "https://xn--80ak6aa92e.com/a.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "https://cdn.example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
     }
   ]
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/internal/outbound"
 )
 
 const maxOpenElementDepth = 512
@@ -35,7 +36,7 @@ func Parse(body []byte, finalURL string) Metadata {
 	// AngleSharp parses with scripting off, so <noscript> holds markup.
 	document, err := html.ParseWithOptions(strings.NewReader(text), html.ParseOptionEnableScripting(false))
 	if err != nil {
-		return build(base, "", "", "", "", "")
+		return build(base, "", "", nil, nil, "")
 	}
 	type frame struct {
 		node  *html.Node
@@ -50,7 +51,7 @@ func Parse(body []byte, finalURL string) Metadata {
 		node := top.node
 		if node.Type == html.ElementNode {
 			if top.depth > maxOpenElementDepth {
-				return build(base, "", "", "", "", "")
+				return build(base, "", "", nil, nil, "")
 			}
 			tag := node.Data
 			if top.sel.drops() {
@@ -128,8 +129,8 @@ func Parse(body []byte, finalURL string) Metadata {
 	return build(base,
 		firstNonEmpty(ogTitle, twitterTitle, title),
 		firstNonEmpty(ogDescription, twitterDescription, description),
-		firstNonEmpty(ogImage, twitterImage),
-		firstNonEmpty(icon, appleIcon), oEmbed)
+		[]string{ogImage, twitterImage},
+		[]string{icon, appleIcon}, oEmbed)
 }
 
 // selectState stands in for AngleSharp 1.9.0's "in select" mode, which x/net
@@ -158,22 +159,35 @@ func asciiLower(s string) string {
 	return string(b)
 }
 
-func build(base *dotnet.URI, title, description, image, favicon, oEmbed string) Metadata {
+// build keeps the first image and favicon a browser may load
+// (outbound.BrowserURL), so an http og:image gives way to an https
+// twitter:image. With a base, /favicon.ico is the last favicon to try.
+func build(base *dotnet.URI, title, description string, images, favicons []string, oEmbed string) Metadata {
 	domain := ""
 	if base != nil {
 		domain = strings.TrimPrefix(strings.ToLower(base.IdnHost), "www.")
-		if favicon == "" {
-			favicon = "/favicon.ico"
-		}
+		favicons = append(favicons, "/favicon.ico")
 	}
 	return Metadata{
 		Title:       title,
 		Description: description,
-		Image:       resolveURL(base, image),
-		Favicon:     resolveURL(base, favicon),
+		Image:       firstBrowserURL(base, images),
+		Favicon:     firstBrowserURL(base, favicons),
 		Domain:      domain,
 		OEmbed:      resolveURL(base, oEmbed),
 	}
+}
+
+func firstBrowserURL(base *dotnet.URI, references []string) string {
+	for _, reference := range references {
+		if reference == "" {
+			continue
+		}
+		if url := outbound.BrowserURL(base, reference); url != "" {
+			return url
+		}
+	}
+	return ""
 }
 
 func resolveURL(base *dotnet.URI, reference string) string {

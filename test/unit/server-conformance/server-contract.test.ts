@@ -1413,7 +1413,7 @@ ordinaryIt('keeps the conformance-only journal flag out of an ordinary binary', 
   );
 });
 
-it('unfurls redirected metadata with stable precedence and resolved URLs', async () => {
+it('unfurls redirected metadata with stable precedence and drops image and favicon URLs on a loopback http origin', async () => {
   const origin = await startFixtureOrigin();
 
   try {
@@ -1439,8 +1439,7 @@ it('unfurls redirected metadata with stable precedence and resolved URLs', async
         meta: {
           title: 'OpenGraph title',
           description: 'OpenGraph description',
-          image: { url: origin.metadataImageUrl },
-          favicon: origin.metadataFaviconUrl,
+          image: {},
           domain: '127.0.0.1',
         },
       });

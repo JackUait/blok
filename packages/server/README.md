@@ -350,6 +350,16 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` is refused. A response head over 64 KiB is refused. When a rate limit is on, each redirect hop counts as one more request for the caller.
 
+`GET /unfurl?url=…` answers `{"success": 1, "link": …, "meta": {"title", "description", "image": {"url"}, "favicon", "domain"}}`. A field with no value is left out, and `image` is then `{}`.
+
+- `link` is the final URL after redirects.
+- `image.url` and `favicon` are URLs a reader's browser loads. They pass the same filter as the `/frame-check` `thumbnail_url` below:
+  - They must be `https`, with no user name or password, and at most 2048 characters.
+  - A control character, raw or escaped, drops the URL.
+  - A loopback, private or metadata address, `localhost`, a name with no dot, a name ending in a dot and a name whose last label starts with a digit are dropped. A Unicode host comes back as punycode.
+- When a candidate is dropped, the next one is tried: `og:image`, then `twitter:image`; `rel="icon"`, then `apple-touch-icon`, then `/favicon.ico` on the final page.
+- So a page served over `http` gets no favicon, unless it names an `https` one.
+
 `GET /frame-check?url=…&embedder=…` is open whenever `/unfurl` is. It answers `{"verdict": …, "link": …, "oembed": {…}}`.
 
 - `verdict` is `allowed`, `blocked`, `insecure` or `unknown`.

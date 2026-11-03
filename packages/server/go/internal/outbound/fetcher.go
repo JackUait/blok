@@ -145,6 +145,9 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 			if err != nil {
 				return nil, err
 			}
+			if target.URL.Scheme == "https" && next.URL.Scheme != "https" {
+				return nil, fail(Blocked)
+			}
 			raw = next.URL.AbsoluteURI
 			redirects++
 			continue

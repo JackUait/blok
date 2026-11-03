@@ -223,6 +223,12 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
         var redirect = policy.Validate(
             location.OriginalString,
             target.Url);
+        if (target.Url.Scheme == Uri.UriSchemeHttps &&
+            redirect.Url.Scheme != Uri.UriSchemeHttps)
+        {
+          throw Blocked();
+        }
+
         rawUrl = redirect.Url.AbsoluteUri;
         redirects++;
         continue;

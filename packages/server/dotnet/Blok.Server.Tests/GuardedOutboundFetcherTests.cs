@@ -876,6 +876,70 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task RefusesARedirectFromHttpsDownToHttp()
+  {
+    using var certificates = TestCertificates.Create("secure.example");
+    await using var plain = new LoopbackOrigin();
+    await using var secure = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var response = "HTTP/1.1 302 Found\r\n" +
+              $"Location: http://secure.example:{plain.Port}/plain\r\n" +
+              "Content-Length: 0\r\n" +
+              "Connection: close\r\n\r\n";
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(response),
+              cancellationToken);
+        },
+        certificates.Server);
+    var fetcher = new GuardedOutboundFetcher(
+        new PortsFixturePolicy("secure.example", [secure.Port, plain.Port]),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"https://secure.example:{secure.Port}/",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(
+        GuardedFetchFailure.BlockedDestination,
+        error.Failure);
+    Assert.Equal(1, secure.RequestCount);
+    Assert.Equal(0, plain.RequestCount);
+  }
+
+  [Fact]
+  public async Task FollowsARedirectFromHttpUpToHttps()
+  {
+    using var certificates = TestCertificates.Create("secure.example");
+    await using var secure = new LoopbackOrigin(certificates.Server);
+    await using var plain = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var response = "HTTP/1.1 302 Found\r\n" +
+              $"Location: https://secure.example:{secure.Port}/up\r\n" +
+              "Content-Length: 0\r\n" +
+              "Connection: close\r\n\r\n";
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(response),
+              cancellationToken);
+        });
+    var fetcher = new GuardedOutboundFetcher(
+        new PortsFixturePolicy("secure.example", [secure.Port, plain.Port]),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+
+    await using var response = await fetcher.GetAsync(
+        $"http://secure.example:{plain.Port}/",
+        Limits,
+        CancellationToken.None);
+
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
+  }
+
+  [Fact]
   public async Task KeepsABodyExactlyAtTheConfiguredCap()
   {
     await using var origin = new LoopbackOrigin(
@@ -1624,6 +1688,36 @@ public sealed class GuardedOutboundFetcherTests
     public bool IsAddressAllowed(IPAddress address)
     {
       return addresses.Contains(address);
+    }
+  }
+
+  private sealed class PortsFixturePolicy(
+      string host,
+      int[] ports) : IGuardedOutboundPolicy
+  {
+    public GuardedTarget Validate(
+        string rawUrl,
+        Uri? baseUrl = null)
+    {
+      var parsed = baseUrl is null
+        ? Uri.TryCreate(rawUrl, UriKind.Absolute, out var url)
+        : Uri.TryCreate(baseUrl, rawUrl, out url);
+
+      if (!parsed ||
+          url is null ||
+          url.Host != host ||
+          !ports.Contains(url.Port))
+      {
+        throw new GuardedFetchException(
+            GuardedFetchFailure.BlockedDestination);
+      }
+
+      return new GuardedTarget(url, url.IdnHost, url.Port, null);
+    }
+
+    public bool IsAddressAllowed(IPAddress address)
+    {
+      return address.Equals(IPAddress.Loopback);
     }
   }
 

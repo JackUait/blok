@@ -180,6 +180,28 @@ public sealed class CollabJournalStoreCaptureTests
         .Open("c")
         .Close("c");
 
+    // A stale session's close must not hand back the fence its successor holds.
+    yield return new Scenario("a-stale-session-closing-releases-nothing")
+        .Open("a")
+        .Reset("a", 1, Lineage(1))
+        .Delete(Lock)
+        .Open("b")
+        .Close("a")
+        .Open("c")
+        .Close("b")
+        .Open("c")
+        .Close("c");
+
+    yield return new Scenario("every-call-after-close-is-disposed")
+        .Open("a")
+        .Reset("a", 1, Lineage(1))
+        .Append("a", 1, [1])
+        .Close("a")
+        .Find("a", 1, Digest(1))
+        .Append("a", 2, [2])
+        .Checkpoint("a", 1, [0xc1])
+        .Reset("a", 2, Lineage(2));
+
     yield return new Scenario("a-purge-fences-a-stale-session")
         .Open("a")
         .Reset("a", 1, Lineage(1), [0xb1])

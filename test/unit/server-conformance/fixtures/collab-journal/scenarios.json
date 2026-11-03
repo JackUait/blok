@@ -1490,6 +1490,253 @@
       }
     },
     {
+      "name": "a-stale-session-closing-releases-nothing",
+      "steps": [
+        {
+          "op": "open",
+          "session": "a",
+          "result": {
+            "outcome": "Opened",
+            "head": null,
+            "baseline": [],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "reset",
+          "session": "a",
+          "format": 1,
+          "epoch": 1,
+          "lineage": "00000000000000000000000000000001",
+          "baseline": [],
+          "result": {
+            "format": 1,
+            "epoch": 1,
+            "lineage": "00000000000000000000000000000001",
+            "durableThrough": "0"
+          }
+        },
+        {
+          "op": "delete",
+          "path": "{doc}.journal/lock"
+        },
+        {
+          "op": "open",
+          "session": "b",
+          "result": {
+            "outcome": "Opened",
+            "head": {
+              "format": 1,
+              "epoch": 1,
+              "lineage": "00000000000000000000000000000001",
+              "durableThrough": "0"
+            },
+            "baseline": [],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "close",
+          "session": "a",
+          "result": {
+            "ok": true
+          }
+        },
+        {
+          "op": "open",
+          "session": "c",
+          "result": {
+            "outcome": "DocumentOpenElsewhere"
+          }
+        },
+        {
+          "op": "close",
+          "session": "b",
+          "result": {
+            "ok": true
+          }
+        },
+        {
+          "op": "open",
+          "session": "c",
+          "result": {
+            "outcome": "Opened",
+            "head": {
+              "format": 1,
+              "epoch": 1,
+              "lineage": "00000000000000000000000000000001",
+              "durableThrough": "0"
+            },
+            "baseline": [],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "close",
+          "session": "c",
+          "result": {
+            "ok": true
+          }
+        }
+      ],
+      "log": [
+        "collab: \u0022doc-1\u0022 is held elsewhere: \u2026"
+      ],
+      "files": {
+        "{doc}.journal/": null,
+        "{doc}.journal/baseline.1.1": "424b4a4201000000000000000000000000000000000000008cabe23eebcb4ee665161ba4a2573072b2ee1d154ed768bc9b2904e1921a5b02",
+        "{doc}.journal/journal.1.1": "",
+        "{doc}.journal/lineages": "0101000000000000000100000000000000000000000000000000000000000000010100000000000000010000000020577d4637df08c64b9ac0004e97f4",
+        "{doc}.journal/lock": "",
+        "{doc}.journal/manifest": "424b4a4d0201000004000000000000000300000000000000010000000000000001000000010000000000000000000000000000000000000000000001000000000000000001000000000000000000000000000000000000000000000000000000472f358be54bc05dd9831d7a5fabb1d4b09b8ef453365dfa6b31e756aaa8eb43424b4a4d02010000030000000000000002000000000000000100000000000000010000000100000000000000000000000000000000000000000000010000000000000000010000000000000000000000000000000000000000000000000000005391afa207f7f4ccb070cc7184b3789b91bcc92de4ccbe2e1c6ec0af37e0f23d"
+      },
+      "reopen": {
+        "outcome": "Opened",
+        "head": {
+          "format": 1,
+          "epoch": 1,
+          "lineage": "00000000000000000000000000000001",
+          "durableThrough": "0"
+        },
+        "baseline": [],
+        "checkpoint": null,
+        "tail": []
+      }
+    },
+    {
+      "name": "every-call-after-close-is-disposed",
+      "steps": [
+        {
+          "op": "open",
+          "session": "a",
+          "result": {
+            "outcome": "Opened",
+            "head": null,
+            "baseline": [],
+            "checkpoint": null,
+            "tail": []
+          }
+        },
+        {
+          "op": "reset",
+          "session": "a",
+          "format": 1,
+          "epoch": 1,
+          "lineage": "00000000000000000000000000000001",
+          "baseline": [],
+          "result": {
+            "format": 1,
+            "epoch": 1,
+            "lineage": "00000000000000000000000000000001",
+            "durableThrough": "0"
+          }
+        },
+        {
+          "op": "append",
+          "session": "a",
+          "operationId": "00000000000000000000000000000001",
+          "actorId": "user-1",
+          "source": 0,
+          "update": "01",
+          "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+          "result": {
+            "outcome": "Committed",
+            "sequence": "1"
+          }
+        },
+        {
+          "op": "close",
+          "session": "a",
+          "result": {
+            "ok": true
+          }
+        },
+        {
+          "op": "find",
+          "session": "a",
+          "operationId": "00000000000000000000000000000001",
+          "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+          "result": {
+            "error": {
+              "type": "Disposed"
+            }
+          }
+        },
+        {
+          "op": "append",
+          "session": "a",
+          "operationId": "00000000000000000000000000000002",
+          "actorId": "user-1",
+          "source": 0,
+          "update": "02",
+          "digest": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986",
+          "result": {
+            "error": {
+              "type": "Disposed"
+            }
+          }
+        },
+        {
+          "op": "checkpoint",
+          "session": "a",
+          "through": "1",
+          "state": "c1",
+          "result": {
+            "error": {
+              "type": "Disposed"
+            }
+          }
+        },
+        {
+          "op": "reset",
+          "session": "a",
+          "format": 1,
+          "epoch": 2,
+          "lineage": "00000000000000000000000000000002",
+          "baseline": [],
+          "result": {
+            "error": {
+              "type": "Disposed"
+            }
+          }
+        }
+      ],
+      "log": [],
+      "files": {
+        "{doc}.journal/": null,
+        "{doc}.journal/baseline.1.1": "424b4a4201000000000000000000000000000000000000008cabe23eebcb4ee665161ba4a2573072b2ee1d154ed768bc9b2904e1921a5b02",
+        "{doc}.journal/journal.1.1": "6f00000001005b3048220923600b1b090d643af4f0b6ec6245ecdcfb26471d7b0fea0d191ac20000000000000000000000000000000101000000000000000020577d4637df0806000000757365722d314bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a0100000001c3cd06d7994c6959d9f5546036d00fbb36896177c3aa66c250f0e3b3ae0c7932",
+        "{doc}.journal/lineages": "0101000000000000000100000000000000000000000000000000000000000000010100000000000000010000000020577d4637df08c64b9ac0004e97f4",
+        "{doc}.journal/lock": "",
+        "{doc}.journal/manifest": "424b4a4d020100000200000000000000010000000000000001000000000000000100000001000000000000000000000000000000000000000000000100000000000000000100000000000000000000000000000000000000000000000000000063ef4a412c70dfd27998568bf24cca143845386ed25ad740259070abfee53832424b4a4d0200000001000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c6c1716eb5e269f88332f2839fba80235b9871749a672c99063ceab7dd033447"
+      },
+      "reopen": {
+        "outcome": "Opened",
+        "head": {
+          "format": 1,
+          "epoch": 1,
+          "lineage": "00000000000000000000000000000001",
+          "durableThrough": "1"
+        },
+        "baseline": [],
+        "checkpoint": null,
+        "tail": [
+          {
+            "operationId": "00000000000000000000000000000001",
+            "sequence": "1",
+            "committedAt": "639290448000000000",
+            "actorId": "user-1",
+            "source": 0,
+            "update": "01",
+            "digest": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+          }
+        ]
+      }
+    },
+    {
       "name": "a-purge-fences-a-stale-session",
       "steps": [
         {

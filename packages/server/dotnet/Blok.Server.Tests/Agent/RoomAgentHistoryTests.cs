@@ -34,4 +34,14 @@ public sealed class RoomAgentHistoryTests
     Assert.Same(kept, history.Top("d", Actor, undo: true));
     Assert.Null(history.Top("d", Actor, undo: false));
   }
+
+  // T1: the char cap counts the escaped JSON text in UTF-16 units. The Go room history has the same test.
+  [Fact]
+  public void AStepCountsItsEscapedJsonText()
+  {
+    var step = new RoomAgentHistory.Step { Before = new System.Text.Json.Nodes.JsonObject { ["t"] = "\U0001F680<a>&'+\u00E9" } };
+
+    Assert.Equal("{\"t\":\"\\uD83D\\uDE80\\u003Ca\\u003E\\u0026\\u0027\\u002B\\u00E9\"}", step.Before.ToJsonString());
+    Assert.Equal(57 + 2, step.Chars);
+  }
 }

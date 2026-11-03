@@ -572,3 +572,17 @@ func TestARestoreTheRoomRefusesIsApplyFailedWithItsStatus(t *testing.T) {
 		t.Fatalf("%s %q", execution.ResultJSON, execution.Revision)
 	}
 }
+
+// T1: the char cap counts the escaped JSON text in UTF-16 units (C#
+// RoomAgentHistoryTests.AStepCountsItsEscapedJsonText).
+func TestAStepCountsItsEscapedJSONText(t *testing.T) {
+	before := &jsjson.Object{}
+	before.Set(jsjson.FromString("t"), jsjson.FromString("\U0001F680<a>&'+é"))
+	s := &roomStep{before: before, after: &jsjson.Object{}}
+	if err := s.measure(); err != nil {
+		t.Fatal(err)
+	}
+	if s.chars != 57+2 {
+		t.Fatalf("chars %d", s.chars)
+	}
+}

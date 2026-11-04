@@ -1197,6 +1197,18 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'two spaces after the method': bytes(`GET  /health HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
   'two Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\nContent-Length: 2\r\n${CLOSE}\r\nxx`),
   'HTTP/2 prior-knowledge preface': bytes('PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'),
+  // The version is the rest of the line: 8 bytes, or 9 ending in CR, or 400.
+  // Kestrel answers it from the request line alone.
+  'HTTP/1.2 version': bytes(`GET /health HTTP/1.2\r\nHost: x\r\n${CLOSE}\r\n`),
+  'HTTP/2.0 version': bytes(`GET /health HTTP/2.0\r\nHost: x\r\n${CLOSE}\r\n`),
+  'HTTP/0.9 version': bytes(`GET /health HTTP/0.9\r\nHost: x\r\n${CLOSE}\r\n`),
+  'lower-case version': bytes(`GET /health http/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  'seven-byte version': bytes(`GET /health HTTP/1.\r\nHost: x\r\n${CLOSE}\r\n`),
+  'HTTP/1.10 version': bytes(`GET /health HTTP/1.10\r\nHost: x\r\n${CLOSE}\r\n`),
+  'HTTP/1.2 with bare LF': bytes(`GET /health HTTP/1.2\nHost: x\n${CLOSE}\n`),
+  'HTTP/1.2 line alone': bytes('GET /health HTTP/1.2\r\n'),
+  'HTTP/1.2 with a bad method': bytes(`G@T /health HTTP/1.2\r\nHost: x\r\n${CLOSE}\r\n`),
+  'HTTP/1.2 after a kept-alive request': bytes(`GET /health HTTP/1.1\r\nHost: x\r\n\r\nGET /health HTTP/1.2\r\n`),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

@@ -36,7 +36,41 @@ const (
 	kestrel400 = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 	kestrel414 = "HTTP/1.1 414 URI Too Long\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 	kestrel431 = "HTTP/1.1 431 Request Header Fields Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+	kestrel505 = "HTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 )
+
+// Measured on the C# host: the version is the rest of the request line. It
+// must be 8 bytes, or 9 ending in CR, else 400; any 8 bytes but HTTP/1.0 and
+// HTTP/1.1 get 505. Kestrel answers from the line alone.
+func TestTheVersionFollowsKestrel(t *testing.T) {
+	address := startHost(t, echoTarget, time.Minute)
+	line := func(version string) string { return "GET /h " + version + "\r\nHost: x\r\nConnection: close\r\n\r\n" }
+	cases := []struct{ name, request, want string }{
+		{"HTTP/1.2", line("HTTP/1.2"), kestrel505},
+		{"HTTP/2.0", line("HTTP/2.0"), kestrel505},
+		{"HTTP/0.9", line("HTTP/0.9"), kestrel505},
+		{"lower case", line("http/1.1"), kestrel505},
+		{"seven bytes and CR", line("HTTP/1."), kestrel505},
+		{"eight bytes and no CR", "GET /h HTTP/1.2\nHost: x\n\n", kestrel505},
+		{"nine bytes and CR", line("HTTP/1.10"), kestrel400},
+		{"nine bytes and no CR", "GET /h HTTP/1.10\nHost: x\n\n", kestrel400},
+		{"a space after", line("HTTP/1.1 "), kestrel400},
+		{"none", line(""), kestrel400},
+		{"the line alone", "GET /h HTTP/1.2\r\n", kestrel505},
+		{"before 101 headers", "GET /h HTTP/1.2\r\n" + numberedHeaders(101) + "\r\n", kestrel505},
+		{"a bad method first", "G@T /h HTTP/1.2\r\nHost: x\r\n\r\n", kestrel400},
+		{"HTTP/1.1", line("HTTP/1.1"), "HTTP/1.1 200 OK"},
+	}
+	for _, c := range cases {
+		got := rawAnswer(t, address, c.request)
+		if strings.HasSuffix(c.want, " 200 OK") {
+			got = answerStatus(got)
+		}
+		if got != c.want {
+			t.Errorf("%s: got %.120q, want %q", c.name, got, c.want)
+		}
+	}
+}
 
 // echoHeader answers with the X-A values and every header name the handler sees.
 var echoHeader = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

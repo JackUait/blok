@@ -150,5 +150,45 @@
   {
     "name": "HTTP/2 prior-knowledge preface",
     "response": "\u0000\u0000\b\u0007\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\r\n\n"
+  },
+  {
+    "name": "HTTP/1.2 version",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/2.0 version",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/0.9 version",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "lower-case version",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "seven-byte version",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/1.10 version",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/1.2 with bare LF",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/1.2 line alone",
+    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/1.2 with a bad method",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/1.2 after a kept-alive request",
+    "response": "HTTP/1.1 200 OK\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
   }
 ]

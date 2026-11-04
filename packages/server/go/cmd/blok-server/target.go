@@ -37,9 +37,8 @@ import (
 // Kestrel skips them. Only heads change, never a body. To know where the next
 // head starts it reads each head with http.ReadRequest, the parser net/http
 // uses. Whatever it cannot follow exactly (a chunked body, an upgrade,
-// CONNECT, a transfer coding net/http refuses, a version that is not 1.x)
-// ends the rewriting for the rest of the connection; MaxHeaderBytes then
-// caps heads instead.
+// CONNECT, a transfer coding net/http refuses) ends the rewriting for the
+// rest of the connection; MaxHeaderBytes then caps heads instead.
 
 // Kestrel's defaults (KestrelServerLimits; Program.cs sets none), measured
 // on the C# host: the request line counts its line end, the header block
@@ -226,6 +225,10 @@ func (s *targetStream) step() bool {
 	s.consume(end + 1)
 	line := s.head[start:]
 	if s.state == streamLine {
+		if status := versionRefusal(line); status != 0 {
+			s.refuse(status)
+			return true
+		}
 		s.entry = queuedRequest{queuedTarget: swapRequestLine(line)}
 		s.state = streamHead
 		return true
@@ -243,6 +246,37 @@ func (s *targetStream) step() bool {
 		s.refuse(http.StatusBadRequest)
 	}
 	return true
+}
+
+// versionRefusal is Kestrel's version check, made on the request line before
+// any header is read. The version is everything after the target's space,
+// up to the LF: 8 bytes, or 9 ending in CR, or the line is a 400. Of those,
+// all but HTTP/1.0 and HTTP/1.1 get 505, unless the method is bad (400).
+// A line with no version is left to http.ReadRequest; so is the HTTP/2
+// preface, which gets its GOAWAY after its blank line.
+func versionRefusal(line []byte) int {
+	line = bytes.TrimSuffix(line, []byte("\n"))
+	method, rest, ok := bytes.Cut(line, []byte(" "))
+	if !ok {
+		return 0
+	}
+	target, version, ok := bytes.Cut(rest, []byte(" "))
+	if !ok {
+		return 0
+	}
+	if string(method) == "PRI" && string(target) == "*" && string(bytes.TrimSuffix(version, []byte("\r"))) == "HTTP/2.0" {
+		return 0
+	}
+	if len(version) != 8 && (len(version) != 9 || version[8] != '\r') {
+		return http.StatusBadRequest
+	}
+	if v := string(version[:8]); v == "HTTP/1.0" || v == "HTTP/1.1" {
+		return 0
+	}
+	if len(method) == 0 || bytes.ContainsFunc(method, func(r rune) bool { return !httpguts.IsTokenRune(r) }) {
+		return http.StatusBadRequest
+	}
+	return http.StatusHTTPVersionNotSupported
 }
 
 // swapHeaderLine applies Kestrel's header grammar to one line, in place. It
@@ -327,9 +361,6 @@ func (s *targetStream) endHead() {
 		return
 	case request.Method == "PRI" && request.RequestURI == "*" && request.Proto == "HTTP/2.0":
 		s.refuse(rejectGoAway)
-		return
-	case request.ProtoMajor != 1:
-		s.handOn(streamPass)
 		return
 	}
 	// ReadRequest drops Host from the header map; net/http's server checks
@@ -528,6 +559,7 @@ var kestrelReasons = map[int]string{
 	http.StatusRequestEntityTooLarge:       "Payload Too Large",
 	http.StatusRequestURITooLong:           "URI Too Long",
 	http.StatusRequestHeaderFieldsTooLarge: "Request Header Fields Too Large",
+	http.StatusHTTPVersionNotSupported:     "HTTP Version Not Supported",
 }
 
 // kestrelAnswer is the bare answer Kestrel writes when it refuses a request.

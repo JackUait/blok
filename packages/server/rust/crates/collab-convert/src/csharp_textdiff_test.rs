@@ -238,5 +238,5 @@ fn filling_empty_text_is_one_insert() {
 fn the_grapheme_table_matches_the_runtime() {}
 
 #[test]
-#[ignore = "regenerates cases.json from C# TextDiff; diffs_like_c_sharp and atomizes_like_c_sharp check Rust against that capture"]
+#[ignore = "regenerates cases.json from C# TextDiff; diffs_like_csharp and atomizes_like_csharp check Rust against that capture"]
 fn the_cases_match_the_diff() {}

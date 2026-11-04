@@ -80,7 +80,7 @@ fn splits_text_elements_like_string_info() {
 }
 
 #[test]
-fn atomizes_like_c_sharp() {
+fn atomizes_like_csharp() {
     for (i, c) in load_text_diff_cases().iter().enumerate() {
         let got = atomize(&c.before, c.markup);
         assert!(
@@ -95,7 +95,7 @@ fn atomizes_like_c_sharp() {
 }
 
 #[test]
-fn diffs_like_c_sharp() {
+fn diffs_like_csharp() {
     for (i, c) in load_text_diff_cases().iter().enumerate() {
         let got = diff(&c.before, &c.after, c.markup);
         assert_eq!(got, c.edits, "case {i} {:?} -> {:?}", c.before, c.after);

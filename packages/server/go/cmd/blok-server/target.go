@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/textproto"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -71,6 +72,8 @@ type headerSwap struct {
 	line        int // among the head's header lines
 	sentName    string
 	name, value string // as sent, without the line end
+	// drop: the line goes, as net/http drops the codings line it reads.
+	drop bool
 }
 
 type queuedRequest struct {
@@ -97,6 +100,7 @@ type targetStream struct {
 	hostLines   int
 	host        string
 	lengthLines int
+	codings     []codingLine
 	// dropped counts the CR and LF bytes skipped before request lines.
 	dropped int
 
@@ -305,6 +309,13 @@ func (s *targetStream) swapHeaderLine(line []byte) bool {
 	if bytes.EqualFold(name, []byte("Content-Length")) {
 		s.lengthLines++
 	}
+	// endHead reads and rewrites the codings; their bytes stay as sent.
+	if bytes.EqualFold(name, []byte("Transfer-Encoding")) {
+		s.codings = append(s.codings, codingLine{
+			line: s.headerLines - 1, at: len(s.head) - len(line), nameLength: len(name), valueLength: len(value),
+		})
+		return true
+	}
 	original := swap{name: string(name), value: string(value)}
 	changed := swapBytes(name, kestrelOnlyNameByte)
 	changed = swapBytes(value, kestrelOnlyValueByte) || changed
@@ -349,23 +360,70 @@ func (s *targetStream) refuse(status int) {
 	s.in, s.head, s.state = nil, nil, streamDone
 }
 
+// codingLine is where a Transfer-Encoding line sits in the head.
+type codingLine struct {
+	line, at, nameLength, valueLength int
+}
+
+// droppedCodings is what a Transfer-Encoding line net/http must not see is
+// renamed to. Same length as the name, so the head keeps its length.
+const droppedCodings = "X-Blok-Dropped-Te"
+
+// takeCodings is Kestrel's check of the transfer codings: the last one, of
+// every line split on commas and trimmed of spaces (not tabs), must be
+// chunked. It reports false for Kestrel's 400. net/http takes only one line
+// whose whole value is chunked, so for any other spelling Kestrel takes, the
+// line with the last coding becomes "chunked" padded with spaces and every
+// other line is renamed, blanked, and dropped before routing. net/http
+// drops Transfer-Encoding from the header map, so nothing is restored.
+func (s *targetStream) takeCodings() bool {
+	last, final := -1, ""
+	for i, c := range s.codings {
+		value := s.head[c.at+c.nameLength+1 : c.at+c.nameLength+1+c.valueLength]
+		for _, coding := range bytes.Split(bytes.Trim(value, " \t"), []byte(",")) {
+			if coding = bytes.Trim(coding, " "); len(coding) > 0 {
+				last, final = i, string(coding)
+			}
+		}
+	}
+	if last < 0 || !strings.EqualFold(final, "chunked") {
+		return false
+	}
+	if len(s.codings) == 1 {
+		value := s.head[s.codings[0].at+s.codings[0].nameLength+1:][:s.codings[0].valueLength]
+		if strings.EqualFold(string(bytes.Trim(value, " \t")), "chunked") {
+			return true
+		}
+	}
+	for i, c := range s.codings {
+		value := s.head[c.at+c.nameLength+1:][:c.valueLength]
+		for j := range value {
+			value[j] = ' '
+		}
+		if i == last {
+			copy(value, "chunked")
+			continue
+		}
+		copy(s.head[c.at:], droppedCodings)
+		s.entry.swaps = append(s.entry.swaps, headerSwap{line: c.line, drop: true})
+	}
+	slices.SortStableFunc(s.entry.swaps, func(a, b headerSwap) int { return a.line - b.line })
+	return true
+}
+
 // endHead reads the head the way net/http will and sets where the next
 // request line starts.
 func (s *targetStream) endHead() {
 	s.headerBytes, s.headerLines = 0, 0
-	defer func() { s.hostLines, s.host, s.lengthLines = 0, "", 0 }()
+	defer func() { s.hostLines, s.host, s.lengthLines, s.codings = 0, "", 0, nil }()
 	// net/http takes equal Content-Length lines as one; Kestrel refuses any
 	// second line.
-	if s.lengthLines > 1 {
+	if s.lengthLines > 1 || len(s.codings) > 0 && !s.takeCodings() {
 		s.refuse(http.StatusBadRequest)
 		return
 	}
 	request, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(s.head)))
 	switch {
-	case err != nil && strings.Contains(err.Error(), "unsupported transfer encoding"):
-		// net/http answers 501 itself.
-		s.handOn(streamPass)
-		return
 	case err != nil:
 		s.refuse(http.StatusBadRequest)
 		return
@@ -538,7 +596,7 @@ func restoreTarget(w http.ResponseWriter, r *http.Request, stream *targetStream)
 }
 
 // restoreHeaders puts each swapped line's name and value back, trimmed the
-// way textproto trims them. Last first, so a moved value does not shift the
+// way textproto trims them, and takes out each dropped line. Last first, so a moved value does not shift the
 // index of an earlier one.
 func restoreHeaders(header http.Header, swaps []headerSwap) bool {
 	for i := len(swaps) - 1; i >= 0; i-- {
@@ -548,7 +606,7 @@ func restoreHeaders(header http.Header, swaps []headerSwap) bool {
 			return false
 		}
 		value := strings.Trim(swap.value, " \t")
-		if textproto.CanonicalMIMEHeaderKey(swap.name) == swap.sentName {
+		if !swap.drop && textproto.CanonicalMIMEHeaderKey(swap.name) == swap.sentName {
 			values[swap.line] = value
 			continue
 		}
@@ -557,7 +615,9 @@ func restoreHeaders(header http.Header, swaps []headerSwap) bool {
 		} else {
 			header[swap.sentName] = values
 		}
-		header[swap.name] = append([]string{value}, header[swap.name]...)
+		if !swap.drop {
+			header[swap.name] = append([]string{value}, header[swap.name]...)
+		}
 	}
 	return true
 }

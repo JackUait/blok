@@ -133,10 +133,15 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 		out:    "GET /s_ HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
 		queued: []queuedTarget{{"/s_", "/s\x01"}},
 	}, {
-		name:   "a transfer coding net/http refuses ends the rewriting",
+		name:   "a transfer coding Kestrel refuses gets the stand-in",
 		in:     "POST /a\x01 HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: gzip\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		out:    "POST /a_ HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: gzip\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		queued: []queuedTarget{{"/a_", "/a\x01"}},
+		out:    standIn,
+		queued: []queuedTarget{{"/", "/"}},
+	}, {
+		name:   "codings Kestrel takes become one chunked line",
+		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: g\x01zip\r\ntransfer-encoding: x, chunked ,\r\n\r\n0\r\n\r\n",
+		out:    "POST /a HTTP/1.1\r\nHost: x\r\nX-Blok-Dropped-Te:      \r\ntransfer-encoding:chunked      \r\n\r\n0\r\n\r\n",
+		queued: []queuedTarget{{"/a", "/a"}},
 	}, {
 		name:   "HTTP/2 prior knowledge gets the stand-in",
 		in:     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\x00\x00\x12\x04\x00\x01\x01",
@@ -343,6 +348,7 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add("POST /a%zz HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("GET /a HTTP/1.1\r\nHost: x\r\nUpgrade: x\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: g\x01\r\ntransfer-encoding: x, chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
 	f.Add("GET /e%4 HTTP/1.0\nContent-Length: 2\nX\"\x01: \x7f\n\n%zGET /f\t HTTP/1.1\nHost: x\n\n")
 	f.Add("\r\nGET / HTTP/1.1\r\nHost: x\r\nX: \xe9\r\n\r\n")
 	f.Add(" /% \n")
@@ -448,6 +454,11 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 	}
 	for i := range out {
 		if out[i] == in[i] || onLine[i] || i >= stop {
+			continue
+		}
+		// takeCodings rewrites whole Transfer-Encoding lines.
+		lineStart := strings.LastIndexByte(in[:i], '\n') + 1
+		if len(in)-lineStart > 17 && strings.EqualFold(in[lineStart:lineStart+18], "Transfer-Encoding:") {
 			continue
 		}
 		if out[i] != '_' || !kestrelOnlyNameByte(in[i]) && !kestrelOnlyValueByte(in[i]) {

@@ -1212,6 +1212,25 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   // Kestrel refuses a second Content-Length line, even an equal one.
   'two equal Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
   'two Content-Length values beside chunked': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 1\r\nContent-Length: 1\r\n${CLOSE}\r\n0\r\n\r\n`),
+  // Kestrel takes any codings whose last is chunked, and refuses the rest
+  // with 400. A 415 here is /delete's answer to the type.
+  ...Object.fromEntries(Object.entries({
+    'identity': 'Transfer-Encoding: identity\r\n',
+    'gzip': 'Transfer-Encoding: gzip\r\n',
+    'gzip, chunked': 'Transfer-Encoding: gzip, chunked\r\n',
+    'chunked, gzip': 'Transfer-Encoding: chunked, gzip\r\n',
+    'upper-case chunked': 'Transfer-Encoding: CHUNKED\r\n',
+    'spaces and commas around chunked': 'Transfer-Encoding:  , chunked , \r\n',
+    'two lines, chunked last': 'Transfer-Encoding: gzip\r\ntransfer-encoding: chunked\r\n',
+    'two lines, chunked first': 'Transfer-Encoding: chunked\r\nTransfer-Encoding: gzip\r\n',
+    'an empty line after chunked': 'Transfer-Encoding: chunked\r\nTransfer-Encoding:\r\n',
+    'a tab before chunked': 'Transfer-Encoding: gzip,\tchunked\r\n',
+    'chunked with a parameter': 'Transfer-Encoding: chunked;x\r\n',
+    'an empty value': 'Transfer-Encoding:\r\n',
+    'a control byte in an earlier coding': 'Transfer-Encoding: g\x01zip, chunked\r\n',
+  }).map(([name, te]) => [`Transfer-Encoding ${name}`,
+    bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\n${te}${CLOSE}\r\n0\r\n\r\n`)])),
+  'Transfer-Encoding gzip on HTTP/1.0': bytes('POST /delete HTTP/1.0\r\nTransfer-Encoding: gzip\r\n\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

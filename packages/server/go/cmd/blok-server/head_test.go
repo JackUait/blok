@@ -5,10 +5,63 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 )
+
+// Measured on the C# host: Kestrel takes any codings whose last non-empty
+// one, split on commas and trimmed of spaces only, is chunked, and reads the
+// body as chunked. Anything else gets an empty 400, on HTTP/1.0 too.
+func TestTransferCodingsFollowKestrel(t *testing.T) {
+	echoBody := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		names := slices.Sorted(func(yield func(string) bool) {
+			for name := range r.Header {
+				if !yield(name) {
+					return
+				}
+			}
+		})
+		_, _ = fmt.Fprintf(w, "%q %q %q", body, r.TransferEncoding, names)
+	})
+	address := startHost(t, echoBody, time.Minute)
+	post := func(te string) string {
+		return "POST /h HTTP/1.1\r\nHost: x\r\n" + te + "Connection: close\r\n\r\n2\r\nab\r\n0\r\n\r\n"
+	}
+	read := `"ab" ["chunked"] ["Connection"]`
+	cases := []struct{ name, request, want string }{
+		{"identity", post("Transfer-Encoding: identity\r\n"), kestrel400},
+		{"gzip", post("Transfer-Encoding: gzip\r\n"), kestrel400},
+		{"gzip, chunked", post("Transfer-Encoding: gzip, chunked\r\n"), read},
+		{"chunked, gzip", post("Transfer-Encoding: chunked, gzip\r\n"), kestrel400},
+		{"upper case", post("Transfer-Encoding: CHUNKED\r\n"), read},
+		{"spaces and commas", post("Transfer-Encoding:  , chunked , \r\n"), read},
+		{"two lines, chunked last", post("Transfer-Encoding: gzip\r\ntransfer-encoding: chunked\r\n"), read},
+		{"two lines, chunked first", post("Transfer-Encoding: chunked\r\nTransfer-Encoding: gzip\r\n"), kestrel400},
+		{"an empty line after", post("Transfer-Encoding: chunked\r\nTransfer-Encoding:\r\n"), read},
+		{"a comma line after", post("Transfer-Encoding: chunked\r\nTransfer-Encoding: ,\r\n"), read},
+		{"tabs at the ends", post("Transfer-Encoding:\tchunked\t\r\n"), read},
+		{"a tab inside", post("Transfer-Encoding: gzip,\tchunked\r\n"), kestrel400},
+		{"a parameter", post("Transfer-Encoding: chunked;x\r\n"), kestrel400},
+		{"quoted", post("Transfer-Encoding: \"chunked\"\r\n"), kestrel400},
+		{"empty", post("Transfer-Encoding:\r\n"), kestrel400},
+		{"only commas", post("Transfer-Encoding: ,\r\n"), kestrel400},
+		{"a control byte in an earlier coding", post("Transfer-Encoding: g\x01zip, chunked\r\n"), read},
+		{"a control byte in a dropped line", post("Transfer-Encoding: g\x01zip\r\nTransfer-Encoding: chunked\r\n"), read},
+		{"gzip on HTTP/1.0", "POST /h HTTP/1.0\r\nTransfer-Encoding: gzip\r\n\r\n", kestrel400},
+	}
+	for _, c := range cases {
+		got := rawAnswer(t, address, c.request)
+		if !strings.HasPrefix(c.want, "HTTP/") {
+			_, got, _ = strings.Cut(got, "\r\n\r\n")
+		}
+		if got != c.want {
+			t.Errorf("%s: got %.160q, want %q", c.name, got, c.want)
+		}
+	}
+}
 
 // rawAnswer sends request on a fresh connection and returns what comes back
 // before the server closes it, with the Date header dropped.

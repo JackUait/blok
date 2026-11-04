@@ -198,5 +198,61 @@
   {
     "name": "two Content-Length values beside chunked",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding identity",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding gzip",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding gzip, chunked",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Transfer-Encoding chunked, gzip",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding upper-case chunked",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Transfer-Encoding spaces and commas around chunked",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Transfer-Encoding two lines, chunked last",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Transfer-Encoding two lines, chunked first",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding an empty line after chunked",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Transfer-Encoding a tab before chunked",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding chunked with a parameter",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding an empty value",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Transfer-Encoding a control byte in an earlier coding",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Transfer-Encoding gzip on HTTP/1.0",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   }
 ]

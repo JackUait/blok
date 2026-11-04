@@ -3283,6 +3283,9 @@ async fn reset_commits_the_current_endpoint_document_and_a_new_lineage_before_re
     let writer = v2("");
     enter(&manager, &writer).await;
     let joined = control_tag(&writer);
+    let edited = plain_edit(&manager, vec![appending("before-reset", "journal")]).await;
+    assert_eq!(edited.status, EditStatus::Applied);
+    assert_eq!(cs.committed().len(), 1);
     cs.endpoint().holds(TEST_DOC, "endpoint reset", None);
     let pause = Pause::new();
     set_hook(&cs.journal.0.before_reset, Some(pause.clone()));
@@ -3292,9 +3295,10 @@ async fn reset_commits_the_current_endpoint_document_and_a_new_lineage_before_re
     bounded("the store reset", pause.wait_entered()).await;
 
     assert!(!pending.is_finished());
+    let held = cs.operations().head(TEST_DOC).expect("a head");
     assert_eq!(
-        cs.operations().head(TEST_DOC).expect("a head").lineage,
-        joined.lineage
+        (held.lineage.as_str(), held.durable_through),
+        (joined.lineage.as_str(), 1)
     );
     assert!(writer.closed().is_empty(), "{:?}", writer.closed());
 

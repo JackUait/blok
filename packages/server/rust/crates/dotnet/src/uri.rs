@@ -101,8 +101,10 @@ pub fn resolve_uri(base: &Uri, reference: &str) -> Option<Uri> {
     }
 }
 
+/// What .NET trims: space, tab, CR and LF. Other controls stay and are
+/// escaped, or refuse a scheme they start.
 fn trim_uri_whitespace(s: &str) -> &str {
-    s.trim_matches(|c: char| c <= ' ')
+    s.trim_matches([' ', '\t', '\r', '\n'])
 }
 
 fn split_scheme(s: &str) -> Option<(String, &str)> {

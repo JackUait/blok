@@ -352,7 +352,13 @@
     "http://example.com\\x",
     "http://u@example.com\\x",
     "http://[::1]\\x",
-    "http://example.com:80\\x"
+    "http://example.com:80\\x",
+    "\u0000http://h/p",
+    "http://h/p\u0000",
+    "http://h/p#f\u0001",
+    "\u000Bhttp://h/p",
+    "\thttp://h/p\r\n",
+    "http://h/p?q\u001F"
   ],
   "relativeInputs": [
     [
@@ -490,6 +496,14 @@
     [
       "http://example.com/a/b",
       "  \\/trim  "
+    ],
+    [
+      "http://example.com/a/b",
+      "x\u0000"
+    ],
+    [
+      "http://example.com/a/b",
+      "\u0001x"
     ]
   ],
   "unescapeInputs": [
@@ -4839,6 +4853,74 @@
     {
       "input": "http://example.com:80\\x",
       "ok": false
+    },
+    {
+      "input": "\u0000http://h/p",
+      "ok": false
+    },
+    {
+      "input": "http://h/p\u0000",
+      "ok": true,
+      "scheme": "http",
+      "host": "h",
+      "idnHost": "h",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/p%00",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "http://h/p%00",
+      "loopback": false
+    },
+    {
+      "input": "http://h/p#f\u0001",
+      "ok": true,
+      "scheme": "http",
+      "host": "h",
+      "idnHost": "h",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/p",
+      "query": "",
+      "fragment": "#f%01",
+      "absoluteUri": "http://h/p#f%01",
+      "loopback": false
+    },
+    {
+      "input": "\u000Bhttp://h/p",
+      "ok": false
+    },
+    {
+      "input": "\thttp://h/p\r\n",
+      "ok": true,
+      "scheme": "http",
+      "host": "h",
+      "idnHost": "h",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/p",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "http://h/p",
+      "loopback": false
+    },
+    {
+      "input": "http://h/p?q\u001F",
+      "ok": true,
+      "scheme": "http",
+      "host": "h",
+      "idnHost": "h",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/p",
+      "query": "?q%1F",
+      "fragment": "",
+      "absoluteUri": "http://h/p?q%1F",
+      "loopback": false
     }
   ],
   "relative": [
@@ -5351,6 +5433,38 @@
       "query": "",
       "fragment": "",
       "absoluteUri": "http://trim/",
+      "loopback": false
+    },
+    {
+      "base": "http://example.com/a/b",
+      "input": "x\u0000",
+      "ok": true,
+      "scheme": "http",
+      "host": "example.com",
+      "idnHost": "example.com",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/a/x%00",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "http://example.com/a/x%00",
+      "loopback": false
+    },
+    {
+      "base": "http://example.com/a/b",
+      "input": "\u0001x",
+      "ok": true,
+      "scheme": "http",
+      "host": "example.com",
+      "idnHost": "example.com",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/a/%01x",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "http://example.com/a/%01x",
       "loopback": false
     }
   ],

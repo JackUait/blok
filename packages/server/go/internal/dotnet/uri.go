@@ -98,8 +98,10 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 	return ParseAbsoluteURI(prefix + directory + reference)
 }
 
+// trimURIWhitespace trims what .NET trims: space, tab, CR and LF. Other
+// controls stay and are escaped, or refuse a scheme they start.
 func trimURIWhitespace(s string) string {
-	return strings.TrimFunc(s, func(r rune) bool { return r <= ' ' })
+	return strings.Trim(s, " \t\r\n")
 }
 
 func splitScheme(s string) (scheme, rest string, ok bool) {

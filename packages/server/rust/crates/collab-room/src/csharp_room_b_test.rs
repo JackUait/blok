@@ -1,7 +1,5 @@
 // Twins of the C# CollabRoomTests.cs (second half of the untwinned cases) cases with no Go twin.
 
-#![allow(dead_code, unused_imports, reason = "helpers the later slices use")]
-
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -2432,65 +2430,348 @@ async fn stamp_count(manager: &Manager) -> usize {
 
 const STAMP_ROUND: usize = crate::options::ACTIVITY_STAMP_LIMIT + 1;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_join_reports_the_actor_as_joined() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_join_reports_the_actor_as_joined() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_connection_with_no_verified_actor_is_never_reported() {}
+    let _joined = join(&manager, TEST_DOC, &v1("user-1", true)).await;
+    manager.settle().await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_activity_frame_reports_active_with_the_document_and_the_server_clock() {}
+    match k.activity.records().as_slice() {
+        [record] => {
+            assert_eq!(record.kind, ActivityKind::Joined);
+            assert_eq!(record.doc, TEST_DOC);
+            assert_eq!(record.actor, "user-1");
+            assert_eq!(record.at, k.clock.now());
+        }
+        other => panic!("expected one record, got {other:?}"),
+    }
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn active_and_edited_share_one_minute_window_per_actor() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_connection_with_no_verified_actor_is_never_reported() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(true);
+    let member = v2("", true);
+    let (membership, lineage) = enter(&manager, &member).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_heartbeat_arriving_just_under_the_clients_minute_is_still_reported() {}
+    heartbeat(&membership).await;
+    op(&membership, &lineage, OP_ONE, edit).await;
+    leave(&manager, membership).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn join_and_leave_are_never_suppressed() {}
+    assert_eq!(k.committed(), 1);
+    assert!(k.activity.records().is_empty());
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_reader_that_never_edits_is_reported_joined_then_left() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_activity_frame_reports_active_with_the_document_and_the_server_clock() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let member = v1("user-1", true);
+    let (membership, _) = enter(&manager, &member).await;
+    member.clear();
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_throwing_observer_is_logged_and_neither_closes_the_room_nor_stalls_it() {}
+    k.clock.advance(Duration::from_secs(90));
+    let sent = k.clock.now();
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_observer_still_inside_record_async_does_not_hold_the_lane() {}
+    heartbeat(&membership).await;
+    manager.settle().await;
+
+    let records = k.activity.records();
+    assert_eq!(
+        k.activity.kinds(),
+        [ActivityKind::Joined, ActivityKind::Active]
+    );
+    assert_eq!(records[1].doc, TEST_DOC);
+    assert_eq!(records[1].actor, "user-1");
+    assert_eq!(records[1].at, sent);
+    assert!(member.messages().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn active_and_edited_share_one_minute_window_per_actor() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(true);
+    let member = v2("user-1", true);
+    let (membership, lineage) = enter(&manager, &member).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let opened = k.clock.now();
+
+    heartbeat(&membership).await;
+    k.clock.advance(Duration::from_secs(30));
+    op(
+        &membership,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, "a"),
+    )
+    .await;
+    k.clock.advance(Duration::from_secs(30));
+    op(
+        &membership,
+        &lineage,
+        OP_TWO,
+        update_appending(&client, "b"),
+    )
+    .await;
+    heartbeat(&membership).await;
+    manager.settle().await;
+
+    assert_eq!(k.committed(), 2);
+    let records: Vec<(ActivityKind, SystemTime)> = k
+        .activity
+        .records()
+        .into_iter()
+        .map(|r| (r.kind, r.at))
+        .collect();
+    assert_eq!(
+        records,
+        [
+            (ActivityKind::Joined, opened),
+            (ActivityKind::Active, opened),
+            (ActivityKind::Edited, opened + Duration::from_secs(60)),
+        ]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_heartbeat_arriving_just_under_the_clients_minute_is_still_reported() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let (membership, _) = enter(&manager, &v1("user-1", true)).await;
+
+    heartbeat(&membership).await;
+    k.clock.advance(Duration::from_secs(59));
+    let late = k.clock.now();
+    heartbeat(&membership).await;
+    manager.settle().await;
+
+    assert_eq!(
+        k.activity.kinds(),
+        [
+            ActivityKind::Joined,
+            ActivityKind::Active,
+            ActivityKind::Active
+        ]
+    );
+    assert_eq!(k.activity.records()[2].at, late);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn join_and_leave_are_never_suppressed() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+
+    let (first, _) = enter(&manager, &v1("user-1", true)).await;
+    leave(&manager, first).await;
+    let (second, _) = enter(&manager, &v1("user-1", true)).await;
+    leave(&manager, second).await;
+
+    assert_eq!(
+        k.activity.kinds(),
+        [
+            ActivityKind::Joined,
+            ActivityKind::Left,
+            ActivityKind::Joined,
+            ActivityKind::Left
+        ]
+    );
+    assert!(k.activity.records().iter().all(|r| r.actor == "user-1"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_reader_that_never_edits_is_reported_joined_then_left() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let (membership, _) = enter(&manager, &v1("user-1", false)).await;
+
+    step1(&membership).await;
+    k.clock.advance(Duration::from_secs(120));
+    leave(&manager, membership).await;
+
+    assert_eq!(
+        k.activity.kinds(),
+        [ActivityKind::Joined, ActivityKind::Left]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_throwing_observer_is_logged_and_neither_closes_the_room_nor_stalls_it() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    k.activity.failing.store(true, Ordering::SeqCst);
+    let manager = k.activity_manager(false);
+    let member = v1("user-1", true);
+    let (membership, _) = enter(&manager, &member).await;
+    manager.settle().await;
+
+    step1(&membership).await;
+    heartbeat(&membership).await;
+    manager.settle().await;
+
+    assert_eq!(
+        k.activity.kinds(),
+        [ActivityKind::Joined, ActivityKind::Active]
+    );
+    assert!(member.closed().is_empty());
+    assert!(received_step2(&member));
+    assert!(k.logs.logged("activity observer failed"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_observer_still_inside_record_async_does_not_hold_the_lane() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let gate = k.activity.hold();
+    let manager = k.activity_manager(false);
+    let member = v1("user-1", true);
+    let bound = Duration::from_secs(10);
+    let (membership, _) = tokio::time::timeout(bound, enter(&manager, &member))
+        .await
+        .expect("the join took the lane");
+
+    k.activity.wait_for(1).await;
+    tokio::time::timeout(bound, step1(&membership))
+        .await
+        .expect("the observer held the lane");
+
+    assert!(received_step2(&member));
+
+    gate.open();
+    manager.settle().await;
+}
 
 #[test]
 #[ignore = "same case as activity_test::the_drain_stops_waiting_for_a_stuck_observer_at_the_commit_timeout"]
 fn a_drain_abandons_an_activity_observer_that_never_completes() {}
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_drain_already_cancelled_does_not_wait_out_the_activity_observer() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drain_already_cancelled_does_not_wait_out_the_activity_observer() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let gate = k.activity.hold();
+    let manager = k.activity_manager(false);
+    let _joined = enter(&manager, &v1("user-1", true)).await;
+    k.activity.wait_for(1).await;
+    let cancelled = Token::new();
+    cancelled.cancel();
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_heartbeat_flood_is_dropped_before_a_session_boundary() {}
+    for room in manager.live_rooms() {
+        tokio::time::timeout(Duration::from_secs(5), room.drain(&cancelled))
+            .await
+            .expect("the cancelled drain waited out the observer");
+    }
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_room_that_closes_on_a_commit_failure_reports_left_for_every_member() {}
+    assert!(
+        k.logs
+            .logged("abandoned its activity dispatch while draining: the drain was cancelled"),
+        "{:?}",
+        k.logs.lines()
+    );
+    gate.open();
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_drain_reports_left_for_every_verified_member_it_still_held() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_heartbeat_flood_is_dropped_before_a_session_boundary() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let gate = k.activity.hold();
+    let manager = k.activity_manager(false);
+    let (leaving, _) = enter(&manager, &v1("user-a", true)).await;
+    k.activity.wait_for(1).await;
+    leaving.leave();
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_member_that_left_is_not_reported_left_again_when_the_room_closes() {}
+    let (beating, _) = enter(&manager, &v1("user-b", true)).await;
+    for _ in 0..256 {
+        k.clock.advance(Duration::from_secs(60));
+        heartbeat(&beating).await;
+    }
+
+    gate.open();
+    manager.settle().await;
+
+    assert!(actor_records(&k, ActivityKind::Left).contains(&"user-a".to_owned()));
+    assert!(actor_records(&k, ActivityKind::Joined).contains(&"user-b".to_owned()));
+    assert!(k.logs.logged("dropped an activity record (Active)"));
+    assert!(!k.logs.logged("dropped an activity record (Left)"));
+    assert!(!k.logs.logged("dropped an activity record (Joined)"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_room_that_closes_on_a_commit_failure_reports_left_for_every_member() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(true);
+    let writer = v2("user-1", true);
+    let reader = v1("user-2", false);
+    let (membership, lineage) = enter(&manager, &writer).await;
+    let _reading = enter(&manager, &reader).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    k.journal
+        .set_fail_appends(Some(Box::new(|_| Some("the journal is down".to_owned()))));
+
+    op(&membership, &lineage, OP_ONE, edit).await;
+
+    k.activity.wait_for(4).await;
+
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(reader.closed(), [CloseReason::CommitUnavailable]);
+    let mut left = actor_records(&k, ActivityKind::Left);
+    left.sort();
+    assert_eq!(left, ["user-1", "user-2"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drain_reports_left_for_every_verified_member_it_still_held() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let member = v1("user-1", true);
+    let anonymous = v1("", true);
+    let _member = enter(&manager, &member).await;
+    let _anonymous = enter(&manager, &anonymous).await;
+
+    manager.drain().await.expect("drain");
+
+    let records = k.activity.records();
+    assert_eq!(
+        k.activity.kinds(),
+        [ActivityKind::Joined, ActivityKind::Left]
+    );
+    assert_eq!(records[1].actor, "user-1");
+    assert_eq!(records[1].at, k.clock.now());
+    assert_eq!(member.closed(), [CloseReason::Draining]);
+    assert_eq!(anonymous.closed(), [CloseReason::Draining]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_member_that_left_is_not_reported_left_again_when_the_room_closes() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let member = v1("user-1", true);
+    let (membership, _) = enter(&manager, &member).await;
+
+    membership.leave();
+    manager.drain().await.expect("drain");
+
+    assert_eq!(
+        k.activity.kinds(),
+        [ActivityKind::Joined, ActivityKind::Left]
+    );
+    assert!(member.closed().is_empty());
+}
 
 fn malformed_awareness() -> Message {
     Message::Awareness {
@@ -2498,38 +2779,188 @@ fn malformed_awareness() -> Message {
     }
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_expelled_member_is_reported_left_exactly_once() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_expelled_member_is_reported_left_exactly_once() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let member = v1("user-1", true);
+    let (membership, _) = enter(&manager, &member).await;
+    let expelled = k.clock.now();
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_expelled_member_with_no_verified_actor_is_never_reported() {}
+    for _ in 0..3 {
+        receive(&membership, malformed_awareness()).await;
+    }
+    membership.leave();
+    manager.drain().await.expect("drain");
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_actor_inside_its_window_is_still_suppressed_after_a_sweep() {}
+    assert_eq!(member.closed(), [CloseReason::BadAwareness]);
+    let records = k.activity.records();
+    assert_eq!(
+        k.activity.kinds(),
+        [ActivityKind::Joined, ActivityKind::Left]
+    );
+    assert_eq!(records[1].actor, "user-1");
+    assert_eq!(records[1].at, expelled);
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn distinct_actors_across_two_windows_leave_the_stamp_map_bounded() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_expelled_member_with_no_verified_actor_is_never_reported() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let (membership, _) = enter(&manager, &v1("", true)).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_stamp_exactly_one_window_old_is_swept() {}
+    for _ in 0..3 {
+        receive(&membership, malformed_awareness()).await;
+    }
+    manager.drain().await.expect("drain");
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_join_and_leave_after_the_limit_still_sweeps_the_inert_stamps() {}
+    assert!(k.activity.records().is_empty());
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn with_no_observer_an_activity_frame_changes_nothing() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_actor_inside_its_window_is_still_suppressed_after_a_sweep() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let _anchor = enter(&manager, &v1("anchor", true)).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn reset_settles_an_in_flight_write_so_it_cannot_overtake_the_reset() {}
+    heartbeat_distinct_actors(&manager, "old", STAMP_ROUND).await;
+    k.clock.advance(Duration::from_secs(56));
 
-#[test]
-#[ignore = "not ported yet"]
-fn dispose_is_idempotent() {}
+    let (subject, _) = enter(&manager, &v1("subject", true)).await;
+    heartbeat(&subject).await;
+
+    k.clock.advance(Duration::from_secs(10));
+    heartbeat_distinct_actors(&manager, "new", STAMP_ROUND).await;
+    heartbeat(&subject).await;
+    manager.settle().await;
+
+    let subject_active = k
+        .activity
+        .records()
+        .into_iter()
+        .filter(|r| r.actor == "subject" && r.kind == ActivityKind::Active)
+        .count();
+    assert_eq!(subject_active, 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn distinct_actors_across_two_windows_leave_the_stamp_map_bounded() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let _anchor = enter(&manager, &v1("anchor", true)).await;
+
+    heartbeat_distinct_actors(&manager, "first", STAMP_ROUND).await;
+    k.clock.advance(Duration::from_secs(56));
+    heartbeat_distinct_actors(&manager, "second", STAMP_ROUND).await;
+
+    assert_eq!(stamp_count(&manager).await, STAMP_ROUND);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_stamp_exactly_one_window_old_is_swept() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let _anchor = enter(&manager, &v1("anchor", true)).await;
+    let (edge, _) = enter(&manager, &v1("edge", true)).await;
+
+    heartbeat(&edge).await;
+    edge.leave();
+    k.clock.advance(Duration::from_secs(55));
+    heartbeat_distinct_actors(&manager, "fresh", STAMP_ROUND).await;
+
+    assert_eq!(stamp_count(&manager).await, STAMP_ROUND);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_join_and_leave_after_the_limit_still_sweeps_the_inert_stamps() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.activity_manager(false);
+    let _anchor = enter(&manager, &v1("anchor", true)).await;
+
+    heartbeat_distinct_actors(&manager, "gone", STAMP_ROUND).await;
+    k.clock.advance(Duration::from_secs(56));
+
+    let (latecomer, _) = enter(&manager, &v1("latecomer", true)).await;
+    leave(&manager, latecomer).await;
+
+    assert_eq!(stamp_count(&manager).await, 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn with_no_observer_an_activity_frame_changes_nothing() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(Options::default(), false);
+    let member = v1("user-1", true);
+    let (membership, _) = enter(&manager, &member).await;
+    member.clear();
+
+    heartbeat(&membership).await;
+    manager.settle().await;
+
+    assert!(k.activity.records().is_empty());
+    assert!(member.messages().is_empty());
+    assert!(
+        !k.logs.lines().iter().any(|line| {
+            line.to_lowercase().contains("activity") || line.contains("dropped a frame")
+        }),
+        "{:?}",
+        k.logs.lines()
+    );
+
+    step1(&membership).await;
+    manager.settle().await;
+
+    assert!(received_step2(&member));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reset_settles_an_in_flight_write_so_it_cannot_overtake_the_reset() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(Options::default(), false);
+    let (membership, _) = enter(&manager, &v1("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+
+    let stuck = Gate::new();
+    *lock(&k.disk.before_write) = Some(stuck.clone());
+    update(&membership, update_appending(&client, "!")).await;
+
+    let resetting = manager.clone();
+    let reset = tokio::spawn(async move { resetting.reset(TEST_DOC).await });
+
+    stuck.open();
+    *lock(&k.disk.before_write) = None;
+    let result = reset.await.expect("the reset ran").expect("reset");
+
+    assert_eq!(result.status, ResetStatus::Done);
+    let minted = result.tag.expect("a minted tag");
+    assert_eq!(minted.epoch, 1);
+    assert_eq!(minted.lineage.len(), 32);
+    let landed = k.disk.landed();
+    assert_eq!(landed[landed.len() - 2..], ["write:0", "reset:1"]);
+    assert_eq!(k.store().stored(TEST_DOC).tag, minted);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn dispose_is_idempotent() {
+    let k = Kit::new();
+    let manager = k.manager(Options::default(), false);
+    let room = crate::room::Room::new(TEST_DOC, &manager.0);
+
+    {
+        let mut st = room.state.lock().await;
+        room.dispose(&mut st);
+        room.dispose(&mut st);
+        assert!(st.disposed);
+        assert!(st.doc.is_none());
+    }
+
+    assert!(room.lifetime.is_cancelled());
+}

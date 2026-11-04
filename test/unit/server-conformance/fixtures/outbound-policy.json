@@ -214,7 +214,10 @@
     "https://-a.example/",
     "https://_a.example/",
     "https://a.-b.example/",
-    "http://-a.example/"
+    "http://-a.example/",
+    "http://@example.com/",
+    "http://:@example.com/",
+    "http://a‍b.example/"
   ],
   "relative": [
     [
@@ -800,6 +803,15 @@
         "host": "-a.example",
         "port": 80,
         "literal": null
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
+      },
+      {
+        "allowed": false
       }
     ],
     "relative": [

@@ -127,11 +127,14 @@ fn parse_hierarchical(scheme: &str, s: &str) -> Option<Uri> {
         return None;
     }
     let mut u = Uri::with_scheme(scheme);
+    let mut user_info = String::new();
     if let Some(at) = authority.rfind('@') {
-        u.user_info = authority[..at].to_string();
-        if u.user_info.contains('@') {
+        if authority[..at].contains('@') {
             return None;
         }
+        // Escaped as a path is; an empty one still writes its '@'.
+        u.user_info = escape_component(&authority[..at]);
+        user_info = format!("{}@", u.user_info);
         authority = &authority[at + 1..];
     }
     let (host_text, mut port_text, mut ok) = split_host_port(authority);
@@ -175,11 +178,6 @@ fn parse_hierarchical(scheme: &str, s: &str) -> Option<Uri> {
     if u.port != default_port {
         u.authority += &format!(":{}", u.port);
     }
-    let user_info = if u.user_info.is_empty() {
-        String::new()
-    } else {
-        format!("{}@", u.user_info)
-    };
     u.absolute_uri = format!(
         "{scheme}://{user_info}{}{}{}{}",
         u.authority, u.absolute_path, u.query, u.fragment

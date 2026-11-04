@@ -131,11 +131,14 @@ func parseHierarchical(scheme, s string) (*URI, bool) {
 		return nil, false
 	}
 	u := &URI{Scheme: scheme}
+	userInfo := ""
 	if at := strings.LastIndexByte(authority, '@'); at >= 0 {
-		u.UserInfo = authority[:at]
-		if strings.Contains(u.UserInfo, "@") {
+		if strings.IndexByte(authority[:at], '@') >= 0 {
 			return nil, false
 		}
+		// Escaped as a path is; an empty one still writes its '@'.
+		u.UserInfo = escapeComponent(authority[:at])
+		userInfo = u.UserInfo + "@"
 		authority = authority[at+1:]
 	}
 	hostText, portText, ok := splitHostPort(authority)
@@ -188,10 +191,6 @@ func parseHierarchical(scheme, s string) (*URI, bool) {
 	u.authority = u.Host
 	if u.Port != defaultPort {
 		u.authority += ":" + strconv.Itoa(u.Port)
-	}
-	userInfo := ""
-	if u.UserInfo != "" {
-		userInfo = u.UserInfo + "@"
 	}
 	u.AbsoluteURI = scheme + "://" + userInfo + u.authority + u.AbsolutePath + u.Query + u.Fragment
 	u.authority = userInfo + u.authority

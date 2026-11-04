@@ -276,6 +276,20 @@ async fn load_rejects_a_malformed_body() {
     }
 }
 
+// HostCollabTests.ASeedGetWithoutAJsonBodyCloses4503AndStateAnswers503, the
+// client's half: a 204 is a 2xx, so it fails as an unreadable body, not as a
+// status.
+#[tokio::test]
+async fn a_seed_get_without_a_json_body_closes4503_and_state_answers503() {
+    let err = client(&Recorder::default(), Setup::default(), |_| {
+        answer(204, "", true)
+    })
+    .load("doc")
+    .await
+    .unwrap_err();
+    assert_eq!(endpoint_error(err).1, 0);
+}
+
 #[tokio::test]
 async fn save_puts_the_bare_document_with_the_version_header() {
     let r = Recorder::default();

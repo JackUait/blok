@@ -1,0 +1,45 @@
+Usage of blok-server:
+  --listen value
+    address to listen on (default "127.0.0.1:4000")
+  --auth value
+    access mode: none, proxy, or ticket (default "none")
+  --secret value
+    shared secret for --auth ticket; prefer BLOK_SECRET
+  --allow-origin value
+    comma-separated origins allowed to call this service
+  --storage-dir value
+    directory for uploaded files (default "./blok-uploads")
+  --public-url value
+    URL prefix uploaded files are handed out under
+  --max-upload value
+    largest upload accepted, in bytes (default 33554432)
+  --rate-limit value
+    requests a minute per caller (ticket mode defaults to 60; other modes default to 0)
+  --no-unfurl
+    close GET /unfurl and POST /upload-by-url
+  --s3-endpoint value
+    S3-compatible endpoint
+  --s3-region value
+    S3 region
+  --s3-bucket value
+    S3 bucket
+  --s3-bucket-url value
+    public S3 bucket URL prefix
+  --s3-addressing value
+    "path" or "virtual"
+  --collab
+    serve collaborative sync rooms (needs --doc-endpoint)
+  --doc-endpoint value
+    HTTP(S) URL sync rooms seed documents from and export them to
+  --doc-endpoint-auth value
+    Authorization header for --doc-endpoint; prefer BLOK_DOC_ENDPOINT_AUTH
+  --collab-dir value
+    directory for the collaboration working set (default "./blok-collab")
+  --collab-s3-prefix value
+    S3 key prefix for the collaboration working set (needs --s3-bucket)
+  --collab-journal
+    keep an operation journal under --collab-dir: edit receipts, key dedupe, blok-sync.v2
+    (needs --collab; refused with --collab-s3-prefix; or set BLOK_COLLAB_JOURNAL)
+  --rich-text-fields value
+    your custom tools' rich text fields as JSON, e.g. {"callout":["title"]};
+    list what each tool's richTextFields declares (or set BLOK_RICH_TEXT_FIELDS)

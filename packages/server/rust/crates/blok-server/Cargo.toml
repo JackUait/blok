@@ -6,13 +6,27 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[lib]
+name = "blok_server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "blok-server"
 path = "src/main.rs"
 
 [features]
 # The conformance build: the -tags conformance build of the Go host.
-conformance = []
+conformance = ["blok-blokserver/conformance"]
+
+[dependencies]
+blok-blokserver = { path = "../blokserver" }
+blok-dotnet = { path = "../dotnet" }
+blok-http = { path = "../http" }
+blok-jsjson = { path = "../jsjson" }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util"] }
 
 [lints]
 workspace = true

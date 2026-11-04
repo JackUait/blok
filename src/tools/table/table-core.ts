@@ -18,6 +18,11 @@ export const CELL_ATTR = 'data-blok-table-cell';
 /** A row's own cells, read from its children: a `:scope >` query walks every cell's content. */
 export const rowCells = (row: Element): HTMLTableCellElement[] =>
   Array.from(row.children).filter((child): child is HTMLTableCellElement => child instanceof HTMLElement && child.hasAttribute(CELL_ATTR));
+const setIfChanged = (element: Element, name: string, value: string): void => {
+  if (element.getAttribute(name) !== value) {
+    element.setAttribute(name, value);
+  }
+};
 /** Grid-relative selector for this table's own cells; a nested table's cells sit inside ours. */
 export const ownCells = (tail = ''): string =>
   `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}, :scope > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}`;
@@ -217,6 +222,62 @@ export class TableGrid {
     this.reindexCoordinates(table);
 
     return row;
+  }
+
+  /**
+   * Append `count` rows at the end, reindexing once.
+   */
+  public appendRows(table: HTMLElement, count: number): void {
+    const cols = this.getColumnCount(table);
+    const tbody = table.querySelector('tbody') ?? table;
+    const rows = document.createDocumentFragment();
+
+    Array.from({ length: count }).forEach(() => rows.appendChild(this.createRow(cols)));
+    tbody.appendChild(rows);
+    this.reindexCoordinates(table);
+  }
+
+  /**
+   * Append one pixel-width column per entry of `newWidths`, reindexing once.
+   * Same result as {@link addColumn} in px mode once per width.
+   * @param table - the grid
+   * @param colWidths - pixel widths of the columns already there
+   * @param newWidths - pixel width of each new column
+   */
+  public appendColumns(table: HTMLElement, colWidths: number[], newWidths: number[]): void {
+    const colgroup = table.querySelector('colgroup');
+
+    if (colgroup) {
+      if (colWidths.length === colgroup.querySelectorAll('col').length) {
+        this.applyWidthsToCols(colgroup, colWidths);
+      }
+      newWidths.forEach(width => {
+        const col = document.createElement('col');
+
+        col.style.width = `${width}px`;
+        colgroup.appendChild(col);
+      });
+    }
+
+    this.getRows(table).forEach(row => {
+      const cells = document.createDocumentFragment();
+
+      newWidths.forEach(() => cells.appendChild(this.createCell()));
+      row.appendChild(cells);
+    });
+
+    this.reindexCoordinates(table);
+  }
+
+  /**
+   * Whether {@link appendColumns} matches what {@link addColumn} would do
+   * with these widths: only in px mode.
+   */
+  public canAppendColumnsPx(table: HTMLElement, colWidths: number[]): boolean {
+    const colgroup = table.querySelector('colgroup');
+    const colCount = colgroup ? colgroup.querySelectorAll('col').length : 0;
+
+    return colWidths.length === colCount || this.detectWidthUnit(table) === 'px';
   }
 
   /**
@@ -486,8 +547,10 @@ export class TableGrid {
         const skipBlocked = (c: number): number => (blockedCols.has(c) ? skipBlocked(c + 1) : c);
         const col = skipBlocked(modelCol);
 
-        cell.setAttribute(CELL_ROW_ATTR, String(r));
-        cell.setAttribute(CELL_COL_ATTR, String(col));
+        // Unchanged values are not rewritten: every write is a DOM record the
+        // editor's observer walks, and growing a big table touches every cell.
+        setIfChanged(cell, CELL_ROW_ATTR, String(r));
+        setIfChanged(cell, CELL_COL_ATTR, String(col));
 
         const colSpan = tdCell.colSpan || 1;
         const rowSpan = tdCell.rowSpan || 1;
@@ -532,8 +595,8 @@ export class TableGrid {
         ].filter(Boolean).join(' ');
 
         if (corners) {
-          cell.setAttribute(CORNER_ATTR, corners);
-        } else {
+          setIfChanged(cell, CORNER_ATTR, corners);
+        } else if (cell.hasAttribute(CORNER_ATTR)) {
           cell.removeAttribute(CORNER_ATTR);
         }
       });

@@ -13,19 +13,22 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
  * — notion.com/help/columns-headings-and-dividers
  */
 
+const createMockBlock = (): { id: string; holder: HTMLElement } => {
+  const holder = document.createElement('div');
+
+  holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
+
+  return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+};
+
 const createMockAPI = (): API => {
   return {
     styles: { block: 'blok-block' },
     i18n: { t: (key: string) => key },
     blocks: {
       delete: () => {},
-      insert: () => {
-        const holder = document.createElement('div');
-
-        holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
-
-        return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
-      },
+      insert: createMockBlock,
+      insertMany: (specs: unknown[]) => specs.map(createMockBlock),
       getById: () => null,
       getChildren: () => [],
       getCurrentBlockIndex: () => 0,

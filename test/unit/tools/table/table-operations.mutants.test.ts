@@ -141,7 +141,7 @@ const colWidthsOf = (gridEl: HTMLElement): string[] => {
 interface CellBlocksStub {
   calls: Element[][];
   getBlockIdsFromCells: (cells: NodeListOf<Element> | Element[]) => string[];
-  ensureCellHasBlock: (cell: HTMLElement, options?: { track?: boolean }) => void;
+  fillEmptyCells: (cells: readonly HTMLElement[], options?: { track?: boolean }) => void;
   touched: HTMLElement[];
   trackFlags: boolean[];
 }
@@ -163,9 +163,9 @@ const makeCellBlocksStub = (): CellBlocksStub => {
 
       return list.map(cell => cell.getAttribute('data-test-block-id') ?? '');
     },
-    ensureCellHasBlock: (cell: HTMLElement, options?: { track?: boolean }): void => {
-      touched.push(cell);
-      trackFlags.push(options?.track === true);
+    fillEmptyCells: (cells: readonly HTMLElement[], options?: { track?: boolean }): void => {
+      touched.push(...cells);
+      trackFlags.push(...cells.map(() => options?.track === true));
     },
   };
 };

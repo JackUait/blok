@@ -1290,4 +1290,39 @@ describe('TableGrid adding a column', () => {
     expect(element.querySelectorAll('[data-blok-table-corner~="top-end"]')).toHaveLength(1);
     expect(element.querySelector('[data-blok-table-cell-row="0"][data-blok-table-cell-col="3"]')?.getAttribute('data-blok-table-corner')).toBe('top-end');
   });
+
+  it('leaves a cell whose coordinates did not change unwritten', () => {
+    const grid = new TableGrid({ readOnly: false });
+    const element = grid.createGrid(2, 2);
+    const first = element.querySelector<HTMLElement>('[data-blok-table-cell]');
+
+    if (first === null) {
+      throw new Error('no cell');
+    }
+
+    const writes = vi.spyOn(first, 'setAttribute');
+
+    grid.addColumn(element);
+    grid.addRow(element);
+
+    expect(writes).not.toHaveBeenCalled();
+    expect(first.getAttribute('data-blok-table-corner')).toBe('top-start');
+  });
+
+  it('appends many rows and columns with the coordinates and corners of one at a time', () => {
+    const grid = new TableGrid({ readOnly: false });
+    const bulk = grid.createGrid(2, 2);
+    const single = grid.createGrid(2, 2);
+    const coordinates = (element: HTMLElement): string[] => Array.from(element.querySelectorAll('[data-blok-table-cell]'), cell =>
+      `${cell.getAttribute('data-blok-table-cell-row')}:${cell.getAttribute('data-blok-table-cell-col')}:${cell.getAttribute('data-blok-table-corner') ?? ''}`);
+
+    grid.appendRows(bulk, 2);
+    grid.appendColumns(bulk, [100, 100], [50, 50, 50]);
+    grid.addRow(single);
+    grid.addRow(single);
+    [0, 1, 2].forEach(() => grid.addColumn(single, undefined, undefined, 50));
+
+    expect(coordinates(bulk)).toEqual(coordinates(single));
+    expect(Array.from(bulk.querySelectorAll('col'), col => col.style.width)).toEqual(['100px', '100px', '50px', '50px', '50px']);
+  });
 });

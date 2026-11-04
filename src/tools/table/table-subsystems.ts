@@ -312,12 +312,21 @@ export class TableSubsystems {
   }
 
   private addRowAtEnd(gridEl: HTMLElement): void {
+    this.addRowsAtEnd(gridEl, 1, true);
+  }
+
+  /**
+   * @param populate - give the new cells their blocks now; false leaves that to the caller
+   */
+  private addRowsAtEnd(gridEl: HTMLElement, count: number, populate: boolean): void {
     this.host.runTransactedStructuralOp(() => {
       const hadMerges = this.host.model.hasMerges();
 
-      this.host.model.addRow();
-      this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
-      populateNewCells(gridEl, this.host.cellBlocks);
+      Array.from({ length: count }).forEach(() => this.host.model.addRow());
+      this.applyStructuralDom(hadMerges, () => this.host.grid.appendRows(gridEl, count));
+      if (populate) {
+        populateNewCells(gridEl, this.host.cellBlocks);
+      }
       updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
       updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
     });
@@ -342,7 +351,44 @@ export class TableSubsystems {
     });
   }
 
-  private addColumnAtEnd(gridEl: HTMLElement): void {
+  /**
+   * {@link addColumnAtEnd} `count` times in one pass, when nothing is merged
+   * and the grid is in px mode; otherwise column by column.
+   * @param populate - give the new cells their blocks now; false leaves that to the caller
+   */
+  private addColumnsAtEnd(gridEl: HTMLElement, count: number, populate: boolean): void {
+    const colWidths = this.host.model.colWidths ?? readPixelWidths(gridEl);
+
+    if (this.host.model.hasMerges() || !this.host.grid.canAppendColumnsPx(gridEl, colWidths)) {
+      Array.from({ length: count }).forEach(() => this.addColumnAtEnd(gridEl, populate));
+
+      return;
+    }
+
+    this.host.runTransactedStructuralOp(() => {
+      const widths = [...colWidths];
+      const added = Array.from({ length: count }, () => {
+        const halfWidth = this.host.model.initialColWidth !== undefined
+          ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
+          : computeHalfAvgWidth(widths);
+
+        this.host.model.addColumn(undefined, halfWidth);
+        widths.push(halfWidth);
+
+        return halfWidth;
+      });
+
+      this.host.model.setColWidths(widths);
+      this.host.grid.appendColumns(gridEl, colWidths, added);
+      applyPixelWidths(gridEl, widths);
+      if (populate) {
+        populateNewCells(gridEl, this.host.cellBlocks);
+      }
+      updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
+    });
+  }
+
+  private addColumnAtEnd(gridEl: HTMLElement, populate = true): void {
     this.host.runTransactedStructuralOp(() => {
       const colWidths = this.host.model.colWidths ?? readPixelWidths(gridEl);
       const halfWidth = this.host.model.initialColWidth !== undefined
@@ -357,7 +403,9 @@ export class TableSubsystems {
       this.host.model.setColWidths(newWidths);
       this.applyStructuralDom(hadMergesForCol, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
       applyPixelWidths(gridEl, newWidths);
-      populateNewCells(gridEl, this.host.cellBlocks);
+      if (populate) {
+        populateNewCells(gridEl, this.host.cellBlocks);
+      }
       updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
     });
   }
@@ -421,16 +469,20 @@ export class TableSubsystems {
       Array.from({ length: Math.abs(target - current()) }).every(() => (current() < target ? more() : fewer()));
     };
 
-    step(() => {
-      this.addRowAtEnd(gridEl);
+    const startRows = this.host.model.rows;
 
-      return true;
-    }, () => this.removeLastRowIfEmpty(gridEl), () => this.host.model.rows, rows);
-    step(() => {
-      this.addColumnAtEnd(gridEl);
-
-      return true;
-    }, () => this.removeLastColumnIfEmpty(gridEl), () => this.host.model.cols, cols);
+    // Growth is one pass: one reindex, and new cells filled together at the end.
+    if (rows > startRows) {
+      this.addRowsAtEnd(gridEl, rows - startRows, false);
+    }
+    step(() => false, () => this.removeLastRowIfEmpty(gridEl), () => this.host.model.rows, rows);
+    if (cols > startCols) {
+      this.addColumnsAtEnd(gridEl, cols - startCols, false);
+    }
+    step(() => false, () => this.removeLastColumnIfEmpty(gridEl), () => this.host.model.cols, cols);
+    if (rows > startRows || cols > startCols) {
+      this.host.runTransactedStructuralOp(() => populateNewCells(gridEl, this.host.cellBlocks));
+    }
 
     // Once, not per column: each scroll lays out the whole table.
     if (this.host.model.cols > startCols && this.host.scrollContainer) {

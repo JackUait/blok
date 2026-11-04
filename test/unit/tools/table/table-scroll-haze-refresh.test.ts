@@ -7,6 +7,12 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
+const createMockBlock = (): { id: string; holder: HTMLElement } => {
+  const holder = document.createElement('div');
+
+  return { id: 'mock-block', holder };
+};
+
 const createMockAPI = (): API => {
   return {
     styles: {
@@ -22,11 +28,8 @@ const createMockAPI = (): API => {
     },
     i18n: { t: (key: string) => key },
     blocks: {
-      insert: vi.fn().mockImplementation(() => {
-        const holder = document.createElement('div');
-
-        return { id: 'mock-block', holder };
-      }),
+      insert: vi.fn().mockImplementation(createMockBlock),
+      insertMany: vi.fn().mockImplementation((specs: unknown[]) => specs.map(createMockBlock)),
       delete: vi.fn(),
       getChildren: vi.fn().mockReturnValue([]),
       getCurrentBlockIndex: vi.fn().mockReturnValue(0),

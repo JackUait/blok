@@ -339,6 +339,7 @@ interface Harness {
   insertCalls: InsertCall[];
   setBlockParent: Mock;
   ensureCellHasBlock: Mock;
+  fillEmptyCells: Mock;
   focusClearedCell: Mock;
   ensureScrollContainer: Mock;
   transactions: string[];
@@ -482,7 +483,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     caret: { setToBlock: vi.fn() },
   } as unknown as API;
 
-  const ensureCellHasBlock = vi.fn((cell: HTMLElement) => {
+  const seedEmptyCell = (cell: HTMLElement): void => {
     if (cell.querySelector('[data-blok-id]')) {
       return;
     }
@@ -490,7 +491,9 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
     container?.appendChild(makeBlock(`seed-${nextId++}`, 'paragraph', { text: '' }, {}).holder);
-  });
+  };
+  const ensureCellHasBlock = vi.fn(seedEmptyCell);
+  const fillEmptyCells = vi.fn((cells: readonly HTMLElement[]) => cells.forEach(seedEmptyCell));
   const focusClearedCell = vi.fn();
 
   const cellBlocks = {
@@ -513,6 +516,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
       });
     },
     ensureCellHasBlock,
+    fillEmptyCells,
     focusClearedCell,
     indexAfterTableSubtree: (): number => order.length,
     insertClipboardBlock: (block: ClipboardBlockData): BlockAPI =>
@@ -610,6 +614,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     insertCalls,
     setBlockParent,
     ensureCellHasBlock,
+    fillEmptyCells,
     focusClearedCell,
     ensureScrollContainer: ensureScrollContainerSpy,
     transactions,
@@ -1973,7 +1978,12 @@ describe('add-controls wiring', () => {
 
     expect(harness.model.rows).toBe(3);
     expect(harness.grid.getRowCount(harness.gridEl)).toBe(3);
-    expect(harness.ensureCellHasBlock).toHaveBeenCalled();
+    expect(harness.fillEmptyCells).toHaveBeenCalledWith(
+      expect.arrayContaining([harness.cellOf(2, 0), harness.cellOf(2, 1)]),
+      { track: true }
+    );
+    expect(harness.idsOf(2, 0)).toHaveLength(1);
+    expect(harness.idsOf(2, 1)).toHaveLength(1);
     expect(harness.gridEl.querySelector(`[${ROW_ATTR}]`)?.hasAttribute('data-blok-table-heading')).toBe(true);
     expect(captured.resize).toHaveLength(1);
     expect(addControlsMock().syncRowButtonWidth).toHaveBeenCalledTimes(1);
@@ -2192,7 +2202,12 @@ describe('corner-drag wiring', () => {
 
     expect(harness.model.rows).toBe(3);
     expect(harness.grid.getRowCount(harness.gridEl)).toBe(3);
-    expect(harness.ensureCellHasBlock).toHaveBeenCalled();
+    expect(harness.fillEmptyCells).toHaveBeenCalledWith(
+      expect.arrayContaining([harness.cellOf(2, 0), harness.cellOf(2, 1)]),
+      { track: true }
+    );
+    expect(harness.idsOf(2, 0)).toHaveLength(1);
+    expect(harness.idsOf(2, 1)).toHaveLength(1);
   });
 
   it('lays down a FULL-width column, not the half-width the insert paths use', () => {

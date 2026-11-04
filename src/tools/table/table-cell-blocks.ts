@@ -1852,6 +1852,84 @@ export class TableCellBlocks {
   }
 
   /**
+   * {@link ensureCellHasBlock} for many cells at once. Empty cells that follow
+   * each other in grid order get their blocks from one insertMany, placed
+   * right after the blocks of the last earlier cell that has any, so the
+   * table's children stay in grid order.
+   * @param cells - this table's own cells, in grid order
+   * @param options - as for {@link ensureCellHasBlock}
+   * @param options.track - the fill joins the current undo step
+   */
+  public fillEmptyCells(cells: readonly HTMLElement[], options: { track?: boolean } = {}): void {
+    const runs: Array<{ after: string | undefined; cells: Array<{ cell: HTMLElement; container: HTMLElement }> }> = [];
+    const scan = { after: undefined as string | undefined, open: false };
+
+    for (const cell of cells) {
+      const container = Array.from(cell.children).find((child): child is HTMLElement =>
+        child instanceof HTMLElement && child.hasAttribute(CELL_BLOCKS_ATTR));
+
+      if (container === undefined) {
+        continue;
+      }
+
+      const ids = Array.from(container.children).flatMap(child => child.getAttribute('data-blok-id') ?? []);
+
+      if (ids.length > 0) {
+        scan.after = ids.at(-1);
+        scan.open = false;
+        continue;
+      }
+
+      if (!scan.open) {
+        runs.push({ after: scan.after, cells: [] });
+        scan.open = true;
+      }
+      runs.at(-1)?.cells.push({ cell, container });
+    }
+
+    if (runs.length === 0) {
+      return;
+    }
+
+    const firstIndex = (): number => {
+      const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+      return tableIndex === undefined ? this.api.blocks.getBlocksCount() : tableIndex + 1;
+    };
+    const fill = (): void => runs.forEach(run => {
+      const index = run.after !== undefined ? this.indexAfterSubtreeOf(run.after) : firstIndex();
+      const blocks = this.api.blocks.insertMany(
+        run.cells.map(() => ({ type: 'paragraph', data: { text: '' }, parent: this.tableBlockId })),
+        index
+      );
+
+      blocks.forEach((block, i) => {
+        const { cell, container } = run.cells[i];
+
+        if (options.track !== true) {
+          this.repairIds.add(block.id);
+        }
+        container.appendChild(block.holder);
+        this.syncBlockToModel(cell, block.id);
+        this.stripPlaceholders(container);
+      });
+    });
+
+    // The blocks are placed here; see ensureCellHasBlock for why claiming stays off.
+    this.isRepairingCell = true;
+
+    try {
+      if (options.track === true) {
+        fill();
+      } else {
+        this.api.blocks.transactWithoutCapture?.(fill);
+      }
+    } finally {
+      this.isRepairingCell = false;
+    }
+  }
+
+  /**
    * Place the caret inside a cell after its content has been cleared.
    *
    * Clearing a multi-cell selection deletes every block those cells owned via

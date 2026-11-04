@@ -5,6 +5,15 @@ import type { TableModel } from '../../../../src/tools/table/table-model';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
+const createMockBlock = (): { id: string; holder: HTMLElement } => {
+  const holder = document.createElement('div');
+  const id = `mock-${Math.random().toString(36).slice(2, 8)}`;
+
+  holder.setAttribute('data-blok-id', id);
+
+  return { id, holder };
+};
+
 const createMockAPI = (): API => ({
   styles: {
     block: 'blok-block',
@@ -19,14 +28,8 @@ const createMockAPI = (): API => ({
   },
   i18n: { t: (key: string) => key },
   blocks: {
-    insert: vi.fn().mockImplementation(() => {
-      const holder = document.createElement('div');
-      const id = `mock-${Math.random().toString(36).slice(2, 8)}`;
-
-      holder.setAttribute('data-blok-id', id);
-
-      return { id, holder };
-    }),
+    insert: vi.fn().mockImplementation(createMockBlock),
+    insertMany: vi.fn().mockImplementation((specs: unknown[]) => specs.map(createMockBlock)),
     delete: vi.fn(),
     getById: vi.fn().mockReturnValue(null),
     getChildren: vi.fn().mockReturnValue([]),
@@ -313,6 +316,14 @@ const createRegistryAPI = (seed: Array<{ id: string; text: string }>): { api: AP
   seed.forEach(({ id, text }) => registry.push(make(id, text)));
 
   const counter = { next: 0 };
+  const addBlock = (data?: { text?: string }): RegistryBlock => {
+    counter.next += 1;
+    const block = make(`new-${counter.next}`, data?.text ?? '');
+
+    registry.push(block);
+
+    return block;
+  };
 
   const api = {
     styles: {
@@ -328,14 +339,9 @@ const createRegistryAPI = (seed: Array<{ id: string; text: string }>): { api: AP
     },
     i18n: { t: (key: string) => key },
     blocks: {
-      insert: vi.fn().mockImplementation((_tool: string, data?: { text?: string }) => {
-        counter.next += 1;
-        const block = make(`new-${counter.next}`, data?.text ?? '');
-
-        registry.push(block);
-
-        return block;
-      }),
+      insert: vi.fn().mockImplementation((_tool: string, data?: { text?: string }) => addBlock(data)),
+      insertMany: vi.fn().mockImplementation((specs: Array<{ data?: { text?: string } }>) =>
+        specs.map(spec => addBlock(spec.data))),
       delete: vi.fn().mockImplementation((index: number) => {
         const [removed] = registry.splice(index, 1);
 

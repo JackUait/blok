@@ -662,9 +662,46 @@ export class BlockHierarchy {
     const slot = afterId === null ? 0 : siblings.indexOf(afterId) + 1;
 
     parent.contentIds = [...siblings.slice(0, slot), ...run.map(block => block.id), ...siblings.slice(slot)];
-    run.forEach(block => this.mountOutsidersInFirstSlot(block));
+    this.mountRunInFirstSlot(parent, run);
 
     return true;
+  }
+
+  /**
+   * {@link mountOutsidersInFirstSlot} for a run of childless blocks that sit
+   * next to each other in the flat array: one anchor lookup for the run.
+   * @param parent - the table or database
+   * @param run - its new children, in flat order
+   */
+  private mountRunInFirstSlot(parent: Block, run: Block[]): void {
+    const outside = run.filter(block => !parent.holder.contains(block.holder));
+
+    if (outside.length !== run.length) {
+      outside.forEach(block => this.mountOutsidersInFirstSlot(block));
+
+      return;
+    }
+
+    const slot = this.findHomeSlot(parent.id);
+    const last = run.at(-1);
+
+    if (slot === null || last === undefined || this.blocksStore === undefined) {
+      return;
+    }
+
+    // See mountOutsidersInFirstSlot.
+    if (this.isApplyingRemoteChange?.() === true) {
+      run.forEach(block => block.holder.remove());
+
+      return;
+    }
+
+    const before = document.createDocumentFragment();
+
+    this.blocksStore.mount(last, this.repository.getBlockIndex(last), slot);
+    run.slice(0, -1).forEach(block => before.appendChild(block.holder));
+    last.holder.before(before);
+    run.forEach(block => this.updateBlockIndentation(block));
   }
 
   /**

@@ -364,11 +364,7 @@ export const getBlockIdsInColumn = (element: HTMLElement | null, cellBlocks: Tab
 // ─── Populate new cells ─────────────────────────────────────────────
 
 export const populateNewCells = (gridEl: HTMLElement, cellBlocks: TableCellBlocks | null): void => {
-  const cells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
-
-  cells.forEach(cell => {
-    cellBlocks?.ensureCellHasBlock(cell as HTMLElement, { track: true });
-  });
+  cellBlocks?.fillEmptyCells(ownRows(gridEl).flatMap(rowCells), { track: true });
 };
 
 // ─── Readonly block mounting ────────────────────────────────────────

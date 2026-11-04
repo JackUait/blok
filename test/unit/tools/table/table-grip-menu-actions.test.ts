@@ -50,6 +50,28 @@ const createMockAPI = (blocks: Map<string, StoredBlock>): API => {
     dispatchChange: vi.fn(),
   });
 
+  const addBlock = (tool: string, data: Record<string, unknown> | undefined, index: number | undefined, parentId: string | null): unknown => {
+    counter += 1;
+
+    const id = `block-${counter}`;
+    const holder = document.createElement('div');
+
+    holder.setAttribute('data-blok-id', id);
+
+    const entry: StoredBlock = {
+      id,
+      holder,
+      name: tool,
+      data: data ?? {},
+      parentId,
+    };
+
+    blocks.set(id, entry);
+    order.splice(index === undefined ? order.length : Math.min(Math.max(index, 0), order.length), 0, id);
+
+    return toBlockApi(entry);
+  };
+
   return {
     styles: {
       block: 'blok-block',
@@ -64,27 +86,10 @@ const createMockAPI = (blocks: Map<string, StoredBlock>): API => {
     },
     i18n: { t: (key: string) => key },
     blocks: {
-      insert: vi.fn((tool: string, data: Record<string, unknown>, _config?: unknown, index?: number) => {
-        counter += 1;
-
-        const id = `block-${counter}`;
-        const holder = document.createElement('div');
-
-        holder.setAttribute('data-blok-id', id);
-
-        const entry: StoredBlock = {
-          id,
-          holder,
-          name: tool,
-          data: data ?? {},
-          parentId: null,
-        };
-
-        blocks.set(id, entry);
-        order.splice(index === undefined ? order.length : Math.min(Math.max(index, 0), order.length), 0, id);
-
-        return toBlockApi(entry);
-      }),
+      insert: vi.fn((tool: string, data: Record<string, unknown>, _config?: unknown, index?: number) =>
+        addBlock(tool, data, index, null)),
+      insertMany: vi.fn((specs: Array<{ type: string; data: Record<string, unknown>; parent?: string }>, index?: number) =>
+        specs.map((spec, i) => addBlock(spec.type, spec.data, index === undefined ? undefined : index + i, spec.parent ?? null))),
       delete: vi.fn((index: number) => {
         const id = order[index];
 

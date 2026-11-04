@@ -107,10 +107,8 @@ describe('blocks.insertMany under a table', () => {
       return reads.count;
     };
 
-    const few = await readsFor(2);
-    const many = await readsFor(40);
-
-    expect(many).toBe(few);
+    // One for the run, plus the table re-claiming the one block the batch announces.
+    expect(await readsFor(40)).toBeLessThanOrEqual(3);
   });
   it('puts a batch inserted right after the table first, inside the table', async () => {
     const editor = await boot();
@@ -121,6 +119,7 @@ describe('blocks.insertMany under a table', () => {
     expect(contentIdsOf(editor, 't').toArray()).toEqual(['n0', 'n1', 'a']);
     expect(table?.contentIds).toEqual(['n0', 'n1', 'a']);
     expect(['n0', 'n1'].map(id => table?.holder.contains(editor.moduleGraph?.BlockManager.getBlockById(id)?.holder ?? null))).toEqual([true, true]);
+    expect(Array.from(table?.holder.querySelector('[data-blok-table-cell-blocks]')?.children ?? [], child => child.getAttribute('data-blok-id'))).toEqual(['n0', 'n1', 'a']);
   });
 
   it('writes the table\'s child list once per batch, not once per new child', async () => {
@@ -149,6 +148,21 @@ describe('blocks.insertMany under a table', () => {
       return state.writes;
     };
 
-    expect(await writesFor(30)).toBe(await writesFor(2));
+    // One for the run, plus the table re-claiming the one block the batch announces.
+    expect(await writesFor(30)).toBeLessThanOrEqual(3);
+  });
+
+  it('saves every block of a batch inserted into a table', async () => {
+    const editor = await boot();
+
+    // Past the frame the load keeps its own sync window open for.
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const end = (editor.blocks.getBlockIndex('a') ?? -1) + 1;
+
+    editor.blocks.insertMany(cells(3, 'n'), end);
+
+    const saved = await editor.save();
+
+    expect(saved.blocks.filter(block => block.parent === 't').map(block => block.id)).toEqual(['a', 'n0', 'n1', 'n2']);
   });
 });

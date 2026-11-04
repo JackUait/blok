@@ -8,6 +8,15 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 let insertCallCount = 0;
 
+const createMockBlock = (): { id: string; holder: HTMLElement } => {
+  insertCallCount++;
+  const holder = document.createElement('div');
+
+  holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
+
+  return { id: `mock-block-${insertCallCount}`, holder };
+};
+
 const createMockAPI = (): API => {
   return {
     styles: {
@@ -25,14 +34,8 @@ const createMockAPI = (): API => {
       t: (key: string) => key,
     },
     blocks: {
-      insert: vi.fn().mockImplementation(() => {
-        insertCallCount++;
-        const holder = document.createElement('div');
-
-        holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
-
-        return { id: `mock-block-${insertCallCount}`, holder };
-      }),
+      insert: vi.fn().mockImplementation(createMockBlock),
+      insertMany: vi.fn().mockImplementation((specs: unknown[]) => specs.map(createMockBlock)),
       delete: vi.fn(),
       getChildren: vi.fn().mockReturnValue([]),
       getCurrentBlockIndex: vi.fn().mockReturnValue(0),

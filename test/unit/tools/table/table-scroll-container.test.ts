@@ -3,6 +3,14 @@ import { Table } from '../../../../src/tools/table';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
+const createMockBlock = (): { id: string; holder: HTMLElement } => {
+  const holder = document.createElement('div');
+
+  holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
+
+  return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+};
+
 const createMockAPI = (): API => {
   return {
     styles: {
@@ -21,13 +29,8 @@ const createMockAPI = (): API => {
     },
     blocks: {
       delete: () => {},
-      insert: () => {
-        const holder = document.createElement('div');
-
-        holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
-
-        return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
-      },
+      insert: createMockBlock,
+      insertMany: (specs: unknown[]) => specs.map(createMockBlock),
       getCurrentBlockIndex: () => 0,
       getBlocksCount: () => 0,
       getBlockIndex: () => undefined,

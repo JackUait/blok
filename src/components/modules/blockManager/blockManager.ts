@@ -871,7 +871,7 @@ export class BlockManager extends Module {
         } else {
           this.blocksStore.insertMany(blocks, index);
         }
-      }, { extendThroughRAF: true });
+      }, { extendThroughRAF: isDocumentRender });
     } finally {
       this.isRenderingDocument = false;
     }

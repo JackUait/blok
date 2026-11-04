@@ -876,12 +876,27 @@ fn the_law_accepts_a_guarded_remove() {
 }
 
 #[test]
-fn the_law_ignores_a_truncate_flag_that_is_only_tested() {
+fn the_law_ignores_a_truncate_flag_that_is_only_tested_or_cleared() {
     for body in [
         "fn can_create(flags: &Flags) -> bool { flags.write && flags.truncate }",
         "fn can_create(flags: &Flags) -> bool { matches!(flags, Flags { truncate: true, .. }) }",
+        "fn open_plain(flags: Flags) { open_file(p, Flags { truncate: false, ..flags }, false); }",
+        "fn open_plain(mut flags: Flags) { flags.truncate = false; open_file(p, flags, false); }",
     ] {
         let got = Law::of(body).truncation_violations();
+        assert!(got.is_empty(), "{body}: {got:?}");
+    }
+}
+
+// Go chains the flush in an "if err == nil" body; Rust chains it on the
+// write's Result.
+#[test]
+fn the_law_accepts_a_flush_chained_on_the_writes_error() {
+    for body in [
+        "fn publish() -> io::Result<()> { manifest_file.write_all_at(b, 0).and_then(|()| manifest_file.sync_all()) }",
+        "fn publish() -> io::Result<()> { check().and_then(|()| manifest_file.write_all_at(b, 0)).and_then(|()| manifest_file.sync_all()) }",
+    ] {
+        let got = Law::of(body).flush_violations("publish", "manifest_file", "write_all_at");
         assert!(got.is_empty(), "{body}: {got:?}");
     }
 }

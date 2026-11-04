@@ -73,27 +73,27 @@ fn free_port() -> String {
     listener.local_addr().unwrap().to_string()
 }
 
-// The host listens within milliseconds; 30 s only covers a workspace run
-// whose QuickJS suites take every core.
-async fn wait_for(condition: impl Fn() -> bool) {
+/// Waits for the listening line. False when the port was taken first and
+/// another attempt may pick a free one. The host listens within
+/// milliseconds; 30 s only covers a workspace run whose QuickJS suites take
+/// every core.
+async fn listened(text: &dyn Fn() -> String, attempt: usize) -> bool {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
-    while !condition() {
+    loop {
+        let seen = text();
+        if seen.contains(" listening on ") {
+            return true;
+        }
+        let refused = seen.contains("refused to start") || seen.contains("stopped");
+        if refused && seen.contains("address already in use") && attempt < 5 {
+            return false;
+        }
         assert!(
-            tokio::time::Instant::now() < deadline,
-            "condition not met within 30s"
+            !refused && tokio::time::Instant::now() < deadline,
+            "the host did not listen (attempt {attempt}): {seen:?}"
         );
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-}
-
-/// Waits for the listening line. False when the port was taken first.
-async fn listened(text: &dyn Fn() -> String) -> bool {
-    wait_for(|| {
-        let text = text();
-        text.contains(" listening on ") || text.contains("address already in use")
-    })
-    .await;
-    text().contains(" listening on ")
 }
 
 /// A host running on a free port until stop is called.
@@ -106,7 +106,7 @@ struct Running {
 
 impl Running {
     async fn start(args: &[&str], getenv: fn(&str) -> String, version: &'static str) -> Running {
-        loop {
+        for attempt in 1.. {
             let address = free_port();
             let out = Buffer::default();
             let (stop, stopped) = oneshot::channel::<()>();
@@ -126,7 +126,7 @@ impl Running {
                 .await
             });
             let watched = out.clone();
-            if listened(&|| watched.text()).await {
+            if listened(&|| watched.text(), attempt).await {
                 return Running {
                     address,
                     out,
@@ -136,6 +136,7 @@ impl Running {
             }
             let _ = done.await;
         }
+        unreachable!()
     }
 
     async fn stop(mut self) -> (i32, String) {
@@ -480,16 +481,17 @@ async fn listening_binary(
     args: &[&str],
     envs: &[(&str, &str)],
 ) -> (std::process::Child, Arc<Mutex<String>>, String) {
-    loop {
+    for attempt in 1.. {
         let address = free_port();
         let mut all = vec!["--listen", address.as_str()];
         all.extend(args);
         let (mut child, text) = spawn_binary(&all, envs);
-        if listened(&|| text.lock().unwrap().clone()).await {
+        if listened(&|| text.lock().unwrap().clone(), attempt).await {
             return (child, text, address);
         }
         let _ = child.wait();
     }
+    unreachable!()
 }
 
 fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, Arc<Mutex<String>>) {
@@ -543,7 +545,7 @@ async fn binary_exits_within_two_seconds_of_sigterm() {
 }
 
 #[test]
-#[ignore = "stamping 9.8.7 needs a second cargo build of the binary from inside the test, which would rebuild the binary the other tests run; published_host_reports_the_supplied_build_version checks the stamp this build carries on stderr and /health"]
+#[ignore = "stamping 9.8.7 needs a second cargo build from inside the test: in this target dir it rebuilds the binary the other tests run, and in its own target dir it is a full cold build; published_host_reports_the_supplied_build_version checks the stamp this build carries on stderr and /health"]
 fn binary_version_comes_from_ldflags() {}
 
 // Kestrel streams answers with a body: chunked on HTTP/1.1, closed on

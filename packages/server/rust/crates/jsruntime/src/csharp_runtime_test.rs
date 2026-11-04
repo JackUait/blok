@@ -479,3 +479,32 @@ fn keeps_the_exception_type_callers_already_catch() {
         other => panic!("{:?}", other.err()),
     }
 }
+
+const ECHO_SCRIPT: &str = "globalThis.blokServerInvoke = function (op, input) { return input; };";
+
+#[tokio::test]
+async fn hands_the_engine_the_last_value_of_a_repeated_key() {
+    let pool = Pool::from_source(ECHO_SCRIPT, 1, Duration::ZERO, 0).expect("from_source");
+    let output = pool
+        .invoke("x", r#"{"a":1,"b":1,"a":2}"#, Duration::ZERO)
+        .await;
+    assert_eq!(output.expect("echo"), r#"{"a":2,"b":1}"#);
+}
+
+// The rewrite runs on the host, so it is held to the engine's budget too.
+// The echo script would hand the text back if it got that far.
+#[tokio::test]
+async fn refuses_a_rewrite_larger_than_the_allocation_budget_and_keeps_serving() {
+    let pool =
+        Pool::from_source(ECHO_SCRIPT, 1, Duration::ZERO, 8 * 1024 * 1024).expect("from_source");
+    let blocks: Vec<String> = (0..100_000)
+        .map(|i| format!(r#"{{"id":"b{i}","type":"paragraph","data":{{"text":"x"}}}}"#))
+        .collect();
+    let input = format!(r#"{{"blocks":[],"blocks":[{}]}}"#, blocks.join(","));
+    want_kind(
+        pool.invoke("x", &input, Duration::ZERO).await,
+        Kind::DocumentTooLarge,
+    );
+    let output = pool.invoke("x", "{}", Duration::ZERO).await;
+    assert_eq!(output.expect("after the refusal"), "{}");
+}

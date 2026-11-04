@@ -136,6 +136,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "blok-collab-convert"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-collab-collabtest",
+ "blok-collab-operation",
+ "blok-dotnet",
+ "blok-jsjson",
+ "blok-jsruntime",
+ "blok-lib0",
+ "blok-yjs",
+ "blok-yjs-yjstest",
+ "getrandom 0.4.3",
+ "sha2",
+]
+
+[[package]]
 name = "blok-collab-docendpoint"
 version = "0.0.0"
 dependencies = [

@@ -146,7 +146,15 @@
     "form-data; name=\"file\"; filename*=bad; filename=\"b.txt\"",
     "form-data; name=\"file\"; filename*=bad",
     "form-data; name=\"file\"; filename*=\"\"",
-    "form-data; name=\"file\"; filename*=utf-16''%41; filename=\"b.txt\""
+    "form-data; name=\"file\"; filename*=utf-16''%41; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=shift_jis''a.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=koi8-r''a.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=ibm437''a.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=gb2312''a.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=utf-8''caf%C3%A9.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=iso-8859-1''caf%E9.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=utf-16be''a%41%E9.txt; filename=\"b.txt\"",
+    "form-data; name=\"file\"; filename*=x-unicode-2-0-utf-7''a.txt; filename=\"b.txt\""
   ],
   "answers": [
     "aA?.txt",
@@ -295,6 +303,14 @@
     "b.txt",
     null,
     null,
-    "�"
+    "�",
+    "b.txt",
+    "b.txt",
+    "b.txt",
+    "b.txt",
+    "café.txt",
+    "café.txt",
+    "a䇩.txt",
+    "b.txt"
   ]
 }

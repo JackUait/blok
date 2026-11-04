@@ -163,6 +163,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "blok-framecheck"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-dotnet",
+ "blok-jsjson",
+ "blok-outbound",
+]
+
+[[package]]
 name = "blok-http"
 version = "0.0.0"
 dependencies = [

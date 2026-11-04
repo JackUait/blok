@@ -30,7 +30,8 @@ func (s Source) String() string {
 	case SourceHTTPEdit:
 		return "HttpEdit"
 	}
-	return "Source(" + strconv.Itoa(int(s)) + ")"
+	// An undefined value prints as its number, as a C# enum does.
+	return strconv.Itoa(int(s))
 }
 
 // Head is CollabDocumentHead.

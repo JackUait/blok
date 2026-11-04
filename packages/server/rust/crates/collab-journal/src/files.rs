@@ -1,11 +1,10 @@
 use std::fs::File;
 use std::io::{self, Write};
-use std::os::unix::fs::FileExt;
 use std::path::Path;
 
 use crate::codec::{decode_hex, lower_hex, sha256};
 use crate::error::Error;
-use crate::lock::{Flags, open_file, read_shared};
+use crate::lock::{FileAt, Flags, open_file, read_shared};
 
 // File names and magics inside a document's journal directory (C#
 // LocalCollabOperationStore).

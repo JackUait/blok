@@ -3,11 +3,12 @@
 //! share, never waiting. Go probed this on macOS with .NET 10: a C# store
 //! and a Go store on one directory refuse each other's live hold because
 //! both use flock. std's try_lock is flock on Unix; the cross-process and
-//! in-process store tests pin that.
+//! in-process store tests pin that. lock_windows.rs is the Windows build of
+//! this module and must keep the same functions.
 
-use std::fs::{self, File, OpenOptions, TryLockError};
+use std::fs::{self, DirBuilder, File, OpenOptions, TryLockError};
 use std::io::{self, Read};
-use std::os::unix::fs::OpenOptionsExt;
+use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -86,4 +87,27 @@ pub(crate) fn read_shared(path: &Path) -> io::Result<Vec<u8>> {
     let mut data = Vec::new();
     file.read_to_end(&mut data)?;
     Ok(data)
+}
+
+/// Reads and writes at an offset without moving the cursor.
+pub(crate) trait FileAt {
+    fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()>;
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
+}
+
+impl FileAt for File {
+    fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
+        std::os::unix::fs::FileExt::write_all_at(self, buf, offset)
+    }
+
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
+        std::os::unix::fs::FileExt::read_exact_at(self, buf, offset)
+    }
+}
+
+/// A directory only its owner may enter.
+pub(crate) fn private_dir_builder() -> DirBuilder {
+    let mut builder = DirBuilder::new();
+    builder.mode(0o700);
+    builder
 }

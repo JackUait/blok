@@ -1,5 +1,3 @@
-use std::os::unix::fs::PermissionsExt;
-
 use blok_jsjson::Node;
 
 use crate::fixture::*;
@@ -97,8 +95,12 @@ fn writes_every_sealed_file_to_the_bytes_c_sharp_writes() {
             text(c, "hex"),
             "case {i}"
         );
-        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600, "case {i}");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "case {i}");
+        }
     }
 }
 

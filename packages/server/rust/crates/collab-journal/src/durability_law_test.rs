@@ -8,7 +8,15 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-const LAW_FILES: [&str; 4] = ["store.rs", "files.rs", "ledger.rs", "lock.rs"];
+// The store's sources. lock_windows.rs is read for the shortening and
+// remover laws only: its sync_directory is a no-op, like .NET's on Windows.
+const LAW_FILES: [&str; 5] = [
+    "store.rs",
+    "files.rs",
+    "ledger.rs",
+    "lock.rs",
+    "lock_windows.rs",
+];
 
 // Every boundary where a completion means durable: (function, handle, the
 // call the flush must follow).
@@ -294,8 +302,16 @@ impl Law {
     }
 
     fn read() -> Law {
+        Law::read_files(&LAW_FILES[..4])
+    }
+
+    fn read_all() -> Law {
+        Law::read_files(&LAW_FILES)
+    }
+
+    fn read_files(files: &[&str]) -> Law {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/src/");
-        let sources: Vec<(String, String)> = LAW_FILES
+        let sources: Vec<(String, String)> = files
             .iter()
             .map(|name| {
                 (
@@ -693,7 +709,7 @@ fn every_durability_boundary_flushes_to_disk() {
 
 #[test]
 fn every_truncation_of_a_live_journal_checks_the_fence_first() {
-    let violations = Law::read().truncation_violations();
+    let violations = Law::read_all().truncation_violations();
     assert!(violations.is_empty(), "{violations:#?}");
 }
 
@@ -717,7 +733,7 @@ fn every_publication_calls_its_durable_steps_in_order() {
 
 #[test]
 fn the_only_remover_callers_are_the_exempt_ones() {
-    assert_eq!(Law::read().remove_callers(), LAW_REMOVE_CALLERS);
+    assert_eq!(Law::read_all().remove_callers(), LAW_REMOVE_CALLERS);
 }
 
 #[test]

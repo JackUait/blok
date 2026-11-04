@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, DirBuilder, File};
+use std::fs::{self, File};
 use std::io::{self, Read, Write};
-use std::os::unix::fs::{DirBuilderExt, FileExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -26,7 +25,8 @@ use crate::ledger::{
     read_ledger,
 };
 use crate::lock::{
-    Flags, READ_ONLY, is_held_elsewhere, open_file, read_shared, remove_file, sync_directory,
+    FileAt, Flags, READ_ONLY, is_held_elsewhere, open_file, private_dir_builder, read_shared,
+    remove_file, sync_directory,
 };
 
 /// Matches the default CollabMaxMessageBytes. The codec's 32 MiB ceiling is
@@ -763,11 +763,8 @@ impl Inner {
         if dir_exists(doc_dir) {
             return Ok(());
         }
-        DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(&self.dir)?;
-        match DirBuilder::new().mode(0o700).create(doc_dir) {
+        private_dir_builder().recursive(true).create(&self.dir)?;
+        match private_dir_builder().create(doc_dir) {
             Err(err) if err.kind() != io::ErrorKind::AlreadyExists => return Err(err),
             _ => {}
         }

@@ -2,13 +2,14 @@
 //! ledger and the local store (C# CollabJournalCodec.cs,
 //! CollabLineageLedger.cs, LocalCollabOperationStore.cs). The bytes are the
 //! same as C# writes, so either server can open the other's directory. Port
-//! of Go `internal/collab/journal`. Unix only, like the working-set store:
-//! the hold is flock(2).
+//! of Go `internal/collab/journal`. The hold is flock(2) on Unix and the
+//! open's share mode on Windows.
 
 mod codec;
 mod error;
 mod files;
 mod ledger;
+#[cfg_attr(windows, path = "lock_windows.rs")]
 mod lock;
 mod store;
 

@@ -2,8 +2,10 @@
 //! LocalCollabOperationHistoryTests for what the scenario fixture cannot
 //! hold: other processes, stale descriptors, OS faults and concurrency.
 
+#[cfg(unix)]
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 
@@ -142,7 +144,7 @@ fn a_stale_session_cannot_append_even_with_its_file_handle_still_open() {
     let before = std::fs::read(&journal_path).unwrap();
 
     // Nothing at the OS level took write access away from the stale side.
-    std::os::unix::fs::FileExt::write_all_at(&old, &[0xff], before.len() as u64).unwrap();
+    crate::lock::FileAt::write_all_at(&old, &[0xff], before.len() as u64).unwrap();
     old.set_len(before.len() as u64).unwrap();
     assert!(matches!(
         twin_append(&mut stale, 2, &[0x02]),
@@ -166,6 +168,7 @@ fn a_stale_session_cannot_append_even_with_its_file_handle_still_open() {
     assert_eq!(ids, [twin_op_id(1), twin_op_id(3)]);
 }
 
+#[cfg(unix)]
 fn python3() -> Option<&'static str> {
     let found = [
         "/usr/bin/python3",
@@ -182,8 +185,10 @@ fn python3() -> Option<&'static str> {
     found
 }
 
+#[cfg(unix)]
 struct Holder(Child);
 
+#[cfg(unix)]
 impl Drop for Holder {
     fn drop(&mut self) {
         let _ = self.0.kill();
@@ -193,6 +198,7 @@ impl Drop for Holder {
 
 // Holds flock(LOCK_EX) from another process: what a live C# store holds,
 // since .NET's FileShare.None is flock on Unix.
+#[cfg(unix)]
 fn start_lock_holder(python: &str, lock_path: &Path) -> Holder {
     let script = "import fcntl, sys, time\n\
         handle = open(sys.argv[1], 'a+')\n\
@@ -213,6 +219,9 @@ fn start_lock_holder(python: &str, lock_path: &Path) -> Holder {
     Holder(child)
 }
 
+// Go skips this on Windows: flock, the python holder and a symlink
+// loop are POSIX-only.
+#[cfg(unix)]
 #[test]
 fn open_while_another_process_holds_the_document_reports_open_elsewhere() {
     let store = new_twin_store();
@@ -251,6 +260,7 @@ fn open_while_another_process_holds_the_document_reports_open_elsewhere() {
 }
 
 // A Rust hold is the same flock another process (and so a C# store) tests for.
+#[cfg(unix)]
 #[test]
 fn a_go_hold_refuses_another_process_flock() {
     let Some(python) = python3() else {
@@ -270,6 +280,7 @@ fn a_go_hold_refuses_another_process_flock() {
     assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "held");
 }
 
+#[cfg(unix)]
 #[test]
 fn purge_does_not_report_a_lock_io_fault_as_a_live_holder() {
     let store = new_twin_store();

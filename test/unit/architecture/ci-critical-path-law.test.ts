@@ -582,6 +582,31 @@ describe('CI critical-path law', () => {
           'yarn vitest run --project=unit test/unit/architecture/react-fixture-import-map-law.test.ts',
         ].join('\n'),
       },
+      // The Rust server's gates: here, so they take no slot of the 20-job cap.
+      {
+        name: 'Cache Rust build',
+        uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
+        with: {
+          path: ['~/.cargo/registry', '~/.cargo/git', 'packages/server/rust/target', ''].join('\n'),
+          key: "rust-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}",
+          'restore-keys': 'rust-${{ runner.os }}-',
+        },
+      },
+      {
+        name: 'Check Rust formatting',
+        'working-directory': 'packages/server/rust',
+        run: 'cargo fmt --check',
+      },
+      {
+        name: 'Lint Rust server',
+        'working-directory': 'packages/server/rust',
+        run: 'cargo clippy --locked --all-targets -- -D warnings',
+      },
+      {
+        name: 'Test Rust server',
+        'working-directory': 'packages/server/rust',
+        run: 'cargo test --locked --workspace',
+      },
     ]);
   });
 

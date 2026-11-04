@@ -508,11 +508,36 @@ jobs:
       - name: Run @bloklabs/server Unit Tests
         run: yarn workspace @bloklabs/server test
 
+
       # One path per vitest run: several paths in one run can silently drop one.
       - name: Run dist unit tests
         run: |
           yarn vitest run --project=unit test/unit/build/
           yarn vitest run --project=unit test/unit/architecture/react-fixture-import-map-law.test.ts
+
+      # The Rust gates live here, not in a job of their own: a new job takes a
+      # slot of the 20-job cap, and this job has room under the 7-minute budget.
+      - name: Cache Rust build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/server/rust/target
+          key: rust-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}
+          restore-keys: rust-${{ runner.os }}-
+
+      - name: Check Rust formatting
+        working-directory: packages/server/rust
+        run: cargo fmt --check
+
+      - name: Lint Rust server
+        working-directory: packages/server/rust
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test Rust server
+        working-directory: packages/server/rust
+        run: cargo test --locked --workspace
 
   validate-spec-coverage:
     name: Validate Spec File Coverage

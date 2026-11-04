@@ -190,6 +190,8 @@ pub(crate) fn entity_tag(lineage: &str, sequence: u64) -> String {
 }
 
 #[cfg(test)]
+mod csharp_test;
+#[cfg(test)]
 mod edit_result_test;
 #[cfg(test)]
 mod history_test;

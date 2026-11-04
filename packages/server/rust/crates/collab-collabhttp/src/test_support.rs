@@ -5,21 +5,24 @@
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::{Duration, SystemTime};
 
+use blok_auth::{Authorization, BoxFuture as AuthFuture, Error as AuthError, User};
 use blok_collab::BoxFuture;
 use blok_collab_convert::{
-    DocConverter, EditOp, RichTextHtml, RichTextHtmlSlot, RuntimeHtmlReader, SlotStep,
+    DocConverter, EditError, EditOp, RichTextHtml, RichTextHtmlSlot, RuntimeHtmlReader, SlotStep,
     TransientError,
 };
 use blok_collab_docendpoint::{Loaded, Projection};
+use blok_collab_journal::{Context, LineageDeleteOutcome, LineageInfo};
 use blok_collab_room::{
-    Converter, Endpoint, Error, HistoryConverter, LocalJournal, Manager, ManagerOptions,
-    Options as RoomOptions,
+    Converter, Endpoint, Error, Headers, HistoryConverter, HistoryStore, LocalJournal, Manager,
+    ManagerOptions, Opened, OperationStore, Options as RoomOptions, PurgeStore, Records,
 };
 use blok_collab_workingset::LocalStore;
-use blok_http::{Config as HttpConfig, Handler, Server};
+use blok_http::{Config as HttpConfig, Handler, Request, ResponseWriter, Server};
 use blok_jsjson::{Node, Object, Options as JsonOptions, Str, Value, parse_node};
 use blok_jsruntime::{Options as PoolOptions, Pool};
 use blok_route::Router;
@@ -175,10 +178,17 @@ fn failure_error(failure: Failure) -> Option<Error> {
     }
 }
 
+/// How the next edit's apply fails: C#'s NextEditFailure.
+pub enum EditFailure {
+    Transient,
+    Refused(&'static str),
+}
+
 /// C# FailingConverter over the real converter.
 pub struct FailingConverter {
     inner: DocConverter<&'static RuntimeHtmlReader<Pool>>,
     state: Mutex<(Failure, Option<String>)>,
+    pub next_edit: Mutex<Option<EditFailure>>,
 }
 
 impl FailingConverter {
@@ -211,7 +221,20 @@ impl Converter for FailingConverter {
         doc: &'a Doc,
         ops: &'a [EditOp],
     ) -> BoxFuture<'a, Result<(), Error>> {
-        Converter::apply_ops(&self.inner, doc, ops)
+        Box::pin(async move {
+            let next = self
+                .next_edit
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .take();
+            match next {
+                Some(EditFailure::Transient) => Err(failure_error(Failure::Transient).unwrap()),
+                Some(EditFailure::Refused(message)) => Err(Error::Convert(
+                    blok_collab_convert::Error::Edit(EditError::new(message)),
+                )),
+                None => Converter::apply_ops(&self.inner, doc, ops).await,
+            }
+        })
     }
     fn migrate_rich_text<'a>(&'a self, doc: &'a Doc) -> BoxFuture<'a, Result<usize, Error>> {
         Converter::migrate_rich_text(&self.inner, doc)
@@ -283,12 +306,21 @@ impl HistoryConverter for FailingConverter {
     }
 }
 
-/// A doc endpoint holding one paragraph "one".
-pub struct HeldDocument;
+/// A doc endpoint holding one paragraph "one"; C#'s FakeDocEndpointClient
+/// counts its loads and can fail them.
+#[derive(Default)]
+pub struct HeldDocument {
+    pub gets: AtomicUsize,
+    pub load_fails: AtomicBool,
+}
 
 impl Endpoint for HeldDocument {
     fn load<'a>(&'a self, _doc_id: &'a str) -> BoxFuture<'a, Result<Loaded, Error>> {
         Box::pin(async move {
+            self.gets.fetch_add(1, Ordering::SeqCst);
+            if self.load_fails.load(Ordering::SeqCst) {
+                return Err(Error::message("the records are down"));
+            }
             let data = parse_node(
                 br#"{"blocks":[{"id":"a","type":"paragraph","data":{"text":"one"}}]}"#,
                 JsonOptions {
@@ -314,18 +346,175 @@ impl Endpoint for HeldDocument {
     }
 }
 
-pub struct HistoryApp {
+fn corrupt() -> Error {
+    Error::Journal(blok_collab_journal::Error::InvalidData {
+        message: "collab: the record is corrupt.".to_owned(),
+        source: None,
+    })
+}
+
+/// The built-in journal with C#'s CorruptRecords and CorruptLineages
+/// switches on its history reads.
+pub struct TestJournal {
+    inner: LocalJournal,
+    pub corrupt_records: AtomicBool,
+    pub corrupt_lineages: AtomicBool,
+}
+
+impl OperationStore for TestJournal {
+    fn open<'a>(
+        &'a self,
+        ctx: &'a Context,
+        doc_id: &'a str,
+    ) -> BoxFuture<'a, Result<Opened, Error>> {
+        self.inner.open(ctx, doc_id)
+    }
+    fn as_purge(&self) -> Option<&dyn PurgeStore> {
+        Some(&self.inner)
+    }
+    fn as_history(&self) -> Option<&dyn HistoryStore> {
+        Some(self)
+    }
+    fn type_name(&self) -> &'static str {
+        "TestJournal"
+    }
+}
+
+impl HistoryStore for TestJournal {
+    fn is_purged(&self, ctx: &Context, doc_id: &str) -> Result<bool, Error> {
+        self.inner.is_purged(ctx, doc_id)
+    }
+    fn list_lineages(&self, ctx: &Context, doc_id: &str) -> Result<Vec<LineageInfo>, Error> {
+        if self.corrupt_lineages.load(Ordering::SeqCst) {
+            return Err(corrupt());
+        }
+        self.inner.list_lineages(ctx, doc_id)
+    }
+    fn read_baseline(
+        &self,
+        ctx: &Context,
+        doc_id: &str,
+        lineage: &str,
+    ) -> Result<Option<Vec<Vec<u8>>>, Error> {
+        self.inner.read_baseline(ctx, doc_id, lineage)
+    }
+    fn read_headers<'a>(
+        &'a self,
+        ctx: &'a Context,
+        doc_id: &'a str,
+        lineage: &'a str,
+    ) -> Headers<'a> {
+        self.inner.read_headers(ctx, doc_id, lineage)
+    }
+    fn read_records<'a>(
+        &'a self,
+        ctx: &'a Context,
+        doc_id: &'a str,
+        lineage: &'a str,
+        through: u64,
+    ) -> Records<'a> {
+        if self.corrupt_records.load(Ordering::SeqCst) {
+            return Box::new(std::iter::once(Err(corrupt())));
+        }
+        self.inner.read_records(ctx, doc_id, lineage, through)
+    }
+    fn delete_lineage(
+        &self,
+        ctx: &Context,
+        doc_id: &str,
+        lineage: &str,
+    ) -> Result<LineageDeleteOutcome, Error> {
+        self.inner.delete_lineage(ctx, doc_id, lineage)
+    }
+}
+
+/// C# RecordingAuthorization: both gates on by default, every call kept as
+/// (gate, user id, doc).
+pub struct RecordingAuthorization {
+    pub allow_read: AtomicBool,
+    pub allow_write: AtomicBool,
+    pub calls: Mutex<Vec<(String, String, String)>>,
+}
+
+impl RecordingAuthorization {
+    pub fn new(read: bool, write: bool) -> Arc<Self> {
+        Arc::new(Self {
+            allow_read: AtomicBool::new(read),
+            allow_write: AtomicBool::new(write),
+            calls: Mutex::default(),
+        })
+    }
+
+    pub fn set(&self, read: bool, write: bool) {
+        self.allow_read.store(read, Ordering::SeqCst);
+        self.allow_write.store(write, Ordering::SeqCst);
+    }
+
+    pub fn calls(&self) -> Vec<(String, String, String)> {
+        self.calls.lock().unwrap().clone()
+    }
+
+    fn answer(&self, gate: &str, user: &User, doc: &str, allowed: &AtomicBool) -> bool {
+        self.calls
+            .lock()
+            .unwrap()
+            .push((gate.to_owned(), user.id.clone(), doc.to_owned()));
+        allowed.load(Ordering::SeqCst)
+    }
+}
+
+impl Authorization for RecordingAuthorization {
+    fn can_read_document<'a>(
+        &'a self,
+        user: &'a User,
+        document_id: &'a str,
+    ) -> AuthFuture<'a, Result<bool, AuthError>> {
+        Box::pin(async move { Ok(self.answer("read", user, document_id, &self.allow_read)) })
+    }
+    fn can_write_document<'a>(
+        &'a self,
+        user: &'a User,
+        document_id: &'a str,
+    ) -> AuthFuture<'a, Result<bool, AuthError>> {
+        Box::pin(async move { Ok(self.answer("write", user, document_id, &self.allow_write)) })
+    }
+}
+
+/// What an app is started with.
+#[derive(Default)]
+pub struct AppOptions {
+    /// The built-in journal; without it the rooms keep no journal.
+    pub journal: bool,
+    pub ticket_mode: bool,
+    pub authorization: Option<Arc<RecordingAuthorization>>,
+    pub retry_backoff: Duration,
+}
+
+pub struct App {
     pub running: Running,
     pub converter: Arc<FailingConverter>,
+    pub endpoint: Arc<HeldDocument>,
+    pub journal: Option<Arc<TestJournal>>,
     pub manager: Manager,
+    pub corrupt: Arc<Mutex<Vec<String>>>,
     keys: Mutex<usize>,
 }
 
 /// C# HistoryApp.StartAsync: the routes over a room manager on the built-in
 /// journal.
-pub async fn start_history() -> HistoryApp {
-    let store = blok_collab_journal::Store::new(temp_dir(), Default::default()).unwrap();
-    let max_update_bytes = store.max_update_bytes();
+pub async fn start_history() -> App {
+    start_app(AppOptions {
+        journal: true,
+        ..AppOptions::default()
+    })
+    .await
+}
+
+/// Test headers the app's own middleware reads, standing in for the
+/// server's guard: X-User signs a caller in (ticket mode takes X-Doc as
+/// the pass's doc claim); Origin is echoed as an allowed CORS origin, and
+/// X-Expose is what the host's own CORS layer exposes first.
+pub async fn start_app(options: AppOptions) -> App {
     let converter = Arc::new(FailingConverter {
         inner: DocConverter {
             now: Box::new(SystemTime::now),
@@ -334,69 +523,118 @@ pub async fn start_history() -> HistoryApp {
             log: None,
         },
         state: Mutex::new((Failure::None, None)),
+        next_edit: Mutex::new(None),
+    });
+    let endpoint = Arc::new(HeldDocument::default());
+    let mut room = RoomOptions {
+        retry_backoff: options.retry_backoff,
+        ..RoomOptions::default()
+    };
+    let journal = options.journal.then(|| {
+        let store = blok_collab_journal::Store::new(temp_dir(), Default::default()).unwrap();
+        room.max_update_bytes = store.max_update_bytes();
+        Arc::new(TestJournal {
+            inner: LocalJournal(store),
+            corrupt_records: AtomicBool::new(false),
+            corrupt_lineages: AtomicBool::new(false),
+        })
     });
     let manager = Manager::new(ManagerOptions {
         store: Arc::new(LocalStore::new(temp_dir(), None)),
-        endpoint: Arc::new(HeldDocument),
+        endpoint: endpoint.clone(),
         converter: converter.clone(),
-        room: RoomOptions {
-            max_update_bytes,
-            ..RoomOptions::default()
-        },
+        room,
         log: None,
-        operations: Some(Arc::new(LocalJournal(store))),
+        operations: journal
+            .clone()
+            .map(|journal| journal as Arc<dyn OperationStore>),
         activity: None,
     });
     let rooms = manager.clone();
+    let corrupt = Arc::new(Mutex::new(Vec::new()));
+    let logged = corrupt.clone();
     let routes = Handlers::new(Config {
-        ticket_mode: false,
-        authorization: None,
+        ticket_mode: options.ticket_mode,
+        authorization: options
+            .authorization
+            .map(|hook| hook as Arc<dyn Authorization>),
         rooms: Arc::new(move || Ok(rooms.clone())),
         max_message_bytes: 8 << 20,
-        corrupt_log: None,
+        corrupt_log: Some(Arc::new(move |doc: &str| {
+            logged.lock().unwrap().push(doc.to_owned());
+        })),
     });
     let mut router = Router::new();
-    let map = |router: &mut Router, pattern: &str, method: &'static str, which: Route| {
+    for (pattern, method, which) in [
+        ("/sync/{doc}/edit", "POST", Route::Edit),
+        ("/sync/{doc}/state", "GET", Route::State),
+        ("/sync/{doc}/reset", "POST", Route::Reset),
+        ("/sync/{doc}/history", "GET", Route::List),
+        (
+            "/sync/{doc}/history/{lineage}/{sequence}",
+            "GET",
+            Route::Read,
+        ),
+        ("/sync/{doc}/history/{lineage}", "DELETE", Route::Delete),
+        (
+            "/sync/{doc}/history/{lineage}/{sequence}/changes",
+            "GET",
+            Route::Changes,
+        ),
+        (
+            "/sync/{doc}/history/{lineage}/{sequence}/restore",
+            "POST",
+            Route::Restore,
+        ),
+    ] {
         let routes = routes.clone();
-        router.handle(pattern, Some(&[method]), move |request, response| {
-            let routes = routes.clone();
-            async move {
-                match which {
-                    Route::Edit => routes.edit(request, response).await,
-                    Route::State => routes.state(request, response).await,
-                    Route::List => routes.history_list(request, response).await,
-                    Route::Read => routes.history_read(request, response).await,
-                    Route::Changes => routes.history_changes(request, response).await,
-                    Route::Restore => routes.history_restore(request, response).await,
+        router.handle(
+            pattern,
+            Some(&[method]),
+            move |mut request: Request, mut response: ResponseWriter| {
+                let routes = routes.clone();
+                if let Some(id) = request.headers().get("X-User").map(str::to_owned) {
+                    let doc = request.headers().get("X-Doc").unwrap_or("").to_owned();
+                    request.extensions.insert(User {
+                        name: id.clone(),
+                        id,
+                        doc,
+                        write: true,
+                        authenticated: true,
+                    });
                 }
-            }
-        });
-    };
-    map(&mut router, "/sync/{doc}/edit", "POST", Route::Edit);
-    map(&mut router, "/sync/{doc}/state", "GET", Route::State);
-    map(&mut router, "/sync/{doc}/history", "GET", Route::List);
-    map(
-        &mut router,
-        "/sync/{doc}/history/{lineage}/{sequence}",
-        "GET",
-        Route::Read,
-    );
-    map(
-        &mut router,
-        "/sync/{doc}/history/{lineage}/{sequence}/changes",
-        "GET",
-        Route::Changes,
-    );
-    map(
-        &mut router,
-        "/sync/{doc}/history/{lineage}/{sequence}/restore",
-        "POST",
-        Route::Restore,
-    );
-    HistoryApp {
+                if let Some(origin) = request.headers().get("Origin") {
+                    response
+                        .headers_mut()
+                        .set("Access-Control-Allow-Origin", origin);
+                }
+                if let Some(exposed) = request.headers().get("X-Expose") {
+                    response
+                        .headers_mut()
+                        .set("Access-Control-Expose-Headers", exposed);
+                }
+                async move {
+                    match which {
+                        Route::Edit => routes.edit(request, response).await,
+                        Route::State => routes.state(request, response).await,
+                        Route::Reset => routes.reset(request, response).await,
+                        Route::List => routes.history_list(request, response).await,
+                        Route::Read => routes.history_read(request, response).await,
+                        Route::Delete => routes.history_delete(request, response).await,
+                        Route::Changes => routes.history_changes(request, response).await,
+                        Route::Restore => routes.history_restore(request, response).await,
+                    }
+                }
+            },
+        );
+    }
+    App {
         running: start(router).await,
         converter,
+        endpoint,
+        journal,
         manager,
+        corrupt,
         keys: Mutex::new(0),
     }
 }
@@ -405,13 +643,30 @@ pub async fn start_history() -> HistoryApp {
 enum Route {
     Edit,
     State,
+    Reset,
     List,
     Read,
+    Delete,
     Changes,
     Restore,
 }
 
-impl HistoryApp {
+impl App {
+    /// One request to /sync/doc{path} with extra header lines.
+    pub async fn request(
+        &self,
+        method: &str,
+        path: &str,
+        headers: &[(&str, &str)],
+        body: &str,
+    ) -> Answer {
+        let mut head = format!("{method} /sync/doc{path} HTTP/1.1");
+        for (name, value) in headers {
+            head.push_str(&format!("\r\n{name}: {value}"));
+        }
+        send(self.running.address, &head, body.as_bytes()).await
+    }
+
     pub async fn send(
         &self,
         method: &str,
@@ -420,14 +675,14 @@ impl HistoryApp {
         if_match: &str,
         body: &str,
     ) -> Answer {
-        let mut head = format!("{method} /sync/doc{path} HTTP/1.1");
+        let mut headers = Vec::new();
         if !key.is_empty() {
-            head.push_str(&format!("\r\nBlok-Idempotency-Key: {key}"));
+            headers.push(("Blok-Idempotency-Key", key));
         }
         if !if_match.is_empty() {
-            head.push_str(&format!("\r\nIf-Match: {if_match}"));
+            headers.push(("If-Match", if_match));
         }
-        send(self.running.address, &head, body.as_bytes()).await
+        self.request(method, path, &headers, body).await
     }
 
     /// Loads the room through /state and answers its lineage.

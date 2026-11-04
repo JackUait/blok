@@ -49,3 +49,44 @@ func TestUploadCapCountsTheWholeChunkedBody(t *testing.T) {
 		t.Fatalf("%d %q (body %s bytes)", response.StatusCode, text, strconv.Itoa(len(body)))
 	}
 }
+
+// UploadEndpoint.cs sets IHttpMaxRequestBodySizeFeature to MaxUploadBytes
+// before it reads, so Kestrel's 30,000,000-byte cap does not apply to it.
+func TestUploadRaisesTheHostsBodyCapBeforeItReads(t *testing.T) {
+	o := DefaultOptions()
+	o.StorageDirectory = t.TempDir()
+	o.PublicURL = "/files"
+	o.MaxUploadBytes = 40_000_000
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raised int64
+	body := &firstRead{Reader: strings.NewReader(multipartBody("a.txt", "one")), onFirst: func() {
+		if raised == 0 {
+			t.Error("the body was read before the cap was raised")
+		}
+	}}
+	request := httptest.NewRequest("POST", "/upload", body)
+	request.Header.Set("Content-Type", "multipart/form-data; boundary="+testBoundary)
+	request = request.WithContext(WithRequestBodyLimit(request.Context(), func(n int64) { raised = n }))
+	recorder := httptest.NewRecorder()
+	s.Handler("").ServeHTTP(recorder, request)
+	if recorder.Code != 200 || raised != 40_000_000 {
+		t.Fatalf("%d %q, cap raised to %d", recorder.Code, recorder.Body.String(), raised)
+	}
+}
+
+type firstRead struct {
+	io.Reader
+	onFirst func()
+	read    bool
+}
+
+func (f *firstRead) Read(p []byte) (int, error) {
+	if !f.read {
+		f.read = true
+		f.onFirst()
+	}
+	return f.Reader.Read(p)
+}

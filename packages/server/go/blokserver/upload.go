@@ -35,6 +35,7 @@ var (
 // counts the whole request body, framing included.
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	max := s.options.MaxUploadBytes
+	SetRequestBodyLimit(r.Context(), max)
 	if r.ContentLength > max {
 		writeText(w, http.StatusRequestEntityTooLarge, "file too large\n")
 		return
@@ -168,6 +169,11 @@ func (c *cappedReader) Read(p []byte) (int, error) {
 				return 0, errTooLarge
 			}
 			if err != nil {
+				// The host's cap is MaxUploadBytes too; its refusal is this one.
+				if errors.Is(err, ErrRequestBodyTooLarge) {
+					c.tooLarge = true
+					return 0, errTooLarge
+				}
 				return 0, err
 			}
 		}
@@ -177,6 +183,10 @@ func (c *cappedReader) Read(p []byte) (int, error) {
 	}
 	n, err := c.r.Read(p)
 	c.remaining -= int64(n)
+	if errors.Is(err, ErrRequestBodyTooLarge) {
+		c.tooLarge = true
+		return n, errTooLarge
+	}
 	return n, err
 }
 

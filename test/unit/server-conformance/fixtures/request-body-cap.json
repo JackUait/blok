@@ -1,0 +1,38 @@
+[
+  {
+    "name": "POST /delete",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "POST /delete with Expect: 100-continue",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "POST /delete with some of the body",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "POST /delete with the wrong type",
+    "response": "HTTP/1.1 415 Unsupported Media Type\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "POST /upload-by-url",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "GET /health never reads the body",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "POST to no route",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\n404 page not found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "POST /sync/{doc}/edit",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "POST /sync/{doc}/reset",
+    "response": "HTTP/1.1 204 No Content\nconnection: close\n\n"
+  }
+]

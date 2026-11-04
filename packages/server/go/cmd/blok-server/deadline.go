@@ -44,13 +44,25 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 				}
 			}
 		}
-		next.ServeHTTP(tracked, r.WithContext(blokserver.WithRequestTimeoutLift(ctx, lift)))
+		next.ServeHTTP(tracked, withBodyLimit(r, blokserver.WithRequestTimeoutLift(ctx, lift), tracked))
 		// By the clock, not ctx.Err(): the read deadline can cancel the
 		// connection's context first, and that reads as Canceled.
 		if !time.Now().Before(deadline) {
 			tracked.timeOut()
 		}
 	})
+}
+
+// withBodyLimit puts Kestrel's body cap on r's body, and the setter a route
+// raises it with in its context.
+func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter) *http.Request {
+	if r.Body == nil || r.Body == http.NoBody {
+		return r.WithContext(ctx)
+	}
+	body := &limitedBody{ReadCloser: r.Body, writer: tracked, limit: maxRequestBodyBytes, length: r.ContentLength}
+	limited := r.WithContext(blokserver.WithRequestBodyLimit(ctx, body.setLimit))
+	limited.Body = body
+	return limited
 }
 
 type trackingWriter struct {
@@ -89,6 +101,18 @@ func (t *trackingWriter) timeOut() bool {
 	t.ResponseWriter.Header().Set("Content-Length", "0")
 	t.ResponseWriter.WriteHeader(http.StatusGatewayTimeout)
 	return true
+}
+
+// refuse is Kestrel ending a request over its body: its bare answer, unless
+// the handler already started one, and nothing the handler writes after.
+func (t *trackingWriter) refuse(status int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.wrote || t.timedOut {
+		return
+	}
+	t.timedOut = true
+	answerAndClose(t.ResponseWriter, status)
 }
 
 func (t *trackingWriter) WriteHeader(status int) {

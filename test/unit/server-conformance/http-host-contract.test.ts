@@ -1202,3 +1202,55 @@ it('refuses request heads at Kestrel\'s limits and grammar', async () => {
 
   compareGolden('request-heads.json', actual);
 }, 120_000);
+
+// Kestrel's MaxRequestBodySize is 30,000,000 bytes on every route but
+// /upload, and it answers when the handler first reads the body. A
+// Content-Length exactly at the cap only waits for the body, so it is a
+// unit test in Go, not a case here.
+const OVER_CAP = 'Content-Length: 30000001\r\n';
+const JSON_TYPE = 'Content-Type: application/json\r\n';
+
+it('caps a request body at 30,000,000 bytes off /upload', async () => {
+  const actual: Array<{ name: string; response: string }> = [];
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-body-'));
+  const endpoint = createServer((_request, response) => {
+    response.writeHead(500);
+    response.end();
+  });
+
+  await new Promise<void>((resolve) => endpoint.listen(0, '127.0.0.1', resolve));
+  const address = endpoint.address();
+
+  if (address === null || typeof address === 'string') {
+    throw new Error('Could not allocate a doc-endpoint port');
+  }
+
+  const cases: Record<string, string> = {
+    'POST /delete': `POST /delete HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+    'POST /delete with Expect: 100-continue': `POST /delete HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}Expect: 100-continue\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /delete with some of the body': `POST /delete HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n{"url":"x"}${' '.repeat(9_000)}`,
+    'POST /delete with the wrong type': `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /upload-by-url': `POST /upload-by-url HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+    'GET /health never reads the body': `GET /health HTTP/1.1\r\nHost: x\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST to no route': `POST /nope HTTP/1.1\r\nHost: x\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /sync/{doc}/edit': `POST /sync/d/edit HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}Blok-Idempotency-Key: k\r\n${OVER_CAP}${CLOSE}\r\n`,
+    'POST /sync/{doc}/reset': `POST /sync/d/reset HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+  };
+
+  try {
+    await withServer([
+      '--auth', 'none', '--storage-dir', join(directory, 'files'), '--rate-limit', '0',
+      '--collab', '--collab-dir', join(directory, 'collab'),
+      '--doc-endpoint', `http://127.0.0.1:${address.port}/docs`,
+    ], async (server) => {
+      for (const [name, request] of Object.entries(cases)) {
+        actual.push({ name, response: await rawExchange(server.baseUrl, Buffer.from(request, 'latin1')) });
+      }
+    });
+  } finally {
+    await new Promise<void>((resolve) => endpoint.close(() => resolve()));
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  compareGolden('request-body-cap.json', actual);
+}, 120_000);

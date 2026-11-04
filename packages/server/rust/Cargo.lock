@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "blok-collab"
+version = "0.0.0"
+
+[[package]]
 name = "blok-collab-operation"
 version = "0.0.0"
 

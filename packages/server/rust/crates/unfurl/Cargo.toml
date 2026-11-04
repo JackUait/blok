@@ -1,0 +1,19 @@
+[package]
+name = "blok-unfurl"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-dotnet = { path = "../dotnet" }
+blok-jsjson = { path = "../jsjson" }
+blok-outbound = { path = "../outbound" }
+html5ever = "0.36"
+
+[dev-dependencies]
+base64 = "0.22"
+
+[lints]
+workspace = true

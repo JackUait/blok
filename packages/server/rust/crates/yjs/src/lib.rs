@@ -29,6 +29,8 @@ mod test_support;
 #[cfg(test)]
 mod capture_test;
 #[cfg(test)]
+mod csharp_test;
+#[cfg(test)]
 mod decode_test;
 #[cfg(test)]
 mod headid_test;

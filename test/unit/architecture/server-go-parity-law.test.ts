@@ -48,7 +48,7 @@ const fullGoRuns = (workflowText: string): string[] => {
 
 type RunnerResult = { status: number | null; stdout: string; stderr: string };
 
-const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go', interop: 'dotnet' };
+const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go', interop: 'dotnet', rust: 'cargo' };
 
 /**
  * With no PATH the build spawn fails, so a runner that accepted the target
@@ -102,7 +102,19 @@ describe('server Go and C# parity law', () => {
     expect(fullGoRuns(read('.github/workflows/ci.yml'))).toHaveLength(1);
   });
 
-  it.each(['csharp', 'go', 'interop'])('lets the runner accept --target %s', (target) => {
+  it('has the Rust workspace and its server binary', () => {
+    expect(existsSync(resolve(repoRoot, 'packages/server/rust/Cargo.toml'))).toBe(true);
+    expect(read('packages/server/rust/crates/blok-server/Cargo.toml')).toMatch(/^name = "blok-server"$/m);
+    expect(read('packages/server/rust/crates/blok-server/Cargo.toml')).toMatch(/^conformance = \[/m);
+  });
+
+  it('refuses --configuration for rust, which has no Debug or Release choice', () => {
+    const result = runRunner(runnerPath, ['--target', 'rust', '--configuration', 'Release']);
+
+    expect(result.stderr).toContain('Usage:');
+  });
+
+  it.each(['csharp', 'go', 'interop', 'rust'])('lets the runner accept --target %s', (target) => {
     expect(runnerAccepts(target, runRunner(runnerPath, ['--target', target]))).toBe(true);
   });
 

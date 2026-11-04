@@ -75,16 +75,23 @@ describe('test-server-conformance', () => {
       .toContain('BLOK_CONFORMANCE_TARGET: options.target,');
   });
 
-  // Go has no Debug or Release build, so the flag would be silently ignored.
-  it('refuses --configuration for the Go target', () => {
-    const result = runWithoutDotnet(['--target', 'go', '--configuration', 'Release']);
+  // Go and Rust have no Debug or Release choice here, so the flag would be silently ignored.
+  it.each(['go', 'rust'])('refuses --configuration for the %s target', (target) => {
+    const result = runWithoutDotnet(['--target', target, '--configuration', 'Release']);
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
     expect(result.stderr).toBe(
-      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go|interop] ' +
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go|interop|rust] ' +
       '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp and interop)]\n',
     );
+  });
+
+  it('builds the Rust target with cargo', () => {
+    const result = runWithoutDotnet(['--target', 'rust']);
+
+    expect(result.stdout).toContain('Conformance suites: all.');
+    expect(result.stderr).toContain('spawn cargo ENOENT');
   });
 
   // CI runs Go on the suites it passes whole, so a name typo must not
@@ -111,11 +118,11 @@ describe('test-server-conformance', () => {
   });
 
   it('refuses an unknown target before any build', () => {
-    const result = runWithoutDotnet(['--target', 'rust']);
+    const result = runWithoutDotnet(['--target', 'ruby']);
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
-    expect(result.stderr).toContain('[--target csharp|go|interop]');
+    expect(result.stderr).toContain('[--target csharp|go|interop|rust]');
   });
 
   // interop builds both servers for the journal handover suite and nothing else.

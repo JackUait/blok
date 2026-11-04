@@ -1,0 +1,17 @@
+[package]
+name = "blok-collab-convert"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-jsjson = { path = "../jsjson" }
+
+[dev-dependencies]
+blok-collab-collabtest = { path = "../collab-collabtest" }
+blok-yjs-yjstest = { path = "../yjs-yjstest" }
+
+[lints]
+workspace = true

@@ -13,6 +13,7 @@ mod graphemes_table;
 mod htmlreader;
 mod keys;
 mod longestkept;
+mod migrate;
 mod richtext;
 mod richtextedit;
 mod richtextinput;
@@ -35,6 +36,7 @@ pub use fields::{FieldsError, RichTextFieldEntry, RichTextFields};
 pub use htmlreader::{HtmlReader, Invoker, MAX_CALL_CHARS, MAX_EDIT_HTML_CHARS, RuntimeHtmlReader};
 pub use keys::{DIFFABLE_TEXT_KEYS, ORDERED_ID_ARRAY_KEYS};
 pub use longestkept::longest_kept_order;
+pub use migrate::{collect_legacy_rich_text, migrate_rich_text};
 pub use richtext::{
     WriteOp, canonical_marks, canonicalize, from_delta, is_rich_text, normalize, normalize_value,
     read_input, same_value, to_write_ops,
@@ -74,6 +76,8 @@ mod csharp_export_test;
 #[cfg(test)]
 mod csharp_graphemes_test;
 #[cfg(test)]
+mod csharp_migrate_test;
+#[cfg(test)]
 mod csharp_richtext_test;
 #[cfg(test)]
 mod csharp_seed_richtext_test;
@@ -101,6 +105,8 @@ mod htmlreader_test;
 mod keys_test;
 #[cfg(test)]
 mod longestkept_test;
+#[cfg(test)]
+mod migrate_test;
 #[cfg(test)]
 mod richtext_test;
 #[cfg(test)]

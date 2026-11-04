@@ -112,7 +112,7 @@ fn object_at<'a>(root: &'a mut Value, path: &[Step]) -> &'a mut Object {
     }
 }
 
-fn with_segments(reader: &RuntimeHtmlReader<Pool>, blocks: &Value) -> Value {
+pub(crate) fn with_segments(reader: &RuntimeHtmlReader<Pool>, blocks: &Value) -> Value {
     let mut copy = blocks.clone();
     let mut found = Vec::new();
     html_fields(items(&copy), &[], &mut found);

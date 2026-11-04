@@ -297,7 +297,7 @@ pub(crate) fn block_data_entries(
 
 /// HTML through the caller's table, then the NUL and depth guards, then the
 /// client's lenient input read.
-fn rich_segments(
+pub(crate) fn rich_segments(
     kind: &[u16],
     key: &[u16],
     v: &SourceValue,

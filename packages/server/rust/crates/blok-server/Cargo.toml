@@ -1,0 +1,18 @@
+[package]
+name = "blok-server"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "blok-server"
+path = "src/main.rs"
+
+[features]
+# The conformance build: the -tags conformance build of the Go host.
+conformance = []
+
+[lints]
+workspace = true

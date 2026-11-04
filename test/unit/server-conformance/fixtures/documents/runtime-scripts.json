@@ -240,12 +240,8 @@
       {
         "op": "odd",
         "expect": {
-          "error": "InvalidDocument"
-        },
-        "goja": {
           "error": "Unknown"
-        },
-        "why": "Jint turns the rejected value into a string for its exception message; String(Object.create(null)) throws a TypeError, and C# classifies that TypeError instead of the value. goja keeps the value."
+        }
       },
       {
         "op": "count",

@@ -4,6 +4,7 @@ using Blok.Server.Documents;
 using Jint;
 using Jint.Constraints;
 using Jint.Native;
+using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
 
@@ -33,6 +34,36 @@ internal sealed class JintBlokRuntime : IBlokRuntime
           writable: true,
           enumerable: false,
           configurable: true,
+        });
+
+        // Jint formats a rejected value into its exception message, and
+        // String(Object.create(null)) throws, so that TypeError would be
+        // classified instead of the value. A rejection is wrapped in an
+        // object that formats as the value would, or safely when it cannot;
+        // the host unwraps it.
+        class Rejection {
+          constructor(value) {
+            this.value = value;
+          }
+
+          toString() {
+            try {
+              return String(this.value);
+            } catch {
+              return 'a value that cannot be written as a string';
+            }
+          }
+        }
+        Object.defineProperty(globalThis, '__blokRejection', { value: Rejection.prototype });
+        Object.defineProperty(globalThis, '__blokServerInvokeSettled', {
+          value: (operation, input) => {
+            const answer = globalThis.blokServerInvoke(operation, input);
+            return answer instanceof Promise
+              ? answer.then(undefined, (error) => {
+                throw new Rejection(error);
+              })
+              : answer;
+          },
         });
       })();
       """;
@@ -221,7 +252,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
       running = true;
       result = (await engine.InvokeAsync(
-          "blokServerInvoke",
+          engine.GetValue("blokServerInvoke") is Function ? "__blokServerInvokeSettled" : "blokServerInvoke",
           cancellationToken,
           operation,
           inputJson)).AsString();
@@ -266,7 +297,15 @@ internal sealed class JintBlokRuntime : IBlokRuntime
      */
     catch (PromiseRejectedException exception)
     {
-      throw new BlokDocumentConversionException(Classify(exception.RejectedValue), exception);
+      var rejected = exception.RejectedValue;
+
+      if (rejected is ObjectInstance wrapper &&
+          ReferenceEquals(wrapper.Prototype, engine.GetValue("__blokRejection")))
+      {
+        rejected = wrapper.Get("value");
+      }
+
+      throw new BlokDocumentConversionException(Classify(rejected), exception);
     }
     catch (JavaScriptException exception)
     {

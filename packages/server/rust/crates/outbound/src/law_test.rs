@@ -10,6 +10,7 @@ use std::path::Path;
 /// Code that opens a connection, or names a type whose only use is to.
 const RESTRICTED: &[&str] = &[
     "TcpStream::connect",
+    "TcpStream::connect_timeout",
     "TcpStream::from_std",
     "UnixStream::connect",
     "TcpSocket",

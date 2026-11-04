@@ -295,3 +295,66 @@ async fn upload_answers413_when_the_host_refuses_between_parts() {
     let got = send(running.address, "POST /upload HTTP/1.1", b"").await;
     assert_eq!((got.status, got.text().as_str()), (413, "file too large\n"));
 }
+
+// UploadEndpoint.cs hands S3 a CountingReadStream that keeps CanSeek, so
+// PreparedPayload hashes the upload's own temp file in place: one spool,
+// not two. The size it reports is the furthest position read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_upload_to_s3_hashes_its_spool_in_place_and_reports_the_file_size() {
+    let content = "blok".repeat(5000);
+    let spooled = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let put = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let (seen_spools, seen_put) = (Arc::clone(&spooled), Arc::clone(&put));
+    let bucket = start(move |mut request: Request, mut response: ResponseWriter| {
+        let (seen_spools, seen_put) = (Arc::clone(&seen_spools), Arc::clone(&seen_put));
+        async move {
+            let spools: Vec<String> = std::fs::read_dir(std::env::temp_dir())
+                .unwrap()
+                .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+                .filter(|name| name.starts_with("blok-s3-"))
+                .collect();
+            *seen_spools.lock().unwrap() = spools;
+            let mut body = Vec::new();
+            if let Some(reader) = request.body_mut() {
+                let _ = reader.read_to_end(&mut body).await;
+            }
+            *seen_put.lock().unwrap() = body;
+            response.set_status(200);
+        }
+    })
+    .await;
+    let server = Server::new(Options {
+        s3_endpoint: format!("http://127.0.0.1:{}", bucket.address.port()),
+        s3_region: "us-east-1".into(),
+        s3_bucket: "media".into(),
+        s3_addressing: "path".into(),
+        s3_access_key: "a".into(),
+        s3_secret_key: "b".into(),
+        s3_bucket_url: "https://cdn.example.com".into(),
+        ..Options::default()
+    })
+    .unwrap();
+    let running = start(server.handler("")).await;
+    let body = multipart_body("a.txt", &content);
+    let got = send(
+        running.address,
+        &format!(
+            "POST /upload HTTP/1.1\r\nContent-Length: {}\r\nContent-Type: multipart/form-data; boundary={TEST_BOUNDARY}",
+            body.len()
+        ),
+        body.as_bytes(),
+    )
+    .await;
+    assert!(
+        got.status == 200 && got.text().contains("\"size\":20000,"),
+        "{} {}",
+        got.status,
+        got.text()
+    );
+    assert_eq!(put.lock().unwrap().as_slice(), content.as_bytes());
+    assert!(
+        spooled.lock().unwrap().is_empty(),
+        "S3 spools {:?}",
+        spooled.lock().unwrap()
+    );
+}

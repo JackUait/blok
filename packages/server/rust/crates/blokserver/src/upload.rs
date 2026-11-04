@@ -10,7 +10,7 @@ use std::task::{Context, Poll};
 use blok_blob::{extension, normalize_extension};
 use blok_http::{BodyError, Request, ResponseWriter};
 use blok_mediatype::{Param, boundary, parse as parse_media_type, sanitize_wire};
-use tokio::io::{AsyncRead, AsyncSeekExt, AsyncWriteExt, ReadBuf};
+use tokio::io::{AsyncRead, AsyncSeek, AsyncSeekExt, AsyncWriteExt, ReadBuf};
 
 use crate::disposition::decode_extended_value;
 use crate::handlers::{Source, body_of};
@@ -112,7 +112,11 @@ pub(crate) async fn upload_from(
             write_text(&mut response, 502, "upload failed\n").await;
             return;
         }
-        let mut counted = Counting { inner: file, n: 0 };
+        let mut counted = Counting {
+            inner: file,
+            position: 0,
+            n: 0,
+        };
         let stored = match inner.blob_store() {
             Ok(store) => {
                 let extension = normalize_extension(extension(&upload.file_name));
@@ -120,7 +124,7 @@ pub(crate) async fn upload_from(
                     .put(
                         &extension,
                         &upload.mime_type,
-                        blok_blob::Body::Stream(Box::new(&mut counted)),
+                        blok_blob::Body::Seekable(Box::new(&mut counted)),
                         &*cancelled,
                     )
                     .await
@@ -237,8 +241,11 @@ impl Content {
 }
 
 /// Counts how far the store read, as CountingReadStream.
+/// CountingReadStream: it keeps seeking, so S3 hashes the spool in place,
+/// and n is the furthest position read, not the bytes read in all.
 struct Counting<'a> {
     inner: &'a mut tokio::fs::File,
+    position: u64,
     n: i64,
 }
 
@@ -250,8 +257,22 @@ impl AsyncRead for Counting<'_> {
     ) -> Poll<std::io::Result<()>> {
         let before = buf.filled().len();
         let polled = Pin::new(&mut *self.inner).poll_read(cx, buf);
-        let read = buf.filled().len() - before;
-        self.n += i64::try_from(read).unwrap_or(0);
+        self.position += (buf.filled().len() - before) as u64;
+        self.n = self.n.max(i64::try_from(self.position).unwrap_or(i64::MAX));
+        polled
+    }
+}
+
+impl AsyncSeek for Counting<'_> {
+    fn start_seek(mut self: Pin<&mut Self>, position: SeekFrom) -> std::io::Result<()> {
+        Pin::new(&mut *self.inner).start_seek(position)
+    }
+
+    fn poll_complete(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<u64>> {
+        let polled = Pin::new(&mut *self.inner).poll_complete(cx);
+        if let Poll::Ready(Ok(position)) = polled {
+            self.position = position;
+        }
         polled
     }
 }

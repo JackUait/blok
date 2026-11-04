@@ -8,6 +8,7 @@ mod handlers;
 mod localfile;
 mod log;
 mod options;
+mod outbound;
 mod server;
 mod upload;
 

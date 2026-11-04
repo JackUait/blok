@@ -190,12 +190,10 @@ async fn authorization_is_not_consulted_off_the_document_routes() {
     )
     .await;
     assert_eq!(got.status, 200, "delete: {}", got.text());
+    let got = send(running.address, "GET /unfurl HTTP/1.1", b"").await;
+    assert_eq!(got.status, 400, "unfurl without a url: {}", got.text());
     assert_eq!(deny.0.load(Ordering::SeqCst), 0);
 }
-
-#[tokio::test]
-#[ignore = "GET /unfurl needs the outbound crate; until it is plugged in the route is not mapped"]
-async fn authorization_is_not_consulted_on_unfurl() {}
 
 // AddBlokServer TryAdds TimeProvider.System, so a host's own clock drives the
 // guard's ticket check.
@@ -253,9 +251,23 @@ async fn new_keeps_its_own_copy_of_the_options() {
     assert_eq!(server.options().rich_text_fields.len(), 1);
 }
 
+// L6: the S3 store spools to Path.GetTempPath() and caps the spool at
+// MaxUploadBytes (BlokServerServiceCollectionExtensions.cs:210-226).
 #[test]
-#[ignore = "the S3 blob store is not ported yet (blob lane)"]
-fn s3_store_spools_to_the_temp_dir_up_to_the_upload_cap() {}
+fn s3_store_spools_to_the_temp_dir_up_to_the_upload_cap() {
+    let options = Options {
+        s3_endpoint: "https://s3.example.com".into(),
+        s3_region: "us-east-1".into(),
+        s3_bucket: "media".into(),
+        s3_access_key: "a".into(),
+        s3_secret_key: "b".into(),
+        max_upload_bytes: 12345,
+        ..Options::default()
+    };
+    let s3 = s3_options(&options);
+    assert_eq!((s3.max_spool_bytes, s3.temp_dir.clone()), (12345, None));
+    assert!(blok_blob::S3::new(s3).is_ok());
+}
 
 #[test]
 #[ignore = "PurgeDocument needs the collab rooms and collabstore, not ported yet"]

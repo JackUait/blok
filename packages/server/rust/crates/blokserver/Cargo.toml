@@ -15,12 +15,15 @@ blok-auth = { path = "../auth" }
 blok-blob = { path = "../blob" }
 blok-blokdocs = { path = "../blokdocs" }
 blok-dotnet = { path = "../dotnet" }
+blok-framecheck = { path = "../framecheck" }
 blok-http = { path = "../http" }
 blok-jsjson = { path = "../jsjson" }
 blok-jsruntime = { path = "../jsruntime" }
 blok-mediatype = { path = "../mediatype" }
+blok-outbound = { path = "../outbound" }
 blok-route = { path = "../route" }
 blok-ticket = { path = "../ticket" }
+blok-unfurl = { path = "../unfurl" }
 getrandom = "0.4"
 tokio = { version = "1", features = ["fs", "io-util", "sync", "time"] }
 

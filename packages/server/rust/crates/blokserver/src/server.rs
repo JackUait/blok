@@ -25,7 +25,8 @@ pub(crate) struct Inner {
     pub public_path: String,
     pub limiter: RateLimiter,
     pub clock: Clock,
-    store: OnceLock<Result<Arc<dyn Store>, String>>,
+    pub(crate) store: OnceLock<Result<Arc<dyn Store>, String>>,
+    fetcher: Mutex<blok_outbound::Fetcher>,
     #[cfg_attr(not(feature = "conformance"), allow(dead_code))]
     pub conformance: Mutex<Conformance>,
 }
@@ -61,6 +62,9 @@ impl Server {
                 limiter,
                 clock,
                 store: OnceLock::new(),
+                fetcher: Mutex::new(blok_outbound::Fetcher::new(Arc::new(
+                    blok_outbound::DefaultPolicy,
+                ))),
                 conformance: Mutex::new(Conformance::default()),
             }),
         })
@@ -80,9 +84,8 @@ impl Server {
     /// the root), every other path answered 404, and local files served at
     /// the public URL path, outside the prefix.
     ///
-    /// Not mapped until their crates are plugged in, so they answer as the
-    /// feature switched off does (404): GET /unfurl, GET /frame-check, POST
-    /// /upload-by-url (outbound) and the /sync routes (collab).
+    /// The /sync routes are not mapped until the collab crates are plugged
+    /// in, so they answer as collaboration switched off does (404).
     pub fn handler(&self, prefix: &str) -> Router {
         let prefix = prefix.trim_end_matches('/');
         let mut router = Router::new();
@@ -118,6 +121,20 @@ impl Server {
             None,
             method_not_allowed("GET, HEAD"),
         );
+        if o.unfurl_enabled {
+            self.shell(
+                &mut router,
+                &format!("{prefix}/unfurl"),
+                "GET",
+                crate::outbound::unfurl,
+            );
+            self.shell(
+                &mut router,
+                &format!("{prefix}/frame-check"),
+                "GET",
+                crate::outbound::frame_check,
+            );
+        }
         if o.has_storage() {
             self.shell(
                 &mut router,
@@ -131,6 +148,14 @@ impl Server {
                 "POST",
                 crate::handlers::delete,
             );
+            if o.unfurl_enabled {
+                self.shell(
+                    &mut router,
+                    &format!("{prefix}/upload-by-url"),
+                    "POST",
+                    crate::outbound::upload_by_url,
+                );
+            }
         }
         router
     }
@@ -179,10 +204,14 @@ impl Server {
 #[cfg(feature = "conformance")]
 impl Server {
     /// Lets outbound fetches reach origin only, so the conformance suite can
-    /// unfurl from a loopback fixture. The outbound crate reads it once it
-    /// is plugged in.
+    /// unfurl from a loopback fixture.
     pub fn use_conformance_origin(&self, origin: &str, port: u16) {
         lock(&self.inner.conformance).origin = Some((origin.to_owned(), port));
+        self.inner
+            .set_policy(Arc::new(blok_outbound::ExactOriginPolicy {
+                origin: origin.to_owned(),
+                port,
+            }));
     }
 
     /// Puts the built-in journal behind collaboration without
@@ -195,6 +224,22 @@ impl Server {
 #[cfg(test)]
 #[path = "server_test.rs"]
 mod tests;
+
+/// The S3 store's settings: the spool is capped at MaxUploadBytes, in the
+/// system temp directory.
+pub(crate) fn s3_options(o: &Options) -> blok_blob::S3Options {
+    blok_blob::S3Options {
+        endpoint: o.s3_endpoint.clone(),
+        region: o.s3_region.clone(),
+        bucket: o.s3_bucket.clone(),
+        access_key: o.s3_access_key.clone(),
+        secret_key: o.s3_secret_key.clone(),
+        public_url: o.s3_bucket_url.clone(),
+        addressing: o.s3_addressing.clone(),
+        max_spool_bytes: u64::try_from(o.max_upload_bytes).unwrap_or(0),
+        temp_dir: None,
+    }
+}
 
 pub(crate) fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex
@@ -209,19 +254,7 @@ impl Inner {
             .get_or_init(|| {
                 let o = &self.options;
                 if !o.s3_bucket.is_empty() {
-                    // The spool cap is MaxUploadBytes, in the system temp directory.
-                    let store = blok_blob::S3::new(blok_blob::S3Options {
-                        endpoint: o.s3_endpoint.clone(),
-                        region: o.s3_region.clone(),
-                        bucket: o.s3_bucket.clone(),
-                        access_key: o.s3_access_key.clone(),
-                        secret_key: o.s3_secret_key.clone(),
-                        public_url: o.s3_bucket_url.clone(),
-                        addressing: o.s3_addressing.clone(),
-                        max_spool_bytes: u64::try_from(o.max_upload_bytes).unwrap_or(0),
-                        temp_dir: None,
-                    })
-                    .map_err(|e| e.to_string())?;
+                    let store = blok_blob::S3::new(s3_options(o)).map_err(|e| e.to_string())?;
                     return Ok(Arc::new(store) as Arc<dyn Store>);
                 }
                 Ok(Arc::new(blok_blob::Local::new(
@@ -230,6 +263,17 @@ impl Inner {
                 )) as Arc<dyn Store>)
             })
             .clone()
+    }
+
+    /// The guarded fetcher. Clones share its four slots.
+    pub fn fetcher(&self) -> blok_outbound::Fetcher {
+        lock(&self.fetcher).clone()
+    }
+
+    /// Swaps the outbound policy. Call it before the first request.
+    #[cfg_attr(not(any(test, feature = "conformance")), allow(dead_code))]
+    pub fn set_policy(&self, policy: Arc<dyn blok_outbound::Policy>) {
+        *lock(&self.fetcher) = blok_outbound::Fetcher::new(policy);
     }
 
     /// BlokServerCors.IsAllowed: an exact, case-insensitive match against a

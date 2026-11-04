@@ -54,9 +54,6 @@ pub fn listen(
         return bind_one("tcp4", SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), port));
     }
     if host == "*" || host == "+" {
-        // Kestrel sets DualMode and Go sets IPV6_V6ONLY=0 itself. std cannot
-        // set it, so this socket is dual-stack only where the OS default is
-        // (macOS; Linux unless net.ipv6.bindv6only=1).
         return match bind_one("tcp", SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), port)) {
             Err(error) if !error.in_use => {
                 bind_one("tcp4", SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), port))
@@ -122,7 +119,12 @@ fn bind_localhost(port: u16) -> Result<Vec<TcpListener>, ListenError> {
 }
 
 fn bind_one(network: &str, address: SocketAddr) -> Result<Vec<TcpListener>, ListenError> {
-    match TcpListener::bind(address) {
+    let bound = if network == "tcp" && address.is_ipv6() {
+        bind_dual_stack(address)
+    } else {
+        TcpListener::bind(address)
+    };
+    match bound {
         Ok(listener) => Ok(vec![listener]),
         Err(error) if error.kind() == io::ErrorKind::AddrInUse => Err(ListenError {
             // Kestrel's AddressInUseException message.
@@ -134,6 +136,20 @@ fn bind_one(network: &str, address: SocketAddr) -> Result<Vec<TcpListener>, List
             os_error_text(&error)
         ))),
     }
+}
+
+/// An IPv6 wildcard that takes IPv4 too: Kestrel sets DualMode and Go sets
+/// IPV6_V6ONLY=0, whatever net.ipv6.bindv6only says. SO_REUSEADDR as std
+/// sets it, so a restart is not refused over TIME_WAIT sockets.
+fn bind_dual_stack(address: SocketAddr) -> io::Result<TcpListener> {
+    use socket2::{Domain, Protocol, Socket, Type};
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, Some(Protocol::TCP))?;
+    socket.set_only_v6(false)?;
+    socket.set_reuse_address(true)?;
+    socket.bind(&address.into())?;
+    // The kernel caps this at somaxconn, which is what Go asks for.
+    socket.listen(4096)?;
+    Ok(socket.into())
 }
 
 /// The OS text without std's " (os error N)" tail, first letter lowered as
@@ -271,6 +287,16 @@ mod tests {
         let bound = listen("*:0", std_parse).unwrap();
         let port = bound[0].local_addr().unwrap().port();
         assert!(std::net::TcpStream::connect(("127.0.0.1", port)).is_ok());
+    }
+
+    #[test]
+    fn an_ipv6_wildcard_is_dual_stack_like_go() {
+        for address in ["*:0", "[::]:0"] {
+            let bound = listen(address, std_parse).unwrap();
+            let socket = socket2::SockRef::from(&bound[0]);
+            assert!(!socket.only_v6().unwrap(), "{address}");
+            assert!(socket.reuse_address().unwrap(), "{address}");
+        }
     }
 
     #[test]

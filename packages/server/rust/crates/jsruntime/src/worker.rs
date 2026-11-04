@@ -6,9 +6,11 @@ use crate::engine::{Engine, Limits};
 use crate::runtime::Error;
 
 /// The native stack of an engine thread. QuickJS stops recursion at
-/// `engine::MAX_STACK`; the rest is room for the frames QuickJS and Rust run
-/// above and below its check.
-pub(crate) const THREAD_STACK: usize = 64 << 20;
+/// `engine::MAX_STACK`; the rest is room for the frames above and below its
+/// check. QuickJS measures the limit from the stack top of the thread that
+/// built the engine (rquickjs moves it only with its "parallel" feature), so
+/// an engine must run on the thread that built it.
+pub(crate) const THREAD_STACK: usize = 32 << 20;
 
 pub(crate) type Job = Box<dyn FnOnce(&mut Engine) + Send>;
 

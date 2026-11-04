@@ -13,7 +13,15 @@ use crate::runtime::{Error, JsError, Stop};
 /// QuickJS's own stack limit. It must stay below the worker thread's stack
 /// (`worker::THREAD_STACK`), or deep recursion overflows the native stack and
 /// aborts the process instead of throwing a RangeError.
+///
+/// rquickjs 0.14 treats any limit above 16 MiB as no limit at all
+/// (`RawRuntime::set_max_stack_size`), so 16 MiB is the most there is. In a
+/// release build it converts about 1500 outline levels to HTML and 3000 to
+/// Markdown (measured); the unoptimized QuickJS of a debug build uses about
+/// 8.6 times the stack per JS frame, so there HTML stops near 500 levels.
 pub(crate) const MAX_STACK: usize = 16 << 20;
+
+const _: () = assert!(MAX_STACK <= 1 << 24);
 
 /// The guards of one pooled call.
 pub(crate) struct Limits {

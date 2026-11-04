@@ -15,8 +15,11 @@ pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 pub const MINIMUM_TIMEOUT: Duration = Duration::from_millis(100);
 /// Bounds how far one call may grow the bytes its engine holds. QuickJS
 /// frees by reference count, so this is close to live heap, like Go's
-/// budget and unlike C#'s count of every allocation.
-pub const DEFAULT_MEMORY_BUDGET: i64 = 1 << 30;
+/// budget and unlike C#'s count of every allocation. C#'s 512 MiB: the
+/// hungriest document measured, a 3 MiB https URL written to Markdown,
+/// needs 112 MiB; every other ops.json big.* case and C#'s long-article
+/// tests need 16 MiB or less.
+pub const DEFAULT_MEMORY_BUDGET: i64 = 512 << 20;
 /// C#'s floor.
 pub const MINIMUM_MEMORY_BUDGET: i64 = 8 << 20;
 
@@ -373,7 +376,7 @@ fn load_guarded(
                 "Loading Blok's runtime bundle into an engine grew its heap past the {budget}-byte \
                  allocation budget this runtime was created with. Loading runs under the same \
                  budget as a conversion, so raise MemoryBudget: the default is \
-                 {DEFAULT_MEMORY_BUDGET} bytes, and {MINIMUM_MEMORY_BUDGET} bytes is the floor \
+                 {DEFAULT_MEMORY_BUDGET} bytes (512 MiB), and {MINIMUM_MEMORY_BUDGET} bytes is the floor \
                  this package accepts at all."
             ),
             err,
@@ -408,6 +411,12 @@ fn classify(result: Result<String, Error>) -> (Result<String, InvokeError>, bool
         Error::Stopped(Stop::Budget) => (Kind::DocumentTooLarge, false),
         // C#'s stack guard throws a JS RangeError and keeps the engine; so
         // does QuickJS's stack limit.
+        // QuickJS concatenates into ropes, so a string that doubles itself
+        // hits the length cap long before the budget. C# counts that growth
+        // and stops it as too large.
+        Error::Js(err) if err.name == "InternalError" && err.message == "string too long" => {
+            (Kind::DocumentTooLarge, true)
+        }
         Error::Js(err) => (classify_name(&err.name), true),
         // No event loop: a promise pending now can never settle. The engine
         // itself finished, so it is kept.

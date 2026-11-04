@@ -18,6 +18,8 @@ pub use pool::{
 pub use runtime::{Error, JsError, Runtime, Stop};
 
 #[cfg(test)]
+mod csharp_runtime_test;
+#[cfg(test)]
 mod guard_test;
 #[cfg(test)]
 mod ops_fixture_test;

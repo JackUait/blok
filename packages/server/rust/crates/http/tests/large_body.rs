@@ -69,3 +69,42 @@ async fn an_unread_body_under_the_cap_is_drained_for_the_next_request() {
         );
     }
 }
+
+// Measured on the C# host: after the answer Kestrel gives an unread body
+// about 6 s at any rate (cut at 6.0 to 7.0 s, kept when done at 5.0 s), then
+// closes.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_unread_body_gets_six_seconds_after_the_answer() {
+    use tokio::io::AsyncWriteExt;
+    let running = start(
+        |request: Request, mut response: ResponseWriter| async move {
+            let _ = response.write(request.path().as_bytes()).await;
+        },
+        Config::default(),
+    )
+    .await;
+    // Done at 5.5 s: kept, and the next request answered.
+    let mut conn = connect(running.address).await;
+    conn.write_all(b"POST /first HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\nab")
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(5500)).await;
+    conn.write_all(b"cdGET /second HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let answer =
+        String::from_utf8_lossy(&read_all(&mut conn, Duration::from_secs(5)).await).into_owned();
+    assert!(answer.contains("/second"), "{answer:?}");
+    // Never sent: closed after about 6 s.
+    let mut conn = connect(running.address).await;
+    conn.write_all(b"POST /first HTTP/1.1\r\nHost: x\r\nContent-Length: 4\r\n\r\n")
+        .await
+        .unwrap();
+    let started = std::time::Instant::now();
+    let _ = read_all(&mut conn, Duration::from_secs(15)).await;
+    let waited = started.elapsed();
+    assert!(
+        waited >= Duration::from_secs(6) && waited < Duration::from_secs(8),
+        "closed after {waited:?}"
+    );
+}

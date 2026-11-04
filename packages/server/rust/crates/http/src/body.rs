@@ -220,7 +220,7 @@ pub(crate) async fn read(
             }
             Step::Progress => continue,
             Step::Wait(have) => {
-                if let Err(error) = wait(exchange, &mut state, have).await {
+                if let Err(error) = wait(exchange, &mut state, have, answer).await {
                     return Err(fail(exchange, &mut state, error, route_set, answer).await);
                 }
             }
@@ -399,9 +399,15 @@ fn chunk_size(line: &[u8]) -> Result<u64, BodyError> {
     Ok(size)
 }
 
-async fn wait(exchange: &Exchange, state: &mut BodyState, have: usize) -> Result<(), BodyError> {
+/// rated is false for the host's drain, which has its own cut-off.
+async fn wait(
+    exchange: &Exchange,
+    state: &mut BodyState,
+    have: usize,
+    rated: bool,
+) -> Result<(), BodyError> {
     let deadline = exchange.body_deadline();
-    let rate = exchange.config.min_body_rate;
+    let rate = exchange.config.min_body_rate.filter(|_| rated);
     let started = Instant::now();
     // The moment the rate fails if no byte comes: past the grace, and past
     // the time the bytes so far are worth at the rate. Only time spent

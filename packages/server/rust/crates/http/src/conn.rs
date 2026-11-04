@@ -353,6 +353,8 @@ fn expire(exchange: &Exchange) {
     }
 }
 
+const DRAIN_GRACE: std::time::Duration = std::time::Duration::from_secs(6);
+
 /// Reads off what the handler left of the body, so the next request can be
 /// read. False: the connection must close instead.
 async fn drain(exchange: &Exchange) -> bool {
@@ -365,16 +367,19 @@ async fn drain(exchange: &Exchange) -> bool {
             return true;
         }
     }
-    // Measured: Kestrel drains it all. The body cap, the minimum data rate
-    // and the request deadline still bound each read here.
+    // Measured: Kestrel drains it all, up to the body cap, and gives it
+    // about 6 s at any rate (cut at 6.0 to 7.0 s, kept when done at 5.0 s).
     let mut chunk = vec![0u8; 16 << 10];
-    loop {
-        match body::read(exchange, &mut chunk, false).await {
-            Ok(0) => return true,
-            Ok(_) => {}
-            Err(_) => return false,
+    let drained = async {
+        loop {
+            match body::read(exchange, &mut chunk, false).await {
+                Ok(0) => return true,
+                Ok(_) => {}
+                Err(_) => return false,
+            }
         }
-    }
+    };
+    timeout(DRAIN_GRACE, drained).await.unwrap_or(false)
 }
 
 /// Half-closes, then reads for a moment before the close, so the peer gets

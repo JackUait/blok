@@ -3233,6 +3233,8 @@
 
 [data-blok-table-cell-blocks] {
   text-align: var(--_blok-start-side, left);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1.6em;
 }
 
 [data-blok-table-cell-blocks][data-blok-cell-placement$="-center"] {

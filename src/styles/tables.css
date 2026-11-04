@@ -85,6 +85,12 @@
  */
 [data-blok-table-cell-blocks] {
   text-align: var(--_blok-start-side, left);
+  /* Off-screen cells skip style and layout: a 100x100 table has 10k of them.
+     `auto` keeps each cell's last rendered size while it is skipped. 1.6em is
+     an empty paragraph's height here; another value moves every row that was
+     never on screen when it first shows. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1.6em;
 }
 
 [data-blok-table-cell-blocks][data-blok-cell-placement$="-center"] {

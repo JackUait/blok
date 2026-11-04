@@ -1463,6 +1463,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // find, slash-search, database, main: ::highlight() rules moved to their roots, so a
     // big table does not resolve every highlight per element.
     const HIGHLIGHT_ROOT_FORM_BYTES = 1_181;
+    // tables.css: off-screen cell containers skip style and layout.
+    const TABLE_OFFSCREEN_CELLS_BYTES = 346;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1835,7 +1837,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + MODALITY_GATE_LEADS_BYTES
       + EMBED_GENERIC_GATE_BYTES
       + EMBED_GENERIC_HOST_BYTES
-      + HIGHLIGHT_ROOT_FORM_BYTES;
+      + HIGHLIGHT_ROOT_FORM_BYTES
+      + TABLE_OFFSCREEN_CELLS_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

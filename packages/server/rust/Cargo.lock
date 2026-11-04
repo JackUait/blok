@@ -178,6 +178,30 @@ name = "blok-collab-operation"
 version = "0.0.0"
 
 [[package]]
+name = "blok-collab-room"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-collab",
+ "blok-collab-collabtest",
+ "blok-collab-convert",
+ "blok-collab-docendpoint",
+ "blok-collab-journal",
+ "blok-collab-operation",
+ "blok-collab-wire",
+ "blok-collab-workingset",
+ "blok-dotnet",
+ "blok-jsjson",
+ "blok-jsruntime",
+ "blok-lib0",
+ "blok-yjs",
+ "blok-yjs-yjstest",
+ "getrandom 0.4.3",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "blok-collab-synchttp"
 version = "0.0.0"
 dependencies = [

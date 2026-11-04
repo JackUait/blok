@@ -429,7 +429,8 @@ pub(crate) fn valid_host(host: &str) -> bool {
         let Some(end) = bytes.iter().position(|&b| b == b']') else {
             return false;
         };
-        if end == 1
+        // Kestrel's IsIPv6HostValid: "[::1]" is the shortest literal it takes.
+        if end < 4
             || !bytes[1..end]
                 .iter()
                 .all(|&b| b.is_ascii_hexdigit() || b == b':' || b == b'.')
@@ -658,13 +659,14 @@ mod tests {
     }
 
     #[test]
-    fn hosts_follow_kestrels_grammar() {
+    fn kestrel_host_grammar() {
         let ok = [
             "", "a:80", "[::1]", "[::1]:80", "a:99999", "1.2.3.4", "a.b.", "a..b", "-a", "a:0",
-            "a:080", " a ",
+            "a:080", " a ", "x", "a.b-c_d~", "a:65536", "a:0080",
         ];
         let bad = [
             "a:", ":80", "[::1", "a:8x", "a%41", "[v1.x]", "[::1]x", "\u{e9}", "a\tb", "a b",
+            "a:b", "a:80:80", "[::]", "[g::1]", "a@b",
         ];
         for host in ok {
             let input = format!("GET / HTTP/1.1\r\nHost: {host}\r\n\r\n");

@@ -285,3 +285,28 @@ async fn shutdown_drains_requests_in_flight() {
         "still accepting"
     );
 }
+
+// A connection hijacked before any answer writes its own bytes as they are.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_hijacked_connection_writes_as_sent() {
+    let handler = |_: Request, response: ResponseWriter| async move {
+        let Ok(mut upgraded) = response.hijack().await else {
+            return;
+        };
+        let _ = tokio::io::AsyncWriteExt::write_all(
+            &mut upgraded.stream,
+            b"HTTP/1.0 413 Request Entity Too Large\r\n\r\n",
+        )
+        .await;
+        let _ = tokio::io::AsyncWriteExt::shutdown(&mut upgraded.stream).await;
+    };
+    let server = start(handler, Config::default()).await;
+    let mut conn = connect(server.address).await;
+    write(&mut conn, b"GET /h HTTP/1.0\r\n\r\n").await;
+    let got = read_all(&mut conn, Duration::from_secs(5)).await;
+    assert!(
+        got.starts_with(b"HTTP/1.0 413 Request Entity Too Large\r\n\r\n"),
+        "{:?}",
+        String::from_utf8_lossy(&got)
+    );
+}

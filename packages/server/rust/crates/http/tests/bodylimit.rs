@@ -164,3 +164,43 @@ async fn a_route_that_set_the_cap_answers_an_over_cap_read() {
     );
     assert_eq!(body_of(&got), "file too large\n");
 }
+
+// After a refusal the socket is drained only briefly: a client that keeps
+// writing finds it closed within two seconds.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_refused_body_closes_after_rst_avoidance() {
+    use std::time::{Duration, Instant};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let reads = |mut request: Request, _: ResponseWriter| async move {
+        let mut sink = Vec::new();
+        let _ = request.body_mut().unwrap().read_to_end(&mut sink).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    };
+    let server = start(reads, Config::default()).await;
+    let mut conn = connect(server.address).await;
+    write(
+        &mut conn,
+        post("Content-Length: 30000001\r\n", "hello").as_bytes(),
+    )
+    .await;
+    let mut answer = Vec::new();
+    let _ = tokio::time::timeout(Duration::from_secs(5), conn.read_to_end(&mut answer)).await;
+    assert!(
+        answer.starts_with(b"HTTP/1.1 413 "),
+        "{:?}",
+        String::from_utf8_lossy(&answer)
+    );
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_secs(4) {
+        if conn.write_all(&[b'x'; 1024]).await.is_err() {
+            let elapsed = started.elapsed();
+            assert!(
+                elapsed <= Duration::from_secs(2),
+                "closed after {elapsed:?}"
+            );
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    panic!("still open after 4 s");
+}

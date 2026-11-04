@@ -537,6 +537,68 @@ test.describe('Table full screen', () => {
     expect(gap?.below).toBeLessThanOrEqual(Math.ceil(gap?.bar ?? 0) + 1);
   });
 
+  test('with the table border scrolled away, the row and column grips stay on the modal edges', async ({ page }) => {
+    const bigData: OutputData = {
+      blocks: [{
+        id: 'tbl',
+        type: 'table',
+        data: {
+          withHeadings: true,
+          colWidths: Array.from({ length: 8 }, () => 300),
+          content: Array.from({ length: 40 }, (_, r) => Array.from({ length: 8 }, (__, c) => `R${r}C${c}`)),
+        },
+      }],
+    };
+
+    await createBlok(page, false, bigData);
+    await openWithButton(page);
+    const modal = page.locator('[data-blok-table-fullscreen]');
+
+    await expect.poll(() => modal.evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
+    await modal.evaluate((el) => {
+      el.scrollTo(0, 400);
+      el.querySelector('[data-blok-table-scroll]')?.scrollTo(500, 0);
+    });
+    const cell = page.getByText('R20C3', { exact: true });
+
+    await cell.hover();
+    const rowGrip = page.locator('[data-blok-table-grip-row="20"]');
+    const colGrip = page.locator('[data-blok-table-grip-col="3"]');
+
+    await expect(rowGrip).toBeVisible();
+    await expect(colGrip).toBeVisible();
+
+    const placed = await modal.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const left = box.left + el.clientLeft;
+      const header = el.querySelector('[data-blok-table-fullscreen-header]')?.getBoundingClientRect();
+      const row = el.querySelector('[data-blok-table-grip-row="20"]')?.getBoundingClientRect();
+      const col = el.querySelector('[data-blok-table-grip-col="3"]')?.getBoundingClientRect();
+
+      if (header === undefined || row === undefined || col === undefined) {
+        return null;
+      }
+      const hits = (r: DOMRect): boolean =>
+        document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('[data-blok-table-grip]') !== null;
+
+      return {
+        rowCentre: row.left + row.width / 2 - left,
+        colCentre: col.top + col.height / 2 - header.bottom,
+        rowOnTop: hits(row),
+        colOnTop: hits(col),
+      };
+    });
+
+    expect(placed).not.toBeNull();
+    // A hovered grip is 16px across: centred 8px in, it shows whole at the edge.
+    expect(placed?.rowCentre).toBeGreaterThanOrEqual(8);
+    expect(placed?.rowCentre).toBeLessThanOrEqual(12);
+    expect(placed?.colCentre).toBeGreaterThanOrEqual(8);
+    expect(placed?.colCentre).toBeLessThanOrEqual(12);
+    expect(placed?.rowOnTop).toBe(true);
+    expect(placed?.colOnTop).toBe(true);
+  });
+
   test('a wide table runs to the modal edges, its start gap scrolls away, and it shows the add-column bar at its scroll end', async ({ page }) => {
     await createBlok(page, false, wideData);
     await openWithButton(page);

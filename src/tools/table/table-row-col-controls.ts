@@ -18,6 +18,17 @@ const GRIP_ROW_ATTR = 'data-blok-table-grip-row';
 /** Present on grips whose row/column is locked in place by a merge. */
 export const GRIP_DRAG_DISABLED_ATTR = 'data-blok-table-grip-drag-disabled';
 const HIDE_DELAY_MS = 150;
+/** Set by table-fullscreen.ts on the modal box and its header. */
+const FULLSCREEN_ATTR = 'data-blok-table-fullscreen';
+const FULLSCREEN_HEADER_SELECTOR = '[data-blok-table-fullscreen-header]';
+
+interface GripFrame {
+  gridOffset: number;
+  visibleStart: number;
+  visibleWidth: number;
+  rowGripX: number;
+  colGripY: number;
+}
 const COL_PILL_WIDTH = 24;
 const COL_PILL_HEIGHT = 4;
 const ROW_PILL_WIDTH = 4;
@@ -151,6 +162,7 @@ export class TableRowColControls {
   private boundMouseLeave: (e: MouseEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
   private boundScrollHandler: (() => void) | null = null;
+  private boundModalScrollHandler: ((e: Event) => void) | null = null;
 
   constructor(options: TableRowColControlsOptions) {
     this.grid = options.grid;
@@ -450,12 +462,25 @@ export class TableRowColControls {
       this.boundScrollHandler = () => this.positionGrips();
       this.scrollContainer.addEventListener('scroll', this.boundScrollHandler);
     }
+    if (this.overlay) {
+      // Scroll does not bubble, so the full-screen modal's own scroll is caught here.
+      this.boundModalScrollHandler = (e: Event) => {
+        if (e.target instanceof HTMLElement && e.target.hasAttribute(FULLSCREEN_ATTR) && e.target.contains(this.grid)) {
+          this.positionGrips();
+        }
+      };
+      document.addEventListener('scroll', this.boundModalScrollHandler, { capture: true, passive: true });
+    }
   }
 
   private detachScrollListener(): void {
     if (this.boundScrollHandler && this.scrollContainer) {
       this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
       this.boundScrollHandler = null;
+    }
+    if (this.boundModalScrollHandler) {
+      document.removeEventListener('scroll', this.boundModalScrollHandler, { capture: true });
+      this.boundModalScrollHandler = null;
     }
   }
 
@@ -613,7 +638,7 @@ export class TableRowColControls {
     i: number,
     edges: number[],
     direction: 'ltr' | 'rtl',
-    frame: { gridOffset: number; visibleStart: number; visibleWidth: number }
+    frame: GripFrame
   ): void {
     if (i + 1 >= edges.length) {
       return;
@@ -624,7 +649,7 @@ export class TableRowColControls {
     const adjustedX = centerX + frame.gridOffset;
     const style = grip.style;
 
-    style.top = `${BORDER_WIDTH / 2}px`;
+    style.top = `${frame.colGripY}px`;
     style.left = `${adjustedX}px`;
 
     if (!this.overlay) {
@@ -666,27 +691,60 @@ export class TableRowColControls {
    * Row grips ride the scroller's inline-start edge, so they stay put while
    * the grid scrolls under them.
    */
-  private getGripFrame(direction: 'ltr' | 'rtl'): { gridOffset: number; visibleStart: number; visibleWidth: number; rowGripX: number } {
+  private getGripFrame(direction: 'ltr' | 'rtl'): GripFrame {
     const scroller = this.overlay ? this.scrollContainer : undefined;
+    const colGripY = BORDER_WIDTH / 2;
 
     if (!scroller) {
       const gridWidth = this.grid.offsetWidth;
 
-      return { gridOffset: 0, visibleStart: 0, visibleWidth: Infinity, rowGripX: gridX(BORDER_WIDTH / 2, gridWidth, direction) };
+      return { gridOffset: 0, visibleStart: 0, visibleWidth: Infinity, rowGripX: gridX(BORDER_WIDTH / 2, gridWidth, direction), colGripY };
     }
 
     if (direction === 'ltr') {
-      return { gridOffset: -scroller.scrollLeft, visibleStart: 0, visibleWidth: scroller.clientWidth, rowGripX: BORDER_WIDTH / 2 };
+      return this.pinToModalEdges({ gridOffset: -scroller.scrollLeft, visibleStart: 0, visibleWidth: scroller.clientWidth, rowGripX: BORDER_WIDTH / 2, colGripY }, direction);
     }
 
     const containerLeft = (this.overlay ?? scroller).getBoundingClientRect().left;
     const scrollerRect = scroller.getBoundingClientRect();
 
-    return {
+    return this.pinToModalEdges({
       gridOffset: this.grid.getBoundingClientRect().left - containerLeft,
       visibleStart: scrollerRect.left - containerLeft,
       visibleWidth: scroller.clientWidth,
       rowGripX: scrollerRect.right - containerLeft - BORDER_WIDTH / 2,
+      colGripY,
+    }, direction);
+  }
+
+  /**
+   * In full screen the modal clips the table, and its scroller runs past the
+   * grid to the modal edges. A grip whose table border scrolled away rides the
+   * modal's visible edge instead: the start side, or just under the header.
+   * Half a hovered grip in, so it shows whole.
+   */
+  private pinToModalEdges(frame: GripFrame, direction: 'ltr' | 'rtl'): GripFrame {
+    const modal = this.grid.closest<HTMLElement>(`[${FULLSCREEN_ATTR}]`);
+    const header = modal?.querySelector(FULLSCREEN_HEADER_SELECTOR) ?? null;
+
+    if (this.overlay === undefined || modal === null || header === null) {
+      return frame;
+    }
+    const origin = this.overlay.getBoundingClientRect();
+    const start = modal.getBoundingClientRect().left + modal.clientLeft - origin.left;
+    const end = start + modal.clientWidth;
+    const inset = GRIP_HOVER_SIZE / 2;
+    const gridStart = frame.gridOffset;
+    const gridEnd = frame.gridOffset + this.grid.offsetWidth;
+
+    return {
+      ...frame,
+      visibleStart: start,
+      visibleWidth: end - start,
+      rowGripX: direction === 'ltr'
+        ? Math.max(gridStart + BORDER_WIDTH / 2, start + inset)
+        : Math.min(gridEnd - BORDER_WIDTH / 2, end - inset),
+      colGripY: Math.max(frame.colGripY, header.getBoundingClientRect().bottom - origin.top + inset),
     };
   }
 

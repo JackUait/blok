@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use blok_collab_convert::{
     DocStructure, EditOp, KeyShape, MapPatch, PAGE_MAPS, PageMap, is_plain_map_value,
-    longest_kept_order, plain_map_values_equal, same_value,
+    longest_kept_order, plain_map_values_equal,
 };
 use blok_dotnet::format_double;
 use blok_jsjson::{
@@ -11,7 +11,7 @@ use blok_jsjson::{
 };
 use blok_yjs::Out;
 
-use crate::changes::{data_of, parent_of, string_of, tunes_of, type_of};
+use crate::changes::{data_of, parent_of, same_data, string_of, tunes_of, type_of};
 
 /// CollabRestorePlanner.Plan: /edit ops that make the live doc equal the
 /// target. Blocks that can stay keep their place; everything else is
@@ -114,7 +114,7 @@ fn plan_blocks(
             continue;
         }
         let target_data = data_of(block);
-        if !same_value(target_data, data_of(exported[id].0)) {
+        if !same_data(target_data, data_of(exported[id].0)) {
             let data = match target_data {
                 Value::Object(_) => to_node(target_data),
                 _ => new_object(Vec::new()),
@@ -269,7 +269,7 @@ fn kept_in_place<'a>(
             || shape.stored_parent.as_ref() != parent
             || !lists_it(parent, id, shapes, &root_order)
             || type_of(live) != type_of(block)
-            || !same_value(&tunes_of(live), &tunes_of(block))
+            || !same_data(&tunes_of(live), &tunes_of(block))
             || (has_target_children.contains(id) && shape.listed.is_none())
         {
             continue;

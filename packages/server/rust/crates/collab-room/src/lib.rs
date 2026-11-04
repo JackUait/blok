@@ -61,6 +61,8 @@ pub const MAX_CHANGE_BYTES: i64 = 4 * 1024 * 1024;
 #[cfg(test)]
 mod bigint_probe_test;
 #[cfg(test)]
+mod bigint_data_test;
+#[cfg(test)]
 mod changes_test;
 #[cfg(test)]
 mod constants_test;

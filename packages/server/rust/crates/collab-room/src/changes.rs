@@ -430,8 +430,71 @@ fn index_by_id(blocks: &[Value]) -> (HashMap<&Str, Indexed<'_>>, Vec<(&Str, Inde
 /// same thing read as changed.
 fn is_block_changed(before: &Object, after: &Object) -> bool {
     type_of(before) != type_of(after)
-        || !same_value(data_of(before), data_of(after))
-        || !same_value(&tunes_of(before), &tunes_of(after))
+        || !same_data(data_of(before), data_of(after))
+        || !same_data(&tunes_of(before), &tunes_of(after))
+}
+
+/// convert's same_value, except that a peer's bigint compares by its
+/// digits: it equals itself and the double of the same value, as C#'s
+/// JsonNode.DeepEquals and CollabRestorePlanner.Canonical read an exported
+/// long. same_value cannot stringify a bigint and reads it as a change, as
+/// Go does.
+pub(crate) fn same_data(left: &Value, right: &Value) -> bool {
+    if !has_bigint(left) && !has_bigint(right) {
+        return same_value(left, right);
+    }
+    let (mut a, mut b) = (String::new(), String::new());
+    write_canonical(left, &mut a).is_some() && write_canonical(right, &mut b).is_some() && a == b
+}
+
+fn has_bigint(value: &Value) -> bool {
+    match value {
+        Value::BigInt(_) => true,
+        Value::Object(object) => object.members().iter().any(|m| has_bigint(&m.value)),
+        Value::Array(items) => items.iter().any(has_bigint),
+        _ => false,
+    }
+}
+
+/// JSON with keys sorted at every level; undefined is skipped as a member
+/// and null in an array, as JSON.stringify writes it.
+fn write_canonical(value: &Value, out: &mut String) -> Option<()> {
+    match value {
+        Value::BigInt(n) => out.push_str(&n.to_string()),
+        Value::Object(object) => {
+            let mut members: Vec<_> = object
+                .members()
+                .iter()
+                .filter(|m| m.value != Value::Undefined)
+                .collect();
+            members.sort_by(|a, b| a.key.cmp(&b.key));
+            out.push('{');
+            for (i, member) in members.into_iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                out.push_str(&stringify(&Value::String(member.key.clone())).ok()?);
+                out.push(':');
+                write_canonical(&member.value, out)?;
+            }
+            out.push('}');
+        }
+        Value::Array(items) => {
+            out.push('[');
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                match item {
+                    Value::Undefined => out.push_str("null"),
+                    item => write_canonical(item, out)?,
+                }
+            }
+            out.push(']');
+        }
+        leaf => out.push_str(&stringify(leaf).ok()?),
+    }
+    Some(())
 }
 
 static NULL: Value = Value::Null;

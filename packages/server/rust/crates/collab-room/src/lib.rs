@@ -63,6 +63,12 @@ mod changes_test;
 #[cfg(test)]
 mod constants_test;
 #[cfg(test)]
+mod csharp_changes_test;
+#[cfg(test)]
+mod csharp_restore_planner_test;
+#[cfg(test)]
+mod csharp_timeline_test;
+#[cfg(test)]
 mod history_fixture_test;
 #[cfg(test)]
 mod lane_test;

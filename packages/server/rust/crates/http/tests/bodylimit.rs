@@ -98,15 +98,27 @@ async fn a_chunked_body_over_the_cap_gets413() {
     )
     .await;
     assert_eq!(over, KESTREL413);
-    let at = raw_answer(
-        server.address,
-        post("Transfer-Encoding: chunked\r\n", "4\r\nhell\r\n0\r\n\r\n").as_bytes(),
-    )
-    .await;
-    assert!(
-        body_of(&at).ends_with("hell unexpected EOF"),
-        "at the cap: {at:?}"
-    );
+    // All 14 bytes of "4\r\nhell\r\n0\r\n\r\n" count, not only the data.
+    for (cap, at_cap) in [(14, true), (13, false)] {
+        let config = Config {
+            max_request_body: cap,
+            ..Config::default()
+        };
+        let server = start(read_then_answer, config).await;
+        let got = raw_answer(
+            server.address,
+            post("Transfer-Encoding: chunked\r\n", "4\r\nhell\r\n0\r\n\r\n").as_bytes(),
+        )
+        .await;
+        if at_cap {
+            assert!(
+                body_of(&got).ends_with("hell unexpected EOF"),
+                "at the cap: {got:?}"
+            );
+        } else {
+            assert_eq!(got, KESTREL413, "one byte over");
+        }
+    }
 }
 
 // POST /upload raises the cap to MaxUploadBytes before it reads, as

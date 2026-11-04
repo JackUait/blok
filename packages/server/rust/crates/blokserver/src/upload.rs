@@ -78,8 +78,15 @@ pub(crate) async fn upload_from(
     let mut reader = MultipartReader::new(capped, &boundary, size);
     let result = read_upload(&mut reader, &mut upload, &cancelled).await;
     let too_slow = reader.r.source.too_slow;
+    // The sticky flag too: a chunked body's framing can trip the cap while
+    // the reader looks for the next part, where a read error is not passed on.
+    let too_large = reader.r.source.too_large;
     let answer = async {
         match result {
+            _ if too_large => {
+                write_text(&mut response, 413, "file too large\n").await;
+                return;
+            }
             Err(ReadErr::TooLarge) => {
                 write_text(&mut response, 413, "file too large\n").await;
                 return;

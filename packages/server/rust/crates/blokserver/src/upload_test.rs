@@ -161,3 +161,137 @@ async fn upload_stores_the_file_part_and_answers_its_metadata() {
     let path = stored[0].as_ref().unwrap().path();
     assert_eq!(std::fs::read_to_string(path).unwrap(), "a=bc");
 }
+
+/// chunkedUpload in http-host-contract.test.ts.
+fn chunked_upload(size: usize, chunks: usize, extension: &str, trailer: &str) -> Vec<u8> {
+    let head = "--b\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n\r\n";
+    let tail = "\r\n--b--\r\n";
+    let body = format!("{head}{}{tail}", "x".repeat(size - head.len() - tail.len()));
+    let step = body.len().div_ceil(chunks);
+    let mut framed = String::new();
+    let mut at = 0;
+    while at < body.len() {
+        let part = &body[at..(at + step).min(body.len())];
+        let ext = if at == 0 { extension } else { "" };
+        framed.push_str(&format!("{:x}{ext}\r\n{part}\r\n", part.len()));
+        at += step;
+    }
+    format!("{framed}0\r\n{trailer}\r\n").into_bytes()
+}
+
+// chunked-body-cap.json, captured from C# at a 1000-byte /upload cap:
+// Kestrel counts every raw byte of a chunked body against the cap (size
+// lines, extensions and CRLFs, and the last CRLF unless a trailer comes
+// first), and /upload answers 413 when the cap trips between parts.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_chunked_bodys_framing_counts_against_the_body_cap() {
+    let raw = std::fs::read(crate::testutil::fixture_path("chunked-body-cap.json")).unwrap();
+    let golden = blok_jsjson::parse_node(&raw, blok_jsjson::Options::default()).unwrap();
+    let want = |name: &str| {
+        let case = golden
+            .items
+            .iter()
+            .find(|c| {
+                c.members.iter().any(|m| {
+                    blok_jsjson::to_string_lossy(m.value.text().unwrap_or_default().units()) == name
+                })
+            })
+            .unwrap_or_else(|| panic!("no golden {name}"));
+        let response = &case
+            .members
+            .iter()
+            .find(|m| m.key().unwrap().to_string() == "response")
+            .unwrap()
+            .value;
+        blok_jsjson::to_string_lossy(response.text().unwrap().units())
+    };
+    let server = upload_server(1000);
+    let running = start(server.handler("")).await;
+    let cases: [(&str, usize, usize, String, &str); 5] = [
+        ("one chunk", 988, 1, String::new(), ""),
+        ("a one-byte extension", 987, 1, ";".into(), ""),
+        (
+            "a 101-byte extension",
+            887,
+            1,
+            format!(";{}", "e".repeat(100)),
+            "",
+        ),
+        ("ten chunks", 935, 10, String::new(), ""),
+        ("a trailer", 990, 1, String::new(), "X-T: 1\r\n"),
+    ];
+    let mut failures = Vec::new();
+    for (name, size, chunks, extension, trailer) in cases {
+        for (label, data) in [("at the cap", size), ("one byte over", size + 1)] {
+            let name = format!("{name}, {label}");
+            let golden = want(&name);
+            let got = send(
+                running.address,
+                "POST /upload HTTP/1.1\r\nContent-Type: multipart/form-data; boundary=b\r\nTransfer-Encoding: chunked",
+                &chunked_upload(data, chunks, &extension, trailer),
+            )
+            .await;
+            let status = golden[9..12].parse::<u16>().unwrap();
+            let body = golden.split("\n\n").nth(1).unwrap_or("");
+            let ok = got.status == status
+                && if status == 413 {
+                    body.contains(&got.text())
+                } else {
+                    let size_field = &body[body.find("\"size\"").unwrap()..];
+                    got.text()
+                        .contains(&size_field[..size_field.find('}').unwrap()])
+                };
+            if !ok {
+                failures.push(format!("{name}: got {} {:?}", got.status, got.text()));
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// Sends data, then the host's over-cap error.
+struct TooLargeAfter(Vec<u8>, bool);
+
+impl Source for TooLargeAfter {
+    fn read<'a>(&'a mut self, buf: &'a mut [u8]) -> BoxFuture<'a, Result<usize, BodyError>> {
+        Box::pin(async move {
+            if self.1 {
+                return Err(BodyError::TooLarge);
+            }
+            self.1 = true;
+            buf[..self.0.len()].copy_from_slice(&self.0);
+            Ok(self.0.len())
+        })
+    }
+}
+
+// A host that counts a chunked body's framing can refuse it after the
+// file's bytes, while the multipart reader looks for the next part. C#
+// still answers 413 "file too large" (UploadEndpoint catches the
+// BadHttpRequestException from any read).
+#[tokio::test]
+async fn upload_answers413_when_the_host_refuses_between_parts() {
+    let server = upload_server(32 << 20);
+    let inner = Arc::clone(&server.inner);
+    let running = start(move |_request: Request, response: ResponseWriter| {
+        let inner = Arc::clone(&inner);
+        async move {
+            let full = multipart_body("a.txt", "one");
+            let source = TooLargeAfter(full.as_bytes()[..full.len() - 4].to_vec(), false);
+            let content_type = format!("multipart/form-data; boundary={TEST_BOUNDARY}");
+            let never: Cancelled = Arc::new(|| false);
+            upload_from(
+                &inner,
+                Box::new(source),
+                None,
+                &content_type,
+                never,
+                response,
+            )
+            .await;
+        }
+    })
+    .await;
+    let got = send(running.address, "POST /upload HTTP/1.1", b"").await;
+    assert_eq!((got.status, got.text().as_str()), (413, "file too large\n"));
+}

@@ -82,12 +82,15 @@ pub(crate) enum Chunk {
 
 pub(crate) struct BodyState {
     pub framing: Framing,
+    /// Raw bytes read, chunked framing included: Kestrel counts them all
+    /// against the cap.
     pub read: u64,
     pub waited: Duration,
     pub failed: Option<BodyError>,
     /// The head's header bytes and lines, then the trailer's on top.
     pub trailer_bytes: usize,
     pub trailer_lines: usize,
+    pub trailer_seen: bool,
 }
 
 impl BodyState {
@@ -99,6 +102,7 @@ impl BodyState {
             failed: None,
             trailer_bytes: head_bytes,
             trailer_lines: head_lines,
+            trailer_seen: false,
         }
     }
 
@@ -218,7 +222,13 @@ pub(crate) async fn read(
             Step::Fail(error) => {
                 return Err(fail(exchange, &mut state, error, route_set, answer).await);
             }
-            Step::Progress => continue,
+            Step::Progress => {
+                if state.read > limit {
+                    return Err(
+                        fail(exchange, &mut state, BodyError::TooLarge, route_set, answer).await,
+                    );
+                }
+            }
             Step::Wait(have) => {
                 if let Err(error) = wait(exchange, &mut state, have, answer).await {
                     return Err(fail(exchange, &mut state, error, route_set, answer).await);
@@ -284,6 +294,7 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                     return Step::Fail(BodyError::Malformed);
                 }
                 inbound.consume(2);
+                state.read += 2;
                 *chunk = Chunk::Size;
                 Step::Progress
             }
@@ -307,6 +318,11 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 }
                 let line = &inbound.buf[..lf - 1];
                 if line.is_empty() {
+                    // Measured: the last CRLF counts against the cap only
+                    // when no trailer line came first.
+                    if !state.trailer_seen {
+                        state.read += (lf + 1) as u64;
+                    }
                     inbound.consume(lf + 1);
                     *chunk = Chunk::Done;
                     return Step::Progress;
@@ -318,6 +334,7 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                     return Step::Fail(error);
                 }
                 state.trailer_lines += 1;
+                state.trailer_seen = true;
                 inbound.consume(lf + 1);
                 Step::Progress
             }
@@ -338,6 +355,7 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                     Err(error) => return Step::Fail(error),
                 };
                 inbound.consume(lf + 1);
+                state.read += (lf + 1) as u64;
                 *chunk = next;
                 Step::Progress
             }

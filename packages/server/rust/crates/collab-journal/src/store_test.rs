@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 
-use blok_collab_operation::{AppendOutcome, AppendResult, Candidate, LookupOutcome, Reset, Source};
+use blok_collab_operation::{
+    AppendOutcome, AppendResult, Candidate, Checkpoint, LookupOutcome, Reset, Source,
+};
 use blok_collab_workingset::{doc_key, new_lineage};
 
 use crate::codec::sha256;
@@ -559,4 +561,174 @@ fn an_append_that_cannot_be_undone_faults_the_session() {
         Err(err @ Error::Faulted(_)) => assert!(err.to_string().contains("could not be flushed")),
         other => panic!("{other:?}"),
     }
+}
+
+fn twin_reset_with(session: &mut Session, epoch: i64, lineage: &str, baseline: u8) {
+    twin_reset(session, epoch, lineage, &[&[baseline]]);
+}
+
+fn journal_names(store: &TwinStore, generation: u64) -> Vec<String> {
+    let prefix = format!("journal.{generation}.");
+    let mut names: Vec<String> = std::fs::read_dir(store.doc_dir())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|n| n.starts_with(&prefix))
+        .collect();
+    names.sort();
+    names
+}
+
+fn seed_three_lineages(store: &TwinStore) -> Vec<String> {
+    let mut session = store.open();
+    let mut lineages = Vec::new();
+    for epoch in 1..=3u32 {
+        let lineage = new_lineage();
+        twin_reset_with(&mut session, epoch.into(), &lineage, 0xb0 + epoch as u8);
+        twin_append(&mut session, epoch * 10 + 1, &[1]).unwrap();
+        twin_append(&mut session, epoch * 10 + 2, &[2]).unwrap();
+        lineages.push(lineage);
+    }
+    session.close();
+    lineages
+}
+
+fn seed_without_ledger(store: &TwinStore) -> String {
+    let lineage = new_lineage();
+    let mut session = store.open();
+    twin_reset_with(&mut session, 1, &lineage, 0xb1);
+    twin_append(&mut session, 1, &[1]).unwrap();
+    session.close();
+    std::fs::remove_file(store.path(LEDGER_FILE_NAME)).unwrap();
+    lineage
+}
+
+// The rotted byte is the version byte itself, with the checksum left
+// alone: only the order of the two checks decides what open says.
+#[test]
+fn a_corrupt_manifest_is_not_reported_as_another_version() {
+    let store = new_twin_store();
+    let mut session = store.open();
+    twin_reset(&mut session, 1, &new_lineage(), &[]);
+    session.close();
+    let path = store.path(MANIFEST_FILE_NAME);
+    let mut manifest = std::fs::read(&path).unwrap();
+    for slot in 0..2 {
+        manifest[slot * MANIFEST_SLOT_SIZE + 4] ^= 0xff;
+    }
+    std::fs::write(&path, manifest).unwrap();
+    let reopened = Store::new(store.root.path(), StoreOptions::default()).unwrap();
+    let message = match reopened.open(&Context::background(), TWIN_DOC) {
+        Err(err) => err.to_string(),
+        Ok((outcome, _)) => panic!("opened: {outcome}"),
+    };
+    assert!(message.contains("decodes"), "{message}");
+    assert!(!message.contains("is version"), "{message}");
+}
+
+#[test]
+fn checkpoint_publication_preserves_journal_history() {
+    let store = new_twin_store();
+    let state = vec![0xc0, 0xc1, 0xc2];
+    let first_digest = sha256(&[1]).to_vec();
+    let ctx = Context::background();
+    let mut session = store.open();
+    twin_reset(&mut session, 1, &new_lineage(), &[]);
+    for n in 1..=5u32 {
+        twin_append(&mut session, n, &[n as u8]).unwrap();
+    }
+    let journal = journal_names(&store, 1);
+    assert_eq!(journal.len(), 1, "{journal:?}");
+    let before = std::fs::read(store.path(&journal[0])).unwrap();
+    session
+        .write_checkpoint(
+            &ctx,
+            &Checkpoint {
+                through: 3,
+                state: state.clone(),
+            },
+        )
+        .unwrap();
+    assert_eq!(before, std::fs::read(store.path(&journal[0])).unwrap());
+    let found = session
+        .find_committed(&ctx, &twin_op_id(1), &first_digest)
+        .unwrap();
+    assert_eq!(found.outcome, LookupOutcome::Duplicate);
+    session
+        .write_checkpoint(
+            &ctx,
+            &Checkpoint {
+                through: 3,
+                state: vec![0xff],
+            },
+        )
+        .unwrap();
+    for through in [2, 6, 0] {
+        let refused = session.write_checkpoint(
+            &ctx,
+            &Checkpoint {
+                through,
+                state: state.clone(),
+            },
+        );
+        assert!(refused.is_err(), "checkpoint through {through} was taken");
+    }
+    session.close();
+    let mut reopened = store.open();
+    let opened = reopened.open_result().clone();
+    assert_eq!(opened.checkpoint, Some(Checkpoint { through: 3, state }));
+    assert_eq!(opened.head.map(|h| h.durable_through), Some(5));
+    let tail: Vec<u64> = opened.tail.iter().map(|r| r.sequence).collect();
+    assert_eq!(tail, [4, 5]);
+    let found = reopened
+        .find_committed(&ctx, &twin_op_id(1), &first_digest)
+        .unwrap();
+    assert_eq!(found.outcome, LookupOutcome::Duplicate);
+}
+
+// A list or read must not write the ledger: a later open would then skip
+// the backfill.
+#[test]
+fn lists_the_current_lineage_of_a_document_never_opened_since_the_upgrade() {
+    let store = new_twin_store();
+    let lineage = seed_without_ledger(&store);
+    let listed = store
+        .store
+        .list_lineages(&Context::background(), TWIN_DOC)
+        .unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].lineage, lineage);
+    assert!(listed[0].current);
+    assert_eq!(listed[0].created_at, None);
+    assert!(!store.path(LEDGER_FILE_NAME).exists());
+}
+
+#[test]
+fn reads_the_current_lineage_of_a_document_never_opened_since_the_upgrade() {
+    let store = new_twin_store();
+    let lineage = seed_without_ledger(&store);
+    let ctx = Context::background();
+    let headers: Vec<u64> = store
+        .store
+        .read_headers(&ctx, TWIN_DOC, &lineage)
+        .map(|h| h.unwrap().sequence)
+        .collect();
+    assert_eq!(headers, [1]);
+    let baseline = store.store.read_baseline(&ctx, TWIN_DOC, &lineage).unwrap();
+    assert_eq!(baseline, Some(vec![vec![0xb1]]));
+    assert!(!store.path(LEDGER_FILE_NAME).exists());
+}
+
+// Without a manifest nothing says which generation is live.
+#[test]
+fn refuses_to_delete_when_the_manifest_is_empty() {
+    let store = new_twin_store();
+    let lineages = seed_three_lineages(&store);
+    std::fs::write(store.path(MANIFEST_FILE_NAME), []).unwrap();
+    let ctx = Context::background();
+    for lineage in [&lineages[2], &lineages[0]] {
+        let outcome = store.store.delete_lineage(&ctx, TWIN_DOC, lineage).unwrap();
+        assert_eq!(outcome, LineageDeleteOutcome::NotFound);
+    }
+    assert_eq!(journal_names(&store, 3).len(), 1);
+    assert_eq!(journal_names(&store, 1).len(), 1);
 }

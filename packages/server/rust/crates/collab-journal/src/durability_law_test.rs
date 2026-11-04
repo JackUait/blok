@@ -412,16 +412,7 @@ impl Law {
     // when no method, `?`, `else` or `;` follows it.
     fn statements_around(&self, at: usize) -> (Vec<Range<usize>>, usize) {
         let t = &self.text;
-        let func = self.owner_of(at);
-        let mut open = func.body.start - 1;
-        let mut k = at;
-        while k > func.body.start {
-            k -= 1;
-            if t[k] == b'{' && matching(t, k) > at {
-                open = k;
-                break;
-            }
-        }
+        let open = self.block_of(at);
         let close = matching(t, open);
         let mut statements = Vec::new();
         let mut start = open + 1;
@@ -453,6 +444,20 @@ impl Law {
         }
         let index = statements.iter().position(|s| s.contains(&at)).unwrap_or(0);
         (statements, index)
+    }
+
+    // The opening brace of the innermost block holding `at`.
+    fn block_of(&self, at: usize) -> usize {
+        let t = &self.text;
+        let func = self.owner_of(at);
+        let mut k = at;
+        while k > func.body.start {
+            k -= 1;
+            if t[k] == b'{' && matching(t, k) > at {
+                return k;
+            }
+        }
+        func.body.start - 1
     }
 
     fn statement_text(&self, range: &Range<usize>) -> String {
@@ -510,13 +515,16 @@ impl Law {
         let flushed = calls.iter().any(|c| {
             let flush = (c.name == "sync_all" && c.receiver == handle)
                 || (c.name == "sync_journal" && c.args == handle);
-            flush && c.span.start > write.span.start && self.result_used(c)
+            flush
+                && c.span.start > write.span.start
+                && self.block_of(c.span.start) == self.block_of(write.span.start)
+                && self.result_used(c)
         });
         if flushed {
             return Vec::new();
         }
         vec![format!(
-            "{function} must call {handle}.sync_all() after its {handle}.{after} and keep its result"
+            "{function} must call {handle}.sync_all() after its {handle}.{after}, in the same block, and keep its result"
         )]
     }
 
@@ -581,9 +589,7 @@ impl Law {
                 })
                 .map(|c| (c.name, c.span.start, true))
                 .collect();
-            let body = String::from_utf8_lossy(&self.text[func.body.clone()]).into_owned();
-            let compact: String = body.chars().filter(|c| !c.is_whitespace()).collect();
-            if compact.contains("truncate:true") {
+            if self.opens_truncating(&func.body) {
                 cuts.push(("truncate: true".to_owned(), func.body.start, false));
             }
             for (operation, at, guardable) in cuts {
@@ -601,6 +607,34 @@ impl Law {
             }
         }
         violations
+    }
+
+    // Whether a `truncate: true` field sits in a struct literal. A pattern
+    // like `Flags { truncate: true, .. }` only tests a flag; a literal's
+    // `..` is followed by its base expression, a pattern's by the brace.
+    fn opens_truncating(&self, body: &Range<usize>) -> bool {
+        let t = &self.text;
+        let compact = |r: Range<usize>| -> String {
+            String::from_utf8_lossy(&t[r])
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .collect()
+        };
+        let mut at = body.start;
+        while at < body.end {
+            if word_at(t, at, "truncate") {
+                let rest = compact(at..body.end);
+                if rest.starts_with("truncate:true") {
+                    let open = self.block_of(at);
+                    let literal = compact(open..matching(t, open) + 1);
+                    if !literal.ends_with("..}") {
+                        return true;
+                    }
+                }
+            }
+            at += 1;
+        }
+        false
     }
 
     fn directory_sync_violations(&self) -> Vec<String> {
@@ -805,4 +839,73 @@ fn the_law_detects_a_directory_sync_that_drops_its_result() {
     let got = Law::of("impl Session { fn reset(&mut self) { sync_directory(d); } }")
         .discarded_directory_syncs();
     assert_eq!(got.len(), 1, "{got:?}");
+}
+
+#[test]
+fn the_law_detects_an_unguarded_remove_in_a_function_that_needs_the_fence() {
+    let got = Law::of(
+        "impl Session { fn reset(&mut self) { remove_file(&baseline_path(d, g, f))?; self.require_fence()?; } }",
+    )
+    .truncation_violations();
+    assert!(got.len() == 1 && got[0].contains("remove_file"), "{got:?}");
+}
+
+#[test]
+fn the_law_accepts_a_guarded_remove() {
+    let got = Law::of(
+        "impl Session { fn reset(&mut self) { self.require_fence()?; remove_file(&baseline_path(d, g, f))?; } }",
+    )
+    .truncation_violations();
+    assert!(got.is_empty(), "{got:?}");
+}
+
+#[test]
+fn the_law_ignores_a_truncate_flag_that_is_only_tested() {
+    for body in [
+        "fn can_create(flags: &Flags) -> bool { flags.write && flags.truncate }",
+        "fn can_create(flags: &Flags) -> bool { matches!(flags, Flags { truncate: true, .. }) }",
+    ] {
+        let got = Law::of(body).truncation_violations();
+        assert!(got.is_empty(), "{body}: {got:?}");
+    }
+}
+
+#[test]
+fn the_law_detects_a_flush_that_does_not_reach_the_disk() {
+    let got =
+        Law::of("fn publish() { manifest_file.write_all_at(b, 0)?; manifest_file.flush()?; }")
+            .flush_violations("publish", "manifest_file", "write_all_at");
+    assert_eq!(got.len(), 1, "{got:?}");
+}
+
+#[test]
+fn the_law_detects_a_flush_stranded_in_another_block() {
+    for body in [
+        "fn publish() { manifest_file.write_all_at(b, 0)?; if verbose { manifest_file.sync_all()?; } }",
+        "fn publish() { if fast { manifest_file.write_all_at(b, 0)?; } manifest_file.sync_all()?; }",
+    ] {
+        let got = Law::of(body).flush_violations("publish", "manifest_file", "write_all_at");
+        assert_eq!(got.len(), 1, "{body}: {got:?}");
+    }
+}
+
+#[test]
+fn the_law_accepts_the_journal_flush_helper() {
+    let got = Law::of(
+        "impl Session { fn append(&mut self) { journal.write_all_at(b, at)?; sync_journal(journal)?; } }",
+    )
+    .flush_violations("Session.append", "journal", "write_all_at");
+    assert!(got.is_empty(), "{got:?}");
+}
+
+#[test]
+fn the_law_detects_a_guarded_cut_in_a_function_that_may_not_truncate() {
+    let got = Law::of(
+        "impl Session { fn write_checkpoint_later(&mut self) { self.require_fence()?; self.journal.set_len(0)?; } }",
+    )
+    .truncation_violations();
+    assert!(
+        got.len() == 1 && got[0].contains("write_checkpoint_later"),
+        "{got:?}"
+    );
 }

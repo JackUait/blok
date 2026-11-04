@@ -1,0 +1,81 @@
+{
+  "name": "room-undo-unreadable-lock-upper-exponent",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "db",
+        "type": "database",
+        "content": [],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v",
+          "views": [
+            {
+              "id": "v",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0",
+              "databaseLocked": 1E2
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "database.setLock",
+            "args": {
+              "id": "db",
+              "locked": true
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "throws": {
+          "type": "InvalidOperation",
+          "message": "A value of type 'System.Int64' cannot be converted to a 'System.Boolean'."
+        }
+      }
+    }
+  ]
+}

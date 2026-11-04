@@ -323,6 +323,12 @@ export const generate = () => {
     ['string', 'yes', 'A value of type \'System.String\' cannot be converted to a \'System.Boolean\'.'],
     ['number', 5, 'A value of type \'System.Int64\' cannot be converted to a \'System.Boolean\'.'],
     ['fraction', 1.5, 'A value of type \'System.Double\' cannot be converted to a \'System.Boolean\'.'],
+    ['whole-fraction', new RawNumber('5.0'), 'A value of type \'System.Int64\' cannot be converted to a \'System.Boolean\'.'],
+    ['exponent', new RawNumber('1e20'), 'A value of type \'System.Double\' cannot be converted to a \'System.Boolean\'.'],
+    ['past-int64', new RawNumber('9223372036854775808'), 'A value of type \'System.Double\' cannot be converted to a \'System.Boolean\'.'],
+    ['negative-zero', new RawNumber('-0'), 'A value of type \'System.Int64\' cannot be converted to a \'System.Boolean\'.'],
+    ['int64-min', new RawNumber('-9223372036854775808'), 'A value of type \'System.Double\' cannot be converted to a \'System.Boolean\'.'],
+    ['upper-exponent', new RawNumber('1E2'), 'A value of type \'System.Int64\' cannot be converted to a \'System.Boolean\'.'],
     ['object', {}, 'The node must be of type \'JsonValue\'.'],
     ['list', [], 'The node must be of type \'JsonValue\'.']]) {
     const schema = [{ ...SCHEMA[0], databaseLocked: flag }];

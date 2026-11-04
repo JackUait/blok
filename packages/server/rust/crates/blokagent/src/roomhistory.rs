@@ -794,7 +794,8 @@ fn page_values(maps: &[PageMap], keys: &BTreeSet<Str>) -> HashMap<Str, Out> {
 }
 
 /// A comparable spelling of a page map value; a shared type only says it
-/// is one.
+/// is one. A value holding one JSON cannot (a peer's bigint) reads as
+/// absent, as the version read leaves it out.
 fn fingerprint(maps: &[PageMap], name: &str, key: &Str) -> Result<String, Error> {
     let Some(value) = map_value(maps, name, key) else {
         return Ok("absent".to_owned());
@@ -805,7 +806,9 @@ fn fingerprint(maps: &[PageMap], name: &str, key: &Str) -> Result<String, Error>
     let Out::Any(plain) = value else {
         unreachable!("a plain map value is an Any");
     };
-    let plain = plain_json(plain).map_err(blok_collab_convert::Error::from)?;
+    let Ok(plain) = plain_json(plain) else {
+        return Ok("absent".to_owned());
+    };
     Ok(String::from_utf8_lossy(&serialized(&plain)?).into_owned())
 }
 

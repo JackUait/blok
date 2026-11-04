@@ -247,6 +247,49 @@ public sealed class BlokAgentVersionHistoryTests
     Assert.Equal(committed, operations.Committed(DocId).Count);
     Assert.Equal("Hello world", JsonNode.Parse((await rooms.StateAsync(DocId)).Json!)!["blocks"]![0]!["data"]!["text"]![0]!["text"]!.GetValue<string>());
   }
+  /// <summary>
+  /// A peer's page-map value with no JSON form (a nested bigint) is left out,
+  /// as the version read leaves it out: no read, restore, compare or agent
+  /// write fails on it. "restore-before" restores the version before the peer
+  /// wrote it, which removes the key.
+  /// </summary>
+  [Theory]
+  [InlineData("history.read")]
+  [InlineData("history.restore")]
+  [InlineData("restore-before")]
+  [InlineData("history.changes")]
+  [InlineData("text.replace")]
+  public async Task APeerValueWithNoJsonFormFailsNoCommand(string name)
+  {
+    var (executor, rooms) = Create(operations);
+    var before = (await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"doc.setTitle","args":{"title":"One"}}]}""", Actor)).Revision;
+    var big = new Blok.Server.Yjs.AnyObject();
+
+    big.Add("n", new System.Numerics.BigInteger(1));
+
+    var peer = await rooms.EditAsync(
+        DocId,
+        [new CollabEditOp.PatchMaps([new CollabMapPatch("values", "x", big, Remove: false)])],
+        Guid.NewGuid().ToString("N"),
+        new byte[32],
+        "human-2");
+    Assert.Equal(CollabEditStatus.Applied, peer.Status);
+    var head = $"{peer.Receipt!.Tag.Lineage}:{peer.Receipt.ServerSequence}";
+    var command = name switch
+    {
+      "history.changes" => $$$"""{"name":"history.changes","args":{"from":"{{{before}}}","to":"{{{head}}}"}}""",
+      "text.replace" => """{"name":"text.replace","args":{"id":"p","with":"Changed"}}""",
+      "restore-before" => $$$"""{"name":"history.restore","args":{"version":"{{{before}}}"}}""",
+      _ => $$$"""{"name":"{{{name}}}","args":{"version":"{{{head}}}"}}""",
+    };
+
+    var execution = await executor.ExecuteInRoomAsync(DocId, $$"""{"commands":[{{command}}]}""", Actor);
+
+    var result = JsonNode.Parse(execution.ResultJson)!;
+    Assert.True(result["ok"]!.GetValue<bool>(), result.ToJsonString());
+  }
+
   /// <summary>Runs a peer's write right after Jint answers a restore, before the room restores.</summary>
   private sealed class PeerWriteAfterRestoreCheck(IBlokRuntime inner) : IBlokRuntime
   {

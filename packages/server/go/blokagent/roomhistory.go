@@ -912,7 +912,8 @@ func pageValues(maps pageMaps, keys map[string]bool) map[string]any {
 }
 
 // fingerprint is a comparable spelling of a page map value; a shared type
-// only says it is one.
+// only says it is one. A value holding one JSON cannot (a peer's bigint)
+// reads as absent, as the version read leaves it out.
 func fingerprint(maps pageMaps, name, key string) (string, error) {
 	value, ok := maps.value(name, key)
 	if !ok {
@@ -923,7 +924,7 @@ func fingerprint(maps pageMaps, name, key string) (string, error) {
 	}
 	plain, err := convert.PlainJSON(value)
 	if err != nil {
-		return "", err
+		return "absent", nil
 	}
 	written, err := serialized(plain)
 	return string(written), err

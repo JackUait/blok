@@ -11,8 +11,8 @@ use crate::room_test::{insert_batch, ok_in, room_agent};
 use crate::roomharness_test::new_test_room;
 use crate::test_support::{lookup, must_parse, string_of};
 use crate::{
-    Actor, Cancel, Error, Execution, Executor, HostFuture, InvokeFuture, Invoker, Options,
-    PageLocation, PageTarget,
+    Actor, Cancel, Execution, Executor, HostFuture, InvokeFuture, Invoker, Options, PageLocation,
+    PageTarget,
 };
 
 // C# room cases the Go package has no twin for. The other C# room cases
@@ -137,19 +137,31 @@ async fn refuses_a_room_source_without_calling_the_stored_runtime_or_page_backen
     assert_unavailable(&execution);
 }
 
-// A peer can leave a bigint nested in a page map value. C# reads the
-// version through RichText.ToJsonNode, which throws InvalidDataException
-// (RichText.cs:318), and nothing on the agent path catches it. Go panics
-// here (convert PlainPageMaps); the executor answers C#'s error.
+// C# BlokAgentVersionHistoryTests.APeerValueWithNoJsonFormFailsNoCommand: a
+// peer's nested bigint in a page map is left out, as the version read leaves
+// it out, so no command fails on it. "restore-before" restores the version
+// before the peer wrote it, which removes the key.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_version_holding_a_nested_bigint_is_invalid_data() {
-    for name in ["history.read", "history.restore", "history.changes"] {
+async fn a_peer_value_with_no_json_form_fails_no_command() {
+    for name in [
+        "history.read",
+        "history.restore",
+        "restore-before",
+        "history.changes",
+        "text.replace",
+    ] {
         let r = new_test_room(false, None);
         r.docs.hold(
             "d",
             r#"{"blocks":[{"id":"p","type":"paragraph","data":{"text":"Hello"}}]}"#,
         );
-        ok_in(&r, "d", &insert_batch("a", "Agent")).await;
+        let before = ok_in(
+            &r,
+            "d",
+            r#"{"commands":[{"name":"doc.setTitle","args":{"title":"One"}}]}"#,
+        )
+        .await
+        .revision;
         let mut held = Object::new();
         held.set(Str::from("n"), Value::BigInt(1));
         let edit = r
@@ -173,26 +185,22 @@ async fn a_version_holding_a_nested_bigint_is_invalid_data() {
             .expect("peer");
         assert_eq!(edit.status, EditStatus::Applied, "{name}: peer");
         let head = r.head("d").await;
-        let args = if name == "history.changes" {
-            format!(r#"{{"from":"{head}","to":"{head}"}}"#)
-        } else {
-            format!(r#"{{"version":"{head}"}}"#)
+        let command = match name {
+            "history.changes" => {
+                format!(
+                    r#"{{"name":"history.changes","args":{{"from":"{before}","to":"{head}"}}}}"#
+                )
+            }
+            "text.replace" => {
+                r#"{"name":"text.replace","args":{"id":"p","with":"Changed"}}"#.to_owned()
+            }
+            "restore-before" => {
+                format!(r#"{{"name":"history.restore","args":{{"version":"{before}"}}}}"#)
+            }
+            _ => format!(r#"{{"name":"{name}","args":{{"version":"{head}"}}}}"#),
         };
-        let outcome = r
-            .executor
-            .execute_in_room(
-                &Cancel::new(),
-                "d",
-                &format!(r#"{{"commands":[{{"name":"{name}","args":{args}}}]}}"#),
-                &room_agent(),
-                None,
-            )
-            .await;
-        match outcome {
-            Err(Error::InvalidData(message))
-                if message == "collab: unsupported value BigInteger in rich text." => {}
-            other => panic!("{name}: {other:?}"),
-        }
+
+        ok_in(&r, "d", &format!(r#"{{"commands":[{command}]}}"#)).await;
     }
 }
 

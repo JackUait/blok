@@ -105,17 +105,27 @@ fn turns_a_lone_surrogate_in_an_error_message_into_u_fffd() {
 }
 
 // The bundle sorts database property names with localeCompare. Jint (ICU),
-// goja and node all give this order (measured); QuickJS compares code units.
+// goja and node all give this order (measured); QuickJS alone compares
+// code units, so the host replaces it.
 #[test]
-#[ignore = "QuickJS's localeCompare compares UTF-16 code units; matching Jint's ICU collation needs a collator crate"]
 fn sorts_with_locale_compare_like_csharp() {
     let mut runtime = Runtime::from_source(
         "locale.js",
-        "globalThis.blokServerInvoke = () => ['b','A','a','\u{e4}','Z','B','\u{e9}','e','f','_x','1','10','2',' x','\u{c4}','\u{df}','ss','Title','title','Due date','Due Date','due'].sort((x, y) => x.localeCompare(y)).join('|');",
+        "globalThis.blokServerInvoke = () => ['b','A','a','\u{e4}','Z','B','\u{e9}','e','f','_x','1','10','2',' x','\u{c4}','\u{df}','ss','Title','title','\u{540d}\u{524d}','\u{3a9}','\u{3c9}','a-b','ab','a b','Due date','Due Date','due'].sort((x, y) => x.localeCompare(y)).join('|');",
     )
     .expect("from_source");
     assert_eq!(
         runtime.invoke("any", "{}").expect("invoke"),
-        " x|_x|1|10|2|a|A|\u{e4}|\u{c4}|b|B|due|Due date|Due Date|e|\u{e9}|f|ss|\u{df}|title|Title|Z"
+        " x|_x|1|10|2|a|A|\u{e4}|\u{c4}|a b|a-b|ab|b|B|due|Due date|Due Date|e|\u{e9}|f|ss|\u{df}|title|Title|Z|\u{3c9}|\u{3a9}|\u{540d}\u{524d}"
     );
+}
+
+#[test]
+fn compares_a_lone_surrogate_as_u_fffd() {
+    let mut runtime = Runtime::from_source(
+        "lone-compare.js",
+        "globalThis.blokServerInvoke = () => [String.fromCharCode(0xd800).localeCompare('\\ufffd'), 'a'.localeCompare(), 'a'.localeCompare('b')].join(',');",
+    )
+    .expect("from_source");
+    assert_eq!(runtime.invoke("any", "{}").expect("invoke"), "0,-1,-1");
 }

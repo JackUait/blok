@@ -7,6 +7,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+icu_collator = "2.4.0"
 rquickjs = "=0.14.0"
 tokio = { version = "1", features = ["sync"] }
 

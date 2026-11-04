@@ -1,9 +1,11 @@
-use std::sync::Arc;
+use std::cmp::Ordering;
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
+use icu_collator::{Collator, CollatorBorrowed};
 use rquickjs::convert::Coerced;
-use rquickjs::function::This;
+use rquickjs::function::{Opt, This};
 use rquickjs::promise::PromiseState;
 use rquickjs::{Context, Ctx, Function, Object, Persistent, Value};
 
@@ -81,6 +83,7 @@ impl Engine {
                 .get::<_, Object>("String")?
                 .get::<_, Object>("prototype")?
                 .get("toWellFormed")?;
+            install_locale_compare(&ctx)?;
             let well_formed = Persistent::save(&ctx, well_formed);
             let mut options = rquickjs::context::EvalOptions::default();
             options.filename = Some(name.to_owned());
@@ -275,4 +278,55 @@ fn to_rust_string<'js>(
         }
         Err(err) => Err(engine_error(err)),
     }
+}
+
+/// ICU's root collation. Jint compares with the host's current culture, and
+/// the C# host on Linux runs ICU under the invariant culture, which is root.
+static COLLATOR: LazyLock<CollatorBorrowed<'static>> = LazyLock::new(|| {
+    Collator::try_new(Default::default(), Default::default())
+        .expect("icu_collator: compiled root collation data")
+});
+
+/// QuickJS's localeCompare compares UTF-16 code units; Jint (ICU), goja
+/// and node collate. A lone surrogate compares as U+FFFD; Jint throws on it.
+// The closure must not hold a JS value: QuickJS's GC cannot see into it,
+// and the engine would abort on free with a leaked object.
+fn install_locale_compare<'js>(ctx: &Ctx<'js>) -> rquickjs::Result<()> {
+    let compare = Function::new(
+        ctx.clone(),
+        |ctx: Ctx<'js>,
+         this: This<Coerced<rquickjs::String<'js>>>,
+         that: Opt<Coerced<rquickjs::String<'js>>>|
+         -> rquickjs::Result<i32> {
+            let text = |value: rquickjs::String<'js>| match value.to_string() {
+                Ok(text) => Ok(text),
+                Err(_) => ctx
+                    .globals()
+                    .get::<_, Object>("String")?
+                    .get::<_, Object>("prototype")?
+                    .get::<_, Function>("toWellFormed")?
+                    .call::<_, rquickjs::String>((This(value),))?
+                    .to_string(),
+            };
+            let left = text(this.0.0)?;
+            let right = match that.0 {
+                Some(Coerced(that)) => text(that)?,
+                None => "undefined".to_owned(),
+            };
+            Ok(match COLLATOR.compare(&left, &right) {
+                Ordering::Less => -1,
+                Ordering::Equal => 0,
+                Ordering::Greater => 1,
+            })
+        },
+    )?;
+    let descriptor = Object::new(ctx.clone())?;
+    descriptor.set("value", compare)?;
+    descriptor.set("writable", true)?;
+    descriptor.set("configurable", true)?;
+    let object: Object = ctx.globals().get("Object")?;
+    let define: Function = object.get("defineProperty")?;
+    let prototype: Object = ctx.globals().get::<_, Object>("String")?.get("prototype")?;
+    define.call::<_, Value>((prototype, "localeCompare", descriptor))?;
+    Ok(())
 }

@@ -389,6 +389,61 @@ public sealed class JintBlokRuntimeTests
   }
 
   /// <summary>
+  /// How deep a document may nest must not depend on who calls. The stack
+  /// guard measures the calling thread's native stack, so a call from a thread
+  /// that had already spent 512 KiB stopped at about 100
+  /// outline levels to HTML, and one from a fresh thread at about 170. Every
+  /// call now runs on an engine thread of its own fixed stack.
+  /// </summary>
+  [Fact]
+  public void ConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack()
+  {
+    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(2));
+    var blocks = Enumerable.Range(0, 1000).Select(depth => new
+    {
+      id = $"n{depth}",
+      parent = depth == 0 ? null : $"n{depth - 1}",
+      type = "list",
+      data = new { style = "unordered", text = $"level {depth}" },
+    });
+    var input = JsonSerializer.Serialize(new { blocks });
+    string? output = null;
+    Exception? failure = null;
+    var caller = new Thread(() =>
+    {
+      try
+      {
+        output = Spend(512, () => Convert(runtime, input));
+      }
+      catch (Exception exception)
+      {
+        failure = exception;
+      }
+    });
+
+    caller.Start();
+    caller.Join();
+
+    Assert.Null(failure);
+    Assert.Contains("level 999", output, StringComparison.Ordinal);
+  }
+
+#pragma warning disable xUnit1031 // The call must start on the caller's own spent stack, not on an await continuation.
+  private static string Convert(JintBlokRuntime runtime, string input) =>
+      runtime.InvokeAsync("blocksToHtml", input).AsTask().GetAwaiter().GetResult();
+#pragma warning restore xUnit1031
+
+  [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+  private static string Spend(int kibibytes, Func<string> then)
+  {
+    Span<byte> frame = stackalloc byte[1024];
+
+    frame[0] = 1;
+
+    return kibibytes <= 0 ? then() : Spend(kibibytes - frame[0], then);
+  }
+
+  /// <summary>
   /// The regression its plain-prose sibling above cannot catch. That document's
   /// fields are bare words — no <c>&lt;</c>, no <c>&amp;</c> — so every one of
   /// them takes the fast path that skips the HTML tokenizer entirely, which

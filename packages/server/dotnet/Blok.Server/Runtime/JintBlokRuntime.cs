@@ -251,11 +251,9 @@ internal sealed class JintBlokRuntime : IBlokRuntime
       });
 
       running = true;
-      result = (await engine.InvokeAsync(
-          engine.GetValue("blokServerInvoke") is Function ? "__blokServerInvokeSettled" : "blokServerInvoke",
-          cancellationToken,
-          operation,
-          inputJson)).AsString();
+      var entry = engine.GetValue("blokServerInvoke") is Function ? "__blokServerInvokeSettled" : "blokServerInvoke";
+      result = (await OnEngineStack(
+          () => engine.InvokeAsync(entry, cancellationToken, operation, inputJson).GetAwaiter().GetResult())).AsString();
     }
     /*
      * NEVER wrapped: a caller's own cancellation has to stay cancellation, or
@@ -414,6 +412,45 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     {
       deadline.End();
     }
+  }
+
+  /*
+   * The stack guard stops recursion where the CALLING thread's native stack
+   * runs low, so on a thread-pool thread the depth a document could
+   * nest depended on how deep the caller already was and on JIT tiering:
+   * 26 to 175 outline levels to HTML, measured, against a fixture that needs
+   * 120. Every call runs on a fresh thread of its own fixed stack instead,
+   * where the reachable depth no longer depends on the caller. 32 MiB, as
+   * the Rust server's engine thread; it converted 2405 levels to HTML
+   * whatever ran before it (16 MiB reached 2020). A thread costs about
+   * 0.1 ms to start, against about 0.35 ms for the smallest conversion.
+   */
+  private const int EngineStackBytes = 32 << 20;
+
+  private static Task<JsValue> OnEngineStack(Func<JsValue> run)
+  {
+    var done = new TaskCompletionSource<JsValue>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var thread = new Thread(
+        () =>
+        {
+          try
+          {
+            done.SetResult(run());
+          }
+          catch (Exception exception)
+          {
+            done.SetException(exception);
+          }
+        },
+        EngineStackBytes)
+    {
+      IsBackground = true,
+      Name = "blok-jint",
+    };
+
+    thread.Start();
+
+    return done.Task;
   }
 
   private static OperationDeadlineConstraint Deadline(Engine engine)

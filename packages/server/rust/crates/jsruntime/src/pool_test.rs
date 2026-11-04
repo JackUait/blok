@@ -454,3 +454,28 @@ async fn takes_the_defaults_for_zero_options() {
     assert_eq!(size, want);
     assert_eq!(pool.free_engines().await, want);
 }
+
+#[tokio::test]
+#[ignore = "QuickJS's out-of-memory error is catchable, and rquickjs's allocator hook needs unsafe code, which the workspace forbids"]
+async fn a_caught_out_of_memory_still_stops_the_call() {
+    let script = "globalThis.blokServerInvoke = () => { try { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4] }); } } catch (e) { return 'caught ' + e; } };";
+    let pool =
+        Pool::from_source(script, 1, Duration::from_secs(30), 64 << 20).expect("from_source");
+    want_kind(
+        pool.invoke("grow", "", Duration::ZERO).await,
+        Kind::DocumentTooLarge,
+    );
+}
+
+#[tokio::test]
+#[ignore = "QuickJS throws null when it cannot even allocate its out-of-memory error, so a budgeted null throw reads as over budget"]
+async fn a_script_that_throws_null_is_unknown() {
+    let pool = Pool::from_source(
+        "globalThis.blokServerInvoke = () => { throw null; };",
+        1,
+        Duration::ZERO,
+        0,
+    )
+    .expect("from_source");
+    want_kind(pool.invoke("any", "", Duration::ZERO).await, Kind::Unknown);
+}

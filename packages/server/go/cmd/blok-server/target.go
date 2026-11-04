@@ -309,8 +309,13 @@ func (s *targetStream) swapHeaderLine(line []byte) bool {
 	if bytes.EqualFold(name, []byte("Content-Length")) {
 		s.lengthLines++
 	}
-	// endHead reads and rewrites the codings; their bytes stay as sent.
+	// endHead reads and rewrites the codings; their bytes stay as sent. The
+	// rewrite blanks the value, so first refuse what Kestrel refuses in any
+	// value and http.ReadRequest would otherwise never see.
 	if bytes.EqualFold(name, []byte("Transfer-Encoding")) {
+		if bytes.ContainsAny(value, "\x00\r") {
+			return false
+		}
 		s.codings = append(s.codings, codingLine{
 			line: s.headerLines - 1, at: len(s.head) - len(line), nameLength: len(name), valueLength: len(value),
 		})

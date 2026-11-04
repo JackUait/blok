@@ -50,6 +50,12 @@ func TestTransferCodingsFollowKestrel(t *testing.T) {
 		{"only commas", post("Transfer-Encoding: ,\r\n"), kestrel400},
 		{"a control byte in an earlier coding", post("Transfer-Encoding: g\x01zip, chunked\r\n"), read},
 		{"a control byte in a dropped line", post("Transfer-Encoding: g\x01zip\r\nTransfer-Encoding: chunked\r\n"), read},
+		// The rewrite must not clean bytes Kestrel refuses in any value.
+		{"NUL in an earlier coding", post("Transfer-Encoding: g\x00zip, chunked\r\n"), kestrel400},
+		{"NUL in a dropped line", post("Transfer-Encoding: \x00\r\nTransfer-Encoding: chunked\r\n"), kestrel400},
+		{"CR in an earlier coding", post("Transfer-Encoding: g\rzip, chunked\r\n"), kestrel400},
+		{"CR in a dropped line", post("Transfer-Encoding: a\rb\r\nTransfer-Encoding: chunked\r\n"), kestrel400},
+		{"invalid UTF-8 in an earlier coding", post("Transfer-Encoding: g\xe9zip, chunked\r\n"), kestrel400},
 		{"gzip on HTTP/1.0", "POST /h HTTP/1.0\r\nTransfer-Encoding: gzip\r\n\r\n", kestrel400},
 	}
 	for _, c := range cases {

@@ -26,7 +26,8 @@ const (
 	// MaxCallStackSize stops runaway recursion before it eats the heap.
 	// Measured frames per nesting level of an outline: about 3 for plain text
 	// and Markdown, 8 for HTML, so 10000 converts about 1200 levels to HTML.
-	// Jint's native-stack guard stopped HTML between 800 and 1000 levels.
+	// Jint, on an engine thread of 32 MiB, converts 2405 levels to HTML
+	// before its 512 MiB allocation budget stops it.
 	MaxCallStackSize = 10000
 )
 
@@ -264,10 +265,12 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 			return "", false, ctx.Err()
 		}
 		return "", false, &Failure{Kind: KindUnknown, Err: err}
-	// C#'s stack guard throws a JS RangeError and keeps the engine; goja's
-	// overflow unwinds cleanly too (measured: the next call runs).
+	// C#'s stack guard throws a JS RangeError that finally blocks see, and
+	// keeps the engine. goja's overflow skips every finally, so the bundle's
+	// state is left mid-call and the next document could nest less deep:
+	// the engine goes.
 	case errors.As(err, &overflow):
-		return "", true, &Failure{Kind: KindUnknown, Err: err}
+		return "", false, &Failure{Kind: KindUnknown, Err: err}
 	case errors.As(err, &jsErr):
 		return "", true, &Failure{Kind: classify(jsErr.Name), Err: err}
 	// No event loop: a promise pending now can never settle. The engine itself

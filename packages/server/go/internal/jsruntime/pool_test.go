@@ -14,6 +14,7 @@ import (
 // Each engine counts its own calls, so a test can tell reuse from a rebuild.
 const countingScript = `
 let calls = 0;
+let open = 0;
 globalThis.blokServerInvoke = async function (operation, input) {
   calls += 1;
   switch (operation) {
@@ -29,6 +30,8 @@ globalThis.blokServerInvoke = async function (operation, input) {
     case 'awaitThenSpin': await null; for (;;) {}
     case 'recurse': { const r = (d) => d === 0 ? 0 : r(d - 1) + 1; return String(r(1000000)); }
     case 'catchRecursion': { try { const r = (d) => d === 0 ? 0 : r(d - 1) + 1; return String(r(1000000)); } catch (e) { return 'caught ' + e.name; } }
+    case 'guardedRecurse': { const r = (d) => { open += 1; try { return d === 0 ? 0 : r(d - 1) + 1; } finally { open -= 1; } }; return String(r(1000000)); }
+    case 'open': return String(open);
     case 'grow': { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4, 5, 6, 7, 8] }); } }
     default: return 'ok';
   }
@@ -178,14 +181,28 @@ func TestClassifiesTheBundlesOwnErrorsByName(t *testing.T) {
 	wantKind(t, err, KindInvalidDocument)
 }
 
-// Unlike Jint's catchable RangeError, goja's overflow cannot be caught in JS.
-func TestSurvivesRunawayRecursionAndKeepsTheEngine(t *testing.T) {
+// Unlike Jint's catchable RangeError, goja's overflow cannot be caught in
+// JS, and it skips every finally on the way out, so the engine's own state
+// is left mid-call. The engine is replaced, where C# keeps its own.
+func TestSurvivesRunawayRecursionAndReplacesTheEngine(t *testing.T) {
 	p := newCountingPool(t, 1, 0, 0)
 	_, err := invoke(t, p, "recurse", "")
 	wantKind(t, err, KindUnknown)
 	_, err = invoke(t, p, "catchRecursion", "")
 	wantKind(t, err, KindUnknown)
-	wantCount(t, p, "3")
+	wantCount(t, p, "1")
+}
+
+// The bundle's state left by an overflow shrank how deep the next document
+// could nest: 20 overflows took HTML from 1248 to 1244 levels (measured).
+func TestAnOverflowLeavesNoStateForTheNextCall(t *testing.T) {
+	p := newCountingPool(t, 1, 0, 0)
+	_, err := invoke(t, p, "guardedRecurse", "")
+	wantKind(t, err, KindUnknown)
+	open, err := invoke(t, p, "open", "")
+	if err != nil || open != "0" {
+		t.Fatalf("open = %s, %v", open, err)
+	}
 }
 
 // goja has no event loop, so a promise pending after the call never settles.

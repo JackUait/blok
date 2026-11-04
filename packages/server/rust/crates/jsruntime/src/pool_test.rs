@@ -9,6 +9,7 @@ use crate::{
 // Each engine counts its own calls, so a test can tell reuse from a rebuild.
 pub(crate) const COUNTING_SCRIPT: &str = r"
 let calls = 0;
+let open = 0;
 globalThis.blokServerInvoke = async function (operation, input) {
   calls += 1;
   switch (operation) {
@@ -24,6 +25,8 @@ globalThis.blokServerInvoke = async function (operation, input) {
     case 'awaitThenSpin': await null; for (;;) {}
     case 'recurse': { const r = (d) => d === 0 ? 0 : r(d - 1) + 1; return String(r(1000000)); }
     case 'catchRecursion': { try { const r = (d) => d === 0 ? 0 : r(d - 1) + 1; return String(r(1000000)); } catch (e) { return 'caught ' + e.name; } }
+    case 'guardedRecurse': { const r = (d) => { open += 1; try { return d === 0 ? 0 : r(d - 1) + 1; } finally { open -= 1; } }; return String(r(1000000)); }
+    case 'open': return String(open);
     case 'grow': { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4, 5, 6, 7, 8] }); } }
     default: return 'ok';
   }
@@ -185,6 +188,16 @@ async fn survives_runaway_recursion_and_keeps_the_engine() {
     let caught = invoke(&pool, "catchRecursion", "").await;
     assert_eq!(caught.expect("catchRecursion"), "caught RangeError");
     want_count(&pool, "3").await;
+}
+
+// Go replaces its engine because goja's overflow skips every finally.
+// QuickJS runs them, like Jint, so the kept engine is clean.
+#[tokio::test]
+async fn an_overflow_leaves_no_state_for_the_next_call() {
+    let pool = counting_pool(1, Duration::ZERO, 0);
+    want_kind(invoke(&pool, "guardedRecurse", "").await, Kind::Unknown);
+    let open = invoke(&pool, "open", "").await;
+    assert_eq!(open.expect("open"), "0");
 }
 
 #[tokio::test]

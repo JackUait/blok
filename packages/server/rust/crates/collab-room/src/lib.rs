@@ -62,7 +62,17 @@ mod constants_test;
 #[cfg(test)]
 mod csharp_changes_test;
 #[cfg(test)]
+mod csharp_fake_store_test;
+#[cfg(test)]
+mod csharp_history_manager_test;
+#[cfg(test)]
+mod csharp_manager_test;
+#[cfg(test)]
 mod csharp_restore_planner_test;
+#[cfg(test)]
+mod csharp_room_a_test;
+#[cfg(test)]
+mod csharp_room_b_test;
 #[cfg(test)]
 mod csharp_timeline_test;
 #[cfg(test)]

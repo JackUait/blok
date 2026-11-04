@@ -30,8 +30,6 @@ func TestTheStatusLineFollowsKestrel(t *testing.T) {
 	cases := []struct{ name, request, want string }{
 		{"413", "GET /413 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n", "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"},
 		{"416", "GET /416 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n", "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"},
-		{"413 after 100 Continue", "POST /413 HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\nContent-Length: 1\r\nConnection: close\r\n\r\nx",
-			"HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"},
 		{"HTTP/1.0", "GET /ok HTTP/1.0\r\n\r\n", "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"},
 		{"HTTP/1.0 kept alive", "GET /ok HTTP/1.0\r\nConnection: keep-alive\r\n\r\nGET /416 HTTP/1.0\r\n\r\n",
 			"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\n" +
@@ -44,6 +42,12 @@ func TestTheStatusLineFollowsKestrel(t *testing.T) {
 		if got := rawAnswer(t, address, c.request); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
+	}
+	// The body comes late, so the read waits and 100 Continue goes first.
+	head := "POST /413 HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\nContent-Length: 1\r\nConnection: close\r\n\r\n"
+	want := "HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+	if got := trickleAfter(t, address, head, "x", 1, 0, 200*time.Millisecond); got != want {
+		t.Errorf("413 after 100 Continue: got %q, want %q", got, want)
 	}
 }
 

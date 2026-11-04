@@ -159,22 +159,13 @@ func TestAnUnreadBodyHasTheDrainTimeToArrive(t *testing.T) {
 	}
 }
 
-// Measured on the C# host: Kestrel sends 100 Continue when the route first
-// reads, only on HTTP/1.1 and only when the first Expect line is
-// 100-continue in any case. It ignores any other expectation, and keeps the connection after a
-// body the route left, as for any unread body.
+// Measured on the C# host: Kestrel sends 100 Continue when a read of the
+// route must wait for the body, only on HTTP/1.1 and only when the first
+// Expect line is 100-continue in any case. It ignores any other
+// expectation, and keeps the connection after a body the route left, as for
+// any unread body.
 func TestExpectFollowsKestrel(t *testing.T) {
-	address := startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		seen := strings.Join(r.Header.Values("Expect"), "|")
-		if r.URL.Path == "/unread" {
-			w.Header().Set("Content-Length", "0")
-			w.WriteHeader(http.StatusUnsupportedMediaType)
-			return
-		}
-		body, _ := io.ReadAll(r.Body)
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = io.WriteString(w, seen+" "+string(body))
-	}))
+	address := startExpectHost(t)
 	head := func(path, version, expect string) string {
 		return "POST " + path + " " + version + "\r\nHost: x\r\n" + expect + "Content-Length: 2\r\nConnection: close\r\n\r\n"
 	}
@@ -195,7 +186,7 @@ func TestExpectFollowsKestrel(t *testing.T) {
 			"HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 15\r\n\r\n100-continue ab"},
 	}
 	for _, c := range cases {
-		if got := trickle(t, address, c.head, "ab", 2, 0); got != c.want {
+		if got := trickleAfter(t, address, c.head, "ab", 2, 0, 200*time.Millisecond); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
 	}
@@ -204,6 +195,35 @@ func TestExpectFollowsKestrel(t *testing.T) {
 	if got := trickle(t, address, unread, "ab"+head("/p", "HTTP/1.1", "")+"ab", 100, 0); got != unsupported+answer(" ab") {
 		t.Errorf("an unread body: got %q", got)
 	}
+}
+
+// Measured on the C# host: no 100 Continue when the body came with the
+// head, and one when only part of it did and a later read must wait.
+func TestExpectSendsContinueOnlyWhenTheReadMustWait(t *testing.T) {
+	address := startExpectHost(t)
+	head := "POST /p HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\nContent-Length: 2\r\nConnection: close\r\n\r\n"
+	answer := "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 15\r\nConnection: close\r\n\r\n100-continue ab"
+	if got := trickle(t, address, head+"ab", "", 1, 0); got != answer {
+		t.Errorf("the body with the head: got %q", got)
+	}
+	if got := trickleAfter(t, address, head+"a", "b", 1, 0, 200*time.Millisecond); got != "HTTP/1.1 100 Continue\r\n\r\n"+answer {
+		t.Errorf("part of the body with the head: got %q", got)
+	}
+}
+
+func startExpectHost(t *testing.T) string {
+	t.Helper()
+	return startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen := strings.Join(r.Header.Values("Expect"), "|")
+		if r.URL.Path == "/unread" {
+			w.Header().Set("Content-Length", "0")
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		}
+		body, _ := io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = io.WriteString(w, seen+" "+string(body))
+	}))
 }
 
 // A refusal hijacks the socket and drains it for rstAvoidance; the drain

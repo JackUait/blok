@@ -170,6 +170,27 @@ type targetStream struct {
 	// held is set when Read returns with bytes of a request still in in,
 	// head or out.
 	held atomic.Bool
+	// sendContinue writes a body's 100 Continue; run once, before a socket
+	// read, since Kestrel sends it only when a body read must wait.
+	sendContinue atomic.Pointer[func()]
+}
+
+// armContinue sets the 100 Continue the next socket read sends, or clears
+// it (nil).
+func (s *targetStream) armContinue(send func()) {
+	if send == nil {
+		s.sendContinue.Store(nil)
+		return
+	}
+	s.sendContinue.Store(&send)
+}
+
+// readSocket is the stream's only blocking read.
+func (s *targetStream) readSocket(p []byte) (int, error) {
+	if send := s.sendContinue.Swap(nil); send != nil {
+		(*send)()
+	}
+	return s.src.Read(p)
 }
 
 func (s *targetStream) Read(p []byte) (int, error) {
@@ -179,7 +200,7 @@ func (s *targetStream) Read(p []byte) (int, error) {
 			return 0, io.EOF
 		}
 		if s.state == streamPass && len(s.in) == 0 && s.err == nil {
-			return s.src.Read(p)
+			return s.readSocket(p)
 		}
 		if s.step() {
 			continue
@@ -201,7 +222,7 @@ func (s *targetStream) Read(p []byte) (int, error) {
 		if s.buf == nil {
 			s.buf = make([]byte, 4096)
 		}
-		n, err := s.src.Read(s.buf)
+		n, err := s.readSocket(s.buf)
 		s.in = append(s.in, s.buf[:n]...)
 		s.err = err
 	}

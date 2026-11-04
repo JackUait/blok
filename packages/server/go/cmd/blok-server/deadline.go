@@ -53,6 +53,10 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		}
 		limited, body := withBodyLimit(r, blokserver.WithRequestTimeoutLift(ctx, lift), tracked)
 		next.ServeHTTP(tracked, limited)
+		// A read after the handler is net/http's drain, never the route's.
+		if body != nil && body.continueTo != nil {
+			body.stream.armContinue(nil)
+		}
 		// By the clock, not ctx.Err(): the read deadline can cancel the
 		// connection's context first, and that reads as Canceled.
 		if !time.Now().Before(deadline) {

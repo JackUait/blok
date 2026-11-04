@@ -1335,6 +1335,8 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     'another expectation': 'Expect: foo\r\n',
     '100-continue in a list': 'Expect: 100-continue, foo\r\n',
     'an empty line before 100-continue': 'Expect:\r\nExpect: 100-continue\r\n',
+    // The body came with the head, so no read waits and no 100 goes out.
+    '100-continue with the body': 'Expect: 100-continue\r\n',
   }).map(([name, expect]) => [`Expect: ${name}`, bytes(
     `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\n${expect}Content-Length: 47\r\n${CLOSE}\r\n` +
     '{"url":"/0123456789abcdef0123456789abcdef.txt"}',

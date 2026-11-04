@@ -79,18 +79,22 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 	if b.failed != nil {
 		return 0, b.failed
 	}
-	// Before the first read of the body under it: that read sends an
+	// Before the first read of the body under it: that read would send an
 	// Expect: 100-continue answer, which Kestrel never sends here.
 	if !b.started {
 		b.started = true
 		if b.length > b.limit {
 			return 0, b.refuse(413, blokserver.ErrRequestBodyTooLarge)
 		}
-		if b.continueTo != nil && !b.writer.started() {
-			// Nothing of the answer is written yet, so it goes first.
-			if _, err := io.WriteString(b.continueTo, "HTTP/1.1 100 Continue\r\n\r\n"); err != nil {
-				return 0, err
-			}
+		// Kestrel sends 100 Continue only when a read must wait for the
+		// socket, so the stream sends it just before it would block.
+		if b.continueTo != nil {
+			b.stream.armContinue(func() {
+				// Nothing of the answer is written yet, so it goes first.
+				if !b.writer.started() {
+					_, _ = io.WriteString(b.continueTo, "HTTP/1.1 100 Continue\r\n\r\n")
+				}
+			})
 		}
 	}
 	// The moment the rate fails if no byte comes: past the grace, and past
@@ -116,6 +120,9 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 		return 0, b.refuse(413, blokserver.ErrRequestBodyTooLarge)
 	}
 	b.ended = err == io.EOF
+	if err != nil && b.continueTo != nil {
+		b.stream.armContinue(nil)
+	}
 	return n, err
 }
 

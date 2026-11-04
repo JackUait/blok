@@ -18,6 +18,12 @@ const kestrel408 = "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnect
 // what comes back without the Date header.
 func trickle(t *testing.T, address, head, body string, size int, gap time.Duration) string {
 	t.Helper()
+	return trickleAfter(t, address, head, body, size, gap, 0)
+}
+
+// trickleAfter is trickle with a pause between the head and the body.
+func trickleAfter(t *testing.T, address, head, body string, size int, gap, pause time.Duration) string {
+	t.Helper()
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		t.Fatal(err)
@@ -25,6 +31,7 @@ func trickle(t *testing.T, address, head, body string, size int, gap time.Durati
 	defer conn.Close()
 	_, _ = io.WriteString(conn, head)
 	go func() {
+		time.Sleep(pause)
 		for len(body) > 0 {
 			n := min(size, len(body))
 			if _, err := io.WriteString(conn, body[:n]); err != nil {

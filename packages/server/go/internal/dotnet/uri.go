@@ -48,6 +48,13 @@ func ParseAbsoluteURI(s string) (*URI, bool) {
 		// .NET reads these as implicit file paths.
 		return &URI{Scheme: "file"}, true
 	}
+	if isDriveLetter(s) {
+		// A DOS path when a slash follows, else nothing .NET takes.
+		if len(s) > 2 && (s[2] == '/' || s[2] == '\\') {
+			return &URI{Scheme: "file"}, true
+		}
+		return nil, false
+	}
 	scheme, rest, ok := splitScheme(s)
 	if !ok {
 		return nil, false
@@ -73,7 +80,11 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 	if strings.HasPrefix(reference, `\\`) {
 		return &URI{Scheme: "file"}, true
 	}
-	if scheme, rest, ok := splitScheme(reference); ok {
+	if isDriveLetter(reference) && len(reference) > 2 {
+		return ParseAbsoluteURI(reference)
+	}
+	// A lone "x:" is a relative path to .NET.
+	if scheme, rest, ok := splitScheme(reference); ok && !isDriveLetter(reference) {
 		if scheme != base.Scheme || twoSlashes(rest) {
 			return ParseAbsoluteURI(reference)
 		}
@@ -96,6 +107,11 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 	}
 	directory := base.AbsolutePath[:strings.LastIndexByte(base.AbsolutePath, '/')+1]
 	return ParseAbsoluteURI(prefix + directory + reference)
+}
+
+// isDriveLetter reports whether s starts with one ASCII letter and ':'.
+func isDriveLetter(s string) bool {
+	return len(s) >= 2 && s[1] == ':' && ('a' <= s[0] && s[0] <= 'z' || 'A' <= s[0] && s[0] <= 'Z')
 }
 
 // trimURIWhitespace trims what .NET trims: space, tab, CR and LF. Other

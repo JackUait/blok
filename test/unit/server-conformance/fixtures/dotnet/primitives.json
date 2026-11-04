@@ -382,7 +382,11 @@
     "http://a\u0022b@h/",
     "http://u%40v@h/",
     "http://u%zz@h/",
-    "http://u\u00A0:p@h/"
+    "http://u\u00A0:p@h/",
+    "p://h/a",
+    "C:\\x",
+    "c:foo",
+    "c:"
   ],
   "relativeInputs": [
     [
@@ -528,6 +532,22 @@
     [
       "http://example.com/a/b",
       "\u0001x"
+    ],
+    [
+      "http://example.com/a/b",
+      "X:"
+    ],
+    [
+      "http://example.com/a/b",
+      "X:y"
+    ],
+    [
+      "http://example.com/a/b",
+      "f://x/"
+    ],
+    [
+      "http://example.com/a/b",
+      "C:/x"
     ]
   ],
   "unescapeInputs": [
@@ -5184,6 +5204,44 @@
       "fragment": "",
       "absoluteUri": "http://u%C2%A0:p@h/",
       "loopback": false
+    },
+    {
+      "input": "p://h/a",
+      "ok": true,
+      "scheme": "file",
+      "host": "",
+      "idnHost": "",
+      "hostType": "Basic",
+      "userInfo": "",
+      "port": -1,
+      "absolutePath": "p://h/a",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "file:///p://h/a",
+      "loopback": true
+    },
+    {
+      "input": "C:\\x",
+      "ok": true,
+      "scheme": "file",
+      "host": "",
+      "idnHost": "",
+      "hostType": "Basic",
+      "userInfo": "",
+      "port": -1,
+      "absolutePath": "C:/x",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "file:///C:/x",
+      "loopback": true
+    },
+    {
+      "input": "c:foo",
+      "ok": false
+    },
+    {
+      "input": "c:",
+      "ok": false
     }
   ],
   "relative": [
@@ -5729,6 +5787,59 @@
       "fragment": "",
       "absoluteUri": "http://example.com/a/%01x",
       "loopback": false
+    },
+    {
+      "base": "http://example.com/a/b",
+      "input": "X:",
+      "ok": true,
+      "scheme": "http",
+      "host": "example.com",
+      "idnHost": "example.com",
+      "hostType": "Dns",
+      "userInfo": "",
+      "port": 80,
+      "absolutePath": "/a/X:",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "http://example.com/a/X:",
+      "loopback": false
+    },
+    {
+      "base": "http://example.com/a/b",
+      "input": "X:y",
+      "ok": false
+    },
+    {
+      "base": "http://example.com/a/b",
+      "input": "f://x/",
+      "ok": true,
+      "scheme": "file",
+      "host": "",
+      "idnHost": "",
+      "hostType": "Basic",
+      "userInfo": "",
+      "port": -1,
+      "absolutePath": "f://x/",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "file:///f://x/",
+      "loopback": true
+    },
+    {
+      "base": "http://example.com/a/b",
+      "input": "C:/x",
+      "ok": true,
+      "scheme": "file",
+      "host": "",
+      "idnHost": "",
+      "hostType": "Basic",
+      "userInfo": "",
+      "port": -1,
+      "absolutePath": "C:/x",
+      "query": "",
+      "fragment": "",
+      "absoluteUri": "file:///C:/x",
+      "loopback": true
     }
   ],
   "unescape": [

@@ -53,6 +53,10 @@ pub fn parse_absolute_uri(s: &str) -> Option<Uri> {
         // .NET reads these as implicit file paths.
         return Some(Uri::with_scheme("file"));
     }
+    if is_drive_letter(s) {
+        // A DOS path when a slash follows, else nothing .NET takes.
+        return matches!(s.as_bytes().get(2), Some(b'/' | b'\\')).then(|| Uri::with_scheme("file"));
+    }
     let (scheme, rest) = split_scheme(s)?;
     if scheme != "http" && scheme != "https" {
         return Some(Uri::with_scheme(&scheme));
@@ -76,7 +80,11 @@ pub fn resolve_uri(base: &Uri, reference: &str) -> Option<Uri> {
     if reference.starts_with("\\\\") {
         return Some(Uri::with_scheme("file"));
     }
-    if let Some((scheme, rest)) = split_scheme(reference) {
+    if is_drive_letter(reference) && reference.len() > 2 {
+        return parse_absolute_uri(reference);
+    }
+    // A lone "x:" is a relative path to .NET.
+    if let Some((scheme, rest)) = split_scheme(reference).filter(|_| !is_drive_letter(reference)) {
         if scheme != base.scheme || two_slashes(rest) {
             return parse_absolute_uri(reference);
         }
@@ -99,6 +107,12 @@ pub fn resolve_uri(base: &Uri, reference: &str) -> Option<Uri> {
             parse_absolute_uri(&format!("{prefix}{directory}{reference}"))
         }
     }
+}
+
+/// Whether `s` starts with one ASCII letter and ':'.
+fn is_drive_letter(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() >= 2 && b[1] == b':' && b[0].is_ascii_alphabetic()
 }
 
 /// What .NET trims: space, tab, CR and LF. Other controls stay and are

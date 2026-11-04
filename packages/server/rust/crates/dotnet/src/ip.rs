@@ -2,8 +2,8 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// IPAddress.TryParse. IPv4 takes the inet_aton forms .NET takes ("127.1",
 /// "0x7f.0.0.1", "2130706433", octal parts). IPv6 may be bracketed, with a
-/// port after the bracket, and its scope id is dropped. An IPv4-mapped
-/// IPv6 address stays IPv6.
+/// port after the bracket, and its scope id is dropped: read it with
+/// [`scope_id`]. An IPv4-mapped IPv6 address stays IPv6.
 pub fn parse_ip(s: &str) -> Option<IpAddr> {
     if s.contains(':') {
         return parse_ipv6(s).map(IpAddr::V6);
@@ -81,7 +81,8 @@ fn parse_ipv6(s: &str) -> Option<Ipv6Addr> {
         s = &inner[..end];
     }
     if let Some(zone) = s.find('%') {
-        if zone == s.len() - 1 {
+        // Any scope text but '/' and ']' parses, even none.
+        if s[zone + 1..].contains(['/', ']']) {
             return None;
         }
         s = &s[..zone];
@@ -197,6 +198,27 @@ fn parse_ipv4_strict(s: &str) -> Option<Ipv4Addr> {
 
 pub(crate) fn all_digits(s: &str) -> bool {
     s.bytes().all(|c| c.is_ascii_digit())
+}
+
+/// The ScopeId .NET gives the address `s` parses to: an IPv6 scope's value
+/// when it is all digits and fits 32 bits, else 0. A nonzero one makes the
+/// address neither loopback nor any, as IsLoopback and Equals read it. A
+/// name scope would be the index of that interface on the parsing machine;
+/// none is read here. Go keeps a nonzero one as the address's zone.
+pub fn scope_id(s: &str) -> u32 {
+    if !s.contains(':') {
+        return 0;
+    }
+    let s = s
+        .strip_prefix('[')
+        .map_or(s, |inner| inner.split(']').next().unwrap_or(""));
+    let Some((_, scope)) = s.split_once('%') else {
+        return 0;
+    };
+    if scope.is_empty() || !all_digits(scope) {
+        return 0;
+    }
+    scope.parse().unwrap_or(0)
 }
 
 /// IPAddress.IsLoopback: 127/8, ::1, and only 127.0.0.1 mapped into IPv6

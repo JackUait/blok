@@ -3,7 +3,8 @@ mod common;
 use std::net::IpAddr;
 
 use blok_dotnet::{
-    Uri, is_any, is_loopback, parse_absolute_uri, parse_ip, resolve_uri, unescape_data_string,
+    Uri, is_any, is_loopback, parse_absolute_uri, parse_ip, resolve_uri, scope_id,
+    unescape_data_string,
 };
 use blok_jsjson::Value;
 use common::{field, flag, items, load, number, string};
@@ -37,11 +38,14 @@ fn parse_ip_matches_dotnet() {
             .parse()
             .unwrap_or_else(|e| panic!("{input:?}: fixture address {address:?}: {e}"));
         let (loopback, any) = (flag(c, "loopback"), flag(c, "any"));
-        if got != want || is_loopback(got) != loopback || is_any(got) != any {
+        let scope = scope_id(&input);
+        let want_scope: u32 = address
+            .split_once('%')
+            .map_or(0, |(_, s)| s.parse().unwrap());
+        let (got_loopback, got_any) = (scope == 0 && is_loopback(got), scope == 0 && is_any(got));
+        if got != want || scope != want_scope || got_loopback != loopback || got_any != any {
             failures.push(format!(
-                "{input:?}: {got} loopback {} any {}, want {want} {loopback} {any}",
-                is_loopback(got),
-                is_any(got)
+                "{input:?}: {got}%{scope} loopback {got_loopback} any {got_any}, want {address} {loopback} {any}"
             ));
         }
     }

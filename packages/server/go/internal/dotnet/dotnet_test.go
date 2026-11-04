@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/netip"
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -67,7 +66,7 @@ func TestParseIPMatchesDotnet(t *testing.T) {
 		if !ok {
 			continue
 		}
-		want, err := netip.ParseAddr(strings.SplitN(c.Address, "%", 2)[0])
+		want, err := netip.ParseAddr(c.Address)
 		if err != nil {
 			t.Fatalf("%q: fixture address %q: %v", c.Input, c.Address, err)
 		}

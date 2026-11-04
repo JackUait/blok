@@ -62,7 +62,21 @@
     "::0:1",
     "10.0.0.1",
     "*",
-    "\u002B"
+    "\u002B",
+    "fe80::1%",
+    "::%",
+    "::1%25",
+    "::%25",
+    "::%0",
+    "::1%00",
+    "::1%4294967295",
+    "::1%4294967296",
+    "fe80::1%/",
+    "fe80::1%]",
+    "fe80::1%abcdefghijklmnop[q",
+    "fe80::1%abcdefghijklmnop/q",
+    "[::1%25]:80",
+    "[::%1]"
   ],
   "uriInputs": [
     "http://example.com",
@@ -882,6 +896,95 @@
     {
       "input": "\u002B",
       "ok": false
+    },
+    {
+      "input": "fe80::1%",
+      "ok": true,
+      "address": "fe80::1",
+      "loopback": false,
+      "any": false
+    },
+    {
+      "input": "::%",
+      "ok": true,
+      "address": "::",
+      "loopback": false,
+      "any": true
+    },
+    {
+      "input": "::1%25",
+      "ok": true,
+      "address": "::1%25",
+      "loopback": false,
+      "any": false
+    },
+    {
+      "input": "::%25",
+      "ok": true,
+      "address": "::%25",
+      "loopback": false,
+      "any": false
+    },
+    {
+      "input": "::%0",
+      "ok": true,
+      "address": "::",
+      "loopback": false,
+      "any": true
+    },
+    {
+      "input": "::1%00",
+      "ok": true,
+      "address": "::1",
+      "loopback": true,
+      "any": false
+    },
+    {
+      "input": "::1%4294967295",
+      "ok": true,
+      "address": "::1%4294967295",
+      "loopback": false,
+      "any": false
+    },
+    {
+      "input": "::1%4294967296",
+      "ok": true,
+      "address": "::1",
+      "loopback": true,
+      "any": false
+    },
+    {
+      "input": "fe80::1%/",
+      "ok": false
+    },
+    {
+      "input": "fe80::1%]",
+      "ok": false
+    },
+    {
+      "input": "fe80::1%abcdefghijklmnop[q",
+      "ok": true,
+      "address": "fe80::1",
+      "loopback": false,
+      "any": false
+    },
+    {
+      "input": "fe80::1%abcdefghijklmnop/q",
+      "ok": false
+    },
+    {
+      "input": "[::1%25]:80",
+      "ok": true,
+      "address": "::1%25",
+      "loopback": false,
+      "any": false
+    },
+    {
+      "input": "[::%1]",
+      "ok": true,
+      "address": "::%1",
+      "loopback": false,
+      "any": false
     }
   ],
   "uri": [

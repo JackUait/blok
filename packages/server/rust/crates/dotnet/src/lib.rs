@@ -17,7 +17,7 @@ mod uri;
 
 pub use double::format_double;
 pub use httpdate::parse_http_date;
-pub use ip::{is_any, is_loopback, parse_ip, parse_ipv4};
+pub use ip::{is_any, is_loopback, parse_ip, parse_ipv4, scope_id};
 pub use number::parse_uint64_none;
 pub use ordinal::equals_ordinal_ignore_case;
 pub use query::{query_all, query_first};

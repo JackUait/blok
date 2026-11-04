@@ -345,3 +345,36 @@ func TestTheHTTP2PrefaceGetsKestrelsGoAway(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+// Measured on the C# host: Kestrel reads a chunked body on HTTP/1.0 too,
+// before Content-Length. net/http ignores the codings there and would read
+// the chunks as the next request.
+func TestAChunkedBodyOnHTTP10IsReadAsChunked(t *testing.T) {
+	var seen []string
+	address := startHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		seen = append(seen, r.RequestURI)
+		_, _ = fmt.Fprintf(w, "%s %v %q %q %q", r.Proto, r.Close, body, r.Host, r.Header.Values("Host"))
+	}), time.Minute)
+	inner := "GET /smuggled HTTP/1.1\r\nHost: x\r\n\r\n"
+	chunks := fmt.Sprintf("%x\r\n%s\r\n0\r\n\r\n", len(inner), inner)
+	cases := []struct{ name, head, close, host string }{
+		{"keep-alive", "Connection: keep-alive\r\n", "false", `"" []`},
+		{"no keep-alive", "", "true", `"" []`},
+		{"and Content-Length", "Content-Length: 2\r\nConnection: keep-alive\r\n", "false", `"" []`},
+		{"and a Host", "Host: h\r\nConnection: keep-alive\r\n", "false", `"h" []`},
+		{"gzip, chunked", "Connection: keep-alive\r\nTransfer-Encoding: gzip\r\n", "false", `"" []`},
+		{"bare LF", "Connection: keep-alive\n", "false", `"" []`},
+	}
+	for _, c := range cases {
+		seen = nil
+		request := "POST /h HTTP/1.0\r\n" + c.head + "Transfer-Encoding: chunked\r\n\r\n" + chunks + "GET /next HTTP/1.0\r\n\r\n"
+		got := rawAnswer(t, address, request)
+		body := fmt.Sprintf("HTTP/1.0 %s %q %s", c.close, inner, c.host)
+		want := fmt.Sprintf("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: %d\r\n", len(body)) +
+			"Content-Type: text/plain; charset=utf-8\r\n\r\n" + body
+		if got != want || fmt.Sprint(seen) != "[/h]" {
+			t.Errorf("%s: got %q after %q, want %q", c.name, got, seen, want)
+		}
+	}
+}

@@ -35,8 +35,8 @@ import (
 //     (in the target, and in header names and values), keeps the originals
 //     in the queue, and restoreTarget hands them back before routing.
 //
-// The swap keeps the length. CR and LF before a request line are dropped, as
-// Kestrel skips them. Only heads change, never a body. To know where the next
+// The swap keeps the length; only readAsHTTP11 adds a line. CR and LF
+// before a request line are dropped, as Kestrel skips them. Only heads change, never a body. To know where the next
 // head starts it reads each head with http.ReadRequest, the parser net/http
 // uses, and follows a chunked body as net/http's chunked reader does.
 // Whatever it cannot follow exactly (a chunked trailer, an upgrade, CONNECT)
@@ -99,6 +99,8 @@ type queuedRequest struct {
 	queuedTarget
 	reject int
 	swaps  []headerSwap
+	// http10: an HTTP/1.0 head with a chunked body, handed on as HTTP/1.1.
+	http10 bool
 }
 
 type targetStream struct {
@@ -125,6 +127,8 @@ type targetStream struct {
 	codings     []codingLine
 	// dropped counts the CR and LF bytes skipped before request lines.
 	dropped int
+	// added counts the bytes of Host lines added to HTTP/1.0 heads.
+	added int
 
 	mu     sync.Mutex
 	queued []queuedRequest
@@ -685,8 +689,13 @@ func (s *targetStream) endHead() {
 		s.handOn(streamPass)
 		return
 	}
-	// takeCodings left net/http one chunked line, which HTTP/1.0 ignores.
-	if len(request.TransferEncoding) > 0 {
+	// takeCodings left net/http one chunked line. net/http ignores it on
+	// HTTP/1.0 and would read the chunks as the next request; Kestrel reads
+	// them as the body.
+	if len(s.codings) > 0 && !request.ProtoAtLeast(1, 1) {
+		s.readAsHTTP11()
+	}
+	if len(request.TransferEncoding) > 0 || s.entry.http10 {
 		s.chunk = chunkSize
 		s.handOn(streamChunked)
 		return
@@ -697,6 +706,26 @@ func (s *targetStream) endHead() {
 	} else {
 		s.handOn(streamLine)
 	}
+}
+
+// readAsHTTP11 makes the head HTTP/1.1, so net/http reads its chunked body;
+// restoreTarget puts HTTP/1.0 back before routing. HTTP/1.1 needs a Host
+// line, so a head with none gets an empty one: r.Host stays "", as on 1.0.
+func (s *targetStream) readAsHTTP11() {
+	s.entry.http10 = true
+	lineEnd := bytes.IndexByte(s.head, '\n')
+	version := bytes.TrimSuffix(s.head[:lineEnd], []byte("\r"))
+	copy(version[len(version)-len("HTTP/1.1"):], "HTTP/1.1")
+	if s.hostLines > 0 {
+		return
+	}
+	blank := len(s.head) - 1
+	if s.head[blank-1] == '\r' {
+		blank--
+	}
+	const host = "Host: \r\n"
+	s.head = append(s.head[:blank], append([]byte(host), s.head[blank:]...)...)
+	s.added += len(host)
 }
 
 func (s *targetStream) handOn(next int) {
@@ -798,6 +827,8 @@ func restoreTargets(server *http.Server) {
 			if !restoreTarget(w, r, conn.targets) {
 				return
 			}
+			// The proto may have changed since limitRequestHeaders read it.
+			conn.setAnswer(answerFor(r))
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -812,6 +843,13 @@ func restoreTarget(w http.ResponseWriter, r *http.Request, stream *targetStream)
 	if ok && entry.reject != 0 {
 		answerAndClose(w, entry.reject)
 		return false
+	}
+	if entry.http10 {
+		// net/http reads the answer's framing and keep-alive from r when it
+		// writes, so the answer is HTTP/1.0's: no chunks, and a close.
+		r.Proto, r.ProtoMinor = "HTTP/1.0", 0
+		r.Close = !httpguts.HeaderValuesContainsToken(r.Header["Connection"], "keep-alive") ||
+			httpguts.HeaderValuesContainsToken(r.Header["Connection"], "close")
 	}
 	if !ok || entry.sent == entry.original && entry.sent == r.RequestURI && len(entry.swaps) == 0 {
 		return true

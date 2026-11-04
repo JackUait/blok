@@ -366,6 +366,8 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add("GET /e%4 HTTP/1.0\nContent-Length: 2\nX\"\x01: \x7f\n\n%zGET /f\t HTTP/1.1\nHost: x\n\n")
 	f.Add("\r\nGET / HTTP/1.1\r\nHost: x\r\nX: \xe9\r\n\r\n")
 	f.Add(" /% \n")
+	f.Add("POST /a HTTP/1.0\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nGET /\r\n0\r\n\r\nGET /b%zz HTTP/1.0\r\n\r\n")
+	f.Add("POST /a HTTP/1.0\nHost: h\nContent-Length: 3\nTransfer-Encoding: chunked\n\n1\r\nG\r\n0\r\n\r\nGET /b%zz HTTP/1.0\n\n")
 	f.Fuzz(func(t *testing.T, in string) {
 		stream := &targetStream{src: strings.NewReader(in)}
 		out, err := readAllIn(stream, 7)
@@ -424,7 +426,7 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 	if refused && !bytes.HasSuffix(out, []byte(standIn)) {
 		t.Fatalf("%q: refused, but out is %q", in, out)
 	}
-	whole := !refused && stream.dropped == 0
+	whole := !refused && stream.dropped == 0 && stream.added == 0
 	if whole && len(out) != len(in) {
 		t.Fatalf("%q: %d bytes out", in, len(out))
 	}

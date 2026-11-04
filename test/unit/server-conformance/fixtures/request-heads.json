@@ -444,6 +444,18 @@
     "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\n\n{\"status\":\"ok\",\"version\":\"dev\"}\n"
   },
   {
+    "name": "HTTP/1.0 chunked body",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\n\nnot found\n"
+  },
+  {
+    "name": "HTTP/1.0 chunked body, kept alive",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\n\nnot found\n"
+  },
+  {
+    "name": "HTTP/1.0 chunked body and a Content-Length",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\n\nnot found\n"
+  },
+  {
     "name": "unread body, then a refused head",
     "response": "HTTP/1.1 415 Unsupported Media Type\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
   },

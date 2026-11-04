@@ -1288,6 +1288,16 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'HTTP/1.0 keep-alive HEAD, then a refused head': bytes('HEAD /health HTTP/1.0\r\nConnection: keep-alive\r\n\r\nGET /health HTTP/1.2\r\n'),
   'HTTP/1.0 POST': bytes('POST /delete HTTP/1.0\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}'),
   'absolute target on HTTP/1.0 with no Host': bytes('GET http://y/health HTTP/1.0\r\n\r\n'),
+  // Kestrel reads a chunked body on HTTP/1.0 too, before Content-Length.
+  // Read any other way, the chunks would be the next request.
+  ...Object.fromEntries(Object.entries({
+    '': '',
+    ', kept alive': 'Connection: keep-alive\r\n',
+    ' and a Content-Length': 'Content-Length: 2\r\n',
+  }).map(([name, headers]) => [`HTTP/1.0 chunked body${name}`, bytes(
+    `POST /delete HTTP/1.0\r\nContent-Type: application/json\r\n${headers}Transfer-Encoding: chunked\r\n\r\n` +
+    `2f\r\n{"url":"/0123456789abcdef0123456789abcdef.txt"}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n\r\n`,
+  )])),
   // Kestrel answers before it reads a body the route left, so the answer
   // never says Connection: close for it. Past the cap it then just closes.
   'unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\n0123456789GET /health HTTP/1.2\r\n'),

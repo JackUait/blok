@@ -1,5 +1,5 @@
 use std::io;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use tokio::io::{AsyncRead, AsyncWriteExt};
@@ -45,13 +45,15 @@ impl Local {
         let temporary_path = self
             .directory
             .join(format!(".blok-upload-{}", random_hex()));
-        let mut file = tokio::fs::OpenOptions::new()
+        // Opened in place, not on a blocking thread: a put dropped mid-open
+        // would leave a file the guard never saw.
+        let file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
             .mode(0o600)
-            .open(&temporary_path)
-            .await?;
+            .open(&temporary_path)?;
         let mut temporary = Temporary(Some(temporary_path.clone()));
+        let mut file = tokio::fs::File::from_std(file);
         tokio::io::copy(&mut content, &mut file).await?;
         file.flush().await?;
         file.sync_all().await?;

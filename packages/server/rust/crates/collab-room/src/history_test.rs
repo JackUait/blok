@@ -5,13 +5,10 @@ use blok_yjs::Doc;
 use crate::test_support::*;
 use crate::*;
 
-// Go convert/structure.go PlainPageMaps panics on a page-map value with
-// no JSON form, and ReadVersion has no recover, so the HTTP host drops the
-// connection. C# (YDocConverter.PlainPageMaps -> RichText.ToJsonNode)
-// throws InvalidDataException, which ReadVersionAsync lets through: the
-// read is an error, never a crash.
+// C# HistoryEndpointTests.AReadLeavesOutAPageMapValueHoldingAPeerBigint:
+// a value JSON cannot hold is left out of the read, never an error.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn read_version_refuses_a_page_map_value_with_no_json_form() {
+async fn a_read_leaves_out_a_page_map_value_holding_a_peer_bigint() {
     let (journal, _dir) = open_journal();
     let (manager, _, _) = test_manager(Options::default(), Some(journal));
     let writer = FakeMember::v1(true);
@@ -25,21 +22,20 @@ async fn read_version_refuses_a_page_map_value_with_no_json_form() {
     let mut nested = Object::new();
     nested.set(Str::from("n"), Value::BigInt(1));
     let update = client
-        .transact(|txn| values.set(txn, "x", Value::Object(nested)))
+        .transact(|txn| {
+            values.set(txn, "x", Value::Object(nested))?;
+            values.set(txn, "kept", Value::String("plain".into()))
+        })
         .expect("a write")
         .expect("an update");
     receive(&membership, Message::SyncUpdate { update }).await;
 
-    let err = manager
+    let read = manager
         .read_version("doc", &lineage, 1)
         .await
-        .expect_err("a nested bigint has no JSON form");
-    assert!(
-        matches!(err, Error::Convert(blok_collab_convert::Error::Data(_))),
-        "want C#'s InvalidDataException, got {err:?}"
-    );
-    assert_eq!(
-        err.to_string(),
-        "collab: unsupported value BigInteger in rich text."
-    );
+        .expect("a value with no JSON form does not fail the read");
+
+    assert_eq!(read.status, HistoryStatus::Ready);
+    let json = String::from_utf8(read.json).expect("utf-8");
+    assert!(json.ends_with(r#","values":{"kept":"plain"}}"#), "{json}");
 }

@@ -45,8 +45,9 @@ pub struct PlainPageMap {
 
 /// Keeps only the plain keys a restore can copy, and no empty map. `skip`
 /// names keys left out of the page map before conversion, so a value that
-/// is not JSON there cannot fail the read. A plain object can still hold a
-/// peer's nested bigint or bytes: that is a DataError, as C# throws.
+/// is not JSON there cannot fail the read. A value holding one JSON cannot
+/// (a peer's bigint or bytes) is left out too, as export_page leaves out
+/// such an icon; a restore still copies the stored value.
 pub fn plain_page_maps(doc: &Doc, skip: &[&str]) -> Result<Vec<PlainPageMap>, Error> {
     let mut maps = Vec::new();
     for m in read_page_maps(doc)? {
@@ -57,8 +58,9 @@ pub fn plain_page_maps(doc: &Doc, skip: &[&str]) -> Result<Vec<PlainPageMap>, Er
             }
             if let Out::Any(value) = &value
                 && is_plain_value(value)
+                && let Ok(node) = to_json_node(value)
             {
-                plain.set(key, to_json_node(value)?);
+                plain.set(key, node);
             }
         }
         if !plain.is_empty() {

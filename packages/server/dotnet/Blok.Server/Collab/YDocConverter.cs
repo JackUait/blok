@@ -660,7 +660,10 @@ internal static class YDocConverter
   /// The page maps as JSON objects for a version read: only the plain keys a
   /// restore can copy (<see cref="IsPlainMapValue"/>), and no empty map.
   /// <paramref name="skipPageKeys"/> are left out of the <c>page</c> map before
-  /// conversion, so a value that is not JSON there cannot fail the read.
+  /// conversion, so a value that is not JSON there cannot fail the read. A
+  /// value holding one JSON cannot (a peer's bigint or bytes) is left out too,
+  /// as <see cref="ExportPage"/> leaves out such an icon; a restore still
+  /// copies it, since it copies the stored value, not this JSON.
   /// </summary>
   internal static IReadOnlyList<(string Name, JsonObject Map)> PlainPageMaps(
       YDoc doc, IReadOnlyCollection<string>? skipPageKeys = null)
@@ -671,9 +674,23 @@ internal static class YDocConverter
             new JsonObject(map.Value
                 .Where(entry => map.Key != PageRoot || skipPageKeys?.Contains(entry.Key) != true)
                 .Where(entry => IsPlainMapValue(entry.Value))
-                .Select(entry => KeyValuePair.Create(entry.Key, RichText.ToJsonNode(entry.Value))))))
+                .Select(entry => (entry.Key, Json: TryToJsonNode(entry.Value)))
+                .Where(entry => entry.Json.Ok)
+                .Select(entry => KeyValuePair.Create(entry.Key, entry.Json.Node)))))
         .Where(map => map.Item2.Count > 0)
         .ToList();
+  }
+
+  private static (bool Ok, JsonNode? Node) TryToJsonNode(object? value)
+  {
+    try
+    {
+      return (true, RichText.ToJsonNode(value));
+    }
+    catch (InvalidDataException)
+    {
+      return (false, null);
+    }
   }
 
   /// <summary>

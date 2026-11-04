@@ -38,7 +38,9 @@ type PlainPageMap struct {
 
 // PlainPageMaps keeps only the plain keys a restore can copy, and no empty
 // map. skip names keys left out of the page map before conversion, so a
-// value that is not JSON there cannot fail the read.
+// value that is not JSON there cannot fail the read. A value holding one
+// JSON cannot (a peer's bigint or bytes) is left out too, as ExportPage
+// leaves out such an icon; a restore still copies the stored value.
 func PlainPageMaps(doc *yjs.Doc, skip map[string]bool) []PlainPageMap {
 	var maps []PlainPageMap
 	for _, m := range ReadPageMaps(doc) {
@@ -52,8 +54,7 @@ func PlainPageMaps(doc *yjs.Doc, skip map[string]bool) []PlainPageMap {
 			}
 			node, err := toJSONNode(e.Value)
 			if err != nil {
-				// Plain values hold only JSON, so this cannot fail.
-				panic(err)
+				continue
 			}
 			plain.Set(e.Key, node)
 		}

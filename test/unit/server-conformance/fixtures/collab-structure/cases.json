@@ -1690,6 +1690,47 @@
       ]
     },
     {
+      "name": "page-map-non-json",
+      "roomUpdate": "AQQBACgBBnZhbHVlcwNiaWcBdgEBbnoAAAAAAAAAASgBBnZhbHVlcwVieXRlcwF1AXQBASgBBnZhbHVlcwRrZXB0AXcFcGxhaW4oAQRwYWdlBWNvdmVyAXYBAW56AAAAAAAAAAEA",
+      "structure": {
+        "keys": [],
+        "rootOrder": [],
+        "reached": []
+      },
+      "pageMaps": {
+        "page": {
+          "cover": "object"
+        },
+        "values": {
+          "big": "object",
+          "bytes": "array",
+          "kept": "string"
+        }
+      },
+      "plainPageMaps": [
+        {
+          "name": "values",
+          "map": {
+            "kept": "plain"
+          }
+        }
+      ],
+      "plainPageMapsSkippingTitle": [
+        {
+          "name": "values",
+          "map": {
+            "kept": "plain"
+          }
+        }
+      ],
+      "equalPairs": [
+        [
+          "page.cover",
+          "values.big"
+        ]
+      ]
+    },
+    {
       "name": "empty-page-maps",
       "roomUpdate": "AQIBACcBBHBhZ2UFdGl0bGUCBAABAAtvbmx5IHNoYXJlZAA=",
       "structure": {

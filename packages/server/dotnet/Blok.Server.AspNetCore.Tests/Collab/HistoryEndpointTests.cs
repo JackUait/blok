@@ -172,6 +172,31 @@ public sealed class HistoryEndpointTests
     Assert.Equal("""{"title":"Old title"}""", body["values"]!.ToJsonString());
   }
 
+  /// <summary>A peer's value that JSON cannot hold is left out, as the page icon is; it does not fail the read.</summary>
+  [Fact]
+  public async Task AReadLeavesOutAPageMapValueHoldingAPeerBigint()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await using var member = await history.App.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var mirror = await JoinAsync(member);
+    var big = new AnyObject();
+
+    big.Add("n", new System.Numerics.BigInteger(1));
+
+    await SendAsync(history, member, mirror, transaction =>
+    {
+      mirror.GetMap("values").Set(transaction, "x", big);
+      mirror.GetMap("values").Set(transaction, "kept", "plain");
+    });
+
+    using var response = await history.SendAsync(HttpMethod.Get, $"/history/{lineage}/1");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var body = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+    Assert.Equal("""{"kept":"plain"}""", body["values"]!.ToJsonString());
+  }
+
   /// <summary>A page map holding only the title and icon leaves no <c>page</c> object behind.</summary>
   [Fact]
   public async Task AReadWithOnlyATitleHasNoPageObject()

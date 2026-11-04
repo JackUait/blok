@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
@@ -112,6 +113,20 @@ public sealed class YDocConverterStructureCaptureTests
       values.Set(t, "bytes", new byte[] { 1, 2 });
       values.Set(t, "map", new YMap([new("k", "v")]));
       values.Set(t, "list", new YArray(["a"]));
+    }));
+    // A peer can nest a value JSON cannot hold; the read leaves that key out.
+    yield return ("page-map-non-json", doc => doc.Transact(t =>
+    {
+      var values = doc.GetMap("values");
+      var big = new AnyObject();
+      var bytes = new AnyArray();
+
+      big.Add("n", new BigInteger(1));
+      bytes.Add(new byte[] { 1 });
+      values.Set(t, "big", big);
+      values.Set(t, "bytes", bytes);
+      values.Set(t, "kept", "plain");
+      doc.GetMap("page").Set(t, "cover", big);
     }));
     yield return ("empty-page-maps", doc => doc.Transact(t =>
     {

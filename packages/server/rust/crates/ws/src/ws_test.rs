@@ -721,3 +721,46 @@ async fn a_pong_that_beats_the_ping_write_still_answers_it() {
     assert!(aborted.is_err(), "an answered ping timed out");
     server.abort();
 }
+
+/// The 101 the host writes for this sub-protocol, read off the wire.
+async fn answer_101(sub_protocol: &'static str) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = blok_http::Server::new(
+        move |request: blok_http::Request, response: blok_http::ResponseWriter| async move {
+            let options = Options {
+                sub_protocol: sub_protocol.into(),
+                keep_alive_interval: Duration::ZERO,
+                keep_alive_timeout: Duration::ZERO,
+            };
+            if let Ok(conn) = upgrade(response, &request, options).await {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                conn.abort();
+            }
+        },
+        blok_http::Config::default(),
+    );
+    tokio::spawn(async move { server.serve(listener).await });
+    let mut client = TcpStream::connect(address).await.unwrap();
+    client
+        .write_all(b"GET /sync/doc HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n")
+        .await
+        .unwrap();
+    let mut bytes = Vec::new();
+    let _ = tokio::time::timeout(Duration::from_secs(2), client.read_to_end(&mut bytes)).await;
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
+// Measured on the C# host (raw TCP), less its "Server: Kestrel" line, which
+// blok-http leaves out of every answer: no Date, and the sub-protocol last.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_101_has_kestrels_bytes() {
+    assert_eq!(
+        answer_101("").await,
+        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
+    );
+    assert_eq!(
+        answer_101("blok-sync.v2").await,
+        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\nSec-WebSocket-Protocol: blok-sync.v2\r\n\r\n"
+    );
+}

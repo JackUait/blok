@@ -19,7 +19,8 @@ pub const MINIMUM_TIMEOUT: Duration = Duration::from_millis(100);
 /// budget and unlike C#'s count of every allocation. C#'s 512 MiB: the
 /// hungriest document measured, a 3 MiB https URL written to Markdown,
 /// needs 112 MiB; every other ops.json big.* case and C#'s long-article
-/// tests need 16 MiB or less.
+/// tests need 16 MiB or less. Measured with QuickJS's own byte count; the
+/// allocator's count adds a small header per allocation.
 pub const DEFAULT_MEMORY_BUDGET: i64 = 512 << 20;
 /// C#'s floor.
 pub const MINIMUM_MEMORY_BUDGET: i64 = 8 << 20;

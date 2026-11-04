@@ -7,6 +7,7 @@ use rquickjs::function::This;
 use rquickjs::promise::PromiseState;
 use rquickjs::{Context, Ctx, Function, Object, Persistent, Value};
 
+use crate::budget::Budget;
 use crate::guard::Guard;
 use crate::runtime::{Error, JsError, Stop};
 
@@ -32,14 +33,14 @@ pub(crate) struct Limits {
 
 /// One QuickJS engine with the bundle loaded. Not `Send`: it never leaves
 /// the thread that built it.
-// Field order is drop order: the persistent handles and the context must go
-// before the runtime.
+// Field order is drop order: the persistent handles must go before the
+// context, which holds the runtime.
 pub(crate) struct Engine {
     invoke: Persistent<Function<'static>>,
     well_formed: Persistent<Function<'static>>,
     ctx: Context,
-    rt: rquickjs::Runtime,
     guard: Guard,
+    budget: Budget,
 }
 
 enum Settled {
@@ -61,15 +62,17 @@ impl Engine {
         source: &str,
         limits: Option<(Duration, i64)>,
     ) -> Result<Engine, Error> {
-        let rt = rquickjs::Runtime::new().map_err(engine_error)?;
+        let budget = Budget::default();
+        let rt = rquickjs::Runtime::new_with_alloc(budget.allocator()).map_err(engine_error)?;
         rt.set_max_stack_size(MAX_STACK);
         let guard = Guard::new();
-        rt.set_interrupt_handler(Some(Box::new(guard.handler())));
+        rt.set_interrupt_handler(Some(Box::new(guard.handler(budget.clone()))));
         let ctx = Context::full(&rt).map_err(engine_error)?;
 
+        let limit = budget;
         if let Some((timeout, budget)) = limits {
             guard.arm(Instant::now() + timeout, None);
-            limit_memory(&rt, budget);
+            limit.arm(budget);
         }
         let loaded = ctx.with(|ctx| {
             // Taken before the bundle runs, so a script cannot swap it.
@@ -98,8 +101,7 @@ impl Engine {
             )))
         });
         let fired = if limits.is_some() {
-            rt.set_memory_limit(0);
-            guard.disarm()
+            stopped(&guard, &limit)
         } else {
             None
         };
@@ -112,14 +114,14 @@ impl Engine {
                 let thrown = thrown
                     .restore(&ctx)
                     .unwrap_or_else(|_| Value::new_undefined(ctx.clone()));
-                thrown_error(&ctx, thrown, limits.is_some(), None)
+                Error::Js(js_error(&ctx, thrown, None))
             })),
             Ok(Ok((_, None))) => Err(Error::NoEntryPoint),
             Ok(Ok((well_formed, Some(invoke)))) => Ok(Engine {
                 invoke,
                 well_formed,
+                budget: limit,
                 ctx,
-                rt,
                 guard,
             }),
         }
@@ -139,14 +141,13 @@ impl Engine {
     ) -> Result<String, Error> {
         if let Some(limits) = limits {
             self.guard.arm(limits.deadline, limits.cancel.clone());
-            limit_memory(&self.rt, limits.budget);
+            self.budget.arm(limits.budget);
         }
         let settled = self.ctx.with(|ctx| self.run(&ctx, op, input));
         // The limit comes off before any host-side read: reading a result
         // allocates inside QuickJS too.
         let fired = if limits.is_some() {
-            self.rt.set_memory_limit(0);
-            self.guard.disarm()
+            stopped(&self.guard, &self.budget)
         } else {
             None
         };
@@ -161,12 +162,7 @@ impl Engine {
                 Settled::Failed(err) => Err(err),
                 Settled::Thrown(thrown) => {
                     let thrown = thrown.restore(&ctx).map_err(engine_error)?;
-                    Err(thrown_error(
-                        &ctx,
-                        thrown,
-                        limits.is_some(),
-                        Some(&well_formed),
-                    ))
+                    Err(Error::Js(js_error(&ctx, thrown, Some(&well_formed))))
                 }
                 Settled::Value(value) => {
                     let value = value.restore(&ctx).map_err(engine_error)?;
@@ -211,32 +207,12 @@ impl Engine {
     }
 }
 
-/// QuickJS's limit counts bytes it holds, so the budget is growth above what
-/// the engine already holds.
-fn limit_memory(rt: &rquickjs::Runtime, budget: i64) {
-    let used = usize::try_from(rt.memory_usage().malloc_size).unwrap_or(0);
-    let budget = usize::try_from(budget).unwrap_or(usize::MAX);
-    rt.set_memory_limit(used.saturating_add(budget).max(1));
-}
-
-/// Reads a thrown value. Under a budget, QuickJS's own out-of-memory error
-/// is the budget's stop: an InternalError "out of memory", or null when even
-/// that error could not be allocated (quickjs.c JS_ThrowError2). So a script
-/// that throws null under a budget reads as over budget too.
-fn thrown_error<'js>(
-    ctx: &Ctx<'js>,
-    thrown: Value<'js>,
-    budgeted: bool,
-    well_formed: Option<&Function<'js>>,
-) -> Error {
-    if budgeted && thrown.is_null() {
-        return Error::Stopped(Stop::Budget);
-    }
-    let err = js_error(ctx, thrown, well_formed);
-    if budgeted && err.name == "InternalError" && err.message == "out of memory" {
-        return Error::Stopped(Stop::Budget);
-    }
-    Error::Js(err)
+/// Ends a guarded run. A run that went over budget is stopped even when
+/// JS caught the failed allocation and finished.
+fn stopped(guard: &Guard, budget: &Budget) -> Option<Stop> {
+    let over = budget.disarm();
+    let fired = guard.disarm();
+    if over { Some(Stop::Budget) } else { fired }
 }
 
 /// Reads name and message as C# does (Get, then ToString). Either read can

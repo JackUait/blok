@@ -2,9 +2,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
+use crate::budget::Budget;
 use crate::runtime::Stop;
 
-/// Stops one engine run at its deadline or when its caller goes away.
+/// Stops one engine run at its deadline, past its memory budget, or when
+/// its caller goes away.
 /// QuickJS polls the handler between instructions, also while it drains the
 /// job queue, never inside a long native builtin.
 #[derive(Clone)]
@@ -58,7 +60,7 @@ impl Guard {
         std::mem::take(&mut *self.state()).fired
     }
 
-    pub(crate) fn handler(&self) -> impl FnMut() -> bool + Send + 'static {
+    pub(crate) fn handler(&self, budget: Budget) -> impl FnMut() -> bool + Send + 'static {
         let guard = self.clone();
         move || {
             let mut state = guard.state();
@@ -66,7 +68,9 @@ impl Guard {
                 return false;
             }
             if state.fired.is_none() {
-                if state
+                if budget.over() {
+                    state.fired = Some(Stop::Budget);
+                } else if state
                     .cancel
                     .as_ref()
                     .is_some_and(|cancel| cancel.load(Ordering::SeqCst))

@@ -4,6 +4,7 @@
 //! QuickJS engines are not `Send`, so every engine lives on its own thread
 //! (see `worker.rs`) with a native stack sized for the bundle's recursion.
 
+mod budget;
 mod engine;
 mod guard;
 mod pool;

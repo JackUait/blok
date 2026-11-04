@@ -9,10 +9,15 @@ license = "Apache-2.0"
 publish = false
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 
 [profile.release]
 codegen-units = 4
+
+# Unoptimized QuickJS uses about 9 KB of stack per JS frame against 1 KB
+# optimized, so a debug build stopped deep outlines near 500 levels.
+[profile.dev.package.rquickjs-sys]
+opt-level = 3

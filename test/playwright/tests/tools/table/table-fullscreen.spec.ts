@@ -595,6 +595,19 @@ test.describe('Table full screen', () => {
     expect(Math.abs(placed?.colGap ?? Infinity)).toBeLessThanOrEqual(1);
     expect(placed?.rowOnTop).toBe(true);
     expect(placed?.colOnTop).toBe(true);
+
+    // A fast scroll paints before the scroll event re-places grips. Read in the
+    // same task as the scroll, the stuck grip must not have moved with the content.
+    const drift = await modal.evaluate((el) => {
+      const grip = el.querySelector('[data-blok-table-grip-col="3"]');
+      const before = grip?.getBoundingClientRect().top ?? NaN;
+
+      el.scrollBy(0, 120);
+
+      return (grip?.getBoundingClientRect().top ?? NaN) - before;
+    });
+
+    expect(drift).toBe(0);
   });
 
   test('a wide table runs to the modal edges, its start gap scrolls away, and it shows the add-column bar at its scroll end', async ({ page }) => {

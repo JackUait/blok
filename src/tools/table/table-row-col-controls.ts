@@ -31,6 +31,12 @@ interface GripFrame {
   /** Set when the grip hangs from a modal edge instead of centring on the table border. */
   rowTransform?: string;
   colTransform?: string;
+  /**
+   * Viewport top and overlay left for a column grip held under the full-screen
+   * header. Held fixed: Chrome scrolls the modal before the scroll event re-places
+   * grips, so an absolute grip rode up under the header on a fast scroll.
+   */
+  colFixed?: { top: number; originLeft: number };
 }
 
 const CENTRED = 'translate(-50%, -50%)';
@@ -654,11 +660,15 @@ export class TableRowColControls {
     const adjustedX = centerX + frame.gridOffset;
     const style = grip.style;
 
-    style.top = `${frame.colGripY}px`;
-    style.left = `${adjustedX}px`;
+    const fixed = frame.colFixed;
+
+    style.position = fixed === undefined ? '' : 'fixed';
+    style.top = `${fixed?.top ?? frame.colGripY}px`;
     style.transform = frame.colTransform ?? CENTRED;
 
     if (!this.overlay) {
+      style.left = `${adjustedX}px`;
+
       return;
     }
 
@@ -669,9 +679,9 @@ export class TableRowColControls {
 
     // The overlay does not clip, and a hidden grip still takes up layout space.
     // Left where its column is, it would make the page scroll sideways.
-    if (isOutOfView) {
-      style.left = `${Math.min(Math.max(adjustedX, frame.visibleStart), visibleEnd)}px`;
-    }
+    const left = isOutOfView ? Math.min(Math.max(adjustedX, frame.visibleStart), visibleEnd) : adjustedX;
+
+    style.left = `${left + (fixed?.originLeft ?? 0)}px`;
   }
 
   private placeRowGrip(grip: HTMLElement, i: number, rows: ArrayLike<HTMLElement>, frame: GripFrame): void {
@@ -741,7 +751,8 @@ export class TableRowColControls {
     const origin = this.overlay.getBoundingClientRect();
     const start = modal.getBoundingClientRect().left + modal.clientLeft - origin.left;
     const end = start + modal.clientWidth;
-    const top = header.getBoundingClientRect().bottom - origin.top;
+    const headerBottom = header.getBoundingClientRect().bottom;
+    const top = headerBottom - origin.top;
     const rowLine = direction === 'ltr' ? frame.gridOffset : frame.gridOffset + this.grid.offsetWidth;
     const rowStuck = direction === 'ltr' ? rowLine < start : rowLine > end;
     const colStuck = frame.colGripY < top;
@@ -754,6 +765,7 @@ export class TableRowColControls {
     if (colStuck) {
       pinned.colGripY = top;
       pinned.colTransform = 'translate(-50%, 0)';
+      pinned.colFixed = { top: headerBottom, originLeft: origin.left };
     }
 
     return pinned;

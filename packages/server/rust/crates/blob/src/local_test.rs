@@ -1,39 +1,50 @@
-use std::fs;
-use std::path::Path;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 
-use super::*;
-use crate::is_generated;
+use crate::blob::{Body, Error, Store, is_generated};
+use crate::local::Local;
 
 // Hand ports of LocalBlobStoreTests. The key gate is the only thing that
 // keeps a delete inside the storage directory.
 
-const TEST_PUBLIC_URL: &str = "https://cdn.example.com/files/";
+pub const TEST_PUBLIC_URL: &str = "https://cdn.example.com/files/";
 
-fn never() -> bool {
-    false
+pub struct TempDir(pub PathBuf);
+
+impl TempDir {
+    pub fn new() -> TempDir {
+        let mut random = [0u8; 8];
+        getrandom::fill(&mut random).unwrap();
+        let name: String = random.iter().map(|b| format!("{b:02x}")).collect();
+        let path = std::env::temp_dir().join(format!("blok-blob-test-{name}"));
+        std::fs::create_dir_all(&path).unwrap();
+        TempDir(path)
+    }
 }
 
-fn temp_dir() -> std::path::PathBuf {
-    let mut random = [0u8; 8];
-    getrandom::fill(&mut random).unwrap();
-    let hex: String = random.iter().map(|b| format!("{b:02x}")).collect();
-    let dir = std::env::temp_dir().join(format!("blok-blob-test-{hex}"));
-    fs::create_dir_all(&dir).unwrap();
-    dir
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
 }
 
-fn entries(dir: &Path) -> Vec<String> {
-    fs::read_dir(dir)
+pub fn entries(directory: &Path) -> Vec<String> {
+    let mut names: Vec<String> = std::fs::read_dir(directory)
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-        .collect()
+        .collect();
+    names.sort();
+    names
+}
+
+pub fn bytes(content: &str) -> Body {
+    Body::bytes(content.as_bytes().to_vec())
 }
 
 #[tokio::test]
 async fn refuses_foreign_urls_without_touching_bystander_files() {
     let key = format!("{}.txt", "a".repeat(32));
     let hex = "0123456789abcdef0123456789abcdef";
-    let a32 = "a".repeat(32);
     let urls = [
         format!("http://cdn.example.com/files/{key}"),
         format!("https://evil.example.com/files/{key}"),
@@ -45,57 +56,57 @@ async fn refuses_foreign_urls_without_touching_bystander_files() {
         format!("https://cdn.example.com/files/%2e%2e%2f{key}"),
         format!("https://cdn.example.com/files/{}.txt", "A".repeat(32)),
         format!("https://cdn.example.com/files/{}.txt", "g".repeat(32)),
-        format!("https://cdn.example.com/files/{a32}.TXT"),
-        format!("https://cdn.example.com/files/{a32}.tar-gz"),
-        format!("https://cdn.example.com/files/{a32}.{}", "a".repeat(16)),
+        format!("https://cdn.example.com/files/{}.TXT", "a".repeat(32)),
+        format!("https://cdn.example.com/files/{}.tar-gz", "a".repeat(32)),
+        format!(
+            "https://cdn.example.com/files/{}.{}",
+            "a".repeat(32),
+            "a".repeat(16)
+        ),
         format!("https://cdn.example.com/files/{key}/"),
         // A generated prefix followed by a path that climbs out of the store.
         format!("https://cdn.example.com/files/{hex}/../../victim.txt"),
         format!("https://cdn.example.com/files/{hex}/../{key}"),
     ];
     for url in urls {
-        let root = temp_dir();
-        let directory = root.join("store").join("files");
-        fs::create_dir_all(&directory).unwrap();
+        let root = TempDir::new();
+        let directory = root.0.join("store").join("files");
+        std::fs::create_dir_all(&directory).unwrap();
         let bystander = directory.join(&key);
-        let victim = root.join("store").join("victim.txt");
+        let victim = root.0.join("store").join("victim.txt");
         for path in [&bystander, &victim] {
-            fs::write(path, "bystander").unwrap();
+            std::fs::write(path, "bystander").unwrap();
         }
         let store = Local::new(&directory, TEST_PUBLIC_URL);
-        let result = store.delete(&url, &never).await;
-        assert!(matches!(result, Err(Error::Foreign)), "{url}: {result:?}");
+        assert!(
+            matches!(store.delete(&url).await, Err(Error::Foreign)),
+            "{url}"
+        );
         for path in [&bystander, &victim] {
-            assert_eq!(fs::read_to_string(path).unwrap(), "bystander", "{url}");
+            assert_eq!(std::fs::read_to_string(path).unwrap(), "bystander", "{url}");
         }
-        fs::remove_dir_all(root).unwrap();
     }
 }
 
 #[tokio::test]
 async fn deletes_an_owned_url_and_treats_an_absent_owned_file_as_deleted() {
-    let directory = temp_dir();
-    let store = Local::new(&directory, TEST_PUBLIC_URL);
+    let directory = TempDir::new();
+    let store = Local::new(&directory.0, TEST_PUBLIC_URL);
     let url = store
-        .put(".txt", "text/plain", &mut &b"bytes"[..], &never)
+        .put(".txt", "text/plain", bytes("bytes"))
         .await
         .unwrap();
     store
-        .delete(&format!("{url}?download=1#file"), &never)
+        .delete(&format!("{url}?download=1#file"))
         .await
         .unwrap();
-    store.delete(&url, &never).await.unwrap();
-    assert!(
-        entries(&directory).is_empty(),
-        "left {:?}",
-        entries(&directory)
-    );
-    fs::remove_dir_all(directory).unwrap();
+    store.delete(&url).await.unwrap();
+    assert!(entries(&directory.0).is_empty());
 }
 
 #[tokio::test]
 async fn keeps_only_a_bounded_ascii_alphanumeric_extension() {
-    let cases = [
+    for (supplied, want) in [
         ("", ""),
         (".A", ".a"),
         (".AbC123", ".abc123"),
@@ -109,65 +120,59 @@ async fn keeps_only_a_bounded_ascii_alphanumeric_extension() {
         (".p\0ng", ""),
         ("png", ""),
         ("../../evil.png", ""),
-    ];
-    for (supplied, want) in cases {
-        let directory = temp_dir();
-        let store = Local::new(&directory, TEST_PUBLIC_URL);
+    ] {
+        let directory = TempDir::new();
+        let store = Local::new(&directory.0, TEST_PUBLIC_URL);
         store
-            .put(supplied, "application/octet-stream", &mut &b""[..], &never)
+            .put(supplied, "application/octet-stream", bytes(""))
             .await
             .unwrap();
-        let names = entries(&directory);
-        assert_eq!(names.len(), 1, "{supplied:?}: {names:?}");
+        let names = entries(&directory.0);
+        assert_eq!(names.len(), 1, "{supplied:?}");
         let name = &names[0];
         assert!(
             name.len() == 32 + want.len() && is_generated(name) && &name[32..] == want,
-            "{supplied:?}: stored as {name:?}, want the extension {want:?}"
+            "{supplied:?}: stored as {name}"
         );
-        fs::remove_dir_all(directory).unwrap();
     }
 }
 
-// C#'s File.Move succeeds on a file system without hard links (measured on
-// FAT32), so put must not depend on link(2).
 #[tokio::test]
 async fn put_stores_the_file_when_hard_links_fail() {
-    let directory = temp_dir();
-    let mut store = Local::new(&directory, TEST_PUBLIC_URL);
-    store.link = |_, _| Err(io::Error::from(io::ErrorKind::Unsupported));
+    let directory = TempDir::new();
+    let mut store = Local::new(&directory.0, TEST_PUBLIC_URL);
+    store.link = |_, _| Err(std::io::Error::from(std::io::ErrorKind::Unsupported));
     let url = store
-        .put(".txt", "text/plain", &mut &b"hello"[..], &never)
+        .put(".txt", "text/plain", bytes("hello"))
         .await
         .unwrap();
-    let path = directory.join(url.strip_prefix(TEST_PUBLIC_URL).unwrap());
-    assert_eq!(fs::read_to_string(&path).unwrap(), "hello");
-    use std::os::unix::fs::PermissionsExt;
-    assert_eq!(
-        fs::metadata(&path).unwrap().permissions().mode() & 0o777,
-        0o644
-    );
-    assert_eq!(entries(&directory).len(), 1, "want only the file");
-    fs::remove_dir_all(directory).unwrap();
+    let path = directory.0.join(url.strip_prefix(TEST_PUBLIC_URL).unwrap());
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello");
+    let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o644);
+    assert_eq!(entries(&directory.0).len(), 1);
 }
 
 #[tokio::test]
 async fn put_never_overwrites_when_hard_links_fail() {
-    let directory = temp_dir();
-    let mut store = Local::new(&directory, TEST_PUBLIC_URL);
+    let directory = TempDir::new();
+    let mut store = Local::new(&directory.0, TEST_PUBLIC_URL);
     // The key appears between the failed link and the fallback.
     store.link = |_, last| {
-        fs::write(last, "first").unwrap();
-        Err(io::Error::from(io::ErrorKind::Unsupported))
+        std::fs::write(last, "first").unwrap();
+        Err(std::io::Error::from(std::io::ErrorKind::Unsupported))
     };
-    let result = store
-        .put(".txt", "text/plain", &mut &b"second"[..], &never)
-        .await;
-    assert!(result.is_err(), "put wrote over an existing key");
-    let names = entries(&directory);
-    assert_eq!(names.len(), 1, "want only the first file: {names:?}");
+    assert!(
+        store
+            .put(".txt", "text/plain", bytes("second"))
+            .await
+            .is_err(),
+        "Put wrote over an existing key"
+    );
+    let names = entries(&directory.0);
+    assert_eq!(names.len(), 1);
     assert_eq!(
-        fs::read_to_string(directory.join(&names[0])).unwrap(),
+        std::fs::read_to_string(directory.0.join(&names[0])).unwrap(),
         "first"
     );
-    fs::remove_dir_all(directory).unwrap();
 }

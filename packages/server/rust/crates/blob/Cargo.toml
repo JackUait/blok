@@ -7,11 +7,17 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+blok-collab-workingset = { path = "../collab-workingset" }
+blok-dotnet = { path = "../dotnet" }
+blok-mediatype = { path = "../mediatype" }
+blok-outbound = { path = "../outbound" }
 getrandom = "0.4"
-tokio = { version = "1", features = ["fs", "io-util"] }
+hmac = "0.12"
+sha2 = "0.10"
+tokio = { version = "1", features = ["fs", "io-util", "net", "rt", "time", "sync", "macros"] }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["fs", "io-util", "rt", "macros"] }
+tokio = { version = "1", features = ["fs", "io-util", "net", "rt", "rt-multi-thread", "time", "sync", "macros"] }
 
 [lints]
 workspace = true

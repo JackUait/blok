@@ -58,7 +58,13 @@ version = "0.0.0"
 name = "blok-blob"
 version = "0.0.0"
 dependencies = [
+ "blok-collab-workingset",
+ "blok-dotnet",
+ "blok-mediatype",
+ "blok-outbound",
  "getrandom 0.4.3",
+ "hmac",
+ "sha2",
  "tokio",
 ]
 

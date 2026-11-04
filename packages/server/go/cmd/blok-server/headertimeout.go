@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,6 +47,9 @@ func limitRequestHeaders(server *http.Server, timeout, idle time.Duration) func(
 		case http.StateHijacked, http.StateClosed:
 			if conn.targets != nil && state == http.StateHijacked {
 				conn.targets.pass()
+			}
+			if state == http.StateHijacked {
+				conn.hijacked.Store(true)
 			}
 			conn.stop()
 			// A hijacker writes its own bytes.
@@ -92,6 +96,10 @@ type headerConn struct {
 	targets       *targetStream
 	// answer is how the next status line net/http writes is rewritten.
 	answer answerKind
+	// ended: the client ended its side. Kestrel then writes nothing more.
+	ended atomic.Bool
+	// hijacked: a hijacker owns the socket and writes as it likes.
+	hijacked atomic.Bool
 }
 
 func (c *headerConn) Read(p []byte) (int, error) {
@@ -109,6 +117,9 @@ func (r rawConn) Read(p []byte) (int, error) { return r.c.readRaw(p) }
 
 func (c *headerConn) readRaw(p []byte) (int, error) {
 	n, err := c.Conn.Read(p)
+	if n == 0 && err == io.EOF {
+		c.ended.Store(true)
+	}
 	if n > 0 {
 		c.mu.Lock()
 		c.startLocked()
@@ -154,7 +165,20 @@ func (c *headerConn) CloseWrite() error {
 	return nil
 }
 
+// dropped is Kestrel aborting its output once the client ended its side.
+// A hijacked socket is its owner's.
+func (c *headerConn) dropped() bool {
+	if c.ended.Load() && !c.hijacked.Load() {
+		_ = c.Conn.Close()
+		return true
+	}
+	return false
+}
+
 func (c *headerConn) ReadFrom(r io.Reader) (int64, error) {
+	if c.dropped() {
+		return 0, net.ErrClosed
+	}
 	if w, ok := c.Conn.(io.ReaderFrom); ok {
 		return w.ReadFrom(r)
 	}

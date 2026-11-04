@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"net"
 	"net/http"
+	"runtime"
 )
 
 // answerKind says how the next status line net/http writes on a connection
@@ -45,6 +47,14 @@ func (c *headerConn) Write(p []byte) (int, error) {
 	c.mu.Lock()
 	kind := c.answer
 	c.mu.Unlock()
+	if kind != noAnswer {
+		// An answer starts: let net/http's background read meet an end
+		// that has already come. It still loses that race now and then.
+		runtime.Gosched()
+	}
+	if c.dropped() {
+		return 0, net.ErrClosed
+	}
 	lineEnd := bytes.Index(p, []byte("\r\n"))
 	if kind == noAnswer || !bytes.HasPrefix(p, []byte("HTTP/1.")) || lineEnd < len("HTTP/1.x 200") {
 		return c.Conn.Write(p)

@@ -179,6 +179,11 @@ const matchesView = (selector, root) => {
   }
 
   return parts.some((part) => {
+    /** A ::highlight() paints only ranges the editor's scripts register; the view runs none. */
+    if (part.includes('::highlight(')) {
+      return false;
+    }
+
     const probe = part.replace(PSEUDO_ELEMENT, '').trim();
 
     if (probe === '') {

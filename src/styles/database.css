@@ -9866,7 +9866,10 @@ textarea[data-blok-database-cell-input] {
 }
 
 /* Search matches, painted by database-search-highlight.ts. */
-::highlight(blok-database-search-match) {
+/* Roots only; descendants inherit it. The roots are where the colour tokens are set,
+   because var() resolves where the rule matches. highlight-fallback.css covers
+   engines without highlight inheritance. */
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-database-search-match) {
   background-color: var(--blok-database-search-match-bg);
 }
 

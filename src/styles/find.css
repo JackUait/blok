@@ -1,11 +1,14 @@
 /* ─── Find in page (Cmd/Ctrl+F) ───────────────────────────────────────── */
 
 /* The names must match the highlights registered by Find. */
-::highlight(blok-find-match) {
+/* Roots only; descendants inherit it. The roots are where the colour tokens are set,
+   because var() resolves where the rule matches. highlight-fallback.css covers
+   engines without highlight inheritance. */
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-find-match) {
   background-color: var(--blok-find-match-bg, rgba(255, 212, 0, 0.32));
 }
 
-::highlight(blok-find-match-active) {
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-find-match-active) {
   background-color: var(--blok-find-match-active-bg, rgba(255, 138, 0, 0.5));
 }
 

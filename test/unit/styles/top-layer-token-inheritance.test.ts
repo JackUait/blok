@@ -14,7 +14,10 @@ const SHEETS = ['src/styles/colors.css', 'src/styles/database.css', 'src/styles/
 
 /** Every `[data-blok-top-layer]` that a palette `:where(...)` selector list declares tokens on. */
 const tokenScopes = (css: string): string[] =>
-  Array.from(css.matchAll(/:where\(([^{}]*?\[data-blok-top-layer\][^{}]*?)\)\s*(?:,|\{)/g)).map((match) => match[1] ?? '');
+  Array.from(css.matchAll(/:where\(([^{}]*?\[data-blok-top-layer\][^{}]*?)\)\s*(?:,|\{)/g))
+    .map((match) => match[1] ?? '')
+    // A ::highlight() root list paints a highlight; it declares no tokens.
+    .filter((scope) => !scope.includes('::highlight('));
 
 describe('top-layer token inheritance', () => {
   it.each(SHEETS)('%s declares palette tokens only on top-layer elements outside an editor', (sheet) => {

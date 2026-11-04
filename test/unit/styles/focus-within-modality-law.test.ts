@@ -37,6 +37,10 @@ const MAIN_CSS = join(SRC_ROOT, 'styles/main.css');
  */
 const STANDALONE_CSS_ENTRIES = [
   {
+    file: 'src/styles/highlight-fallback.css',
+    reason: 'Appended to #blok-styles by highlight-inheritance.ts in engines without highlight inheritance; holds ::highlight() rules only.',
+  },
+  {
     file: 'src/playground/playground.css',
     reason: 'Dev-page Tailwind entry, loaded by index.html alone — never reachable from main.css.',
   },

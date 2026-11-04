@@ -17,6 +17,7 @@ import { SelectionUtils as Selection } from '../selection/index';
 import { debounce, getBlokVersion, getValidUrl, isEmpty, openSameWindow, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
+import { withHighlightFallback } from '../utils/highlight-inheritance';
 import { mountStyles } from '../utils/lazy-styles';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { resolveLoaderConfig } from '../utils/loader-config';
@@ -917,7 +918,7 @@ export class UI extends Module<UINodes> {
     /**
      * Append styles at the top of HEAD tag
      */
-    mountStyles(layerOrder + styles.toString(), nonce);
+    mountStyles(layerOrder + withHighlightFallback(styles.toString(), nonce), nonce);
   }
 
   /**

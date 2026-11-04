@@ -1,0 +1,32 @@
+/*
+  Descendant form of Blok's ::highlight() rules, for engines without highlight
+  inheritance (Firefox). highlight-inheritance.ts appends this file only there.
+  Elsewhere the root-form rules (find.css, main.css, slash-search.css,
+  database.css) cover descendants by inheritance; this form would make the
+  browser resolve every highlight on every element.
+  Keep each rule's declarations equal to its root-form twin:
+  test/unit/architecture/highlight-root-form-law.test.ts.
+*/
+:where(:root) ::highlight(blok-find-match) {
+  background-color: var(--blok-find-match-bg, rgba(255, 212, 0, 0.32));
+}
+
+:where(:root) ::highlight(blok-find-match-active) {
+  background-color: var(--blok-find-match-active-bg, rgba(255, 138, 0, 0.5));
+}
+
+[data-blok-interface] ::highlight(blok-cross-block-selection) {
+  background-color: var(--blok-selection-inline);
+}
+
+[data-blok-interface] ::highlight(blok-assistant-selection) {
+  background-color: var(--blok-selection-inactive);
+}
+
+:where(:root) ::highlight(blok-page-mention-query) {
+  background-color: var(--blok-item-hover-bg);
+}
+
+:where(:root) ::highlight(blok-database-search-match) {
+  background-color: var(--blok-database-search-match-bg);
+}

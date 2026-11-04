@@ -3064,11 +3064,11 @@
   background-color: transparent;
 }
 
-[data-blok-interface] ::highlight(blok-cross-block-selection) {
+[data-blok-interface]::highlight(blok-cross-block-selection) {
   background-color: var(--blok-selection-inline);
 }
 
-[data-blok-interface] ::highlight(blok-assistant-selection) {
+[data-blok-interface]::highlight(blok-assistant-selection) {
   background-color: var(--blok-selection-inactive);
 }
 
@@ -3708,7 +3708,7 @@ span[data-blok-slash-search] {
   background: var(--blok-gray-text);
 }
 
-::highlight(blok-page-mention-query) {
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-page-mention-query) {
   background-color: var(--blok-item-hover-bg);
 }
 
@@ -12899,7 +12899,7 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-bg-primary);
 }
 
-::highlight(blok-database-search-match) {
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-database-search-match) {
   background-color: var(--blok-database-search-match-bg);
 }
 
@@ -29675,11 +29675,11 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cdefs%3E%3CclipPath id='bk-unknown-behind'%3E%3Cpath clip-rule='evenodd' d='M-10 -10h40v40h-40ZM10 1.4a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Cg transform='translate(0 -.6)'%3E%3Ccircle cx='10' cy='6.2' r='3.9'/%3E%3Cg fill='none' stroke='currentColor' stroke-width='1.2' stroke-linecap='round' transform='rotate(-12 10 10.6)'%3E%3Cpath d='M2.4 10.6A7.6 1.9 0 0 0 17.6 10.6'/%3E%3Cpath opacity='.35' clip-path='url(%23bk-unknown-behind)' d='M2.4 10.6A7.6 1.9 0 0 1 17.6 10.6'/%3E%3C/g%3E%3Cpath d='M3.8 18.8c0-3.3 2.7-5.6 6.2-5.6s6.2 2.3 6.2 5.6Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-::highlight(blok-find-match) {
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-find-match) {
   background-color: var(--blok-find-match-bg, rgba(255, 212, 0, 0.32));
 }
 
-::highlight(blok-find-match-active) {
+:where(:root, [data-blok-interface], [data-blok-popover], [data-blok-top-layer]:not([data-blok-interface] *))::highlight(blok-find-match-active) {
   background-color: var(--blok-find-match-active-bg, rgba(255, 138, 0, 0.5));
 }
 

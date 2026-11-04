@@ -1460,6 +1460,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const EMBED_GENERIC_GATE_BYTES = 1_636;
     // embed.css: the host line above a loaded generic frame, and the toolbar moved below it.
     const EMBED_GENERIC_HOST_BYTES = 911;
+    // find, slash-search, database, main: ::highlight() rules moved to their roots, so a
+    // big table does not resolve every highlight per element.
+    const HIGHLIGHT_ROOT_FORM_BYTES = 1_181;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1831,7 +1834,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABLE_FULLSCREEN_EDGES_BYTES
       + MODALITY_GATE_LEADS_BYTES
       + EMBED_GENERIC_GATE_BYTES
-      + EMBED_GENERIC_HOST_BYTES;
+      + EMBED_GENERIC_HOST_BYTES
+      + HIGHLIGHT_ROOT_FORM_BYTES;
     const counted = new Set<string>();
     // A lazy entry holds no rules of its own, only the import of the sheet it loads.
     const actual = lazyEntries().reduce(

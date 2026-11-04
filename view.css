@@ -1318,12 +1318,6 @@
 [data-list-style="checklist"] {
   font-size: var(--blok-checklist-font-size, var(--blok-list-font-size, inherit));
 }
-[data-blok-interface] ::highlight(blok-cross-block-selection) {
-  background-color: var(--blok-selection-inline);
-}
-[data-blok-interface] ::highlight(blok-assistant-selection) {
-  background-color: var(--blok-selection-inactive);
-}
 :where([data-blok-interface]) {
   --blok-editor-gutter-start: 56px;
 }

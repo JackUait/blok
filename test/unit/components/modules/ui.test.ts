@@ -73,6 +73,10 @@ vi.mock("../../../../src/styles/lazy/fonts.css?inline", () => ({
   default: "@font-face{font-family:Probe}",
 }));
 
+vi.mock("../../../../src/styles/highlight-fallback.css?inline", () => ({
+  default: "[data-blok-interface] ::highlight(x){}",
+}));
+
 vi.mock("../../../../src/styles/main.css?inline", () => ({
   default: ".a{}[data-blok-sheet=fonts]{--blok-sheet:fonts}.b{}",
 }));
@@ -420,6 +424,16 @@ describe("UI module", () => {
       expect(document.querySelectorAll('style[id^="blok-styles"]')).toHaveLength(1);
       expect(document.getElementById("blok-styles")?.textContent).toContain(
         ".a{}@font-face{font-family:Probe}.b{}",
+      );
+    });
+
+    it("appends the descendant-form highlight rules where highlights do not inherit", () => {
+      const { ui } = createUI();
+
+      (ui as unknown as { loadStyles: () => void }).loadStyles();
+
+      expect(document.getElementById("blok-styles")?.textContent).toMatch(
+        /\.b\{\}\n\[data-blok-interface\] ::highlight\(x\)\{\}$/,
       );
     });
 

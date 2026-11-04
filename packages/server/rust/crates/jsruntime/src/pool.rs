@@ -1,4 +1,5 @@
 use std::fmt;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -321,14 +322,14 @@ impl Pool {
             let (result, reusable) = classify(worker::run(engine, &op, &input, Some(&limits)));
             let _ = reply.send(result);
             if !reusable {
-                // A slot that is not refilled is lost for good, so a failed
-                // rebuild keeps the spent engine.
+                // A slot that is not refilled is lost for good, so a rebuild
+                // that fails or panics keeps the spent engine.
                 let load = shared
                     .load
                     .lock()
                     .unwrap_or_else(|p| p.into_inner())
                     .clone();
-                if let Ok(fresh) = load() {
+                if let Ok(Ok(fresh)) = catch_unwind(AssertUnwindSafe(|| load())) {
                     *engine = fresh;
                 }
             }

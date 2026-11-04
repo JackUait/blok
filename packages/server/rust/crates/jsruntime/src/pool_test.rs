@@ -265,6 +265,15 @@ async fn keeps_the_slot_when_a_rebuild_fails() {
     assert_eq!(got.expect("count"), "2", "want the spent engine's 2");
 }
 
+#[tokio::test]
+async fn keeps_the_slot_when_a_rebuild_panics() {
+    let pool = counting_pool(1, Duration::from_millis(200), 0);
+    pool.set_load(|| panic!("no rebuild"));
+    want_kind(invoke(&pool, "spin", "").await, Kind::TimedOut);
+    let got = tokio::time::timeout(Duration::from_secs(5), invoke(&pool, "count", "")).await;
+    assert_eq!(got.expect("served, not stuck").expect("count"), "2");
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn handles_concurrent_calls_without_sharing_an_engine() {
     let pool = Arc::new(
@@ -449,7 +458,7 @@ async fn takes_the_defaults_for_zero_options() {
     let pool = Pool::new(Options::default()).expect("new");
     let (timeout, budget, size) = pool.limits();
     assert_eq!(timeout, Duration::from_secs(10));
-    assert_eq!(budget, crate::DEFAULT_MEMORY_BUDGET);
+    assert_eq!(budget, 512 << 20);
     let want = std::thread::available_parallelism().map_or(1, |n| n.get().clamp(1, 4));
     assert_eq!(size, want);
     assert_eq!(pool.free_engines().await, want);

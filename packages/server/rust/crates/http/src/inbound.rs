@@ -75,6 +75,12 @@ impl Inbound {
         self.room.notify_one();
     }
 
+    /// Wakes the reader after bytes were taken under [`Inbound::lock`]: it
+    /// pauses at the cap until told there is room.
+    pub fn wake_reader(&self) {
+        self.room.notify_one();
+    }
+
     /// Waits until check holds; it is called with the state locked.
     pub async fn wait_until(&self, mut check: impl FnMut(&mut State) -> bool) {
         loop {

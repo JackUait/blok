@@ -185,7 +185,9 @@ pub(crate) async fn read(
         return Ok(0);
     }
     loop {
-        match step(exchange, &mut state, buf) {
+        let stepped = step(exchange, &mut state, buf);
+        exchange.inbound.wake_reader();
+        match stepped {
             Step::Read(n) => {
                 state.read += n as u64;
                 if state.read > limit {

@@ -119,6 +119,7 @@ async fn wait_for_request(shared: &Shared, inbound: &Inbound) -> bool {
                 return false;
             }
         }
+        inbound.wake_reader();
         if shared.stopping.load(std::sync::atomic::Ordering::Acquire) {
             return false;
         }

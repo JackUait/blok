@@ -545,3 +545,48 @@ func TestTrailersFollowKestrel(t *testing.T) {
 		t.Errorf("an unread body: got %q", got)
 	}
 }
+
+// Measured on the C# host: after an upgrade the route did not take, the
+// next head is read with Kestrel's limits and grammar. A route that takes
+// it gets every byte after the head as sent.
+func TestHeadsAfterAnUpgradeFollowKestrel(t *testing.T) {
+	address := startHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/take" {
+			echoTarget(w, r)
+			return
+		}
+		conn, buffered, err := http.NewResponseController(w).Hijack()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer conn.Close()
+		_, _ = io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\n\r\n")
+		_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+		got, _ := io.ReadAll(buffered)
+		_, _ = fmt.Fprintf(conn, "%q", got)
+	}), time.Minute)
+	upgrade := func(path, headers string) string {
+		return "GET " + path + " HTTP/1.1\r\nHost: x\r\n" + headers + "\r\n"
+	}
+	refused := "GET /h HTTP/1.2\r\n"
+	cases := []struct{ name, request string }{
+		{"Upgrade and Connection: upgrade", upgrade("/h", "Upgrade: foo\r\nConnection: upgrade\r\n")},
+		{"Upgrade alone", upgrade("/h", "Upgrade: foo\r\n")},
+		{"Connection: upgrade alone", upgrade("/h", "Connection: upgrade\r\n")},
+		{"with a body", "POST /h HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\nConnection: upgrade\r\nContent-Length: 2\r\n\r\nab"},
+		{"with a chunked body", "POST /h HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nab\r\n0\r\n\r\n"},
+	}
+	for _, c := range cases {
+		got := rawAnswer(t, address, c.request+refused)
+		if !strings.HasPrefix(got, "HTTP/1.1 200 OK\r\n") || !strings.HasSuffix(got, kestrel505) {
+			t.Errorf("%s: got %.200q", c.name, got)
+		}
+	}
+	// Bytes that would be a refused head, and some that are no HTTP at all.
+	frames := refused + "\x00\x81\xff\r\n\r\n" + numberedHeaders(120) + "\r\n"
+	got := rawAnswer(t, address, upgrade("/take", "Upgrade: websocket\r\nConnection: Upgrade\r\n")+frames)
+	if want := "HTTP/1.1 101 Switching Protocols\r\n\r\n" + fmt.Sprintf("%q", frames); got != want {
+		t.Errorf("a taken upgrade: got %.200q, want %.200q", got, want)
+	}
+}

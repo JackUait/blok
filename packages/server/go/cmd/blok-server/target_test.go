@@ -80,12 +80,18 @@ func FuzzRewrite(f *testing.F) {
 
 // readAllIn reads r size bytes at a time, the way net/http's background read
 // takes one byte.
+// readAllIn reads r to its end. A stream waiting after an upgrade is
+// handed over as a hijack would.
 func readAllIn(r io.Reader, size int) ([]byte, error) {
 	var out []byte
 	buffer := make([]byte, size)
 	for {
 		n, err := r.Read(buffer)
 		out = append(out, buffer[:n]...)
+		if stream, ok := r.(*targetStream); ok && errors.Is(err, io.EOF) && stream.state == streamWait {
+			stream.pass()
+			continue
+		}
 		if errors.Is(err, io.EOF) {
 			return out, nil
 		}
@@ -140,7 +146,7 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\nx\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
 		queued: []queuedTarget{{"/a", "/a"}},
 	}, {
-		name:   "an upgrade ends the rewriting",
+		name:   "a taken upgrade hands on what follows",
 		in:     "GET /s\x01 HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
 		out:    "GET /s_ HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
 		queued: []queuedTarget{{"/s_", "/s\x01"}},
@@ -189,6 +195,25 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 				t.Errorf("%s (reads of %d): queued %q, want %q", c.name, size, queued, c.queued)
 			}
 		}
+	}
+}
+
+// After an upgrade the route did not take, what follows is read as a head.
+func TestAnUpgradeNotTakenReadsTheNextHead(t *testing.T) {
+	in := "GET /s HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n"
+	stream := &targetStream{src: &stutter{parts: []string{in, ""}}}
+	got := readMarkingTimeouts(t, stream, 4096)
+	stream.resume()
+	rest, err := readAllIn(stream, 4096)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "GET /s HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\n\r\n<T>"
+	if got != want || string(rest) != "GET /b_ HTTP/1.1\r\nHost: x\r\n\r\n" {
+		t.Fatalf("got %q then %q", got, rest)
+	}
+	if queued := queuedSent(stream); fmt.Sprint(queued) != "[/s /b_]" {
+		t.Fatalf("queued %q", queued)
 	}
 }
 
@@ -409,6 +434,10 @@ func FuzzTheStreamFollowsNetHTTPThroughTimeouts(f *testing.F) {
 		for {
 			n, err := stream.Read(buffer)
 			out = append(out, buffer[:n]...)
+			if errors.Is(err, io.EOF) && stream.state == streamWait {
+				stream.pass()
+				continue
+			}
 			if errors.Is(err, io.EOF) {
 				break
 			}

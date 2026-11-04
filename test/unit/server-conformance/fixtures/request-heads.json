@@ -628,6 +628,18 @@
     "response": "HTTP/1.1 415 Unsupported Media Type\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
   },
   {
+    "name": "upgrade not taken, then a refused head",
+    "response": "HTTP/1.1 200 OK\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "upgrade not taken, then 101 headers",
+    "response": "HTTP/1.1 200 OK\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\nHTTP/1.1 431 Request Header Fields Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "upgrade with a body not taken, then a refused head",
+    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
     "name": "range past the end of a file",
     "response": "HTTP/1.1 416 Range Not Satisfiable\nconnection: close\ncontent-disposition: attachment\ncontent-length: 33\ncontent-range: bytes */5\ncontent-type: text/plain; charset=utf-8\nx-content-type-options: nosniff\n\ninvalid range: failed to overlap\n"
   }

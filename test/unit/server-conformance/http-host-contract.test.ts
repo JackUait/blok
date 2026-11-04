@@ -1358,6 +1358,11 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n${trailer}GET /health HTTP/1.2\r\n`,
   )])),
   'chunked trailer with no colon on a body the route left': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nXT\r\n\r\nGET /health HTTP/1.2\r\n'),
+  // After an upgrade the route did not take, the next head keeps
+  // Kestrel's limits and grammar.
+  'upgrade not taken, then a refused head': bytes('GET /health HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\nConnection: upgrade\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'upgrade not taken, then 101 headers': bytes(`GET /health HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\n\r\n${headWith(numbered(99))}`),
+  'upgrade with a body not taken, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nUpgrade: foo\r\nConnection: upgrade\r\nContent-Length: 2\r\n\r\n{}GET /health HTTP/1.2\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

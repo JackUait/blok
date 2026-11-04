@@ -39,8 +39,14 @@ func limitRequestHeaders(server *http.Server, timeout, idle time.Duration) func(
 		}
 		switch state {
 		case http.StateIdle:
+			if conn.targets != nil {
+				conn.targets.resume()
+			}
 			conn.arm()
 		case http.StateHijacked, http.StateClosed:
+			if conn.targets != nil && state == http.StateHijacked {
+				conn.targets.pass()
+			}
 			conn.stop()
 			// A hijacker writes its own bytes.
 			conn.setAnswer(noAnswer)

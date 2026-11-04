@@ -80,7 +80,15 @@ const (
 	streamPass
 	// streamDone: a head was refused; nothing after it is read as HTTP.
 	streamDone
+	// streamWait: after an upgrade request, bytes are held unread until
+	// the connection goes idle (they are a head) or is hijacked (they
+	// are the new protocol's).
+	streamWait
 )
+
+// maxWaitBytes is how much streamWait holds: one head's worth, as the
+// stream holds at most one head. Past it the stream gives up checking.
+const maxWaitBytes = maxRequestLine + maxHeaderBlock
 
 // Where a chunked body is, inside streamChunked.
 const (
@@ -140,6 +148,9 @@ type targetStream struct {
 	// bodyRefusal is Kestrel's answer to a trailer it refused, for the
 	// body read that meets it.
 	bodyRefusal int
+	// upgrade: the current request asks for an upgrade; streamWait
+	// follows its body.
+	upgrade bool
 
 	mu     sync.Mutex
 	queued []queuedRequest
@@ -163,7 +174,7 @@ func (s *targetStream) Read(p []byte) (int, error) {
 		if s.err != nil {
 			err := s.err
 			s.err = nil
-			if !isTimeout(err) {
+			if !isTimeout(err) && s.state != streamWait {
 				// The stream ends: hand on a partial head as it came.
 				s.state = streamPass
 				if partial := append(s.head, s.in...); len(partial) > 0 {
@@ -224,11 +235,17 @@ func (s *targetStream) step() bool {
 		}
 		s.handOnBody(int(n))
 		if s.body -= n; s.body == 0 {
-			s.state = streamLine
+			s.state = s.afterBody()
 		}
 		return true
 	case streamChunked:
 		return s.stepChunked()
+	case streamWait:
+		if len(s.in) >= maxWaitBytes {
+			s.state = streamPass
+			return true
+		}
+		return false
 	}
 	if s.state == streamLine {
 		skip := 0
@@ -502,7 +519,31 @@ func (s *targetStream) endTrailer() {
 	}
 	s.out, s.head = []byte("\r\n"), nil
 	s.headerBytes, s.headerLines = 0, 0
-	s.state = streamLine
+	s.state = s.afterBody()
+}
+
+func (s *targetStream) afterBody() int {
+	if s.upgrade {
+		s.upgrade = false
+		return streamWait
+	}
+	return streamLine
+}
+
+// resume reads held bytes as the next head: the upgrade was not taken.
+// net/http calls it at StateIdle, when no read of the stream is running.
+func (s *targetStream) resume() {
+	if s.state == streamWait {
+		s.state = streamLine
+	}
+}
+
+// pass hands every byte on as it came: the connection was hijacked.
+// net/http calls it at StateHijacked, after it stopped its own read.
+func (s *targetStream) pass() {
+	if s.state != streamDone {
+		s.state = streamPass
+	}
 }
 
 // trailerRefusal is Kestrel's answer to a trailer line, measured on the C#
@@ -804,11 +845,12 @@ func (s *targetStream) endHead() {
 	if len(s.entry.swaps) > 0 {
 		s.entry.swaps = placeSwaps(s.head, s.entry.swaps)
 	}
-	if request.Method == "CONNECT" || request.Header.Get("Upgrade") != "" ||
-		strings.Contains(strings.ToLower(strings.Join(request.Header.Values("Connection"), ",")), "upgrade") {
+	if request.Method == "CONNECT" {
 		s.handOn(streamPass)
 		return
 	}
+	s.upgrade = request.Header.Get("Upgrade") != "" ||
+		strings.Contains(strings.ToLower(strings.Join(request.Header.Values("Connection"), ",")), "upgrade")
 	// takeCodings left net/http one chunked line. net/http ignores it on
 	// HTTP/1.0 and would read the chunks as the next request; Kestrel reads
 	// them as the body.
@@ -824,7 +866,7 @@ func (s *targetStream) endHead() {
 	if s.body > 0 {
 		s.handOn(streamBody)
 	} else {
-		s.handOn(streamLine)
+		s.handOn(s.afterBody())
 	}
 }
 

@@ -659,7 +659,7 @@ async fn a_re_seed_of_a_null_document_keeps_the_lineage_it_persisted() {
     assert_eq!(b.store.stored(DOC).tag, tag(0, &lineage));
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_doc_access_goes_through_one_lane() {
     let b = Bench::new();
     b.endpoint.holds(DOC, "", None);
@@ -1034,6 +1034,7 @@ async fn cancelling_an_access_recheck_does_not_expel_an_allowed_member() {
             .is_cancelled(),
         "the recheck was not cancelled"
     );
+    peer.fail_recheck("canceled");
     gate.open();
     manager.settle().await;
 
@@ -1539,7 +1540,11 @@ async fn a_store_outage_keeps_the_room_loaded_until_the_working_set_catches_up()
 async fn an_endpoint_outage_at_eviction_keeps_the_room_loaded_until_the_export_lands() {
     let b = Bench::new();
     b.endpoint.holds(DOC, "hello", None);
-    let manager = b.manager(slow_export());
+    let manager = b.manager(Options {
+        retry_backoff: ms(300),
+        retry_backoff_cap: ms(300),
+        ..slow_export()
+    });
     let peer = Peer::new();
     let membership = enter(&manager, DOC, &peer).await;
     let client = synced(&membership, &peer).await;

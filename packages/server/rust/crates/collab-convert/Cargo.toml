@@ -8,6 +8,7 @@ publish.workspace = true
 
 [dependencies]
 blok-jsjson = { path = "../jsjson" }
+blok-jsruntime = { path = "../jsruntime" }
 
 [dev-dependencies]
 blok-collab-collabtest = { path = "../collab-collabtest" }

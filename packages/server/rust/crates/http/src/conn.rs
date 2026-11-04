@@ -161,7 +161,10 @@ async fn exchange(
             Some(length) => BodyFraming::Length(length),
         }
     };
-    let request_close = head.headers.has_token("connection", "close");
+    // Measured: Kestrel reads a request with both Transfer-Encoding and
+    // Content-Length as chunked, then ends the connection.
+    let request_close = head.headers.has_token("connection", "close")
+        || (head.headers.contains("transfer-encoding") && head.headers.contains("content-length"));
     let keep_alive_10 =
         head.version == Version::Http10 && head.headers.has_token("connection", "keep-alive");
     let expects_continue = head.version == Version::Http11
@@ -268,21 +271,26 @@ async fn exchange(
         // A panic before the head went out: Kestrel's empty 500.
         let mut refused = crate::headers::Headers::new();
         refused.add("Content-Length", "0");
-        let head = response_head(&exchange, &mut wire, 500, &refused, true);
+        let head = response_head(&exchange, &mut wire, 500, &refused, true)
+            .unwrap_or_else(|refused| refused);
         wire.started = true;
         let _ = wire.send(&head).await;
     } else if wire.pending_timeout && !wire.started {
         let mut timed_out = crate::headers::Headers::new();
         timed_out.add("Content-Length", "0");
-        let head = response_head(&exchange, &mut wire, 504, &timed_out, true);
+        let head = response_head(&exchange, &mut wire, 504, &timed_out, true)
+            .unwrap_or_else(|refused| refused);
         wire.started = true;
         let _ = wire.send(&head).await;
     } else if !wire.started {
         let (status, headers) = lock(&exchange.left).take().unwrap_or_default();
         let status = if status == 0 { 200 } else { status };
-        let head = response_head(&exchange, &mut wire, status, &headers, true);
+        let head = response_head(&exchange, &mut wire, status, &headers, true)
+            .unwrap_or_else(|refused| refused);
         wire.started = true;
-        if wire.send(&head).await.is_err() {
+        // A Content-Length the handler set but never wrote: the peer
+        // would read the next answer as this body.
+        if wire.send(&head).await.is_err() || matches!(wire.framing, Framing::Length(n) if n > 0) {
             wire.close = true;
         }
     } else if outcome.is_err() {

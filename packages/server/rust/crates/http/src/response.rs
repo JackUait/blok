@@ -210,22 +210,14 @@ impl ResponseWriter {
             return Err(WriteError::Closed);
         }
         self.committed = true;
-        if self
-            .headers
-            .iter()
-            .any(|(name, value)| !is_field_value(value) || !valid_name(name))
-        {
-            let mut refused = Headers::new();
-            refused.add("Content-Length", "0");
-            let head = response_head(&self.exchange, wire, 500, &refused, false);
-            wire.started = true;
-            let _ = wire.send(&head).await;
-            wire.host_owned = true;
-            return Err(WriteError::InvalidHeader);
-        }
-        let head = response_head(&self.exchange, wire, self.status, &self.headers, false);
         wire.started = true;
-        send(wire, &head).await
+        match response_head(&self.exchange, wire, self.status, &self.headers, false) {
+            Ok(head) => send(wire, &head).await,
+            Err(refused) => {
+                let _ = wire.send(&refused).await;
+                Err(WriteError::InvalidHeader)
+            }
+        }
     }
 }
 
@@ -252,9 +244,37 @@ fn body_allowed(status: u16) -> bool {
     !(100..200).contains(&status) && status != 204 && status != 304
 }
 
-/// The head, and the framing and keep-alive it sets on wire. finished: the
-/// handler returned before any write, so an allowed body is empty.
+/// The head for an answer, and the framing and keep-alive it sets on wire.
+/// finished: the handler returned before any write, so an allowed body is
+/// empty. Every head goes through here: a header name or value Kestrel
+/// refuses turns the answer into its empty 500 (Err), and the host owns the
+/// rest of the response.
 pub(crate) fn response_head(
+    exchange: &Exchange,
+    wire: &mut Wire,
+    status: u16,
+    headers: &Headers,
+    finished: bool,
+) -> Result<Vec<u8>, Vec<u8>> {
+    let lengths: Vec<&str> = headers.get_all("content-length").collect();
+    let bad_length = lengths.len() > 1
+        || lengths
+            .iter()
+            .any(|value| value.trim().parse::<u64>().is_err());
+    if bad_length
+        || headers
+            .iter()
+            .any(|(name, value)| !valid_name(name) || !is_field_value(value))
+    {
+        let mut refused = Headers::new();
+        refused.add("Content-Length", "0");
+        wire.host_owned = true;
+        return Err(build_head(exchange, wire, 500, &refused, finished));
+    }
+    Ok(build_head(exchange, wire, status, headers, finished))
+}
+
+fn build_head(
     exchange: &Exchange,
     wire: &mut Wire,
     status: u16,
@@ -324,6 +344,7 @@ pub(crate) fn response_head(
     }
     if let Some(server) = &exchange.config.server_header
         && !headers.contains("server")
+        && is_field_value(server)
     {
         line("Server", server);
     }

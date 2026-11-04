@@ -512,7 +512,7 @@ async fn binary_exits_within_two_seconds_of_sigterm() {
 }
 
 #[test]
-#[ignore = "builds a second binary with BLOK_SERVER_VERSION; one cargo command at a time on this machine. health_reports_the_stamped_version covers the path"]
+#[ignore = "stamping 9.8.7 needs a second cargo build of the binary from inside the test, which would rebuild the binary the other tests run; published_host_reports_the_supplied_build_version checks the stamp this build carries on stderr and /health"]
 fn binary_version_comes_from_ldflags() {}
 
 // Kestrel streams answers with a body: chunked on HTTP/1.1, closed on
@@ -947,6 +947,11 @@ async fn published_host_reports_the_supplied_build_version() {
     let (status, _, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
     let _ = child.kill();
     let _ = child.wait();
+    let stderr = text.lock().unwrap().clone();
+    assert!(
+        stderr.starts_with(&format!("blok-server {want} listening on ")),
+        "{stderr:?}"
+    );
     assert_eq!(
         (status, body),
         (

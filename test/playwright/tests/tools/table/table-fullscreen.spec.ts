@@ -537,7 +537,7 @@ test.describe('Table full screen', () => {
     expect(gap?.below).toBeLessThanOrEqual(Math.ceil(gap?.bar ?? 0) + 1);
   });
 
-  test('a wide table runs to the modal end edge, keeps its start gap, and shows the add-column bar at its scroll end', async ({ page }) => {
+  test('a wide table runs to the modal edges, its start gap scrolls away, and it shows the add-column bar at its scroll end', async ({ page }) => {
     await createBlok(page, false, wideData);
     await openWithButton(page);
     const modal = page.locator('[data-blok-table-fullscreen]');
@@ -553,18 +553,26 @@ test.describe('Table full screen', () => {
         return null;
       }
       const y = cell.top + cell.height / 2;
-      const atEdge = document.elementFromPoint(innerEnd - 2, y)?.closest('[data-blok-table-cell]') !== null;
-      const start = sc.getBoundingClientRect().left - box.left;
+      const isCell = (x: number): boolean => document.elementFromPoint(x, y)?.closest('[data-blok-table-cell]') !== null;
+      const atEdge = isCell(innerEnd - 2);
+      const start = (sc.firstElementChild?.getBoundingClientRect().left ?? 0) - box.left;
+
+      // Scrolled sideways, the start gap scrolls away like the top one does.
+      sc.scrollLeft = 200;
+      const atStartEdge = isCell(box.left + 2);
 
       sc.scrollLeft = sc.scrollWidth;
       sc.dispatchEvent(new Event('scroll'));
 
-      return { atEdge, start };
+      return { atEdge, start, atStartEdge, scrollbar: getComputedStyle(el).scrollbarWidth };
     });
 
     expect(edges).not.toBeNull();
     expect(edges?.atEdge).toBe(true);
     expect(edges?.start).toBe(16);
+    expect(edges?.atStartEdge).toBe(true);
+    // Headless Chromium hides scrollbars; a real one would take a strip at the end edge.
+    expect(edges?.scrollbar).toBe('none');
 
     const end = await modal.evaluate((el) => {
       const innerEnd = el.getBoundingClientRect().left + el.clientLeft + el.clientWidth;

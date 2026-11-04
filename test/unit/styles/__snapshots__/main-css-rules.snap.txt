@@ -3409,6 +3409,7 @@
   color: inherit;
   padding: calc(var(--blok-space-14) + var(--blok-space-1)) 0 0 var(--blok-space-4);
   overflow: hidden auto;
+  scrollbar-width: none;
   background-color: var(--blok-bg-primary);
   border-radius: var(--blok-radius-dialog);
   box-shadow: 0 0 0 1px var(--blok-border-subtle), 0 30px 80px -20px var(--blok-table-fullscreen-shadow);
@@ -3420,6 +3421,8 @@
 }
 
 [data-blok-table-fullscreen] [data-blok-table-scroll] {
+  margin-inline-start: calc(-1 * var(--blok-space-4));
+  padding-inline-start: var(--blok-space-4);
   padding-inline-end: calc(var(--_blok-table-pill-room) + 36px);
 }
 

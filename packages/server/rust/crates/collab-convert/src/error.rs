@@ -3,6 +3,7 @@ use std::fmt;
 use blok_jsruntime::InvokeError;
 use blok_yjs::EngineError;
 
+use crate::editops::EditError;
 use crate::export::DataError;
 
 /// What the converter's fallible calls return, where Go returns `error`.
@@ -19,7 +20,18 @@ pub enum Error {
     /// A string .NET cannot read (a lone-surrogate escape or invalid UTF-8):
     /// C#'s InvalidOperationException, not an InvalidDataException.
     NotUnicode(blok_jsjson::Error),
+    /// A refused edit request (C# CollabEditException).
+    Edit(EditError),
+    /// C#'s InvalidOperationException from ApplyOps: a step failed inside
+    /// the transaction. Nothing was emitted, but what the step wrote stays
+    /// in the doc, so it is a server error, not a refusal. Holds the cause.
+    EditFailedMidWrite(Box<Error>),
+    /// A plain Go `errors.New`.
+    Message(String),
 }
+
+/// Go's ErrEditFailedMidWrite text.
+pub const EDIT_FAILED_MID_WRITE: &str = "collab: an edit failed while it was being written, and the document may hold part of it. Reload the document from the record.";
 
 /// Go's ErrNotUnicode text.
 pub const NOT_UNICODE: &str = "collab: the document holds text that is not valid Unicode";
@@ -32,6 +44,9 @@ impl fmt::Display for Error {
             Error::Json(err) => err.fmt(f),
             Error::Engine(err) => err.fmt(f),
             Error::NotUnicode(err) => write!(f, "{NOT_UNICODE}\n{err}"),
+            Error::Edit(err) => err.fmt(f),
+            Error::EditFailedMidWrite(err) => write!(f, "{EDIT_FAILED_MID_WRITE} ({err})"),
+            Error::Message(message) => f.write_str(message),
         }
     }
 }
@@ -44,6 +59,9 @@ impl std::error::Error for Error {
             Error::Json(err) => Some(err),
             Error::Engine(err) => Some(err),
             Error::NotUnicode(err) => Some(err),
+            Error::Edit(err) => Some(err),
+            Error::EditFailedMidWrite(err) => Some(err.as_ref()),
+            Error::Message(_) => None,
         }
     }
 }
@@ -69,5 +87,11 @@ impl From<blok_jsjson::Error> for Error {
 impl From<EngineError> for Error {
     fn from(err: EngineError) -> Error {
         Error::Engine(err)
+    }
+}
+
+impl From<EditError> for Error {
+    fn from(err: EditError) -> Error {
+        Error::Edit(err)
     }
 }

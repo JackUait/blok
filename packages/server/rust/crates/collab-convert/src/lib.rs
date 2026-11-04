@@ -20,8 +20,11 @@ mod structure;
 mod textdiff;
 mod textdiff_tables;
 
-pub use editops::JSON_MAX_DEPTH;
-pub use error::{Error, NOT_UNICODE};
+pub use editops::{
+    EditError, EditOp, JSON_MAX_DEPTH, MapPatch, canonical_body, canonical_body_digest,
+    normalize_idempotency_key, parse_edit_ops, restore_digest,
+};
+pub use error::{EDIT_FAILED_MID_WRITE, Error, NOT_UNICODE};
 pub use export::{
     DataError, MAX_VALUE_DEPTH, PAGE_MAPS, RichTextHtml, RichTextHtmlSlot, SlotStep, export,
     export_page, plain_json,
@@ -51,6 +54,8 @@ pub use textdiff::{MAX_DIFF_DISTANCE, TextEdit, atomize, diff};
 #[cfg(test)]
 mod apply_test;
 #[cfg(test)]
+mod csharp_editops_test;
+#[cfg(test)]
 mod csharp_export_test;
 #[cfg(test)]
 mod csharp_graphemes_test;
@@ -68,6 +73,8 @@ mod csharp_textdiff_test;
 mod csharp_yrs_compat_test;
 #[cfg(test)]
 mod deepassign_test;
+#[cfg(test)]
+mod editops_test;
 #[cfg(test)]
 mod export_test;
 #[cfg(test)]

@@ -43,6 +43,14 @@ name = "blok-collab"
 version = "0.0.0"
 
 [[package]]
+name = "blok-collab-collabtest"
+version = "0.0.0"
+dependencies = [
+ "blok-jsjson",
+ "blok-yjs-yjstest",
+]
+
+[[package]]
 name = "blok-collab-journal"
 version = "0.0.0"
 dependencies = [
@@ -135,6 +143,27 @@ dependencies = [
  "blok-http",
  "sha1",
  "tokio",
+]
+
+[[package]]
+name = "blok-yjs"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-jsjson",
+ "blok-lib0",
+ "blok-yjs-yjstest",
+ "getrandom",
+ "sha2",
+]
+
+[[package]]
+name = "blok-yjs-yjstest"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-jsjson",
+ "sha2",
 ]
 
 [[package]]

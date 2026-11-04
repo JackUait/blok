@@ -2,7 +2,9 @@
 
 This is the third build of Blok's server, next to C# (`../dotnet`) and Go (`../go`). It serves the same routes and reads and writes the same files on disk.
 
-It is in progress. Until the conformance suite passes on it in full, the npm binary, the Docker image and the NuGet packages keep shipping the C# server, and nothing ships the Rust one.
+It passes the full conformance suite, and CI runs it there. It ships nothing yet: the npm binary, the Docker image and the NuGet packages still ship the C# server.
+
+It runs on Unix only for now. The blob store and the collab journal use Unix file APIs.
 
 ## Build and test
 
@@ -32,5 +34,5 @@ Each Go `foo_test.go` has a Rust twin: a `#[cfg(test)] mod` in `foo.rs`, or `tes
 - Async code runs on tokio.
 - The HTTP/1.1 server and the WebSocket code are our own (`crates/http`, `crates/ws`). The conformance suite pins Kestrel's exact bytes, and a general crate hides the parts we must control.
 - JSON goes through `blok-jsjson`, never `serde_json`, for anything a fixture or a client reads. It matches `System.Text.Json` and JS strings, which `serde_json` does not.
-- No `unsafe`.
+- No `unsafe`, except the JS engine's memory counter in `crates/jsruntime` (`budget.rs`).
 - `cargo fmt --check` and `cargo clippy -- -D warnings` pass.

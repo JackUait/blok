@@ -127,14 +127,15 @@ Scripts live in `package.json`. Two things it does not tell you:
 
 Run `yarn release <version>`. Publish happens **before** git push. Full workflow and the release-notes rules: `/release:release`.
 
-## Backend: Go and C#
+## Backend: Go, C# and Rust
 
-Every backend feature in `packages/server` is written twice: in Go (`packages/server/go`) and in C# (`packages/server/dotnet`).
+Every backend feature in `packages/server` is written three times: in Go (`packages/server/go`), in C# (`packages/server/dotnet`) and in Rust (`packages/server/rust`).
 
-- Parity is proven by the shared conformance suite. Run it against both: `node scripts/test-server-conformance.mjs --target csharp` and `--target go`.
-- Both test suites read the same fixtures under `test/unit/server-conformance/fixtures`.
-- A backend change is not done until both servers have it, with tests.
-- `test/unit/architecture/server-go-parity-law.test.ts` fails if CI stops running either target.
+- Parity is proven by the shared conformance suite. Run it against all three: `node scripts/test-server-conformance.mjs --target csharp`, `--target go` and `--target rust`.
+- All three test suites read the same fixtures under `test/unit/server-conformance/fixtures`.
+- A backend change is not done until all three servers have it, with tests.
+- `test/unit/architecture/server-go-parity-law.test.ts` fails if CI stops running any target.
+- The Rust build ships nothing yet. `packages/server/rust/README.md` has its layout and rules.
 
 ## Architecture
 

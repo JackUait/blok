@@ -131,6 +131,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "blok-collab-docendpoint"
+version = "0.0.0"
+dependencies = [
+ "blok-dotnet",
+ "blok-jsjson",
+ "blok-outbound",
+ "tokio",
+]
+
+[[package]]
 name = "blok-collab-journal"
 version = "0.0.0"
 dependencies = [

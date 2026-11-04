@@ -3,6 +3,9 @@ use blok_jsjson::{Kind, Node, Object, Options as JsonOptions, Str, Value, parse_
 use blok_yjs::{Doc, Options};
 
 use crate::apply::apply_ops;
+use crate::csharp_yrs_compat_test::block_on;
+use crate::docconverter::DocConverter;
+use crate::docconverter_test::FailingReader;
 use crate::editops::{EditOp, member};
 use crate::error::Error;
 use crate::export::{export, export_page};
@@ -498,6 +501,28 @@ fn a_move_or_retype_keeps_a_peers_concurrent_typing() {
     }
 }
 
+// C# AgentRoomOpsTests.SeedCarriesTitleAndIconIntoThePageRoot.
 #[test]
-#[ignore = "needs docconverter (lane F)"]
-fn seed_carries_title_and_icon_into_the_page_root() {}
+fn seed_carries_title_and_icon_into_the_page_root() {
+    // Go's converter has no reader: nothing here is HTML.
+    let converter = DocConverter {
+        now: Box::new(std::time::SystemTime::now),
+        html: FailingReader(|| Error::Message("no reader".to_owned())),
+        fields: None,
+        log: None,
+    };
+    let doc = Doc::new(Options::default());
+    block_on(converter.seed(
+        &doc,
+        &node(r#"{"title":"T","icon":{"type":"emoji","value":"x"},"blocks":[]}"#),
+    ))
+    .unwrap_or_else(|err| panic!("{err}"));
+    let exported =
+        Value::Object(block_on(converter.export(&doc)).unwrap_or_else(|err| panic!("{err}")));
+    assert!(
+        canonical(&ag_field(&exported, "title")) == r#""T""#
+            && canonical(&ag_field(&ag_field(&exported, "icon"), "value")) == r#""x""#,
+        "export {}",
+        canonical(&exported)
+    );
+}

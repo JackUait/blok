@@ -5,10 +5,11 @@ use std::time::{Duration, SystemTime};
 use blok_collab_operation::{Record, Source};
 use blok_jsjson::{Str, Value};
 use blok_lib0::Writer;
-use blok_yjs::{DEFAULT_INSPECT_DEPTH, Doc, Map, MapEntry, Options, Text, inspect};
+use blok_yjs::{DEFAULT_INSPECT_DEPTH, Doc, Options, inspect};
 
 use crate::agentops_test::{ag_apply, ag_seeded};
 use crate::csharp_apply_test::ops;
+use crate::docconverter_test::legacy_html_doc;
 use crate::error::Error;
 use crate::export::{MAX_VALUE_DEPTH, export};
 use crate::export_test::canonical;
@@ -182,39 +183,6 @@ fn a_format_one_baseline_exports_its_legacy_slot() {
         export(&replayed, &RichTextFields::built_in(), None).unwrap_or_else(|err| panic!("{err}"));
     assert_eq!(slots.len(), 1);
     assert_eq!(slots[0].html.html.to_string(), "<b>x</b>");
-}
-
-pub(crate) fn new_block(id: &str, kind: &str, data: Map) -> Map {
-    Map::new(vec![
-        MapEntry {
-            key: Str::from("id"),
-            value: Value::String(Str::from(id)).into(),
-        },
-        MapEntry {
-            key: Str::from("type"),
-            value: Value::String(Str::from(kind)).into(),
-        },
-        MapEntry {
-            key: Str::from("data"),
-            value: data.into(),
-        },
-    ])
-}
-
-pub(crate) fn legacy_html_doc() -> Doc {
-    let doc = Doc::new(Options::default());
-    let data = Map::new(vec![MapEntry {
-        key: Str::from("text"),
-        value: Text::new(Some(Str::from("<b>x</b>"))).into(),
-    }]);
-    let blocks = doc.get_map("blocks").unwrap_or_else(|err| panic!("{err}"));
-    let root = doc.get_array("root").unwrap_or_else(|err| panic!("{err}"));
-    doc.transact(|txn| {
-        blocks.set(txn, "a", new_block("a", "paragraph", data.clone()))?;
-        root.insert(txn, 0, vec![Value::String(Str::from("a")).into()])
-    })
-    .unwrap_or_else(|err| panic!("{err}"));
-    doc
 }
 
 /// One map key holding depth nested Any arrays.

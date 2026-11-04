@@ -4,6 +4,7 @@
 
 mod apply;
 mod deepassign;
+mod docconverter;
 mod editops;
 mod error;
 mod export;
@@ -24,6 +25,9 @@ mod textdiff;
 mod textdiff_tables;
 
 pub use apply::{apply_ops, collect_ops_html};
+pub use docconverter::{
+    Clock, DocConverter, Log, MIGRATION_READ_TIMEOUT, TransientError, is_too_large, is_transient,
+};
 pub use editops::{
     EditError, EditOp, JSON_MAX_DEPTH, MapPatch, canonical_body, canonical_body_digest,
     normalize_idempotency_key, parse_edit_ops, restore_digest,
@@ -93,6 +97,8 @@ mod csharp_textdiff_test;
 mod csharp_yrs_compat_test;
 #[cfg(test)]
 mod deepassign_test;
+#[cfg(test)]
+mod docconverter_test;
 #[cfg(test)]
 mod editops_test;
 #[cfg(test)]

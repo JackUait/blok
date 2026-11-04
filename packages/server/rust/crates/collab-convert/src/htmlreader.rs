@@ -46,6 +46,16 @@ pub trait HtmlReader {
     ) -> impl Future<Output = Result<Vec<Vec<Value>>, Error>> + Send;
 }
 
+impl<T: HtmlReader + Sync> HtmlReader for &T {
+    fn read(
+        &self,
+        fields: &[RichTextHtml],
+        timeout: Duration,
+    ) -> impl Future<Output = Result<Vec<Vec<Value>>, Error>> + Send {
+        T::read(self, fields, timeout)
+    }
+}
+
 /// The client's own reader, run in the embedded runtime through its
 /// htmlFieldsToSegments op, one call per batch.
 pub struct RuntimeHtmlReader<I> {

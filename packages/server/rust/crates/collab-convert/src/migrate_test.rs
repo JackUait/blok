@@ -7,7 +7,8 @@ use blok_collab_collabtest::{path, read};
 use blok_jsjson::{Str, Value};
 use blok_yjs::{Doc, Options, Outcome};
 
-use crate::csharp_yrs_compat_test::{export_resolved, with_segments};
+use crate::csharp_yrs_compat_test::{block_on, with_segments};
+use crate::docconverter_test::runtime;
 use crate::error::Error;
 use crate::export::export;
 use crate::export_test::{canonical, decode64};
@@ -156,10 +157,11 @@ fn migrate_rich_text_writes_what_csharp_writes() {
             && optional(case, "shapeUpdate").is_none()
         {
             oracles += 1;
-            let full = export_resolved(reader(), &doc);
+            // RichTextRuntime.Export: nested HTML the plain export leaves is read too.
+            let full = block_on(runtime().export(&doc)).unwrap_or_else(|err| panic!("{err}"));
             let read = with_segments(reader(), &format1_canonical(&text(room)));
             assert_eq!(
-                canonical(&full),
+                canonical(field(&Value::Object(full), "blocks")),
                 canonical(&read),
                 "{name}: format-1 canonical"
             );

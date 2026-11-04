@@ -3,6 +3,7 @@ use std::fmt;
 use blok_jsruntime::InvokeError;
 use blok_yjs::EngineError;
 
+use crate::docconverter::TransientError;
 use crate::editops::EditError;
 use crate::export::DataError;
 
@@ -28,6 +29,8 @@ pub enum Error {
     EditFailedMidWrite(Box<Error>),
     /// A plain Go `errors.New`.
     Message(String),
+    /// A failure a retry may heal (C# CollabTransientException).
+    Transient(TransientError),
 }
 
 /// Go's ErrEditFailedMidWrite text.
@@ -47,6 +50,7 @@ impl fmt::Display for Error {
             Error::Edit(err) => err.fmt(f),
             Error::EditFailedMidWrite(err) => write!(f, "{EDIT_FAILED_MID_WRITE} ({err})"),
             Error::Message(message) => f.write_str(message),
+            Error::Transient(err) => err.fmt(f),
         }
     }
 }
@@ -62,6 +66,7 @@ impl std::error::Error for Error {
             Error::Edit(err) => Some(err),
             Error::EditFailedMidWrite(err) => Some(err.as_ref()),
             Error::Message(_) => None,
+            Error::Transient(err) => Some(err),
         }
     }
 }

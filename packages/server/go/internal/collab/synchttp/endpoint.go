@@ -89,8 +89,9 @@ func (e *Endpoint) upgrade(w http.ResponseWriter, r *http.Request, subProtocol s
 		options.KeepAliveTimeout = 2 * e.config.KeepAliveInterval
 	}
 	conn, err := ws.Upgrade(w, r, options)
-	if errors.Is(err, ws.ErrAcceptKey) {
-		// Before the hijack: .NET throws building the accept key.
+	if errors.Is(err, ws.ErrAcceptKey) || errors.Is(err, ws.ErrNotHijacked) {
+		// Before the hijack: .NET throws building the accept key, and
+		// Kestrel throws past its upgrade limit.
 		internalError(w)
 	}
 	return conn, err

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
 )
 
 // version is stamped at build time: -ldflags "-X main.version=1.2.3".
@@ -104,9 +105,19 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 }
 
 // maxUpgradedConnections is HostCollab.DefaultMaxUpgradedConnections: an
-// accept-and-hold flood cannot pin every socket the process can hold. Go has
-// no Kestrel backstop behind it; this count is the only cap.
+// accept-and-hold flood cannot pin every socket the process can hold. It is
+// both the service count (503) and the backstop in limitUpgrades (500).
 const maxUpgradedConnections = 1024
+
+// limitUpgrades is the Kestrel backstop HostCollab.Configure sets with
+// collab: it counts the sockets the sync door accepts only to close, which
+// the service count does not.
+func limitUpgrades(handler http.Handler, options blokserver.Options) http.Handler {
+	if !options.CollabEnabled {
+		return handler
+	}
+	return synchttp.LimitUpgrades(handler, maxUpgradedConnections)
+}
 
 // configureCollab is HostCollab.Configure.
 func configureCollab(options *blokserver.Options, stderr io.Writer) {
@@ -154,7 +165,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		fmt.Fprintf(stderr, "blok-server refused to start: %v\n", err)
 		return 1
 	}
-	httpServer := newHTTPServer(server.Handler(""), defaultRequestTimeout)
+	httpServer := newHTTPServer(limitUpgrades(server.Handler(""), options), defaultRequestTimeout)
 	served := make(chan error, len(listeners))
 	for _, listener := range listeners {
 		go func() { served <- httpServer.Serve(headerListener{listener, headerTimeout, keepAliveTimeout}) }()

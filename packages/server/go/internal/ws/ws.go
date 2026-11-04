@@ -177,6 +177,10 @@ func acceptKey(key string) (string, bool) {
 // ErrAcceptKey is a valid key too long for CreateResponseKey's buffer.
 var ErrAcceptKey = errors.New("ws: the Sec-WebSocket-Key does not fit")
 
+// ErrNotHijacked is a failed hijack: nothing was written, so the caller
+// still owns the response.
+var ErrNotHijacked = errors.New("ws: the connection was not hijacked")
+
 // Upgrade hijacks the connection and writes the 101. The caller checked
 // IsWebSocketRequest. Hijack clears the conn's deadlines (net/http's
 // hijackLocked), so the socket outlives the request deadline.
@@ -187,7 +191,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request, options Options) (*Conn, er
 	}
 	raw, buffered, err := http.NewResponseController(w).Hijack()
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrNotHijacked, err)
 	}
 	response := "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: " + accept + "\r\n"
 	if strings.TrimSpace(options.SubProtocol) != "" {

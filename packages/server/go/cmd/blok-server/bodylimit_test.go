@@ -132,3 +132,29 @@ func TestAnUnreadBodyLeavesTheAnswerAlone(t *testing.T) {
 		}
 	}
 }
+
+// Measured on the C# host: after the answer Kestrel gives what a route left
+// of a body about 5 s to arrive, at any rate. 4000 or 5000 bytes sent over 4
+// or 5 s kept the connection; 3000 bytes at 100 a second, 6000 at 500 a
+// second, or none were cut off at 6 to 7 s.
+func TestAnUnreadBodyHasTheDrainTimeToArrive(t *testing.T) {
+	saved := bodyDrainTimeout
+	bodyDrainTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { bodyDrainTimeout = saved })
+	address := startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+	}))
+	unsupported := "HTTP/1.1 415 Unsupported Media Type\r\nContent-Length: 0\r\n\r\n"
+	head := "POST /p HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\n"
+	started := time.Now()
+	if got := trickle(t, address, head, "", 1, 0); got != unsupported {
+		t.Errorf("a body never sent: got %q", got)
+	}
+	if elapsed := time.Since(started); elapsed < 300*time.Millisecond || elapsed > 2*time.Second {
+		t.Errorf("a body never sent: closed after %v", elapsed)
+	}
+	// In time, the connection carries the next request.
+	if got := trickle(t, address, head, "0123456789"+post("", ""), 5, 50*time.Millisecond); got != unsupported+strings.Replace(unsupported, "\r\n\r\n", "\r\nConnection: close\r\n\r\n", 1) {
+		t.Errorf("a body in time: got %q", got)
+	}
+}

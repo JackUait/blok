@@ -44,20 +44,29 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 				}
 			}
 		}
-		next.ServeHTTP(tracked, withBodyLimit(r, blokserver.WithRequestTimeoutLift(ctx, lift), tracked))
+		limited, body := withBodyLimit(r, blokserver.WithRequestTimeoutLift(ctx, lift), tracked)
+		next.ServeHTTP(tracked, limited)
 		// By the clock, not ctx.Err(): the read deadline can cancel the
 		// connection's context first, and that reads as Canceled.
 		if !time.Now().Before(deadline) {
 			tracked.timeOut()
+		}
+		// net/http reads what is left of the body after the answer, under
+		// the read deadline; Kestrel gives it bodyDrainTimeout. Never on a
+		// hijacked conn: the deadline would land on its new owner.
+		if body != nil && !body.ended && !tracked.hijacked() {
+			if drain := time.Now().Add(bodyDrainTimeout); drain.Before(deadline) {
+				_ = controller.SetReadDeadline(drain)
+			}
 		}
 	})
 }
 
 // withBodyLimit puts Kestrel's body cap on r's body, and the setter a route
 // raises it with in its context.
-func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter) *http.Request {
+func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter) (*http.Request, *limitedBody) {
 	if r.Body == nil || r.Body == http.NoBody {
-		return r.WithContext(ctx)
+		return r.WithContext(ctx), nil
 	}
 	body := &limitedBody{
 		ReadCloser: r.Body, writer: tracked, limit: maxRequestBodyBytes, length: r.ContentLength,
@@ -70,7 +79,7 @@ func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter
 	_ = http.NewResponseController(tracked).EnableFullDuplex()
 	limited := r.WithContext(blokserver.WithRequestBodyLimit(ctx, body.setLimit))
 	limited.Body = body
-	return limited
+	return limited, body
 }
 
 type trackingWriter struct {
@@ -80,6 +89,13 @@ type trackingWriter struct {
 	timedOut bool
 	expired  bool
 	lifted   bool
+	hijack   bool
+}
+
+func (t *trackingWriter) hijacked() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.hijack
 }
 
 // exempt takes the request out of the deadline; false if it passed first.
@@ -154,7 +170,7 @@ func (t *trackingWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 	conn, buffered, err := http.NewResponseController(t.ResponseWriter).Hijack()
 	if err == nil {
-		t.wrote = true
+		t.wrote, t.hijack = true, true
 	}
 	return conn, buffered, err
 }

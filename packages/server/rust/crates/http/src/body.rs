@@ -91,6 +91,8 @@ pub(crate) struct BodyState {
     pub trailer_bytes: usize,
     pub trailer_lines: usize,
     pub trailer_seen: bool,
+    /// 100 Continue went out, or may no longer.
+    pub continued: bool,
 }
 
 impl BodyState {
@@ -103,6 +105,7 @@ impl BodyState {
             trailer_bytes: head_bytes,
             trailer_lines: head_lines,
             trailer_seen: false,
+            continued: false,
         }
     }
 
@@ -187,20 +190,11 @@ pub(crate) async fn read(
         limits.started = true;
         (limits.limit, limits.route_set, first)
     };
-    if first {
-        if let Framing::Length(length) = state.framing
-            && length > limit
-        {
-            return Err(fail(exchange, &mut state, BodyError::TooLarge, route_set, answer).await);
-        }
-        // Measured: Kestrel sends 100 Continue only when no body byte has
-        // come yet.
-        if answer && exchange.expects_continue && exchange.inbound.lock().buf.is_empty() {
-            let mut wire = exchange.wire.lock().await;
-            if !wire.started && !wire.hijacked {
-                let _ = wire.send(b"HTTP/1.1 100 Continue\r\n\r\n").await;
-            }
-        }
+    if first
+        && let Framing::Length(length) = state.framing
+        && length > limit
+    {
+        return Err(fail(exchange, &mut state, BodyError::TooLarge, route_set, answer).await);
     }
     if buf.is_empty() {
         return Ok(0);
@@ -230,6 +224,16 @@ pub(crate) async fn read(
                 }
             }
             Step::Wait(have) => {
+                // Measured: Kestrel sends 100 Continue once, when a read of
+                // the route must wait for the socket and nothing of the
+                // answer is out.
+                if answer && exchange.expects_continue && !state.continued {
+                    state.continued = true;
+                    let mut wire = exchange.wire.lock().await;
+                    if !wire.started && !wire.hijacked {
+                        let _ = wire.send(b"HTTP/1.1 100 Continue\r\n\r\n").await;
+                    }
+                }
                 if let Err(error) = wait(exchange, &mut state, have, answer).await {
                     return Err(fail(exchange, &mut state, error, route_set, answer).await);
                 }

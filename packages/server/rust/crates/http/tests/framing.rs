@@ -145,6 +145,25 @@ async fn expect_continue_goes_out_only_for_a_body_not_yet_sent() {
     );
 }
 
+// Measured on the C# host: no 100 Continue when the body came with the
+// head, and one when only part of it did and a later read must wait.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn expect_sends_continue_only_when_the_read_must_wait() {
+    let server = start(routes, Config::default()).await;
+    let head = "POST /read HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\nContent-Length: 2\r\nConnection: close\r\n\r\n";
+    let mut conn = connect(server.address).await;
+    write(&mut conn, format!("{head}o").as_bytes()).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    write(&mut conn, b"k").await;
+    let got =
+        String::from_utf8_lossy(&read_all(&mut conn, Duration::from_secs(2)).await).into_owned();
+    assert!(
+        got.starts_with("HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200 OK\r\n")
+            && got.contains("read ok"),
+        "{got:?}"
+    );
+}
+
 // Measured: chunk sizes are hex digits with an optional extension, chunk
 // framing needs CRLF, and trailers are read and dropped. A bad chunk gets
 // Kestrel's bare 400.

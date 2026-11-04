@@ -29,6 +29,12 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		timer := time.AfterFunc(timeout, func() {
 			if tracked.timeOut() {
 				cancel()
+				// Measured on the C# host: an answer still going out at the
+				// deadline is cut, so a stalled reader cannot hold the
+				// connection. A blocked write fails and net/http closes.
+				if tracked.writingBody() {
+					_ = controller.SetWriteDeadline(time.Now())
+				}
 			}
 		})
 		defer timer.Stop()
@@ -96,6 +102,7 @@ type trackingWriter struct {
 	http.ResponseWriter
 	mu       sync.Mutex
 	wrote    bool
+	body     bool
 	timedOut bool
 	expired  bool
 	lifted   bool
@@ -167,14 +174,24 @@ func (t *trackingWriter) WriteHeader(status int) {
 	t.ResponseWriter.WriteHeader(status)
 }
 
+// Write does not hold the lock while it writes: a reader that stalls would
+// block the deadline behind it.
 func (t *trackingWriter) Write(b []byte) (int, error) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 	if t.timedOut {
+		t.mu.Unlock()
 		return 0, http.ErrHandlerTimeout
 	}
-	t.wrote = true
+	t.wrote, t.body = true, true
+	t.mu.Unlock()
 	return t.ResponseWriter.Write(b)
+}
+
+// writingBody reports whether body bytes went to net/http.
+func (t *trackingWriter) writingBody() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.body
 }
 
 // Hijack marks the writer done before handing the conn over, so the

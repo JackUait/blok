@@ -46,6 +46,13 @@ name = "blok-jsjson"
 version = "0.0.0"
 
 [[package]]
+name = "blok-lib0"
+version = "0.0.0"
+dependencies = [
+ "blok-jsjson",
+]
+
+[[package]]
 name = "blok-mediatype"
 version = "0.0.0"
 

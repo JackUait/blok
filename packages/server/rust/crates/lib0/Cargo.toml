@@ -1,0 +1,13 @@
+[package]
+name = "blok-lib0"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-jsjson = { path = "../jsjson" }
+
+[lints]
+workspace = true

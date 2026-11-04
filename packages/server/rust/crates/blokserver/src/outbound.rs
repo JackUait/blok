@@ -62,19 +62,13 @@ pub(crate) async fn unfurl(inner: Arc<Inner>, request: Request, mut response: Re
         write_json(&mut response, 400, b"{\"success\":0}\n").await;
         return;
     }
-    let limits = Limits {
-        timeout: Duration::from_secs(10),
-        max_bytes: 2 << 20,
-        max_redirects: 5,
-        hop: Some(hop_budget(&inner, &request)),
-        truncate: false,
-    };
+    let limits = unfurl_limits(hop_budget(&inner, &request));
     let cancel = request.cancel_token();
     let Some(result) = fetch(&inner, &cancel, &target, &limits).await else {
         return;
     };
-    let fetched = match result {
-        Ok(fetched) if (200..=299).contains(&fetched.status_code) => fetched,
+    let mut fetched = match result {
+        Ok(fetched) if is_success(fetched.status_code) => fetched,
         _ => {
             if !cancel.is_cancelled() {
                 write_json(&mut response, 200, b"{\"success\":0}\n").await;
@@ -83,9 +77,29 @@ pub(crate) async fn unfurl(inner: Arc<Inner>, request: Request, mut response: Re
         }
     };
     let meta = blok_unfurl::parse(&fetched.body, &fetched.final_url);
-    let mut body = br#"{"success":1,"link":"#.to_vec();
-    append_quoted(&mut body, &units(&fetched.final_url));
+    let final_url = std::mem::take(&mut fetched.final_url);
     drop(fetched);
+    write_json(&mut response, 200, &unfurl_body(&final_url, &meta)).await;
+}
+
+fn unfurl_limits(hop: Arc<dyn Fn() -> bool + Send + Sync>) -> Limits {
+    Limits {
+        timeout: Duration::from_secs(10),
+        max_bytes: 2 << 20,
+        max_redirects: 5,
+        hop: Some(hop),
+        truncate: false,
+    }
+}
+
+fn is_success(status_code: u16) -> bool {
+    (200..=299).contains(&status_code)
+}
+
+/// The success answer: empty scalars are left out, image stays an object.
+fn unfurl_body(final_url: &str, meta: &blok_unfurl::Metadata) -> Vec<u8> {
+    let mut body = br#"{"success":1,"link":"#.to_vec();
+    append_quoted(&mut body, &units(final_url));
     body.extend_from_slice(br#","meta":{"#);
     let field = |body: &mut Vec<u8>, name: &str, value: &str, comma: bool| {
         if value.is_empty() {
@@ -111,7 +125,7 @@ pub(crate) async fn unfurl(inner: Arc<Inner>, request: Request, mut response: Re
     field(&mut body, "favicon", &meta.favicon, true);
     field(&mut body, "domain", &meta.domain, true);
     body.extend_from_slice(b"}}\n");
-    write_json(&mut response, 200, &body).await;
+    body
 }
 
 /// UploadByUrlEndpoint. The fetch slot is held until the store has the
@@ -130,19 +144,13 @@ pub(crate) async fn upload_by_url(
         write_text(&mut response, 400, "expected {\"url\": \"...\"}\n").await;
         return;
     };
-    let limits = Limits {
-        timeout: Duration::from_secs(120),
-        max_bytes: u64::try_from(inner.options.max_upload_bytes).unwrap_or(0),
-        max_redirects: 5,
-        hop: Some(hop_budget(&inner, &request)),
-        truncate: false,
-    };
+    let limits = upload_by_url_limits(inner.options.max_upload_bytes, hop_budget(&inner, &request));
     let cancel = request.cancel_token();
     let Some(result) = fetch(&inner, &cancel, &target, &limits).await else {
         return;
     };
     let mut fetched = match result {
-        Ok(fetched) if (200..=299).contains(&fetched.status_code) => fetched,
+        Ok(fetched) if is_success(fetched.status_code) => fetched,
         _ => {
             if !cancel.is_cancelled() {
                 write_text(&mut response, 400, "the URL could not be fetched\n").await;
@@ -170,6 +178,16 @@ pub(crate) async fn upload_by_url(
         Ok(url) => upload_response(&mut response, &url, &file_name, size, &mime_type).await,
         Err(_) if !cancelled() => write_text(&mut response, 502, "upload failed\n").await,
         Err(_) => {}
+    }
+}
+
+fn upload_by_url_limits(max_upload_bytes: i64, hop: Arc<dyn Fn() -> bool + Send + Sync>) -> Limits {
+    Limits {
+        timeout: Duration::from_secs(120),
+        max_bytes: u64::try_from(max_upload_bytes).unwrap_or(0),
+        max_redirects: 5,
+        hop: Some(hop),
+        truncate: false,
     }
 }
 

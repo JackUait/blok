@@ -20,8 +20,17 @@ fn reads_formula_dates_in_the_host_zone_as_jint_does() {
         zones.members.len() >= 2,
         "the fixture needs at least two zones"
     );
+    let mut ran = 0;
     for m in &zones.members {
         let zone = blok_jsjson::to_string_lossy(m.key().expect("key").units());
+        // libc reads TZ from the zone files and silently falls back to UTC
+        // when the file is missing (Ubuntu 24.04 ships Asia/Saigon only in
+        // tzdata-legacy). Go embeds its own zone data, so Go has no such gap.
+        if !zone_file_exists(&zone) {
+            eprintln!("skipped {zone}: this machine has no zone file for it");
+            continue;
+        }
+        ran += 1;
         let output = Command::new(std::env::current_exe().expect("the test binary"))
             .args([
                 "--exact",
@@ -39,6 +48,15 @@ fn reads_formula_dates_in_the_host_zone_as_jint_does() {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+    assert!(
+        ran >= 2,
+        "only {ran} zones have a zone file on this machine"
+    );
+}
+
+fn zone_file_exists(zone: &str) -> bool {
+    let directory = std::env::var("TZDIR").unwrap_or_else(|_| "/usr/share/zoneinfo".to_owned());
+    std::path::Path::new(&directory).join(zone).is_file()
 }
 
 #[tokio::test]

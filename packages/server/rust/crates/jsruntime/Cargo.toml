@@ -1,0 +1,18 @@
+[package]
+name = "blok-jsruntime"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rquickjs = "=0.14.0"
+tokio = { version = "1", features = ["sync"] }
+
+[dev-dependencies]
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time"] }
+
+[lints]
+workspace = true

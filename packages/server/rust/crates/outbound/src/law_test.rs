@@ -393,3 +393,86 @@ fn the_law_catches_planted_violations() {
     let sources = BTreeMap::from([("x/src/x.rs".to_owned(), clean.to_owned())]);
     assert_eq!(violations(&sources), Vec::<String>::new());
 }
+
+fn one(path: &str, source: &str) -> Vec<String> {
+    violations(&BTreeMap::from([(path.to_owned(), source.to_owned())]))
+}
+
+// An owner's one allowed client does not make a dial beside it allowed.
+#[test]
+fn an_owner_keeps_only_its_client_site() {
+    for path in ["blob/src/s3.rs", "collab-docendpoint/src/client.rs"] {
+        let got = one(
+            path,
+            "fn a() { OperatorClient::new(a, b); TcpStream::connect(x); }",
+        );
+        assert_eq!(got.len(), 1, "{path}: {got:?}");
+        assert!(got[0].contains("TcpStream"), "{path}: {got:?}");
+        assert!(!got[0].contains("operator client"), "{path}: {got:?}");
+    }
+}
+
+#[test]
+fn a_dial_is_restricted_even_inside_a_client_owner() {
+    for path in [
+        "x/src/x.rs",
+        "blob/src/s3.rs",
+        "collab-docendpoint/src/client.rs",
+    ] {
+        let got = one(path, "fn f() { TcpStream::connect(a); }");
+        assert!(
+            got.len() == 1 && got[0].contains("TcpStream"),
+            "{path}: {got:?}"
+        );
+    }
+}
+
+#[test]
+fn an_alias_declared_by_an_allowed_owner_is_caught() {
+    let sources = BTreeMap::from([
+        (
+            "outbound/src/fetcher.rs".to_owned(),
+            "pub use tokio::net::TcpStream as Outbound;".to_owned(),
+        ),
+        (
+            "x/src/x.rs".to_owned(),
+            "fn f() { Outbound::connect(a); }".to_owned(),
+        ),
+    ]);
+    let got = violations(&sources);
+    assert!(
+        got.iter()
+            .any(|v| v.starts_with("outbound/src/fetcher.rs") && v.contains("renames TcpStream")),
+        "{got:?}"
+    );
+}
+
+// The body is read into one buffer and handed back by move. A copy of it
+// would double the peak memory of every capped fetch.
+#[test]
+fn the_guarded_fetcher_does_not_copy_the_finished_body() {
+    let source = strip(include_str!("body.rs"));
+    let start = source
+        .find("async fn read_bounded")
+        .expect("body.rs has read_bounded");
+    let open = start + source[start..].find('{').expect("a body");
+    let mut depth = 0;
+    let mut end = open;
+    for (i, c) in source[open..].char_indices() {
+        match c {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = open + i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let body = &source[open..end];
+    for copy in [".to_vec()", ".clone()", ".to_owned()", "Vec::from("] {
+        assert!(!body.contains(copy), "read_bounded calls {copy}");
+    }
+}

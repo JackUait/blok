@@ -7,6 +7,7 @@
 
 mod double;
 mod httpdate;
+mod idna;
 mod ip;
 mod number;
 mod ordinal;

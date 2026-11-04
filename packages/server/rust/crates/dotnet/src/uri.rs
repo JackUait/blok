@@ -1,7 +1,5 @@
 use std::net::{IpAddr, Ipv6Addr};
 
-use idna::uts46::{AsciiDenyList, DnsLength, Hyphens, Uts46};
-
 use crate::ip::{
     all_digits, digit_value, format_ipv6_groups, is_loopback, parse_ipv4, parse_ipv6_text,
 };
@@ -235,7 +233,7 @@ impl Uri {
         self.host_type = "Dns".into();
         self.idn_host = self.host.clone();
         if !host.is_ascii() {
-            match idn_to_ascii(host) {
+            match crate::idna::to_ascii(host) {
                 Some(idn) => self.idn_host = idn,
                 None => return false,
             }
@@ -243,21 +241,6 @@ impl Uri {
         self.loopback = self.host == "localhost";
         true
     }
-}
-
-/// Go's idna.New(MapForLookup(), StrictDomainName(false),
-/// VerifyDNSLength(false)): UTS 46 nontransitional, no STD3 deny list, with
-/// CheckHyphens. Only the fixture's accepting cases are pinned.
-fn idn_to_ascii(host: &str) -> Option<String> {
-    Uts46::new()
-        .to_ascii(
-            host.as_bytes(),
-            AsciiDenyList::EMPTY,
-            Hyphens::Check,
-            DnsLength::Ignore,
-        )
-        .ok()
-        .map(|cow| cow.into_owned())
 }
 
 /// Writes an IPv4-mapped or IPv4-compatible address with a dotted tail, as

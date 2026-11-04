@@ -2,6 +2,7 @@
 //! Port of Go `internal/collab/convert` (C# YDocConverter.cs,
 //! CollabEditOps.cs, RichText*.cs, TextDiff.cs). One module per Go file.
 
+mod editops;
 mod error;
 mod export;
 mod fields;
@@ -13,11 +14,13 @@ mod longestkept;
 mod richtext;
 mod richtextedit;
 mod richtextinput;
+mod seed;
 mod structure;
 mod textdiff;
 mod textdiff_tables;
 
-pub use error::Error;
+pub use editops::JSON_MAX_DEPTH;
+pub use error::{Error, NOT_UNICODE};
 pub use export::{
     DataError, MAX_VALUE_DEPTH, PAGE_MAPS, RichTextHtml, RichTextHtmlSlot, SlotStep, export,
     export_page, plain_json,
@@ -34,6 +37,10 @@ pub use richtextedit::{
     RichTextOp, RichTextTarget, apply_rich_text_ops, plan_rich_text_edit, same_json,
 };
 pub use richtextinput::RichTextInput;
+pub use seed::{
+    ROW_KEY_LENGTH, SourceNumber, SourceValue, collect_seed_html, generate_row_key, seed,
+    source_object, strict_value,
+};
 pub use structure::{
     DocStructure, KeyShape, PageMap, PlainPageMap, describe_structure, is_plain_map_value,
     plain_map_values_equal, plain_page_maps, read_page_maps,
@@ -68,6 +75,10 @@ mod longestkept_test;
 mod richtext_test;
 #[cfg(test)]
 mod richtextinput_test;
+#[cfg(test)]
+mod seed_test;
+#[cfg(test)]
+mod shape_test;
 #[cfg(test)]
 mod structure_test;
 #[cfg(test)]

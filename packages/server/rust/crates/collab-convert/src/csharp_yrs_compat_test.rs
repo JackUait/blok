@@ -26,7 +26,7 @@ impl Wake for Unpark {
 }
 
 // The pool answers from its engine threads, so the read parks until woken.
-fn block_on<F: Future>(future: F) -> F::Output {
+pub(crate) fn block_on<F: Future>(future: F) -> F::Output {
     let mut future = std::pin::pin!(future);
     let waker = Waker::from(Arc::new(Unpark(std::thread::current())));
     let mut cx = Context::from_waker(&waker);

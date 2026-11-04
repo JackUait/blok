@@ -11,6 +11,7 @@ blok-jsjson = { path = "../jsjson" }
 blok-jsruntime = { path = "../jsruntime" }
 blok-lib0 = { path = "../lib0" }
 blok-yjs = { path = "../yjs" }
+getrandom = "0.4"
 
 [dev-dependencies]
 base64 = "0.22"

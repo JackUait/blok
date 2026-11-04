@@ -68,14 +68,14 @@ pub(crate) fn decode64(text: &str) -> Vec<u8> {
         .unwrap_or_else(|err| panic!("{text:?}: {err}"))
 }
 
-struct CollabCase {
-    name: String,
-    update: Vec<u8>,
-    segments: Value,
-    page_canon: Option<Value>,
+pub(crate) struct CollabCase {
+    pub(crate) name: String,
+    pub(crate) update: Vec<u8>,
+    pub(crate) segments: Value,
+    pub(crate) page_canon: Option<Value>,
 }
 
-fn collab_cases() -> Vec<CollabCase> {
+pub(crate) fn collab_cases() -> Vec<CollabCase> {
     let root = path("collab");
     let mut names: Vec<String> = std::fs::read_dir(&root)
         .unwrap_or_else(|err| panic!("{err}"))

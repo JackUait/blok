@@ -10,12 +10,12 @@ use crate::richtext::{from_delta, is, lookup};
 
 /// How deep block data may nest (C# YDocConverter.MaxValueDepth).
 pub const MAX_VALUE_DEPTH: usize = 256;
-const BLOCK_FIELD_DEPTH: usize = 0;
+pub(crate) const BLOCK_FIELD_DEPTH: usize = 0;
 pub(crate) const BLOCKS_ROOT: &str = "blocks";
 pub(crate) const ORDER_ROOT: &str = "root";
 pub(crate) const PAGE_ROOT: &str = "page";
-const GRID_ROWS_KEY: &str = "__rows";
-const GRID_ORDER_KEY: &str = "__rowKeys";
+pub(crate) const GRID_ROWS_KEY: &str = "__rows";
+pub(crate) const GRID_ORDER_KEY: &str = "__rowKeys";
 
 /// The top-level maps that hold page fields.
 pub const PAGE_MAPS: &[&str] = &["page", "values"];
@@ -104,7 +104,7 @@ fn str_value(m: &Map, key: &str) -> Option<Str> {
     }
 }
 
-fn is_grid_map(m: &Map) -> bool {
+pub(crate) fn is_grid_map(m: &Map) -> bool {
     value(m, GRID_ROWS_KEY).and_then(|v| v.as_map()).is_some()
         && value(m, GRID_ORDER_KEY)
             .and_then(|v| v.as_array())
@@ -113,7 +113,7 @@ fn is_grid_map(m: &Map) -> bool {
 
 /// First occurrence wins, keys with no row are dropped, rows missing from
 /// the order follow, sorted.
-fn grid_row_keys(order: &Array, rows: &Map) -> Vec<Str> {
+pub(crate) fn grid_row_keys(order: &Array, rows: &Map) -> Vec<Str> {
     let mut seen = HashSet::new();
     let mut keys = Vec::new();
     for entry in order.values() {
@@ -136,7 +136,7 @@ fn grid_row_keys(order: &Array, rows: &Map) -> Vec<Str> {
     keys
 }
 
-fn number_node(number: f64) -> Value {
+pub(crate) fn number_node(number: f64) -> Value {
     if number.is_finite() {
         Value::Number(number)
     } else {
@@ -834,7 +834,7 @@ fn has_nul(node: &Value) -> bool {
 }
 
 /// The client's isPageIcon: {type:'emoji', value} or {type:'image', url}.
-fn is_page_icon(v: &Value) -> bool {
+pub(crate) fn is_page_icon(v: &Value) -> bool {
     let Value::Object(icon) = v else {
         return false;
     };

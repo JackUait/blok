@@ -16,5 +16,5 @@ fn the_shared_fixture_holds_the_malformed_cases() {
 }
 
 #[test]
-#[ignore = "drives YDocConverter.Seed and ApplyOps; port with the seed.go and apply.go lanes"]
+#[ignore = "drives YDocConverter.ApplyOps; needs apply (lane E)"]
 fn an_update_leaves_the_delta_yjs_leaves() {}

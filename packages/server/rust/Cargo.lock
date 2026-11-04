@@ -48,6 +48,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "blok-blokserver"
+version = "0.0.0"
+dependencies = [
+ "blok-auth",
+ "blok-blob",
+ "blok-dotnet",
+ "blok-http",
+ "blok-jsjson",
+ "blok-mediatype",
+ "blok-route",
+ "getrandom",
+ "tokio",
+]
+
+[[package]]
 name = "blok-collab"
 version = "0.0.0"
 

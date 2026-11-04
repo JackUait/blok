@@ -1,0 +1,28 @@
+[package]
+name = "blok-blokserver"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# The conformance build: blokserver's conformance.go.
+conformance = []
+
+[dependencies]
+blok-auth = { path = "../auth" }
+blok-blob = { path = "../blob" }
+blok-dotnet = { path = "../dotnet" }
+blok-http = { path = "../http" }
+blok-jsjson = { path = "../jsjson" }
+blok-mediatype = { path = "../mediatype" }
+blok-route = { path = "../route" }
+getrandom = "0.4"
+tokio = { version = "1", features = ["fs", "io-util", "sync", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["fs", "io-util", "net", "rt", "rt-multi-thread", "macros", "time"] }
+
+[lints]
+workspace = true

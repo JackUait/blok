@@ -261,10 +261,14 @@ pub async fn not_found(_request: Request, mut response: ResponseWriter) {
 
 /// Answers 405 with the given Allow value, and no nosniff header (the C#
 /// host never sends one).
-pub fn method_not_allowed(allow: &'static str) -> impl Handler {
-    move |_request: Request, mut response: ResponseWriter| async move {
-        response.headers_mut().set("Allow", allow);
-        write_plain(&mut response, 405, "Method Not Allowed\n").await;
+pub fn method_not_allowed(allow: impl Into<String>) -> impl Handler {
+    let allow: Arc<str> = allow.into().into();
+    move |_request: Request, mut response: ResponseWriter| {
+        let allow = Arc::clone(&allow);
+        async move {
+            response.headers_mut().set("Allow", &*allow);
+            write_plain(&mut response, 405, "Method Not Allowed\n").await;
+        }
     }
 }
 

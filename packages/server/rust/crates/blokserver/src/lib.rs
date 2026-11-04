@@ -1,0 +1,26 @@
+//! The Blok server as a library: the analogue of the C# AddBlokServer and
+//! MapBlokServer. A host builds Options, calls Server::new, and mounts
+//! handler.
+
+mod contenttypes;
+mod disposition;
+mod handlers;
+mod localfile;
+mod log;
+mod options;
+mod seams;
+mod server;
+mod upload;
+
+#[cfg(test)]
+mod testutil;
+
+#[cfg(test)]
+#[path = "disposition_test.rs"]
+mod disposition_test;
+
+pub use blok_auth::{Authorization, User};
+pub use log::{COLLAB_LOG_CATEGORY, HOST_LOG_CATEGORY, Level, Logger};
+pub use options::{Clock, MINIMUM_SECRET_LENGTH, Options, OptionsError, format_time_span};
+pub use seams::{TicketClaims, TicketVerifier};
+pub use server::{Conformance, RateKey, Server, user_from};

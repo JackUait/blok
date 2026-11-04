@@ -23,6 +23,8 @@ mod collab_test;
 #[cfg(test)]
 mod collabstore_test;
 #[cfg(test)]
+mod csharp_routes_test;
+#[cfg(test)]
 mod documents_test;
 #[cfg(test)]
 mod purge_errors_test;

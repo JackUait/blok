@@ -13,6 +13,7 @@ use crate::test_support::{
 // caller in, as the guard would.
 
 const APPEND_ONE: &str = r#"{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "z": "ignored", "text": "!" } } } ] }"#;
+const KEY_REQUIRED: &str = "a valid Blok-Idempotency-Key header is required\n";
 const BAD_IF_MATCH: &str = "If-Match must be one quoted \"<lineage>:<sequence>\" tag\n";
 
 fn assert_error(answer: &Answer, status: u16, body: &str) {
@@ -51,7 +52,11 @@ async fn edit_requires_an_idempotency_key() {
             .map(|key| vec![("Blok-Idempotency-Key", key)])
             .unwrap_or_default();
         let answer = app.request("POST", "/edit", &headers, APPEND_ONE).await;
-        assert_eq!(answer.status, 400, "key {key:?}: {}", answer.text());
+        assert_eq!(
+            (answer.status, answer.text().as_str()),
+            (400, KEY_REQUIRED),
+            "key {key:?}"
+        );
     }
     let multiple = app
         .request(
@@ -64,7 +69,10 @@ async fn edit_requires_an_idempotency_key() {
             APPEND_ONE,
         )
         .await;
-    assert_eq!(multiple.status, 400);
+    assert_eq!(
+        (multiple.status, multiple.text().as_str()),
+        (400, KEY_REQUIRED)
+    );
     let boundary = "~".repeat(128);
     let accepted = app.send("POST", "/edit", &boundary, "", APPEND_ONE).await;
     assert_eq!(accepted.status, 204, "{}", accepted.text());

@@ -22,7 +22,7 @@ fn store(
     let mut options = test_options("https://s3.example.com", "media", "");
     options.temp_dir = Some(dir.0.clone());
     let mut s = S3::build(options, no_proxy()).unwrap();
-    s.now = frozen_time;
+    s.now = std::sync::Arc::new(frozen_time);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let seen2 = seen.clone();
     let s = s.with_fake(Arc::new(move |request: Recorded| {
@@ -235,7 +235,7 @@ async fn wire_store() -> (
     })
     .await;
     let mut s = S3::build(test_options(&endpoint, "media", "path"), no_proxy()).unwrap();
-    s.now = frozen_time;
+    s.now = std::sync::Arc::new(frozen_time);
     (s, seen, task)
 }
 

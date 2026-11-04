@@ -254,7 +254,9 @@ impl Inner {
             .get_or_init(|| {
                 let o = &self.options;
                 if !o.s3_bucket.is_empty() {
-                    let store = blok_blob::S3::new(s3_options(o)).map_err(|e| e.to_string())?;
+                    let store = blok_blob::S3::new(s3_options(o))
+                        .map_err(|e| e.to_string())?
+                        .with_clock(Arc::clone(&self.clock));
                     return Ok(Arc::new(store) as Arc<dyn Store>);
                 }
                 Ok(Arc::new(blok_blob::Local::new(

@@ -220,7 +220,7 @@ pub fn bucket_store(bucket: &Arc<FakeBucket>) -> S3 {
         no_proxy(),
     )
     .unwrap();
-    s.now = frozen_time;
+    s.now = std::sync::Arc::new(frozen_time);
     let bucket = bucket.clone();
     s.with_fake(Arc::new(move |request: Recorded| {
         bucket.requests.lock().unwrap().push(request.clone());

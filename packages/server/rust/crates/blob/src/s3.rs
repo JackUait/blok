@@ -1,6 +1,7 @@
 use std::io::SeekFrom;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use blok_dotnet::{Uri, parse_absolute_uri, unescape_data_string};
@@ -94,8 +95,8 @@ enum Transport {
 pub struct S3 {
     pub options: S3Options,
     pub(crate) settings: Settings,
-    /// The signing clock; tests freeze it.
-    pub(crate) now: fn() -> SystemTime,
+    /// The signing clock: the host's TimeProvider, or the system clock.
+    pub(crate) now: Arc<dyn Fn() -> SystemTime + Send + Sync>,
     transport: Transport,
 }
 
@@ -103,6 +104,12 @@ impl S3 {
     /// Checks the target the way S3TargetResolver does and builds the client.
     pub fn new(options: S3Options) -> Result<S3, Error> {
         S3::build(options, Settings::default())
+    }
+
+    /// Signs with clock instead of the system clock, as Go's blob.S3 Now.
+    pub fn with_clock(mut self, clock: Arc<dyn Fn() -> SystemTime + Send + Sync>) -> S3 {
+        self.now = clock;
+        self
     }
 
     pub(crate) fn build(options: S3Options, settings: Settings) -> Result<S3, Error> {
@@ -116,7 +123,7 @@ impl S3 {
         Ok(S3 {
             options,
             settings,
-            now: SystemTime::now,
+            now: Arc::new(SystemTime::now),
             transport: Transport::Operator(Box::new(client)),
         })
     }

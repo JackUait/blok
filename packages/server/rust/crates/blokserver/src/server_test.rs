@@ -283,3 +283,49 @@ fn rate_limit_windows_reset_after_a_minute() {
     *now.lock().unwrap() += Duration::from_secs(60);
     assert!(limiter.allow("a"));
 }
+
+// Options.clock is the TimeProvider override, and S3 signing reads it as
+// Go's blob.S3 Now does.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_options_clock_signs_s3_requests() {
+    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let record = Arc::clone(&seen);
+    let s3 = start(move |mut request: Request, mut response: ResponseWriter| {
+        let record = Arc::clone(&record);
+        async move {
+            let date = request.headers().get("x-amz-date").unwrap_or("").to_owned();
+            record.lock().unwrap().push(date);
+            if let Some(body) = request.body_mut() {
+                let mut sink = Vec::new();
+                let _ = body.read_to_end(&mut sink).await;
+            }
+            response.set_status(200);
+        }
+    })
+    .await;
+    let then = UNIX_EPOCH + Duration::from_secs(1_577_934_245);
+    let server = Server::new(Options {
+        s3_endpoint: format!("http://127.0.0.1:{}", s3.address.port()),
+        s3_region: "us-east-1".into(),
+        s3_bucket: "media".into(),
+        s3_bucket_url: "https://cdn.example.com/media".into(),
+        s3_addressing: "path".into(),
+        s3_access_key: "a".into(),
+        s3_secret_key: "b".into(),
+        clock: Some(Arc::new(move || then)),
+        ..Options::default()
+    })
+    .unwrap();
+    let store = server.inner.blob_store().unwrap();
+    let never = || false;
+    store
+        .put(
+            ".txt",
+            "text/plain",
+            blok_blob::Body::bytes(b"hi".to_vec()),
+            &never,
+        )
+        .await
+        .unwrap();
+    assert_eq!(seen.lock().unwrap().as_slice(), ["20200102T030405Z"]);
+}

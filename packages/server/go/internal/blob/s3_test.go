@@ -288,7 +288,7 @@ func TestBoundsTheSpool(t *testing.T) {
 	s := bucketStore(t, bucket)
 	s.TempDir = t.TempDir()
 	_, err := s.Put(context.Background(), ".bin", "", io.LimitReader(neverEnding{}, s.MaxSpoolBytes+1))
-	if err == nil || len(bucket.requests) != 0 {
+	if err == nil || !strings.Contains(err.Error(), "exceeds the configured 1024-byte limit") || len(bucket.requests) != 0 {
 		t.Fatalf("got %v after %d requests", err, len(bucket.requests))
 	}
 	if left, _ := os.ReadDir(s.TempDir); len(left) != 0 {

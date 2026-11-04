@@ -259,7 +259,7 @@ func (s *S3) spool(ctx context.Context, content io.Reader) (*os.File, int64, str
 	limited := io.LimitReader(content, s.MaxSpoolBytes+1)
 	length, err := io.Copy(io.MultiWriter(file, hash), readerWithContext{ctx, limited})
 	if err == nil && length > s.MaxSpoolBytes {
-		err = errors.New("blobstore: s3 upload body is over the spool cap")
+		err = fmt.Errorf("The S3 payload exceeds the configured %d-byte limit.", s.MaxSpoolBytes)
 	}
 	if err == nil {
 		_, err = file.Seek(0, io.SeekStart)

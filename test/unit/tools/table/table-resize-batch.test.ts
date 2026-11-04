@@ -152,4 +152,36 @@ describe('table resize from the size card', () => {
     expect(grid[0].slice(0, 2)).toEqual(['c0', 'c1']);
     expect(grid[1].slice(0, 2)).toEqual(['c2', 'c3']);
   });
+  it('finds each new cell\'s row without counting the rows again for every cell', async () => {
+    const readsFor = async (cols: number): Promise<number> => {
+      await bootTable(2, 2);
+      const body = document.querySelector('[data-blok-tool="table"] tbody');
+      const children = Object.getOwnPropertyDescriptor(Element.prototype, 'children')?.get;
+
+      if (body === null || children === undefined) {
+        throw new Error('no table body');
+      }
+
+      const reads = { count: 0 };
+
+      Object.defineProperty(body, 'children', {
+        configurable: true,
+        get(this: Element) {
+          reads.count++;
+          const list: HTMLCollection = children.call(this);
+
+          return list;
+        },
+      });
+
+      resize(10, cols);
+      editors.splice(0).forEach((done) => done.destroy());
+      document.body.innerHTML = '';
+
+      return reads.count;
+    };
+
+    // Same rows, 120 more cells: reading the rows once per new cell would add 120 or more.
+    expect(await readsFor(16)).toBeLessThan(await readsFor(4) + 10);
+  });
 });

@@ -1891,6 +1891,14 @@ export class TableCellBlocks {
       return;
     }
 
+    // getCellPosition counts the rows before a cell's row; once here, not per new cell.
+    const rowIndex = new Map(ownRows(this.gridElement).map((row, index) => [row, index]));
+    const positionOf = (cell: HTMLElement): CellPosition | null => {
+      const row = cell.parentElement === null ? undefined : rowIndex.get(cell.parentElement);
+      const col = parseInt(cell.getAttribute(CELL_COL_ATTR) ?? '', 10);
+
+      return row === undefined || Number.isNaN(col) ? null : { row, col };
+    };
     const firstIndex = (): number => {
       const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
 
@@ -1910,7 +1918,7 @@ export class TableCellBlocks {
           this.repairIds.add(block.id);
         }
         container.appendChild(block.holder);
-        this.syncBlockToModel(cell, block.id);
+        this.syncBlockToModelAt(cell, positionOf(cell), block.id);
         this.stripPlaceholders(container);
       });
     });
@@ -2297,8 +2305,16 @@ export class TableCellBlocks {
    * from DOM order for any non-tail insert, and save() persists model order.
    */
   private syncBlockToModel(cell: HTMLElement, blockId: string): void {
-    const pos = this.getCellPosition(cell);
+    this.syncBlockToModelAt(cell, this.getCellPosition(cell), blockId);
+  }
 
+  /**
+   * {@link syncBlockToModel} with the cell's position already known.
+   * @param cell - the cell holding the block
+   * @param pos - its position, as getCellPosition gives it
+   * @param blockId - the block
+   */
+  private syncBlockToModelAt(cell: HTMLElement, pos: CellPosition | null, blockId: string): void {
     if (pos) {
       this.model.addBlockToCell(pos.row, pos.col, blockId, this.getModelInsertIndex(cell, pos, blockId));
     }

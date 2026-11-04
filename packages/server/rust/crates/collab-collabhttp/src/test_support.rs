@@ -945,6 +945,23 @@ impl App {
         member.clear();
         (member, membership, mirror)
     }
+
+    /// Waits until /state's head reaches sequence: C# WaitForSequenceAsync.
+    pub async fn wait_for_sequence(&self, sequence: u64) {
+        for _ in 0..500 {
+            let state = self.send("GET", "/state", "", "", "").await;
+            if state
+                .header("Blok-Doc-Sequence")
+                .parse::<u64>()
+                .unwrap_or(0)
+                >= sequence
+            {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        panic!("the head never reached {sequence}");
+    }
 }
 
 /// A v1 blok-sync member that keeps every frame and close it gets.

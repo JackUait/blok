@@ -8,7 +8,9 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use blok_auth::Authorization;
+use blok_blokdocs::ConstraintError;
 use blok_dotnet::{equals_ordinal_ignore_case, is_any, is_loopback, parse_absolute_uri, parse_ip};
+use blok_jsruntime::validate_constraints;
 
 use crate::log::Logger;
 
@@ -71,6 +73,11 @@ pub struct Options {
     /// Custom tools' rich text fields by block type.
     pub rich_text_fields: BTreeMap<String, Vec<String>>,
 
+    /// Sizes the one engine pool the document converter, the agent and the
+    /// rooms share, as a host's own AddBlokDocuments call does in C#. Zero
+    /// values take the defaults; warm_up is off, as AddBlokServer leaves it.
+    pub documents: blok_blokdocs::Options,
+
     /// Narrows document access. None allows what the ticket allows.
     pub authorization: Option<Arc<dyn Authorization>>,
 
@@ -118,6 +125,7 @@ impl Default for Options {
             collab_inbound_resyncs_per_minute: 60,
             collab_inbound_awareness_bytes_per_second: 128 << 10,
             rich_text_fields: BTreeMap::new(),
+            documents: blok_blokdocs::Options::default(),
             authorization: None,
             clock: None,
             logger: None,
@@ -185,6 +193,7 @@ impl fmt::Debug for Options {
                 &self.collab_inbound_awareness_bytes_per_second,
             )
             .field("rich_text_fields", &self.rich_text_fields)
+            .field("documents", &self.documents)
             .field("authorization", &self.authorization.is_some())
             .field("clock", &self.clock.is_some())
             .field("logger", &self.logger.is_some())
@@ -194,7 +203,15 @@ impl fmt::Debug for Options {
 
 /// A refusal, with BlokServerOptions.Validate's text byte for byte.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OptionsError(pub String);
+pub struct OptionsError(pub String, Option<ConstraintError>);
+
+impl OptionsError {
+    /// The document limit refused, when it was one: AddBlokDocuments'
+    /// ArgumentOutOfRangeException.
+    pub fn constraint(&self) -> Option<&ConstraintError> {
+        self.1.as_ref()
+    }
+}
 
 impl fmt::Display for OptionsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -207,7 +224,7 @@ impl std::error::Error for OptionsError {}
 type Checked<T> = Result<T, OptionsError>;
 
 fn fail<T>(message: String) -> Checked<T> {
-    Err(OptionsError(message))
+    Err(OptionsError(message, None))
 }
 
 impl Options {
@@ -270,6 +287,13 @@ impl Options {
                 "--rate-limit must be zero or greater (got {})",
                 self.rate_limit_per_minute
             ));
+        }
+        // C# AddBlokDocuments refuses these in the call, not at the first
+        // conversion.
+        if let Err(constraint) =
+            validate_constraints(self.documents.timeout, self.documents.memory_budget)
+        {
+            return Err(OptionsError(constraint.to_string(), Some(constraint)));
         }
         self.validate_collab()?;
         let mut public_path = String::new();

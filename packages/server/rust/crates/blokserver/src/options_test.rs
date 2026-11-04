@@ -145,3 +145,33 @@ fn default_options_match_the_csharp_defaults() {
     let want = Options::default();
     assert_eq!(format!("{got:?}"), format!("{want:?}"));
 }
+
+// AddBlokDocuments validates its constraints in the call, not at the first
+// conversion. PoolSize is a usize here, so Go's -1 case cannot be built.
+#[test]
+fn new_refuses_document_limits_below_their_floor() {
+    for (name, documents) in [
+        (
+            "timeout",
+            blok_blokdocs::Options {
+                timeout: std::time::Duration::from_millis(1),
+                ..blok_blokdocs::Options::default()
+            },
+        ),
+        (
+            "memory budget",
+            blok_blokdocs::Options {
+                memory_budget: 1,
+                ..blok_blokdocs::Options::default()
+            },
+        ),
+    ] {
+        let o = Options {
+            documents,
+            ..Options::default()
+        };
+        let error = o.validate().expect_err(name);
+        assert!(error.constraint().is_some(), "{name}: {error}");
+    }
+    assert!(Options::default().validate().is_ok());
+}

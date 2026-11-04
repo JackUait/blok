@@ -13,9 +13,11 @@ conformance = []
 [dependencies]
 blok-auth = { path = "../auth" }
 blok-blob = { path = "../blob" }
+blok-blokdocs = { path = "../blokdocs" }
 blok-dotnet = { path = "../dotnet" }
 blok-http = { path = "../http" }
 blok-jsjson = { path = "../jsjson" }
+blok-jsruntime = { path = "../jsruntime" }
 blok-mediatype = { path = "../mediatype" }
 blok-route = { path = "../route" }
 blok-ticket = { path = "../ticket" }

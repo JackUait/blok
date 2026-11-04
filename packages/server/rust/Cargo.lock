@@ -96,10 +96,12 @@ version = "0.0.0"
 dependencies = [
  "blok-auth",
  "blok-blob",
+ "blok-blokdocs",
  "blok-blokserver-ticket",
  "blok-dotnet",
  "blok-http",
  "blok-jsjson",
+ "blok-jsruntime",
  "blok-mediatype",
  "blok-route",
  "blok-ticket",

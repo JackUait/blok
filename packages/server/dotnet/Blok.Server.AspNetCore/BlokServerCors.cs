@@ -11,7 +11,9 @@ internal static class BlokServerCors
 
   public static bool IsAllowed(string origin, IList<string> allowedOrigins)
   {
-    if (origin.Length == 0)
+    // Kestrel cannot echo such an origin (a 500), and a browser never sends
+    // one: it writes a non-ASCII host in punycode.
+    if (origin.Length == 0 || origin.Any(c => c != '\t' && c is < ' ' or > '~'))
     {
       return false;
     }

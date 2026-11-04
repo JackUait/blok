@@ -251,9 +251,10 @@ func requestOrigin(r *http.Request) string {
 }
 
 // originAllowed is BlokServerCors.IsAllowed: an exact, case-insensitive
-// match against a trimmed candidate. An empty origin never matches.
+// match against a trimmed candidate. An empty origin never matches, nor one
+// Kestrel could not echo: a browser writes a non-ASCII host in punycode.
 func (s *Server) originAllowed(origin string) bool {
-	if origin == "" {
+	if origin == "" || !isFieldValue(origin) {
 		return false
 	}
 	for _, candidate := range s.options.AllowedOrigins {
@@ -271,7 +272,7 @@ func (s *Server) preflight(w http.ResponseWriter, r *http.Request, method string
 		return
 	}
 	requested := firstValue(r.Header, "Access-Control-Request-Headers")
-	if !isFieldValue(origin) || !isFieldValue(requested) {
+	if !isFieldValue(requested) {
 		headerValueRefused(w)
 		return
 	}
@@ -328,10 +329,6 @@ func (s *Server) guard(w http.ResponseWriter, r *http.Request, requireWrite bool
 		return r, false
 	}
 	if allowed {
-		if !isFieldValue(origin) {
-			headerValueRefused(w)
-			return r, false
-		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Add("Vary", "Origin")
 	}

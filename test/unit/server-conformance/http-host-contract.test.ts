@@ -947,7 +947,8 @@ async function rawExchange(baseUrl: string, request: Buffer): Promise<string> {
 
 // Origins compare with .NET OrdinalIgnoreCase: simple upper case per char,
 // but U+0131 and U+017F keep their case. Kestrel decodes header bytes as
-// UTF-8 and refuses invalid ones; an echoed non-ASCII origin is a 500.
+// UTF-8 and refuses invalid ones. A non-ASCII origin is never allowed, even
+// when listed: Kestrel could not echo it, and a browser sends punycode.
 const ORIGIN_SPELLINGS: Record<string, string> = {
   'ascii exact': 'http://k.example',
   'ascii upper': 'HTTP://K.EXAMPLE',

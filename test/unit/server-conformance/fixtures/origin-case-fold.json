@@ -29,15 +29,15 @@
   },
   {
     "name": "preflight e acute",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight capital E acute",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight sharp s",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight capital sharp s",
@@ -49,19 +49,19 @@
   },
   {
     "name": "preflight final sigma",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight capital sigma",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight micro sign",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight capital mu",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight emoji",
@@ -69,11 +69,11 @@
   },
   {
     "name": "preflight capital turned a",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight capital a with stroke",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "preflight with non-ASCII requested headers",
@@ -89,7 +89,7 @@
   },
   {
     "name": "guarded GET e acute",
-    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 403 Forbidden\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\norigin not allowed\n\r\n0\r\n\r\n"
   },
   {
     "name": "guarded GET kelvin sign",

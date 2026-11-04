@@ -8,7 +8,7 @@ use blok_collab_docendpoint::{Loaded, Projection};
 use blok_collab_journal::{Context, PurgeOutcome};
 use blok_collab_operation::{
     AppendOutcome, AppendResult, Candidate, Checkpoint, Head, Lookup, LookupOutcome, OpenResult,
-    Reset,
+    Reset, Source,
 };
 use blok_collab_wire::Message;
 use blok_collab_workingset::{Set, Tag};
@@ -1441,113 +1441,949 @@ fn compaction_keeps_an_update_that_is_still_pending() {
     assert_eq!(doc_text(&replica), "ab");
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn does_not_ack_or_broadcast_before_append_completes() {}
+impl Pause {
+    fn open() -> Pause {
+        let pause = Pause::new();
+        pause.release.open();
+        pause
+    }
+    fn entered(&self) -> bool {
+        self.entered.load(Ordering::SeqCst)
+    }
+    async fn wait_entered(&self) {
+        wait_until("the pause to be entered", || self.entered()).await;
+    }
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn acknowledges_and_broadcasts_to_every_v2_member_including_the_submitter_after_commit() {}
+impl Journal {
+    fn fail_appends(&self, failure: Option<&str>) {
+        *lock(&self.0.fail_appends) = failure.map(str::to_owned);
+    }
+    fn opens(&self) -> i32 {
+        self.0.opens.load(Ordering::SeqCst)
+    }
+    /// C# operations.OpenAsync from outside the room.
+    fn open_outside(&self) -> Option<Arc<FakeSession>> {
+        self.0.inner.open_session(TEST_DOC)
+    }
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn append_failure_closes_every_member_with_commit_unavailable() {}
+impl Cs {
+    fn operations(&self) -> &FakeJournal {
+        &self.r.operations
+    }
 
-#[test]
-#[ignore = "not ported yet"]
-fn append_failure_closes_and_discards_the_room_without_observation() {}
+    /// C# CreateJournalManager.
+    fn journal_manager(&self, o: Options) -> Manager {
+        self.manager_with(o, true, self.conv.clone())
+    }
 
-#[test]
-#[ignore = "not ported yet"]
-fn unknown_commit_outcome_closes_and_retry_resolves_by_id() {}
+    fn writes(&self) -> i32 {
+        self.store().writes.load(Ordering::SeqCst)
+    }
 
-#[test]
-#[ignore = "not ported yet"]
-fn repeated_append_failure_does_not_reload_the_document_per_retry() {}
+    fn committed(&self) -> Vec<blok_collab_operation::Record> {
+        self.operations().committed(TEST_DOC)
+    }
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_append_past_the_store_timeout_is_commit_unavailable() {}
+fn v2(actor: &str) -> Arc<FakeMember> {
+    FakeMember::new(actor, OperationSource::ClientV2, true)
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn open_elsewhere_refuses_the_join_as_unavailable() {}
+/// C# Operation: a v2 write under lineage.
+fn operation(lineage: &str, operation_id: &str, update: Vec<u8>) -> Message {
+    Message::Operation {
+        lineage: lineage.to_owned(),
+        operation_id: operation_id.to_owned(),
+        update,
+    }
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn lost_ack_retry_returns_the_same_commit_without_rebroadcast() {}
+fn awareness_updates(member: &FakeMember) -> Vec<Vec<u8>> {
+    member
+        .messages()
+        .into_iter()
+        .filter_map(|m| match m {
+            Message::Awareness { update } => Some(update),
+            _ => None,
+        })
+        .collect()
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn same_id_different_bytes_rejects_without_apply() {}
+async fn joined_lineage(manager: &Manager, member: &Arc<FakeMember>) -> (Joined, String) {
+    let membership = enter(manager, member).await;
+    let lineage = control_tag(member).lineage;
+    (membership, lineage)
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn committed_operations_broadcast_in_server_sequence_order() {}
+async fn bounded<T>(what: &str, work: impl Future<Output = T>) -> T {
+    tokio::time::timeout(Duration::from_secs(10), work)
+        .await
+        .unwrap_or_else(|_| panic!("timed out waiting for {what}"))
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn reload_replays_every_acknowledged_operation_after_the_checkpoint() {}
+fn spawn_receive(membership: Arc<Joined>, message: Message) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move { receive(&membership, message).await })
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn unjournalled_provisional_state_never_exports_or_checkpoints() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn does_not_ack_or_broadcast_before_append_completes() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
+    let pause = Pause::new();
+    set_hook(&cs.journal.0.before_append, Some(pause.clone()));
 
-#[test]
-#[ignore = "not ported yet"]
-fn working_set_only_room_keeps_the_legacy_relay_path() {}
+    let received = spawn_receive(Arc::new(membership), operation(&lineage, OP_ONE, edit));
+    bounded("the append", pause.wait_entered()).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_lookup_past_the_store_timeout_is_commit_unavailable() {}
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert!(cs.committed().is_empty());
+    assert_eq!(cs.writes(), 0);
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_an_operation_store_room_resets_the_journal_and_closes_members() {}
+    pause.release.open();
+    bounded("the receive", received).await.expect("receive");
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_queued_old_lineage_receive_cannot_append_after_journal_reset() {}
+    assert_eq!(sync_updates(&other).len(), 1, "{:?}", other.messages());
+    assert!(
+        writer
+            .messages()
+            .iter()
+            .any(|m| matches!(m, Message::Acknowledgement { .. })),
+        "{:?}",
+        writer.messages()
+    );
+    assert_eq!(cs.committed().len(), 1);
+    assert_eq!(cs.writes(), 0);
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_a_new_operation_store_room_opens_the_journal_before_the_working_set() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn acknowledges_and_broadcasts_to_every_v2_member_including_the_submitter_after_commit() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2("user-7"), v2("user-9"));
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_journal_room_reset_does_not_write_the_working_set() {}
+    send(&membership, operation(&lineage, OP_ONE, edit.clone())).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_session_that_hangs_in_dispose_does_not_wedge_the_room() {}
+    assert_eq!(
+        other.messages(),
+        [Message::SyncUpdate {
+            update: edit.clone()
+        }]
+    );
+    assert_eq!(
+        writer.messages(),
+        [
+            Message::SyncUpdate {
+                update: edit.clone()
+            },
+            Message::Acknowledgement {
+                lineage: lineage.clone(),
+                operation_id: OP_ONE.to_owned(),
+                server_sequence: 1,
+            },
+        ]
+    );
+    let committed = cs.committed();
+    assert_eq!(committed.len(), 1);
+    let record = &committed[0];
+    assert_eq!(record.operation_id, OP_ONE);
+    assert_eq!(record.sequence, 1);
+    assert_eq!(record.actor_id.as_deref(), Some("user-7"));
+    assert_eq!(record.source, Source::CLIENT_V2);
+    assert_eq!(record.update, edit);
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_operation_frame_from_av1_member_is_dropped_without_journalling() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn append_failure_closes_every_member_with_commit_unavailable() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    cs.journal.fail_appends(Some("the journal is down"));
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_raw_write_from_av2_member_is_dropped_and_the_member_is_closed() {}
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_raw_write_from_av1_member_is_still_applied_on_the_same_room() {}
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(other.closed(), [CloseReason::CommitUnavailable]);
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_operation_before_the_room_answered_sync_step1_is_rejected_as_not_synced() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn append_failure_closes_and_discards_the_room_without_observation() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
+    cs.journal.fail_appends(Some("the journal is down"));
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_sync_step1_the_room_could_not_answer_does_not_make_the_member_synced() {}
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn awareness_before_the_sync_exchange_is_still_relayed() {}
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert!(cs.committed().is_empty());
+    assert_eq!(manager.live_room_count(), 0);
+    let reopened = cs
+        .journal
+        .open_outside()
+        .expect("the fence went with the room");
+    reopened.do_close();
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn awareness_after_the_sync_exchange_is_still_relayed() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn unknown_commit_outcome_closes_and_retry_resolves_by_id() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
+    cs.journal
+        .0
+        .commit_before_failing
+        .store(true, Ordering::SeqCst);
+    cs.journal
+        .fail_appends(Some("the journal could not answer"));
+
+    send(&membership, operation(&lineage, OP_ONE, edit.clone())).await;
+
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert_eq!(cs.committed().len(), 1);
+
+    cs.journal.fail_appends(None);
+    cs.journal
+        .0
+        .commit_before_failing
+        .store(false, Ordering::SeqCst);
+    cs.r.clock.advance(Duration::from_secs(2));
+    let retry_member = v2("");
+    let (retry, retry_lineage) = joined_lineage(&manager, &retry_member).await;
+    retry_member.clear();
+
+    send(&retry, operation(&retry_lineage, OP_ONE, edit)).await;
+
+    assert_eq!(
+        retry_member.messages(),
+        [Message::Acknowledgement {
+            lineage: retry_lineage,
+            operation_id: OP_ONE.to_owned(),
+            server_sequence: 1,
+        }]
+    );
+    assert_eq!(cs.committed().len(), 1);
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello!");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn repeated_append_failure_does_not_reload_the_document_per_retry() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let writer = v2("");
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    cs.journal.fail_appends(Some("the journal is down"));
+
+    send(&membership, operation(&lineage, OP_ONE, edit.clone())).await;
+    let opens_after_failure = cs.journal.opens();
+
+    for _ in 0..4 {
+        let refused = manager.join(TEST_DOC, v2("")).await.expect("join");
+        assert_eq!(refused.status, JoinStatus::Unavailable);
+    }
+
+    assert_eq!(cs.journal.opens(), opens_after_failure);
+    assert_eq!(cs.endpoint().loaded(), 1);
+
+    cs.r.clock.advance(Duration::from_secs(2));
+    let second_member = v2("");
+    let (second, second_lineage) = joined_lineage(&manager, &second_member).await;
+    send(&second, operation(&second_lineage, OP_TWO, edit)).await;
+
+    cs.r.clock.advance(Duration::from_secs(2));
+    let refused = manager.join(TEST_DOC, v2("")).await.expect("join");
+    assert_eq!(refused.status, JoinStatus::Unavailable);
+
+    cs.r.clock.advance(Duration::from_secs(2));
+    let joined = manager.join(TEST_DOC, v2("")).await.expect("join");
+    assert_eq!(joined.status, JoinStatus::Joined);
+
+    assert_eq!(cs.journal.opens(), cs.endpoint().loaded());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_append_past_the_store_timeout_is_commit_unavailable() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(Options {
+        commit_timeout: ms(300),
+        ..quiet()
+    });
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
+    let never = Pause::new();
+    set_hook(&cs.journal.0.before_append, Some(never.clone()));
+
+    let received = spawn_receive(Arc::new(membership), operation(&lineage, OP_ONE, edit));
+    bounded("the append", never.wait_entered()).await;
+    bounded("the receive", received).await.expect("receive");
+
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(other.closed(), [CloseReason::CommitUnavailable]);
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert_eq!(manager.live_room_count(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn open_elsewhere_refuses_the_join_as_unavailable() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let held = cs.journal.open_outside().expect("the journal opens");
+    let manager = cs.journal_manager(quiet());
+
+    let refused = manager.join(TEST_DOC, v2("")).await.expect("join");
+
+    assert_eq!(refused.status, JoinStatus::Unavailable);
+    assert!(refused.membership.is_none());
+    assert_eq!(cs.endpoint().loaded(), 0);
+    assert_eq!(manager.live_room_count(), 0);
+
+    held.do_close();
+
+    let joined = manager.join(TEST_DOC, v2("")).await.expect("join");
+    assert_eq!(joined.status, JoinStatus::Joined);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn lost_ack_retry_returns_the_same_commit_without_rebroadcast() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    send(&membership, operation(&lineage, OP_ONE, edit.clone())).await;
+    writer.clear();
+    other.clear();
+
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
+
+    assert_eq!(
+        writer.messages(),
+        [Message::Acknowledgement {
+            lineage,
+            operation_id: OP_ONE.to_owned(),
+            server_sequence: 1,
+        }]
+    );
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert_eq!(cs.committed().len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn same_id_different_bytes_rejects_without_apply() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    send(
+        &membership,
+        operation(&lineage, OP_ONE, update_appending(&client, "!")),
+    )
+    .await;
+    let different = update_appending(&client, "?");
+    writer.clear();
+    other.clear();
+
+    send(&membership, operation(&lineage, OP_ONE, different)).await;
+
+    assert_eq!(
+        writer.messages(),
+        [Message::Rejection {
+            lineage,
+            operation_id: OP_ONE.to_owned(),
+            code: "operation-id-conflict".to_owned(),
+        }]
+    );
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(writer.closed().is_empty(), "{:?}", writer.closed());
+    assert!(other.closed().is_empty(), "{:?}", other.closed());
+    assert_eq!(manager.live_room_count(), 1);
+    assert_eq!(cs.committed().len(), 1);
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello!");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn committed_operations_broadcast_in_server_sequence_order() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (first, second, observer) = (v2(""), v2(""), reader());
+    let (first_membership, first_lineage) = joined_lineage(&manager, &first).await;
+    let (second_membership, second_lineage) = joined_lineage(&manager, &second).await;
+    enter(&manager, &observer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let first_update = update_appending(&client, "a");
+    let second_update = update_appending(&client, "b");
+    observer.clear();
+    let pause = Pause::new();
+    set_hook(&cs.journal.0.before_append, Some(pause.clone()));
+
+    let slow = spawn_receive(
+        Arc::new(first_membership),
+        operation(&first_lineage, OP_ONE, first_update.clone()),
+    );
+    bounded("the first append", pause.wait_entered()).await;
+    set_hook(&cs.journal.0.before_append, None);
+    let overtaking = spawn_receive(
+        Arc::new(second_membership),
+        operation(&second_lineage, OP_TWO, second_update.clone()),
+    );
+    tokio::time::sleep(ms(50)).await;
+    pause.release.open();
+    bounded("the slow receive", slow).await.expect("receive");
+    bounded("the overtaking receive", overtaking)
+        .await
+        .expect("receive");
+
+    let submitted = vec![first_update, second_update];
+    let committed: Vec<_> = cs.committed().into_iter().map(|r| r.update).collect();
+    assert_eq!(committed, submitted);
+    assert_eq!(sync_updates(&observer), submitted);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reload_replays_every_acknowledged_operation_after_the_checkpoint() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(Options {
+        eviction_linger: ms(20),
+        ..quiet()
+    });
+    let writer = v2("");
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    send(
+        &membership,
+        operation(&lineage, OP_ONE, update_appending(&client, "!")),
+    )
+    .await;
+    send(
+        &membership,
+        operation(&lineage, OP_TWO, update_appending(&client, "?")),
+    )
+    .await;
+    membership.leave();
+    manager.settle().await;
+
+    wait_until("the room to be evicted", || manager.live_room_count() == 0).await;
+
+    let session = cs.journal.open_outside().expect("the journal opens");
+    let opened = session.open_result().clone();
+    let replica = new_client();
+    for frame in &opened.baseline {
+        replica.apply_update(frame).expect("a baseline frame");
+    }
+    replica
+        .apply_update(&opened.tail[0].update)
+        .expect("the first operation");
+    session
+        .write_checkpoint(
+            &Context::background(),
+            Checkpoint {
+                through: 1,
+                state: full_state(&replica),
+            },
+        )
+        .await
+        .expect("the checkpoint");
+    session.do_close();
+
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello!?");
+    assert_eq!(cs.endpoint().loaded(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn unjournalled_provisional_state_never_exports_or_checkpoints() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(Options {
+        eviction_linger: ms(20),
+        ..brisk()
+    });
+    let writer = v2("");
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    cs.journal.fail_appends(Some("the journal is down"));
+
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
+    tokio::time::sleep(ms(100)).await;
+    manager.settle().await;
+
+    assert!(
+        cs.endpoint().saves().is_empty(),
+        "{:?}",
+        cs.endpoint().saves()
+    );
+    assert!(cs.committed().is_empty());
+    assert!(cs.operations().checkpoint(TEST_DOC).is_none());
+
+    cs.journal.fail_appends(None);
+    cs.r.clock.advance(Duration::from_secs(2));
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn working_set_only_room_keeps_the_legacy_relay_path() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.manager(quiet());
+    let (writer, other) = (writer(), self::writer());
+    let membership = enter(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let frames_before = cs.frame_count();
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
+
+    update(&membership, edit.clone()).await;
+
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert_eq!(other.messages(), [Message::SyncUpdate { update: edit }]);
+    wait_until("the working set to catch up", || {
+        cs.frame_count() == frames_before + 1
+    })
+    .await;
+
+    let negotiated = v2("");
+    let (negotiated_membership, lineage) = joined_lineage(&manager, &negotiated).await;
+    negotiated.clear();
+    writer.clear();
+    other.clear();
+
+    send(
+        &negotiated_membership,
+        operation(&lineage, OP_ONE, update_appending(&client, "?")),
+    )
+    .await;
+
+    assert!(
+        negotiated.messages().is_empty(),
+        "{:?}",
+        negotiated.messages()
+    );
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(cs.committed().is_empty());
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello!");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_lookup_past_the_store_timeout_is_commit_unavailable() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(Options {
+        commit_timeout: ms(300),
+        ..quiet()
+    });
+    let (writer, other) = (v2(""), self::writer());
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+    other.clear();
+    let never = Pause::new();
+    set_hook(&cs.journal.0.before_lookup, Some(never.clone()));
+
+    let received = spawn_receive(Arc::new(membership), operation(&lineage, OP_ONE, edit));
+    bounded("the lookup", never.wait_entered()).await;
+    bounded("the receive", received).await.expect("receive");
+
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(cs.committed().is_empty());
+    assert_eq!(manager.live_room_count(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_an_operation_store_room_resets_the_journal_and_closes_members() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let writer = v2("");
+    enter(&manager, &writer).await;
+    let joined = control_tag(&writer);
+
+    let reset = manager.reset(TEST_DOC).await.expect("reset");
+
+    let tag = reset.tag.expect("a reset tag");
+    assert_eq!(tag.format, joined.format);
+    assert_eq!(tag.epoch, joined.epoch + 1);
+    assert_ne!(tag.lineage, joined.lineage);
+    assert_eq!(writer.closed(), [CloseReason::Reset]);
+    assert_eq!(cs.store().resets.load(Ordering::SeqCst), 0);
+    let head = cs.operations().head(TEST_DOC).expect("a head");
+    assert_eq!(
+        (head.format, head.epoch, head.lineage.as_str()),
+        (tag.format, tag.epoch, tag.lineage.as_str())
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_queued_old_lineage_receive_cannot_append_after_journal_reset() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let writer = writer();
+    let membership = enter(&manager, &writer).await;
+    let joined = control_tag(&writer);
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let old_update = update_appending(&client, "late");
+    let release_load = Gate::new();
+    cs.endpoint().set_load_gate(Some(release_load.clone()));
+    writer.clear();
+    let reset = {
+        let manager = manager.clone();
+        tokio::spawn(async move { manager.reset(TEST_DOC).await })
+    };
+    wait_until("the reset endpoint load", || cs.endpoint().loaded() == 2).await;
+    let append = Pause::open();
+    set_hook(&cs.journal.0.before_append, Some(append.clone()));
+
+    let queued = spawn_receive(
+        Arc::new(membership),
+        Message::SyncUpdate { update: old_update },
+    );
+    tokio::time::sleep(ms(50)).await;
+    assert!(!queued.is_finished(), "the write ran ahead of the reset");
+
+    cs.endpoint().set_load_gate(None);
+    release_load.open();
+    let reset = bounded("the reset", reset)
+        .await
+        .expect("the reset task")
+        .expect("reset");
+    bounded("the queued receive", queued)
+        .await
+        .expect("receive");
+
+    let tag = reset.tag.expect("a reset tag");
+    assert_eq!(tag.epoch, joined.epoch + 1);
+    assert_ne!(tag.lineage, joined.lineage);
+    assert_eq!(writer.closed(), [CloseReason::Reset]);
+    assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+    assert!(!append.entered());
+    assert!(cs.committed().is_empty());
+    assert_eq!(manager.live_room_count(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_a_new_operation_store_room_opens_the_journal_before_the_working_set() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+
+    let reset = manager.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(cs.journal.opens(), 1);
+    assert_eq!(cs.endpoint().loaded(), 1);
+    assert_eq!(cs.store().reads.load(Ordering::SeqCst), 1);
+    assert_eq!(reset.tag.expect("a reset tag").epoch, 1);
+    assert_eq!(manager.live_room_count(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_journal_room_reset_does_not_write_the_working_set() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+
+    let reset = manager.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(reset.status, ResetStatus::Done);
+    assert_eq!(cs.store().resets.load(Ordering::SeqCst), 0);
+    assert_eq!(cs.writes(), 0);
+    assert_eq!(
+        reset.tag.map(|t| t.lineage),
+        cs.operations().head(TEST_DOC).map(|h| h.lineage)
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_session_that_hangs_in_dispose_does_not_wedge_the_room() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(Options {
+        commit_timeout: ms(300),
+        ..quiet()
+    });
+    let writer = v2("");
+    let (membership, lineage) = joined_lineage(&manager, &writer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    let never = Pause::new();
+    set_hook(&cs.journal.0.before_dispose, Some(never.clone()));
+    cs.journal.fail_appends(Some("the journal is down"));
+
+    let received = spawn_receive(Arc::new(membership), operation(&lineage, OP_ONE, edit));
+    bounded("the dispose", never.wait_entered()).await;
+    bounded("the receive", received).await.expect("receive");
+
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(manager.live_room_count(), 0);
+    assert!(
+        cs.journal.open_outside().is_none(),
+        "the abandoned session released the fence"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_operation_frame_from_av1_member_is_dropped_without_journalling() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (stock, other) = (writer(), v2(""));
+    let (membership, lineage) = joined_lineage(&manager, &stock).await;
+    enter(&manager, &other).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    stock.clear();
+    other.clear();
+
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
+
+    assert!(stock.messages().is_empty(), "{:?}", stock.messages());
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(stock.closed().is_empty(), "{:?}", stock.closed());
+    assert!(cs.committed().is_empty());
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_raw_write_from_av2_member_is_dropped_and_the_member_is_closed() {
+    for as_sync_step2 in [false, true] {
+        let cs = Cs::new();
+        cs.endpoint().holds(TEST_DOC, "hello", None);
+        let manager = cs.journal_manager(quiet());
+        let (writer, other) = (v2(""), v2(""));
+        let membership = enter(&manager, &writer).await;
+        enter(&manager, &other).await;
+        let client = synced_client(&manager, TEST_DOC, "hello").await;
+        let edit = update_appending(&client, "!");
+        writer.clear();
+        other.clear();
+
+        let raw = if as_sync_step2 {
+            Message::SyncStep2 { update: edit }
+        } else {
+            Message::SyncUpdate { update: edit }
+        };
+        send(&membership, raw).await;
+
+        assert!(other.messages().is_empty(), "{:?}", other.messages());
+        assert!(writer.messages().is_empty(), "{:?}", writer.messages());
+        assert_eq!(writer.closed(), [CloseReason::RawWriteOnV2]);
+        assert!(cs.committed().is_empty());
+        assert_eq!(exported_text(&manager, TEST_DOC).await, "hello");
+
+        other.clear();
+        send(
+            &membership,
+            Message::Awareness {
+                update: awareness_claiming(1),
+            },
+        )
+        .await;
+
+        assert!(other.messages().is_empty(), "{:?}", other.messages());
+        assert_eq!(writer.closed(), [CloseReason::RawWriteOnV2]);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_raw_write_from_av1_member_is_still_applied_on_the_same_room() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let stock = writer();
+    let membership = enter(&manager, &stock).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+
+    update(&membership, update_appending(&client, "!")).await;
+
+    assert!(stock.closed().is_empty(), "{:?}", stock.closed());
+    assert_eq!(cs.committed().len(), 1);
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello!");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_operation_before_the_room_answered_sync_step1_is_rejected_as_not_synced() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let writer = v2("");
+    let membership = join(&manager, TEST_DOC, &writer).await;
+    let lineage = control_tag(&writer).lineage;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+    writer.clear();
+
+    send(&membership, operation(&lineage, OP_ONE, edit.clone())).await;
+
+    assert_eq!(
+        writer.messages(),
+        [Message::Rejection {
+            lineage: lineage.clone(),
+            operation_id: OP_ONE.to_owned(),
+            code: "not-synced".to_owned(),
+        }]
+    );
+    assert!(cs.committed().is_empty());
+    assert!(writer.closed().is_empty(), "{:?}", writer.closed());
+
+    send(
+        &membership,
+        Message::SyncStep1 {
+            state_vector: new_client().encode_state_vector(),
+        },
+    )
+    .await;
+    writer.clear();
+
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
+
+    assert!(
+        writer
+            .messages()
+            .iter()
+            .any(|m| matches!(m, Message::Acknowledgement { .. })),
+        "{:?}",
+        writer.messages()
+    );
+    assert_eq!(cs.committed().len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_sync_step1_the_room_could_not_answer_does_not_make_the_member_synced() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let writer = v2("");
+    let membership = join(&manager, TEST_DOC, &writer).await;
+    let lineage = control_tag(&writer).lineage;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let edit = update_appending(&client, "!");
+
+    send(
+        &membership,
+        Message::SyncStep1 {
+            state_vector: vec![0xff, 0xff, 0xff],
+        },
+    )
+    .await;
+    writer.clear();
+
+    send(&membership, operation(&lineage, OP_ONE, edit)).await;
+
+    let got = writer.messages();
+    assert!(
+        matches!(&got[..], [Message::Rejection { code, .. }] if code == "not-synced"),
+        "{got:?}"
+    );
+    assert!(cs.committed().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn awareness_before_the_sync_exchange_is_still_relayed() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), v2(""));
+    let membership = join(&manager, TEST_DOC, &writer).await;
+    join(&manager, TEST_DOC, &other).await;
+    other.clear();
+
+    send(
+        &membership,
+        Message::Awareness {
+            update: awareness_claiming(1),
+        },
+    )
+    .await;
+
+    assert_eq!(awareness_updates(&other), [awareness_claiming(1)]);
+    assert_eq!(other.messages().len(), 1, "{:?}", other.messages());
+    assert!(writer.closed().is_empty(), "{:?}", writer.closed());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn awareness_after_the_sync_exchange_is_still_relayed() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.journal_manager(quiet());
+    let (writer, other) = (v2(""), v2(""));
+    let membership = enter(&manager, &writer).await;
+    enter(&manager, &other).await;
+    other.clear();
+
+    send(
+        &membership,
+        Message::Awareness {
+            update: awareness_claiming(1),
+        },
+    )
+    .await;
+
+    assert_eq!(awareness_updates(&other), [awareness_claiming(1)]);
+    assert_eq!(other.messages().len(), 1, "{:?}", other.messages());
+    assert!(writer.closed().is_empty(), "{:?}", writer.closed());
+}
 
 #[test]
 #[ignore = "not ported yet"]

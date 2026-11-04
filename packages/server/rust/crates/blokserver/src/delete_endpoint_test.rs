@@ -84,14 +84,21 @@ async fn local_app() -> (Running, PathBuf) {
     (start(server.handler("")).await, path)
 }
 
+/// C#'s Delete sends Origin; its bare PostAsync rows do not.
 async fn post(
     running: &Running,
+    origin: bool,
     content_type: Option<&str>,
     ticket: Option<&str>,
     body: &str,
 ) -> Answer {
+    let origin = if origin {
+        format!("\r\nOrigin: {ALLOWED_ORIGIN}")
+    } else {
+        String::new()
+    };
     let mut head = format!(
-        "POST /delete HTTP/1.1\r\nOrigin: {ALLOWED_ORIGIN}\r\nContent-Length: {}",
+        "POST /delete HTTP/1.1{origin}\r\nContent-Length: {}",
         body.len()
     );
     if let Some(content_type) = content_type {
@@ -107,6 +114,7 @@ async fn delete(running: &Running, url: &str, ticket: Option<&str>) -> Answer {
     let body = format!(r#"{{"url":"{url}"}}"#);
     post(
         running,
+        true,
         Some("application/json; charset=utf-8"),
         ticket,
         &body,
@@ -195,7 +203,7 @@ async fn rejects_unsupported_media_types_before_storage() {
     ] {
         let (running, store) = recorded_app("none").await;
         let body = format!(r#"{{"url":"{PUBLIC_URL}/{STORED_KEY}"}}"#);
-        let got = post(&running, content_type, None, &body).await;
+        let got = post(&running, false, content_type, None, &body).await;
         assert_eq!(
             (got.status, got.header("Content-Type"), got.text().as_str()),
             (
@@ -223,6 +231,7 @@ async fn rejects_malformed_envelopes_before_storage() {
         let (running, store) = recorded_app("none").await;
         let got = post(
             &running,
+            false,
             Some("application/json; charset=utf-8"),
             None,
             body,
@@ -252,6 +261,7 @@ async fn rejects_an_oversized_envelope_before_storage() {
     let (running, store) = recorded_app("none").await;
     let got = post(
         &running,
+        false,
         Some("application/json; charset=utf-8"),
         None,
         &body,

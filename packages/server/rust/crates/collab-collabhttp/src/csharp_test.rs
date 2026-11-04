@@ -767,11 +767,7 @@ async fn a_late_duplicate_append_closes_without_relaying_or_writing_back() {
         .send("POST", "/edit", "late-duplicate", "", APPEND_ONE)
         .await;
 
-    assert!(
-        member.updates().is_empty(),
-        "relayed {:?}",
-        member.messages()
-    );
+    assert!(member.messages().is_empty(), "sent {:?}", member.messages());
     assert_eq!(
         *member.closed.lock().unwrap(),
         vec![blok_collab::CloseReason::CommitUnavailable]

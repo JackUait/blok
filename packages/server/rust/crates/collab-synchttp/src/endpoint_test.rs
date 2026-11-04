@@ -289,6 +289,59 @@ async fn at_the_process_ceiling_an_upgrade_is503_before_the_room_is_joined() {
     assert_eq!(h.rooms.joins(), 1);
 }
 
+// HostCollabTests.cs. The C# test floods awareness at the stalled peer; here
+// that trips the slow-consumer 1008 first, so the peer only stops answering
+// pings, which leaves the keep-alive as the one thing that can free its slot.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_peer_that_stops_reading_and_answering_pings_leaves_the_room() {
+    let h = start_endpoint(
+        |c| {
+            c.connections = Arc::new(ConnectionTable::new(2, 8));
+            c.keep_alive_interval = Duration::from_secs(1);
+        },
+        None,
+    )
+    .await;
+    let mut writer = h.dial("/sync/doc", &[]).await;
+    assert_eq!(writer.status, 101);
+    let answering = tokio::spawn(async move {
+        loop {
+            let frame = read_server_frame(&mut writer.reader).await;
+            if frame.opcode == 0x9 {
+                writer.write(&client_frame(0x8a, &frame.payload)).await;
+            }
+        }
+    });
+    let stalled = h.dial("/sync/doc", &[]).await;
+    assert_eq!(stalled.status, 101);
+
+    let refused = h.dial("/sync/doc", &[]).await;
+    assert_eq!(
+        (refused.status, refused.body.as_str()),
+        (503, "too many connections on this server\n")
+    );
+
+    // The ping goes out after one interval and times out two later; the rest
+    // is slack for a loaded machine.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(8);
+    let admitted = loop {
+        let client = h.dial("/sync/doc", &[]).await;
+        if client.status == 101 {
+            break client;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "the stalled peer still held its slot after 8 s"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    };
+    // The writer answered its pings, so it still holds the other slot.
+    let full = h.dial("/sync/doc", &[]).await;
+    assert_eq!(full.status, 503, "the writer was evicted too");
+    answering.abort();
+    drop((stalled, admitted));
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_join_error_leaves_no_socket() {
     let h = start_endpoint(|_| {}, None).await;

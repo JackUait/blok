@@ -1,0 +1,20 @@
+[package]
+name = "blok-yjs"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-jsjson = { path = "../jsjson" }
+blok-lib0 = { path = "../lib0" }
+getrandom = "0.4"
+
+[dev-dependencies]
+base64 = "0.22"
+blok-yjs-yjstest = { path = "../yjs-yjstest" }
+sha2 = "0.10"
+
+[lints]
+workspace = true

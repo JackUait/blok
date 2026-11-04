@@ -858,3 +858,145 @@ async fn an_edit_whose_html_ran_past_the_allocation_budget_is_a413_without_retry
     assert!(journal_of(&app).committed("doc").is_empty());
     app.drain().await;
 }
+
+/// The ids of the blocks in a /state body.
+fn state_block_ids(answer: &Answer) -> Vec<String> {
+    let parsed = parse(&answer.body).unwrap_or_else(|err| panic!("{err}: {}", answer.text()));
+    let Value::Object(object) = parsed else {
+        panic!("not an object");
+    };
+    let Some(Value::Array(blocks)) = object.get(&Str::from("blocks")) else {
+        panic!("no blocks");
+    };
+    blocks
+        .iter()
+        .map(|block| match block {
+            Value::Object(block) => match block.get(&Str::from("id")) {
+                Some(Value::String(id)) => id.to_string(),
+                other => panic!("{other:?}"),
+            },
+            other => panic!("{other:?}"),
+        })
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn state_serves_the_live_document_and_the_head_of_the_last_edit() {
+    let app = start_app(journal()).await;
+    let edit = app
+        .send("POST", "/edit", "state-edit", "", APPEND_ONE)
+        .await;
+    assert_eq!(edit.status, 204, "{}", edit.text());
+    let lineage = edit.header("Blok-Doc-Lineage").to_owned();
+
+    let state = app.send("GET", "/state", "", "", "").await;
+
+    assert_eq!(state.status, 200, "{}", state.text());
+    assert_eq!(state_block_ids(&state), ["new", "a"]);
+    assert_eq!(state.header("Content-Type"), "application/json");
+    assert!(!lineage.is_empty());
+    assert_eq!(state.header("Blok-Doc-Lineage"), lineage);
+    assert_eq!(state.header("Blok-Doc-Sequence"), "1");
+    assert_eq!(state.header("ETag"), format!("\"{lineage}:1\""));
+    assert_eq!(state.header("Cache-Control"), "no-store");
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn working_copy_state_carries_no_head() {
+    let app = start_app(AppOptions::default()).await;
+    app.edit("plain-edit", APPEND_ONE).await;
+
+    let state = app.send("GET", "/state", "", "", "").await;
+
+    assert_eq!(state.status, 200, "{}", state.text());
+    assert_eq!(state_block_ids(&state), ["new", "a"]);
+    assert!(!state.headers.iter().any(|(name, _)| {
+        ["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"]
+            .iter()
+            .any(|head| name.eq_ignore_ascii_case(head))
+    }));
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_document_id_with_an_encoded_slash_is_refused_with_a_single_segment_reason() {
+    let app = start_app(AppOptions::default()).await;
+
+    let response =
+        crate::test_support::send(app.running.address, "POST /sync/a%2Fb/reset HTTP/1.1", b"")
+            .await;
+
+    assert_error(
+        &response,
+        400,
+        "document ids must be a single path segment\n",
+    );
+    assert_eq!(response.header("Content-Type"), "text/plain; charset=utf-8");
+    assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
+}
+
+/// A journal directory whose "doc" was purged by a server that has since
+/// stopped: the next server meets the tombstone when it opens the journal.
+async fn purged_journal() -> AppOptions {
+    let dir = crate::test_support::temp_dir();
+    let options = || AppOptions {
+        journal: true,
+        journal_dir: Some(dir.clone()),
+        ..AppOptions::default()
+    };
+    let original = start_app(options()).await;
+    original.edit("before-purge", APPEND_ONE).await;
+    let outcome = original
+        .manager
+        .purge("doc", async { Ok(true) })
+        .await
+        .unwrap_or_else(|err| panic!("{err}"));
+    assert_eq!(outcome, blok_collab_journal::PurgeOutcome::Purged);
+    original.drain().await;
+    options()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn state_of_a_purged_document_is_forbidden() {
+    let app = start_app(purged_journal().await).await;
+
+    let response = app.send("GET", "/state", "", "", "").await;
+
+    assert_error(&response, 403, "forbidden\n");
+    assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn reset_answers_forbidden_when_document_purged() {
+    let app = start_app(purged_journal().await).await;
+
+    let response = app.send("POST", "/reset", "", "", "").await;
+
+    assert_error(&response, 403, "forbidden\n");
+    assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
+    app.drain().await;
+}
+
+// The upgrade's 403 for a Purged join is pinned in collab-synchttp; this is
+// the restarted manager's half.
+#[tokio::test(flavor = "multi_thread")]
+async fn restarted_journal_tombstone_refuses_an_old_consumer_document() {
+    let app = start_app(purged_journal().await).await;
+
+    let joined = app
+        .manager
+        .join(
+            "doc",
+            std::sync::Arc::new(crate::test_support::RecordingMember::default()),
+        )
+        .await
+        .unwrap_or_else(|err| panic!("{err}"));
+
+    assert_eq!(joined.status, blok_collab::JoinStatus::Purged);
+    assert!(joined.membership.is_none());
+    assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
+    assert_eq!(app.manager.live_room_count(), 0);
+    app.drain().await;
+}

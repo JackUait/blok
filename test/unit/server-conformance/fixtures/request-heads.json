@@ -9,7 +9,7 @@
   },
   {
     "name": "header block over with bare LF",
-    "response": "HTTP/1.1 431 Request Header Fields Too Large\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "header block over before its line end",
@@ -25,7 +25,7 @@
   },
   {
     "name": "request line at the limit with bare LF",
-    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "request line over before its line end",
@@ -121,7 +121,7 @@
   },
   {
     "name": "bare LF line ends",
-    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "blank lines before the request line",
@@ -169,7 +169,7 @@
   },
   {
     "name": "seven-byte version",
-    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "HTTP/1.10 version",
@@ -177,7 +177,7 @@
   },
   {
     "name": "HTTP/1.2 with bare LF",
-    "response": "HTTP/1.1 505 HTTP Version Not Supported\nconnection: close\ncontent-length: 0\n\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "HTTP/1.2 line alone",
@@ -577,7 +577,7 @@
   },
   {
     "name": "chunked trailer ended by a bare LF",
-    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "chunked trailer with a control byte and a quote",
@@ -625,11 +625,11 @@
   },
   {
     "name": "chunked trailer with a bare-LF line",
-    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "chunked trailer of only a bare LF",
-    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
     "name": "bare LF after chunk data",

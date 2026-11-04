@@ -15,6 +15,15 @@
     <InternalsVisibleTo Include="Blok.Server.Host.Tests" />
   </ItemGroup>
 
+  <!-- Kestrel takes a bare LF in a chunked trailer by default though every
+       other chunk line needs CRLF: a proxy that reads the trailer otherwise
+       can be desynced from the host. The switch is read by Kestrel's one
+       HTTP/1 parser, so request lines and headers need CRLF too. -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Microsoft.AspNetCore.Server.Kestrel.DisableHttp1LineFeedTerminators"
+                                    Value="true" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj"
                       GlobalPropertiesToRemove="AssemblyName" />

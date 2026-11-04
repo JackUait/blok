@@ -816,7 +816,58 @@ func swapRequestLine(line []byte) queuedTarget {
 	}
 	original := string(target)
 	swapUnparsedTargetBytes(target)
+	swapAbsoluteTargetBytes(target)
 	return queuedTarget{sent: string(target), original: original}
+}
+
+// swapAbsoluteTargetBytes makes an absolute target one url.ParseRequestURI
+// takes, after its authority: the fragment's '#' becomes a '?' (ParseRequestURI
+// keeps a fragment in the path), and control bytes and bad escapes in the
+// path become '_'. NUL stays: the router refuses it, as Kestrel does.
+// restoreTarget routes the path and query as System.Uri reads them.
+func swapAbsoluteTargetBytes(target []byte) {
+	if !isAbsoluteTarget(target) {
+		return
+	}
+	scheme := bytes.Index(target, []byte("://")) + len("://")
+	start := bytes.IndexAny(target[scheme:], "/?#")
+	if start < 0 {
+		return
+	}
+	query, fragment := false, false
+	for i := scheme + start; i < len(target); i++ {
+		switch b := target[i]; {
+		case b == 0:
+		case b < 0x20 || b == 0x7f:
+			target[i] = '_'
+		case b == '#' && !fragment:
+			target[i], query, fragment = '?', true, true
+		case b == '?':
+			query = true
+		case b == '%' && !query && (i+2 >= len(target) || !isHex(target[i+1]) || !isHex(target[i+2])):
+			target[i] = '_'
+		}
+	}
+}
+
+func isAbsoluteTarget(target []byte) bool {
+	return bytes.HasPrefix(target, []byte("http://")) || bytes.HasPrefix(target, []byte("https://"))
+}
+
+// absolutePathAndQuery is what Kestrel routes for an absolute target: the
+// path ("/" when there is none) and the query, without the fragment.
+func absolutePathAndQuery(target string) (path, query string) {
+	target, _, _ = strings.Cut(target, "#")
+	_, rest, _ := strings.Cut(target, "://")
+	start := strings.IndexAny(rest, "/?")
+	if start < 0 {
+		return "/", ""
+	}
+	path, query, _ = strings.Cut(rest[start:], "?")
+	if path == "" {
+		path = "/"
+	}
+	return path, query
 }
 
 // swapUnparsedTargetBytes is url.ParseRequestURI's refusals for an
@@ -883,7 +934,13 @@ func restoreTarget(w http.ResponseWriter, r *http.Request, stream *targetStream)
 		answerAndClose(w, http.StatusBadRequest)
 		return false
 	}
-	if entry.sent != entry.original {
+	if entry.sent != entry.original && isAbsoluteTarget([]byte(entry.original)) {
+		path, query := absolutePathAndQuery(entry.original)
+		route.SetRawTarget(r, path)
+		r.URL.RawQuery = query
+		// The router refuses NUL and high bytes anywhere in the target.
+		r.RequestURI = entry.original
+	} else if entry.sent != entry.original {
 		route.SetRawTarget(r, entry.original)
 	}
 	return true

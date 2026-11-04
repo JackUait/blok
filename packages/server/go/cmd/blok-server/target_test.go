@@ -368,6 +368,7 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add(" /% \n")
 	f.Add("POST /a HTTP/1.0\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nGET /\r\n0\r\n\r\nGET /b%zz HTTP/1.0\r\n\r\n")
 	f.Add("POST /a HTTP/1.0\nHost: h\nContent-Length: 3\nTransfer-Encoding: chunked\n\n1\r\nG\r\n0\r\n\r\nGET /b%zz HTTP/1.0\n\n")
+	f.Add("GET http://x/a%zz\x01#b%\x00 HTTP/1.1\r\nHost: x\r\n\r\nGET http://x#f HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("POST /a HTTP/1.1\r\nHost: x\r\nContent-Length: +2\r\n\r\nabGET /b%zz HTTP/1.1\r\nHost: x\r\nContent-Length: -00\r\n\r\n")
 	f.Fuzz(func(t *testing.T, in string) {
 		stream := &targetStream{src: strings.NewReader(in)}

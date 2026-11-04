@@ -1276,6 +1276,16 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     'with IPv6 in upper case': ['http://[::A]/health', '[::A]'],
     'with IPv6 and a port': ['http://[::1]:8080/health', '[::1]:8080'],
     'with an upper-case scheme': ['Http://x/health', 'x'],
+    // System.Uri drops the fragment. Kestrel routes a control byte or a bad
+    // escape in the path (no route), and a control byte in the query.
+    'with a fragment': ['http://x/health#f', 'x'],
+    'with a query and a fragment': ['http://x/health?a#f', 'x'],
+    'with a fragment and no path': ['http://x:80#f', 'x'],
+    'with a control byte in the fragment': ['http://x/health#\x01%zz', 'x'],
+    'with a control byte in the path': ['http://x/hea\x01lth', 'x'],
+    'with a bad escape in the path': ['http://x/health%zz', 'x'],
+    'with DEL in the query': ['http://x/health?\x7f', 'x'],
+    'with NUL in the fragment': ['http://x/health#\x00', 'x'],
   }).map(([name, [target, host]]) => [`absolute target ${name}`,
     bytes(`GET ${target} HTTP/1.1\r\nHost: ${host}\r\n${CLOSE}\r\n`)])),
   'absolute target for another host on HTTP/1.0': bytes('GET http://y/health HTTP/1.0\r\nHost: x\r\n\r\n'),

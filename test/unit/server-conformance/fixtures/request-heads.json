@@ -424,6 +424,38 @@
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
+    "name": "absolute target with a fragment",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with a query and a fragment",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with a fragment and no path",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\n404 page not found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with a control byte in the fragment",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with a control byte in the path",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\n404 page not found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with a bad escape in the path",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n13\r\n404 page not found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with DEL in the query",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with NUL in the fragment",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
     "name": "absolute target for another host on HTTP/1.0",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },

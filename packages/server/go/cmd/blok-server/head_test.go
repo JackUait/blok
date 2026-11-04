@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/internal/route"
 )
 
 // Measured on the C# host: Kestrel takes any codings whose last non-empty
@@ -421,6 +423,58 @@ func TestContentLengthSignsFollowKestrel(t *testing.T) {
 		}
 		if got != want {
 			t.Errorf("%q: got %q, want %q", value, got, want)
+		}
+	}
+}
+
+// Measured on the C# host: System.Uri drops an absolute target's fragment,
+// and Kestrel routes a control byte or a bad escape in its path (to a 404),
+// a control byte in its query, and anything in its fragment but NUL and
+// bytes over 0x7F.
+func TestAnAbsoluteTargetRoutesItsPathAndQuery(t *testing.T) {
+	router := &route.Router{}
+	router.Handle("/health", nil, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprintf(w, "%q %q %q", r.URL.Path, r.URL.RawQuery, r.RequestURI)
+	}))
+	address := startHost(t, router, time.Minute)
+	cases := map[string]string{
+		"http://x/health#f":     `"/health" "" "http://x/health#f"`,
+		"http://x/health#":      `"/health" "" "http://x/health#"`,
+		"http://x/health?a=1#f": `"/health" "a=1" "http://x/health?a=1#f"`,
+		"http://x/health#/nope": `"/health" "" "http://x/health#/nope"`,
+		"http://x/health#?a":    `"/health" "" "http://x/health#?a"`,
+		"http://x/health#a#b":   `"/health" "" "http://x/health#a#b"`,
+		"http://x/health#%zz":   `"/health" "" "http://x/health#%zz"`,
+		"http://x/health#\x01":  `"/health" "" "http://x/health#\x01"`,
+		"http://x/health?a\x01": `"/health" "a\x01" "http://x/health?a\x01"`,
+		"http://x/health?\x7f":  `"/health" "\x7f" "http://x/health?\x7f"`,
+		"http://x/health?%zz#f": `"/health" "%zz" "http://x/health?%zz#f"`,
+		"http://x/hea\x01lth":   "404",
+		"http://x/hea\tlth":     "404",
+		"http://x/hea\rlth":     "404",
+		"http://x/health\x7f":   "404",
+		"http://x/health%zz":    "404",
+		"http://x#f":            "404",
+		"http://x:80#f":         "404",
+		"http://x/hea\x00lth":   kestrel400,
+		"http://x/health?a\x00": kestrel400,
+		"http://x/health#a\x00": kestrel400,
+		"http://x/health#\xe9":  kestrel400,
+		"http://x\x01/health":   kestrel400,
+		"http://u#@x/health":    kestrel400,
+	}
+	for target, want := range cases {
+		got := rawAnswer(t, address, "GET "+target+" HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+		switch want {
+		case kestrel400:
+			got, want = answerStatus(got), answerStatus(want)
+		case "404":
+			got = strings.TrimPrefix(answerStatus(got), "HTTP/1.1 ")
+		default:
+			_, got, _ = strings.Cut(got, "\r\n\r\n")
+		}
+		if got != want && !(want == "404" && strings.HasPrefix(got, "404 ")) {
+			t.Errorf("%q: got %q, want %q", target, got, want)
 		}
 	}
 }

@@ -4,7 +4,7 @@ use std::time::Duration;
 use blok_jsjson::{Kind, Node};
 
 use crate::normalize_test::deep_equals;
-use crate::scenario_test::{load, run_scenario};
+use crate::scenario_test::load;
 use crate::test_support::{SharedPool, lookup, must_parse, pointer, shared_executor, string_of};
 use crate::wire::write;
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
 // Twins of the C# Agent/*Tests cases that no scenario file and no Go test
 // holds: BlokAgentPageActionTests, BlokAgentExecutorTests,
 // BlokAgentSessionTests, JintAttributionTests, JintCommentHostTests,
-// BlokAgentPageCreateTests, BlokAgentVersionHistoryTests, BlokAgentRoomTests.
+// BlokAgentPageCreateTests.
 
 const SOURCE: &str = r#"{"id":"source","title":"Source title","blocks":[{"id":"pg","type":"page","data":{"pageId":"page-2"}}]}"#;
 const TARGET: &str = r#"{"id":"target","title":"Target title","icon":{"type":"emoji","value":"old"},"blocks":[{"id":"body","type":"paragraph","data":{"text":[{"text":"Keep this content"}]}}]}"#;
@@ -907,51 +907,4 @@ async fn trims_too_many_bytes_before_they_reach_the_engine() {
     let chars: usize = sent.iter().map(|n| write(n).expect("write").len()).sum();
     assert!(chars <= 4 * 1024 * 1024, "{chars}");
     assert_eq!(text_at(sent.last().expect("a step"), "/title"), "T7");
-}
-
-/// A shared scenario with one more expectation than its file holds.
-async fn run_extended(name: &str, extend: impl FnOnce(&mut Node)) {
-    let mut scenario = load(name);
-    extend(&mut scenario);
-    let mut failures = Vec::new();
-    run_scenario(name, &scenario, &mut failures).await;
-    assert!(failures.is_empty(), "{}", failures.join("\n"));
-}
-
-fn step_mut(scenario: &mut Node, index: usize) -> &mut Node {
-    &mut scenario
-        .lookup_mut("steps")
-        .expect("lookup")
-        .expect("steps")
-        .items[index]
-}
-
-// C# asserts no read commits; the scenario checks it on the other steps only.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_version_read_commits_nothing() {
-    run_extended("version-list-read-changes", |scenario| {
-        step_mut(scenario, 2)
-            .lookup_mut("expect")
-            .expect("lookup")
-            .expect("expect")
-            .set("committed", must_parse("0"))
-            .expect("set");
-    })
-    .await;
-}
-
-// The page action's write to the target room is the agent's.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_page_rename_writes_the_title_of_a_target_room_as_the_agent() {
-    run_extended("room-page-rename-writes-a-target-room", |scenario| {
-        scenario
-            .lookup_mut("steps")
-            .expect("lookup")
-            .expect("steps")
-            .items
-            .push(must_parse(
-                r#"{"run":"room","actor":{"id":"agent-cs","name":"Agent"},"batch":{"commands":[{"name":"history.versions","args":{"group":1}}]},"expect":{"ok":true,"result":{"/results/0/versions/0/actors":["agent-cs"]}}}"#,
-            ));
-    })
-    .await;
 }

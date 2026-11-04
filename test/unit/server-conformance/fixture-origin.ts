@@ -141,11 +141,23 @@ const ENCODED: Record<string, { body: () => Buffer; encoding: string[] }> = {
   'trailing-comma': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['gzip,'] },
   'only-commas': { body: () => PRECEDENCE_HTML, encoding: [' , ,'] },
   'tab-spaced': { body: () => gzipSync(PRECEDENCE_HTML), encoding: ['\tgzip\t'] },
+  // Go's compress/gzip refuses a header name or comment over 511 bytes.
+  'gzip-long-name': { body: () => withHeaderField(gzipSync(PRECEDENCE_HTML), 0x08, 600), encoding: ['gzip'] },
+  'gzip-long-comment': { body: () => withHeaderField(gzipSync(PRECEDENCE_HTML), 0x10, 600), encoding: ['gzip'] },
 };
 
 /** The Content-Encoding lines the origin sends for /encoded/{name}. */
 export function encodedContentEncoding(name: string): string[] | undefined {
   return ENCODED[name]?.encoding;
+}
+
+/** Sets a gzip header flag (FNAME or FCOMMENT) and adds its zero-ended field. */
+function withHeaderField(bytes: Buffer, flag: number, length: number): Buffer {
+  const head = Buffer.from(bytes.subarray(0, 10));
+
+  head[3] |= flag;
+
+  return Buffer.concat([head, Buffer.alloc(length, 'a'), Buffer.alloc(1), bytes.subarray(10)]);
 }
 
 function cut(bytes: Buffer): Buffer {

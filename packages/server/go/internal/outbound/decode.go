@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"compress/gzip"
 	"compress/zlib"
+	"encoding/binary"
 	"errors"
+	"hash/crc32"
 	"io"
 
 	"github.com/andybalholm/brotli"
@@ -82,11 +84,12 @@ type gzipMembers struct {
 func (g *gzipMembers) Read(p []byte) (int, error) {
 	for g.err == nil {
 		if g.member == nil {
-			if err := checkGzipHeader(g.in); err != nil {
+			head, err := readGzipHeader(g.in)
+			if err != nil {
 				g.err = err
 				break
 			}
-			member, err := gzip.NewReader(g.in)
+			member, err := gzip.NewReader(&prefixed{head, g.in})
 			if err != nil {
 				g.err = quiet(err)
 				break
@@ -119,4 +122,82 @@ func checkGzipHeader(in *bufio.Reader) error {
 		return gzip.ErrHeader
 	}
 	return nil
+}
+
+// readGzipHeader reads a member header the way zlib's inflate does: a name
+// or comment may be any length, where compress/gzip refuses one over 511
+// bytes. It returns the fixed ten bytes with the optional fields' flags
+// cleared, for compress/gzip to read the rest of the member.
+func readGzipHeader(in *bufio.Reader) ([]byte, error) {
+	if err := checkGzipHeader(in); err != nil {
+		return nil, err
+	}
+	head := make([]byte, 10)
+	if _, err := io.ReadFull(in, head); err != nil {
+		return nil, quiet(err)
+	}
+	sum := crc32.ChecksumIEEE(head)
+	read := func(b []byte) error {
+		_, err := io.ReadFull(in, b)
+		sum = crc32.Update(sum, crc32.IEEETable, b)
+		return quiet(err)
+	}
+	flags := head[3]
+	if flags&0x04 != 0 {
+		size := make([]byte, 2)
+		if err := read(size); err != nil {
+			return nil, err
+		}
+		if err := read(make([]byte, binary.LittleEndian.Uint16(size))); err != nil {
+			return nil, err
+		}
+	}
+	for _, field := range []byte{0x08, 0x10} {
+		if flags&field == 0 {
+			continue
+		}
+		for b := byte(1); b != 0; {
+			var err error
+			if b, err = in.ReadByte(); err != nil {
+				return nil, quiet(err)
+			}
+			sum = crc32.Update(sum, crc32.IEEETable, []byte{b})
+		}
+	}
+	if flags&0x02 != 0 {
+		want := make([]byte, 2)
+		if _, err := io.ReadFull(in, want); err != nil {
+			return nil, quiet(err)
+		}
+		if binary.LittleEndian.Uint16(want) != uint16(sum) {
+			return nil, gzip.ErrHeader
+		}
+	}
+	head[3] = 0
+	return head, nil
+}
+
+// prefixed is a flate.Reader, so compress/gzip reads in through it without
+// a buffer of its own that would swallow the next member's bytes.
+type prefixed struct {
+	head []byte
+	in   *bufio.Reader
+}
+
+func (p *prefixed) Read(b []byte) (int, error) {
+	if len(p.head) > 0 {
+		n := copy(b, p.head)
+		p.head = p.head[n:]
+		return n, nil
+	}
+	return p.in.Read(b)
+}
+
+func (p *prefixed) ReadByte() (byte, error) {
+	if len(p.head) > 0 {
+		b := p.head[0]
+		p.head = p.head[1:]
+		return b, nil
+	}
+	return p.in.ReadByte()
 }

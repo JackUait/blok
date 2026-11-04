@@ -18,6 +18,12 @@ fn gzip(data: &[u8]) -> Vec<u8> {
     e.finish().unwrap()
 }
 
+fn gzip_with(builder: flate2::GzBuilder, data: &[u8]) -> Vec<u8> {
+    let mut e = builder.write(Vec::new(), Compression::default());
+    e.write_all(data).unwrap();
+    e.finish().unwrap()
+}
+
 fn zlib(data: &[u8]) -> Vec<u8> {
     let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
     e.write_all(data).unwrap();
@@ -85,6 +91,8 @@ fn origin_body(name: &str, page: &[u8]) -> Option<Vec<u8>> {
         "deflate-trailing-garbage" => concat(&[&zlib(page), b"garbage"]),
         "br-trailing-garbage" => concat(&[&brotli(page), b"garbage"]),
         "empty-gzip-body" | "empty-br-body" | "empty-deflate-body" => Vec::new(),
+        "gzip-long-name" => gzip_with(flate2::GzBuilder::new().filename(vec![b'a'; 600]), page),
+        "gzip-long-comment" => gzip_with(flate2::GzBuilder::new().comment(vec![b'a'; 600]), page),
         _ => return None,
     })
 }

@@ -702,5 +702,41 @@
       },
       "body": "{\"success\":1,\"link\":\"<origin>/encoded/tab-spaced\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
     }
+  },
+  {
+    "name": "gzip-long-name",
+    "encoding": [
+      "gzip"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/gzip-long-name\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
+  },
+  {
+    "name": "gzip-long-comment",
+    "encoding": [
+      "gzip"
+    ],
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "transfer-encoding": [
+          "chunked"
+        ]
+      },
+      "body": "{\"success\":1,\"link\":\"<origin>/encoded/gzip-long-comment\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{},\"domain\":\"127.0.0.1\"}}\n"
+    }
   }
 ]

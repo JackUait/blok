@@ -615,7 +615,7 @@ const ENCODINGS = [
   'gzip-then-bad-member', 'gzip-then-one-magic-byte', 'gzip-bad-crc', 'deflate-bad-adler',
   'deflate-trailing-garbage', 'br-trailing-garbage', 'empty-gzip-body', 'empty-br-body', 'empty-deflate-body',
   'param', 'quoted', 'two-words', 'slash', 'parens', 'good-then-bad-item', 'bad-line-then-good-line',
-  'trailing-comma', 'only-commas', 'tab-spaced',
+  'trailing-comma', 'only-commas', 'tab-spaced', 'gzip-long-name', 'gzip-long-comment',
 ];
 
 it('decodes outbound bodies by the C# content-encoding rules', async () => {

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import { GRIP_DRAG_DISABLED_ATTR, TableRowColControls } from '../../../../src/tools/table/table-row-col-controls';
 import type { TableRowColControlsOptions } from '../../../../src/tools/table/table-row-col-controls';
+import { isGridBusy } from '../../../../src/tools/table/table-grid-busy';
 
 const CELL_ATTR = 'data-blok-table-cell';
 const ROW_ATTR = 'data-blok-table-row';
@@ -965,14 +966,19 @@ describe('TableRowColControls — geometry and grip state', () => {
       document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 0 }));
 
       expect(document.body.style.cursor).toBe('grabbing');
-      expect(grid.style.userSelect).toBe('none');
+      expect(isGridBusy(grid)).toBe(true);
 
       controls.destroy();
       controls = undefined;
 
       // A drag abandoned by destroy must not leave the page unable to select text.
+      const select = new Event('selectstart', { bubbles: true, cancelable: true });
+
+      grid.dispatchEvent(select);
+
       expect(document.body.style.cursor).toBe('');
-      expect(grid.style.userSelect).toBe('');
+      expect(select.defaultPrevented).toBe(false);
+      expect(isGridBusy(grid)).toBe(false);
     });
 
     it('removes the row grips it rebuilt on refresh', () => {

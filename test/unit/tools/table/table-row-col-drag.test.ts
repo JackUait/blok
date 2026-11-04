@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getCumulativeColEdges, TableRowColDrag } from '../../../../src/tools/table/table-row-col-drag';
+import { isGridBusy } from '../../../../src/tools/table/table-grid-busy';
 
 const DRAG_THRESHOLD = 10;
 
@@ -293,15 +294,34 @@ describe('TableRowColDrag', () => {
       expect(document.body.style.cursor).toBe('');
     });
 
-    it('resets grid.style.userSelect on pointercancel', () => {
+    it('blocks text selection and marks the grid busy until pointercancel', () => {
       grid = createGrid(3, 3);
       const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
 
       startDrag(drag, 'row', 1, 50, 50);
 
-      expect(grid.style.userSelect).toBe('none');
+      const during = new Event('selectstart', { bubbles: true, cancelable: true });
+
+      grid.dispatchEvent(during);
+
+      expect(during.defaultPrevented).toBe(true);
+      expect(isGridBusy(grid)).toBe(true);
 
       document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      const after = new Event('selectstart', { bubbles: true, cancelable: true });
+
+      grid.dispatchEvent(after);
+
+      expect(after.defaultPrevented).toBe(false);
+      expect(isGridBusy(grid)).toBe(false);
+    });
+
+    it('never writes user-select on the grid, which every cell inherits', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
 
       expect(grid.style.userSelect).toBe('');
     });

@@ -168,8 +168,8 @@ const resolveFillShortcut = (e: KeyboardEvent): FillDirection | null => {
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 /**
- * Whether a grip drag or column resize owns the grid. A resize marks the grid
- * busy; a grip drag still disables user-select on it.
+ * Whether a grip drag or column resize owns the grid. Cell selection's own
+ * cross-cell drag still disables user-select on it.
  */
 const isOtherInteractionActive = (grid: HTMLElement): boolean => {
   return isGridBusy(grid) || grid.style.userSelect === 'none';

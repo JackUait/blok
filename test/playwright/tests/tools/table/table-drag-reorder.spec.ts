@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { countStyled } from '../../helpers/style-trace';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
@@ -199,6 +200,38 @@ test.describe('Drag-to-Reorder Rows and Columns', () => {
     const cellAtRow1 = getCell(page, 1, 0);
 
     await expect(cellAtRow1).toContainText('R1C1');
+  });
+
+  test('A row grip drag restyles far fewer elements than the table holds', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [{ type: 'table', data: { withHeadings: false, content: Array.from({ length: 40 }, () => Array.from({ length: 30 }, () => '')) } }],
+      },
+    });
+    const elements = await page.locator(TABLE_SELECTOR).evaluate(table => table.querySelectorAll('*').length);
+
+    await getCell(page, 2, 0).click();
+    const rowGrip = page.locator(ROW_GRIP_SELECTOR).nth(2);
+
+    await expect(rowGrip).toBeVisible({ timeout: 2000 });
+    const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
+    const x = gripBox.x + gripBox.width / 2;
+    const y = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(x, y);
+    const styled = await countStyled(page, async () => {
+      await page.mouse.down();
+      // Out past the drag threshold and back, so the row lands where it was.
+      await page.mouse.move(x, y + 30, { steps: 3 });
+      await page.mouse.move(x, y, { steps: 3 });
+      await page.mouse.up();
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    });
+
+    // An inherited style written on the grid restyles every cell at drag start and end.
+    expect(styled).toBeLessThan(elements);
   });
 
   test('Dragging a column grip reorders columns', async ({ page }) => {

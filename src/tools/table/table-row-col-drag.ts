@@ -2,6 +2,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 
 import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
+import { setGridBusy } from './table-grid-busy';
 import { colEdgeX, gridX } from './table-direction';
 import type { RowColAction } from './table-row-col-controls';
 
@@ -113,6 +114,7 @@ export class TableRowColDrag {
   private boundDocPointerMove: (e: PointerEvent) => void;
   private boundDocPointerUp: (e: PointerEvent) => void;
   private boundDocPointerCancel: () => void;
+  private readonly preventSelect = (e: Event): void => e.preventDefault();
 
   /** Resolves when drag ends — set by beginTracking, consumed by caller */
   private resolveTracking: ((wasDrag: boolean) => void) | null = null;
@@ -157,7 +159,8 @@ export class TableRowColDrag {
   }
 
   public cleanup(): void {
-    this.grid.style.userSelect = '';
+    document.removeEventListener('selectstart', this.preventSelect);
+    setGridBusy(this.grid, false);
     document.body.style.cursor = '';
 
     this.dragOverlayCells.forEach(overlay => {
@@ -275,7 +278,9 @@ export class TableRowColDrag {
   }
 
   private startDrag(): void {
-    this.grid.style.userSelect = 'none';
+    // Not user-select on the grid: Blink inherits it, so writing it restyles every cell.
+    document.addEventListener('selectstart', this.preventSelect);
+    setGridBusy(this.grid, true);
     document.body.style.cursor = 'grabbing';
     this.onDragStateChange?.(true, this.dragType, this.dragFromIndex);
 

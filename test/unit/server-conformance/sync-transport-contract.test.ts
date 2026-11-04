@@ -363,6 +363,25 @@ describe('sync transport: subprotocol', () => {
     });
   }, TEST_TIMEOUT_MS);
 
+  // Kestrel decodes the head as UTF-8 and String.Trim drops what
+  // char.IsWhiteSpace calls space; U+001C and U+200B are not.
+  it('trims every Unicode space from an offer, and nothing else', async () => {
+    await useServer('none', async ({ open }) => {
+      for (const space of ['\v', '\f', '\u0085', ' ', ' ', ' ', ' ', '　']) {
+        const leading = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', `${space}${V1}`]] });
+        const trailing = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', `${V1}${space}`]] });
+
+        expect([space.codePointAt(0), leading.response.headers['sec-websocket-protocol']]).toEqual([space.codePointAt(0), V1]);
+        expect([space.codePointAt(0), trailing.response.headers['sec-websocket-protocol']]).toEqual([space.codePointAt(0), V1]);
+      }
+      for (const kept of ['\u001c', '​']) {
+        const offered = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', `${kept}${V1}`]] });
+
+        expect([kept.codePointAt(0), offered.response.status, offered.response.headers['sec-websocket-protocol']]).toEqual([kept.codePointAt(0), 101, undefined]);
+      }
+    });
+  }, TEST_TIMEOUT_MS);
+
   it('selects blok-sync.v2 when the server keeps a journal', async () => {
     await withServer({ journal: true }, async ({ open }) => {
       const both = await open('/sync/doc', { headers: [['Sec-WebSocket-Protocol', `${V1}, ${V2}`]] });

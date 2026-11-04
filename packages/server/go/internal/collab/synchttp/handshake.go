@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"unicode"
 
 	"github.com/JackUait/blok/packages/server/go/internal/auth"
 	"github.com/JackUait/blok/packages/server/go/internal/collab"
@@ -216,14 +217,13 @@ func (e *Endpoint) selectSubProtocol(offers []string) string {
 }
 
 // protocolOffers reads both header shapes: one comma-joined value and
-// repeated lines. String.Trim drops more than ASCII space; header values in
-// tests are ASCII, and non-ASCII whitespace is not trimmed here (UNVERIFIED
-// how Kestrel decodes such bytes).
+// repeated lines. Kestrel decodes the head as UTF-8, and String.Trim drops
+// exactly what unicode.IsSpace calls space.
 func protocolOffers(h http.Header) []string {
 	var offers []string
 	for _, value := range h.Values("Sec-WebSocket-Protocol") {
 		for _, token := range strings.Split(value, ",") {
-			if token = strings.Trim(token, " \t\v\f"); token != "" {
+			if token = strings.TrimFunc(token, unicode.IsSpace); token != "" {
 				offers = append(offers, token)
 			}
 		}

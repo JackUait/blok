@@ -38,6 +38,9 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
+// freePort gives a port that was free a moment ago. Another process can take
+// it before the host binds, so start a host through listeningHost or
+// listeningBinary, which retry on a taken port.
 func freePort(t *testing.T) string {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -51,14 +54,77 @@ func freePort(t *testing.T) string {
 	return address
 }
 
-func waitFor(t *testing.T, condition func() bool) {
+// pickPort lets a test hand the host a taken port first.
+var pickPort = freePort
+
+type host struct {
+	address string
+	stderr  *syncBuffer
+	done    chan int
+	cancel  context.CancelFunc
+}
+
+// listened waits for the listening line. False when the port was taken and
+// another attempt may pick a free one; any other refusal fails the test.
+func listened(t *testing.T, stderr *syncBuffer, attempt int) bool {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
-	for !condition() {
-		if time.Now().After(deadline) {
-			t.Fatal("condition not met within 5s")
+	for {
+		seen := stderr.String()
+		if strings.Contains(seen, " listening on ") {
+			return true
+		}
+		refused := strings.Contains(seen, "refused to start")
+		if refused && strings.Contains(seen, "address already in use") && attempt < 5 {
+			return false
+		}
+		if refused || time.Now().After(deadline) {
+			t.Fatalf("the host did not listen (attempt %d): %q", attempt, seen)
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func listeningHost(t *testing.T, args []string, getenv func(string) string) host {
+	t.Helper()
+	for attempt := 1; ; attempt++ {
+		address := pickPort(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		stderr := &syncBuffer{}
+		done := make(chan int, 1)
+		go func() { done <- run(ctx, append([]string{"--listen", address}, args...), getenv, stderr) }()
+		if listened(t, stderr, attempt) {
+			return host{address, stderr, done, cancel}
+		}
+		cancel()
+		<-done
+	}
+}
+
+func TestListeningHostRetriesATakenPort(t *testing.T) {
+	owner, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.Close()
+	picks := 0
+	pickPort = func(t *testing.T) string {
+		picks++
+		if picks == 1 {
+			return owner.Addr().String()
+		}
+		return freePort(t)
+	}
+	defer func() { pickPort = freePort }()
+
+	started := listeningHost(t, nil, noEnv)
+	defer func() { started.cancel(); <-started.done }()
+
+	if picks != 2 || started.address == owner.Addr().String() {
+		t.Fatalf("picks %d, address %s", picks, started.address)
+	}
+	if !strings.Contains(started.stderr.String(), " listening on "+started.address+" ") {
+		t.Fatalf("stderr %q", started.stderr.String())
 	}
 }
 
@@ -192,14 +258,8 @@ func TestLostBindRefusesToStart(t *testing.T) {
 }
 
 func TestListeningLineComesAfterBindAndHealthAnswers(t *testing.T) {
-	address := freePort(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	stderr := &syncBuffer{}
-	done := make(chan int, 1)
-
-	go func() { done <- run(ctx, []string{"--listen", address}, noEnv, stderr) }()
-
-	waitFor(t, func() bool { return strings.Contains(stderr.String(), " listening on ") })
+	started := listeningHost(t, nil, noEnv)
+	address, stderr, done, cancel := started.address, started.stderr, started.done, started.cancel
 
 	// The line is written only after bind, so the port answers at once.
 	response, err := http.Get("http://" + address + "/health")
@@ -352,24 +412,29 @@ func buildBinary(t *testing.T, args ...string) string {
 	return binary
 }
 
-func startBinary(t *testing.T, binary, address string) (*exec.Cmd, *syncBuffer) {
+func listeningBinary(t *testing.T, binary string) (*exec.Cmd, *syncBuffer, string) {
 	t.Helper()
-	stderr := &syncBuffer{}
-	command := exec.Command(binary, "--listen", address)
-	command.Stderr = stderr
-	if err := command.Start(); err != nil {
-		t.Fatal(err)
+	for attempt := 1; ; attempt++ {
+		address := pickPort(t)
+		stderr := &syncBuffer{}
+		command := exec.Command(binary, "--listen", address)
+		command.Stderr = stderr
+		if err := command.Start(); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = command.Process.Kill() })
+		if listened(t, stderr, attempt) {
+			return command, stderr, address
+		}
+		_ = command.Wait()
 	}
-	t.Cleanup(func() { _ = command.Process.Kill() })
-	waitFor(t, func() bool { return strings.Contains(stderr.String(), " listening on ") })
-	return command, stderr
 }
 
 func TestBinaryExitsWithinTwoSecondsOfSIGTERM(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary")
 	}
-	command, _ := startBinary(t, buildBinary(t), freePort(t))
+	command, _, _ := listeningBinary(t, buildBinary(t))
 
 	if err := command.Process.Signal(syscall.SIGTERM); err != nil {
 		t.Fatal(err)
@@ -395,8 +460,7 @@ func TestBinaryVersionComesFromLdflags(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the binary")
 	}
-	address := freePort(t)
-	_, stderr := startBinary(t, buildBinary(t, "-ldflags", "-X main.version=9.8.7"), address)
+	_, stderr, address := listeningBinary(t, buildBinary(t, "-ldflags", "-X main.version=9.8.7"))
 
 	if !strings.HasPrefix(stderr.String(), "blok-server 9.8.7 listening on ") {
 		t.Fatalf("stderr %q", stderr.String())

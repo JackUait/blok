@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,12 +13,9 @@ import (
 // returned stderr holds everything written before the stop.
 func runUntilListening(t *testing.T, args []string, getenv func(string) string) string {
 	t.Helper()
-	ctx, cancel := context.WithCancel(context.Background())
-	stderr := &syncBuffer{}
-	done := make(chan int, 1)
-	go func() { done <- run(ctx, append([]string{"--listen", freePort(t)}, args...), getenv, stderr) }()
-	waitFor(t, func() bool { return strings.Contains(stderr.String(), " listening on ") })
-	cancel()
+	started := listeningHost(t, args, getenv)
+	stderr, done := started.stderr, started.done
+	started.cancel()
 	select {
 	case code := <-done:
 		if code != 0 {
@@ -69,15 +65,9 @@ func TestTheShutdownDrainOutlastsASlowDocEndpoint(t *testing.T) {
 	}))
 	defer endpoint.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	stderr := &syncBuffer{}
-	done := make(chan int, 1)
-	listen := freePort(t)
-	go func() {
-		done <- run(ctx, []string{"--listen", listen, "--auth", "none", "--collab", "--doc-endpoint", endpoint.URL,
-			"--storage-dir", "", "--collab-dir", t.TempDir()}, noEnv, stderr)
-	}()
-	waitFor(t, func() bool { return strings.Contains(stderr.String(), " listening on ") })
+	started := listeningHost(t, []string{"--auth", "none", "--collab", "--doc-endpoint", endpoint.URL,
+		"--storage-dir", "", "--collab-dir", t.TempDir()}, noEnv)
+	listen, stderr, done, cancel := started.address, started.stderr, started.done, started.cancel
 
 	edit, _ := http.NewRequest(http.MethodPost, "http://"+listen+"/sync/doc/edit",
 		strings.NewReader(`{"ops":[{"op":"insert","id":"a","block":{"type":"paragraph","data":{"text":"kept"}}}]}`))

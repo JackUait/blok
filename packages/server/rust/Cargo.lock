@@ -156,6 +156,25 @@ name = "blok-collab-operation"
 version = "0.0.0"
 
 [[package]]
+name = "blok-collab-synchttp"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-auth",
+ "blok-collab",
+ "blok-collab-wire",
+ "blok-dotnet",
+ "blok-http",
+ "blok-jsjson",
+ "blok-route",
+ "blok-ticket",
+ "blok-ws",
+ "hmac",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "blok-collab-wire"
 version = "0.0.0"
 dependencies = [

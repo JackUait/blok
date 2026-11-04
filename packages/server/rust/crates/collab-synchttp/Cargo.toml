@@ -1,0 +1,28 @@
+[package]
+name = "blok-collab-synchttp"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-auth = { path = "../auth" }
+blok-collab = { path = "../collab" }
+blok-collab-wire = { path = "../collab-wire" }
+blok-dotnet = { path = "../dotnet" }
+blok-http = { path = "../http" }
+blok-route = { path = "../route" }
+blok-ticket = { path = "../ticket" }
+blok-ws = { path = "../ws" }
+tokio = { version = "1", features = ["io-util", "macros", "rt", "sync", "time"] }
+
+[dev-dependencies]
+base64 = "0.22"
+blok-jsjson = { path = "../jsjson" }
+hmac = "0.12"
+sha2 = "0.10"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+
+[lints]
+workspace = true

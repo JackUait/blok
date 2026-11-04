@@ -954,7 +954,68 @@ async fn purged_journal() -> AppOptions {
         .unwrap_or_else(|err| panic!("{err}"));
     assert_eq!(outcome, blok_collab_journal::PurgeOutcome::Purged);
     original.drain().await;
-    options()
+    // No history store, so only the journal open can refuse.
+    AppOptions {
+        no_history: true,
+        ..options()
+    }
+}
+
+/// A raw upgrade to synchttp's GET /sync/doc over the app's manager: the
+/// answer's status.
+async fn upgrade(app: &crate::test_support::App) -> u16 {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let endpoint = blok_collab_synchttp::Endpoint::new(blok_collab_synchttp::Config {
+        auth: "none".into(),
+        secret: String::new(),
+        origin_allowed: std::sync::Arc::new(|_| true),
+        rate_limit: std::sync::Arc::new(|_| true),
+        clock: std::sync::Arc::new(std::time::SystemTime::now),
+        authorization: None,
+        rooms: std::sync::Arc::new(app.manager.clone()),
+        has_operation_store: true,
+        max_message_bytes: 1 << 20,
+        keep_alive_interval: Duration::ZERO,
+        connections: std::sync::Arc::new(blok_collab_synchttp::ConnectionTable::new(0, 8)),
+        budget: blok_collab_synchttp::BudgetOptions {
+            frames_per_second: 50,
+            burst_frames: 100,
+            resyncs_per_minute: 60,
+            awareness_bytes_per_second: 128 << 10,
+        },
+        budget_clock: None,
+        upgrades: None,
+    });
+    let mut router = blok_route::Router::new();
+    router.handle("/sync/{doc}", Some(&["GET"]), endpoint);
+    let running = crate::test_support::start(router).await;
+    let mut conn = tokio::net::TcpStream::connect(running.address)
+        .await
+        .unwrap();
+    conn.write_all(
+        b"GET /sync/doc HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\
+          Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+          Sec-WebSocket-Protocol: blok-sync.v2\r\n\r\n",
+    )
+    .await
+    .unwrap();
+    let mut bytes = Vec::new();
+    let mut chunk = [0u8; 1024];
+    let head_end = loop {
+        let n = tokio::time::timeout(Duration::from_secs(10), conn.read(&mut chunk))
+            .await
+            .expect("no answer")
+            .unwrap();
+        assert!(n > 0, "closed with {:?}", String::from_utf8_lossy(&bytes));
+        bytes.extend_from_slice(&chunk[..n]);
+        if let Some(end) = bytes.windows(4).position(|w| w == b"\r\n\r\n") {
+            break end;
+        }
+    };
+    String::from_utf8_lossy(&bytes[..head_end])[9..12]
+        .parse()
+        .unwrap()
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -979,11 +1040,13 @@ async fn reset_answers_forbidden_when_document_purged() {
     app.drain().await;
 }
 
-// The upgrade's 403 for a Purged join is pinned in collab-synchttp; this is
-// the restarted manager's half.
 #[tokio::test(flavor = "multi_thread")]
 async fn restarted_journal_tombstone_refuses_an_old_consumer_document() {
     let app = start_app(purged_journal().await).await;
+
+    assert_eq!(upgrade(&app).await, 403);
+    assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
+    assert_eq!(app.manager.live_room_count(), 0);
 
     let joined = app
         .manager
@@ -999,4 +1062,18 @@ async fn restarted_journal_tombstone_refuses_an_old_consumer_document() {
     assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
     assert_eq!(app.manager.live_room_count(), 0);
     app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_purged_document_refuses_sync_before_upgrade() {
+    let app = start_app(purged_journal().await).await;
+
+    assert_eq!(upgrade(&app).await, 403);
+    assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0);
+    app.drain().await;
+
+    // The control: the same upgrade joins a document that was never purged.
+    let fresh = start_app(journal()).await;
+    assert_eq!(upgrade(&fresh).await, 101);
+    fresh.drain().await;
 }

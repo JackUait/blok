@@ -14,6 +14,7 @@ mod htmlreader;
 mod keys;
 mod longestkept;
 mod migrate;
+mod replay;
 mod richtext;
 mod richtextedit;
 mod richtextinput;
@@ -37,6 +38,7 @@ pub use htmlreader::{HtmlReader, Invoker, MAX_CALL_CHARS, MAX_EDIT_HTML_CHARS, R
 pub use keys::{DIFFABLE_TEXT_KEYS, ORDERED_ID_ARRAY_KEYS};
 pub use longestkept::longest_kept_order;
 pub use migrate::{collect_legacy_rich_text, migrate_rich_text};
+pub use replay::{ReplayError, build_replay, step_replay};
 pub use richtext::{
     WriteOp, canonical_marks, canonicalize, from_delta, is_rich_text, normalize, normalize_value,
     read_input, same_value, to_write_ops,
@@ -107,6 +109,8 @@ mod keys_test;
 mod longestkept_test;
 #[cfg(test)]
 mod migrate_test;
+#[cfg(test)]
+mod replay_test;
 #[cfg(test)]
 mod richtext_test;
 #[cfg(test)]

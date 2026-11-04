@@ -288,7 +288,9 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 Step::Progress
             }
             // Measured: trailer lines count with the head's lines and bytes
-            // and follow the head's grammar, bare LF line ends included.
+            // and follow the head's grammar. Kestrel also takes a bare LF
+            // here; this refuses it, as every other chunk line, so a proxy
+            // that reads the trailer otherwise cannot desync the host.
             Chunk::Trailers => {
                 let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
                     if state.trailer_bytes + available >= MAX_HEADER_BLOCK {
@@ -300,8 +302,10 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 if state.trailer_bytes > MAX_HEADER_BLOCK {
                     return Step::Fail(BodyError::HeadersTooLarge);
                 }
-                let line = &inbound.buf[..lf];
-                let line = line.strip_suffix(b"\r").unwrap_or(line);
+                if lf == 0 || inbound.buf[lf - 1] != b'\r' {
+                    return Step::Fail(BodyError::Malformed);
+                }
+                let line = &inbound.buf[..lf - 1];
                 if line.is_empty() {
                     inbound.consume(lf + 1);
                     *chunk = Chunk::Done;

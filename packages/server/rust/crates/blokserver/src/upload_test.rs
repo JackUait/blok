@@ -8,7 +8,9 @@ use crate::handlers::BoxFuture;
 use super::*;
 use crate::Options;
 use crate::server::Server;
-use crate::testutil::{send, start, temp_dir};
+use crate::testutil::{
+    Answer, Recording, open, send, start, temp_dir, upload_spools, wait_for_no_new_spools,
+};
 
 const TEST_BOUNDARY: &str = "blok-server-conformance-boundary";
 
@@ -357,4 +359,548 @@ async fn an_upload_to_s3_hashes_its_spool_in_place_and_reports_the_file_size() {
         "S3 spools {:?}",
         spooled.lock().unwrap()
     );
+}
+
+const BOUNDARY: &str = "blok-upload-test-boundary";
+const UPLOAD_URL: &str = "https://uploads.example.test/files/blob";
+
+/// A part as UploadEndpointTests.cs's MultipartPart.
+#[derive(Clone)]
+struct Part<'a> {
+    name: &'a str,
+    file_name: Option<&'a str>,
+    content_type: Option<&'a str>,
+    bytes: Vec<u8>,
+    transfer_encoding: Option<&'a str>,
+}
+
+fn part<'a>(
+    name: &'a str,
+    file_name: Option<&'a str>,
+    content_type: Option<&'a str>,
+    bytes: &[u8],
+) -> Part<'a> {
+    Part {
+        name,
+        file_name,
+        content_type,
+        bytes: bytes.to_vec(),
+        transfer_encoding: None,
+    }
+}
+
+/// BuildMultipart in UploadEndpointTests.cs.
+fn build_multipart(boundary: &str, close: bool, parts: &[Part]) -> Vec<u8> {
+    let escape = |value: &str| value.replace('\\', "\\\\").replace('"', "\\\"");
+    let mut body = Vec::new();
+    for part in parts {
+        body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+        let mut disposition = format!(
+            "Content-Disposition: form-data; name=\"{}\"",
+            escape(part.name)
+        );
+        if let Some(file_name) = part.file_name {
+            disposition.push_str(&format!("; filename=\"{}\"", escape(file_name)));
+        }
+        body.extend_from_slice(format!("{disposition}\r\n").as_bytes());
+        if let Some(content_type) = part.content_type {
+            body.extend_from_slice(format!("Content-Type: {content_type}\r\n").as_bytes());
+        }
+        if let Some(encoding) = part.transfer_encoding {
+            body.extend_from_slice(format!("Content-Transfer-Encoding: {encoding}\r\n").as_bytes());
+        }
+        body.extend_from_slice(b"\r\n");
+        body.extend_from_slice(&part.bytes);
+        body.extend_from_slice(b"\r\n");
+    }
+    if close {
+        body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    }
+    body
+}
+
+fn multipart(parts: &[Part]) -> Vec<u8> {
+    build_multipart(BOUNDARY, true, parts)
+}
+
+fn multipart_type() -> String {
+    format!("multipart/form-data; boundary={BOUNDARY}")
+}
+
+async fn post_upload(
+    address: std::net::SocketAddr,
+    content_type: Option<&str>,
+    body: &[u8],
+) -> Answer {
+    let mut head = format!("POST /upload HTTP/1.1\r\nContent-Length: {}", body.len());
+    if let Some(content_type) = content_type {
+        head.push_str(&format!("\r\nContent-Type: {content_type}"));
+    }
+    send(address, &head, body).await
+}
+
+struct Uploads {
+    running: crate::testutil::Running,
+    store: Arc<Recording>,
+}
+
+impl Uploads {
+    async fn post(&self, body: &[u8]) -> Answer {
+        post_upload(self.running.address, Some(&multipart_type()), body).await
+    }
+}
+
+async fn uploads_into(store: Recording, max_upload: i64) -> Uploads {
+    let server = upload_server(max_upload);
+    let store = store.install(&server);
+    let running = start(server.handler("")).await;
+    Uploads { running, store }
+}
+
+async fn uploads() -> Uploads {
+    uploads_into(Recording::new(UPLOAD_URL), 32 << 20).await
+}
+
+fn assert_error(got: &Answer, status: u16, text: &str) {
+    assert_eq!(
+        (got.status, got.header("Content-Type"), got.text().as_str()),
+        (status, "text/plain; charset=utf-8", text)
+    );
+}
+
+/// The fileName in an upload answer, if any.
+fn file_name_of(got: &Answer) -> Option<String> {
+    let root = blok_jsjson::parse_node(&got.body, blok_jsjson::Options::default()).unwrap();
+    let value = root.lookup("fileName").unwrap()?;
+    Some(blok_jsjson::to_string_lossy(value.text().unwrap().units()))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn streams_the_exact_file_to_storage_and_returns_its_metadata() {
+    let uploads = uploads().await;
+    let bytes = [0u8, 1, 2, 127, 128, 255];
+    let got = uploads
+        .post(&multipart(&[part(
+            "file",
+            Some("archive.TAR"),
+            Some(" application/octet-stream "),
+            &bytes,
+        )]))
+        .await;
+    assert_eq!(got.status, 200, "{}", got.text());
+    assert_eq!(got.header("Content-Type"), "application/json");
+    assert_eq!(
+        got.text(),
+        format!(
+            "{{\"url\":\"{UPLOAD_URL}\",\"fileName\":\"archive.TAR\",\"size\":6,\"mimeType\":\"application/octet-stream\"}}\n"
+        )
+    );
+    let puts = uploads.store.puts();
+    assert_eq!(puts.len(), 1);
+    assert_eq!(
+        (
+            puts[0].extension.as_str(),
+            puts[0].mime_type.as_str(),
+            puts[0].bytes.as_slice()
+        ),
+        (".tar", "application/octet-stream", bytes.as_slice())
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reduces_browser_paths_before_passing_only_the_extension_to_storage() {
+    for (file_name, expected_name, expected_extension) in [
+        (r"C:\Users\me\PHOTO.PNG", "PHOTO.PNG", ".png"),
+        ("../../notes/report.txt", "report.txt", ".txt"),
+        ("report.💥", "report.💥", ""),
+        ("report.abcdefghijklmnop", "report.abcdefghijklmnop", ""),
+    ] {
+        let uploads = uploads().await;
+        let got = uploads
+            .post(&multipart(&[part(
+                "file",
+                Some(file_name),
+                Some("text/plain"),
+                b"bytes",
+            )]))
+            .await;
+        assert_eq!(got.status, 200, "{file_name}: {}", got.text());
+        assert_eq!(
+            file_name_of(&got).as_deref(),
+            Some(expected_name),
+            "{file_name}"
+        );
+        let puts = uploads.store.puts();
+        assert_eq!(puts.len(), 1);
+        assert_eq!(puts[0].extension, expected_extension, "{file_name}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn drops_unsafe_or_overlong_display_names() {
+    for file_name in [
+        ".".to_owned(),
+        "..".to_owned(),
+        "a".repeat(256),
+        "é".repeat(128),
+    ] {
+        let uploads = uploads().await;
+        let got = uploads
+            .post(&multipart(&[part(
+                "file",
+                Some(&file_name),
+                Some("text/plain"),
+                b"x",
+            )]))
+            .await;
+        assert_eq!(
+            (got.status, got.text()),
+            (
+                200,
+                format!("{{\"url\":\"{UPLOAD_URL}\",\"size\":1,\"mimeType\":\"text/plain\"}}\n")
+            ),
+            "{file_name:.20}"
+        );
+        let puts = uploads.store.puts();
+        assert_eq!(puts.len(), 1);
+        assert_eq!(puts[0].extension, "", "{file_name:.20}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_only_trimmed_valid_bounded_media_types() {
+    let maximum = format!("text/plain; x={}", "a".repeat(241));
+    let too_long = format!("{maximum}a");
+    assert_eq!((maximum.len(), too_long.len()), (255, 256));
+    for (media_type, expected) in [
+        (" text/plain; charset=utf-8 ", "text/plain; charset=utf-8"),
+        (maximum.as_str(), maximum.as_str()),
+        (too_long.as_str(), ""),
+        ("not a media type", ""),
+        ("   ", ""),
+    ] {
+        let uploads = uploads().await;
+        let got = uploads
+            .post(&multipart(&[part(
+                "file",
+                Some("file.bin"),
+                Some(media_type),
+                b"x",
+            )]))
+            .await;
+        let mime = if expected.is_empty() {
+            String::new()
+        } else {
+            format!(",\"mimeType\":\"{expected}\"")
+        };
+        assert_eq!(
+            (got.status, got.text()),
+            (
+                200,
+                format!(
+                    "{{\"url\":\"{UPLOAD_URL}\",\"fileName\":\"file.bin\",\"size\":1{mime}}}\n"
+                )
+            ),
+            "{media_type:.30}"
+        );
+        let puts = uploads.store.puts();
+        assert_eq!(puts.len(), 1);
+        assert_eq!(puts[0].mime_type, expected, "{media_type:.30}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn falls_back_to_the_file_name_when_the_file_name_star_charset_is_utf7() {
+    let uploads = uploads().await;
+    for (parameters, status, file_name) in [
+        (
+            "filename*=utf-7''a.txt; filename=\"b.txt\"",
+            200,
+            Some("b.txt"),
+        ),
+        ("filename*=UTF-7''a.txt", 400, None),
+        (
+            "filename*=x-unicode-2-0-utf-7''a.txt; filename=\"b.txt\"",
+            200,
+            Some("b.txt"),
+        ),
+    ] {
+        let body = format!(
+            "--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"file\"; {parameters}\r\nContent-Type: text/plain\r\n\r\nbytes\r\n--{BOUNDARY}--\r\n"
+        );
+        let got = uploads.post(body.as_bytes()).await;
+        assert_eq!(got.status, status, "{parameters}: {}", got.text());
+        match file_name {
+            None => assert_error(&got, 400, "missing file field\n"),
+            Some(name) => assert_eq!(file_name_of(&got).as_deref(), Some(name), "{parameters}"),
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn rejects_missing_or_wrong_file_fields_before_storage() {
+    let uploads = uploads().await;
+    for body in [
+        multipart(&[]),
+        multipart(&[part("asset", Some("photo.png"), Some("image/png"), &[1])]),
+        multipart(&[part("file", None, None, b"value")]),
+    ] {
+        let got = uploads.post(&body).await;
+        assert_error(&got, 400, "missing file field\n");
+    }
+    assert_eq!(uploads.store.calls(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn rejects_malformed_multipart_before_storage() {
+    let uploads = uploads().await;
+    let photo = part("file", Some("photo.png"), Some("image/png"), &[1, 2, 3]);
+    let valid = multipart(std::slice::from_ref(&photo));
+    let multipart_type = multipart_type();
+    for (body, content_type) in [
+        (valid.clone(), None),
+        (valid, Some("multipart/form-data")),
+        (b"not multipart".to_vec(), Some(multipart_type.as_str())),
+        (
+            build_multipart(BOUNDARY, false, &[photo]),
+            Some(multipart_type.as_str()),
+        ),
+    ] {
+        let got = post_upload(uploads.running.address, content_type, &body).await;
+        assert_error(&got, 400, "malformed upload\n");
+    }
+    assert_eq!(uploads.store.calls(), 0);
+}
+
+fn file_then_fields(name: &str, fields: usize) -> Vec<u8> {
+    let mut parts = vec![part(
+        "file",
+        Some(name),
+        Some("text/plain"),
+        name.as_bytes(),
+    )];
+    let names: Vec<String> = (1..=fields).map(|i| format!("field-{i}")).collect();
+    parts.extend(names.iter().map(|name| part(name, None, None, b"")));
+    multipart(&parts)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn accepts_one_thousand_multipart_sections_and_rejects_the_next() {
+    let accepted = uploads().await;
+    let got = accepted.post(&file_then_fields("accepted.txt", 999)).await;
+    assert_eq!(got.status, 200, "{}", got.text());
+    assert_eq!(accepted.store.puts().len(), 1);
+
+    let existing = upload_spools();
+    let rejected = uploads().await;
+    let got = rejected.post(&file_then_fields("rejected.txt", 1000)).await;
+    assert_error(&got, 400, "malformed upload\n");
+    assert_eq!(rejected.store.calls(), 0);
+    assert_eq!(
+        wait_for_no_new_spools(&existing).await,
+        Vec::<std::path::PathBuf>::new()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn rejects_malformed_quoted_printable_in_discarded_parts_before_storage() {
+    let uploads = uploads().await;
+    for (later_file, encoded) in [
+        (false, "="),
+        (true, "="),
+        (false, "=GG"),
+        (false, "=A"),
+        (false, "a="),
+    ] {
+        let mut discarded = if later_file {
+            part("file", Some("later.txt"), None, encoded.as_bytes())
+        } else {
+            part("note", None, None, encoded.as_bytes())
+        };
+        discarded.transfer_encoding = Some("quoted-printable");
+        let got = uploads
+            .post(&multipart(&[
+                part("file", Some("first.txt"), Some("text/plain"), b"valid file"),
+                discarded,
+            ]))
+            .await;
+        assert_error(&got, 400, "malformed upload\n");
+    }
+    assert_eq!(uploads.store.calls(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn applies_the_complete_body_cap_at_the_exact_unknown_length_boundary() {
+    let body = multipart(&[
+        part("file", Some("small.txt"), Some("text/plain"), b"small"),
+        part("note", None, None, b"other field"),
+    ]);
+    // blok-http counts a chunked body's framing too, as Kestrel does: the
+    // cap is the framed length.
+    let mut chunked = format!("{:x}\r\n", body.len()).into_bytes();
+    chunked.extend_from_slice(&body);
+    chunked.extend_from_slice(b"\r\n0\r\n\r\n");
+    let head = format!(
+        "POST /upload HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Type: {}",
+        multipart_type()
+    );
+
+    let accepted = uploads_into(Recording::new(UPLOAD_URL), chunked.len() as i64).await;
+    let got = send(accepted.running.address, &head, &chunked).await;
+    assert_eq!(got.status, 200, "{}", got.text());
+    assert_eq!(accepted.store.puts().len(), 1);
+
+    let rejected = uploads_into(Recording::new(UPLOAD_URL), chunked.len() as i64 - 1).await;
+    let got = send(rejected.running.address, &head, &chunked).await;
+    assert_error(&got, 413, "file too large\n");
+    assert_eq!(rejected.store.calls(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn reports_only_the_bytes_the_store_actually_consumes() {
+    let mut store = Recording::new(UPLOAD_URL);
+    store.max_read = Some(3);
+    let uploads = uploads_into(store, 32 << 20).await;
+    let got = uploads
+        .post(&multipart(&[part(
+            "file",
+            Some("partial.bin"),
+            None,
+            &[1, 2, 3, 4, 5],
+        )]))
+        .await;
+    assert_eq!(got.status, 200, "{}", got.text());
+    assert!(got.text().contains("\"size\":3"), "{}", got.text());
+    assert_eq!(uploads.store.puts()[0].bytes, [1, 2, 3]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn omits_size_when_the_store_consumes_no_bytes() {
+    let mut store = Recording::new(UPLOAD_URL);
+    store.max_read = Some(0);
+    let uploads = uploads_into(store, 32 << 20).await;
+    let got = uploads
+        .post(&multipart(&[part(
+            "file",
+            Some("unread.bin"),
+            None,
+            &[1, 2, 3],
+        )]))
+        .await;
+    assert_eq!(got.status, 200, "{}", got.text());
+    assert!(!got.text().contains("\"size\""), "{}", got.text());
+    assert!(uploads.store.puts()[0].bytes.is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn passes_the_existing_spool_as_a_seekable_stream_to_storage() {
+    let uploads = uploads().await;
+    let got = uploads
+        .post(&multipart(&[part(
+            "file",
+            Some("photo.png"),
+            Some("image/png"),
+            &[1, 2, 3],
+        )]))
+        .await;
+    assert_eq!(got.status, 200, "{}", got.text());
+    assert!(uploads.store.puts()[0].seekable);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn maps_a_storage_exception_to_the_exact_bad_gateway_wire() {
+    let mut store = Recording::new(UPLOAD_URL);
+    store.failure = Some("store unavailable".into());
+    let uploads = uploads_into(store, 32 << 20).await;
+    let got = uploads
+        .post(&multipart(&[part(
+            "file",
+            Some("photo.png"),
+            Some("image/png"),
+            b"preserved bytes",
+        )]))
+        .await;
+    assert_error(&got, 502, "upload failed\n");
+    let puts = uploads.store.puts();
+    assert_eq!(puts.len(), 1);
+    assert_eq!(puts[0].bytes, b"preserved bytes");
+}
+
+// C#'s ObjectDisposedException check has no Rust twin; the spool going
+// away is what shows the input was let go.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn propagates_request_cancellation_to_storage_and_disposes_its_input() {
+    let mut store = Recording::new(UPLOAD_URL);
+    store.wait_for_cancel = true;
+    let uploads = uploads_into(store, 32 << 20).await;
+    let before = upload_spools();
+    let body = multipart(&[part(
+        "file",
+        Some("photo.png"),
+        Some("image/png"),
+        &[1, 2, 3],
+    )]);
+    let conn = open(
+        uploads.running.address,
+        &format!(
+            "POST /upload HTTP/1.1\r\nContent-Length: {}\r\nContent-Type: {}",
+            body.len(),
+            multipart_type()
+        ),
+        &body,
+    )
+    .await;
+    tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        uploads.store.entered.notified(),
+    )
+    .await
+    .expect("the upload never reached the store");
+    let ours: std::collections::HashSet<_> = upload_spools().difference(&before).cloned().collect();
+    assert!(!ours.is_empty(), "no spool while the store runs");
+    drop(conn);
+    let started = std::time::Instant::now();
+    while !uploads.store.saw_cancel.load(Ordering::SeqCst) {
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(7),
+            "the store never saw the cancellation"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    let started = std::time::Instant::now();
+    while ours.iter().any(|path| path.exists()) {
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(5),
+            "the spool outlived the cancelled upload"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn runs_the_shared_guard_before_parsing_or_storage() {
+    let server = Server::new(Options {
+        auth: "ticket".into(),
+        secret: "a-secret-value-with-at-least-32-characters".into(),
+        allowed_origins: vec!["https://app.example.com".into()],
+        storage_directory: temp_dir().display().to_string(),
+        public_url: "/files".into(),
+        ..Options::default()
+    })
+    .unwrap();
+    let store = Recording::new(UPLOAD_URL).install(&server);
+    let running = start(server.handler("")).await;
+    let body = multipart(&[part("file", Some("photo.png"), Some("image/png"), &[1])]);
+    let got = send(
+        running.address,
+        &format!(
+            "POST /upload HTTP/1.1\r\nOrigin: https://app.example.com\r\nContent-Length: {}\r\nContent-Type: {}",
+            body.len(),
+            multipart_type()
+        ),
+        &body,
+    )
+    .await;
+    assert_error(&got, 401, "missing pass\n");
+    assert_eq!(store.calls(), 0);
 }

@@ -65,6 +65,9 @@ async fn run_to_exit_with(args: &[&str], getenv: fn(&str) -> String) -> (i32, St
     (code, out.text())
 }
 
+/// A port that was free a moment ago. Another test can take it before the
+/// host binds, so a host that must listen starts through Running::start or
+/// listening_binary, which retry on a taken port.
 fn free_port() -> String {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     listener.local_addr().unwrap().to_string()
@@ -83,6 +86,16 @@ async fn wait_for(condition: impl Fn() -> bool) {
     }
 }
 
+/// Waits for the listening line. False when the port was taken first.
+async fn listened(text: &dyn Fn() -> String) -> bool {
+    wait_for(|| {
+        let text = text();
+        text.contains(" listening on ") || text.contains("address already in use")
+    })
+    .await;
+    text().contains(" listening on ")
+}
+
 /// A host running on a free port until stop is called.
 struct Running {
     address: String,
@@ -93,31 +106,35 @@ struct Running {
 
 impl Running {
     async fn start(args: &[&str], getenv: fn(&str) -> String, version: &'static str) -> Running {
-        let address = free_port();
-        let out = Buffer::default();
-        let (stop, stopped) = oneshot::channel::<()>();
-        let mut all = strings(&["--listen", &address]);
-        all.extend(strings(args));
-        let stderr = out.stderr();
-        let done = tokio::spawn(async move {
-            run(
-                &all,
-                &getenv,
-                stderr,
-                async {
-                    let _ = stopped.await;
-                },
-                version,
-            )
-            .await
-        });
-        let watched = out.clone();
-        wait_for(|| watched.text().contains(" listening on ")).await;
-        Running {
-            address,
-            out,
-            stop: Some(stop),
-            done,
+        loop {
+            let address = free_port();
+            let out = Buffer::default();
+            let (stop, stopped) = oneshot::channel::<()>();
+            let mut all = strings(&["--listen", &address]);
+            all.extend(strings(args));
+            let stderr = out.stderr();
+            let done = tokio::spawn(async move {
+                run(
+                    &all,
+                    &getenv,
+                    stderr,
+                    async {
+                        let _ = stopped.await;
+                    },
+                    version,
+                )
+                .await
+            });
+            let watched = out.clone();
+            if listened(&|| watched.text()).await {
+                return Running {
+                    address,
+                    out,
+                    stop: Some(stop),
+                    done,
+                };
+            }
+            let _ = done.await;
         }
     }
 
@@ -131,12 +148,14 @@ impl Running {
     }
 }
 
-/// One raw request; the answer as text.
+/// One raw request; the answer as text. Every caller asks for the close, so
+/// the bound only stops a hang: a first edit takes 200 ms alone and past 5 s
+/// when a workspace run takes every core.
 async fn exchange(address: &str, request: &str) -> String {
     let mut conn = TcpStream::connect(address).await.unwrap();
     conn.write_all(request.as_bytes()).await.unwrap();
     let mut answer = Vec::new();
-    let _ = tokio::time::timeout(Duration::from_secs(5), conn.read_to_end(&mut answer)).await;
+    let _ = tokio::time::timeout(Duration::from_secs(30), conn.read_to_end(&mut answer)).await;
     String::from_utf8_lossy(&answer).into_owned()
 }
 
@@ -456,8 +475,21 @@ async fn health_reports_the_stamped_version() {
     running.stop().await;
 }
 
-fn start_binary(address: &str) -> (std::process::Child, Arc<Mutex<String>>) {
-    spawn_binary(&["--listen", address], &[])
+/// The binary listening on a free port, and that port.
+async fn listening_binary(
+    args: &[&str],
+    envs: &[(&str, &str)],
+) -> (std::process::Child, Arc<Mutex<String>>, String) {
+    loop {
+        let address = free_port();
+        let mut all = vec!["--listen", address.as_str()];
+        all.extend(args);
+        let (mut child, text) = spawn_binary(&all, envs);
+        if listened(&|| text.lock().unwrap().clone()).await {
+            return (child, text, address);
+        }
+        let _ = child.wait();
+    }
 }
 
 fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, Arc<Mutex<String>>) {
@@ -489,8 +521,7 @@ fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, A
 #[tokio::test]
 async fn binary_exits_within_two_seconds_of_sigterm() {
     for signal in ["TERM", "INT", "QUIT"] {
-        let (mut child, text) = start_binary(&free_port());
-        wait_for(|| text.lock().unwrap().contains(" listening on ")).await;
+        let (mut child, _, _) = listening_binary(&[], &[]).await;
         let killed = std::process::Command::new("kill")
             .args([&format!("-{signal}"), &child.id().to_string()])
             .status()
@@ -879,7 +910,8 @@ async fn post(address: &str, path: &str, content_type: &str, body: &[u8]) -> (u1
     conn.write_all(head.as_bytes()).await.unwrap();
     conn.write_all(body).await.unwrap();
     let mut answer = Vec::new();
-    let _ = tokio::time::timeout(Duration::from_secs(5), conn.read_to_end(&mut answer)).await;
+    // A hang guard, as in exchange.
+    let _ = tokio::time::timeout(Duration::from_secs(30), conn.read_to_end(&mut answer)).await;
     let (status, _, body) = parse_answer(&String::from_utf8_lossy(&answer));
     (status, body)
 }
@@ -941,9 +973,7 @@ async fn starts_with_defaults_and_reports_the_development_version() {
 #[tokio::test]
 async fn published_host_reports_the_supplied_build_version() {
     let want = option_env!("BLOK_SERVER_VERSION").unwrap_or("dev");
-    let address = free_port();
-    let (mut child, text) = start_binary(&address);
-    wait_for(|| text.lock().unwrap().contains(" listening on ")).await;
+    let (mut child, text, address) = listening_binary(&[], &[]).await;
     let (status, _, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
     let _ = child.kill();
     let _ = child.wait();
@@ -961,22 +991,17 @@ async fn published_host_reports_the_supplied_build_version() {
     );
 }
 
-async fn wait_for_binary(text: &Arc<Mutex<String>>) {
-    wait_for(|| text.lock().unwrap().contains(" listening on ")).await;
-}
-
 #[tokio::test]
 async fn removes_the_endpoint_spool_after_malformed_trailing_data() {
     let root = scratch_dir("malformed-cleanup");
     let temp = root.join("temp");
     std::fs::create_dir_all(&temp).unwrap();
     let storage = root.join("storage").display().to_string();
-    let address = free_port();
-    let (mut child, text) = spawn_binary(
-        &["--listen", &address, "--storage-dir", &storage],
+    let (mut child, _, address) = listening_binary(
+        &["--storage-dir", &storage],
         &[("TMPDIR", temp.to_str().unwrap())],
-    );
-    wait_for_binary(&text).await;
+    )
+    .await;
     let b = "blok-host-malformed-cleanup-boundary";
     let body = format!(
         "--{b}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"first.txt\"\r\nContent-Type: text/plain\r\n\r\nvalid file\r\n--{b}\r\nContent-Disposition: form-data; name=\"note\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n=\r\n--{b}--\r\n"
@@ -1002,17 +1027,11 @@ async fn removes_the_endpoint_spool_after_storage_failure() {
     std::fs::create_dir_all(&temp).unwrap();
     let storage = root.join("storage-file");
     std::fs::write(&storage, "occupied").unwrap();
-    let address = free_port();
-    let (mut child, text) = spawn_binary(
-        &[
-            "--listen",
-            &address,
-            "--storage-dir",
-            storage.to_str().unwrap(),
-        ],
+    let (mut child, _, address) = listening_binary(
+        &["--storage-dir", storage.to_str().unwrap()],
         &[("TMPDIR", temp.to_str().unwrap())],
-    );
-    wait_for_binary(&text).await;
+    )
+    .await;
     let b = "blok-host-storage-failure-cleanup-boundary";
     let body = format!(
         "--{b}\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name=file; filename=upload.bin; filename*=utf-8''upload.bin\r\n\r\nuploaded bytes\r\n--{b}--\r\n"

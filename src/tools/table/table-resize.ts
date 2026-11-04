@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { setGridBusy } from './table-grid-busy';
 import { getElementDirection, inlineDelta } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 
@@ -47,6 +48,7 @@ export class TableResize {
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: (e: PointerEvent) => void;
   private boundPointerCancel: (e: PointerEvent) => void;
+  private readonly preventSelect = (e: Event): void => e.preventDefault();
 
   public get enabled(): boolean {
     return this._enabled;
@@ -95,10 +97,12 @@ export class TableResize {
     this.bodyObserver = null;
     this.rowObserver?.disconnect();
     this.rowObserver = null;
+    setGridBusy(this.gridEl, false);
     this.gridEl.removeEventListener('pointerdown', this.boundPointerDown);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointercancel', this.boundPointerCancel);
+    document.removeEventListener('selectstart', this.preventSelect);
     this.dragColElements = null;
 
     this.handles.forEach(handle => handle.remove());
@@ -448,7 +452,9 @@ export class TableResize {
     this.dragColElements = this.resolveColElements();
 
     this.onDragStart?.();
-    this.gridEl.style.userSelect = 'none';
+    // Not user-select on the grid: Blink inherits it, so writing it restyles every cell.
+    document.addEventListener('selectstart', this.preventSelect);
+    setGridBusy(this.gridEl, true);
 
     target.style.opacity = '1';
 
@@ -461,7 +467,7 @@ export class TableResize {
     // With pointer capture the browser fires pointercancel INSTEAD of pointerup
     // when it takes the gesture over (touch pan, device disruption). Without
     // this listener the drag would stay "active" forever: dangling document
-    // listeners, userSelect:none stuck on the grid — and onChange never called,
+    // listeners, text selection blocked for good — and onChange never called,
     // so the widths already painted into the DOM never reach the model.
     document.addEventListener('pointercancel', this.boundPointerCancel);
   }
@@ -503,7 +509,7 @@ export class TableResize {
     }
 
     this.isDragging = false;
-    this.gridEl.style.userSelect = '';
+    setGridBusy(this.gridEl, false);
 
     // Record this release for double-click detection: a no-drag release arms the
     // next press on the same handle to be treated as a double-click.
@@ -521,6 +527,7 @@ export class TableResize {
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointercancel', this.boundPointerCancel);
+    document.removeEventListener('selectstart', this.preventSelect);
     this.dragColElements = null;
 
     this.onChange([...this.colWidths]);

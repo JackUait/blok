@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TableResize } from '../../../../src/tools/table/table-resize';
+import { isGridBusy } from '../../../../src/tools/table/table-grid-busy';
 
 const MIN_COL_WIDTH = 50;
 
@@ -746,12 +747,55 @@ describe('TableResize', () => {
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
         bubbles: true }));
 
-      expect(grid.style.userSelect).toBe('none');
+      const during = new Event('selectstart', { bubbles: true, cancelable: true });
+
+      grid.dispatchEvent(during);
+
+      expect(during.defaultPrevented).toBe(true);
 
       document.dispatchEvent(new PointerEvent('pointercancel', {}));
 
-      expect(grid.style.userSelect).toBe('');
+      const after = new Event('selectstart', { bubbles: true, cancelable: true });
+
+      grid.dispatchEvent(after);
+
+      expect(after.defaultPrevented).toBe(false);
       expect(handle.style.opacity).toBe('0');
+    });
+
+    it('marks the grid busy for the length of a drag', () => {
+      grid = createGrid([300, 300]);
+
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+
+      expect(isGridBusy(grid)).toBe(true);
+
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      expect(isGridBusy(grid)).toBe(false);
+    });
+
+    it('never writes user-select on the grid, which every cell inherits', () => {
+      grid = createGrid([300, 300]);
+
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+      const before = grid.style.userSelect;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+
+      expect(grid.style.userSelect).toBe(before);
+
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      expect(grid.style.userSelect).toBe(before);
     });
   });
 

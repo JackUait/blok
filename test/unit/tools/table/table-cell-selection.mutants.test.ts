@@ -114,6 +114,7 @@ vi.mock('../../../../src/components/utils/caret', () => ({
 
 import type { CellMark, FillDirection, SelectionRange } from '../../../../src/tools/table/table-cell-selection';
 import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
+import { setGridBusy } from '../../../../src/tools/table/table-grid-busy';
 import { MODIFIER_KEY } from '../../../../src/components/constants';
 
 const mockI18n = {
@@ -1080,6 +1081,22 @@ describe('TableCellSelection — mutation gaps', () => {
       expect(event.defaultPrevented).toBe(false);
       expect(selection.getSelectedRange()).toBeNull();
       expect(caret.asked).toStrictEqual([]);
+    });
+
+    it('ignores the keyboard while a column resize owns the grid', () => {
+      grid = createGrid(3, 3);
+      selection = makeSelection();
+      caret.atEnd = true;
+      stubSelection({ anchorNode: caretIn(cellAt(grid, 1, 1)) });
+
+      setGridBusy(grid, true);
+
+      const event = pressKey({ key: 'ArrowRight', shiftKey: true });
+
+      setGridBusy(grid, false);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(selection.getSelectedRange()).toBeNull();
     });
 
     it('refuses to extend out of the grid on the first press at the top-left', () => {

@@ -1,4 +1,5 @@
 import type { I18n } from '../../../types/api';
+import { isGridBusy } from './table-grid-busy';
 import { Dom } from '../../components/dom';
 import { IconCopy, IconCross, IconDotsHorizontal, IconPaintRoller, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
@@ -167,11 +168,11 @@ const resolveFillShortcut = (e: KeyboardEvent): FillDirection | null => {
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
 /**
- * Check if a grip drag or resize is in progress by testing for known drag indicators.
- * Returns true if the grid has an active drag ghost or user-select is disabled.
+ * Whether a grip drag or column resize owns the grid. A resize marks the grid
+ * busy; a grip drag still disables user-select on it.
  */
 const isOtherInteractionActive = (grid: HTMLElement): boolean => {
-  return grid.style.userSelect === 'none';
+  return isGridBusy(grid) || grid.style.userSelect === 'none';
 };
 
 /**

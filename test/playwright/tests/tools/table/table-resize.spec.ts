@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { countStyled } from '../../helpers/style-trace';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
@@ -192,6 +193,68 @@ test.describe('Column Resizing', () => {
     });
 
     expect(finalFirstWidth).toBeGreaterThan(initialFirstWidth + 50);
+  });
+
+  test('Pressing and releasing a resize handle restyles far fewer elements than the table holds', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [{ type: 'table', data: { withHeadings: false, content: Array.from({ length: 40 }, () => Array.from({ length: 30 }, () => '')) } }],
+      },
+    });
+    const elements = await page.locator(TABLE_SELECTOR).evaluate(table => table.querySelectorAll('*').length);
+    const handleBox = assertBoundingBox(await page.locator(RESIZE_HANDLE_SELECTOR).nth(2).boundingBox(), 'Resize handle');
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 40);
+    const styled = await countStyled(page, async () => {
+      await page.mouse.down();
+      await page.mouse.up();
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    });
+
+    // An inherited style written on the grid restyles every cell, twice per press.
+    expect(styled).toBeLessThan(elements);
+  });
+
+  test('Dragging a resize handle leaves no text selected', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: { blocks: [{ type: 'table', data: { withHeadings: false, content: [['Alpha text', 'Bravo text'], ['Charlie text', 'Delta text']] } }] },
+    });
+    const handleBox = assertBoundingBox(await page.locator(RESIZE_HANDLE_SELECTOR).first().boundingBox(), 'Resize handle');
+    const startX = handleBox.x + handleBox.width / 2;
+    const startY = handleBox.y + 10;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 120, startY + 60, { steps: 6 });
+    const during = await page.evaluate(() => window.getSelection()?.toString() ?? '');
+
+    await page.mouse.up();
+
+    expect(during).toBe('');
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+  });
+
+  test('Dragging a resize handle across cells selects no cells', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: { blocks: [{ type: 'table', data: { withHeadings: false, content: [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']] } }] },
+    });
+    const handleBox = assertBoundingBox(await page.locator(RESIZE_HANDLE_SELECTOR).first().boundingBox(), 'Resize handle');
+    const startX = handleBox.x + handleBox.width / 2;
+    const startY = handleBox.y + 10;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 160, startY + 90, { steps: 8 });
+    const selectedDuring = await page.locator('[data-blok-table-cell-selected]').count();
+
+    await page.mouse.up();
+
+    expect(selectedDuring).toBe(0);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(0);
   });
 
   test('Dragging a resize handle to the left narrows the column width', async ({ page }) => {

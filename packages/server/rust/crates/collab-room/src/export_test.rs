@@ -131,6 +131,9 @@ async fn a_transient_export_failure_that_never_heals_is_given_up() {
 async fn a_non_transient_export_failure_on_a_journal_room_is_refused_at_once() {
     let (journal, _dir) = open_journal();
     let e = export_room(invalid_data, Some(journal));
+    // Unheld, the 20 ms linger can fire during a slow checkpoint and evict
+    // before the checkpoint's export runs. C# holds a member the same way.
+    let membership = join(&e.manager, "doc", &FakeMember::v1(true)).await;
     let block = node(r#"{"type":"custom","data":{"n":1}}"#);
     let result = e
         .manager
@@ -156,6 +159,13 @@ async fn a_non_transient_export_failure_on_a_journal_room_is_refused_at_once() {
         e.logs.matching("cannot export its document").len() == 1
     })
     .await;
+    tokio::time::sleep(ms(50)).await;
+    assert_eq!(
+        e.converter.exports.load(Ordering::SeqCst),
+        1,
+        "the refusal was retried while the room was occupied"
+    );
+    membership.leave();
     // The refusal releases the hold a dirty projection puts on eviction.
     wait_until("the room to be evicted", || {
         e.manager.live_room_count() == 0

@@ -205,18 +205,28 @@ func (c *cappedReader) hostError(err error) error {
 
 // countingReader records how far the store read, as CountingReadStream.
 type countingReader struct {
-	r   io.Reader
-	n   int64
+	r   io.ReadSeeker
+	pos int64
 	max int64
 }
 
 func (c *countingReader) Read(p []byte) (int, error) {
 	n, err := c.r.Read(p)
-	c.n += int64(n)
-	if c.n > c.max {
-		c.max = c.n
+	c.pos += int64(n)
+	if c.pos > c.max {
+		c.max = c.pos
 	}
 	return n, err
+}
+
+// Seek keeps the spool seekable, so S3 hashes it in place. A seek is not a
+// read: only Read moves max.
+func (c *countingReader) Seek(offset int64, whence int) (int64, error) {
+	pos, err := c.r.Seek(offset, whence)
+	if err == nil {
+		c.pos = pos
+	}
+	return pos, err
 }
 
 // fileMetadata is TryGetFileMetadata: a form-data part named "file" with a

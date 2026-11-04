@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -123,4 +125,40 @@ func (f *firstRead) Read(p []byte) (int, error) {
 		f.onFirst()
 	}
 	return f.Reader.Read(p)
+}
+
+// UploadEndpoint.cs hands S3 a CountingReadStream that keeps CanSeek, so
+// PreparedPayload hashes the upload's own temp file in place: one spool,
+// not two. The size it reports is the furthest position read.
+func TestAnUploadToS3HashesItsSpoolInPlaceAndReportsTheFileSize(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	content := strings.Repeat("blok", 5000)
+	var spooled []string
+	var put []byte
+	bucket := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		spooled, _ = filepath.Glob(filepath.Join(os.TempDir(), "blok-s3-*"))
+		put, _ = io.ReadAll(r.Body)
+	}))
+	defer bucket.Close()
+	o := DefaultOptions()
+	o.S3Endpoint = bucket.URL
+	o.S3Region = "us-east-1"
+	o.S3Bucket = "media"
+	o.S3AccessKey = "a"
+	o.S3SecretKey = "b"
+	o.S3BucketURL = "https://cdn.example.com"
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("POST", "/upload", strings.NewReader(multipartBody("a.txt", content)))
+	request.Header.Set("Content-Type", "multipart/form-data; boundary="+testBoundary)
+	recorder := httptest.NewRecorder()
+	s.Handler("").ServeHTTP(recorder, request)
+	if recorder.Code != 200 || !strings.Contains(recorder.Body.String(), `"size":20000,`) {
+		t.Fatalf("%d %s", recorder.Code, recorder.Body.String())
+	}
+	if string(put) != content || len(spooled) != 0 {
+		t.Fatalf("put %d bytes, S3 spools %v", len(put), spooled)
+	}
 }

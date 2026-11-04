@@ -98,7 +98,11 @@ func (s *LocalStore) Write(ctx context.Context, docID string, updates []byte, ta
 		if err != nil {
 			return err
 		}
-		if err := EnsureWriteDoesNotLowerEpoch(docID, s.readTag(docID), tag); err != nil {
+		stored, err := s.readTag(docID)
+		if err != nil {
+			return err
+		}
+		if err := EnsureWriteDoesNotLowerEpoch(docID, stored, tag); err != nil {
 			return err
 		}
 		return s.replaceAtomically(ctx, docID, document)
@@ -112,7 +116,11 @@ func (s *LocalStore) Reset(ctx context.Context, docID string, tag Tag) error {
 		if err != nil {
 			return err
 		}
-		if err := EnsureResetRaisesEpoch(docID, s.readTag(docID), tag); err != nil {
+		stored, err := s.readTag(docID)
+		if err != nil {
+			return err
+		}
+		if err := EnsureResetRaisesEpoch(docID, stored, tag); err != nil {
 			return err
 		}
 		return s.replaceAtomically(ctx, docID, document)
@@ -251,21 +259,30 @@ func (s *LocalStore) sweepTemporaryFiles() {
 }
 
 // readTag reads only the header; anything unreadable is no stored tag.
-func (s *LocalStore) readTag(docID string) *Set {
-	file, err := os.Open(s.pathFor(docID))
-	if err != nil {
-		return nil
-	}
-	defer file.Close()
+// readTag reads only the header. As in C# ReadTagAsync, a missing file, a
+// directory, a refused open and a short file read as no tag; any other
+// failure (a symlink loop, an I/O error) fails the caller, so the epoch
+// guard is never skipped on a file it could not read.
+func (s *LocalStore) readTag(docID string) (*Set, error) {
 	header := make([]byte, HeaderLength)
-	if _, err := io.ReadFull(file, header); err != nil {
-		return nil
+	file, err := os.Open(s.pathFor(docID))
+	if err == nil {
+		_, err = io.ReadFull(file, header)
+		file.Close()
+	}
+	switch {
+	case err == nil:
+	case errors.Is(err, fs.ErrNotExist), errors.Is(err, fs.ErrPermission), errors.Is(err, syscall.ENOTDIR),
+		errors.Is(err, syscall.EISDIR), errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		return nil, nil
+	default:
+		return nil, err
 	}
 	tag, _, ok := DecodeHeader(header)
 	if !ok {
-		return nil
+		return nil, nil
 	}
-	return &Set{Updates: []byte{}, Tag: tag}
+	return &Set{Updates: []byte{}, Tag: tag}, nil
 }
 
 func (s *LocalStore) replaceAtomically(ctx context.Context, docID string, document []byte) error {

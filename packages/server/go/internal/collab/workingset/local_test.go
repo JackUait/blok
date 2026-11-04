@@ -342,3 +342,19 @@ func TestRetireLeavesAnUnreadableWorkingSetInPlace(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+// C# ReadTagAsync treats only a missing file, a directory, a refused open and
+// a short file as no tag. Anything else, such as a symlink to itself, fails
+// the write instead of skipping the epoch guard.
+func TestAHeaderReadFailureOtherThanAbsentFailsTheWrite(t *testing.T) {
+	h := newHarness(t)
+	must(t, os.MkdirAll(h.dir, 0o700))
+	path := filepath.Join(h.dir, docKeyHex)
+	must(t, os.Symlink(path, path))
+	if err := h.store().Write(ctx, docID, sectionOf(t, []byte{1}), storeTag); err == nil {
+		t.Fatal("the write went through")
+	}
+	if info, err := os.Lstat(path); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("the symlink is gone: %v", err)
+	}
+}

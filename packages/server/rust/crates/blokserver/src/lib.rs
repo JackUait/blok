@@ -25,6 +25,8 @@ mod collabstore_test;
 #[cfg(test)]
 mod csharp_routes_test;
 #[cfg(test)]
+mod delete_endpoint_test;
+#[cfg(test)]
 mod documents_test;
 #[cfg(test)]
 mod local_file_serving_test;

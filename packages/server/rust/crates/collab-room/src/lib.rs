@@ -59,6 +59,8 @@ pub const MAX_CHANGE_RECORDS: usize = 200;
 pub const MAX_CHANGE_BYTES: i64 = 4 * 1024 * 1024;
 
 #[cfg(test)]
+mod bigint_probe_test;
+#[cfg(test)]
 mod changes_test;
 #[cfg(test)]
 mod constants_test;
@@ -90,6 +92,8 @@ mod flush_test;
 mod headless_test;
 #[cfg(all(test, feature = "core-wip"))]
 mod join_test;
+#[cfg(all(test, feature = "core-wip"))]
+mod migration_test;
 #[cfg(all(test, feature = "core-wip"))]
 mod purge_test;
 #[cfg(all(test, feature = "core-wip"))]

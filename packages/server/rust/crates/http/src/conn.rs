@@ -21,8 +21,9 @@ use crate::request::{CancelToken, Extensions, Request};
 use crate::response::{ResponseWriter, response_head};
 use crate::server::{ActiveGuard, Shared};
 
-/// net/http's maxPostHandlerReadBytes: an unread body bigger than this is
-/// not drained after the handler; the connection closes instead.
+/// net/http's maxPostHandlerReadBytes (256 << 10, server.go in Go 1.27.1):
+/// an unread body bigger than this is not drained after the handler; the
+/// connection closes instead. Kestrel drains it all.
 const MAX_DRAIN: u64 = 256 << 10;
 
 pub(crate) async fn serve(

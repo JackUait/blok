@@ -54,8 +54,9 @@ pub fn listen(
         return bind_one("tcp4", SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), port));
     }
     if host == "*" || host == "+" {
-        // std leaves IPV6_V6ONLY at the OS default, which is off on macOS
-        // and Linux: the socket is dual-stack, as Kestrel sets DualMode.
+        // Kestrel sets DualMode and Go sets IPV6_V6ONLY=0 itself. std cannot
+        // set it, so this socket is dual-stack only where the OS default is
+        // (macOS; Linux unless net.ipv6.bindv6only=1).
         return match bind_one("tcp", SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), port)) {
             Err(error) if !error.in_use => {
                 bind_one("tcp4", SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), port))
@@ -263,6 +264,13 @@ mod tests {
         );
         let error = listen("[::ffff:127.0.0.1]:0", std_parse).unwrap_err();
         assert_eq!(error.to_string(), "Can't assign requested address");
+    }
+
+    #[test]
+    fn a_wildcard_takes_ipv4_too() {
+        let bound = listen("*:0", std_parse).unwrap();
+        let port = bound[0].local_addr().unwrap().port();
+        assert!(std::net::TcpStream::connect(("127.0.0.1", port)).is_ok());
     }
 
     #[test]

@@ -27,6 +27,8 @@ mod csharp_routes_test;
 #[cfg(test)]
 mod documents_test;
 #[cfg(test)]
+mod local_file_serving_test;
+#[cfg(test)]
 mod purge_errors_test;
 #[cfg(test)]
 mod sync_test;

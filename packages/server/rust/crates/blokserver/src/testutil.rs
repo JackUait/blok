@@ -45,6 +45,15 @@ impl Answer {
             .map_or("", |(_, v)| v.as_str())
     }
 
+    /// Every value sent under name, in order.
+    pub fn headers_all(&self, name: &str) -> Vec<&str> {
+        self.headers
+            .iter()
+            .filter(|(n, _)| n.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+            .collect()
+    }
+
     pub fn text(&self) -> String {
         String::from_utf8_lossy(&self.body).into_owned()
     }
@@ -66,12 +75,12 @@ pub async fn send(address: SocketAddr, head: &str, body: &[u8]) -> Answer {
         let _ = write.write_all(&request).await;
         write
     });
-    let answer = read_answer(&mut read, head.starts_with("HEAD ")).await;
+    let answer = read_answer(&mut read).await;
     writer.abort();
     answer
 }
 
-pub async fn read_answer(conn: &mut (impl AsyncReadExt + Unpin), head_request: bool) -> Answer {
+pub async fn read_answer(conn: &mut (impl AsyncReadExt + Unpin)) -> Answer {
     let mut bytes = Vec::new();
     let _ = tokio::time::timeout(Duration::from_secs(10), conn.read_to_end(&mut bytes)).await;
     let end = find(&bytes, b"\r\n\r\n").expect("a response head");
@@ -98,7 +107,8 @@ pub async fn read_answer(conn: &mut (impl AsyncReadExt + Unpin), head_request: b
             body.extend_from_slice(&rest[..size]);
             rest = &rest[size + 2..];
         }
-    } else if !head_request {
+    } else {
+        // Kept for HEAD too, so a body leaked after a HEAD head shows.
         body.extend_from_slice(rest);
     }
     Answer {

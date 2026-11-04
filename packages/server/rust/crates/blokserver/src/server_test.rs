@@ -6,32 +6,26 @@ use blok_auth::{Authorization, BoxFuture, Error, User};
 use blok_http::{Request, ResponseWriter};
 
 use super::*;
-use crate::seams::TicketClaims;
 use crate::testutil::{send, start, temp_dir};
 
 const GUARD_SECRET: &str = "s3cret-value-at-least-32-chars-long!";
 
-/// Stands in for blok-ticket until it lands: "read" and "write" are valid
-/// passes for u1, "other-doc" names a document.
-fn fake_verifier() -> crate::TicketVerifier {
-    Arc::new(|secret, pass, _now| {
-        assert_eq!(secret, GUARD_SECRET);
-        let claims = |write, doc: &str| TicketClaims {
-            user: "u1".into(),
-            doc: doc.into(),
-            write,
-        };
-        match pass {
-            "read" => Some(claims(false, "")),
-            "write" => Some(claims(true, "")),
-            "write-other-doc" => Some(claims(true, "other-doc")),
-            _ => None,
-        }
-    })
+fn pass(write: bool, doc: Option<&str>) -> String {
+    pass_at(write, doc, SystemTime::now())
+}
+
+fn pass_at(write: bool, doc: Option<&str>, now: SystemTime) -> String {
+    let claims = blok_blokserver_ticket::Claims {
+        user: "u1".into(),
+        doc: doc.map(str::to_owned),
+        write,
+        ttl_seconds: None,
+    };
+    blok_blokserver_ticket::mint(GUARD_SECRET, &claims, now).unwrap()
 }
 
 fn ticket_server() -> Server {
-    let server = Server::new(Options {
+    Server::new(Options {
         auth: "ticket".into(),
         secret: GUARD_SECRET.into(),
         allowed_origins: vec!["https://app.example.com".into()],
@@ -39,9 +33,7 @@ fn ticket_server() -> Server {
         public_url: "/files".into(),
         ..Options::default()
     })
-    .unwrap();
-    server.set_ticket_verifier(fake_verifier());
-    server
+    .unwrap()
 }
 
 // BlokServerRequestGuardTests: every guarded route that is not GET needs a
@@ -53,7 +45,8 @@ async fn guard_refuses_a_read_only_pass_on_a_write_route() {
     let got = send(
         running.address,
         &format!(
-            "POST /delete HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer read\r\nContent-Type: application/json\r\nContent-Length: {}",
+            "POST /delete HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer {}\r\nContent-Type: application/json\r\nContent-Length: {}",
+            pass(false, None),
             body.len()
         ),
         body,
@@ -92,7 +85,10 @@ async fn guarded(server: &Server, head: &str) -> String {
 async fn guard_ignores_the_doc_claim_and_sets_the_user() {
     let got = guarded(
         &ticket_server(),
-        "GET /health HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer write-other-doc",
+        &format!(
+            "GET /health HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer {}",
+            pass(true, Some("other-doc"))
+        ),
     )
     .await;
     let want = User {
@@ -103,24 +99,6 @@ async fn guard_ignores_the_doc_claim_and_sets_the_user() {
         authenticated: true,
     };
     assert_eq!(got, format!("200 {:?}", Some(&want)));
-}
-
-// Until blok-ticket is plugged in, ticket mode accepts no pass.
-#[tokio::test]
-async fn ticket_mode_without_a_verifier_refuses_every_pass() {
-    let server = Server::new(Options {
-        auth: "ticket".into(),
-        secret: GUARD_SECRET.into(),
-        allowed_origins: vec!["https://app.example.com".into()],
-        ..Options::default()
-    })
-    .unwrap();
-    let got = guarded(
-        &server,
-        "GET /health HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer write",
-    )
-    .await;
-    assert_eq!(got, "401 invalid pass\n");
 }
 
 // MapBlokServer(pattern) maps the routes in a group under pattern, with a
@@ -240,18 +218,12 @@ async fn options_clock_drives_the_ticket_check() {
             ..Options::default()
         })
         .unwrap();
-        // Valid for five minutes from then, as a pass minted then is.
-        server.set_ticket_verifier(Arc::new(move |_, _, now: SystemTime| {
-            let age = now.duration_since(then).ok()?;
-            (age < Duration::from_secs(300)).then(|| TicketClaims {
-                user: "u1".into(),
-                doc: String::new(),
-                write: true,
-            })
-        }));
         let got = guarded(
             &server,
-            "GET /health HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer token",
+            &format!(
+                "GET /health HTTP/1.1\r\nOrigin: https://app.example.com\r\nAuthorization: Bearer {}",
+                pass_at(true, None, then)
+            ),
         )
         .await;
         assert_eq!(got.starts_with("200 "), ok, "{name}: {got}");

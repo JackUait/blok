@@ -13,7 +13,6 @@ use blok_jsjson::append_quoted;
 use blok_route::{Router, method_not_allowed, start_stream};
 
 use crate::options::{Clock, Options, OptionsError};
-use crate::seams::TicketVerifier;
 
 /// A configured Blok server. Build it with [`Server::new`].
 #[derive(Clone)]
@@ -27,7 +26,6 @@ pub(crate) struct Inner {
     pub limiter: RateLimiter,
     pub clock: Clock,
     store: OnceLock<Result<Arc<dyn Store>, String>>,
-    ticket_verifier: Mutex<Option<TicketVerifier>>,
     #[cfg_attr(not(feature = "conformance"), allow(dead_code))]
     pub conformance: Mutex<Conformance>,
 }
@@ -63,7 +61,6 @@ impl Server {
                 limiter,
                 clock,
                 store: OnceLock::new(),
-                ticket_verifier: Mutex::new(None),
                 conformance: Mutex::new(Conformance::default()),
             }),
         })
@@ -71,12 +68,6 @@ impl Server {
 
     pub fn options(&self) -> &Options {
         &self.inner.options
-    }
-
-    /// Plugs in the ticket check (blok-ticket's verify). Until one is set,
-    /// ticket mode refuses every pass as invalid.
-    pub fn set_ticket_verifier(&self, verifier: TicketVerifier) {
-        *lock(&self.inner.ticket_verifier) = Some(verifier);
     }
 
     /// Stops the server's long-lived work before the HTTP server shuts
@@ -331,10 +322,7 @@ pub(crate) async fn guard(
             write_text(response, 401, "missing pass\n").await;
             return false;
         }
-        let verifier = lock(&inner.ticket_verifier).clone();
-        let claims =
-            verifier.and_then(|verify| verify(&inner.options.secret, pass, (inner.clock)()));
-        let Some(claims) = claims else {
+        let Some(claims) = blok_ticket::verify(&inner.options.secret, pass, (inner.clock)()) else {
             write_text(response, 401, "invalid pass\n").await;
             return false;
         };

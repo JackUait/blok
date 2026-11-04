@@ -18,10 +18,12 @@ blok-http = { path = "../http" }
 blok-jsjson = { path = "../jsjson" }
 blok-mediatype = { path = "../mediatype" }
 blok-route = { path = "../route" }
+blok-ticket = { path = "../ticket" }
 getrandom = "0.4"
 tokio = { version = "1", features = ["fs", "io-util", "sync", "time"] }
 
 [dev-dependencies]
+blok-blokserver-ticket = { path = "../blokserver-ticket" }
 tokio = { version = "1", features = ["fs", "io-util", "net", "rt", "rt-multi-thread", "macros", "time"] }
 
 [lints]

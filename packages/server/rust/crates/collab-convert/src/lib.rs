@@ -2,6 +2,7 @@
 //! Port of Go `internal/collab/convert` (C# YDocConverter.cs,
 //! CollabEditOps.cs, RichText*.cs, TextDiff.cs). One module per Go file.
 
+mod deepassign;
 mod editops;
 mod error;
 mod export;
@@ -59,6 +60,8 @@ mod csharp_structure_test;
 mod csharp_textdiff_test;
 #[cfg(test)]
 mod csharp_yrs_compat_test;
+#[cfg(test)]
+mod deepassign_test;
 #[cfg(test)]
 mod export_test;
 #[cfg(test)]

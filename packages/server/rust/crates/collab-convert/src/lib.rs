@@ -55,6 +55,10 @@ mod csharp_graphemes_test;
 #[cfg(test)]
 mod csharp_richtext_test;
 #[cfg(test)]
+mod csharp_seed_richtext_test;
+#[cfg(test)]
+mod csharp_seed_test;
+#[cfg(test)]
 mod csharp_structure_test;
 #[cfg(test)]
 mod csharp_textdiff_test;

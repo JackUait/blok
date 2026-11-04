@@ -60,8 +60,10 @@ version = "0.0.0"
 dependencies = [
  "blok-collab-workingset",
  "blok-dotnet",
+ "blok-jsjson",
  "blok-mediatype",
  "blok-outbound",
+ "flate2",
  "getrandom 0.4.3",
  "hmac",
  "sha2",

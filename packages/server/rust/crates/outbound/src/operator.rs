@@ -80,13 +80,13 @@ impl RequestBody<'_> {
 }
 
 /// One request: `headers` go out in order after Host, then Content-Length.
-pub struct Request<'a> {
+pub struct Request<'a, 'b> {
     pub method: &'a str,
     pub url: &'a Uri,
     /// The Host header, also the authority signed for S3.
     pub host: &'a str,
     pub headers: Vec<(String, String)>,
-    pub body: RequestBody<'a>,
+    pub body: RequestBody<'b>,
 }
 
 pub struct Response {
@@ -121,7 +121,7 @@ impl OperatorClient {
     }
 
     /// Sends one request on a new connection and reads the head.
-    pub async fn send(&self, request: Request<'_>) -> Result<Response, OperatorError> {
+    pub async fn send(&self, request: Request<'_, '_>) -> Result<Response, OperatorError> {
         let scheme = request.url.scheme.as_str();
         let proxy = self
             .proxy

@@ -324,3 +324,118 @@ async fn a_host_stores_checkpoint_error_decides_between_fail_and_retry() {
         host.close().await;
     }
 }
+
+// HostCollabTests.cs
+
+impl Host {
+    /// PostEditAsync: an insert of `id` with text `id`.
+    async fn insert(&self, key: &str, id: &str) -> Answer {
+        let body = format!(
+            r#"{{ "ops": [ {{ "op": "insert", "id": "{id}", "block": {{ "type": "paragraph", "data": {{ "text": "{id}" }} }} }} ] }}"#
+        );
+        send(
+            self.running.address,
+            &format!(
+                "POST /sync/doc-1/edit HTTP/1.1\r\nContent-Type: application/json; charset=utf-8\r\nBlok-Idempotency-Key: {key}\r\nContent-Length: {}",
+                body.len()
+            ),
+            body.as_bytes(),
+        )
+        .await
+    }
+}
+
+fn block_ids(output: &[u8]) -> Vec<String> {
+    let node = blok_jsjson::parse_node(output, Default::default()).unwrap();
+    node.lookup("blocks")
+        .unwrap()
+        .expect("no blocks array")
+        .items
+        .iter()
+        .map(|b| {
+            blok_jsjson::to_string_lossy(b.lookup("id").unwrap().unwrap().text().unwrap().units())
+        })
+        .collect()
+}
+
+/// Names under `dir`: (regular files, directories ending ".journal").
+fn listing(dir: &std::path::Path) -> (Vec<String>, Vec<String>) {
+    let (mut files, mut journals) = (Vec::new(), Vec::new());
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let entry = entry.unwrap();
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let kind = entry.file_type().unwrap();
+        if kind.is_file() {
+            files.push(name);
+        } else if kind.is_dir() && name.ends_with(".journal") {
+            journals.push(name);
+        }
+    }
+    (files, journals)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_collab_journal_flag_turns_on_receipts_and_key_dedupe_on_edit() {
+    let collab = temp_dir().join("collab");
+    let dir = collab.display().to_string();
+    let host = host_server(|o| {
+        o.collab_journal = true;
+        o.collab_directory = dir;
+    })
+    .await;
+
+    let first = host.insert("journal-key", "first").await;
+    let replay = host.insert("journal-key", "first").await;
+    let next = host.insert("journal-key-2", "second").await;
+
+    assert_eq!(first.status, 204, "{}", first.text());
+    assert_eq!(replay.status, 204, "{}", replay.text());
+    let lineage = first.header("Blok-Doc-Lineage").to_owned();
+    assert!(
+        lineage.len() == 32
+            && lineage
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "lineage {lineage:?}"
+    );
+    assert_eq!(first.header("Blok-Doc-Sequence"), "1");
+    assert_eq!(replay.header("Blok-Doc-Lineage"), lineage);
+    assert_eq!(replay.header("Blok-Doc-Sequence"), "1");
+    assert_eq!(next.header("Blok-Doc-Sequence"), "2");
+
+    let state = host.get("/sync/doc-1/state").await;
+    assert_eq!(state.status, 200, "{}", state.text());
+    assert_eq!(state.header("ETag"), format!("\"{lineage}:2\""));
+    // An insert with no "after" goes first, so the later edit leads.
+    assert_eq!(block_ids(&state.body), ["second", "first"]);
+    assert!(!listing(&collab).1.is_empty(), "no *.journal directory");
+    host.close().await;
+}
+
+// The endpoint GET answers null, so after the switch the block can only come
+// from the working set the first boot left. Once adopted the working-set
+// file goes.
+#[tokio::test(flavor = "multi_thread")]
+async fn turning_the_journal_on_keeps_what_the_working_set_held() {
+    let collab = temp_dir().join("collab");
+    let dir = collab.display().to_string();
+
+    let before = host_server(|o| o.collab_directory = dir.clone()).await;
+    let edit = before.insert("before-switch", "kept").await;
+    assert_eq!(edit.status, 204, "{}", edit.text());
+    before.close().await;
+
+    let after = host_server(|o| {
+        o.collab_journal = true;
+        o.collab_directory = dir;
+    })
+    .await;
+    let state = after.get("/sync/doc-1/state").await;
+    assert_eq!(state.status, 200, "{}", state.text());
+    assert_eq!(block_ids(&state.body), ["kept"]);
+    assert_eq!(state.header("Blok-Doc-Sequence"), "0");
+    let (files, journals) = listing(&collab);
+    assert!(files.is_empty(), "plain files left: {files:?}");
+    assert_eq!(journals.len(), 1, "{journals:?}");
+    after.close().await;
+}

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -272,4 +273,230 @@ async fn the_collab_runtime_is_built_only_on_the_first_html_read() {
     get("/sync/rich/state").await;
     get("/sync/rich/state").await;
     assert_eq!(*builds.lock().unwrap(), 1, "pools built after HTML reads");
+}
+
+// HostCollabTests.cs
+
+/// FixtureDocEndpoint: GET answers `get` (status, body); each PUT body is
+/// kept with its path.
+struct DocEndpoint {
+    running: crate::testutil::Running,
+    puts: Puts,
+}
+
+type Puts = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
+
+async fn doc_endpoint(get: Option<u16>, get_body: &'static str) -> DocEndpoint {
+    let puts = Arc::new(Mutex::new(Vec::new()));
+    let kept = puts.clone();
+    let running = start(move |mut request: Request, mut response: ResponseWriter| {
+        let kept = kept.clone();
+        async move {
+            if request.method() == "GET" {
+                if let Some(status) = get {
+                    response.set_status(status);
+                    return;
+                }
+                response
+                    .headers_mut()
+                    .set("Content-Type", "application/json; charset=utf-8");
+                let _ = response.write(get_body.as_bytes()).await;
+                return;
+            }
+            let mut body = Vec::new();
+            if let Some(reader) = request.body_mut() {
+                let _ = reader.read_to_end(&mut body).await;
+            }
+            kept.lock().unwrap().push((request.path().to_owned(), body));
+            response.set_status(204);
+        }
+    })
+    .await;
+    DocEndpoint { running, puts }
+}
+
+impl DocEndpoint {
+    fn server(&self, configure: impl FnOnce(&mut Options)) -> Server {
+        let mut o = Options {
+            doc_endpoint: format!("http://{}/docs", self.running.address),
+            ..collab_options()
+        };
+        configure(&mut o);
+        Server::new(o).unwrap()
+    }
+
+    /// The last PUT for doc-1 whose texts pass `carries`, waiting up to 30 s.
+    async fn put(&self, carries: impl Fn(&BTreeMap<String, String>) -> bool) -> Vec<u8> {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        loop {
+            let found = self
+                .puts
+                .lock()
+                .unwrap()
+                .iter()
+                .rev()
+                .find(|(path, body)| path.ends_with("/doc-1") && carries(&texts(body)))
+                .map(|(_, body)| body.clone());
+            if let Some(body) = found {
+                return body;
+            }
+            assert!(Instant::now() < deadline, "no write-back PUT within 30 s");
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+}
+
+/// Each block's data.text as compact JSON, by block id; `&` unescaped as
+/// C#'s UnsafeRelaxedJsonEscaping writes it.
+fn texts(output: &[u8]) -> BTreeMap<String, String> {
+    let node = blok_jsjson::parse_node(output, Default::default()).unwrap();
+    let blocks = node.lookup("blocks").unwrap().expect("no blocks array");
+    blocks
+        .items
+        .iter()
+        .map(|block| {
+            let id = block.lookup("id").unwrap().unwrap().text().unwrap();
+            let mut text = Vec::new();
+            if let Some(t) = block
+                .lookup("data")
+                .unwrap()
+                .and_then(|d| d.lookup("text").unwrap())
+            {
+                t.append_json(&mut text).unwrap();
+            }
+            (
+                blok_jsjson::to_string_lossy(id.units()),
+                String::from_utf8(text).unwrap().replace("\\u0026", "&"),
+            )
+        })
+        .collect()
+}
+
+async fn post_ops(address: std::net::SocketAddr, key: &str, ops: &str) -> crate::testutil::Answer {
+    let body = format!(r#"{{ "ops": {ops} }}"#);
+    send(
+        address,
+        &format!(
+            "POST /sync/doc-1/edit HTTP/1.1\r\nContent-Type: application/json; charset=utf-8\r\nBlok-Idempotency-Key: {key}\r\nContent-Length: {}",
+            body.len()
+        ),
+        body.as_bytes(),
+    )
+    .await
+}
+
+fn insert(id: &str) -> String {
+    format!(
+        r#"[ {{ "op": "insert", "id": "{id}", "block": {{ "type": "paragraph", "data": {{ "text": "{id}" }} }} }} ]"#
+    )
+}
+
+/// The close code of the first close frame after a 101.
+async fn upgrade_close_code(address: std::net::SocketAddr) -> u16 {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let mut conn = tokio::net::TcpStream::connect(address).await.unwrap();
+    conn.write_all(
+        b"GET /sync/doc-1 HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n",
+    )
+    .await
+    .unwrap();
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let mut head = Vec::new();
+        while !head.ends_with(b"\r\n\r\n") {
+            head.push(conn.read_u8().await.unwrap());
+        }
+        assert!(
+            head.starts_with(b"HTTP/1.1 101"),
+            "{}",
+            String::from_utf8_lossy(&head)
+        );
+        loop {
+            let opcode = conn.read_u8().await.unwrap() & 0x0f;
+            let mut length = u64::from(conn.read_u8().await.unwrap() & 0x7f);
+            if length == 126 {
+                length = u64::from(conn.read_u16().await.unwrap());
+            } else if length == 127 {
+                length = conn.read_u64().await.unwrap();
+            }
+            let mut payload = vec![0u8; usize::try_from(length).unwrap()];
+            conn.read_exact(&mut payload).await.unwrap();
+            if opcode == 0x8 {
+                return u16::from_be_bytes([payload[0], payload[1]]);
+            }
+        }
+    })
+    .await
+    .expect("no close frame")
+}
+
+// The host guide: a GET answering 404, 204 or an empty 200 fails a first
+// open closed; only "null" opens an empty document.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_seed_get_without_a_json_body_closes4503_and_state_answers503() {
+    for status in [404, 204, 200] {
+        let endpoint = doc_endpoint(Some(status), "").await;
+        let running = start(endpoint.server(|_| {}).handler("")).await;
+        assert_eq!(upgrade_close_code(running.address).await, 4503, "{status}");
+        let state = send(running.address, "GET /sync/doc-1/state HTTP/1.1", b"").await;
+        assert_eq!(state.status, 503, "{status}: {}", state.text());
+    }
+}
+
+// The edit route takes rich text as HTML or as segments; /state and the
+// write-back PUT both answer segments.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_edit_in_html_or_segments_is_served_and_written_back_as_segments() {
+    let endpoint = doc_endpoint(None, "null").await;
+    let s = endpoint.server(|_| {});
+    let running = start(s.handler("")).await;
+    let html = post_ops(
+        running.address,
+        "html-edit",
+        r#"[ { "op": "insert", "id": "html", "block": { "type": "paragraph", "data": { "text": "<b>bold</b> &amp; plain" } } } ]"#,
+    )
+    .await;
+    let segments = post_ops(
+        running.address,
+        "segments-edit",
+        r#"[ { "op": "insert", "id": "segments", "after": "html", "block": { "type": "paragraph", "data": { "text": [ { "text": "seg", "marks": { "italic": true } } ] } } } ]"#,
+    )
+    .await;
+    let state = send(running.address, "GET /sync/doc-1/state HTTP/1.1", b"").await;
+    assert_eq!(html.status, 204, "{}", html.text());
+    assert_eq!(segments.status, 204, "{}", segments.text());
+    assert_eq!(state.status, 200, "{}", state.text());
+    let expected = BTreeMap::from([
+        (
+            "html".to_owned(),
+            r#"[{"text":"bold","marks":{"bold":true}},{"text":" & plain"}]"#.to_owned(),
+        ),
+        (
+            "segments".to_owned(),
+            r#"[{"text":"seg","marks":{"italic":true}}]"#.to_owned(),
+        ),
+    ]);
+    assert_eq!(texts(&state.body), expected);
+    let put = endpoint.put(|t| t.len() == 2).await;
+    assert_eq!(texts(&put), expected);
+    let _ = s.drain(Duration::from_secs(30)).await;
+}
+
+// A document stored as HTML comes back as segments on the first write-back.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_html_document_from_the_endpoint_is_written_back_as_segments() {
+    let endpoint = doc_endpoint(
+        None,
+        r#"{ "time": 1, "blocks": [ { "id": "old", "type": "paragraph", "data": { "text": "a <i>b</i>" } } ] }"#,
+    )
+    .await;
+    let s = endpoint.server(|_| {});
+    let running = start(s.handler("")).await;
+    let edit = post_ops(running.address, "after-html-seed", &insert("new")).await;
+    let state = send(running.address, "GET /sync/doc-1/state HTTP/1.1", b"").await;
+    assert_eq!(edit.status, 204, "{}", edit.text());
+    let old = r#"[{"text":"a "},{"text":"b","marks":{"italic":true}}]"#;
+    assert_eq!(texts(&state.body)["old"], old, "{}", state.text());
+    let put = endpoint.put(|t| t.contains_key("new")).await;
+    assert_eq!(texts(&put)["old"], old);
+    let _ = s.drain(Duration::from_secs(30)).await;
 }

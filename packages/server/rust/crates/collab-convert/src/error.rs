@@ -1,6 +1,7 @@
 use std::fmt;
 
 use blok_jsruntime::InvokeError;
+use blok_yjs::EngineError;
 
 use crate::export::DataError;
 
@@ -13,6 +14,8 @@ pub enum Error {
     Runtime(InvokeError),
     /// A value JS JSON has no form for.
     Json(blok_jsjson::Error),
+    /// The engine refused an operation, where Go panics with *yjs.EngineError.
+    Engine(EngineError),
 }
 
 impl fmt::Display for Error {
@@ -21,6 +24,7 @@ impl fmt::Display for Error {
             Error::Data(err) => err.fmt(f),
             Error::Runtime(err) => err.fmt(f),
             Error::Json(err) => err.fmt(f),
+            Error::Engine(err) => err.fmt(f),
         }
     }
 }
@@ -31,6 +35,7 @@ impl std::error::Error for Error {
             Error::Data(err) => Some(err),
             Error::Runtime(err) => Some(err),
             Error::Json(err) => Some(err),
+            Error::Engine(err) => Some(err),
         }
     }
 }
@@ -50,5 +55,11 @@ impl From<InvokeError> for Error {
 impl From<blok_jsjson::Error> for Error {
     fn from(err: blok_jsjson::Error) -> Error {
         Error::Json(err)
+    }
+}
+
+impl From<EngineError> for Error {
+    fn from(err: EngineError) -> Error {
+        Error::Engine(err)
     }
 }

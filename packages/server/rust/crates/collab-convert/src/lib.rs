@@ -13,11 +13,15 @@ mod longestkept;
 mod richtext;
 mod richtextedit;
 mod richtextinput;
+mod structure;
 mod textdiff;
 mod textdiff_tables;
 
 pub use error::Error;
-pub use export::{DataError, RichTextHtml};
+pub use export::{
+    DataError, MAX_VALUE_DEPTH, PAGE_MAPS, RichTextHtml, RichTextHtmlSlot, SlotStep, export,
+    export_page, plain_json,
+};
 pub use fields::{FieldsError, RichTextFieldEntry, RichTextFields};
 pub use htmlreader::{HtmlReader, Invoker, MAX_CALL_CHARS, MAX_EDIT_HTML_CHARS, RuntimeHtmlReader};
 pub use keys::{DIFFABLE_TEXT_KEYS, ORDERED_ID_ARRAY_KEYS};
@@ -30,16 +34,28 @@ pub use richtextedit::{
     RichTextOp, RichTextTarget, apply_rich_text_ops, plan_rich_text_edit, same_json,
 };
 pub use richtextinput::RichTextInput;
+pub use structure::{
+    DocStructure, KeyShape, PageMap, PlainPageMap, describe_structure, is_plain_map_value,
+    plain_map_values_equal, plain_page_maps, read_page_maps,
+};
 pub use textdiff::{MAX_DIFF_DISTANCE, TextEdit, atomize, diff};
 
+#[cfg(test)]
+mod csharp_export_test;
 #[cfg(test)]
 mod csharp_graphemes_test;
 #[cfg(test)]
 mod csharp_richtext_test;
 #[cfg(test)]
+mod csharp_structure_test;
+#[cfg(test)]
 mod csharp_textdiff_test;
 #[cfg(test)]
+mod export_test;
+#[cfg(test)]
 mod fields_test;
+#[cfg(test)]
+mod hardening_test;
 #[cfg(test)]
 mod htmlreader_test;
 #[cfg(test)]
@@ -50,5 +66,7 @@ mod longestkept_test;
 mod richtext_test;
 #[cfg(test)]
 mod richtextinput_test;
+#[cfg(test)]
+mod structure_test;
 #[cfg(test)]
 mod textdiff_test;

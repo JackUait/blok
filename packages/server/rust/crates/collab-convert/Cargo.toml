@@ -9,9 +9,12 @@ publish.workspace = true
 [dependencies]
 blok-jsjson = { path = "../jsjson" }
 blok-jsruntime = { path = "../jsruntime" }
+blok-lib0 = { path = "../lib0" }
 blok-yjs = { path = "../yjs" }
 
 [dev-dependencies]
+base64 = "0.22"
+blok-dotnet = { path = "../dotnet" }
 blok-collab-collabtest = { path = "../collab-collabtest" }
 blok-yjs-yjstest = { path = "../yjs-yjstest" }
 

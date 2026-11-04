@@ -1,6 +1,8 @@
 use blok_jsjson::{Str, Value};
 use blok_yjs::{Array, Doc, Map, Options, Out, Outcome};
 
+use crate::apply::apply_ops;
+use crate::editops::parse_edit_ops;
 use crate::export::{BLOCKS_ROOT, GRID_ORDER_KEY, GRID_ROWS_KEY};
 use crate::export_test::{applied, decode64};
 use crate::fields::RichTextFields;
@@ -146,6 +148,19 @@ fn seeded(json: &[&str]) -> Doc {
     doc
 }
 
+/// C# YDocConverter.ApplyOps(doc, CollabEditOps.Parse(...)).
+fn apply(doc: &Doc, ops: &[&str]) {
+    let body = format!(r#"{{ "ops": [{}] }}"#, ops.join(","));
+    let ops = parse_edit_ops(body.as_bytes()).unwrap_or_else(|err| panic!("{err}"));
+    let fields = RichTextFields::built_in();
+    apply_ops(doc, &ops, &mut RichTextInput::refusing(&fields))
+        .unwrap_or_else(|err| panic!("{err}"));
+}
+
+fn stringify(value: &Value) -> String {
+    blok_jsjson::stringify(value).unwrap_or_else(|err| panic!("{err}"))
+}
+
 fn peer(server: &Doc) -> Doc {
     let peer = Doc::new(Options::default());
     sync(server, &peer);
@@ -240,24 +255,102 @@ fn seed_stores_an_empty_list_under_properties_as_a_keyed_container() {
 }
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn two_peers_relating_different_rows_at_once_keep_both() {}
+fn two_peers_relating_different_rows_at_once_keep_both() {
+    let server = seeded(&[ROW_WITH_RELATION]);
+    let peer = peer(&server);
+    apply(
+        &server,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "z" }, { "id": "b" }] } } }"#,
+        ],
+    );
+    apply(
+        &peer,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "z" }, { "id": "c" }] } } }"#,
+        ],
+    );
+    exchange(&server, &peer);
+    assert_eq!(related_ids(&server), ["b", "c", "z"]);
+    assert_eq!(related_ids(&peer), ["b", "c", "z"]);
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn a_removal_and_an_add_made_at_once_keep_the_add() {}
+fn a_removal_and_an_add_made_at_once_keep_the_add() {
+    let server = seeded(&[r#"{ "id": "r1", "type": "database-row",
+        "data": { "properties": { "rel": [{ "id": "z" }, { "id": "y" }] } } }"#]);
+    let peer = peer(&server);
+    apply(
+        &server,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "y" }] } } }"#,
+        ],
+    );
+    apply(
+        &peer,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "z" }, { "id": "y" }, { "id": "c" }] } } }"#,
+        ],
+    );
+    exchange(&server, &peer);
+    assert_eq!(related_ids(&server), ["c", "y"]);
+    assert_eq!(related_ids(&peer), related_ids(&server));
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn two_peers_relating_the_first_row_of_a_list_born_empty_keep_both() {}
+fn two_peers_relating_the_first_row_of_a_list_born_empty_keep_both() {
+    let server = seeded(&[
+        r#"{ "id": "r1", "type": "database-row", "data": { "properties": { "rel": [] } } }"#,
+    ]);
+    let peer = peer(&server);
+    apply(
+        &server,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "b" }] } } }"#,
+        ],
+    );
+    apply(
+        &peer,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "c" }] } } }"#,
+        ],
+    );
+    exchange(&server, &peer);
+    assert_eq!(related_ids(&server), ["b", "c"]);
+    assert_eq!(related_ids(&peer), ["b", "c"]);
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn a_clear_and_an_add_made_at_once_keep_the_add() {}
+fn a_clear_and_an_add_made_at_once_keep_the_add() {
+    let server = seeded(&[ROW_WITH_RELATION]);
+    let peer = peer(&server);
+    apply(
+        &server,
+        &[r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [] } } }"#],
+    );
+    apply(
+        &peer,
+        &[
+            r#"{ "op": "update", "id": "r1", "data": { "properties": { "rel": [{ "id": "z" }, { "id": "c" }] } } }"#,
+        ],
+    );
+    exchange(&server, &peer);
+    assert_eq!(related_ids(&server), ["c"]);
+    assert_eq!(related_ids(&peer), ["c"]);
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_update_that_adds_an_empty_list_makes_a_keyed_container() {}
+fn an_update_that_adds_an_empty_list_makes_a_keyed_container() {
+    let doc = seeded(&[
+        r#"{ "id": "r1", "type": "database-row", "data": { "properties": { "n": 1 } } }"#,
+    ]);
+    apply(
+        &doc,
+        &[r#"{ "op": "update", "id": "r1", "data": { "properties": { "n": 1, "rel": [] } } }"#],
+    );
+    let properties = as_map(entry(&data(&doc, "r1"), "properties"));
+    assert!(is_keyed_container(properties.get("rel")));
+}
 
 const ROW_WITH_TITLE: &str = r#"{ "id": "r1", "type": "database-row",
     "data": { "title": "Ship it", "properties": { "status": "todo" } } }"#;
@@ -314,17 +407,61 @@ fn an_old_row_keeps_its_nested_title_atomic() {
 }
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_insert_op_mints_a_y_text_for_the_row_title() {}
+fn an_insert_op_mints_a_y_text_for_the_row_title() {
+    let doc = seeded(&[r#"{ "id": "p", "type": "paragraph", "data": { "text": "" } }"#]);
+    apply(
+        &doc,
+        &[r#"{ "op": "insert", "id": "r1", "after": "p",
+        "block": { "type": "database-row", "data": { "title": "Ship it" } } }"#],
+    );
+    assert_eq!(title(&doc), "Ship it");
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_edit_keeps_the_same_y_text_instance_for_the_row_title() {}
+fn an_edit_keeps_the_same_y_text_instance_for_the_row_title() {
+    let doc = seeded(&[ROW_WITH_TITLE]);
+    let before = entry(&data(&doc, "r1"), "title").as_text();
+    apply(
+        &doc,
+        &[r#"{ "op": "update", "id": "r1", "data": { "title": "Ship it!" } }"#],
+    );
+    let after = entry(&data(&doc, "r1"), "title").as_text();
+    assert!(before.is_some() && before == after, "{before:?} {after:?}");
+    assert_eq!(title(&doc), "Ship it!");
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn a_server_seeded_row_merges_a_clients_typing_with_an_edit() {}
+fn a_server_seeded_row_merges_a_clients_typing_with_an_edit() {
+    let server = seeded(&[ROW_WITH_TITLE]);
+    let client = peer(&server);
+    // The client types " now" at the end of the title.
+    type_title(&client, "Ship it".len() as i64, " now");
+    // At the same moment the server pushes an edit that prepends "Do ".
+    apply(
+        &server,
+        &[r#"{ "op": "update", "id": "r1", "data": { "title": "Do Ship it" } }"#],
+    );
+    exchange(&server, &client);
+    assert_eq!(title(&server), "Do Ship it now");
+    assert_eq!(title(&client), title(&server));
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn the_server_never_invents_a_top_level_title_for_an_old_row() {}
+fn the_server_never_invents_a_top_level_title_for_an_old_row() {
+    let doc = seeded(&[r#"{ "id": "r0", "type": "database-row",
+        "data": { "properties": { "title": "Legacy" } } }"#]);
+    assert_eq!(data(&doc, "r0").keys(), [Str::from("properties")]);
+    // An edit that does not carry a title must not grow one either.
+    apply(
+        &doc,
+        &[r#"{ "op": "update", "id": "r0",
+        "data": { "properties": { "title": "Legacy", "status": "done" } } }"#],
+    );
+    assert_eq!(data(&doc, "r0").keys(), [Str::from("properties")]);
+    let want = blok_jsjson::parse(
+        br#"[{ "id": "r0", "type": "database-row",
+           "data": { "properties": { "title": "Legacy", "status": "done" } } }]"#,
+    )
+    .unwrap_or_else(|err| panic!("{err}"));
+    assert_eq!(stringify(&exported(&doc)), stringify(&want));
+}

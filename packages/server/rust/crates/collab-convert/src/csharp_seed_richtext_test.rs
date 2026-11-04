@@ -1,7 +1,11 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-use blok_jsjson::{Node, Options as JsonOptions, Str, Value, parse, parse_node, stringify};
-use blok_yjs::{Doc, Options, Out};
+use blok_jsjson::{Node, Object, Options as JsonOptions, Str, Value, parse, parse_node, stringify};
+use blok_yjs::{Array, Doc, In, Map, MapEntry, Options, Out, Text, XmlText};
+
+use crate::apply::{apply_ops, collect_ops_html};
+use crate::editops::{EditOp, parse_edit_ops};
 
 use crate::error::Error;
 use crate::export::{BLOCKS_ROOT, RichTextHtml, export};
@@ -317,29 +321,244 @@ fn seed_normalises_malformed_marks_and_embeds() {
 }
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_update_with_unchanged_segments_writes_nothing() {}
+fn an_update_with_unchanged_segments_writes_nothing() {
+    let doc = seeded(&[
+        r#"{ "id": "b1", "type": "paragraph", "data": { "text": [{ "text": "a", "marks": { "link": { "href": "h", "rel": "r" } } }] } }"#,
+    ]);
+    let updates = counted(&doc);
+    apply(
+        &doc,
+        &[
+            r#"{ "op": "update", "id": "b1", "data": { "text": [{ "marks": { "link": { "rel": "r", "href": "h", "title": "x" } }, "text": "a" }] } }"#,
+        ],
+    );
+    assert_eq!(count(&updates), 0);
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_update_edits_the_formatted_text_in_place() {}
+fn an_update_edits_the_formatted_text_in_place() {
+    let doc = seeded(&[
+        r#"{ "id": "b1", "type": "paragraph", "data": { "text": [{ "text": "hello world" }] } }"#,
+    ]);
+    let live = data_value(&doc, "b1", "text");
+    apply(
+        &doc,
+        &[
+            r#"{ "op": "update", "id": "b1", "data": { "text": [{ "text": "hello " }, { "text": "big", "marks": { "bold": true } }, { "text": " world" }] } }"#,
+        ],
+    );
+    assert!(live.is_some() && live == data_value(&doc, "b1", "text"));
+    assert_eq!(
+        text(&doc, "b1"),
+        r#"[{"text":"hello "},{"text":"big","marks":{"bold":true}},{"text":" world"}]"#
+    );
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_update_replaces_legacy_plain_text_with_formatted_text() {}
+fn an_update_replaces_legacy_plain_text_with_formatted_text() {
+    let doc = Doc::new(Options::default());
+    let blocks_map = doc
+        .get_map(BLOCKS_ROOT)
+        .unwrap_or_else(|err| panic!("{err}"));
+    let root = doc.get_array("root").unwrap_or_else(|err| panic!("{err}"));
+    doc.transact(|t| {
+        let data = Map::new(vec![MapEntry::new(
+            "text",
+            Text::new(Some(Str::from("<b>x</b>"))),
+        )]);
+        blocks_map.set(t, "b1", plain_block("b1", "paragraph", data))?;
+        root.insert(t, 0, vec![In::Any(Value::String(Str::from("b1")))])
+    })
+    .unwrap_or_else(|err| panic!("{err}"));
+    apply(
+        &doc,
+        &[
+            r#"{ "op": "update", "id": "b1", "data": { "text": [{ "text": "x", "marks": { "bold": true } }] } }"#,
+        ],
+    );
+    assert!(is_xml_text(data_value(&doc, "b1", "text")));
+    assert_eq!(text(&doc, "b1"), r#"[{"text":"x","marks":{"bold":true}}]"#);
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn an_update_finds_html_for_the_converter_using_the_blocks_type_in_the_doc() {}
+fn an_update_finds_html_for_the_converter_using_the_blocks_type_in_the_doc() {
+    let doc = seeded(&[
+        r#"{ "id": "b1", "type": "paragraph", "data": { "text": [] } }"#,
+        r#"{ "id": "c1", "type": "code", "data": { "code": "" } }"#,
+    ]);
+    let ops = ops(&[
+        r#"{ "op": "update", "id": "b1", "data": { "text": "<b>x</b>" } }"#,
+        r#"{ "op": "update", "id": "c1", "data": { "code": "<b>y</b>" } }"#,
+        r#"{ "op": "insert", "id": "n1", "block": { "type": "header", "data": { "text": "<i>z</i>" } } }"#,
+        r#"{ "op": "update", "id": "n1", "data": { "text": "<u>w</u>" } }"#,
+    ]);
+    let html = |kind: &str, field: &str, html: &str| RichTextHtml {
+        kind: Str::from(kind),
+        field: Str::from(field),
+        html: Str::from(html),
+    };
+    let fields = RichTextFields::built_in();
+    assert_eq!(
+        collect_ops_html(&doc, &ops, &fields).unwrap_or_else(|err| panic!("{err}")),
+        [
+            html("paragraph", "text", "<b>x</b>"),
+            html("header", "text", "<i>z</i>"),
+            html("header", "text", "<u>w</u>"),
+        ]
+    );
+    let result = apply_ops(&doc, &ops, &mut RichTextInput::refusing(&fields));
+    assert!(matches!(result, Err(Error::Edit(_))), "{result:?}");
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn same_as_live_reads_formatted_text_as_segments() {}
+fn same_as_live_reads_formatted_text_as_segments() {
+    let doc = seeded(&[r#"{ "id": "x1", "type": "custom", "data": { "nested": { "k": 1 } } }"#]);
+    let data = block_data(&doc, "x1");
+    doc.transact(|t| {
+        let rich = XmlText::new(None);
+        rich.insert(None, 0, "a", Some(&Object::new()))?;
+        data.set(t, "rich", rich)
+    })
+    .unwrap_or_else(|err| panic!("{err}"));
+    let updates = counted(&doc);
+    apply(
+        &doc,
+        &[
+            r#"{ "op": "update", "id": "x1", "data": { "nested": { "k": 1 }, "rich": [{ "text": "a" }] } }"#,
+        ],
+    );
+    assert_eq!(count(&updates), 0);
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn a_rest_edit_normalises_malformed_marks_and_embeds() {}
+fn a_rest_edit_normalises_malformed_marks_and_embeds() {
+    let doc =
+        seeded(&[r#"{ "id": "b1", "type": "paragraph", "data": { "text": [{ "text": "a" }] } }"#]);
+    apply(
+        &doc,
+        &[r#"{ "op": "update", "id": "b1", "data": { "text": [
+          { "text": "a", "marks": { "tag:b": { "x": null }, "color": [1] } },
+          { "embed": { "page": { "id": "p", "extra": "1" } } },
+          { "embed": { "equation": { "expression": "e" } } }
+        ] } }"#],
+    );
+    assert_eq!(
+        text(&doc, "b1"),
+        r#"[{"text":"a","marks":{"tag:b":{}}},{"embed":{"equation":{"expression":"e"}}}]"#
+    );
+}
 
 #[test]
-#[ignore = "needs apply (lane E)"]
-fn a_peers_malformed_write_neither_breaks_export_nor_the_next_edit() {}
+fn a_peers_malformed_write_neither_breaks_export_nor_the_next_edit() {
+    let doc = seeded(&[
+        r#"{ "id": "b1", "type": "paragraph", "data": { "text": [{ "text": "ab" }] } }"#,
+        r#"{ "id": "b2", "type": "paragraph", "data": { "text": [{ "text": "other" }] } }"#,
+    ]);
+    poison_formatted_text(&doc, "b1");
+    assert_eq!(
+        text(&doc, "b1"),
+        r#"[{"text":"a"},{"text":"x","marks":{"tag:b":{}}},{"text":"b"}]"#
+    );
+    assert_eq!(text(&doc, "b2"), r#"[{"text":"other"}]"#);
+    apply(
+        &doc,
+        &[r#"{ "op": "update", "id": "b1", "data": { "text": [{ "text": "abc" }] } }"#],
+    );
+    assert_eq!(text(&doc, "b1"), r#"[{"text":"abc"}]"#);
+    let live = data_value(&doc, "b1", "text")
+        .and_then(|v| v.as_xml_text())
+        .unwrap_or_else(|| panic!("not a YXmlText"));
+    let inserted: String = live
+        .to_delta()
+        .iter()
+        .filter_map(|op| match &op.insert {
+            Out::Any(Value::String(text)) => Some(text.to_string()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(inserted, "abc");
+}
+
+fn ops(ops: &[&str]) -> Vec<EditOp> {
+    let body = format!(r#"{{ "ops": [{}] }}"#, ops.join(","));
+    parse_edit_ops(body.as_bytes()).unwrap_or_else(|err| panic!("{err}"))
+}
+
+/// C# YDocConverter.ApplyOps(doc, ops): built-in fields, HTML refused.
+fn apply(doc: &Doc, json: &[&str]) {
+    let fields = RichTextFields::built_in();
+    apply_ops(doc, &ops(json), &mut RichTextInput::refusing(&fields))
+        .unwrap_or_else(|err| panic!("{err}"));
+}
+
+fn counted(doc: &Doc) -> Arc<Mutex<usize>> {
+    let updates = Arc::new(Mutex::new(0));
+    let sink = Arc::clone(&updates);
+    // Dropping the subscription does not unsubscribe.
+    let _subscription = doc.on_update(move |_| {
+        *sink.lock().unwrap_or_else(|err| panic!("{err}")) += 1;
+    });
+    updates
+}
+
+fn count(updates: &Arc<Mutex<usize>>) -> usize {
+    *updates.lock().unwrap_or_else(|err| panic!("{err}"))
+}
+
+fn block_data(doc: &Doc, id: &str) -> Map {
+    doc.get_map(BLOCKS_ROOT)
+        .unwrap_or_else(|err| panic!("{err}"))
+        .get(id)
+        .and_then(|block| block.as_map())
+        .and_then(|block| block.get("data"))
+        .and_then(|data| data.as_map())
+        .unwrap_or_else(|| panic!("no data map for {id}"))
+}
+
+fn plain_block(id: &str, kind: &str, data: Map) -> Map {
+    Map::new(vec![
+        MapEntry::new("id", Value::String(Str::from(id))),
+        MapEntry::new("type", Value::String(Str::from(kind))),
+        MapEntry::new("data", data),
+        MapEntry::new("tunes", Map::new(Vec::new())),
+        MapEntry::new("contentIds", Array::new(Vec::new())),
+    ])
+}
+
+fn object(entries: Vec<(&str, Value)>) -> Object {
+    entries
+        .into_iter()
+        .map(|(key, value)| (Str::from(key), value))
+        .collect()
+}
+
+/// Writes, between "a" and "b": a malformed equation embed, an "x" whose
+/// marks are a non-string tag attribute and a non-string color, and a page
+/// embed whose id is not a string.
+pub(crate) fn poison_formatted_text(doc: &Doc, block_id: &str) {
+    let text = data_value(doc, block_id, "text")
+        .and_then(|v| v.as_xml_text())
+        .unwrap_or_else(|| panic!("not a YXmlText"));
+    let marks = object(vec![
+        ("color", Value::Object(Object::new())),
+        (
+            "tag:b",
+            Value::Object(object(vec![("x", Value::Number(1.0))])),
+        ),
+    ]);
+    let bad_equation = object(vec![(
+        "equation",
+        Value::Object(object(vec![("expression", Value::Number(5.0))])),
+    )]);
+    let bad_page = object(vec![(
+        "page",
+        Value::Object(object(vec![("id", Value::Object(Object::new()))])),
+    )]);
+    let empty = Object::new();
+    doc.transact(|t| {
+        text.insert_embed(Some(t), 1, Value::Object(bad_equation), Some(&empty))?;
+        text.insert(Some(t), 2, "x", Some(&marks))?;
+        text.insert_embed(Some(t), 3, Value::Object(bad_page), Some(&empty))
+    })
+    .unwrap_or_else(|err| panic!("{err}"));
+}

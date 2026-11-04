@@ -33,7 +33,7 @@ pub(crate) fn json(value: &Value) -> String {
     stringify(value).unwrap_or_else(|err| panic!("{err}"))
 }
 
-fn json_array(values: Vec<Value>) -> String {
+pub(crate) fn json_array(values: Vec<Value>) -> String {
     json(&Value::Array(values))
 }
 
@@ -249,7 +249,7 @@ fn rich_text_ops_json(ops: &[RichTextOp]) -> Vec<Value> {
         .collect()
 }
 
-fn delta_json(delta: &[Delta]) -> Vec<Value> {
+pub(crate) fn delta_json(delta: &[Delta]) -> Vec<Value> {
     delta
         .iter()
         .map(|op| {

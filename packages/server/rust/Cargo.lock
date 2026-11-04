@@ -133,6 +133,16 @@ name = "blok-mediatype"
 version = "0.0.0"
 
 [[package]]
+name = "blok-route"
+version = "0.0.0"
+dependencies = [
+ "blok-dotnet",
+ "blok-http",
+ "blok-jsjson",
+ "tokio",
+]
+
+[[package]]
 name = "blok-server"
 version = "0.0.0"
 

@@ -130,6 +130,12 @@ impl Request {
         &self.path
     }
 
+    /// Replaces the routed path, for a mount under a prefix (PathBase in
+    /// ASP.NET). The target and the query stay as sent.
+    pub fn set_path(&mut self, path: String) {
+        self.path = path;
+    }
+
     /// The query with its '?', or "": Kestrel's QueryString.
     pub fn query(&self) -> &str {
         &self.query

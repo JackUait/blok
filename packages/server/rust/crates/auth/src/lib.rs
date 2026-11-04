@@ -1,0 +1,91 @@
+//! The caller identity the request guard sets and the handlers read. It is
+//! its own crate so blokserver and the collab handlers share one type;
+//! blokserver re-exports it.
+
+use std::future::Future;
+use std::pin::Pin;
+
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+
+/// The caller of one request. In ticket mode the guard builds it from the
+/// verified pass; a host's own middleware may set it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct User {
+    pub id: String,
+    pub name: String,
+    /// The one document the pass names, "" when it names none.
+    pub doc: String,
+    pub write: bool,
+    pub authenticated: bool,
+}
+
+/// Narrows document access: IBlokAuthorization. It is consulted on the
+/// document routes only, never on upload, unfurl or delete.
+pub trait Authorization: Send + Sync {
+    fn can_read_document<'a>(
+        &'a self,
+        user: &'a User,
+        document_id: &'a str,
+    ) -> BoxFuture<'a, Result<bool, Error>>;
+    fn can_write_document<'a>(
+        &'a self,
+        user: &'a User,
+        document_id: &'a str,
+    ) -> BoxFuture<'a, Result<bool, Error>>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_default_user_is_anonymous_and_read_only() {
+        let user = User::default();
+        assert!(!user.authenticated);
+        assert!(!user.write);
+        assert_eq!(user.doc, "");
+    }
+
+    struct OnlyDocA;
+
+    impl Authorization for OnlyDocA {
+        fn can_read_document<'a>(
+            &'a self,
+            _user: &'a User,
+            document_id: &'a str,
+        ) -> BoxFuture<'a, Result<bool, Error>> {
+            Box::pin(async move { Ok(document_id == "a") })
+        }
+        fn can_write_document<'a>(
+            &'a self,
+            user: &'a User,
+            _document_id: &'a str,
+        ) -> BoxFuture<'a, Result<bool, Error>> {
+            Box::pin(async move { Ok(user.write) })
+        }
+    }
+
+    #[test]
+    fn an_authorization_is_usable_as_a_shared_trait_object() {
+        let authorization: std::sync::Arc<dyn Authorization> = std::sync::Arc::new(OnlyDocA);
+        let user = User::default();
+        let writer = User {
+            write: true,
+            ..User::default()
+        };
+        assert!(poll_once(authorization.can_read_document(&user, "a")));
+        assert!(!poll_once(authorization.can_read_document(&user, "b")));
+        assert!(!poll_once(authorization.can_write_document(&user, "a")));
+        assert!(poll_once(authorization.can_write_document(&writer, "a")));
+    }
+
+    fn poll_once(mut future: BoxFuture<'_, Result<bool, Error>>) -> bool {
+        let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+        match future.as_mut().poll(&mut context) {
+            std::task::Poll::Ready(Ok(answer)) => answer,
+            _ => panic!("not ready"),
+        }
+    }
+}

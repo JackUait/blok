@@ -5,15 +5,21 @@
 mod codec;
 mod error;
 mod law;
+mod s3;
 mod tag;
 
 pub use codec::*;
 pub use error::*;
 pub use law::*;
+pub use s3::*;
 pub use tag::*;
 
 #[cfg(test)]
 mod csharp_codec_test;
+#[cfg(test)]
+mod csharp_s3_test;
+#[cfg(test)]
+mod s3_test;
 #[cfg(test)]
 mod test_json;
 #[cfg(test)]

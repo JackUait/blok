@@ -143,3 +143,33 @@ async fn content_encoding_matches_the_c_sharp_fixture() {
         }
     }
 }
+
+// The header CRC covers the name, however long it is.
+#[tokio::test]
+async fn gzip_header_crc_covers_a_long_name() {
+    let page = b"<p>";
+    let zipped = gzip(page);
+    let mut head = zipped[..10].to_vec();
+    head.extend_from_slice(&[b'a'; 600]);
+    head.push(0);
+    head[3] |= 0x08 | 0x02;
+    let mut crc = flate2::Crc::new();
+    crc.update(&head);
+    let sum = crc.sum() as u16;
+    for (header_crc, fail) in [(sum, false), (sum ^ 1, true)] {
+        let body = concat(&[&head, &header_crc.to_le_bytes(), &zipped[10..]]);
+        let got = read_bounded(
+            &body[..],
+            Some(body.len() as u64),
+            &[b"gzip"],
+            UNFURL_MAX,
+            false,
+        )
+        .await;
+        if fail {
+            assert!(got.is_err(), "crc {header_crc:x}: read {got:?}");
+        } else {
+            assert_eq!(got.ok().as_deref(), Some(&page[..]), "crc {header_crc:x}");
+        }
+    }
+}

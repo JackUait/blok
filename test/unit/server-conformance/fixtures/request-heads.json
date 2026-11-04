@@ -656,6 +656,14 @@
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
   },
   {
+    "name": "chunk data holding a semicolon",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\na\r\nnot found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "chunk data starting with a semicolon",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
     "name": "Host with an empty port",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },

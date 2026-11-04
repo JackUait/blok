@@ -781,3 +781,30 @@ func TestALongChunkExtensionIsNeverHeld(t *testing.T) {
 		}
 	}
 }
+
+// A ';' in chunk data is data. Only one on the size line, after the hex
+// digits and before its CRLF, starts an extension.
+func TestASemicolonInChunkDataArrivesAsData(t *testing.T) {
+	for _, c := range []struct{ chunks, want string }{
+		{"5\r\nA;xyz\r\n0\r\n\r\n", "A;xyz"},
+		{"3\r\n;ab\r\n0\r\n\r\n", ";ab"},
+		{"2;e=1\r\n;;\r\n0\r\n\r\n", ";;"},
+	} {
+		for _, size := range []int{1, 3, 4096} {
+			in := "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n" + c.chunks
+			var parts []string
+			for len(in) > size {
+				parts, in = append(parts, in[:size]), in[size:]
+			}
+			stream := &targetStream{src: &stutter{parts: append(parts, in)}}
+			request, err := http.ReadRequest(bufio.NewReader(stream))
+			if err != nil {
+				t.Fatalf("%q: %v", c.chunks, err)
+			}
+			body, err := io.ReadAll(request.Body)
+			if err != nil || string(body) != c.want {
+				t.Errorf("%q (reads of %d): body %q %v, want %q", c.chunks, size, body, err, c.want)
+			}
+		}
+	}
+}

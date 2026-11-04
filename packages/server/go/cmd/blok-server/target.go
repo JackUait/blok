@@ -472,14 +472,14 @@ func (s *targetStream) stepChunked() bool {
 	switch s.chunk {
 	case chunkSize:
 		// Kestrel's grammar first: what it refuses fails the body read.
-		status, complete := kestrelChunkPrefix(s.in)
+		status, complete, semicolon := kestrelChunkPrefix(s.in)
 		if status != 0 {
 			s.refuseBody(status)
 			return true
 		}
 		// Kestrel reads an extension as it comes, so it is dropped as it
 		// comes: holding it would let one line grow without bound.
-		if semicolon := bytes.IndexByte(s.in[:min(len(s.in), maxChunkPrefix)], ';'); semicolon >= 0 {
+		if semicolon >= 0 {
 			s.chunkDigits = append(s.chunkDigits[:0], s.in[:semicolon]...)
 			s.dropped += semicolon + 1
 			s.consume(semicolon + 1)

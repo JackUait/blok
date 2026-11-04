@@ -182,6 +182,24 @@ async fn chunked_bodies_follow_kestrels_grammar() {
     }
 }
 
+// A ';' in chunk data is data. Only one on the size line starts an
+// extension.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_semicolon_in_chunk_data_arrives_as_data() {
+    let server = start(routes, Config::default()).await;
+    for (chunks, want) in [
+        ("5\r\nA;xyz\r\n0\r\n\r\n", "A;xyz"),
+        ("3\r\n;ab\r\n0\r\n\r\n", ";ab"),
+        ("2;e=1\r\n;;\r\n0\r\n\r\n", ";;"),
+    ] {
+        let request = format!(
+            "POST /read HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n{chunks}"
+        );
+        let got = raw_answer(server.address, request.as_bytes()).await;
+        assert!(got.contains(&format!("read {want}")), "{chunks:?}: {got:?}");
+    }
+}
+
 // Measured: Kestrel answers nothing to a request whose peer half-closed,
 // even a whole one it already read. The Go host answers it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

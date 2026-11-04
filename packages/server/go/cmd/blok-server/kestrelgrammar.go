@@ -59,37 +59,38 @@ func isASCIILetterOrDigit(c byte) bool {
 // maxChunkPrefix is Kestrel's MaxChunkPrefixBytes: enough for "7FFFFFFF\r\n".
 const maxChunkPrefix = 10
 
-// kestrelChunkPrefix is Kestrel's ParseChunkedPrefix and ParseExtension on
-// the bytes so far. It gives 400 where Kestrel throws BadHttpRequest, 500
-// where its int size overflows (an IOException), and 0 with complete false
-// while it needs more bytes.
-func kestrelChunkPrefix(b []byte) (status int, complete bool) {
+// kestrelChunkPrefix is Kestrel's ParseChunkedPrefix on the bytes so far.
+// It gives 400 where Kestrel throws BadHttpRequest, 500 where its int size
+// overflows (an IOException), and 0 with complete false while it needs
+// more bytes. extension is where a ';' on the size line sits, after the
+// hex digits and before its CRLF, or -1: a ';' past the line is data.
+func kestrelChunkPrefix(b []byte) (status int, complete bool, extension int) {
 	if len(b) < 2 {
-		return 0, false
+		return 0, false, -1
 	}
 	size, status := kestrelChunkDigit(b[0], 0)
 	if status != 0 {
-		return status, false
+		return status, false, -1
 	}
 	first := b[1]
 	for consumed := 2; consumed < maxChunkPrefix; {
 		if first == ';' {
-			return kestrelChunkExtension(b[consumed:])
+			return 0, false, consumed - 1
 		}
 		if consumed >= len(b) {
-			return 0, false
+			return 0, false, -1
 		}
 		second := b[consumed]
 		consumed++
 		if first == '\r' && second == '\n' {
-			return 0, true
+			return 0, true, -1
 		}
 		if size, status = kestrelChunkDigit(first, size); status != 0 {
-			return status, false
+			return status, false, -1
 		}
 		first = second
 	}
-	return http.StatusBadRequest, false
+	return http.StatusBadRequest, false, -1
 }
 
 func kestrelChunkDigit(c byte, size int32) (int32, int) {
@@ -100,17 +101,4 @@ func kestrelChunkDigit(c byte, size int32) (int32, int) {
 		return 0, http.StatusInternalServerError
 	}
 	return size*16 + int32(hexValue(c)), 0
-}
-
-// kestrelChunkExtension takes anything up to the first CR or LF, which must
-// start CRLF.
-func kestrelChunkExtension(b []byte) (int, bool) {
-	end := strings.IndexAny(string(b), "\r\n")
-	if end < 0 || end+1 >= len(b) {
-		return 0, false
-	}
-	if b[end] == '\r' && b[end+1] == '\n' {
-		return 0, true
-	}
-	return http.StatusBadRequest, false
 }

@@ -38,9 +38,10 @@ import (
 // The swap keeps the length. CR and LF before a request line are dropped, as
 // Kestrel skips them. Only heads change, never a body. To know where the next
 // head starts it reads each head with http.ReadRequest, the parser net/http
-// uses. Whatever it cannot follow exactly (a chunked body, an upgrade,
-// CONNECT, a transfer coding net/http refuses) ends the rewriting for the
-// rest of the connection; MaxHeaderBytes then caps heads instead.
+// uses, and follows a chunked body as net/http's chunked reader does.
+// Whatever it cannot follow exactly (a chunked trailer, an upgrade, CONNECT)
+// ends the rewriting for the rest of the connection; MaxHeaderBytes then
+// caps heads instead.
 
 // Kestrel's defaults (KestrelServerLimits; Program.cs sets none), measured
 // on the C# host: the request line counts its line end, the header block
@@ -68,9 +69,19 @@ const (
 	streamLine = iota
 	streamHead
 	streamBody
+	// streamChunked: a chunked body, read as net/http's chunked reader reads it.
+	streamChunked
 	streamPass
 	// streamDone: a head was refused; nothing after it is read as HTTP.
 	streamDone
+)
+
+// Where a chunked body is, inside streamChunked.
+const (
+	chunkSize = iota
+	chunkData
+	chunkEnd
+	chunkLast
 )
 
 type queuedTarget struct{ sent, original string }
@@ -98,7 +109,10 @@ type targetStream struct {
 	state int
 	head  []byte // the current head, held until its blank line
 	body  int64  // Content-Length bytes left
-	buf   []byte // one read buffer for the stream's life
+	chunk int    // where a chunked body is
+	// chunkLeft is the current chunk's data bytes left.
+	chunkLeft uint64
+	buf       []byte // one read buffer for the stream's life
 	// scanned is how much of in has no LF, so a slow line is scanned once.
 	scanned int
 
@@ -193,14 +207,13 @@ func (s *targetStream) step() bool {
 		if n > s.body {
 			n = s.body
 		}
-		s.scanned = 0
-		if s.out, s.in = s.in[:n], s.in[n:]; len(s.in) == 0 {
-			s.in = nil
-		}
+		s.handOnBody(int(n))
 		if s.body -= n; s.body == 0 {
 			s.state = streamLine
 		}
 		return true
+	case streamChunked:
+		return s.stepChunked()
 	}
 	if s.state == streamLine {
 		skip := 0
@@ -381,6 +394,107 @@ func absoluteAuthority(target string) (authority, defaultPort string, ok bool) {
 		return authority, defaultPort, true
 	}
 	return authority + ":" + strconv.Itoa(number), "", true
+}
+
+// handOnBody hands on the first n bytes of in, unchanged.
+func (s *targetStream) handOnBody(n int) {
+	s.scanned = 0
+	if s.out, s.in = s.in[:n], s.in[n:]; len(s.in) == 0 {
+		s.in = nil
+	}
+}
+
+// maxChunkLine is under net/http's limit: its chunk line, CRLF included,
+// must fit its 4096-byte read buffer.
+const maxChunkLine = 4000
+
+// stepChunked follows a chunked body the way net/http's chunked reader does,
+// so the head after it is read like any other. Anything that reader might
+// read otherwise (a trailer, a line it refuses or may refuse) ends the
+// rewriting instead: net/http then closes on its error, or the next head
+// goes on unchecked, as before.
+func (s *targetStream) stepChunked() bool {
+	switch s.chunk {
+	case chunkSize:
+		end := bytes.IndexByte(s.in, '\n')
+		if end < 0 && len(s.in) < maxChunkLine {
+			return false
+		}
+		size, ok := uint64(0), end >= 0 && end < maxChunkLine
+		if ok {
+			size, ok = parseChunkLine(s.in[:end+1])
+		}
+		if !ok {
+			s.state = streamPass
+			return true
+		}
+		s.handOnBody(end + 1)
+		if s.chunk, s.chunkLeft = chunkData, size; size == 0 {
+			s.chunk = chunkLast
+		}
+		return true
+	case chunkData:
+		if len(s.in) == 0 {
+			return false
+		}
+		n := uint64(len(s.in))
+		if n > s.chunkLeft {
+			n = s.chunkLeft
+		}
+		s.handOnBody(int(n))
+		if s.chunkLeft -= n; s.chunkLeft == 0 {
+			s.chunk = chunkEnd
+		}
+		return true
+	}
+	// After a chunk's data, and after the last chunk when there is no
+	// trailer, net/http reads exactly CRLF.
+	if len(s.in) < 2 {
+		return false
+	}
+	if s.in[0] != '\r' || s.in[1] != '\n' {
+		s.state = streamPass
+		return true
+	}
+	s.handOnBody(2)
+	if s.chunk == chunkEnd {
+		s.chunk = chunkSize
+	} else {
+		s.state = streamLine
+	}
+	return true
+}
+
+// parseChunkLine is net/http's chunk-size line: CRLF with no other CR,
+// trailing spaces and tabs dropped, an extension cut at ';', then 1 to 16
+// hex digits.
+func parseChunkLine(line []byte) (uint64, bool) {
+	if len(line) < 2 || bytes.IndexByte(line, '\r') != len(line)-2 {
+		return 0, false
+	}
+	line = bytes.TrimRight(line[:len(line)-2], " \t")
+	line, _, _ = bytes.Cut(line, []byte(";"))
+	if len(line) == 0 || len(line) > 16 {
+		return 0, false
+	}
+	var size uint64
+	for _, c := range line {
+		if !isHex(c) {
+			return 0, false
+		}
+		size = size<<4 | uint64(hexValue(c))
+	}
+	return size, true
+}
+
+func hexValue(c byte) byte {
+	switch {
+	case c <= '9':
+		return c - '0'
+	case c >= 'a':
+		return c - 'a' + 10
+	}
+	return c - 'A' + 10
 }
 
 // swapHeaderLine applies Kestrel's header grammar to one line, in place. It
@@ -566,9 +680,15 @@ func (s *targetStream) endHead() {
 	if len(s.entry.swaps) > 0 {
 		s.entry.swaps = placeSwaps(s.head, s.entry.swaps)
 	}
-	if request.Method == "CONNECT" || len(request.TransferEncoding) > 0 || request.Header.Get("Upgrade") != "" ||
+	if request.Method == "CONNECT" || request.Header.Get("Upgrade") != "" ||
 		strings.Contains(strings.ToLower(strings.Join(request.Header.Values("Connection"), ",")), "upgrade") {
 		s.handOn(streamPass)
+		return
+	}
+	// takeCodings left net/http one chunked line, which HTTP/1.0 ignores.
+	if len(request.TransferEncoding) > 0 {
+		s.chunk = chunkSize
+		s.handOn(streamChunked)
 		return
 	}
 	s.body = request.ContentLength

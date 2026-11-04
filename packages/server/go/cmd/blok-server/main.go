@@ -95,7 +95,7 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,
 		// The stream holds Kestrel's head limits; this caps heads only after
-		// it stops rewriting (a chunked body, an upgrade). net/http adds 4096.
+		// it stops rewriting (a chunked trailer, an upgrade). net/http adds 4096.
 		MaxHeaderBytes: maxRequestLine + maxHeaderBlock - 4096,
 	}
 	restoreTargets(server)

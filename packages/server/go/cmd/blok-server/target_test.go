@@ -123,10 +123,22 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 		out:    "GET / HTTP/1.1\r\nHost: x\r\nX_y: a_b_\r\n\r\n",
 		queued: []queuedTarget{{"/", "/"}},
 	}, {
-		name:   "a chunked body ends the rewriting",
-		in:     "POST /a\x01 HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		out:    "POST /a_ HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		queued: []queuedTarget{{"/a_", "/a\x01"}},
+		name: "heads after a chunked body are still read",
+		in: "POST /a\x01 HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n" +
+			"2;e=GET /c\x01 \t\r\n\r\n\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n",
+		out: "POST /a_ HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n" +
+			"2;e=GET /c\x01 \t\r\n\r\n\r\n0\r\n\r\nGET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
+		queued: []queuedTarget{{"/a_", "/a\x01"}, {"/b_", "/b\x01"}},
+	}, {
+		name:   "a trailer ends the rewriting",
+		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: y\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: y\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		queued: []queuedTarget{{"/a", "/a"}},
+	}, {
+		name:   "a chunk net/http refuses ends the rewriting",
+		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\nx\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\nx\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		queued: []queuedTarget{{"/a", "/a"}},
 	}, {
 		name:   "an upgrade ends the rewriting",
 		in:     "GET /s\x01 HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
@@ -349,6 +361,8 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add("GET /a HTTP/1.1\r\nHost: x\r\nUpgrade: x\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: g\x01\r\ntransfer-encoding: x, chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n2;a=b \t\r\n\r\n\r\nA\r\nGET /x HTTP\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n")
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nT: 1\r\n\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("GET /e%4 HTTP/1.0\nContent-Length: 2\nX\"\x01: \x7f\n\n%zGET /f\t HTTP/1.1\nHost: x\n\n")
 	f.Add("\r\nGET / HTTP/1.1\r\nHost: x\r\nX: \xe9\r\n\r\n")
 	f.Add(" /% \n")
@@ -368,6 +382,7 @@ func FuzzTheStreamFollowsNetHTTPThroughTimeouts(f *testing.F) {
 	f.Add("POST /a%zz HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n", []byte{30, 5, 2}, uint8(7))
 	f.Add("GET /a HTTP/1.1\r\nHost: x\r\n\r\nGET /b%zz HTTP/1.1\r\nHost: x\r\nX: y\r\n\r\n", []byte{3, 17, 1}, uint8(1))
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n", []byte{40, 1}, uint8(3))
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3;e\r\nabc\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n", []byte{52, 2, 3, 1}, uint8(2))
 	f.Add("POST /000 HTTP/0.0\r\nContent-Length:07 \n\r\n0000000\n0 * HTTP/0.0\n\n", []byte("00"), uint8(7))
 	f.Add("0 * HTTP/0.0\n\n0 * HTTP/0.0\n\n", []byte("0"), uint8(1))
 	f.Fuzz(func(t *testing.T, in string, cuts []byte, size uint8) {
@@ -441,11 +456,18 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 			}
 			break
 		}
-		if request.Method == "CONNECT" || request.Method == "PRI" || len(request.TransferEncoding) > 0 || request.ProtoMajor != 1 ||
+		if request.Method == "CONNECT" || request.Method == "PRI" || request.ProtoMajor != 1 ||
 			request.Header.Get("Upgrade") != "" || strings.Contains(strings.ToLower(request.Header.Get("Connection")), "upgrade") {
 			break
 		}
 		if _, err := io.Copy(io.Discard, request.Body); err != nil {
+			break
+		}
+		// The stream may give up on a chunked body (a trailer, a long
+		// line); then nothing after it is queued. If it followed the body,
+		// the next request must match the queue.
+		if len(request.TransferEncoding) > 0 && stream.state == streamPass && len(stream.queued) == 0 {
+			stop = consumed()
 			break
 		}
 	}

@@ -1,0 +1,2 @@
+go test fuzz v1
+string("0 / HTTP/1.1\nHost:\ntrAnsfer-enCoding:Chunked\n\n0\r\n\r\n /% HTTP/1.0\n")

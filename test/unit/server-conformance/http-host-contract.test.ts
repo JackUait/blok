@@ -1294,6 +1294,10 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'unread body over the cap, kept alive': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 30000001\r\n\r\n'),
   'POST /upload with an unread body, then a refused head': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
   'POST /upload over its cap, kept alive': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n\r\n'),
+  // Heads after a chunked body keep Kestrel's limits and grammar.
+  'chunked body, then 101 headers': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n${headWith(numbered(99))}`),
+  'chunked body with data and an extension, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2;e=1\r\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'gzip, chunked body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

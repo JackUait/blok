@@ -504,7 +504,7 @@ fn formatted_writes_read_back_in_yjs() {}
 fn node_replay_applies_an_empty_update_and_reports_no_pending() {}
 
 #[test]
-#[ignore = "needs the collab converter (YrsCompatCorpusTests.CapturedUpdatesApplyIntoTheEngineAndExportTheCanonicalJson)"]
+#[ignore = "ported to blok-collab-convert csharp_yrs_compat_test.rs: needs the converter, which blok-yjs cannot depend on"]
 fn captured_updates_apply_into_the_engine_and_export_the_canonical_json() {}
 
 // A room holds its document across awaits on a multi-thread runtime.

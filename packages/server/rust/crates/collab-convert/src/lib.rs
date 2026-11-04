@@ -51,6 +51,8 @@ mod csharp_structure_test;
 #[cfg(test)]
 mod csharp_textdiff_test;
 #[cfg(test)]
+mod csharp_yrs_compat_test;
+#[cfg(test)]
 mod export_test;
 #[cfg(test)]
 mod fields_test;

@@ -1,12 +1,13 @@
-use blok_jsjson::Value;
-use blok_yjs::{Array, Doc, Map, Options, Out};
+use blok_jsjson::{Str, Value};
+use blok_yjs::{Array, Doc, Map, Options, Out, Outcome};
 
 use crate::export::{BLOCKS_ROOT, GRID_ORDER_KEY, GRID_ROWS_KEY};
 use crate::export_test::{applied, decode64};
 use crate::fields::RichTextFields;
+use crate::richtext_test::{field, items};
 use crate::richtextinput::RichTextInput;
 use crate::seed::seed;
-use crate::seed_test::{converted, node_of};
+use crate::seed_test::{converted, exported, node_of};
 
 fn client_update(case: &str) -> Doc {
     let path = blok_collab_collabtest::path(&format!("collab/{case}/update.b64"));
@@ -129,3 +130,201 @@ fn server_seed_keys_a_row_by_its_row_id() {
 fn the_client_update_keys_the_rows_the_same_way() {
     assert_row_keys(&client_update("table-row-ids"));
 }
+
+fn seeded(json: &[&str]) -> Doc {
+    let nodes: Vec<blok_jsjson::Node> = json
+        .iter()
+        .map(|block| {
+            blok_jsjson::parse_node(block.as_bytes(), blok_jsjson::Options::default())
+                .unwrap_or_else(|err| panic!("{err}"))
+        })
+        .collect();
+    let doc = Doc::new(Options::default());
+    let fields = RichTextFields::built_in();
+    seed(&doc, &nodes, &mut RichTextInput::refusing(&fields), None)
+        .unwrap_or_else(|err| panic!("{err}"));
+    doc
+}
+
+fn peer(server: &Doc) -> Doc {
+    let peer = Doc::new(Options::default());
+    sync(server, &peer);
+    peer
+}
+
+fn sync(from: &Doc, to: &Doc) {
+    let update = from
+        .encode_state_as_update(&to.encode_state_vector())
+        .unwrap_or_else(|err| panic!("{err}"));
+    let result = to
+        .apply_update(&update)
+        .unwrap_or_else(|err| panic!("{err}"));
+    assert_eq!(result.outcome, Outcome::Applied);
+}
+
+fn exchange(left: &Doc, right: &Doc) {
+    let to_right = left
+        .encode_state_as_update(&right.encode_state_vector())
+        .unwrap_or_else(|err| panic!("{err}"));
+    let to_left = right
+        .encode_state_as_update(&left.encode_state_vector())
+        .unwrap_or_else(|err| panic!("{err}"));
+    for (doc, update) in [(right, to_right), (left, to_left)] {
+        let result = doc
+            .apply_update(&update)
+            .unwrap_or_else(|err| panic!("{err}"));
+        assert_eq!(result.outcome, Outcome::Applied);
+    }
+}
+
+fn is_keyed_container(value: Option<Out>) -> bool {
+    value.and_then(|value| value.as_map()).is_some_and(|map| {
+        map.get(GRID_ROWS_KEY)
+            .is_some_and(|rows| rows.as_map().is_some())
+            && map
+                .get(GRID_ORDER_KEY)
+                .is_some_and(|order| order.as_array().is_some())
+    })
+}
+
+fn related_ids(doc: &Doc) -> Vec<String> {
+    let blocks = exported(doc);
+    let block = items(&blocks)
+        .iter()
+        .find(|block| matches!(field(block, "id"), Value::String(id) if id.to_string() == "r1"))
+        .unwrap_or_else(|| panic!("no r1"));
+    let mut ids: Vec<String> = match field(field(field(block, "data"), "properties"), "rel") {
+        Value::Array(relation) => relation
+            .iter()
+            .map(|item| match field(item, "id") {
+                Value::String(id) => id.to_string(),
+                _ => String::new(),
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    ids.sort();
+    ids
+}
+
+const ROW_WITH_RELATION: &str = r#"{ "id": "r1", "type": "database-row",
+    "data": { "title": "Alpha", "properties": { "rel": [{ "id": "z" }] } } }"#;
+
+// C# YDocConverterDatabaseRelationTests: a relation value is a list of
+// { "id": rowId } objects inside a row's properties, stored keyed by id
+// through the generic identity rule.
+#[test]
+fn seed_stores_a_relation_value_keyed_by_id() {
+    let doc = seeded(&[ROW_WITH_RELATION]);
+    let properties = as_map(entry(&data(&doc, "r1"), "properties"));
+    let relation = entry(&properties, "rel");
+    assert!(!matches!(relation, Out::Any(Value::String(_))));
+    assert!(relation.as_array().is_none());
+    assert_eq!(related_ids(&doc), ["z"]);
+}
+
+#[test]
+fn seed_stores_an_empty_list_under_properties_as_a_keyed_container() {
+    let doc = seeded(&[r#"{ "id": "r1", "type": "database-row",
+        "data": { "properties": { "rel": [], "tags": ["a"] }, "other": { "x": [] } } }"#]);
+    let properties = as_map(entry(&data(&doc, "r1"), "properties"));
+    let other = as_map(entry(&data(&doc, "r1"), "other"));
+    assert!(is_keyed_container(properties.get("rel")));
+    assert!(!is_keyed_container(other.get("x")));
+    let blocks = exported(&doc);
+    let rel = field(
+        field(field(&items(&blocks)[0], "data"), "properties"),
+        "rel",
+    );
+    assert_eq!(rel, &Value::Array(Vec::new()));
+}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn two_peers_relating_different_rows_at_once_keep_both() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn a_removal_and_an_add_made_at_once_keep_the_add() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn two_peers_relating_the_first_row_of_a_list_born_empty_keep_both() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn a_clear_and_an_add_made_at_once_keep_the_add() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn an_update_that_adds_an_empty_list_makes_a_keyed_container() {}
+
+const ROW_WITH_TITLE: &str = r#"{ "id": "r1", "type": "database-row",
+    "data": { "title": "Ship it", "properties": { "status": "todo" } } }"#;
+
+fn title(doc: &Doc) -> String {
+    entry(&data(doc, "r1"), "title")
+        .as_text()
+        .unwrap_or_else(|| panic!("not a YText"))
+        .units()
+        .to_string()
+}
+
+fn type_title(doc: &Doc, index: i64, characters: &str) {
+    let title = entry(&data(doc, "r1"), "title")
+        .as_text()
+        .unwrap_or_else(|| panic!("not a YText"));
+    doc.transact(|t| title.insert(Some(t), index, characters, None))
+        .unwrap_or_else(|err| panic!("{err}"));
+}
+
+// C# YDocConverterDatabaseRowTitleTests: a database-row's top-level title
+// is a Y.Text whoever seeds it, because title is a diffable text key.
+#[test]
+fn seed_stores_a_database_row_title_as_a_y_text() {
+    assert_eq!(title(&seeded(&[ROW_WITH_TITLE])), "Ship it");
+}
+
+#[test]
+fn two_clients_typing_in_one_row_title_keep_both_bursts() {
+    let server = seeded(&[ROW_WITH_TITLE]);
+    let left = peer(&server);
+    let right = peer(&server);
+    type_title(&left, 0, "A ");
+    type_title(&right, "Ship it".len() as i64, " B");
+    exchange(&server, &left);
+    exchange(&server, &right);
+    exchange(&server, &left);
+    for doc in [&server, &left, &right] {
+        assert_eq!(title(doc), "A Ship it B");
+    }
+}
+
+// A row written before the top-level title existed keeps its title inside
+// properties, a nested key and so an atomic leaf, as on the client.
+#[test]
+fn an_old_row_keeps_its_nested_title_atomic() {
+    let doc = seeded(&[r#"{ "id": "r0", "type": "database-row",
+        "data": { "properties": { "title": "Legacy", "status": "todo" } } }"#]);
+    let properties = as_map(entry(&data(&doc, "r0"), "properties"));
+    assert_eq!(
+        entry(&properties, "title"),
+        Out::Any(Value::String(Str::from("Legacy")))
+    );
+}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn an_insert_op_mints_a_y_text_for_the_row_title() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn an_edit_keeps_the_same_y_text_instance_for_the_row_title() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn a_server_seeded_row_merges_a_clients_typing_with_an_edit() {}
+
+#[test]
+#[ignore = "needs apply (lane E)"]
+fn the_server_never_invents_a_top_level_title_for_an_old_row() {}

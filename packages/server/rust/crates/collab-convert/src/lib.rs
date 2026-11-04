@@ -49,6 +49,8 @@ pub use structure::{
 pub use textdiff::{MAX_DIFF_DISTANCE, TextEdit, atomize, diff};
 
 #[cfg(test)]
+mod apply_test;
+#[cfg(test)]
 mod csharp_export_test;
 #[cfg(test)]
 mod csharp_graphemes_test;

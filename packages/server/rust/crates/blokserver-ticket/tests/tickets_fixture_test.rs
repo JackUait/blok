@@ -68,7 +68,7 @@ fn mints_the_shared_ticket_passes_byte_for_byte() {
         ("userTwo", "u2", "doc-42", true),
     ] {
         let claims = Claims {
-            user: user.into(),
+            user: Some(user.into()),
             doc: Some(doc.into()),
             write,
             ttl_seconds: Some(FIXTURE_EXP),

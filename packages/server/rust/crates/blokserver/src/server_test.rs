@@ -16,8 +16,8 @@ fn pass(write: bool, doc: Option<&str>) -> String {
 
 fn pass_at(write: bool, doc: Option<&str>, now: SystemTime) -> String {
     let claims = blok_blokserver_ticket::Claims {
-        user: "u1".into(),
-        doc: doc.map(str::to_owned),
+        user: Some("u1".into()),
+        doc: doc.map(Into::into),
         write,
         ttl_seconds: None,
     };

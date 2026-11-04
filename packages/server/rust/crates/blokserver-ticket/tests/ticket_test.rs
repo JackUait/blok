@@ -3,6 +3,7 @@ mod support;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use blok_blokserver_ticket::{Claims, DEFAULT_TTL_SECONDS, MINIMUM_SECRET_LENGTH, MintError, mint};
+use blok_jsjson::Str;
 use blok_ticket::{HEADER_SEGMENT, verify};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -75,8 +76,8 @@ fn mint_matches_the_c_sharp_fixture() {
     let now = at(int(&f, "now"));
     for c in &get(&f, "mints").unwrap().items {
         let claims = Claims {
-            user: text(c, "user"),
-            doc: opt_text(c, "doc"),
+            user: Some(text(c, "user").into()),
+            doc: opt_text(c, "doc").map(Str::from),
             write: flag(c, "write"),
             ttl_seconds: Some(int(c, "ttl")),
         };
@@ -85,9 +86,10 @@ fn mint_matches_the_c_sharp_fixture() {
         match get(answer, "throws") {
             Some(_) => {
                 let thrown = text(answer, "throws");
-                let error = result.expect_err(&claims.user);
+                let error = result.expect_err(&format!("{:?}", claims.user));
                 let kind = match error {
-                    MintError::ShortSecret => "ArgumentException",
+                    MintError::ShortSecret | MintError::LoneSurrogate => "ArgumentException",
+                    MintError::Null => "ArgumentNullException",
                     MintError::Lifetime => "ArgumentOutOfRangeException",
                     MintError::Overflow => "OverflowException",
                 };
@@ -102,7 +104,7 @@ fn mint_matches_the_c_sharp_fixture() {
 fn mint_zero_ttl_uses_the_default() {
     let now = at(1_700_000_000);
     let claims = Claims {
-        user: "u".into(),
+        user: Some("u".into()),
         ..Claims::default()
     };
     let token = mint(SECRET, &claims, now).unwrap();
@@ -110,15 +112,22 @@ fn mint_zero_ttl_uses_the_default() {
     assert_eq!(verified.exp, 1_700_000_000 + DEFAULT_TTL_SECONDS);
 }
 
+// Go's invalid UTF-8 is a JS string's lone surrogate: either would be
+// written as U+FFFD, a valid pass for another id.
 #[test]
-#[ignore = "a Rust String cannot hold invalid UTF-8 or a lone surrogate, so mint takes no such input"]
-fn mint_refuses_invalid_utf8() {}
+fn mint_refuses_invalid_utf8() {
+    let claims = Claims {
+        user: Some(Str(vec![0xff, 0xdfff])),
+        ..Claims::default()
+    };
+    assert_eq!(mint(SECRET, &claims, at(0)), Err(MintError::LoneSurrogate));
+}
 
 #[test]
 fn a_pass_for_a_non_ascii_user_is_read_back_by_the_verifier() {
     let now = at(1_800_000_000);
     let claims = Claims {
-        user: "ü😀<".into(),
+        user: Some("ü😀<".into()),
         doc: Some("doc-ü".into()),
         write: true,
         ttl_seconds: Some(60),
@@ -134,7 +143,7 @@ fn a_pass_for_a_non_ascii_user_is_read_back_by_the_verifier() {
 fn a_null_doc_leaves_the_claim_out_and_defaults_to_a_read_pass() {
     let now = at(1_800_000_000);
     let claims = Claims {
-        user: "u1".into(),
+        user: Some("u1".into()),
         ..Claims::default()
     };
     let verified = verify(SECRET, &mint(SECRET, &claims, now).unwrap(), now).unwrap();
@@ -143,14 +152,37 @@ fn a_null_doc_leaves_the_claim_out_and_defaults_to_a_read_pass() {
     assert_eq!(verified.exp, 1_800_000_000 + DEFAULT_TTL_SECONDS);
 }
 
+// A lone surrogate would be written as U+FFFD: a valid pass for another id.
 #[test]
-#[ignore = "a Rust String cannot hold a lone surrogate, so mint takes no such input"]
-fn rejects_a_lone_surrogate_in_the_user_or_the_doc() {}
+fn rejects_a_lone_surrogate_in_the_user_or_the_doc() {
+    let lone = Str(vec![u16::from(b'a'), 0xd800]);
+    assert_eq!(lone.len(), 2);
+    for in_user in [true, false] {
+        let claims = if in_user {
+            Claims {
+                user: Some(lone.clone()),
+                doc: Some("doc-42".into()),
+                ..Claims::default()
+            }
+        } else {
+            Claims {
+                user: Some("u1".into()),
+                doc: Some(lone.clone()),
+                ..Claims::default()
+            }
+        };
+        assert_eq!(
+            mint(SECRET, &claims, at(1_800_000_000)),
+            Err(MintError::LoneSurrogate),
+            "in user: {in_user}"
+        );
+    }
+}
 
 #[test]
 fn rejects_a_secret_shorter_than_the_server_floor() {
     let claims = Claims {
-        user: "u1".into(),
+        user: Some("u1".into()),
         ..Claims::default()
     };
     let now = at(1_800_000_000);
@@ -168,7 +200,7 @@ fn rejects_a_secret_shorter_than_the_server_floor() {
 #[test]
 fn rejects_a_ttl_that_is_not_positive() {
     let claims = Claims {
-        user: "u1".into(),
+        user: Some("u1".into()),
         ttl_seconds: Some(0),
         ..Claims::default()
     };
@@ -178,7 +210,7 @@ fn rejects_a_ttl_that_is_not_positive() {
 #[test]
 fn rejects_a_ttl_that_overflows_exp() {
     let claims = Claims {
-        user: "u1".into(),
+        user: Some("u1".into()),
         ttl_seconds: Some(i64::MAX),
         ..Claims::default()
     };
@@ -192,7 +224,7 @@ fn rejects_a_ttl_that_overflows_exp() {
 fn a_pass_verifies_until_the_second_before_exp() {
     let minted_at = 1_800_000_000;
     let claims = Claims {
-        user: "u1".into(),
+        user: Some("u1".into()),
         doc: Some("doc-42".into()),
         ..Claims::default()
     };
@@ -203,5 +235,12 @@ fn a_pass_verifies_until_the_second_before_exp() {
 }
 
 #[test]
-#[ignore = "Rust claims and users cannot be null"]
-fn rejects_null_claims_or_a_null_user() {}
+fn rejects_null_claims_or_a_null_user() {
+    let now = at(1_800_000_000);
+    assert_eq!(mint(SECRET, None, now), Err(MintError::Null));
+    let claims = Claims {
+        user: None,
+        ..Claims::default()
+    };
+    assert_eq!(mint(SECRET, &claims, now), Err(MintError::Null));
+}

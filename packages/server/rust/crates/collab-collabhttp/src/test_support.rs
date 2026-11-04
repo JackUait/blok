@@ -7,24 +7,31 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use blok_auth::{Authorization, BoxFuture as AuthFuture, Error as AuthError, User};
-use blok_collab::BoxFuture;
+use blok_collab::{BoxFuture, CloseReason, Member, Membership, OperationSource};
 use blok_collab_convert::{
     DocConverter, EditError, EditOp, RichTextHtml, RichTextHtmlSlot, RuntimeHtmlReader, SlotStep,
     TransientError,
 };
 use blok_collab_docendpoint::{Loaded, Projection};
 use blok_collab_journal::{Context, LineageDeleteOutcome, LineageInfo};
+use blok_collab_operation::{
+    AppendOutcome, AppendResult, Candidate, Checkpoint, Head, Lookup, OpenResult, Record, Reset,
+};
 use blok_collab_room::{
     Converter, Endpoint, Error, Headers, HistoryConverter, HistoryStore, LocalJournal, Manager,
-    ManagerOptions, Opened, OperationStore, Options as RoomOptions, PurgeStore, Records,
+    ManagerOptions, Opened, OperationSession, OperationStore, Options as RoomOptions, PurgeStore,
+    Records,
 };
+use blok_collab_wire::Message;
 use blok_collab_workingset::LocalStore;
 use blok_http::{Config as HttpConfig, Handler, Request, ResponseWriter, Server};
 use blok_jsjson::{Node, Object, Options as JsonOptions, Str, Value, parse_node};
-use blok_jsruntime::{Options as PoolOptions, Pool};
+use blok_jsruntime::{
+    Failure as RuntimeFailure, InvokeError, Kind as FailureKind, Options as PoolOptions, Pool,
+};
 use blok_route::Router;
 use blok_yjs::Doc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -182,6 +189,8 @@ fn failure_error(failure: Failure) -> Option<Error> {
 pub enum EditFailure {
     Transient,
     Refused(&'static str),
+    /// A refusal whose cause is the runtime's DocumentTooLarge.
+    TooLarge(&'static str),
 }
 
 /// C# FailingConverter over the real converter.
@@ -189,6 +198,7 @@ pub struct FailingConverter {
     inner: DocConverter<&'static RuntimeHtmlReader<Pool>>,
     state: Mutex<(Failure, Option<String>)>,
     pub next_edit: Mutex<Option<EditFailure>>,
+    pub apply_calls: AtomicUsize,
 }
 
 impl FailingConverter {
@@ -222,6 +232,7 @@ impl Converter for FailingConverter {
         ops: &'a [EditOp],
     ) -> BoxFuture<'a, Result<(), Error>> {
         Box::pin(async move {
+            self.apply_calls.fetch_add(1, Ordering::SeqCst);
             let next = self
                 .next_edit
                 .lock()
@@ -231,6 +242,17 @@ impl Converter for FailingConverter {
                 Some(EditFailure::Transient) => Err(failure_error(Failure::Transient).unwrap()),
                 Some(EditFailure::Refused(message)) => Err(Error::Convert(
                     blok_collab_convert::Error::Edit(EditError::new(message)),
+                )),
+                Some(EditFailure::TooLarge(message)) => Err(Error::Convert(
+                    blok_collab_convert::Error::Edit(EditError {
+                        message: message.to_owned(),
+                        err: Some(Box::new(blok_collab_convert::Error::Runtime(
+                            InvokeError::Failure(RuntimeFailure {
+                                kind: FailureKind::DocumentTooLarge,
+                                err: blok_jsruntime::Error::Engine("too large".to_owned()),
+                            }),
+                        ))),
+                    }),
                 )),
                 None => Converter::apply_ops(&self.inner, doc, ops).await,
             }
@@ -311,6 +333,7 @@ impl HistoryConverter for FailingConverter {
 #[derive(Default)]
 pub struct HeldDocument {
     pub gets: AtomicUsize,
+    pub saves: AtomicUsize,
     pub load_fails: AtomicBool,
 }
 
@@ -342,6 +365,7 @@ impl Endpoint for HeldDocument {
         _version: Option<&'a str>,
         _projection: Option<&'a Projection>,
     ) -> BoxFuture<'a, Result<Option<String>, Error>> {
+        self.saves.fetch_add(1, Ordering::SeqCst);
         Box::pin(async move { Ok(None) })
     }
 }
@@ -353,12 +377,100 @@ fn corrupt() -> Error {
     })
 }
 
-/// The built-in journal with C#'s CorruptRecords and CorruptLineages
-/// switches on its history reads.
+/// Switches on a session's appends: C#'s BeforeAppend and
+/// NextAppendOutcome.
+#[derive(Default)]
+pub struct AppendHook {
+    /// The next append waits for `release` after notifying `entered`.
+    pub hold: AtomicBool,
+    pub entered: tokio::sync::Notify,
+    pub release: tokio::sync::Notify,
+    /// The next append answers Duplicate without writing.
+    pub duplicate: AtomicBool,
+}
+
+struct HookedSession {
+    inner: Arc<dyn OperationSession>,
+    hook: Arc<AppendHook>,
+}
+
+impl OperationSession for HookedSession {
+    fn open_result(&self) -> &OpenResult {
+        self.inner.open_result()
+    }
+    fn find_committed<'a>(
+        &'a self,
+        ctx: &'a Context,
+        operation_id: &'a str,
+        digest: &'a [u8],
+    ) -> BoxFuture<'a, Result<Lookup, Error>> {
+        self.inner.find_committed(ctx, operation_id, digest)
+    }
+    fn append<'a>(
+        &'a self,
+        ctx: &'a Context,
+        candidate: Candidate,
+    ) -> BoxFuture<'a, Result<AppendResult, Error>> {
+        Box::pin(async move {
+            if self.hook.hold.swap(false, Ordering::SeqCst) {
+                self.hook.entered.notify_one();
+                self.hook.release.notified().await;
+            }
+            if self.hook.duplicate.swap(false, Ordering::SeqCst) {
+                return Ok(AppendResult {
+                    outcome: AppendOutcome::Duplicate,
+                    sequence: 0,
+                });
+            }
+            self.inner.append(ctx, candidate).await
+        })
+    }
+    fn write_checkpoint<'a>(
+        &'a self,
+        ctx: &'a Context,
+        checkpoint: Checkpoint,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        self.inner.write_checkpoint(ctx, checkpoint)
+    }
+    fn reset<'a>(&'a self, ctx: &'a Context, reset: Reset) -> BoxFuture<'a, Result<Head, Error>> {
+        self.inner.reset(ctx, reset)
+    }
+    fn close(&self) -> BoxFuture<'_, Result<(), Error>> {
+        self.inner.close()
+    }
+}
+
+/// The built-in journal with C#'s CorruptRecords, CorruptLineages,
+/// HeaderSpacing and LineagesAsked on its history reads.
 pub struct TestJournal {
     inner: LocalJournal,
     pub corrupt_records: AtomicBool,
     pub corrupt_lineages: AtomicBool,
+    /// False makes it a journal that keeps no history.
+    pub keeps_history: bool,
+    /// Header N reads as committed at the Unix epoch plus N times this.
+    pub header_spacing: Mutex<Option<Duration>>,
+    pub lineages_asked: Mutex<Vec<String>>,
+    pub hook: Arc<AppendHook>,
+}
+
+impl TestJournal {
+    fn asked(&self, lineage: &str) {
+        self.lineages_asked.lock().unwrap().push(lineage.to_owned());
+    }
+
+    /// The current lineage's records of doc, read past the switches.
+    pub fn committed(&self, doc: &str) -> Vec<Record> {
+        let ctx = Context::background();
+        let lineages = self.inner.list_lineages(&ctx, doc).unwrap();
+        let Some(current) = lineages.iter().find(|info| info.current) else {
+            return Vec::new();
+        };
+        self.inner
+            .read_records(&ctx, doc, &current.lineage, u64::MAX)
+            .map(Result::unwrap)
+            .collect()
+    }
 }
 
 impl OperationStore for TestJournal {
@@ -367,13 +479,22 @@ impl OperationStore for TestJournal {
         ctx: &'a Context,
         doc_id: &'a str,
     ) -> BoxFuture<'a, Result<Opened, Error>> {
-        self.inner.open(ctx, doc_id)
+        Box::pin(async move {
+            let (outcome, session) = self.inner.open(ctx, doc_id).await?;
+            let session = session.map(|inner| {
+                Arc::new(HookedSession {
+                    inner,
+                    hook: self.hook.clone(),
+                }) as Arc<dyn OperationSession>
+            });
+            Ok((outcome, session))
+        })
     }
     fn as_purge(&self) -> Option<&dyn PurgeStore> {
         Some(&self.inner)
     }
     fn as_history(&self) -> Option<&dyn HistoryStore> {
-        Some(self)
+        if self.keeps_history { Some(self) } else { None }
     }
     fn type_name(&self) -> &'static str {
         "TestJournal"
@@ -396,6 +517,7 @@ impl HistoryStore for TestJournal {
         doc_id: &str,
         lineage: &str,
     ) -> Result<Option<Vec<Vec<u8>>>, Error> {
+        self.asked(lineage);
         self.inner.read_baseline(ctx, doc_id, lineage)
     }
     fn read_headers<'a>(
@@ -404,7 +526,17 @@ impl HistoryStore for TestJournal {
         doc_id: &'a str,
         lineage: &'a str,
     ) -> Headers<'a> {
-        self.inner.read_headers(ctx, doc_id, lineage)
+        self.asked(lineage);
+        let headers = self.inner.read_headers(ctx, doc_id, lineage);
+        let Some(spacing) = *self.header_spacing.lock().unwrap() else {
+            return headers;
+        };
+        Box::new(headers.map(move |header| {
+            header.map(|mut header| {
+                header.committed_at = UNIX_EPOCH + spacing * header.sequence as u32;
+                header
+            })
+        }))
     }
     fn read_records<'a>(
         &'a self,
@@ -413,6 +545,7 @@ impl HistoryStore for TestJournal {
         lineage: &'a str,
         through: u64,
     ) -> Records<'a> {
+        self.asked(lineage);
         if self.corrupt_records.load(Ordering::SeqCst) {
             return Box::new(std::iter::once(Err(corrupt())));
         }
@@ -424,6 +557,7 @@ impl HistoryStore for TestJournal {
         doc_id: &str,
         lineage: &str,
     ) -> Result<LineageDeleteOutcome, Error> {
+        self.asked(lineage);
         self.inner.delete_lineage(ctx, doc_id, lineage)
     }
 }
@@ -488,6 +622,10 @@ pub struct AppOptions {
     pub ticket_mode: bool,
     pub authorization: Option<Arc<RecordingAuthorization>>,
     pub retry_backoff: Duration,
+    /// The journal keeps no history.
+    pub no_history: bool,
+    /// Where the journal lives; a fresh directory when None.
+    pub journal_dir: Option<PathBuf>,
 }
 
 pub struct App {
@@ -524,6 +662,7 @@ pub async fn start_app(options: AppOptions) -> App {
         },
         state: Mutex::new((Failure::None, None)),
         next_edit: Mutex::new(None),
+        apply_calls: AtomicUsize::new(0),
     });
     let endpoint = Arc::new(HeldDocument::default());
     let mut room = RoomOptions {
@@ -531,12 +670,17 @@ pub async fn start_app(options: AppOptions) -> App {
         ..RoomOptions::default()
     };
     let journal = options.journal.then(|| {
-        let store = blok_collab_journal::Store::new(temp_dir(), Default::default()).unwrap();
+        let dir = options.journal_dir.clone().unwrap_or_else(temp_dir);
+        let store = blok_collab_journal::Store::new(dir, Default::default()).unwrap();
         room.max_update_bytes = store.max_update_bytes();
         Arc::new(TestJournal {
             inner: LocalJournal(store),
             corrupt_records: AtomicBool::new(false),
             corrupt_lineages: AtomicBool::new(false),
+            keeps_history: !options.no_history,
+            header_spacing: Mutex::new(None),
+            lineages_asked: Mutex::new(Vec::new()),
+            hook: Arc::default(),
         })
     });
     let manager = Manager::new(ManagerOptions {
@@ -737,5 +881,120 @@ impl App {
 
     pub async fn drain(&self) {
         let _ = self.manager.drain().await;
+    }
+
+    /// Each block of a client doc as "id=text", read with the real
+    /// converter.
+    pub async fn export(&self, doc: &Doc) -> Vec<String> {
+        let object = Converter::export(&self.converter.inner, doc)
+            .await
+            .unwrap_or_else(|err| panic!("{err}"));
+        let Some(Value::Array(blocks)) = object.get(&Str::from("blocks")) else {
+            panic!("no blocks");
+        };
+        let field = |value: &Value, key: &str| match value {
+            Value::Object(object) => object.get(&Str::from(key)).cloned(),
+            _ => None,
+        };
+        blocks
+            .iter()
+            .map(|block| {
+                let text = field(block, "data").and_then(|data| field(&data, "text"));
+                // Rich text reads as segments: [{"text": ..}, ..].
+                let as_text = |value: Option<Value>| match value {
+                    Some(Value::String(text)) => text.to_string(),
+                    Some(Value::Array(segments)) => segments
+                        .iter()
+                        .filter_map(|segment| match field(segment, "text") {
+                            Some(Value::String(text)) => Some(text.to_string()),
+                            _ => None,
+                        })
+                        .collect(),
+                    other => format!("{other:?}"),
+                };
+                format!("{}={}", as_text(field(block, "id")), as_text(text))
+            })
+            .collect()
+    }
+
+    /// Joins "doc" as a v1 blok-sync writer and syncs a fresh client doc.
+    pub async fn connect(&self) -> (Arc<RecordingMember>, Box<dyn Membership>, Doc) {
+        let member = Arc::new(RecordingMember::default());
+        let joined = self
+            .manager
+            .join("doc", member.clone())
+            .await
+            .unwrap_or_else(|err| panic!("{err}"));
+        assert_eq!(joined.status, blok_collab::JoinStatus::Joined);
+        let membership = joined.membership.expect("a membership");
+        let mirror = Doc::new(blok_yjs::Options::default());
+        let step1 = blok_collab_wire::encode(&Message::SyncStep1 {
+            state_vector: mirror.encode_state_vector(),
+        })
+        .unwrap();
+        membership.receive(step1).await.unwrap();
+        let step2 = member
+            .messages()
+            .into_iter()
+            .find_map(|message| match message {
+                Message::SyncStep2 { update } => Some(update),
+                _ => None,
+            })
+            .expect("a SyncStep2");
+        mirror.apply_update(&step2).unwrap();
+        member.clear();
+        (member, membership, mirror)
+    }
+}
+
+/// A v1 blok-sync member that keeps every frame and close it gets.
+#[derive(Default)]
+pub struct RecordingMember {
+    messages: Mutex<Vec<Message>>,
+    pub closed: Mutex<Vec<CloseReason>>,
+}
+
+impl RecordingMember {
+    pub fn messages(&self) -> Vec<Message> {
+        self.messages.lock().unwrap().clone()
+    }
+
+    pub fn clear(&self) {
+        self.messages.lock().unwrap().clear();
+    }
+
+    pub fn updates(&self) -> Vec<Vec<u8>> {
+        self.messages()
+            .into_iter()
+            .filter_map(|message| match message {
+                Message::SyncUpdate { update } => Some(update),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+impl Member for RecordingMember {
+    fn can_write(&self) -> bool {
+        true
+    }
+    fn accepts_control_frames(&self) -> bool {
+        true
+    }
+    fn actor_id(&self) -> String {
+        String::new()
+    }
+    fn protocol_source(&self) -> OperationSource {
+        OperationSource::ClientV1
+    }
+    fn recheck_access(&self) -> BoxFuture<'_, Result<bool, blok_collab::Error>> {
+        Box::pin(async { Ok(true) })
+    }
+    fn send(&self, frame: Vec<u8>) {
+        let message = blok_collab_wire::decode(&frame).expect("a frame the codec reads");
+        self.messages.lock().unwrap().push(message);
+    }
+    fn close(&self, reason: CloseReason) {
+        self.closed.lock().unwrap().push(reason);
     }
 }

@@ -602,3 +602,263 @@ async fn reads_ask_only_the_read_gate_and_writes_ask_both() {
     assert_error(&write_denied, 403, "forbidden\n");
     history.drain().await;
 }
+
+// EditEndpointTests cases a member socket or the journal's append proves.
+
+fn journal_of(app: &crate::test_support::App) -> &crate::test_support::TestJournal {
+    app.journal.as_deref().expect("a journal")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn edit_returns_only_after_durable_commit() {
+    let app = start_app(journal()).await;
+    let (member, membership, mirror) = app.connect().await;
+    let journal = journal_of(&app);
+    journal.hook.hold.store(true, Ordering::SeqCst);
+
+    let address = app.running.address;
+    let pending = tokio::spawn(async move {
+        crate::test_support::send(
+            address,
+            "POST /sync/doc/edit HTTP/1.1\r\nBlok-Idempotency-Key: durable-edit",
+            APPEND_ONE.as_bytes(),
+        )
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(10), journal.hook.entered.notified())
+        .await
+        .expect("the append was never entered");
+
+    assert!(
+        !pending.is_finished(),
+        "answered before the append returned"
+    );
+    assert!(journal.committed("doc").is_empty());
+    assert!(member.updates().is_empty(), "relayed before the append");
+
+    journal.hook.release.notify_one();
+    let response = pending.await.unwrap();
+
+    assert_eq!(response.status, 204, "{}", response.text());
+    let updates = member.updates();
+    assert_eq!(updates.len(), 1);
+    mirror.apply_update(&updates[0]).unwrap();
+    assert_eq!(app.export(&mirror).await, ["new=!", "a=one"]);
+    let committed = journal.committed("doc");
+    assert_eq!(committed.len(), 1);
+    assert_eq!(
+        committed[0].source,
+        blok_collab_operation::Source::HTTP_EDIT
+    );
+    let id = &committed[0].operation_id;
+    assert!(
+        id.len() == 32 && id.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
+        "operation id {id}"
+    );
+    assert_ne!(id, "durable-edit");
+    assert_eq!(response.header("Blok-Doc-Sequence"), "1");
+    assert_eq!(response.header("Blok-Doc-Lineage"), app.open().await);
+    membership.leave();
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stale_if_match_answers412_with_the_head_and_applies_nothing() {
+    let app = start_app(journal()).await;
+    let first = app
+        .send("POST", "/edit", "first-edit", "", APPEND_ONE)
+        .await;
+    let lineage = first.header("Blok-Doc-Lineage").to_owned();
+    let (member, membership, mirror) = app.connect().await;
+
+    let stale = app
+        .send(
+            "POST",
+            "/edit",
+            "stale-edit",
+            &format!("\"{lineage}:0\""),
+            r#"{ "ops": [ { "op": "insert", "id": "stale", "block": { "type": "p", "data": { "text": "?" } } } ] }"#,
+        )
+        .await;
+
+    assert_error(
+        &stale,
+        412,
+        "the document is no longer at the If-Match head\n",
+    );
+    assert_eq!(stale.header("Blok-Doc-Lineage"), lineage);
+    assert_eq!(stale.header("Blok-Doc-Sequence"), "1");
+    assert_eq!(journal_of(&app).committed("doc").len(), 1);
+    assert_eq!(app.converter.apply_calls.load(Ordering::SeqCst), 1);
+
+    let matching = app
+        .send(
+            "POST",
+            "/edit",
+            "matching-edit",
+            &format!("\"{lineage}:1\""),
+            r#"{ "ops": [ { "op": "insert", "id": "next", "block": { "type": "p", "data": { "text": "!" } } } ] }"#,
+        )
+        .await;
+    assert_eq!(matching.status, 204, "{}", matching.text());
+    assert_eq!(matching.header("Blok-Doc-Sequence"), "2");
+    let updates = member.updates();
+    assert_eq!(updates.len(), 1, "the refused edit relayed");
+    mirror.apply_update(&updates[0]).unwrap();
+    assert_eq!(app.export(&mirror).await, ["next=!", "new=!", "a=one"]);
+    membership.leave();
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn if_match_is_checked_against_the_head_a_cold_room_loads_from_the_journal() {
+    let dir = crate::test_support::temp_dir();
+    let cold = || AppOptions {
+        journal: true,
+        journal_dir: Some(dir.clone()),
+        ..AppOptions::default()
+    };
+    let lineage = {
+        let first_app = start_app(cold()).await;
+        let first = first_app
+            .send("POST", "/edit", "before-reload", "", APPEND_ONE)
+            .await;
+        assert_eq!(first.status, 204, "{}", first.text());
+        first_app.drain().await;
+        first.header("Blok-Doc-Lineage").to_owned()
+    };
+
+    let app = start_app(cold()).await;
+    let stale = app
+        .send(
+            "POST",
+            "/edit",
+            "stale-after-reload",
+            &format!("\"{lineage}:0\""),
+            APPEND_ONE,
+        )
+        .await;
+    let matching = app
+        .send(
+            "POST",
+            "/edit",
+            "after-reload",
+            &format!("\"{lineage}:1\""),
+            r#"{ "ops": [ { "op": "insert", "id": "next", "block": { "type": "p", "data": { "text": "!" } } } ] }"#,
+        )
+        .await;
+
+    assert_eq!(stale.status, 412, "{}", stale.text());
+    assert_eq!(stale.header("Blok-Doc-Sequence"), "1");
+    assert_eq!(matching.status, 204, "{}", matching.text());
+    assert_eq!(matching.header("Blok-Doc-Lineage"), lineage);
+    assert_eq!(matching.header("Blok-Doc-Sequence"), "2");
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_late_duplicate_append_closes_without_relaying_or_writing_back() {
+    let app = start_app(journal()).await;
+    let (member, membership, _mirror) = app.connect().await;
+    let journal = journal_of(&app);
+    journal.hook.duplicate.store(true, Ordering::SeqCst);
+
+    let response = app
+        .send("POST", "/edit", "late-duplicate", "", APPEND_ONE)
+        .await;
+
+    assert!(
+        member.updates().is_empty(),
+        "relayed {:?}",
+        member.messages()
+    );
+    assert_eq!(
+        *member.closed.lock().unwrap(),
+        vec![blok_collab::CloseReason::CommitUnavailable]
+    );
+    assert_eq!(response.status, 503, "{}", response.text());
+    assert!(journal.committed("doc").is_empty());
+    assert_eq!(app.endpoint.saves.load(Ordering::SeqCst), 0);
+    membership.leave();
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn edit_journals_a_batch_as_one_operation() {
+    let app = start_app(journal()).await;
+
+    let response = app
+        .send(
+            "POST",
+            "/edit",
+            "batched-edit",
+            "",
+            r#"{ "ops": [ { "op": "insert", "id": "first", "block": { "type": "p", "data": { "text": "!" } } }, { "op": "insert", "id": "second", "block": { "type": "p", "data": { "text": "?" } } } ] }"#,
+        )
+        .await;
+
+    assert_eq!(response.status, 204, "{}", response.text());
+    assert_eq!(journal_of(&app).committed("doc").len(), 1);
+    app.drain().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_edit_lands_on_every_open_socket_and_in_the_document() {
+    for options in [AppOptions::default(), journal()] {
+        let app = start_app(options).await;
+        let (member, membership, mirror) = app.connect().await;
+        assert_eq!(app.export(&mirror).await, ["a=one"]);
+
+        let response = app.send("POST", "/edit", "edit-key", "", APPEND_ONE).await;
+
+        assert_eq!(response.status, 204, "{}", response.text());
+        let updates = member.updates();
+        assert_eq!(updates.len(), 1);
+        mirror.apply_update(&updates[0]).unwrap();
+        assert_eq!(app.export(&mirror).await, ["new=!", "a=one"]);
+        membership.leave();
+        app.drain().await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_encoded_backslash_document_is_rejected_or_can_be_purged_after_edit() {
+    for path in ["/sync/a%5Cb/edit", "/sync/a%255cb/edit"] {
+        let app = start_app(AppOptions::default()).await;
+
+        let response = crate::test_support::send(
+            app.running.address,
+            &format!("POST {path} HTTP/1.1\r\nBlok-Idempotency-Key: encoded-backslash"),
+            APPEND_ONE.as_bytes(),
+        )
+        .await;
+
+        assert_error(
+            &response,
+            400,
+            "document ids must be a single path segment\n",
+        );
+        assert_eq!(app.endpoint.gets.load(Ordering::SeqCst), 0, "{path}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_edit_whose_html_ran_past_the_allocation_budget_is_a413_without_retry_after() {
+    let app = start_app(journal()).await;
+    *app.converter.next_edit.lock().unwrap() = Some(EditFailure::TooLarge(
+        "collab: the rich text HTML in this edit could not be read: too large",
+    ));
+
+    let too_large = app
+        .send("POST", "/edit", "too-large-edit", "", APPEND_ONE)
+        .await;
+
+    assert_error(
+        &too_large,
+        413,
+        "collab: the rich text HTML in this edit could not be read: too large\n",
+    );
+    assert_eq!(too_large.header("Retry-After"), "");
+    assert!(journal_of(&app).committed("doc").is_empty());
+    app.drain().await;
+}

@@ -21,6 +21,11 @@ const toNodes = (nodes: NodeListOf<ChildNode>): InlineNode[] => Array.from(nodes
 
 /** Inline HTML → parser-neutral tree through an inert document. */
 export const parseInlineHtmlWithDom = (html: string): InlineNode[] => {
+  // Every new table cell writes an empty text; a document per cell adds up.
+  if (html === '') {
+    return [];
+  }
+
   const body = document.implementation.createHTMLDocument('').body;
 
   body.innerHTML = html;

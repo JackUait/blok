@@ -1225,6 +1225,10 @@ function buildEmptyStructs() {
 
     doc.destroy();
 
+    if (name.startsWith('map-key-empty-string')) {
+      result.probes = emptyStructProbes(updates);
+    }
+
     return result;
   });
 
@@ -1236,6 +1240,76 @@ function buildEmptyStructs() {
       'exactly as yjs did.',
     cases,
   };
+}
+
+/**
+ * One step after the updates, each on a fresh doc whose own client is
+ * CLIENT_B. yjs's cleanup looks up the struct at clock + length - 1 of every
+ * deleted range, so a step that deletes a length-0 item at clock 0 throws
+ * "Unexpected case" after it has changed the doc, and emits nothing.
+ * `ownClient` replays the updates into a doc whose own client is the one
+ * that wrote them: yjs then mints a new client id, though the clock did not
+ * move, because the client was absent before.
+ */
+function emptyStructProbes(updates) {
+  const remote = (client) => {
+    const writer = new Y.Doc();
+
+    writer.clientID = client;
+    writer.getMap('m').set('k', 2);
+
+    return b64(Y.encodeStateAsUpdate(writer));
+  };
+  const steps = [
+    { step: 'map.set', key: 'k', value: 1 },
+    { step: 'map.delete', key: 'k' },
+    { step: 'map.set', key: 'other', value: 1 },
+    { step: 'apply', update: remote(CLIENT_A * 2), description: 'A writer above the empty item sets "k".' },
+    { step: 'apply', update: remote(2), description: 'A writer below the empty item sets "k".' },
+  ];
+  const probes = steps.map((probe) => {
+    const doc = new Y.Doc({ gc: false });
+
+    doc.clientID = CLIENT_B;
+
+    for (const update of updates) {
+      Y.applyUpdate(doc, hex(update));
+    }
+
+    const emitted = [];
+
+    doc.on('update', (update) => emitted.push(b64(update)));
+
+    let throws = null;
+
+    try {
+      if (probe.step === 'map.set') {
+        doc.getMap('m').set(probe.key, probe.value);
+      } else if (probe.step === 'map.delete') {
+        doc.getMap('m').delete(probe.key);
+      } else {
+        Y.applyUpdate(doc, Buffer.from(probe.update, 'base64'));
+      }
+    } catch (error) {
+      throws = error.message;
+    }
+
+    doc.destroy();
+
+    return { ...probe, throws, emitted };
+  });
+  const own = new Y.Doc({ gc: false });
+
+  own.clientID = CLIENT_A;
+
+  for (const update of updates) {
+    Y.applyUpdate(own, hex(update));
+  }
+
+  probes.push({ step: 'ownClient', client: CLIENT_A, clientIdChanged: own.clientID !== CLIENT_A });
+  own.destroy();
+
+  return probes;
 }
 
 // ---------------------------------------------------------------------------

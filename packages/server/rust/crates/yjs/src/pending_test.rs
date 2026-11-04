@@ -423,3 +423,65 @@ fn equal_clock_parked_structs_keep_their_parked_order() {
         assert_eq!(doc.get_text("t").unwrap().to_string(), text, "{name}: text");
     }
 }
+
+// Shared oracle with Go and C#: after a length-0 item, each probe runs on a
+// fresh doc as yjs ran it. yjs throws when a step deletes that item at
+// clock 0, and then emits nothing.
+#[test]
+fn steps_after_a_length_zero_item_match_yjs() {
+    let text = |value: &Value| match value {
+        Value::String(text) => text.to_string(),
+        _ => panic!("a string"),
+    };
+    let mut probed = 0;
+    for c in fixture_cases("empty-structs.json") {
+        for probe in yjstest::items(&c, "probes") {
+            probed += 1;
+            let step = yjstest::string(probe, "step");
+            let label = format!(
+                "{}/{step}/{}",
+                yjstest::string(&c, "name"),
+                yjstest::string(probe, "key")
+            );
+            let own = if step == "ownClient" {
+                yjstest::number(probe, "client") as u32
+            } else {
+                1001
+            };
+            let doc = Doc::new(Options {
+                client_id: Some(own),
+                no_gc: true,
+            });
+            for update in yjstest::items(&c, "updates") {
+                apply_bytes(&doc, &b64(&text(update)));
+            }
+            if step == "ownClient" {
+                let changed = doc.client_id() != u64::from(own);
+                assert_eq!(changed, yjstest::bool(probe, "clientIdChanged"), "{label}");
+                continue;
+            }
+            let emitted = Arc::new(Mutex::new(Vec::new()));
+            let sink = emitted.clone();
+            let _subscription =
+                doc.on_update(move |event| sink.lock().unwrap().push(b64_encode(&event.update)));
+            let m = doc.get_map("m").unwrap();
+            let key = yjstest::string(probe, "key");
+            let threw = match step.as_str() {
+                "apply" => doc
+                    .apply_update(&b64(&yjstest::string(probe, "update")))
+                    .is_err(),
+                "map.set" => {
+                    let value =
+                        yjstest::to_engine(yjstest::field(probe, "value").unwrap()).unwrap();
+                    doc.transact(|txn| m.set(txn, key.as_str(), value)).is_err()
+                }
+                _ => doc.transact(|txn| m.delete(txn, key.as_str())).is_err(),
+            };
+            let want_throw = !matches!(yjstest::field(probe, "throws"), None | Some(Value::Null));
+            assert_eq!(threw, want_throw, "{label}: threw");
+            let want: Vec<String> = yjstest::items(probe, "emitted").iter().map(text).collect();
+            assert_eq!(*emitted.lock().unwrap(), want, "{label}: emitted");
+        }
+    }
+    assert!(probed > 0, "empty-structs.json has no probes");
+}

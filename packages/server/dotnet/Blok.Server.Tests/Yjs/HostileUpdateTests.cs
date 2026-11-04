@@ -96,6 +96,79 @@ public sealed class HostileUpdateTests
     Assert.Equal("AegHAA==", Convert.ToBase64String(doc.EncodeStateVector()));
   }
 
+  public static TheoryData<string, int> EmptyStructProbes()
+  {
+    var data = new TheoryData<string, int>();
+
+    foreach (var golden in YjsEngineFixtures.Cases("empty-structs.json"))
+    {
+      var probes = golden!["probes"]?.AsArray();
+
+      for (var index = 0; probes is not null && index < probes.Count; index++)
+      {
+        data.Add(golden["name"]!.GetValue<string>(), index);
+      }
+    }
+
+    return data;
+  }
+
+  /// <summary>
+  /// Each probe runs on a fresh doc as yjs ran it. yjs throws when a step
+  /// deletes a length-0 item at clock 0, and then emits nothing.
+  /// </summary>
+  [Theory]
+  [MemberData(nameof(EmptyStructProbes))]
+  public void StepsAfterALengthZeroItemMatchYjs(string name, int index)
+  {
+    var golden = YjsEngineFixtures.Cases("empty-structs.json")
+        .First(node => node!["name"]!.GetValue<string>() == name)!;
+    var probe = golden["probes"]![index]!;
+    var step = probe["step"]!.GetValue<string>();
+    var own = step == "ownClient" ? probe["client"]!.GetValue<uint>() : 1001u;
+    var doc = new YDoc(own) { Gc = false };
+
+    foreach (var update in golden["updates"]!.AsArray())
+    {
+      doc.ApplyUpdate(Convert.FromBase64String(update!.GetValue<string>()));
+    }
+
+    if (step == "ownClient")
+    {
+      Assert.Equal(probe["clientIdChanged"]!.GetValue<bool>(), doc.ClientId != own);
+      return;
+    }
+
+    var emitted = new List<string>();
+    doc.UpdateEmitted += update => emitted.Add(Convert.ToBase64String(update.Update));
+    var map = doc.GetMap("m");
+    var key = probe["key"]?.GetValue<string>() ?? "";
+    var threw = false;
+
+    try
+    {
+      switch (step)
+      {
+        case "apply":
+          doc.ApplyUpdate(Convert.FromBase64String(probe["update"]!.GetValue<string>()));
+          break;
+        case "map.set":
+          doc.Transact(transaction => map.Set(transaction, key, ScenarioSupport.BuildValue(probe["value"])));
+          break;
+        default:
+          doc.Transact(transaction => map.Remove(transaction, key));
+          break;
+      }
+    }
+    catch (InvalidOperationException)
+    {
+      threw = true;
+    }
+
+    Assert.Equal(probe["throws"] is not null, threw);
+    Assert.Equal(probe["emitted"]!.AsArray().Select(node => node!.GetValue<string>()), emitted);
+  }
+
   public static TheoryData<string> EmptyStructCases()
   {
     return new TheoryData<string>(YjsEngineFixtures.Cases("empty-structs.json")

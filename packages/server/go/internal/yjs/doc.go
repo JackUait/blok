@@ -433,7 +433,10 @@ func (d *Doc) cleanup(t *Transaction) []byte {
 	if d.gc {
 		d.collectDeleted(t.deleteSet)
 	}
-	if !t.local && t.afterState.Get(d.clientID) != t.beforeState.Get(d.clientID) {
+	d.findDeletedEnds(t.deleteSet)
+	// yjs compares Map.get results, so a client first seen at clock 0 moved.
+	if !t.local && (t.afterState.Get(d.clientID) != t.beforeState.Get(d.clientID) ||
+		t.afterState.has(d.clientID) != t.beforeState.has(d.clientID)) {
 		d.clientID = newClientID()
 	}
 	var update []byte
@@ -446,6 +449,25 @@ func (d *Doc) cleanup(t *Transaction) []byte {
 		}
 	}
 	return update
+}
+
+// findDeletedEnds is the lookup yjs's tryMergeDeleteSet starts every
+// deleted range with: the struct holding its last clock. A length-0 item at
+// clock 0 ends at clock -1, so yjs throws "Unexpected case" there, after the
+// change and before it emits. The merge itself is left out, as elsewhere.
+func (d *Doc) findDeletedEnds(deleted *DeleteSet) {
+	for _, entry := range deleted.clients {
+		if _, ok := d.store.clients[entry.client]; !ok {
+			continue
+		}
+		for r := len(entry.ranges) - 1; r >= 0; r-- {
+			end := entry.ranges[r].Clock + entry.ranges[r].Length
+			if end == 0 {
+				fail("Unexpected case")
+			}
+			d.store.findIndex(entry.client, end-1)
+		}
+	}
 }
 
 // collectDeleted is yjs's tryGcDeleteSet. The struct at an index is re-read

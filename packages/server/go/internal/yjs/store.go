@@ -145,6 +145,14 @@ type StateVector struct {
 	order  []uint64
 }
 
+func (v *StateVector) has(client uint64) bool {
+	if v == nil {
+		return false
+	}
+	_, ok := v.clocks[client]
+	return ok
+}
+
 // Get is the client's clock, 0 when unknown.
 func (v *StateVector) Get(client uint64) uint64 {
 	if v == nil {

@@ -30,8 +30,8 @@
     {
       "path": "empty-structs.json",
       "description": "Length-0 structs yjs accepts, with what yjs encodes after them.",
-      "bytes": 3252,
-      "sha256": "3f4398acd59d5e3aa56e6db97fd6d2f675c982a1aabedb069744e2f809980de9"
+      "bytes": 4374,
+      "sha256": "65ad305497bdb89e6f38140e4fc271fe0e672dc6680bdec53ae11e8f2fef0d99"
     },
     {
       "path": "fuzz/seed-000001.json",

@@ -22,7 +22,52 @@
       "sv": "AegHAA==",
       "full": "AQHoBwAkAQFtAWsAAA==",
       "behind": "AegHAQ==",
-      "diff": "AAA="
+      "diff": "AAA=",
+      "probes": [
+        {
+          "step": "map.set",
+          "key": "k",
+          "value": 1,
+          "throws": "Unexpected case",
+          "emitted": []
+        },
+        {
+          "step": "map.delete",
+          "key": "k",
+          "throws": "Unexpected case",
+          "emitted": []
+        },
+        {
+          "step": "map.set",
+          "key": "other",
+          "value": 1,
+          "throws": null,
+          "emitted": [
+            "AQHpBwAoAQFtBW90aGVyAX0BAA=="
+          ]
+        },
+        {
+          "step": "apply",
+          "update": "AQHQDwAoAQFtAWsBfQIA",
+          "description": "A writer above the empty item sets \"k\".",
+          "throws": "Unexpected case",
+          "emitted": []
+        },
+        {
+          "step": "apply",
+          "update": "AQECACgBAW0BawF9AgA=",
+          "description": "A writer below the empty item sets \"k\".",
+          "throws": null,
+          "emitted": [
+            "AQECACgBAW0BawF9AgECAQAB"
+          ]
+        },
+        {
+          "step": "ownClient",
+          "client": 1000,
+          "clientIdChanged": true
+        }
+      ]
     },
     {
       "name": "map-key-empty-any",

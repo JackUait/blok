@@ -3,6 +3,7 @@ package yjs
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"slices"
 	"testing"
 
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -343,4 +344,82 @@ func TestEqualClockParkedStructsKeepTheirParkedOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Shared oracle with C# and Rust: after a length-0 item, each probe runs on
+// a fresh doc as yjs ran it. yjs throws when a step deletes that item at
+// clock 0, and then emits nothing.
+func TestStepsAfterALengthZeroItemMatchYjs(t *testing.T) {
+	for _, c := range fixtureCases(t, "empty-structs.json") {
+		for _, probe := range yjstest.Items(c, "probes") {
+			step := yjstest.String(probe, "step")
+			t.Run(yjstest.String(c, "name")+"/"+step+"/"+yjstest.String(probe, "key"), func(t *testing.T) {
+				if step == "ownClient" {
+					id := uint32(yjstest.Number(probe, "client"))
+					doc := NewDoc(Options{ClientID: &id, NoGC: true})
+					for _, update := range yjstest.Items(c, "updates") {
+						applyBytes(t, doc, b64Bytes(t, update.(jsjson.Str).String()))
+					}
+					if changed := doc.ClientID() != uint64(id); changed != yjstest.Bool(probe, "clientIdChanged") {
+						t.Fatalf("client id changed %v", changed)
+					}
+					return
+				}
+				id := uint32(1001)
+				doc := NewDoc(Options{ClientID: &id, NoGC: true})
+				for _, update := range yjstest.Items(c, "updates") {
+					applyBytes(t, doc, b64Bytes(t, update.(jsjson.Str).String()))
+				}
+				var emitted []string
+				doc.OnUpdate(func(event UpdateEvent) { emitted = append(emitted, base64.StdEncoding.EncodeToString(event.Update)) })
+				threw := runProbe(t, doc, probe)
+				if want := yjstest.Has(probe, "throws") && yjstest.Field(probe, "throws") != nil; threw != want {
+					t.Fatalf("threw %v, want %v", threw, want)
+				}
+				want := []string{}
+				for _, update := range yjstest.Items(probe, "emitted") {
+					want = append(want, update.(jsjson.Str).String())
+				}
+				if !slices.Equal(append([]string{}, emitted...), want) {
+					t.Fatalf("emitted %v, want %v", emitted, want)
+				}
+			})
+		}
+	}
+}
+
+func runProbe(t *testing.T, doc *Doc, probe any) (threw bool) {
+	t.Helper()
+	m := doc.GetMap(s("m"))
+	key := s(yjstest.String(probe, "key"))
+	switch yjstest.String(probe, "step") {
+	case "apply":
+		_, err := doc.ApplyUpdate(b64Bytes(t, yjstest.String(probe, "update")))
+		return err != nil
+	case "map.set":
+		value, err := yjstest.ToEngine(yjstest.Field(probe, "value"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				if _, ok := recovered.(*EngineError); !ok {
+					panic(recovered)
+				}
+				threw = true
+			}
+		}()
+		doc.Transact(func(tx *Transaction) { m.Set(tx, key, value) })
+	case "map.delete":
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				if _, ok := recovered.(*EngineError); !ok {
+					panic(recovered)
+				}
+				threw = true
+			}
+		}()
+		doc.Transact(func(tx *Transaction) { m.Delete(tx, key) })
+	}
+	return false
 }

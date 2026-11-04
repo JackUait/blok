@@ -63,6 +63,11 @@ internal sealed class StateVector : IEnumerable<KeyValuePair<ulong, ulong>>
     return writer.ToArray();
   }
 
+  public bool Has(ulong client)
+  {
+    return clocks.ContainsKey(client);
+  }
+
   /// <summary>0 for a client this vector has never heard of.</summary>
   public ulong Get(ulong client)
   {

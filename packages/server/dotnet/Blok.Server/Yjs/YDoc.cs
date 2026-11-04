@@ -621,8 +621,12 @@ internal sealed class YDoc
       CollectDeleted(transaction.DeleteSet);
     }
 
+    FindDeletedEnds(transaction.DeleteSet);
+
+    // yjs compares Map.get results, so a client first seen at clock 0 moved.
     if (!transaction.Local &&
-        transaction.AfterState.Get(ClientId) != transaction.BeforeState.Get(ClientId))
+        (transaction.AfterState.Get(ClientId) != transaction.BeforeState.Get(ClientId) ||
+         transaction.AfterState.Has(ClientId) != transaction.BeforeState.Has(ClientId)))
     {
       ClientId = NewClientId();
     }
@@ -635,6 +639,35 @@ internal sealed class YDoc
     }
 
     return update;
+  }
+
+  /// <summary>
+  /// The lookup yjs's tryMergeDeleteSet starts every deleted range with: the
+  /// struct holding its last clock. A length-0 item at clock 0 ends at clock
+  /// -1, so yjs throws "Unexpected case" there, after the change and before
+  /// it emits. The merge itself is left out, as elsewhere.
+  /// </summary>
+  private void FindDeletedEnds(DeleteSet deleted)
+  {
+    foreach (var (client, ranges) in deleted.Clients)
+    {
+      if (!Store.Clients.ContainsKey(client))
+      {
+        continue;
+      }
+
+      for (var range = ranges.Count - 1; range >= 0; range--)
+      {
+        var end = ranges[range].Clock + ranges[range].Length;
+
+        if (end == 0)
+        {
+          throw new InvalidOperationException("Unexpected case");
+        }
+
+        Store.FindIndex(client, end - 1);
+      }
+    }
   }
 
   /// <summary>

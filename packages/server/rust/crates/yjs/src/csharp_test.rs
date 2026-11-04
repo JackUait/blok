@@ -534,36 +534,14 @@ fn a_panicking_body_leaves_no_transaction_open() {
     assert!(update.is_some(), "a later transaction joined a dead one");
 }
 
-// C# (unchecked ulong) and Go (uint64) wrap clock + length - 1 on a
-// length-0 item at clock 0, so a local write after one names origin
-// 2^64-1, which no decoder reads back. Pinned as both servers behave.
+// A write over a length-0 item at clock 0 deletes a range that ends at
+// clock -1. yjs's cleanup cannot find that struct and throws "Unexpected
+// case" before it emits, so no update names the wrapped origin 2^64-1.
 #[test]
-fn a_write_after_a_length_zero_head_wraps_its_origin() {
+fn a_write_over_a_length_zero_head_fails_like_yjs() {
     let doc = pinned_doc();
     apply_bytes(&doc, &b64("AQHoBwAkAQFtAWsAAA=="));
     let m = doc.get_map("m").unwrap();
-    let update = doc
-        .transact(|txn| m.set(txn, "k", num(1.0)))
-        .unwrap()
-        .unwrap();
-    let mut r = Reader::new(&update);
-    for _ in 0..4 {
-        r.read_var_uint().unwrap();
-    }
-    assert_eq!(
-        r.read_uint8().unwrap() & crate::item::ORIGIN_BIT,
-        crate::item::ORIGIN_BIT
-    );
-    assert_eq!(r.read_var_uint().unwrap(), 1000);
-    let wrapped = &update[r.pos()..r.pos() + 10];
-    assert_eq!(
-        wrapped,
-        &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
-    );
-    assert!(
-        crate::decode(&update)
-            .unwrap_err()
-            .to_string()
-            .contains("above 2^53-1")
-    );
+    let failure = doc.transact(|txn| m.set(txn, "k", num(1.0))).unwrap_err();
+    assert_eq!(failure.to_string(), "Unexpected case");
 }

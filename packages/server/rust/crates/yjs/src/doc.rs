@@ -521,7 +521,13 @@ impl DocState {
         if self.gc {
             self.collect_deleted(&t.delete_set)?;
         }
-        if !t.local && after.get(self.client_id) != t.before_state.get(self.client_id) {
+        self.find_deleted_ends(&t.delete_set)?;
+        // yjs compares Map.get results, so a client first seen at clock 0 moved.
+        let own = self.client_id;
+        if !t.local
+            && (after.get(own) != t.before_state.get(own)
+                || after.has(own) != t.before_state.has(own))
+        {
             self.client_id = new_client_id();
         }
         t.after_state = Some(after);
@@ -529,6 +535,27 @@ impl DocState {
             Some(hook) => Ok(hook(t)),
             None => update_from_transaction(t, &self.store),
         }
+    }
+
+    /// The lookup yjs's tryMergeDeleteSet starts every deleted range with:
+    /// the struct holding its last clock. A length-0 item at clock 0 ends at
+    /// clock -1, so yjs throws "Unexpected case" there, after the change and
+    /// before it emits. The merge itself is left out, as elsewhere.
+    fn find_deleted_ends(&self, deleted: &DeleteSet) -> EngineResult<()> {
+        for entry in &deleted.clients {
+            if !self.store.clients.contains_key(&entry.client) {
+                continue;
+            }
+            for r in entry.ranges.iter().rev() {
+                match (r.clock + r.length).checked_sub(1) {
+                    Some(last) => {
+                        self.store.find_index(entry.client, last)?;
+                    }
+                    None => crate::fail!("Unexpected case"),
+                }
+            }
+        }
+        Ok(())
     }
 
     /// yjs's tryGcDeleteSet. The struct at an index is re-read every step

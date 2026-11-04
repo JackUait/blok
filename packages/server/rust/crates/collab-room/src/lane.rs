@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::task::{Context, Poll};
 
 use tokio::sync::oneshot;
@@ -29,12 +29,12 @@ impl Lane {
     /// called; the turn completes on that place's turn. Dropping a turn that
     /// was not yet taken gives the place up, and passes the lane on when it
     /// was handed over as the turn dropped.
-    pub(crate) fn reserve(&self) -> Turn<'_> {
+    pub(crate) fn reserve(self: &Arc<Self>) -> Turn {
         let mut state = self.lock();
         if !state.held {
             state.held = true;
             return Turn {
-                lane: self,
+                lane: self.clone(),
                 waiting: None,
                 done: false,
             };
@@ -42,7 +42,7 @@ impl Lane {
         let (tx, rx) = oneshot::channel();
         state.waiters.push_back(tx);
         Turn {
-            lane: self,
+            lane: self.clone(),
             waiting: Some(rx),
             done: false,
         }
@@ -71,13 +71,13 @@ impl Lane {
 }
 
 /// One place in the lane's line.
-pub(crate) struct Turn<'a> {
-    lane: &'a Lane,
+pub(crate) struct Turn {
+    lane: Arc<Lane>,
     waiting: Option<oneshot::Receiver<()>>,
     done: bool,
 }
 
-impl Future for Turn<'_> {
+impl Future for Turn {
     type Output = ();
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
@@ -93,7 +93,7 @@ impl Future for Turn<'_> {
     }
 }
 
-impl Drop for Turn<'_> {
+impl Drop for Turn {
     fn drop(&mut self) {
         if self.done {
             return;
@@ -109,5 +109,23 @@ impl Drop for Turn<'_> {
                 }
             }
         }
+    }
+}
+
+/// The lane held; dropping it leaves.
+pub(crate) struct Held(Arc<Lane>);
+
+impl Turn {
+    /// Waits for the turn and holds the lane until the guard drops.
+    pub(crate) async fn hold(self) -> Held {
+        let lane = self.lane.clone();
+        self.await;
+        Held(lane)
+    }
+}
+
+impl Drop for Held {
+    fn drop(&mut self) {
+        self.0.leave();
     }
 }

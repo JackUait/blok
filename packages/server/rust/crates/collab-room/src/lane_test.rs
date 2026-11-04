@@ -67,7 +67,7 @@ async fn a_cancelled_waiter_gives_up_its_place() {
 // A turn handed over as its waiter gave up passes the lane on.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_turn_dropped_after_its_handover_passes_the_lane_on() {
-    let lane = Lane::default();
+    let lane = Arc::new(Lane::default());
     lane.reserve().await;
     let turn = lane.reserve();
     lane.leave();

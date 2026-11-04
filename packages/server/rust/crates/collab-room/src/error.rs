@@ -3,6 +3,9 @@ use std::fmt;
 use blok_collab_convert::{EditError, ReplayError};
 use blok_jsruntime::{InvokeError, Kind};
 
+/// The start of the purge refusal for a store that cannot purge.
+pub const PURGE_UNSUPPORTED: &str = "the operation journal cannot purge documents";
+
 /// What the room's fallible calls return, where Go returns `error`. The
 /// classifiers walk the same wrappers Go's errors.As unwraps.
 #[derive(Debug)]
@@ -28,6 +31,13 @@ pub enum Error {
     Corrupt(Box<Error>),
     /// CollabChangesExportException.
     ChangesExport(Box<Error>),
+    /// ArgumentException.ThrowIfNullOrEmpty(documentId).
+    EmptyDocId,
+    /// A purged id that is not one path segment.
+    NotSingleSegment,
+    PurgeNotAuthorized,
+    /// The registered operation store cannot purge; holds its type name.
+    PurgeUnsupported(String),
     /// A host's own store failure.
     Other(Box<dyn std::error::Error + Send + Sync>),
 }
@@ -57,6 +67,17 @@ impl fmt::Display for Error {
                     "collab: a step of the history could not be exported: {err}"
                 )
             }
+            Error::EmptyDocId => {
+                f.write_str("The value cannot be an empty string. (Parameter 'documentId')")
+            }
+            Error::NotSingleSegment => {
+                f.write_str("collab: document ids must be a single path segment.")
+            }
+            Error::PurgeNotAuthorized => f.write_str("collab: document purge was not authorized."),
+            Error::PurgeUnsupported(store) => write!(
+                f,
+                "{PURGE_UNSUPPORTED}: the registered collabstore.OperationStore ({store}) must also implement collabstore.PurgeStore"
+            ),
             Error::Other(err) => err.fmt(f),
         }
     }
@@ -169,6 +190,7 @@ pub(crate) fn is_runtime_limit(err: &Error) -> bool {
 }
 
 /// A history read failure the routes answer Corrupt for.
+#[allow(dead_code, reason = "history.rs uses it; it lands next")]
 pub(crate) fn is_corrupt(err: &Error) -> bool {
     let mut at = err;
     loop {

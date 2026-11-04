@@ -27,6 +27,11 @@ impl<K: Eq + Hash + Clone, V> Ordered<K, V> {
         self.slots[i].as_ref().map(|(_, v)| v)
     }
 
+    pub(crate) fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        let i = *self.index.get(key)?;
+        self.slots[i].as_mut().map(|(_, v)| v)
+    }
+
     pub(crate) fn set(&mut self, key: K, value: V) {
         if let Some(&i) = self.index.get(&key) {
             self.slots[i] = Some((key, value));

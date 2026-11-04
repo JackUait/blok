@@ -10,6 +10,7 @@ mod fetcher;
 pub mod operator;
 mod policy;
 mod proxy;
+mod socks;
 pub mod wire;
 
 pub use browserurl::browser_url;
@@ -41,6 +42,8 @@ mod pki_test;
 mod policy_test;
 #[cfg(test)]
 mod proxy_test;
+#[cfg(test)]
+mod socks_test;
 #[cfg(test)]
 mod test_json;
 #[cfg(test)]

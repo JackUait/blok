@@ -129,7 +129,10 @@ impl OperatorClient {
             .and_then(|p| p.for_target(scheme, &request.url.host))
             .cloned();
         if let Some(proxy) = &proxy
-            && proxy.scheme != "http"
+            && !matches!(
+                proxy.scheme.as_str(),
+                "http" | "socks4" | "socks4a" | "socks5"
+            )
         {
             return Err(OperatorError::Io(io::Error::new(
                 io::ErrorKind::Unsupported,
@@ -140,13 +143,14 @@ impl OperatorClient {
         let path = format!("{}{}", request.url.absolute_path, request.url.query);
         // A plain request through a proxy names the whole URL.
         let target = match (&proxy, scheme) {
-            (Some(_), "http") => format!("http://{}{path}", request.host),
+            (Some(p), "http") if p.scheme == "http" => format!("http://{}{path}", request.host),
             _ => path,
         };
         let length = request.body.len().to_string();
         let mut headers: Vec<(&str, &str)> = vec![("Host", request.host)];
         let authorization;
         if let (Some(proxy), "http") = (&proxy, scheme)
+            && proxy.scheme == "http"
             && let Some(value) = proxy_authorization(proxy)
         {
             authorization = value;
@@ -202,11 +206,19 @@ impl OperatorClient {
         let tcp = timeout_at(deadline, connect_authority(&dial))
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
+        let mut tcp = tcp;
+        if let Some(proxy) = proxy.filter(|p| p.scheme.starts_with("socks")) {
+            timeout_at(
+                deadline,
+                crate::socks::tunnel(&mut tcp, proxy, &url.host, url.port),
+            )
+            .await
+            .map_err(|_| OperatorError::ConnectTimeout)??;
+        }
         if url.scheme != "https" {
             return Ok(Box::new(tcp));
         }
-        let mut tcp = tcp;
-        if let Some(proxy) = proxy {
+        if let Some(proxy) = proxy.filter(|p| p.scheme == "http") {
             timeout_at(deadline, tunnel(&mut tcp, &authority, proxy))
                 .await
                 .map_err(|_| OperatorError::ConnectTimeout)??;

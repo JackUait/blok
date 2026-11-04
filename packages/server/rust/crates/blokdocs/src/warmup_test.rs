@@ -52,6 +52,34 @@ async fn warms_up_off_the_startup_path_with_a_long_article() {
     done.wait_for(|warmed| *warmed).await.expect("finished");
 }
 
+// A small warm-up runs the same code too few times to warm it, so the
+// document the warm-up converts must be at least 30000 UTF-16 units.
+#[tokio::test]
+async fn converts_something_at_startup_rather_than_only_building_the_pool() {
+    let release = Arc::new(Notify::new());
+    let (seen, mut calls) = mpsc::unbounded_channel();
+    let converter = new_on_runtime(Blocking {
+        release: release.clone(),
+        seen,
+        fail: false,
+    });
+    let mut done = converter.warm_up_in_background();
+    let (op, input) = calls.recv().await.expect("the warm-up ran no conversion");
+    assert_eq!(op, "blocksToPlainText");
+    for (name, text) in [
+        ("document", crate::converter::warm_up_document()),
+        ("request", input),
+    ] {
+        let length = text.encode_utf16().count();
+        assert!(
+            length >= 30_000,
+            "the warm-up {name} is too small: {length}"
+        );
+    }
+    release.notify_one();
+    done.wait_for(|warmed| *warmed).await.expect("finished");
+}
+
 #[tokio::test]
 async fn ignores_a_warm_up_that_fails() {
     let (seen, _calls) = mpsc::unbounded_channel();

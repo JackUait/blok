@@ -2,6 +2,10 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+fn never() -> bool {
+    false
+}
+
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -168,8 +172,10 @@ async fn an_empty_put_sends_content_length_zero() {
     let mut s = S3::build(test_options(&endpoint, "bucket", "path"), no_proxy()).unwrap();
     s.options.temp_dir = Some(dir.0.clone());
     s.put_object("p/k", &[]).await.unwrap();
-    s.put(".bin", "", Body::bytes(Vec::new())).await.unwrap();
-    s.put(".bin", "", Body::Stream(Box::new(&b""[..])))
+    s.put(".bin", "", Body::bytes(Vec::new()), &never)
+        .await
+        .unwrap();
+    s.put(".bin", "", Body::Stream(Box::new(&b""[..])), &never)
         .await
         .unwrap();
     let seen = seen.lock().unwrap().clone();
@@ -189,7 +195,7 @@ async fn puts_a_seekable_body_without_a_temp_file() {
     std::fs::write(&not_a_directory, b"").unwrap();
     s.options.temp_dir = Some(not_a_directory);
     let body = "x".repeat(s.options.max_spool_bytes as usize + 1);
-    s.put(".bin", "", Body::bytes(body.clone().into_bytes()))
+    s.put(".bin", "", Body::bytes(body.clone().into_bytes()), &never)
         .await
         .unwrap();
     let r = first(&bucket);
@@ -220,7 +226,7 @@ async fn spool_creates_the_temp_directory() {
     let dir = crate::local_test::TempDir::new();
     let spool = dir.0.join("missing").join("spool");
     s.options.temp_dir = Some(spool.clone());
-    s.put(".bin", "", Body::Stream(Box::new(&b"hello"[..])))
+    s.put(".bin", "", Body::Stream(Box::new(&b"hello"[..])), &never)
         .await
         .unwrap();
     assert!(crate::local_test::entries(&spool).is_empty());

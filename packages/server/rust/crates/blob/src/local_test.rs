@@ -1,6 +1,10 @@
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
+fn never() -> bool {
+    false
+}
+
 use crate::blob::{Body, Error, Store, is_generated};
 use crate::local::Local;
 
@@ -37,7 +41,7 @@ pub fn entries(directory: &Path) -> Vec<String> {
     names
 }
 
-pub fn bytes(content: &str) -> Body {
+pub fn bytes(content: &str) -> Body<'static> {
     Body::bytes(content.as_bytes().to_vec())
 }
 
@@ -79,7 +83,7 @@ async fn refuses_foreign_urls_without_touching_bystander_files() {
         }
         let store = Local::new(&directory, TEST_PUBLIC_URL);
         assert!(
-            matches!(store.delete(&url).await, Err(Error::Foreign)),
+            matches!(store.delete(&url, &never).await, Err(Error::Foreign)),
             "{url}"
         );
         for path in [&bystander, &victim] {
@@ -93,14 +97,14 @@ async fn deletes_an_owned_url_and_treats_an_absent_owned_file_as_deleted() {
     let directory = TempDir::new();
     let store = Local::new(&directory.0, TEST_PUBLIC_URL);
     let url = store
-        .put(".txt", "text/plain", bytes("bytes"))
+        .put(".txt", "text/plain", bytes("bytes"), &never)
         .await
         .unwrap();
     store
-        .delete(&format!("{url}?download=1#file"))
+        .delete(&format!("{url}?download=1#file"), &never)
         .await
         .unwrap();
-    store.delete(&url).await.unwrap();
+    store.delete(&url, &never).await.unwrap();
     assert!(entries(&directory.0).is_empty());
 }
 
@@ -124,7 +128,7 @@ async fn keeps_only_a_bounded_ascii_alphanumeric_extension() {
         let directory = TempDir::new();
         let store = Local::new(&directory.0, TEST_PUBLIC_URL);
         store
-            .put(supplied, "application/octet-stream", bytes(""))
+            .put(supplied, "application/octet-stream", bytes(""), &never)
             .await
             .unwrap();
         let names = entries(&directory.0);
@@ -143,7 +147,7 @@ async fn put_stores_the_file_when_hard_links_fail() {
     let mut store = Local::new(&directory.0, TEST_PUBLIC_URL);
     store.link = |_, _| Err(std::io::Error::from(std::io::ErrorKind::Unsupported));
     let url = store
-        .put(".txt", "text/plain", bytes("hello"))
+        .put(".txt", "text/plain", bytes("hello"), &never)
         .await
         .unwrap();
     let path = directory.0.join(url.strip_prefix(TEST_PUBLIC_URL).unwrap());
@@ -164,7 +168,7 @@ async fn put_never_overwrites_when_hard_links_fail() {
     };
     assert!(
         store
-            .put(".txt", "text/plain", bytes("second"))
+            .put(".txt", "text/plain", bytes("second"), &never)
             .await
             .is_err(),
         "Put wrote over an existing key"
@@ -175,4 +179,36 @@ async fn put_never_overwrites_when_hard_links_fail() {
         std::fs::read_to_string(directory.0.join(&names[0])).unwrap(),
         "first"
     );
+}
+
+// A multi-byte char straddling byte 32 is not a key, and must not panic.
+#[test]
+fn a_key_split_inside_a_character_is_not_generated() {
+    let key = format!("{}\u{e9}.png", "a".repeat(31));
+    assert!(!is_generated(&key));
+    assert_eq!(
+        crate::blob::key_from_public_url(TEST_PUBLIC_URL, &format!("{TEST_PUBLIC_URL}{key}")),
+        None
+    );
+}
+
+// The host's cancel signal: a set flag stops a put before it stores and a
+// delete before it removes, and leaves no temporary file.
+#[tokio::test]
+async fn a_cancel_signal_stops_put_and_delete() {
+    let directory = TempDir::new();
+    let store = Local::new(&directory.0, TEST_PUBLIC_URL);
+    let url = store
+        .put(".txt", "text/plain", bytes("kept"), &never)
+        .await
+        .unwrap();
+    let always = || true;
+    let err = store
+        .put(".txt", "text/plain", bytes("bytes"), &always)
+        .await
+        .unwrap_err();
+    assert!(matches!(err, Error::Cancelled));
+    let err = store.delete(&url, &always).await.unwrap_err();
+    assert!(matches!(err, Error::Cancelled));
+    assert_eq!(entries(&directory.0).len(), 1);
 }

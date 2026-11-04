@@ -11,7 +11,10 @@ use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
-use crate::blob::{Body, Error, Store, key_from_public_url, new_key, random_hex};
+use crate::blob::{
+    Body, BoxFuture, Cancelled, Error, Store, key_from_public_url, new_key, random_hex,
+    until_cancelled,
+};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 const RESPONSE_HEADER_TIMEOUT: Duration = Duration::from_secs(60);
@@ -271,12 +274,12 @@ impl S3 {
         )))
     }
 
-    async fn put_seekable(
+    async fn put_seekable<'b>(
         &self,
         key: &str,
         mime: &str,
-        mut body: Box<dyn crate::blob::Seekable>,
-    ) -> Result<Option<Box<dyn crate::blob::Seekable>>, Error> {
+        mut body: Box<dyn crate::blob::Seekable + 'b>,
+    ) -> Result<Option<Box<dyn crate::blob::Seekable + 'b>>, Error> {
         let Ok(start) = body.stream_position().await else {
             return Ok(Some(body));
         };
@@ -424,34 +427,48 @@ impl Store for S3 {
     /// Learns the body's length and hash, then PUTs it. Like C#'s
     /// PreparedPayload, a seekable body is hashed in place, with no spool
     /// cap; any other body is spooled.
-    async fn put(&self, extension: &str, mime_type: &str, content: Body) -> Result<String, Error> {
-        let key = new_key(extension);
-        let mime = sanitize_s3_media_type(mime_type);
-        match content {
-            Body::Seekable(body) => {
-                if let Some(unseekable) = self.put_seekable(&key, &mime, body).await? {
-                    self.put_spooled(&key, &mime, Box::new(unseekable)).await?;
+    fn put<'a>(
+        &'a self,
+        extension: &'a str,
+        mime_type: &'a str,
+        content: Body<'a>,
+        cancelled: Cancelled<'a>,
+    ) -> BoxFuture<'a, Result<String, Error>> {
+        Box::pin(until_cancelled(cancelled, async move {
+            let key = new_key(extension);
+            let mime = sanitize_s3_media_type(mime_type);
+            match content {
+                Body::Seekable(body) => {
+                    if let Some(unseekable) = self.put_seekable(&key, &mime, body).await? {
+                        self.put_spooled(&key, &mime, Box::new(unseekable)).await?;
+                    }
                 }
+                Body::Stream(body) => self.put_spooled(&key, &mime, body).await?,
             }
-            Body::Stream(body) => self.put_spooled(&key, &mime, body).await?,
-        }
-        Ok(self.public(&key))
+            Ok(self.public(&key))
+        }))
     }
 
     /// Removes the object behind a URL this store issued.
-    async fn delete(&self, url: &str) -> Result<(), Error> {
-        let key = key_from_public_url(&self.options.public_url, url).ok_or(Error::Foreign)?;
-        self.send(
-            "DELETE",
-            &key,
-            "",
-            RequestBody::Bytes(&[]),
-            &empty_hash(),
-            false,
-            false,
-        )
-        .await?;
-        Ok(())
+    fn delete<'a>(
+        &'a self,
+        url: &'a str,
+        cancelled: Cancelled<'a>,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        Box::pin(until_cancelled(cancelled, async move {
+            let key = key_from_public_url(&self.options.public_url, url).ok_or(Error::Foreign)?;
+            self.send(
+                "DELETE",
+                &key,
+                "",
+                RequestBody::Bytes(&[]),
+                &empty_hash(),
+                false,
+                false,
+            )
+            .await?;
+            Ok(())
+        }))
     }
 }
 

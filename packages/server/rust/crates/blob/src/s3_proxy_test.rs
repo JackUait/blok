@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+fn never() -> bool {
+    false
+}
+
 use tokio::io::AsyncWriteExt;
 
 use blok_outbound::EnvironmentProxy;
@@ -131,7 +135,7 @@ async fn sends_s3_requests_through_the_environment_proxy_the_way_dotnet_does() {
         };
         let s = S3::build(options, settings).unwrap();
         assert!(
-            s.put(".txt", "text/plain", Body::bytes(b"one".to_vec()))
+            s.put(".txt", "text/plain", Body::bytes(b"one".to_vec()), &never)
                 .await
                 .is_err(),
             "{name}"

@@ -6,8 +6,8 @@ mod local;
 mod s3;
 
 pub use blob::{
-    Body, Error, Seekable, Store, extension, is_generated, key_from_public_url, new_key,
-    normalize_extension,
+    Body, BoxFuture, Cancelled, Error, Seekable, Store, extension, is_generated,
+    key_from_public_url, new_key, normalize_extension,
 };
 pub use local::Local;
 pub use s3::{S3, S3Options};

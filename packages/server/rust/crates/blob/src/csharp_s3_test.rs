@@ -1,6 +1,10 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+fn never() -> bool {
+    false
+}
+
 use tokio::io::AsyncRead;
 
 use crate::blob::{Body, Error, Store};
@@ -29,7 +33,7 @@ fn store(
     (s, seen)
 }
 
-fn stream(content: &'static [u8]) -> Body {
+fn stream(content: &'static [u8]) -> Body<'static> {
     Body::Stream(Box::new(content))
 }
 
@@ -38,9 +42,10 @@ async fn deletes_an_owned_url_with_a_signed_empty_payload() {
     let dir = TempDir::new();
     let (s, seen) = store(&dir, |_| (204, Vec::new()));
     let key = format!("{}.png", "a".repeat(32));
-    s.delete(&format!(
-        "https://cdn.example.com/media/{key}?download=1#file"
-    ))
+    s.delete(
+        &format!("https://cdn.example.com/media/{key}?download=1#file"),
+        &never,
+    )
     .await
     .unwrap();
     let r = seen.lock().unwrap()[0].clone();
@@ -67,10 +72,10 @@ async fn refuses_a_foreign_delete_without_sending_a_request() {
     let dir = TempDir::new();
     let (s, seen) = store(&dir, |_| (204, Vec::new()));
     let err = s
-        .delete(&format!(
-            "https://evil.example.com/media/{}.png",
-            "a".repeat(32)
-        ))
+        .delete(
+            &format!("https://evil.example.com/media/{}.png", "a".repeat(32)),
+            &never,
+        )
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Foreign));
@@ -89,6 +94,7 @@ async fn truncates_the_upstream_error_body() {
             ".bin",
             "application/octet-stream",
             Body::bytes(b"bytes".to_vec()),
+            &never,
         )
         .await
         .unwrap_err();
@@ -109,7 +115,7 @@ async fn spools_a_non_seekable_body_only_for_the_request_lifetime() {
         assert_eq!(request.body, b"hello");
         (200, Vec::new())
     });
-    s.put(".bin", "", stream(b"hello")).await.unwrap();
+    s.put(".bin", "", stream(b"hello"), &never).await.unwrap();
     assert!(entries(&dir.0).is_empty());
 }
 
@@ -117,7 +123,7 @@ async fn spools_a_non_seekable_body_only_for_the_request_lifetime() {
 async fn removes_the_spool_when_s3_rejects_the_request() {
     let dir = TempDir::new();
     let (s, _) = store(&dir, |_| (500, b"nope".to_vec()));
-    assert!(s.put(".bin", "", stream(b"hello")).await.is_err());
+    assert!(s.put(".bin", "", stream(b"hello"), &never).await.is_err());
     assert!(entries(&dir.0).is_empty());
 }
 
@@ -138,7 +144,7 @@ async fn removes_the_spool_when_the_input_fails() {
     let dir = TempDir::new();
     let (s, seen) = store(&dir, |_| (200, Vec::new()));
     let err = s
-        .put(".bin", "", Body::Stream(Box::new(Failing)))
+        .put(".bin", "", Body::Stream(Box::new(Failing)), &never)
         .await
         .unwrap_err();
     assert_eq!(err.to_string(), "connection reset");
@@ -172,7 +178,10 @@ async fn silent_store(
 async fn bounds_the_configured_s3_request_and_removes_the_spool() {
     let dir = TempDir::new();
     let (s, _task) = silent_store(&dir, Duration::from_millis(200)).await;
-    let err = s.put(".bin", "", stream(b"hello")).await.unwrap_err();
+    let err = s
+        .put(".bin", "", stream(b"hello"), &never)
+        .await
+        .unwrap_err();
     assert!(deadline(&err), "{err}");
     assert!(entries(&dir.0).is_empty());
 }
@@ -182,7 +191,7 @@ async fn bounds_the_configured_s3_request_and_removes_the_spool() {
 async fn removes_the_spool_when_the_s3_request_is_cancelled() {
     let dir = TempDir::new();
     let (s, _task) = silent_store(&dir, Duration::from_secs(30)).await;
-    let put = s.put(".bin", "", stream(b"hello"));
+    let put = s.put(".bin", "", stream(b"hello"), &never);
     assert!(
         tokio::time::timeout(Duration::from_millis(200), put)
             .await
@@ -234,7 +243,7 @@ async fn wire_store() -> (
 async fn puts_with_the_exact_on_wire_signature_for_its_generated_target() {
     let (s, seen, _task) = wire_store().await;
     let url = s
-        .put(".png", "image/png", Body::bytes(b"bytes".to_vec()))
+        .put(".png", "image/png", Body::bytes(b"bytes".to_vec()), &never)
         .await
         .unwrap();
     let request = seen.lock().unwrap()[0].clone();
@@ -247,11 +256,33 @@ async fn puts_with_the_exact_on_wire_signature_for_its_generated_target() {
 async fn deletes_with_the_exact_on_wire_signature_for_its_dynamic_target() {
     let (s, seen, _task) = wire_store().await;
     let key = format!("{}.png", "b".repeat(32));
-    s.delete(&format!("https://cdn.example.com/media/{key}"))
+    s.delete(&format!("https://cdn.example.com/media/{key}"), &never)
         .await
         .unwrap();
     let request = seen.lock().unwrap()[0].clone();
     assert_eq!(request.method, "DELETE");
     assert_eq!(request.target, format!("/media/{key}"));
     assert_wire_signature(&request, &s.options, "");
+}
+
+// The host's cancel signal stops an S3 put mid-request and removes the spool.
+#[tokio::test]
+async fn a_cancel_signal_stops_an_s3_put_and_removes_the_spool() {
+    let dir = TempDir::new();
+    let (s, _task) = silent_store(&dir, Duration::from_secs(30)).await;
+    let flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let setter = flag.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        setter.store(true, std::sync::atomic::Ordering::SeqCst);
+    });
+    let cancelled = move || flag.load(std::sync::atomic::Ordering::SeqCst);
+    let started = std::time::Instant::now();
+    let err = s
+        .put(".bin", "", stream(b"hello"), &cancelled)
+        .await
+        .unwrap_err();
+    assert!(matches!(err, Error::Cancelled), "{err}");
+    assert!(started.elapsed() < Duration::from_secs(2));
+    assert!(entries(&dir.0).is_empty());
 }

@@ -2,16 +2,18 @@ use std::io;
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
-use tokio::io::{AsyncRead, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
-use crate::blob::{Body, Error, Store, key_from_public_url, new_key, random_hex};
+use crate::blob::{
+    Body, BoxFuture, Cancelled, Error, Store, key_from_public_url, new_key, random_hex,
+};
 
 /// LocalBlobStore: files in one directory, served under `public_url`.
 pub struct Local {
     pub directory: PathBuf,
     pub public_url: String,
     /// std::fs::hard_link; a seam for tests.
-    pub link: fn(&Path, &Path) -> io::Result<()>,
+    pub(crate) link: fn(&Path, &Path) -> io::Result<()>,
 }
 
 /// Removes the temporary file unless the put committed, also when the put
@@ -27,10 +29,10 @@ impl Drop for Temporary {
 }
 
 impl Local {
-    pub fn new(directory: impl Into<PathBuf>, public_url: &str) -> Local {
+    pub fn new(directory: impl Into<PathBuf>, public_url: impl Into<String>) -> Local {
         Local {
             directory: directory.into(),
-            public_url: public_url.to_owned(),
+            public_url: public_url.into(),
             link: |from, to| std::fs::hard_link(from, to),
         }
     }
@@ -39,6 +41,7 @@ impl Local {
         &self,
         key: &str,
         mut content: Box<dyn AsyncRead + Send + Unpin + '_>,
+        cancelled: Cancelled<'_>,
     ) -> Result<(), Error> {
         tokio::fs::create_dir_all(&self.directory).await?;
         let final_path = self.directory.join(key);
@@ -54,9 +57,22 @@ impl Local {
             .open(&temporary_path)?;
         let mut temporary = Temporary(Some(temporary_path.clone()));
         let mut file = tokio::fs::File::from_std(file);
-        tokio::io::copy(&mut content, &mut file).await?;
+        let mut buffer = vec![0u8; 32 << 10];
+        loop {
+            if cancelled() {
+                return Err(Error::Cancelled);
+            }
+            let n = content.read(&mut buffer).await?;
+            if n == 0 {
+                break;
+            }
+            file.write_all(&buffer[..n]).await?;
+        }
         file.flush().await?;
         file.sync_all().await?;
+        if cancelled() {
+            return Err(Error::Cancelled);
+        }
         tokio::fs::set_permissions(&temporary_path, std::fs::Permissions::from_mode(0o644)).await?;
         drop(file);
         // File.Move refuses to overwrite; a hard link does too. Where
@@ -85,19 +101,40 @@ impl Local {
 impl Store for Local {
     /// Writes to a 0600 temporary file in the directory, syncs it, makes it
     /// 0644 and renames it into place, never over an existing file.
-    async fn put(&self, extension: &str, _mime_type: &str, content: Body) -> Result<String, Error> {
-        let key = new_key(extension);
-        let reader: Box<dyn AsyncRead + Send + Unpin> = match content {
-            Body::Seekable(body) => Box::new(body),
-            Body::Stream(body) => body,
-        };
-        self.store(&key, reader).await?;
-        Ok(format!("{}/{key}", self.public_url.trim_end_matches('/')))
+    fn put<'a>(
+        &'a self,
+        extension: &'a str,
+        _mime_type: &'a str,
+        content: Body<'a>,
+        cancelled: Cancelled<'a>,
+    ) -> BoxFuture<'a, Result<String, Error>> {
+        Box::pin(async move {
+            let key = new_key(extension);
+            let reader: Box<dyn AsyncRead + Send + Unpin + 'a> = match content {
+                Body::Seekable(body) => Box::new(body),
+                Body::Stream(body) => body,
+            };
+            self.store(&key, reader, cancelled).await?;
+            Ok(format!("{}/{key}", self.public_url.trim_end_matches('/')))
+        })
     }
 
+    fn delete<'a>(
+        &'a self,
+        url: &'a str,
+        cancelled: Cancelled<'a>,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        Box::pin(self.remove(url, cancelled))
+    }
+}
+
+impl Local {
     /// A missing file is fine; a missing directory is an error, as
     /// File.Delete throws DirectoryNotFoundException.
-    async fn delete(&self, url: &str) -> Result<(), Error> {
+    async fn remove(&self, url: &str, cancelled: Cancelled<'_>) -> Result<(), Error> {
+        if cancelled() {
+            return Err(Error::Cancelled);
+        }
         let key = key_from_public_url(&self.public_url, url).ok_or(Error::Foreign)?;
         let path = self.directory.join(key);
         // File.Delete never removes a directory.

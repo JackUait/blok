@@ -2,6 +2,10 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+fn never() -> bool {
+    false
+}
+
 use sha2::{Digest, Sha256};
 
 use crate::blob::{Body, Error, Store};
@@ -363,7 +367,7 @@ async fn refuses_an_empty_key() {
 async fn puts_an_upload_as_an_attachment_with_a_known_length() {
     let bucket = Arc::new(FakeBucket::default());
     let url = bucket_store(&bucket)
-        .put(".png", "image/png", Body::bytes(b"bytes".to_vec()))
+        .put(".png", "image/png", Body::bytes(b"bytes".to_vec()), &never)
         .await
         .unwrap();
     let r = first(&bucket);
@@ -407,7 +411,7 @@ async fn bounds_the_spool() {
         NeverEnding,
         s.options.max_spool_bytes + 1,
     )));
-    assert!(s.put(".bin", "", body).await.is_err());
+    assert!(s.put(".bin", "", body, &never).await.is_err());
     assert!(bucket.requests.lock().unwrap().is_empty());
     assert!(crate::local_test::entries(&dir.0).is_empty());
 }
@@ -427,7 +431,7 @@ async fn sanitizes_the_media_type_before_signing() {
     ] {
         let bucket = Arc::new(FakeBucket::default());
         bucket_store(&bucket)
-            .put(".txt", media_type, Body::bytes(b"bytes".to_vec()))
+            .put(".txt", media_type, Body::bytes(b"bytes".to_vec()), &never)
             .await
             .unwrap();
         let r = first(&bucket);

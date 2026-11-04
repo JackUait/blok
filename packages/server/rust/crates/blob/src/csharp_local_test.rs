@@ -3,6 +3,10 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+fn never() -> bool {
+    false
+}
+
 use tokio::io::{AsyncRead, AsyncWriteExt, ReadBuf};
 
 use crate::blob::{Body, Store};
@@ -24,7 +28,7 @@ async fn stores_bytes_under_a_random_key_and_returns_the_public_url() {
     let directory = TempDir::new();
     let store = Local::new(&directory.0, TEST_PUBLIC_URL);
     let url = store
-        .put(".txt", "text/plain", bytes("bytes"))
+        .put(".txt", "text/plain", bytes("bytes"), &never)
         .await
         .unwrap();
     let names = entries(&directory.0);
@@ -43,7 +47,7 @@ async fn creates_the_destination_directory_on_first_put() {
     let directory = root.0.join("not").join("yet");
     let store = Local::new(&directory, TEST_PUBLIC_URL);
     store
-        .put(".txt", "text/plain", bytes("bytes"))
+        .put(".txt", "text/plain", bytes("bytes"), &never)
         .await
         .unwrap();
     assert_eq!(entries(&directory).len(), 1);
@@ -60,7 +64,7 @@ async fn paused_put(
     let store = Local::new(directory, TEST_PUBLIC_URL);
     let put = tokio::spawn(async move {
         store
-            .put(".txt", "text/plain", Body::Stream(Box::new(reader)))
+            .put(".txt", "text/plain", Body::Stream(Box::new(reader)), &never)
             .await
     });
     writer.write_all(b"partial ").await.unwrap();
@@ -121,7 +125,12 @@ async fn removes_the_temporary_file_when_the_input_fails() {
     let directory = TempDir::new();
     let store = Local::new(&directory.0, TEST_PUBLIC_URL);
     let error = store
-        .put(".txt", "text/plain", Body::Stream(Box::new(Failing)))
+        .put(
+            ".txt",
+            "text/plain",
+            Body::Stream(Box::new(Failing)),
+            &never,
+        )
         .await
         .unwrap_err();
     assert_eq!(error.to_string(), "connection reset");
@@ -145,7 +154,7 @@ async fn stores_a_world_readable_file_where_unix_modes_are_supported() {
     let directory = TempDir::new();
     let store = Local::new(&directory.0, TEST_PUBLIC_URL);
     store
-        .put(".txt", "text/plain", bytes("bytes"))
+        .put(".txt", "text/plain", bytes("bytes"), &never)
         .await
         .unwrap();
     let names = entries(&directory.0);
@@ -161,9 +170,9 @@ async fn a_cancelled_delete_does_not_remove_the_file() {
     let directory = TempDir::new();
     let store = Local::new(&directory.0, TEST_PUBLIC_URL);
     let url = store
-        .put(".txt", "text/plain", bytes("bytes"))
+        .put(".txt", "text/plain", bytes("bytes"), &never)
         .await
         .unwrap();
-    drop(store.delete(&url));
+    drop(store.delete(&url, &never));
     assert_eq!(entries(&directory.0).len(), 1);
 }

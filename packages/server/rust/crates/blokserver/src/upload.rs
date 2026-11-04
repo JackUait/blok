@@ -110,7 +110,12 @@ pub(crate) async fn upload_from(
             Ok(store) => {
                 let extension = normalize_extension(extension(&upload.file_name));
                 store
-                    .put(&extension, &upload.mime_type, &mut counted, &*cancelled)
+                    .put(
+                        &extension,
+                        &upload.mime_type,
+                        blok_blob::Body::Stream(Box::new(&mut counted)),
+                        &*cancelled,
+                    )
                     .await
                     .map_err(|_| ())
             }

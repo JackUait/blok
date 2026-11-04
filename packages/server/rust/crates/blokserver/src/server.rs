@@ -207,8 +207,22 @@ impl Inner {
     pub fn blob_store(&self) -> Result<Arc<dyn Store>, String> {
         self.store
             .get_or_init(|| {
-                if !self.options.s3_bucket.is_empty() {
-                    return Err("blob: the S3 store is not built into this server yet".to_owned());
+                let o = &self.options;
+                if !o.s3_bucket.is_empty() {
+                    // The spool cap is MaxUploadBytes, in the system temp directory.
+                    let store = blok_blob::S3::new(blok_blob::S3Options {
+                        endpoint: o.s3_endpoint.clone(),
+                        region: o.s3_region.clone(),
+                        bucket: o.s3_bucket.clone(),
+                        access_key: o.s3_access_key.clone(),
+                        secret_key: o.s3_secret_key.clone(),
+                        public_url: o.s3_bucket_url.clone(),
+                        addressing: o.s3_addressing.clone(),
+                        max_spool_bytes: u64::try_from(o.max_upload_bytes).unwrap_or(0),
+                        temp_dir: None,
+                    })
+                    .map_err(|e| e.to_string())?;
+                    return Ok(Arc::new(store) as Arc<dyn Store>);
                 }
                 Ok(Arc::new(blok_blob::Local::new(
                     &self.options.storage_directory,

@@ -1,6 +1,8 @@
 use std::fmt;
 use std::future::Future;
 use std::io;
+use std::pin::Pin;
+use std::time::Duration;
 
 use tokio::io::{AsyncRead, AsyncSeek};
 
@@ -10,14 +12,14 @@ pub trait Seekable: AsyncRead + AsyncSeek + Send + Unpin {}
 impl<T: AsyncRead + AsyncSeek + Send + Unpin> Seekable for T {}
 
 /// What an upload carries.
-pub enum Body {
-    Seekable(Box<dyn Seekable>),
+pub enum Body<'a> {
+    Seekable(Box<dyn Seekable + 'a>),
     /// Its length is unknown until read, so S3 spools it.
-    Stream(Box<dyn AsyncRead + Send + Unpin>),
+    Stream(Box<dyn AsyncRead + Send + Unpin + 'a>),
 }
 
-impl Body {
-    pub fn bytes(content: Vec<u8>) -> Body {
+impl Body<'_> {
+    pub fn bytes(content: Vec<u8>) -> Body<'static> {
         Body::Seekable(Box::new(io::Cursor::new(content)))
     }
 }
@@ -31,6 +33,8 @@ pub enum Error {
     Message(String),
     /// The S3 request timeout passed.
     DeadlineExceeded,
+    /// The caller went away mid-call.
+    Cancelled,
 }
 
 impl fmt::Display for Error {
@@ -40,6 +44,7 @@ impl fmt::Display for Error {
             Error::Io(err) => err.fmt(f),
             Error::Message(message) => f.write_str(message),
             Error::DeadlineExceeded => f.write_str("context deadline exceeded"),
+            Error::Cancelled => f.write_str("blob: cancelled"),
         }
     }
 }
@@ -52,17 +57,52 @@ impl From<io::Error> for Error {
     }
 }
 
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
+/// Polled during a call; true stops it with [`Error::Cancelled`].
+pub type Cancelled<'a> = &'a (dyn Fn() -> bool + Send + Sync);
+
 /// IBlobStore.
 pub trait Store: Send + Sync {
     /// Stores `content` and returns its public URL.
-    fn put(
-        &self,
-        extension: &str,
-        mime_type: &str,
-        content: Body,
-    ) -> impl Future<Output = Result<String, Error>> + Send;
+    fn put<'a>(
+        &'a self,
+        extension: &'a str,
+        mime_type: &'a str,
+        content: Body<'a>,
+        cancelled: Cancelled<'a>,
+    ) -> BoxFuture<'a, Result<String, Error>>;
     /// Removes the file behind `url`; `Error::Foreign` for a URL it never issued.
-    fn delete(&self, url: &str) -> impl Future<Output = Result<(), Error>> + Send;
+    fn delete<'a>(
+        &'a self,
+        url: &'a str,
+        cancelled: Cancelled<'a>,
+    ) -> BoxFuture<'a, Result<(), Error>>;
+}
+
+/// How often a network call looks at its cancel signal.
+const CANCEL_POLL: Duration = Duration::from_millis(20);
+
+/// Runs `work` until it ends or `cancelled` turns true.
+pub(crate) async fn until_cancelled<T>(
+    cancelled: Cancelled<'_>,
+    work: impl Future<Output = Result<T, Error>>,
+) -> Result<T, Error> {
+    if cancelled() {
+        return Err(Error::Cancelled);
+    }
+    let watch = async {
+        loop {
+            tokio::time::sleep(CANCEL_POLL).await;
+            if cancelled() {
+                return;
+            }
+        }
+    };
+    tokio::select! {
+        result = work => result,
+        () = watch => Err(Error::Cancelled),
+    }
 }
 
 const HEX_LENGTH: usize = 32;
@@ -103,7 +143,10 @@ pub fn is_generated(key: &str) -> bool {
     {
         return false;
     }
-    let extension = &key[HEX_LENGTH..];
+    // A multi-byte char could straddle byte 32; such a key is not generated.
+    let Some(extension) = key.get(HEX_LENGTH..) else {
+        return false;
+    };
     extension.is_empty() || extension == normalize_extension(extension)
 }
 

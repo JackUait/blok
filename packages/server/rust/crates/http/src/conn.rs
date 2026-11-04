@@ -172,6 +172,7 @@ async fn exchange(
     let started = Instant::now();
     let deadline_at = config.request_timeout.map(|timeout| started + timeout);
     let (cancel, cancel_receiver) = watch::channel(false);
+    let (expired, expired_receiver) = watch::channel(false);
     let exchange = Arc::new(Exchange {
         config: Arc::clone(config),
         inbound: Arc::clone(inbound),
@@ -184,6 +185,7 @@ async fn exchange(
             finished: false,
             close: false,
             hijacked: false,
+            expired: expired_receiver,
         }),
         body: tokio::sync::Mutex::new(BodyState::new(
             framing,
@@ -203,6 +205,7 @@ async fn exchange(
         deadline_changed: Notify::new(),
         hijacked: Notify::new(),
         cancel,
+        expired,
         left: Mutex::new(None),
         active: Mutex::new(guard.take()),
         method_head: head.method == "HEAD",
@@ -336,12 +339,17 @@ fn expire(exchange: &Exchange) {
         deadline.expired = true;
     }
     exchange.cancel();
-    // A held lock is a write in progress, so the answer has started.
-    if let Ok(mut wire) = exchange.wire.try_lock()
-        && !wire.started
-    {
-        wire.host_owned = true;
-        wire.pending_timeout = true;
+    // A held lock is a write in progress, so the answer has started. An
+    // answer that started is reset at its next blocked write; one that did
+    // not gets the 504.
+    match exchange.wire.try_lock() {
+        Ok(mut wire) if !wire.started => {
+            wire.host_owned = true;
+            wire.pending_timeout = true;
+        }
+        _ => {
+            exchange.expired.send_replace(true);
+        }
     }
 }
 

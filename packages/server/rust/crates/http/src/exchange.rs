@@ -41,14 +41,29 @@ pub(crate) struct Wire {
     pub finished: bool,
     pub close: bool,
     pub hijacked: bool,
+    /// Turns true when the request deadline passes.
+    pub expired: watch::Receiver<bool>,
 }
 
 impl Wire {
+    /// Measured: Kestrel resets a connection whose answer is still going out
+    /// at the request deadline, so a stalled reader cannot hold it longer.
+    /// Any write after that deadline resets too.
     pub async fn send(&mut self, bytes: &[u8]) -> std::io::Result<()> {
-        match self.write.as_mut() {
-            Some(write) => write.write_all(bytes).await,
-            None => Err(std::io::ErrorKind::NotConnected.into()),
+        let Some(write) = self.write.as_mut() else {
+            return Err(std::io::ErrorKind::NotConnected.into());
+        };
+        let mut expired = self.expired.clone();
+        let result = tokio::select! {
+            biased;
+            _ = expired.wait_for(|expired| *expired) => Err(std::io::ErrorKind::TimedOut.into()),
+            result = write.write_all(bytes) => return result,
+        };
+        if let Some(write) = self.write.take() {
+            let _ = socket2::SockRef::from(write.as_ref()).set_linger(Some(Duration::ZERO));
         }
+        self.close = true;
+        result
     }
 }
 
@@ -70,6 +85,8 @@ pub(crate) struct Exchange {
     pub deadline_changed: Notify,
     pub hijacked: Notify,
     pub cancel: watch::Sender<bool>,
+    /// Fires at the request deadline, unless it was lifted.
+    pub expired: watch::Sender<bool>,
     /// What a handler that never answered left in its writer.
     pub left: Mutex<Option<(u16, Headers)>>,
     pub active: Mutex<Option<ActiveGuard>>,

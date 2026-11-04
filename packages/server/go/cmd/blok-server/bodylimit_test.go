@@ -101,7 +101,7 @@ func TestARouteThatSetTheCapAnswersAnOverCapRead(t *testing.T) {
 		_, _ = io.WriteString(w, "file too large\n")
 	}))
 	got := rawAnswer(t, address, post("Content-Length: 5\r\n", "hello"))
-	if !strings.HasPrefix(got, "HTTP/1.1 413 Request Entity Too Large\r\n") || !strings.HasSuffix(got, "file too large\n") {
+	if !strings.HasPrefix(got, "HTTP/1.1 413 Payload Too Large\r\n") || !strings.HasSuffix(got, "file too large\n") {
 		t.Fatalf("got %q", got)
 	}
 }

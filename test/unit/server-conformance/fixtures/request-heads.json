@@ -418,5 +418,33 @@
   {
     "name": "asterisk and more",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "HTTP/1.0 request",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\n\n{\"status\":\"ok\",\"version\":\"dev\"}\n"
+  },
+  {
+    "name": "HTTP/1.0 request with no route",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\n\n404 page not found\n"
+  },
+  {
+    "name": "HTTP/1.0 keep-alive with an answer of unknown length",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\n\n{\"status\":\"ok\",\"version\":\"dev\"}\n"
+  },
+  {
+    "name": "HTTP/1.0 keep-alive HEAD, then a refused head",
+    "response": "HTTP/1.1 200 OK\nconnection: keep-alive\ncontent-type: application/json\n\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "HTTP/1.0 POST",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\n\nexpected {\"url\": \"...\"}\n"
+  },
+  {
+    "name": "absolute target on HTTP/1.0 with no Host",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\n\n{\"status\":\"ok\",\"version\":\"dev\"}\n"
+  },
+  {
+    "name": "range past the end of a file",
+    "response": "HTTP/1.1 416 Range Not Satisfiable\nconnection: close\ncontent-disposition: attachment\ncontent-length: 33\ncontent-range: bytes */5\ncontent-type: text/plain; charset=utf-8\nx-content-type-options: nosniff\n\ninvalid range: failed to overlap\n"
   }
 ]

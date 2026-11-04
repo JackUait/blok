@@ -139,7 +139,7 @@ func TestTargetFormsFollowKestrel(t *testing.T) {
 		{"a trailing dot", get("http://x./h", "x."), ok},
 		{"a Host with spaces around", get("http://x/h", "  x  "), ok},
 		{"an upper-case scheme", get("Http://x/h", "x"), kestrel400},
-		{"on HTTP/1.0 with no Host", "GET http://y/h HTTP/1.0\r\n\r\n", "HTTP/1.0 200 OK"},
+		{"on HTTP/1.0 with no Host", "GET http://y/h HTTP/1.0\r\n\r\n", "HTTP/1.1 200 OK"},
 		{"on HTTP/1.0 for another host", "GET http://y/h HTTP/1.0\r\nHost: x\r\n\r\n", kestrel400},
 		{"a port over 65535", "GET http://x:65536/h HTTP/1.1\r\n", kestrel400},
 		{"a port with a letter", "GET http://x:8a/h HTTP/1.1\r\n", kestrel400},

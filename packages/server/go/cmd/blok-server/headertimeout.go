@@ -42,11 +42,14 @@ func limitRequestHeaders(server *http.Server, timeout, idle time.Duration) func(
 			conn.arm()
 		case http.StateHijacked, http.StateClosed:
 			conn.stop()
+			// A hijacker writes its own bytes.
+			conn.setAnswer(noAnswer)
 		}
 	}
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if conn, ok := r.Context().Value(headerConnKey{}).(*headerConn); ok {
 			conn.stop()
+			conn.setAnswer(answerFor(r))
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -81,6 +84,8 @@ type headerConn struct {
 	idleDeadlines int
 	timer         *time.Timer
 	targets       *targetStream
+	// answer is how the next status line net/http writes is rewritten.
+	answer answerKind
 }
 
 func (c *headerConn) Read(p []byte) (int, error) {

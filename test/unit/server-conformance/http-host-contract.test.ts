@@ -1280,6 +1280,14 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'authority target with an underscore': bytes('GET a_b HTTP/1.1\r\n'),
   'asterisk target with GET': bytes('GET * HTTP/1.1\r\n'),
   'asterisk and more': bytes('GET *x HTTP/1.1\r\n'),
+  // Kestrel answers HTTP/1.0 with an HTTP/1.1 status line. It closes after
+  // an answer of unknown length, and says so.
+  'HTTP/1.0 request': bytes('GET /health HTTP/1.0\r\n\r\n'),
+  'HTTP/1.0 request with no route': bytes('GET /nope HTTP/1.0\r\n\r\n'),
+  'HTTP/1.0 keep-alive with an answer of unknown length': bytes('GET /health HTTP/1.0\r\nConnection: keep-alive\r\n\r\n'),
+  'HTTP/1.0 keep-alive HEAD, then a refused head': bytes('HEAD /health HTTP/1.0\r\nConnection: keep-alive\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'HTTP/1.0 POST': bytes('POST /delete HTTP/1.0\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}'),
+  'absolute target on HTTP/1.0 with no Host': bytes('GET http://y/health HTTP/1.0\r\n\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {
@@ -1293,6 +1301,17 @@ it('refuses request heads at Kestrel\'s limits and grammar', async () => {
 
       actual.push({ name, response });
     }
+    // Kestrel's reason phrase for 416, which net/http words differently.
+    const upload = await server.request('POST', '/upload', {
+      body: multipart([filePart('a.txt', 'hello')]),
+      headers: { 'Content-Type': `multipart/form-data; boundary=${BOUNDARY}` },
+    });
+    const { pathname } = new URL((JSON.parse(upload.text) as { url: string }).url);
+
+    actual.push({
+      name: 'range past the end of a file',
+      response: await rawExchange(server.baseUrl, bytes(`GET ${pathname} HTTP/1.1\r\nHost: x\r\nRange: bytes=99-\r\n${CLOSE}\r\n`)),
+    });
   }).finally(() => rm(directory, { recursive: true, force: true }));
 
   compareGolden('request-heads.json', actual);
@@ -1330,6 +1349,8 @@ it('caps a request body at 30,000,000 bytes off /upload', async () => {
     'POST to no route': `POST /nope HTTP/1.1\r\nHost: x\r\n${OVER_CAP}${CLOSE}\r\n`,
     'POST /sync/{doc}/edit': `POST /sync/d/edit HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}Blok-Idempotency-Key: k\r\n${OVER_CAP}${CLOSE}\r\n`,
     'POST /sync/{doc}/reset': `POST /sync/d/reset HTTP/1.1\r\nHost: x\r\n${JSON_TYPE}${OVER_CAP}${CLOSE}\r\n`,
+    // /upload answers its own cap (32 MiB here) with Kestrel's reason phrase.
+    'POST /upload over its cap': `POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n${CLOSE}\r\n`,
   };
 
   try {

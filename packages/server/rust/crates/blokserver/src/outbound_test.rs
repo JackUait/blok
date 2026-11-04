@@ -739,6 +739,26 @@ async fn fetches_through_the_registered_guard_with_frozen_limits() {
     );
     let too_large = unfurl_get(running.address, &format!("{origin}/too-large")).await;
     assert_eq!(too_large.text(), "{\"success\":0}\n");
+    // Relative assets need a public final URL, which a loopback fetch never
+    // has: C#'s own page goes through the body builder.
+    let final_url = "https://example.com/final/page.html?from=redirect";
+    let csharp_head = "<title>Plain title</title>\n\
+        <meta name=\"description\" content=\"Plain description\">\n\
+        <meta name=\"twitter:title\" content=\"Twitter title\">\n\
+        <meta name=\"twitter:description\" content=\"Twitter description\">\n\
+        <meta name=\"twitter:image\" content=\"/twitter.png\">\n\
+        <meta property=\"og:title\" content=\"OpenGraph title\">\n\
+        <meta property=\"og:description\" content=\"OpenGraph description\">\n\
+        <meta property=\"og:image\" content=\"../images/cover.png?size=2\">\n\
+        <link rel=\"icon\" href=\"./favicon.svg\">\n";
+    assert_eq!(
+        String::from_utf8(unfurl_body(
+            final_url,
+            &blok_unfurl::parse(csharp_head.as_bytes(), final_url)
+        ))
+        .unwrap(),
+        "{\"success\":1,\"link\":\"https://example.com/final/page.html?from=redirect\",\"meta\":{\"title\":\"OpenGraph title\",\"description\":\"OpenGraph description\",\"image\":{\"url\":\"https://example.com/images/cover.png?size=2\"},\"favicon\":\"https://example.com/final/favicon.svg\",\"domain\":\"example.com\"}}\n"
+    );
     // The 10 s timeout cannot be waited out in a test: the limits show it.
     let limits = unfurl_limits(any_hop());
     assert_eq!(
@@ -770,7 +790,8 @@ async fn non_two_hundred_status_is_not_parsed() {
 }
 
 // A loopback page gets no /favicon.ico fallback (browser_url drops a
-// non-public URL), so the page names a public icon to show the field.
+// non-public URL), so the wire page names a public icon and C#'s fallback
+// goes through the body builder.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_two_hundred_status_is_parsed() {
     let (origin_server, _) = origin(|target| Reply {
@@ -796,6 +817,15 @@ async fn every_two_hundred_status_is_parsed() {
             "status {status}"
         );
     }
+    let final_url = "https://example.com/a";
+    assert_eq!(
+        String::from_utf8(unfurl_body(
+            final_url,
+            &blok_unfurl::parse(b"<title>T</title>", final_url)
+        ))
+        .unwrap(),
+        "{\"success\":1,\"link\":\"https://example.com/a\",\"meta\":{\"title\":\"T\",\"image\":{},\"favicon\":\"https://example.com/favicon.ico\",\"domain\":\"example.com\"}}\n"
+    );
 }
 
 // A guarded fetch's final URL always has a host, so the empty-domain

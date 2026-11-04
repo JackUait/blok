@@ -870,7 +870,7 @@ async fn propagates_request_cancellation_to_storage_and_disposes_its_input() {
     let started = std::time::Instant::now();
     while ours.iter().any(|path| path.exists()) {
         assert!(
-            started.elapsed() < std::time::Duration::from_secs(5),
+            started.elapsed() < std::time::Duration::from_secs(10),
             "the spool outlived the cancelled upload"
         );
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;

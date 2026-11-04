@@ -135,7 +135,7 @@ func TestAnUnreadBodyLeavesTheAnswerAlone(t *testing.T) {
 }
 
 // Measured on the C# host: after the answer Kestrel gives what a route left
-// of a body about 5 s to arrive, at any rate. 4000 or 5000 bytes sent over 4
+// of a body 5 to 6 s to arrive, at any rate. 4000 or 5000 bytes sent over 4
 // or 5 s kept the connection; 3000 bytes at 100 a second, 6000 at 500 a
 // second, or none were cut off at 6 to 7 s.
 func TestAnUnreadBodyHasTheDrainTimeToArrive(t *testing.T) {

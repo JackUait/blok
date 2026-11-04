@@ -23,12 +23,12 @@ type dataRate struct {
 var minBodyRate = dataRate{bytesPerSecond: 240, grace: 5 * time.Second}
 
 // bodyDrainTimeout is how long Kestrel waits, after the answer, for what a
-// route left of a body, measured on the C# host (it cuts off at 6 to 7 s on
-// its 1 s heartbeat). Atomic so a test can shorten it while an earlier
+// route left of a body, measured on the C# host: a body done at 5 s was
+// kept, and unfinished ones were cut at 6.0 to 7.0 s (its 1 s heartbeat). Atomic so a test can shorten it while an earlier
 // test's handler still reads it.
 var bodyDrainTimeout = func() *atomic.Int64 {
 	var d atomic.Int64
-	d.Store(int64(5 * time.Second))
+	d.Store(int64(6 * time.Second))
 	return &d
 }()
 

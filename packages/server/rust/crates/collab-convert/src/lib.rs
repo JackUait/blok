@@ -2,6 +2,7 @@
 //! Port of Go `internal/collab/convert` (C# YDocConverter.cs,
 //! CollabEditOps.cs, RichText*.cs, TextDiff.cs). One module per Go file.
 
+mod apply;
 mod deepassign;
 mod editops;
 mod error;
@@ -20,6 +21,7 @@ mod structure;
 mod textdiff;
 mod textdiff_tables;
 
+pub use apply::{apply_ops, collect_ops_html};
 pub use editops::{
     EditError, EditOp, JSON_MAX_DEPTH, MapPatch, canonical_body, canonical_body_digest,
     normalize_idempotency_key, parse_edit_ops, restore_digest,

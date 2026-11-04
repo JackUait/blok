@@ -99,7 +99,7 @@ pub fn plain_map_values_equal(left: &Out, right: &Out) -> bool {
     }
 }
 
-fn encode_any(v: &Value) -> Vec<u8> {
+pub(crate) fn encode_any(v: &Value) -> Vec<u8> {
     let mut w = Writer::new();
     write_any(&mut w, v);
     w.into_bytes()

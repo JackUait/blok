@@ -97,7 +97,7 @@ fn value(m: &Map, key: &str) -> Option<Out> {
     m.get(key)
 }
 
-fn str_value(m: &Map, key: &str) -> Option<Str> {
+pub(crate) fn str_value(m: &Map, key: &str) -> Option<Str> {
     match value(m, key) {
         Some(Out::Any(Value::String(text))) => Some(text),
         _ => None,

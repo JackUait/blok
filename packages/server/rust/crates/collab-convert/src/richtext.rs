@@ -216,7 +216,7 @@ pub fn normalize_value(value: &Value) -> Value {
     }
 }
 
-fn without_nul(text: &[u16]) -> Str {
+pub(crate) fn without_nul(text: &[u16]) -> Str {
     Str::from(
         text.iter()
             .copied()

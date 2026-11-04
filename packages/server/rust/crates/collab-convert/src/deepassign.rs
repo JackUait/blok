@@ -6,8 +6,6 @@
 //! simply written. Every write was screened while planning, so an error
 //! here means the edit failed mid-write (Go panics).
 
-#![allow(dead_code, reason = "the edit planner (apply.rs, lane E) calls it")]
-
 use std::collections::{HashMap, HashSet};
 
 use blok_jsjson::{Object, Str, Value};

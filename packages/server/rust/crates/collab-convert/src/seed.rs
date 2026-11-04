@@ -124,7 +124,6 @@ pub fn strict_value(n: &Node) -> Result<SourceValue, Error> {
 
 /// strict_value keeping each number's text, for the values an edit
 /// compares against the live doc.
-#[allow(dead_code, reason = "the edit planner (apply.rs, lane E) calls it")]
 pub(crate) fn edit_value(n: &Node) -> Result<SourceValue, Error> {
     read_value(n, true)
 }
@@ -344,7 +343,6 @@ pub(crate) fn new_rich_text(segments: &[Value]) -> Result<XmlText, Error> {
 
 /// Runs the NUL and depth guards over the entries and throws the result
 /// away: the conversion is the validator.
-#[allow(dead_code, reason = "the edit planner (apply.rs, lane E) calls it")]
 pub(crate) fn screen(entries: &[Entry]) -> Result<(), DataError> {
     for e in entries {
         if let EntryValue::Plain(v) = &e.value {
@@ -706,7 +704,7 @@ pub(crate) fn new_grid_row_key(row: &SourceValue, taken: &HashSet<Str>) -> Str {
     }
 }
 
-fn is_source_page_icon(v: &SourceValue) -> bool {
+pub(crate) fn is_source_page_icon(v: &SourceValue) -> bool {
     let SourceValue::Object(icon) = v else {
         return false;
     };

@@ -40,6 +40,12 @@ mod formula_limits_test;
 #[cfg(test)]
 mod host_fixture_test;
 #[cfg(test)]
+mod normalize_test;
+#[cfg(test)]
+mod parity_test;
+#[cfg(test)]
+mod scenario_test;
+#[cfg(test)]
 mod test_json;
 #[cfg(test)]
 mod test_support;

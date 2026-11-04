@@ -1134,3 +1134,71 @@ it('sends S3 requests through the environment proxy the way .NET does', async ()
 
   compareGolden('s3-proxy.json', actual);
 }, 120_000);
+
+// Kestrel's defaults (Program.cs sets neither): an 8192-byte request line
+// with its line end, 32768 header bytes plus the blank line, 100 headers.
+// Every case closes at once, so the 5 s exchange timeout never runs.
+const CLOSE = 'Connection: close\r\n';
+const headWith = (headers: string): string => `GET /health HTTP/1.1\r\nHost: x\r\n${headers}${CLOSE}\r\n`;
+const numbered = (count: number): string =>
+  Array.from({ length: count }, (_, index) => `X${index}: v\r\n`).join('');
+const bytes = (...parts: Array<string | number[]>): Buffer =>
+  Buffer.concat(parts.map((part) => (typeof part === 'string' ? Buffer.from(part, 'latin1') : Buffer.from(part))));
+
+const REQUEST_HEADS: Record<string, Buffer> = {
+  // Host: x, X: <n>, Connection: close and the blank line take n + 35 bytes.
+  'header block at the limit': bytes(headWith(`X: ${'a'.repeat(32_735)}\r\n`)),
+  'header block one byte over': bytes(headWith(`X: ${'a'.repeat(32_736)}\r\n`)),
+  'header block over with bare LF': bytes(`GET /health HTTP/1.1\nHost: x\nX: ${'a'.repeat(32_740)}\n${CLOSE}\n`),
+  'header block over before its line end': bytes(`GET /health HTTP/1.1\r\nHost: x\r\nX: ${'a'.repeat(33_000)}`),
+  'request line at the limit': bytes(`GET /health?${'a'.repeat(8_169)} HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  'request line one byte over': bytes(`GET /health?${'a'.repeat(8_170)} HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  'request line at the limit with bare LF': bytes(`GET /health?${'a'.repeat(8_170)} HTTP/1.1\nHost: x\n${CLOSE}\n`),
+  'request line over before its line end': bytes(`GET /health?${'a'.repeat(8_300)}`),
+  'long method': bytes(`${'G'.repeat(8_300)} / HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  '100 headers': bytes(headWith(numbered(98))),
+  '101 headers': bytes(headWith(numbered(99))),
+  '101 headers after a kept-alive request': bytes(`GET /health HTTP/1.1\r\nHost: x\r\n\r\n${headWith(numbered(99))}`),
+  'invalid UTF-8 in a value': bytes('GET /health HTTP/1.1\r\nHost: x\r\nX-A: ', [0xe9], `\r\n${CLOSE}\r\n`),
+  'valid UTF-8 in a value': bytes('GET /health HTTP/1.1\r\nHost: x\r\nX-A: ', [0xc3, 0xa9], `\r\n${CLOSE}\r\n`),
+  'DEL in a value': bytes(headWith('X-A: a\x7fb\r\n')),
+  'control byte in a value': bytes(headWith('X-A: a\x01b\r\n')),
+  'tab in a value': bytes(headWith('X-A: a\tb\r\n')),
+  'NUL in a value': bytes(headWith('X-A: a\x00b\r\n')),
+  'CR in a value': bytes(headWith('X-A: a\rb\r\n')),
+  'folded line': bytes(headWith('X-A: a\r\n b\r\n')),
+  'first header line folded': bytes(`GET /health HTTP/1.1\r\n Host: x\r\n${CLOSE}\r\n`),
+  'quote in a name': bytes(headWith('X"A: a\r\n')),
+  'control byte in a name': bytes(headWith('X\x01A: a\r\n')),
+  'space before the colon': bytes(headWith('X-A : a\r\n')),
+  'no colon': bytes(headWith('NoColon\r\n')),
+  'empty name': bytes(headWith(': v\r\n')),
+  'no Host': bytes(`GET /health HTTP/1.1\r\n${CLOSE}\r\n`),
+  'two Host headers': bytes(`GET /health HTTP/1.1\r\nHost: a\r\nHost: b\r\n${CLOSE}\r\n`),
+  'malformed Host': bytes(`GET /health HTTP/1.1\r\nHost: a b\r\n${CLOSE}\r\n`),
+  'empty Host': bytes(`GET /health HTTP/1.1\r\nHost:\r\n${CLOSE}\r\n`),
+  'bare LF line ends': bytes(`GET /health HTTP/1.1\nHost: x\n${CLOSE}\n`),
+  'blank lines before the request line': bytes(`\r\n\r\n\n\r${headWith('')}`),
+  'HTTP/0.9 request line': bytes('GET /health\r\n\r\n'),
+  'HTTP/3 version': bytes(`GET /health HTTP/3\r\nHost: x\r\n${CLOSE}\r\n`),
+  'bad method byte': bytes(`G@T /health HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  'two spaces after the method': bytes(`GET  /health HTTP/1.1\r\nHost: x\r\n${CLOSE}\r\n`),
+  'two Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\nContent-Length: 2\r\n${CLOSE}\r\nxx`),
+  'HTTP/2 prior-knowledge preface': bytes('PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'),
+};
+
+it('refuses request heads at Kestrel\'s limits and grammar', async () => {
+  const actual: Array<{ name: string; response: string }> = [];
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-heads-'));
+
+  await withServer(['--auth', 'none', '--storage-dir', directory], async (server) => {
+    for (const [name, request] of Object.entries(REQUEST_HEADS)) {
+      // rawExchange drops Date and Server only from the first answer.
+      const response = (await rawExchange(server.baseUrl, request)).replace(/^(date|server): [^\r\n]*\r?\n/gim, '');
+
+      actual.push({ name, response });
+    }
+  }).finally(() => rm(directory, { recursive: true, force: true }));
+
+  compareGolden('request-heads.json', actual);
+}, 120_000);

@@ -151,8 +151,7 @@ func (c *headerConn) ReadFrom(r io.Reader) (int64, error) {
 }
 
 func (c *headerConn) expire() {
-	_, _ = io.WriteString(c.Conn, "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnection: close\r\nDate: "+
-		time.Now().UTC().Format(http.TimeFormat)+"\r\n\r\n")
+	_, _ = io.WriteString(c.Conn, kestrelAnswer(http.StatusRequestTimeout))
 	_ = c.Conn.Close()
 }
 

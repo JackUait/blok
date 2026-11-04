@@ -95,7 +95,7 @@ func readAllIn(r io.Reader, size int) ([]byte, error) {
 	}
 }
 
-func TestTheStreamChangesOnlyRequestLines(t *testing.T) {
+func TestTheStreamChangesOnlyHeads(t *testing.T) {
 	body := "GET /in-body\x01 HTTP/1.1\r\nHost: x\r\n\r\n"
 	cases := []struct {
 		name, in, out string
@@ -108,15 +108,20 @@ func TestTheStreamChangesOnlyRequestLines(t *testing.T) {
 			"GET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
 		queued: []queuedTarget{{"/a_zz", "/a%zz"}, {"/b_", "/b\x01"}},
 	}, {
-		name:   "net/http drops up to four CR or LF after a POST",
-		in:     "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz\r\n\r\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n",
-		out:    "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz\r\n\r\nGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n",
+		name:   "CR and LF before a request line are dropped, as Kestrel skips them",
+		in:     "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz\r\n\r\n\r\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n",
+		out:    "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nzGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n",
 		queued: []queuedTarget{{"/", "/"}, {"/c_zz", "/c%zz"}},
 	}, {
-		name:   "only after a POST",
-		in:     "GET / HTTP/1.1\r\nHost: x\r\n\r\n\r\nGET /c%zz HTTP/1.1\r\n\r\n",
-		out:    "GET / HTTP/1.1\r\nHost: x\r\n\r\n\r\nGET /c%zz HTTP/1.1\r\n\r\n",
-		queued: []queuedTarget{{"/", "/"}, {"", ""}},
+		name:   "after any request",
+		in:     "GET / HTTP/1.1\r\nHost: x\r\n\r\n\r\n\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n",
+		out:    "GET / HTTP/1.1\r\nHost: x\r\n\r\nGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n",
+		queued: []queuedTarget{{"/", "/"}, {"/c_zz", "/c%zz"}},
+	}, {
+		name:   "header bytes Kestrel takes and net/http refuses",
+		in:     "GET / HTTP/1.1\r\nHost: x\r\nX\"y: a\x01b\x7f\r\n\r\n",
+		out:    "GET / HTTP/1.1\r\nHost: x\r\nX_y: a_b_\r\n\r\n",
+		queued: []queuedTarget{{"/", "/"}},
 	}, {
 		name:   "a chunked body ends the rewriting",
 		in:     "POST /a\x01 HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
@@ -128,19 +133,24 @@ func TestTheStreamChangesOnlyRequestLines(t *testing.T) {
 		out:    "GET /s_ HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
 		queued: []queuedTarget{{"/s_", "/s\x01"}},
 	}, {
-		name:   "HTTP/2 prior knowledge passes through",
-		in:     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\x00\x00\x12\x04\x00\x01\x01",
-		out:    "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\x00\x00\x12\x04\x00\x01\x01",
-		queued: []queuedTarget{{"*", "*"}},
-	}, {
-		name:   "a head net/http cannot read ends the rewriting",
-		in:     "GET /a\x01 HTTP/1.1\r\nContent-Length: 1\r\nContent-Length: 2\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		out:    "GET /a_ HTTP/1.1\r\nContent-Length: 1\r\nContent-Length: 2\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		name:   "a transfer coding net/http refuses ends the rewriting",
+		in:     "POST /a\x01 HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: gzip\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		out:    "POST /a_ HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: gzip\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
 		queued: []queuedTarget{{"/a_", "/a\x01"}},
 	}, {
+		name:   "HTTP/2 prior knowledge gets the stand-in",
+		in:     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\x00\x00\x12\x04\x00\x01\x01",
+		out:    standIn,
+		queued: []queuedTarget{{"/", "/"}},
+	}, {
+		name:   "a head net/http cannot read gets the stand-in",
+		in:     "GET /a\x01 HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\nContent-Length: 2\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		out:    standIn,
+		queued: []queuedTarget{{"/", "/"}},
+	}, {
 		name:   "bare LF line ends, and a CR inside the target",
-		in:     "GET /a\rb HTTP/1.1\nHost: x\n\nGET /c%zz HTTP/1.1\r\n\r\n",
-		out:    "GET /a_b HTTP/1.1\nHost: x\n\nGET /c_zz HTTP/1.1\r\n\r\n",
+		in:     "GET /a\rb HTTP/1.1\nHost: x\n\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n",
+		out:    "GET /a_b HTTP/1.1\nHost: x\n\nGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n",
 		queued: []queuedTarget{{"/a_b", "/a\rb"}, {"/c_zz", "/c%zz"}},
 	}}
 	for _, c := range cases {
@@ -156,7 +166,7 @@ func TestTheStreamChangesOnlyRequestLines(t *testing.T) {
 				if !ok {
 					break
 				}
-				queued = append(queued, entry)
+				queued = append(queued, entry.queuedTarget)
 			}
 			if fmt.Sprint(queued) != fmt.Sprint(c.queued) {
 				t.Errorf("%s (reads of %d): queued %q, want %q", c.name, size, queued, c.queued)
@@ -165,17 +175,23 @@ func TestTheStreamChangesOnlyRequestLines(t *testing.T) {
 	}
 }
 
-// A head larger than net/http reads passes as sent, so net/http still
-// answers 431 for it.
-func TestAnOversizedHeadPassesThrough(t *testing.T) {
-	in := "GET /a\x01 HTTP/1.1\r\nX: " + strings.Repeat("v", maxRequestHead) + "\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n"
-	got, err := readAllIn(&targetStream{src: strings.NewReader(in)}, 4096)
-	if err != nil || string(got) != strings.Replace(in, "/a\x01", "/a_", 1) {
-		t.Fatalf("got %d bytes %v", len(got), err)
+// A head over Kestrel's limits is never handed on: net/http reads the
+// stand-in, and its entry carries the refusal.
+func TestAHeadOverTheLimitsBecomesTheStandIn(t *testing.T) {
+	cases := map[string]int{
+		"GET /a HTTP/1.1\r\nHost: x\r\nX: " + strings.Repeat("v", maxHeaderBlock) + "\r\n\r\nGET /b HTTP/1.1\r\n\r\n": 431,
+		"GET /a\x01" + strings.Repeat("v", maxRequestLine) + " HTTP/1.1\r\n\r\n":                                      414,
+		"GET /a HTTP/1.1\r\nHost: x\r\nX-A: \xff\r\n\r\n":                                                             400,
 	}
-	long := "GET /a\x01" + strings.Repeat("v", maxRequestHead) + " HTTP/1.1\r\n\r\n"
-	if got, _ := readAllIn(&targetStream{src: strings.NewReader(long)}, 4096); string(got) != long {
-		t.Fatal("an oversized request line changed")
+	for in, status := range cases {
+		stream := &targetStream{src: strings.NewReader(in)}
+		got, err := readAllIn(stream, 4096)
+		if err != nil || string(got) != standIn {
+			t.Errorf("%.30q: got %.60q %v", in, got, err)
+		}
+		if entry, ok := stream.pop(); !ok || entry.reject != status {
+			t.Errorf("%.30q: queued %+v, want a %d refusal", in, entry, status)
+		}
 	}
 }
 
@@ -207,7 +223,7 @@ func (s *stutter) Read(p []byte) (int, error) {
 // net/http aborts its background read with a past deadline. The error must
 // reach it as a timeout, and the half line must survive it.
 func TestATimeoutKeepsAHalfReadLine(t *testing.T) {
-	stream := &targetStream{src: &stutter{parts: []string{"GET /a", "", "%zz HTTP/1.1\r\n\r\n"}}}
+	stream := &targetStream{src: &stutter{parts: []string{"GET /a", "", "%zz HTTP/1.1\r\nHost: x\r\n\r\n"}}}
 	buffer := make([]byte, 64)
 	n, err := stream.Read(buffer)
 	var netErr net.Error
@@ -215,7 +231,7 @@ func TestATimeoutKeepsAHalfReadLine(t *testing.T) {
 		t.Fatalf("first read: %d %v", n, err)
 	}
 	got, err := readAllIn(stream, 64)
-	if err != nil || string(got) != "GET /a_zz HTTP/1.1\r\n\r\n" {
+	if err != nil || string(got) != "GET /a_zz HTTP/1.1\r\nHost: x\r\n\r\n" {
 		t.Fatalf("got %q %v", got, err)
 	}
 }
@@ -284,7 +300,7 @@ func TestTheHandlerSeesTheTargetAsSentOnAKeptAliveConnection(t *testing.T) {
 // A request the rewriter never saw must not take another one's target.
 func TestATargetThatDoesNotMatchTheQueueIsRefused(t *testing.T) {
 	stream := &targetStream{}
-	stream.push(queuedTarget{sent: "/other", original: "/other\x01"})
+	stream.push(queuedRequest{queuedTarget: queuedTarget{sent: "/other", original: "/other\x01"}})
 	request, _ := http.NewRequest("GET", "http://x/mine", nil)
 	request.RequestURI = "/mine"
 	recorder := &headerRecorder{header: http.Header{}}
@@ -322,35 +338,19 @@ func TestAHeldBackRequestLineStillGets408(t *testing.T) {
 	}
 }
 
-// Swapping keeps the length, so the head limit is the same for every target.
-func TestTheHeadLimitIsTheSameForAnUnparsedTarget(t *testing.T) {
-	address := startHost(t, echoTarget, time.Minute)
-	for _, size := range []struct {
-		padding int
-		status  string
-	}{{http.DefaultMaxHeaderBytes, "200 "}, {maxRequestHead, "431 "}} {
-		padding := strings.Repeat("v", size.padding)
-		for _, target := range []string{"/plain", "/a%zzz"} {
-			got := pipeline(t, address, "GET "+target+" HTTP/1.1\r\nHost: x\r\nConnection: close\r\nX: "+padding+"\r\n\r\n")
-			if len(got) != 1 || !strings.HasPrefix(got[0], size.status) {
-				t.Errorf("%s with %d bytes: got %.40q, want %s", target, size.padding, got, size.status)
-			}
-		}
-	}
-}
-
 // FuzzTheStreamFollowsNetHTTP checks the stream on input it reads whole.
 func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
-	f.Add("POST /a%zz HTTP/1.1\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
-	f.Add("GET /a HTTP/1.1\r\nUpgrade: x\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
-	f.Add("POST /c HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
-	f.Add("GET /e%4 HTTP/1.0\nContent-Length: 2\n\n%zGET /f\t HTTP/1.1\n\n")
+	f.Add("POST /a%zz HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n")
+	f.Add("GET /a HTTP/1.1\r\nHost: x\r\nUpgrade: x\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n")
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
+	f.Add("GET /e%4 HTTP/1.0\nContent-Length: 2\nX\"\x01: \x7f\n\n%zGET /f\t HTTP/1.1\nHost: x\n\n")
+	f.Add("\r\nGET / HTTP/1.1\r\nHost: x\r\nX: \xe9\r\n\r\n")
 	f.Add(" /% \n")
 	f.Fuzz(func(t *testing.T, in string) {
 		stream := &targetStream{src: strings.NewReader(in)}
 		out, err := readAllIn(stream, 7)
-		if err != nil || len(out) != len(in) {
-			t.Fatalf("%q: %d bytes, %v", in, len(out), err)
+		if err != nil {
+			t.Fatalf("%q: %v", in, err)
 		}
 		checkTheStreamFollowsNetHTTP(t, in, out, stream)
 	})
@@ -359,10 +359,11 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 // FuzzTheStreamFollowsNetHTTPThroughTimeouts cuts the input into pieces with
 // a timeout after each, the way net/http aborts its background read.
 func FuzzTheStreamFollowsNetHTTPThroughTimeouts(f *testing.F) {
-	f.Add("POST /a%zz HTTP/1.1\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n", []byte{30, 5, 2}, uint8(7))
-	f.Add("GET /a HTTP/1.1\r\n\r\nGET /b%zz HTTP/1.1\r\nX: y\r\n\r\n", []byte{3, 17, 1}, uint8(1))
-	f.Add("POST /c HTTP/1.1\r\nContent-Length: 1\r\n\r\nz\r\nGET /d%zz HTTP/1.1\r\n\r\n", []byte{40, 1}, uint8(3))
+	f.Add("POST /a%zz HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nG\x01T \r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n", []byte{30, 5, 2}, uint8(7))
+	f.Add("GET /a HTTP/1.1\r\nHost: x\r\n\r\nGET /b%zz HTTP/1.1\r\nHost: x\r\nX: y\r\n\r\n", []byte{3, 17, 1}, uint8(1))
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n", []byte{40, 1}, uint8(3))
 	f.Add("POST /000 HTTP/0.0\r\nContent-Length:07 \n\r\n0000000\n0 * HTTP/0.0\n\n", []byte("00"), uint8(7))
+	f.Add("0 * HTTP/0.0\n\n0 * HTTP/0.0\n\n", []byte("0"), uint8(1))
 	f.Fuzz(func(t *testing.T, in string, cuts []byte, size uint8) {
 		var pieces []string
 		rest := in
@@ -387,18 +388,25 @@ func FuzzTheStreamFollowsNetHTTPThroughTimeouts(f *testing.F) {
 				t.Fatalf("%q: %v", in, err)
 			}
 		}
-		if len(out) != len(in) {
-			t.Fatalf("%q: %d bytes out", in, len(out))
-		}
 		checkTheStreamFollowsNetHTTP(t, in, out, stream)
 	})
 }
 
 // checkTheStreamFollowsNetHTTP reads out the way net/http's conn loop does.
-// Every request it parses must match the queue in order, and every changed
-// byte must sit on one of those request lines.
+// Every request it parses must match the queue in order. A refusal must be
+// the stand-in, and the last thing out. Otherwise, with nothing dropped,
+// every changed byte must sit on one of those request lines or be a header
+// byte only Kestrel takes, swapped for '_'.
 func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *targetStream) {
 	t.Helper()
+	refused := stream.state == streamDone
+	if refused && !bytes.HasSuffix(out, []byte(standIn)) {
+		t.Fatalf("%q: refused, but out is %q", in, out)
+	}
+	whole := !refused && stream.dropped == 0
+	if whole && len(out) != len(in) {
+		t.Fatalf("%q: %d bytes out", in, len(out))
+	}
 	source := bytes.NewReader(out)
 	reader := bufio.NewReader(source)
 	consumed := func() int { return len(out) - source.Len() - reader.Buffered() }
@@ -406,17 +414,7 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 	// net/http closes the connection on the first head it refuses, so
 	// nothing from there on is read as HTTP.
 	stop := len(out)
-	lastPost := false
 	for {
-		if lastPost {
-			peek, _ := reader.Peek(4)
-			for _, b := range peek {
-				if b != '\r' && b != '\n' {
-					break
-				}
-				_, _ = reader.ReadByte()
-			}
-		}
 		start := consumed()
 		request, err := http.ReadRequest(reader)
 		if err != nil {
@@ -431,17 +429,28 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 		if !ok || entry.sent != request.RequestURI {
 			t.Fatalf("%q: net/http read %q, the queue had %q", in, request.RequestURI, entry.sent)
 		}
-		if request.Method == "CONNECT" || request.Method == "PRI" || len(request.TransferEncoding) > 0 ||
+		if entry.reject != 0 {
+			if consumed() != len(out) {
+				t.Fatalf("%q: bytes after the stand-in: %q", in, out)
+			}
+			break
+		}
+		if request.Method == "CONNECT" || request.Method == "PRI" || len(request.TransferEncoding) > 0 || request.ProtoMajor != 1 ||
 			request.Header.Get("Upgrade") != "" || strings.Contains(strings.ToLower(request.Header.Get("Connection")), "upgrade") {
 			break
 		}
 		if _, err := io.Copy(io.Discard, request.Body); err != nil {
 			break
 		}
-		lastPost = request.Method == "POST"
+	}
+	if !whole {
+		return
 	}
 	for i := range out {
-		if out[i] != in[i] && !onLine[i] && i < stop {
+		if out[i] == in[i] || onLine[i] || i >= stop {
+			continue
+		}
+		if out[i] != '_' || !kestrelOnlyNameByte(in[i]) && !kestrelOnlyValueByte(in[i]) {
 			t.Fatalf("%q: byte %d changed off a request line: %q", in, i, out)
 		}
 	}
@@ -506,9 +515,9 @@ func queuedSent(stream *targetStream) []string {
 }
 
 // net/http aborts its background read after a POST with a timeout. That is
-// not the end of input: the CR/LF it skips after a POST may still come, and
-// must not be queued as a request line of its own.
-func TestATimeoutAfterAPostKeepsTheCRLFSkip(t *testing.T) {
+// not the end of input: the CR/LF after the POST may still come, and must be
+// dropped, not queued as a request line of its own.
+func TestATimeoutAfterAPostStillDropsTheCRLF(t *testing.T) {
 	post := "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\n\r\nz"
 	cases := []struct {
 		name  string
@@ -517,7 +526,7 @@ func TestATimeoutAfterAPostKeepsTheCRLFSkip(t *testing.T) {
 		{"timeout before the CRLF", []string{post, "", "\r\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n"}},
 		{"timeout inside the CRLF", []string{post, "\r", "", "\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n"}},
 	}
-	want := post + "<T>\r\nGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n"
+	want := post + "<T>GET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n"
 	for _, c := range cases {
 		for _, size := range []int{1, 3, 64} {
 			stream := &targetStream{src: &stutter{parts: append([]string(nil), c.parts...)}}
@@ -584,8 +593,8 @@ func TestAnIdleStreamDropsABigHeadsBuffers(t *testing.T) {
 		return stats.HeapAlloc
 	}
 	cases := map[string]string{
-		"a big head":            "GET /a HTTP/1.1\r\nX: " + strings.Repeat("v", 900<<10) + "\r\n\r\n",
-		"a head over the limit": "GET /a HTTP/1.1\r\nX: " + strings.Repeat("v", maxRequestHead) + "\r\n\r\n",
+		"a head at the limit":   "GET /a HTTP/1.1\r\nHost: x\r\nX: " + strings.Repeat("v", maxHeaderBlock-16) + "\r\n\r\n",
+		"a head over the limit": "GET /a HTTP/1.1\r\nHost: x\r\nX: " + strings.Repeat("v", maxHeaderBlock) + "\r\n\r\n",
 	}
 	for name, input := range cases {
 		const streams = 16
@@ -593,7 +602,12 @@ func TestAnIdleStreamDropsABigHeadsBuffers(t *testing.T) {
 		held := make([]*targetStream, streams)
 		for i := range held {
 			held[i] = &targetStream{src: &stutter{parts: []string{input, ""}}}
-			if got := readMarkingTimeouts(t, held[i], 4096); len(got) != len(input)+len("<T>") {
+			want := len(input) + len("<T>")
+			if strings.Contains(name, "over") {
+				// Refused: the stand-in, then the end.
+				want = len(standIn)
+			}
+			if got := readMarkingTimeouts(t, held[i], 4096); len(got) != want {
 				t.Fatalf("%s: read %d bytes", name, len(got))
 			}
 		}

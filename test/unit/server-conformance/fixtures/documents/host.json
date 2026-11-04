@@ -307,6 +307,73 @@
     }
   },
   {
+    "name": "html, a lone surrogate, the engine's answer",
+    "method": "ToHtml",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "<p>a�b</p>"
+    },
+    "request": {
+      "op": "blocksToHtml",
+      "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": "<p>a�b</p>"
+    }
+  },
+  {
+    "name": "markdown, a lone surrogate, the engine's answer",
+    "method": "ToMarkdown",
+    "args": {
+      "document": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "runtime": {
+      "answer": "{\"markdown\":\"a�b\",\"warnings\":[]}"
+    },
+    "request": {
+      "op": "blocksToMarkdown",
+      "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\\ud800b\"}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "markdown": "a�b",
+        "warnings": []
+      }
+    }
+  },
+  {
+    "name": "validate, a lone-surrogate block type, the engine's answer",
+    "method": "Validate",
+    "args": {
+      "document": "{\"blocks\":[{\"type\":\"\\udc00\",\"data\":{}}]}"
+    },
+    "runtime": {
+      "answer": "{\"blockCount\":1,\"malformedBlockCount\":0,\"isEmpty\":true,\"unrecognizedBlockTypes\":[\"�\"]}"
+    },
+    "request": {
+      "op": "inspect",
+      "input": "{\"blocks\":[{\"type\":\"\\udc00\",\"data\":{}}]}"
+    },
+    "hrefCalls": null,
+    "expect": {
+      "result": {
+        "isDocument": true,
+        "isEmpty": true,
+        "blockCount": 1,
+        "malformedBlockCount": 0,
+        "unrecognizedBlockTypes": [
+          "�"
+        ],
+        "failure": null,
+        "isFullyUnderstood": false
+      }
+    }
+  },
+  {
     "name": "html with pages",
     "method": "ToHtmlWithPages",
     "args": {

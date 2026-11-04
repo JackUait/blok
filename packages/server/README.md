@@ -2,9 +2,11 @@
 
 Blok's shared server is written in C#. It handles file uploads, link previews and live collaboration, and it converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-A Go version of the server is in progress in `packages/server/go`. It serves health, link previews (`/unfurl`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. With `--collab` it also serves live collaboration: the sync socket, `/edit`, `/state`, `/reset` and the history routes. It reads and writes the same collaboration directory as the C# server.
+A Go version of the server lives in `packages/server/go`. It serves the same routes as the C# server. Every conformance suite runs against both. It serves health, link previews (`/unfurl`), uploads (`/upload`, `/upload-by-url`), deletes and local files. Its `blokdocs` package converts saved documents. With `--collab` it also serves live collaboration: the sync socket, `/edit`, `/state`, `/reset` and the history routes. It reads and writes the same collaboration directory as the C# server.
 
 The npm binary, the Docker image and the NuGet packages all ship the C# server. See [Go module and archives](#go-module-and-archives) for how the Go server ships.
+
+A Rust build is in progress in `packages/server/rust`. It ships nothing yet. Its README is `packages/server/rust/README.md`.
 
 Your documents stay yours. Your own app saves and loads them through a small endpoint, and that endpoint stays the record. With live collaboration on, the service keeps only a working copy of each open document. The copy lives in storage you point it at. Every few seconds, the service writes what people type back to your endpoint.
 
@@ -577,7 +579,7 @@ What the service requires of it:
 - **Cancellation belongs to the caller.** A store-side timeout or abort surfaces as some other exception, because the caller reads a cancellation it did not ask for as its own shutdown.
 - **Disposal releases the fence, unless it is already gone.** `DisposeAsync` lets another process open the document, and never throws because the fence was already lost; every method throws `ObjectDisposedException` afterwards. A session that HAS lost the fence releases nothing. The fence it would release now belongs to somebody else, so a `DisposeAsync` that unconditionally drops its lock row hands a third writer the document while the second is mid-write.
 
-A backend that is not .NET implements the wire protocol instead of this interface. `packages/server/protocol/blok-sync-v2.md` is a normative spec written so a server outside this repository can be built from it alone, and the frame vectors it pins live in `test/unit/server-conformance/fixtures/sync-frames.json`. This repository's conformance runner builds and drives the C# host (`node scripts/test-server-conformance.mjs --target csharp`) and the Go host in progress (`--target go`). Another backend runs those vectors in its own harness, along with the same durability scenarios: restart the process, fail the next append, inspect history.
+A backend that is not .NET implements the wire protocol instead of this interface. `packages/server/protocol/blok-sync-v2.md` is a normative spec written so a server outside this repository can be built from it alone, and the frame vectors it pins live in `test/unit/server-conformance/fixtures/sync-frames.json`. This repository's conformance runner builds and drives the C# host (`node scripts/test-server-conformance.mjs --target csharp`) and the Go host (`--target go`). Another backend runs those vectors in its own harness, along with the same durability scenarios: restart the process, fail the next append, inspect history.
 
 Stock `y-websocket` never offers `blok-sync.v2`, so it negotiates v1 and is compatible with the working-copy profile alone: ordinary y-protocol sync, no acknowledgement, no durability claim. On a journal-backed document a v1 write is still journaled before it is relayed; it earns no receipt. The same holds for any client that offers only v1.
 

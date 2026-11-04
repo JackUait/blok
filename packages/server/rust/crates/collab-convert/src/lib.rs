@@ -62,6 +62,8 @@ mod csharp_apply_concurrent_test;
 #[cfg(test)]
 mod csharp_apply_structure_test;
 #[cfg(test)]
+mod csharp_apply_table_test;
+#[cfg(test)]
 mod csharp_apply_test;
 #[cfg(test)]
 mod csharp_apply_textdiff_test;

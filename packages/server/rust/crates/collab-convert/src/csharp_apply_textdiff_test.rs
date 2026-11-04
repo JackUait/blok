@@ -258,3 +258,53 @@ fn an_emoji_rewrite_past_the_cap_stays_well_formed() {
         &("\u{1F44E}".repeat(40) + " tail"),
     );
 }
+
+// C# YDocConverterTextMergeTests, the update half (the seed half is in the
+// collab-hardening capture): an update edits the live YText in place.
+
+const NOTE: &str = r#"{ "id": "p", "type": "note", "data": { "text": "hello" } }"#;
+
+#[test]
+fn update_keeps_the_same_y_text_instance() {
+    let doc = seeded(NOTE);
+    let before = live(&doc);
+    update_text(&doc, "hello!");
+    let after = live(&doc);
+    assert_eq!(before, after);
+    assert_eq!(after.units(), Str::from("hello!"));
+}
+
+// A peer typing into the paragraph while the host pushes an update op
+// through /edit keeps the burst.
+#[test]
+fn an_update_op_and_a_peers_typing_both_survive() {
+    let server = seeded(NOTE);
+    let peer = cloned(&server);
+    // The peer types " world" at the end of the paragraph.
+    let peer_text = live(&peer);
+    peer.transact(|t| peer_text.insert(Some(t), 5, " world", None))
+        .unwrap_or_else(|err| panic!("{err}"));
+    // At the same moment the host pushes an edit that appends "!".
+    update_text(&server, "hello!");
+    exchange(&server, &peer);
+    let merged = text_of(&server);
+    assert!(occurrences(&merged, " world") > 0, "{merged}");
+    assert!(occurrences(&merged, "!") > 0, "{merged}");
+    assert_eq!(merged.len(), "hello world!".len());
+    assert_eq!(text_of(&peer), merged);
+}
+
+#[test]
+fn update_still_drops_the_keys_the_new_data_omits() {
+    let doc = seeded(r#"{ "id": "p", "type": "note", "data": { "text": "old", "level": 3 } }"#);
+    update_text(&doc, "new");
+    let data = doc
+        .get_map(BLOCKS_ROOT)
+        .unwrap_or_else(|err| panic!("{err}"))
+        .get("p")
+        .and_then(|block| block.as_map())
+        .and_then(|block| block.get("data"))
+        .and_then(|data| data.as_map())
+        .unwrap_or_else(|| panic!("no data map"));
+    assert_eq!(data.keys(), [Str::from("text")]);
+}

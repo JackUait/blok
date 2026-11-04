@@ -66,12 +66,14 @@ fn free_port() -> String {
     listener.local_addr().unwrap().to_string()
 }
 
+// The host listens within milliseconds; 30 s only covers a workspace run
+// whose QuickJS suites take every core.
 async fn wait_for(condition: impl Fn() -> bool) {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
     while !condition() {
         assert!(
             tokio::time::Instant::now() < deadline,
-            "condition not met within 5s"
+            "condition not met within 30s"
         );
         tokio::time::sleep(Duration::from_millis(10)).await;
     }

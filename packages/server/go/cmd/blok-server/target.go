@@ -96,6 +96,8 @@ const (
 	chunkData
 	chunkEnd
 	chunkLast
+	// chunkExtension: past a size's ';', dropping the extension as it comes.
+	chunkExtension
 )
 
 type queuedTarget struct{ sent, original string }
@@ -132,6 +134,13 @@ type targetStream struct {
 	chunk int    // where a chunked body is
 	// chunkLeft is the current chunk's data bytes left.
 	chunkLeft uint64
+	// chunkDigits is the size before an extension, handed on as its line.
+	chunkDigits []byte
+	// extension counts a body's extension bytes, which Kestrel counts
+	// against the body cap.
+	extension int64
+	// bodyLimit is the body cap the route set, or 0 for Kestrel's default.
+	bodyLimit atomic.Int64
 	buf       []byte // one read buffer for the stream's life
 	// scanned is how much of in has no LF, so a slow line is scanned once.
 	scanned int
@@ -463,10 +472,21 @@ func (s *targetStream) stepChunked() bool {
 	switch s.chunk {
 	case chunkSize:
 		// Kestrel's grammar first: what it refuses fails the body read.
-		if status, complete := kestrelChunkPrefix(s.in); status != 0 {
+		status, complete := kestrelChunkPrefix(s.in)
+		if status != 0 {
 			s.refuseBody(status)
 			return true
-		} else if !complete {
+		}
+		// Kestrel reads an extension as it comes, so it is dropped as it
+		// comes: holding it would let one line grow without bound.
+		if semicolon := bytes.IndexByte(s.in[:min(len(s.in), maxChunkPrefix)], ';'); semicolon >= 0 {
+			s.chunkDigits = append(s.chunkDigits[:0], s.in[:semicolon]...)
+			s.dropped += semicolon + 1
+			s.consume(semicolon + 1)
+			s.chunk = chunkExtension
+			return true
+		}
+		if !complete {
 			return false
 		}
 		end := bytes.IndexByte(s.in, '\n')
@@ -486,6 +506,8 @@ func (s *targetStream) stepChunked() bool {
 			s.chunk = chunkLast
 		}
 		return true
+	case chunkExtension:
+		return s.stepExtension()
 	case chunkData:
 		if len(s.in) == 0 {
 			return false
@@ -515,6 +537,43 @@ func (s *targetStream) stepChunked() bool {
 		return true
 	}
 	s.handOnBody(2)
+	s.chunk = chunkSize
+	return true
+}
+
+// stepExtension drops extension bytes up to the line end, then hands on
+// the size alone as the chunk line. The extension must end in CRLF.
+func (s *targetStream) stepExtension() bool {
+	end := bytes.IndexAny(s.in, "\r\n")
+	take := end
+	if end < 0 {
+		take = len(s.in)
+	}
+	if take > 0 {
+		s.extension += int64(take)
+		s.dropped += take
+		s.consume(take)
+		limit := s.bodyLimit.Load()
+		if limit == 0 {
+			limit = maxRequestBodyBytes
+		}
+		if s.extension > limit {
+			s.refuseBody(http.StatusRequestEntityTooLarge)
+			return true
+		}
+	}
+	if len(s.in) < 2 {
+		return take > 0
+	}
+	if s.in[0] != '\r' || s.in[1] != '\n' {
+		s.refuseBody(http.StatusBadRequest)
+		return true
+	}
+	line := append(append([]byte(nil), s.chunkDigits...), '\r', '\n')
+	s.dropped += 2
+	s.added += len(line)
+	s.consume(2)
+	s.in = append(line, s.in...)
 	s.chunk = chunkSize
 	return true
 }
@@ -876,7 +935,8 @@ func (s *targetStream) endHead() {
 	}
 	if len(request.TransferEncoding) > 0 || s.entry.http10 {
 		s.entry.dualFramed = s.lengthLines > 0
-		s.chunk = chunkSize
+		s.chunk, s.extension = chunkSize, 0
+		s.bodyLimit.Store(0)
 		s.handOn(streamChunked)
 		return
 	}
@@ -1083,8 +1143,8 @@ func restoreTarget(w http.ResponseWriter, r *http.Request, stream *targetStream)
 			httpguts.HeaderValuesContainsToken(r.Header["Connection"], "close")
 	}
 	// net/http fixed its keep-alive before the handler; the header still
-	// makes it close after the answer.
-	if entry.dualFramed && !entry.http10 {
+	// makes it close after the answer, on HTTP/1.0 keep-alive too.
+	if entry.dualFramed {
 		w.Header().Set("Connection", "close")
 	}
 	if !ok || entry.sent == entry.original && entry.sent == r.RequestURI && len(entry.swaps) == 0 {

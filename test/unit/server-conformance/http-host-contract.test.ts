@@ -1368,6 +1368,9 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   // closes, so bytes a Content-Length reader would take as a body are never
   // read as a request.
   'chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: x\r\n\r\n'),
+  'HTTP/1.0 keep-alive, chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.0\r\nHost: x\r\nConnection: keep-alive\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: x\r\n\r\n'),
+  'chunk extension that ends in a bare LF': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2;a\n{}\r\n0\r\n\r\n'),
+  'chunk extension with control bytes': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2;e=\x01\x7f\r\n{}\r\n0\r\n\r\n'),
   'Host with an empty port': bytes(`GET /health HTTP/1.1\r\nHost: a:\r\n${CLOSE}\r\n`),
   'Host with only a port': bytes(`GET /health HTTP/1.1\r\nHost: :80\r\n${CLOSE}\r\n`),
   'Host with an unclosed bracket': bytes(`GET /health HTTP/1.1\r\nHost: [::1\r\n${CLOSE}\r\n`),

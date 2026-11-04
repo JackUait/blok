@@ -132,8 +132,9 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 		name: "heads after a chunked body are still read",
 		in: "POST /a\x01 HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n" +
 			"2;e=GET /c\x01 \t\r\n\r\n\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n",
+		// The extension is dropped: Kestrel reads it as it comes.
 		out: "POST /a_ HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n3\r\n\x01\x01\x01\r\n" +
-			"2;e=GET /c\x01 \t\r\n\r\n\r\n0\r\n\r\nGET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
+			"2\r\n\r\n\r\n0\r\n\r\nGET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
 		queued: []queuedTarget{{"/a_", "/a\x01"}, {"/b_", "/b\x01"}},
 	}, {
 		name:   "a trailer is checked and dropped, and the next head checked",
@@ -724,5 +725,59 @@ func TestACRLFAfterAPostOnAKeptAliveConnection(t *testing.T) {
 	body, _ := io.ReadAll(response.Body)
 	if response.StatusCode != 200 || !strings.Contains(string(body), `"/ok"`) {
 		t.Fatalf("GET after the CRLF: %d %q", response.StatusCode, body)
+	}
+}
+
+// peakSource hands out n bytes of 'a' after a prefix, and notes the most
+// the stream ever held unread while it read them.
+type peakSource struct {
+	prefix string
+	n      int
+	stream *targetStream
+	peak   int
+}
+
+func (p *peakSource) Read(b []byte) (int, error) {
+	if p.stream != nil && len(p.stream.in) > p.peak {
+		p.peak = len(p.stream.in)
+	}
+	if p.prefix != "" {
+		n := copy(b, p.prefix)
+		p.prefix = p.prefix[n:]
+		return n, nil
+	}
+	if p.n == 0 {
+		return 0, io.EOF
+	}
+	n := min(len(b), p.n)
+	for i := range n {
+		b[i] = 'a'
+	}
+	p.n -= n
+	return n, nil
+}
+
+// Kestrel reads a chunk extension as it comes and counts it against the
+// body cap: 1.1 MB of extension is taken, 31 MB gets 413 (measured on the
+// C# host). The stream must not hold the extension while it waits.
+func TestALongChunkExtensionIsNeverHeld(t *testing.T) {
+	for _, c := range []struct {
+		n      int
+		refuse int
+	}{{1_100_000, 0}, {31_000_000, http.StatusRequestEntityTooLarge}} {
+		source := &peakSource{prefix: "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n2;", n: c.n}
+		stream := &targetStream{src: source}
+		source.stream = stream
+		for {
+			if _, err := stream.Read(make([]byte, 4096)); err != nil {
+				break
+			}
+		}
+		if source.peak > maxChunkLine {
+			t.Errorf("%d bytes of extension: held %d", c.n, source.peak)
+		}
+		if stream.bodyRefusal != c.refuse {
+			t.Errorf("%d bytes of extension: refusal %d, want %d", c.n, stream.bodyRefusal, c.refuse)
+		}
 	}
 }

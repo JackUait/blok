@@ -644,6 +644,18 @@
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
   },
   {
+    "name": "HTTP/1.0 keep-alive, chunked with a Content-Length, then a pipelined head",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\n\nexpected {\"url\": \"...\"}\n"
+  },
+  {
+    "name": "chunk extension that ends in a bare LF",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunk extension with control bytes",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
     "name": "Host with an empty port",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },

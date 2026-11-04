@@ -69,6 +69,9 @@ type limitedBody struct {
 func (b *limitedBody) setLimit(limit int64) {
 	if !b.started {
 		b.limit, b.routeSet = limit, true
+		if b.stream != nil {
+			b.stream.bodyLimit.Store(limit)
+		}
 	}
 }
 

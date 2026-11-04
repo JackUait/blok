@@ -157,32 +157,6 @@ fn authority_has_at(url: &Uri) -> bool {
     rest.contains('@')
 }
 
-/// Whether the authority as written holds an '@'. blok-dotnet (like Go's
-/// twin) drops an empty userinfo from AbsoluteUri, where .NET keeps
-/// "http://@host/" and C# refuses it.
-fn raw_authority_has_at(raw: &str, absolute: bool) -> bool {
-    let s = raw.trim();
-    let scheme_end = s.find(':').filter(|&i| {
-        let scheme = &s.as_bytes()[..i];
-        !scheme.is_empty()
-            && scheme[0].is_ascii_alphabetic()
-            && scheme
-                .iter()
-                .all(|c| c.is_ascii_alphanumeric() || b"+-.".contains(c))
-    });
-    let rest = scheme_end.map_or(s, |i| &s[i + 1..]);
-    let authority = rest.trim_start_matches(['/', '\\']);
-    let slashes = rest.len() - authority.len();
-    let has_authority = match scheme_end {
-        Some(_) => slashes > 0 || absolute,
-        None => slashes >= 2,
-    };
-    let end = authority
-        .find(['/', '\\', '?', '#'])
-        .unwrap_or(authority.len());
-    has_authority && authority[..end].contains('@')
-}
-
 impl Policy for DefaultPolicy {
     /// Allows http and https on port 80 or 443 with a host and no userinfo.
     /// An IP literal must parse.
@@ -198,7 +172,6 @@ impl Policy for DefaultPolicy {
             || url.host.is_empty()
             || !url.user_info.is_empty()
             || authority_has_at(&url)
-            || raw_authority_has_at(raw, base.is_none())
         {
             return blocked;
         }
@@ -206,12 +179,8 @@ impl Policy for DefaultPolicy {
             return blocked;
         }
         // .NET's IdnHost throws when the mapped name holds a URL delimiter,
-        // as "a／b" mapping to "a/b"; the host on the wire would differ.
-        if url.host_type == "Dns"
-            && url
-                .idn_host
-                .contains(['#', '/', ':', '?', '@', '[', '\\', ']'])
-        {
+        // as "a／b" mapping to "a/b"; C# refuses the URL then.
+        if url.idn_host_throws {
             return blocked;
         }
         let mut literal = None;

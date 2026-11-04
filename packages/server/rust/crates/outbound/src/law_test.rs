@@ -289,6 +289,31 @@ fn workspace_sources() -> BTreeMap<String, String> {
             }
         }
     }
+    // A file declared behind #[cfg(test)] is test code, whatever its name.
+    let mut test_files = Vec::new();
+    for (path, source) in &sources {
+        let dir = path.rsplit_once('/').map_or("", |(d, _)| d);
+        for (at, _) in source.match_indices("#[cfg(test)]") {
+            let item = &source[at + "#[cfg(test)]".len()..];
+            let end = item.find(['{', ';']).unwrap_or(item.len());
+            if !item[end..].starts_with(';') {
+                continue;
+            }
+            let declaration = &item[..end];
+            let words: Vec<&str> = declaration.split_whitespace().collect();
+            let Some(index) = words.iter().position(|w| *w == "mod") else {
+                continue;
+            };
+            let file = match declaration.split_once("#[path = \"") {
+                Some((_, rest)) => rest.split('"').next().unwrap_or_default().to_owned(),
+                None => format!("{}.rs", words.get(index + 1).unwrap_or(&"")),
+            };
+            test_files.push(format!("{dir}/{file}"));
+        }
+    }
+    for file in test_files {
+        sources.remove(&file);
+    }
     sources
 }
 

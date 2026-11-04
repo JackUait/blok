@@ -16,7 +16,7 @@ pub fn browser_url(base: Option<&Uri>, reference: &str) -> String {
     let Some(u) = resolve(reference, base) else {
         return String::new();
     };
-    if u.scheme != "https" || u.host.is_empty() || !u.user_info.is_empty() {
+    if u.scheme != "https" || u.host.is_empty() || !u.user_info.is_empty() || u.idn_host_throws {
         return String::new();
     }
     let prefix = format!("https://{}", u.host);

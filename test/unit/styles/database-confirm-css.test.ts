@@ -259,7 +259,7 @@ describe('database confirm dialog css', () => {
 
   // research/37 §4.1 (dark Reset, after Tab): page bg 2px, blue 4px, page bg 6px. Light is not read; its page bg stands in.
   it('rings a keyboard-focused button in page bg, blue, page bg, and never after a pointer press', () => {
-    const KEYBOARD = '[data-blok-database-confirm-action]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)';
+    const KEYBOARD = ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-confirm-action]:focus-visible';
 
     expect(ruleBody(database, '[data-blok-database-confirm-action]:focus-visible')).toContain('outline: none');
     expect(ruleBody(database, KEYBOARD))

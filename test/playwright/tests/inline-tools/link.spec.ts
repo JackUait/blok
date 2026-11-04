@@ -361,6 +361,37 @@ test.describe('inline tool link', () => {
     await expect(paragraph).toContainText('Remove via button');
   });
 
+  test('keyboard focus on the remove-link button tints its icon like its label', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: '<a href="https://google.com">Remove via keyboard</a>',
+        },
+      },
+    ]);
+
+    await selectAll(getParagraphByText(page, 'Remove via keyboard'));
+    await ensureLinkInputOpen(page);
+
+    const removeButton = page.getByTestId('inline-tool-remove-link');
+
+    await expect(removeButton).toBeVisible();
+    await expect.poll(async () => {
+      await page.keyboard.press('Tab');
+
+      return removeButton.evaluate(button => button === document.activeElement);
+    }).toBe(true);
+
+    await expect.poll(() => removeButton.evaluate(button => button.getAnimations({ subtree: true }).length)).toBe(0);
+    const colors = await removeButton.evaluate(button => ({
+      icon: getComputedStyle(button.firstElementChild ?? button).color,
+      label: getComputedStyle(button).color,
+    }));
+
+    expect(colors.icon).toBe(colors.label);
+  });
+
   test('editing the title field in edit mode rewrites the link text', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {

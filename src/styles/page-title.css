@@ -102,8 +102,8 @@
 [data-blok-page-header]:hover [data-blok-page-add-icon],
 [data-blok-page-add-icon]:focus-visible { opacity: 1; }
 /* Ring only after keyboard use: the same :where the focus-visible variant in main.css expands to. */
-[data-blok-page-icon]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
-[data-blok-page-add-icon]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-page-icon]:focus-visible,
+:where(:root:not([data-blok-modality="pointer"])) [data-blok-page-add-icon]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 1px;
 }

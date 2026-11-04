@@ -114,7 +114,7 @@ describe('database row page layout css', () => {
     expect(handle).toContain('cursor: col-resize');
     expect(ruleBody('[data-blok-database-peek-resize][hidden]')).toContain('display: none');
     expect(ruleBody('[data-blok-database-peek-resize]:focus-visible')).toContain('outline: none');
-    expect(ruleBody('[data-blok-database-peek-resize]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)'))
+    expect(ruleBody(':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-peek-resize]:focus-visible'))
       .toContain('var(--blok-focus-ring)');
   });
 
@@ -498,7 +498,7 @@ describe('database row page layout css', () => {
     // Sections move from their menu only, so their ⠿ is no drag handle.
     expect(ruleBody('[data-blok-database-layout-group-handle], [data-blok-database-layout-section-handle]')).not.toContain('cursor: grab');
     // Rings show after keyboard use only.
-    expect(database).toContain('[data-blok-database-layout-section-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)');
+    expect(database).toContain(':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-layout-section-row]:focus-visible');
     expect(ruleBody('[data-blok-database-layout-group-row][data-dragging]')).toContain('opacity: 0.5');
   });
 

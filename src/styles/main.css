@@ -98,8 +98,11 @@
   Replaces the built-in focus-visible: a click must never paint a ring, and
   Blink still matches :focus-visible after some clicks. The attribute comes
   from src/components/utils/input-modality.ts. :where() adds no specificity.
+  The gate leads the selector: inside the element's own :where() it makes Chrome
+  restyle the whole page on every keyboard/mouse switch. group-* and peer-* wrap
+  it back inside :is(), so use in-* or a plain variant instead.
 */
-@custom-variant focus-visible (&:focus-visible:where(:root:not([data-blok-modality="pointer"]) *));
+@custom-variant focus-visible (:where(:root:not([data-blok-modality="pointer"])) &:focus-visible);
 
 @import './tokens.css';
 @import './colors.css';

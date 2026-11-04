@@ -59,7 +59,7 @@ describe('database chart and feed styles', () => {
 
   it('rings chart, legend, drilldown and feed controls only after keyboard use', () => {
     for (const selector of ['[data-blok-database-chart-hit]', '[data-blok-database-chart-legend-entry]', '[data-blok-database-drilldown-close]', '[data-blok-database-feed-title]']) {
-      expect(css).toContain(`${selector}:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)`);
+      expect(css).toContain(`:where(:root:not([data-blok-modality="pointer"])) ${selector}:focus-visible`);
     }
   });
 

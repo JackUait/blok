@@ -76,9 +76,9 @@ describe('list rows (research/07)', () => {
   });
 
   it('rings a focused row or property only after keyboard use', () => {
-    expect(ruleBody(database, '[data-blok-database-list-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)'))
+    expect(ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row]:focus-visible'))
       .toContain('var(--blok-focus-ring)');
-    expect(ruleBody(database, '[data-blok-database-list-row-property][data-editable]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)'))
+    expect(ruleBody(database, ':where(:root:not([data-blok-modality="pointer"])) [data-blok-database-list-row-property][data-editable]:focus-visible'))
       .toContain('var(--blok-focus-ring)');
     expect(ruleBody(database, '[data-blok-database-list-row]:focus')).toBe('');
   });

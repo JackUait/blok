@@ -1453,6 +1453,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const TOP_LAYER_RESTYLE_BYTES = 407;
     // tables.css: the full-screen table runs to every edge; the start gap scrolls away; its add bars keep their room.
     const TABLE_FULLSCREEN_EDGES_BYTES = 1_104;
+    // The modality gate leads each focus-visible selector, so a keyboard/mouse switch
+    // restyles only the rings' targets, not the whole page.
+    const MODALITY_GATE_LEADS_BYTES = 121;
     // embed.css: the click-to-load gate a generic embed shows before the reader loads it.
     const EMBED_GENERIC_GATE_BYTES = 1_636;
     // embed.css: the host line above a loaded generic frame, and the toolbar moved below it.
@@ -1826,6 +1829,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TABLE_FULLSCREEN_BYTES
       + TOP_LAYER_RESTYLE_BYTES
       + TABLE_FULLSCREEN_EDGES_BYTES
+      + MODALITY_GATE_LEADS_BYTES
       + EMBED_GENERIC_GATE_BYTES
       + EMBED_GENERIC_HOST_BYTES;
     const counted = new Set<string>();

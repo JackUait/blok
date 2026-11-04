@@ -580,6 +580,9 @@ public sealed class YDocConverterEditCaptureTests
     yield return new("update-edits-rich-text-in-place", [
         """{ "id": "root", "type": "paragraph", "data": { "text": "hello world" } }"""],
         Edit("""{"op":"update","id":"root","data":{"text":[{"text":"hello "},{"text":"brave","bold":true},{"text":" world"}]}}"""));
+    // The input boundary keeps known marks and tag:<safe name> only.
+    yield return new("update-drops-unknown-marks-and-unsafe-tag-names", [Root],
+        Edit("""{"op":"update","id":"root","data":{"text":[{"text":"a","marks":{"bold":true,"glow":true,"tag:kbd":{"class":"k"},"tag:1x":{},"tag:x y":{},"tag:":{},"tag:a-1":{},"tag:\u00e9":{}}}]}}"""));
     yield return new("update-replaces-legacy-plain-text-with-rich-text", [Root],
         Edit("""{"op":"update","id":"root","data":{"text":"legacy words!"}}"""),
         Shape: "legacy-plain-text-under-rich-key");

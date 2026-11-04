@@ -154,7 +154,6 @@ fn migrate_rich_text_writes_what_csharp_writes() {
         // C#'s, what the format-1 client read from the same room.
         if let Some(room) = optional(case, "room")
             && optional(case, "customFields").is_none()
-            && optional(case, "shapeUpdate").is_none()
         {
             oracles += 1;
             // RichTextRuntime.Export: nested HTML the plain export leaves is read too.

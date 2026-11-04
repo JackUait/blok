@@ -134,7 +134,7 @@ func TestMigrateRichTextWritesWhatCSharpWrites(t *testing.T) {
 			// Twin of YDocConverterMigrationTests.MigrationKeepsEveryCharacterAndMark
 			// and StringLeafRoomsMigrateToTheSameSegments: an oracle that is not
 			// C#'s, what the format-1 client read from the same room.
-			if c.Room != nil && c.CustomFields == nil && c.ShapeUpdate == nil {
+			if c.Room != nil && c.CustomFields == nil {
 				// RichTextRuntime.Export: nested HTML the plain export leaves is read too.
 				full, err := (&DocConverter{Now: time.Now, HTML: runtimeReader(t)}).Export(context.Background(), doc)
 				if err != nil {

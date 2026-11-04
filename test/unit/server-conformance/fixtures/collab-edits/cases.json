@@ -1326,6 +1326,54 @@
       "exportPage": {}
     },
     {
+      "name": "update-drops-unknown-marks-and-unsafe-tag-names",
+      "seed": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": "r"
+          }
+        }
+      ],
+      "seedUpdate": "AQkBACcBBmJsb2NrcwRyb290ASgAAQACaWQBdwRyb290KAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhAScAAQMEdGV4dAYEAAEEAXInAAEABXR1bmVzAScAAQAKY29udGVudElkcwAIAQRyb290AXcEcm9vdAA=",
+      "seedHtml": [
+        {
+          "html": "r",
+          "segments": [
+            {
+              "text": "r"
+            }
+          ]
+        }
+      ],
+      "body": "{\u0022ops\u0022:[{\u0022op\u0022:\u0022update\u0022,\u0022id\u0022:\u0022root\u0022,\u0022data\u0022:{\u0022text\u0022:[{\u0022text\u0022:\u0022a\u0022,\u0022marks\u0022:{\u0022bold\u0022:true,\u0022glow\u0022:true,\u0022tag:kbd\u0022:{\u0022class\u0022:\u0022k\u0022},\u0022tag:1x\u0022:{},\u0022tag:x y\u0022:{},\u0022tag:\u0022:{},\u0022tag:a-1\u0022:{},\u0022tag:\\u00e9\u0022:{}}}]}}]}",
+      "updates": [
+        "AQcCAEYBBQRib2xkBHRydWXGAgABBQd0YWc6YS0xAnt9xgIBAQUHdGFnOmtiZA17ImNsYXNzIjoiayJ9xAICAQUBYcYCAwEFBGJvbGQEbnVsbMYCBAEFB3RhZzphLTEEbnVsbMYCBQEFB3RhZzprYmQEbnVsbAEBAQUB"
+      ],
+      "export": [
+        {
+          "id": "root",
+          "type": "paragraph",
+          "data": {
+            "text": [
+              {
+                "text": "a",
+                "marks": {
+                  "bold": true,
+                  "tag:a-1": {},
+                  "tag:kbd": {
+                    "class": "k"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "exportPage": {}
+    },
+    {
       "name": "update-replaces-legacy-plain-text-with-rich-text",
       "seed": [
         {

@@ -159,6 +159,24 @@ func TestAFormatOneBaselineExportsItsLegacySlot(t *testing.T) {
 	}
 }
 
+// C# CollabHistoryReplayTests.AFormatOneBaselineExportsAsSegments: the
+// legacy slot read through the runtime.
+func TestAFormatOneBaselineExportsAsSegments(t *testing.T) {
+	replayed, err := BuildReplay(context.Background(), [][]byte{mustState(t, legacyHTMLDoc())}, records())
+	if err != nil {
+		t.Fatal(err)
+	}
+	exported, err := (&DocConverter{Now: time.Now, HTML: runtimeReader(t)}).Export(context.Background(), replayed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := mustGet(exported, "blocks").([]any)[0].(*jsjson.Object)
+	text, err := jsjson.Stringify(mustGet(mustGet(block, "data").(*jsjson.Object), "text"))
+	if err != nil || text != `[{"text":"x","marks":{"bold":true}}]` {
+		t.Fatal(text, err)
+	}
+}
+
 func mustState(t *testing.T, doc *yjs.Doc) []byte {
 	t.Helper()
 	state, err := doc.EncodeStateAsUpdate(nil)

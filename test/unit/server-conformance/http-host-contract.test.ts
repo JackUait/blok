@@ -1355,9 +1355,17 @@ const REQUEST_HEADS: Record<string, Buffer> = {
     'with CR in a value': 'X: a\rb\r\n\r\n',
     'with NUL in a value': 'X: a\x00b\r\n\r\n',
     'with invalid UTF-8 in a value': 'X: a\xe9b\r\n\r\n',
+    // Kestrel takes a bare LF in a trailer: a front proxy that reads it
+    // otherwise can be desynced from this host.
+    'with a bare-LF line': 'X-T: 1\n\r\n',
+    'of only a bare LF': '\n',
   }).map(([name, trailer]) => [`chunked trailer ${name}`, bytes(
     `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n${trailer}GET /health HTTP/1.2\r\n`,
   )])),
+  // Chunk lines need CRLF.
+  'bare LF after chunk data': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'bare LF after a chunk size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  'bare LF after the last chunk size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\n\r\nGET /health HTTP/1.2\r\n'),
   'chunked trailer with no colon on a body the route left': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nXT\r\n\r\nGET /health HTTP/1.2\r\n'),
   // After an upgrade the route did not take, the next head keeps
   // Kestrel's limits and grammar.

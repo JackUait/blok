@@ -122,6 +122,20 @@ async fn a_call_queued_behind_a_closing_room_is_retried_on_a_fresh_one() {
             "{which:?}: loads and reads"
         );
         assert_eq!(manager.live_room_count(), rooms, "{which:?}: live rooms");
+        if matches!(which, Call::Edit) {
+            // The edit lands on what the eviction flushed, not beside it.
+            let doc = blok_yjs::Doc::new(blok_yjs::Options::default());
+            for frame in store.frames("doc") {
+                doc.apply_update(&frame).expect("a frame applies");
+            }
+            let notes = doc.get_map("notes").expect("a map root");
+            let blocks = doc.get_map("blocks").expect("a blocks root");
+            assert_eq!(
+                (notes.keys(), blocks.keys()),
+                (vec![Str::from("k")], vec![Str::from("c")]),
+                "the working set after the edit"
+            );
+        }
     }
 }
 

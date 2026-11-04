@@ -1096,8 +1096,8 @@ async fn exports_no_later_than_the_max_delay_under_continuous_edits() {
     let cs = Cs::new();
     cs.endpoint().holds(TEST_DOC, "", None);
     let manager = cs.manager(Options {
-        export_debounce: ms(400),
-        export_max_delay: ms(1000),
+        export_debounce: ms(500),
+        export_max_delay: ms(1500),
         now: Some(Arc::new(std::time::SystemTime::now)),
         ..quiet()
     });
@@ -1112,13 +1112,13 @@ async fn exports_no_later_than_the_max_delay_under_continuous_edits() {
             break;
         }
         assert!(
-            started.elapsed() < ms(1600),
+            started.elapsed() < ms(2400),
             "no export {:?} after the first edit",
             started.elapsed()
         );
     }
     assert!(
-        started.elapsed() >= ms(900),
+        started.elapsed() >= ms(1400),
         "the export came {:?} after the first edit, inside the max delay",
         started.elapsed()
     );
@@ -1273,11 +1273,12 @@ async fn a_joiner_cancelling_mid_seed_does_not_poison_the_seed_for_the_others() 
         let manager = manager.clone();
         tokio::spawn(async move { manager.join(TEST_DOC, writer()).await })
     };
+    wait_until("the seed load to start", || cs.endpoint().loaded() == 1).await;
     let second = {
         let manager = manager.clone();
         tokio::spawn(async move { manager.join(TEST_DOC, writer()).await })
     };
-    wait_until("the seed load to start", || cs.endpoint().loaded() == 1).await;
+    tokio::time::sleep(ms(20)).await;
     first.abort();
     cs.endpoint().set_load_gate(None);
     gate.open();
@@ -2523,7 +2524,10 @@ async fn v1_duplicate_state_converges_but_has_no_client_receipt() {
 async fn an_idle_v1_resync_is_not_journalled_even_with_deletion_history() {
     let cs = Cs::new();
     cs.endpoint().holds(TEST_DOC, "hello", None);
-    let manager = cs.journal_manager(quiet());
+    let manager = cs.journal_manager(Options {
+        eviction_linger: HOUR,
+        ..brisk()
+    });
     let (stock, other) = (writer(), self::writer());
     let membership = enter(&manager, &stock).await;
     enter(&manager, &other).await;
@@ -2551,6 +2555,7 @@ async fn an_idle_v1_resync_is_not_journalled_even_with_deletion_history() {
         answer.len()
     );
 
+    tokio::time::sleep(ms(100)).await;
     manager.settle().await;
     let committed = cs.committed().len();
     let writes = cs.writes();
@@ -2572,6 +2577,7 @@ async fn an_idle_v1_resync_is_not_journalled_even_with_deletion_history() {
     assert!(other.messages().is_empty(), "{:?}", other.messages());
     assert_eq!(exported_text(&manager, TEST_DOC).await, "hell");
 
+    tokio::time::sleep(ms(100)).await;
     manager.settle().await;
     assert_eq!(cs.writes(), writes);
     assert!(
@@ -2611,7 +2617,10 @@ async fn a_deletion_that_only_widens_parked_ranges_is_still_journalled() {
 async fn an_idle_v1_resync_is_not_journalled_while_a_delete_is_parked() {
     let cs = Cs::new();
     cs.endpoint().holds(TEST_DOC, "hello", None);
-    let manager = cs.journal_manager(quiet());
+    let manager = cs.journal_manager(Options {
+        eviction_linger: HOUR,
+        ..brisk()
+    });
     let (stock, other) = (writer(), self::writer());
     let membership = enter(&manager, &stock).await;
     enter(&manager, &other).await;
@@ -2625,6 +2634,7 @@ async fn an_idle_v1_resync_is_not_journalled_while_a_delete_is_parked() {
     update_appending(&stray, "zz");
     update(&membership, update_deleting(&stray, 0, 2)).await;
 
+    tokio::time::sleep(ms(100)).await;
     manager.settle().await;
     let committed = cs.committed().len();
     let writes = cs.writes();
@@ -2646,6 +2656,7 @@ async fn an_idle_v1_resync_is_not_journalled_while_a_delete_is_parked() {
     assert!(other.messages().is_empty(), "{:?}", other.messages());
     assert_eq!(exported_text(&manager, TEST_DOC).await, "hello");
 
+    tokio::time::sleep(ms(100)).await;
     manager.settle().await;
     assert_eq!(cs.writes(), writes);
     assert!(

@@ -165,3 +165,44 @@ fn seed_and_export_handle_data_nested_to_the_limit_on_a_one_megabyte_stack() {
         .join()
         .unwrap_or_else(|_| panic!("the seed overflowed a 1 MiB stack"));
 }
+
+// HostileNulUpdateExportsTheNulIntact and
+// ExportSkipsAWireJsonValueItCannotMaterialise check the export after the
+// runtime read its slots; the fixture records only the slots.
+#[test]
+fn the_hardening_exports_read_their_slots_like_csharp() {
+    let fixture = read("collab-hardening/cases.json");
+    let converter = crate::docconverter_test::runtime();
+    let want = [
+        ("hostile-nul-update", "a\u{0}b", r#"[{"text":"x"}]"#),
+        (
+            "wire-json-that-cannot-materialise",
+            "n1",
+            r#"[{"text":"n1"}]"#,
+        ),
+    ];
+    for (name, id, want_text) in want {
+        let case = items(field(&fixture, "exports"))
+            .iter()
+            .find(|c| text(field(c, "name")) == name)
+            .unwrap_or_else(|| panic!("no case {name}"));
+        let doc = Doc::new(Options::default());
+        doc.apply_update(&crate::export_test::decode64(&text(field(case, "update"))))
+            .unwrap_or_else(|err| panic!("{name}: {err}"));
+        let (mut blocks, slots) = export(&doc, &RichTextFields::built_in(), None)
+            .unwrap_or_else(|err| panic!("{name}: {err}"));
+        crate::csharp_yrs_compat_test::block_on(converter.resolve(&mut blocks, &slots))
+            .unwrap_or_else(|err| panic!("{name}: {err}"));
+        assert_eq!(blocks.len(), 1, "{name}");
+        assert_eq!(text(field(&blocks[0], "id")), id, "{name}");
+        let data = field(&blocks[0], "data");
+        assert_eq!(
+            crate::export_test::canonical(field(data, "text")),
+            want_text,
+            "{name}"
+        );
+        if name == "wire-json-that-cannot-materialise" {
+            assert_eq!(field(data, "lone"), &Value::Undefined, "{name}");
+        }
+    }
+}

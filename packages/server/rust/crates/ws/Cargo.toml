@@ -1,0 +1,19 @@
+[package]
+name = "blok-ws"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-http = { path = "../http" }
+tokio = { version = "1", features = ["net", "io-util", "time", "rt", "sync", "macros"] }
+sha1 = "0.10"
+base64 = "0.22"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["net", "io-util", "time", "rt", "rt-multi-thread", "sync", "macros"] }
+
+[lints]
+workspace = true

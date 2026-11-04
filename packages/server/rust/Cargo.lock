@@ -44,6 +44,7 @@ dependencies = [
 name = "blok-http"
 version = "0.0.0"
 dependencies = [
+ "blok-ws",
  "tokio",
 ]
 

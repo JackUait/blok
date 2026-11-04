@@ -10,7 +10,8 @@ publish.workspace = true
 tokio = { version = "1", features = ["net", "io-util", "time", "rt", "sync", "signal", "macros"] }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["net", "io-util", "time", "rt", "rt-multi-thread", "sync", "macros", "test-util"] }
+blok-ws = { path = "../ws" }
+tokio = { version = "1", features = ["net", "io-util", "time", "rt", "rt-multi-thread", "sync", "macros"] }
 
 [lints]
 workspace = true

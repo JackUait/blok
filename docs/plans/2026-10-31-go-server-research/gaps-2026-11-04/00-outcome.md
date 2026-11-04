@@ -52,14 +52,23 @@ All on main. Each lane was retested on the merged tip before push.
 - HTTP conformance cases for the 32768-char cap and raw non-UTF-8 bodies.
 - The flag number grammar.
 
+## Fixed on 2026-11-05 (HTTP host, second pass)
+- HTTP/1.0 with a chunked body is read as chunked. Before, the chunks were read as the next request, and with Content-Length a request inside a chunk reached the router.
+- A Content-Length with one sign (`+2`, `-0`) is read as Kestrel reads it.
+- An absolute target drops its fragment, and routes a control byte or bad escape in its path or query as Kestrel does.
+- A body the route left gets 6 s to arrive after the answer, then the connection closes.
+- Expect is answered as Kestrel does: 100 Continue only for a first line of 100-continue, no 417, and no Connection: close after an unread body.
+- Chunked trailers are checked under the head's limits and grammar, and heads after them are checked again.
+- Heads after an upgrade the route did not take are checked again.
+
 ## Still different (measured, left open)
-- An unread body over 256 KiB but under the cap: C# drains it and keeps the connection; Go closes.
-- A body announced but never sent: C# closes after about 6 s; Go waits for the read deadline.
-- Expect: 100-continue with an unread body: Go sends Connection: close at once.
-- HTTP/1.0 with a chunked body: C# decodes it; net/http sees an empty body.
-- Heads after a chunked trailer, an upgrade or CONNECT are not checked.
-- Content-Length `+2` or `-0`: C# reads them as numbers; Go answers 400.
-- An absolute target with a fragment: C# 200, Go 404.
+- An unread body over 256 KiB but under the cap: C# finishes its whole answer, reads the body, and keeps the connection; Go closes. net/http gives up on more than 256 KiB left (transfer.go `body.Close`, after `finishRequest` wrote the answer). Go could only keep the connection by reading the body before the answer ends. A probe that sends the body only after the whole answer got C#'s answer to the next request at once, so that would stall such a client.
+- A body announced but never sent: Go closes at 6 s with a FIN. C# closes at 6.0 to 7.0 s (its 1 s heartbeat) with a reset.
+- HTTP/1.0 keep-alive with a chunked body: Go closes after the answer (net/http decides 1.0 keep-alive before the handler runs). C# keeps a HEAD with keep-alive open. Closing is the safe side.
+- CONNECT: Go answers with Connection: close and closes, so no head after it is read. C# keeps the connection and checks the next head.
+- More than one head's worth (40 KiB) sent during an upgrade request's handler: Go stops checking heads on that connection.
+- Trailer lines are dropped, not handed to the handler. Blok reads no trailers.
+- An absolute target with `%2F` in its path: C# routes the decoded path (`http://x/health%2F` is 200), Go 404. Found in this pass, not fixed.
 - An app that embeds blokserver in its own http.Server gets no body cap or rate unless it wires the new hook, much as a C# host's own Kestrel sets those limits.
 - Log wording for a room seam error on receive (collab-transport.md). Wire is the same.
 - The accepted engine gaps U2–U5 (goja memory, timeout, stack, pending promise) are unchanged.

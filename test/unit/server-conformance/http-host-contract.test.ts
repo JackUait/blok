@@ -82,6 +82,8 @@ const FILES = {
   directory: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.txt',
   unreadable: 'cccccccccccccccccccccccccccccccc.txt',
   unknownType: 'dddddddddddddddddddddddddddddddd.blokunknown',
+  // ASP.NET's table holds this extension in upper case.
+  ivf: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.ivf',
   // Files in the storage directory that no upload named. Only generated
   // keys are served, so these must stay 404.
   dotFile: '.env',
@@ -123,6 +125,7 @@ function buildCases(): LocalFileCase[] {
     { name: 'missing key', method: 'GET', file: 'missing', headers: {} },
     { name: 'directory at a generated key', method: 'GET', file: 'directory', headers: {} },
     { name: 'unknown extension', method: 'GET', file: 'unknownType', headers: {} },
+    { name: 'extension in upper case in the table', method: 'GET', file: 'ivf', headers: {} },
     { name: 'empty file', method: 'GET', file: 'empty', headers: {} },
     { name: 'empty file, start past the end', method: 'GET', file: 'empty', headers: { Range: 'bytes=0-' } },
     { name: 'empty file, suffix', method: 'GET', file: 'empty', headers: { Range: 'bytes=-5' } },
@@ -226,9 +229,11 @@ async function seedStorage(directory: string): Promise<void> {
   const text = join(directory, FILES.text);
   const empty = join(directory, FILES.empty);
   const unknown = join(directory, FILES.unknownType);
+  const ivf = join(directory, FILES.ivf);
   const unreadable = join(directory, FILES.unreadable);
 
   await writeFile(text, TEXT);
+  await writeFile(ivf, TEXT);
   await writeFile(empty, '');
   await writeFile(unknown, TEXT);
   await writeFile(unreadable, TEXT);
@@ -238,7 +243,7 @@ async function seedStorage(directory: string): Promise<void> {
   await chmod(unreadable, 0o000);
   await mkdir(join(directory, FILES.directory));
 
-  for (const path of [text, empty, unknown]) {
+  for (const path of [text, empty, unknown, ivf]) {
     await utimes(path, MODIFIED_SECONDS, MODIFIED_SECONDS);
   }
 }

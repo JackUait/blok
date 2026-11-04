@@ -25,3 +25,11 @@ func TestContentTypesMatchAspNet(t *testing.T) {
 		t.Fatal("lookup")
 	}
 }
+
+// The table holds ".IVF" in upper case; ASP.NET's provider ignores case, so
+// a stored name (always lower case) still finds it.
+func TestAnUpperCaseTableKeyMatchesALowerCaseName(t *testing.T) {
+	if got := contentTypeFor("0123456789abcdef0123456789abcdef.ivf"); got != "video/x-ivf" {
+		t.Fatalf("got %q", got)
+	}
+}

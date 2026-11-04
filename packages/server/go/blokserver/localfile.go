@@ -19,11 +19,21 @@ const maxRanges = 16
 // contentTypeFor looks the extension up case-insensitively, as ASP.NET's
 // provider does, and falls back to application/octet-stream.
 func contentTypeFor(name string) string {
-	if t, ok := contentTypes[strings.ToLower(blob.Extension(name))]; ok {
+	if t, ok := lowerContentTypes[strings.ToLower(blob.Extension(name))]; ok {
 		return t
 	}
 	return "application/octet-stream"
 }
+
+// lowerContentTypes is contentTypes by lower-case key: the generated table
+// keeps ASP.NET's spelling, which has upper-case keys (".IVF").
+var lowerContentTypes = func() map[string]string {
+	lower := make(map[string]string, len(contentTypes))
+	for extension, t := range contentTypes {
+		lower[strings.ToLower(extension)] = t
+	}
+	return lower
+}()
 
 type byteRange struct{ start, length int64 }
 

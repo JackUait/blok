@@ -998,6 +998,18 @@ it('matches request origins the way OrdinalIgnoreCase does', async () => {
         Buffer.from('\r\nConnection: close\r\n\r\n'),
       ])),
     });
+    // Control bytes and DEL pass the request parser but not the response's.
+    for (const [name, byte] of [['control byte', 0x01], ['DEL', 0x7f]] as const) {
+      actual.push({
+        name: `preflight with a ${name} in the requested headers`,
+        response: await rawExchange(server.baseUrl, Buffer.concat([
+          Buffer.from('OPTIONS /unfurl HTTP/1.1\r\nHost: x\r\nOrigin: http://k.example\r\n' +
+            'Access-Control-Request-Method: GET\r\nAccess-Control-Request-Headers: x-a'),
+          Buffer.from([byte]),
+          Buffer.from('b\r\nConnection: close\r\n\r\n'),
+        ])),
+      });
+    }
     for (const [name, origin] of [['e acute', 'http://\u00e9.example'], ['kelvin sign', 'http://\u212a.example']]) {
       actual.push({
         name: `guarded GET ${name}`,

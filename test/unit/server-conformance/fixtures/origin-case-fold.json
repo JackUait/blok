@@ -80,6 +80,14 @@
     "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
   },
   {
+    "name": "preflight with a control byte in the requested headers",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "preflight with a DEL in the requested headers",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
     "name": "guarded GET e acute",
     "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
   },

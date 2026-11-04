@@ -36,19 +36,21 @@ const conformanceTargets = (workflowText: string): string[] => {
  * The Go conformance runs that name no --suite and no --test-name-pattern:
  * only those prove the whole suite on Go.
  */
-const fullGoRuns = (workflowText: string): string[] => {
+const fullRuns = (workflowText: string, target: string): string[] => {
   const workflow = parse(workflowText) as Workflow;
 
   return Object.values(workflow.jobs ?? {})
     .flatMap((job) => job.steps ?? [])
     .flatMap((step) => step.run === undefined ? [] : step.run.split('\n'))
     .map((line) => line.trim())
-    .filter((line) => line === 'node scripts/test-server-conformance.mjs --target go');
+    .filter((line) => line === `node scripts/test-server-conformance.mjs --target ${target}`);
 };
+
+const fullGoRuns = (workflowText: string): string[] => fullRuns(workflowText, 'go');
 
 type RunnerResult = { status: number | null; stdout: string; stderr: string };
 
-const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go', interop: 'dotnet', rust: 'cargo' };
+const TOOLCHAINS: Record<string, string> = { csharp: 'dotnet', go: 'go', interop: 'dotnet', rust: 'cargo', 'interop-rust': 'go' };
 
 /**
  * With no PATH the build spawn fails, so a runner that accepted the target
@@ -102,6 +104,15 @@ describe('server Go and C# parity law', () => {
     expect(fullGoRuns(read('.github/workflows/ci.yml'))).toHaveLength(1);
   });
 
+  it('runs every conformance suite on Rust in CI, unfiltered', () => {
+    expect(fullRuns(read('.github/workflows/ci.yml'), 'rust')).toHaveLength(1);
+  });
+
+  // One collaboration directory, written by Go and served by Rust, and the reverse.
+  it('runs the Go and Rust journal interop suite in CI', () => {
+    expect(fullRuns(read('.github/workflows/ci.yml'), 'interop-rust')).toHaveLength(1);
+  });
+
   it('has the Rust workspace and its server binary', () => {
     expect(existsSync(resolve(repoRoot, 'packages/server/rust/Cargo.toml'))).toBe(true);
     expect(read('packages/server/rust/crates/blok-server/Cargo.toml')).toMatch(/^name = "blok-server"$/m);
@@ -114,7 +125,7 @@ describe('server Go and C# parity law', () => {
     expect(result.stderr).toContain('Usage:');
   });
 
-  it.each(['csharp', 'go', 'interop', 'rust'])('lets the runner accept --target %s', (target) => {
+  it.each(['csharp', 'go', 'interop', 'rust', 'interop-rust'])('lets the runner accept --target %s', (target) => {
     expect(runnerAccepts(target, runRunner(runnerPath, ['--target', target]))).toBe(true);
   });
 

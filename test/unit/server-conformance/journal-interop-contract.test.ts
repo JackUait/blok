@@ -11,25 +11,40 @@ import { sendRequest } from './http-client';
 import { startServer, type RunningServer } from './run-against';
 
 /**
- * One collaboration directory, two servers: what the C# host writes, the Go
- * host serves after a restart, and the reverse. The journal and the working
- * set are the same bytes on disk in both (decision U8), so a deployment can
- * switch servers without losing a document, its history or its edit
- * receipts. Only `scripts/test-server-conformance.mjs --target interop`
- * builds both binaries and sets both variables.
+ * One collaboration directory, two servers: what one host writes, the other
+ * serves after a restart, and the reverse. The journal and the working set
+ * are the same bytes on disk in every server (decision U8), so a deployment
+ * can switch servers without losing a document, its history or its edit
+ * receipts. `scripts/test-server-conformance.mjs --target interop` builds C#
+ * and Go, and `--target interop-rust` builds Go and Rust; every ordered pair
+ * of the servers it built runs.
  */
 const unset = (name: string): boolean =>
   process.env[name] === undefined || process.env[name] === '';
 
-const it = baseIt.skipIf(unset('BLOK_CONFORMANCE_CSHARP_SERVER') || unset('BLOK_CONFORMANCE_GO_SERVER'));
+const SERVER_VARIABLES = {
+  csharp: 'BLOK_CONFORMANCE_CSHARP_SERVER',
+  go: 'BLOK_CONFORMANCE_GO_SERVER',
+  rust: 'BLOK_CONFORMANCE_RUST_SERVER',
+} as const;
 
 const KEY = 'Blok-Idempotency-Key';
 const TIMEOUT_MS = 90_000;
 
-type Target = 'csharp' | 'go';
+type Target = keyof typeof SERVER_VARIABLES;
 
-const binary = (target: Target): string =>
-  String(target === 'csharp' ? process.env.BLOK_CONFORMANCE_CSHARP_SERVER : process.env.BLOK_CONFORMANCE_GO_SERVER);
+const built = (Object.keys(SERVER_VARIABLES) as Target[])
+  .filter((target) => !unset(SERVER_VARIABLES[target]));
+
+const pairs: [Target, Target][] = built.flatMap((writer) => built
+  .filter((reader) => reader !== writer)
+  .map((reader): [Target, Target] => [writer, reader]));
+
+// With fewer than two servers built there is no pair; the C# and Go pair is
+// still listed, skipped, so a run without the runner reports the suite.
+const it = baseIt.skipIf(pairs.length === 0);
+
+const binary = (target: Target): string => String(process.env[SERVER_VARIABLES[target]]);
 
 const insertBody = (id: string, text: string): string => JSON.stringify({
   ops: [{ op: 'insert', id, block: { type: 'paragraph', data: { text } } }],
@@ -133,10 +148,7 @@ const historyShape = (text: string): unknown => {
   };
 };
 
-describe.each([
-  ['csharp', 'go'],
-  ['go', 'csharp'],
-] as [Target, Target][])('a journal %s wrote, served by %s', (writer, reader) => {
+describe.each(pairs.length > 0 ? pairs : [['csharp', 'go'], ['go', 'csharp']] as [Target, Target][])('a journal %s wrote, served by %s', (writer, reader) => {
   it('keeps the document, its history and its edit receipts', async () => {
     const collabDirectory = await directory();
     const docs = await endpoint();

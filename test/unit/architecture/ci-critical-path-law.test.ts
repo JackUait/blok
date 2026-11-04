@@ -284,6 +284,33 @@ describe('CI critical-path law', () => {
           key: '${{ steps.lint-cache.outputs.cache-primary-key }}',
         },
       },
+      // The Rust server's conformance: here, so it takes no slot of the
+      // 20-job cap, and after TypeScript, whose globs would sweep target/.
+      {
+        name: 'Cache Rust release build',
+        uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
+        with: {
+          path: ['~/.cargo/registry', '~/.cargo/git', 'packages/server/rust/target', ''].join('\n'),
+          key: "rust-release-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}",
+          'restore-keys': 'rust-release-${{ runner.os }}-',
+        },
+      },
+      {
+        name: 'Setup Go',
+        uses: 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e',
+        with: {
+          'go-version-file': 'packages/server/go/go.mod',
+          'cache-dependency-path': 'packages/server/go/go.sum',
+        },
+      },
+      {
+        name: 'Test Rust conformance',
+        run: 'node scripts/test-server-conformance.mjs --target rust',
+      },
+      {
+        name: 'Test journal interop between Go and Rust',
+        run: 'node scripts/test-server-conformance.mjs --target interop-rust',
+      },
     ]);
   });
 

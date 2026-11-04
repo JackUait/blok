@@ -92,6 +92,32 @@ jobs:
             node_modules/.cache/blok-lint.tsbuildinfo
           key: ${{ steps.lint-cache.outputs.cache-primary-key }}
 
+      # The Rust conformance runs live here, not in a job of their own: a new
+      # job takes a slot of the 20-job cap, and Lint has the most room under
+      # the 7-minute budget. They come after TypeScript, whose include globs
+      # would otherwise sweep cargo's target directory.
+      - name: Cache Rust release build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/server/rust/target
+          key: rust-release-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}
+          restore-keys: rust-release-${{ runner.os }}-
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: packages/server/go/go.mod
+          cache-dependency-path: packages/server/go/go.sum
+
+      - name: Test Rust conformance
+        run: node scripts/test-server-conformance.mjs --target rust
+
+      - name: Test journal interop between Go and Rust
+        run: node scripts/test-server-conformance.mjs --target interop-rust
+
   workflow-lint:
     name: Workflow Lint
     runs-on: ubuntu-latest

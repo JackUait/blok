@@ -35,9 +35,10 @@ function run(command, args, options = {}) {
 const ORDINARY_CONFIGURATION = 'Release';
 const JOURNAL_CONFIGURATIONS = ['Debug', 'Release'];
 
-// interop builds both servers and runs only INTEROP_SUITES: one directory,
-// written by one server and served by the other.
-const TARGETS = ['csharp', 'go', 'interop', 'rust'];
+// interop builds C# and Go, interop-rust builds Go and Rust, and both run only
+// INTEROP_SUITES: one directory, written by one server and served by the other.
+const TARGETS = ['csharp', 'go', 'interop', 'rust', 'interop-rust'];
+const INTEROP_TARGETS = ['interop', 'interop-rust'];
 
 const INTEROP_SUITES = ['journal-interop-contract'];
 
@@ -70,18 +71,18 @@ function selectedOptions(args) {
   const configuration = configurationIndex >= 0 ? args[configurationIndex + 1] : 'Debug';
   const suites = args.flatMap((arg, index) => (arg === '--suite' ? [args[index + 1]] : []));
 
-  const allowed = target === 'interop' ? INTEROP_SUITES : SUITES;
+  const allowed = INTEROP_TARGETS.includes(target) ? INTEROP_SUITES : SUITES;
 
   // Go and Rust have no Debug or Release choice here, so --configuration would mean nothing.
   if (
     !TARGETS.includes(target) ||
-    ((target === 'go' || target === 'rust') && configurationIndex >= 0) ||
+    ((target === 'go' || target === 'rust' || target === 'interop-rust') && configurationIndex >= 0) ||
     (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === '')) ||
     !JOURNAL_CONFIGURATIONS.includes(configuration) ||
     suites.some((suite) => !allowed.includes(suite))
   ) {
     throw new Error(
-      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go|interop|rust] ' +
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp|go|interop|rust|interop-rust] ' +
       '[--suite NAME]... [--test-name-pattern PATTERN] [--configuration Debug|Release (csharp and interop)]',
     );
   }
@@ -236,6 +237,11 @@ function announce(options) {
     announceRust();
     return;
   }
+  if (options.target === 'interop-rust') {
+    announceGo();
+    announceRust();
+    return;
+  }
   if (options.target !== 'csharp') {
     announceGo();
   }
@@ -259,6 +265,21 @@ async function buildBoth(options, temporaryDirectory, executableSuffix) {
   };
 }
 
+/** Go and Rust conformance builds, for the Go and Rust journal handover. */
+async function buildGoAndRust(temporaryDirectory, executableSuffix) {
+  const go = await buildGo(temporaryDirectory, executableSuffix);
+  const rust = await buildRust(temporaryDirectory, executableSuffix);
+
+  return {
+    ordinary: go.ordinary,
+    conformance: go.conformance,
+    interop: {
+      BLOK_CONFORMANCE_GO_SERVER: go.conformance,
+      BLOK_CONFORMANCE_RUST_SERVER: rust.conformance,
+    },
+  };
+}
+
 async function main() {
   const options = selectedOptions(process.argv.slice(2));
   announceSuites(options);
@@ -271,6 +292,7 @@ async function main() {
       go: (_options, ...rest) => buildGo(...rest),
       interop: buildBoth,
       rust: (_options, ...rest) => buildRust(...rest),
+      'interop-rust': (_options, ...rest) => buildGoAndRust(...rest),
     };
     const binaries = await build[options.target](options, temporaryDirectory, executableSuffix);
 

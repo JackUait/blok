@@ -10,6 +10,12 @@ import (
 // catches Kestrel's 413; for any other route the host has answered 413.
 var ErrRequestBodyTooLarge = errors.New("request body over the host's cap")
 
+// ErrRequestBodyTooSlow is a body read under a host's minimum data rate,
+// Kestrel's MinRequestBodyDataRate. The host ends the read with a read
+// deadline, which also cancels the request context; a route that set the cap
+// still answers it, as UploadEndpoint catches it as an IOException.
+var ErrRequestBodyTooSlow = errors.New("request body under the host's minimum data rate")
+
 type requestBodyLimitKey struct{}
 
 // WithRequestBodyLimit is for a host that caps request bodies, as Kestrel's

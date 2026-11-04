@@ -57,6 +57,10 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, errTooLarge):
 		writeText(w, http.StatusRequestEntityTooLarge, "file too large\n")
 		return
+	// Before the context check: the host's read deadline cancels it.
+	case body.tooSlow:
+		writeText(w, http.StatusBadRequest, "malformed upload\n")
+		return
 	case r.Context().Err() != nil:
 		return
 	case err != nil:
@@ -151,6 +155,8 @@ type cappedReader struct {
 	r         io.Reader
 	remaining int64
 	tooLarge  bool
+	// tooSlow: the host ended a read under its minimum data rate.
+	tooSlow bool
 }
 
 func (c *cappedReader) Read(p []byte) (int, error) {
@@ -169,12 +175,7 @@ func (c *cappedReader) Read(p []byte) (int, error) {
 				return 0, errTooLarge
 			}
 			if err != nil {
-				// The host's cap is MaxUploadBytes too; its refusal is this one.
-				if errors.Is(err, ErrRequestBodyTooLarge) {
-					c.tooLarge = true
-					return 0, errTooLarge
-				}
-				return 0, err
+				return 0, c.hostError(err)
 			}
 		}
 	}
@@ -183,11 +184,23 @@ func (c *cappedReader) Read(p []byte) (int, error) {
 	}
 	n, err := c.r.Read(p)
 	c.remaining -= int64(n)
-	if errors.Is(err, ErrRequestBodyTooLarge) {
-		c.tooLarge = true
-		return n, errTooLarge
+	if err != nil {
+		return n, c.hostError(err)
 	}
-	return n, err
+	return n, nil
+}
+
+// hostError notes a host's refusal of the body. The host's cap is
+// MaxUploadBytes too, so its 413 is this one.
+func (c *cappedReader) hostError(err error) error {
+	switch {
+	case errors.Is(err, ErrRequestBodyTooLarge):
+		c.tooLarge = true
+		return errTooLarge
+	case errors.Is(err, ErrRequestBodyTooSlow):
+		c.tooSlow = true
+	}
+	return err
 }
 
 // countingReader records how far the store read, as CountingReadStream.

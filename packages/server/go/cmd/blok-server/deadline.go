@@ -59,7 +59,10 @@ func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter
 	if r.Body == nil || r.Body == http.NoBody {
 		return r.WithContext(ctx)
 	}
-	body := &limitedBody{ReadCloser: r.Body, writer: tracked, limit: maxRequestBodyBytes, length: r.ContentLength}
+	body := &limitedBody{
+		ReadCloser: r.Body, writer: tracked, limit: maxRequestBodyBytes, length: r.ContentLength,
+		setDeadline: http.NewResponseController(tracked).SetReadDeadline,
+	}
 	limited := r.WithContext(blokserver.WithRequestBodyLimit(ctx, body.setLimit))
 	limited.Body = body
 	return limited

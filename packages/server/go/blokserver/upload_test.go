@@ -1,6 +1,7 @@
 package blokserver
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,39 @@ import (
 	"strings"
 	"testing"
 )
+
+// Measured on the C# host: a body under Kestrel's minimum data rate on
+// /upload gets 400 "malformed upload" (UploadEndpoint catches it as an
+// IOException). In Go the host's read deadline has cancelled the context by
+// then, and the answer must still go out.
+func TestUploadAnswersASlowBodyAfterTheHostCancelled(t *testing.T) {
+	o := DefaultOptions()
+	o.StorageDirectory = t.TempDir()
+	o.PublicURL = "/files"
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	body := io.MultiReader(strings.NewReader("--"+testBoundary+"\r\n"), &failingReader{err: ErrRequestBodyTooSlow, before: cancel})
+	request := httptest.NewRequestWithContext(ctx, "POST", "/upload", body)
+	request.Header.Set("Content-Type", "multipart/form-data; boundary="+testBoundary)
+	recorder := httptest.NewRecorder()
+	s.Handler("").ServeHTTP(recorder, request)
+	if recorder.Code != 400 || recorder.Body.String() != "malformed upload\n" {
+		t.Fatalf("%d %q", recorder.Code, recorder.Body.String())
+	}
+}
+
+type failingReader struct {
+	err    error
+	before func()
+}
+
+func (f *failingReader) Read([]byte) (int, error) {
+	f.before()
+	return 0, f.err
+}
 
 const testBoundary = "blok-server-conformance-boundary"
 

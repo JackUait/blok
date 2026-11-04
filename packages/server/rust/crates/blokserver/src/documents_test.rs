@@ -32,9 +32,53 @@ fn documents_options() -> Options {
 
 // Twin of RegistersOneConverterAcrossRepeatedAndMixedRegistration and
 // TakesTheTimeoutTheCallerAsksFor.
-#[test]
-#[ignore = "needs the agent executor on the shared pool; the agent lane adds AgentExecutor"]
-fn the_document_converter_shares_the_agents_engine_pool_and_takes_its_size() {}
+#[tokio::test(flavor = "multi_thread")]
+async fn the_document_converter_shares_the_agents_engine_pool_and_takes_its_size() {
+    let size = PoolOptions {
+        pool_size: 1,
+        timeout: Duration::from_secs(120),
+        memory_budget: 64 << 20,
+    };
+    let s = Server::new(Options {
+        documents: blok_blokdocs::Options {
+            pool_size: size.pool_size,
+            timeout: size.timeout,
+            memory_budget: size.memory_budget,
+            ..blok_blokdocs::Options::default()
+        },
+        ..documents_options()
+    })
+    .unwrap();
+    let seen = count_builds(&s);
+    let converter = s.document_converter();
+    let converted = converter
+        .to_markdown(r#"{"blocks":[{"type":"paragraph","data":{"text":"Hi"}}]}"#)
+        .await
+        .unwrap();
+    assert_eq!(converted.markdown, "Hi");
+    let executor = s.agent_executor().unwrap();
+    executor
+        .execute(
+            &blok_blokagent::Cancel::new(),
+            r#"{"blocks":[]}"#,
+            r#"{"commands":[{"name":"doc.setTitle","args":{"title":"T"}}]}"#,
+            &blok_blokagent::Actor {
+                id: "a".into(),
+                name: "A".into(),
+                on_behalf_of: None,
+            },
+            None,
+        )
+        .await
+        .unwrap();
+    let seen = seen.lock().unwrap();
+    assert_eq!(seen.len(), 1, "engine pools built, want 1");
+    assert_eq!(
+        (seen[0].pool_size, seen[0].timeout, seen[0].memory_budget),
+        (size.pool_size, size.timeout, size.memory_budget),
+        "pool size"
+    );
+}
 
 // Twin of SkipsTheWarmUpWhenItIsNotWanted: AddBlokServer registers no warm-up.
 #[tokio::test]

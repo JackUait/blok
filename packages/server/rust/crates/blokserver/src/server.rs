@@ -100,6 +100,7 @@ pub(crate) struct Inner {
     /// first use.
     pub(crate) runtime: Arc<LazyRuntime>,
     pub(crate) documents: OnceLock<blok_blokdocs::Converter>,
+    pub(crate) agent: OnceLock<Result<Arc<blok_blokagent::Executor>, String>>,
     /// Turns true when the warm-up `new` started has finished.
     #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) warmed: Option<tokio::sync::watch::Receiver<bool>>,
@@ -175,6 +176,7 @@ impl Server {
             collab,
             runtime,
             documents: OnceLock::new(),
+            agent: OnceLock::new(),
             warmed: None,
             connections,
             upgrades: Mutex::new(None),

@@ -13,6 +13,7 @@ conformance = []
 [dependencies]
 blok-auth = { path = "../auth" }
 blok-blob = { path = "../blob" }
+blok-blokagent = { path = "../blokagent" }
 blok-blokdocs = { path = "../blokdocs" }
 blok-collab = { path = "../collab" }
 blok-collab-collabhttp = { path = "../collab-collabhttp" }

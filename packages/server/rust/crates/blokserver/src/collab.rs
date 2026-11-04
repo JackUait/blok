@@ -91,6 +91,12 @@ impl LazyRuntime {
         input: &str,
         timeout: Duration,
     ) -> Result<String, InvokeError> {
+        self.pool().await?.invoke(op, input, timeout).await
+    }
+
+    /// Never raced against a cancel: a dropped build keeps loading in the
+    /// blocking pool and the next caller would start a second one.
+    async fn pool(&self) -> Result<Arc<Pool>, InvokeError> {
         let built = self
             .pool
             .get_or_init(|| async {
@@ -106,7 +112,7 @@ impl LazyRuntime {
             })
             .await;
         match built {
-            Ok(pool) => pool.invoke(op, input, timeout).await,
+            Ok(pool) => Ok(Arc::clone(pool)),
             Err(BuildFailure::Constraint(err)) => Err(InvokeError::Constraint(err.clone())),
             Err(BuildFailure::Message(message)) => Err(InvokeError::Failure(Failure {
                 kind: Kind::Unknown,
@@ -128,6 +134,29 @@ impl blok_blokdocs::Runtime for SharedRuntime {
         timeout: Duration,
     ) -> blok_blokdocs::InvokeFuture<'a> {
         Box::pin(self.0.invoke(op, input, timeout))
+    }
+}
+
+impl blok_blokagent::Invoker for SharedRuntime {
+    fn invoke<'a>(
+        &'a self,
+        cancel: &'a blok_blokagent::Cancel,
+        op: &'a str,
+        input: &'a str,
+        timeout: Duration,
+    ) -> blok_blokagent::InvokeFuture<'a> {
+        Box::pin(async move {
+            let pool = self.0.pool().await.map_err(|err| match err {
+                InvokeError::Constraint(err) => blok_blokagent::Error::Constraint(err),
+                InvokeError::Failure(failure) => {
+                    blok_blokagent::Error::Conversion(blok_blokdocs::ConversionError {
+                        reason: blok_blokdocs::Reason::Unknown,
+                        source: Some(Box::new(failure)),
+                    })
+                }
+            })?;
+            <Pool as blok_blokagent::Invoker>::invoke(&pool, cancel, op, input, timeout).await
+        })
     }
 }
 
@@ -366,6 +395,29 @@ impl Server {
     /// until the first conversion.
     pub fn document_converter(&self) -> blok_blokdocs::Converter {
         self.inner.document_converter()
+    }
+
+    /// The server's agent executor: one executor over the server's engine
+    /// pool that edits its live rooms when collaboration is on, as C#
+    /// AddBlokDocuments registers it. No route calls it; a host embedding
+    /// the server does. Nothing is built until the first call, and a room
+    /// manager that failed to build fails every later call alike.
+    pub fn agent_executor(&self) -> Result<Arc<blok_blokagent::Executor>, CollabError> {
+        let inner = &self.inner;
+        inner
+            .agent
+            .get_or_init(|| {
+                let rooms = match &inner.collab {
+                    Some(collab) => Some(blok_blokagent::Rooms::new(collab.get(inner)?)),
+                    None => None,
+                };
+                Ok(Arc::new(blok_blokagent::Executor::new_on_runtime(
+                    SharedRuntime(Arc::clone(&inner.runtime)),
+                    rooms,
+                )))
+            })
+            .clone()
+            .map_err(CollabError::Build)
     }
 
     /// Makes the sync door refuse upgrades past max, as Kestrel's

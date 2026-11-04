@@ -134,8 +134,8 @@ impl Exchange {
 }
 
 impl Exchange {
-    /// What an exception the app does not catch gets: an empty 500 with no
-    /// Connection header, then the close.
+    /// What an exception the app does not catch gets: an empty 500, then the
+    /// close. Measured: it says Connection: close only when the request did.
     pub async fn refuse_unhandled(&self) {
         let mut wire = self.wire.lock().await;
         wire.close = true;
@@ -144,8 +144,13 @@ impl Exchange {
         }
         wire.started = true;
         wire.host_owned = true;
+        let connection = if self.request_close {
+            "Connection: close\r\n"
+        } else {
+            ""
+        };
         let mut head = format!(
-            "HTTP/1.1 500 {}\r\nContent-Length: 0\r\nDate: {}\r\n",
+            "HTTP/1.1 500 {}\r\nContent-Length: 0\r\n{connection}Date: {}\r\n",
             reason_phrase(500),
             http_date(std::time::SystemTime::now())
         );

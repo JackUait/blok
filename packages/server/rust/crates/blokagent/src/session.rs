@@ -7,10 +7,10 @@ use crate::types::{Actor, Execution, Options};
 use crate::wire::{common, get_mut, member, set, str_node};
 
 // Same caps as AGENT_HISTORY_LIMITS in src/shared/agent/document-session.ts.
-const MAX_STEPS: usize = 100;
+pub(crate) const MAX_STEPS: usize = 100;
 // Counted in the UTF-16 units of each step as System.Text.Json writes it
 // (non-ASCII escaped), not in bytes or chars.
-const MAX_CHARS: usize = 4 * 1024 * 1024;
+pub(crate) const MAX_CHARS: usize = 4 * 1024 * 1024;
 
 /// One agent's batches on stored documents, kept in memory so history.undo
 /// and history.redo can take them back and write them again. Its steps stay

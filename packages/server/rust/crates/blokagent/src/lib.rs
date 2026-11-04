@@ -7,9 +7,9 @@
 //! so a Rust host sends and stores the same bytes as a C# host. The shared
 //! fixture test/unit/server-conformance/fixtures/agent/host.json pins that.
 //!
-//! Live rooms need collaboration, which this crate does not carry yet:
-//! `execute_in_room` answers COMMAND_UNAVAILABLE, as a C# executor built
-//! without rooms does.
+//! An executor built with `Rooms` runs batches on live collaboration
+//! rooms; without them `execute_in_room` answers COMMAND_UNAVAILABLE, as a
+//! C# executor built without rooms does.
 
 mod cancel;
 mod errors;
@@ -17,13 +17,18 @@ mod executor;
 mod pageaction;
 mod pagecreate;
 mod room;
+mod roomhistory;
+mod roomreplay;
 mod session;
+mod translate;
 mod types;
+mod versions;
 mod wire;
 
 pub use cancel::{Cancel, CancelReason};
 pub use errors::Error;
 pub use executor::{Executor, FactoryOptions, InvokeFuture, Invoker};
+pub use room::Rooms;
 pub use session::Session;
 pub use types::{
     Actor, Execution, HostFuture, Options, PageCreator, PageLocation, PageTarget, StoredPage,
@@ -44,8 +49,14 @@ mod normalize_test;
 #[cfg(test)]
 mod parity_test;
 #[cfg(test)]
+mod room_test;
+#[cfg(test)]
+mod roomharness_test;
+#[cfg(test)]
 mod scenario_test;
 #[cfg(test)]
 mod test_json;
 #[cfg(test)]
 mod test_support;
+#[cfg(test)]
+mod translate_test;

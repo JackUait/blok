@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
 
 use blok_jsjson::{Kind, Node};
@@ -7,6 +8,7 @@ use blok_jsruntime::{Options as PoolOptions, Pool, PoolError};
 
 use crate::cancel::Cancel;
 use crate::errors::{Error, from_runtime, no_answer};
+use crate::room::{Live, Rooms};
 use crate::types::{Actor, Execution, Options};
 use crate::wire::{
     actor_node, common, field, get, is_true, member, object, parse, present, revision_of, text,
@@ -47,18 +49,36 @@ impl Invoker for Pool {
     }
 }
 
+impl<T: Invoker + ?Sized> Invoker for Arc<T> {
+    fn invoke<'a>(
+        &'a self,
+        cancel: &'a Cancel,
+        op: &'a str,
+        input: &'a str,
+        timeout: Duration,
+    ) -> InvokeFuture<'a> {
+        T::invoke(self, cancel, op, input, timeout)
+    }
+}
+
 /// Configures `Executor::new`. Zero values take the defaults, as in
 /// blokdocs::Options.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct FactoryOptions {
     pub pool_size: usize,
     pub timeout: Duration,
     pub memory_budget: i64,
+    /// When set, `execute_in_room` runs on these live rooms.
+    pub rooms: Option<Rooms>,
 }
 
 /// Runs agent batches. Safe for concurrent use; a Session is not.
 pub struct Executor {
-    runtime: Box<dyn Invoker>,
+    pub(crate) runtime: Arc<dyn Invoker>,
+    pub(crate) live: Option<Live>,
+    /// Runs between an undo's head read and its room lane.
+    #[cfg(test)]
+    pub(crate) before_history_lane: Option<crate::roomreplay::Hook>,
 }
 
 impl Executor {
@@ -71,13 +91,22 @@ impl Executor {
             timeout: options.timeout,
             memory_budget: options.memory_budget,
         })?;
-        Ok(Executor::on_runtime(pool))
+        Ok(Executor::new_on_runtime(pool, options.rooms))
     }
 
     /// An executor over a runtime the caller holds.
     pub fn on_runtime(runtime: impl Invoker) -> Executor {
+        Executor::new_on_runtime(runtime, None)
+    }
+
+    /// For blokserver: an executor over the server's own engine pool, the
+    /// one its rooms read HTML with, as a C# host shares one IBlokRuntime.
+    pub fn new_on_runtime(runtime: impl Invoker, rooms: Option<Rooms>) -> Executor {
         Executor {
-            runtime: Box::new(runtime),
+            runtime: Arc::new(runtime),
+            live: rooms.map(Live::attach),
+            #[cfg(test)]
+            before_history_lane: None,
         }
     }
 
@@ -87,10 +116,7 @@ impl Executor {
         op: &str,
         input: &Node,
     ) -> Result<String, Error> {
-        let written = write(input)?;
-        self.runtime
-            .invoke(cancel, op, &written, Duration::ZERO)
-            .await
+        invoke_on(self.runtime.as_ref(), cancel, op, input).await
     }
 
     /// Runs a batch on a stored document. The answer holds a document to
@@ -196,13 +222,8 @@ impl Executor {
 
     /// The call C# wraps in one try: the invoke, the parse and the null
     /// check all count as the run stopping.
-    async fn agent_execute(&self, cancel: &Cancel, input: &Node) -> Result<Node, Error> {
-        let answer = self.invoke(cancel, "agentExecute", input).await?;
-        let output = parse(&answer)?;
-        if !present(Some(&output)) {
-            return Err(no_answer("agent execution"));
-        }
-        Ok(output)
+    pub(crate) async fn agent_execute(&self, cancel: &Cancel, input: &Node) -> Result<Node, Error> {
+        agent_execute_on(self.runtime.as_ref(), cancel, input).await
     }
 
     /// The command contract for `execute`.
@@ -236,6 +257,29 @@ impl Executor {
         let contract = get(&output, "contract")?.ok_or_else(|| no_answer("agent contract"))?;
         write(contract)
     }
+}
+
+pub(crate) async fn invoke_on(
+    runtime: &dyn Invoker,
+    cancel: &Cancel,
+    op: &str,
+    input: &Node,
+) -> Result<String, Error> {
+    let written = write(input)?;
+    runtime.invoke(cancel, op, &written, Duration::ZERO).await
+}
+
+pub(crate) async fn agent_execute_on(
+    runtime: &dyn Invoker,
+    cancel: &Cancel,
+    input: &Node,
+) -> Result<Node, Error> {
+    let answer = invoke_on(runtime, cancel, "agentExecute", input).await?;
+    let output = parse(&answer)?;
+    if !present(Some(&output)) {
+        return Err(no_answer("agent execution"));
+    }
+    Ok(output)
 }
 
 /// A command with one of `names`, as C# HasInsert and HasPageAction: it

@@ -124,7 +124,7 @@ pub(crate) fn stopped_after_creating(err: &Error, created: &[Node]) -> Result<Ex
 
 /// Wraps a failure after the host created pages in ORPHANED_SIDE_EFFECT,
 /// unless it already is one or has no error.
-fn stranded(failed: Execution, created: &[Node]) -> Result<Execution, Error> {
+pub(crate) fn stranded(failed: Execution, created: &[Node]) -> Result<Execution, Error> {
     let result = parse(&failed.result_json)?;
     if result.kind != Kind::Object {
         return Err(invalid_operation("The agent result is not an object."));

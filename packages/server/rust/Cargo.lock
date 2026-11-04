@@ -75,8 +75,17 @@ name = "blok-blokagent"
 version = "0.0.0"
 dependencies = [
  "blok-blokdocs",
+ "blok-collab",
+ "blok-collab-convert",
+ "blok-collab-docendpoint",
+ "blok-collab-journal",
+ "blok-collab-room",
+ "blok-collab-workingset",
+ "blok-dotnet",
  "blok-jsjson",
  "blok-jsruntime",
+ "blok-yjs",
+ "getrandom 0.4.3",
  "sha2",
  "tokio",
 ]

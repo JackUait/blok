@@ -30,12 +30,58 @@ pub enum Error {
     Cancelled(CancelReason),
     /// A host callback's own failure, passed on unchanged.
     Host(Box<dyn std::error::Error + Send + Sync>),
+    /// A live room's own failure, passed on unchanged.
+    Room(blok_collab_room::Error),
 }
 
 impl Error {
     /// C#'s `error is OperationCanceledException`.
     pub fn is_cancel(&self) -> bool {
-        matches!(self, Error::Cancelled(_))
+        match self {
+            Error::Cancelled(_) => true,
+            Error::Room(err) => blok_collab_room::is_cancellation(err),
+            _ => false,
+        }
+    }
+}
+
+impl From<blok_collab_room::Error> for Error {
+    /// The agent's own errors travel through the room boxed; they come back
+    /// out as themselves.
+    fn from(err: blok_collab_room::Error) -> Error {
+        match err {
+            blok_collab_room::Error::Other(inner) => match inner.downcast::<Error>() {
+                Ok(own) => *own,
+                Err(other) => Error::Room(blok_collab_room::Error::Other(other)),
+            },
+            other => Error::Room(other),
+        }
+    }
+}
+
+impl From<blok_collab_convert::Error> for Error {
+    fn from(err: blok_collab_convert::Error) -> Error {
+        Error::Room(blok_collab_room::Error::Convert(err))
+    }
+}
+
+impl From<blok_collab_docendpoint::Error> for Error {
+    fn from(err: blok_collab_docendpoint::Error) -> Error {
+        Error::Room(blok_collab_room::Error::Endpoint(err))
+    }
+}
+
+impl From<blok_yjs::EngineError> for Error {
+    fn from(err: blok_yjs::EngineError) -> Error {
+        Error::Room(err.into())
+    }
+}
+
+/// An agent error carried through a room plan, which returns room errors.
+pub(crate) fn into_room(err: Error) -> blok_collab_room::Error {
+    match err {
+        Error::Room(err) => err,
+        other => blok_collab_room::Error::Other(Box::new(other)),
     }
 }
 
@@ -52,6 +98,7 @@ impl fmt::Display for Error {
                 f.write_str("context deadline exceeded")
             }
             Error::Host(err) => err.fmt(f),
+            Error::Room(err) => err.fmt(f),
         }
     }
 }

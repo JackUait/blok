@@ -8,12 +8,21 @@ publish.workspace = true
 
 [dependencies]
 blok-blokdocs = { path = "../blokdocs" }
+blok-collab-convert = { path = "../collab-convert" }
+blok-collab-docendpoint = { path = "../collab-docendpoint" }
+blok-collab-room = { path = "../collab-room" }
+blok-dotnet = { path = "../dotnet" }
 blok-jsjson = { path = "../jsjson" }
 blok-jsruntime = { path = "../jsruntime" }
+blok-yjs = { path = "../yjs" }
+getrandom = "0.4"
+sha2 = "0.10"
 tokio = { version = "1", features = ["macros", "sync"] }
 
 [dev-dependencies]
-sha2 = "0.10"
+blok-collab = { path = "../collab" }
+blok-collab-journal = { path = "../collab-journal" }
+blok-collab-workingset = { path = "../collab-workingset" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time"] }
 
 [lints]

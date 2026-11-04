@@ -1,9 +1,12 @@
 use std::sync::OnceLock;
+use std::time::Duration;
 
+use blok_collab_convert::RuntimeHtmlReader;
 use blok_jsjson::{Kind, Node, Options as JsonOptions, parse_node};
+use blok_jsruntime::{Options as PoolOptions, Pool};
 
 use crate::wire::text;
-use crate::{Executor, FactoryOptions};
+use crate::{Cancel, Executor, InvokeFuture, Invoker};
 
 pub(crate) fn must_parse(text: &str) -> Node {
     let options = JsonOptions {
@@ -45,14 +48,36 @@ pub(crate) fn pointer<'a>(root: &'a Node, path: &str) -> Option<&'a Node> {
     Some(found)
 }
 
-/// One pool for the crate's real-bundle tests: each engine parses the bundle.
+/// One pool for the crate's real-bundle tests, which the rooms read HTML
+/// with too: each engine parses the bundle.
+pub(crate) fn shared_reader() -> &'static RuntimeHtmlReader<Pool> {
+    static READER: OnceLock<RuntimeHtmlReader<Pool>> = OnceLock::new();
+    READER.get_or_init(|| RuntimeHtmlReader {
+        runtime: Pool::new(PoolOptions {
+            pool_size: 1,
+            ..PoolOptions::default()
+        })
+        .expect("pool"),
+    })
+}
+
+/// The shared pool as the executor's runtime.
+#[derive(Clone, Copy)]
+pub(crate) struct SharedPool;
+
+impl Invoker for SharedPool {
+    fn invoke<'a>(
+        &'a self,
+        cancel: &'a Cancel,
+        op: &'a str,
+        input: &'a str,
+        timeout: Duration,
+    ) -> InvokeFuture<'a> {
+        Invoker::invoke(&shared_reader().runtime, cancel, op, input, timeout)
+    }
+}
+
 pub(crate) fn shared_executor() -> &'static Executor {
     static EXECUTOR: OnceLock<Executor> = OnceLock::new();
-    EXECUTOR.get_or_init(|| {
-        Executor::new(FactoryOptions {
-            pool_size: 1,
-            ..FactoryOptions::default()
-        })
-        .expect("new")
-    })
+    EXECUTOR.get_or_init(|| Executor::on_runtime(SharedPool))
 }

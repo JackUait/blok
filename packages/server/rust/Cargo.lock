@@ -36,6 +36,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "blok-blokagent"
+version = "0.0.0"
+dependencies = [
+ "blok-blokdocs",
+ "blok-jsjson",
+ "blok-jsruntime",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "blok-blokdocs"
 version = "0.0.0"
 dependencies = [

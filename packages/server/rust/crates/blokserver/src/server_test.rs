@@ -348,3 +348,123 @@ async fn a_non_ascii_origin_is_never_allowed() {
         (403, "origin not allowed\n")
     );
 }
+
+// S3 wins over a set StorageDirectory, and no local file route is mapped.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn registers_the_shared_s3_store_when_a_bucket_is_configured() {
+    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let record = Arc::clone(&seen);
+    let s3 = start(move |mut request: Request, mut response: ResponseWriter| {
+        let record = Arc::clone(&record);
+        async move {
+            record.lock().unwrap().push(request.path().to_owned());
+            if let Some(body) = request.body_mut() {
+                let mut sink = Vec::new();
+                let _ = body.read_to_end(&mut sink).await;
+            }
+            response.set_status(200);
+        }
+    })
+    .await;
+    let options = Options {
+        storage_directory: "/unused/local/storage".into(),
+        s3_endpoint: format!("http://127.0.0.1:{}", s3.address.port()),
+        s3_region: "eu-central-1".into(),
+        s3_bucket: "media".into(),
+        s3_bucket_url: "https://cdn.example.com/media".into(),
+        s3_addressing: "path".into(),
+        s3_access_key: "access-key".into(),
+        s3_secret_key: "secret-key".into(),
+        ..Options::default()
+    };
+    let server = Server::new(options.clone()).unwrap();
+    let never = || false;
+    server
+        .inner
+        .blob_store()
+        .unwrap()
+        .put(
+            ".txt",
+            "text/plain",
+            blok_blob::Body::bytes(b"hi".to_vec()),
+            &never,
+        )
+        .await
+        .unwrap();
+    let paths = seen.lock().unwrap().clone();
+    assert!(
+        paths.len() == 1 && paths[0].starts_with("/media/"),
+        "{paths:?}"
+    );
+
+    let server = Server::new(Options {
+        public_url: "/files".into(),
+        ..options
+    })
+    .unwrap();
+    let running = start(server.handler("")).await;
+    let got = send(
+        running.address,
+        &format!("GET /files/{}.txt HTTP/1.1", "a".repeat(32)),
+        b"",
+    )
+    .await;
+    assert_eq!(
+        (got.status, got.text().as_str()),
+        (404, "404 page not found\n")
+    );
+}
+
+#[tokio::test]
+async fn active_routes_keep_their_rejected_preflight_wire() {
+    let server = Server::new(Options {
+        storage_directory: temp_dir().display().to_string(),
+        public_url: "http://127.0.0.1:4000/files".into(),
+        unfurl_enabled: true,
+        ..Options::default()
+    })
+    .unwrap();
+    let running = start(server.handler("")).await;
+    for path in ["/unfurl", "/upload", "/upload-by-url"] {
+        let got = send(running.address, &format!("OPTIONS {path} HTTP/1.1"), b"").await;
+        assert_eq!(
+            (got.status, got.header("Content-Type"), got.text().as_str()),
+            (403, "text/plain; charset=utf-8", "origin not allowed\n"),
+            "{path}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn preserves_the_go_method_and_unknown_route_responses() {
+    let server = Server::new(Options {
+        storage_directory: String::new(),
+        unfurl_enabled: false,
+        ..Options::default()
+    })
+    .unwrap();
+    let running = start(server.handler("")).await;
+    let got = send(running.address, "POST /health HTTP/1.1", b"").await;
+    assert_eq!(
+        (
+            got.status,
+            got.header("Allow"),
+            got.header("Content-Type"),
+            got.text().as_str()
+        ),
+        (
+            405,
+            "GET, HEAD",
+            "text/plain; charset=utf-8",
+            "Method Not Allowed\n"
+        )
+    );
+    for path in ["/missing", "/upload"] {
+        let got = send(running.address, &format!("GET {path} HTTP/1.1"), b"").await;
+        assert_eq!(
+            (got.status, got.header("Content-Type"), got.text().as_str()),
+            (404, "text/plain; charset=utf-8", "404 page not found\n"),
+            "{path}"
+        );
+    }
+}

@@ -104,6 +104,17 @@ async fn recheck_access_of_an_unloaded_document_expels_nobody() {
     assert!(matches!(expelled, Ok(0)), "RecheckAccess = {expelled:?}");
 }
 
+// C# resolves ICollabWorkingSetStore and ICollabRoomManager; the room
+// manager's two Rust entry points answer the same message.
+#[tokio::test]
+async fn collab_services_throw_when_collaboration_is_disabled() {
+    let s = Server::new(Options::default()).unwrap();
+    let err = s.recheck_access("doc").await.unwrap_err();
+    assert_eq!(err.to_string(), "Collaboration is disabled.");
+    let err = s.purge_document("doc", Some(allow())).await.unwrap_err();
+    assert_eq!(err.to_string(), "Collaboration is disabled.");
+}
+
 // ICollabDocumentPurger: the id and the authorize callback are checked
 // first, and a purged id is refused from then on.
 #[tokio::test(flavor = "multi_thread")]

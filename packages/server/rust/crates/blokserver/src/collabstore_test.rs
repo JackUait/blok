@@ -439,3 +439,138 @@ async fn turning_the_journal_on_keeps_what_the_working_set_held() {
     assert_eq!(journals.len(), 1, "{journals:?}");
     after.close().await;
 }
+
+impl Host {
+    async fn post(&self, path: &str, key: &str, body: &str) -> Answer {
+        send(
+            self.running.address,
+            &format!(
+                "POST {path} HTTP/1.1\r\nBlok-Idempotency-Key: {key}\r\nContent-Length: {}",
+                body.len()
+            ),
+            body.as_bytes(),
+        )
+        .await
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_collab_journal_option_registers_the_local_journal_unless_a_store_replaces_it() {
+    let host = host_server(|o| o.collab_journal = true).await;
+    for (key, sequence) in [("k1", "1"), ("k2", "2")] {
+        let response = host.edit("doc", key).await;
+        assert_eq!(
+            (response.status, response.header("Blok-Doc-Sequence")),
+            (204, sequence),
+            "edit {key}: {}",
+            response.text()
+        );
+    }
+    let history = host.get("/sync/doc/history").await;
+    assert!(
+        history.status == 200 && history.text().contains(r#""sequence":2"#),
+        "history: {} {:?}",
+        history.status,
+        history.text()
+    );
+    host.close().await;
+
+    let store = Arc::new(Opening {
+        opened: Mutex::default(),
+        inner: local_journal(),
+        keeps: false,
+    });
+    let replaced = host_server(|o| {
+        o.collab_journal = true;
+        o.collab_operation_store = Some(store.clone());
+    })
+    .await;
+    assert_eq!(replaced.edit("doc", "k1").await.status, 204);
+    assert_eq!(store.opened.lock().unwrap().join(","), "doc");
+    let history = replaced.get("/sync/doc/history").await;
+    assert_eq!(
+        (history.status, history.text().as_str()),
+        (501, "history needs a journal that keeps it\n")
+    );
+    replaced.close().await;
+}
+
+// C# reads CollabRoomManager.Options; Rust's Manager hides them, so the
+// limit is read off a restore. 1.5 MiB is over the built-in journal's 1 MiB
+// append limit and under the announced 4 MiB.
+#[tokio::test(flavor = "multi_thread")]
+async fn rooms_know_the_built_in_journals_update_limit_but_not_a_custom_stores() {
+    // An edit may send at most 32768 HTML characters per field, so the
+    // 1.5 MiB is 48 blocks of 32000.
+    async fn restore_a_large_removal(host: &Host) -> Answer {
+        let text = "x".repeat(32_000);
+        let mut lineage = String::new();
+        for edit in 0..3 {
+            let ops: Vec<String> = (0..16)
+                .map(|n| {
+                    format!(
+                        r#"{{"op":"insert","id":"b{edit}-{n}","block":{{"type":"paragraph","data":{{"text":"{text}"}}}}}}"#
+                    )
+                })
+                .collect();
+            let body = format!(r#"{{"ops":[{}]}}"#, ops.join(","));
+            let response = host
+                .post("/sync/doc/edit", &format!("i{edit}"), &body)
+                .await;
+            assert_eq!(response.status, 204, "insert {edit}: {}", response.text());
+            lineage = response.header("Blok-Doc-Lineage").to_owned();
+        }
+        let removes: Vec<String> = (0..3)
+            .flat_map(|edit| {
+                (0..16).map(move |n| format!(r#"{{"op":"remove","id":"b{edit}-{n}"}}"#))
+            })
+            .collect();
+        let body = format!(r#"{{"ops":[{}]}}"#, removes.join(","));
+        let response = host.post("/sync/doc/edit", "removes", &body).await;
+        assert_eq!(response.status, 204, "removes: {}", response.text());
+        host.post(
+            &format!("/sync/doc/history/{lineage}/3/restore"),
+            "restore",
+            "",
+        )
+        .await
+    }
+
+    let built_in = host_server(|o| {
+        o.collab_journal = true;
+        o.collab_max_message_bytes = 4 << 20;
+    })
+    .await;
+    let restore = restore_a_large_removal(&built_in).await;
+    assert_eq!(
+        (restore.status, restore.text().as_str()),
+        (
+            413,
+            "collab: the restore is larger than one update may be.\n"
+        )
+    );
+    built_in.close().await;
+
+    let roomy = blok_collab_journal::Store::new(
+        temp_dir(),
+        blok_collab_journal::StoreOptions {
+            max_update_bytes: 8 << 20,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let store = Arc::new(Opening {
+        opened: Mutex::default(),
+        inner: LocalJournal(roomy),
+        keeps: true,
+    });
+    let custom = host_server(|o| {
+        o.collab_journal = true;
+        o.collab_max_message_bytes = 4 << 20;
+        o.collab_operation_store = Some(store);
+    })
+    .await;
+    let restore = restore_a_large_removal(&custom).await;
+    assert_eq!(restore.status, 204, "restore: {}", restore.text());
+    custom.close().await;
+}

@@ -175,3 +175,237 @@ fn new_refuses_document_limits_below_their_floor() {
     }
     assert!(Options::default().validate().is_ok());
 }
+
+// AddBlokServer validates in the call; validate() is its twin here.
+fn refusal(o: Options) -> String {
+    match o.validate() {
+        Ok(()) => panic!("accepted"),
+        Err(error) => error.to_string(),
+    }
+}
+
+fn assert_refused(name: &str, o: Options, parts: &[&str]) {
+    let message = refusal(o);
+    for part in parts {
+        assert!(message.contains(part), "{name}: {message:?} lacks {part:?}");
+    }
+}
+
+fn s3_options(endpoint: &str, bucket_url: &str) -> Options {
+    Options {
+        s3_endpoint: endpoint.into(),
+        s3_region: "eu-central-1".into(),
+        s3_bucket: "media".into(),
+        s3_bucket_url: bucket_url.into(),
+        s3_access_key: "access-key".into(),
+        s3_secret_key: "secret-key".into(),
+        ..Options::default()
+    }
+}
+
+fn local_storage(public_url: &str) -> Options {
+    Options {
+        storage_directory: "/local/storage".into(),
+        public_url: public_url.into(),
+        ..Options::default()
+    }
+}
+
+#[test]
+fn rejects_an_empty_or_nul_rich_text_field_name() {
+    for (kind, field) in [("", "title"), ("callout", ""), ("callout", "ti\0tle")] {
+        let o = Options {
+            rich_text_fields: BTreeMap::from([(kind.to_owned(), vec![field.to_owned()])]),
+            ..Options::default()
+        };
+        assert_refused(&format!("{kind:?} {field:?}"), o, &["RichTextFields"]);
+    }
+}
+
+#[test]
+fn rejects_unsafe_doc_endpoints() {
+    for endpoint in [
+        "app.example.com/api/blok-docs",
+        "/api/blok-docs",
+        "ftp://app.example.com/api/blok-docs",
+        "https://user@app.example.com/api/blok-docs",
+        "https://app.example.com/api/blok-docs?mode=test",
+        "https://app.example.com/api/blok-docs#fragment",
+    ] {
+        let o = Options {
+            collab_enabled: true,
+            doc_endpoint: endpoint.into(),
+            ..Options::default()
+        };
+        assert_refused(endpoint, o, &["--doc-endpoint", "credentials"]);
+    }
+}
+
+#[test]
+fn allows_full_doc_endpoints() {
+    for endpoint in [
+        "https://app.example.com/api/blok-docs",
+        "https://app.example.com",
+        "http://127.0.0.1:5100/api/blok-docs",
+        "http://localhost:5100/api/blok-docs",
+    ] {
+        let o = Options {
+            collab_enabled: true,
+            doc_endpoint: endpoint.into(),
+            ..Options::default()
+        };
+        if let Err(error) = o.validate() {
+            panic!("{endpoint}: {error}");
+        }
+    }
+}
+
+#[test]
+fn rejects_collab_directories_inside_the_storage_directory() {
+    for collab_directory in [
+        "/srv/blok/uploads",
+        "/srv/blok/uploads/",
+        "/srv/blok/uploads/working-set",
+        "/srv/blok/collab/../uploads/working-set",
+    ] {
+        let o = Options {
+            collab_enabled: true,
+            doc_endpoint: "https://app.example.com/api/blok-docs".into(),
+            storage_directory: "/srv/blok/uploads".into(),
+            public_url: "/files".into(),
+            collab_directory: collab_directory.into(),
+            ..Options::default()
+        };
+        assert_refused(collab_directory, o, &["--collab-dir", "--storage-dir"]);
+    }
+}
+
+#[test]
+fn registers_no_collab_activity_observer_by_default() {
+    assert!(Options::default().collab_activity_observer.is_none());
+    let o = Options {
+        collab_enabled: true,
+        doc_endpoint: "https://app.example.com/api/blok-docs".into(),
+        collab_directory: "/srv/blok/collab".into(),
+        ..Options::default()
+    };
+    assert!(o.validate().is_ok());
+    assert!(o.collab_activity_observer.is_none());
+}
+
+#[test]
+fn requires_an_explicit_valid_public_url_for_local_storage() {
+    assert_refused("missing", local_storage(""), &["PublicUrl"]);
+    assert_refused(
+        "malformed",
+        local_storage("https://uploads.example/%zz"),
+        &["PublicUrl"],
+    );
+}
+
+#[test]
+fn rejects_unsafe_local_public_urls() {
+    for public_url in [
+        "javascript:alert(1)",
+        "data:text/plain,payload",
+        "//evil.example/files",
+        "/\\evil.example/files",
+        "/files\\nested",
+        "https://user@uploads.example.com/files",
+        "files",
+    ] {
+        assert_refused(public_url, local_storage(public_url), &["PublicUrl"]);
+    }
+}
+
+#[test]
+fn rejects_unsafe_s3_bucket_urls() {
+    for bucket_url in [
+        "javascript:alert(1)",
+        "data:text/plain,payload",
+        "ftp://cdn.example.com/media",
+        "//evil.example/media",
+        "/media",
+        "https://user@cdn.example.com/media",
+        "https://cdn.example.com/%zz",
+    ] {
+        let o = s3_options("https://s3.example.com", bucket_url);
+        assert_refused(bucket_url, o, &["--s3-bucket-url"]);
+    }
+}
+
+#[test]
+fn rejects_unsafe_s3_endpoints() {
+    for endpoint in [
+        "https://user@s3.example.com",
+        "https://s3.example.com/path",
+        "https://s3.example.com?mode=test",
+        "https://s3.example.com#fragment",
+    ] {
+        let o = s3_options(endpoint, "https://cdn.example.com/media");
+        assert_refused(endpoint, o, &["--s3-endpoint"]);
+    }
+}
+
+#[test]
+fn allows_loopback_http_s3_endpoints() {
+    let o = Options {
+        s3_region: "local".into(),
+        ..s3_options("http://127.0.0.1:9000", "http://127.0.0.1:9000/media")
+    };
+    if let Err(error) = o.validate() {
+        panic!("{error}");
+    }
+}
+
+// Array.MaxLength + 1: only a remote upload buffers the whole file.
+#[test]
+fn allows_upload_limits_larger_than_managed_arrays_without_storage() {
+    let o = Options {
+        max_upload_bytes: 2_147_483_592,
+        unfurl_enabled: true,
+        ..Options::default()
+    };
+    if let Err(error) = o.validate() {
+        panic!("{error}");
+    }
+}
+
+#[test]
+fn rejects_dns_listen_hosts_that_kestrel_would_treat_as_wildcards() {
+    for listen_address in ["internal.example:4000", "example.test:0"] {
+        let o = Options {
+            allowed_origins: vec!["https://app.example.com".into()],
+            auth: "ticket".into(),
+            listen_address: listen_address.into(),
+            secret: "s".repeat(32),
+            ..Options::default()
+        };
+        assert_refused(listen_address, o, &["DNS host", "every network interface"]);
+    }
+}
+
+#[test]
+fn rejects_query_or_fragment_in_local_public_urls() {
+    for public_url in [
+        "https://uploads.example.com/files?download=1",
+        "/files#latest",
+    ] {
+        assert_refused(
+            public_url,
+            local_storage(public_url),
+            &["PublicUrl", "query or fragment"],
+        );
+    }
+}
+
+#[test]
+fn rejects_query_or_fragment_in_s3_bucket_urls() {
+    for bucket_url in [
+        "https://cdn.example.com/media?download=1",
+        "https://cdn.example.com/media#latest",
+    ] {
+        let o = s3_options("https://s3.example.com", bucket_url);
+        assert_refused(bucket_url, o, &["--s3-bucket-url", "query or fragment"]);
+    }
+}

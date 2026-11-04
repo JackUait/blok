@@ -1,0 +1,15 @@
+[package]
+name = "blok-blokserver-collabstore"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-collab-journal = { path = "../collab-journal" }
+blok-collab-operation = { path = "../collab-operation" }
+blok-collab-room = { path = "../collab-room" }
+
+[lints]
+workspace = true

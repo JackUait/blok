@@ -113,6 +113,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "blok-blokserver-collabstore"
+version = "0.0.0"
+dependencies = [
+ "blok-collab-journal",
+ "blok-collab-operation",
+ "blok-collab-room",
+]
+
+[[package]]
 name = "blok-blokserver-ticket"
 version = "0.0.0"
 dependencies = [

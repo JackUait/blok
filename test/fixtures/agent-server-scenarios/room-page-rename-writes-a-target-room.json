@@ -74,6 +74,31 @@
           "/title": "Roadmap"
         }
       }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.versions",
+            "args": {
+              "group": 1
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "result": {
+          "/results/0/versions/0/actors": [
+            "agent-cs"
+          ]
+        }
+      }
     }
   ]
 }

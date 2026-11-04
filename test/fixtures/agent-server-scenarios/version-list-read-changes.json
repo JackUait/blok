@@ -86,6 +86,7 @@
       },
       "expect": {
         "ok": true,
+        "committed": 0,
         "result": {
           "/results/0/version": "{lineage}:0",
           "/results/0/blocks/0/text": "Hello world",

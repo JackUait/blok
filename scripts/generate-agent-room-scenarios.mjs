@@ -123,7 +123,8 @@ export const generate = () => {
       result: { '/error/message': 'This room keeps no journal, so expectRevision cannot be checked. Send the batch without it.' } })], { journal: false });
   scen('room-page-rename-writes-a-target-room', ROOM_SEED, [
     { run: 'plain', document: { from: '@seed', set: { '/blocks': [{ id: 'pg', type: 'page', data: { pageId: 'page-2' } }] } },
-      batch: b([c('page.rename', { id: 'pg', title: 'Roadmap' })]), expect: { ok: true, saved: false, state: { '/title': 'Roadmap' } } }],
+      batch: b([c('page.rename', { id: 'pg', title: 'Roadmap' })]), expect: { ok: true, saved: false, state: { '/title': 'Roadmap' } } },
+    room(b([c('history.versions', { group: 1 })]), { ok: true, result: { '/results/0/versions/0/actors': ['agent-cs'] } })],
   null, { options: { pageTitles: true, target: 'plain' }, pages: { 'page-2': { room: 'agent-room' } } });
   scen('room-read-returns-the-head', ROOM_SEED, [
     room(setTitle('One'), { ok: true }),
@@ -224,7 +225,7 @@ export const generate = () => {
   scen('version-list-read-changes', VER_SEED, [
     room(replace('p', 'Changed'), { ok: true }),
     room(b([c('history.versions', { group: 1 })]), { ok: true, committed: 0, result: { '/results/0/versions/0/version': '{rev:0}', '/results/0/versions/0/actors': ['agent-cs'] } }),
-    room(b([c('history.read', { version: '{lineage}:0' })]), { ok: true, result: { '/results/0/version': '{lineage}:0', '/results/0/blocks/0/text': 'Hello world', '/results/0/revision': { absent: true } } }),
+    room(b([c('history.read', { version: '{lineage}:0' })]), { ok: true, committed: 0, result: { '/results/0/version': '{lineage}:0', '/results/0/blocks/0/text': 'Hello world', '/results/0/revision': { absent: true } } }),
     room(b([c('history.changes', { from: '{lineage}:0' })]), { ok: true, committed: 0, state: { '/blocks/0/data/text/0/text': 'Changed' },
       result: { '/results/0/changed': { length: 1 }, '/results/0/changed/0/id': 'p', '/results/0/changed/0/before/text': 'Hello world',
         '/results/0/changed/0/after/text': 'Changed', '/results/0/added': { length: 0 } } })]);

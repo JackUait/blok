@@ -45,12 +45,16 @@ fn strings(args: &[&str]) -> Vec<String> {
 
 /// Runs to the end with a shutdown that never comes; for runs that exit.
 async fn run_to_exit(args: &[&str]) -> (i32, String) {
+    run_to_exit_with(args, no_env).await
+}
+
+async fn run_to_exit_with(args: &[&str], getenv: fn(&str) -> String) -> (i32, String) {
     let out = Buffer::default();
     let code = tokio::time::timeout(
         Duration::from_secs(10),
         run(
             &strings(args),
-            &no_env,
+            &getenv,
             out.stderr(),
             std::future::pending(),
             "dev",
@@ -149,7 +153,11 @@ async fn request(
         &format!("{method} {path} {proto}\r\nHost: x\r\nConnection: close\r\n\r\n"),
     )
     .await;
-    let (head, body) = answer.split_once("\r\n\r\n").unwrap_or((&answer, ""));
+    parse_answer(&answer)
+}
+
+fn parse_answer(answer: &str) -> (u16, Vec<(String, String)>, String) {
+    let (head, body) = answer.split_once("\r\n\r\n").unwrap_or((answer, ""));
     let mut lines = head.split("\r\n");
     let status = lines.next().unwrap_or("")[9..12].parse().unwrap();
     let headers = lines
@@ -449,9 +457,14 @@ async fn health_reports_the_stamped_version() {
 }
 
 fn start_binary(address: &str) -> (std::process::Child, Arc<Mutex<String>>) {
+    spawn_binary(&["--listen", address], &[])
+}
+
+fn spawn_binary(args: &[&str], envs: &[(&str, &str)]) -> (std::process::Child, Arc<Mutex<String>>) {
     use std::io::Read;
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_blok-server"))
-        .args(["--listen", address])
+        .args(args)
+        .envs(envs.iter().copied())
         .stderr(std::process::Stdio::piped())
         .spawn()
         .unwrap();
@@ -849,4 +862,525 @@ fn the_host_limits_upgraded_sockets_only_when_collaborating() {
     assert_eq!(blok_server::upgrade_limit(&options), None);
     options.collab_enabled = true;
     assert_eq!(blok_server::upgrade_limit(&options), Some(1024));
+}
+
+// HostProcessTests.cs
+
+const VALID_SECRET: &str = "a-secret-value-with-at-least-32-characters";
+const VALID_DOC_ENDPOINT: &str = "https://app.example.test/api/blok-docs";
+
+/// Status and body of one POST with a Connection: close.
+async fn post(address: &str, path: &str, content_type: &str, body: &[u8]) -> (u16, String) {
+    let mut conn = TcpStream::connect(address).await.unwrap();
+    let head = format!(
+        "POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n\r\n",
+        body.len()
+    );
+    conn.write_all(head.as_bytes()).await.unwrap();
+    conn.write_all(body).await.unwrap();
+    let mut answer = Vec::new();
+    let _ = tokio::time::timeout(Duration::from_secs(5), conn.read_to_end(&mut answer)).await;
+    let (status, _, body) = parse_answer(&String::from_utf8_lossy(&answer));
+    (status, body)
+}
+
+fn scratch_dir(name: &str) -> std::path::PathBuf {
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("blok-host-{name}-{}-{n}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+fn spool_files(dir: &std::path::Path) -> Vec<String> {
+    std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(".blok-upload-"))
+        .collect()
+}
+
+#[tokio::test]
+async fn starts_with_defaults_and_reports_the_development_version() {
+    let running = Running::start(&[], no_env, "dev").await;
+    let address = running.address.clone();
+    let (status, headers, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
+    assert_eq!(
+        (
+            status,
+            header(&headers, "content-type").as_str(),
+            body.as_str()
+        ),
+        (
+            200,
+            "application/json",
+            "{\"status\":\"ok\",\"version\":\"dev\"}\n"
+        )
+    );
+    let (status, _, body) = request(&address, "GET", "/unfurl", "HTTP/1.1").await;
+    assert_eq!((status, body.as_str()), (400, "{\"success\":0}\n"));
+    let (status, body) = post(&address, "/upload", "text/plain; charset=utf-8", b"").await;
+    assert_eq!((status, body.as_str()), (400, "malformed upload\n"));
+    let (status, body) = post(
+        &address,
+        "/upload-by-url",
+        "application/json; charset=utf-8",
+        b"",
+    )
+    .await;
+    assert_eq!(
+        (status, body.as_str()),
+        (400, "expected {\"url\": \"...\"}\n")
+    );
+    running.stop().await;
+}
+
+#[test]
+#[ignore = "needs a second cargo build of the binary with BLOK_SERVER_VERSION set at compile time; only one cargo command may run at a time here. health_reports_the_stamped_version covers the run path"]
+fn published_host_reports_the_supplied_build_version() {}
+
+async fn wait_for_binary(text: &Arc<Mutex<String>>) {
+    wait_for(|| text.lock().unwrap().contains(" listening on ")).await;
+}
+
+#[tokio::test]
+async fn removes_the_endpoint_spool_after_malformed_trailing_data() {
+    let root = scratch_dir("malformed-cleanup");
+    let temp = root.join("temp");
+    std::fs::create_dir_all(&temp).unwrap();
+    let storage = root.join("storage").display().to_string();
+    let address = free_port();
+    let (mut child, text) = spawn_binary(
+        &["--listen", &address, "--storage-dir", &storage],
+        &[("TMPDIR", temp.to_str().unwrap())],
+    );
+    wait_for_binary(&text).await;
+    let b = "blok-host-malformed-cleanup-boundary";
+    let body = format!(
+        "--{b}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"first.txt\"\r\nContent-Type: text/plain\r\n\r\nvalid file\r\n--{b}\r\nContent-Disposition: form-data; name=\"note\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n=\r\n--{b}--\r\n"
+    );
+    let answer = post(
+        &address,
+        "/upload",
+        &format!("multipart/form-data; boundary={b}"),
+        body.as_bytes(),
+    )
+    .await;
+    let _ = child.kill();
+    let _ = child.wait();
+    assert_eq!(answer, (400, "malformed upload\n".to_owned()));
+    assert_eq!(spool_files(&temp), Vec::<String>::new());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test]
+async fn removes_the_endpoint_spool_after_storage_failure() {
+    let root = scratch_dir("storage-failure-cleanup");
+    let temp = root.join("temp");
+    std::fs::create_dir_all(&temp).unwrap();
+    let storage = root.join("storage-file");
+    std::fs::write(&storage, "occupied").unwrap();
+    let address = free_port();
+    let (mut child, text) = spawn_binary(
+        &[
+            "--listen",
+            &address,
+            "--storage-dir",
+            storage.to_str().unwrap(),
+        ],
+        &[("TMPDIR", temp.to_str().unwrap())],
+    );
+    wait_for_binary(&text).await;
+    let b = "blok-host-storage-failure-cleanup-boundary";
+    let body = format!(
+        "--{b}\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name=file; filename=upload.bin; filename*=utf-8''upload.bin\r\n\r\nuploaded bytes\r\n--{b}--\r\n"
+    );
+    let answer = post(
+        &address,
+        "/upload",
+        &format!("multipart/form-data; boundary=\"{b}\""),
+        body.as_bytes(),
+    )
+    .await;
+    let _ = child.kill();
+    let _ = child.wait();
+    assert_eq!(answer, (502, "upload failed\n".to_owned()));
+    assert_eq!(spool_files(&temp), Vec::<String>::new());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test]
+async fn refuses_a_malformed_local_public_url_before_binding() {
+    let (code, stderr) = run_to_exit(&[
+        "--listen",
+        &free_port(),
+        "--public-url",
+        "https://uploads.example/%zz",
+    ])
+    .await;
+    assert_eq!(code, 1, "{stderr:?}");
+    assert!(
+        stderr.starts_with("blok-server refused to start: ")
+            && stderr.contains("PublicUrl")
+            && !stderr.contains(" listening on "),
+        "{stderr:?}"
+    );
+}
+
+#[test]
+fn uses_a_loopback_public_url_for_wildcard_listeners() {
+    for listen in ["*:4000", "+:4000"] {
+        let parsed = parse_host_arguments(&strings(&["--listen", listen]), &no_env);
+        assert_eq!(parsed.err, "", "{listen}");
+        assert_eq!(
+            parsed.options.public_url, "http://127.0.0.1:4000/files",
+            "{listen}"
+        );
+    }
+}
+
+#[test]
+fn uses_the_auth_default_rate_limit_when_the_flag_is_omitted() {
+    for (auth, want) in [("none", 0), ("proxy", 0), ("ticket", 60)] {
+        let parsed = parse_host_arguments(&strings(&["--auth", auth]), &no_env);
+        assert_eq!(parsed.err, "", "{auth}");
+        assert_eq!(parsed.options.rate_limit_per_minute, want, "{auth}");
+    }
+}
+
+#[tokio::test]
+async fn accepts_every_flag_and_lets_an_explicit_secret_override_the_environment() {
+    fn environment(name: &str) -> String {
+        match name {
+            "BLOK_SECRET" => "short",
+            "BLOK_S3_ACCESS_KEY" => "access-key",
+            "BLOK_S3_SECRET_KEY" => "secret-key",
+            _ => "",
+        }
+        .to_owned()
+    }
+    let collab_dir = scratch_dir("every-flag").display().to_string();
+    let running = Running::start(
+        &[
+            "--auth",
+            "ticket",
+            "--secret",
+            VALID_SECRET,
+            "--allow-origin",
+            "https://app.example.com, https://admin.example.com",
+            "--storage-dir",
+            "",
+            "--public-url",
+            "https://uploads.example.com/files",
+            "--max-upload",
+            "1024",
+            "--rate-limit",
+            "7",
+            "--no-unfurl",
+            "--s3-endpoint",
+            "https://s3.example.com",
+            "--s3-region",
+            "eu-central-1",
+            "--s3-bucket",
+            "blok",
+            "--s3-bucket-url",
+            "https://uploads.example.com",
+            "--s3-addressing",
+            "path",
+            "--collab",
+            "--doc-endpoint",
+            VALID_DOC_ENDPOINT,
+            "--doc-endpoint-auth",
+            "Bearer app-token",
+            "--collab-dir",
+            &collab_dir,
+            "--collab-s3-prefix",
+            "collab/",
+        ],
+        environment,
+        "dev",
+    )
+    .await;
+    let address = running.address.clone();
+    assert_eq!(request(&address, "GET", "/health", "HTTP/1.1").await.0, 200);
+    assert_eq!(request(&address, "GET", "/unfurl", "HTTP/1.1").await.0, 404);
+    let answer = post(&address, "/upload", "text/plain; charset=utf-8", b"").await;
+    assert_eq!(answer, (403, "origin not allowed\n".to_owned()));
+    let (status, _) = post(&address, "/upload-by-url", "text/plain; charset=utf-8", b"").await;
+    assert_eq!(status, 404);
+    let (code, _) = running.stop().await;
+    assert_eq!(code, 0);
+    let _ = std::fs::remove_dir_all(&collab_dir);
+}
+
+#[tokio::test]
+async fn keeps_port_zero_when_binding_a_blank_host_listener() {
+    // The later --listen wins over the one Running::start puts first.
+    let running = Running::start(
+        &[
+            "--listen",
+            ":0",
+            "--auth",
+            "ticket",
+            "--secret",
+            VALID_SECRET,
+            "--allow-origin",
+            "https://app.example.com",
+            "--storage-dir",
+            "",
+        ],
+        no_env,
+        "dev",
+    )
+    .await;
+    assert!(
+        running.out.text().contains("listening on :0"),
+        "{:?}",
+        running.out.text()
+    );
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert!(!running.done.is_finished(), "{:?}", running.out.text());
+    let (code, _) = running.stop().await;
+    assert_eq!(code, 0);
+}
+
+fn doc_endpoint_auth_environment(name: &str) -> String {
+    if name == "BLOK_DOC_ENDPOINT_AUTH" {
+        "Bearer environment-token".into()
+    } else {
+        String::new()
+    }
+}
+
+#[test]
+fn parses_the_doc_endpoint_auth_from_the_environment() {
+    let parsed = parse_host_arguments(
+        &strings(&["--collab", "--doc-endpoint", VALID_DOC_ENDPOINT]),
+        &doc_endpoint_auth_environment,
+    );
+    assert_eq!(parsed.err, "");
+    assert!(parsed.options.collab_enabled);
+    assert_eq!(parsed.options.doc_endpoint, VALID_DOC_ENDPOINT);
+    assert_eq!(parsed.options.doc_endpoint_auth, "Bearer environment-token");
+    assert!(!parsed.doc_endpoint_auth_from_flag);
+}
+
+#[test]
+fn lets_an_explicit_doc_endpoint_auth_flag_override_the_environment() {
+    let parsed = parse_host_arguments(
+        &strings(&[
+            "--collab",
+            "--doc-endpoint",
+            VALID_DOC_ENDPOINT,
+            "--doc-endpoint-auth",
+            "Bearer flag-token",
+        ]),
+        &doc_endpoint_auth_environment,
+    );
+    assert_eq!(parsed.err, "");
+    assert_eq!(parsed.options.doc_endpoint_auth, "Bearer flag-token");
+    assert!(parsed.doc_endpoint_auth_from_flag);
+}
+
+#[test]
+fn defaults_collab_off_with_a_working_set_directory_beside_the_uploads() {
+    let parsed = parse_host_arguments(&[], &no_env);
+    assert_eq!(parsed.err, "");
+    let o = &parsed.options;
+    assert!(!o.collab_enabled);
+    assert_eq!(o.collab_directory, "./blok-collab");
+    assert_eq!(
+        (
+            o.doc_endpoint.as_str(),
+            o.doc_endpoint_auth.as_str(),
+            o.collab_s3_prefix.as_str()
+        ),
+        ("", "", "")
+    );
+}
+
+#[test]
+fn parses_the_boolean_collab_flag_forms() {
+    let enabled = parse_host_arguments(&strings(&["--collab"]), &no_env);
+    assert!(enabled.err.is_empty() && enabled.options.collab_enabled);
+    let disabled = parse_host_arguments(&strings(&["--collab=false"]), &no_env);
+    assert!(disabled.err.is_empty() && !disabled.options.collab_enabled);
+}
+
+#[test]
+fn parses_the_boolean_collab_journal_flag_forms() {
+    let enabled = parse_host_arguments(&strings(&["--collab-journal"]), &no_env);
+    assert!(enabled.err.is_empty() && enabled.options.collab_journal);
+    let disabled = parse_host_arguments(&strings(&["--collab-journal=false"]), &no_env);
+    assert!(disabled.err.is_empty() && !disabled.options.collab_journal);
+    let invalid = parse_host_arguments(&strings(&["--collab-journal=maybe"]), &no_env);
+    assert_eq!(
+        invalid.err,
+        "invalid value \"maybe\" for flag -collab-journal: parse error"
+    );
+}
+
+#[test]
+fn reads_the_collab_journal_from_the_environment_unless_the_flag_is_given() {
+    let journal = |name: &str| {
+        if name == "BLOK_COLLAB_JOURNAL" {
+            "true".to_owned()
+        } else {
+            String::new()
+        }
+    };
+    let from_environment = parse_host_arguments(&strings(&["--collab"]), &journal);
+    assert!(from_environment.err.is_empty() && from_environment.options.collab_journal);
+    let flag_wins = parse_host_arguments(&strings(&["--collab-journal=false"]), &journal);
+    assert!(flag_wins.err.is_empty() && !flag_wins.options.collab_journal);
+    let empty = parse_host_arguments(&[], &no_env);
+    assert!(empty.err.is_empty() && !empty.options.collab_journal);
+    let invalid = parse_host_arguments(&[], &|name: &str| {
+        if name == "BLOK_COLLAB_JOURNAL" {
+            "maybe".to_owned()
+        } else {
+            String::new()
+        }
+    });
+    assert_eq!(
+        invalid.err,
+        "invalid value \"maybe\" for BLOK_COLLAB_JOURNAL: parse error"
+    );
+}
+
+#[test]
+fn parses_the_rich_text_fields_flag_as_a_json_object_of_field_lists() {
+    let parsed = parse_host_arguments(
+        &strings(&[
+            "--rich-text-fields",
+            r#"{ "callout": ["title", "caption"], "widget": [] }"#,
+        ]),
+        &no_env,
+    );
+    assert_eq!(parsed.err, "");
+    let fields = &parsed.options.rich_text_fields;
+    assert_eq!(fields.keys().collect::<Vec<_>>(), ["callout", "widget"]);
+    assert_eq!(fields["callout"], ["title", "caption"]);
+    assert!(fields["widget"].is_empty());
+}
+
+#[test]
+fn defaults_the_rich_text_fields_to_none() {
+    let parsed = parse_host_arguments(&[], &no_env);
+    assert_eq!(parsed.err, "");
+    assert!(parsed.options.rich_text_fields.is_empty());
+}
+
+#[test]
+fn refuses_rich_text_fields_that_are_not_an_object_of_string_lists() {
+    for value in [
+        "not json",
+        r#"["callout"]"#,
+        r#"{ "callout": "title" }"#,
+        r#"{ "callout": [1] }"#,
+        r#"{ "callout": [null] }"#,
+        r#"{ "callout": null }"#,
+        r#"{ "a": ["x"], "a": ["y"] }"#,
+    ] {
+        let parsed = parse_host_arguments(&strings(&["--rich-text-fields", value]), &no_env);
+        assert_eq!(
+            parsed.err,
+            format!("invalid value \"{value}\" for flag -rich-text-fields: parse error")
+        );
+    }
+}
+
+#[test]
+fn reads_the_rich_text_fields_from_the_environment_unless_the_flag_is_given() {
+    let fields = |name: &str| {
+        if name == "BLOK_RICH_TEXT_FIELDS" {
+            r#"{ "callout": ["title"] }"#.to_owned()
+        } else {
+            String::new()
+        }
+    };
+    let from_environment = parse_host_arguments(&[], &fields);
+    assert_eq!(from_environment.err, "");
+    assert_eq!(
+        from_environment.options.rich_text_fields["callout"],
+        ["title"]
+    );
+    let flag_wins = parse_host_arguments(
+        &strings(&["--rich-text-fields", r#"{ "widget": ["text"] }"#]),
+        &fields,
+    );
+    assert_eq!(flag_wins.err, "");
+    assert_eq!(
+        flag_wins
+            .options
+            .rich_text_fields
+            .keys()
+            .collect::<Vec<_>>(),
+        ["widget"]
+    );
+    let empty = parse_host_arguments(&[], &no_env);
+    assert!(empty.err.is_empty() && empty.options.rich_text_fields.is_empty());
+    let invalid = parse_host_arguments(&[], &|name: &str| {
+        if name == "BLOK_RICH_TEXT_FIELDS" {
+            "nope".to_owned()
+        } else {
+            String::new()
+        }
+    });
+    assert_eq!(
+        invalid.err,
+        "invalid value \"nope\" for BLOK_RICH_TEXT_FIELDS: parse error"
+    );
+}
+
+// Only the rows no other Rust test or conformance case covers.
+#[tokio::test]
+async fn exits_with_the_contract_code() {
+    fn journal_one(name: &str) -> String {
+        if name == "BLOK_COLLAB_JOURNAL" {
+            "1".into()
+        } else {
+            String::new()
+        }
+    }
+    let listen = free_port();
+    type Case<'a> = (&'a [&'a str], i32, &'a str, fn(&str) -> String);
+    let cases: [Case; 4] = [
+        (
+            &["--collab=maybe"],
+            2,
+            "invalid value \"maybe\" for flag -collab: parse error",
+            no_env,
+        ),
+        (
+            &["--collab=false", "--doc-endpoint", VALID_DOC_ENDPOINT],
+            1,
+            "--doc-endpoint needs --collab",
+            no_env,
+        ),
+        (&[], 1, "--collab-journal needs --collab", journal_one),
+        (
+            // The default --collab-dir ./blok-collab resolves against the cwd.
+            &[
+                "--collab",
+                "--doc-endpoint",
+                VALID_DOC_ENDPOINT,
+                "--storage-dir",
+                ".",
+            ],
+            1,
+            "--collab-dir must not resolve inside --storage-dir",
+            no_env,
+        ),
+    ];
+    for (args, want_code, want, getenv) in cases {
+        let mut all = vec!["--listen", listen.as_str()];
+        all.extend(args);
+        let (code, stderr) = run_to_exit_with(&all, getenv).await;
+        assert!(
+            code == want_code && stderr.contains(want),
+            "{args:?}: {code} {stderr:?}"
+        );
+    }
 }

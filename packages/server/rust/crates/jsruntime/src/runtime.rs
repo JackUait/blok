@@ -39,6 +39,9 @@ pub enum Error {
     NotAString,
     /// A host limit stopped the engine mid-run.
     Stopped(Stop),
+    /// A host limit stopped the input rewrite (`json_input.rs`) before the
+    /// engine ran, so the engine is still sound.
+    InputStopped(Stop),
     /// The bundle does not define `blokServerInvoke` as a function.
     NoEntryPoint,
     /// The engine itself failed or panicked.
@@ -58,6 +61,9 @@ impl fmt::Display for Error {
                 f.write_str("jsruntime: the call ran past its memory budget")
             }
             Error::Stopped(Stop::Cancel) => f.write_str("jsruntime: the caller cancelled the call"),
+            Error::InputStopped(stop) => {
+                write!(f, "{} while reading the input", Error::Stopped(*stop))
+            }
             Error::NoEntryPoint => {
                 f.write_str("jsruntime: bundle does not define blokServerInvoke")
             }

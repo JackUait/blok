@@ -61,6 +61,47 @@ fn normalize_import_ids(text: &str) -> String {
     out
 }
 
+/// Go gojaReadsLoneSurrogates and C# ReadLoneSurrogatesAsGoDoes: each
+/// `\\uD800`-`\\uDFFF` escape becomes U+FFFD unless a high escape sits right
+/// before a low one.
+fn reads_lone_surrogates_as_go_does(want: &str) -> String {
+    let bytes = want.as_bytes();
+    let escape_at = |i: usize| -> Option<bool> {
+        let unit = bytes.get(i..i + 6)?;
+        if unit[0] != b'\\' || unit[1] != b'u' || !matches!(unit[2], b'd' | b'D') {
+            return None;
+        }
+        if !unit[3..].iter().all(u8::is_ascii_hexdigit) {
+            return None;
+        }
+        match unit[3] {
+            b'8' | b'9' | b'a' | b'b' | b'A' | b'B' => Some(true),
+            b'c'..=b'f' | b'C'..=b'F' => Some(false),
+            _ => None,
+        }
+    };
+    let mut out = String::with_capacity(want.len());
+    let mut i = 0;
+    let mut copied = 0;
+    while i < bytes.len() {
+        let Some(high) = escape_at(i) else {
+            i += 1;
+            continue;
+        };
+        out.push_str(&want[copied..i]);
+        if high && escape_at(i + 6) == Some(false) {
+            out.push_str(&want[i..i + 12]);
+            i += 12;
+        } else {
+            out.push('\u{fffd}');
+            i += 6;
+        }
+        copied = i;
+    }
+    out.push_str(&want[copied..]);
+    out
+}
+
 fn sha256_hex(text: &str) -> String {
     Sha256::digest(text.as_bytes())
         .iter()
@@ -71,8 +112,9 @@ fn sha256_hex(text: &str) -> String {
 }
 
 // Outputs are node:vm's answers (scripts/generate-documents-ops-fixture.mjs);
-// C# DocumentOpsFixtureTests checks Jint against the same file, exactly, and
-// so does this. Go rewrites the lone.* answers to U+FFFD for goja.
+// C# DocumentOpsFixtureTests checks Jint against the same file. Node keeps a
+// lone-surrogate escape; Go, C# and this runtime read it as U+FFFD, so the
+// lone.* answers are rewritten as Go and C# rewrite them.
 #[tokio::test]
 async fn matches_node_on_the_document_ops_fixture() {
     let cases = fixture("test/unit/server-conformance/fixtures/documents/ops.json");
@@ -118,7 +160,12 @@ async fn matches_node_on_the_document_ops_fixture() {
             got = normalize_import_ids(&got);
         }
         if let Some(want) = map.get("output") {
-            if got != want.str() {
+            let want = if name.starts_with("lone.") {
+                reads_lone_surrogates_as_go_does(want.str())
+            } else {
+                want.str().to_owned()
+            };
+            if got != want {
                 let shown: String = got.chars().take(400).collect();
                 failures.push(format!("{name}: output differs, got {shown:?}"));
             }
@@ -140,5 +187,13 @@ fn normalizes_import_ids_like_go_and_csharp() {
     assert_eq!(
         normalize_import_ids(r#"{"id":"md-abc12-3","x":"html-z9-","y":"md-ABC-"}"#),
         r#"{"id":"md-X-3","x":"html-X-","y":"md-ABC-"}"#
+    );
+}
+
+#[test]
+fn rewrites_lone_escapes_and_keeps_pairs_as_go_does() {
+    assert_eq!(
+        reads_lone_surrogates_as_go_does(r"a\ud800b\uD83D\uDE80\udc00\\x"),
+        "a\u{fffd}b\\uD83D\\uDE80\u{fffd}\\\\x"
     );
 }

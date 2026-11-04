@@ -1,9 +1,12 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::thread;
+use std::time::Instant;
 
 use crate::engine::{Engine, Limits};
-use crate::runtime::Error;
+use crate::json_input::normalize;
+use crate::runtime::{Error, Stop};
 
 /// The native stack of an engine thread. QuickJS stops recursion at
 /// `engine::MAX_STACK`; the rest is room for the frames above and below its
@@ -82,7 +85,24 @@ pub(crate) fn run(
     input: &str,
     limits: Option<&Limits>,
 ) -> Result<String, Error> {
-    catch_unwind(AssertUnwindSafe(|| engine.invoke(op, input, limits))).unwrap_or_else(|panic| {
+    catch_unwind(AssertUnwindSafe(|| {
+        let budget = limits.map_or(i64::MAX, |limits| limits.budget);
+        let mut check = || match limits {
+            Some(limits)
+                if limits
+                    .cancel
+                    .as_ref()
+                    .is_some_and(|c| c.load(Ordering::SeqCst)) =>
+            {
+                Err(Stop::Cancel)
+            }
+            Some(limits) if Instant::now() >= limits.deadline => Err(Stop::Timeout),
+            _ => Ok(()),
+        };
+        let input = normalize(input, budget, &mut check).map_err(Error::InputStopped)?;
+        engine.invoke(op, &input, limits)
+    }))
+    .unwrap_or_else(|panic| {
         let message = panic
             .downcast_ref::<&str>()
             .map(|text| (*text).to_owned())

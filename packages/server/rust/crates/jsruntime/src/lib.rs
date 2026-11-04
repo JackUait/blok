@@ -7,6 +7,7 @@
 mod budget;
 mod engine;
 mod guard;
+mod json_input;
 mod pool;
 mod runtime;
 mod worker;
@@ -22,6 +23,8 @@ pub use runtime::{Error, JsError, Runtime, Stop};
 mod csharp_runtime_test;
 #[cfg(test)]
 mod guard_test;
+#[cfg(test)]
+mod json_input_test;
 #[cfg(test)]
 mod ops_fixture_test;
 #[cfg(test)]

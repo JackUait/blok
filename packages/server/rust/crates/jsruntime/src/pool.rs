@@ -420,6 +420,9 @@ fn classify(result: Result<String, Error>) -> (Result<String, InvokeError>, bool
             (Kind::DocumentTooLarge, true)
         }
         Error::Js(err) => (classify_name(&err.name), true),
+        Error::InputStopped(Stop::Timeout) => (Kind::TimedOut, true),
+        Error::InputStopped(Stop::Budget) => (Kind::DocumentTooLarge, true),
+        Error::InputStopped(Stop::Cancel) => (Kind::Unknown, true),
         // No event loop: a promise pending now can never settle. The engine
         // itself finished, so it is kept.
         Error::Pending => (Kind::Unknown, true),

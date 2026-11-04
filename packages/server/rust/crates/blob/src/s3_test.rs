@@ -411,7 +411,11 @@ async fn bounds_the_spool() {
         NeverEnding,
         s.options.max_spool_bytes + 1,
     )));
-    assert!(s.put(".bin", "", body, &never).await.is_err());
+    let err = s.put(".bin", "", body, &never).await.unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "The S3 payload exceeds the configured 1024-byte limit."
+    );
     assert!(bucket.requests.lock().unwrap().is_empty());
     assert!(crate::local_test::entries(&dir.0).is_empty());
 }

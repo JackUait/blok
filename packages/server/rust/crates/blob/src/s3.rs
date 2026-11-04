@@ -358,9 +358,10 @@ impl S3 {
             length += n as u64;
         }
         if length > self.options.max_spool_bytes {
-            return Err(Error::Message(
-                "blobstore: s3 upload body is over the spool cap".to_owned(),
-            ));
+            return Err(Error::Message(format!(
+                "The S3 payload exceeds the configured {}-byte limit.",
+                self.options.max_spool_bytes
+            )));
         }
         file.flush().await?;
         file.seek(SeekFrom::Start(0)).await?;

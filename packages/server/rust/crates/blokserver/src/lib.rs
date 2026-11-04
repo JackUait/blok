@@ -31,6 +31,8 @@ mod local_file_serving_test;
 #[cfg(test)]
 mod purge_errors_test;
 #[cfg(test)]
+mod request_guard_test;
+#[cfg(test)]
 mod sync_test;
 
 #[cfg(test)]

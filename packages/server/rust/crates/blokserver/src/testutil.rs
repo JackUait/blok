@@ -30,6 +30,29 @@ pub async fn start(handler: impl Handler) -> Running {
     Running { address, task }
 }
 
+/// Like [`start`], on `[::]` so both 127.0.0.1 and ::1 reach it: two
+/// client addresses on one host.
+pub async fn start_dual_stack(handler: impl Handler) -> Running {
+    let listener = TcpListener::bind("[::]:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = Server::new(handler, Config::default());
+    let task = tokio::spawn(async move {
+        let _ = server.serve(listener).await;
+    });
+    Running { address, task }
+}
+
+/// tickets.json: the passes C#'s TicketFixture reads.
+pub fn fixture_ticket(name: &str) -> String {
+    let bytes = std::fs::read(fixture_path("tickets.json")).unwrap();
+    let root = blok_jsjson::parse_node(&bytes, Default::default()).unwrap();
+    let value = root
+        .lookup(name)
+        .unwrap()
+        .unwrap_or_else(|| panic!("no ticket {name}"));
+    blok_jsjson::to_string_lossy(value.text().unwrap().units())
+}
+
 #[derive(Debug)]
 pub struct Answer {
     pub status: u16,

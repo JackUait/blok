@@ -15,6 +15,8 @@ pub use s3::{S3, S3Options};
 #[cfg(test)]
 mod csharp_local_test;
 #[cfg(test)]
+mod csharp_s3_test;
+#[cfg(test)]
 mod local_test;
 #[cfg(test)]
 mod s3_proxy_test;

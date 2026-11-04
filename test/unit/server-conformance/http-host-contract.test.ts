@@ -1338,6 +1338,26 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'chunked body, then 101 headers': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n${headWith(numbered(99))}`),
   'chunked body with data and an extension, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2;e=1\r\n{}\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
   'gzip, chunked body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\nGET /health HTTP/1.2\r\n'),
+  // Trailer lines follow the head's grammar, and count with the head's
+  // lines and bytes (71 bytes and 3 lines here).
+  ...Object.fromEntries(Object.entries({
+    'then a refused head': 'X-T: 1\r\n\r\n',
+    'ended by a bare LF': 'X-T: 1\r\n\n',
+    'with a control byte and a quote': 'X"T: a\x01b\r\n\r\n',
+    'of 97 lines': `${numbered(97)}\r\n`,
+    'of 98 lines': `${numbered(98)}\r\n`,
+    'at the byte limit': `X: ${'a'.repeat(32_692)}\r\n\r\n`,
+    'one byte over': `X: ${'a'.repeat(32_693)}\r\n\r\n`,
+    'with no colon': 'XT\r\n\r\n',
+    'folded': 'X: a\r\n b\r\n\r\n',
+    'with a space before the colon': 'X : 1\r\n\r\n',
+    'with CR in a value': 'X: a\rb\r\n\r\n',
+    'with NUL in a value': 'X: a\x00b\r\n\r\n',
+    'with invalid UTF-8 in a value': 'X: a\xe9b\r\n\r\n',
+  }).map(([name, trailer]) => [`chunked trailer ${name}`, bytes(
+    `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n${trailer}GET /health HTTP/1.2\r\n`,
+  )])),
+  'chunked trailer with no colon on a body the route left': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nXT\r\n\r\nGET /health HTTP/1.2\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

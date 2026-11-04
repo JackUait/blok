@@ -572,6 +572,62 @@
     "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
   },
   {
+    "name": "chunked trailer then a refused head",
+    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "chunked trailer ended by a bare LF",
+    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "chunked trailer with a control byte and a quote",
+    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "chunked trailer of 97 lines",
+    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "chunked trailer of 98 lines",
+    "response": "HTTP/1.1 431 Request Header Fields Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer at the byte limit",
+    "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "chunked trailer one byte over",
+    "response": "HTTP/1.1 431 Request Header Fields Too Large\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer with no colon",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer folded",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer with a space before the colon",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer with CR in a value",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer with NUL in a value",
+    "response": "HTTP/1.1 500 Internal Server Error\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer with invalid UTF-8 in a value",
+    "response": "HTTP/1.1 500 Internal Server Error\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunked trailer with no colon on a body the route left",
+    "response": "HTTP/1.1 415 Unsupported Media Type\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n1a\r\nexpected application/json\n\r\n0\r\n\r\n"
+  },
+  {
     "name": "range past the end of a file",
     "response": "HTTP/1.1 416 Range Not Satisfiable\nconnection: close\ncontent-disposition: attachment\ncontent-length: 33\ncontent-range: bytes */5\ncontent-type: text/plain; charset=utf-8\nx-content-type-options: nosniff\n\ninvalid range: failed to overlap\n"
   }

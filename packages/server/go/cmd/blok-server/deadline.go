@@ -56,7 +56,7 @@ func withDeadline(next http.Handler, timeout time.Duration) http.Handler {
 		// the read deadline; Kestrel gives it bodyDrainTimeout. Never on a
 		// hijacked conn: the deadline would land on its new owner.
 		if body != nil && !body.ended && !tracked.hijacked() {
-			if drain := time.Now().Add(bodyDrainTimeout); drain.Before(deadline) {
+			if drain := time.Now().Add(time.Duration(bodyDrainTimeout.Load())); drain.Before(deadline) {
 				_ = controller.SetReadDeadline(drain)
 			}
 		}
@@ -78,12 +78,14 @@ func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter
 	// says Connection: close past that; on it, net/http reads after the
 	// answer, the same 256 KiB, and closes without a word past it.
 	_ = http.NewResponseController(tracked).EnableFullDuplex()
-	// The stream hid Expect from net/http; Kestrel answers only a first
-	// line of 100-continue, on HTTP/1.1.
-	if conn, ok := r.Context().Value(headerConnKey{}).(*headerConn); ok && conn.targets != nil &&
-		r.ProtoAtLeast(1, 1) && len(r.Header["Expect"]) > 0 &&
-		strings.EqualFold(strings.Trim(r.Header["Expect"][0], " \t"), "100-continue") {
-		body.continueTo = conn.Conn
+	if conn, ok := r.Context().Value(headerConnKey{}).(*headerConn); ok && conn.targets != nil {
+		body.stream = conn.targets
+		// The stream hid Expect from net/http; Kestrel answers only a
+		// first line of 100-continue, on HTTP/1.1.
+		if r.ProtoAtLeast(1, 1) && len(r.Header["Expect"]) > 0 &&
+			strings.EqualFold(strings.Trim(r.Header["Expect"][0], " \t"), "100-continue") {
+			body.continueTo = conn.Conn
+		}
 	}
 	limited := r.WithContext(blokserver.WithRequestBodyLimit(ctx, body.setLimit))
 	limited.Body = body

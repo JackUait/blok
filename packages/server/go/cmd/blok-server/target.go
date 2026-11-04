@@ -39,9 +39,10 @@ import (
 // before a request line are dropped, as Kestrel skips them. Only heads change, never a body. To know where the next
 // head starts it reads each head with http.ReadRequest, the parser net/http
 // uses, and follows a chunked body as net/http's chunked reader does.
-// Whatever it cannot follow exactly (a chunked trailer, an upgrade, CONNECT)
-// ends the rewriting for the rest of the connection; MaxHeaderBytes then
-// caps heads instead.
+// A chunked body's trailer is checked and dropped (endTrailer). Whatever it
+// cannot follow exactly (an upgrade, CONNECT, a chunk line net/http may
+// refuse) ends the rewriting for the rest of the connection;
+// MaxHeaderBytes then caps heads instead.
 
 // Kestrel's defaults (KestrelServerLimits; Program.cs sets none), measured
 // on the C# host: the request line counts its line end, the header block
@@ -60,6 +61,9 @@ const (
 	// header, for an authority target off CONNECT and "*" off OPTIONS.
 	rejectNeedsConnect = -2
 	rejectNeedsOptions = -3
+	// rejectTrailerValue: Kestrel's 500 for NUL or invalid UTF-8 in a
+	// trailer value. It has no Connection line, but closes.
+	rejectTrailerValue = -4
 )
 
 // standIn is what net/http reads in place of a refused head.
@@ -71,6 +75,8 @@ const (
 	streamBody
 	// streamChunked: a chunked body, read as net/http's chunked reader reads it.
 	streamChunked
+	// streamTrailer: a chunked body's trailer lines, held and checked.
+	streamTrailer
 	streamPass
 	// streamDone: a head was refused; nothing after it is read as HTTP.
 	streamDone
@@ -129,6 +135,11 @@ type targetStream struct {
 	dropped int
 	// added counts the bytes of Host lines added to HTTP/1.0 heads.
 	added int
+	// bodyHeaderBytes and bodyHeaderLines are the head's, for its trailer.
+	bodyHeaderBytes, bodyHeaderLines int
+	// bodyRefusal is Kestrel's answer to a trailer it refused, for the
+	// body read that meets it.
+	bodyRefusal int
 
 	mu     sync.Mutex
 	queued []queuedRequest
@@ -244,7 +255,7 @@ func (s *targetStream) step() bool {
 			return true
 		}
 	} else if end < 0 && s.headerBytes+len(s.in) >= maxHeaderBlock || end >= 0 && s.headerBytes+end+1 > maxHeaderBlock {
-		s.refuse(http.StatusRequestHeaderFieldsTooLarge)
+		s.refuseHeaders(http.StatusRequestHeaderFieldsTooLarge)
 		return true
 	}
 	if end < 0 {
@@ -264,12 +275,23 @@ func (s *targetStream) step() bool {
 		return true
 	}
 	s.headerBytes += len(line)
-	if len(line) == 1 || (len(line) == 2 && line[0] == '\r') {
+	blank := len(line) == 1 || (len(line) == 2 && line[0] == '\r')
+	if blank && s.state == streamTrailer {
+		s.endTrailer()
+		return true
+	}
+	if blank {
 		s.endHead()
 		return true
 	}
 	if s.headerLines++; s.headerLines > maxHeaderCount {
-		s.refuse(http.StatusRequestHeaderFieldsTooLarge)
+		s.refuseHeaders(http.StatusRequestHeaderFieldsTooLarge)
+		return true
+	}
+	if s.state == streamTrailer {
+		if status := trailerRefusal(line); status != 0 {
+			s.refuseHeaders(status)
+		}
 		return true
 	}
 	if !s.swapHeaderLine(line) {
@@ -413,10 +435,9 @@ func (s *targetStream) handOnBody(n int) {
 const maxChunkLine = 4000
 
 // stepChunked follows a chunked body the way net/http's chunked reader does,
-// so the head after it is read like any other. Anything that reader might
-// read otherwise (a trailer, a line it refuses or may refuse) ends the
-// rewriting instead: net/http then closes on its error, or the next head
-// goes on unchecked, as before.
+// so the head after it is read like any other. A line that reader refuses
+// or may refuse ends the rewriting instead: net/http then closes on its
+// error, or the next head goes on unchecked.
 func (s *targetStream) stepChunked() bool {
 	switch s.chunk {
 	case chunkSize:
@@ -451,8 +472,13 @@ func (s *targetStream) stepChunked() bool {
 		}
 		return true
 	}
-	// After a chunk's data, and after the last chunk when there is no
-	// trailer, net/http reads exactly CRLF.
+	// After the last chunk come trailer lines, which count with the head's.
+	if s.chunk == chunkLast {
+		s.state = streamTrailer
+		s.headerBytes, s.headerLines = s.bodyHeaderBytes, s.bodyHeaderLines
+		return true
+	}
+	// After a chunk's data, net/http reads exactly CRLF.
 	if len(s.in) < 2 {
 		return false
 	}
@@ -461,12 +487,70 @@ func (s *targetStream) stepChunked() bool {
 		return true
 	}
 	s.handOnBody(2)
-	if s.chunk == chunkEnd {
-		s.chunk = chunkSize
-	} else {
-		s.state = streamLine
-	}
+	s.chunk = chunkSize
 	return true
+}
+
+// endTrailer hands net/http an empty trailer in place of the lines it
+// held: net/http takes only a trailer that fits its 4096-byte buffer and
+// ends in CRLF CRLF, and Kestrel takes more. The lines are not kept.
+func (s *targetStream) endTrailer() {
+	if held := len(s.head); held >= 2 {
+		s.dropped += held - 2
+	} else {
+		s.added += 2 - held
+	}
+	s.out, s.head = []byte("\r\n"), nil
+	s.headerBytes, s.headerLines = 0, 0
+	s.state = streamLine
+}
+
+// trailerRefusal is Kestrel's answer to a trailer line, measured on the C#
+// host: 400 for a line with no colon, a folded or empty name, a name byte
+// it refuses in a head, or CR in a value; 500 for NUL or invalid UTF-8 in a
+// value. Otherwise 0.
+func trailerRefusal(line []byte) int {
+	content := bytes.TrimSuffix(bytes.TrimSuffix(line, []byte("\n")), []byte("\r"))
+	name, value, ok := bytes.Cut(content, []byte(":"))
+	if !ok || len(name) == 0 || bytes.ContainsFunc(name, func(r rune) bool {
+		return r == 0 || r == '\t' || r == '\r' || r == ' ' || r >= 0x80
+	}) {
+		return http.StatusBadRequest
+	}
+	for _, c := range value {
+		switch c {
+		case '\r':
+			return http.StatusBadRequest
+		case 0:
+			return rejectTrailerValue
+		}
+	}
+	if !utf8.Valid(value) {
+		return rejectTrailerValue
+	}
+	return 0
+}
+
+// refuseHeaders refuses a head, or a trailer: net/http is reading a body
+// then, so a stand-in request cannot go out. The body read gets io.EOF,
+// and takeBodyRefusal says what to answer.
+func (s *targetStream) refuseHeaders(status int) {
+	if s.state != streamTrailer {
+		s.refuse(status)
+		return
+	}
+	s.mu.Lock()
+	s.bodyRefusal = status
+	s.mu.Unlock()
+	s.in, s.head, s.state = nil, nil, streamDone
+}
+
+func (s *targetStream) takeBodyRefusal() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	status := s.bodyRefusal
+	s.bodyRefusal = 0
+	return status
 }
 
 // parseChunkLine is net/http's chunk-size line: CRLF with no other CR,
@@ -671,6 +755,7 @@ func (s *targetStream) takeCodings() bool {
 // endHead reads the head the way net/http will and sets where the next
 // request line starts.
 func (s *targetStream) endHead() {
+	s.bodyHeaderBytes, s.bodyHeaderLines = s.headerBytes, s.headerLines
 	s.headerBytes, s.headerLines = 0, 0
 	defer func() { s.hostLines, s.host, s.lengthLines, s.codings = 0, "", 0, nil }()
 	// net/http takes equal Content-Length lines as one; Kestrel refuses any
@@ -986,6 +1071,7 @@ func restoreHeaders(header http.Header, swaps []headerSwap) bool {
 // Kestrel's reason phrases, which net/http's StatusText does not all share.
 var kestrelReasons = map[int]string{
 	http.StatusBadRequest:                  "Bad Request",
+	http.StatusInternalServerError:         "Internal Server Error",
 	http.StatusMethodNotAllowed:            "Method Not Allowed",
 	http.StatusRequestTimeout:              "Request Timeout",
 	http.StatusRequestEntityTooLarge:       "Payload Too Large",
@@ -1000,12 +1086,16 @@ func kestrelAnswer(status int) string {
 		// An HTTP/2 GOAWAY frame: stream 0, last stream 0, HTTP_1_1_REQUIRED.
 		return "\x00\x00\x08\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0d"
 	}
+	connection := "Connection: close\r\n"
+	if status == rejectTrailerValue {
+		connection = ""
+	}
 	status, allow := refusalStatus(status)
 	if allow != "" {
 		allow = "Allow: " + allow + "\r\n"
 	}
-	return fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Length: 0\r\nConnection: close\r\n%sDate: %s\r\n\r\n",
-		status, kestrelReasons[status], allow, time.Now().UTC().Format(http.TimeFormat))
+	return fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Length: 0\r\n%s%sDate: %s\r\n\r\n",
+		status, kestrelReasons[status], connection, allow, time.Now().UTC().Format(http.TimeFormat))
 }
 
 // refusalStatus is the status and Allow value a queue entry's refusal gets.
@@ -1017,6 +1107,8 @@ func refusalStatus(reject int) (int, string) {
 		return http.StatusMethodNotAllowed, "OPTIONS"
 	case rejectGoAway:
 		return http.StatusBadRequest, ""
+	case rejectTrailerValue:
+		return http.StatusInternalServerError, ""
 	}
 	return reject, ""
 }

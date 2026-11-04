@@ -130,10 +130,10 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 			"2;e=GET /c\x01 \t\r\n\r\n\r\n0\r\n\r\nGET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
 		queued: []queuedTarget{{"/a_", "/a\x01"}, {"/b_", "/b\x01"}},
 	}, {
-		name:   "a trailer ends the rewriting",
-		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: y\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: y\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		queued: []queuedTarget{{"/a", "/a"}},
+		name:   "a trailer is checked and dropped, and the next head checked",
+		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: y\r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\n\r\n",
+		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
+		queued: []queuedTarget{{"/a", "/a"}, {"/b_", "/b\x01"}},
 	}, {
 		name:   "a chunk net/http refuses ends the rewriting",
 		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\nx\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
@@ -363,6 +363,8 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: g\x01\r\ntransfer-encoding: x, chunked\r\n\r\n1\r\n\x01\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\n\r\n")
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n2;a=b \t\r\n\r\n\r\nA\r\nGET /x HTTP\r\n0\r\n\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nT: 1\r\n\r\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n")
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nT\"\x01: 1\nU: \xc3\xa9\n\nGET /d%zz HTTP/1.1\r\nHost: x\r\n\r\n")
+	f.Add("POST /c HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nT: \x00\r\n\r\nGET /d HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("GET /e%4 HTTP/1.0\nContent-Length: 2\nX\"\x01: \x7f\n\n%zGET /f\t HTTP/1.1\nHost: x\n\n")
 	f.Add("\r\nGET / HTTP/1.1\r\nHost: x\r\nX: \xe9\r\n\r\n")
 	f.Add(" /% \n")
@@ -426,7 +428,8 @@ func FuzzTheStreamFollowsNetHTTPThroughTimeouts(f *testing.F) {
 func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *targetStream) {
 	t.Helper()
 	refused := stream.state == streamDone
-	if refused && !bytes.HasSuffix(out, []byte(standIn)) {
+	// A refused trailer ends the body read instead of a stand-in.
+	if refused && stream.bodyRefusal == 0 && !bytes.HasSuffix(out, []byte(standIn)) {
 		t.Fatalf("%q: refused, but out is %q", in, out)
 	}
 	whole := !refused && stream.dropped == 0 && stream.added == 0

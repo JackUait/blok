@@ -478,3 +478,70 @@ func TestAnAbsoluteTargetRoutesItsPathAndQuery(t *testing.T) {
 		}
 	}
 }
+
+// Measured on the C# host: Kestrel reads a chunked body's trailer lines
+// under the head's limits (lines and bytes count with the head's) and its
+// grammar, except that NUL or invalid UTF-8 in a value gets a bare 500
+// with no Connection line. A refusal answers the read that met it. After
+// the trailer, the next head is read as any other.
+func TestTrailersFollowKestrel(t *testing.T) {
+	address := startHost(t, echoTarget, time.Minute)
+	// The head's header block is 39 bytes and 2 lines.
+	post := "POST /h HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nab\r\n0\r\n"
+	const (
+		read       = "read"
+		kestrel500 = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n"
+	)
+	cases := []struct{ name, trailer, want string }{
+		{"one line", "X-T: 1\r\n\r\n", read},
+		{"a bare LF blank line", "X-T: 1\r\n\n", read},
+		{"bare LF lines", "X-T: 1\nY: 2\n\n", read},
+		{"none, ended by a bare LF", "\n", read},
+		{"a quote in a name", "X\"T: 1\r\n\r\n", read},
+		{"control bytes in a value", "X: a\x01\x7f\tb\r\n\r\n", read},
+		{"valid UTF-8 in a value", "X: \xc3\xa9\r\n\r\n", read},
+		{"an empty value", "X:\r\n\r\n", read},
+		{"head fields", "Content-Length: 5\r\nTransfer-Encoding: gzip\r\nHost: a b\r\n\r\n", read},
+		{"100 lines with the head's", numberedHeaders(98) + "\r\n", read},
+		{"101 lines with the head's", numberedHeaders(99) + "\r\n", kestrel431},
+		{"bytes at the limit with the head's", "X: " + strings.Repeat("a", 32_724) + "\r\n\r\n", read},
+		{"bytes one over", "X: " + strings.Repeat("a", 32_725) + "\r\n\r\n", kestrel431},
+		{"over before its line end", "X: " + strings.Repeat("a", 33_000), kestrel431},
+		{"no colon", "XT\r\n\r\n", kestrel400},
+		{"folded", "X: a\r\n b\r\n\r\n", kestrel400},
+		{"a space first", " X: 1\r\n\r\n", kestrel400},
+		{"an empty name", ": 1\r\n\r\n", kestrel400},
+		{"a space before the colon", "X : 1\r\n\r\n", kestrel400},
+		{"a tab in a name", "X\tY: 1\r\n\r\n", kestrel400},
+		{"a high byte in a name", "X\xe9: 1\r\n\r\n", kestrel400},
+		{"NUL in a name", "X\x00: 1\r\n\r\n", kestrel400},
+		{"CR in a name", "X\rY: 1\r\n\r\n", kestrel400},
+		{"CR in a value", "X: a\rb\r\n\r\n", kestrel400},
+		{"NUL in a value", "X: a\x00b\r\n\r\n", kestrel500},
+		{"invalid UTF-8 in a value", "X: a\xe9b\r\n\r\n", kestrel500},
+		{"NUL before CR", "X: \x00\r\nY: a\rb\r\n\r\n", kestrel500},
+		{"CR before NUL", "Y: a\rb\r\nX: \x00\r\n\r\n", kestrel400},
+	}
+	for _, c := range cases {
+		got := rawAnswer(t, address, post+c.trailer+"GET /h HTTP/1.2\r\n")
+		if c.want == read {
+			if !strings.HasPrefix(got, "HTTP/1.1 200 OK\r\n") || !strings.HasSuffix(got, `"/h" "" "ab"`+kestrel505) {
+				t.Errorf("%s: got %.200q", c.name, got)
+			}
+			continue
+		}
+		if got != c.want {
+			t.Errorf("%s: got %.200q, want %q", c.name, got, c.want)
+		}
+	}
+	// A body the route left is read after the answer; a refused trailer
+	// then closes the connection.
+	unread := startHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+	}), time.Minute)
+	got := rawAnswer(t, unread, post+"XT\r\n\r\nGET /h HTTP/1.2\r\n")
+	if got != "HTTP/1.1 415 Unsupported Media Type\r\nContent-Length: 0\r\n\r\n" {
+		t.Errorf("an unread body: got %q", got)
+	}
+}

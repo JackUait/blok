@@ -24,8 +24,13 @@ var minBodyRate = dataRate{bytesPerSecond: 240, grace: 5 * time.Second}
 
 // bodyDrainTimeout is how long Kestrel waits, after the answer, for what a
 // route left of a body, measured on the C# host (it cuts off at 6 to 7 s on
-// its 1 s heartbeat). A var so a test can shorten it.
-var bodyDrainTimeout = 5 * time.Second
+// its 1 s heartbeat). Atomic so a test can shorten it while an earlier
+// test's handler still reads it.
+var bodyDrainTimeout = func() *atomic.Int64 {
+	var d atomic.Int64
+	d.Store(int64(5 * time.Second))
+	return &d
+}()
 
 // limitedBody is Kestrel's body limits.
 //
@@ -56,6 +61,8 @@ type limitedBody struct {
 	ended bool
 	// continueTo is the socket for Kestrel's 100 Continue, or nil.
 	continueTo io.Writer
+	// stream says when a read failed on a trailer Kestrel refuses.
+	stream *targetStream
 }
 
 // setLimit is IHttpMaxRequestBodySizeFeature: read-only once reading starts.
@@ -96,6 +103,11 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 	b.waited += time.Since(started)
 	if b.slow.Load() {
 		return 0, b.refuse(408, blokserver.ErrRequestBodyTooSlow)
+	}
+	if err != nil && err != io.EOF && b.stream != nil {
+		if status := b.stream.takeBodyRefusal(); status != 0 {
+			return 0, b.refuse(status, err)
+		}
 	}
 	if b.read += int64(n); b.read > b.limit {
 		return 0, b.refuse(413, blokserver.ErrRequestBodyTooLarge)

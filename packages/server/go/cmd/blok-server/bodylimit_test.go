@@ -139,9 +139,8 @@ func TestAnUnreadBodyLeavesTheAnswerAlone(t *testing.T) {
 // or 5 s kept the connection; 3000 bytes at 100 a second, 6000 at 500 a
 // second, or none were cut off at 6 to 7 s.
 func TestAnUnreadBodyHasTheDrainTimeToArrive(t *testing.T) {
-	saved := bodyDrainTimeout
-	bodyDrainTimeout = 300 * time.Millisecond
-	t.Cleanup(func() { bodyDrainTimeout = saved })
+	saved := bodyDrainTimeout.Swap(int64(300 * time.Millisecond))
+	t.Cleanup(func() { bodyDrainTimeout.Store(saved) })
 	address := startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 	}))

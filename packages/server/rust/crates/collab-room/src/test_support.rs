@@ -177,6 +177,29 @@ pub(crate) async fn join(manager: &Manager, doc: &str, member: &Arc<FakeMember>)
     result.membership.expect("a joined membership")
 }
 
+/// Every room's queued lane work has run, as an awaited C# LeaveAsync
+/// guarantees. Unlike Manager::settle it does not wait for the activity
+/// observer, so it works while a test holds that observer.
+pub(crate) async fn settle_lanes(manager: &Manager) {
+    for room in manager.live_rooms() {
+        drop(room.lane.reserve().hold().await);
+    }
+}
+
+/// Waits until n callers wait on the live rooms' lanes, so work queued
+/// from another task is in line before the test lets the lane go.
+pub(crate) async fn wait_for_lane_waiters(manager: &Manager, n: usize, what: &str) {
+    wait_until(what, || {
+        manager
+            .live_rooms()
+            .iter()
+            .map(|room| room.lane.waiters())
+            .sum::<usize>()
+            >= n
+    })
+    .await;
+}
+
 pub(crate) fn sync_frame(message: Message) -> Vec<u8> {
     blok_collab_wire::encode(&message).expect("encodable")
 }

@@ -1284,7 +1284,7 @@ async fn a_joiner_cancelling_mid_seed_does_not_poison_the_seed_for_the_others() 
         let manager = manager.clone();
         tokio::spawn(async move { manager.join(TEST_DOC, writer()).await })
     };
-    tokio::time::sleep(ms(20)).await;
+    wait_for_lane_waiters(&manager, 1, "the second join to queue").await;
     first.abort();
     cs.endpoint().set_load_gate(None);
     gate.open();
@@ -1889,7 +1889,7 @@ async fn committed_operations_broadcast_in_server_sequence_order() {
         Arc::new(second_membership),
         operation(&second_lineage, OP_TWO, second_update.clone()),
     );
-    tokio::time::sleep(ms(50)).await;
+    wait_for_lane_waiters(&manager, 1, "the overtaking receive to queue").await;
     pause.release.open();
     bounded("the slow receive", slow).await.expect("receive");
     bounded("the overtaking receive", overtaking)

@@ -106,7 +106,7 @@ async fn a_call_queued_behind_a_closing_room_is_retried_on_a_fresh_one() {
         let caller = manager.clone();
         let done = tokio::spawn(async move { call(&caller, which).await });
         // The call must be queued behind the flush, not run after it.
-        tokio::time::sleep(ms(20)).await;
+        wait_for_lane_waiters(&manager, 1, "the call to queue").await;
         endpoint.set_save_gate(None);
         gate.open();
 

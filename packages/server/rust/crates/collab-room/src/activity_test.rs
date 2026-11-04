@@ -88,6 +88,9 @@ async fn the_activity_queue_drops_its_oldest_past_the_bound() {
         let member = FakeMember::new(&format!("user-{index}"), OperationSource::ClientV1, false);
         join(&manager, "doc", &member).await.leave();
     }
+    // leave() only queues its lane turn: every Left must be queued before the
+    // pump runs again, or the last one finds room and nothing more drops.
+    settle_lanes(&manager).await;
     observer.gate.open();
     manager.settle().await;
 

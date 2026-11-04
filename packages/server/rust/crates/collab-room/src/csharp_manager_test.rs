@@ -763,6 +763,10 @@ async fn a_cancelled_join_does_not_arm_the_linger_while_others_are_still_in_the_
     b.endpoint.holds(DOC, "hello", None);
     let manager = b.manager(fast());
     let _first = enter(&manager, DOC, &Peer::new()).await;
+    // C# cancels the join at its lane wait. Holding the lane keeps the join
+    // there, or under load it can finish within the one poll.
+    let room = manager.live_rooms().pop().expect("the room");
+    let held = room.lane.reserve().hold().await;
 
     let second = Peer::new();
     let mut cancelled = Box::pin(try_join(&manager, DOC, &second));
@@ -774,6 +778,7 @@ async fn a_cancelled_join_does_not_arm_the_linger_while_others_are_still_in_the_
         "the join finished before it was cancelled"
     );
     drop(cancelled);
+    drop(held);
     tokio::time::sleep(ms(500)).await;
     manager.settle().await;
 
@@ -1138,7 +1143,7 @@ async fn recheck_keeps_queued_writes_out_of_the_journal_and_rejects_a_queued_joi
     });
     let m = manager.clone();
     let denied = tokio::spawn(async move { status_of(&m, DOC, &Peer::denied()).await });
-    tokio::time::sleep(ms(50)).await;
+    wait_for_lane_waiters(&manager, 2, "the write and the join to queue").await;
     gate.open();
 
     assert_eq!(recheck.await.expect("recheck").expect("recheck"), 1);
@@ -1169,7 +1174,7 @@ async fn recheck_closes_a_join_that_passed_access_before_the_acl_changed() {
     revoked.deny();
     let m = manager.clone();
     let recheck = tokio::spawn(async move { m.recheck_access(DOC).await });
-    tokio::time::sleep(ms(50)).await;
+    wait_for_lane_waiters(&manager, 1, "the recheck to queue").await;
     gate.open();
 
     assert_eq!(join.await.expect("join").status, JoinStatus::Joined);
@@ -1253,7 +1258,7 @@ async fn reset_waits_for_an_in_flight_blob_write_instead_of_racing_it() {
 
     let m = manager.clone();
     let reset = tokio::spawn(async move { m.reset(DOC).await });
-    tokio::time::sleep(ms(50)).await;
+    wait_for_lane_waiters(&manager, 1, "the reset to queue").await;
     stuck.open();
     b.store.set_before_write(None);
     let result = reset.await.expect("reset").expect("reset");
@@ -1367,11 +1372,10 @@ async fn reset_abandons_an_in_flight_export_instead_of_letting_it_land_afterward
     assert!(reset.is_ok(), "the reset waited on the stuck export");
     gate.open();
     b.endpoint.set_save_gate(None);
-    tokio::time::sleep(ms(400)).await;
+    wait_until("the room to be evicted", || manager.live_room_count() == 0).await;
     manager.settle().await;
 
     assert_eq!(b.endpoint.saved(), 1);
-    assert_eq!(manager.live_room_count(), 0);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -1517,11 +1521,13 @@ async fn a_store_outage_keeps_the_room_loaded_until_the_working_set_catches_up()
     assert_eq!(saved_texts(&b.endpoint)[0], text_json("hello!"));
 
     membership.leave();
-    tokio::time::sleep(ms(500)).await;
+    wait_until("the eviction's flush to fail", || {
+        b.logs.logged("could not flush the working set")
+    })
+    .await;
     manager.settle().await;
 
     assert_eq!(manager.live_room_count(), 1);
-    assert!(b.logs.logged("could not"), "{:?}", b.logs.lines());
 
     b.store.set_fail_writes(None);
     evicted(&manager).await;
@@ -1753,7 +1759,7 @@ async fn purge_bars_admission_while_a_previous_blob_write_is_still_in_flight() {
             .receive(sync_frame(Message::SyncUpdate { update }))
             .await;
     });
-    tokio::time::sleep(ms(50)).await;
+    wait_until("the purge to start", || manager.is_purging(DOC)).await;
 
     assert!(!pending.is_finished());
     assert_every_entry_point_purged(&manager).await;
@@ -1786,7 +1792,7 @@ async fn purge_waits_for_an_in_flight_export_but_starts_no_final_export() {
 
     let m = manager.clone();
     let pending = tokio::spawn(async move { purge(&m, true).await });
-    tokio::time::sleep(ms(50)).await;
+    wait_until("the purge to start", || manager.is_purging(DOC)).await;
 
     assert!(!pending.is_finished());
     let joined = tokio::time::timeout(

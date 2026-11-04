@@ -145,15 +145,10 @@ async fn an_empty_room_flushes_and_unloads_after_its_linger() {
     )
     .await;
     membership.leave();
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
-    while manager.live_room_count() > 0 && tokio::time::Instant::now() < deadline {
-        tokio::time::sleep(ms(5)).await;
-    }
-    assert_eq!(
-        manager.live_room_count(),
-        0,
-        "the empty room stayed loaded past its linger"
-    );
+    wait_until("the empty room to unload after its linger", || {
+        manager.live_room_count() == 0
+    })
+    .await;
     assert_eq!(endpoint.saved(), 1, "the eviction's PUTs");
 }
 

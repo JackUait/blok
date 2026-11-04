@@ -2226,14 +2226,10 @@ async fn a_java_script_error_reading_export_html_is_a_refusal() {
 
     assert_eq!(edit.status, EditStatus::Applied, "{:?}", edit.err);
     assert!(checkpoint(&manager).await);
-    tokio::time::sleep(ms(100)).await;
-    manager.settle().await;
-
-    assert!(
-        k.logs.logged("cannot export its document"),
-        "{:?}",
-        k.logs.lines()
-    );
+    wait_until("the refused projection", || {
+        k.logs.logged("cannot export its document")
+    })
+    .await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

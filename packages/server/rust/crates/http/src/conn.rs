@@ -21,11 +21,6 @@ use crate::request::{CancelToken, Extensions, Request};
 use crate::response::{ResponseWriter, response_head};
 use crate::server::{ActiveGuard, Shared};
 
-/// net/http's maxPostHandlerReadBytes (256 << 10, server.go in Go 1.27.1):
-/// an unread body bigger than this is not drained after the handler; the
-/// connection closes instead. Kestrel drains it all.
-const MAX_DRAIN: u64 = 256 << 10;
-
 pub(crate) async fn serve(
     shared: Arc<Shared>,
     stream: TcpStream,
@@ -357,23 +352,14 @@ async fn drain(exchange: &Exchange) -> bool {
         if state.done() {
             return true;
         }
-        if let BodyFraming::Length(remaining) = state.framing
-            && remaining > MAX_DRAIN
-        {
-            return false;
-        }
     }
+    // Measured: Kestrel drains it all. The body cap, the minimum data rate
+    // and the request deadline still bound each read here.
     let mut chunk = vec![0u8; 16 << 10];
-    let mut drained = 0u64;
     loop {
         match body::read(exchange, &mut chunk, false).await {
             Ok(0) => return true,
-            Ok(n) => {
-                drained += n as u64;
-                if drained > MAX_DRAIN {
-                    return false;
-                }
-            }
+            Ok(_) => {}
             Err(_) => return false,
         }
     }

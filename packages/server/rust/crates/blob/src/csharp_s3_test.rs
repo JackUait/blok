@@ -572,3 +572,23 @@ async fn preserves_cancellation_when_a_response_read_reports_an_io_failure() {
         .unwrap_err();
     assert!(matches!(err, Error::Cancelled), "{err}");
 }
+
+// C# looks at the cancel only after a failed error-body read. A 500 read in
+// full stays the 500, though the cancel was raised before the put returned.
+#[tokio::test]
+async fn a_fully_read_error_stays_the_error_when_the_cancel_comes_after() {
+    let dir = TempDir::new();
+    let (flag, cancelled) = flagged();
+    let (s, _) = store(&dir, move |_| {
+        flag.store(true, std::sync::atomic::Ordering::SeqCst);
+        (500, b"boom".to_vec())
+    });
+    let err = s
+        .put(".bin", "", Body::bytes(b"bytes".to_vec()), &cancelled)
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(&err, Error::Message(m) if m.contains("returned 500") && m.contains("boom")),
+        "{err}"
+    );
+}

@@ -99,13 +99,8 @@ pub(crate) async fn until_cancelled<T>(
             }
         }
     };
-    // A cancel can be what made the work fail (a read cut short), so a
-    // failure seen after the signal is reported as the cancel, as C# does.
     tokio::select! {
-        result = work => match result {
-            Err(_) if cancelled() => Err(Error::Cancelled),
-            result => result,
-        },
+        result = work => result,
         () = watch => Err(Error::Cancelled),
     }
 }

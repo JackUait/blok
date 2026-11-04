@@ -151,6 +151,7 @@ impl S3 {
             &empty_hash(),
             true,
             true,
+            None,
         )
         .await
     }
@@ -168,6 +169,7 @@ impl S3 {
             &hash,
             false,
             false,
+            None,
         )
         .await?;
         Ok(())
@@ -184,6 +186,7 @@ impl S3 {
             &empty_hash(),
             false,
             true,
+            None,
         )
         .await?;
         Ok(())
@@ -199,6 +202,7 @@ impl S3 {
         hash: &str,
         read_body: bool,
         allow_not_found: bool,
+        cancelled: Option<Cancelled<'_>>,
     ) -> Result<Option<Vec<u8>>, Error> {
         let (url, host) = target(&self.options, key)?;
         let mut headers = Vec::new();
@@ -226,7 +230,7 @@ impl S3 {
         };
         tokio::time::timeout(
             self.settings.request_timeout,
-            self.exchange(request, read_body, allow_not_found),
+            self.exchange(request, read_body, allow_not_found, cancelled),
         )
         .await
         .map_err(|_| Error::DeadlineExceeded)?
@@ -237,6 +241,7 @@ impl S3 {
         request: Request<'_, '_>,
         read_body: bool,
         allow_not_found: bool,
+        cancelled: Option<Cancelled<'_>>,
     ) -> Result<Option<Vec<u8>>, Error> {
         let method = request.method.to_owned();
         let (status, mut body): (u16, Answer) = match &self.transport {
@@ -274,7 +279,12 @@ impl S3 {
         if allow_not_found && status == 404 {
             return Ok(None);
         }
-        let prefix = body.read_prefix(ERROR_BODY_LIMIT).await;
+        let (prefix, failed) = body.read_prefix(ERROR_BODY_LIMIT).await;
+        // C# re-checks the cancel only here: the cancel may be what cut the
+        // read short. A body read in full stays the status error.
+        if failed && cancelled.is_some_and(|cancelled| cancelled()) {
+            return Err(Error::Cancelled);
+        }
         Err(Error::Message(format!(
             "blobstore: s3 {method} returned {status}: {}",
             String::from_utf8_lossy(&prefix).trim()
@@ -286,6 +296,7 @@ impl S3 {
         key: &str,
         mime: &str,
         mut body: Box<dyn crate::blob::Seekable + 'b>,
+        cancelled: Cancelled<'_>,
     ) -> Result<Option<Box<dyn crate::blob::Seekable + 'b>>, Error> {
         let Ok(start) = body.stream_position().await else {
             return Ok(Some(body));
@@ -317,6 +328,7 @@ impl S3 {
             &hash,
             false,
             false,
+            Some(cancelled),
         )
         .await?;
         Ok(None)
@@ -327,6 +339,7 @@ impl S3 {
         key: &str,
         mime: &str,
         content: Box<dyn AsyncRead + Send + Unpin + '_>,
+        cancelled: Cancelled<'_>,
     ) -> Result<(), Error> {
         let dir = self
             .options
@@ -374,6 +387,7 @@ impl S3 {
             &hash,
             false,
             false,
+            Some(cancelled),
         )
         .await?;
         Ok(())
@@ -397,9 +411,11 @@ enum Answer {
 
 impl Answer {
     /// What arrives of an error body before the limit, the end or a failed
-    /// read; C# keeps the bytes read before the failure too.
-    async fn read_prefix(&mut self, limit: usize) -> Vec<u8> {
+    /// read, and whether a read failed; C# keeps the bytes read before the
+    /// failure too.
+    async fn read_prefix(&mut self, limit: usize) -> (Vec<u8>, bool) {
         let mut out = Vec::new();
+        let mut failed = false;
         match self {
             #[cfg(test)]
             Answer::Canned(bytes) => out.extend_from_slice(&bytes[..bytes.len().min(limit)]),
@@ -408,13 +424,17 @@ impl Answer {
                 while out.len() < limit {
                     let want = chunk.len().min(limit - out.len());
                     match body.read(&mut chunk[..want]).await {
-                        Ok(0) | Err(_) => break,
+                        Ok(0) => break,
                         Ok(n) => out.extend_from_slice(&chunk[..n]),
+                        Err(_) => {
+                            failed = true;
+                            break;
+                        }
                     }
                 }
             }
         }
-        out
+        (out, failed)
     }
 
     async fn read_to_end(&mut self, limit: usize) -> std::io::Result<Vec<u8>> {
@@ -468,11 +488,14 @@ impl Store for S3 {
             let mime = sanitize_s3_media_type(mime_type);
             match content {
                 Body::Seekable(body) => {
-                    if let Some(unseekable) = self.put_seekable(&key, &mime, body).await? {
-                        self.put_spooled(&key, &mime, Box::new(unseekable)).await?;
+                    if let Some(unseekable) =
+                        self.put_seekable(&key, &mime, body, cancelled).await?
+                    {
+                        self.put_spooled(&key, &mime, Box::new(unseekable), cancelled)
+                            .await?;
                     }
                 }
-                Body::Stream(body) => self.put_spooled(&key, &mime, body).await?,
+                Body::Stream(body) => self.put_spooled(&key, &mime, body, cancelled).await?,
             }
             Ok(self.public(&key))
         }))
@@ -494,6 +517,7 @@ impl Store for S3 {
                 &empty_hash(),
                 false,
                 false,
+                Some(cancelled),
             )
             .await?;
             Ok(())

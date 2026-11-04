@@ -115,6 +115,10 @@ type queuedRequest struct {
 	swaps  []headerSwap
 	// http10: an HTTP/1.0 head with a chunked body, handed on as HTTP/1.1.
 	http10 bool
+	// dualFramed: chunked and a Content-Length. Kestrel reads the chunks and
+	// closes after the answer, so the bytes a Content-Length reader would
+	// count are never read as a request.
+	dualFramed bool
 }
 
 type targetStream struct {
@@ -458,6 +462,13 @@ const maxChunkLine = 4000
 func (s *targetStream) stepChunked() bool {
 	switch s.chunk {
 	case chunkSize:
+		// Kestrel's grammar first: what it refuses fails the body read.
+		if status, complete := kestrelChunkPrefix(s.in); status != 0 {
+			s.refuseBody(status)
+			return true
+		} else if !complete {
+			return false
+		}
 		end := bytes.IndexByte(s.in, '\n')
 		if end < 0 && len(s.in) < maxChunkLine {
 			return false
@@ -495,12 +506,12 @@ func (s *targetStream) stepChunked() bool {
 		s.headerBytes, s.headerLines = s.bodyHeaderBytes, s.bodyHeaderLines
 		return true
 	}
-	// After a chunk's data, net/http reads exactly CRLF.
+	// After a chunk's data, net/http and Kestrel read exactly CRLF.
 	if len(s.in) < 2 {
 		return false
 	}
 	if s.in[0] != '\r' || s.in[1] != '\n' {
-		s.state = streamPass
+		s.refuseBody(http.StatusBadRequest)
 		return true
 	}
 	s.handOnBody(2)
@@ -580,6 +591,12 @@ func (s *targetStream) refuseHeaders(status int) {
 		s.refuse(status)
 		return
 	}
+	s.refuseBody(status)
+}
+
+// refuseBody ends a body Kestrel refuses: net/http's read of it fails,
+// and takeBodyRefusal says what to answer.
+func (s *targetStream) refuseBody(status int) {
 	s.mu.Lock()
 	s.bodyRefusal = status
 	s.mu.Unlock()
@@ -817,7 +834,7 @@ func (s *targetStream) endHead() {
 	// ReadRequest drops Host from the header map; net/http's server checks
 	// the lines it had.
 	if request.ProtoAtLeast(1, 1) && s.hostLines == 0 && request.Method != "CONNECT" ||
-		s.hostLines == 1 && !httpguts.ValidHostHeader(s.host) {
+		s.hostLines == 1 && (!httpguts.ValidHostHeader(s.host) || !kestrelHostValid(s.host)) {
 		s.refuse(http.StatusBadRequest)
 		return
 	}
@@ -858,6 +875,7 @@ func (s *targetStream) endHead() {
 		s.readAsHTTP11()
 	}
 	if len(request.TransferEncoding) > 0 || s.entry.http10 {
+		s.entry.dualFramed = s.lengthLines > 0
 		s.chunk = chunkSize
 		s.handOn(streamChunked)
 		return
@@ -1063,6 +1081,11 @@ func restoreTarget(w http.ResponseWriter, r *http.Request, stream *targetStream)
 		r.Proto, r.ProtoMinor = "HTTP/1.0", 0
 		r.Close = !httpguts.HeaderValuesContainsToken(r.Header["Connection"], "keep-alive") ||
 			httpguts.HeaderValuesContainsToken(r.Header["Connection"], "close")
+	}
+	// net/http fixed its keep-alive before the handler; the header still
+	// makes it close after the answer.
+	if entry.dualFramed && !entry.http10 {
+		w.Header().Set("Connection", "close")
 	}
 	if !ok || entry.sent == entry.original && entry.sent == r.RequestURI && len(entry.swaps) == 0 {
 		return true

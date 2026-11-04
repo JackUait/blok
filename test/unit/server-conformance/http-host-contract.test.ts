@@ -1364,6 +1364,26 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'upgrade not taken, then a refused head': bytes('GET /health HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\nConnection: upgrade\r\n\r\nGET /health HTTP/1.2\r\n'),
   'upgrade not taken, then 101 headers': bytes(`GET /health HTTP/1.1\r\nHost: x\r\nUpgrade: foo\r\n\r\n${headWith(numbered(99))}`),
   'upgrade with a body not taken, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nUpgrade: foo\r\nConnection: upgrade\r\nContent-Length: 2\r\n\r\n{}GET /health HTTP/1.2\r\n'),
+  // A head with both framings is read as chunked and the connection then
+  // closes, so bytes a Content-Length reader would take as a body are never
+  // read as a request.
+  'chunked with a Content-Length, then a pipelined head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\n0\r\n\r\nGET /health HTTP/1.1\r\nHost: x\r\n\r\n'),
+  'Host with an empty port': bytes(`GET /health HTTP/1.1\r\nHost: a:\r\n${CLOSE}\r\n`),
+  'Host with only a port': bytes(`GET /health HTTP/1.1\r\nHost: :80\r\n${CLOSE}\r\n`),
+  'Host with an unclosed bracket': bytes(`GET /health HTTP/1.1\r\nHost: [::1\r\n${CLOSE}\r\n`),
+  'Host with a percent escape': bytes(`GET /health HTTP/1.1\r\nHost: a%41\r\n${CLOSE}\r\n`),
+  'Host with a word port': bytes(`GET /health HTTP/1.1\r\nHost: a:b\r\n${CLOSE}\r\n`),
+  'Host with text after the bracket': bytes(`GET /health HTTP/1.1\r\nHost: [::1]x\r\n${CLOSE}\r\n`),
+  'Host with two ports': bytes(`GET /health HTTP/1.1\r\nHost: a:80:80\r\n${CLOSE}\r\n`),
+  'Host with a port past 65535': bytes(`GET /health HTTP/1.1\r\nHost: a:65536\r\n${CLOSE}\r\n`),
+  'Expect with an unknown token': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nExpect: foo\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
+  'chunk size not hex': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nzz\r\n'),
+  'chunk shorter than its size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n5\r\nab\r\n0\r\n\r\n'),
+  'chunk size past 64 bits': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\nfffffffffffffffffff\r\n'),
+  'chunk data with no line end': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2\r\n{}0\r\n\r\n'),
+  'chunk lines with bare LF': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2\n{}\n0\n\n'),
+  'chunk size with a space': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n2 \r\n{}\r\n0\r\n\r\n'),
+  'negative chunk size': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n' + CLOSE + '\r\n-2\r\n{}\r\n0\r\n\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

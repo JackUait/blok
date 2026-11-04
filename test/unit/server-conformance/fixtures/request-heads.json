@@ -640,6 +640,74 @@
     "response": "HTTP/1.1 400 Bad Request\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
   },
   {
+    "name": "chunked with a Content-Length, then a pipelined head",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Host with an empty port",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with only a port",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with an unclosed bracket",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with a percent escape",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with a word port",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with text after the bracket",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with two ports",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Host with a port past 65535",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Expect with an unknown token",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "chunk size not hex",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunk shorter than its size",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunk size past 64 bits",
+    "response": "HTTP/1.1 500 Internal Server Error\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunk data with no line end",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunk lines with bare LF",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "chunk size with a space",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "negative chunk size",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
     "name": "range past the end of a file",
     "response": "HTTP/1.1 416 Range Not Satisfiable\nconnection: close\ncontent-disposition: attachment\ncontent-length: 33\ncontent-range: bytes */5\ncontent-type: text/plain; charset=utf-8\nx-content-type-options: nosniff\n\ninvalid range: failed to overlap\n"
   }

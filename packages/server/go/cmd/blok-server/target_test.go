@@ -141,9 +141,9 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /b_ HTTP/1.1\r\nHost: x\r\n\r\n",
 		queued: []queuedTarget{{"/a", "/a"}, {"/b_", "/b\x01"}},
 	}, {
-		name:   "a chunk net/http refuses ends the rewriting",
+		name:   "a chunk line Kestrel refuses ends the body",
 		in:     "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\nx\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
-		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n1\nx\r\n0\r\n\r\nGET /b\x01 HTTP/1.1\r\n\r\n",
+		out:    "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n",
 		queued: []queuedTarget{{"/a", "/a"}},
 	}, {
 		name:   "a taken upgrade hands on what follows",

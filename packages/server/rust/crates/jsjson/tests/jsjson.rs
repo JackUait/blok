@@ -423,3 +423,15 @@ fn from_utf8_replaces_each_maximal_subpart() {
         "\u{fffd}\u{fffd}\u{fffd}"
     );
 }
+
+// When two shortest candidates are equally close, Number::toString takes the
+// even one. Measured with node 24: String(x).
+#[test]
+fn format_number_rounds_ties_to_even() {
+    for (bits, want) in [
+        (0x4310_62ad_46fe_948d_u64, "1153023996831011.2"),
+        (0xc305_0c0e_8643_0b8a_u64, "-740528879067505.2"),
+    ] {
+        assert_eq!(format_number(f64::from_bits(bits)), want, "{bits:x}");
+    }
+}

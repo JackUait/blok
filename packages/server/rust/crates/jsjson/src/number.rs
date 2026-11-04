@@ -7,16 +7,35 @@ pub fn nan() -> f64 {
     f64::from_bits(NAN_BITS)
 }
 
-/// Splits `{:e}` output (the shortest round-trip digits) into the digits
-/// without trailing zeros and the decimal exponent.
+/// The shortest round-trip digits (no trailing zeros) and the decimal
+/// exponent of a positive finite number.
 pub(crate) fn shortest_digits(magnitude: f64) -> (String, i32) {
-    let shortest = format!("{magnitude:e}");
-    let (mantissa, exponent) = shortest.split_once('e').expect("{:e} has an exponent");
+    let (digits, exponent) = split_e(&format!("{magnitude:e}"));
+    (closest_digits(magnitude, digits), exponent)
+}
+
+fn split_e(text: &str) -> (String, i32) {
+    let (mantissa, exponent) = text.split_once('e').expect("{:e} has an exponent");
     let digits = mantissa
         .replacen('.', "", 1)
         .trim_end_matches('0')
         .to_string();
     (digits, exponent.parse().expect("exponent"))
+}
+
+/// `{:e}` finds the shortest length but rounds an exact tie between two
+/// candidates up; JS, Go and .NET take the even one. Exact `{:.Ne}` rounds
+/// half to even, so use it when it still round-trips (it may not at a power
+/// of two, where the gap below is half the gap above).
+fn closest_digits(magnitude: f64, shortest: String) -> String {
+    let exact = format!("{magnitude:.*e}", shortest.len() - 1);
+    if exact.parse::<f64>() == Ok(magnitude) {
+        let (digits, _) = split_e(&exact);
+        if digits.len() == shortest.len() {
+            return digits;
+        }
+    }
+    shortest
 }
 
 /// What JSON.stringify writes for a number: Number::toString on the

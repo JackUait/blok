@@ -565,3 +565,49 @@ async fn a_hook_still_running_when_the_client_leaves_is_cancelled() {
         "the hook outlived its request"
     );
 }
+
+/// Signs in the user named by the X-User header, as a host's own
+/// authentication would.
+fn signed_in_by_header() -> Wrap {
+    Box::new(|next: Arc<dyn blok_http::Handler>| {
+        Arc::new(move |mut request: blok_http::Request, response| {
+            if let Some(name) = request.headers().get("X-User").map(str::to_owned) {
+                request.extensions.insert(User {
+                    id: name.clone(),
+                    name,
+                    authenticated: true,
+                    ..User::default()
+                });
+            }
+            next.serve(request, response)
+        }) as Arc<dyn blok_http::Handler>
+    })
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn require_authorization_on_the_group_protects_the_sync_route_and_the_signed_in_user_is_the_principal()
+ {
+    let hook = FakeAuthorization::new(true, true, false);
+    let authorization = Arc::clone(&hook);
+    let h = start_endpoint(
+        move |c| {
+            c.connections = Arc::new(ConnectionTable::new(0, 1));
+            c.authorization = Some(authorization);
+        },
+        Some(signed_in_by_header()),
+    )
+    .await;
+
+    let alice = h.dial("/sync/doc", &[("X-User", "alice")]).await;
+    assert_eq!(alice.status, 101, "{}", alice.body);
+    assert!(hook.calls().iter().any(|user| user.id == "alice"));
+    assert!(hook.write_calls().iter().any(|user| user.id == "alice"));
+
+    let again = h.dial("/sync/doc", &[("X-User", "alice")]).await;
+    assert_eq!(
+        (again.status, again.body.as_str()),
+        (429, "too many connections\n")
+    );
+    let bob = h.dial("/sync/doc", &[("X-User", "bob")]).await;
+    assert_eq!(bob.status, 101, "{}", bob.body);
+}

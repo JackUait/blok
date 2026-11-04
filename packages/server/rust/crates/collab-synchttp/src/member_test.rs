@@ -220,3 +220,23 @@ async fn recheck_with_no_hook_allows() {
     let answer = new_test_member(1).recheck_access().await;
     assert!(matches!(answer, Ok(true)), "got {answer:?}");
 }
+
+// A peer that vanishes with no close frame (a crash, a killed tab) must
+// still leave the room, or its presence stays drawn on everyone else.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn withdraws_the_presence_of_a_connection_that_just_disappears() {
+    let (server, client) = ws_pair().await;
+    let membership = Arc::new(RecordingMembership::default());
+    let done = run_member(
+        Arc::new(new_test_member(1 << 20)),
+        server,
+        Some(Arc::clone(&membership)),
+        None,
+    );
+    drop(client);
+    tokio::time::timeout(Duration::from_secs(5), done)
+        .await
+        .expect("the member never ended")
+        .unwrap();
+    assert!(membership.has_left());
+}

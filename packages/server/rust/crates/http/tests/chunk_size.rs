@@ -97,3 +97,43 @@ async fn a_lone_lf_after_the_last_chunk_waits_for_one_more_byte() {
         "{got:?}"
     );
 }
+
+// Kestrel's ParseChunkedPrefix decides on the bytes so far: a bare LF after
+// the size waits for one more byte, and a size line that cannot be hex is
+// refused once two bytes are in, before any line end.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn kestrel_chunk_prefix_waits_on_a_partial_line() {
+    use std::time::Duration;
+    use tokio::io::AsyncReadExt;
+    let server = start(read_body, Config::default()).await;
+    let answer = |bytes: Vec<u8>| {
+        String::from_utf8_lossy(&bytes)
+            .split("\r\n")
+            .filter(|line| !line.starts_with("Date: "))
+            .collect::<Vec<_>>()
+            .join("\r\n")
+    };
+    let head = b"POST /delete HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n";
+
+    let mut conn = connect(server.address).await;
+    write(&mut conn, &[&head[..], b"2\n"].concat()).await;
+    let mut first = [0u8; 64];
+    let early = tokio::time::timeout(Duration::from_millis(500), conn.read(&mut first)).await;
+    assert!(
+        early.is_err(),
+        "answered at once: {:?}",
+        early.map(|r| r.map(|n| String::from_utf8_lossy(&first[..n]).into_owned()))
+    );
+    write(&mut conn, b"{").await;
+    assert_eq!(
+        answer(read_all(&mut conn, Duration::from_secs(3)).await),
+        BARE_400
+    );
+
+    let mut conn = connect(server.address).await;
+    write(&mut conn, &[&head[..], b"zz"].concat()).await;
+    assert_eq!(
+        answer(read_all(&mut conn, Duration::from_secs(2)).await),
+        BARE_400
+    );
+}

@@ -127,9 +127,6 @@ pub(crate) struct Limits {
     pub length: Option<u64>,
 }
 
-/// A chunk-size line longer than this is refused.
-const MAX_CHUNK_LINE: usize = 8 << 10;
-
 /// The request body. Reads stream from the socket; nothing is buffered
 /// beyond what the connection holds.
 pub struct Body {
@@ -349,42 +346,28 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 inbound.consume(lf + 1);
                 Step::Progress
             }
-            Chunk::Size => {
-                let lf = inbound.buf.iter().position(|&b| b == b'\n');
+            Chunk::Size => match chunk_prefix(&inbound.buf) {
+                Err(error) => Step::Fail(error),
+                Ok(Prefix::More) => ended_step(available),
                 // Measured: Kestrel reads an extension as it comes and counts
                 // it against the body cap, so it is not held here.
-                if let Some(semicolon) = inbound.buf.iter().position(|&b| b == b';')
-                    && lf.is_none_or(|lf| semicolon < lf)
-                {
-                    let size = match chunk_size(&inbound.buf[..semicolon]) {
-                        Ok(size) => size,
-                        Err(error) => return Step::Fail(error),
-                    };
-                    inbound.consume(semicolon + 1);
-                    state.read += (semicolon + 1) as u64;
+                Ok(Prefix::Extension { size, at }) => {
+                    inbound.consume(at + 1);
+                    state.read += (at + 1) as u64;
                     *chunk = Chunk::Extension(size);
-                    return Step::Progress;
+                    Step::Progress
                 }
-                let Some(lf) = lf else {
-                    if available > MAX_CHUNK_LINE {
-                        return Step::Fail(BodyError::Malformed);
-                    }
-                    return ended_step(available);
-                };
-                // Chunk framing needs CRLF; a bare LF is refused.
-                if lf == 0 || inbound.buf[lf - 1] != b'\r' {
-                    return Step::Fail(BodyError::Malformed);
+                Ok(Prefix::Line { size, len }) => {
+                    inbound.consume(len);
+                    state.read += len as u64;
+                    *chunk = if size == 0 {
+                        Chunk::Trailers
+                    } else {
+                        Chunk::Data(size)
+                    };
+                    Step::Progress
                 }
-                let next = match chunk_size(&inbound.buf[..lf - 1]) {
-                    Ok(0) => Chunk::Trailers,
-                    Ok(size) => Chunk::Data(size),
-                    Err(error) => return Step::Fail(error),
-                };
-                inbound.consume(lf + 1);
-                state.read += (lf + 1) as u64;
-                *chunk = next;
-                Step::Progress
-            }
+            },
             Chunk::Extension(size) => {
                 let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
                     // Keeps the last byte: it may be the CR of the CRLF.
@@ -437,30 +420,66 @@ fn check_trailer_line(line: &[u8]) -> Result<(), BodyError> {
     Ok(())
 }
 
-/// Hex digits, then an optional ";extension". Measured: no spaces, no sign.
-/// Kestrel adds each digit to an int, checked: past 0x7FFFFFFF is an
-/// OverflowException (the app's 500), and a ninth digit that fits is its
-/// 400. The digits are taken in order, so an overflow wins over a bad byte
+#[derive(Debug, PartialEq, Eq)]
+enum Prefix {
+    More,
+    /// The size line, CRLF included, is len bytes.
+    Line {
+        size: u64,
+        len: usize,
+    },
+    /// The ';' that starts an extension is at index at.
+    Extension {
+        size: u64,
+        at: usize,
+    },
+}
+
+/// Kestrel's MaxChunkPrefixBytes: enough for "7FFFFFFF\r\n".
+const MAX_CHUNK_PREFIX: usize = 10;
+
+/// Kestrel's ParseChunkedPrefix on the bytes so far, so a line is refused
+/// or waits at the same byte as on the C# host. It starts only with two
+/// bytes in, takes each byte before the next as a hex digit unless the pair
+/// is CRLF or the byte is ';', and refuses a line not done in ten bytes.
+/// Each digit is added to an int, checked: past 0x7FFFFFFF is an
+/// OverflowException (the app's 500), so an overflow wins over a bad byte
 /// after it.
-fn chunk_size(line: &[u8]) -> Result<u64, BodyError> {
-    let mut size: u64 = 0;
-    let mut digits = 0;
-    for &b in line {
-        let Some(digit) = (b as char).to_digit(16) else {
-            break;
-        };
-        size = size * 16 + u64::from(digit);
-        if size > i32::MAX as u64 {
-            return Err(BodyError::Overflow);
-        }
-        digits += 1;
-        if digits > 8 {
-            return Err(BodyError::Malformed);
-        }
+fn chunk_prefix(b: &[u8]) -> Result<Prefix, BodyError> {
+    if b.len() < 2 {
+        return Ok(Prefix::More);
     }
-    let rest = &line[digits..];
-    if digits == 0 || !(rest.is_empty() || rest[0] == b';') {
-        return Err(BodyError::Malformed);
+    let mut size = chunk_digit(b[0], 0)?;
+    let mut first = b[1];
+    let mut consumed = 2;
+    while consumed < MAX_CHUNK_PREFIX {
+        if first == b';' {
+            return Ok(Prefix::Extension {
+                size,
+                at: consumed - 1,
+            });
+        }
+        let Some(&second) = b.get(consumed) else {
+            return Ok(Prefix::More);
+        };
+        consumed += 1;
+        if first == b'\r' && second == b'\n' {
+            return Ok(Prefix::Line {
+                size,
+                len: consumed,
+            });
+        }
+        size = chunk_digit(first, size)?;
+        first = second;
+    }
+    Err(BodyError::Malformed)
+}
+
+fn chunk_digit(c: u8, size: u64) -> Result<u64, BodyError> {
+    let digit = (c as char).to_digit(16).ok_or(BodyError::Malformed)?;
+    let size = size * 16 + u64::from(digit);
+    if size > i32::MAX as u64 {
+        return Err(BodyError::Overflow);
     }
     Ok(size)
 }
@@ -548,45 +567,45 @@ async fn fail(
 mod tests {
     use super::*;
 
-    fn status(line: &str) -> u16 {
-        match chunk_size(line.as_bytes()) {
-            Ok(_) => 0,
-            Err(BodyError::Overflow) => 500,
-            Err(BodyError::Malformed) => 400,
-            Err(error) => panic!("{line:?}: {error:?}"),
-        }
-    }
-
-    // Kestrel's ParseChunkedPrefix on a whole line, CRLF taken off. The rows
-    // with an extension are read up to the ';'.
+    // Kestrel's ParseChunkedPrefix on the bytes so far: More while it needs
+    // another byte, the whole line once it is taken, or where an extension
+    // starts.
     #[test]
     fn kestrel_chunk_prefix() {
-        let rows = [
-            ("2", 0),
-            ("7FFFFFFF", 0),
-            ("00000002", 0),
-            ("0", 0),
-            ("7FFFFFF", 0),
-            ("5", 0),
-            ("3", 0),
-            ("zz", 400),
-            ("2 ", 400),
-            ("-2", 400),
-            ("", 400),
-            ("0000000002", 400),
-            (";a", 400),
-            ("80000000", 500),
-            ("100000000", 500),
-            ("fffffffffffffffffff", 500),
+        use Prefix::{Extension, Line, More};
+        let line = |size, len| Ok(Line { size, len });
+        let rows: [(&str, Result<Prefix, BodyError>); 22] = [
+            ("2\r\n", line(2, 3)),
+            ("7FFFFFFF\r\n", line(0x7FFF_FFFF, 10)),
+            ("00000002\r\n", line(2, 10)),
+            ("0\r\n", line(0, 3)),
+            ("2;a=b\r\n", Ok(Extension { size: 2, at: 1 })),
+            ("2;", Ok(Extension { size: 2, at: 1 })),
+            (
+                "7FFFFFF;\r\n",
+                Ok(Extension {
+                    size: 0x7FF_FFFF,
+                    at: 7,
+                }),
+            ),
+            ("5\r\nA;xyz", line(5, 3)),
+            ("3\r\n;ab", line(3, 3)),
+            ("2", Ok(More)),
+            ("2\r", Ok(More)),
+            ("2\n", Ok(More)),
+            ("zz\r\n", Err(BodyError::Malformed)),
+            ("2 \r\n", Err(BodyError::Malformed)),
+            ("-2\r\n", Err(BodyError::Malformed)),
+            ("2\n{", Err(BodyError::Malformed)),
+            ("\r\n", Err(BodyError::Malformed)),
+            ("0000000002\r\n", Err(BodyError::Malformed)),
+            (";a\r\n", Err(BodyError::Malformed)),
+            ("80000000\r\n", Err(BodyError::Overflow)),
+            ("100000000\r\n", Err(BodyError::Overflow)),
+            ("fffffffffffffffffff\r\n", Err(BodyError::Overflow)),
         ];
-        for (line, want) in rows {
-            assert_eq!(status(line), want, "{line:?}");
+        for (bytes, want) in rows {
+            assert_eq!(chunk_prefix(bytes.as_bytes()), want, "{bytes:?}");
         }
-        assert_eq!(chunk_size(b"2;a=b"), Ok(2));
-        assert_eq!(chunk_size(b"7FFFFFF;"), Ok(0x7FF_FFFF));
     }
-
-    #[test]
-    #[ignore = "Rust reads a size line whole: it refuses \"2\\n\" before the next byte comes, where Kestrel waits, and waits for the LF after \"zz\", where Kestrel refuses at once"]
-    fn kestrel_chunk_prefix_waits_on_a_partial_line() {}
 }

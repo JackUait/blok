@@ -21,6 +21,8 @@ pub use store::*;
 #[cfg(test)]
 mod codec_test;
 #[cfg(test)]
+mod durability_law_test;
+#[cfg(test)]
 mod files_test;
 #[cfg(test)]
 mod fixture;

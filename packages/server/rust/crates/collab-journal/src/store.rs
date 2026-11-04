@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, DirBuilder, File};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::os::unix::fs::{DirBuilderExt, FileExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -729,7 +729,7 @@ fn append_ledger_entry(doc_dir: &Path, entry: &LineageEntry) -> io::Result<()> {
         (LEDGER_ENTRY_SIZE as u64 - size % LEDGER_ENTRY_SIZE as u64) % LEDGER_ENTRY_SIZE as u64;
     let mut bytes = vec![0u8; padding as usize];
     bytes.extend_from_slice(&encode_lineage_entry(entry));
-    io::Write::write_all(&mut file, &bytes)?;
+    file.write_all(&bytes)?;
     file.sync_all()?;
     drop(file);
     if created {
@@ -1417,13 +1417,14 @@ impl Session {
     /// cut would delete records the new holder acknowledged. When it cannot
     /// undo, the session stops answering.
     fn roll_back(&mut self, length: u64) {
-        let undone = self.require_fence().and_then(|()| {
-            let journal = self.journal.as_ref().expect("an append has a journal");
+        let journal = self.journal.as_ref().expect("an append has a journal");
+        let undo = || -> Result<(), Error> {
+            self.require_fence()?;
             journal.set_len(length)?;
             journal.sync_all()?;
             Ok(())
-        });
-        if undone.is_err() {
+        };
+        if undo().is_err() {
             self.faulted = true;
         }
     }

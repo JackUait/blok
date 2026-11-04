@@ -409,3 +409,98 @@ fn rejects_query_or_fragment_in_s3_bucket_urls() {
         assert_refused(bucket_url, o, &["--s3-bucket-url", "query or fragment"]);
     }
 }
+
+fn collab_on() -> Options {
+    Options {
+        collab_enabled: true,
+        doc_endpoint: "https://app.example.com/api/blok-docs".into(),
+        ..Options::default()
+    }
+}
+
+// SyncEndpointTests: every row, with BlokServerOptions.ValidateCollab's text.
+#[test]
+fn rejects_non_positive_collab_limits() {
+    type Set = fn(&mut Options, i64);
+    let cases: [(Set, i64, &str); 11] = [
+        (
+            |o, v| o.collab_max_connections_per_user_per_doc = v,
+            0,
+            "CollabMaxConnectionsPerUserPerDoc must be a positive number (got 0): a zero cap refuses every sync connection",
+        ),
+        (
+            |o, v| o.collab_max_connections_per_user_per_doc = v,
+            -1,
+            "CollabMaxConnectionsPerUserPerDoc must be a positive number (got -1): a zero cap refuses every sync connection",
+        ),
+        (
+            |o, v| o.collab_max_message_bytes = v,
+            0,
+            "CollabMaxMessageBytes must be a positive number of bytes (got 0): a zero cap closes every sync connection on its first frame",
+        ),
+        (
+            |o, v| o.collab_max_message_bytes = v,
+            -1,
+            "CollabMaxMessageBytes must be a positive number of bytes (got -1): a zero cap closes every sync connection on its first frame",
+        ),
+        (
+            |o, v| o.collab_keep_alive_interval_nanos = v * 1_000_000_000,
+            -1,
+            "CollabKeepAliveInterval must be zero (off) or greater (got -00:00:01)",
+        ),
+        (
+            |o, v| o.collab_inbound_frames_per_second = v,
+            -1,
+            "CollabInboundFramesPerSecond must be zero (off) or greater (got -1)",
+        ),
+        (
+            |o, v| o.collab_inbound_burst_frames = v,
+            0,
+            "CollabInboundBurstFrames must be a positive number of frames (got 0): a zero burst closes every connection on its first frame",
+        ),
+        (
+            |o, v| o.collab_inbound_burst_frames = v,
+            -1,
+            "CollabInboundBurstFrames must be a positive number of frames (got -1): a zero burst closes every connection on its first frame",
+        ),
+        (
+            |o, v| o.collab_inbound_resyncs_per_minute = v,
+            -1,
+            "CollabInboundResyncsPerMinute must be zero (off) or greater (got -1)",
+        ),
+        (
+            |o, v| o.collab_inbound_awareness_bytes_per_second = v,
+            -1,
+            "CollabInboundAwarenessBytesPerSecond must be zero (off) or greater (got -1)",
+        ),
+        (
+            |o, v| o.collab_max_connections = v,
+            -1,
+            "CollabMaxConnections must be zero (no ceiling) or greater (got -1)",
+        ),
+    ];
+    for (set, value, want) in cases {
+        let mut o = collab_on();
+        set(&mut o, value);
+        assert_eq!(refusal(o), want);
+    }
+}
+
+#[test]
+fn rejects_a_doc_endpoint_auth_with_a_line_break() {
+    for value in [
+        "Bearer doc-secret\n",
+        "Bearer doc-secret\r\n",
+        "Bearer\rdoc-secret",
+    ] {
+        let o = Options {
+            doc_endpoint_auth: value.into(),
+            ..collab_on()
+        };
+        assert_eq!(
+            refusal(o),
+            "--doc-endpoint-auth must not contain a line break (a trailing newline from `echo` or a file is the usual cause): the header would be silently dropped from every doc-endpoint request",
+            "{value:?}"
+        );
+    }
+}

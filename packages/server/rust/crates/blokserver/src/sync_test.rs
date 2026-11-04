@@ -76,6 +76,14 @@ async fn the_sync_door_is_not_mapped_without_collaboration() {
     let running = start(s.handler("")).await;
     let got = send(running.address, &upgrade_head("GET", "/sync/doc-1"), b"").await;
     assert_eq!(got.status, 404);
+    // MapsTheSyncRoutesOnlyWhenCollaborationIsEnabled: no reset either.
+    let reset = send(
+        running.address,
+        "POST /sync/doc-1/reset HTTP/1.1\r\nContent-Length: 0",
+        b"",
+    )
+    .await;
+    assert_eq!(reset.status, 404);
 }
 
 // GET /sync/{doc} lifts the host's request deadline before the door runs,

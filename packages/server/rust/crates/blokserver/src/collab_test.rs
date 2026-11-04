@@ -79,6 +79,24 @@ async fn open_sync_routes_warn_under_the_host_category() {
             "warning = {:?}",
             seen[0]
         );
+        // WarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess; C#
+        // names IBlokAuthorization where Rust names Options.Authorization.
+        for route in [
+            "Options.Authorization",
+            "POST /blok/sync/{doc}/edit",
+            "GET /blok/sync/{doc}/state",
+            "GET /blok/sync/{doc}/history,",
+            "GET /blok/sync/{doc}/history/{lineage}/{sequence}",
+            "DELETE /blok/sync/{doc}/history/{lineage}",
+            "POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore",
+            "GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
+        ] {
+            assert!(
+                seen[0].contains(route),
+                "warning lacks {route:?}: {:?}",
+                seen[0]
+            );
+        }
     }
 
     records.0.lock().unwrap().clear();
@@ -510,4 +528,54 @@ async fn an_html_document_from_the_endpoint_is_written_back_as_segments() {
     let put = endpoint.put(|t| t.contains_key("new")).await;
     assert_eq!(texts(&put)["old"], old);
     let _ = s.drain(Duration::from_secs(30)).await;
+}
+
+// The restart half of C#'s TwoUsersKeepRestoredContentButCannotReopenAfterPermanentPurge:
+// a purge is a tombstone in the journal directory, so a new server over it
+// refuses the upgrade before any endpoint GET.
+#[tokio::test(flavor = "multi_thread")]
+async fn two_users_keep_restored_content_but_cannot_reopen_after_permanent_purge() {
+    let gets = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counted = gets.clone();
+    let endpoint = start(move |request: Request, mut response: ResponseWriter| {
+        let counted = counted.clone();
+        async move {
+            if request.method() == "GET" {
+                counted.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let _ = response.write(b"null").await;
+                return;
+            }
+            response.set_status(204);
+        }
+    })
+    .await;
+    let o = Options {
+        collab_journal: true,
+        doc_endpoint: format!("http://{}/docs", endpoint.address),
+        ..collab_options()
+    };
+    let first = Server::new(o.clone()).unwrap();
+    {
+        let running = start(first.handler("")).await;
+        let state = send(running.address, "GET /sync/doc/state HTTP/1.1", b"").await;
+        assert_eq!(state.status, 200, "state: {}", state.text());
+        assert!(matches!(
+            first.purge_document("doc", Some(allow())).await,
+            Ok(PurgeOutcome::Purged)
+        ));
+    }
+    let _ = first.drain(Duration::from_secs(30)).await;
+    assert!(gets.swap(0, std::sync::atomic::Ordering::SeqCst) > 0);
+
+    let restarted = Server::new(o).unwrap();
+    let running = start(restarted.handler("")).await;
+    let got = send(
+        running.address,
+        "GET /sync/doc HTTP/1.1\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Protocol: blok-sync.v1",
+        b"",
+    )
+    .await;
+    assert_eq!(got.status, 403, "{}", got.text());
+    assert_eq!(gets.load(std::sync::atomic::Ordering::SeqCst), 0);
+    let _ = restarted.drain(Duration::from_secs(30)).await;
 }

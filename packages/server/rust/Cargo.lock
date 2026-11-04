@@ -28,23 +28,20 @@ name = "blok-auth"
 version = "0.0.0"
 
 [[package]]
+name = "blok-blob"
+version = "0.0.0"
+dependencies = [
+ "getrandom",
+ "tokio",
+]
+
+[[package]]
 name = "blok-blokdocs"
 version = "0.0.0"
 dependencies = [
  "blok-jsjson",
  "blok-jsruntime",
  "tokio",
-]
-
-[[package]]
-name = "blok-blokserver-ticket"
-version = "0.0.0"
-dependencies = [
- "base64",
- "blok-jsjson",
- "blok-ticket",
- "hmac",
- "sha2",
 ]
 
 [[package]]
@@ -62,6 +59,17 @@ dependencies = [
  "blok-ticket",
  "getrandom",
  "tokio",
+]
+
+[[package]]
+name = "blok-blokserver-ticket"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "blok-jsjson",
+ "blok-ticket",
+ "hmac",
+ "sha2",
 ]
 
 [[package]]

@@ -129,3 +129,78 @@ fn compares_a_lone_surrogate_as_u_fffd() {
     .expect("from_source");
     assert_eq!(runtime.invoke("any", "{}").expect("invoke"), "0,-1,-1");
 }
+
+// A real path into the sort: an alphabetical view places its unlisted
+// properties by name. Jint 4.17 (ICU, invariant culture), goja and node all
+// give this order for this batch (measured).
+#[test]
+fn sorts_database_properties_like_csharp_through_agent_execute() {
+    let names = [
+        "b",
+        "A",
+        "a",
+        "\u{e4}",
+        "Z",
+        "B",
+        "\u{e9}",
+        "e",
+        "_x",
+        "1",
+        "10",
+        "2",
+        "\u{c4}",
+        "\u{df}",
+        "ss",
+        "Title",
+        "title",
+        "Due date",
+        "Due Date",
+        "a b",
+        "a-b",
+        "ab",
+        "\u{3c9}",
+        "\u{3a9}",
+        "\u{540d}\u{524d}",
+    ];
+    let schema: Vec<String> = names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            format!(
+                r#"{{"id":"p{i}","name":"{name}","type":"text","position":"a{:02}"}}"#,
+                i + 1
+            )
+        })
+        .collect();
+    let input = format!(
+        r#"{{"services":[],"document":{{"blocks":[{{"id":"db","type":"database","data":{{"schema":[{{"id":"title","name":"Name","type":"title","position":"a00"}},{}],"views":[{{"id":"v1","name":"Table","type":"table","position":"a0","sorts":[],"filters":[],"visibleProperties":[],"propertyOrder":"alphabetical"}}],"activeViewId":"v1"}}}}]}},"batch":{{"commands":[{{"name":"database.updateView","args":{{"id":"db","viewId":"v1","changes":{{"properties":[]}}}}}}]}},"actor":{{"id":"agent-x","name":"Agent","kind":"agent"}}}}"#,
+        schema.join(",")
+    );
+    let output = test_json::parse(
+        &new_runtime()
+            .invoke("agentExecute", &input)
+            .expect("agentExecute"),
+    );
+    assert!(output.get("result").get("ok").bool(), "{output:?}");
+    let data = output.get("document").get("blocks").array()[0]
+        .get("data")
+        .clone();
+    let name_of = |id: &str| {
+        data.get("schema")
+            .array()
+            .iter()
+            .find(|p| p.get("id").str() == id)
+            .map(|p| p.get("name").str().to_owned())
+            .expect("a schema id")
+    };
+    let order: Vec<String> = data.get("views").array()[0]
+        .get("visibleProperties")
+        .array()
+        .iter()
+        .map(|id| name_of(id.str()))
+        .collect();
+    assert_eq!(
+        order.join("|"),
+        "_x|1|10|2|a|A|\u{e4}|\u{c4}|a b|a-b|ab|b|B|Due date|Due Date|e|\u{e9}|ss|\u{df}|title|Title|Z|\u{3c9}|\u{3a9}|\u{540d}\u{524d}"
+    );
+}

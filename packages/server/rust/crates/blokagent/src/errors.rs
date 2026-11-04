@@ -54,6 +54,11 @@ impl From<blok_collab_room::Error> for Error {
                 Ok(own) => *own,
                 Err(other) => Error::Room(blok_collab_room::Error::Other(other)),
             },
+            // C# InvalidDataException, which nothing on the room path
+            // catches: a value with no JSON form, such as a nested bigint.
+            blok_collab_room::Error::Convert(blok_collab_convert::Error::Data(err)) => {
+                Error::InvalidData(err.message)
+            }
             other => Error::Room(other),
         }
     }
@@ -61,7 +66,7 @@ impl From<blok_collab_room::Error> for Error {
 
 impl From<blok_collab_convert::Error> for Error {
     fn from(err: blok_collab_convert::Error) -> Error {
-        Error::Room(blok_collab_room::Error::Convert(err))
+        Error::from(blok_collab_room::Error::Convert(err))
     }
 }
 

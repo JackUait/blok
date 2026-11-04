@@ -50,6 +50,9 @@ func HasControl(s string) bool {
 // localhost, a single label, a trailing-dot name or a name ending in a
 // number (a browser reads "１２７.0.0.1" as 127.0.0.1). No DNS lookup.
 func publicHost(u *dotnet.URI) (string, bool) {
+	if u.IdnHostThrows {
+		return "", false
+	}
 	switch u.HostType {
 	case "IPv4", "IPv6":
 		address, ok := dotnet.ParseIP(u.IdnHost)

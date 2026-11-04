@@ -87,6 +87,7 @@ version = "0.0.0"
 dependencies = [
  "blok-jsjson",
  "idna_adapter",
+ "unicode-normalization",
 ]
 
 [[package]]

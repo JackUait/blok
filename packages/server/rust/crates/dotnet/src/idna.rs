@@ -1,9 +1,10 @@
-//! UTS 46 ToASCII as Go's idna.New(MapForLookup(), StrictDomainName(false),
-//! VerifyDNSLength(false)) does it (golang.org/x/net/idna v0.62.0): the
-//! nontransitional mapping, NFC, CheckHyphens on bytes, CheckJoiners, empty
-//! labels allowed, and no bidi rule. .NET's Uri.IdnHost also skips the bidi
-//! rule; the `idna` crate cannot, which is why this is not that crate. The
-//! Unicode tables come from idna_adapter 1.1 (the unicode-rs back end).
+//! UTS 46 ToASCII as .NET's IdnMapping asks ICU for it: the nontransitional
+//! mapping, NFC, hyphens checked at a label's ends only (.NET drops ICU's
+//! HYPHEN_3_4 error), CheckJoiners, labels of 1 to 63 and names of up to 253
+//! bytes, and no bidi rule. The `idna` crate cannot skip the bidi rule,
+//! which is why this is not that crate. The Unicode tables come from
+//! idna_adapter 1.1 (the unicode-rs back end), and ICU's are the machine's:
+//! a char new to Unicode can answer differently.
 
 use idna_adapter::{Adapter, LEFT_OR_DUAL_JOINING_MASK, RIGHT_OR_DUAL_JOINING_MASK};
 
@@ -18,13 +19,21 @@ pub(crate) fn to_ascii(host: &str) -> Option<String> {
     // disallowed, so validate_label refuses them.
     let mapped: String = adapter.map_normalize(host.chars()).collect();
     let mut labels: Vec<String> = mapped.split('.').map(str::to_string).collect();
-    for label in labels.iter_mut() {
+    let last = labels.len() - 1;
+    for (i, label) in labels.iter_mut().enumerate() {
         if label.is_empty() {
-            continue;
+            // ICU allows only the root label to be empty.
+            if i == last && i > 0 {
+                continue;
+            }
+            return None;
         }
         if let Some(encoded) = label.strip_prefix(ACE_PREFIX) {
+            if !encoded.is_ascii() {
+                return None;
+            }
             let decoded = decode(encoded)?;
-            if !decoded.is_empty() && decoded.is_ascii() {
+            if decoded.is_ascii() {
                 return None;
             }
             // NFC and every char valid: the validating mapper changes nothing.
@@ -44,8 +53,15 @@ pub(crate) fn to_ascii(host: &str) -> Option<String> {
         if !label.is_ascii() {
             *label = encode(ACE_PREFIX, label)?;
         }
+        if label.len() > 63 {
+            return None;
+        }
     }
-    Some(labels.join("."))
+    let ascii = labels.join(".");
+    if ascii.strip_suffix('.').unwrap_or(&ascii).len() > 253 {
+        return None;
+    }
+    Some(ascii)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -111,15 +127,12 @@ fn join_type(adapter: &Adapter, c: char) -> Join {
     }
 }
 
-/// Go's validateLabel for the profile: hyphens on bytes, every char valid,
+/// A label as ICU checks it: no hyphen at either end, every char valid,
 /// no leading mark, and the ContextJ rules for the joiners.
 fn validate_label(adapter: &Adapter, label: &str) -> bool {
     let b = label.as_bytes();
     if b.is_empty() {
         return true;
-    }
-    if b.len() > 4 && b[2] == b'-' && b[3] == b'-' {
-        return false;
     }
     if b[0] == b'-' || b[b.len() - 1] == b'-' {
         return false;

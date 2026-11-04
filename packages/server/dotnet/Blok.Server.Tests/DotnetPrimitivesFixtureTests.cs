@@ -63,7 +63,16 @@ public sealed class DotnetPrimitivesFixtureTests
       {
         Assert.Equal(entry["scheme"]!.GetValue<string>(), uri!.Scheme);
         Assert.Equal(entry["host"]!.GetValue<string>(), uri.Host);
-        Assert.Equal(entry["idnHost"]!.GetValue<string>(), uri.IdnHost);
+        Assert.Equal(entry["hostType"]!.GetValue<string>(), uri.HostNameType.ToString());
+        if (entry["idnHostThrows"] is not null)
+        {
+          Assert.Throws<UriFormatException>(() => uri.IdnHost);
+        }
+        else
+        {
+          Assert.Equal(entry["idnHost"]!.GetValue<string>(), uri.IdnHost);
+        }
+
         Assert.Equal(entry["userInfo"]!.GetValue<string>(), uri.UserInfo);
         Assert.Equal(entry["port"]!.GetValue<int>(), uri.Port);
         Assert.Equal(entry["absolutePath"]!.GetValue<string>(), uri.AbsolutePath);

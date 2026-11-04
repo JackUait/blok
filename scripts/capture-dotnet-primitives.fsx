@@ -40,7 +40,10 @@ let uri (b: string) (s: string) =
   if ok then
     o["scheme"] <- JsonValue.Create u.Scheme
     o["host"] <- JsonValue.Create u.Host
-    o["idnHost"] <- JsonValue.Create u.IdnHost
+    // IdnHost throws for some names TryCreate takes, as "a\u200Db.example".
+    match (try Some u.IdnHost with :? UriFormatException -> None) with
+    | Some idn -> o["idnHost"] <- JsonValue.Create idn
+    | None -> o["idnHostThrows"] <- JsonValue.Create true
     o["hostType"] <- JsonValue.Create(string u.HostNameType)
     o["userInfo"] <- JsonValue.Create u.UserInfo
     o["port"] <- JsonValue.Create u.Port

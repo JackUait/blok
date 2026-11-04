@@ -1,5 +1,7 @@
 use std::net::{IpAddr, Ipv6Addr};
 
+use unicode_normalization::UnicodeNormalization;
+
 use crate::ip::{
     all_digits, digit_value, format_ipv6_groups, is_loopback, parse_ipv4, parse_ipv6_text,
 };
@@ -14,7 +16,10 @@ pub struct Uri {
     pub host: String,
     /// Uri.IdnHost: punycode, IPv6 without brackets.
     pub idn_host: String,
-    /// "Dns", "IPv4" or "IPv6".
+    /// Set, and `idn_host` empty, where reading Uri.IdnHost throws:
+    /// TryCreate takes the name but ICU refuses it.
+    pub idn_host_throws: bool,
+    /// Uri.HostNameType: "Dns", "IPv4", "IPv6" or "Basic".
     pub host_type: String,
     pub user_info: String,
     pub port: u16,
@@ -222,44 +227,189 @@ impl Uri {
             self.loopback = is_loopback(IpAddr::V4(address));
             return true;
         }
-        if host.contains("..") {
-            return false;
-        }
-        let allowed = |c: char| c == '-' || c == '.' || c == '_' || c.is_ascii_alphanumeric();
-        if host.chars().any(|c| c.is_ascii() && !allowed(c)) {
-            return false;
-        }
-        // Checked before the IDN step too: punycode is quadratic in a
-        // label's length, and this keeps every label it sees short.
-        let long = host.encode_utf16().count() > MAX_BASIC_HOST_UNITS;
-        if long && has_long_label(host, &['.', '\u{3002}', '\u{ff0e}', '\u{ff61}']) {
-            return false;
-        }
-        self.host = host.to_ascii_lowercase();
-        self.host_type = "Dns".into();
-        self.idn_host = self.host.clone();
-        if !host.is_ascii() {
-            match crate::idna::to_ascii(host) {
+        if is_iri_dns_name(host) {
+            self.host_type = "Dns".into();
+            let host = if host.is_ascii() {
+                host.to_string()
+            } else {
+                strip_bidi_controls(host).nfc().collect()
+            };
+            (self.host, self.loopback) = canonical_name(&host);
+            match idn_equivalent(&self.host) {
                 Some(idn) => self.idn_host = idn,
-                None => return false,
+                None => self.idn_host_throws = true,
             }
-            if long && has_long_label(&self.idn_host, &['.']) {
-                return false;
-            }
+        } else if host.encode_utf16().count() <= MAX_UNC_NAME_UNITS && is_unc_name(host) {
+            // A UNC name, which HostNameType reports as Basic. IdnHost is Host.
+            self.host_type = "Basic".into();
+            (self.host, self.loopback) = canonical_name(host);
+            self.idn_host = self.host.clone();
+        } else {
+            return false;
         }
-        self.loopback = self.host == "localhost";
         true
     }
 }
 
-/// .NET refuses a host longer than this (in UTF-16 units) unless it is a
-/// DNS name, every label of its IDN form at most 63 chars. Measured with
-/// .NET 10 Uri.TryCreate; Go has no such cap.
-const MAX_BASIC_HOST_UNITS: usize = 256;
+/// .NET's UncNameHelper.MaximumInternetNameLength, in UTF-16 units. A
+/// longer name that is not a DNS name is refused, so no long label reaches
+/// punycode.
+const MAX_UNC_NAME_UNITS: usize = 256;
 
-fn has_long_label(host: &str, dots: &[char]) -> bool {
-    host.split(dots)
-        .any(|label| label.encode_utf16().count() > 63)
+const IRI_DOTS: [char; 4] = ['.', '\u{3002}', '\u{ff0e}', '\u{ff61}'];
+
+/// DomainNameHelper.IsValid(iri: true): no ASCII but letters, digits, '-',
+/// '_' and '.', nothing in U+0080..U+009F, and labels split by any IRI dot,
+/// each starting with an ASCII letter or digit or a char from U+00A0 up, 1
+/// to 63 long. A non-ASCII label counts "xn--" and two units for each UTF-16
+/// unit above U+00FF. Only a last label may be empty.
+fn is_iri_dns_name(host: &str) -> bool {
+    let bad = |c: char| {
+        c.is_ascii() && !(c == '-' || c == '.' || c == '_' || c.is_ascii_alphanumeric())
+            || ('\u{80}'..='\u{9f}').contains(&c)
+    };
+    if host.chars().any(bad) {
+        return false;
+    }
+    let mut rest = host;
+    loop {
+        let (label, next) = match rest.find(IRI_DOTS) {
+            Some(end) => {
+                let dot = rest[end..].chars().next().map_or(1, char::len_utf8);
+                (&rest[..end], Some(&rest[end + dot..]))
+            }
+            None => (rest, None),
+        };
+        let Some(first) = label.chars().next() else {
+            return false;
+        };
+        if first < '\u{a0}' && !first.is_ascii_alphanumeric() {
+            return false;
+        }
+        let mut length: usize = label
+            .chars()
+            .map(|c| match u32::from(c) {
+                0..0x100 => 1,
+                0x100..0x10000 => 2,
+                _ => 4,
+            })
+            .sum();
+        if !label.is_ascii() {
+            length += 4;
+        }
+        if length > 63 {
+            return false;
+        }
+        match next {
+            None | Some("") => return true,
+            Some(next) => rest = next,
+        }
+    }
+}
+
+/// UncNameHelper.IsValid, step for step: letters, ASCII digits, '-' and
+/// '_' between dots. The first label may start with '-' or '_' but not be
+/// all digits; a '.' then needs the label before it to have a letter or
+/// digit, so the second label may start with '-' too. A trailing dot is
+/// fine. char.IsLetter reads UTF-16 units: a char above U+FFFF is no letter.
+fn is_unc_name(host: &str) -> bool {
+    let adapter = idna_adapter::Adapter::new();
+    // Letter is Alphabetic without its marks, numbers and circled letters.
+    let letter = |c: char| {
+        u32::from(c) <= 0xffff
+            && c.is_alphabetic()
+            && !c.is_numeric()
+            && !adapter.is_mark(c)
+            && !('\u{24b6}'..='\u{24e9}').contains(&c)
+    };
+    let mut chars = host.chars();
+    let mut valid = false;
+    let mut previous = '\0';
+    for c in chars.by_ref() {
+        previous = c;
+        if c == '.' {
+            break;
+        }
+        if letter(c) || c == '-' || c == '_' {
+            valid = true;
+        } else if !c.is_ascii_digit() {
+            return false;
+        }
+    }
+    if !valid {
+        return false;
+    }
+    for c in chars {
+        match c {
+            '.' => {
+                if !valid || previous == '.' {
+                    return false;
+                }
+                valid = false;
+            }
+            '-' | '_' => {
+                if !valid {
+                    return false;
+                }
+            }
+            _ if letter(c) || c.is_ascii_digit() => valid = true,
+            _ => return false,
+        }
+        previous = c;
+    }
+    valid || previous == '.'
+}
+
+/// DomainNameHelper.ParseCanonicalName: "localhost" and "loopback" read as
+/// localhost, and the whole name is lowercased only when it holds an ASCII
+/// capital.
+fn canonical_name(host: &str) -> (String, bool) {
+    let upper = host.bytes().any(|b| b.is_ascii_uppercase());
+    let folded = host.to_ascii_lowercase();
+    if host == "localhost"
+        || host == "loopback"
+        || upper && (folded == "localhost" || folded == "loopback")
+    {
+        return ("localhost".into(), true);
+    }
+    if upper {
+        return (host.chars().map(lower_invariant).collect(), false);
+    }
+    (host.to_string(), false)
+}
+
+/// char.ToLowerInvariant: one char to one char, and U+0130 (İ) kept.
+fn lower_invariant(c: char) -> char {
+    if c == '\u{130}' {
+        return c;
+    }
+    let mut lower = c.to_lowercase();
+    match (lower.next(), lower.next()) {
+        (Some(l), None) => l,
+        _ => c,
+    }
+}
+
+/// DomainNameHelper.IdnEquivalent: ICU's UTS 46 ToASCII, None where it
+/// throws, as it does for an answer holding a URL delimiter.
+fn idn_equivalent(host: &str) -> Option<String> {
+    if host.is_ascii() {
+        return Some(host.to_ascii_lowercase());
+    }
+    let ascii = crate::idna::to_ascii(&strip_bidi_controls(host))?;
+    if ascii.contains(['\\', '/', '?', '@', '#', ':', '[', ']']) {
+        return None;
+    }
+    Some(ascii)
+}
+
+/// UriHelper.StripBidiControlCharacters: U+200E..U+202E but U+2010..U+2029.
+fn strip_bidi_controls(s: &str) -> String {
+    s.chars()
+        .filter(|&c| {
+            !(('\u{200e}'..='\u{202e}').contains(&c) && !('\u{2010}'..='\u{2029}').contains(&c))
+        })
+        .collect()
 }
 
 /// Writes an IPv4-mapped or IPv4-compatible address with a dotted tail, as

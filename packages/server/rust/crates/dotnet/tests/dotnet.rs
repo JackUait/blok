@@ -70,6 +70,8 @@ fn check_uri(failures: &mut Vec<String>, label: &str, got: Option<Uri>, c: &Valu
         got.scheme.as_str(),
         got.host.as_str(),
         got.idn_host.as_str(),
+        got.idn_host_throws,
+        got.host_type.as_str(),
         got.user_info.as_str(),
         u32::from(got.port),
         got.absolute_path.as_str(),
@@ -78,9 +80,10 @@ fn check_uri(failures: &mut Vec<String>, label: &str, got: Option<Uri>, c: &Valu
         got.absolute_uri.as_str(),
         got.loopback,
     );
-    let (host, idn_host, user_info) = (
+    let (host, idn_host, host_type, user_info) = (
         string(c, "host"),
         string(c, "idnHost"),
+        string(c, "hostType"),
         string(c, "userInfo"),
     );
     let (path, query, fragment, absolute) = (
@@ -93,6 +96,8 @@ fn check_uri(failures: &mut Vec<String>, label: &str, got: Option<Uri>, c: &Valu
         scheme.as_str(),
         host.as_str(),
         idn_host.as_str(),
+        flag(c, "idnHostThrows"),
+        host_type.as_str(),
         user_info.as_str(),
         number(c, "port") as u32,
         path.as_str(),

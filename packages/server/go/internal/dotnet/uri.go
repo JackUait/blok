@@ -4,9 +4,12 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf16"
 	"unicode/utf8"
 
 	"golang.org/x/net/idna"
+	"golang.org/x/text/unicode/norm"
 )
 
 // URI is the part of System.Uri the server reads. Only http and https are
@@ -17,7 +20,11 @@ type URI struct {
 	// Host is Uri.Host: lowercase ASCII, Unicode kept, IPv6 in brackets.
 	Host string
 	// IdnHost is Uri.IdnHost: punycode, IPv6 without brackets.
-	IdnHost  string
+	IdnHost string
+	// IdnHostThrows is set, and IdnHost empty, where reading Uri.IdnHost
+	// throws: TryCreate takes the name but ICU refuses it.
+	IdnHostThrows bool
+	// HostType is Uri.HostNameType: "Dns", "IPv4", "IPv6" or "Basic".
 	HostType string
 	UserInfo string
 	Port     int
@@ -234,29 +241,227 @@ func (u *URI) readHost(host string) bool {
 		u.Loopback = IsLoopback(address)
 		return true
 	}
-	if strings.Contains(host, "..") {
+	switch {
+	case isIriDNSName(host):
+		u.HostType = "Dns"
+		if !isASCII(host) {
+			host = norm.NFC.String(stripBidiControls(host))
+		}
+		u.Host, u.Loopback = canonicalName(host)
+		u.IdnHost, u.IdnHostThrows = idnEquivalent(u.Host)
+	case utf16Len(host) <= maxUncNameUnits && isUncName(host):
+		// A UNC name, which HostNameType reports as Basic. IdnHost is Host.
+		u.HostType = "Basic"
+		u.Host, u.Loopback = canonicalName(host)
+		u.IdnHost = u.Host
+	default:
 		return false
 	}
-	for _, r := range host {
-		if r < 0x80 && !(r == '-' || r == '.' || r == '_' || '0' <= r && r <= '9' || 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z') {
-			return false
-		}
-	}
-	u.Host = asciiLower(host)
-	u.HostType = "Dns"
-	u.IdnHost = u.Host
-	if !isASCII(host) {
-		idn, err := idnaProfile.ToASCII(host)
-		if err != nil {
-			return false
-		}
-		u.IdnHost = idn
-	}
-	u.Loopback = u.Host == "localhost"
 	return true
 }
 
-var idnaProfile = idna.New(idna.MapForLookup(), idna.StrictDomainName(false), idna.VerifyDNSLength(false))
+// .NET's UncNameHelper.MaximumInternetNameLength, in UTF-16 units. A longer
+// name that is not a DNS name is refused, so no long label reaches punycode.
+const maxUncNameUnits = 256
+
+const iriDots = ".\u3002\uff0e\uff61"
+
+// isIriDNSName is DomainNameHelper.IsValid(iri: true): no ASCII but letters,
+// digits, '-', '_' and '.', nothing in U+0080..U+009F, and labels split by
+// any IRI dot, each starting with an ASCII letter or digit or a char from
+// U+00A0 up, 1 to 63 long. A non-ASCII label counts "xn--" and two units
+// for each UTF-16 unit above U+00FF. Only a last label may be empty.
+func isIriDNSName(host string) bool {
+	for _, r := range host {
+		if r < 0x80 && !(r == '-' || r == '.' || r == '_' || isASCIIAlnum(r)) || 0x80 <= r && r <= 0x9f {
+			return false
+		}
+	}
+	for rest := host; ; {
+		end := strings.IndexAny(rest, iriDots)
+		label := rest
+		if end >= 0 {
+			label = rest[:end]
+		}
+		if label == "" {
+			return false
+		}
+		if first, _ := utf8.DecodeRuneInString(label); first < 0xa0 && !isASCIIAlnum(first) {
+			return false
+		}
+		length := 0
+		for _, r := range label {
+			switch {
+			case r < 0x100:
+				length++
+			case r <= 0xffff:
+				length += 2
+			default:
+				length += 4
+			}
+		}
+		if !isASCII(label) {
+			length += 4
+		}
+		if length > 63 {
+			return false
+		}
+		if end < 0 {
+			return true
+		}
+		_, size := utf8.DecodeRuneInString(rest[end:])
+		if rest = rest[end+size:]; rest == "" {
+			return true
+		}
+	}
+}
+
+// isUncName is UncNameHelper.IsValid, step for step: letters, ASCII digits,
+// '-' and '_' between dots. The first label may start with '-' or '_' but
+// not be all digits; a '.' then needs the label before it to have a letter
+// or digit, so the second label may start with '-' too. A trailing dot is
+// fine. char.IsLetter reads UTF-16 units: a char above U+FFFF is no letter.
+func isUncName(host string) bool {
+	letter := func(r rune) bool { return r <= 0xffff && unicode.IsLetter(r) }
+	valid := false
+	i := 0
+	for i < len(host) {
+		r, size := utf8.DecodeRuneInString(host[i:])
+		i += size
+		if r == '.' {
+			break
+		}
+		if letter(r) || r == '-' || r == '_' {
+			valid = true
+		} else if r < '0' || r > '9' {
+			return false
+		}
+	}
+	if !valid {
+		return false
+	}
+	previous := rune(0)
+	if i > 0 {
+		previous = rune(host[i-1])
+	}
+	for i < len(host) {
+		r, size := utf8.DecodeRuneInString(host[i:])
+		i += size
+		switch {
+		case r == '.':
+			if !valid || previous == '.' {
+				return false
+			}
+			valid = false
+		case r == '-' || r == '_':
+			if !valid {
+				return false
+			}
+		case letter(r) || '0' <= r && r <= '9':
+			valid = true
+		default:
+			return false
+		}
+		previous = r
+	}
+	return valid || previous == '.'
+}
+
+// canonicalName is DomainNameHelper.ParseCanonicalName: "localhost" and
+// "loopback" read as localhost, and the whole name is lowercased only when
+// it holds an ASCII capital.
+func canonicalName(host string) (string, bool) {
+	upper := strings.IndexFunc(host, func(r rune) bool { return 'A' <= r && r <= 'Z' }) >= 0
+	if host == "localhost" || host == "loopback" ||
+		upper && (asciiLower(host) == "localhost" || asciiLower(host) == "loopback") {
+		return "localhost", true
+	}
+	if upper {
+		return strings.Map(lowerInvariant, host), false
+	}
+	return host, false
+}
+
+// lowerInvariant is char.ToLowerInvariant, which keeps U+0130 (İ).
+func lowerInvariant(r rune) rune {
+	if r == 'İ' {
+		return r
+	}
+	return unicode.ToLower(r)
+}
+
+// idnEquivalent is DomainNameHelper.IdnEquivalent: ICU's UTS 46 ToASCII
+// with CheckContextJ and nontransitional mapping, no STD3 rules and no bidi
+// rule, where any ICU error but HYPHEN_3_4 throws, as does an answer
+// holding a URL delimiter. It reports whether it throws.
+func idnEquivalent(host string) (string, bool) {
+	if isASCII(host) {
+		return asciiLower(host), false
+	}
+	host = stripBidiControls(host)
+	// ICU refuses a mapped label that starts "xn--" and is not ASCII, which
+	// Go reads as punycode anyway. The "a" keeps Go from decoding the label
+	// while it maps it; the mapped form comes back even with an error.
+	for _, label := range strings.FieldsFunc(host, func(r rune) bool { return strings.ContainsRune(iriDots, r) }) {
+		if isASCII(label) {
+			continue
+		}
+		mapped, _ := idnaProfile.ToUnicode("a" + label)
+		if strings.HasPrefix(mapped, "axn--") && !isASCII(mapped) {
+			return "", true
+		}
+	}
+	ascii, err := idnaProfile.ToASCII(host)
+	if err != nil || strings.ContainsAny(ascii, `\/?@#:[]`) {
+		return "", true
+	}
+	// Go checks hyphens at 3 and 4 with the others, which .NET ignores, so
+	// the ends are checked here, on the Unicode labels.
+	unicodeForm, err := idnaProfile.ToUnicode(ascii)
+	if err != nil {
+		return "", true
+	}
+	for _, label := range strings.Split(strings.TrimSuffix(unicodeForm, "."), ".") {
+		if label == "" || label[0] == '-' || label[len(label)-1] == '-' {
+			return "", true
+		}
+	}
+	labels := strings.Split(strings.TrimSuffix(ascii, "."), ".")
+	for _, label := range labels {
+		if len(label) > 63 {
+			return "", true
+		}
+	}
+	if len(strings.TrimSuffix(ascii, ".")) > 253 {
+		return "", true
+	}
+	return ascii, false
+}
+
+// stripBidiControls is UriHelper.StripBidiControlCharacters: U+200E..U+202E
+// but U+2010..U+2029.
+func stripBidiControls(s string) string {
+	return strings.Map(func(r rune) rune {
+		if 0x200e <= r && r <= 0x202e && !(0x2010 <= r && r <= 0x2029) {
+			return -1
+		}
+		return r
+	}, s)
+}
+
+func utf16Len(s string) int {
+	n := 0
+	for _, r := range s {
+		n += utf16.RuneLen(r)
+	}
+	return n
+}
+
+func isASCIIAlnum(r rune) bool {
+	return '0' <= r && r <= '9' || 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z'
+}
+
+var idnaProfile = idna.New(idna.MapForLookup(), idna.StrictDomainName(false), idna.CheckHyphens(false), idna.VerifyDNSLength(false))
 
 // formatIPv6 writes an IPv4-mapped or IPv4-compatible address with a dotted
 // tail, as .NET does.

@@ -26,6 +26,8 @@ type uriCase struct {
 	Scheme       string  `json:"scheme"`
 	Host         string  `json:"host"`
 	IdnHost      string  `json:"idnHost"`
+	IdnThrows    bool    `json:"idnHostThrows"`
+	HostType     string  `json:"hostType"`
 	UserInfo     string  `json:"userInfo"`
 	Port         int     `json:"port"`
 	AbsolutePath string  `json:"absolutePath"`
@@ -95,11 +97,11 @@ func checkURI(t *testing.T, label string, got *URI, ok bool, c uriCase) {
 		return
 	}
 	want := URI{
-		Scheme: c.Scheme, Host: c.Host, IdnHost: c.IdnHost, UserInfo: c.UserInfo, Port: c.Port,
-		AbsolutePath: c.AbsolutePath, Query: c.Query, Fragment: c.Fragment, AbsoluteURI: c.AbsoluteURI,
-		Loopback: c.Loopback,
+		Scheme: c.Scheme, Host: c.Host, IdnHost: c.IdnHost, IdnHostThrows: c.IdnThrows, HostType: c.HostType,
+		UserInfo: c.UserInfo, Port: c.Port, AbsolutePath: c.AbsolutePath, Query: c.Query, Fragment: c.Fragment,
+		AbsoluteURI: c.AbsoluteURI, Loopback: c.Loopback,
 	}
-	got.HostType, got.authority = "", ""
+	got.authority = ""
 	if *got != want {
 		t.Errorf("%s:\n got %+v\nwant %+v", label, *got, want)
 	}

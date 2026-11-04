@@ -320,6 +320,46 @@
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },
   {
+    "name": "Content-Length +47",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\na\r\nnot found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Content-Length +047",
+    "response": "HTTP/1.1 404 Not Found\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\na\r\nnot found\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Content-Length -0",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Content-Length +0",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Content-Length -00",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\n18\r\nexpected {\"url\": \"...\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "Content-Length -47",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Content-Length +",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Content-Length ++47",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Content-Length + 47",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "Content-Length 9223372036854775808",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
     "name": "absolute target for another host",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   },

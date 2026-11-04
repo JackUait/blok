@@ -378,3 +378,49 @@ func TestAChunkedBodyOnHTTP10IsReadAsChunked(t *testing.T) {
 		}
 	}
 }
+
+// Measured on the C# host: Kestrel reads a Content-Length with one sign in
+// front, "+" before any digits and "-" only before zeros. Anything else
+// that is not digits gets its empty 400.
+func TestContentLengthSignsFollowKestrel(t *testing.T) {
+	address := startHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_, _ = fmt.Fprintf(w, "%d %q %q", r.ContentLength, body, r.Header.Values("Content-Length"))
+	}), time.Minute)
+	cases := map[string]string{
+		"+2":                    `2 "ab" ["+2"]`,
+		"+02":                   `2 "ab" ["+02"]`,
+		"+0":                    `0 "" ["+0"]`,
+		"-0":                    `0 "" ["-0"]`,
+		"-00":                   `0 "" ["-00"]`,
+		" +2\t":                 `2 "ab" ["+2"]`,
+		"+00000000000000000002": `2 "ab" ["+00000000000000000002"]`,
+		"-0000000000000000000":  `0 "" ["-0000000000000000000"]`,
+		"02":                    `2 "ab" ["02"]`,
+		"-2":                    kestrel400,
+		"-1":                    kestrel400,
+		"+":                     kestrel400,
+		"-":                     kestrel400,
+		"++2":                   kestrel400,
+		"+-2":                   kestrel400,
+		"+ 2":                   kestrel400,
+		"+\t2":                  kestrel400,
+		"2+":                    kestrel400,
+		"1-0":                   kestrel400,
+		"9223372036854775808":   kestrel400,
+		"+9223372036854775808":  kestrel400,
+		"+99999999999999999999": kestrel400,
+		"-99999999999999999999": kestrel400,
+		"+0x2":                  kestrel400,
+		"+2,2":                  kestrel400,
+	}
+	for value, want := range cases {
+		got := rawAnswer(t, address, "POST /h HTTP/1.1\r\nHost: x\r\nContent-Length: "+value+"\r\nConnection: close\r\n\r\nab")
+		if want != kestrel400 {
+			_, got, _ = strings.Cut(got, "\r\n\r\n")
+		}
+		if got != want {
+			t.Errorf("%q: got %q, want %q", value, got, want)
+		}
+	}
+}

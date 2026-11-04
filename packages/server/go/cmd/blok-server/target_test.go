@@ -368,6 +368,7 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add(" /% \n")
 	f.Add("POST /a HTTP/1.0\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nGET /\r\n0\r\n\r\nGET /b%zz HTTP/1.0\r\n\r\n")
 	f.Add("POST /a HTTP/1.0\nHost: h\nContent-Length: 3\nTransfer-Encoding: chunked\n\n1\r\nG\r\n0\r\n\r\nGET /b%zz HTTP/1.0\n\n")
+	f.Add("POST /a HTTP/1.1\r\nHost: x\r\nContent-Length: +2\r\n\r\nabGET /b%zz HTTP/1.1\r\nHost: x\r\nContent-Length: -00\r\n\r\n")
 	f.Fuzz(func(t *testing.T, in string) {
 		stream := &targetStream{src: strings.NewReader(in)}
 		out, err := readAllIn(stream, 7)
@@ -483,6 +484,11 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 		// takeCodings rewrites whole Transfer-Encoding lines.
 		lineStart := strings.LastIndexByte(in[:i], '\n') + 1
 		if len(in)-lineStart > 17 && strings.EqualFold(in[lineStart:lineStart+18], "Transfer-Encoding:") {
+			continue
+		}
+		// signedLength turns a Content-Length's sign into a zero.
+		if out[i] == '0' && (in[i] == '+' || in[i] == '-') && len(in)-lineStart > 14 &&
+			strings.EqualFold(in[lineStart:lineStart+15], "Content-Length:") {
 			continue
 		}
 		if out[i] != '_' || !kestrelOnlyNameByte(in[i]) && !kestrelOnlyValueByte(in[i]) {

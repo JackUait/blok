@@ -525,6 +525,14 @@ func (s *targetStream) swapHeaderLine(line []byte) bool {
 	}
 	if bytes.EqualFold(name, []byte("Content-Length")) {
 		s.lengthLines++
+		if signed := signedLength(value); signed >= 0 {
+			// Kestrel reads a sign net/http refuses; a zero reads the same.
+			s.entry.swaps = append(s.entry.swaps, headerSwap{
+				line: s.headerLines - 1, sentName: string(name), name: string(name), value: string(value),
+			})
+			value[signed] = '0'
+			return true
+		}
 	}
 	// endHead reads and rewrites the codings; their bytes stay as sent. The
 	// rewrite blanks the value, so first refuse what Kestrel refuses in any
@@ -550,6 +558,23 @@ func (s *targetStream) swapHeaderLine(line []byte) bool {
 }
 
 type swap struct{ name, value string }
+
+// signedLength is where the sign sits in a Content-Length Kestrel reads and
+// net/http refuses, measured on the C# host: one "+" before digits, or one
+// "-" before zeros, spaces and tabs around. Otherwise -1.
+func signedLength(value []byte) int {
+	start := len(value) - len(bytes.TrimLeft(value, " \t"))
+	digits := bytes.TrimRight(value[start:], " \t")
+	if len(digits) < 2 || digits[0] != '+' && digits[0] != '-' {
+		return -1
+	}
+	for _, c := range digits[1:] {
+		if c < '0' || c > '9' || digits[0] == '-' && c != '0' {
+			return -1
+		}
+	}
+	return start
+}
 
 func swapBytes(b []byte, swapped func(byte) bool) bool {
 	changed := false

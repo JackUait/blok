@@ -1249,6 +1249,14 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   }).map(([name, te]) => [`Transfer-Encoding ${name}`,
     bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\n${te}${CLOSE}\r\n0\r\n\r\n`)])),
   'Transfer-Encoding gzip on HTTP/1.0': bytes('POST /delete HTTP/1.0\r\nTransfer-Encoding: gzip\r\n\r\n'),
+  // Kestrel reads one sign before a Content-Length: "+" before digits, "-"
+  // only before zeros.
+  ...Object.fromEntries(['+47', '+047', '-0', '+0', '-00', '-47', '+', '++47', '+ 47', '9223372036854775808'].map(
+    (length) => [`Content-Length ${length}`, bytes(
+      `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: ${length}\r\n${CLOSE}\r\n` +
+      '{"url":"/0123456789abcdef0123456789abcdef.txt"}',
+    )],
+  )),
   // An absolute target's authority must be the Host, as System.Uri prints
   // it: host in lower case, no userinfo, the default port optional.
   ...Object.fromEntries(Object.entries({

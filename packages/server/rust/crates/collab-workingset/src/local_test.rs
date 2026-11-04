@@ -1,4 +1,5 @@
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -277,10 +278,13 @@ async fn refuses_invalid_updates_before_touching_the_disk() {
     assert_eq!(s.read(DOC_ID).await.unwrap().unwrap().updates, updates);
 }
 
+// File modes are Unix only.
+#[cfg(unix)]
 fn mode(path: &Path) -> u32 {
     fs::metadata(path).unwrap().permissions().mode() & 0o777
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn keeps_the_working_set_private_on_unix() {
     let h = Harness::new();
@@ -292,6 +296,7 @@ async fn keeps_the_working_set_private_on_unix() {
     assert_eq!(mode(&h.dir), 0o700);
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn tightens_a_working_set_directory_that_already_existed() {
     let h = Harness::new();

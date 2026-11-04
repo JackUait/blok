@@ -1,4 +1,3 @@
-use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
@@ -11,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWriteExt, ReadBuf};
 
 use crate::blob::{Body, Store};
 use crate::local::Local;
-use crate::local_test::{TEST_PUBLIC_URL, TempDir, bytes, entries};
+use crate::local_test::{TEST_PUBLIC_URL, TempDir, assert_mode, bytes, entries};
 
 // Twins of the LocalBlobStoreTests cases with no Go twin.
 
@@ -99,11 +98,7 @@ async fn creates_the_temporary_file_owner_only_while_copying() {
     let directory = TempDir::new();
     let (put, writer) = paused_put(&directory.0).await;
     let names = entries(&directory.0);
-    let mode = std::fs::metadata(directory.0.join(&names[0]))
-        .unwrap()
-        .permissions()
-        .mode();
-    assert_eq!(mode & 0o777, 0o600);
+    assert_mode(&directory.0.join(&names[0]), 0o600);
     drop(writer);
     put.await.unwrap().unwrap();
 }
@@ -158,11 +153,7 @@ async fn stores_a_world_readable_file_where_unix_modes_are_supported() {
         .await
         .unwrap();
     let names = entries(&directory.0);
-    let mode = std::fs::metadata(directory.0.join(&names[0]))
-        .unwrap()
-        .permissions()
-        .mode();
-    assert_eq!(mode & 0o777, 0o644);
+    assert_mode(&directory.0.join(&names[0]), 0o644);
 }
 
 #[tokio::test]

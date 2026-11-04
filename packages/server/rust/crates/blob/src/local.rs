@@ -1,4 +1,5 @@
 use std::io;
+#[cfg(unix)]
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -50,11 +51,11 @@ impl Local {
             .join(format!(".blok-upload-{}", random_hex()));
         // Opened in place, not on a blocking thread: a put dropped mid-open
         // would leave a file the guard never saw.
-        let file = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(&temporary_path)?;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let file = options.open(&temporary_path)?;
         let mut temporary = Temporary(Some(temporary_path.clone()));
         let mut file = tokio::fs::File::from_std(file);
         let mut buffer = vec![0u8; 32 << 10];
@@ -73,7 +74,8 @@ impl Local {
         if cancelled() {
             return Err(Error::Cancelled);
         }
-        tokio::fs::set_permissions(&temporary_path, std::fs::Permissions::from_mode(0o644)).await?;
+        tokio::fs::set_permissions(&temporary_path, shared_permissions(&temporary_path).await?)
+            .await?;
         drop(file);
         // File.Move refuses to overwrite; a hard link does too. Where
         // linking fails (FAT, some network mounts) File.Move still succeeds,
@@ -155,4 +157,22 @@ impl Local {
             other => Ok(other?),
         }
     }
+}
+
+#[cfg(unix)]
+async fn shared_permissions(_path: &Path) -> io::Result<std::fs::Permissions> {
+    Ok(std::fs::Permissions::from_mode(0o644))
+}
+
+/// Go's os.Chmod(0o644) on Windows: the owner-write bit clears the
+/// read-only attribute, and nothing else changes.
+#[cfg(windows)]
+#[allow(
+    clippy::permissions_set_readonly_false,
+    reason = "on Windows this only clears the read-only attribute"
+)]
+async fn shared_permissions(path: &Path) -> io::Result<std::fs::Permissions> {
+    let mut permissions = tokio::fs::metadata(path).await?.permissions();
+    permissions.set_readonly(false);
+    Ok(permissions)
 }

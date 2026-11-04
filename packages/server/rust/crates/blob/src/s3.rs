@@ -1,4 +1,5 @@
 use std::io::SeekFrom;
+#[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -349,12 +350,11 @@ impl S3 {
         tokio::fs::create_dir_all(&dir).await?;
         let path = dir.join(format!("blok-s3-{}.tmp", random_hex()));
         // Opened in place so a dropped put cannot miss the file it made.
-        let file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(&path)?;
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(true).create_new(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let file = options.open(&path)?;
         let _spool = Spool(path);
         let mut file = tokio::fs::File::from_std(file);
         let mut hasher = Sha256::new();

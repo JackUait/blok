@@ -4,7 +4,7 @@ This is the third build of Blok's server, next to C# (`../dotnet`) and Go (`../g
 
 It passes the full conformance suite, and CI runs it there. It ships nothing yet: the npm binary, the Docker image and the NuGet packages still ship the C# server.
 
-It runs on Unix only for now. The blob store and the collab journal use Unix file APIs.
+It builds for Unix and Windows. On Windows the collab journal holds a document with the open's share mode, as Go's `lock_windows.go` does, and file modes are left to Windows. CI tests it on Linux only; `cargo check --workspace --all-targets --target x86_64-pc-windows-gnu` (with a MinGW toolchain for `ring`) checks the Windows build.
 
 ## Build and test
 

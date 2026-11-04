@@ -1,5 +1,6 @@
 use std::fs;
 use std::io::{self, Read};
+#[cfg(unix)]
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -311,10 +312,12 @@ impl Inner {
         document: &[u8],
         cancelled: &AtomicBool,
     ) -> Result<(), Error> {
-        fs::DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(&self.directory)?;
+        let mut builder = fs::DirBuilder::new();
+        builder.recursive(true);
+        // Go's MkdirAll ignores the mode on Windows.
+        #[cfg(unix)]
+        builder.mode(0o700);
+        builder.create(&self.directory)?;
         self.tighten_existing_directory();
         let final_path = self.path_for(doc_id);
         let mut suffix = [0u8; 16];
@@ -325,11 +328,11 @@ impl Inner {
             lower_hex(&suffix)
         ));
         let result = (|| {
-            let mut file = fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .mode(0o600)
-                .open(&temporary)?;
+            let mut options = fs::OpenOptions::new();
+            options.write(true).create_new(true);
+            #[cfg(unix)]
+            options.mode(0o600);
+            let mut file = options.open(&temporary)?;
             io::Write::write_all(&mut file, document)?;
             file.sync_all()?;
             drop(file);
@@ -361,7 +364,7 @@ impl Inner {
     /// The private mode applies only at creation, so a pre-made directory is
     /// chmodded, warned about once if not ours.
     fn tighten_existing_directory(&self) {
-        if let Err(err) = fs::set_permissions(&self.directory, fs::Permissions::from_mode(0o700))
+        if let Err(err) = make_private(&self.directory)
             && err.kind() == io::ErrorKind::PermissionDenied
             && !self.mode_warned.swap(true, Ordering::SeqCst)
         {
@@ -412,6 +415,24 @@ fn is_guid_n(value: &str) -> bool {
 }
 
 /// Makes a rename or delete durable; failures are ignored, as in C#.
+#[cfg(unix)]
+fn make_private(path: &Path) -> io::Result<()> {
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))
+}
+
+/// Go's os.Chmod(0o700) on Windows: the owner-write bit clears the
+/// read-only attribute, and nothing else changes.
+#[cfg(windows)]
+#[allow(
+    clippy::permissions_set_readonly_false,
+    reason = "on Windows this only clears the read-only attribute"
+)]
+fn make_private(path: &Path) -> io::Result<()> {
+    let mut permissions = fs::metadata(path)?.permissions();
+    permissions.set_readonly(false);
+    fs::set_permissions(path, permissions)
+}
+
 fn sync_directory(path: &Path) {
     if let Ok(dir) = fs::File::open(path) {
         let _ = dir.sync_all();

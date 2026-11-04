@@ -187,14 +187,11 @@ async fn read_upload(
             getrandom::fill(&mut random).map_err(|_| ReadErr::Io)?;
             let hex: String = random.iter().map(|b| format!("{b:02x}")).collect();
             let path = std::env::temp_dir().join(format!(".blok-upload-{hex}"));
-            let file = tokio::fs::OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create_new(true)
-                .mode(0o600)
-                .open(&path)
-                .await
-                .map_err(|_| ReadErr::Io)?;
+            let mut options = tokio::fs::OpenOptions::new();
+            options.read(true).write(true).create_new(true);
+            #[cfg(unix)]
+            options.mode(0o600);
+            let file = options.open(&path).await.map_err(|_| ReadErr::Io)?;
             upload.spool = Some((file, path));
             upload.file_name = name;
             upload.mime_type = mime;

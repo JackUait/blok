@@ -146,6 +146,7 @@ impl Server {
 }
 
 /// Resolves on SIGTERM, SIGINT or SIGQUIT: .NET stops gracefully on each.
+#[cfg(unix)]
 pub async fn shutdown_signal() -> io::Result<()> {
     use tokio::signal::unix::{SignalKind, signal};
     let mut term = signal(SignalKind::terminate())?;
@@ -155,6 +156,27 @@ pub async fn shutdown_signal() -> io::Result<()> {
         _ = term.recv() => {}
         _ = interrupt.recv() => {}
         _ = quit.recv() => {}
+    }
+    Ok(())
+}
+
+/// Resolves on what Go's signal.Notify reports on Windows for the same
+/// signals: Ctrl+C or Ctrl+Break (os.Interrupt), and a console close,
+/// logoff or shutdown (syscall.SIGTERM).
+#[cfg(windows)]
+pub async fn shutdown_signal() -> io::Result<()> {
+    use tokio::signal::windows;
+    let mut c = windows::ctrl_c()?;
+    let mut brk = windows::ctrl_break()?;
+    let mut close = windows::ctrl_close()?;
+    let mut logoff = windows::ctrl_logoff()?;
+    let mut shutdown = windows::ctrl_shutdown()?;
+    tokio::select! {
+        _ = c.recv() => {}
+        _ = brk.recv() => {}
+        _ = close.recv() => {}
+        _ = logoff.recv() => {}
+        _ = shutdown.recv() => {}
     }
     Ok(())
 }

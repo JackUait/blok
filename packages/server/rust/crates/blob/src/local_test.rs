@@ -1,4 +1,3 @@
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 fn never() -> bool {
@@ -30,6 +29,24 @@ impl Drop for TempDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.0);
     }
+}
+
+/// The file's mode on Unix. Windows has no mode: Go's chmod there only
+/// clears the read-only attribute for a mode with the owner-write bit.
+pub fn assert_mode(path: &Path, mode: u32) {
+    let permissions = std::fs::metadata(path).unwrap().permissions();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(permissions.mode() & 0o777, mode, "{}", path.display());
+    }
+    #[cfg(windows)]
+    assert_eq!(
+        permissions.readonly(),
+        mode & 0o200 == 0,
+        "{}",
+        path.display()
+    );
 }
 
 pub fn entries(directory: &Path) -> Vec<String> {
@@ -152,8 +169,7 @@ async fn put_stores_the_file_when_hard_links_fail() {
         .unwrap();
     let path = directory.0.join(url.strip_prefix(TEST_PUBLIC_URL).unwrap());
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello");
-    let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
-    assert_eq!(mode, 0o644);
+    assert_mode(&path, 0o644);
     assert_eq!(entries(&directory.0).len(), 1);
 }
 

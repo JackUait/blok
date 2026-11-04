@@ -3,6 +3,8 @@ use std::fs;
 use crate::local_test::Harness;
 use crate::s3_test::{DOC_ID, DOC_KEY_HEX, section_of, store_tag};
 
+// A symlink loop needs a privilege on Windows.
+#[cfg(unix)]
 #[tokio::test]
 async fn a_header_read_failure_other_than_absent_fails_the_write() {
     let h = Harness::new();

@@ -493,7 +493,7 @@ fn append_canonical_op(out: &mut Vec<u8>, op: &EditOp) -> Result<(), Error> {
         }
         EditOp::PatchMaps { .. } => {
             return Err(Error::Message(
-                "collab: a map patch comes only from restore, which never digests its ops".into(),
+                "collab: a map patch comes only from restore, which never digests its ops.".into(),
             ));
         }
     }

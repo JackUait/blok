@@ -210,6 +210,11 @@ fn says_a_map_patch_has_no_canonical_body() {
     .err()
     .unwrap_or_else(|| panic!("a map patch digested"));
     assert!(err.to_string().contains("restore"), "{err}");
+    // C# CollabEditOps.cs ends it with a period; Go's editops.go does not.
+    assert_eq!(
+        err.to_string(),
+        "collab: a map patch comes only from restore, which never digests its ops."
+    );
 }
 
 #[test]

@@ -38,6 +38,8 @@ pub enum Error {
     PurgeNotAuthorized,
     /// The registered operation store cannot purge; holds its type name.
     PurgeUnsupported(String),
+    /// A restore whose point is gone; the restore answers NotFound.
+    RestorePointMissing,
     /// A host's own store failure.
     Other(Box<dyn std::error::Error + Send + Sync>),
 }
@@ -78,6 +80,7 @@ impl fmt::Display for Error {
                 f,
                 "{PURGE_UNSUPPORTED}: the registered collabstore.OperationStore ({store}) must also implement collabstore.PurgeStore"
             ),
+            Error::RestorePointMissing => f.write_str("collab: the restore point is gone"),
             Error::Other(err) => err.fmt(f),
         }
     }
@@ -190,7 +193,6 @@ pub(crate) fn is_runtime_limit(err: &Error) -> bool {
 }
 
 /// A history read failure the routes answer Corrupt for.
-#[allow(dead_code, reason = "history.rs uses it; it lands next")]
 pub(crate) fn is_corrupt(err: &Error) -> bool {
     let mut at = err;
     loop {

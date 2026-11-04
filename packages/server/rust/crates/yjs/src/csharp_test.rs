@@ -516,3 +516,54 @@ fn documents_and_types_cross_threads() {
     assert_send_sync::<crate::Map>();
     assert_send_sync::<XmlText>();
 }
+
+// Go's transact clears the open transaction in a defer: a body that panics
+// must not leave every later transaction looking nested.
+#[test]
+fn a_panicking_body_leaves_no_transaction_open() {
+    let doc = pinned_doc();
+    let m = doc.get_map("m").unwrap();
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = doc.transact(|txn| {
+            m.set(txn, "a", num(1.0))?;
+            panic!("the body fails");
+        });
+    }));
+    assert!(caught.is_err());
+    let update = doc.transact(|txn| m.set(txn, "b", num(2.0))).unwrap();
+    assert!(update.is_some(), "a later transaction joined a dead one");
+}
+
+// C# (unchecked ulong) and Go (uint64) wrap clock + length - 1 on a
+// length-0 item at clock 0, so a local write after one names origin
+// 2^64-1, which no decoder reads back. Pinned as both servers behave.
+#[test]
+fn a_write_after_a_length_zero_head_wraps_its_origin() {
+    let doc = pinned_doc();
+    apply_bytes(&doc, &b64("AQHoBwAkAQFtAWsAAA=="));
+    let m = doc.get_map("m").unwrap();
+    let update = doc
+        .transact(|txn| m.set(txn, "k", num(1.0)))
+        .unwrap()
+        .unwrap();
+    let mut r = Reader::new(&update);
+    for _ in 0..4 {
+        r.read_var_uint().unwrap();
+    }
+    assert_eq!(
+        r.read_uint8().unwrap() & crate::item::ORIGIN_BIT,
+        crate::item::ORIGIN_BIT
+    );
+    assert_eq!(r.read_var_uint().unwrap(), 1000);
+    let wrapped = &update[r.pos()..r.pos() + 10];
+    assert_eq!(
+        wrapped,
+        &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+    );
+    assert!(
+        crate::decode(&update)
+            .unwrap_err()
+            .to_string()
+            .contains("above 2^53-1")
+    );
+}

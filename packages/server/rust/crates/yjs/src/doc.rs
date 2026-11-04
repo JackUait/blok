@@ -89,7 +89,9 @@ impl DocShared {
 ///
 /// Every public method takes the document's lock for its own duration
 /// only, so a transaction body may call any of them, the document's own
-/// transact and apply included.
+/// transact and apply included. Callers serialize transactions, as Go's
+/// room does: a transact from another thread while one is open joins it
+/// as if nested.
 #[derive(Clone)]
 pub struct Doc(Arc<DocShared>);
 
@@ -306,7 +308,15 @@ impl Doc {
                 delete_set: DeleteSet::new(),
             });
         }
-        let result = body(&txn);
+        // Go clears the open transaction in a defer; a body that unwinds
+        // must not leave every later transaction looking nested.
+        let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| body(&txn))) {
+            Ok(result) => result,
+            Err(panic) => {
+                self.lock().current = None;
+                std::panic::resume_unwind(panic);
+            }
+        };
         let mut st = self.lock();
         let mut t = st.current.take().expect("the transaction is open");
         result?;

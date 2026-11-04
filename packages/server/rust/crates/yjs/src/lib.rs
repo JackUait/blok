@@ -95,8 +95,16 @@ pub(crate) struct Header {
 }
 
 impl Header {
+    /// Wraps, as C#'s unchecked ulong and Go's uint64 do: a length-0
+    /// struct at clock 0 ends at 2^64-1.
     pub fn last_id(&self) -> Id {
-        Id::new(self.id.client, self.id.clock + self.length as u64 - 1)
+        Id::new(
+            self.id.client,
+            self.id
+                .clock
+                .wrapping_add(self.length as u64)
+                .wrapping_sub(1),
+        )
     }
 
     pub fn end(&self) -> u64 {

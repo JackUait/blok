@@ -280,6 +280,25 @@ async fn no_auth_mode_rejects_a_present_disallowed_origin() {
     assert_eq!(allowed.header("Sec-WebSocket-Protocol"), "");
 }
 
+// SyncHandshake.Admit asks for an allowed origin when Sec-Fetch-Site is
+// cross-site, even with no Origin header.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn no_auth_mode_rejects_a_cross_site_upgrade_with_no_origin() {
+    let h = start_endpoint(|_| {}, None).await;
+    for site in ["cross-site", "Cross-Site"] {
+        let client = h.dial("/sync/doc-42", &[("Sec-Fetch-Site", site)]).await;
+        assert_eq!(
+            (client.status, client.body.as_str()),
+            (403, "origin not allowed\n"),
+            "{site}"
+        );
+    }
+    let same = h
+        .dial("/sync/doc-42", &[("Sec-Fetch-Site", "same-site")])
+        .await;
+    assert_eq!(same.status, 101);
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rejected_handshake_spends_the_rate_limit_on_its_address_so_auth_failures_cannot_flood() {
     let h = start_endpoint(

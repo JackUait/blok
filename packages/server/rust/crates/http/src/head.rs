@@ -40,6 +40,8 @@ pub(crate) struct Head {
     pub query: String,
     pub version: Version,
     pub headers: Headers,
+    /// Bytes of the header lines and the blank line: a trailer counts on.
+    pub header_bytes: usize,
 }
 
 /// Why Kestrel refuses a head. Each is a bare answer and a close.
@@ -219,6 +221,7 @@ impl HeadScan {
             query,
             version: line.version,
             headers,
+            header_bytes: self.header_bytes,
         })
     }
 }
@@ -466,10 +469,17 @@ fn check_framing(headers: &Headers) -> Result<(), Refusal> {
     Ok(())
 }
 
-/// Measured: an optional '+', then decimal digits that fit an i64.
+/// Measured: one optional '+', or one '-' before zeros only, then decimal
+/// digits that fit an i64.
 pub(crate) fn parse_content_length(value: &str) -> Option<u64> {
-    let digits = value.strip_prefix('+').unwrap_or(value);
+    let (negative, digits) = match value.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, value.strip_prefix('+').unwrap_or(value)),
+    };
     if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    if negative && !digits.bytes().all(|b| b == b'0') {
         return None;
     }
     digits.parse::<i64>().ok().map(|n| n as u64)

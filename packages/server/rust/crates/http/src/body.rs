@@ -8,6 +8,7 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 use crate::exchange::{Exchange, lock};
+use crate::head::{MAX_HEADER_BLOCK, MAX_HEADER_COUNT};
 
 /// Kestrel's MinRequestBodyDataRate.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -29,6 +30,11 @@ pub enum BodyError {
     /// Bad chunked framing. Unless the route set the cap, the host has
     /// answered 400 and closes.
     Malformed,
+    /// A trailer over the head's limits: Kestrel's 431, then the close.
+    HeadersTooLarge,
+    /// NUL or invalid UTF-8 in a trailer value. Unless the route set the cap,
+    /// the host has answered Kestrel's unhandled-error 500 and closes.
+    BadTrailer,
     /// A chunk size past 0x7FFFFFFF. Unless the route set the cap, the host
     /// has answered Kestrel's unhandled-error 500 and closes.
     Overflow,
@@ -47,6 +53,8 @@ impl fmt::Display for BodyError {
             Self::TooSlow => f.write_str("request body under the host's minimum data rate"),
             Self::Malformed => f.write_str("malformed chunked request body"),
             Self::Overflow => f.write_str("chunk size over 0x7FFFFFFF"),
+            Self::HeadersTooLarge => f.write_str("request trailer over the header limits"),
+            Self::BadTrailer => f.write_str("request trailer value is not valid UTF-8"),
             Self::UnexpectedEof => f.write_str("unexpected EOF"),
             Self::Deadline => f.write_str("request deadline passed"),
             Self::Io(kind) => write!(f, "request body read failed: {kind}"),
@@ -77,15 +85,20 @@ pub(crate) struct BodyState {
     pub read: u64,
     pub waited: Duration,
     pub failed: Option<BodyError>,
+    /// The head's header bytes and lines, then the trailer's on top.
+    pub trailer_bytes: usize,
+    pub trailer_lines: usize,
 }
 
 impl BodyState {
-    pub fn new(framing: Framing) -> Self {
+    pub fn new(framing: Framing, head_bytes: usize, head_lines: usize) -> Self {
         Self {
             framing,
             read: 0,
             waited: Duration::ZERO,
             failed: None,
+            trailer_bytes: head_bytes,
+            trailer_lines: head_lines,
         }
     }
 
@@ -274,7 +287,37 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 *chunk = Chunk::Size;
                 Step::Progress
             }
-            Chunk::Size | Chunk::Trailers => {
+            // Measured: trailer lines count with the head's lines and bytes
+            // and follow the head's grammar, bare LF line ends included.
+            Chunk::Trailers => {
+                let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
+                    if state.trailer_bytes + available >= MAX_HEADER_BLOCK {
+                        return Step::Fail(BodyError::HeadersTooLarge);
+                    }
+                    return ended_step(available);
+                };
+                state.trailer_bytes += lf + 1;
+                if state.trailer_bytes > MAX_HEADER_BLOCK {
+                    return Step::Fail(BodyError::HeadersTooLarge);
+                }
+                let line = &inbound.buf[..lf];
+                let line = line.strip_suffix(b"\r").unwrap_or(line);
+                if line.is_empty() {
+                    inbound.consume(lf + 1);
+                    *chunk = Chunk::Done;
+                    return Step::Progress;
+                }
+                if state.trailer_lines >= MAX_HEADER_COUNT {
+                    return Step::Fail(BodyError::HeadersTooLarge);
+                }
+                if let Err(error) = check_trailer_line(line) {
+                    return Step::Fail(error);
+                }
+                state.trailer_lines += 1;
+                inbound.consume(lf + 1);
+                Step::Progress
+            }
+            Chunk::Size => {
                 let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
                     if available > MAX_CHUNK_LINE {
                         return Step::Fail(BodyError::Malformed);
@@ -285,19 +328,10 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 if lf == 0 || inbound.buf[lf - 1] != b'\r' {
                     return Step::Fail(BodyError::Malformed);
                 }
-                let line = &inbound.buf[..lf - 1];
-                let next = if *chunk == Chunk::Trailers {
-                    if line.is_empty() {
-                        Chunk::Done
-                    } else {
-                        Chunk::Trailers
-                    }
-                } else {
-                    match chunk_size(line) {
-                        Ok(0) => Chunk::Trailers,
-                        Ok(size) => Chunk::Data(size),
-                        Err(error) => return Step::Fail(error),
-                    }
+                let next = match chunk_size(&inbound.buf[..lf - 1]) {
+                    Ok(0) => Chunk::Trailers,
+                    Ok(size) => Chunk::Data(size),
+                    Err(error) => return Step::Fail(error),
                 };
                 inbound.consume(lf + 1);
                 *chunk = next;
@@ -306,6 +340,31 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
             Chunk::Done => Step::End,
         },
     }
+}
+
+/// Measured on the C# host: a line with no colon, an empty or folded name,
+/// a name byte that is NUL, tab, CR, space or above 0x7F, or a CR in the
+/// value is a 400; NUL or invalid UTF-8 in the value is the app's 500.
+fn check_trailer_line(line: &[u8]) -> Result<(), BodyError> {
+    let colon = line
+        .iter()
+        .position(|&b| b == b':')
+        .ok_or(BodyError::Malformed)?;
+    let (name, value) = (&line[..colon], &line[colon + 1..]);
+    if name.is_empty()
+        || name
+            .iter()
+            .any(|&b| b == 0 || b == b'\t' || b == b'\r' || b == b' ' || b >= 0x80)
+    {
+        return Err(BodyError::Malformed);
+    }
+    if value.contains(&b'\r') {
+        return Err(BodyError::Malformed);
+    }
+    if value.contains(&0) || std::str::from_utf8(value).is_err() {
+        return Err(BodyError::BadTrailer);
+    }
+    Ok(())
 }
 
 /// Hex digits, then an optional ";extension". Measured: no spaces, no sign.
@@ -389,9 +448,10 @@ async fn fail(
             exchange.cancel();
             None
         }
-        BodyError::Deadline | BodyError::Overflow => None,
+        BodyError::HeadersTooLarge => Some(431),
+        BodyError::Deadline | BodyError::Overflow | BodyError::BadTrailer => None,
     };
-    if error == BodyError::Overflow {
+    if matches!(error, BodyError::Overflow | BodyError::BadTrailer) {
         if answer && !route_set {
             exchange.refuse_unhandled().await;
         } else {

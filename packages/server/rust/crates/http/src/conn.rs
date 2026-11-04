@@ -185,7 +185,11 @@ async fn exchange(
             close: false,
             hijacked: false,
         }),
-        body: tokio::sync::Mutex::new(BodyState::new(framing)),
+        body: tokio::sync::Mutex::new(BodyState::new(
+            framing,
+            head.header_bytes,
+            head.headers.len(),
+        )),
         limits: Mutex::new(Limits {
             limit: config.max_request_body,
             route_set: false,

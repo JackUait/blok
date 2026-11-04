@@ -333,6 +333,12 @@ func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Rea
 		return nil, err
 	}
 	request.ContentLength = length
+	if length == 0 && method != http.MethodPut {
+		// C# sends Content-Length: 0 on GET and DELETE too. net/http drops
+		// the canonical key and never writes a zero length for GET, so
+		// only a lower-case key reaches the wire.
+		request.Header["content-length"] = []string{"0"}
+	}
 	// C# sends no User-Agent; nil stops Go's default one.
 	request.Header["User-Agent"] = nil
 	if method == http.MethodPut {

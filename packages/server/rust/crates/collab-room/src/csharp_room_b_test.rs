@@ -1480,45 +1480,289 @@ fn threshold(operations: i64) -> Options {
     }
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_checkpoint_refused_by_a_corrupt_journal_closes_the_room() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_checkpoint_refused_by_a_corrupt_journal_closes_the_room() {
+    let k = Kit::new();
+    let (manager, writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.fail_checkpoints(Some(|| {
+        invalid_data("collab: the journal record after sequence 1 is corrupt.")
+    }));
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_checkpoint_sequence_the_store_refuses_closes_the_room() {}
+    assert!(!checkpoint(&manager).await);
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_transient_checkpoint_failure_keeps_the_room_and_is_retried() {}
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(manager.live_room_count(), 0);
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_checkpoint_that_lost_the_fence_closes_the_room() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_checkpoint_sequence_the_store_refuses_closes_the_room() {
+    let k = Kit::new();
+    let (manager, writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.fail_checkpoints(Some(|| {
+        Error::Journal(blok_collab_journal::Error::Argument {
+            message: "a checkpoint must name a committed sequence at or above the published one"
+                .to_owned(),
+            out_of_range: true,
+        })
+    }));
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_reloaded_room_counts_the_tail_it_inherited_toward_the_threshold() {}
+    assert!(!checkpoint(&manager).await);
 
-#[test]
-#[ignore = "not ported yet"]
-fn checkpoint_then_tail_replays_the_exact_document() {}
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(manager.live_room_count(), 0);
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn checkpoint_publication_does_not_delete_operation_history() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_transient_checkpoint_failure_keeps_the_room_and_is_retried() {
+    let k = Kit::new();
+    let (manager, writer, membership, lineage, client) = one_operation(&k, quick()).await;
+    let busy: MakeError = || Error::message("the journal disk is busy");
+    k.fail_checkpoints(Some(busy));
 
-#[test]
-#[ignore = "not ported yet"]
-fn the_operation_that_trips_a_fatal_checkpoint_is_still_relayed_and_acknowledged() {}
+    assert!(!checkpoint(&manager).await);
+    assert!(!checkpoint(&manager).await);
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_a_journal_room_projects_committed_work_before_it_rebaselines() {}
+    assert!(writer.closed().is_empty());
+    assert_eq!(manager.live_room_count(), 1);
+    assert!(k.journal.checkpoint(TEST_DOC).is_none());
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_client_disconnecting_mid_reset_does_not_cost_the_projection() {}
+    k.fail_checkpoints(None);
+
+    assert!(checkpoint(&manager).await);
+    assert_eq!(checkpointed_through(&k), 1);
+
+    op(
+        &membership,
+        &lineage,
+        OP_TWO,
+        update_appending(&client, "?"),
+    )
+    .await;
+    k.fail_checkpoints(Some(busy));
+
+    assert!(!checkpoint(&manager).await);
+    assert!(!checkpoint(&manager).await);
+
+    assert!(writer.closed().is_empty());
+    assert_eq!(manager.live_room_count(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_checkpoint_that_lost_the_fence_closes_the_room() {
+    let k = Kit::new();
+    let (manager, writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.journal.steal_fence(TEST_DOC);
+
+    assert!(!checkpoint(&manager).await);
+
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(manager.live_room_count(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_reloaded_room_counts_the_tail_it_inherited_toward_the_threshold() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(threshold(3), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    for (id, piece) in [(OP_ONE, "a"), (OP_TWO, "b")] {
+        op(&membership, &lineage, id, update_appending(&client, piece)).await;
+    }
+    leave(&manager, membership).await;
+    evicted(&manager, "the room to be evicted").await;
+
+    assert!(k.journal.checkpoint(TEST_DOC).is_none());
+
+    let (rejoined, lineage) = enter(&manager, &v2("", true)).await;
+    let second = synced_client(&manager, TEST_DOC, "helloab").await;
+    op(
+        &rejoined,
+        &lineage,
+        OP_THREE,
+        update_appending(&second, "c"),
+    )
+    .await;
+    manager.settle().await;
+
+    assert_eq!(checkpointed_through(&k), 3);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn checkpoint_then_tail_replays_the_exact_document() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(threshold(3), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    for (n, id) in [OP_ONE, OP_TWO, OP_THREE, OP_FOUR, OP_FIVE]
+        .into_iter()
+        .enumerate()
+    {
+        let piece = char::from(b'a' + n as u8).to_string();
+        op(&membership, &lineage, id, update_appending(&client, &piece)).await;
+    }
+    manager.settle().await;
+    let live_text = exported_text(&manager, TEST_DOC).await;
+    let live_state_vector = server_state_vector(&manager, &new_client()).await;
+    leave(&manager, membership).await;
+    evicted(&manager, "the room to be evicted").await;
+
+    let probe = k.journal.open_session(TEST_DOC).expect("the journal opens");
+    let opened = probe.open_result().clone();
+    probe.do_close();
+    assert_eq!(
+        opened.checkpoint.as_ref().map(|c| c.through),
+        Some(3),
+        "the reload has no checkpoint to stand in for anything"
+    );
+    assert_eq!(
+        opened.tail.iter().map(|r| r.sequence).collect::<Vec<_>>(),
+        [4, 5]
+    );
+
+    let reloaded_state_vector = server_state_vector(&manager, &new_client()).await;
+
+    assert_eq!(live_state_vector, reloaded_state_vector);
+    assert_eq!(live_text, "helloabcde");
+    assert_eq!(exported_text(&manager, TEST_DOC).await, live_text);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn checkpoint_publication_does_not_delete_operation_history() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(threshold(3), true);
+    let writer = v2("editor-1", true);
+    let (membership, lineage) = enter(&manager, &writer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    let ids = [OP_ONE, OP_TWO, OP_THREE];
+    for (n, id) in ids.into_iter().enumerate() {
+        let piece = char::from(b'a' + n as u8).to_string();
+        op(&membership, &lineage, id, update_appending(&client, &piece)).await;
+    }
+    manager.settle().await;
+
+    assert_eq!(checkpointed_through(&k), 3);
+    let committed = k.journal.committed(TEST_DOC);
+    assert_eq!(
+        committed
+            .iter()
+            .map(|r| r.operation_id.as_str())
+            .collect::<Vec<_>>(),
+        ids
+    );
+    assert_eq!(
+        committed.iter().map(|r| r.sequence).collect::<Vec<_>>(),
+        [1, 2, 3]
+    );
+    assert_eq!(
+        committed
+            .iter()
+            .map(|r| r.actor_id.as_deref())
+            .collect::<Vec<_>>(),
+        [Some("editor-1"); 3]
+    );
+
+    writer.clear();
+    op(&membership, &lineage, OP_ONE, committed[0].update.clone()).await;
+    manager.settle().await;
+
+    match writer.messages().as_slice() {
+        [
+            Message::Acknowledgement {
+                server_sequence, ..
+            },
+        ] => assert_eq!(*server_sequence, 1),
+        other => panic!("expected one acknowledgement, got {other:?}"),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_operation_that_trips_a_fatal_checkpoint_is_still_relayed_and_acknowledged() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(threshold(1), true);
+    let writer = v2("", true);
+    let (membership, lineage) = enter(&manager, &writer).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    k.fail_checkpoints(Some(|| Error::message("the journal disk is busy")));
+    for id in [OP_ONE, OP_TWO] {
+        op(&membership, &lineage, id, update_appending(&client, "!")).await;
+    }
+    manager.settle().await;
+    let last = update_appending(&client, "?");
+    writer.clear();
+
+    op(&membership, &lineage, OP_THREE, last.clone()).await;
+    manager.settle().await;
+
+    match writer.messages().as_slice() {
+        [
+            Message::SyncUpdate { update },
+            Message::Acknowledgement {
+                server_sequence, ..
+            },
+        ] => {
+            assert_eq!(update, &last);
+            assert_eq!(*server_sequence, 3);
+        }
+        other => panic!("expected the relay then the acknowledgement, got {other:?}"),
+    }
+    assert_eq!(writer.closed(), [CloseReason::CommitUnavailable]);
+    assert_eq!(k.committed(), 3);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_a_journal_room_projects_committed_work_before_it_rebaselines() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", Some("v1"));
+    k.host.echoes.store(true, Ordering::SeqCst);
+    let manager = k.manager(quick(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    op(
+        &membership,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, " world"),
+    )
+    .await;
+
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello world");
+
+    manager.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello world");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_client_disconnecting_mid_reset_does_not_cost_the_projection() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", Some("v1"));
+    k.host.echoes.store(true, Ordering::SeqCst);
+    let manager = k.manager(quick(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    op(
+        &membership,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, " world"),
+    )
+    .await;
+
+    let stuck = k.host.gate_saves();
+    let resetting = manager.clone();
+    let reset = tokio::spawn(async move { resetting.reset(TEST_DOC).await });
+    wait_until("the reset's flush to start", || k.host.saved() == 1).await;
+
+    reset.abort();
+    k.host.open_saves(&stuck);
+    let _ = reset.await;
+
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello world");
+}
 
 /// C# AJournalledDocumentWhoseRecordMissedAnOperation: the drain's
 /// write-back is refused, so the record holds "hello"; answers a fresh
@@ -1546,9 +1790,16 @@ async fn a_journalled_document_whose_record_missed_an_operation(k: &Kit) -> Mana
     k.manager(quick(), true)
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_a_reloaded_room_projects_the_work_the_record_never_got() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_a_reloaded_room_projects_the_work_the_record_never_got() {
+    let k = Kit::new();
+    let second = a_journalled_document_whose_record_missed_an_operation(&k).await;
+    let _joined = enter(&second, &v2("", true)).await;
+
+    second.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(exported_text(&second, TEST_DOC).await, "hello world");
+}
 
 fn seed_raw_journal(k: &Kit, baseline: Vec<Vec<u8>>) {
     let session = k.journal.open_session(TEST_DOC).expect("the journal opens");
@@ -1563,21 +1814,82 @@ fn seed_raw_journal(k: &Kit, baseline: Vec<Vec<u8>>) {
     session.do_close();
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_a_cold_document_whose_journal_cannot_be_replayed_still_rebaselines() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_a_cold_document_whose_journal_cannot_be_replayed_still_rebaselines() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", Some("v1"));
+    seed_raw_journal(&k, vec![vec![0xde, 0xad, 0xbe, 0xef, 0x01]]);
+    let manager = k.manager(quick(), true);
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_a_cold_document_whose_journal_stops_replaying_still_rebaselines() {}
+    let result = manager.reset(TEST_DOC).await.expect("reset");
 
-#[test]
-#[ignore = "not ported yet"]
-fn resetting_a_cold_journalled_document_projects_it_before_rebaselining() {}
+    assert_eq!(result.status, ResetStatus::Done);
+    assert_eq!(result.tag.expect("a tag").epoch, 4);
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello");
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_edit_on_a_cold_journalled_document_does_not_wait_for_the_version_read() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_a_cold_document_whose_journal_stops_replaying_still_rebaselines() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", Some("v1"));
+    let replayable = new_client();
+    seed_raw_journal(
+        &k,
+        vec![
+            update_appending(&replayable, "hello"),
+            vec![0xde, 0xad, 0xbe, 0xef, 0x01],
+        ],
+    );
+    let manager = k.manager(quick(), true);
+    let writes_before = k.disk.writes();
+
+    let result = manager.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(k.disk.writes(), writes_before);
+    assert_eq!(result.status, ResetStatus::Done);
+    assert_eq!(result.tag.expect("a tag").epoch, 4);
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "hello");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resetting_a_cold_journalled_document_projects_it_before_rebaselining() {
+    let k = Kit::new();
+    let second = a_journalled_document_whose_record_missed_an_operation(&k).await;
+
+    second.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(exported_text(&second, TEST_DOC).await, "hello world");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_edit_on_a_cold_journalled_document_does_not_wait_for_the_version_read() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", Some("v1"));
+    let manager = k.manager(quick(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    op(
+        &membership,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, " world"),
+    )
+    .await;
+    leave(&manager, membership).await;
+    evicted(&manager, "the room to be evicted").await;
+    let gate = k.host.gate_loads();
+
+    let edit = tokio::time::timeout(
+        Duration::from_secs(5),
+        edit_ops(&manager, vec![appending("b-1", "!")]),
+    )
+    .await
+    .expect("the edit waited for the version read");
+
+    assert_eq!(edit.status, EditStatus::Applied);
+    assert_eq!(k.committed(), 2);
+    gate.open();
+}
 
 /// C# AReloadedRoomWhoseVersionReadIsStuck.
 async fn a_reloaded_room_whose_version_read_is_stuck(k: &Kit, o: Options) -> (Manager, Gate) {
@@ -1598,41 +1910,234 @@ async fn a_reloaded_room_whose_version_read_is_stuck(k: &Kit, o: Options) -> (Ma
     (k.manager(o, true), gate)
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_version_read_that_lands_after_a_failed_projection_still_fills_the_handle() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_version_read_that_lands_after_a_failed_projection_still_fills_the_handle() {
+    let k = Kit::new();
+    let (manager, gate) =
+        a_reloaded_room_whose_version_read_is_stuck(&k, version_options(ms(50))).await;
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello world").await;
+    op(
+        &membership,
+        &lineage,
+        OP_TWO,
+        update_appending(&client, "!"),
+    )
+    .await;
+    let before = k.host.saved();
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_reset_flush_carries_the_reloaded_version_and_yields_to_the_hosts_save() {}
+    k.host
+        .fail_next_save(|| endpoint_error("collab: the doc endpoint PUT returned 502.", 502));
+    assert!(checkpoint(&manager).await);
+    wait_until("the projection the settle gave up waiting for", || {
+        k.host.saved() > before
+    })
+    .await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_reloaded_room_inherits_its_committed_sequence_from_the_head() {}
+    assert_eq!(k.host.last().version, None);
+    gate.open();
 
-#[test]
-#[ignore = "not ported yet"]
-fn failed_projection_stays_dirty_and_retries() {}
+    wait_until("the refused projection to be retried", || {
+        k.host.saved() > before + 1
+    })
+    .await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn eviction_and_drain_project_the_latest_committed_sequence() {}
+    assert_eq!(k.host.last().version.as_deref(), Some("v2"));
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn eviction_waits_for_a_dirty_projection() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_reset_flush_carries_the_reloaded_version_and_yields_to_the_hosts_save() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", Some("v1"));
+    let manager = k.manager(quick(), true);
+    let (first, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    op(
+        &first,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, " world"),
+    )
+    .await;
+    leave(&manager, first).await;
+    evicted(&manager, "the seeded room to be evicted").await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn permanent_projection_failure_releases_the_hold_and_marks_the_document_unexportable() {}
+    k.host.holds(TEST_DOC, "hello world", Some("v2"));
+    let (second, lineage) = enter(&manager, &v2("", true)).await;
+    let next = synced_client(&manager, TEST_DOC, "hello world").await;
+    op(&second, &lineage, OP_TWO, update_appending(&next, "!")).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_transient_export_failure_is_retried_not_refused() {}
+    k.host.holds(TEST_DOC, "host wins", Some("v3"));
+    k.host
+        .fail_next_save(|| endpoint_error("collab: the doc endpoint PUT returned 409.", 409));
 
-#[test]
-#[ignore = "not ported yet"]
-fn an_engine_pool_wait_never_gives_the_export_up() {}
+    manager.reset(TEST_DOC).await.expect("reset");
+
+    assert_eq!(k.host.last().version.as_deref(), Some("v2"));
+    assert_eq!(exported_text(&manager, TEST_DOC).await, "host wins");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_reloaded_room_inherits_its_committed_sequence_from_the_head() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(quick(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    for id in [OP_ONE, OP_TWO] {
+        op(&membership, &lineage, id, update_appending(&client, "!")).await;
+    }
+
+    assert!(checkpoint(&manager).await);
+    leave(&manager, membership).await;
+    evicted(&manager, "the room to be evicted").await;
+    let _rejoined = enter(&manager, &v2("", true)).await;
+
+    let republished = checkpoint(&manager).await;
+
+    assert_eq!(manager.live_room_count(), 1);
+    assert!(!republished);
+    assert_eq!(checkpointed_through(&k), 2);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn failed_projection_stays_dirty_and_retries() {
+    let k = Kit::new();
+    let (manager, _writer, _membership, lineage, _) = one_operation(&k, quick()).await;
+    k.host
+        .fail_next_save(|| endpoint_error("collab: the doc endpoint PUT returned 502.", 502));
+
+    assert!(checkpoint(&manager).await);
+
+    wait_until("the refused projection to be retried", || {
+        k.host.saved() >= 2
+    })
+    .await;
+
+    let saves = k.host.saves();
+    assert_eq!(save_text(&saves[0]), "hello!");
+    assert_eq!(save_text(&saves[1]), "hello!");
+    assert_projection(&saves[1], &lineage, 1);
+    assert_eq!(manager.live_room_count(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn eviction_and_drain_project_the_latest_committed_sequence() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(quick(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    for id in [OP_ONE, OP_TWO] {
+        op(&membership, &lineage, id, update_appending(&client, "!")).await;
+    }
+    leave(&manager, membership).await;
+    evicted(&manager, "the room to be evicted").await;
+
+    let saves = k.host.saves();
+    assert_eq!(saves.len(), 1);
+    assert_projection(&saves[0], &lineage, 2);
+    assert_eq!(save_text(&saves[0]), "hello!!");
+
+    let (rejoined, _) = enter(&manager, &v2("", true)).await;
+    let next = synced_client(&manager, TEST_DOC, "hello!!").await;
+    op(&rejoined, &lineage, OP_THREE, update_appending(&next, "?")).await;
+
+    manager.drain().await.expect("drain");
+
+    let drained = &k.host.saves()[1];
+    assert_projection(drained, &lineage, 3);
+    assert_eq!(save_text(drained), "hello!!?");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn eviction_waits_for_a_dirty_projection() {
+    let k = Kit::new();
+    let o = Options {
+        retry_backoff: ms(400),
+        retry_backoff_cap: ms(400),
+        ..quick()
+    };
+    let (manager, _writer, membership, lineage, _) = one_operation(&k, o).await;
+    k.host
+        .fail_next_save(|| endpoint_error("collab: the doc endpoint PUT returned 502.", 502));
+    leave(&manager, membership).await;
+
+    wait_until("the eviction projection to be refused", || {
+        k.host.saved() == 1
+    })
+    .await;
+    manager.settle().await;
+
+    assert_eq!(manager.live_room_count(), 1);
+
+    evicted(
+        &manager,
+        "the room to be evicted once its projection landed",
+    )
+    .await;
+
+    let saves = k.host.saves();
+    assert_eq!(saves.len(), 2);
+    assert_projection(&saves[1], &lineage, 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn permanent_projection_failure_releases_the_hold_and_marks_the_document_unexportable() {
+    let k = Kit::new();
+    let (manager, _writer, membership, _, _) = one_operation(&k, quick()).await;
+    k.knob.fail_exports(Some(|| {
+        Error::Convert(blok_collab_convert::Error::Data(
+            blok_collab_convert::DataError {
+                message: "collab: block \"b-1\" has data that is not a map.".to_owned(),
+            },
+        ))
+    }));
+
+    assert!(checkpoint(&manager).await);
+    tokio::time::sleep(ms(100)).await;
+    manager.settle().await;
+    leave(&manager, membership).await;
+
+    evicted(
+        &manager,
+        "the room to stop being held for a projection it can never build",
+    )
+    .await;
+
+    assert_eq!(k.knob.exports(), 2);
+    assert!(k.host.saves().is_empty());
+    assert_eq!(k.lines_with("b-1"), 1, "{:?}", k.logs.lines());
+    assert_eq!(k.committed(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_transient_export_failure_is_retried_not_refused() {
+    let k = Kit::new();
+    let (manager, _writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.knob.fail_next_export(plain_timeout_export);
+
+    assert!(checkpoint(&manager).await);
+
+    wait_until("the retried export to land", || k.host.saved() > 0).await;
+
+    assert_eq!(k.lines_with("cannot export its document"), 0);
+    assert_eq!(save_text(&k.host.last()), "hello!");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_engine_pool_wait_never_gives_the_export_up() {
+    let k = Kit::new();
+    let (manager, _writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.knob.fail_exports(Some(pool_wait_export));
+
+    assert!(checkpoint(&manager).await);
+
+    wait_until("more than eight export attempts", || k.knob.exports() > 8).await;
+    manager.settle().await;
+
+    assert_eq!(k.lines_with("gave up exporting"), 0);
+}
 
 /// A working copy whose every export fails with `make`, after one v1 edit.
 async fn a_failing_working_copy(k: &Kit, make: MakeError) -> (Manager, Joined, Doc) {
@@ -1645,45 +2150,240 @@ async fn a_failing_working_copy(k: &Kit, make: MakeError) -> (Manager, Joined, D
     (manager, membership, client)
 }
 
-#[test]
-#[ignore = "not ported yet"]
-fn on_a_working_copy_a_transient_export_failure_that_never_heals_is_given_up() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn on_a_working_copy_a_transient_export_failure_that_never_heals_is_given_up() {
+    let k = Kit::new();
+    let (manager, membership, client) = a_failing_working_copy(&k, timed_out_export).await;
+    wait_until("the export to be given up", || {
+        k.logs.logged("gave up exporting")
+    })
+    .await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn on_a_working_copy_a_given_up_export_lets_the_room_unload() {}
+    let attempts = k.knob.exports();
+    run_timers(&manager).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn on_a_working_copy_an_engine_pool_wait_never_gives_the_export_up() {}
+    assert_eq!(k.knob.exports(), attempts);
+    assert!(k.host.saves().is_empty());
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_transient_flush_export_failure_is_not_a_refusal() {}
+    k.knob.fail_exports(None);
+    update(&membership, update_appending(&client, "?")).await;
+    wait_until("the next edit's export", || k.host.saved() == 1).await;
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_java_script_error_reading_export_html_is_a_refusal() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn on_a_working_copy_a_given_up_export_lets_the_room_unload() {
+    let k = Kit::new();
+    let (manager, membership, _) = a_failing_working_copy(&k, too_large_export).await;
+    leave(&manager, membership).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn a_cancelled_export_is_retried_not_refused() {}
+    evicted(&manager, "the room to unload").await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn operation_store_room_never_writes_the_working_set_store() {}
+    assert!(k.host.saves().is_empty());
+    assert_eq!(replay(&k.store().frames(TEST_DOC)), "hello!");
+}
 
-#[test]
-#[ignore = "not ported yet"]
-fn operation_store_room_never_compacts() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn on_a_working_copy_an_engine_pool_wait_never_gives_the_export_up() {
+    let k = Kit::new();
+    let (manager, _membership, _) = a_failing_working_copy(&k, pool_wait_export).await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn operation_store_room_loads_baseline_and_tail_through_the_fenced_session() {}
+    wait_until("more than eight export attempts", || k.knob.exports() > 8).await;
+    manager.settle().await;
 
-#[test]
-#[ignore = "not ported yet"]
-fn operation_store_room_evicts_without_waiting_for_a_blob_write() {}
+    assert_eq!(k.lines_with("gave up exporting"), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_transient_flush_export_failure_is_not_a_refusal() {
+    let k = Kit::new();
+    let (manager, _writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.knob.fail_exports(Some(plain_timeout_export));
+
+    manager.drain().await.expect("drain");
+
+    assert!(k.logs.logged("could not export during flush"));
+    assert_eq!(k.lines_with("cannot export its document"), 0);
+    assert!(k.host.saves().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_java_script_error_reading_export_html_is_a_refusal() {
+    let k = Kit::new();
+    k.host.holds_nothing(TEST_DOC);
+    let failing = FailingHtml(|| runtime_failure(Kind::InvalidDocument));
+    let manager = k.build(quick(), true, Some(converter_over(failing)), false);
+    let _joined = enter(&manager, &v2("", true)).await;
+    let edit = edit_ops(
+        &manager,
+        vec![EditOp::Insert {
+            id: Str::from("r"),
+            block: node(
+                r#"{"type":"database-row","data":{"properties":{"notes":{"blocks":[{"id":"n","type":"paragraph","data":{"text":"<i>n</i>"}}]}}}}"#,
+            ),
+            after: None,
+            parent: None,
+        }],
+    )
+    .await;
+
+    assert_eq!(edit.status, EditStatus::Applied, "{:?}", edit.err);
+    assert!(checkpoint(&manager).await);
+    tokio::time::sleep(ms(100)).await;
+    manager.settle().await;
+
+    assert!(
+        k.logs.logged("cannot export its document"),
+        "{:?}",
+        k.logs.lines()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancelled_export_is_retried_not_refused() {
+    let k = Kit::new();
+    let (manager, _writer, _membership, _, _) = one_operation(&k, quick()).await;
+    k.knob.fail_next_export(|| Error::Canceled);
+
+    assert!(checkpoint(&manager).await);
+
+    wait_until("the retried export to land", || k.host.saved() > 0).await;
+
+    assert_eq!(k.lines_with("cannot export its document"), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn operation_store_room_never_writes_the_working_set_store() {
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(quick(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let (stock, _) = enter(&manager, &v1("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+
+    op(
+        &membership,
+        &lineage,
+        OP_ONE,
+        update_appending(&client, "!"),
+    )
+    .await;
+    update(&stock, update_appending(&client, "?")).await;
+    let edit = edit_ops(&manager, vec![appending("b-1", "x")]).await;
+    let text = exported_text(&manager, TEST_DOC).await;
+
+    manager.drain().await.expect("drain");
+
+    assert_eq!(k.disk.writes(), 0);
+    assert!(!k.store().holds(TEST_DOC));
+    assert_eq!(edit.status, EditStatus::Applied);
+    assert_eq!(k.committed(), 3);
+    let saves = k.host.saves();
+    assert_eq!(saves.len(), 1);
+    assert_eq!(save_text(&saves[0]), text);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn operation_store_room_never_compacts() {
+    let k = Kit::new();
+    let o = Options {
+        compaction_frame_threshold: 2,
+        ..quick()
+    };
+    k.host.holds(TEST_DOC, "hello", None);
+    let manager = k.manager(o.clone(), true);
+    let (membership, lineage) = enter(&manager, &v2("", true)).await;
+    let (stock, _) = enter(&manager, &v1("", true)).await;
+    let client = synced_client(&manager, TEST_DOC, "hello").await;
+    for id in [OP_ONE, OP_TWO] {
+        op(&membership, &lineage, id, update_appending(&client, "!")).await;
+    }
+    for piece in ["a", "b"] {
+        update(&stock, update_appending(&client, piece)).await;
+    }
+    edit_ops(&manager, vec![appending("b-1", "x")]).await;
+    manager.drain().await.expect("drain");
+
+    assert_eq!(k.disk.writes(), 0);
+    assert!(!k.store().holds(TEST_DOC));
+    assert_eq!(k.committed(), 5);
+
+    let legacy_doc = "doc-legacy";
+    k.host.holds(legacy_doc, "hello", None);
+    let legacy = k.manager(o, false);
+    let joined = join(&legacy, legacy_doc, &v1("", true)).await;
+    let legacy_client = new_client();
+    for piece in ["a", "b", "c", "d", "e"] {
+        update(&joined, update_appending(&legacy_client, piece)).await;
+    }
+    legacy.drain().await.expect("drain");
+
+    assert!(
+        k.disk.writes() > 0,
+        "the working-set-only room wrote nothing"
+    );
+    assert_eq!(k.disk.most_frames.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn operation_store_room_loads_baseline_and_tail_through_the_fenced_session() {
+    use sha2::{Digest, Sha256};
+
+    let k = Kit::new();
+    k.host.holds(TEST_DOC, "endpoint", None);
+    let source = new_client();
+    let baseline = update_appending(&source, "base");
+    let tail = update_appending(&source, "-tail");
+    let session = k.journal.open_session(TEST_DOC).expect("the journal opens");
+    session
+        .do_reset(Reset {
+            format: blok_collab_workingset::CURRENT_FORMAT,
+            epoch: 2,
+            lineage: TAG_LINEAGE.to_owned(),
+            baseline: vec![baseline],
+        })
+        .expect("the reset");
+    session
+        .do_append(Candidate {
+            operation_id: OP_ONE.to_owned(),
+            actor_id: None,
+            source: blok_collab_operation::Source::CLIENT_V1,
+            digest: Sha256::digest(&tail).to_vec(),
+            update: tail,
+        })
+        .expect("the append");
+    session.do_close();
+    k.store()
+        .seed(TEST_DOC, &[full_state(&doc_with("blob"))], tag_at(9));
+    let manager = k.manager(quick(), true);
+
+    let served = exported_text(&manager, TEST_DOC).await;
+    manager.drain().await.expect("drain");
+
+    assert_eq!(served, "base-tail");
+    assert_eq!(k.store().reads.load(Ordering::SeqCst), 0);
+    assert_eq!(k.disk.writes(), 0);
+    assert!(!k.store().holds(TEST_DOC));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn operation_store_room_evicts_without_waiting_for_a_blob_write() {
+    let k = Kit::new();
+    k.store().set_fail_writes(Some(Box::new(|_| {
+        Some("the working set store is down".to_owned())
+    })));
+    let (manager, _writer, membership, _, _) = one_operation(&k, quick()).await;
+
+    leave(&manager, membership).await;
+    wait_until("the eviction flush to project", || k.host.saved() == 1).await;
+    manager.settle().await;
+
+    assert_eq!(k.lines_with("until its working set is written"), 0);
+    assert_eq!(manager.live_room_count(), 0);
+    assert_eq!(k.disk.writes(), 0);
+    let saves = k.host.saves();
+    assert_eq!(saves.len(), 1);
+    assert_eq!(save_text(&saves[0]), "hello!");
+}
 
 fn actor_records(k: &Kit, kind: ActivityKind) -> Vec<String> {
     k.activity

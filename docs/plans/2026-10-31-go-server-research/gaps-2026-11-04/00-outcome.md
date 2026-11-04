@@ -76,10 +76,10 @@ Each C# answer was measured first.
   - Fixed in Go. With collab on, the standalone host counts every hijacked socket until it closes. A failed hijack answers the empty 500.
   - This means rejected sockets can push a real user into a 500 on C#. Go now does the same. Changing it would be a C# decision.
 - Sec-WebSocket-Protocol trim. Kestrel decodes the head as UTF-8. String.Trim then drops U+000B, U+000C, U+0085, U+00A0, U+1680, U+2009, U+202F and U+3000. It keeps U+001C and U+200B. A lone 0x85 or 0xA0 byte is a 400 on both hosts (measured). Fixed in Go with `unicode.IsSpace`. A new sync-transport case passes on both targets.
-- Compaction throw. Not reachable from any input found:
-  - C#'s `EncodeStateAsUpdate` with no target cannot fail on decode. It throws only on an engine invariant (`has no parent to write`).
-  - Go's twin of that check is `item.go:88,103`.
-  - If it ever fired: C# would skip that flush's persist and export, and its caller would log. Go logs and still persists and exports. Left as is.
+- Compaction throw. No input found that reaches it. UNVERIFIED that none exists.
+  - C#'s `EncodeStateAsUpdate` with no target does no decode. Its throw sites on the encode path are engine invariant checks. Examples: `Yjs/UpdateV1Encoder.cs:58` ("has no wire form") and the store lookups in `Yjs/StructStore.cs:94-209`.
+  - Go has the same checks as `fail()` calls, for example `item.go:88,103` and `store.go:44,76`.
+  - If one ever fired, C# would skip that flush's persist and export, and its caller would log. That reading comes from collab-core.md (`CollabRoom.cs:3550-3637`). Go logs and still persists and exports. Left as is.
 - Empty user name, embedding only. Measured on C# with a per-user cap of 1:
   - Name claim absent: the second socket gets 429.
   - Name claim `"alice"`: the second socket gets 429.

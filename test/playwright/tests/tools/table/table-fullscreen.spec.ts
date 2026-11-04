@@ -537,7 +537,7 @@ test.describe('Table full screen', () => {
     expect(gap?.below).toBeLessThanOrEqual(Math.ceil(gap?.bar ?? 0) + 1);
   });
 
-  test('with the table border scrolled away, the row and column grips stay on the modal edges', async ({ page }) => {
+  test('with the table border scrolled away, the row and column grips hang from the modal edges', async ({ page }) => {
     const bigData: OutputData = {
       blocks: [{
         id: 'tbl',
@@ -582,19 +582,17 @@ test.describe('Table full screen', () => {
         document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('[data-blok-table-grip]') !== null;
 
       return {
-        rowCentre: row.left + row.width / 2 - left,
-        colCentre: col.top + col.height / 2 - header.bottom,
+        rowGap: row.left - left,
+        colGap: col.top - header.bottom,
         rowOnTop: hits(row),
         colOnTop: hits(col),
       };
     });
 
     expect(placed).not.toBeNull();
-    // A hovered grip is 16px across: centred 8px in, it shows whole at the edge.
-    expect(placed?.rowCentre).toBeGreaterThanOrEqual(8);
-    expect(placed?.rowCentre).toBeLessThanOrEqual(12);
-    expect(placed?.colCentre).toBeGreaterThanOrEqual(8);
-    expect(placed?.colCentre).toBeLessThanOrEqual(12);
+    // Each hangs from its edge line: the modal's start edge, the header's bottom line.
+    expect(Math.abs(placed?.rowGap ?? Infinity)).toBeLessThanOrEqual(1);
+    expect(Math.abs(placed?.colGap ?? Infinity)).toBeLessThanOrEqual(1);
     expect(placed?.rowOnTop).toBe(true);
     expect(placed?.colOnTop).toBe(true);
   });

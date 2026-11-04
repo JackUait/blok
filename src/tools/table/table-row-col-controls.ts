@@ -28,7 +28,12 @@ interface GripFrame {
   visibleWidth: number;
   rowGripX: number;
   colGripY: number;
+  /** Set when the grip hangs from a modal edge instead of centring on the table border. */
+  rowTransform?: string;
+  colTransform?: string;
 }
+
+const CENTRED = 'translate(-50%, -50%)';
 const COL_PILL_WIDTH = 24;
 const COL_PILL_HEIGHT = 4;
 const ROW_PILL_WIDTH = 4;
@@ -534,7 +539,7 @@ export class TableRowColControls {
 
     grip.style.width = `${idleWidth}px`;
     grip.style.height = `${idleHeight}px`;
-    grip.style.transform = 'translate(-50%, -50%)';
+    grip.style.transform = CENTRED;
     grip.style.outline = '2px solid var(--blok-table-grip-outline, transparent)';
 
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
@@ -651,6 +656,7 @@ export class TableRowColControls {
 
     style.top = `${frame.colGripY}px`;
     style.left = `${adjustedX}px`;
+    style.transform = frame.colTransform ?? CENTRED;
 
     if (!this.overlay) {
       return;
@@ -668,7 +674,7 @@ export class TableRowColControls {
     }
   }
 
-  private placeRowGrip(grip: HTMLElement, i: number, rows: ArrayLike<HTMLElement>, frame: { rowGripX: number }): void {
+  private placeRowGrip(grip: HTMLElement, i: number, rows: ArrayLike<HTMLElement>, frame: GripFrame): void {
     if (i >= rows.length) {
       return;
     }
@@ -682,6 +688,7 @@ export class TableRowColControls {
 
     style.left = `${frame.rowGripX}px`;
     style.top = `${centerY}px`;
+    style.transform = frame.rowTransform ?? CENTRED;
   }
 
   /**
@@ -719,9 +726,10 @@ export class TableRowColControls {
 
   /**
    * In full screen the modal clips the table, and its scroller runs past the
-   * grid to the modal edges. A grip whose table border scrolled away rides the
-   * modal's visible edge instead: the start side, or just under the header.
-   * Half a hovered grip in, so it shows whole.
+   * grid to the modal edges. A grip whose table border scrolled away hangs from
+   * the modal's visible edge instead: the start side, or the header's bottom line.
+   * It grows inward from that line: centred on it, the modal edge would clip
+   * half of it and the header (above the grip overlay) would cover half.
    */
   private pinToModalEdges(frame: GripFrame, direction: 'ltr' | 'rtl'): GripFrame {
     const modal = this.grid.closest<HTMLElement>(`[${FULLSCREEN_ATTR}]`);
@@ -733,19 +741,22 @@ export class TableRowColControls {
     const origin = this.overlay.getBoundingClientRect();
     const start = modal.getBoundingClientRect().left + modal.clientLeft - origin.left;
     const end = start + modal.clientWidth;
-    const inset = GRIP_HOVER_SIZE / 2;
-    const gridStart = frame.gridOffset;
-    const gridEnd = frame.gridOffset + this.grid.offsetWidth;
+    const top = header.getBoundingClientRect().bottom - origin.top;
+    const rowLine = direction === 'ltr' ? frame.gridOffset : frame.gridOffset + this.grid.offsetWidth;
+    const rowStuck = direction === 'ltr' ? rowLine < start : rowLine > end;
+    const colStuck = frame.colGripY < top;
+    const pinned = { ...frame, visibleStart: start, visibleWidth: end - start };
 
-    return {
-      ...frame,
-      visibleStart: start,
-      visibleWidth: end - start,
-      rowGripX: direction === 'ltr'
-        ? Math.max(gridStart + BORDER_WIDTH / 2, start + inset)
-        : Math.min(gridEnd - BORDER_WIDTH / 2, end - inset),
-      colGripY: Math.max(frame.colGripY, header.getBoundingClientRect().bottom - origin.top + inset),
-    };
+    if (rowStuck) {
+      pinned.rowGripX = direction === 'ltr' ? start : end;
+      pinned.rowTransform = direction === 'ltr' ? 'translate(0, -50%)' : 'translate(-100%, -50%)';
+    }
+    if (colStuck) {
+      pinned.colGripY = top;
+      pinned.colTransform = 'translate(-50%, 0)';
+    }
+
+    return pinned;
   }
 
   /**

@@ -3,6 +3,7 @@
 // The host's flag, environment and startup-refusal contract, black-box, for
 // every target. Messages come from HostArguments and BlokServerOptions.
 
+import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer as createHttpServer, get } from 'node:http';
 import { createServer, type Server } from 'node:net';
@@ -13,7 +14,7 @@ import { expect, it as baseIt } from 'vitest';
 
 import { sendRequest } from './http-client';
 import { allocateLoopbackPort, runServerCommand } from './run-against';
-import { startServerProcess } from './server-process';
+import { adoptChild, startServerProcess } from './server-process';
 
 const it = baseIt.skipIf(
   process.env.BLOK_CONFORMANCE_SERVER === undefined ||
@@ -348,3 +349,30 @@ it('keeps a room warning on one line when the doc id holds a newline', async () 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+// The .NET host stops gracefully on SIGQUIT, as on SIGTERM and SIGINT: the
+// drain runs, the exit code is 0, and nothing more is written. Go's runtime
+// default would dump every goroutine and exit 2.
+it.each(['SIGTERM', 'SIGINT', 'SIGQUIT'] as const)('stops gracefully on %s', async (signal) => {
+  const port = await allocateLoopbackPort();
+  const child = spawn(process.env.BLOK_CONFORMANCE_SERVER ?? '', [
+    '--listen', `127.0.0.1:${port}`, '--auth', 'none', '--storage-dir', '',
+  ], { stdio: ['ignore', 'ignore', 'pipe'] });
+
+  adoptChild(child);
+  let stderr = '';
+
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', (chunk: string) => {
+    stderr += chunk;
+  });
+  const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
+    child.once('exit', (code, exitSignal) => resolve({ code, signal: exitSignal }));
+  });
+
+  await expect.poll(() => stderr, { timeout: 20_000 }).toContain(' listening on ');
+  child.kill(signal);
+
+  expect(await exited).toEqual({ code: 0, signal: null });
+  expect(stderr.trimEnd().split('\n')).toHaveLength(1);
+}, 30_000);

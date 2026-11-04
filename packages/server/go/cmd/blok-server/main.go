@@ -77,7 +77,9 @@ const (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+	// SIGQUIT too: .NET stops gracefully on it, where Go's default dumps
+	// every goroutine and exits 2 without the drain.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt, syscall.SIGQUIT)
 	code := run(ctx, os.Args[1:], os.Getenv, os.Stderr)
 	stop()
 	os.Exit(code)

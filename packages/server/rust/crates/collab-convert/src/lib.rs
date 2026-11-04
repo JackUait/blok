@@ -76,6 +76,8 @@ mod csharp_apply_test;
 #[cfg(test)]
 mod csharp_apply_textdiff_test;
 #[cfg(test)]
+mod csharp_capture_html_test;
+#[cfg(test)]
 mod csharp_docconverter_test;
 #[cfg(test)]
 mod csharp_editops_test;

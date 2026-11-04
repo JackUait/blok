@@ -203,6 +203,12 @@ fn check_edit_case(c: &Value, raw_case: &Node, client: u32) -> Result<(), String
                 "html\n got {html:?}\nwant {want_html:?}"
             )));
         }
+        if let Value::Array(recorded) = field(c, "html") {
+            let failures = crate::csharp_capture_html_test::check_read("ops", &found, recorded);
+            if !failures.is_empty() {
+                return Err(Error::Message(failures.join("\n")));
+            }
+        }
         apply_ops(
             &doc,
             &ops,

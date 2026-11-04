@@ -2,6 +2,8 @@
 //! blok-jsjson is another lane's crate. Lone surrogates become U+FFFD, as Go's
 //! encoding/json reads them.
 
+#![allow(dead_code)]
+
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,7 +45,6 @@ impl Json {
         }
     }
 
-    #[allow(dead_code)]
     pub fn number(&self) -> f64 {
         match self {
             Json::Number(value) => *value,

@@ -27,6 +27,8 @@ mod encodings_test;
 #[cfg(test)]
 mod fetcher_test;
 #[cfg(test)]
+mod fixtures_test;
+#[cfg(test)]
 mod origin_test;
 #[cfg(test)]
 mod pki_test;

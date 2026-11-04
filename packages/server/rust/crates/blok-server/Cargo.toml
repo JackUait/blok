@@ -26,6 +26,7 @@ blok-jsjson = { path = "../jsjson" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net"] }
 
 [dev-dependencies]
+blok-collab-workingset = { path = "../collab-workingset" }
 blok-http = { path = "../http" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util"] }
 

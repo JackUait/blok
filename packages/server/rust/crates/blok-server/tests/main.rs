@@ -1384,3 +1384,440 @@ async fn exits_with_the_contract_code() {
         );
     }
 }
+
+// HostCollabTests.cs
+
+const DOC_ID: &str = "doc-1";
+
+fn fixture(relative: &str) -> Vec<u8> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../../../test/unit/server-conformance/fixtures")
+        .join(relative);
+    std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+}
+
+fn base64_decode(text: &[u8]) -> Vec<u8> {
+    let value = |c: u8| match c {
+        b'A'..=b'Z' => c - b'A',
+        b'a'..=b'z' => c - b'a' + 26,
+        b'0'..=b'9' => c - b'0' + 52,
+        b'+' => 62,
+        b'/' => 63,
+        _ => panic!("bad base64 byte {c}"),
+    };
+    let digits: Vec<u8> = text
+        .iter()
+        .copied()
+        .filter(|c| !c.is_ascii_whitespace() && *c != b'=')
+        .map(value)
+        .collect();
+    let mut out = Vec::new();
+    for chunk in digits.chunks(4) {
+        let mut n = 0u32;
+        for (i, d) in chunk.iter().enumerate() {
+            n |= u32::from(*d) << (18 - 6 * i);
+        }
+        let bytes = n.to_be_bytes();
+        out.extend_from_slice(&bytes[1..chunk.len()]);
+    }
+    out
+}
+
+fn json_node(bytes: &[u8]) -> blok_jsjson::Node {
+    parse_node(bytes, JsonOptions::default()).unwrap()
+}
+
+fn node_text(node: &blok_jsjson::Node) -> String {
+    to_string_lossy(node.text().unwrap().units())
+}
+
+fn block_ids(blocks: &blok_jsjson::Node) -> Vec<String> {
+    blocks
+        .items
+        .iter()
+        .map(|b| node_text(b.lookup("id").unwrap().unwrap()))
+        .collect()
+}
+
+/// Each block's data.text as compact JSON, by block id.
+fn block_texts(output: &[u8]) -> std::collections::BTreeMap<String, String> {
+    let node = json_node(output);
+    let blocks = node.lookup("blocks").unwrap().expect("no blocks array");
+    blocks
+        .items
+        .iter()
+        .map(|b| {
+            let mut text = Vec::new();
+            if let Some(t) = b
+                .lookup("data")
+                .unwrap()
+                .and_then(|d| d.lookup("text").unwrap())
+            {
+                t.append_json(&mut text).unwrap();
+            }
+            (
+                node_text(b.lookup("id").unwrap().unwrap()),
+                // C#'s UnsafeRelaxedJsonEscaping leaves these as they are.
+                String::from_utf8(text)
+                    .unwrap()
+                    .replace("\\u003C", "<")
+                    .replace("\\u003E", ">")
+                    .replace("\\u0026", "&"),
+            )
+        })
+        .collect()
+}
+
+fn write_var_uint(out: &mut Vec<u8>, mut value: usize) {
+    while value >= 0x80 {
+        out.push((value as u8) | 0x80);
+        value >>= 7;
+    }
+    out.push(value as u8);
+}
+
+fn read_var_uint(input: &mut &[u8]) -> Option<usize> {
+    let (mut value, mut shift) = (0usize, 0);
+    loop {
+        let (&b, rest) = input.split_first()?;
+        *input = rest;
+        value |= usize::from(b & 0x7f) << shift;
+        if b < 0x80 {
+            return Some(value);
+        }
+        shift += 7;
+    }
+}
+
+const STEP1_EMPTY: [u8; 4] = [0, 0, 1, 0];
+
+fn update_frame(update: &[u8]) -> Vec<u8> {
+    let mut frame = vec![0, 2];
+    write_var_uint(&mut frame, update.len());
+    frame.extend_from_slice(update);
+    frame
+}
+
+/// The payload of a sync frame of `sub_type`, or None for any other frame.
+fn sync_payload(frame: &[u8], sub_type: usize) -> Option<Vec<u8>> {
+    let mut input = frame;
+    (read_var_uint(&mut input)? == 0
+        && read_var_uint(&mut input)? == sub_type
+        && read_var_uint(&mut input)? == input.len())
+    .then(|| input.to_vec())
+}
+
+/// A raw WebSocket client on /sync/doc-1; it answers pings as it reads.
+struct Socket(TcpStream);
+
+impl Socket {
+    async fn connect(address: &str) -> Socket {
+        let mut conn = TcpStream::connect(address).await.unwrap();
+        conn.write_all(
+            format!(
+                "GET /sync/{DOC_ID} HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n"
+            )
+            .as_bytes(),
+        )
+        .await
+        .unwrap();
+        let mut head = Vec::new();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while !head.ends_with(b"\r\n\r\n") {
+                head.push(conn.read_u8().await.unwrap());
+            }
+        })
+        .await
+        .expect("no upgrade answer");
+        assert!(
+            head.starts_with(b"HTTP/1.1 101"),
+            "{}",
+            String::from_utf8_lossy(&head)
+        );
+        Socket(conn)
+    }
+
+    async fn write_frame(&mut self, first: u8, payload: &[u8]) {
+        let mut frame = vec![first];
+        match payload.len() {
+            n if n <= 125 => frame.push(0x80 | n as u8),
+            n if n <= 0xffff => {
+                frame.push(0x80 | 126);
+                frame.extend_from_slice(&(n as u16).to_be_bytes());
+            }
+            n => {
+                frame.push(0x80 | 127);
+                frame.extend_from_slice(&(n as u64).to_be_bytes());
+            }
+        }
+        frame.extend_from_slice(&[0, 0, 0, 0]);
+        frame.extend_from_slice(payload);
+        self.0.write_all(&frame).await.unwrap();
+    }
+
+    async fn send(&mut self, payload: &[u8]) {
+        self.write_frame(0x82, payload).await;
+    }
+
+    /// The next data or close frame: (opcode, payload).
+    async fn next(&mut self) -> (u8, Vec<u8>) {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                let first = self.0.read_u8().await.unwrap();
+                let mut length = u64::from(self.0.read_u8().await.unwrap() & 0x7f);
+                if length == 126 {
+                    length = u64::from(self.0.read_u16().await.unwrap());
+                } else if length == 127 {
+                    length = self.0.read_u64().await.unwrap();
+                }
+                let mut payload = vec![0u8; usize::try_from(length).unwrap()];
+                self.0.read_exact(&mut payload).await.unwrap();
+                match first & 0x0f {
+                    0x9 => self.write_frame(0x8a, &payload).await,
+                    0xa => {}
+                    opcode => return (opcode, payload),
+                }
+            }
+        })
+        .await
+        .expect("no frame within 10 s")
+    }
+
+    async fn receive_sync(&mut self, sub_type: usize) -> Vec<u8> {
+        loop {
+            let (opcode, payload) = self.next().await;
+            assert_ne!(opcode, 0x8, "closed while waiting: {payload:?}");
+            if let Some(found) = sync_payload(&payload, sub_type) {
+                return found;
+            }
+        }
+    }
+
+    /// SyncStep1 with an empty state vector; the reply is SyncStep2 then
+    /// SyncStep1.
+    async fn handshake(&mut self) {
+        self.send(&STEP1_EMPTY).await;
+        self.receive_sync(1).await;
+        self.receive_sync(0).await;
+    }
+
+    async fn receive_close(&mut self) -> (u16, String) {
+        loop {
+            let (opcode, payload) = self.next().await;
+            if opcode == 0x8 {
+                // Answer the close, as ClientWebSocket.CloseOutputAsync does.
+                self.write_frame(0x88, &1000u16.to_be_bytes()).await;
+                return (
+                    u16::from_be_bytes([payload[0], payload[1]]),
+                    String::from_utf8_lossy(&payload[2..]).into_owned(),
+                );
+            }
+        }
+    }
+}
+
+type Puts = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
+
+/// FixtureDocEndpoint: GET answers `get_body`, each PUT is kept with its
+/// path and answered 204.
+async fn fixture_doc_endpoint(
+    get_body: &'static str,
+) -> (String, Puts, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let puts: Puts = Arc::default();
+    let kept = puts.clone();
+    let server = blok_http::Server::new(
+        move |mut request: blok_http::Request, mut response: blok_http::ResponseWriter| {
+            let kept = kept.clone();
+            async move {
+                if request.method() == "GET" {
+                    response
+                        .headers_mut()
+                        .set("Content-Type", "application/json; charset=utf-8");
+                    let _ = response.write(get_body.as_bytes()).await;
+                    return;
+                }
+                let mut body = Vec::new();
+                if let Some(reader) = request.body_mut() {
+                    let _ = reader.read_to_end(&mut body).await;
+                }
+                kept.lock().unwrap().push((request.path().to_owned(), body));
+                response.set_status(204);
+            }
+        },
+        blok_http::Config::default(),
+    );
+    let serving = tokio::spawn(async move {
+        let _ = server.serve(listener).await;
+    });
+    (format!("http://{address}/docs"), puts, serving)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn drains_sync_rooms_on_sigterm() {
+    let (endpoint, puts, serving) = fixture_doc_endpoint("null").await;
+    let collab_dir = scratch_dir("sigterm");
+    let dir = collab_dir.display().to_string();
+    let running = Running::start(
+        &[
+            "--auth",
+            "none",
+            "--storage-dir",
+            "",
+            "--rate-limit",
+            "0",
+            "--collab",
+            "--collab-dir",
+            &dir,
+            "--doc-endpoint",
+            &endpoint,
+        ],
+        no_env,
+        "dev",
+    )
+    .await;
+
+    let mut editor = Socket::connect(&running.address).await;
+    editor.handshake().await;
+    let mut observer = Socket::connect(&running.address).await;
+    observer.handshake().await;
+
+    // The observer's relayed copy proves the room applied the edit.
+    let update = base64_decode(&fixture("collab/hierarchy-3-deep/update.b64"));
+    editor.send(&update_frame(&update)).await;
+    assert_eq!(observer.receive_sync(2).await, update);
+
+    let Running {
+        address,
+        out,
+        mut stop,
+        done,
+    } = running;
+    let _ = stop.take().unwrap().send(());
+    let closes = (editor.receive_close().await, observer.receive_close().await);
+    let want = (1001, "server shutting down".to_owned());
+    assert_eq!(closes, (want.clone(), want));
+    // HostOptions.ShutdownTimeout is 30 s; a drain that misses it fails.
+    let code = tokio::time::timeout(Duration::from_secs(35), done)
+        .await
+        .expect("the host did not exit after the stop")
+        .unwrap();
+    let stderr = out.text();
+    assert_eq!(code, 0, "{stderr}");
+
+    let canonical = json_node(&fixture("collab/hierarchy-3-deep/canonical.json"));
+    let doc_puts: Vec<Vec<u8>> = puts
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|(path, _)| path.ends_with(&format!("/{DOC_ID}")))
+        .map(|(_, body)| body.clone())
+        .collect();
+    assert_eq!(doc_puts.len(), 1, "PUTs for {DOC_ID} via {address}");
+    let put = json_node(&doc_puts[0]);
+    assert_eq!(
+        block_ids(put.lookup("blocks").unwrap().expect("no blocks")),
+        block_ids(&canonical)
+    );
+
+    let blob = collab_dir.join(blok_collab_workingset::doc_key(DOC_ID));
+    let length = std::fs::metadata(&blob)
+        .unwrap_or_else(|e| panic!("no working-set blob at {}: {e}", blob.display()))
+        .len();
+    // 16 bytes is a header-only (empty-log) working set.
+    assert!(
+        length > 16,
+        "the working-set blob holds no frames ({length} bytes)"
+    );
+    assert!(
+        !stderr.contains("Unhandled exception") && !stderr.contains("error:"),
+        "{stderr}"
+    );
+    serving.abort();
+    let _ = std::fs::remove_dir_all(&collab_dir);
+}
+
+// The keep-alive half of the C# test lives in http's sync_deadline.rs, since
+// the host's keep-alive cannot be shortened from the command line. This is
+// the other half: the host's own config must not take an idle socket for a
+// stalled body once Kestrel's 5 s body-rate grace has passed.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sync_socket_outlives_kestrels_keep_alive_timeout() {
+    let (endpoint, _puts, serving) = fixture_doc_endpoint("null").await;
+    let collab_dir = scratch_dir("keep-alive");
+    let dir = collab_dir.display().to_string();
+    let running = Running::start(
+        &[
+            "--storage-dir",
+            "",
+            "--collab",
+            "--collab-dir",
+            &dir,
+            "--doc-endpoint",
+            &endpoint,
+        ],
+        no_env,
+        "dev",
+    )
+    .await;
+    let mut socket = Socket::connect(&running.address).await;
+    socket.handshake().await;
+    tokio::time::sleep(Duration::from_secs(6)).await;
+    socket.handshake().await;
+    drop(socket);
+    running.stop().await;
+    serving.abort();
+    let _ = std::fs::remove_dir_all(&collab_dir);
+}
+
+// --rich-text-fields reaches the room: a listed custom field is stored as
+// formatted text and answered as segments; an unlisted one stays a string.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_rich_text_fields_flag_makes_a_custom_field_segments() {
+    for listed in [true, false] {
+        let (endpoint, _puts, serving) = fixture_doc_endpoint("null").await;
+        let collab_dir = scratch_dir("rich-fields");
+        let dir = collab_dir.display().to_string();
+        let mut args = vec![
+            "--storage-dir",
+            "",
+            "--collab",
+            "--collab-dir",
+            &dir,
+            "--doc-endpoint",
+            &endpoint,
+        ];
+        if listed {
+            args.extend(["--rich-text-fields", r#"{ "widget": ["text"] }"#]);
+        }
+        let running = Running::start(&args, no_env, "dev").await;
+        let body = r#"{ "ops": [ { "op": "insert", "id": "w", "block": { "type": "widget", "data": { "text": "<i>w</i>" } } } ] }"#;
+        let edit = exchange(
+            &running.address,
+            &format!(
+                "POST /sync/{DOC_ID}/edit HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json; charset=utf-8\r\nBlok-Idempotency-Key: widget-edit\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            ),
+        )
+        .await;
+        let (status, _, state) = request(
+            &running.address,
+            "GET",
+            &format!("/sync/{DOC_ID}/state"),
+            "HTTP/1.1",
+        )
+        .await;
+        assert!(edit.starts_with("HTTP/1.1 204"), "{listed}: {edit:?}");
+        assert_eq!(status, 200, "{listed}: {state}");
+        let want = if listed {
+            r#"[{"text":"w","marks":{"italic":true}}]"#
+        } else {
+            r#""<i>w</i>""#
+        };
+        assert_eq!(block_texts(state.as_bytes())["w"], want, "{listed}");
+        running.stop().await;
+        serving.abort();
+        let _ = std::fs::remove_dir_all(&collab_dir);
+    }
+}

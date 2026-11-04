@@ -99,3 +99,52 @@ async fn a_declared_length_over_the_cap_is_refused_before_the_body() {
     assert!(endpoint_error(err).0.contains("too large"));
     assert!(start.elapsed() < std::time::Duration::from_secs(2));
 }
+
+// DocEndpointClient's handler keeps SocketsHttpHandler's environment proxy,
+// the same rules s3-proxy.json pins for S3: ALL_PROXY counts, "*" bypasses
+// nothing, and a loopback endpoint is proxied too.
+#[tokio::test]
+async fn uses_dotnets_environment_proxy() {
+    let (proxy, heads) =
+        crate::client_test::raw_endpoint(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
+            .await;
+    let proxy = proxy.trim_end_matches("/docs").to_owned();
+    for (endpoint, variables) in [
+        (
+            "http://docs.blok-proxy.invalid/docs",
+            vec![("ALL_PROXY", proxy.clone())],
+        ),
+        (
+            "http://127.0.0.1:9/docs",
+            vec![("HTTP_PROXY", proxy.clone())],
+        ),
+        (
+            "http://docs.blok-proxy.invalid/docs",
+            vec![("HTTP_PROXY", proxy.clone()), ("NO_PROXY", "*".to_owned())],
+        ),
+    ] {
+        let before = heads.lock().unwrap().len();
+        let lookup = |name: &str| {
+            variables
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, v)| v.clone())
+        };
+        let c = crate::Client::with_connect_timeout(
+            crate::Options {
+                endpoint: blok_dotnet::parse_absolute_uri(endpoint).unwrap(),
+                request_timeout: Some(std::time::Duration::from_secs(5)),
+                ..crate::Options::default()
+            },
+            std::time::Duration::from_secs(10),
+            blok_outbound::EnvironmentProxy::from_lookup(lookup),
+        );
+        let err = c.load("a").await.unwrap_err();
+        assert_eq!(endpoint_error(err).1, 502, "{endpoint} {variables:?}");
+        let head = heads.lock().unwrap()[before].clone();
+        assert!(
+            head.starts_with(&format!("GET {endpoint}/a HTTP/1.1")),
+            "{head}"
+        );
+    }
+}

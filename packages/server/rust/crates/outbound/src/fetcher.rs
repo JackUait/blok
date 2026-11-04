@@ -87,8 +87,9 @@ fn system_resolve(host: String) -> Lookup {
 }
 
 /// The system roots, read once. Verification is rustls's own, which never
-/// fetches a missing issuer, never checks revocation, and on macOS still
-/// trusts roots added to the Keychain.
+/// fetches a missing issuer and never checks revocation (tls_test pins
+/// both). On macOS the roots come from the trust settings, not
+/// /etc/ssl/cert.pem.
 pub(crate) fn system_roots() -> Arc<RootCertStore> {
     static ROOTS: OnceLock<Arc<RootCertStore>> = OnceLock::new();
     ROOTS

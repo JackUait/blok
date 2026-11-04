@@ -190,3 +190,68 @@ async fn removes_the_spool_when_the_s3_request_is_cancelled() {
     );
     assert!(entries(&dir.0).is_empty());
 }
+
+/// Signs what reached the wire and compares it with what was sent.
+fn assert_wire_signature(
+    seen: &crate::s3_wire_test::Seen,
+    options: &crate::s3::S3Options,
+    content_type: &str,
+) {
+    let hash = seen.header("X-Amz-Content-Sha256").unwrap();
+    let want = crate::s3::sign(
+        &seen.method,
+        &seen.target,
+        seen.header("Host").unwrap(),
+        options,
+        content_type,
+        hash,
+        frozen_time(),
+    );
+    let authorization = want.iter().find(|(n, _)| n == "Authorization").unwrap();
+    assert_eq!(seen.header("Authorization"), Some(authorization.1.as_str()));
+    assert_eq!(seen.header("X-Amz-Date"), Some("20250102T030405Z"));
+}
+
+async fn wire_store() -> (
+    S3,
+    Arc<Mutex<Vec<crate::s3_wire_test::Seen>>>,
+    tokio::task::JoinHandle<()>,
+) {
+    use tokio::io::AsyncWriteExt;
+    let (endpoint, seen, task) = raw_server(true, |_, mut conn| async move {
+        let _ = conn
+            .get_mut()
+            .write_all(b"HTTP/1.1 204 No Content\r\n\r\n")
+            .await;
+    })
+    .await;
+    let mut s = S3::build(test_options(&endpoint, "media", "path"), no_proxy()).unwrap();
+    s.now = frozen_time;
+    (s, seen, task)
+}
+
+#[tokio::test]
+async fn puts_with_the_exact_on_wire_signature_for_its_generated_target() {
+    let (s, seen, _task) = wire_store().await;
+    let url = s
+        .put(".png", "image/png", Body::bytes(b"bytes".to_vec()))
+        .await
+        .unwrap();
+    let request = seen.lock().unwrap()[0].clone();
+    let key = url.rsplit('/').next().unwrap();
+    assert_eq!(request.target, format!("/media/{key}"));
+    assert_wire_signature(&request, &s.options, "image/png");
+}
+
+#[tokio::test]
+async fn deletes_with_the_exact_on_wire_signature_for_its_dynamic_target() {
+    let (s, seen, _task) = wire_store().await;
+    let key = format!("{}.png", "b".repeat(32));
+    s.delete(&format!("https://cdn.example.com/media/{key}"))
+        .await
+        .unwrap();
+    let request = seen.lock().unwrap()[0].clone();
+    assert_eq!(request.method, "DELETE");
+    assert_eq!(request.target, format!("/media/{key}"));
+    assert_wire_signature(&request, &s.options, "");
+}

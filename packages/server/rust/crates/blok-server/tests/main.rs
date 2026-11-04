@@ -756,6 +756,95 @@ async fn the_doc_endpoint_auth_warns_only_when_it_comes_from_the_flag() {
     );
 }
 
+// H34: the host gives the drain C#'s 30 s (HostCollab.ShutdownTimeout), so a
+// doc endpoint that takes 2 s to save still gets the room's last state.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_shutdown_drain_outlasts_a_slow_doc_endpoint() {
+    let endpoint = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint_address = endpoint.local_addr().unwrap();
+    let (saved_tx, mut saved) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let server = blok_http::Server::new(
+        move |mut request: blok_http::Request, mut response: blok_http::ResponseWriter| {
+            let saved_tx = saved_tx.clone();
+            async move {
+                if request.method() == "GET" {
+                    let _ = response.write(b"null").await;
+                    return;
+                }
+                let mut body = Vec::new();
+                if let Some(reader) = request.body_mut() {
+                    let _ = reader.read_to_end(&mut body).await;
+                }
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                response.set_status(204);
+                let _ = saved_tx.send(String::from_utf8_lossy(&body).into_owned());
+            }
+        },
+        blok_http::Config::default(),
+    );
+    let serving = tokio::spawn(async move {
+        let _ = server.serve(endpoint).await;
+    });
+    let collab_dir = std::env::temp_dir().join(format!(
+        "blok-host-drain-{}-{}",
+        std::process::id(),
+        endpoint_address.port()
+    ));
+    let collab_dir = collab_dir.display().to_string();
+    let doc_endpoint = format!("http://{endpoint_address}");
+    let mut running = Running::start(
+        &[
+            "--auth",
+            "none",
+            "--collab",
+            "--doc-endpoint",
+            &doc_endpoint,
+            "--storage-dir",
+            "",
+            "--collab-dir",
+            &collab_dir,
+        ],
+        no_env,
+        "dev",
+    )
+    .await;
+
+    let body =
+        r#"{"ops":[{"op":"insert","id":"a","block":{"type":"paragraph","data":{"text":"kept"}}}]}"#;
+    let answer = exchange(
+        &running.address,
+        &format!(
+            "POST /sync/doc/edit HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json\r\nBlok-Idempotency-Key: k1\r\nContent-Length: {}\r\n\r\n{body}",
+            body.len()
+        ),
+    )
+    .await;
+    assert!(answer.starts_with("HTTP/1.1 204"), "edit: {answer:?}");
+
+    let _ = running.stop.take().unwrap().send(());
+    let code = tokio::time::timeout(Duration::from_secs(10), &mut running.done)
+        .await
+        .expect("run did not return")
+        .unwrap();
+    let text = running.out.text();
+    assert_eq!(code, 0, "exit {code}: {text}");
+    assert!(
+        !text.contains("the shutdown drain did not complete"),
+        "the drain was cut short: {text}"
+    );
+    let body = saved
+        .try_recv()
+        .expect("the endpoint never finished a save");
+    assert!(body.contains(r#""kept""#), "saved {body}");
+    serving.abort();
+}
+
+// HostCollab.Configure sets Kestrel's MaxConcurrentUpgradedConnections to
+// 1024 only with collab; without it Kestrel has no limit.
 #[test]
-#[ignore = "needs the collab rooms and their shutdown drain, not ported yet"]
-fn the_shutdown_drain_outlasts_a_slow_doc_endpoint() {}
+fn the_host_limits_upgraded_sockets_only_when_collaborating() {
+    let mut options = Options::default();
+    assert_eq!(blok_server::upgrade_limit(&options), None);
+    options.collab_enabled = true;
+    assert_eq!(blok_server::upgrade_limit(&options), Some(1024));
+}

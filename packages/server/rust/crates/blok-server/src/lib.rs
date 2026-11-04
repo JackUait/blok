@@ -34,6 +34,12 @@ pub fn configure_collab(options: &mut Options, stderr: &Stderr) {
     }
 }
 
+/// The upgraded-socket limit HostCollab.Configure gives Kestrel: 1024 with
+/// collab, none without.
+pub fn upgrade_limit(options: &Options) -> Option<i64> {
+    options.collab_enabled.then_some(MAX_UPGRADED_CONNECTIONS)
+}
+
 fn print(stderr: &Stderr, text: &str) {
     let mut out = stderr
         .lock()
@@ -91,6 +97,9 @@ pub async fn run(
         );
     }
     apply_conformance(&server, &conformance);
+    if let Some(max) = upgrade_limit(server.options()) {
+        server.limit_upgrades(max);
+    }
 
     let options = server.options();
     let listeners = match listen(&options.listen_address, blok_dotnet::parse_ip) {

@@ -295,6 +295,16 @@ func (s *targetStream) step() bool {
 	s.head = append(s.head, s.in[:end+1]...)
 	s.consume(end + 1)
 	line := s.head[start:]
+	// The C# host turns on Kestrel's DisableHttp1LineFeedTerminators: a bare
+	// LF ends no line, in a head or a chunked trailer.
+	if len(line) < 2 || line[len(line)-2] != '\r' {
+		if s.state == streamLine {
+			s.refuse(http.StatusBadRequest)
+		} else {
+			s.refuseHeaders(http.StatusBadRequest)
+		}
+		return true
+	}
 	if s.state == streamLine {
 		if status := lineRefusal(line); status != 0 {
 			s.refuse(status)
@@ -332,7 +342,7 @@ func (s *targetStream) step() bool {
 
 // lineRefusal is what Kestrel refuses on the request line, before any header
 // is read. The version is everything after the target's space, up to the
-// LF: 8 bytes, or 9 ending in CR, or the line is a 400. Of those, all but
+// LF: 9 bytes ending in CR, or the line is a 400. Of those, all but
 // HTTP/1.0 and HTTP/1.1 get 505, unless the method is bad (400). Then the
 // target's form (targetRefusal). A line with no version is left to
 // http.ReadRequest; so is the HTTP/2 preface, which gets its GOAWAY after
@@ -350,7 +360,7 @@ func lineRefusal(line []byte) int {
 	if string(method) == "PRI" && string(target) == "*" && string(bytes.TrimSuffix(version, []byte("\r"))) == "HTTP/2.0" {
 		return 0
 	}
-	if len(version) != 8 && (len(version) != 9 || version[8] != '\r') {
+	if len(version) != 9 || version[8] != '\r' {
 		return http.StatusBadRequest
 	}
 	known := string(version[:8]) == "HTTP/1.0" || string(version[:8]) == "HTTP/1.1"

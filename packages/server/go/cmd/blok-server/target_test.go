@@ -172,10 +172,11 @@ func TestTheStreamChangesOnlyHeads(t *testing.T) {
 		out:    standIn,
 		queued: []queuedTarget{{"/", "/"}},
 	}, {
-		name:   "bare LF line ends, and a CR inside the target",
+		// The C# host turns on Kestrel's DisableHttp1LineFeedTerminators.
+		name:   "bare LF line ends get the stand-in",
 		in:     "GET /a\rb HTTP/1.1\nHost: x\n\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n",
-		out:    "GET /a_b HTTP/1.1\nHost: x\n\nGET /c_zz HTTP/1.1\r\nHost: x\r\n\r\n",
-		queued: []queuedTarget{{"/a_b", "/a\rb"}, {"/c_zz", "/c%zz"}},
+		out:    standIn,
+		queued: []queuedTarget{{"/", "/"}},
 	}}
 	for _, c := range cases {
 		for _, size := range []int{1, 3, 4096} {
@@ -806,5 +807,41 @@ func TestASemicolonInChunkDataArrivesAsData(t *testing.T) {
 				t.Errorf("%q (reads of %d): body %q %v, want %q", c.chunks, size, body, err, c.want)
 			}
 		}
+	}
+}
+
+// The C# host turns on Kestrel's DisableHttp1LineFeedTerminators: a bare LF
+// ends no line. In a chunked trailer Kestrel took one, though every other
+// chunk line needs CRLF, which let a front proxy that reads the trailer
+// otherwise desync from the host.
+func TestBareLineFeedsAreRefusedAsTheCSharpHostRefusesThem(t *testing.T) {
+	const post = "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n"
+	heads := map[string]string{
+		"a request line": "GET / HTTP/1.1\nHost: x\r\n\r\n",
+		"a header line":  "GET / HTTP/1.1\r\nHost: x\n\r\n",
+		"the blank line": "GET / HTTP/1.1\r\nHost: x\r\n\n",
+	}
+	for name, in := range heads {
+		stream := &targetStream{src: strings.NewReader(in + "GET /b HTTP/1.1\r\nHost: x\r\n\r\n")}
+		got, err := readAllIn(stream, 4096)
+		entry, _ := stream.pop()
+		if err != nil || string(got) != standIn || entry.reject != http.StatusBadRequest {
+			t.Errorf("%s: got %q %v, reject %d", name, got, err, entry.reject)
+		}
+	}
+	trailers := map[string]string{
+		"a trailer line":    "0\r\nX-T: 1\n\r\n",
+		"the trailer's end": "0\r\n\n",
+		"both":              "0\r\nX-T: 1\n\n",
+	}
+	for name, trailer := range trailers {
+		stream := &targetStream{src: strings.NewReader(post + trailer + "GET /b HTTP/1.1\r\nHost: x\r\n\r\n")}
+		got, err := readAllIn(stream, 4096)
+		if err != nil || string(got) != post+"0\r\n" || stream.takeBodyRefusal() != http.StatusBadRequest {
+			t.Errorf("%s: got %q %v", name, got, err)
+		}
+	}
+	if status := lineRefusal([]byte("GET /health HTTP/1.\r\n")); status != http.StatusBadRequest {
+		t.Errorf("a seven-byte version: %d, want 400", status)
 	}
 }

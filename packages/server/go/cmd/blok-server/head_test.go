@@ -169,8 +169,9 @@ func TestTargetFormsFollowKestrel(t *testing.T) {
 }
 
 // Measured on the C# host: the version is the rest of the request line. It
-// must be 8 bytes, or 9 ending in CR, else 400; any 8 bytes but HTTP/1.0 and
-// HTTP/1.1 get 505. Kestrel answers from the line alone.
+// must be 9 bytes ending in CR (the host turns on Kestrel's
+// DisableHttp1LineFeedTerminators), else 400; any 8 bytes but HTTP/1.0 and
+// HTTP/1.1 before the CR get 505. Kestrel answers from the line alone.
 func TestTheVersionFollowsKestrel(t *testing.T) {
 	address := startHost(t, echoTarget, time.Minute)
 	line := func(version string) string { return "GET /h " + version + "\r\nHost: x\r\nConnection: close\r\n\r\n" }
@@ -179,8 +180,8 @@ func TestTheVersionFollowsKestrel(t *testing.T) {
 		{"HTTP/2.0", line("HTTP/2.0"), kestrel505},
 		{"HTTP/0.9", line("HTTP/0.9"), kestrel505},
 		{"lower case", line("http/1.1"), kestrel505},
-		{"seven bytes and CR", line("HTTP/1."), kestrel505},
-		{"eight bytes and no CR", "GET /h HTTP/1.2\nHost: x\n\n", kestrel505},
+		{"seven bytes and CR", line("HTTP/1."), kestrel400},
+		{"eight bytes and no CR", "GET /h HTTP/1.2\nHost: x\n\n", kestrel400},
 		{"nine bytes and CR", line("HTTP/1.10"), kestrel400},
 		{"nine bytes and no CR", "GET /h HTTP/1.10\nHost: x\n\n", kestrel400},
 		{"a space after", line("HTTP/1.1 "), kestrel400},
@@ -366,7 +367,10 @@ func TestAChunkedBodyOnHTTP10IsReadAsChunked(t *testing.T) {
 		{"and Content-Length", "Content-Length: 2\r\nConnection: keep-alive\r\n", "false", `"" []`},
 		{"and a Host", "Host: h\r\nConnection: keep-alive\r\n", "false", `"h" []`},
 		{"gzip, chunked", "Connection: keep-alive\r\nTransfer-Encoding: gzip\r\n", "false", `"" []`},
-		{"bare LF", "Connection: keep-alive\n", "false", `"" []`},
+	}
+	bareLF := "POST /h HTTP/1.0\r\nConnection: keep-alive\nTransfer-Encoding: chunked\r\n\r\n" + chunks
+	if got := rawAnswer(t, address, bareLF); got != kestrel400 {
+		t.Errorf("bare LF: got %q, want the bare 400", got)
 	}
 	for _, c := range cases {
 		seen = nil
@@ -494,9 +498,12 @@ func TestTrailersFollowKestrel(t *testing.T) {
 	)
 	cases := []struct{ name, trailer, want string }{
 		{"one line", "X-T: 1\r\n\r\n", read},
-		{"a bare LF blank line", "X-T: 1\r\n\n", read},
-		{"bare LF lines", "X-T: 1\nY: 2\n\n", read},
-		{"none, ended by a bare LF", "\n", read},
+		// Kestrel took these until the host turned on
+		// DisableHttp1LineFeedTerminators: a proxy that reads a trailer
+		// otherwise could be desynced from the host.
+		{"a bare LF blank line", "X-T: 1\r\n\n", kestrel400},
+		{"bare LF lines", "X-T: 1\nY: 2\n\n", kestrel400},
+		{"none, ended by a bare LF", "\n", kestrel400},
 		{"a quote in a name", "X\"T: 1\r\n\r\n", read},
 		{"control bytes in a value", "X: a\x01\x7f\tb\r\n\r\n", read},
 		{"valid UTF-8 in a value", "X: \xc3\xa9\r\n\r\n", read},

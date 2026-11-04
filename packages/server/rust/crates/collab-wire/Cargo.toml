@@ -9,5 +9,8 @@ publish.workspace = true
 [dependencies]
 blok-jsjson = { path = "../jsjson" }
 
+[dev-dependencies]
+blok-yjs = { path = "../yjs" }
+
 [lints]
 workspace = true

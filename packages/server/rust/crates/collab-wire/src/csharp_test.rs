@@ -521,17 +521,86 @@ fn decodes_then_re_encodes_every_fixture_byte_for_byte() {
     }
 }
 
-#[test]
-#[ignore = "needs a Yjs engine to apply the state vector; no Rust yjs crate is on main yet"]
-fn sync_step1_carries_the_seed_state_vector() {}
+fn frames_root() -> blok_jsjson::Node {
+    fixture("sync-frames.json")
+}
+
+fn root_bytes(key: &str) -> Vec<u8> {
+    unhex(&text(&frames_root(), key))
+}
+
+fn expected(key: &str) -> String {
+    text(get(&frames_root(), "expected").unwrap(), key)
+}
+
+fn decoded(name: &str) -> Message {
+    decode(&unhex(&text(&frames_fixture(name), "frameHex"))).unwrap()
+}
+
+fn apply(doc: &blok_yjs::Doc, update: &[u8]) {
+    assert_eq!(
+        doc.apply_update(update).unwrap().outcome,
+        blok_yjs::Outcome::Applied
+    );
+}
+
+fn seeded_doc() -> blok_yjs::Doc {
+    let doc = blok_yjs::Doc::new(blok_yjs::Options::default());
+    apply(&doc, &root_bytes("seedUpdateHex"));
+    doc
+}
+
+fn content_text(doc: &blok_yjs::Doc) -> String {
+    doc.get_text("content").unwrap().to_string()
+}
 
 #[test]
-#[ignore = "needs a Yjs engine to replay the update; no Rust yjs crate is on main yet"]
-fn sync_step2_replays_the_seeded_document() {}
+fn sync_step1_carries_the_seed_state_vector() {
+    let Message::SyncStep1 { state_vector } = decoded("syncStep1") else {
+        panic!("not a SyncStep1");
+    };
+    let seeded = seeded_doc();
+    let advanced = seeded_doc();
+    apply(&advanced, &root_bytes("incrementalUpdateHex"));
+
+    assert_eq!(seeded.encode_state_vector(), state_vector);
+
+    apply(
+        &seeded,
+        &advanced.encode_state_as_update(&state_vector).unwrap(),
+    );
+    assert_eq!(content_text(&seeded), expected("textAfterIncremental"));
+}
 
 #[test]
-#[ignore = "needs a Yjs engine to apply the update; no Rust yjs crate is on main yet"]
-fn update_appends_to_the_seeded_document() {}
+fn sync_step2_replays_the_seeded_document() {
+    let Message::SyncStep2 { update } = decoded("syncStep2") else {
+        panic!("not a SyncStep2");
+    };
+    let replica = blok_yjs::Doc::new(blok_yjs::Options::default());
+    apply(&replica, &update);
+
+    assert_eq!(content_text(&replica), expected("textAfterSeed"));
+    let kind = replica.get_map("meta").unwrap().get("kind");
+    assert_eq!(
+        kind.as_ref().and_then(blok_yjs::Out::as_value),
+        Some(&blok_jsjson::Value::String(blok_jsjson::Str::from(
+            expected("metaKindAfterSeed").as_str()
+        )))
+    );
+}
+
+#[test]
+fn update_appends_to_the_seeded_document() {
+    let Message::SyncUpdate { update } = decoded("update") else {
+        panic!("not an Update");
+    };
+    assert_eq!(update, root_bytes("incrementalUpdateHex"));
+
+    let seeded = seeded_doc();
+    apply(&seeded, &update);
+    assert_eq!(content_text(&seeded), expected("textAfterIncremental"));
+}
 
 fn number(node: &blok_jsjson::Node, key: &str) -> u64 {
     let value = get(node, key).unwrap_or_else(|| panic!("no {key}"));

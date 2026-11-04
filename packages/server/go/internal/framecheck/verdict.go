@@ -35,7 +35,7 @@ type origin struct {
 
 func parseOrigin(raw string) (origin, bool) {
 	u, ok := dotnet.ParseAbsoluteURI(raw)
-	if !ok || !u.IsHTTP() || u.IdnHost == "" || u.UserInfo != "" {
+	if !ok || !u.IsHTTP() || u.IdnHostThrows || u.IdnHost == "" || u.UserInfo != "" {
 		return origin{}, false
 	}
 	o := origin{scheme: u.Scheme, host: asciiLower(u.IdnHost), domain: u.HostType == "Dns", port: u.Port}

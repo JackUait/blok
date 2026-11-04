@@ -1325,6 +1325,30 @@
         ]
       ],
       "verdict": "allowed"
+    },
+    {
+      "name": "an embedder whose IdnHost throws counts as none",
+      "url": "https://site.example/page",
+      "embedder": "https://a‍b.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "unknown"
+    },
+    {
+      "name": "a page whose IdnHost throws",
+      "url": "https://a‍b.example/page",
+      "embedder": "https://editor.example",
+      "headers": [
+        [
+          "X-Frame-Options",
+          "DENY"
+        ]
+      ],
+      "verdict": "unknown"
     }
   ]
 }

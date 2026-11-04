@@ -62,10 +62,21 @@ internal static partial class FrameCheckVerdict
       return null;
     }
 
+    string host;
+    try
+    {
+      // Throws for a name TryCreate takes but ICU refuses, as "a\u200Db".
+      host = url.IdnHost;
+    }
+    catch (UriFormatException)
+    {
+      return null;
+    }
+
     var port = url.Port == DefaultPort(url.Scheme) ? 0 : url.Port;
     return new Origin(
         url.Scheme,
-        AsciiLower(url.IdnHost),
+        AsciiLower(host),
         url.HostNameType == UriHostNameType.Dns,
         port);
   }

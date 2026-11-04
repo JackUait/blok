@@ -2661,23 +2661,29 @@ async fn a_drain_already_cancelled_does_not_wait_out_the_activity_observer() {
     k.host.holds(TEST_DOC, "hello", None);
     let gate = k.activity.hold();
     let manager = k.activity_manager(false);
-    let _joined = enter(&manager, &v1("user-1", true)).await;
+    let member = v1("user-1", true);
+    let _joined = enter(&manager, &member).await;
     k.activity.wait_for(1).await;
-    let cancelled = Token::new();
-    cancelled.cancel();
 
-    for room in manager.live_rooms() {
-        tokio::time::timeout(Duration::from_secs(5), room.drain(&cancelled))
-            .await
-            .expect("the cancelled drain waited out the observer");
-    }
+    let draining = manager.clone();
+    let drain = tokio::spawn(async move { draining.drain().await });
+    wait_until("the drain to close the member", || {
+        member.closed() == [CloseReason::Draining]
+    })
+    .await;
+    drain.abort();
 
-    assert!(
-        k.logs
-            .logged("abandoned its activity dispatch while draining: the drain was cancelled"),
-        "{:?}",
-        k.logs.lines()
-    );
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        wait_until("the cancelled drain to give the observer up", || {
+            k.logs
+                .logged("abandoned its activity dispatch while draining: the drain was cancelled")
+        }),
+    )
+    .await
+    .expect("the cancelled drain waited out the observer");
+
+    assert!(!k.logs.logged("the observer is past its bound"));
     gate.open();
 }
 
@@ -2930,10 +2936,21 @@ async fn reset_settles_an_in_flight_write_so_it_cannot_overtake_the_reset() {
 
     let stuck = Gate::new();
     *lock(&k.disk.before_write) = Some(stuck.clone());
+    let (writes, landed) = (k.disk.writes(), k.disk.landed().len());
     update(&membership, update_appending(&client, "!")).await;
+    wait_until("the update's write to reach the gate", || {
+        k.disk.writes() == writes + 1
+    })
+    .await;
+    assert_eq!(k.disk.landed().len(), landed);
 
     let resetting = manager.clone();
     let reset = tokio::spawn(async move { resetting.reset(TEST_DOC).await });
+    tokio::time::sleep(ms(50)).await;
+    assert!(
+        !reset.is_finished(),
+        "the reset overtook the in-flight write"
+    );
 
     stuck.open();
     *lock(&k.disk.before_write) = None;

@@ -29,6 +29,9 @@ pub enum BodyError {
     /// Bad chunked framing. Unless the route set the cap, the host has
     /// answered 400 and closes.
     Malformed,
+    /// A chunk size past 0x7FFFFFFF. Unless the route set the cap, the host
+    /// has answered Kestrel's unhandled-error 500 and closes.
+    Overflow,
     /// The peer closed before the body ended.
     UnexpectedEof,
     /// The request deadline passed.
@@ -43,6 +46,7 @@ impl fmt::Display for BodyError {
             Self::TooLarge => f.write_str("request body over the host's cap"),
             Self::TooSlow => f.write_str("request body under the host's minimum data rate"),
             Self::Malformed => f.write_str("malformed chunked request body"),
+            Self::Overflow => f.write_str("chunk size over 0x7FFFFFFF"),
             Self::UnexpectedEof => f.write_str("unexpected EOF"),
             Self::Deadline => f.write_str("request deadline passed"),
             Self::Io(kind) => write!(f, "request body read failed: {kind}"),
@@ -290,9 +294,9 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                     }
                 } else {
                     match chunk_size(line) {
-                        Some(0) => Chunk::Trailers,
-                        Some(size) => Chunk::Data(size),
-                        None => return Step::Fail(BodyError::Malformed),
+                        Ok(0) => Chunk::Trailers,
+                        Ok(size) => Chunk::Data(size),
+                        Err(error) => return Step::Fail(error),
                     }
                 };
                 inbound.consume(lf + 1);
@@ -305,21 +309,31 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
 }
 
 /// Hex digits, then an optional ";extension". Measured: no spaces, no sign.
-fn chunk_size(line: &[u8]) -> Option<u64> {
-    let digits_end = line
-        .iter()
-        .position(|b| !b.is_ascii_hexdigit())
-        .unwrap_or(line.len());
-    let (digits, rest) = line.split_at(digits_end);
-    if digits.is_empty() || !(rest.is_empty() || rest[0] == b';') {
-        return None;
+/// Kestrel adds each digit to an int, checked: past 0x7FFFFFFF is an
+/// OverflowException (the app's 500), and a ninth digit that fits is its
+/// 400. The digits are taken in order, so an overflow wins over a bad byte
+/// after it.
+fn chunk_size(line: &[u8]) -> Result<u64, BodyError> {
+    let mut size: u64 = 0;
+    let mut digits = 0;
+    for &b in line {
+        let Some(digit) = (b as char).to_digit(16) else {
+            break;
+        };
+        size = size * 16 + u64::from(digit);
+        if size > i32::MAX as u64 {
+            return Err(BodyError::Overflow);
+        }
+        digits += 1;
+        if digits > 8 {
+            return Err(BodyError::Malformed);
+        }
     }
-    // Over 16 hex digits overflows; the C# host answers that with an
-    // empty 500 from the app, this refuses it as malformed.
-    let text = std::str::from_utf8(digits).ok()?;
-    u64::from_str_radix(text, 16)
-        .ok()
-        .filter(|&n| n <= i64::MAX as u64)
+    let rest = &line[digits..];
+    if digits == 0 || !(rest.is_empty() || rest[0] == b';') {
+        return Err(BodyError::Malformed);
+    }
+    Ok(size)
 }
 
 async fn wait(exchange: &Exchange, state: &mut BodyState, have: usize) -> Result<(), BodyError> {
@@ -375,8 +389,15 @@ async fn fail(
             exchange.cancel();
             None
         }
-        BodyError::Deadline => None,
+        BodyError::Deadline | BodyError::Overflow => None,
     };
+    if error == BodyError::Overflow {
+        if answer && !route_set {
+            exchange.refuse_unhandled().await;
+        } else {
+            exchange.wire.lock().await.close = true;
+        }
+    }
     if let Some(status) = status {
         if answer && !route_set {
             exchange.refuse(status).await;

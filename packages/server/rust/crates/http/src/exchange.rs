@@ -116,6 +116,30 @@ impl Exchange {
     }
 }
 
+impl Exchange {
+    /// What an exception the app does not catch gets: an empty 500 with no
+    /// Connection header, then the close.
+    pub async fn refuse_unhandled(&self) {
+        let mut wire = self.wire.lock().await;
+        wire.close = true;
+        if wire.started || wire.hijacked || wire.finished {
+            return;
+        }
+        wire.started = true;
+        wire.host_owned = true;
+        let mut head = format!(
+            "HTTP/1.1 500 {}\r\nContent-Length: 0\r\nDate: {}\r\n",
+            reason_phrase(500),
+            http_date(std::time::SystemTime::now())
+        );
+        if let Some(server) = &self.config.server_header {
+            head.push_str(&format!("Server: {server}\r\n"));
+        }
+        head.push_str("\r\n");
+        let _ = wire.send(head.as_bytes()).await;
+    }
+}
+
 /// A refusal Kestrel answers itself.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Answer {

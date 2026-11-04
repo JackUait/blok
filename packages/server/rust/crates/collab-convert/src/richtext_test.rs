@@ -1,8 +1,12 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use blok_collab_collabtest::read;
 use blok_jsjson::{Object, Str, Value, stringify};
-use blok_yjs::{Delta, Out};
+use blok_yjs::{Delta, Doc, Options, Out, XmlText};
 
-use crate::richtext::{canonicalize, from_delta, normalize, read_input};
+use crate::richtext::{canonicalize, from_delta, normalize, read_input, to_write_ops};
+use crate::richtextedit::{RichTextOp, apply_rich_text_ops, plan_rich_text_edit};
 
 pub(crate) fn field<'a>(value: &'a Value, key: &str) -> &'a Value {
     match value {
@@ -119,4 +123,146 @@ fn from_delta_never_changes_the_delta_it_reads() {
         before
     );
     assert_eq!(json(&marks), before);
+}
+
+#[test]
+fn plans_and_applies_every_rich_text_edit_fixture() {
+    let cases = read("rich-text-edits/cases.json");
+    let cases = items(&cases);
+    assert!(cases.len() >= 20, "only {} cases", cases.len());
+    let mut failures = Vec::new();
+    for entry in cases {
+        let name = text(field(entry, "name"));
+        let doc = Doc::new(Options::default());
+        let live = XmlText::new(None);
+        let seed = to_write_ops(&canonicalize(items(field(entry, "current"))))
+            .unwrap_or_else(|err| panic!("{name}: {err}"));
+        doc.transact(|txn| {
+            doc.get_map("blocks")?.set(txn, "b1", &live)?;
+            let mut index = 0;
+            for op in &seed {
+                match &op.insert {
+                    Value::String(insert) => {
+                        live.insert(Some(txn), index, insert.clone(), Some(&op.attributes))?
+                    }
+                    embed => {
+                        live.insert_embed(Some(txn), index, embed.clone(), Some(&op.attributes))?
+                    }
+                }
+                index += op.length() as i64;
+            }
+            Ok(())
+        })
+        .unwrap_or_else(|err| panic!("{name}: {err}"));
+        let next = read_input(items(field(entry, "next")));
+        let ops = plan_rich_text_edit(&live.to_delta(), &next);
+        let (got, want) = (
+            json_array(rich_text_ops_json(&ops)),
+            json(field(entry, "ops")),
+        );
+        if got != want {
+            failures.push(format!("{name}: ops\n got {got}\nwant {want}"));
+            continue;
+        }
+        let expected = field(entry, "expected");
+        let updates = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&updates);
+        let subscription = doc.on_update(move |_| {
+            counter.fetch_add(1, Ordering::SeqCst);
+        });
+        if !ops.is_empty() {
+            doc.transact(|txn| apply_rich_text_ops(txn, &live, &ops))
+                .unwrap_or_else(|err| panic!("{name}: {err}"));
+        }
+        subscription.unsubscribe();
+        let updates = updates.load(Ordering::SeqCst);
+        let want_writes = matches!(field(expected, "writes"), Value::Bool(true));
+        if (updates == 1) != want_writes || updates > 1 {
+            failures.push(format!("{name}: {updates} updates, writes={want_writes}"));
+        }
+        let (got, want) = (
+            json_array(delta_json(&live.to_delta())),
+            json(field(expected, "delta")),
+        );
+        if got != want {
+            failures.push(format!("{name}: delta\n got {got}\nwant {want}"));
+        }
+        let (got, want) = (
+            json_array(from_delta(&live.to_delta())),
+            json(field(expected, "segments")),
+        );
+        if got != want {
+            failures.push(format!("{name}: segments\n got {got}\nwant {want}"));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+fn set(object: &mut Object, key: &str, value: Value) {
+    object.set(Str::from(key), value);
+}
+
+fn rich_text_ops_json(ops: &[RichTextOp]) -> Vec<Value> {
+    ops.iter()
+        .map(|op| {
+            let mut json = Object::new();
+            let s = |text: &str| Value::String(Str::from(text));
+            match op {
+                RichTextOp::Insert {
+                    index,
+                    text,
+                    attributes,
+                } => {
+                    set(&mut json, "op", s("insert"));
+                    set(&mut json, "index", Value::Number(*index as f64));
+                    set(&mut json, "text", Value::String(text.clone()));
+                    set(&mut json, "attributes", Value::Object(attributes.clone()));
+                }
+                RichTextOp::InsertEmbed {
+                    index,
+                    embed,
+                    attributes,
+                } => {
+                    set(&mut json, "op", s("insertEmbed"));
+                    set(&mut json, "index", Value::Number(*index as f64));
+                    set(&mut json, "embed", Value::Object(embed.clone()));
+                    set(&mut json, "attributes", Value::Object(attributes.clone()));
+                }
+                RichTextOp::Delete { index, length } => {
+                    set(&mut json, "op", s("delete"));
+                    set(&mut json, "index", Value::Number(*index as f64));
+                    set(&mut json, "length", Value::Number(*length as f64));
+                }
+                RichTextOp::Format {
+                    index,
+                    length,
+                    attributes,
+                } => {
+                    set(&mut json, "op", s("format"));
+                    set(&mut json, "index", Value::Number(*index as f64));
+                    set(&mut json, "length", Value::Number(*length as f64));
+                    set(&mut json, "attributes", Value::Object(attributes.clone()));
+                }
+            }
+            Value::Object(json)
+        })
+        .collect()
+}
+
+fn delta_json(delta: &[Delta]) -> Vec<Value> {
+    delta
+        .iter()
+        .map(|op| {
+            let mut json = Object::new();
+            let insert = match &op.insert {
+                Out::Any(value) => value.clone(),
+                other => panic!("not a JSON insert: {other:?}"),
+            };
+            set(&mut json, "insert", insert);
+            if let Some(attributes) = &op.attributes {
+                set(&mut json, "attributes", Value::Object(attributes.clone()));
+            }
+            Value::Object(json)
+        })
+        .collect()
 }

@@ -14,3 +14,7 @@ fn the_shared_fixture_holds_the_malformed_cases() {
     assert!(malformed("segments") >= 20);
     assert!(malformed("deltas") > 0);
 }
+
+#[test]
+#[ignore = "drives YDocConverter.Seed and ApplyOps; port with the seed.go and apply.go lanes"]
+fn an_update_leaves_the_delta_yjs_leaves() {}

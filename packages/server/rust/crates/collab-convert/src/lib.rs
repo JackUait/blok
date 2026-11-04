@@ -11,6 +11,7 @@ mod htmlreader;
 mod keys;
 mod longestkept;
 mod richtext;
+mod richtextedit;
 mod richtextinput;
 mod textdiff;
 mod textdiff_tables;
@@ -24,6 +25,9 @@ pub use longestkept::longest_kept_order;
 pub use richtext::{
     WriteOp, canonical_marks, canonicalize, from_delta, is_rich_text, normalize, normalize_value,
     read_input, same_value, to_write_ops,
+};
+pub use richtextedit::{
+    RichTextOp, RichTextTarget, apply_rich_text_ops, plan_rich_text_edit, same_json,
 };
 pub use richtextinput::RichTextInput;
 pub use textdiff::{MAX_DIFF_DISTANCE, TextEdit, atomize, diff};

@@ -1,0 +1,110 @@
+{
+  "name": "room-redo-unreadable-property-type-object",
+  "room": {},
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": "P"
+        }
+      },
+      {
+        "id": "db",
+        "type": "database",
+        "content": [],
+        "data": {
+          "title": "Tasks",
+          "activeViewId": "v",
+          "views": [
+            {
+              "id": "v",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "filters": [],
+              "sorts": [],
+              "visibleProperties": []
+            }
+          ],
+          "schema": [
+            {
+              "id": "t",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "x",
+              "name": "Other",
+              "type": {},
+              "position": "a1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "block.delete",
+            "args": {
+              "id": "db"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.undo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "run": "room",
+      "actor": {
+        "id": "agent-cs",
+        "name": "Agent"
+      },
+      "batch": {
+        "commands": [
+          {
+            "name": "history.redo",
+            "args": {}
+          }
+        ]
+      },
+      "expect": {
+        "throws": {
+          "type": "InvalidOperation",
+          "message": "The node must be of type 'JsonValue'."
+        }
+      }
+    }
+  ]
+}

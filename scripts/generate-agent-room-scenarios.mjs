@@ -315,6 +315,32 @@ export const generate = () => {
       result: { '/error/retryable': false, '/error/details': { reason: 'no-channel', approval: { kind: 'database.unlock', blockId: 'db' } },
         '/error/message': 'This undo would unlock database "db". Unlocking needs a person\'s explicit approval, and nothing here can ask one. Nothing was written. Ask the person to unlock it themselves.' } })]);
   const FORM = { id: 'f', name: 'Signup', type: 'form', position: 'a1', filters: [], sorts: [], visibleProperties: [], form: { public: true } };
+  // A lock flag or a property type the undo cannot read: C# GetValue throws, and its text is the answer.
+  const unreadableLock = (schema, message) => [
+    room(b([c('database.setLock', { id: 'db', locked: true })]), { ok: true }),
+    room(UNDO, { throws: { type: 'InvalidOperation', message } })];
+  for (const [label, flag, message] of [
+    ['string', 'yes', 'A value of type \'System.String\' cannot be converted to a \'System.Boolean\'.'],
+    ['number', 5, 'A value of type \'System.Int64\' cannot be converted to a \'System.Boolean\'.'],
+    ['fraction', 1.5, 'A value of type \'System.Double\' cannot be converted to a \'System.Boolean\'.'],
+    ['object', {}, 'The node must be of type \'JsonValue\'.'],
+    ['list', [], 'The node must be of type \'JsonValue\'.']]) {
+    const schema = [{ ...SCHEMA[0], databaseLocked: flag }];
+
+    scen(`room-undo-unreadable-lock-${label}`, { blocks: [{ ...database(), data: { ...database().data, schema } }] }, unreadableLock(schema, message));
+  }
+  // The agent refuses to write such a type, so it comes from the seed: delete, undo, then the redo reads it.
+  for (const [label, type, message] of [
+    ['number', 5, 'A value of type \'System.Int64\' cannot be converted to a \'System.String\'.'],
+    ['boolean', true, 'A value of type \'System.Boolean\' cannot be converted to a \'System.String\'.'],
+    ['object', {}, 'The node must be of type \'JsonValue\'.']]) {
+    const schema = [SCHEMA[0], { id: 'x', name: 'Other', type, position: 'a1' }];
+
+    scen(`room-redo-unreadable-property-type-${label}`, { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'P' } }, { ...database(), data: { ...database().data, schema } }] }, [
+      room(b([c('block.delete', { id: 'db' })]), { ok: true }),
+      room(UNDO, { ok: true }),
+      room(REDO, { throws: { type: 'InvalidOperation', message } })]);
+  }
   scen('room-undo-share-public-form', { blocks: [database(FORM)] }, [
     room(b([c('database.deleteView', { id: 'db', viewId: 'f' })]), { ok: true, state: { '/blocks/0/data/views': { length: 1 } } }),
     room(UNDO, { ok: false, code: 'APPROVAL_REQUIRED', committed: 0, state: { '/blocks/0/data/views': { length: 1 } },

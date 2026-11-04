@@ -3,6 +3,7 @@ package blokagent
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"sync"
@@ -394,7 +395,29 @@ func netString(value any, present bool) (*string, error) {
 		text := s.String()
 		return &text, nil
 	}
-	return nil, &InvalidOperationError{Message: fmt.Sprintf("The node must be of type 'JsonValue' holding a String, not %T.", value)}
+	return nil, wrongValueType(value, "System.String")
+}
+
+// wrongValueType is what .NET's GetValue<T> throws on the export model's nodes,
+// which hold CLR values: an integer reads as Int64, any other number as Double.
+func wrongValueType(value any, target string) error {
+	var held string
+	switch value := value.(type) {
+	case *jsjson.Object, []any:
+		return &InvalidOperationError{Message: "The node must be of type 'JsonValue'."}
+	case jsjson.Str:
+		held = "System.String"
+	case bool:
+		held = "System.Boolean"
+	case float64:
+		held = "System.Double"
+		if value == math.Trunc(value) && math.Abs(value) < 1<<63 {
+			held = "System.Int64"
+		}
+	default:
+		held = fmt.Sprintf("%T", value)
+	}
+	return &InvalidOperationError{Message: fmt.Sprintf("A value of type '%s' cannot be converted to a '%s'.", held, target)}
 }
 
 // netIndex is C#'s `node?[key]` on the JS value model: the indexer throws
@@ -457,7 +480,7 @@ func locked(entry any) (bool, error) {
 		}
 		value, ok := flag.(bool)
 		if !ok {
-			return false, &InvalidOperationError{Message: "The node must be of type 'JsonValue' holding a Boolean."}
+			return false, wrongValueType(flag, "System.Boolean")
 		}
 		if value {
 			return true, nil

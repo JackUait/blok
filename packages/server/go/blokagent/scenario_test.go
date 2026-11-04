@@ -2,6 +2,7 @@ package blokagent
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -361,6 +362,16 @@ func TestMatchesTheAgentServerScenarios(t *testing.T) {
 						execution, err = session.Execute(ctx, document, batch)
 					}
 					live.healListings()
+					// A step the executor throws on: only the error's kind and text are the answer.
+					if throws := lookup(expect, "throws"); throws != nil {
+						kind, _ := stringOf(lookup(throws, "type"))
+						message, _ := stringOf(lookup(throws, "message"))
+						var invalid *InvalidOperationError
+						if kind != "InvalidOperation" || !errors.As(err, &invalid) || invalid.Message != message {
+							t.Fatalf("%s: threw %v, want %s: %s", where, err, kind, message)
+						}
+						continue
+					}
 					if err != nil {
 						t.Fatalf("%s: %v", where, err)
 					}

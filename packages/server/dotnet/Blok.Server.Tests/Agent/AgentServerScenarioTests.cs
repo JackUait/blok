@@ -110,6 +110,18 @@ public sealed class AgentServerScenarioTests
         var beforeHead = live is null ? null : await live.HeadAsync(doc!);
         var beforeBlocks = live is null ? null : (await live.ExportAsync(doc!))?["blocks"]?.ToJsonString();
         var batch = Fill(Indexed(step["batch"]!, repeat).ToJsonString());
+
+        // A step the executor throws on: only the exception's kind and text are the answer.
+        if (expect["throws"] is JsonObject throws)
+        {
+          var error = await Assert.ThrowsAnyAsync<Exception>(async () => await executor.ExecuteInRoomAsync(doc!, batch, StepActor(step), options));
+
+          Assert.True(
+              error.GetType().Name == throws["type"]!.GetValue<string>() + "Exception" && error.Message == throws["message"]!.GetValue<string>(),
+              $"{where}: threw {error.GetType().Name}: {error.Message}");
+          continue;
+        }
+
         var execution = run switch
         {
           "room" => await executor.ExecuteInRoomAsync(doc!, batch, StepActor(step), options),

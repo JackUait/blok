@@ -936,9 +936,25 @@ async fn starts_with_defaults_and_reports_the_development_version() {
     running.stop().await;
 }
 
-#[test]
-#[ignore = "needs a second cargo build of the binary with BLOK_SERVER_VERSION set at compile time; only one cargo command may run at a time here. health_reports_the_stamped_version covers the run path"]
-fn published_host_reports_the_supplied_build_version() {}
+// The stamp is read at compile time, and cargo builds this test and the
+// binary with the same environment, so both see the same value.
+#[tokio::test]
+async fn published_host_reports_the_supplied_build_version() {
+    let want = option_env!("BLOK_SERVER_VERSION").unwrap_or("dev");
+    let address = free_port();
+    let (mut child, text) = start_binary(&address);
+    wait_for(|| text.lock().unwrap().contains(" listening on ")).await;
+    let (status, _, body) = request(&address, "GET", "/health", "HTTP/1.1").await;
+    let _ = child.kill();
+    let _ = child.wait();
+    assert_eq!(
+        (status, body),
+        (
+            200,
+            format!("{{\"status\":\"ok\",\"version\":\"{want}\"}}\n")
+        )
+    );
+}
 
 async fn wait_for_binary(text: &Arc<Mutex<String>>) {
     wait_for(|| text.lock().unwrap().contains(" listening on ")).await;

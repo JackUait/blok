@@ -352,7 +352,7 @@ fn an_export_runtime_limit_is_transient() {
 }
 
 #[test]
-#[ignore = "Rust has no cancelled-elsewhere error: blok_jsruntime::Pool::invoke is cancelled only by dropping its future, and a lost engine is Kind::Unknown"]
+#[ignore = "not observable in Rust: Pool::invoke has no token and no shutdown, so it is cancelled only by dropping its future; its wait for an engine cannot fail; a lost engine is Kind::Unknown; and the host wires only RuntimeHtmlReader over that pool, whose Error has no cancel variant"]
 fn an_engine_pool_wait_cancelled_elsewhere_is_transient() {}
 
 #[test]

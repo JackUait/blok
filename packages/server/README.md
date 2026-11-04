@@ -42,6 +42,23 @@ The mapped group uses your ASP.NET Core authorization policy for upload and unfu
 
 In-process defaults expose health only. Storage and outbound routes must be enabled explicitly, and local storage requires an explicit valid `PublicUrl`. `AddBlokServer(options => { ... })` also accepts the origin, upload-limit, and S3 settings used by the standalone host.
 
+### Refuse bare LF line ends
+
+By default Kestrel takes a bare LF (no CR) at the end of a chunked trailer line. Every other chunk line needs CRLF. A proxy in front of your app may read that trailer another way. The proxy and Kestrel then disagree on where the next request starts, and a request can be smuggled past the proxy.
+
+The standalone host turns this off. Your own app does not get that setting from `AddBlokServer` or `MapBlokServer`, because it is a Kestrel runtime switch. Set it in your app's project file:
+
+```xml
+<ItemGroup>
+  <RuntimeHostConfigurationOption Include="Microsoft.AspNetCore.Server.Kestrel.DisableHttp1LineFeedTerminators"
+                                  Value="true" />
+</ItemGroup>
+```
+
+The switch covers all of Kestrel's HTTP/1 parsing. The request line and the headers then need CRLF too. A request with a bare LF gets an empty 400, and the connection closes.
+
+The Go and Rust hosts refuse bare LF line ends as well.
+
 ## Convert documents
 
 `Blok.Server` embeds Blok's own serializer as a JavaScript bundle and runs it in this process. A document therefore converts through the editor's implementation, not a port of it. A port has to be taught every block Blok gains, and it silently drops the ones nobody remembered.

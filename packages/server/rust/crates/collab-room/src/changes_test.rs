@@ -53,7 +53,7 @@ pub(crate) fn string(value: &Value) -> String {
 }
 
 #[test]
-fn diff_blocks_marks_every_kind_fixture_case() {
+pub(crate) fn diff_blocks_marks_every_kind_fixture_case() {
     let fixture = read_repo_json(&["test", "fixtures", "version-history", "kind-cases.json"]);
     let cases = array(member(&fixture, "cases"));
     assert!(cases.len() > 10, "only {} cases", cases.len());

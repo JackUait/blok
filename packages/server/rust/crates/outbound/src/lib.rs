@@ -7,7 +7,9 @@ mod body;
 mod browserurl;
 mod decode;
 mod fetcher;
+pub mod operator;
 mod policy;
+mod proxy;
 pub mod wire;
 
 pub use browserurl::browser_url;
@@ -15,6 +17,7 @@ pub use fetcher::{Fetcher, Limits, Resolver, Response, USER_AGENT};
 pub use policy::{
     DefaultPolicy, Error, ExactOriginPolicy, Failure, Policy, Target, has_control, is_failure,
 };
+pub use proxy::{EnvironmentProxy, ProxyUrl};
 
 #[cfg(test)]
 mod browserurl_test;
@@ -34,6 +37,8 @@ mod origin_test;
 mod pki_test;
 #[cfg(test)]
 mod policy_test;
+#[cfg(test)]
+mod proxy_test;
 #[cfg(test)]
 mod test_json;
 #[cfg(test)]

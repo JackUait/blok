@@ -1,8 +1,10 @@
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use blok_jsruntime::PoolError;
 
-use crate::{Actor, Cancel, Executor, FactoryOptions};
+use crate::roomharness_test::new_test_room;
+use crate::{Actor, Cancel, Executor, FactoryOptions, InvokeFuture, Invoker};
 
 // C# BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints. Rust's
 // pool size is a usize, so the negative-size row has no form.
@@ -34,9 +36,56 @@ fn new_refuses_limits_below_their_floors_before_loading() {
     }
 }
 
-#[test]
-#[ignore = "needs live rooms, which wait for the collab crates"]
-fn a_room_contract_offers_the_history_only_with_a_history_journal() {}
+/// Records the input and answers one fixed text.
+struct RecordingRuntime {
+    answer: &'static str,
+    input: Arc<Mutex<String>>,
+}
+
+impl Invoker for RecordingRuntime {
+    fn invoke<'a>(
+        &'a self,
+        _: &'a Cancel,
+        _: &'a str,
+        input: &'a str,
+        _: Duration,
+    ) -> InvokeFuture<'a> {
+        *self.input.lock().expect("lock") = input.to_owned();
+        Box::pin(async { Ok(self.answer.to_owned()) })
+    }
+}
+
+// RoomCommon (BlokAgentExecutor.cs:1205-1219): rooms whose journal keeps
+// history add versionHistory last to services, then restores after
+// runtime. Rooms with no journal add neither.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_room_contract_offers_the_history_only_with_a_history_journal() {
+    for (no_journal, want) in [
+        (
+            false,
+            r#"{"services":["versionHistory"],"runtime":"csharp-live","restores":true}"#,
+        ),
+        (true, r#"{"services":[],"runtime":"csharp-live"}"#),
+    ] {
+        let input = Arc::new(Mutex::new(String::new()));
+        let recorded = input.clone();
+        let rooms = new_test_room(
+            no_journal,
+            Some(Box::new(move |_| {
+                Arc::new(RecordingRuntime {
+                    answer: r#"{"contract":{}}"#,
+                    input: recorded,
+                })
+            })),
+        );
+        rooms
+            .executor
+            .room_contract(&Cancel::new(), None)
+            .await
+            .expect("contract");
+        assert_eq!(*input.lock().expect("lock"), want, "room contract input");
+    }
+}
 
 /// Drops the edit time, the one field that differs between calls.
 fn untimed(document: &str) -> String {

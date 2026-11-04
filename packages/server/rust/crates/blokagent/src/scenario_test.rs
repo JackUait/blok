@@ -5,11 +5,12 @@ use blok_jsjson::{Kind, Node, new_member, new_object, to_string_lossy};
 
 use crate::host_fixture_test::{REPO_ROOT, read_repo_file};
 use crate::normalize_test::{deep_equals, records};
+use crate::scenario_room_test::{fill_scenario, headed, open_scenario_room, step_actor};
 use crate::test_support::{lookup, must_parse, pointer, shared_executor, stable, string_of};
 use crate::wire::{is_true, present, str_node, write};
 use crate::{
-    Actor, Cancel, Error, Execution, HostFuture, Options, PageCreator, PageLocation, PageTarget,
-    Session, StoredPage,
+    Actor, Cancel, Error, Execution, Executor, HostFuture, Options, PageCreator, PageLocation,
+    PageTarget, Session, StoredPage,
 };
 
 // The Rust reader of test/fixtures/agent-server-scenarios. The runner
@@ -178,7 +179,12 @@ fn scenario_options(
     (Some(options), host)
 }
 
-fn check_pointers(failures: &mut Vec<String>, place: &str, root: &Node, pointers: Option<&Node>) {
+pub(crate) fn check_pointers(
+    failures: &mut Vec<String>,
+    place: &str,
+    root: &Node,
+    pointers: Option<&Node>,
+) {
     let Some(pointers) = pointers else { return };
     for m in &pointers.members {
         let path = to_string_lossy(m.key().expect("key").units());
@@ -286,7 +292,13 @@ fn load(name: &str) -> Node {
 }
 
 async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
-    let executor = shared_executor();
+    let live = lookup(Some(scenario), "room")
+        .map(|spec| open_scenario_room(spec, lookup(Some(scenario), "seed").expect("seed")));
+    let executor: &Executor = match &live {
+        Some(live) => &live.room.executor,
+        None => shared_executor(),
+    };
+    let mut revisions: HashMap<usize, String> = HashMap::new();
     let cancel = Cancel::new();
     let (options, host) = scenario_options(lookup(Some(scenario), "options"), scenario);
     let seed = write(lookup(Some(scenario), "seed").expect("seed")).expect("write");
@@ -301,12 +313,13 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
         .enumerate()
     {
         let run = string_of(lookup(Some(step), "run")).unwrap_or_default();
-        let expect = lookup(Some(step), "expect").unwrap_or(&empty);
+        let given = lookup(Some(step), "expect").unwrap_or(&empty);
         let times: usize = lookup(Some(step), "times")
             .and_then(|n| std::str::from_utf8(n.raw()).ok()?.parse().ok())
             .unwrap_or(1);
         for repeat in 0..times {
             let place = format!("{name} step {index}#{repeat}");
+            let expect = given;
             if run.starts_with("contract:") {
                 let contract = match run.as_str() {
                     "contract:plain" => executor.contract(&cancel, options.as_ref()).await,
@@ -323,6 +336,33 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
                 check_contract(failures, &place, &must_parse(&contract), expect);
                 continue;
             }
+            let current = match &live {
+                Some(live) => live.head(&live.doc).await,
+                None => String::new(),
+            };
+            let fill = |text: &str, revisions: &HashMap<usize, String>| -> String {
+                match &live {
+                    Some(_) => fill_scenario(text, revisions, &current),
+                    None => text.to_owned(),
+                }
+            };
+            if matches!(
+                run.as_str(),
+                "peer" | "reset" | "purge" | "restore" | "drain" | "failListings"
+            ) {
+                let live = live.as_ref().expect("a room");
+                live.host_step(&place, &run, step, &|text| fill(text, &revisions))
+                    .await;
+                continue;
+            }
+            let doc = live
+                .as_ref()
+                .map(|live| live.step_doc(step))
+                .unwrap_or_default();
+            let (before_head, before_blocks) = match &live {
+                Some(live) => (live.head(&doc).await, live.blocks(&doc).await),
+                None => (String::new(), String::new()),
+            };
             let reference = |reference: &str| -> String {
                 match reference {
                     "@seed" => seed.clone(),
@@ -367,7 +407,19 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
                 repeat,
             ))
             .expect("write");
+            let batch = fill(&batch, &revisions);
             let outcome: Result<Execution, Error> = match run.as_str() {
+                "room" => {
+                    executor
+                        .execute_in_room(
+                            &cancel,
+                            &doc,
+                            &batch,
+                            &step_actor(step, scenario_actor()),
+                            options.as_ref(),
+                        )
+                        .await
+                }
                 "plain" => {
                     executor
                         .execute(
@@ -386,6 +438,9 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
                     session.execute(&cancel, &document, &batch).await
                 }
             };
+            if let Some(live) = &live {
+                live.heal_listings();
+            }
             // A step the executor throws on: only the error's kind and text are the answer.
             if let Some(throws) = lookup(Some(expect), "throws") {
                 let kind = string_of(lookup(Some(throws), "type")).unwrap_or_default();
@@ -407,6 +462,18 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
                 }
             };
             let result = must_parse(&execution.result_json);
+            revisions.insert(index, execution.revision.clone());
+            let mut head = String::new();
+            let rewritten;
+            let expect = match &live {
+                Some(live) => {
+                    head = live.head(&doc).await;
+                    let written = fill(&write(expect).expect("write"), &revisions);
+                    rewritten = headed(must_parse(&written), &head);
+                    &rewritten
+                }
+                None => expect,
+            };
             if let Some(want) = lookup(Some(expect), "ok")
                 && is_true(Some(&result), "ok").unwrap_or(false) != (want.kind == Kind::True)
             {
@@ -473,6 +540,21 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
                     ));
                 }
             }
+            if let Some(live) = &live {
+                live.check(
+                    failures,
+                    &place,
+                    &doc,
+                    expect,
+                    &execution,
+                    &head,
+                    &before_head,
+                    &before_blocks,
+                    |at| by_step.get(&at).cloned().unwrap_or_default(),
+                    lookup(Some(scenario), "seed").expect("seed"),
+                )
+                .await;
+            }
             if let Some(saved) = execution.document_json {
                 last = saved;
                 by_step.insert(index, last.clone());
@@ -524,28 +606,19 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
     }
 }
 
-fn needs_a_room(scenario: &Node) -> bool {
-    lookup(Some(scenario), "room").is_some()
-}
-
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn matches_the_agent_server_scenarios() {
     let names = scenario_names();
     assert!(!names.is_empty(), "no scenarios");
     let mut failures = Vec::new();
-    let mut ran = 0;
+    let mut rooms = 0;
     for name in &names {
         let scenario = load(name);
-        if needs_a_room(&scenario) {
-            continue;
+        if lookup(Some(&scenario), "room").is_some() {
+            rooms += 1;
         }
-        ran += 1;
         run_scenario(name, &scenario, &mut failures).await;
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
-    assert!(ran > 0, "no stored scenario ran");
+    assert_eq!(rooms, 88, "room scenarios");
 }
-
-#[test]
-#[ignore = "the scenarios with a live room need the collab crates"]
-fn matches_the_agent_server_scenarios_in_a_room() {}

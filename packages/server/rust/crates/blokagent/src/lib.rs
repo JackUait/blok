@@ -49,9 +49,13 @@ mod normalize_test;
 #[cfg(test)]
 mod parity_test;
 #[cfg(test)]
+mod room_fuzz_test;
+#[cfg(test)]
 mod room_test;
 #[cfg(test)]
 mod roomharness_test;
+#[cfg(test)]
+mod scenario_room_test;
 #[cfg(test)]
 mod scenario_test;
 #[cfg(test)]

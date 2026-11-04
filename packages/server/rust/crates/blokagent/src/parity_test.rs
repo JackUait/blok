@@ -4,6 +4,8 @@ use blok_jsjson::{Kind, Node};
 
 use crate::host_fixture_test::{REPO_ROOT, read_repo_file};
 use crate::normalize_test::{id_of, normalize_document, records};
+use crate::room::new_guid;
+use crate::roomharness_test::new_test_room;
 use crate::test_support::{lookup, must_parse, shared_executor, stable, string_of};
 use crate::wire::{is_true, write};
 use crate::{Actor, Cancel};
@@ -184,6 +186,61 @@ async fn matches_the_agent_command_corpus() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
-#[test]
-#[ignore = "needs live rooms, which wait for the collab crates"]
-fn matches_the_agent_command_corpus_in_a_room() {}
+// The live-room runner over the same corpus, as C# RoomAgentParityTests: a
+// real room on the real converter and journal, the "room" expectation, and
+// the stored golden when the case succeeds everywhere.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn matches_the_agent_command_corpus_in_a_room() {
+    let corpus = load_corpus();
+    assert_eq!(corpus.len(), 52, "runnable cases");
+    let actor = Actor {
+        id: "agent-test".to_owned(),
+        name: "Parity".to_owned(),
+        on_behalf_of: Some("human-1".to_owned()),
+    };
+    let cancel = Cancel::new();
+    let mut failures = Vec::new();
+    for case in &corpus {
+        let rooms = new_test_room(false, None);
+        let doc = format!("parity-{}", new_guid());
+        rooms.docs.hold(&doc, &write(&case.seed).expect("write"));
+        let mut code = String::new();
+        for batch in &case.batches {
+            let batch = write(batch).expect("write");
+            let execution = rooms
+                .executor
+                .execute_in_room(&cancel, &doc, &batch, &actor, None)
+                .await
+                .unwrap_or_else(|err| panic!("{}: execute: {err}", case.name));
+            let result = must_parse(&execution.result_json);
+            if !is_true(Some(&result), "ok").unwrap_or(false) {
+                code =
+                    string_of(lookup(lookup(Some(&result), "error"), "code")).unwrap_or_default();
+                break;
+            }
+        }
+        let want = expected_error(case, "room");
+        if code != want {
+            failures.push(format!("{}: error {code:?}, want {want:?}", case.name));
+            continue;
+        }
+        // Same gate as the stored runner: content only.
+        if !code.is_empty() || !expected_error(case, "json").is_empty() {
+            continue;
+        }
+        let Some(want) = golden(&case.name) else {
+            failures.push(format!("{}: no golden", case.name));
+            continue;
+        };
+        let got = normalize_document(&rooms.export(&doc).await, &caller_chosen_ids(case));
+        if stable(Some(&got)) != stable(Some(&want)) {
+            failures.push(format!(
+                "{}: document\n got {}\nwant {}",
+                case.name,
+                stable(Some(&got)),
+                stable(Some(&want))
+            ));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}

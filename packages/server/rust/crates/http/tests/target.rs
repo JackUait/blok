@@ -599,3 +599,61 @@ async fn a_long_chunk_extension_is_never_held() {
             .collect::<Vec<_>>()
     );
 }
+
+// Go's stream swapped the \x01 and queued the targets; blok-http reads the
+// head after an upgrade no route took as any other and hands its target
+// over as sent.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_upgrade_not_taken_reads_the_next_head() {
+    let (server, seen) = recording(Config::default()).await;
+    let input = b"GET /s HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\n\r\nGET /b\x01 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n";
+    let got = raw_answer(server.address, input).await;
+    let statuses: Vec<u16> = responses(got.as_bytes()).iter().map(|r| r.status).collect();
+    assert_eq!(statuses, [200, 200], "{got:?}");
+    let targets: Vec<String> = seen
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(t, _)| t.clone())
+        .collect();
+    assert_eq!(targets, ["/s", "/b\x01"]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bare_line_feeds_are_refused_as_the_csharp_host_refuses_them() {
+    const KESTREL400: &str =
+        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+    const NEXT: &str = "GET /b HTTP/1.1\r\nHost: x\r\n\r\n";
+    const POST: &str = "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n";
+    let (server, seen) = recording(Config::default()).await;
+    let heads = [
+        ("a request line", "GET / HTTP/1.1\nHost: x\r\n\r\n"),
+        ("a header line", "GET / HTTP/1.1\r\nHost: x\n\r\n"),
+        ("the blank line", "GET / HTTP/1.1\r\nHost: x\r\n\n"),
+    ];
+    for (name, head) in heads {
+        seen.lock().unwrap().clear();
+        let got = raw_answer(server.address, format!("{head}{NEXT}").as_bytes()).await;
+        assert_eq!(got, KESTREL400, "{name}");
+        assert!(seen.lock().unwrap().is_empty(), "{name}");
+    }
+    let trailers = [
+        ("a trailer line", "0\r\nX-T: 1\n\r\n"),
+        ("the trailer's end", "0\r\n\n"),
+        ("both", "0\r\nX-T: 1\n\n"),
+    ];
+    for (name, trailer) in trailers {
+        seen.lock().unwrap().clear();
+        let got = raw_answer(server.address, format!("{POST}{trailer}{NEXT}").as_bytes()).await;
+        assert_eq!(got, KESTREL400, "{name}");
+        let targets: Vec<String> = seen
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(t, _)| t.clone())
+            .collect();
+        assert_eq!(targets, ["/a"], "{name}");
+    }
+    let got = raw_answer(server.address, b"GET /health HTTP/1.\r\n").await;
+    assert_eq!(got, KESTREL400, "a seven-byte version");
+}

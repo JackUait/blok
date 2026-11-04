@@ -130,6 +130,11 @@ impl Fetcher {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn permits_available(&self) -> usize {
+        self.permits.available_permits()
+    }
+
     /// Fetches `raw`. Every failure is an `Error`; the caller cancels by
     /// dropping the future, which closes the connection and frees the slot.
     pub async fn get(&self, raw: &str, limits: &Limits) -> Result<Response, Error> {

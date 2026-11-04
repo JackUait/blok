@@ -19,6 +19,8 @@ pub use policy::{
 #[cfg(test)]
 mod browserurl_test;
 #[cfg(test)]
+mod csharp_fetcher_test;
+#[cfg(test)]
 mod csharp_policy_test;
 #[cfg(test)]
 mod encodings_test;
@@ -27,6 +29,10 @@ mod fetcher_test;
 #[cfg(test)]
 mod origin_test;
 #[cfg(test)]
+mod pki_test;
+#[cfg(test)]
 mod policy_test;
 #[cfg(test)]
 mod test_json;
+#[cfg(test)]
+mod tls_test;

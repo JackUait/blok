@@ -115,6 +115,9 @@ func TestATransientExportFailureThatNeverHealsIsGivenUp(t *testing.T) {
 // never retried (CollabRoom.cs:3358-3429).
 func TestANonTransientExportFailureOnAJournalRoomIsRefusedAtOnce(t *testing.T) {
 	e := newExportRoom(t, &journal.InvalidDataError{Message: `collab: block "b-1" has data that is not a map.`}, openJournal(t))
+	// Unheld, the 20 ms linger can fire during a slow checkpoint and evict
+	// before the checkpoint's export runs. C# holds a member the same way.
+	membership := join(t, e.manager, "doc", &fakeMember{source: collab.SourceClientV1, write: true})
 	block, err := jsjson.ParseNode([]byte(`{"type":"custom","data":{"n":1}}`), jsjson.Options{})
 	if err != nil {
 		t.Fatal(err)
@@ -129,6 +132,11 @@ func TestANonTransientExportFailureOnAJournalRoomIsRefusedAtOnce(t *testing.T) {
 	}
 
 	waitUntil(t, "the refusal", func() bool { return e.logged("cannot export its document") == 1 })
+	time.Sleep(50 * time.Millisecond)
+	if got := e.converter.count(); got != 1 {
+		t.Fatalf("%d exports while the room was occupied, want 1: the refusal was retried", got)
+	}
+	membership.Leave()
 	// The refusal releases the hold a dirty projection puts on eviction.
 	waitUntil(t, "the room to be evicted", func() bool { return liveRooms(e.manager) == 0 })
 	time.Sleep(50 * time.Millisecond)

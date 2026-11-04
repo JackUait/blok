@@ -168,6 +168,8 @@ func TestRequestHeadsFollowKestrelsGrammar(t *testing.T) {
 		{"malformed Host", "GET /h HTTP/1.1\r\nHost: a b\r\nConnection: close\r\n\r\n", kestrel400},
 		{"HTTP/0.9", "GET /h\r\n\r\n", kestrel400},
 		{"two Content-Length values", "POST /h HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\nContent-Length: 2\r\n\r\nxx", kestrel400},
+		{"two equal Content-Length values", "POST /h HTTP/1.1\r\nHost: x\r\nContent-Length: 2\r\ncontent-length: 2\r\n\r\nxx", kestrel400},
+		{"two Content-Length values beside chunked", "POST /h HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\nContent-Length: 1\r\nContent-Length: 1\r\n\r\n0\r\n\r\n", kestrel400},
 		{"blank lines before the request line", "\r\n\n\r" + headWith("X-A: v\r\n"), `["v"]`},
 	}
 	for _, c := range cases {

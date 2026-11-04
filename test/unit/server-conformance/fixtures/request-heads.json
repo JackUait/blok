@@ -190,5 +190,13 @@
   {
     "name": "HTTP/1.2 after a kept-alive request",
     "response": "HTTP/1.1 200 OK\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\nHTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+  },
+  {
+    "name": "two equal Content-Length values",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "two Content-Length values beside chunked",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   }
 ]

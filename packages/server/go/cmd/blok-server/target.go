@@ -96,6 +96,7 @@ type targetStream struct {
 	headerLines int
 	hostLines   int
 	host        string
+	lengthLines int
 	// dropped counts the CR and LF bytes skipped before request lines.
 	dropped int
 
@@ -301,6 +302,9 @@ func (s *targetStream) swapHeaderLine(line []byte) bool {
 		s.host = string(bytes.Trim(value, " \t"))
 		return true
 	}
+	if bytes.EqualFold(name, []byte("Content-Length")) {
+		s.lengthLines++
+	}
 	original := swap{name: string(name), value: string(value)}
 	changed := swapBytes(name, kestrelOnlyNameByte)
 	changed = swapBytes(value, kestrelOnlyValueByte) || changed
@@ -348,9 +352,15 @@ func (s *targetStream) refuse(status int) {
 // endHead reads the head the way net/http will and sets where the next
 // request line starts.
 func (s *targetStream) endHead() {
-	request, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(s.head)))
 	s.headerBytes, s.headerLines = 0, 0
-	defer func() { s.hostLines, s.host = 0, "" }()
+	defer func() { s.hostLines, s.host, s.lengthLines = 0, "", 0 }()
+	// net/http takes equal Content-Length lines as one; Kestrel refuses any
+	// second line.
+	if s.lengthLines > 1 {
+		s.refuse(http.StatusBadRequest)
+		return
+	}
+	request, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(s.head)))
 	switch {
 	case err != nil && strings.Contains(err.Error(), "unsupported transfer encoding"):
 		// net/http answers 501 itself.

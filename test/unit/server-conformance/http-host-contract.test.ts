@@ -1209,6 +1209,9 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'HTTP/1.2 line alone': bytes('GET /health HTTP/1.2\r\n'),
   'HTTP/1.2 with a bad method': bytes(`G@T /health HTTP/1.2\r\nHost: x\r\n${CLOSE}\r\n`),
   'HTTP/1.2 after a kept-alive request': bytes(`GET /health HTTP/1.1\r\nHost: x\r\n\r\nGET /health HTTP/1.2\r\n`),
+  // Kestrel refuses a second Content-Length line, even an equal one.
+  'two equal Content-Length values': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\nContent-Length: 2\r\n${CLOSE}\r\n{}`),
+  'two Content-Length values beside chunked': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 1\r\nContent-Length: 1\r\n${CLOSE}\r\n0\r\n\r\n`),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

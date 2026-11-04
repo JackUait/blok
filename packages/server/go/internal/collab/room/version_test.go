@@ -157,8 +157,13 @@ func TestTheVersionIsCapturedAtLoadSoAHostSaveAfterwardsStillRefusesTheWriteBack
 
 	// The room reloads while the consumer's record is at v2 ...
 	r.endpoint.Holds(t, testDoc, "hello world", strPtr("v2"))
+	loads := r.endpoint.Loads()
 	nextMember := v2Member()
 	second := joinSynced(t, manager, testDoc, nextMember)
+	// C# sends the version GET inside the load, so its synchronous fake has
+	// answered before the join returns. Go sends it from a goroutine: wait
+	// for it, or the host's save below can land first.
+	waitUntil(t, "the reloaded room's version read", func() bool { return r.endpoint.Loads() > loads })
 	next := syncedClient(t, manager, testDoc, "hello world")
 	sendOperation(t, second, nextMember, opTwo, updateAppending(next, "!"))
 

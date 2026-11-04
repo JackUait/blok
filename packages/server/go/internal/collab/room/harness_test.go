@@ -531,18 +531,27 @@ func (e *fakeEndpoint) Saves() []recordedSave {
 
 func (e *fakeEndpoint) Load(ctx context.Context, doc string) (*docendpoint.Loaded, error) {
 	e.mu.Lock()
-	e.loads++
 	gate := e.loadGate
+	if gate == nil {
+		// Counted and answered in one step, so a test that sees the count
+		// knows which record the load read.
+		defer e.mu.Unlock()
+		e.loads++
+		return e.answerLocked(doc)
+	}
+	e.loads++
 	e.mu.Unlock()
-	if gate != nil {
-		select {
-		case <-gate:
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
+	select {
+	case <-gate:
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	return e.answerLocked(doc)
+}
+
+func (e *fakeEndpoint) answerLocked(doc string) (*docendpoint.Loaded, error) {
 	loaded := e.documents[doc]
 	if loaded == nil {
 		return nil, errors.New("collab: the doc endpoint GET returned 404.")

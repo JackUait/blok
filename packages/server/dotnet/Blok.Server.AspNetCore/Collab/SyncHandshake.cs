@@ -225,7 +225,10 @@ internal sealed class SyncHandshake(
       return null;
     }
 
-    var name = identity.Name ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    // An empty Name falls back too: a null principal has no connection cap.
+    var name = string.IsNullOrEmpty(identity.Name)
+      ? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+      : identity.Name;
 
     return string.IsNullOrEmpty(name) ? null : $"app:{name}";
   }

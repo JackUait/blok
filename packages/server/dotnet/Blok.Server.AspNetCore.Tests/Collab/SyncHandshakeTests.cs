@@ -535,6 +535,25 @@ public sealed class SyncHandshakeTests
     Assert.Equal("alice", accepted.ActorId);
   }
 
+  // The principal is the key of the per-user connection cap. An empty Name
+  // must fall back to the id, or the user would have no cap at all.
+  [Fact]
+  public async Task AnEmptyApplicationNameFallsBackToTheNameIdentifierForThePrincipal()
+  {
+    var handshake = NewHandshake(new BlokServerOptions { Auth = "none" });
+    var identity = new ClaimsIdentity(
+        [
+          new Claim(ClaimTypes.Name, ""),
+          new Claim(ClaimTypes.NameIdentifier, "alice"),
+        ],
+        "test");
+    var context = NewWebSocketContext(origin: null, user: new ClaimsPrincipal(identity));
+
+    var accepted = Assert.IsType<SyncAccepted>(await handshake.NegotiateAsync(context, SyncApp.Doc));
+
+    Assert.Equal("app:alice", accepted.Principal);
+  }
+
   // A verified ticket never names an empty user in practice — SyncClose.UserlessPass
   // rejects it before a SyncAccepted can exist. This pins the derivation itself, so
   // that gate is not the only thing standing between an empty claim and a fabricated

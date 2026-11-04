@@ -271,6 +271,16 @@ func TestASignedInUserIsCappedByNameAndJournalledByID(t *testing.T) {
 	}
 }
 
+// An empty name falls back to the id, or the user would have no cap.
+func TestASignedInUserWithAnEmptyNameIsCappedByID(t *testing.T) {
+	h := startEndpoint(t, func(c *Config) { c.Connections = NewConnectionTable(0, 1) },
+		signedIn(auth.User{ID: "id-7", Authenticated: true}))
+	h.dial(t, "/sync/doc")
+	if second := h.dial(t, "/sync/doc"); second.response.StatusCode != 429 || second.body != "too many connections\n" {
+		t.Fatalf("second: %d %q", second.response.StatusCode, second.body)
+	}
+}
+
 func TestTheHookIsAskedWithTheTicketsClaims(t *testing.T) {
 	hook := &fakeAuthorization{read: true, write: true}
 	h := startEndpoint(t, func(c *Config) { c.Auth = "ticket"; c.Authorization = hook }, nil)

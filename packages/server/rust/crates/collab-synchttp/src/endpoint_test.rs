@@ -111,6 +111,25 @@ async fn a_signed_in_user_is_capped_by_name_and_journalled_by_id() {
     );
 }
 
+#[tokio::test]
+async fn a_signed_in_user_with_an_empty_name_is_capped_by_id() {
+    let h = start_endpoint(
+        |c| c.connections = Arc::new(ConnectionTable::new(0, 1)),
+        Some(signed_in(User {
+            id: "id-7".into(),
+            authenticated: true,
+            ..User::default()
+        })),
+    )
+    .await;
+    let _first = h.dial("/sync/doc", &[]).await;
+    let second = h.dial("/sync/doc", &[]).await;
+    assert_eq!(
+        (second.status, second.body.as_str()),
+        (429, "too many connections\n")
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_hook_is_asked_with_the_tickets_claims() {
     let hook = FakeAuthorization::new(true, true, false);

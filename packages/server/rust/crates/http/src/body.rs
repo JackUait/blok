@@ -307,6 +307,11 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
             // here; this refuses it, as every other chunk line, so a proxy
             // that reads the trailer otherwise cannot desync the host.
             Chunk::Trailers => {
+                // Measured: Kestrel reads a trailer line only once it holds
+                // two bytes, so a lone LF waits for the next one.
+                if available < 2 {
+                    return ended_step(available);
+                }
                 let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
                     if state.trailer_bytes + available >= MAX_HEADER_BLOCK {
                         return Step::Fail(BodyError::HeadersTooLarge);

@@ -69,3 +69,31 @@ async fn a_route_that_set_the_cap_sees_the_overflow() {
     let got = raw_answer(server.address, &chunked("/own-cap", "80000000")).await;
     assert!(got.contains("route saw overflow=true"), "{got:?}");
 }
+
+// Measured on the C# host: after the last chunk Kestrel reads a trailer line
+// only once it holds two bytes, so a lone LF waits (408 at the body rate)
+// and the byte after it gets the 400 for the bare LF.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_lone_lf_after_the_last_chunk_waits_for_one_more_byte() {
+    use tokio::io::AsyncReadExt;
+    let server = start(read_body, Config::default()).await;
+    let mut conn = connect(server.address).await;
+    write(&mut conn, &chunked("/delete", "0")[..]).await;
+    write(&mut conn, b"\n").await;
+    let mut first = [0u8; 64];
+    let early =
+        tokio::time::timeout(std::time::Duration::from_millis(500), conn.read(&mut first)).await;
+    assert!(
+        early.is_err(),
+        "answered at once: {:?}",
+        early.map(|r| r.map(|n| String::from_utf8_lossy(&first[..n]).into_owned()))
+    );
+    write(&mut conn, b"G").await;
+    let got =
+        String::from_utf8_lossy(&read_all(&mut conn, std::time::Duration::from_secs(3)).await)
+            .into_owned();
+    assert!(
+        got.starts_with("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n"),
+        "{got:?}"
+    );
+}

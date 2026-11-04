@@ -212,11 +212,28 @@ func (l *lawSource) flushViolations(fnName, handle, after string) []string {
 	for _, call := range calls(fn) {
 		flush := callName(call) == "Sync" && callReceiver(call) == handle ||
 			callName(call) == "syncJournal" && len(call.Args) == 1 && types.ExprString(call.Args[0]) == handle
-		if flush && call.Pos() > write.Pos() && l.resultUsed(call) {
+		if flush && call.Pos() > write.Pos() && l.resultUsed(call) && l.block(call) == l.block(write) {
 			return nil
 		}
 	}
-	return []string{fnName + " must call " + handle + ".Sync() after its " + handle + "." + after + " and keep its result"}
+	return []string{fnName + " must call " + handle + ".Sync() after its " + handle + "." + after + ", in the same block, and keep its result"}
+}
+
+// block is the nearest block holding node. An "if err == nil {" body counts
+// as the block around it: that is Go's way of running the next step only when
+// the last one worked, so it is the same straight line as C#'s one block.
+func (l *lawSource) block(node ast.Node) *ast.BlockStmt {
+	for at := l.parents[node]; at != nil; at = l.parents[at] {
+		block, ok := at.(*ast.BlockStmt)
+		if !ok {
+			continue
+		}
+		chain, ok := l.parents[block].(*ast.IfStmt)
+		if !ok || chain.Body != block || chain.Init != nil || chain.Else != nil || types.ExprString(chain.Cond) != "err == nil" {
+			return block
+		}
+	}
+	return nil
 }
 
 func (l *lawSource) orderViolations(fnName string, steps []string) []string {
@@ -304,7 +321,10 @@ func (l *lawSource) truncationViolations() []string {
 						operation, guardable = callName(n), true
 					}
 				case *ast.SelectorExpr:
-					if types.ExprString(n) == "os.O_TRUNC" {
+					// flag&os.O_TRUNC tests the flag and flag&^os.O_TRUNC clears it.
+					binary, ok := l.parents[n].(*ast.BinaryExpr)
+					masks := ok && binary.Y == n && (binary.Op == token.AND || binary.Op == token.AND_NOT)
+					if types.ExprString(n) == "os.O_TRUNC" && !masks {
 						operation = "os.O_TRUNC"
 					}
 				}
@@ -520,5 +540,39 @@ func TestTheLawDetectsADirectorySyncThatDropsItsResult(t *testing.T) {
 	}
 	if got := lawOf(t, `func (s *Session) Reset() { syncDirectory(d) }`).discardedDirectorySyncs(); len(got) != 1 {
 		t.Error(got)
+	}
+}
+
+func TestTheLawDetectsAFlushStrandedInAnotherBlock(t *testing.T) {
+	for _, body := range []string{
+		`func publish() error { manifestFile.WriteAt(b, 0); if verbose { return manifestFile.Sync() }; return nil }`,
+		`func publish() error { if fast { manifestFile.WriteAt(b, 0) }; return manifestFile.Sync() }`,
+		`func publish() (err error) { _, err = manifestFile.WriteAt(b, 0); if err != nil { err = manifestFile.Sync() }; return }`,
+	} {
+		if got := lawOf(t, body).flushViolations("publish", "manifestFile", "WriteAt"); len(got) != 1 {
+			t.Errorf("%s: %v", body, got)
+		}
+	}
+}
+
+func TestTheLawAcceptsAFlushChainedOnTheWritesError(t *testing.T) {
+	for _, body := range []string{
+		`func publish() (err error) { _, err = manifestFile.WriteAt(b, 0); if err == nil { err = manifestFile.Sync() }; return }`,
+		`func publish() (err error) { err = check(); if err == nil { _, err = manifestFile.WriteAt(b, 0) }; if err == nil { err = manifestFile.Sync() }; return }`,
+	} {
+		if got := lawOf(t, body).flushViolations("publish", "manifestFile", "WriteAt"); len(got) != 0 {
+			t.Errorf("%s: %v", body, got)
+		}
+	}
+}
+
+func TestTheLawIgnoresATruncateFlagThatIsOnlyTestedOrCleared(t *testing.T) {
+	for _, body := range []string{
+		`func canCreate(flag int) bool { return flag&os.O_TRUNC != 0 }`,
+		`func openPlain(flag int) { os.OpenFile(p, flag&^os.O_TRUNC, 0o600) }`,
+	} {
+		if got := lawOf(t, body).truncationViolations(); len(got) != 0 {
+			t.Errorf("%s: %v", body, got)
+		}
 	}
 }

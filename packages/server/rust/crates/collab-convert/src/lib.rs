@@ -84,6 +84,8 @@ mod csharp_export_test;
 #[cfg(test)]
 mod csharp_graphemes_test;
 #[cfg(test)]
+mod csharp_lone_surrogate_test;
+#[cfg(test)]
 mod csharp_migrate_test;
 #[cfg(test)]
 mod csharp_replay_test;

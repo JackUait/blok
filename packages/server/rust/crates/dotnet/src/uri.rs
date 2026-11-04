@@ -229,6 +229,12 @@ impl Uri {
         if host.chars().any(|c| c.is_ascii() && !allowed(c)) {
             return false;
         }
+        // Checked before the IDN step too: punycode is quadratic in a
+        // label's length, and this keeps every label it sees short.
+        let long = host.encode_utf16().count() > MAX_BASIC_HOST_UNITS;
+        if long && has_long_label(host, &['.', '\u{3002}', '\u{ff0e}', '\u{ff61}']) {
+            return false;
+        }
         self.host = host.to_ascii_lowercase();
         self.host_type = "Dns".into();
         self.idn_host = self.host.clone();
@@ -237,10 +243,23 @@ impl Uri {
                 Some(idn) => self.idn_host = idn,
                 None => return false,
             }
+            if long && has_long_label(&self.idn_host, &['.']) {
+                return false;
+            }
         }
         self.loopback = self.host == "localhost";
         true
     }
+}
+
+/// .NET refuses a host longer than this (in UTF-16 units) unless it is a
+/// DNS name, every label of its IDN form at most 63 chars. Measured with
+/// .NET 10 Uri.TryCreate; Go has no such cap.
+const MAX_BASIC_HOST_UNITS: usize = 256;
+
+fn has_long_label(host: &str, dots: &[char]) -> bool {
+    host.split(dots)
+        .any(|label| label.encode_utf16().count() > 63)
 }
 
 /// Writes an IPv4-mapped or IPv4-compatible address with a dotted tail, as

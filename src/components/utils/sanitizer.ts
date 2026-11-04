@@ -143,7 +143,8 @@ const cleanOneItem = (
    * Bypasses the global sanitizer too: a host-level config must not be able
    * to mangle a field the tool declared as literal text.
    */
-  if (isPlaintextRule(rule)) {
+  // Nothing to clean; skips building the rules for every empty table cell.
+  if (isPlaintextRule(rule) || taintString === '') {
     return taintString;
   }
 

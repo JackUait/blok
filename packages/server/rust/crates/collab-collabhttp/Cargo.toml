@@ -1,0 +1,31 @@
+[package]
+name = "blok-collab-collabhttp"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-auth = { path = "../auth" }
+blok-collab-convert = { path = "../collab-convert" }
+blok-collab-docendpoint = { path = "../collab-docendpoint" }
+blok-collab-journal = { path = "../collab-journal" }
+blok-collab-room = { path = "../collab-room" }
+blok-collab-synchttp = { path = "../collab-synchttp" }
+blok-collab-workingset = { path = "../collab-workingset" }
+blok-dotnet = { path = "../dotnet" }
+blok-http = { path = "../http" }
+blok-jsjson = { path = "../jsjson" }
+blok-route = { path = "../route" }
+tokio = { version = "1", features = ["rt", "sync"] }
+
+[dev-dependencies]
+blok-collab = { path = "../collab" }
+blok-jsruntime = { path = "../jsruntime" }
+blok-yjs = { path = "../yjs" }
+getrandom = "0.4"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt", "rt-multi-thread", "sync", "time"] }
+
+[lints]
+workspace = true

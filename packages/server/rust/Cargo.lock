@@ -137,6 +137,28 @@ name = "blok-collab"
 version = "0.0.0"
 
 [[package]]
+name = "blok-collab-collabhttp"
+version = "0.0.0"
+dependencies = [
+ "blok-auth",
+ "blok-collab",
+ "blok-collab-convert",
+ "blok-collab-docendpoint",
+ "blok-collab-journal",
+ "blok-collab-room",
+ "blok-collab-synchttp",
+ "blok-collab-workingset",
+ "blok-dotnet",
+ "blok-http",
+ "blok-jsjson",
+ "blok-jsruntime",
+ "blok-route",
+ "blok-yjs",
+ "getrandom 0.4.3",
+ "tokio",
+]
+
+[[package]]
 name = "blok-collab-collabtest"
 version = "0.0.0"
 dependencies = [

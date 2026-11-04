@@ -14,6 +14,14 @@ conformance = []
 blok-auth = { path = "../auth" }
 blok-blob = { path = "../blob" }
 blok-blokdocs = { path = "../blokdocs" }
+blok-collab = { path = "../collab" }
+blok-collab-collabhttp = { path = "../collab-collabhttp" }
+blok-collab-convert = { path = "../collab-convert" }
+blok-collab-docendpoint = { path = "../collab-docendpoint" }
+blok-collab-journal = { path = "../collab-journal" }
+blok-collab-room = { path = "../collab-room" }
+blok-collab-synchttp = { path = "../collab-synchttp" }
+blok-collab-workingset = { path = "../collab-workingset" }
 blok-dotnet = { path = "../dotnet" }
 blok-framecheck = { path = "../framecheck" }
 blok-http = { path = "../http" }
@@ -25,9 +33,10 @@ blok-route = { path = "../route" }
 blok-ticket = { path = "../ticket" }
 blok-unfurl = { path = "../unfurl" }
 getrandom = "0.4"
-tokio = { version = "1", features = ["fs", "io-util", "sync", "time"] }
+tokio = { version = "1", features = ["fs", "io-util", "rt", "sync", "time"] }
 
 [dev-dependencies]
+blok-collab-operation = { path = "../collab-operation" }
 blok-blokserver-ticket = { path = "../blokserver-ticket" }
 tokio = { version = "1", features = ["fs", "io-util", "net", "rt", "rt-multi-thread", "macros", "time"] }
 

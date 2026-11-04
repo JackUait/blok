@@ -270,10 +270,6 @@ fn s3_store_spools_to_the_temp_dir_up_to_the_upload_cap() {
 }
 
 #[test]
-#[ignore = "PurgeDocument needs the collab rooms and collabstore, not ported yet"]
-fn a_host_can_tell_every_purge_refusal_apart() {}
-
-#[test]
 fn rate_limit_windows_reset_after_a_minute() {
     let now = Arc::new(std::sync::Mutex::new(UNIX_EPOCH));
     let clock = Arc::clone(&now);

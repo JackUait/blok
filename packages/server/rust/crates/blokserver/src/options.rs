@@ -81,6 +81,14 @@ pub struct Options {
     /// Narrows document access. None allows what the ticket allows.
     pub authorization: Option<Arc<dyn Authorization>>,
 
+    /// UseCollabOperationStore<T>: the host's own journal. Setting it turns
+    /// the journal on, as collab_journal does with the built-in one, and it
+    /// wins over collab_journal.
+    pub collab_operation_store: Option<Arc<dyn blok_collab_room::OperationStore>>,
+
+    /// UseCollabActivityObserver<T>. None makes no calls.
+    pub collab_activity_observer: Option<Arc<dyn blok_collab_room::ActivityObserver>>,
+
     /// The TimeProvider override: tickets and the rate limit window read
     /// it. None is the system clock.
     pub clock: Option<Clock>,
@@ -127,6 +135,8 @@ impl Default for Options {
             rich_text_fields: BTreeMap::new(),
             documents: blok_blokdocs::Options::default(),
             authorization: None,
+            collab_operation_store: None,
+            collab_activity_observer: None,
             clock: None,
             logger: None,
         }
@@ -195,6 +205,14 @@ impl fmt::Debug for Options {
             .field("rich_text_fields", &self.rich_text_fields)
             .field("documents", &self.documents)
             .field("authorization", &self.authorization.is_some())
+            .field(
+                "collab_operation_store",
+                &self.collab_operation_store.is_some(),
+            )
+            .field(
+                "collab_activity_observer",
+                &self.collab_activity_observer.is_some(),
+            )
             .field("clock", &self.clock.is_some())
             .field("logger", &self.logger.is_some())
             .finish()

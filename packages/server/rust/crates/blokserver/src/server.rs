@@ -12,7 +12,72 @@ use blok_http::{Request, ResponseWriter, is_field_value};
 use blok_jsjson::append_quoted;
 use blok_route::{Router, method_not_allowed, start_stream};
 
+use blok_collab_synchttp::ConnectionTable;
+
+use crate::collab::{CollabRooms, LazyRooms, LazyRuntime, runtime_options};
 use crate::options::{Clock, Options, OptionsError};
+
+/// One collab route behind the guard.
+#[derive(Clone, Copy)]
+enum CollabRoute {
+    Reset,
+    Edit,
+    State,
+    HistoryList,
+    HistoryRead,
+    HistoryDelete,
+    HistoryRestore,
+    HistoryChanges,
+}
+
+impl CollabRoute {
+    async fn serve(
+        self,
+        routes: &blok_collab_collabhttp::Handlers,
+        request: Request,
+        response: ResponseWriter,
+    ) {
+        match self {
+            CollabRoute::Reset => routes.reset(request, response).await,
+            CollabRoute::Edit => routes.edit(request, response).await,
+            CollabRoute::State => routes.state(request, response).await,
+            CollabRoute::HistoryList => routes.history_list(request, response).await,
+            CollabRoute::HistoryRead => routes.history_read(request, response).await,
+            CollabRoute::HistoryDelete => routes.history_delete(request, response).await,
+            CollabRoute::HistoryRestore => routes.history_restore(request, response).await,
+            CollabRoute::HistoryChanges => routes.history_changes(request, response).await,
+        }
+    }
+}
+
+/// Converts a long article in the background, so the first request does
+/// not pay for cold paths: a failed or slow warm-up never fails or delays
+/// `new`, as C#'s BlokDocumentWarmUp.
+fn warm_up_in_background(
+    converter: blok_blokdocs::Converter,
+) -> tokio::sync::watch::Receiver<bool> {
+    let (done, warmed) = tokio::sync::watch::channel(false);
+    let task = async move {
+        let _ = converter.warm_up().await;
+        let _ = done.send(true);
+    };
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) => {
+            handle.spawn(task);
+        }
+        Err(_) => {
+            std::thread::spawn(move || {
+                if let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                {
+                    runtime.block_on(task);
+                }
+            });
+        }
+    }
+    warmed
+}
 
 /// A configured Blok server. Build it with [`Server::new`].
 #[derive(Clone)]
@@ -29,6 +94,20 @@ pub(crate) struct Inner {
     fetcher: Mutex<blok_outbound::Fetcher>,
     #[cfg_attr(not(feature = "conformance"), allow(dead_code))]
     pub conformance: Mutex<Conformance>,
+    /// Set when collaboration is on; /sync is mapped only with it.
+    pub(crate) collab: Option<CollabRooms>,
+    /// The engine pool the rooms and the document converter share, built on
+    /// first use.
+    pub(crate) runtime: Arc<LazyRuntime>,
+    pub(crate) documents: OnceLock<blok_blokdocs::Converter>,
+    /// Turns true when the warm-up `new` started has finished.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) warmed: Option<tokio::sync::watch::Receiver<bool>>,
+    pub(crate) connections: Arc<ConnectionTable>,
+    pub(crate) upgrades: Mutex<Option<Arc<blok_collab_synchttp::UpgradeLimit>>>,
+    /// Stands in for the room manager at the sync door.
+    #[cfg(test)]
+    pub(crate) rooms_override: Mutex<Option<Arc<dyn blok_collab::Rooms>>>,
 }
 
 /// What the conformance build's flags switched on.
@@ -49,24 +128,64 @@ impl Server {
     /// heavy is built until a request needs it. The server keeps its own
     /// copy of the options.
     pub fn new(options: Options) -> Result<Self, OptionsError> {
+        Self::build(options, None)
+    }
+
+    /// `new` with the engine pool built by `builder`, so a test can count
+    /// the builds the warm-up makes.
+    #[cfg(test)]
+    pub(crate) fn new_with_runtime_builder(
+        options: Options,
+        builder: crate::collab::Builder,
+    ) -> Result<Self, OptionsError> {
+        Self::build(options, Some(builder))
+    }
+
+    fn build(
+        options: Options,
+        builder: Option<crate::collab::Builder>,
+    ) -> Result<Self, OptionsError> {
         let public_path = options.validate_path()?;
         let clock: Clock = options
             .clock
             .clone()
             .unwrap_or_else(|| Arc::new(SystemTime::now));
         let limiter = RateLimiter::new(options.rate_limit_per_minute, Arc::clone(&clock));
+        let runtime = LazyRuntime::new(runtime_options(&options));
+        if let Some(builder) = builder {
+            *lock(&runtime.build) = builder;
+        }
+        let runtime = Arc::new(runtime);
+        let connections = Arc::new(ConnectionTable::new(
+            options.collab_max_connections,
+            options.collab_max_connections_per_user_per_doc,
+        ));
+        let collab = options.collab_enabled.then(CollabRooms::default);
+        let warm_up = options.documents.warm_up;
+        let mut inner = Inner {
+            options,
+            public_path,
+            limiter,
+            clock,
+            store: OnceLock::new(),
+            fetcher: Mutex::new(blok_outbound::Fetcher::new(Arc::new(
+                blok_outbound::DefaultPolicy,
+            ))),
+            conformance: Mutex::new(Conformance::default()),
+            collab,
+            runtime,
+            documents: OnceLock::new(),
+            warmed: None,
+            connections,
+            upgrades: Mutex::new(None),
+            #[cfg(test)]
+            rooms_override: Mutex::new(None),
+        };
+        if warm_up {
+            inner.warmed = Some(warm_up_in_background(inner.document_converter()));
+        }
         Ok(Self {
-            inner: Arc::new(Inner {
-                options,
-                public_path,
-                limiter,
-                clock,
-                store: OnceLock::new(),
-                fetcher: Mutex::new(blok_outbound::Fetcher::new(Arc::new(
-                    blok_outbound::DefaultPolicy,
-                ))),
-                conformance: Mutex::new(Conformance::default()),
-            }),
+            inner: Arc::new(inner),
         })
     }
 
@@ -75,17 +194,34 @@ impl Server {
     }
 
     /// Stops the server's long-lived work before the HTTP server shuts
-    /// down. Without collaboration there is none.
-    pub async fn drain(&self, _grace: Duration) -> Result<(), String> {
+    /// down: new upgrades get 503, every room flushes, members close 1001.
+    /// Without collaboration there is none. Grace bounds the whole drain.
+    pub async fn drain(&self, grace: Duration) -> Result<(), String> {
+        let Some(collab) = &self.inner.collab else {
+            return Ok(());
+        };
+        let deadline = tokio::time::Instant::now() + grace;
+        let manager = collab.get(&self.inner)?;
+        match tokio::time::timeout_at(deadline, manager.drain()).await {
+            Err(_) => return Err("context deadline exceeded".to_owned()),
+            Ok(Err(err)) => return Err(err.to_string()),
+            Ok(Ok(())) => {}
+        }
+        // A hijacked socket outlives the HTTP shutdown, and each member's
+        // close is only queued: wait for the sockets, as Kestrel waits for
+        // upgraded connections, until the grace ends.
+        while self.inner.connections.live() > 0 {
+            if tokio::time::Instant::now() >= deadline {
+                return Ok(());
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
         Ok(())
     }
 
     /// MapBlokServer: the routes the options switch on under prefix ("" for
     /// the root), every other path answered 404, and local files served at
     /// the public URL path, outside the prefix.
-    ///
-    /// The /sync routes are not mapped until the collab crates are plugged
-    /// in, so they answer as collaboration switched off does (404).
     pub fn handler(&self, prefix: &str) -> Router {
         let prefix = prefix.trim_end_matches('/');
         let mut router = Router::new();
@@ -157,7 +293,114 @@ impl Server {
                 );
             }
         }
+        if o.collab_enabled && self.inner.collab.is_some() {
+            self.map_collab(&mut router, prefix);
+        }
         router
+    }
+
+    fn map_collab(&self, router: &mut Router, prefix: &str) {
+        let o = &self.inner.options;
+        // Not behind the guard: the handshake is its own door, and a live
+        // socket outlasts any request deadline.
+        let endpoint = self.sync_endpoint();
+        router.handle(
+            &format!("{prefix}/sync/{{doc}}"),
+            Some(&["GET"]),
+            move |request: Request, response: ResponseWriter| {
+                let endpoint = endpoint.clone();
+                async move {
+                    request.lift_timeout();
+                    blok_http::Handler::serve(&endpoint, request, response).await;
+                }
+            },
+        );
+        router.handle(
+            &format!("{prefix}/sync/{{doc}}"),
+            None,
+            method_not_allowed("GET"),
+        );
+        let rooms = Arc::clone(&self.inner);
+        let corrupt = Arc::clone(&self.inner);
+        let routes = blok_collab_collabhttp::Handlers::new(blok_collab_collabhttp::Config {
+            ticket_mode: o.auth == "ticket",
+            authorization: o.authorization.clone(),
+            rooms: Arc::new(move || rooms.rooms()),
+            max_message_bytes: usize::try_from(o.collab_max_message_bytes).unwrap_or(0),
+            corrupt_log: Some(Arc::new(move |doc: &str| corrupt.corrupt_log(doc))),
+        });
+        for (path, method, route) in [
+            ("/reset", "POST", CollabRoute::Reset),
+            ("/edit", "POST", CollabRoute::Edit),
+            ("/state", "GET", CollabRoute::State),
+            ("/history", "GET", CollabRoute::HistoryList),
+            (
+                "/history/{lineage}/{sequence}",
+                "GET",
+                CollabRoute::HistoryRead,
+            ),
+            ("/history/{lineage}", "DELETE", CollabRoute::HistoryDelete),
+            (
+                "/history/{lineage}/{sequence}/restore",
+                "POST",
+                CollabRoute::HistoryRestore,
+            ),
+            (
+                "/history/{lineage}/{sequence}/changes",
+                "GET",
+                CollabRoute::HistoryChanges,
+            ),
+        ] {
+            let routes = routes.clone();
+            self.shell(
+                router,
+                &format!("{prefix}/sync/{{doc}}{path}"),
+                method,
+                move |_inner, request, response| {
+                    let routes = routes.clone();
+                    async move { route.serve(&routes, request, response).await }
+                },
+            );
+        }
+        if o.auth == "none" && o.authorization.is_none() {
+            self.inner.warn_open_sync_routes(prefix);
+        }
+    }
+
+    fn sync_endpoint(&self) -> blok_collab_synchttp::Endpoint {
+        let o = &self.inner.options;
+        let origins = Arc::clone(&self.inner);
+        let limiter = Arc::clone(&self.inner);
+        let clock = Arc::clone(&self.inner.clock);
+        #[cfg(test)]
+        let rooms: Arc<dyn blok_collab::Rooms> = lock(&self.inner.rooms_override)
+            .clone()
+            .unwrap_or_else(|| Arc::new(LazyRooms(Arc::clone(&self.inner))));
+        #[cfg(not(test))]
+        let rooms: Arc<dyn blok_collab::Rooms> = Arc::new(LazyRooms(Arc::clone(&self.inner)));
+        blok_collab_synchttp::Endpoint::new(blok_collab_synchttp::Config {
+            auth: o.auth.clone(),
+            secret: o.secret.clone(),
+            origin_allowed: Arc::new(move |origin: &str| origins.origin_allowed(origin)),
+            rate_limit: Arc::new(move |key: &str| limiter.limiter.allow(key)),
+            clock: Arc::new(move || clock()),
+            authorization: o.authorization.clone(),
+            rooms,
+            has_operation_store: self.inner.has_journal(),
+            max_message_bytes: usize::try_from(o.collab_max_message_bytes).unwrap_or(0),
+            keep_alive_interval: Duration::from_nanos(
+                u64::try_from(o.collab_keep_alive_interval_nanos).unwrap_or(0),
+            ),
+            connections: Arc::clone(&self.inner.connections),
+            budget: blok_collab_synchttp::BudgetOptions {
+                frames_per_second: o.collab_inbound_frames_per_second,
+                burst_frames: o.collab_inbound_burst_frames,
+                resyncs_per_minute: o.collab_inbound_resyncs_per_minute,
+                awareness_bytes_per_second: o.collab_inbound_awareness_bytes_per_second,
+            },
+            budget_clock: None,
+            upgrades: lock(&self.inner.upgrades).clone(),
+        })
     }
 
     /// Maps one guarded route with its preflight and its 405 answer.

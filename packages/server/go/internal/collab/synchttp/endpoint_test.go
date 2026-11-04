@@ -518,3 +518,46 @@ func TestARevokedReaderDropsQueuedFramesBeforeTheForbiddenClose(t *testing.T) {
 		t.Fatalf("received all %d queued frames after revocation", received)
 	}
 }
+
+// Measured on Kestrel: "500", Content-Length: 0, no body, and the
+// connection stays open.
+func TestAHookErrorBeforeTheUpgradeIsAnEmpty500ThatKeepsTheConnection(t *testing.T) {
+	hook := &fakeAuthorization{err: errors.New("authorization unavailable")}
+	h := startEndpoint(t, func(c *Config) { c.Auth = "ticket"; c.Authorization = hook }, nil)
+	conn, err := net.Dial("tcp", h.server.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	request := "GET /sync/doc-42 HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n" +
+		"Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+		"Origin: https://app.example.com\r\nSec-WebSocket-Protocol: blok-sync.v1, " + writeTicket + "\r\n\r\n"
+	if _, err := io.WriteString(conn, request); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	var got []byte
+	buffer := make([]byte, 4096)
+	for {
+		n, err := conn.Read(buffer)
+		got = append(got, buffer[:n]...)
+		if err != nil {
+			var timeout net.Error
+			if !errors.As(err, &timeout) || !timeout.Timeout() {
+				t.Fatalf("connection ended: %v after %q", err, got)
+			}
+			break
+		}
+	}
+	head, body, _ := strings.Cut(string(got), "\r\n\r\n")
+	lines := strings.Split(head, "\r\n")
+	var names []string
+	for _, line := range lines[1:] {
+		name, _, _ := strings.Cut(line, ":")
+		names = append(names, name)
+	}
+	if lines[0] != "HTTP/1.1 500 Internal Server Error" || body != "" ||
+		strings.Join(names, ",") != "Content-Length,Date" || lines[1] != "Content-Length: 0" {
+		t.Fatalf("got %q", got)
+	}
+}

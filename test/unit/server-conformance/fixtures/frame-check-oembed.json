@@ -531,8 +531,7 @@
     },
     {
       "name": "a thumbnail host with a non-LDH character: 127％2e0％2e0％2e1.example/a.png",
-      "json": "{\"thumbnail_url\": \"https://127％2e0％2e0％2e1.example/a.png\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://127％2e0％2e0％2e1.example/a.png\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: 127％2E0.0.1/a.png",
@@ -540,13 +539,11 @@
     },
     {
       "name": "a thumbnail host with a non-LDH character: a％2fb.example/x",
-      "json": "{\"thumbnail_url\": \"https://a％2fb.example/x\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a％2fb.example/x\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: example.com％2e/a.png",
-      "json": "{\"thumbnail_url\": \"https://example.com％2e/a.png\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://example.com％2e/a.png\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: 127.0.0.1％2e/a.png",
@@ -554,8 +551,7 @@
     },
     {
       "name": "a thumbnail host with a non-LDH character: a％41.example/",
-      "json": "{\"thumbnail_url\": \"https://a％41.example/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a％41.example/\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: a％00.example/",
@@ -563,8 +559,7 @@
     },
     {
       "name": "a thumbnail host with a non-LDH character: x.example％40y.example/",
-      "json": "{\"thumbnail_url\": \"https://x.example％40y.example/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://x.example％40y.example/\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: ｌｏｃａｌｈｏｓｔ/a.png",
@@ -612,13 +607,11 @@
     },
     {
       "name": "a thumbnail host with a non-LDH character: a％20b.example/",
-      "json": "{\"thumbnail_url\": \"https://a％20b.example/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a％20b.example/\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: a\u3000b.example/",
-      "json": "{\"thumbnail_url\": \"https://a\u3000b.example/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a\u3000b.example/\"}"
     },
     {
       "name": "a thumbnail host with a non-LDH character: a!b.example/",
@@ -670,13 +663,11 @@
     },
     {
       "name": "a thumbnail host with a non-LDH character: a％25b.example/",
-      "json": "{\"thumbnail_url\": \"https://a％25b.example/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a％25b.example/\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: 127.0.0.％31/a.png",
-      "json": "{\"thumbnail_url\": \"https://127.0.0.％31/a.png\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://127.0.0.％31/a.png\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: 127.0.0.%31/a.png",
@@ -684,8 +675,7 @@
     },
     {
       "name": "a thumbnail host a browser percent-decodes: foo.localhos％74/a.png",
-      "json": "{\"thumbnail_url\": \"https://foo.localhos％74/a.png\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://foo.localhos％74/a.png\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: foo.localhos%74/a.png",
@@ -701,23 +691,19 @@
     },
     {
       "name": "a thumbnail host a browser percent-decodes: 0x7f.0.0.％31/",
-      "json": "{\"thumbnail_url\": \"https://0x7f.0.0.％31/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://0x7f.0.0.％31/\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: a.％31/",
-      "json": "{\"thumbnail_url\": \"https://a.％31/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a.％31/\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: 1.％32/",
-      "json": "{\"thumbnail_url\": \"https://1.％32/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://1.％32/\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: foo.％6c％6f％63％61％6c％68％6f％73％74/",
-      "json": "{\"thumbnail_url\": \"https://foo.％6c％6f％63％61％6c％68％6f％73％74/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://foo.％6c％6f％63％61％6c％68％6f％73％74/\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: a％2e/",
@@ -729,13 +715,11 @@
     },
     {
       "name": "a thumbnail host a browser percent-decodes: 127.0.0.1％2e.example/",
-      "json": "{\"thumbnail_url\": \"https://127.0.0.1％2e.example/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://127.0.0.1％2e.example/\"}"
     },
     {
       "name": "a thumbnail host a browser percent-decodes: a.b％2e/",
-      "json": "{\"thumbnail_url\": \"https://a.b％2e/\"}",
-      "goDropsPendingCSharpFix": "C# BrowserUrl writes this host with a non-LDH character, which a browser may percent-decode to a refused host (127.0.0.%31 loads 127.0.0.1). Go drops it. The C# fix is pending; the answer stays C#'s until then."
+      "json": "{\"thumbnail_url\": \"https://a.b％2e/\"}"
     },
     {
       "name": "a thumbnail host with a label edge: _a.example/",
@@ -1818,10 +1802,10 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://127%2e0%2e0%2e1.example/a.png",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://127%2e0%2e0%2e1.example/a.png\"}"
+      "wire": ""
     },
     {
       "title": null,
@@ -1834,18 +1818,10 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a%2fb.example/x",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a%2fb.example/x\"}"
-    },
-    {
-      "title": null,
-      "provider_name": null,
-      "thumbnail_url": "https://example.com%2e/a.png",
-      "width": null,
-      "height": null,
-      "wire": "{\"thumbnail_url\":\"https://example.com%2e/a.png\"}"
+      "wire": ""
     },
     {
       "title": null,
@@ -1858,14 +1834,6 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a%41.example/",
-      "width": null,
-      "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a%41.example/\"}"
-    },
-    {
-      "title": null,
-      "provider_name": null,
       "thumbnail_url": null,
       "width": null,
       "height": null,
@@ -1874,10 +1842,10 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://x.example%40y.example/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://x.example%40y.example/\"}"
+      "wire": ""
     },
     {
       "title": null,
@@ -1970,18 +1938,34 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a%20b.example/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a%20b.example/\"}"
+      "wire": ""
     },
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a b.example/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a b.example/\"}"
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
     },
     {
       "title": null,
@@ -2082,22 +2066,6 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a%25b.example/",
-      "width": null,
-      "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a%25b.example/\"}"
-    },
-    {
-      "title": null,
-      "provider_name": null,
-      "thumbnail_url": "https://127.0.0.%31/a.png",
-      "width": null,
-      "height": null,
-      "wire": "{\"thumbnail_url\":\"https://127.0.0.%31/a.png\"}"
-    },
-    {
-      "title": null,
-      "provider_name": null,
       "thumbnail_url": null,
       "width": null,
       "height": null,
@@ -2106,10 +2074,10 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://foo.localhos%74/a.png",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://foo.localhos%74/a.png\"}"
+      "wire": ""
     },
     {
       "title": null,
@@ -2138,34 +2106,50 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://0x7f.0.0.%31/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://0x7f.0.0.%31/\"}"
+      "wire": ""
     },
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a.%31/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a.%31/\"}"
+      "wire": ""
     },
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://1.%32/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://1.%32/\"}"
+      "wire": ""
     },
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://foo.%6c%6f%63%61%6c%68%6f%73%74/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://foo.%6c%6f%63%61%6c%68%6f%73%74/\"}"
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
+    },
+    {
+      "title": null,
+      "provider_name": null,
+      "thumbnail_url": null,
+      "width": null,
+      "height": null,
+      "wire": ""
     },
     {
       "title": null,
@@ -2186,18 +2170,18 @@
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://127.0.0.1%2e.example/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://127.0.0.1%2e.example/\"}"
+      "wire": ""
     },
     {
       "title": null,
       "provider_name": null,
-      "thumbnail_url": "https://a.b%2e/",
+      "thumbnail_url": null,
       "width": null,
       "height": null,
-      "wire": "{\"thumbnail_url\":\"https://a.b%2e/\"}"
+      "wire": ""
     },
     {
       "title": null,

@@ -74,8 +74,7 @@ func publicHost(u *dotnet.URI) (string, bool) {
 // delimiter ("a／b" to "a/b", where .NET's IdnHost throws) or to '%', and a
 // browser percent-decodes a host: "127.0.0.％31" loads 127.0.0.1. .NET
 // reads a label starting with '-' or '_' as a Basic host and drops it.
-// C# BrowserUrl still writes the '%' forms; frame-check-oembed.json marks
-// them.
+// C#'s IsPlainName is the same rule.
 func plainName(name string) bool {
 	for i := 0; i < len(name); i++ {
 		c := name[i]

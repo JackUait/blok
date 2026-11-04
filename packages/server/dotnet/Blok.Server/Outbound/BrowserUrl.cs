@@ -86,7 +86,7 @@ internal static class BrowserUrl
           : null;
       case UriHostNameType.Dns:
         var dot = name.LastIndexOf('.');
-        return dot < 0 || dot == name.Length - 1 ||
+        return !IsPlainName(name) || dot < 0 || dot == name.Length - 1 ||
           name.EndsWith(".localhost", StringComparison.Ordinal) ||
           char.IsAsciiDigit(name[dot + 1])
           ? null
@@ -94,6 +94,26 @@ internal static class BrowserUrl
       default:
         return null;
     }
+  }
+
+  // Only letters, digits, '-', '_' and '.', with no label starting with '-'
+  // or '_'. A fullwidth character can map to '%', and a browser
+  // percent-decodes a host: "127.0.0.％31" loads 127.0.0.1. Go's plainName
+  // is the same rule.
+  private static bool IsPlainName(string name)
+  {
+    for (var i = 0; i < name.Length; i++)
+    {
+      var c = name[i];
+      var start = i == 0 || name[i - 1] == '.';
+      if (!(char.IsAsciiLetterOrDigit(c) || c == '.' ||
+            (c is '-' or '_' && !start)))
+      {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // %00-%1F, %7F or a C1 control in UTF-8 (%C2%80-%C2%9F), in any hex

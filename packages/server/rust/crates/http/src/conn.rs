@@ -63,7 +63,15 @@ pub(crate) async fn serve(
             Ok(parsed) => parsed,
             Err(answer) => {
                 if let (Some(answer), Some(mut write)) = (answer, write.take()) {
-                    let _ = write.write_all(&bare_answer(&shared.config, answer)).await;
+                    // Measured: not even a refusal once the client ended its
+                    // side. A refusal closes the connection anyway, so it
+                    // waits a moment for an end that is on its way: the
+                    // head can be refused before the client's end arrives.
+                    let _ =
+                        timeout(REFUSAL_END_GRACE, inbound.wait_until(|state| state.ended())).await;
+                    if !inbound.peer_ended(&write).await {
+                        let _ = write.write_all(&bare_answer(&shared.config, answer)).await;
+                    }
                     close_softly(&inbound, write).await;
                 }
                 break;
@@ -186,6 +194,7 @@ async fn exchange(
             close: false,
             hijacked: false,
             expired: expired_receiver,
+            inbound: Arc::clone(inbound),
         }),
         body: tokio::sync::Mutex::new(BodyState::new(
             framing,
@@ -352,6 +361,8 @@ fn expire(exchange: &Exchange) {
         }
     }
 }
+
+const REFUSAL_END_GRACE: std::time::Duration = std::time::Duration::from_millis(5);
 
 const DRAIN_GRACE: std::time::Duration = std::time::Duration::from_secs(6);
 

@@ -43,6 +43,7 @@ pub(crate) struct Wire {
     pub hijacked: bool,
     /// Turns true when the request deadline passes.
     pub expired: watch::Receiver<bool>,
+    pub inbound: Arc<Inbound>,
 }
 
 impl Wire {
@@ -53,6 +54,11 @@ impl Wire {
         let Some(write) = self.write.as_mut() else {
             return Err(std::io::ErrorKind::NotConnected.into());
         };
+        // Measured: Kestrel aborts its output once the client ended its side.
+        if self.inbound.peer_ended(write).await {
+            self.close = true;
+            return Err(std::io::ErrorKind::BrokenPipe.into());
+        }
         let mut expired = self.expired.clone();
         let result = tokio::select! {
             biased;

@@ -9,13 +9,16 @@ use std::io;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use tokio::io::AsyncReadExt;
-use tokio::net::tcp::OwnedReadHalf;
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::{Notify, oneshot};
 
 /// Unread bytes past this pause the reader. It holds a head at Kestrel's
 /// limits (8 KiB line + 32 KiB block) with room to spare.
 const CAP: usize = 64 << 10;
 const READ_SIZE: usize = 16 << 10;
+/// How often peer_ended lets the reader take pending bytes before it gives
+/// up and answers.
+const PEEK_TRIES: usize = 8;
 
 #[derive(Default)]
 pub(crate) struct State {
@@ -79,6 +82,39 @@ impl Inbound {
     /// pauses at the cap until told there is room.
     pub fn wake_reader(&self) {
         self.room.notify_one();
+    }
+
+    /// Whether the client has ended its side. Kestrel writes nothing more
+    /// then. The reader task may not have met the end yet, so the socket is
+    /// peeked too: an empty queue at the end reads as 0. Bytes the reader has
+    /// yet to take hide the end behind them, so it gets a moment to take
+    /// them, unless it is paused at the cap.
+    pub async fn peer_ended(&self, write: &OwnedWriteHalf) -> bool {
+        for _ in 0..PEEK_TRIES {
+            let have = {
+                let state = self.lock();
+                if state.ended() {
+                    return true;
+                }
+                if state.buf.len() >= CAP {
+                    return false;
+                }
+                state.buf.len()
+            };
+            let mut probe = [std::mem::MaybeUninit::<u8>::uninit(); 1];
+            match socket2::SockRef::from(write.as_ref()).peek(&mut probe) {
+                Ok(0) => return true,
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => return false,
+                Err(_) => return true,
+                Ok(_) => {}
+            }
+            let _ = tokio::time::timeout(
+                std::time::Duration::from_millis(5),
+                self.wait_until(|state| state.buf.len() != have || state.ended()),
+            )
+            .await;
+        }
+        false
     }
 
     /// Waits until check holds; it is called with the state locked.

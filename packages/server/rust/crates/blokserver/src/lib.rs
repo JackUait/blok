@@ -37,6 +37,8 @@ mod purge_errors_test;
 #[cfg(test)]
 mod request_guard_test;
 #[cfg(test)]
+mod state_endpoint_test;
+#[cfg(test)]
 mod sync_test;
 
 #[cfg(test)]

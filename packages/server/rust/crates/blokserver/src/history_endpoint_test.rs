@@ -7,14 +7,14 @@ use crate::{Options, Server};
 
 const ALLOWED_ORIGIN: &str = "https://app.example.com";
 
-struct HistoryApp {
+pub(crate) struct HistoryApp {
     running: Running,
     _endpoint: Running,
     server: Server,
 }
 
 /// HistoryApp.StartAsync: the journal on, doc-42 held with one paragraph.
-async fn history_app(auth: &str) -> HistoryApp {
+pub(crate) async fn history_app(auth: &str) -> HistoryApp {
     let endpoint = start(
         |request: Request, mut response: ResponseWriter| async move {
             if request.method() == "GET" {
@@ -54,7 +54,7 @@ async fn history_app(auth: &str) -> HistoryApp {
 }
 
 impl HistoryApp {
-    async fn send(
+    pub(crate) async fn send(
         &self,
         method: &str,
         path: &str,
@@ -80,13 +80,13 @@ impl HistoryApp {
         state.header("Blok-Doc-Lineage").to_owned()
     }
 
-    async fn close(self) {
+    pub(crate) async fn close(self) {
         let _ = self.server.drain(std::time::Duration::from_secs(30)).await;
     }
 }
 
 #[track_caller]
-fn assert_error(got: &Answer, status: u16, body: &str) {
+pub(crate) fn assert_error(got: &Answer, status: u16, body: &str) {
     assert_eq!(
         (got.status, got.header("Content-Type"), got.text().as_str()),
         (status, "text/plain; charset=utf-8", body)

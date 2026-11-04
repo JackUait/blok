@@ -524,5 +524,24 @@
         }
       }
     ]
+  },
+  {
+    "name": "localeCompare reads a lone surrogate as U+FFFD",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  const sorted = ['\\ud800', 'a', 'b', '\\ufffd', 'z', '\\u4e00'].sort((x, y) => x.localeCompare(y));\n  return sorted.map((s) => s.charCodeAt(0).toString(16)).join() + ' ' + '\\ud800'.localeCompare('\\ufffd') + ' ' + 'a'.localeCompare('\\udc00');\n};\n",
+    "steps": [
+      {
+        "op": "sort",
+        "expect": {
+          "result": "61,62,7a,4e00,d800,fffd 0 -1"
+        },
+        "why": "A lone surrogate collates as U+FFFD, as Go's and Rust's collators read it and as .NET's CompareInfo does once the text is well formed. node's ICU gives an unpaired surrogate its own weight instead ('\\ud800'.localeCompare('\\ufffd') is -1 there)."
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
   }
 ]

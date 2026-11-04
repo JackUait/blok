@@ -5,9 +5,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/dop251/goja"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
+	"golang.org/x/text/unicode/norm"
 )
 
 // The bundle C# embeds too. scripts/build-server-runtime.mjs writes this
@@ -67,7 +71,31 @@ func fromProgram(program *goja.Program) (*Runtime, error) {
 func newVM() *goja.Runtime {
 	vm := goja.New()
 	vm.SetMaxCallStackSize(MaxCallStackSize)
+	installLocaleCompare(vm)
 	return vm
+}
+
+// installLocaleCompare is goja's localeCompare (NFD, then x/text's root
+// collator) with U+FFFD read as U+FFFF. x/text puts U+FFFD among the
+// symbols; ICU (C#, Rust, browsers) sorts it after every other char, which
+// x/text gives U+FFFF. A lone surrogate reaches it as U+FFFD.
+func installLocaleCompare(vm *goja.Runtime) {
+	collator := collate.New(language.Und)
+	text := func(value goja.Value) string {
+		return strings.ReplaceAll(norm.NFD.String(value.String()), "\ufffd", "\uffff")
+	}
+	compare := func(call goja.FunctionCall) goja.Value {
+		if goja.IsUndefined(call.This) || goja.IsNull(call.This) {
+			panic(vm.NewTypeError("String.prototype.localeCompare called on null or undefined"))
+		}
+		this := text(call.This.ToString())
+		that := text(call.Argument(0).ToString())
+		return vm.ToValue(collator.CompareString(this, that))
+	}
+	prototype := vm.Get("String").ToObject(vm).Get("prototype").ToObject(vm)
+	if err := prototype.DefineDataProperty("localeCompare", vm.ToValue(compare), goja.FLAG_TRUE, goja.FLAG_FALSE, goja.FLAG_TRUE); err != nil {
+		panic(err)
+	}
 }
 
 func fromVM(vm *goja.Runtime, program *goja.Program) (*Runtime, error) {

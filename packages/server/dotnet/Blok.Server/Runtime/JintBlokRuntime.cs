@@ -15,6 +15,28 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
   private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);
 
+  // Jint's collator calls string.Normalize, which throws on a lone
+  // surrogate, so localeCompare made the engine fail. It now reads one as
+  // U+FFFD, as .NET's CompareInfo, Go and Rust compare it.
+  private const string Prelude = """
+      (() => {
+        const compare = String.prototype.localeCompare;
+        Object.defineProperty(String.prototype, 'localeCompare', {
+          value: {
+            localeCompare(that, locales, options) {
+              if (this === null || this === undefined) {
+                throw new TypeError('String.prototype.localeCompare called on null or undefined');
+              }
+              return compare.call(`${this}`.toWellFormed(), `${that}`.toWellFormed(), locales, options);
+            },
+          }.localeCompare,
+          writable: true,
+          enumerable: false,
+          configurable: true,
+        });
+      })();
+      """;
+
   /*
    * Jint counts every allocation a call makes, not what it still holds, so this
    * is churn per conversion rather than resident memory — a reader that builds
@@ -347,7 +369,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
     try
     {
-      return engine.Execute(script);
+      return engine.Execute(Prelude).Execute(script);
     }
     finally
     {

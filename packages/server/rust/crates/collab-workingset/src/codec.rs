@@ -34,12 +34,13 @@ pub fn doc_key(doc_id: &str) -> String {
 pub fn encode_document(tag: &Tag, frame_section: &[u8]) -> Result<Vec<u8>, Error> {
     if !tag.is_announceable() {
         return Err(Error::Refused(format!(
-            "collab: the tag {tag} is not encodable"
+            "collab: the tag {tag} is not encodable. (Parameter 'tag')"
         )));
     }
     if !validate_frames(frame_section) {
         return Err(Error::Refused(
-            "collab: the frame section is not a valid update log".to_owned(),
+            "collab: the frame section is not a valid update log. (Parameter 'frameSection')"
+                .to_owned(),
         ));
     }
     let mut document = Vec::with_capacity(HEADER_LENGTH + frame_section.len());
@@ -95,7 +96,7 @@ pub fn decode_document(document: &[u8]) -> Result<(Tag, Vec<u8>), String> {
 pub fn encode_frames<U: AsRef<[u8]>>(updates: &[U]) -> Result<Vec<u8>, Error> {
     if updates.iter().any(|update| update.as_ref().is_empty()) {
         return Err(Error::Refused(
-            "collab: update frames must not be empty".to_owned(),
+            "collab: update frames must not be empty. (Parameter 'updates')".to_owned(),
         ));
     }
     let mut section = Vec::new();

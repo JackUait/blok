@@ -121,7 +121,7 @@ impl LocalStore {
         let tag = tag.clone();
         self.run(doc_id, "write", move |inner, doc_id, cancelled| {
             let document = encode_document(&tag, &updates)?;
-            ensure_write_does_not_lower_epoch(doc_id, inner.read_tag(doc_id).as_ref(), &tag)?;
+            ensure_write_does_not_lower_epoch(doc_id, inner.read_tag(doc_id)?.as_ref(), &tag)?;
             inner.replace_atomically(doc_id, &document, cancelled)
         })
         .await
@@ -132,7 +132,7 @@ impl LocalStore {
         let tag = tag.clone();
         self.run(doc_id, "reset", move |inner, doc_id, cancelled| {
             let document = encode_document(&tag, &[])?;
-            ensure_reset_raises_epoch(doc_id, inner.read_tag(doc_id).as_ref(), &tag)?;
+            ensure_reset_raises_epoch(doc_id, inner.read_tag(doc_id)?.as_ref(), &tag)?;
             inner.replace_atomically(doc_id, &document, cancelled)
         })
         .await
@@ -276,16 +276,33 @@ impl Inner {
         ));
     }
 
-    /// Reads only the header; anything unreadable is no stored tag.
-    fn read_tag(&self, doc_id: &str) -> Option<Set> {
-        let mut file = fs::File::open(self.path_for(doc_id)).ok()?;
+    /// Reads only the header. Absent, a directory, access denied or a short
+    /// file is no stored tag, as C#'s ReadTagAsync catches exactly those;
+    /// any other failure fails the write rather than skip the epoch guard.
+    fn read_tag(&self, doc_id: &str) -> Result<Option<Set>, Error> {
         let mut header = [0u8; HEADER_LENGTH];
-        file.read_exact(&mut header).ok()?;
-        let tag = decode_header(&header).ok()?;
-        Some(Set {
+        let read =
+            fs::File::open(self.path_for(doc_id)).and_then(|mut file| file.read_exact(&mut header));
+        match read {
+            Ok(()) => {}
+            Err(err)
+                if matches!(
+                    err.kind(),
+                    io::ErrorKind::NotFound
+                        | io::ErrorKind::NotADirectory
+                        | io::ErrorKind::IsADirectory
+                        | io::ErrorKind::PermissionDenied
+                        | io::ErrorKind::UnexpectedEof
+                ) =>
+            {
+                return Ok(None);
+            }
+            Err(err) => return Err(err.into()),
+        }
+        Ok(decode_header(&header).ok().map(|tag| Set {
             updates: Vec::new(),
             tag,
-        })
+        }))
     }
 
     fn replace_atomically(
@@ -333,8 +350,9 @@ impl Inner {
             && let Err(cleanup) = fs::remove_file(&temporary)
             && cleanup.kind() != io::ErrorKind::NotFound
         {
+            // AggregateException's message: its own, then each inner one.
             return Err(Error::Io(io::Error::other(format!(
-                "collab: the working-set write failed and cleanup also failed: {err}\n{cleanup}"
+                "collab: the working-set write failed and cleanup also failed. ({err}) ({cleanup})"
             ))));
         }
         result

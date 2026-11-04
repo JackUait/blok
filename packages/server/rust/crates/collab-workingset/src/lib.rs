@@ -19,6 +19,8 @@ pub use tag::*;
 #[cfg(test)]
 mod csharp_codec_test;
 #[cfg(test)]
+mod csharp_local_test;
+#[cfg(test)]
 mod csharp_s3_test;
 #[cfg(test)]
 mod local_test;

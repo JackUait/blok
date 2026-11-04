@@ -209,3 +209,27 @@ fn refuses_to_encode_an_invalid_frame_section() {
         Err(Error::Refused(_))
     ));
 }
+
+#[test]
+fn refusals_carry_the_argument_exception_messages() {
+    let bad = Tag {
+        format: 0,
+        epoch: 0,
+        lineage: LINEAGE.to_owned(),
+    };
+    assert_eq!(
+        encode_document(&bad, &[]).unwrap_err().to_string(),
+        "collab: the tag CollabWorkingSetTag { Format = 0, Epoch = 0, Lineage = 0123456789abcdef0123456789abcdef } is not encodable. (Parameter 'tag')"
+    );
+    assert_eq!(
+        encode_document(&tag(), &[0x01, 0x02])
+            .unwrap_err()
+            .to_string(),
+        "collab: the frame section is not a valid update log. (Parameter 'frameSection')"
+    );
+    let empty: [&[u8]; 1] = [&[]];
+    assert_eq!(
+        encode_frames(&empty).unwrap_err().to_string(),
+        "collab: update frames must not be empty. (Parameter 'updates')"
+    );
+}

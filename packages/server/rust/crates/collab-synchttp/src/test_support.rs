@@ -252,6 +252,7 @@ pub(crate) struct AuthorizationState {
     pub write: bool,
     pub fail: bool,
     pub seen: Vec<User>,
+    pub writes: Vec<User>,
 }
 
 impl FakeAuthorization {
@@ -262,6 +263,7 @@ impl FakeAuthorization {
                 write,
                 fail,
                 seen: Vec::new(),
+                writes: Vec::new(),
             }),
         })
     }
@@ -272,6 +274,10 @@ impl FakeAuthorization {
 
     pub fn calls(&self) -> Vec<User> {
         lock(&self.state).seen.clone()
+    }
+
+    pub fn write_calls(&self) -> Vec<User> {
+        lock(&self.state).writes.clone()
     }
 }
 
@@ -293,10 +299,11 @@ impl Authorization for FakeAuthorization {
 
     fn can_write_document<'a>(
         &'a self,
-        _user: &'a User,
+        user: &'a User,
         _document_id: &'a str,
     ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
-        let state = lock(&self.state);
+        let mut state = lock(&self.state);
+        state.writes.push(user.clone());
         let answer = if state.fail {
             Err("authorization unavailable".into())
         } else {

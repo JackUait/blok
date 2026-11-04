@@ -24,6 +24,8 @@ mod budget_test;
 #[cfg(test)]
 mod conntable_test;
 #[cfg(test)]
+mod csharp_test;
+#[cfg(test)]
 mod endpoint_test;
 #[cfg(test)]
 mod member_test;

@@ -15,8 +15,8 @@ use crate::{
     PageLocation, PageTarget,
 };
 
-// C# room cases the Go package has no twin for. Every other C# room case is
-// a Go twin in room_test.rs or one of the room scenarios.
+// C# room cases the Go package has no twin for. The other C# room cases
+// match a Go twin in room_test.rs or a room scenario by name.
 
 const READ_BATCH: &str = r#"{"commands":[{"name":"doc.read","args":{"detail":"full"}}]}"#;
 const RENAME_BATCH: &str =
@@ -194,4 +194,37 @@ async fn a_version_holding_a_nested_bigint_is_invalid_data() {
             other => panic!("{name}: {other:?}"),
         }
     }
+}
+
+// The host's own STALE, from a restore whose expectRevision is behind the
+// room, is retryable as C#'s Failure("STALE", ..., true) is
+// (BlokAgentExecutor.cs:1023). No scenario or C# test pins the flag here.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_restore_behind_the_room_is_a_retryable_stale() {
+    let r = new_test_room(false, None);
+    r.docs.hold(
+        "d",
+        r#"{"blocks":[{"id":"p","type":"paragraph","data":{"text":"Hello"}}]}"#,
+    );
+    let first = ok_in(&r, "d", &insert_batch("a", "One")).await;
+    ok_in(&r, "d", &insert_batch("b", "Two")).await;
+    let execution = r
+        .executor
+        .execute_in_room(
+            &Cancel::new(),
+            "d",
+            &format!(
+                r#"{{"expectRevision":"{0}","commands":[{{"name":"history.restore","args":{{"version":"{0}"}}}}]}}"#,
+                first.revision
+            ),
+            &room_agent(),
+            None,
+        )
+        .await
+        .expect("execute");
+    let result = must_parse(&execution.result_json);
+    let error = lookup(Some(&result), "error");
+    assert_eq!(string_of(lookup(error, "code")).as_deref(), Some("STALE"));
+    assert_eq!(lookup(error, "retryable").map(|r| r.kind), Some(Kind::True));
+    assert_eq!(execution.revision, r.head("d").await);
 }

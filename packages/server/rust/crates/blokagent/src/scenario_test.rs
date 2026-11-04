@@ -562,6 +562,13 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
         }
     }
 
+    if let Some(live) = &live {
+        live.room
+            .manager
+            .drain()
+            .await
+            .unwrap_or_else(|err| panic!("{name}: drain: {err}"));
+    }
     let expect_host = lookup(Some(scenario), "host");
     let state = host.as_ref().map(|host| {
         let state = host.state.lock().expect("lock");

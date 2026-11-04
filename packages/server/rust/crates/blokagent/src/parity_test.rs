@@ -219,6 +219,8 @@ async fn matches_the_agent_command_corpus_in_a_room() {
                 break;
             }
         }
+        let exported = rooms.export(&doc).await;
+        rooms.manager.drain().await.expect("drain");
         let want = expected_error(case, "room");
         if code != want {
             failures.push(format!("{}: error {code:?}, want {want:?}", case.name));
@@ -232,7 +234,7 @@ async fn matches_the_agent_command_corpus_in_a_room() {
             failures.push(format!("{}: no golden", case.name));
             continue;
         };
-        let got = normalize_document(&rooms.export(&doc).await, &caller_chosen_ids(case));
+        let got = normalize_document(&exported, &caller_chosen_ids(case));
         if stable(Some(&got)) != stable(Some(&want)) {
             failures.push(format!(
                 "{}: document\n got {}\nwant {}",

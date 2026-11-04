@@ -449,3 +449,51 @@ async fn sanitizes_the_media_type_before_signing() {
 pub fn deadline(err: &Error) -> bool {
     matches!(err, Error::DeadlineExceeded)
 }
+
+#[tokio::test]
+async fn reads_absent_as_none_through_a_signed_get() {
+    let bucket = Arc::new(FakeBucket::default());
+    assert_eq!(
+        bucket_store(&bucket).get_object(COLLAB_KEY).await.unwrap(),
+        None
+    );
+    let r = first(&bucket);
+    assert_eq!((r.method.as_str(), r.path.as_str()), ("GET", OBJECT_PATH));
+    assert!(
+        r.header("Authorization")
+            .unwrap()
+            .starts_with("AWS4-HMAC-SHA256 Credential=AKIAEXAMPLE/20250102/eu-central-1/"),
+        "{:?}",
+        r.header("Authorization")
+    );
+    assert_eq!(
+        r.header("X-Amz-Content-Sha256"),
+        Some("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    );
+}
+
+#[tokio::test]
+async fn delete_treats_an_s3_not_found_answer_as_already_deleted() {
+    let bucket = Arc::new(FakeBucket {
+        status: 404,
+        ..FakeBucket::default()
+    });
+    bucket_store(&bucket)
+        .delete_object(COLLAB_KEY)
+        .await
+        .unwrap();
+    assert_eq!(first(&bucket).method, "DELETE");
+}
+
+#[tokio::test]
+async fn delete_propagates_an_s3_failure() {
+    let bucket = Arc::new(FakeBucket {
+        status: 500,
+        ..FakeBucket::default()
+    });
+    let err = bucket_store(&bucket)
+        .delete_object(COLLAB_KEY)
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("returned 500"), "{err}");
+}

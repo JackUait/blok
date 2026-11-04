@@ -274,7 +274,7 @@ impl S3 {
         if allow_not_found && status == 404 {
             return Ok(None);
         }
-        let prefix = body.read_to_end(ERROR_BODY_LIMIT).await.unwrap_or_default();
+        let prefix = body.read_prefix(ERROR_BODY_LIMIT).await;
         Err(Error::Message(format!(
             "blobstore: s3 {method} returned {status}: {}",
             String::from_utf8_lossy(&prefix).trim()
@@ -395,6 +395,27 @@ enum Answer {
 }
 
 impl Answer {
+    /// What arrives of an error body before the limit, the end or a failed
+    /// read; C# keeps the bytes read before the failure too.
+    async fn read_prefix(&mut self, limit: usize) -> Vec<u8> {
+        let mut out = Vec::new();
+        match self {
+            #[cfg(test)]
+            Answer::Canned(bytes) => out.extend_from_slice(&bytes[..bytes.len().min(limit)]),
+            Answer::Wire(body) => {
+                let mut chunk = vec![0u8; 64 << 10];
+                while out.len() < limit {
+                    let want = chunk.len().min(limit - out.len());
+                    match body.read(&mut chunk[..want]).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => out.extend_from_slice(&chunk[..n]),
+                    }
+                }
+            }
+        }
+        out
+    }
+
     async fn read_to_end(&mut self, limit: usize) -> std::io::Result<Vec<u8>> {
         match self {
             #[cfg(test)]

@@ -10,6 +10,7 @@ mod graphemes_table;
 mod htmlreader;
 mod keys;
 mod longestkept;
+mod richtext;
 mod richtextinput;
 mod textdiff;
 mod textdiff_tables;
@@ -20,11 +21,17 @@ pub use fields::{FieldsError, RichTextFieldEntry, RichTextFields};
 pub use htmlreader::{HtmlReader, Invoker, MAX_CALL_CHARS, MAX_EDIT_HTML_CHARS, RuntimeHtmlReader};
 pub use keys::{DIFFABLE_TEXT_KEYS, ORDERED_ID_ARRAY_KEYS};
 pub use longestkept::longest_kept_order;
+pub use richtext::{
+    WriteOp, canonical_marks, canonicalize, from_delta, is_rich_text, normalize, normalize_value,
+    read_input, same_value, to_write_ops,
+};
 pub use richtextinput::RichTextInput;
 pub use textdiff::{MAX_DIFF_DISTANCE, TextEdit, atomize, diff};
 
 #[cfg(test)]
 mod csharp_graphemes_test;
+#[cfg(test)]
+mod csharp_richtext_test;
 #[cfg(test)]
 mod csharp_textdiff_test;
 #[cfg(test)]
@@ -35,6 +42,8 @@ mod htmlreader_test;
 mod keys_test;
 #[cfg(test)]
 mod longestkept_test;
+#[cfg(test)]
+mod richtext_test;
 #[cfg(test)]
 mod richtextinput_test;
 #[cfg(test)]

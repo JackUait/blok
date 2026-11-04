@@ -181,7 +181,7 @@ func blockDataEntries(kind *jsjson.Str, data *jsjson.Object, input *RichTextInpu
 		}
 		text, isString := m.Value.(jsjson.Str)
 		_, isArray := m.Value.([]any)
-		if kind != nil && input.Fields.IsRich(kind.String(), key.String()) && (isString || isArray) {
+		if kind != nil && input.Fields.isRich(*kind, key) && (isString || isArray) {
 			segments, err := richSegments(kind.String(), key.String(), m.Value, input)
 			if err != nil {
 				return nil, err

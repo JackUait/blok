@@ -50,6 +50,15 @@ public sealed class YDocConverterMigrationCaptureTests
     }
 
     cases.Add(Capture("rich-negatives/host-widget", "rich-negatives", null, false, new() { ["widget"] = ["text"] }));
+    // Only a peer's legacy JSON content (ref 2) can carry a lone surrogate.
+    // A type of "\uD800" is not the custom type "\uFFFD": types compare as
+    // exact UTF-16, so nothing is collected.
+    cases.Add(Capture(
+        "lone-surrogate-type-is-not-its-replacement",
+        null,
+        doc => doc.ApplyUpdate(LoneSurrogateTypeRoom()),
+        false,
+        new() { ["\uFFFD"] = ["text"] }));
     cases.Add(Capture("nul-in-legacy-html", null, doc => doc.Transact(t =>
     {
       doc.GetMap("blocks").Set(t, "p", Block("p", "paragraph", "a\0<b>b\0c</b>", null, asString: true));
@@ -185,6 +194,70 @@ public sealed class YDocConverterMigrationCaptureTests
     Assert.Empty(YDocConverter.CollectLegacyRichText(doc, fields));
 
     return result;
+  }
+
+  /// <summary>
+  /// As client 1: block "p" whose type is the legacy JSON content
+  /// <c>"\ud800"</c>, with a format-1 text of <c>&lt;b&gt;x&lt;/b&gt;</c>.
+  /// </summary>
+  private static byte[] LoneSurrogateTypeRoom()
+  {
+    var w = new Lib0Writer();
+
+    void Field(string key, byte info)
+    {
+      w.WriteUint8(info);
+      w.WriteVarUint(0);
+      w.WriteVarUint(1);
+      w.WriteVarUint(0);
+      w.WriteVarString(key);
+    }
+
+    w.WriteVarUint(1);
+    w.WriteVarUint(7);
+    w.WriteVarUint(1);
+    w.WriteVarUint(0);
+    // 0: blocks["p"] = Y.Map
+    w.WriteUint8(0x27);
+    w.WriteVarUint(1);
+    w.WriteVarString("blocks");
+    w.WriteVarString("p");
+    w.WriteVarUint(1);
+    // 1: id = "p" (any)
+    Field("id", 0x28);
+    w.WriteVarUint(1);
+    w.WriteUint8(119);
+    w.WriteVarString("p");
+    // 2: type = JSON "\ud800"
+    Field("type", 0x22);
+    w.WriteVarUint(1);
+    w.WriteVarString("\"\\ud800\"");
+    // 3: data = Y.Map
+    Field("data", 0x27);
+    w.WriteVarUint(1);
+    // 4: data.text = Y.Text
+    w.WriteUint8(0x27);
+    w.WriteVarUint(0);
+    w.WriteVarUint(1);
+    w.WriteVarUint(3);
+    w.WriteVarString("text");
+    w.WriteVarUint(2);
+    // 5: the text's string
+    w.WriteUint8(0x04);
+    w.WriteVarUint(0);
+    w.WriteVarUint(1);
+    w.WriteVarUint(4);
+    w.WriteVarString("<b>x</b>");
+    // 6 (clock 13): root = ["p"]
+    w.WriteUint8(0x08);
+    w.WriteVarUint(1);
+    w.WriteVarString("root");
+    w.WriteVarUint(1);
+    w.WriteUint8(119);
+    w.WriteVarString("p");
+    w.WriteVarUint(0);
+
+    return w.ToArray();
   }
 
   private static YMap Block(string id, string type, string html, string? parentId, bool asString = false)

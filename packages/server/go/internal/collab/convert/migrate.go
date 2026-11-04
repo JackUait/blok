@@ -34,7 +34,7 @@ func legacyRichText(doc *yjs.Doc, fields *RichTextFields) []legacyField {
 			continue
 		}
 		for _, key := range data.Keys() {
-			if !fields.IsRich(kind.String(), key.String()) {
+			if !fields.isRich(kind, key) {
 				continue
 			}
 			var html jsjson.Str

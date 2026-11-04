@@ -9353,6 +9353,27 @@
       ]
     },
     {
+      "name": "lone-surrogate-type-is-not-its-replacement",
+      "roomUpdate": "AQcBACcBBmJsb2NrcwFwASgAAQACaWQBdwFwIgABAAR0eXBlAQgiXHVkODAwIicAAQAEZGF0YQEnAAEDBHRleHQCBAABBAg8Yj54PC9iPggBBHJvb3QBdwFwAA==",
+      "customFields": {
+        "\uFFFD": [
+          "text"
+        ]
+      },
+      "found": [],
+      "migrated": 0,
+      "updates": [],
+      "export": [
+        {
+          "id": "p",
+          "type": "\uFFFD",
+          "data": {
+            "text": "\u003Cb\u003Ex\u003C/b\u003E"
+          }
+        }
+      ]
+    },
+    {
       "name": "nul-in-legacy-html",
       "roomUpdate": "AQYBACcBBmJsb2NrcwFwASgAAQACaWQBdwFwKAABAAR0eXBlAXcJcGFyYWdyYXBoJwABAARkYXRhASgAAQMEdGV4dAF3DGEAPGI\u002BYgBjPC9iPggBBHJvb3QBdwFwAA==",
       "found": [

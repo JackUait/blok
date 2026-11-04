@@ -408,7 +408,7 @@ func (r *docReader) yBlockToOutputData(key string, entry *blockEntry) (*jsjson.O
 
 	// What is left holding HTML after the generic read is a legacy text or string.
 	for _, dataKey := range data.Keys() {
-		if !r.fields.IsRich(kind, dataKey.String()) {
+		if !r.fields.isRich(kindText, dataKey) {
 			continue
 		}
 		switch value(data, dataKey.String()).(type) {
@@ -517,7 +517,7 @@ func (r *docReader) nestedDocumentSlots(kind string, data *jsjson.Object) {
 				continue
 			}
 			for _, m := range nestedData.Members() {
-				if html, ok := m.Value.(jsjson.Str); ok && r.fields.IsRich(nestedType.String(), m.Key.String()) {
+				if html, ok := m.Value.(jsjson.Str); ok && r.fields.isRich(nestedType, m.Key) {
 					r.slots = append(r.slots, RichTextHTMLSlot{nestedData, m.Key, RichTextHTML{nestedType.String(), m.Key.String(), html}})
 				}
 			}

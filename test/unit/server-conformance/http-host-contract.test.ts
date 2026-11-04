@@ -1249,6 +1249,37 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   }).map(([name, te]) => [`Transfer-Encoding ${name}`,
     bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\n${te}${CLOSE}\r\n0\r\n\r\n`)])),
   'Transfer-Encoding gzip on HTTP/1.0': bytes('POST /delete HTTP/1.0\r\nTransfer-Encoding: gzip\r\n\r\n'),
+  // An absolute target's authority must be the Host, as System.Uri prints
+  // it: host in lower case, no userinfo, the default port optional.
+  ...Object.fromEntries(Object.entries({
+    'for another host': ['http://y/health', 'x'],
+    'for the Host': ['http://x/health', 'x'],
+    'in upper case': ['http://X/health', 'x'],
+    'with the default port': ['http://x:80/health', 'x'],
+    'and a Host with the default port': ['http://x/health', 'x:80'],
+    'with another port': ['http://x:81/health', 'x'],
+    'with a leading-zero port': ['http://x:080/health', 'x:080'],
+    'with an empty port': ['http://x:/health', 'x'],
+    'over https with a Host on 443': ['https://x/health', 'x:443'],
+    'over https with a Host on 80': ['https://x/health', 'x:80'],
+    'and a Host in upper case': ['http://x/health', 'X'],
+    'with userinfo': ['http://u:p@x/health', 'x'],
+    'and a Host with userinfo': ['http://u@x/health', 'u@x'],
+    'with IPv6 in upper case': ['http://[::A]/health', '[::A]'],
+    'with IPv6 and a port': ['http://[::1]:8080/health', '[::1]:8080'],
+    'with an upper-case scheme': ['Http://x/health', 'x'],
+  }).map(([name, [target, host]]) => [`absolute target ${name}`,
+    bytes(`GET ${target} HTTP/1.1\r\nHost: ${host}\r\n${CLOSE}\r\n`)])),
+  'absolute target for another host on HTTP/1.0': bytes('GET http://y/health HTTP/1.0\r\nHost: x\r\n\r\n'),
+  // Kestrel refuses these from the request line alone.
+  'absolute target with a port over 65535': bytes('GET http://x:65536/health HTTP/1.1\r\n'),
+  'absolute target with no host': bytes('GET http:///health HTTP/1.1\r\n'),
+  'absolute target with a percent in the host': bytes('GET http://%78/health HTTP/1.1\r\n'),
+  'authority target': bytes('GET x:80 HTTP/1.1\r\n'),
+  'authority target with a slash': bytes('GET a/b HTTP/1.1\r\n'),
+  'authority target with an underscore': bytes('GET a_b HTTP/1.1\r\n'),
+  'asterisk target with GET': bytes('GET * HTTP/1.1\r\n'),
+  'asterisk and more': bytes('GET *x HTTP/1.1\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

@@ -318,5 +318,105 @@
   {
     "name": "Transfer-Encoding gzip on HTTP/1.0",
     "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target for another host",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target for the Host",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target in upper case",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with the default port",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target and a Host with the default port",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with another port",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with a leading-zero port",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with an empty port",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target over https with a Host on 443",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target over https with a Host on 80",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target and a Host in upper case",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with userinfo",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target and a Host with userinfo",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with IPv6 in upper case",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with IPv6 and a port",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n20\r\n{\"status\":\"ok\",\"version\":\"dev\"}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "absolute target with an upper-case scheme",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target for another host on HTTP/1.0",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with a port over 65535",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with no host",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "absolute target with a percent in the host",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "authority target",
+    "response": "HTTP/1.1 405 Method Not Allowed\nallow: CONNECT\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "authority target with a slash",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "authority target with an underscore",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "asterisk target with GET",
+    "response": "HTTP/1.1 405 Method Not Allowed\nallow: OPTIONS\nconnection: close\ncontent-length: 0\n\n"
+  },
+  {
+    "name": "asterisk and more",
+    "response": "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n"
   }
 ]

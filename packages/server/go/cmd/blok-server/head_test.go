@@ -98,6 +98,74 @@ const (
 	kestrel505 = "HTTP/1.1 505 HTTP Version Not Supported\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 )
 
+// Measured on the C# host. An absolute target's authority, as System.Uri
+// prints it, must be the Host; Kestrel checks that after the headers. The
+// rest it answers from the request line alone: a target that is not
+// origin-form, http(s)://, or "*" is authority-form, 405 unless CONNECT
+// and 400 for any byte but letters, digits and "-.:@[]".
+func TestTargetFormsFollowKestrel(t *testing.T) {
+	address := startHost(t, echoTarget, time.Minute)
+	get := func(target, host string) string {
+		return "GET " + target + " HTTP/1.1\r\nHost: " + host + "\r\nConnection: close\r\n\r\n"
+	}
+	const (
+		ok          = "HTTP/1.1 200 OK"
+		needConnect = "HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\nConnection: close\r\nAllow: CONNECT\r\n\r\n"
+		needOptions = "HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\nConnection: close\r\nAllow: OPTIONS\r\n\r\n"
+	)
+	cases := []struct{ name, request, want string }{
+		{"for another host", get("http://y/h", "x"), kestrel400},
+		{"for the Host", get("http://x/h", "x"), ok},
+		{"in upper case", get("http://X/h", "x"), ok},
+		{"with the default port", get("http://x:80/h", "x"), ok},
+		{"a Host with the default port", get("http://x/h", "x:80"), ok},
+		{"both with the default port", get("http://x:80/h", "x:80"), ok},
+		{"with another port", get("http://x:81/h", "x"), kestrel400},
+		{"the same other port", get("http://x:81/h", "x:81"), ok},
+		{"a leading-zero port", get("http://x:080/h", "x:080"), kestrel400},
+		{"a leading-zero port and no port", get("http://x:080/h", "x"), ok},
+		{"an empty port", get("http://x:/h", "x"), ok},
+		{"port 0", get("http://x:0/h", "x:0"), ok},
+		{"https on 443", get("https://x/h", "x:443"), ok},
+		{"https with 443", get("https://x:443/h", "x"), ok},
+		{"https on 80", get("https://x/h", "x:80"), kestrel400},
+		{"a Host in upper case", get("http://x/h", "X"), kestrel400},
+		{"userinfo", get("http://u:p@x/h", "x"), ok},
+		{"a Host with userinfo", get("http://u@x/h", "u@x"), kestrel400},
+		{"IPv6", get("http://[::1]/h", "[::1]"), ok},
+		{"IPv6 in upper case", get("http://[::A]/h", "[::A]"), kestrel400},
+		{"IPv6 and a port", get("http://[::1]:8080/h", "[::1]:8080"), ok},
+		{"an underscore host", get("http://X_Y/h", "x_y"), ok},
+		{"a trailing dot", get("http://x./h", "x."), ok},
+		{"a Host with spaces around", get("http://x/h", "  x  "), ok},
+		{"an upper-case scheme", get("Http://x/h", "x"), kestrel400},
+		{"on HTTP/1.0 with no Host", "GET http://y/h HTTP/1.0\r\n\r\n", "HTTP/1.0 200 OK"},
+		{"on HTTP/1.0 for another host", "GET http://y/h HTTP/1.0\r\nHost: x\r\n\r\n", kestrel400},
+		{"a port over 65535", "GET http://x:65536/h HTTP/1.1\r\n", kestrel400},
+		{"a port with a letter", "GET http://x:8a/h HTTP/1.1\r\n", kestrel400},
+		{"no host", "GET http:///h HTTP/1.1\r\n", kestrel400},
+		{"only the scheme", "GET http:// HTTP/1.1\r\n", kestrel400},
+		{"a percent in the host", "GET http://%78/h HTTP/1.1\r\n", kestrel400},
+		{"authority", "GET x:80 HTTP/1.1\r\n", needConnect},
+		{"authority with every byte it takes", "POST aZ09-.:@[] HTTP/1.1\r\n", needConnect},
+		{"authority with a slash", "GET a/b HTTP/1.1\r\n", kestrel400},
+		{"authority with an underscore", "GET a_b HTTP/1.1\r\n", kestrel400},
+		{"authority with a high byte", "GET a\xe9b HTTP/1.1\r\n", kestrel400},
+		{"asterisk with GET", "GET * HTTP/1.1\r\n", needOptions},
+		{"asterisk and more", "GET *x HTTP/1.1\r\n", kestrel400},
+		{"asterisk with OPTIONS", "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n", ok},
+	}
+	for _, c := range cases {
+		got := rawAnswer(t, address, c.request)
+		if strings.HasSuffix(c.want, " 200 OK") {
+			got = answerStatus(got)
+		}
+		if got != c.want {
+			t.Errorf("%s: got %.120q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
 // Measured on the C# host: the version is the rest of the request line. It
 // must be 8 bytes, or 9 ending in CR, else 400; any 8 bytes but HTTP/1.0 and
 // HTTP/1.1 get 505. Kestrel answers from the line alone.

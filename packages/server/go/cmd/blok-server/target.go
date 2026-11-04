@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -50,8 +51,15 @@ const (
 	maxHeaderCount = 100
 )
 
-// rejectGoAway marks a queue entry for the HTTP/2 preface.
-const rejectGoAway = -1
+// Queue entries for refusals that are not a bare status.
+const (
+	// rejectGoAway: the HTTP/2 preface.
+	rejectGoAway = -1
+	// rejectNeedsConnect, rejectNeedsOptions: Kestrel's 405 with an Allow
+	// header, for an authority target off CONNECT and "*" off OPTIONS.
+	rejectNeedsConnect = -2
+	rejectNeedsOptions = -3
+)
 
 // standIn is what net/http reads in place of a refused head.
 const standIn = "GET / HTTP/1.1\r\nHost: x\r\n\r\n"
@@ -230,7 +238,7 @@ func (s *targetStream) step() bool {
 	s.consume(end + 1)
 	line := s.head[start:]
 	if s.state == streamLine {
-		if status := versionRefusal(line); status != 0 {
+		if status := lineRefusal(line); status != 0 {
 			s.refuse(status)
 			return true
 		}
@@ -253,13 +261,14 @@ func (s *targetStream) step() bool {
 	return true
 }
 
-// versionRefusal is Kestrel's version check, made on the request line before
-// any header is read. The version is everything after the target's space,
-// up to the LF: 8 bytes, or 9 ending in CR, or the line is a 400. Of those,
-// all but HTTP/1.0 and HTTP/1.1 get 505, unless the method is bad (400).
-// A line with no version is left to http.ReadRequest; so is the HTTP/2
-// preface, which gets its GOAWAY after its blank line.
-func versionRefusal(line []byte) int {
+// lineRefusal is what Kestrel refuses on the request line, before any header
+// is read. The version is everything after the target's space, up to the
+// LF: 8 bytes, or 9 ending in CR, or the line is a 400. Of those, all but
+// HTTP/1.0 and HTTP/1.1 get 505, unless the method is bad (400). Then the
+// target's form (targetRefusal). A line with no version is left to
+// http.ReadRequest; so is the HTTP/2 preface, which gets its GOAWAY after
+// its blank line.
+func lineRefusal(line []byte) int {
 	line = bytes.TrimSuffix(line, []byte("\n"))
 	method, rest, ok := bytes.Cut(line, []byte(" "))
 	if !ok {
@@ -275,13 +284,103 @@ func versionRefusal(line []byte) int {
 	if len(version) != 8 && (len(version) != 9 || version[8] != '\r') {
 		return http.StatusBadRequest
 	}
-	if v := string(version[:8]); v == "HTTP/1.0" || v == "HTTP/1.1" {
-		return 0
-	}
-	if len(method) == 0 || bytes.ContainsFunc(method, func(r rune) bool { return !httpguts.IsTokenRune(r) }) {
+	known := string(version[:8]) == "HTTP/1.0" || string(version[:8]) == "HTTP/1.1"
+	if !known && (len(method) == 0 || bytes.ContainsFunc(method, func(r rune) bool { return !httpguts.IsTokenRune(r) })) {
 		return http.StatusBadRequest
 	}
-	return http.StatusHTTPVersionNotSupported
+	if !known {
+		return http.StatusHTTPVersionNotSupported
+	}
+	return targetRefusal(method, target)
+}
+
+// targetRefusal is Kestrel's check of the target's form, measured on the C#
+// host. An absolute target (http:// or https://, in lower case) must parse;
+// endHead checks its authority against Host. "*" is only for OPTIONS. Any
+// other target is authority-form: off CONNECT a 405, or a 400 for a byte
+// that is not a letter, a digit or one of "-.:@[]".
+func targetRefusal(method, target []byte) int {
+	switch {
+	case len(target) == 0 || target[0] == '/':
+		return 0
+	case target[0] == '*':
+		if len(target) > 1 {
+			return http.StatusBadRequest
+		}
+		if string(method) != "OPTIONS" {
+			return rejectNeedsOptions
+		}
+		return 0
+	case bytes.HasPrefix(target, []byte("http://")) || bytes.HasPrefix(target, []byte("https://")):
+		if _, _, ok := absoluteAuthority(string(target)); !ok {
+			return http.StatusBadRequest
+		}
+		return 0
+	case string(method) == "CONNECT":
+		return 0
+	}
+	for _, b := range target {
+		if !('a' <= b && b <= 'z' || 'A' <= b && b <= 'Z' || '0' <= b && b <= '9' || bytes.IndexByte([]byte("-.:@[]"), b) >= 0) {
+			return http.StatusBadRequest
+		}
+	}
+	return rejectNeedsConnect
+}
+
+// absoluteAuthority is the authority of an absolute target as System.Uri
+// prints it: no userinfo, the host in lower case, and the port only when it
+// is not the scheme's default. defaultPort is that port, or "" when the
+// target names another. ok is false where Kestrel's parse fails: no host, a
+// '%' in it, or a port that is not a number up to 65535.
+func absoluteAuthority(target string) (authority, defaultPort string, ok bool) {
+	scheme, rest, found := strings.Cut(target, "://")
+	if !found || scheme != "http" && scheme != "https" {
+		return "", "", false
+	}
+	defaultPort = "80"
+	if scheme == "https" {
+		defaultPort = "443"
+	}
+	if end := strings.IndexAny(rest, "/?#"); end >= 0 {
+		rest = rest[:end]
+	}
+	if at := strings.LastIndexByte(rest, '@'); at >= 0 {
+		rest = rest[at+1:]
+	}
+	host, port := rest, ""
+	if strings.HasPrefix(rest, "[") {
+		end := strings.IndexByte(rest, ']')
+		if end < 0 {
+			return "", "", false
+		}
+		host, port = rest[:end+1], rest[end+1:]
+		if port != "" && port[0] != ':' {
+			return "", "", false
+		}
+		port = strings.TrimPrefix(port, ":")
+	} else if colon := strings.IndexByte(rest, ':'); colon >= 0 {
+		host, port = rest[:colon], rest[colon+1:]
+	}
+	if host == "" || strings.Contains(host, "%") {
+		return "", "", false
+	}
+	authority = strings.ToLower(host)
+	if port == "" {
+		return authority, defaultPort, true
+	}
+	number := 0
+	for _, c := range port {
+		if c < '0' || c > '9' {
+			return "", "", false
+		}
+		if number = number*10 + int(c-'0'); number > 65535 {
+			return "", "", false
+		}
+	}
+	if strconv.Itoa(number) == defaultPort {
+		return authority, defaultPort, true
+	}
+	return authority + ":" + strconv.Itoa(number), "", true
 }
 
 // swapHeaderLine applies Kestrel's header grammar to one line, in place. It
@@ -440,6 +539,13 @@ func (s *targetStream) endHead() {
 	// the lines it had.
 	if request.ProtoAtLeast(1, 1) && s.hostLines == 0 && request.Method != "CONNECT" ||
 		s.hostLines == 1 && !httpguts.ValidHostHeader(s.host) {
+		s.refuse(http.StatusBadRequest)
+		return
+	}
+	// Kestrel checks an absolute target's authority against Host, when there
+	// is one (HTTP/1.0 may send none).
+	if authority, defaultPort, ok := absoluteAuthority(s.entry.original); ok && s.hostLines == 1 &&
+		s.host != authority && (defaultPort == "" || s.host != authority+":"+defaultPort) {
 		s.refuse(http.StatusBadRequest)
 		return
 	}
@@ -630,6 +736,7 @@ func restoreHeaders(header http.Header, swaps []headerSwap) bool {
 // Kestrel's reason phrases, which net/http's StatusText does not all share.
 var kestrelReasons = map[int]string{
 	http.StatusBadRequest:                  "Bad Request",
+	http.StatusMethodNotAllowed:            "Method Not Allowed",
 	http.StatusRequestTimeout:              "Request Timeout",
 	http.StatusRequestEntityTooLarge:       "Payload Too Large",
 	http.StatusRequestURITooLong:           "URI Too Long",
@@ -643,8 +750,25 @@ func kestrelAnswer(status int) string {
 		// An HTTP/2 GOAWAY frame: stream 0, last stream 0, HTTP_1_1_REQUIRED.
 		return "\x00\x00\x08\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0d"
 	}
-	return fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Length: 0\r\nConnection: close\r\nDate: %s\r\n\r\n",
-		status, kestrelReasons[status], time.Now().UTC().Format(http.TimeFormat))
+	status, allow := refusalStatus(status)
+	if allow != "" {
+		allow = "Allow: " + allow + "\r\n"
+	}
+	return fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Length: 0\r\nConnection: close\r\n%sDate: %s\r\n\r\n",
+		status, kestrelReasons[status], allow, time.Now().UTC().Format(http.TimeFormat))
+}
+
+// refusalStatus is the status and Allow value a queue entry's refusal gets.
+func refusalStatus(reject int) (int, string) {
+	switch reject {
+	case rejectNeedsConnect:
+		return http.StatusMethodNotAllowed, "CONNECT"
+	case rejectNeedsOptions:
+		return http.StatusMethodNotAllowed, "OPTIONS"
+	case rejectGoAway:
+		return http.StatusBadRequest, ""
+	}
+	return reject, ""
 }
 
 // rstAvoidance is how long a refused connection keeps reading before it
@@ -659,8 +783,9 @@ func answerAndClose(w http.ResponseWriter, status int) {
 	if err != nil {
 		w.Header().Set("Connection", "close")
 		w.Header().Set("Content-Length", "0")
-		if status == rejectGoAway {
-			status = http.StatusBadRequest
+		status, allow := refusalStatus(status)
+		if allow != "" {
+			w.Header().Set("Allow", allow)
 		}
 		w.WriteHeader(status)
 		return

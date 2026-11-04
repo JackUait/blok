@@ -190,3 +190,9 @@ fn guard_turns_a_foreign_cancellation_into_a_store_error() {
         "other errors pass through: {plain:?}"
     );
 }
+
+#[test]
+#[should_panic(expected = "collab: an empty doc id has no key")]
+fn refuses_an_empty_doc_id() {
+    doc_key("");
+}

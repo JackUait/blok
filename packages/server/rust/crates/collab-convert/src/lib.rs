@@ -58,6 +58,8 @@ mod agentops_test;
 #[cfg(test)]
 mod apply_test;
 #[cfg(test)]
+mod csharp_apply_test;
+#[cfg(test)]
 mod csharp_editops_test;
 #[cfg(test)]
 mod csharp_export_test;

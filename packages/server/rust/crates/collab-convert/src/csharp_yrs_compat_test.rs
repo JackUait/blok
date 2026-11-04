@@ -132,7 +132,7 @@ fn with_segments(reader: &RuntimeHtmlReader<Pool>, blocks: &Value) -> Value {
 }
 
 /// RichTextRuntime.Export: the export with its legacy HTML slots read.
-fn export_resolved(reader: &RuntimeHtmlReader<Pool>, doc: &Doc) -> Value {
+pub(crate) fn export_resolved(reader: &RuntimeHtmlReader<Pool>, doc: &Doc) -> Value {
     let (mut blocks, slots) =
         export(doc, &RichTextFields::built_in(), None).unwrap_or_else(|err| panic!("{err}"));
     let html: Vec<RichTextHtml> = slots.iter().map(|slot| slot.html.clone()).collect();

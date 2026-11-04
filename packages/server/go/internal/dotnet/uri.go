@@ -55,10 +55,16 @@ func ParseAbsoluteURI(s string) (*URI, bool) {
 	if scheme != "http" && scheme != "https" {
 		return &URI{Scheme: scheme}, true
 	}
-	if !strings.HasPrefix(rest, "//") {
+	if !twoSlashes(rest) {
 		return nil, false
 	}
 	return parseHierarchical(scheme, rest[2:])
+}
+
+// twoSlashes reports whether s starts with two of '/' and '\', in any
+// mix, which .NET reads as "//" after an http scheme.
+func twoSlashes(s string) bool {
+	return len(s) >= 2 && (s[0] == '/' || s[0] == '\\') && (s[1] == '/' || s[1] == '\\')
 }
 
 // ResolveURI is Uri.TryCreate(base, reference) for an http(s) base.
@@ -68,7 +74,7 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 		return &URI{Scheme: "file"}, true
 	}
 	if scheme, rest, ok := splitScheme(reference); ok {
-		if scheme != base.Scheme || strings.HasPrefix(rest, "//") {
+		if scheme != base.Scheme || twoSlashes(rest) {
 			return ParseAbsoluteURI(reference)
 		}
 		// "http:x" against an http base is relative, as in .NET.
@@ -76,7 +82,8 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 	}
 	prefix := base.Scheme + "://" + base.authority
 	switch {
-	case strings.HasPrefix(reference, "//") || strings.HasPrefix(reference, `\\`):
+	// "\/x" names a host as "//x" does; "/\x" is a path.
+	case strings.HasPrefix(reference, "//") || strings.HasPrefix(reference, `\/`):
 		return ParseAbsoluteURI(base.Scheme + ":" + reference)
 	case reference == "":
 		return ParseAbsoluteURI(prefix + base.AbsolutePath + base.Query)
@@ -85,7 +92,7 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 	case reference[0] == '?':
 		return ParseAbsoluteURI(prefix + base.AbsolutePath + reference)
 	case reference[0] == '/' || reference[0] == '\\':
-		return ParseAbsoluteURI(prefix + reference)
+		return ParseAbsoluteURI(prefix + "/" + reference[1:])
 	}
 	directory := base.AbsolutePath[:strings.LastIndexByte(base.AbsolutePath, '/')+1]
 	return ParseAbsoluteURI(prefix + directory + reference)
@@ -116,16 +123,10 @@ func parseHierarchical(scheme, s string) (*URI, bool) {
 		end = len(s)
 	}
 	authority, rest := s[:end], s[end:]
-	// A backslash ends the authority only when no '@' follows it there: .NET
-	// refuses "host\@other" rather than reading "other" as the host.
+	// A backslash right after the authority is refused: .NET tries it as
+	// part of a Basic host, which http does not allow.
 	if strings.HasPrefix(rest, `\`) {
-		tail := rest
-		if stop := strings.IndexAny(tail, "/?#"); stop >= 0 {
-			tail = tail[:stop]
-		}
-		if strings.Contains(tail, "@") {
-			return nil, false
-		}
+		return nil, false
 	}
 	u := &URI{Scheme: scheme}
 	if at := strings.LastIndexByte(authority, '@'); at >= 0 {

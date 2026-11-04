@@ -57,7 +57,17 @@ pub fn parse_absolute_uri(s: &str) -> Option<Uri> {
     if scheme != "http" && scheme != "https" {
         return Some(Uri::with_scheme(&scheme));
     }
-    parse_hierarchical(&scheme, rest.strip_prefix("//")?)
+    if !two_slashes(rest) {
+        return None;
+    }
+    parse_hierarchical(&scheme, &rest[2..])
+}
+
+/// Whether `s` starts with two of `/` and `\`, in any mix, which .NET
+/// reads as "//" after an http scheme.
+fn two_slashes(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() >= 2 && matches!(b[0], b'/' | b'\\') && matches!(b[1], b'/' | b'\\')
 }
 
 /// Uri.TryCreate(base, reference) for an http(s) base.
@@ -67,7 +77,7 @@ pub fn resolve_uri(base: &Uri, reference: &str) -> Option<Uri> {
         return Some(Uri::with_scheme("file"));
     }
     if let Some((scheme, rest)) = split_scheme(reference) {
-        if scheme != base.scheme || rest.starts_with("//") {
+        if scheme != base.scheme || two_slashes(rest) {
             return parse_absolute_uri(reference);
         }
         // "http:x" against an http base is relative, as in .NET.
@@ -75,14 +85,15 @@ pub fn resolve_uri(base: &Uri, reference: &str) -> Option<Uri> {
     }
     let prefix = format!("{}://{}", base.scheme, base.authority);
     let (path, query) = (&base.absolute_path, &base.query);
-    if reference.starts_with("//") || reference.starts_with("\\\\") {
+    // "\/x" names a host as "//x" does; "/\x" is a path.
+    if reference.starts_with("//") || reference.starts_with("\\/") {
         return parse_absolute_uri(&format!("{}:{reference}", base.scheme));
     }
     match reference.as_bytes().first() {
         None => parse_absolute_uri(&format!("{prefix}{path}{query}")),
         Some(b'#') => parse_absolute_uri(&format!("{prefix}{path}{query}{reference}")),
         Some(b'?') => parse_absolute_uri(&format!("{prefix}{path}{reference}")),
-        Some(b'/' | b'\\') => parse_absolute_uri(&format!("{prefix}{reference}")),
+        Some(b'/' | b'\\') => parse_absolute_uri(&format!("{prefix}/{}", &reference[1..])),
         Some(_) => {
             let directory = &path[..path.rfind('/').map_or(0, |at| at + 1)];
             parse_absolute_uri(&format!("{prefix}{directory}{reference}"))
@@ -108,13 +119,10 @@ fn split_scheme(s: &str) -> Option<(String, &str)> {
 fn parse_hierarchical(scheme: &str, s: &str) -> Option<Uri> {
     let end = s.find(['/', '?', '#', '\\']).unwrap_or(s.len());
     let (mut authority, mut rest) = (&s[..end], s[end..].to_string());
-    // A backslash ends the authority only when no '@' follows it there: .NET
-    // refuses "host\@other" rather than reading "other" as the host.
+    // A backslash right after the authority is refused: .NET tries it as
+    // part of a Basic host, which http does not allow.
     if rest.starts_with('\\') {
-        let tail = &rest[..rest.find(['/', '?', '#']).unwrap_or(rest.len())];
-        if tail.contains('@') {
-            return None;
-        }
+        return None;
     }
     let mut u = Uri::with_scheme(scheme);
     if let Some(at) = authority.rfind('@') {

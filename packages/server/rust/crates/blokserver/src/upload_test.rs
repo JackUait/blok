@@ -303,18 +303,25 @@ async fn upload_answers413_when_the_host_refuses_between_parts() {
 // not two. The size it reports is the furthest position read.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_upload_to_s3_hashes_its_spool_in_place_and_reports_the_file_size() {
+    // The server spools to the shared temp dir, as Go and C# do, so only a
+    // spool that was not there before counts.
+    fn s3_spools() -> std::collections::HashSet<String> {
+        std::fs::read_dir(std::env::temp_dir())
+            .unwrap()
+            .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+            .filter(|name| name.starts_with("blok-s3-"))
+            .collect()
+    }
+    let before = Arc::new(s3_spools());
     let content = "blok".repeat(5000);
     let spooled = Arc::new(std::sync::Mutex::new(Vec::new()));
     let put = Arc::new(std::sync::Mutex::new(Vec::new()));
     let (seen_spools, seen_put) = (Arc::clone(&spooled), Arc::clone(&put));
     let bucket = start(move |mut request: Request, mut response: ResponseWriter| {
         let (seen_spools, seen_put) = (Arc::clone(&seen_spools), Arc::clone(&seen_put));
+        let before = Arc::clone(&before);
         async move {
-            let spools: Vec<String> = std::fs::read_dir(std::env::temp_dir())
-                .unwrap()
-                .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
-                .filter(|name| name.starts_with("blok-s3-"))
-                .collect();
+            let spools: Vec<String> = s3_spools().difference(&before).cloned().collect();
             *seen_spools.lock().unwrap() = spools;
             let mut body = Vec::new();
             if let Some(reader) = request.body_mut() {

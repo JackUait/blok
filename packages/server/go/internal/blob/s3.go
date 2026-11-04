@@ -66,7 +66,7 @@ func NewS3(s *S3) (*S3, error) {
 	s.client = &http.Client{
 		Transport: &http.Transport{
 			// SocketsHttpHandler's default: the environment proxy.
-			Proxy:       osProxy(),
+			Proxy:       dotnet.OSProxy(),
 			DialContext: s.dialer.DialContext,
 			// ConnectTimeout bounds the TLS handshake too.
 			TLSHandshakeTimeout: s.connectTimeout,

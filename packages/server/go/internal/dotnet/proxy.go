@@ -1,4 +1,4 @@
-package blob
+package dotnet
 
 import (
 	"net/http"
@@ -7,18 +7,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 )
 
-// environmentProxy is .NET's HttpEnvironmentProxy (System.Net.Http 10.0.11,
+// EnvironmentProxy is .NET's HttpEnvironmentProxy (System.Net.Http 10.0.11,
 // decompiled), which SocketsHttpHandler uses by default. Unlike Go's
 // ProxyFromEnvironment it reads ALL_PROXY, takes a lower-case variable even
 // when it is empty for no_proxy, matches NO_PROXY entries only exactly or as
 // ".suffix", has no "*" and no loopback bypass, and skips HTTP_PROXY only
 // under GATEWAY_INTERFACE. With no variable set .NET on macOS falls back to
 // the system proxy settings; Go does not read those.
-func environmentProxy(lookup func(string) (string, bool)) func(*http.Request) (*url.URL, error) {
+func EnvironmentProxy(lookup func(string) (string, bool)) func(*http.Request) (*url.URL, error) {
 	get := func(name string) string { value, _ := lookup(name); return value }
 	httpProxy := proxyURL(get("http_proxy"))
 	if _, cgi := lookup("GATEWAY_INTERFACE"); httpProxy == nil && !cgi {
@@ -86,7 +84,7 @@ func proxyURL(value string) *url.URL {
 	}
 	var user *url.Userinfo
 	if at := strings.LastIndexByte(value, '@'); at >= 0 {
-		info := dotnet.UnescapeDataString(value[:at])
+		info := UnescapeDataString(value[:at])
 		value = value[at+1:]
 		if name, password, ok := strings.Cut(info, ":"); ok {
 			user = url.UserPassword(name, password)
@@ -140,4 +138,5 @@ func bypassed(entries []string, host string) bool {
 	return false
 }
 
-func osProxy() func(*http.Request) (*url.URL, error) { return environmentProxy(os.LookupEnv) }
+// OSProxy reads the environment when called, not per request.
+func OSProxy() func(*http.Request) (*url.URL, error) { return EnvironmentProxy(os.LookupEnv) }

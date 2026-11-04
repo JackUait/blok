@@ -87,7 +87,7 @@ type Client struct {
 func New(options Options, transport http.RoundTripper) *Client {
 	if transport == nil {
 		transport = &http.Transport{
-			Proxy:       http.ProxyFromEnvironment,
+			Proxy:       dotnet.OSProxy(),
 			DialContext: (&net.Dialer{Timeout: connectTimeout}).DialContext,
 			// ConnectTimeout bounds the TLS handshake too.
 			TLSHandshakeTimeout: connectTimeout,

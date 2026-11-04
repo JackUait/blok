@@ -45,3 +45,5 @@ mod proxy_test;
 mod test_json;
 #[cfg(test)]
 mod tls_test;
+#[cfg(test)]
+mod wire_test;

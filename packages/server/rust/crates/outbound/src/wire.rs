@@ -127,12 +127,17 @@ async fn read_line<R: AsyncBufRead + Unpin>(
     }
 }
 
-/// Reads a response head, skipping interim 1xx answers. The whole head,
-/// status line included, must fit in `max_head` bytes.
+/// Go's transport gives up after five interim answers; without a cap a
+/// server could stream 1xx heads forever.
+const MAX_INTERIM: usize = 5;
+
+/// Reads a response head, skipping interim 1xx answers. Each head, status
+/// line included, must fit in `max_head` bytes.
 pub async fn read_head<R: AsyncBufRead + Unpin>(
     r: &mut R,
     max_head: usize,
 ) -> Result<Head, WireError> {
+    let mut interim = 0;
     loop {
         let mut budget = max_head;
         let line = read_line(r, &mut budget).await?;
@@ -169,6 +174,10 @@ pub async fn read_head<R: AsyncBufRead + Unpin>(
             ));
         }
         if (100..200).contains(&status) && status != 101 {
+            interim += 1;
+            if interim > MAX_INTERIM {
+                return Err(WireError::Malformed("too many interim answers"));
+            }
             continue;
         }
         return Ok(Head {

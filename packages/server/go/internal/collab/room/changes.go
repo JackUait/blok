@@ -244,7 +244,7 @@ func reorderedIDs(beforeOrder, afterOrder []indexedBlock, beforeById map[string]
 	positionBefore := map[string]int{}
 	siblingCounts := map[string]int{}
 	for _, entry := range beforeOrder {
-		parent := parentKey(parentOf(entry.block))
+		parent := siblingKey(parentOf(entry.block))
 		positionBefore[unitKey(entry.id)] = siblingCounts[parent]
 		siblingCounts[parent]++
 	}
@@ -255,7 +255,7 @@ func reorderedIDs(beforeOrder, afterOrder []indexedBlock, beforeById map[string]
 		if !had || !sameStr(parentOf(old), parentOf(entry.block)) {
 			continue
 		}
-		parent := parentKey(parentOf(entry.block))
+		parent := siblingKey(parentOf(entry.block))
 		if _, ok := afterSiblings[parent]; !ok {
 			parents = append(parents, parent)
 		}
@@ -360,6 +360,15 @@ func parentKey(parent *jsjson.Str) string {
 		return "\x00root"
 	}
 	return "\x01" + unitKey(*parent)
+}
+
+// siblingKey groups the root with a parent of "", as C# ParentOf ?? "" and
+// the client's output-diff do. restore keeps them apart (parentKey).
+func siblingKey(parent *jsjson.Str) string {
+	if parent == nil {
+		return ""
+	}
+	return unitKey(*parent)
 }
 
 const valuesPrefix = "values."

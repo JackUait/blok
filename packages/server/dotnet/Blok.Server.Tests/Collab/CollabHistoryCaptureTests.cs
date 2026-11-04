@@ -224,6 +224,21 @@ public sealed class CollabHistoryCaptureTests
     }
 
     {
+      // A parent of "" groups with the root, as the client's output-diff
+      // does. Both blocks start in the unlisted tail, c first; listing r
+      // moves it ahead of c.
+      var live = new YDoc(7);
+      var blocks = live.GetMap("blocks");
+      var baseline = live.Transact(transaction =>
+      {
+        blocks.Set(transaction, "c", new YMap([new("id", "c"), new("type", "paragraph"), new("data", new YMap()), new("parentId", "")]));
+        blocks.Set(transaction, "r", new YMap([new("id", "r"), new("type", "paragraph"), new("data", new YMap())]));
+      })!;
+      var reorder = live.Transact(transaction => live.GetArray("root").Insert(transaction, 0, ["r"]))!;
+      cases.Add(new("a parent of \"\" is the root's group", [baseline], [(reorder, null)]));
+    }
+
+    {
       var client = new YDoc(1);
       var page = client.GetMap("page");
       var values = client.GetMap("values");

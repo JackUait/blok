@@ -685,6 +685,47 @@
       ]
     },
     {
+      "name": "a parent of \u0022\u0022 is the root\u0027s group",
+      "baseline": [
+        "AQkHACcBBmJsb2NrcwFjASgABwACaWQBdwFjKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhASgABwAIcGFyZW50SWQBdwAnAQZibG9ja3MBcgEoAAcFAmlkAXcBcigABwUEdHlwZQF3CXBhcmFncmFwaCcABwUEZGF0YQEA"
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHCQgBBHJvb3QBdwFyAA=="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "r",
+              "type": "paragraph",
+              "kind": "moved",
+              "before": {
+                "id": "r",
+                "type": "paragraph",
+                "data": {}
+              },
+              "after": {
+                "id": "r",
+                "type": "paragraph",
+                "data": {}
+              }
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
       "name": "page and values keys",
       "baseline": [
         "AQEBACgBBHBhZ2UFdGl0bGUBdwFBAA=="

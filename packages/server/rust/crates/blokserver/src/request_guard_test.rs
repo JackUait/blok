@@ -317,19 +317,26 @@ async fn resets_at_sixty_seconds_from_the_first_accepted_request() {
 }
 
 /// C# sets RemoteIpAddress from a test header; here the two client
-/// addresses are the IPv4 and IPv6 loopbacks.
-async fn two_client_addresses(options: Options) -> (Running, SocketAddr, SocketAddr) {
+/// addresses are the IPv4 and IPv6 loopbacks. None on a machine with no
+/// IPv6 loopback, as host-cli-contract skips its IPv6 rows there.
+async fn two_client_addresses(options: Options) -> Option<(Running, SocketAddr, SocketAddr)> {
+    if tokio::net::TcpListener::bind("[::1]:0").await.is_err() {
+        eprintln!("no IPv6 loopback: skipped");
+        return None;
+    }
     let running = start_dual_stack(Server::new(options).unwrap().handler("")).await;
     let port = running.address.port();
     let v4 = SocketAddr::from(([127, 0, 0, 1], port));
     let v6 = SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, port));
-    (running, v4, v6)
+    Some((running, v4, v6))
 }
 
 #[tokio::test]
 async fn uses_client_address_buckets_outside_ticket_mode() {
     for auth in ["none", "proxy"] {
-        let (_running, a, b) = two_client_addresses(options(auth, 1, false)).await;
+        let Some((_running, a, b)) = two_client_addresses(options(auth, 1, false)).await else {
+            return;
+        };
         assert_shell(&unfurl_at(a, None, None).await);
         assert_rate_limited(&unfurl_at(a, None, None).await);
         assert_shell(&unfurl_at(b, None, None).await);
@@ -338,7 +345,9 @@ async fn uses_client_address_buckets_outside_ticket_mode() {
 
 #[tokio::test]
 async fn uses_client_address_when_a_ticket_has_no_user() {
-    let (_running, a, b) = two_client_addresses(options("ticket", 1, false)).await;
+    let Some((_running, a, b)) = two_client_addresses(options("ticket", 1, false)).await else {
+        return;
+    };
     let ticket = bearer(&signed("", true));
     assert_shell(&unfurl_at(a, Some(ALLOWED_ORIGIN), Some(&ticket)).await);
     assert_rate_limited(&unfurl_at(a, Some(ALLOWED_ORIGIN), Some(&ticket)).await);

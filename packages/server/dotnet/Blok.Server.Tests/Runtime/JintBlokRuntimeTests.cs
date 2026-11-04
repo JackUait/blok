@@ -176,6 +176,34 @@ public sealed class JintBlokRuntimeTests
     Assert.Equal(BlokConversionFailure.DocumentTooLarge, failure.Reason);
   }
 
+  private const string EchoScript = "globalThis.blokServerInvoke = function (op, input) { return input; };";
+
+  [Fact]
+  public async Task HandsTheEngineTheLastValueOfARepeatedKey()
+  {
+    var runtime = new JintBlokRuntime(EchoScript, poolSize: 1);
+
+    Assert.Equal("""{"a":2,"b":1}""", await runtime.InvokeAsync("x", """{"a":1,"b":1,"a":2}"""));
+  }
+
+  /// <summary>
+  /// The rewrite runs on the host, so it is held to the engine's allocation
+  /// budget too. The echo script would hand the text back if it got that far.
+  /// </summary>
+  [Fact]
+  public async Task RefusesARewriteLargerThanTheAllocationBudgetAndKeepsServing()
+  {
+    var runtime = new JintBlokRuntime(EchoScript, poolSize: 1, allocationBudgetBytes: 8 * 1024 * 1024);
+    var blocks = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $$$"""{"id":"b{{{i}}}","type":"paragraph","data":{"text":"x"}}"""));
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await runtime.InvokeAsync("x", $$"""{"blocks":[],"blocks":[{{blocks}}]}"""));
+
+    Assert.Equal(BlokConversionFailure.DocumentTooLarge, failure.Reason);
+    Assert.IsType<InsufficientMemoryException>(failure.InnerException);
+    Assert.Equal("{}", await runtime.InvokeAsync("x", "{}"));
+  }
+
   /// <summary>
   /// The stack guard's <c>RangeError</c>, and anything else the bundle raises
   /// that is not a rejection of the input, is NOT reported as a bad document.

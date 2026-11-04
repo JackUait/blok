@@ -130,6 +130,12 @@ const parentAlias = { blocks: [
   { id: 'c', type: 'paragraph', parentId: 'tg', data: { text: 'Child through parentId' } },
 ] };
 const lone = '{"blocks":[{"id":"p","type":"paragraph","data":{"text":"a\\ud800b"}},{"id":"\\udc00","type":"header","data":{"text":"x\\udbff","level":2}}]}';
+// Raw text, because J() cannot write a repeated key. JSON.parse keeps the
+// LAST value at the FIRST key's position; Jint needs the host to do that.
+const repeated = '{"blocks":[{"id":"p","type":"paragraph","type":"header","data":{"text":"a","text":"b","level":2}}]}';
+const repeatedRoot = '{"blocks":1,"blocks":[{"id":"p","type":"paragraph","data":{"text":"x"}}]}';
+const repeatedOrder = '{"blocks":[{"id":"p","type":"paragraph","data":{"text":"a","b":{"x":1},"t\\u0065xt":"c","b":7}}]}';
+const repeatedAgentDoc = '{"blocks":[{"id":"p","type":"paragraph","data":{"text":"one"}}]}';
 const nested = { blocks: Array.from({ length: 120 }, (_, d) => ({ id: `n${d}`, parent: d === 0 ? null : `n${d - 1}`, type: 'list', data: { style: 'unordered', text: `level ${d}` } })) };
 const remapDoc = { time: 1759670000000, version: '1.15.2', blocks: [
   { id: 'h1', type: 'header', data: { text: 'Go <a href="#p2">down</a>', level: 2 }, tunes: { anchor: { id: 'top' } } },
@@ -267,6 +273,17 @@ const buildCases = async (invoke) => {
   add('lone.markdown', 'blocksToMarkdown', lone);
   add('lone.pageIndex', 'pageIndex', `{"document":${lone}}`);
   add('lone.inject', 'injectTexts', `{"document":${lone},"includeCode":false,"texts":["\\ud801","y\\udfff"]}`);
+  add('lone.inspect.type', 'inspect', '{"blocks":[{"type":"\\udc00","data":{}}]}');
+  add('repeated.html', 'blocksToHtml', repeated);
+  add('repeated.markdown', 'blocksToMarkdown', repeated);
+  add('repeated.text', 'blocksToPlainText', repeated);
+  add('repeated.text.envelope', 'blocksToPlainText', '{"document":{"blocks":[],"blocks":[{"id":"p","type":"paragraph","data":{"text":"x","text":"y"}}]},"includeHiddenText":false}');
+  add('repeated.inspect', 'inspect', repeated);
+  add('repeated.root.html', 'blocksToHtml', repeatedRoot);
+  add('repeated.root.markdown', 'blocksToMarkdown', repeatedRoot);
+  add('repeated.root.text', 'blocksToPlainText', repeatedRoot);
+  add('repeated.order.inject', 'injectTexts', `{"document":${repeatedOrder},"includeCode":false,"texts":["z"]}`);
+  add('repeated.agent', 'agentExecute', `{"services":[],"document":${repeatedAgentDoc},"batch":{"commands":[],"commands":[{"name":"block.update","name":"doc.read","args":{}}]},"actor":{"id":"agent-x","name":"Agent","kind":"agent"}}`);
   add('fromMarkdown', 'markdownToBlocks', J({ markdown }));
   add('fromHtml', 'htmlToBlocks', J({ html }));
   tableHtml.forEach((source, i) => add(`fromHtml.table.${i}`, 'htmlToBlocks', J({ html: source })));

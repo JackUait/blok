@@ -151,9 +151,8 @@ func isReason(err error, reason Reason) bool {
 }
 
 // goja's JSON.parse reads a lone-surrogate escape as U+FFFD, so the bare
-// operations convert such a document in Go. C# differs (measured, recorded in
-// progress-documents-runtime.md): ToMarkdown throws a raw JsonException, and
-// Validate reports Unknown for a lone-surrogate block type.
+// operations convert such a document. C# reads its runtime input the same way
+// (JsonInputNormalizer.cs), pinned by the C# test of the same name.
 func TestReadsALoneSurrogateInABareDocumentAsAReplacementCharacter(t *testing.T) {
 	c := newRealConverter(t)
 	ctx := context.Background()

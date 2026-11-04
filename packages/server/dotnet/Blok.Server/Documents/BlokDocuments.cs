@@ -73,10 +73,9 @@ public static class BlokDocuments
     }
 
     /*
-     * A repeated key is refused, not resolved: Jint's JSON.parse reads
-     * {"blocks":1,"blocks":[]} as blocks = 1 once the bundle is loaded, where
-     * node and goja keep the last. JsonNode would throw on it instead, and on
-     * a lone-surrogate key.
+     * A repeated key is refused, not resolved, as the Go server does, though
+     * the converters let the last value win (JsonInputNormalizer). JsonNode
+     * would throw on it instead, and on a lone-surrogate key.
      */
     try
     {

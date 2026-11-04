@@ -377,6 +377,50 @@ public sealed class BlokDocumentConverterTests
   }
 
   /// <summary>
+  /// JSON.parse keeps the last value of a repeated key, and so does the Go
+  /// server. Jint, once the bundle is loaded, kept the first.
+  /// </summary>
+  [Fact]
+  public async Task ReadsTheLastValueOfARepeatedKey()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string repeated = """{"blocks":[{"id":"p","type":"paragraph","type":"header","data":{"text":"a","text":"b","level":2}}]}""";
+    const string repeatedRoot = """{"blocks":1,"blocks":[{"id":"p","type":"paragraph","data":{"text":"x"}}]}""";
+
+    Assert.Equal("<h2>b</h2>", await converter.ToHtmlAsync(repeated));
+    Assert.Equal("## b", (await converter.ToMarkdownAsync(repeated)).Markdown);
+    Assert.Equal("b", await converter.ToPlainTextAsync(repeated));
+    Assert.Equal("<p>x</p>", await converter.ToHtmlAsync(repeatedRoot));
+    Assert.Equal(
+        "y",
+        await converter.ToPlainTextAsync("""{"blocks":[],"blocks":[{"id":"p","type":"paragraph","data":{"text":"x","text":"y"}}]}"""));
+  }
+
+  /// <summary>
+  /// Go's JSON.parse reads a lone-surrogate escape as U+FFFD, so the bare
+  /// operations convert such a document. The envelope operations still refuse it.
+  /// </summary>
+  [Fact]
+  public async Task ReadsALoneSurrogateInABareDocumentAsAReplacementCharacter()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string lone = """{"blocks":[{"id":"p","type":"paragraph","data":{"text":"a\ud800b"}}]}""";
+
+    Assert.Equal("a�b", (await converter.ToMarkdownAsync(lone)).Markdown);
+    Assert.Equal("<p>a�b</p>", await converter.ToHtmlAsync(lone));
+
+    var validation = await converter.ValidateAsync("""{"blocks":[{"type":"\udc00","data":{}}]}""");
+
+    Assert.Null(validation.Failure);
+    Assert.Equal(["�"], validation.UnrecognizedBlockTypes);
+
+    var envelope = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        async () => await converter.ToPlainTextAsync(lone));
+
+    Assert.Equal(BlokConversionFailure.InvalidDocument, envelope.Reason);
+  }
+
+  /// <summary>
   /// The editor builds the outline live and saves only its colours, so the
   /// server has to rebuild it from the headings — and give each heading the id
   /// its link points at.

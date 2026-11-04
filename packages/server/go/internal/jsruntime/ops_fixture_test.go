@@ -68,8 +68,8 @@ var importIDs = regexp.MustCompile(`"(md|html)-[a-z0-9]+-`)
 var surrogateEscape = regexp.MustCompile(`\\u[dD][89a-fA-F][0-9a-fA-F]{2}`)
 
 // gojaReadsLoneSurrogates is what goja makes of node's answer: its JSON.parse
-// reads a lone-surrogate escape as U+FFFD (measured), where node and Jint keep
-// the unit. Paired escapes stay escapes.
+// reads a lone-surrogate escape as U+FFFD (measured), where node keeps the
+// unit. The C# runner applies the same rewrite. Paired escapes stay escapes.
 func gojaReadsLoneSurrogates(want string) string {
 	matches := surrogateEscape.FindAllStringIndex(want, -1)
 	high := func(i int) bool { return strings.ContainsAny(want[matches[i][0]+3:matches[i][0]+4], "89abAB") }

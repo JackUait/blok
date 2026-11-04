@@ -182,11 +182,22 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     var deadline = Deadline(engine);
     var reusable = true;
     var returned = false;
+    var running = false;
     string result;
 
     try
     {
       deadline.Begin(timeout ?? this.timeout, CancellationToken.None);
+
+      // Every op's input passes here, so Go and C# read it alike. It runs
+      // under the call's deadline, budget and cancellation, before the engine.
+      inputJson = JsonInputNormalizer.Normalize(inputJson, allocationBudgetBytes, () =>
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        deadline.Check();
+      });
+
+      running = true;
       result = (await engine.InvokeAsync(
           "blokServerInvoke",
           cancellationToken,
@@ -199,7 +210,12 @@ internal sealed class JintBlokRuntime : IBlokRuntime
      */
     catch (OperationCanceledException)
     {
-      reusable = false;
+      reusable = !running;
+      throw;
+    }
+    // Only the input rewrite throws this here, and it never touched the engine.
+    catch (BlokDocumentConversionException)
+    {
       throw;
     }
     /*
@@ -211,7 +227,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
      */
     catch (TimeoutException exception)
     {
-      reusable = false;
+      reusable = !running;
       throw new BlokDocumentConversionException(BlokConversionFailure.TimedOut, exception);
     }
     catch (MemoryLimitExceededException exception)

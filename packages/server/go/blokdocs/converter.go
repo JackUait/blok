@@ -432,8 +432,8 @@ func warmUpDocument() string {
 // like a saved document: an object whose blocks member is an array, with no
 // key repeated anywhere. It never says whether the blocks are readable.
 //
-// Repeats are refused because Jint (the C# engine) reads them differently
-// from goja and node once the bundle is loaded.
+// Repeats are refused on both servers, though the converters let the last
+// value win: a check of "is this a document" stays strict.
 func LooksLikeADocument(documentJSON string) bool {
 	if strings.TrimSpace(documentJSON) == "" {
 		return false

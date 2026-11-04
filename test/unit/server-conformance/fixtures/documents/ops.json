@@ -2226,6 +2226,72 @@
     "output": "{\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"\\ud801\"}},{\"id\":\"\\udc00\",\"type\":\"header\",\"data\":{\"text\":\"y\\udfff\",\"level\":2}}]}}"
   },
   {
+    "name": "lone.inspect.type",
+    "op": "inspect",
+    "input": "{\"blocks\":[{\"type\":\"\\udc00\",\"data\":{}}]}",
+    "output": "{\"blockCount\":1,\"malformedBlockCount\":0,\"isEmpty\":true,\"unrecognizedBlockTypes\":[\"\\udc00\"]}"
+  },
+  {
+    "name": "repeated.html",
+    "op": "blocksToHtml",
+    "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"type\":\"header\",\"data\":{\"text\":\"a\",\"text\":\"b\",\"level\":2}}]}",
+    "output": "<h2>b</h2>"
+  },
+  {
+    "name": "repeated.markdown",
+    "op": "blocksToMarkdown",
+    "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"type\":\"header\",\"data\":{\"text\":\"a\",\"text\":\"b\",\"level\":2}}]}",
+    "output": "{\"markdown\":\"## b\",\"warnings\":[]}"
+  },
+  {
+    "name": "repeated.text",
+    "op": "blocksToPlainText",
+    "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"type\":\"header\",\"data\":{\"text\":\"a\",\"text\":\"b\",\"level\":2}}]}",
+    "output": "b"
+  },
+  {
+    "name": "repeated.text.envelope",
+    "op": "blocksToPlainText",
+    "input": "{\"document\":{\"blocks\":[],\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"x\",\"text\":\"y\"}}]},\"includeHiddenText\":false}",
+    "output": "y"
+  },
+  {
+    "name": "repeated.inspect",
+    "op": "inspect",
+    "input": "{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"type\":\"header\",\"data\":{\"text\":\"a\",\"text\":\"b\",\"level\":2}}]}",
+    "output": "{\"blockCount\":1,\"malformedBlockCount\":0,\"isEmpty\":false,\"unrecognizedBlockTypes\":[]}"
+  },
+  {
+    "name": "repeated.root.html",
+    "op": "blocksToHtml",
+    "input": "{\"blocks\":1,\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"x\"}}]}",
+    "output": "<p>x</p>"
+  },
+  {
+    "name": "repeated.root.markdown",
+    "op": "blocksToMarkdown",
+    "input": "{\"blocks\":1,\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"x\"}}]}",
+    "output": "{\"markdown\":\"x\",\"warnings\":[]}"
+  },
+  {
+    "name": "repeated.root.text",
+    "op": "blocksToPlainText",
+    "input": "{\"blocks\":1,\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"x\"}}]}",
+    "output": "x"
+  },
+  {
+    "name": "repeated.order.inject",
+    "op": "injectTexts",
+    "input": "{\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"a\",\"b\":{\"x\":1},\"t\\u0065xt\":\"c\",\"b\":7}}]},\"includeCode\":false,\"texts\":[\"z\"]}",
+    "output": "{\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"z\",\"b\":7}}]}}"
+  },
+  {
+    "name": "repeated.agent",
+    "op": "agentExecute",
+    "input": "{\"services\":[],\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":\"one\"}}]},\"batch\":{\"commands\":[],\"commands\":[{\"name\":\"block.update\",\"name\":\"doc.read\",\"args\":{}}]},\"actor\":{\"id\":\"agent-x\",\"name\":\"Agent\",\"kind\":\"agent\"}}",
+    "output": "{\"result\":{\"ok\":true,\"revision\":\"h3ab860abb0926\",\"results\":[{\"revision\":\"h3ab860abb0926\",\"rootId\":null,\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"depth\":0,\"text\":\"one\"}]}],\"refs\":{},\"changed\":{\"created\":[],\"updated\":[],\"moved\":[],\"removed\":[]},\"warnings\":[]},\"document\":{\"blocks\":[{\"id\":\"p\",\"type\":\"paragraph\",\"data\":{\"text\":[{\"text\":\"one\"}]}}]},\"edits\":[]}"
+  },
+  {
     "name": "fromMarkdown",
     "op": "markdownToBlocks",
     "input": "{\"markdown\":\"# Hello\\n\\nA **bold** claim with `code`, a [link](https://x.com) and ~~strike~~.\\n\\n- a\\n  - b\\n\\n1. one\\n2. two\\n\\n- [x] done\\n- [ ] todo\\n\\n| a | b |\\n|---|---|\\n| 1 | 2 |\\n\\n$$E = mc^2$$\\n\\ninline $x^2$ math\\n\\n<div>raw html</div>\\n\\n```js\\nconst a = 1;\\n```\\n\\n> quote\\n\\n---\\n\\nEmail <me@example.com>, auto <https://a.b>, &amp; &copy; &#x41; ü 日本 🍎\\n\\n[ref]: https://ref.example\\nsee [ref] and [missing]\\n\\n![img](javascript:x)\"}",

@@ -101,7 +101,7 @@ fn mint_matches_the_c_sharp_fixture() {
 }
 
 #[test]
-fn mint_zero_ttl_uses_the_default() {
+fn mint_unset_ttl_uses_the_default() {
     let now = at(1_700_000_000);
     let claims = Claims {
         user: Some("u".into()),
@@ -110,6 +110,16 @@ fn mint_zero_ttl_uses_the_default() {
     let token = mint(SECRET, &claims, now).unwrap();
     let verified = verify(SECRET, &token, now).unwrap();
     assert_eq!(verified.exp, 1_700_000_000 + DEFAULT_TTL_SECONDS);
+}
+
+#[test]
+fn mint_refuses_a_zero_ttl() {
+    let claims = Claims {
+        user: Some("u".into()),
+        ttl_seconds: Some(0),
+        ..Claims::default()
+    };
+    assert_eq!(mint(SECRET, &claims, at(0)), Err(MintError::Lifetime));
 }
 
 // Go's invalid UTF-8 is a JS string's lone surrogate: either would be

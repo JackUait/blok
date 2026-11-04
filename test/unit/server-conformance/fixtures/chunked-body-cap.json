@@ -1,0 +1,42 @@
+[
+  {
+    "name": "one chunk, at the cap",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n6a\r\n{\"url\":\"<origin>/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":909}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "one chunk, one byte over",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\nf\r\nfile too large\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "a one-byte extension, at the cap",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n6a\r\n{\"url\":\"<origin>/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":908}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "a one-byte extension, one byte over",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\nf\r\nfile too large\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "a 101-byte extension, at the cap",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n6a\r\n{\"url\":\"<origin>/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":808}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "a 101-byte extension, one byte over",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\nf\r\nfile too large\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "ten chunks, at the cap",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n6a\r\n{\"url\":\"<origin>/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":856}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "ten chunks, one byte over",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\nf\r\nfile too large\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "a trailer, at the cap",
+    "response": "HTTP/1.1 200 OK\nconnection: close\ncontent-type: application/json\ntransfer-encoding: chunked\n\n6a\r\n{\"url\":\"<origin>/files/<key>.txt\",\"fileName\":\"a.txt\",\"size\":911}\n\r\n0\r\n\r\n"
+  },
+  {
+    "name": "a trailer, one byte over",
+    "response": "HTTP/1.1 413 Payload Too Large\nconnection: close\ncontent-type: text/plain; charset=utf-8\ntransfer-encoding: chunked\n\nf\r\nfile too large\n\r\n0\r\n\r\n"
+  }
+]

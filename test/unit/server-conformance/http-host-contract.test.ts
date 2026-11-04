@@ -1440,6 +1440,57 @@ it('refuses request heads at Kestrel\'s limits and grammar', async () => {
 const OVER_CAP = 'Content-Length: 30000001\r\n';
 const JSON_TYPE = 'Content-Type: application/json\r\n';
 
+// Kestrel counts every byte of a chunked body against the cap: size lines,
+// extensions and CRLFs, and the last CRLF unless a trailer comes first.
+// The trailer's lines are not counted. Each pair is at the cap and one
+// byte over (a 1000-byte /upload cap).
+function chunkedUpload(size: number, chunks: number, extension = '', trailer = ''): Buffer {
+  const head = '--b\r\nContent-Disposition: form-data; name="file"; filename="a.txt"\r\n\r\n';
+  const tail = '\r\n--b--\r\n';
+  const body = head + 'x'.repeat(size - head.length - tail.length) + tail;
+  const step = Math.ceil(body.length / chunks);
+  let framed = '';
+
+  for (let at = 0; at < body.length; at += step) {
+    const part = body.slice(at, at + step);
+
+    framed += `${part.length.toString(16)}${at === 0 ? extension : ''}\r\n${part}\r\n`;
+  }
+
+  return bytes(
+    'POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\n' +
+    `Transfer-Encoding: chunked\r\n${CLOSE}\r\n${framed}0\r\n${trailer}\r\n`,
+  );
+}
+
+it('counts a chunked body\'s framing against the body cap', async () => {
+  const actual: Array<{ name: string; response: string }> = [];
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-chunk-cap-'));
+  const cases: Record<string, [number, number, string?, string?]> = {
+    'one chunk': [988, 1],
+    'a one-byte extension': [987, 1, ';'],
+    'a 101-byte extension': [887, 1, `;${'e'.repeat(100)}`],
+    'ten chunks': [935, 10],
+    'a trailer': [990, 1, '', 'X-T: 1\r\n'],
+  };
+
+  await withServer(['--auth', 'none', '--storage-dir', directory, '--max-upload', '1000'], async (server) => {
+    for (const [name, [size, chunks, extension, trailer]] of Object.entries(cases)) {
+      for (const [label, data] of [['at the cap', size], ['one byte over', size + 1]] as const) {
+        const response = await rawExchange(server.baseUrl, chunkedUpload(data, chunks, extension, trailer));
+
+        // The stored name is random, and the port changes.
+        actual.push({
+          name: `${name}, ${label}`,
+          response: response.split(server.baseUrl).join('<origin>').replace(/[0-9a-f]{32}/g, '<key>'),
+        });
+      }
+    }
+  }).finally(() => rm(directory, { recursive: true, force: true }));
+
+  compareGolden('chunked-body-cap.json', actual);
+}, 60_000);
+
 it('caps a request body at 30,000,000 bytes off /upload', async () => {
   const actual: Array<{ name: string; response: string }> = [];
   const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-body-'));

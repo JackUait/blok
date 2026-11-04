@@ -63,7 +63,8 @@ func TestABodyOverKestrelsCapGets413(t *testing.T) {
 	}
 }
 
-// Kestrel counts the bytes read too, for a body with no Content-Length.
+// Kestrel counts the bytes read too, for a body with no Content-Length,
+// and counts the chunk framing with them.
 func TestAChunkedBodyOverTheCapGets413(t *testing.T) {
 	saved := maxRequestBodyBytes
 	maxRequestBodyBytes = 4
@@ -72,8 +73,14 @@ func TestAChunkedBodyOverTheCapGets413(t *testing.T) {
 	if got := rawAnswer(t, address, post("Transfer-Encoding: chunked\r\n", "5\r\nhello\r\n0\r\n\r\n")); got != kestrel413 {
 		t.Fatalf("got %q", got)
 	}
+	// All 14 bytes of "4\r\nhell\r\n0\r\n\r\n" count, not only the data.
+	maxRequestBodyBytes = 14
 	if got := rawAnswer(t, address, post("Transfer-Encoding: chunked\r\n", "4\r\nhell\r\n0\r\n\r\n")); !strings.HasSuffix(got, "hell unexpected EOF") {
 		t.Fatalf("at the cap: got %q", got)
+	}
+	maxRequestBodyBytes = 13
+	if got := rawAnswer(t, address, post("Transfer-Encoding: chunked\r\n", "4\r\nhell\r\n0\r\n\r\n")); got != kestrel413 {
+		t.Fatalf("one byte over: got %q", got)
 	}
 }
 

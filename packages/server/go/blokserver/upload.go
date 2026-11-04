@@ -54,7 +54,9 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 	switch {
-	case errors.Is(err, errTooLarge):
+	// tooLarge too: the multipart reader does not wrap a read error it
+	// meets between parts, and a chunked body's framing counts there.
+	case errors.Is(err, errTooLarge) || body.tooLarge:
 		writeText(w, http.StatusRequestEntityTooLarge, "file too large\n")
 		return
 	// Before the context check: the host's read deadline cancels it.

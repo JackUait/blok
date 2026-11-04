@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -113,10 +114,20 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 	}
 	if err != nil && err != io.EOF && b.stream != nil {
 		if status := b.stream.takeBodyRefusal(); status != 0 {
+			// The stream counts a chunked body's bytes against the cap, so
+			// the route sees the cap's error, as from Kestrel.
+			if status == http.StatusRequestEntityTooLarge {
+				err = blokserver.ErrRequestBodyTooLarge
+			}
 			return 0, b.refuse(status, err)
 		}
 	}
 	if b.read += int64(n); b.read > b.limit {
+		return 0, b.refuse(413, blokserver.ErrRequestBodyTooLarge)
+	}
+	// The stream may have counted a chunked body's bytes before the route
+	// set its cap.
+	if b.length < 0 && b.stream != nil && b.stream.chunked.Load() > b.limit {
 		return 0, b.refuse(413, blokserver.ErrRequestBodyTooLarge)
 	}
 	b.ended = err == io.EOF

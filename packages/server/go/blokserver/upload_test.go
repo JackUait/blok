@@ -35,6 +35,30 @@ func TestUploadAnswersASlowBodyAfterTheHostCancelled(t *testing.T) {
 	}
 }
 
+// A host that counts a chunked body's framing can refuse it after the
+// file's bytes, while the multipart reader looks for the next part. C#
+// still answers 413 "file too large" (UploadEndpoint catches the
+// BadHttpRequestException from any read).
+func TestUploadAnswers413WhenTheHostRefusesBetweenParts(t *testing.T) {
+	o := DefaultOptions()
+	o.StorageDirectory = t.TempDir()
+	o.PublicURL = "/files"
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	full := multipartBody("a.txt", "one")
+	body := io.MultiReader(strings.NewReader(full[:len(full)-4]), &failingReader{err: ErrRequestBodyTooLarge, before: cancel})
+	request := httptest.NewRequestWithContext(ctx, "POST", "/upload", body)
+	request.Header.Set("Content-Type", "multipart/form-data; boundary="+testBoundary)
+	recorder := httptest.NewRecorder()
+	s.Handler("").ServeHTTP(recorder, request)
+	if recorder.Code != 413 || recorder.Body.String() != "file too large\n" {
+		t.Fatalf("%d %q", recorder.Code, recorder.Body.String())
+	}
+}
+
 type failingReader struct {
 	err    error
 	before func()

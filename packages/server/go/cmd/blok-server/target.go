@@ -136,9 +136,9 @@ type targetStream struct {
 	chunkLeft uint64
 	// chunkDigits is the size before an extension, handed on as its line.
 	chunkDigits []byte
-	// extension counts a body's extension bytes, which Kestrel counts
-	// against the body cap.
-	extension int64
+	// chunked counts the raw bytes of a chunked body, which Kestrel counts
+	// against the body cap: size lines, extensions and CRLFs too.
+	chunked atomic.Int64
 	// bodyLimit is the body cap the route set, or 0 for Kestrel's default.
 	bodyLimit atomic.Int64
 	buf       []byte // one read buffer for the stream's life
@@ -338,6 +338,11 @@ func (s *targetStream) step() bool {
 	s.headerBytes += len(line)
 	blank := len(line) == 1 || (len(line) == 2 && line[0] == '\r')
 	if blank && s.state == streamTrailer {
+		// Kestrel counts the body's last line end only when no trailer
+		// line came before it.
+		if s.headerLines == s.bodyHeaderLines && !s.countChunked(len(line)) {
+			return true
+		}
 		s.endTrailer()
 		return true
 	}
@@ -515,6 +520,9 @@ func (s *targetStream) stepChunked() bool {
 			s.dropped += semicolon + 1
 			s.consume(semicolon + 1)
 			s.chunk = chunkExtension
+			// Only the ';': the digits count when stepExtension hands them on
+			// as their own line.
+			s.countChunked(1)
 			return true
 		}
 		if !complete {
@@ -532,6 +540,9 @@ func (s *targetStream) stepChunked() bool {
 			s.state = streamPass
 			return true
 		}
+		if !s.countChunked(end + 1) {
+			return true
+		}
 		s.handOnBody(end + 1)
 		if s.chunk, s.chunkLeft = chunkData, size; size == 0 {
 			s.chunk = chunkLast
@@ -546,6 +557,9 @@ func (s *targetStream) stepChunked() bool {
 		n := uint64(len(s.in))
 		if n > s.chunkLeft {
 			n = s.chunkLeft
+		}
+		if !s.countChunked(int(n)) {
+			return true
 		}
 		s.handOnBody(int(n))
 		if s.chunkLeft -= n; s.chunkLeft == 0 {
@@ -567,8 +581,25 @@ func (s *targetStream) stepChunked() bool {
 		s.refuseBody(http.StatusBadRequest)
 		return true
 	}
+	if !s.countChunked(2) {
+		return true
+	}
 	s.handOnBody(2)
 	s.chunk = chunkSize
+	return true
+}
+
+// countChunked adds n raw bytes of a chunked body and refuses it with 413
+// once they pass the cap. It reports whether the body is still taken.
+func (s *targetStream) countChunked(n int) bool {
+	limit := s.bodyLimit.Load()
+	if limit == 0 {
+		limit = maxRequestBodyBytes
+	}
+	if s.chunked.Add(int64(n)) > limit {
+		s.refuseBody(http.StatusRequestEntityTooLarge)
+		return false
+	}
 	return true
 }
 
@@ -581,15 +612,9 @@ func (s *targetStream) stepExtension() bool {
 		take = len(s.in)
 	}
 	if take > 0 {
-		s.extension += int64(take)
 		s.dropped += take
 		s.consume(take)
-		limit := s.bodyLimit.Load()
-		if limit == 0 {
-			limit = maxRequestBodyBytes
-		}
-		if s.extension > limit {
-			s.refuseBody(http.StatusRequestEntityTooLarge)
+		if !s.countChunked(take) {
 			return true
 		}
 	}
@@ -966,7 +991,8 @@ func (s *targetStream) endHead() {
 	}
 	if len(request.TransferEncoding) > 0 || s.entry.http10 {
 		s.entry.dualFramed = s.lengthLines > 0
-		s.chunk, s.extension = chunkSize, 0
+		s.chunk = chunkSize
+		s.chunked.Store(0)
 		s.bodyLimit.Store(0)
 		s.handOn(streamChunked)
 		return

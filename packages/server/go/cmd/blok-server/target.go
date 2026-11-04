@@ -549,6 +549,13 @@ func (s *targetStream) swapHeaderLine(line []byte) bool {
 	original := swap{name: string(name), value: string(value)}
 	changed := swapBytes(name, kestrelOnlyNameByte)
 	changed = swapBytes(value, kestrelOnlyValueByte) || changed
+	// net/http answers Expect itself: a 417 for any other value, and a
+	// close after a body the route left. withBodyLimit answers it as
+	// Kestrel does.
+	if bytes.EqualFold(name, []byte("Expect")) {
+		copy(name, hiddenExpect)
+		original.name, changed = "Expect", true
+	}
 	if changed {
 		s.entry.swaps = append(s.entry.swaps, headerSwap{
 			line: s.headerLines - 1, sentName: string(name), name: original.name, value: original.value,
@@ -615,6 +622,9 @@ type codingLine struct {
 // droppedCodings is what a Transfer-Encoding line net/http must not see is
 // renamed to. Same length as the name, so the head keeps its length.
 const droppedCodings = "X-Blok-Dropped-Te"
+
+// hiddenExpect is what an Expect line is renamed to, the same length.
+const hiddenExpect = "X-Blok"
 
 // takeCodings is Kestrel's check of the transfer codings: the last one, of
 // every line split on commas and trimmed of spaces (not tabs), must be

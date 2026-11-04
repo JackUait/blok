@@ -368,6 +368,7 @@ func FuzzTheStreamFollowsNetHTTP(f *testing.F) {
 	f.Add(" /% \n")
 	f.Add("POST /a HTTP/1.0\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nGET /\r\n0\r\n\r\nGET /b%zz HTTP/1.0\r\n\r\n")
 	f.Add("POST /a HTTP/1.0\nHost: h\nContent-Length: 3\nTransfer-Encoding: chunked\n\n1\r\nG\r\n0\r\n\r\nGET /b%zz HTTP/1.0\n\n")
+	f.Add("POST /a HTTP/1.1\r\nHost: x\r\nexpect: 100-continue\r\nExpect: f\x01\r\nContent-Length: 1\r\n\r\naGET /b%zz HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("GET http://x/a%zz\x01#b%\x00 HTTP/1.1\r\nHost: x\r\n\r\nGET http://x#f HTTP/1.1\r\nHost: x\r\n\r\n")
 	f.Add("POST /a HTTP/1.1\r\nHost: x\r\nContent-Length: +2\r\n\r\nabGET /b%zz HTTP/1.1\r\nHost: x\r\nContent-Length: -00\r\n\r\n")
 	f.Fuzz(func(t *testing.T, in string) {
@@ -485,6 +486,10 @@ func checkTheStreamFollowsNetHTTP(t *testing.T, in string, out []byte, stream *t
 		// takeCodings rewrites whole Transfer-Encoding lines.
 		lineStart := strings.LastIndexByte(in[:i], '\n') + 1
 		if len(in)-lineStart > 17 && strings.EqualFold(in[lineStart:lineStart+18], "Transfer-Encoding:") {
+			continue
+		}
+		// An Expect line is renamed to hiddenExpect.
+		if i-lineStart < len(hiddenExpect) && len(in)-lineStart > 6 && strings.EqualFold(in[lineStart:lineStart+7], "Expect:") {
 			continue
 		}
 		// signedLength turns a Content-Length's sign into a zero.

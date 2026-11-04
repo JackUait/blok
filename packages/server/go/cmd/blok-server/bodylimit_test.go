@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -156,5 +157,52 @@ func TestAnUnreadBodyHasTheDrainTimeToArrive(t *testing.T) {
 	// In time, the connection carries the next request.
 	if got := trickle(t, address, head, "0123456789"+post("", ""), 5, 50*time.Millisecond); got != unsupported+strings.Replace(unsupported, "\r\n\r\n", "\r\nConnection: close\r\n\r\n", 1) {
 		t.Errorf("a body in time: got %q", got)
+	}
+}
+
+// Measured on the C# host: Kestrel sends 100 Continue when the route first
+// reads, only on HTTP/1.1 and only when the first Expect line is
+// 100-continue in any case. It ignores any other expectation, and keeps the connection after a
+// body the route left, as for any unread body.
+func TestExpectFollowsKestrel(t *testing.T) {
+	address := startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen := strings.Join(r.Header.Values("Expect"), "|")
+		if r.URL.Path == "/unread" {
+			w.Header().Set("Content-Length", "0")
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		}
+		body, _ := io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = io.WriteString(w, seen+" "+string(body))
+	}))
+	head := func(path, version, expect string) string {
+		return "POST " + path + " " + version + "\r\nHost: x\r\n" + expect + "Content-Length: 2\r\nConnection: close\r\n\r\n"
+	}
+	answer := func(body string) string {
+		return fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s", len(body), body)
+	}
+	continued := "HTTP/1.1 100 Continue\r\n\r\n"
+	cases := []struct{ name, head, want string }{
+		{"100-continue", head("/p", "HTTP/1.1", "Expect: 100-continue\r\n"), continued + answer("100-continue ab")},
+		{"in upper case", head("/p", "HTTP/1.1", "expect: 100-CONTINUE\r\n"), continued + answer("100-CONTINUE ab")},
+		{"in a list", head("/p", "HTTP/1.1", "Expect: 100-continue, foo\r\n"), answer("100-continue, foo ab")},
+		{"two lines", head("/p", "HTTP/1.1", "Expect: 100-continue\r\nExpect: foo\r\n"), continued + answer("100-continue|foo ab")},
+		{"an empty line first", head("/p", "HTTP/1.1", "Expect:\r\nExpect: 100-continue\r\n"), answer("|100-continue ab")},
+		{"spaces and tabs around", head("/p", "HTTP/1.1", "Expect: \t100-continue\t \r\n"), continued + answer("100-continue ab")},
+		{"another expectation", head("/p", "HTTP/1.1", "Expect: foo\r\n"), answer("foo ab")},
+		{"a control byte", head("/p", "HTTP/1.1", "Expect: f\x01o\r\n"), answer("f\x01o ab")},
+		{"on HTTP/1.0", head("/p", "HTTP/1.0", "Expect: 100-continue\r\n"),
+			"HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 15\r\n\r\n100-continue ab"},
+	}
+	for _, c := range cases {
+		if got := trickle(t, address, c.head, "ab", 2, 0); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+	unread := "POST /unread HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\nContent-Length: 2\r\n\r\n"
+	unsupported := "HTTP/1.1 415 Unsupported Media Type\r\nContent-Length: 0\r\n\r\n"
+	if got := trickle(t, address, unread, "ab"+head("/p", "HTTP/1.1", "")+"ab", 100, 0); got != unsupported+answer(" ab") {
+		t.Errorf("an unread body: got %q", got)
 	}
 }

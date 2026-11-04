@@ -5,6 +5,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,6 +78,13 @@ func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter
 	// says Connection: close past that; on it, net/http reads after the
 	// answer, the same 256 KiB, and closes without a word past it.
 	_ = http.NewResponseController(tracked).EnableFullDuplex()
+	// The stream hid Expect from net/http; Kestrel answers only a first
+	// line of 100-continue, on HTTP/1.1.
+	if conn, ok := r.Context().Value(headerConnKey{}).(*headerConn); ok && conn.targets != nil &&
+		r.ProtoAtLeast(1, 1) && len(r.Header["Expect"]) > 0 &&
+		strings.EqualFold(strings.Trim(r.Header["Expect"][0], " \t"), "100-continue") {
+		body.continueTo = conn.Conn
+	}
 	limited := r.WithContext(blokserver.WithRequestBodyLimit(ctx, body.setLimit))
 	limited.Body = body
 	return limited, body
@@ -90,6 +98,13 @@ type trackingWriter struct {
 	expired  bool
 	lifted   bool
 	hijack   bool
+}
+
+// started reports whether any of the answer went out.
+func (t *trackingWriter) started() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.wrote || t.timedOut
 }
 
 func (t *trackingWriter) hijacked() bool {

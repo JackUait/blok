@@ -1321,6 +1321,18 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\n0123456789GET /health HTTP/1.2\r\n'),
   'unread body over the cap, kept alive': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 30000001\r\n\r\n'),
   'POST /upload with an unread body, then a refused head': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
+  // Kestrel sends 100 Continue only for a first Expect line of
+  // 100-continue, ignores any other expectation, and treats a body the
+  // route left as any unread body.
+  'Expect: 100-continue, unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nExpect: 100-continue\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
+  ...Object.fromEntries(Object.entries({
+    'another expectation': 'Expect: foo\r\n',
+    '100-continue in a list': 'Expect: 100-continue, foo\r\n',
+    'an empty line before 100-continue': 'Expect:\r\nExpect: 100-continue\r\n',
+  }).map(([name, expect]) => [`Expect: ${name}`, bytes(
+    `POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\n${expect}Content-Length: 47\r\n${CLOSE}\r\n` +
+    '{"url":"/0123456789abcdef0123456789abcdef.txt"}',
+  )])),
   'POST /upload over its cap, kept alive': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n\r\n'),
   // Heads after a chunked body keep Kestrel's limits and grammar.
   'chunked body, then 101 headers': bytes(`POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n${headWith(numbered(99))}`),

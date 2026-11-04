@@ -54,6 +54,8 @@ type limitedBody struct {
 	slow     atomic.Bool
 	// ended: a read returned io.EOF.
 	ended bool
+	// continueTo is the socket for Kestrel's 100 Continue, or nil.
+	continueTo io.Writer
 }
 
 // setLimit is IHttpMaxRequestBodySizeFeature: read-only once reading starts.
@@ -73,6 +75,12 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 		b.started = true
 		if b.length > b.limit {
 			return 0, b.refuse(413, blokserver.ErrRequestBodyTooLarge)
+		}
+		if b.continueTo != nil && !b.writer.started() {
+			// Nothing of the answer is written yet, so it goes first.
+			if _, err := io.WriteString(b.continueTo, "HTTP/1.1 100 Continue\r\n\r\n"); err != nil {
+				return 0, err
+			}
 		}
 	}
 	// The moment the rate fails if no byte comes: past the grace, and past

@@ -79,6 +79,9 @@ struct RequestLine {
     method: String,
     target: String,
     version: Version,
+    form: TargetForm,
+    path: String,
+    query: String,
 }
 
 const BAD_REQUEST: Refusal = Refusal::Status(400);
@@ -192,10 +195,11 @@ impl HeadScan {
         {
             return Err(BAD_REQUEST);
         }
-        let (form, path, query) = target_form(&line.method, &line.target)?;
+        let (form, path, query) = (line.form, line.path, line.query);
         match form {
+            // Measured: HTTP/1.0 with no Host takes any absolute target.
             TargetForm::Absolute => {
-                if self.host_lines == 0 || !absolute_matches_host(&line.target, &self.host) {
+                if self.host_lines > 0 && !absolute_matches_host(&line.target, &self.host) {
                     return Err(BAD_REQUEST);
                 }
             }
@@ -287,11 +291,19 @@ fn parse_request_line(line: &[u8]) -> Result<RequestLine, Refusal> {
     if target.iter().any(|&b| b == 0 || b >= 0x80) {
         return Err(BAD_REQUEST);
     }
+    // Both are ASCII: tchar, and the checks above.
+    let method = String::from_utf8_lossy(method).into_owned();
+    let target = String::from_utf8_lossy(target).into_owned();
+    // Measured: Kestrel checks the target's form from the request line
+    // alone, before any header comes.
+    let (form, path, query) = target_form(&method, &target)?;
     Ok(RequestLine {
-        // Both are ASCII: tchar, and the checks above.
-        method: String::from_utf8_lossy(method).into_owned(),
-        target: String::from_utf8_lossy(target).into_owned(),
+        method,
+        target,
         version,
+        form,
+        path,
+        query,
     })
 }
 
@@ -313,7 +325,7 @@ fn target_form(method: &str, target: &str) -> Result<(TargetForm, String, String
     {
         let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
         let (host, _, _) = split_authority(&rest[..authority_end]).ok_or(BAD_REQUEST)?;
-        if host.is_empty() {
+        if host.is_empty() || host.contains('%') {
             return Err(BAD_REQUEST);
         }
         let rest = &rest[authority_end..];
@@ -323,11 +335,16 @@ fn target_form(method: &str, target: &str) -> Result<(TargetForm, String, String
         let path = if path.is_empty() { "/" } else { path };
         return Ok((TargetForm::Absolute, path.to_owned(), query.to_owned()));
     }
+    if method != "CONNECT" {
+        // Measured: off CONNECT a byte outside these is a 400, not the 405.
+        let plain = |b: u8| b.is_ascii_alphanumeric() || b"-.:@[]".contains(&b);
+        if !target.bytes().all(plain) {
+            return Err(BAD_REQUEST);
+        }
+        return Err(Refusal::MethodNotAllowed("CONNECT"));
+    }
     if !valid_host(target) {
         return Err(BAD_REQUEST);
-    }
-    if method != "CONNECT" {
-        return Err(Refusal::MethodNotAllowed("CONNECT"));
     }
     Ok((TargetForm::Authority, String::new(), String::new()))
 }
@@ -459,11 +476,17 @@ pub(crate) fn parse_content_length(value: &str) -> Option<u64> {
 }
 
 /// The last coding, over every Transfer-Encoding line, is "chunked".
+/// Kestrel's split: each line trimmed of spaces and tabs, split on commas,
+/// each coding trimmed of spaces only, so "gzip,\tchunked" ends in
+/// "\tchunked" and is refused.
 pub(crate) fn final_coding_is_chunked(headers: &Headers) -> bool {
     headers
-        .tokens("transfer-encoding")
+        .get_all("transfer-encoding")
+        .flat_map(|value| value.trim_matches([' ', '\t']).split(','))
+        .map(|coding| coding.trim_matches(' '))
+        .filter(|coding| !coding.is_empty())
         .last()
-        .is_some_and(|token| token.eq_ignore_ascii_case("chunked"))
+        .is_some_and(|coding| coding.eq_ignore_ascii_case("chunked"))
 }
 
 #[cfg(test)]

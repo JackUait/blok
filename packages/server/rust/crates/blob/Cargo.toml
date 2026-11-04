@@ -1,0 +1,17 @@
+[package]
+name = "blok-blob"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+getrandom = "0.4"
+tokio = { version = "1", features = ["fs", "io-util"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["fs", "io-util", "rt", "macros"] }
+
+[lints]
+workspace = true

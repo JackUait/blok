@@ -1,0 +1,19 @@
+[package]
+name = "blok-collab-journal"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+blok-collab-operation = { path = "../collab-operation" }
+blok-collab-workingset = { path = "../collab-workingset" }
+blok-dotnet = { path = "../dotnet" }
+sha2 = "0.10"
+
+[dev-dependencies]
+blok-jsjson = { path = "../jsjson" }
+
+[lints]
+workspace = true

@@ -32,6 +32,17 @@ name = "blok-collab"
 version = "0.0.0"
 
 [[package]]
+name = "blok-collab-journal"
+version = "0.0.0"
+dependencies = [
+ "blok-collab-operation",
+ "blok-collab-workingset",
+ "blok-dotnet",
+ "blok-jsjson",
+ "sha2",
+]
+
+[[package]]
 name = "blok-collab-operation"
 version = "0.0.0"
 

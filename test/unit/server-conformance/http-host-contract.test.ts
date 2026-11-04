@@ -1288,6 +1288,12 @@ const REQUEST_HEADS: Record<string, Buffer> = {
   'HTTP/1.0 keep-alive HEAD, then a refused head': bytes('HEAD /health HTTP/1.0\r\nConnection: keep-alive\r\n\r\nGET /health HTTP/1.2\r\n'),
   'HTTP/1.0 POST': bytes('POST /delete HTTP/1.0\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}'),
   'absolute target on HTTP/1.0 with no Host': bytes('GET http://y/health HTTP/1.0\r\n\r\n'),
+  // Kestrel answers before it reads a body the route left, so the answer
+  // never says Connection: close for it. Past the cap it then just closes.
+  'unread body, then a refused head': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 10\r\n\r\n0123456789GET /health HTTP/1.2\r\n'),
+  'unread body over the cap, kept alive': bytes('POST /delete HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 30000001\r\n\r\n'),
+  'POST /upload with an unread body, then a refused head': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nxxGET /health HTTP/1.2\r\n'),
+  'POST /upload over its cap, kept alive': bytes('POST /upload HTTP/1.1\r\nHost: x\r\nContent-Type: multipart/form-data; boundary=b\r\nContent-Length: 33554433\r\n\r\n'),
 };
 
 it('refuses request heads at Kestrel\'s limits and grammar', async () => {

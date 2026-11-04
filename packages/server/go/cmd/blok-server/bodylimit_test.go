@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -103,5 +104,31 @@ func TestARouteThatSetTheCapAnswersAnOverCapRead(t *testing.T) {
 	got := rawAnswer(t, address, post("Content-Length: 5\r\n", "hello"))
 	if !strings.HasPrefix(got, "HTTP/1.1 413 Payload Too Large\r\n") || !strings.HasSuffix(got, "file too large\n") {
 		t.Fatalf("got %q", got)
+	}
+}
+
+// Measured on the C# host: Kestrel answers before it reads a body the route
+// left, so the answer never says Connection: close for it. It then reads the
+// rest and keeps the connection, or closes when it cannot.
+func TestAnUnreadBodyLeavesTheAnswerAlone(t *testing.T) {
+	address := startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+	}))
+	unsupported := "HTTP/1.1 415 Unsupported Media Type\r\nContent-Length: 0\r\n\r\n"
+	head := func(length int) string {
+		return "POST /p HTTP/1.1\r\nHost: x\r\nContent-Length: " + strconv.Itoa(length) + "\r\n\r\n"
+	}
+	cases := []struct{ name, request, want string }{
+		{"a small body, then a refused head", head(10) + "0123456789GET /p HTTP/1.2\r\n", unsupported + kestrel505},
+		{"a body over the cap", head(30_000_001), unsupported},
+	}
+	for _, c := range cases {
+		started := time.Now()
+		if got := rawAnswer(t, address, c.request); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+		if elapsed := time.Since(started); elapsed > 2*time.Second {
+			t.Errorf("%s: closed after %v", c.name, elapsed)
+		}
 	}
 }

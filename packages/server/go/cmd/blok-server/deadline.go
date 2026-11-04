@@ -63,6 +63,11 @@ func withBodyLimit(r *http.Request, ctx context.Context, tracked *trackingWriter
 		ReadCloser: r.Body, writer: tracked, limit: maxRequestBodyBytes, length: r.ContentLength,
 		setDeadline: http.NewResponseController(tracked).SetReadDeadline,
 	}
+	// Kestrel answers before it reads what the route left of a body. Off
+	// full duplex, net/http reads up to 256 KiB of it before the answer and
+	// says Connection: close past that; on it, net/http reads after the
+	// answer, the same 256 KiB, and closes without a word past it.
+	_ = http.NewResponseController(tracked).EnableFullDuplex()
 	limited := r.WithContext(blokserver.WithRequestBodyLimit(ctx, body.setLimit))
 	limited.Body = body
 	return limited

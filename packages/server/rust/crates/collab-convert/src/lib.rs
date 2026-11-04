@@ -58,7 +58,13 @@ mod agentops_test;
 #[cfg(test)]
 mod apply_test;
 #[cfg(test)]
+mod csharp_apply_concurrent_test;
+#[cfg(test)]
+mod csharp_apply_structure_test;
+#[cfg(test)]
 mod csharp_apply_test;
+#[cfg(test)]
+mod csharp_apply_textdiff_test;
 #[cfg(test)]
 mod csharp_editops_test;
 #[cfg(test)]

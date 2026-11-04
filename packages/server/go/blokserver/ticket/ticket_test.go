@@ -41,7 +41,7 @@ type fixture struct {
 		User   string  `json:"user"`
 		Doc    *string `json:"doc"`
 		Write  bool    `json:"write"`
-		TTL    int64   `json:"ttl"`
+		TTL    *int64  `json:"ttl"`
 		Answer answer  `json:"answer"`
 	} `json:"mints"`
 }
@@ -94,11 +94,6 @@ func TestMintMatchesTheCSharpFixture(t *testing.T) {
 	f := load(t)
 	now := time.Unix(f.Now, 0)
 	for _, c := range f.Mints {
-		// Go has no unset field: a zero TTL means the 300-second default,
-		// where C# refuses an explicit 0.
-		if c.TTL == 0 {
-			continue
-		}
 		token, err := Mint(c.Secret, Claims{User: c.User, Doc: c.Doc, Write: c.Write, TTLSeconds: c.TTL}, now)
 		if (err != nil) != (c.Answer.Throws != "") || token != c.Answer.Token {
 			t.Errorf("%q: %q %v, want %+v", c.User, token, err, c.Answer)
@@ -106,7 +101,7 @@ func TestMintMatchesTheCSharpFixture(t *testing.T) {
 	}
 }
 
-func TestMintZeroTTLUsesTheDefault(t *testing.T) {
+func TestMintUnsetTTLUsesTheDefault(t *testing.T) {
 	now := time.Unix(1700000000, 0)
 	token, err := Mint("s3cret-value-at-least-32-chars-long!", Claims{User: "u"}, now)
 	if err != nil {
@@ -115,6 +110,14 @@ func TestMintZeroTTLUsesTheDefault(t *testing.T) {
 	claims, valid := ticket.Verify("s3cret-value-at-least-32-chars-long!", token, now)
 	if !valid || claims.Exp != 1700000000+DefaultTTLSeconds {
 		t.Fatalf("%v %+v", valid, claims)
+	}
+}
+
+// C# BlokTicket.Create throws ArgumentOutOfRangeException on an explicit 0.
+func TestMintRefusesAZeroTTL(t *testing.T) {
+	zero := int64(0)
+	if _, err := Mint("s3cret-value-at-least-32-chars-long!", Claims{User: "u", TTLSeconds: &zero}, time.Now()); err == nil {
+		t.Fatal("minted a pass that lives 0 seconds")
 	}
 }
 

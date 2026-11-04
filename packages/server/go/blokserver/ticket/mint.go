@@ -22,7 +22,7 @@ const header = ticket.HeaderSegment
 // MinimumSecretLength is the shortest secret, in UTF-16 code units.
 const MinimumSecretLength = 32
 
-// DefaultTTLSeconds is the lifetime a zero TTLSeconds stands for.
+// DefaultTTLSeconds is the lifetime an unset TTLSeconds stands for.
 const DefaultTTLSeconds = 300
 
 // Claims say who a pass is for and how long it lives.
@@ -34,8 +34,9 @@ type Claims struct {
 	Doc *string
 	// Write lets the holder write.
 	Write bool
-	// TTLSeconds is the lifetime in whole seconds; 0 means DefaultTTLSeconds.
-	TTLSeconds int64
+	// TTLSeconds is the lifetime in whole seconds; nil means
+	// DefaultTTLSeconds. Below 1 is refused, as C# refuses it.
+	TTLSeconds *int64
 }
 
 // Mint returns a pass for c, signed with secret, that expires TTLSeconds after now.
@@ -43,9 +44,9 @@ func Mint(secret string, c Claims, now time.Time) (string, error) {
 	if len(jsjson.FromString(secret)) < MinimumSecretLength {
 		return "", fmt.Errorf("the secret must be at least %d characters", MinimumSecretLength)
 	}
-	ttl := c.TTLSeconds
-	if ttl == 0 {
-		ttl = DefaultTTLSeconds
+	ttl := int64(DefaultTTLSeconds)
+	if c.TTLSeconds != nil {
+		ttl = *c.TTLSeconds
 	}
 	if ttl < 1 {
 		return "", errors.New("the lifetime must be at least one second")

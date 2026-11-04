@@ -105,7 +105,8 @@ func TestMintsTheSharedTicketPassesByteForByte(t *testing.T) {
 		"readOnly":    {Claims{User: "u1", Doc: doc("doc-42")}, f.ReadOnly},
 		"userTwo":     {Claims{User: "u2", Doc: doc("doc-42"), Write: true}, f.UserTwo},
 	} {
-		c.claims.TTLSeconds = fixtureExp
+		ttl := int64(fixtureExp)
+		c.claims.TTLSeconds = &ttl
 		got, err := Mint(f.Secret, c.claims, time.Unix(0, 0))
 		if err != nil || got != c.want {
 			t.Errorf("%s: %q %v, want %q", name, got, err, c.want)

@@ -88,6 +88,16 @@ pub fn new_on_runtime(runtime: impl Runtime) -> Converter {
 #[cfg(test)]
 mod converter_test;
 #[cfg(test)]
+mod csharp_converter_test;
+#[cfg(test)]
+mod csharp_pages_test;
+#[cfg(test)]
+mod csharp_report_tabs_test;
+#[cfg(test)]
+mod csharp_table_test;
+#[cfg(test)]
+mod csharp_title_inspection_test;
+#[cfg(test)]
 mod host_fixture_test;
 #[cfg(test)]
 mod looks_test;

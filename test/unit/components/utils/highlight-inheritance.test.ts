@@ -24,10 +24,20 @@ const reportInherited = (): void => {
 describe('withHighlightFallback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('CSS', { highlights: new Map() });
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('skips the probe where the engine has no highlight API', () => {
+    vi.stubGlobal('CSS', {});
+    const read = vi.spyOn(window, 'getComputedStyle');
+
+    expect(withHighlightFallback('.a{}', undefined)).toBe(`.a{}\n${FALLBACK}`);
+    expect(read).not.toHaveBeenCalled();
   });
 
   it('appends the descendant-form fallback when highlights do not inherit', () => {

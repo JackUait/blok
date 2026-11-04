@@ -9,6 +9,11 @@ const PROBE_COLOR = 'rgb(1, 2, 3)';
  * answer instead of guessing it from the user agent.
  */
 const inheritsHighlights = (nonce: string | undefined): boolean => {
+  /** No highlight API: Blok registers no highlights, so the probe would only cost a style recalc. */
+  if (typeof CSS === 'undefined' || !('highlights' in CSS)) {
+    return false;
+  }
+
   const style = document.createElement('style');
   const probe = document.createElement(PROBE_TAG);
   const child = document.createElement('span');

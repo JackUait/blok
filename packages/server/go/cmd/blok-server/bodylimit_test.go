@@ -205,3 +205,34 @@ func TestExpectFollowsKestrel(t *testing.T) {
 		t.Errorf("an unread body: got %q", got)
 	}
 }
+
+// A refusal hijacks the socket and drains it for rstAvoidance; the drain
+// deadline for an unread body must not stretch that.
+func TestARefusedBodyClosesAfterRSTAvoidance(t *testing.T) {
+	address := startBodyHost(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		// The refusal's drain has set its deadline by the time this returns.
+		time.Sleep(100 * time.Millisecond)
+	}))
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_, _ = io.WriteString(conn, post("Content-Length: 30000001\r\n", "hello"))
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if answer, _ := io.ReadAll(conn); !strings.HasPrefix(string(answer), "HTTP/1.1 413 ") {
+		t.Fatalf("got %q", answer)
+	}
+	started := time.Now()
+	for time.Since(started) < 4*time.Second {
+		if _, err := io.WriteString(conn, strings.Repeat("x", 1024)); err != nil {
+			if elapsed := time.Since(started); elapsed > 2*time.Second {
+				t.Fatalf("closed after %v", elapsed)
+			}
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("still open after 4 s")
+}

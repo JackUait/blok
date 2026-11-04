@@ -152,7 +152,8 @@ func (t *trackingWriter) refuse(status int) {
 	if t.wrote || t.timedOut {
 		return
 	}
-	t.timedOut = true
+	// answerAndClose hijacks the socket and drains it on its own deadline.
+	t.timedOut, t.hijack = true, true
 	answerAndClose(t.ResponseWriter, status)
 }
 

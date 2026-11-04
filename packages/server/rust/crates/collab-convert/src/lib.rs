@@ -76,6 +76,8 @@ mod csharp_apply_test;
 #[cfg(test)]
 mod csharp_apply_textdiff_test;
 #[cfg(test)]
+mod csharp_docconverter_test;
+#[cfg(test)]
 mod csharp_editops_test;
 #[cfg(test)]
 mod csharp_export_test;
@@ -83,6 +85,8 @@ mod csharp_export_test;
 mod csharp_graphemes_test;
 #[cfg(test)]
 mod csharp_migrate_test;
+#[cfg(test)]
+mod csharp_replay_test;
 #[cfg(test)]
 mod csharp_richtext_test;
 #[cfg(test)]

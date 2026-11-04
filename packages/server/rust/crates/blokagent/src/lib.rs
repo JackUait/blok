@@ -37,6 +37,8 @@ pub use types::{
 #[cfg(test)]
 mod computed_read_test;
 #[cfg(test)]
+mod csharp_agent_test;
+#[cfg(test)]
 mod csharp_room_test;
 #[cfg(test)]
 mod executor_test;

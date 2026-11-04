@@ -287,11 +287,11 @@ fn scenario_names() -> Vec<String> {
     names
 }
 
-fn load(name: &str) -> Node {
+pub(crate) fn load(name: &str) -> Node {
     must_parse(&read_repo_file(&format!("{SCENARIO_ROOT}/{name}.json")))
 }
 
-async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
+pub(crate) async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
     let live = lookup(Some(scenario), "room")
         .map(|spec| open_scenario_room(spec, lookup(Some(scenario), "seed").expect("seed")));
     let executor: &Executor = match &live {

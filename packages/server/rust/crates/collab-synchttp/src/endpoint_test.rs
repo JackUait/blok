@@ -428,3 +428,68 @@ async fn a_hook_error_before_the_upgrade_is_an_empty500_that_keeps_the_connectio
     assert_eq!(names.join(","), "Content-Length,Date", "{text:?}");
     assert_eq!(lines[1], "Content-Length: 0", "{text:?}");
 }
+
+/// Never answers; records when its future is dropped.
+struct StuckHook(Arc<std::sync::atomic::AtomicBool>);
+
+struct DropFlag(Arc<std::sync::atomic::AtomicBool>);
+
+impl Drop for DropFlag {
+    fn drop(&mut self) {
+        self.0.store(true, std::sync::atomic::Ordering::Release);
+    }
+}
+
+impl blok_auth::Authorization for StuckHook {
+    fn can_read_document<'a>(
+        &'a self,
+        _user: &'a User,
+        _document_id: &'a str,
+    ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
+        let flag = DropFlag(Arc::clone(&self.0));
+        Box::pin(async move {
+            let _flag = flag;
+            std::future::pending::<()>().await;
+            Ok(true)
+        })
+    }
+
+    fn can_write_document<'a>(
+        &'a self,
+        _user: &'a User,
+        _document_id: &'a str,
+    ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
+        Box::pin(async { Ok(true) })
+    }
+}
+
+// C# hands the hook RequestAborted and Go the request context: a client that
+// leaves mid-hook cancels it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_hook_still_running_when_the_client_leaves_is_cancelled() {
+    let dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let hook: Arc<dyn blok_auth::Authorization> = Arc::new(StuckHook(Arc::clone(&dropped)));
+    let h = start_endpoint(
+        move |c| {
+            c.auth = "ticket".into();
+            c.authorization = Some(hook);
+        },
+        None,
+    )
+    .await;
+    let mut conn = tokio::net::TcpStream::connect(h.address).await.unwrap();
+    let request = format!(
+        "GET /sync/doc-42 HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\
+         Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+         Origin: https://app.example.com\r\nSec-WebSocket-Protocol: blok-sync.v1, {}\r\n\r\n",
+        write_ticket()
+    );
+    conn.write_all(request.as_bytes()).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(!dropped.load(std::sync::atomic::Ordering::Acquire));
+    conn.shutdown().await.unwrap();
+    assert!(
+        eventually(|| dropped.load(std::sync::atomic::Ordering::Acquire)).await,
+        "the hook outlived its request"
+    );
+}

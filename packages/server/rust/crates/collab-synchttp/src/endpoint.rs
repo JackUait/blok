@@ -85,7 +85,14 @@ impl Endpoint {
 
     async fn handle(&self, request: Request, mut response: ResponseWriter) {
         let doc = blok_route::path_value(&request, "doc").to_owned();
-        match self.negotiate(&request, &doc).await {
+        // Only the hook awaits in here; a client that leaves cancels it, as
+        // RequestAborted does in C#.
+        let cancel = request.cancel_token();
+        let negotiated = tokio::select! {
+            negotiated = self.negotiate(&request, &doc) => negotiated,
+            () = cancel.cancelled() => return,
+        };
+        match negotiated {
             HandshakeResult::Refused { status, body } => refuse(&mut response, status, body).await,
             HandshakeResult::Rejected {
                 sub_protocol,

@@ -280,8 +280,11 @@ impl Inner {
 
     /// BlokServerCors.IsAllowed: an exact, case-insensitive match against a
     /// trimmed candidate. An empty origin never matches.
+    /// Nor one Kestrel could not echo: a browser writes a non-ASCII host in
+    /// punycode.
     pub fn origin_allowed(&self, origin: &str) -> bool {
         !origin.is_empty()
+            && is_field_value(origin)
             && self.options.allowed_origins.iter().any(|candidate| {
                 equals_ordinal_ignore_case(candidate.trim().as_bytes(), origin.as_bytes())
             })
@@ -314,7 +317,7 @@ async fn preflight(inner: &Inner, request: &Request, mut response: ResponseWrite
         return;
     }
     let requested = first_value(request, "Access-Control-Request-Headers");
-    if !is_field_value(origin) || !is_field_value(requested) {
+    if !is_field_value(requested) {
         header_value_refused(&mut response).await;
         return;
     }
@@ -363,10 +366,6 @@ pub(crate) async fn guard(
         return false;
     }
     if allowed {
-        if !is_field_value(&origin) {
-            header_value_refused(response).await;
-            return false;
-        }
         response
             .headers_mut()
             .set("Access-Control-Allow-Origin", &*origin);

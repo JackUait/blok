@@ -329,3 +329,26 @@ async fn the_options_clock_signs_s3_requests() {
         .unwrap();
     assert_eq!(seen.lock().unwrap().as_slice(), ["20200102T030405Z"]);
 }
+
+// A browser writes a non-ASCII host in punycode, and Kestrel cannot echo
+// one: such an origin is never allowed, even when listed (3d9ee2e9).
+#[tokio::test]
+async fn a_non_ascii_origin_is_never_allowed() {
+    let server = Server::new(Options {
+        allowed_origins: vec!["http://\u{e9}.example".into()],
+        unfurl_enabled: true,
+        ..Options::default()
+    })
+    .unwrap();
+    let running = start(server.handler("")).await;
+    let got = send(
+        running.address,
+        "OPTIONS /unfurl HTTP/1.1\r\nOrigin: http://\u{e9}.example\r\nAccess-Control-Request-Method: GET",
+        b"",
+    )
+    .await;
+    assert_eq!(
+        (got.status, got.text().as_str()),
+        (403, "origin not allowed\n")
+    );
+}

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -239,6 +240,15 @@ public sealed class CollabHistoryCaptureTests
     }
 
     {
+      // A peer's bigint in block data does not make its block read as changed.
+      var live = Seeded(P("a"), P("b"));
+      SetData(live, "a", "o", Holding(new BigInteger(7)));
+      var baseline = live.EncodeStateAsUpdate();
+      var updates = Edits(live, """{ "op": "update", "id": "b", "data": { "text": "two" } }""");
+      cases.Add(new("a peer bigint in block data is no change", [baseline], [.. updates.Select(u => (u, (string?)null))]));
+    }
+
+    {
       var client = new YDoc(1);
       var page = client.GetMap("page");
       var values = client.GetMap("values");
@@ -460,6 +470,18 @@ public sealed class CollabHistoryCaptureTests
     }
 
     {
+      // A peer's bigint in block data equals itself and the same double.
+      var current = Doc(P("a"), P("b"));
+      var same = Doc(P("a"), P("b"));
+      var asDouble = Doc(P("a"), P("b"));
+      SetData(current, "a", "o", Holding(new BigInteger(7)));
+      SetData(same, "a", "o", Holding(new BigInteger(7)));
+      SetData(asDouble, "a", "o", Holding(7d));
+      cases.Add(("nothing for an identical document holding a peer bigint", current, same));
+      cases.Add(("nothing for a peer bigint and the same double", current, asDouble));
+    }
+
+    {
       // A child its parent does not list, and a root block missing from the root order.
       var current = Doc(P("a"), P("r"));
       current.Transact(transaction =>
@@ -550,6 +572,25 @@ public sealed class CollabHistoryCaptureTests
   private static void SetMap(YDoc doc, string map, string key, object? value)
   {
     doc.Transact(transaction => doc.GetMap(map).Set(transaction, key, value));
+  }
+
+  private static void SetData(YDoc doc, string id, string key, object? value)
+  {
+    doc.Transact(transaction =>
+    {
+      Assert.True(doc.GetMap("blocks").TryGet(id, out var block));
+      Assert.True(((YMap)block!).TryGet("data", out var data));
+      ((YMap)data!).Set(transaction, key, value);
+    });
+  }
+
+  private static AnyObject Holding(object value)
+  {
+    var held = new AnyObject();
+
+    held.Add("n", value);
+
+    return held;
   }
 
   private static AnyObject Icon(string emoji)

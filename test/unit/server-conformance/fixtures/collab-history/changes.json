@@ -726,6 +726,59 @@
       ]
     },
     {
+      "name": "a peer bigint in block data is no change",
+      "baseline": [
+        "ARIHACcBBmJsb2NrcwFhASgABwACaWQBdwFhKAAHAAR0eXBlAXcJcGFyYWdyYXBoJwAHAARkYXRhAScABwMEdGV4dAYEAAcEAWEnAAcABXR1bmVzAScABwAKY29udGVudElkcwAnAQZibG9ja3MBYgEoAAcIAmlkAXcBYigABwgEdHlwZQF3CXBhcmFncmFwaCcABwgEZGF0YQEnAAcLBHRleHQGBAAHDAFiJwAHCAV0dW5lcwEnAAcICmNvbnRlbnRJZHMACAEEcm9vdAJ3AWF3AWIoAAcDAW8BdgEBbnoAAAAAAAAABwA="
+      ],
+      "records": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "update": "AQEHE0QHDQN0d28BBwENAQ=="
+        }
+      ],
+      "firstBefore": "0",
+      "maxBytes": "9223372036854775807",
+      "changes": [
+        {
+          "sequence": "1",
+          "committedAt": "639269712600000001",
+          "actor": null,
+          "blocks": [
+            {
+              "id": "b",
+              "type": "paragraph",
+              "kind": "changed",
+              "before": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "b"
+                    }
+                  ]
+                }
+              },
+              "after": {
+                "id": "b",
+                "type": "paragraph",
+                "data": {
+                  "text": [
+                    {
+                      "text": "two"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "page": []
+        }
+      ]
+    },
+    {
       "name": "page and values keys",
       "baseline": [
         "AQEBACgBBHBhZ2UFdGl0bGUBdwFBAA=="

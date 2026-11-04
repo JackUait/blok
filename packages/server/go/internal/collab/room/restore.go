@@ -119,7 +119,7 @@ func planBlocks(currentBlocks []any, current convert.DocStructure, targetBlocks 
 		}
 		targetData, _ := block.Get(jsjson.FromString("data"))
 		liveData, _ := exported[unitKey(id)].block.Get(jsjson.FromString("data"))
-		if !convert.SameValue(targetData, liveData) {
+		if !sameData(targetData, liveData) {
 			data := targetData
 			if _, isObject := data.(*jsjson.Object); !isObject {
 				data = &jsjson.Object{}
@@ -269,7 +269,7 @@ func keptInPlace(target []*jsjson.Object, exported map[string]exportedBlock, cur
 			!sameStr(shape.StoredParent, parent) ||
 			!listsIt(parent, id, shapes, rootOrder) ||
 			!sameStr(typeOf(live.block), typeOf(block)) ||
-			!convert.SameValue(tunesOf(live.block), tunesOf(block)) ||
+			!sameData(tunesOf(live.block), tunesOf(block)) ||
 			(hasTargetChildren[key] && shape.Listed == nil) {
 			continue
 		}

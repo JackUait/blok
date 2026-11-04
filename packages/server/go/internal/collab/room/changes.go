@@ -311,10 +311,10 @@ func isBlockChanged(before, after *jsjson.Object) bool {
 	}
 	beforeData, _ := before.Get(jsjson.FromString("data"))
 	afterData, _ := after.Get(jsjson.FromString("data"))
-	if !convert.SameValue(beforeData, afterData) {
+	if !sameData(beforeData, afterData) {
 		return true
 	}
-	return !convert.SameValue(tunesOf(before), tunesOf(after))
+	return !sameData(tunesOf(before), tunesOf(after))
 }
 
 func tunesOf(block *jsjson.Object) any {
@@ -360,6 +360,94 @@ func parentKey(parent *jsjson.Str) string {
 		return "\x00root"
 	}
 	return "\x01" + unitKey(*parent)
+}
+
+// sameData is convert.SameValue, except that a peer's bigint (an int64 in
+// the export) compares by its digits: it equals itself and the double of
+// the same value, as C# JsonNode.DeepEquals (changes) and
+// CollabRestorePlanner.Canonical (restore) read an exported long.
+// SameValue cannot stringify an int64 and would read it as a change.
+func sameData(left, right any) bool {
+	if !hasLong(left) && !hasLong(right) {
+		return convert.SameValue(left, right)
+	}
+	a, okA := canonical(nil, left)
+	b, okB := canonical(nil, right)
+	return okA && okB && string(a) == string(b)
+}
+
+func hasLong(value any) bool {
+	switch value := value.(type) {
+	case int64:
+		return true
+	case *jsjson.Object:
+		for _, m := range value.Members() {
+			if hasLong(m.Value) {
+				return true
+			}
+		}
+	case []any:
+		for _, item := range value {
+			if hasLong(item) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// canonical is JSON with keys sorted at every level; undefined is skipped
+// as a member and null in an array, as JSON.stringify writes it.
+func canonical(dst []byte, value any) ([]byte, bool) {
+	switch value := value.(type) {
+	case int64:
+		return strconv.AppendInt(dst, value, 10), true
+	case *jsjson.Object:
+		var members []jsjson.Member
+		for _, m := range value.Members() {
+			if _, undefined := m.Value.(jsjson.Undefined); !undefined {
+				members = append(members, m)
+			}
+		}
+		sort.SliceStable(members, func(i, j int) bool { return jsjson.Compare(members[i].Key, members[j].Key) < 0 })
+		dst = append(dst, '{')
+		for i, m := range members {
+			if i > 0 {
+				dst = append(dst, ',')
+			}
+			key, err := jsjson.Stringify(m.Key)
+			if err != nil {
+				return nil, false
+			}
+			dst = append(dst, key...)
+			dst = append(dst, ':')
+			var ok bool
+			if dst, ok = canonical(dst, m.Value); !ok {
+				return nil, false
+			}
+		}
+		return append(dst, '}'), true
+	case []any:
+		dst = append(dst, '[')
+		for i, item := range value {
+			if i > 0 {
+				dst = append(dst, ',')
+			}
+			if _, undefined := item.(jsjson.Undefined); undefined {
+				item = nil
+			}
+			var ok bool
+			if dst, ok = canonical(dst, item); !ok {
+				return nil, false
+			}
+		}
+		return append(dst, ']'), true
+	}
+	leaf, err := jsjson.Stringify(value)
+	if err != nil {
+		return nil, false
+	}
+	return append(dst, leaf...), true
 }
 
 // siblingKey groups the root with a parent of "", as C# ParentOf ?? "" and

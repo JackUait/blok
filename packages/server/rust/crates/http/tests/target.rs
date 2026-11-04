@@ -548,3 +548,54 @@ async fn a_crlf_after_a_post_on_a_kept_alive_connection() {
     assert_eq!(second.len(), 1, "{:?}", String::from_utf8_lossy(&rest));
     assert!(String::from_utf8_lossy(&second[0].body).contains(r#""/ok""#));
 }
+
+// Kestrel reads a chunk extension as it comes and counts it against the
+// body cap: 1.1 MB of extension is taken, 31 MB gets 413 (measured on the
+// C# host).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_long_chunk_extension_is_never_held() {
+    use tokio::io::AsyncWriteExt;
+    let (server, seen) = recording(Config::default()).await;
+    for (n, want) in [
+        (1_100_000, "HTTP/1.1 200 OK"),
+        (31_000_000, "HTTP/1.1 413 Payload Too Large"),
+    ] {
+        let conn = connect(server.address).await;
+        let (mut reader, mut writer) = conn.into_split();
+        let sender = tokio::spawn(async move {
+            let head = "POST /a HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n2;";
+            writer.write_all(head.as_bytes()).await?;
+            let piece = vec![b'a'; 64 << 10];
+            let mut left = n;
+            while left > 0 {
+                let take = left.min(piece.len());
+                writer.write_all(&piece[..take]).await?;
+                left -= take;
+            }
+            writer.write_all(b"\r\nab\r\n0\r\n\r\n").await?;
+            // A half-close before the answer is a dropped request.
+            Ok::<_, std::io::Error>(writer)
+        });
+        let mut answer = Vec::new();
+        let _ = tokio::time::timeout(
+            Duration::from_secs(20),
+            tokio::io::AsyncReadExt::read_to_end(&mut reader, &mut answer),
+        )
+        .await;
+        let _ = sender.await;
+        let answer = String::from_utf8_lossy(&answer);
+        assert!(
+            answer.starts_with(want),
+            "{n} bytes of extension: {answer:?}"
+        );
+    }
+    let seen = seen.lock().unwrap();
+    assert!(
+        seen.iter()
+            .any(|(target, body)| target == "/a" && body == b"ab"),
+        "the 1.1 MB extension's request read {:?}",
+        seen.iter()
+            .map(|(t, b)| (t.clone(), b.len()))
+            .collect::<Vec<_>>()
+    );
+}

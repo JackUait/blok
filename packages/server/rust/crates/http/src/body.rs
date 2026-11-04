@@ -74,6 +74,8 @@ pub(crate) enum Framing {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Chunk {
     Size,
+    /// Inside a size line's extension, with the size it gave.
+    Extension(u64),
     Data(u64),
     DataEnd,
     Trailers,
@@ -348,7 +350,22 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 Step::Progress
             }
             Chunk::Size => {
-                let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
+                let lf = inbound.buf.iter().position(|&b| b == b'\n');
+                // Measured: Kestrel reads an extension as it comes and counts
+                // it against the body cap, so it is not held here.
+                if let Some(semicolon) = inbound.buf.iter().position(|&b| b == b';')
+                    && lf.is_none_or(|lf| semicolon < lf)
+                {
+                    let size = match chunk_size(&inbound.buf[..semicolon]) {
+                        Ok(size) => size,
+                        Err(error) => return Step::Fail(error),
+                    };
+                    inbound.consume(semicolon + 1);
+                    state.read += (semicolon + 1) as u64;
+                    *chunk = Chunk::Extension(size);
+                    return Step::Progress;
+                }
+                let Some(lf) = lf else {
                     if available > MAX_CHUNK_LINE {
                         return Step::Fail(BodyError::Malformed);
                     }
@@ -366,6 +383,28 @@ fn step(exchange: &Exchange, state: &mut BodyState, buf: &mut [u8]) -> Step {
                 inbound.consume(lf + 1);
                 state.read += (lf + 1) as u64;
                 *chunk = next;
+                Step::Progress
+            }
+            Chunk::Extension(size) => {
+                let Some(lf) = inbound.buf.iter().position(|&b| b == b'\n') else {
+                    // Keeps the last byte: it may be the CR of the CRLF.
+                    if available < 2 {
+                        return ended_step(available);
+                    }
+                    inbound.consume(available - 1);
+                    state.read += (available - 1) as u64;
+                    return Step::Progress;
+                };
+                if lf == 0 || inbound.buf[lf - 1] != b'\r' {
+                    return Step::Fail(BodyError::Malformed);
+                }
+                inbound.consume(lf + 1);
+                state.read += (lf + 1) as u64;
+                *chunk = if size == 0 {
+                    Chunk::Trailers
+                } else {
+                    Chunk::Data(size)
+                };
                 Step::Progress
             }
             Chunk::Done => Step::End,
@@ -503,4 +542,51 @@ async fn fail(
         }
     }
     error
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn status(line: &str) -> u16 {
+        match chunk_size(line.as_bytes()) {
+            Ok(_) => 0,
+            Err(BodyError::Overflow) => 500,
+            Err(BodyError::Malformed) => 400,
+            Err(error) => panic!("{line:?}: {error:?}"),
+        }
+    }
+
+    // Kestrel's ParseChunkedPrefix on a whole line, CRLF taken off. The rows
+    // with an extension are read up to the ';'.
+    #[test]
+    fn kestrel_chunk_prefix() {
+        let rows = [
+            ("2", 0),
+            ("7FFFFFFF", 0),
+            ("00000002", 0),
+            ("0", 0),
+            ("7FFFFFF", 0),
+            ("5", 0),
+            ("3", 0),
+            ("zz", 400),
+            ("2 ", 400),
+            ("-2", 400),
+            ("", 400),
+            ("0000000002", 400),
+            (";a", 400),
+            ("80000000", 500),
+            ("100000000", 500),
+            ("fffffffffffffffffff", 500),
+        ];
+        for (line, want) in rows {
+            assert_eq!(status(line), want, "{line:?}");
+        }
+        assert_eq!(chunk_size(b"2;a=b"), Ok(2));
+        assert_eq!(chunk_size(b"7FFFFFF;"), Ok(0x7FF_FFFF));
+    }
+
+    #[test]
+    #[ignore = "Rust reads a size line whole: it refuses \"2\\n\" before the next byte comes, where Kestrel waits, and waits for the LF after \"zz\", where Kestrel refuses at once"]
+    fn kestrel_chunk_prefix_waits_on_a_partial_line() {}
 }

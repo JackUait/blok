@@ -98,18 +98,6 @@ fn drop_inner_date(text: &str) -> String {
     out
 }
 
-/// Where blok-http refuses what Kestrel takes, with why. Kestrel 10 takes a
-/// bare LF in a chunked trailer though it wants CRLF on every chunk line; a
-/// front proxy that reads the trailer otherwise can be desynced from the
-/// host (request smuggling). Here every body line needs CRLF.
-const SECURE_DEFAULTS: &[(&str, &str)] = &[
-    ("chunked trailer ended by a bare LF", BARE_400),
-    ("chunked trailer with a bare-LF line", BARE_400),
-    ("chunked trailer of only a bare LF", BARE_400),
-];
-
-const BARE_400: &str = "HTTP/1.1 400 Bad Request\nconnection: close\ncontent-length: 0\n\n";
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_heads_match_the_csharp_golden() {
     let server = start(routes, Config::default()).await;
@@ -124,12 +112,8 @@ async fn request_heads_match_the_csharp_golden() {
     );
     let mut failures = Vec::new();
     for ((name, request), (_, want)) in cases.iter().zip(&golden) {
-        let want = SECURE_DEFAULTS
-            .iter()
-            .find(|(secure, _)| secure == name)
-            .map_or(want.as_str(), |(_, answer)| answer);
         let got = drop_inner_date(&raw_exchange(server.address, request).await);
-        if got != want {
+        if &got != want {
             failures.push(format!("{name}:\n  got  {got:?}\n  want {want:?}"));
         }
     }

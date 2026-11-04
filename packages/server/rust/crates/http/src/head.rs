@@ -128,6 +128,11 @@ impl HeadScan {
             };
             let end = from + offset + 1;
             let line = &buf[self.line_start..end];
+            // The host turns on Kestrel's DisableHttp1LineFeedTerminators:
+            // every head line ends in CRLF.
+            if line.len() < 2 || line[line.len() - 2] != b'\r' {
+                return Parse::Refused(BAD_REQUEST);
+            }
             self.line_start = end;
             self.scanned = 0;
             if self.line.is_none() {
@@ -286,9 +291,9 @@ fn parse_request_line(line: &[u8]) -> Result<RequestLine, Refusal> {
     let version = match version_text {
         b"HTTP/1.1" => Version::Http11,
         b"HTTP/1.0" => Version::Http10,
-        // Measured: an unknown version of 7 or 8 bytes is 505, any other
-        // length a malformed line.
-        other if other.len() == 7 || other.len() == 8 => return Err(Refusal::Status(505)),
+        // Measured: an unknown version of 8 bytes is 505, any other length a
+        // malformed line.
+        other if other.len() == 8 => return Err(Refusal::Status(505)),
         _ => return Err(BAD_REQUEST),
     };
     if target.iter().any(|&b| b == 0 || b >= 0x80) {
@@ -550,8 +555,8 @@ mod tests {
             (b"GET /health http/1.1", "505"),
             (b"GET /health HTTP/1.9", "505"),
             (b"GET /health HTTP/0.9", "505"),
-            (b"GET /health HTTP/1.", "505"),
-            (b"GET /health abcdefg", "505"),
+            (b"GET /health HTTP/1.", "400"),
+            (b"GET /health abcdefg", "400"),
             (b"GET /health abcdefgh", "505"),
             (b"GET /health HTTPX1.1", "505"),
             (b"GET /health HTTP/3", "400"),
@@ -735,8 +740,9 @@ mod tests {
         assert_eq!(verdict(b"GET /health HTTP/1.1\rHost: x\r\n\r\n"), "400");
         assert_eq!(verdict(b"GET /health HTTP/1.1\r\nHost: x\r\r\n\r\n"), "400");
         assert_eq!(verdict(b"GET /health HTTP/1.1\r\nHost: x\r\n\r\r\n"), "400");
-        assert_eq!(verdict(b"GET /health HTTP/1.1\r\nHost: x\r\n\n"), "ok");
-        assert_eq!(verdict(b"GET /health HTTP/1.1\nHost: x\n\n"), "ok");
+        // With DisableHttp1LineFeedTerminators every line needs its CR.
+        assert_eq!(verdict(b"GET /health HTTP/1.1\r\nHost: x\r\n\n"), "400");
+        assert_eq!(verdict(b"GET /health HTTP/1.1\nHost: x\n\n"), "400");
     }
 
     #[test]
@@ -810,7 +816,7 @@ mod tests {
                     "GET /health HTTP/1.1\nHost: x\nX: {}\nConnection: close\n\n",
                     a(32_740)
                 ),
-                "431",
+                "400",
             ),
             (
                 format!("GET /health HTTP/1.1\r\nHost: x\r\nX: {}", a(33_000)),
@@ -835,7 +841,7 @@ mod tests {
                     "GET /health?{} HTTP/1.1\nHost: x\nConnection: close\n\n",
                     a(8_170)
                 ),
-                "ok",
+                "400",
             ),
             (format!("GET /health?{}", a(8_300)), "414"),
             (

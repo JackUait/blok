@@ -212,10 +212,11 @@ async fn the_stream_changes_only_heads() {
             vec![],
             Some("HTTP/1.1 400 Bad Request\r\n"),
         ),
+        // The host refuses bare LF line ends (DisableHttp1LineFeedTerminators).
         (
             "GET /a\rb HTTP/1.1\nHost: x\n\nGET /c%zz HTTP/1.1\r\nHost: x\r\n\r\n".into(),
-            vec![("/a\rb", ""), ("/c%zz", "")],
-            None,
+            vec![],
+            Some("HTTP/1.1 400 Bad Request\r\n"),
         ),
     ];
     for (input, want, refusal) in cases {

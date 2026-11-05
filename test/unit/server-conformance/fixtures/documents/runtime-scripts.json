@@ -560,6 +560,22 @@
     ]
   },
   {
+    "name": "only Jint has Intl",
+    "script": "globalThis.blokServerInvoke = function () {\n  return typeof Intl;\n};\n",
+    "steps": [
+      {
+        "op": "intl",
+        "expect": {
+          "result": "object"
+        },
+        "goja": {
+          "result": "undefined"
+        },
+        "why": "Jint has Intl; goja and QuickJS do not. The bundle checks `typeof Intl` in one place, formula dates (src/shared/database/formula/dates.ts wallTime), and falls back to Date's getters. The server never passes a time zone there, so both branches read the host zone: fixtures/agent/formula-dates.json pins the same answers on all three servers across ten zones."
+      }
+    ]
+  },
+  {
     "name": "JSON.parse stops past 64 levels",
     "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  const arrays = (n) => '['.repeat(n) + ']'.repeat(n);\n  const objects = (n) => '{\"a\":'.repeat(n) + '1' + '}'.repeat(n);\n  const read = (text) => { try { JSON.parse(text); return 'ok'; } catch (error) { return error.name + ': ' + error.message; } };\n  if (operation === 'deepest') return [read(arrays(64)), read(objects(64)), read('[' + objects(63) + ']')].join(' | ');\n  if (operation === 'too deep') return [read(arrays(65)), read(objects(65)), read(' [\"[{\", ' + arrays(64) + ']')].join(' | ');\n  if (operation === 'clone') { let value = 1; for (let i = 0; i < 70; i++) value = { a: value }; return read(JSON.stringify(value)); }\n  if (operation === 'surrogates') return [read('[\"\\ud800\", ' + arrays(64) + ']'), read('[\"\\ud83d\\ude00\", ' + arrays(64) + ']')].join(' | ');\n  if (operation === 'throws') JSON.parse(arrays(65));\n  return 'unknown';\n};\n",
     "steps": [

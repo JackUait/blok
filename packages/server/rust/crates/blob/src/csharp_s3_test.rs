@@ -112,6 +112,15 @@ async fn spools_a_non_seekable_body_only_for_the_request_lifetime() {
         let spools = entries(&path);
         assert_eq!(spools.len(), 1, "no spool while sending");
         assert!(spools[0].starts_with("blok-s3-") && spools[0].ends_with(".tmp"));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(path.join(&spools[0]))
+                .expect("the spool")
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o600, "spool mode {mode:o}");
+        }
         assert_eq!(request.body, b"hello");
         (200, Vec::new())
     });

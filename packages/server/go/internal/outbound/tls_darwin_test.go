@@ -86,3 +86,15 @@ func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
 		t.Fatalf("the verifier fetched the issuer %d time(s)", got)
 	}
 }
+
+// The roots are rustls-native-certs' set, read from the trust settings, so
+// a root added only to the Keychain is trusted as in C# and Rust.
+func TestTheMacOSRootsComeFromTheTrustSettings(t *testing.T) {
+	pool, err := loadTrustSettingsRoots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pool.Equal(x509.NewCertPool()) {
+		t.Fatal("no roots")
+	}
+}

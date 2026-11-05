@@ -336,14 +336,17 @@ func ntlmFirst(ctx context.Context, sent, data string, proxy *url.URL, user, pas
 }
 
 // ntlmSpnHost is the SPN host of a proxy: an IP literal as it is (IPv6
-// without brackets), else Dns.GetHostEntryAsync's HostName, the canonical
-// name. Go's lookup misses names getaddrinfo finds (/etc/hosts, mDNS), and
-// the dial has found this one, so such a name stands as given.
+// without brackets), else Dns.GetHostEntryAsync's HostName, getaddrinfo's
+// canonical name. Without cgo the nearest source is Go's own resolver: it
+// reads /etc/hosts first, as getaddrinfo does, and then follows CNAMEs.
+// The system resolver's LookupCNAME skips /etc/hosts on macOS. A name it
+// cannot answer (mDNS, other NSS sources) stands as given: the dial has
+// found it.
 func ntlmSpnHost(ctx context.Context, host string) string {
 	if _, err := netip.ParseAddr(host); err == nil {
 		return host
 	}
-	name, err := net.DefaultResolver.LookupCNAME(ctx, host)
+	name, err := (&net.Resolver{PreferGo: true}).LookupCNAME(ctx, host)
 	if err != nil || name == "" {
 		return host
 	}

@@ -12,6 +12,11 @@ pub mod operator;
 mod policy;
 mod proxy;
 mod socks;
+#[cfg(target_os = "macos")]
+mod tls_darwin;
+// Only tls_darwin calls it; the tests run it on every OS.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod trustsettings;
 pub mod wire;
 
 pub use browserurl::browser_url;
@@ -47,7 +52,11 @@ mod proxy_test;
 mod socks_test;
 #[cfg(test)]
 mod test_json;
+#[cfg(all(test, target_os = "macos"))]
+mod tls_darwin_test;
 #[cfg(test)]
 mod tls_test;
+#[cfg(test)]
+mod trustsettings_test;
 #[cfg(test)]
 mod wire_test;

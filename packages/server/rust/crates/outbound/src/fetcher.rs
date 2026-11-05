@@ -100,15 +100,21 @@ fn system_resolve(host: String) -> Lookup {
 
 /// The system roots, read once. Verification is rustls's own, which never
 /// fetches a missing issuer and never checks revocation (tls_test pins
-/// both). On macOS the roots come from the trust settings, not
-/// /etc/ssl/cert.pem.
+/// both). On macOS the roots come from the trust settings (tls_darwin),
+/// with /etc/ssl/cert.pem only when a read fails.
 pub(crate) fn system_roots() -> Arc<RootCertStore> {
     static ROOTS: OnceLock<Arc<RootCertStore>> = OnceLock::new();
     ROOTS
         .get_or_init(|| {
             let mut store = RootCertStore::empty();
+            #[cfg(target_os = "macos")]
+            let certificates = crate::tls_darwin::load_roots(std::path::Path::new(
+                crate::tls_darwin::SECURITY_TOOL,
+            ));
+            #[cfg(not(target_os = "macos"))]
+            let certificates = rustls_native_certs::load_native_certs().certs;
             // Empty when nothing loads: every https fetch then fails closed.
-            for certificate in rustls_native_certs::load_native_certs().certs {
+            for certificate in certificates {
                 let _ = store.add(certificate);
             }
             Arc::new(store)

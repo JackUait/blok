@@ -392,6 +392,11 @@ impl Room {
         }
     }
 
+    /// Logs where a failing logger must not stop access cleanup.
+    pub(crate) fn logf_surviving(&self, message: &str) {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.logf(message)));
+    }
+
     pub(crate) fn request_purge(&self) {
         self.purge_requested.store(true, Ordering::SeqCst);
     }
@@ -615,7 +620,7 @@ impl Room {
             Ok(allowed) => Ok(allowed),
             Err(err) => {
                 caller.err()?;
-                self.logf(&format!(
+                self.logf_surviving(&format!(
                     "collab: room \"{}\" could not recheck member access: {err}",
                     self.doc_id
                 ));

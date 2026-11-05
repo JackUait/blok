@@ -121,7 +121,7 @@ impl Room {
             tokio::spawn(async move { room.pump_activity(dispatch).await });
         }
         if let Some(lost) = dropped {
-            self.logf(&format!(
+            self.logf_surviving(&format!(
                 "collab: room \"{}\" dropped an activity record ({}) for \"{}\"; the activity observer is behind",
                 self.doc_id, lost.kind, lost.actor
             ));

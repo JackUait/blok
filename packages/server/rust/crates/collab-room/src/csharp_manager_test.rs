@@ -354,6 +354,8 @@ struct Bench {
     consumer: Arc<Consumer>,
     converter: Arc<Conv>,
     logs: Logs,
+    /// C# ThrowingLogger: a logged line holding this text panics after it is kept.
+    panic_on: Arc<Mutex<Option<&'static str>>>,
 }
 
 fn fast() -> Options {
@@ -388,7 +390,12 @@ impl Bench {
             endpoint,
             converter: Arc::new(Conv::default()),
             logs: Logs::default(),
+            panic_on: Arc::new(Mutex::new(None)),
         }
+    }
+
+    fn panic_when_logging(&self, part: &'static str) {
+        *lock(&self.panic_on) = Some(part);
     }
 
     fn manager(&self, o: Options) -> Manager {
@@ -416,7 +423,17 @@ impl Bench {
             endpoint: self.consumer.clone(),
             converter: self.converter.clone(),
             room: o,
-            log: Some(self.logs.log()),
+            log: Some({
+                let keep = self.logs.log();
+                let panic_on = self.panic_on.clone();
+                Arc::new(move |line: &str| {
+                    keep(line);
+                    let part = *lock(&panic_on);
+                    if part.is_some_and(|p| line.contains(p)) {
+                        panic!("logger failed");
+                    }
+                })
+            }),
             operations,
             activity,
         })
@@ -987,6 +1004,7 @@ async fn recheck_expels_a_member_when_policy_and_logger_throw() {
     let membership = enter(&manager, DOC, &revoked).await;
     let _allowed = enter(&manager, DOC, &allowed).await;
     revoked.fail_recheck("policy failed");
+    b.panic_when_logging("could not recheck member access");
     assert_eq!(manager.live_room_count(), 1);
 
     let expelled = manager.recheck_access(DOC).await.expect("recheck");
@@ -1009,6 +1027,7 @@ async fn first_join_is_refused_when_policy_and_logger_throw() {
     let manager = b.manager(fast());
     let peer = Peer::new();
     peer.fail_recheck("policy failed");
+    b.panic_when_logging("could not recheck member access");
 
     let denied = status_of(&manager, DOC, &peer).await;
 
@@ -1106,6 +1125,7 @@ async fn a_throwing_activity_drop_logger_does_not_strand_other_revoked_members()
     let _second = enter(&manager, DOC, &second).await;
     first.deny();
     second.deny();
+    b.panic_when_logging("dropped an activity record");
 
     let expelled = manager.recheck_access(DOC).await;
     observer.gate.open();

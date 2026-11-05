@@ -315,3 +315,41 @@ func TestRecheckWithNoHookAllows(t *testing.T) {
 		t.Fatalf("got %v, %v", ok, err)
 	}
 }
+
+// waitingMembership holds each frame as a busy room lane would, until the
+// receive is cancelled.
+type waitingMembership struct {
+	entered   chan struct{}
+	cancelled chan struct{}
+}
+
+func (m *waitingMembership) Receive(ctx context.Context, _ []byte) error {
+	close(m.entered)
+	<-ctx.Done()
+	close(m.cancelled)
+	return ctx.Err()
+}
+
+func (m *waitingMembership) Leave() {}
+
+// C# SyncSocketMember hands its receive token to the room: when the close
+// grace runs out, a frame still waiting for the room lane is dropped.
+func TestAFrameWaitingOnTheRoomIsCancelledWhenTheCloseGraceEnds(t *testing.T) {
+	server, client := wsPair(t)
+	membership := &waitingMembership{entered: make(chan struct{}), cancelled: make(chan struct{})}
+	member := NewSocketMember(MemberOptions{MaxQueuedBytes: 1 << 20, CloseGrace: 50 * time.Millisecond})
+	done := runMember(t, member, server, membership, nil)
+	if _, err := client.Write(clientFrame(0x82, []byte{1})); err != nil {
+		t.Fatal(err)
+	}
+	<-membership.entered
+
+	member.Close(collab.CloseReset)
+
+	select {
+	case <-membership.cancelled:
+	case <-time.After(3 * time.Second):
+		t.Fatal("the waiting frame was not cancelled after the close grace")
+	}
+	<-done
+}

@@ -166,7 +166,11 @@ func (m *SocketMember) next(gone <-chan struct{}) (outbound, bool) {
 // leaves the room and frees the lease BEFORE answering the peer's close, so
 // a reconnecting client never races its own slot.
 func (m *SocketMember) Run(ctx context.Context, socket Socket, membership collab.Membership, maxMessageBytes int, lease *Lease) {
-	receiving := newCanceller(socket)
+	// C#'s receive token: cancelling it also drops a frame still waiting
+	// for the room lane.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	receiving := newCanceller(socket, cancel)
 	pumpDone := make(chan struct{})
 	go func() {
 		defer close(pumpDone)
@@ -192,16 +196,18 @@ func (m *SocketMember) Run(ctx context.Context, socket Socket, membership collab
 	receiving.stop()
 }
 
-// canceller aborts the socket, which is what cancelling a .NET receive does.
+// canceller aborts the socket and cancels the receive's context, which is
+// what cancelling a .NET receive token does.
 type canceller struct {
 	socket Socket
+	cancel context.CancelFunc
 	mu     sync.Mutex
 	timer  *time.Timer
 	done   chan struct{}
 }
 
-func newCanceller(socket Socket) *canceller {
-	return &canceller{socket: socket, done: make(chan struct{})}
+func newCanceller(socket Socket, cancel context.CancelFunc) *canceller {
+	return &canceller{socket: socket, cancel: cancel, done: make(chan struct{})}
 }
 
 // after is CancelAfter: the latest call sets the time.
@@ -212,6 +218,7 @@ func (c *canceller) after(d time.Duration) {
 		c.timer.Stop()
 	}
 	c.timer = time.AfterFunc(d, func() {
+		c.cancel()
 		c.socket.Abort()
 		c.mu.Lock()
 		defer c.mu.Unlock()

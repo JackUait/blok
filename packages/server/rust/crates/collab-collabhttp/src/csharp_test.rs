@@ -297,7 +297,7 @@ async fn an_edit_whose_html_read_ran_past_the_runtimes_limits_is_a_retryable503(
 async fn the_retry_after_of_an_overloaded_edit_is_the_rooms_retry_backoff() {
     let app = start_app(AppOptions {
         journal: true,
-        retry_backoff: Duration::from_millis(4500),
+        retry_backoff: Some(Duration::from_millis(4500)),
         ..AppOptions::default()
     })
     .await;

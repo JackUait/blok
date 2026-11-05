@@ -689,9 +689,10 @@ async fn every_doc_access_goes_through_one_lane() {
     let b = Bench::new();
     b.endpoint.holds(DOC, "", None);
     *lock(&b.store.write_delay) = Some(ms(1));
+    // C# sets both to TimeSpan.Zero; a zero now stays zero here too.
     let manager = b.manager(Options {
-        export_debounce: ms(1),
-        export_max_delay: ms(1),
+        export_debounce: Duration::ZERO,
+        export_max_delay: Duration::ZERO,
         ..fast()
     });
     let mut memberships = Vec::new();

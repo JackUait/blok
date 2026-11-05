@@ -4,8 +4,9 @@ use std::time::{Duration, SystemTime};
 /// The room's clock.
 pub type Clock = Arc<dyn Fn() -> SystemTime + Send + Sync>;
 
-/// CollabRoomOptions. Zero fields take C#'s defaults in `with_defaults`.
-#[derive(Clone, Default)]
+/// CollabRoomOptions. Default is C#'s defaults; an explicit zero stays zero,
+/// as a C# init property does.
+#[derive(Clone)]
 pub struct Options {
     pub export_debounce: Duration,
     pub export_max_delay: Duration,
@@ -38,34 +39,29 @@ pub(crate) const ACTIVITY_WINDOW: Duration = Duration::from_secs(55);
 pub(crate) const ACTIVITY_QUEUE_LIMIT: usize = 256;
 pub(crate) const ACTIVITY_STAMP_LIMIT: usize = 256;
 
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            export_debounce: Duration::from_secs(2),
+            export_max_delay: Duration::from_secs(10),
+            eviction_linger: Duration::from_secs(30),
+            compaction_frame_threshold: 64,
+            compaction_byte_threshold: 1 << 20,
+            checkpoint_operation_threshold: 64,
+            checkpoint_byte_threshold: 1 << 20,
+            max_awareness_clients: 256,
+            announced_max_message_bytes: 0,
+            max_update_bytes: 0,
+            retry_backoff: Duration::from_secs(2),
+            retry_backoff_cap: Duration::from_secs(60),
+            commit_timeout: Duration::from_secs(10),
+            now: None,
+        }
+    }
+}
+
 impl Options {
     pub fn with_defaults(mut self) -> Options {
-        fn or(d: &mut Duration, default: Duration) {
-            if d.is_zero() {
-                *d = default;
-            }
-        }
-        or(&mut self.export_debounce, Duration::from_secs(2));
-        or(&mut self.export_max_delay, Duration::from_secs(10));
-        or(&mut self.eviction_linger, Duration::from_secs(30));
-        if self.compaction_frame_threshold == 0 {
-            self.compaction_frame_threshold = 64;
-        }
-        if self.compaction_byte_threshold == 0 {
-            self.compaction_byte_threshold = 1 << 20;
-        }
-        if self.checkpoint_operation_threshold == 0 {
-            self.checkpoint_operation_threshold = 64;
-        }
-        if self.checkpoint_byte_threshold == 0 {
-            self.checkpoint_byte_threshold = 1 << 20;
-        }
-        if self.max_awareness_clients == 0 {
-            self.max_awareness_clients = 256;
-        }
-        or(&mut self.retry_backoff, Duration::from_secs(2));
-        or(&mut self.retry_backoff_cap, Duration::from_secs(60));
-        or(&mut self.commit_timeout, Duration::from_secs(10));
         if self.now.is_none() {
             self.now = Some(Arc::new(SystemTime::now));
         }

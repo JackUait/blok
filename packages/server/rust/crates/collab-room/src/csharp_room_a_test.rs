@@ -3480,3 +3480,30 @@ async fn a_journal_that_cannot_commit_lets_nothing_become_observable() {
         assert_eq!(cs.committed().len(), 1);
     }
 }
+
+// AZeroAwarenessClientCapRelaysNoPresence: an explicit zero is kept, not
+// read as "use the default".
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_zero_awareness_client_cap_relays_no_presence() {
+    let cs = Cs::new();
+    cs.endpoint().holds(TEST_DOC, "hello", None);
+    let manager = cs.manager(Options {
+        max_awareness_clients: 0,
+        ..quiet()
+    });
+    let (sender, other) = (writer(), writer());
+    let membership = enter(&manager, &sender).await;
+    enter(&manager, &other).await;
+    other.clear();
+
+    send(
+        &membership,
+        Message::Awareness {
+            update: awareness_claiming(1),
+        },
+    )
+    .await;
+
+    assert!(other.messages().is_empty(), "{:?}", other.messages());
+    assert!(sender.closed().is_empty(), "{:?}", sender.closed());
+}

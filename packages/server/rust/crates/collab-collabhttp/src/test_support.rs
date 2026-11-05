@@ -645,7 +645,8 @@ pub struct AppOptions {
     pub journal: bool,
     pub ticket_mode: bool,
     pub authorization: Option<Arc<RecordingAuthorization>>,
-    pub retry_backoff: Duration,
+    /// None keeps the room's default, as the C# harness does.
+    pub retry_backoff: Option<Duration>,
     /// The journal keeps no history.
     pub no_history: bool,
     /// Where the journal lives; a fresh directory when None.
@@ -689,10 +690,10 @@ pub async fn start_app(options: AppOptions) -> App {
         apply_calls: AtomicUsize::new(0),
     });
     let endpoint = Arc::new(HeldDocument::default());
-    let mut room = RoomOptions {
-        retry_backoff: options.retry_backoff,
-        ..RoomOptions::default()
-    };
+    let mut room = RoomOptions::default();
+    if let Some(backoff) = options.retry_backoff {
+        room.retry_backoff = backoff;
+    }
     let journal = options.journal.then(|| {
         let dir = options.journal_dir.clone().unwrap_or_else(temp_dir);
         let store = blok_collab_journal::Store::new(dir, Default::default()).unwrap();

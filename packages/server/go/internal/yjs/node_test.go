@@ -566,3 +566,36 @@ func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
+
+// C# ToDeltaReadsANullEmbed: the decoder only checks that an embed is JSON,
+// so a peer can send null; the engine and yjs both read { insert: null }.
+func TestToDeltaReadsANullEmbed(t *testing.T) {
+	writer := docWithID(4242)
+	content := writer.GetText(s("content"))
+	written := writer.Transact(func(txn *Transaction) {
+		content.InsertEmbed(txn, 0, obj("a", 1.0), nil)
+	})
+	json := []byte(`{"a":1}`)
+	at := bytes.Index(written, append([]byte{byte(len(json))}, json...))
+	if at < 0 {
+		t.Fatal("the embed's JSON is not in the update")
+	}
+	patched := slices.Concat(written[:at], []byte{4}, []byte("null"), written[at+1+len(json):])
+	doc := docWithID(4343)
+	if result, err := doc.ApplyUpdate(patched); err != nil || result.Outcome != Applied {
+		t.Fatalf("%+v, %v", result, err)
+	}
+	delta := doc.GetText(s("content")).ToDelta()
+	replay := nodeReplay(t, [][2]string{{"content", "text"}}, [][]byte{patched}, nil)
+
+	if len(delta) != 1 || delta[0].Insert != nil {
+		t.Fatalf("delta %+v", delta)
+	}
+	got, err := jsjson.Stringify(yjstest.Field(replay.json, "content"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"$text":[{"insert":null}]}`; got != want {
+		t.Fatalf("yjs read %s, want %s", got, want)
+	}
+}

@@ -639,6 +639,52 @@ fn foreign_text_embeds_and_formats_survive_the_oracle() {
     same_json("json", &render(&doc, &roots), &replay.json);
 }
 
+// YTextFormattingTests.ToDeltaReadsANullEmbed: the decoder only checks that
+// an embed is JSON, so a peer can send null; the engine and yjs both read
+// { insert: null }.
+#[test]
+fn to_delta_reads_a_null_embed() {
+    let writer = doc_with_id(4242);
+    let content = writer.get_text("content").unwrap();
+    let written = writer
+        .transact(|txn| {
+            content.insert_embed(Some(txn), 0, vobj(vec![("a", Value::Number(1.0))]), None)
+        })
+        .unwrap()
+        .unwrap();
+    let json = br#"{"a":1}"#;
+    let mut needle = vec![u8::try_from(json.len()).unwrap()];
+    needle.extend_from_slice(json);
+    let at = written
+        .windows(needle.len())
+        .position(|w| w == needle.as_slice())
+        .expect("the embed's JSON is not in the update");
+    let patched = [
+        &written[..at],
+        &[4],
+        b"null",
+        &written[at + 1 + json.len()..],
+    ]
+    .concat();
+    let doc = doc_with_id(4343);
+    assert_eq!(
+        doc.apply_update(&patched).unwrap().outcome,
+        crate::Outcome::Applied
+    );
+
+    let delta = doc.get_text("content").unwrap().to_delta();
+    let replay = node_replay(&roots(&[("content", "text")]), &[patched]);
+
+    assert!(
+        delta.len() == 1 && delta[0].insert == Out::Any(Value::Null),
+        "{delta:?}"
+    );
+    assert_eq!(
+        canonical(&replay.json),
+        r#"{"content":{"$text":[{"insert":null}]}}"#
+    );
+}
+
 // The Node halves of EncoderTests TransactionEmitsOneUpdateThatReplaysIntoYjs,
 // ApplyEmitsTheAppliedChangeOnly and PendingWithGapsEncodesSkipsReadableByYjs.
 #[test]

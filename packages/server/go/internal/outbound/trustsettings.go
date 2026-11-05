@@ -38,37 +38,42 @@ var sslPolicyOID = []byte{0x2a, 0x86, 0x48, 0x86, 0xf7, 0x63, 0x64, 0x01, 0x03}
 // keyUseAny is kSecTrustSettingsKeyUseAny.
 const keyUseAny = 0xffffffff
 
-// appliesToTLS is trustd's SecPVCMeetsConstraint for an SSL server check
-// (SecPolicyServer.c): with both a name and an OID, both must be SSL's;
-// with one, that one; with neither, it applies.
-func (s trustSetting) appliesToTLS() bool {
-	if s.constrained {
-		return false
-	}
-	hasOID := s.policyOID != nil
+// namesTLS is trustd's policy rule for an SSL server check
+// (SecPVCMeetsConstraint, trust/trustd/SecPolicyServer.c): with both a name
+// and an OID, both must be SSL's; with one, that one; with neither, it
+// applies.
+func (s trustSetting) namesTLS() bool {
 	if s.hasPolicyName && s.policyName != "sslServer" {
 		return false
 	}
-	return !hasOID || bytes.Equal(s.policyOID, sslPolicyOID)
+	return s.policyOID == nil || bytes.Equal(s.policyOID, sslPolicyOID)
 }
 
-// decideTrust is trustd's SecPVCGetTrustSettingsResult: an empty list
-// trusts; else the first entry that applies decides, no result meaning
-// TrustRoot. decided is false when no entry applies or the result is
-// Unspecified or unknown, so the next domain decides.
+// decideTrust is TrustSettings::evaluateCert (apple-oss-distributions/
+// Security, OSX/libsecurity_keychain/lib/TrustSettings.cpp): an empty list
+// trusts; else the first entry for TLS with a definite result decides, no
+// result meaning TrustRoot. Unspecified or an unknown result goes on to the
+// next entry. A constrained entry matches only some checks, so its Deny
+// denies and its trust is skipped: it fails closed. decided is false when
+// nothing definite applies; then the next domain decides.
 func decideTrust(settings []trustSetting) (result int64, decided bool) {
 	if len(settings) == 0 {
 		return trustRoot, true
 	}
 	for _, s := range settings {
-		if !s.appliesToTLS() {
+		if !s.namesTLS() {
 			continue
 		}
 		result = trustRoot
 		if s.hasResult {
 			result = s.result
 		}
-		return result, result == trustRoot || result == trustAsRoot || result == trustDeny
+		if s.constrained && result != trustDeny {
+			continue
+		}
+		if result == trustRoot || result == trustAsRoot || result == trustDeny {
+			return result, true
+		}
 	}
 	return 0, false
 }

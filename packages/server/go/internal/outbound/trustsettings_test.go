@@ -23,27 +23,35 @@ var (
 	basicOID = []byte{0x2a, 0x86, 0x48, 0x86, 0xf7, 0x63, 0x64, 0x01, 0x02}
 )
 
-// trustd's SecPVCGetTrustSettingsResult and SecPVCMeetsConstraint
-// (apple-oss-distributions/Security, trust/trustd/SecPolicyServer.c), which
-// SecTrust runs for C#: an empty list trusts; otherwise the first entry
-// whose every constraint matches an SSL server check decides, with no
-// result meaning TrustRoot. An entry for another policy, or with a
-// constraint a fixed root set cannot check, does not match. Unspecified or
-// an unknown result decides nothing, nor does no match; then the next
-// domain decides.
-func TestTrustSettingsDecideAsTrustdDoes(t *testing.T) {
+// TrustSettings::evaluateCert and SecTrustSettingsEvaluateCert
+// (apple-oss-distributions/Security, OSX/libsecurity_keychain/lib/
+// TrustSettings.cpp and SecTrustSettings.cpp): domains user, admin, system;
+// an empty list trusts; within a list the first entry for an SSL server
+// check (SecPVCMeetsConstraint's name and OID rule, trust/trustd/
+// SecPolicyServer.c) with a definite result decides, no result meaning
+// TrustRoot, and Unspecified or an unknown result goes on to the next
+// entry. A rule a fixed root set cannot check (a hostname, say) still
+// denies, but never trusts. Nothing definite leaves it to the next domain.
+func TestTrustSettingsDecideAsSecTrustSettingsDoes(t *testing.T) {
 	certs := map[string][]byte{}
-	for _, hash := range "ABCDEFGHIJKLMNOP" {
+	for _, hash := range "ABCDEFGHIJKLMNOPQRS" {
 		certs[string(hash)] = []byte(string(hash))
+	}
+	constrainedSSL := func(result int64) trustSetting {
+		s := setting("sslServer", result)
+		s.constrained = true
+		return s
 	}
 	user := map[string][]trustSetting{
 		"A": {setting("sslServer", 3)},
 		"G": {setting("smime", 1)},
 		"H": {{policyOID: sslOID, result: 1, hasResult: true}},
-		"I": {{policyName: "sslServer", hasPolicyName: true, constrained: true}},
+		"I": {constrainedSSL(0)},
 		"J": {{policyName: "sslServer", hasPolicyName: true, policyOID: basicOID}},
 		"K": {{policyName: "sslServer", hasPolicyName: true, policyOID: sslOID, result: 2, hasResult: true}},
 		"L": {{policyOID: basicOID}},
+		"R": {constrainedSSL(3)},
+		"S": {constrainedSSL(1)},
 	}
 	admin := map[string][]trustSetting{
 		"A":       {},
@@ -53,6 +61,7 @@ func TestTrustSettingsDecideAsTrustdDoes(t *testing.T) {
 		"D":       {setting("sslServer", 4)},
 		"E":       {setting("", 9), setting("sslServer", 0)},
 		"N":       {setting("smime", 3)},
+		"Q":       {setting("sslServer", 4), setting("", 3)},
 		"missing": {},
 	}
 	system := map[string][]trustSetting{
@@ -61,14 +70,20 @@ func TestTrustSettingsDecideAsTrustdDoes(t *testing.T) {
 		"M": nil,
 		"N": nil,
 		"P": {setting("smime", 1)},
+		"Q": nil,
+		"R": nil,
+		"S": nil,
 	}
 	got := trustedAnchors([]map[string][]trustSetting{user, admin, system}, certs)
 	// A: the user denies. B: admin's TrustAsRoot beats the system's deny.
-	// C: Unspecified decides nothing. M: as C, then the system trusts it.
-	// G, L, P: only other policies. H: the SSL OID alone. I: a hostname-only
-	// rule. J: the name with another policy's OID. K: name and OID.
-	// N: admin's S/MIME rule leaves it to the system.
-	want := [][]byte{[]byte("B"), []byte("F"), []byte("H"), []byte("K"), []byte("M"), []byte("N")}
+	// C, M: past Unspecified to TrustRoot. D: only Unspecified. E: past an
+	// unknown result. G, L, P: only other policies. H: the SSL OID alone.
+	// I: a hostname-only trust is skipped. J: the name with another policy's
+	// OID. K: name and OID. N: admin's S/MIME rule leaves it to the system.
+	// Q: past Unspecified to Deny, over the system's trust. R: a hostname
+	// rule's Deny still denies. S: a hostname rule's trust leaves it to the
+	// system.
+	want := [][]byte{[]byte("B"), []byte("C"), []byte("E"), []byte("F"), []byte("H"), []byte("K"), []byte("M"), []byte("N"), []byte("S")}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %q, want %q", got, want)
 	}

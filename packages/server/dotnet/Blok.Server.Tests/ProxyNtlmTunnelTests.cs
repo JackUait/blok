@@ -31,6 +31,7 @@ public sealed partial class ProxyConnectTunnelTests
   // A blank user or password: no token, so the 407 is the answer.
   [InlineData("empty", "u", "", "", "error 407|1 auth=no")]
   [InlineData("sharp", "ß", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=ß@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
+  [InlineData("dotless", "ıſ", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=354 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=ıſ@334 dom=@338 ws=W@338 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
   // A Type 2 without a required flag, or without both NetBIOS names: no Type 3.
   [InlineData("flags", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}")]
   [InlineData("no-nb", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}")]
@@ -67,6 +68,14 @@ public sealed partial class ProxyConnectTunnelTests
 
   // The proxy's target info pairs, which the Type 3 repeats before its own.
   private const string ServerAvs = "2:44004f004d00410049004e00,1:530045005200560045005200,4:64006f006d00610069006e002e007400650073007400,3:7300650072007600650072002e0064006f006d00610069006e002e007400650073007400,7:00803ed5deb19d01,";
+
+  // NTOWFv2 upper-cases the user with ToUpperInvariant: the simple mapping,
+  // except that ı keeps its case (ſ does not, unlike OrdinalIgnoreCase).
+  [Fact]
+  public void NtlmUpperCasesTheUserAsToUpperInvariant()
+  {
+    Assert.Equal("ßıSǄ", "ßıſǅ".ToUpperInvariant());
+  }
 
   // The Type 3 names the workstation by Environment.MachineName: on macOS
   // the host name up to its first dot, case kept.

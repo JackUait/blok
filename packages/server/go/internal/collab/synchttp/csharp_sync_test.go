@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/http"
 	"regexp"
 	"strings"
 	"sync"
@@ -250,6 +251,8 @@ type synOptions struct {
 	journal    bool
 	operations room.OperationStore
 	ceiling    int64
+	policy     auth.Authorization
+	wrap       func(http.Handler) http.Handler
 }
 
 type synApp struct {
@@ -288,7 +291,10 @@ func synStart(t *testing.T, o synOptions) *synApp {
 		if o.hook != nil {
 			c.Authorization = o.hook
 		}
-	}, nil)
+		if o.policy != nil {
+			c.Authorization = o.policy
+		}
+	}, o.wrap)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()

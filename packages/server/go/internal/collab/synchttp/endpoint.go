@@ -118,7 +118,11 @@ func (e *Endpoint) serve(w http.ResponseWriter, r *http.Request, doc string, a a
 
 	var recheck func(context.Context) (bool, error)
 	if hook := e.config.Authorization; hook != nil {
+		// C# rechecks with the handshake's principal; here that is the
+		// request's values, under the recheck's own cancellation.
+		values := context.WithoutCancel(r.Context())
 		recheck = func(ctx context.Context) (bool, error) {
+			ctx = requestValues{Context: ctx, values: values}
 			if ok, err := hook.CanReadDocument(ctx, a.user, doc); err != nil || !ok {
 				return false, err
 			}
@@ -180,4 +184,17 @@ func (e *Endpoint) acceptThenClose(w http.ResponseWriter, r *http.Request, resul
 	member := NewSocketMember(MemberOptions{CloseGrace: rejectedCloseGrace})
 	member.RequestClose(result.close)
 	member.Run(context.WithoutCancel(r.Context()), conn, nil, e.config.MaxMessageBytes, nil)
+}
+
+// requestValues is ctx with the upgrade request's values looked up first.
+type requestValues struct {
+	context.Context
+	values context.Context
+}
+
+func (c requestValues) Value(key any) any {
+	if value := c.values.Value(key); value != nil {
+		return value
+	}
+	return c.Context.Value(key)
 }

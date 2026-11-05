@@ -373,7 +373,6 @@ async fn converts_a_long_article_whose_fields_carry_inline_markup() {
 }
 
 #[tokio::test]
-#[ignore = "QuickJS's budget counts bytes held, not every allocation as Jint does: this article converts under 9 MiB (measured), so 64 MiB never stops it"]
 async fn stops_a_conversion_that_outgrows_the_budget_it_was_given() {
     let pool = embedded(Duration::from_secs(300), 64 * 1024 * 1024);
     let result = pool

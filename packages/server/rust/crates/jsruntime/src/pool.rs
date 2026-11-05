@@ -14,13 +14,11 @@ use crate::worker::{self, Worker};
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Catches a host that passed milliseconds meaning seconds, as C#.
 pub const MINIMUM_TIMEOUT: Duration = Duration::from_millis(100);
-/// Bounds how far one call may grow the bytes its engine holds. QuickJS
-/// frees by reference count, so this is close to live heap, like Go's
-/// budget and unlike C#'s count of every allocation. C#'s 512 MiB: the
-/// hungriest document measured, a 3 MiB https URL written to Markdown,
-/// needs 112 MiB; every other ops.json big.* case and C#'s long-article
-/// tests need 16 MiB or less. Measured with QuickJS's own byte count; the
-/// allocator's count adds a small header per allocation.
+/// Bounds the bytes one call allocates, freed or not, as C#'s 512 MiB
+/// bounds Jint's count of every allocation (see budget.rs). QuickJS
+/// allocates less than Jint for most documents, so a document can fit here
+/// that C# refuses: the shared ops.json big.* cases need 8 to 164 MiB here
+/// and 11 to 281 MiB in C# (measured, fresh engine each).
 pub const DEFAULT_MEMORY_BUDGET: i64 = 512 << 20;
 /// C#'s floor.
 pub const MINIMUM_MEMORY_BUDGET: i64 = 8 << 20;
@@ -128,7 +126,8 @@ pub struct Options {
     pub pool_size: usize,
     /// The default wall-clock budget of one call and of each load.
     pub timeout: Duration,
-    /// The growth one call may cause in the bytes its engine holds.
+    /// The bytes one call may allocate; a load may grow what the engine
+    /// holds by as much. See budget.rs.
     pub memory_budget: i64,
 }
 

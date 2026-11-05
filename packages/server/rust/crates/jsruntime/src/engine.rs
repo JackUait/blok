@@ -10,7 +10,7 @@ use rquickjs::function::{Opt, This};
 use rquickjs::promise::PromiseState;
 use rquickjs::{Context, Ctx, Function, Object, Persistent, Value};
 
-use crate::budget::Budget;
+use crate::budget::{Budget, Charge};
 use crate::guard::Guard;
 use crate::runtime::{Error, JsError, Stop};
 
@@ -88,7 +88,7 @@ impl Engine {
         let limit = budget;
         if let Some((timeout, budget)) = limits {
             guard.arm(Instant::now() + timeout, None);
-            limit.arm(budget);
+            limit.arm(budget, Charge::Held);
         }
         let loaded = ctx.with(|ctx| {
             // Taken before the bundle runs, so a script cannot swap it.
@@ -160,7 +160,7 @@ impl Engine {
     ) -> Result<String, Error> {
         if let Some(limits) = limits {
             self.guard.arm(limits.deadline, limits.cancel.clone());
-            self.budget.arm(limits.budget);
+            self.budget.arm(limits.budget, Charge::Allocated);
         }
         let settled = self.ctx.with(|ctx| self.run(&ctx, op, input));
         // The limit comes off before any host-side read: reading a result

@@ -1,5 +1,11 @@
-//! Counts the bytes one engine holds, so a budget hit cannot be caught by JS.
-//! QuickJS's own memory limit throws an ordinary error a `try` can swallow.
+//! The memory budget of one engine. A call is charged every byte it
+//! allocates, as Jint's LimitMemory charges every allocation of an entry:
+//! churn, not what is still held. A realloc is charged its growth. Loading
+//! the bundle is charged what the engine holds instead: QuickJS's parser
+//! allocates about 30 MiB to load what Jint loads in 8.4 MiB, and C# floors
+//! the budget at 8 MiB with 9 MiB measured to load. A budget hit cannot be
+//! caught by JS; QuickJS's own memory limit throws an ordinary error a `try`
+//! can swallow.
 // The only unsafe code in the crate: rquickjs's `Allocator` is an unsafe
 // trait, and its hook is the one place that sees every allocation.
 #![allow(unsafe_code)]
@@ -9,6 +15,15 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use rquickjs::allocator::{Allocator, RustAllocator};
 
+/// What an armed budget charges.
+#[derive(Clone, Copy)]
+pub(crate) enum Charge {
+    /// Every byte allocated since arming: a call.
+    Allocated,
+    /// Growth of the bytes held since arming: a load.
+    Held,
+}
+
 /// The shared count. `limit` 0 means no limit.
 #[derive(Clone, Default)]
 pub(crate) struct Budget(Arc<State>);
@@ -16,19 +31,26 @@ pub(crate) struct Budget(Arc<State>);
 #[derive(Default)]
 struct State {
     held: AtomicUsize,
+    spent: AtomicUsize,
     limit: AtomicUsize,
+    held_charge: AtomicBool,
     over: AtomicBool,
 }
 
 impl Budget {
-    /// Allows `budget` more bytes than the engine holds now.
-    pub(crate) fn arm(&self, budget: i64) {
+    /// Allows `budget` more bytes, charged as `charge` says.
+    pub(crate) fn arm(&self, budget: i64, charge: Charge) {
         let budget = usize::try_from(budget).unwrap_or(usize::MAX);
-        let held = self.0.held.load(Ordering::Relaxed);
         self.0.over.store(false, Ordering::Relaxed);
+        self.0.spent.store(0, Ordering::Relaxed);
+        let limit = match charge {
+            Charge::Allocated => budget,
+            Charge::Held => self.0.held.load(Ordering::Relaxed).saturating_add(budget),
+        };
         self.0
-            .limit
-            .store(held.saturating_add(budget).max(1), Ordering::Relaxed);
+            .held_charge
+            .store(matches!(charge, Charge::Held), Ordering::Relaxed);
+        self.0.limit.store(limit.max(1), Ordering::Relaxed);
     }
 
     /// Lifts the limit. Returns whether the run went over it.
@@ -44,7 +66,15 @@ impl Budget {
     /// False, and marks the run over budget, when `more` bytes do not fit.
     fn admit(&self, more: usize) -> bool {
         let limit = self.0.limit.load(Ordering::Relaxed);
-        if limit != 0 && self.0.held.load(Ordering::Relaxed).saturating_add(more) > limit {
+        if limit == 0 {
+            return true;
+        }
+        let charged = if self.0.held_charge.load(Ordering::Relaxed) {
+            self.0.held.load(Ordering::Relaxed)
+        } else {
+            self.0.spent.fetch_add(more, Ordering::Relaxed)
+        };
+        if charged.saturating_add(more) > limit {
             self.0.over.store(true, Ordering::Relaxed);
             return false;
         }
@@ -58,7 +88,7 @@ impl Budget {
     }
 }
 
-/// `RustAllocator` with a count of the bytes it holds.
+/// `RustAllocator` that charges the budget and counts the bytes it holds.
 pub(crate) struct CountingAllocator {
     budget: Budget,
 }

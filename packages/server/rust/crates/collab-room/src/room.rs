@@ -610,16 +610,23 @@ impl Room {
         Ok(expelled)
     }
 
-    /// A failed check is a denial, except the caller's own cancellation.
+    /// A failed check is a denial, except the caller's cancel. C# hands the
+    /// policy the caller's token; here the cancel drops the policy's future.
+    /// Biased: an answer already given wins, so a policy that failed is a
+    /// denial even when the caller has since cancelled, as in C#.
     async fn is_member_allowed_locked(
         &self,
         caller: &Token,
         member: &dyn Member,
     ) -> Result<bool, Error> {
-        match member.recheck_access().await {
+        let answer = tokio::select! {
+            biased;
+            answer = member.recheck_access() => answer,
+            () = caller.cancelled() => return Err(Error::Canceled),
+        };
+        match answer {
             Ok(allowed) => Ok(allowed),
             Err(err) => {
-                caller.err()?;
                 self.logf_surviving(&format!(
                     "collab: room \"{}\" could not recheck member access: {err}",
                     self.doc_id

@@ -266,6 +266,8 @@ struct Peer {
     failure: Mutex<Option<String>>,
     entered: Mutex<Option<Gate>>,
     gate: Mutex<Option<Gate>>,
+    /// Runs inside the policy, after the gate and before it answers.
+    on_answer: Hook,
 }
 
 impl Peer {
@@ -276,6 +278,7 @@ impl Peer {
             failure: Mutex::new(None),
             entered: Mutex::new(None),
             gate: Mutex::new(None),
+            on_answer: Mutex::new(None),
         })
     }
     fn new() -> Arc<Peer> {
@@ -337,6 +340,7 @@ impl Member for Peer {
             if let Some(gate) = gate {
                 gate.wait().await;
             }
+            hook(&self.on_answer);
             if let Some(failure) = lock(&self.failure).clone() {
                 return Err(failure.into());
             }
@@ -1068,6 +1072,62 @@ async fn cancelling_an_access_recheck_does_not_expel_an_allowed_member() {
 
     assert!(peer.closed().is_empty());
     assert_eq!(manager.live_room_count(), 1);
+}
+
+// C# APolicyThatFailsAfterTheCallerCancelledStillExpels: only a
+// cancellation aborts a cancelled recheck. A Rust policy cannot outlive a
+// cancel at an await, so the caller cancels inside the policy, just before
+// it fails.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_policy_that_fails_after_the_caller_cancelled_still_expels() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "seeded", None);
+    let manager = b.manager(fast());
+    let peer = Peer::new();
+    let _membership = enter(&manager, DOC, &peer).await;
+    let token = Token::new();
+    let cancel = token.clone();
+    *lock(&peer.on_answer) = Some(Box::new(move || cancel.cancel()));
+    peer.fail_recheck("policy failed");
+
+    let expelled = manager
+        .recheck_access_with(DOC, &token)
+        .await
+        .expect("recheck");
+
+    assert_eq!(expelled, 1);
+    assert_eq!(peer.closed(), [CloseReason::Forbidden]);
+}
+
+// C# hands the caller's token to the policy. In Rust a cancel drops the
+// policy's future, so a policy that never answers does not hold the room.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancelled_recheck_drops_a_policy_that_never_answers() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "seeded", None);
+    let manager = b.manager(fast());
+    let peer = Peer::new();
+    let _membership = enter(&manager, DOC, &peer).await;
+    let (entered, _gate) = peer.hold_recheck();
+    let token = Token::new();
+    let m = manager.clone();
+    let caller = token.clone();
+    let recheck = tokio::spawn(async move { m.recheck_access_with(DOC, &caller).await });
+    tokio::time::timeout(Duration::from_secs(3), entered.wait())
+        .await
+        .expect("the recheck to start");
+
+    token.cancel();
+
+    let answer = tokio::time::timeout(Duration::from_secs(3), recheck)
+        .await
+        .expect("the recheck to end")
+        .expect("the recheck task");
+    assert!(matches!(answer, Err(Error::Canceled)), "{answer:?}");
+    tokio::time::timeout(Duration::from_secs(3), manager.settle())
+        .await
+        .expect("the room lane to be free");
+    assert!(peer.closed().is_empty());
 }
 
 /// C# RecordingActivityObserver with Gate: every call waits for the gate,

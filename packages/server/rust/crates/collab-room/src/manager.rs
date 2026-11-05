@@ -424,13 +424,20 @@ impl Manager {
 
     /// Rechecks only a loaded room and answers the expelled count.
     pub async fn recheck_access(&self, doc_id: &str) -> Result<usize, Error> {
+        let (token, _gone) = caller();
+        self.recheck_access_with(doc_id, &token).await
+    }
+
+    /// recheck_access, with a caller token: a cancel ends the recheck and
+    /// drops a policy still answering.
+    pub async fn recheck_access_with(&self, doc_id: &str, caller: &Token) -> Result<usize, Error> {
         if doc_id.is_empty() {
             return Err(Error::EmptyDocId);
         }
         let Some(room) = self.0.lock().rooms.get(doc_id).cloned() else {
             return Ok(0);
         };
-        let (token, _gone) = caller();
+        let token = caller.clone();
         spawned(async move { room.recheck_access(&token).await }).await
     }
 

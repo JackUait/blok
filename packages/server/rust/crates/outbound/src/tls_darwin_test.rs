@@ -99,7 +99,7 @@ fn self_signed_is_apples_rule() {
         assert_eq!(self_signed(&STANDARD.decode(der).unwrap()), want, "{name}");
     }
     // Every system root but the Developer ID intermediate is self-signed,
-    // as Go finds (Go: crypto/x509; here: Security.framework).
+    // as Go finds with crypto/x509 (here: Security.framework).
     let out = std::process::Command::new(SECURITY_TOOL)
         .args([
             "find-certificate",
@@ -113,7 +113,13 @@ fn self_signed_is_apples_rule() {
         .map(|cert| cert.unwrap().to_vec())
         .filter(|der| !self_signed(der))
         .collect();
-    assert_eq!(not_self_signed.len(), 1);
+    let intermediate = b"Developer ID Certification Authority";
+    for der in &not_self_signed {
+        assert!(
+            der.windows(intermediate.len()).any(|w| w == intermediate),
+            "a system root is not self-signed"
+        );
+    }
 }
 
 // trustd's system anchors are the PKI trust store asset when its

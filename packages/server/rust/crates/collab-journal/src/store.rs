@@ -1279,7 +1279,7 @@ impl Session {
         }
         if self.faulted {
             return Err(Error::Faulted(format!(
-                "collab: the journal for \"{}\" could not be flushed and this session can no longer say what is durable; reopen the document",
+                "collab: the journal for \"{}\" could not be flushed and this session can no longer say what is durable; reopen the document.",
                 self.doc_id
             )));
         }

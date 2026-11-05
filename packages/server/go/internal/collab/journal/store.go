@@ -1131,7 +1131,7 @@ func (s *Session) requireFence() error {
 		return ErrClosed
 	}
 	if s.faulted {
-		return fmt.Errorf("collab: the journal for \"%s\" could not be flushed and this session can no longer say what is durable; reopen the document", s.docID)
+		return fmt.Errorf("collab: the journal for \"%s\" could not be flushed and this session can no longer say what is durable; reopen the document.", s.docID)
 	}
 	return requireFence(s.docDir, s.docID, s.manifest)
 }

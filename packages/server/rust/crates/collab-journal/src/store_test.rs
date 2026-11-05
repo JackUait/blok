@@ -569,7 +569,11 @@ fn an_append_that_cannot_be_undone_faults_the_session() {
         "the record was cut after the fence moved"
     );
     match session.find_committed(&Context::background(), &twin_op_id(1), &[0; 32]) {
-        Err(err @ Error::Faulted(_)) => assert!(err.to_string().contains("could not be flushed")),
+        // C# LocalCollabOperationStore.RequireFence, with its closing period.
+        Err(err @ Error::Faulted(_)) => assert_eq!(
+            err.to_string(),
+            "collab: the journal for \"doc-1\" could not be flushed and this session can no longer say what is durable; reopen the document."
+        ),
         other => panic!("{other:?}"),
     }
 }

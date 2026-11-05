@@ -500,7 +500,9 @@ func TestAnAppendThatCannotBeUndoneFaultsTheSession(t *testing.T) {
 		t.Fatal("the record was cut after the fence moved")
 	}
 	_, err := session.FindCommitted(context.Background(), twinOpID(1), make([]byte, 32))
-	if err == nil || errors.Is(err, ErrFenceLost) || !strings.Contains(err.Error(), "could not be flushed") {
-		t.Fatal(err)
+	// C# LocalCollabOperationStore.RequireFence, with its closing period.
+	want := `collab: the journal for "doc-1" could not be flushed and this session can no longer say what is durable; reopen the document.`
+	if err == nil || errors.Is(err, ErrFenceLost) || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
 	}
 }

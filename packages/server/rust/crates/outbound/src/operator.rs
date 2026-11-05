@@ -464,8 +464,25 @@ struct Signed<'a> {
 
 impl ProxyAuth {
     /// The Proxy-Authorization a 407 asks for next; None when .NET stops
-    /// and the 407 is the answer.
+    /// and the 407 is the answer. A value .NET cannot write as ASCII (a
+    /// Digest realm or nonce from the proxy) fails before it goes out, as
+    /// HttpConnection.WriteString does.
     async fn answer(
+        &mut self,
+        head: &Head,
+        proxy: &ProxyUrl,
+        signed: &Signed<'_>,
+    ) -> Result<Option<String>, OperatorError> {
+        let next = self.next_authorization(head, proxy, signed).await?;
+        if next.as_ref().is_some_and(|next| !next.is_ascii()) {
+            return Err(OperatorError::Io(io::Error::other(
+                "Request headers must contain only ASCII characters.",
+            )));
+        }
+        Ok(next)
+    }
+
+    async fn next_authorization(
         &mut self,
         head: &Head,
         proxy: &ProxyUrl,
@@ -683,60 +700,153 @@ async fn drain<T: AsyncRead + Unpin + Send>(
 }
 
 /// Proxy-Authenticate lines as each scheme's parameter text, lower-case
-/// scheme, the first of a scheme kept: a comma-separated piece (commas in
-/// quotes do not split) that starts with a bare token starts a challenge,
-/// the rest are its parameters.
+/// scheme, the first of a scheme kept. Each line is a list of
+/// AuthenticationHeaderValue (System.Net.Http 10.0.11, decompiled); a line
+/// with any bad value is dropped whole, as HttpHeaders keeps it invalid.
+/// Header bytes are Latin-1 chars, as .NET reads them.
 fn auth_challenges<'a>(values: impl Iterator<Item = &'a [u8]>) -> HashMap<String, String> {
     let mut challenges = HashMap::new();
     for value in values {
-        let value = String::from_utf8_lossy(value);
-        let mut scheme: Option<String> = None;
-        let mut data: Vec<String> = Vec::new();
-        let mut flush = |scheme: &Option<String>, data: &mut Vec<String>| {
-            if let Some(scheme) = scheme {
-                challenges
-                    .entry(scheme.clone())
-                    .or_insert_with(|| data.join(", "));
-            }
-            data.clear();
+        let Some(parsed) = parse_challenge_line(value) else {
+            continue;
         };
-        for piece in split_outside_quotes(&value) {
-            let piece = piece.trim_matches([' ', '\t']);
-            let (token, rest) = piece.split_once(' ').unwrap_or((piece, ""));
-            if !token.is_empty() && token.bytes().all(crate::wire::is_token_char) {
-                flush(&scheme, &mut data);
-                scheme = Some(token.to_ascii_lowercase());
-                let rest = rest.trim_matches([' ', '\t']);
-                if !rest.is_empty() {
-                    data.push(rest.to_owned());
-                }
-            } else if !piece.is_empty() {
-                data.push(piece.to_owned());
-            }
+        for (scheme, parameter) in parsed {
+            challenges
+                .entry(scheme)
+                .or_insert_with(|| parameter.iter().map(|&b| char::from(b)).collect());
         }
-        flush(&scheme, &mut data);
     }
     challenges
 }
 
-/// `s` split at the commas outside quoted strings.
-fn split_outside_quotes(s: &str) -> Vec<&str> {
-    let bytes = s.as_bytes();
-    let (mut pieces, mut start, mut quoted, mut i) = (Vec::new(), 0, false, 0);
-    while i < bytes.len() {
-        match bytes[i] {
-            b'\\' if quoted => i += 1,
-            b'"' => quoted = !quoted,
-            b',' if !quoted => {
-                pieces.push(&s[start..i]);
-                start = i + 1;
-            }
-            _ => {}
-        }
-        i += 1;
+fn space_length(s: &[u8], at: usize) -> usize {
+    s[at.min(s.len())..]
+        .iter()
+        .take_while(|&&c| c == b' ' || c == b'\t')
+        .count()
+}
+
+fn token_length(s: &[u8], at: usize) -> usize {
+    s[at.min(s.len())..]
+        .iter()
+        .take_while(|&&c| crate::wire::is_token_char(c))
+        .count()
+}
+
+/// HeaderUtilities.GetNextNonEmptyOrWhitespaceIndex with empty values
+/// skipped: the next index, and whether a comma was passed.
+fn next_non_empty(s: &[u8], mut i: usize) -> (usize, bool) {
+    i += space_length(s, i);
+    if i == s.len() || s[i] != b',' {
+        return (i, false);
     }
-    pieces.push(&s[start..]);
-    pieces
+    i += 1;
+    i += space_length(s, i);
+    while i < s.len() && s[i] == b',' {
+        i += 1;
+        i += space_length(s, i);
+    }
+    (i, true)
+}
+
+/// BaseHeaderParser.TryParseValue over one line: values split by commas,
+/// empty ones skipped.
+fn parse_challenge_line(line: &[u8]) -> Option<Vec<(String, &[u8])>> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < line.len() {
+        let (next, _) = next_non_empty(line, i);
+        if next == line.len() {
+            break;
+        }
+        let (scheme, parameter, length) = authentication_value(line, next)?;
+        out.push((
+            String::from_utf8_lossy(scheme).to_ascii_lowercase(),
+            parameter,
+        ));
+        let separator;
+        (i, separator) = next_non_empty(line, next + length);
+        if !separator && i < line.len() {
+            return None;
+        }
+    }
+    Some(out)
+}
+
+/// AuthenticationHeaderValue.GetAuthenticationLength: a scheme token, then
+/// either nothing or whitespace and a first blob of any bytes up to a
+/// comma, then name=value pairs. A token without "=" ends the value: it
+/// starts the next challenge.
+fn authentication_value(s: &[u8], start: usize) -> Option<(&[u8], &[u8], usize)> {
+    if s[start..].iter().any(|c| matches!(c, b'\r' | b'\n' | 0)) {
+        return None;
+    }
+    let n = token_length(s, start);
+    if n == 0 {
+        return None;
+    }
+    let scheme = &s[start..start + n];
+    let mut i = start + n;
+    let space = space_length(s, i);
+    i += space;
+    if i == s.len() || s[i] == b',' {
+        return Some((scheme, &[], i - start));
+    }
+    if space == 0 {
+        return None;
+    }
+    let (from, mut end) = (i, i);
+    while i < s.len() && s[i] != b',' {
+        if s[i] == b'"' {
+            let q = crate::wire::quoted_string_length(s, i);
+            if q == 0 {
+                return None;
+            }
+            i += q;
+            end = i - 1;
+        } else {
+            let w = space_length(s, i);
+            if w > 0 {
+                i += w;
+            } else {
+                end = i;
+                i += 1;
+            }
+        }
+    }
+    // TryGetParametersEndIndex, from the comma at i.
+    while i < s.len() {
+        let (mut j, _) = next_non_empty(s, i + 1);
+        if j == s.len() {
+            i = j;
+            break;
+        }
+        let t = token_length(s, j);
+        if t == 0 {
+            return None;
+        }
+        j += t;
+        j += space_length(s, j);
+        if j == s.len() || s[j] != b'=' {
+            break;
+        }
+        j += 1;
+        j += space_length(s, j);
+        let mut v = token_length(s, j);
+        if v == 0 {
+            v = crate::wire::quoted_string_length(s, j);
+        }
+        if v == 0 {
+            return None;
+        }
+        j += v;
+        end = j - 1;
+        i = j + space_length(s, j);
+        if i >= s.len() || s[i] != b',' {
+            break;
+        }
+    }
+    Some((scheme, &s[from..=end], i - start))
 }
 
 /// TryGetAuthenticationChallenge's order: Negotiate, NTLM, Digest, Basic.

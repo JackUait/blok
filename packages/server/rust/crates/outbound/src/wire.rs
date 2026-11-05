@@ -646,7 +646,7 @@ fn keep_alive_line_closes(value: &[u8]) -> bool {
 /// quoted string at `at`. A backslash pairs with the next byte only when
 /// two more follow it and that byte is ASCII and not NUL, CR or LF;
 /// otherwise it is a plain byte.
-fn quoted_string_length(s: &[u8], at: usize) -> usize {
+pub(crate) fn quoted_string_length(s: &[u8], at: usize) -> usize {
     if s.get(at) != Some(&b'"') {
         return 0;
     }

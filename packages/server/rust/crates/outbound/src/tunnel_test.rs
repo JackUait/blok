@@ -188,6 +188,13 @@ fn digest_challenge(mode: &str, second: bool) -> &'static str {
         "stale" if second => "Digest realm=\"r\", nonce=\"n2\", stale=true",
         "stale" => "Digest realm=\"r\", nonce=\"n\"",
         "unsupported" => "Digest realm=\"r\", nonce=\"n\", algorithm=SHA-512",
+        "dup-ascii" => "Digest realm=\"r\", nonce=\"n\", NONCE=\"m\"",
+        "dup-latin1" => "Digest realm=\"r\", nonce=\"n\", \u{e9}=1, \u{c9}=2",
+        "dup-utf8" => "Digest realm=\"r\", nonce=\"n\", \u{c3}\u{a9}=1, \u{c3}\u{89}=2",
+        "realm-latin1" => "Digest realm=\"\u{e9}\", nonce=\"n\"",
+        "domain-quoted-latin1" => "Digest realm=\"r\", nonce=\"n\", domain=\"\u{e9}\"",
+        "domain-token-latin1" => "Digest realm=\"r\", nonce=\"n\", domain=\u{e9}",
+        "firstkey-latin1" => "Digest \u{e9}=1, realm=\"r\", nonce=\"n\"",
         _ => "",
     }
 }
@@ -196,6 +203,7 @@ fn challenge_lines(mode: &str, second: bool) -> String {
     match mode {
         "digest+basic" => "Proxy-Authenticate: Basic realm=\"r\"\r\nProxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n".to_owned(),
         "negotiate+basic" => "Proxy-Authenticate: Negotiate\r\nProxy-Authenticate: Basic realm=\"r\"\r\n".to_owned(),
+        "sameline-basic" => "Proxy-Authenticate: Basic realm=\"r\", Digest realm=\"r\", nonce=\"n\", \u{e9}=1\r\n".to_owned(),
         _ => format!("Proxy-Authenticate: {}\r\n", digest_challenge(mode, second)),
     }
 }
@@ -328,7 +336,9 @@ async fn digest_proxy(mode: &'static str, user: &'static str) -> (u16, Arc<Mutex
                         "HTTP/1.1 407 Proxy Authentication Required\r\n{}Content-Length: 0\r\n\r\n",
                         challenge_lines(mode, stale)
                     );
-                    let _ = reader.get_mut().write_all(answer.as_bytes()).await;
+                    // Latin-1: each char of a challenge is one byte on the wire.
+                    let answer: Vec<u8> = answer.chars().map(|c| c as u8).collect();
+                    let _ = reader.get_mut().write_all(&answer).await;
                 }
             });
         }
@@ -414,6 +424,22 @@ async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
             "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
         ),
         ("negotiate+basic", "u", "error|1 auth=no|1 auth=Negotiate T"),
+        ("dup-ascii", "u", "error|1 auth=no"),
+        ("dup-latin1", "u", "error|1 auth=no"),
+        ("dup-utf8", "u", "error|1 auth=no"),
+        ("sameline-basic", "u", "error|1 auth=no"),
+        (
+            "domain-quoted-latin1",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
+        ),
+        ("domain-token-latin1", "u", "error|1 auth=no"),
+        (
+            "firstkey-latin1",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
+        ),
+        ("realm-latin1", "u", "error|1 auth=no"),
     ] {
         let (port, seen) = digest_proxy(mode, user).await;
         let proxy_user = match (mode, user) {
@@ -560,4 +586,23 @@ async fn connection_reuse_matches_the_fixture() {
         }
     }
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+// The twin of C#'s DigestKeysFoldTheseLatin1Pairs.
+#[test]
+fn digest_keys_fold_these_latin1_pairs() {
+    let fold = |b: u32| crate::digest::latin1_fold(&char::from_u32(b).unwrap().to_string());
+    let mut got = Vec::new();
+    for a in 0..256u32 {
+        for b in a + 1..256 {
+            if fold(a) == fold(b) {
+                got.push(format!("{a:02X}{b:02X}"));
+            }
+        }
+    }
+    let want: Vec<String> = (0x41..0x41 + 26)
+        .chain((0xC0..0xC0 + 0x1F).filter(|&c| c != 0xD7))
+        .map(|c: u32| format!("{c:02X}{:02X}", c + 0x20))
+        .collect();
+    assert_eq!(got, want);
 }

@@ -11,6 +11,20 @@ fn space_or_tab(c: u8) -> bool {
     c == b' ' || c == b'\t'
 }
 
+/// Lowers what OrdinalIgnoreCase folds among Latin-1 chars, the chars
+/// .NET reads header bytes as: A-Z, and U+00C0-U+00DE less U+00D7 (C#'s
+/// DigestKeysFoldTheseLatin1Pairs).
+pub(crate) fn latin1_fold(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            'A'..='Z' | '\u{c0}'..='\u{de}' if c != '\u{d7}' => {
+                char::from_u32(c as u32 + 0x20).unwrap_or(c)
+            }
+            _ => c,
+        })
+        .collect()
+}
+
 /// DigestResponse.Parse. Keys match without case; realm, nonce, opaque and
 /// qop must be quoted, and parsing stops at the first pair that breaks the
 /// rules. A key seen twice is refused, as Dictionary.Add throws.
@@ -25,7 +39,7 @@ pub(crate) fn parse(challenge: &str) -> Option<HashMap<String, String>> {
         if key.is_empty() || i >= data.len() {
             break;
         }
-        let lower = key.to_ascii_lowercase();
+        let lower = latin1_fold(&key);
         let quoted = matches!(lower.as_str(), "realm" | "nonce" | "opaque" | "qop");
         let (value, next) = next_value(data, i, quoted);
         i = next;

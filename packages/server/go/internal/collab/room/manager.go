@@ -109,6 +109,9 @@ func (m *Manager) LiveRoomCount() int {
 
 // Join is JoinAsync; it implements collab.Rooms.
 func (m *Manager) Join(ctx context.Context, docID string, member collab.Member) (collab.JoinResult, error) {
+	if docID == "" {
+		return collab.JoinResult{}, ErrEmptyDocIDArgument
+	}
 	for attempt := 0; attempt < maxJoinAttempts; attempt++ {
 		if m.isPurging(docID) {
 			return collab.JoinResult{Status: collab.JoinPurged}, nil
@@ -137,6 +140,9 @@ func (m *Manager) Join(ctx context.Context, docID string, member collab.Member) 
 
 // Reset is ResetForHttpAsync.
 func (m *Manager) Reset(ctx context.Context, docID string) (ResetResult, error) {
+	if docID == "" {
+		return ResetResult{}, ErrEmptyDocIDArgument
+	}
 	for attempt := 0; attempt < maxJoinAttempts; attempt++ {
 		r := m.roomFor(docID)
 		if r == nil {
@@ -158,6 +164,9 @@ func (m *Manager) Reset(ctx context.Context, docID string) (ResetResult, error) 
 // Edit is the HTTP edit with the endpoint's idempotency receipt.
 func (m *Manager) Edit(ctx context.Context, docID string, ops []convert.EditOp, operationID string, digest []byte,
 	actorID string, expect *Precondition) (EditResult, error) {
+	if err := checkEditIDs(docID, operationID); err != nil {
+		return EditResult{}, err
+	}
 	// Checked before a room is made, so no seed GET is spent on it.
 	if expect != nil && m.operations == nil {
 		return EditResult{Status: EditPreconditionRequired}, nil
@@ -172,12 +181,25 @@ func (m *Manager) Edit(ctx context.Context, docID string, ops []convert.EditOp, 
 // the lane, after the duplicate and precondition checks, gated to one frame.
 func (m *Manager) AgentEdit(ctx context.Context, docID string, plan PlanOps, operationID string, digest []byte,
 	actorID string, expect *Precondition, applied Applied) (EditResult, error) {
+	if err := checkEditIDs(docID, operationID); err != nil {
+		return EditResult{}, err
+	}
 	if expect != nil && m.operations == nil {
 		return EditResult{Status: EditPreconditionRequired}, nil
 	}
 	return m.editInRoom(docID, func(r *Room) (*EditResult, error) {
 		return r.edit(ctx, plan, true, operationID, digest, actorID, expect, applied)
 	})
+}
+
+func checkEditIDs(docID, operationID string) error {
+	if docID == "" {
+		return ErrEmptyDocIDArgument
+	}
+	if operationID == "" {
+		return ErrEmptyOperationID
+	}
+	return nil
 }
 
 func (m *Manager) editInRoom(docID string, edit func(*Room) (*EditResult, error)) (EditResult, error) {
@@ -212,6 +234,9 @@ func (m *Manager) editInRoom(docID string, edit func(*Room) (*EditResult, error)
 // State is GET /sync/{doc}/state: the live document, loading the room the
 // way an edit does.
 func (m *Manager) State(ctx context.Context, docID string) (StateResult, error) {
+	if docID == "" {
+		return StateResult{}, ErrEmptyDocIDArgument
+	}
 	for attempt := 0; attempt < maxJoinAttempts; attempt++ {
 		if m.isPurging(docID) {
 			return StateResult{Status: StatePurged}, nil
@@ -254,6 +279,9 @@ func (m *Manager) RecheckAccess(ctx context.Context, docID string) (int, error) 
 
 // Checkpoint publishes a checkpoint on a loaded document.
 func (m *Manager) Checkpoint(ctx context.Context, docID string) (bool, error) {
+	if docID == "" {
+		return false, ErrEmptyDocIDArgument
+	}
 	m.mu.Lock()
 	_, purging := m.purgeLanes[docID]
 	r := m.rooms[docID]
@@ -268,7 +296,11 @@ func (m *Manager) Checkpoint(ctx context.Context, docID string) (bool, error) {
 // ErrPurgeUnsupported are PurgeDocumentAsync's refusals.
 var (
 	// ErrEmptyDocID is ArgumentException.ThrowIfNullOrEmpty(documentId).
-	ErrEmptyDocID         = errors.New("The value cannot be an empty string. (Parameter 'documentId')")
+	ErrEmptyDocID = errors.New("The value cannot be an empty string. (Parameter 'documentId')")
+	// ErrEmptyDocIDArgument and ErrEmptyOperationID are the same refusal at
+	// the doors whose C# parameter is docId or operationId.
+	ErrEmptyDocIDArgument = errors.New("The value cannot be an empty string. (Parameter 'docId')")
+	ErrEmptyOperationID   = errors.New("The value cannot be an empty string. (Parameter 'operationId')")
 	ErrNotSingleSegment   = errors.New("collab: document ids must be a single path segment.")
 	ErrPurgeNotAuthorized = errors.New("collab: document purge was not authorized.")
 	ErrPurgeUnsupported   = errors.New("the operation journal cannot purge documents")

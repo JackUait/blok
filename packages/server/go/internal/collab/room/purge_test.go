@@ -7,8 +7,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/internal/yjs"
 )
 
 // emptyObjects is an S3 bucket that records every key it is asked for.
@@ -97,5 +99,42 @@ func TestAnEmptyDocIDIsRefusedBeforeAuthorizeOnEveryStore(t *testing.T) {
 	}
 	if len(bucket.keys) != 0 || len(host.purged) != 0 {
 		t.Fatalf("a store saw the empty id: S3 keys %q, host purges %q", bucket.keys, host.purged)
+	}
+}
+
+// C# refuses an empty doc id (ArgumentException) at every manager door,
+// and an empty operation id at the edit doors, before any room exists.
+func TestEveryDoorRefusesAnEmptyDocIDBeforeAnyRoomExists(t *testing.T) {
+	manager, _, endpoint := newTestManager(t, Options{}, nil)
+	ctx := context.Background()
+	noPlan := func(context.Context, *yjs.Doc) ([]convert.EditOp, error) { return nil, nil }
+	doors := map[string]func() error{
+		"join":  func() error { _, err := manager.Join(ctx, "", &fakeMember{}); return err },
+		"reset": func() error { _, err := manager.Reset(ctx, ""); return err },
+		"edit": func() error {
+			_, err := manager.Edit(ctx, "", nil, "op", nil, "", nil)
+			return err
+		},
+		"agent edit": func() error {
+			_, err := manager.AgentEdit(ctx, "", noPlan, "op", nil, "", nil, nil)
+			return err
+		},
+		"state":      func() error { _, err := manager.State(ctx, ""); return err },
+		"checkpoint": func() error { _, err := manager.Checkpoint(ctx, ""); return err },
+	}
+	for name, door := range doors {
+		if err := door(); !errors.Is(err, ErrEmptyDocIDArgument) || err.Error() != "The value cannot be an empty string. (Parameter 'docId')" {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, err := manager.Edit(ctx, "doc", nil, "", nil, "", nil); !errors.Is(err, ErrEmptyOperationID) ||
+		err.Error() != "The value cannot be an empty string. (Parameter 'operationId')" {
+		t.Errorf("edit: %v", err)
+	}
+	if _, err := manager.AgentEdit(ctx, "doc", noPlan, "", nil, "", nil, nil); !errors.Is(err, ErrEmptyOperationID) {
+		t.Errorf("agent edit: %v", err)
+	}
+	if manager.LiveRoomCount() != 0 || endpoint.loaded() != 0 {
+		t.Fatalf("rooms %d, loads %d", manager.LiveRoomCount(), endpoint.loaded())
 	}
 }

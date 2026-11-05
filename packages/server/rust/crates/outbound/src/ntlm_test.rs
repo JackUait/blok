@@ -1059,3 +1059,222 @@ async fn ntlm_spn_host_keeps_a_name_the_lookup_cannot_answer() {
         assert_eq!(crate::operator::spn_host(host).await, want, "{host}");
     }
 }
+
+/// C#'s ServeForwardProxy: answers absolute-form requests itself and logs
+/// "conn request-line auth=... body=...".
+async fn serve_forward(
+    stream: TcpStream,
+    id: usize,
+    mode: &'static str,
+    log: Arc<Mutex<Vec<String>>>,
+) {
+    let scheme = if mode == "negotiate" {
+        "Negotiate"
+    } else {
+        "NTLM"
+    };
+    let mut reader = BufReader::new(stream);
+    let mut state = State::default();
+    for _ in 0..4 {
+        let (mut line0, mut auth, mut length) = (String::new(), None::<String>, 0usize);
+        loop {
+            let mut line = String::new();
+            if reader.read_line(&mut line).await.unwrap_or(0) == 0 {
+                return;
+            }
+            let line = line.trim_end().to_owned();
+            if line.is_empty() {
+                break;
+            }
+            if line0.is_empty() {
+                line0 = line.clone();
+            } else if let Some(value) = line.strip_prefix("Proxy-Authorization:") {
+                auth = Some(value.trim().to_owned());
+            } else if let Some(value) = line.strip_prefix("Content-Length:") {
+                length = value.trim().parse().unwrap();
+            }
+        }
+        let mut body = vec![0u8; length];
+        tokio::io::AsyncReadExt::read_exact(&mut reader, &mut body)
+            .await
+            .unwrap();
+        let mut logged = auth
+            .as_deref()
+            .map_or("no".to_owned(), crate::tunnel_test::mask);
+        let (mut answer, closing, ok);
+        match auth.as_deref() {
+            Some(a) if matches!(mode, "ntlm" | "negotiate") && a.starts_with(scheme) => {
+                let (name, data) = a.split_once(' ').unwrap();
+                let token = base64::engine::general_purpose::STANDARD
+                    .decode(data)
+                    .unwrap();
+                let (read, valid) = read_ntlm(name, &token, &mut state, "p");
+                logged = if read.contains(" T1 ") {
+                    format!("{name} T1")
+                } else if valid {
+                    format!("{name} T3 ok")
+                } else {
+                    format!("{name} T3 bad")
+                };
+                ok = valid;
+                answer = String::new();
+                closing = false;
+                if !valid && state.type2.is_none() {
+                    let message = type2("ntlm");
+                    let token = if scheme == "Negotiate" {
+                        spnego_challenge(&message, "")
+                    } else {
+                        message.clone()
+                    };
+                    state.type2 = Some(message);
+                    answer = format!(
+                        "Proxy-Authenticate: {scheme} {}\r\n",
+                        base64::engine::general_purpose::STANDARD.encode(token)
+                    );
+                }
+            }
+            _ => {
+                let method = line0.split(' ').next().unwrap();
+                ok = match (&auth, mode) {
+                    (None, _) => false,
+                    (Some(a), "digest") => {
+                        let hash = |d: &str| hex(&md5(d.as_bytes()));
+                        let want = hash(&format!(
+                            "{}:n:{}",
+                            hash("u:r:p"),
+                            hash(&format!("{method}:/x?q"))
+                        ));
+                        a.contains(&format!("response=\"{want}\""))
+                    }
+                    _ => true,
+                };
+                answer = match mode {
+                    "basic" | "basic-close" => {
+                        "Proxy-Authenticate: Basic realm=\"r\"\r\n".to_owned()
+                    }
+                    "digest" => {
+                        "Proxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n".to_owned()
+                    }
+                    "ntlm" | "negotiate" => format!("Proxy-Authenticate: {scheme}\r\n"),
+                    _ => String::new(),
+                };
+                closing = mode == "basic-close";
+            }
+        }
+        log.lock().unwrap().push(format!(
+            "{id} {line0} auth={logged} body={}",
+            String::from_utf8_lossy(&body)
+        ));
+        if ok {
+            let _ = reader
+                .get_mut()
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                .await;
+            continue;
+        }
+        if closing {
+            answer += "Connection: close\r\n";
+        }
+        let head = format!(
+            "HTTP/1.1 407 Proxy Authentication Required\r\n{answer}Content-Length: 0\r\n\r\n"
+        );
+        if reader.get_mut().write_all(head.as_bytes()).await.is_err() || closing {
+            return;
+        }
+    }
+}
+
+// The twin of C#'s AuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes:
+// an http target through a proxy gets no credentials before a 407.
+#[tokio::test]
+async fn authenticates_a_forwarded_request_as_sockets_http_handler_does() {
+    for (mode, method, want) in [
+        (
+            "basic",
+            "GET",
+            "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Basic dTpw body=",
+        ),
+        (
+            "basic-close",
+            "GET",
+            "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|2 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Basic dTpw body=",
+        ),
+        (
+            "basic",
+            "POST",
+            "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=abc|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Basic dTpw body=abc",
+        ),
+        (
+            "none",
+            "GET",
+            "407 |1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=",
+        ),
+        (
+            "digest",
+            "GET",
+            "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/x?q\", response=\"R\" body=",
+        ),
+        (
+            "ntlm",
+            "GET",
+            "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T3 ok body=",
+        ),
+        (
+            "negotiate",
+            "GET",
+            "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T3 ok body=",
+        ),
+    ] {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let log = seen.clone();
+        tokio::spawn(async move {
+            let mut conns = 0;
+            while let Ok((client, _)) = listener.accept().await {
+                conns += 1;
+                tokio::spawn(serve_forward(client, conns, mode, log.clone()));
+            }
+        });
+        let client = OperatorClient {
+            connect_timeout: Duration::from_secs(5),
+            header_timeout: None,
+            proxy: EnvironmentProxy::from_lookup(move |n| {
+                (n == "ALL_PROXY").then(|| format!("http://u:p@127.0.0.1:{port}"))
+            }),
+            roots: None,
+        };
+        let url = blok_dotnet::parse_absolute_uri("http://127.0.0.1:1/x?q").unwrap();
+        let mut content = std::io::Cursor::new(b"abc".to_vec());
+        let body = if method == "POST" {
+            RequestBody::Reader(&mut content, 3)
+        } else {
+            RequestBody::None
+        };
+        let outcome = match client
+            .send(Request {
+                method,
+                url: &url,
+                host: "127.0.0.1:1",
+                headers: Vec::new(),
+                body,
+            })
+            .await
+        {
+            Ok(mut response) => {
+                let mut body = vec![0u8; 16];
+                let n = response.body.read(&mut body).await.unwrap();
+                format!(
+                    "{} {}",
+                    response.status,
+                    String::from_utf8_lossy(&body[..n])
+                )
+            }
+            Err(OperatorError::Tunnel(status)) => format!("error {status}"),
+            Err(_) => "error".to_owned(),
+        };
+        let mut got = vec![outcome];
+        got.extend(seen.lock().unwrap().iter().cloned());
+        assert_eq!(got.join("|"), want, "{mode} {method}");
+    }
+}

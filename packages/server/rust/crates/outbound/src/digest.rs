@@ -1,6 +1,6 @@
-//! AuthenticationHelper's Digest (System.Net.Http 10.0.11, decompiled), for
-//! a CONNECT: the request URI is the proxy's, so uri is "/" and A2 is
-//! "CONNECT:/". Pinned by C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes.
+//! AuthenticationHelper's Digest (System.Net.Http 10.0.11, decompiled).
+//! Pinned by C#'s AnswersADigestChallengeAsSocketsHttpHandlerDoes and
+//! AuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes.
 
 use std::collections::HashMap;
 
@@ -111,9 +111,18 @@ fn next_value(data: &[u8], mut i: usize, expect_quotes: bool) -> (Option<String>
     (Some(value), i)
 }
 
-/// GetDigestTokenForCredential for a CONNECT; None when .NET gives no token
-/// (an algorithm it lacks, no nonce, no realm).
-pub(crate) fn token(user: &str, password: &str, p: &HashMap<String, String>) -> Option<String> {
+/// GetDigestTokenForCredential; None when .NET gives no token (an
+/// algorithm it lacks, no nonce, no realm). `uri` is the request URI's path
+/// and query, `content` the body auth-int hashes. .NET hashes the body read
+/// as a string (ReadAsStringAsync); this hashes it as lossy UTF-8.
+pub(crate) fn token(
+    user: &str,
+    password: &str,
+    p: &HashMap<String, String>,
+    method: &str,
+    uri: &str,
+    content: &[u8],
+) -> Option<String> {
     let specified = p.get("algorithm");
     let algorithm = match specified {
         Some(a) => {
@@ -165,7 +174,7 @@ pub(crate) fn token(user: &str, password: &str, p: &HashMap<String, String>) -> 
     }
     pair("realm", realm, true, true);
     pair("nonce", nonce, true, true);
-    pair("uri", "/", true, true);
+    pair("uri", uri, true, true);
     let offered = p.get("qop");
     let mut qop = "auth";
     if let Some(offered) = offered
@@ -180,10 +189,9 @@ pub(crate) fn token(user: &str, password: &str, p: &HashMap<String, String>) -> 
     if algorithm.len() >= 4 && algorithm[algorithm.len() - 4..].eq_ignore_ascii_case("sess") {
         a1 = format!("{}:{nonce}:{cnonce}", hash(&a1));
     }
-    let mut a2 = "CONNECT:/".to_owned();
+    let mut a2 = format!("{method}:{uri}");
     if qop == "auth-int" {
-        // A CONNECT has no content.
-        a2 = format!("{a2}:{}", hash(""));
+        a2 = format!("{a2}:{}", hash(&String::from_utf8_lossy(content)));
     }
     let response = if offered.is_some() {
         hash(&format!(

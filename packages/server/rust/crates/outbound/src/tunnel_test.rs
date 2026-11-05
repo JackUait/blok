@@ -251,7 +251,7 @@ fn digest_valid(header: &str, user: &str) -> bool {
 }
 
 /// Masks the random cnonce as C and the response as R.
-fn mask(auth: &str) -> String {
+pub(crate) fn mask(auth: &str) -> String {
     auth.split(", ")
         .map(|part| match part.split_once('=') {
             Some(("response", _)) => "response=\"R\"".to_owned(),

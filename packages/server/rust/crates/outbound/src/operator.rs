@@ -12,7 +12,9 @@ use std::time::Duration;
 use base64::Engine;
 use blok_dotnet::Uri;
 use rustls::pki_types::ServerName;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{
+    AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, AsyncWrite, AsyncWriteExt, BufReader,
+};
 use tokio::net::TcpStream;
 use tokio::time::{Instant, timeout_at};
 
@@ -69,8 +71,14 @@ pub enum RequestBody<'a> {
     /// No content: no Content-Length, as .NET sends a GET without one.
     None,
     Bytes(&'a [u8]),
-    Reader(&'a mut (dyn AsyncRead + Send + Unpin), u64),
+    /// Seekable, so a proxy's 407 can send it again from where it started,
+    /// as .NET resends its content.
+    Reader(&'a mut (dyn ReadSeek + Send + Unpin), u64),
 }
+
+pub trait ReadSeek: AsyncRead + AsyncSeek {}
+
+impl<T: AsyncRead + AsyncSeek> ReadSeek for T {}
 
 impl RequestBody<'_> {
     fn len(&self) -> u64 {
@@ -124,7 +132,7 @@ impl OperatorClient {
     }
 
     /// Sends one request on a new connection and reads the head.
-    pub async fn send(&self, request: Request<'_, '_>) -> Result<Response, OperatorError> {
+    pub async fn send(&self, mut request: Request<'_, '_>) -> Result<Response, OperatorError> {
         let scheme = request.url.scheme.as_str();
         let proxy = self
             .proxy
@@ -144,20 +152,81 @@ impl OperatorClient {
         }
         let mut stream = self.connect(request.url, proxy.as_ref()).await?;
         let path = format!("{}{}", request.url.absolute_path, request.url.query);
-        // A plain request through a proxy names the whole URL.
-        let target = match (&proxy, scheme) {
-            (Some(p), "http") if is_http_proxy(p) => format!("http://{}{path}", request.host),
-            _ => path,
+        // A plain request through a proxy names the whole URL and answers
+        // the proxy's 407 (SendWithProxyAuthAsync); the CONNECT route
+        // answers it in the tunnel.
+        let forward = match (&proxy, scheme) {
+            (Some(p), "http") if is_http_proxy(p) => Some(p),
+            _ => None,
         };
+        let target = match forward {
+            Some(_) => format!("http://{}{path}", request.host),
+            None => path.clone(),
+        };
+        let start = match &mut request.body {
+            RequestBody::Reader(reader, _) => Some(reader.stream_position().await?),
+            _ => None,
+        };
+        let mut auth = ProxyAuth::default();
+        let mut content: Option<Vec<u8>> = None;
+        loop {
+            self.write_request(&mut stream, &mut request, &target, &auth, start)
+                .await?;
+            let mut reader = BufReader::new(stream);
+            let head: Head = match self.header_timeout {
+                Some(limit) => timeout_at(Instant::now() + limit, read_head(&mut reader, MAX_HEAD))
+                    .await
+                    .map_err(|_| OperatorError::HeaderTimeout)??,
+                None => read_head(&mut reader, MAX_HEAD).await?,
+            };
+            if let Some(proxy) = forward {
+                auth.check_final(&head)?;
+                if head.status == 407 {
+                    // Only Digest's auth-int reads the body.
+                    let auth_int = head
+                        .headers
+                        .values("Proxy-Authenticate")
+                        .any(|v| v.windows(8).any(|w| w.eq_ignore_ascii_case(b"auth-int")));
+                    if auth_int && content.is_none() {
+                        content = Some(self.content(&mut request, start).await?);
+                    }
+                    let signed = Signed {
+                        method: request.method,
+                        uri: &path,
+                        content: content.as_deref().unwrap_or_default(),
+                    };
+                    if let Some(next) = auth.answer(&head, proxy, &signed).await? {
+                        stream = if auth.retry(next, &mut reader, &head).await? {
+                            reader.into_inner()
+                        } else {
+                            self.connect(request.url, Some(proxy)).await?
+                        };
+                        continue;
+                    }
+                }
+            }
+            let framing: Framing = framing(&head)?;
+            return Ok(Response {
+                status: head.status,
+                headers: head.headers,
+                body: Body::after_head(reader, framing, head.budget),
+            });
+        }
+    }
+
+    /// Writes the head and the body; a reader body goes out from `start`.
+    async fn write_request(
+        &self,
+        stream: &mut Box<dyn Stream>,
+        request: &mut Request<'_, '_>,
+        target: &str,
+        auth: &ProxyAuth,
+        start: Option<u64>,
+    ) -> Result<(), OperatorError> {
         let length = request.body.len().to_string();
         let mut headers: Vec<(&str, &str)> = vec![("Host", request.host)];
-        let authorization;
-        if let (Some(proxy), "http") = (&proxy, scheme)
-            && is_http_proxy(proxy)
-            && let Some(value) = proxy_authorization(proxy)
-        {
-            authorization = value;
-            headers.push(("Proxy-Authorization", &authorization));
+        if let Some(value) = &auth.authorization {
+            headers.push(("Proxy-Authorization", value));
         }
         headers.extend(
             request
@@ -169,13 +238,17 @@ impl OperatorClient {
             headers.push(("Content-Length", &length));
         }
         stream
-            .write_all(&request_head(request.method, &target, &headers))
+            .write_all(&request_head(request.method, target, &headers))
             .await?;
-        match request.body {
+        match &mut request.body {
             RequestBody::None => {}
             RequestBody::Bytes(bytes) => stream.write_all(bytes).await?,
             RequestBody::Reader(reader, length) => {
-                let copied = tokio::io::copy(&mut reader.take(length), &mut stream).await?;
+                reader
+                    .seek(std::io::SeekFrom::Start(start.unwrap_or_default()))
+                    .await?;
+                let length = *length;
+                let copied = tokio::io::copy(&mut reader.take(length), stream).await?;
                 if copied != length {
                     return Err(io::Error::new(
                         io::ErrorKind::UnexpectedEof,
@@ -186,18 +259,26 @@ impl OperatorClient {
             }
         }
         stream.flush().await?;
-        let mut reader = BufReader::new(stream);
-        let head: Head = match self.header_timeout {
-            Some(limit) => timeout_at(Instant::now() + limit, read_head(&mut reader, MAX_HEAD))
-                .await
-                .map_err(|_| OperatorError::HeaderTimeout)??,
-            None => read_head(&mut reader, MAX_HEAD).await?,
-        };
-        let framing: Framing = framing(&head)?;
-        Ok(Response {
-            status: head.status,
-            headers: head.headers,
-            body: Body::after_head(reader, framing, head.budget),
+        Ok(())
+    }
+
+    /// The body Digest's auth-int hashes.
+    async fn content(
+        &self,
+        request: &mut Request<'_, '_>,
+        start: Option<u64>,
+    ) -> Result<Vec<u8>, OperatorError> {
+        Ok(match &mut request.body {
+            RequestBody::None => Vec::new(),
+            RequestBody::Bytes(bytes) => bytes.to_vec(),
+            RequestBody::Reader(reader, length) => {
+                reader
+                    .seek(std::io::SeekFrom::Start(start.unwrap_or_default()))
+                    .await?;
+                let mut out = Vec::new();
+                reader.take(*length).read_to_end(&mut out).await?;
+                out
+            }
         })
     }
 
@@ -355,10 +436,15 @@ enum Tunnel {
     Again { keep: bool },
 }
 
-/// Where a CONNECT's proxy authentication stands.
+/// Where one request's proxy authentication stands: .NET's
+/// SendWithProxyAuthAsync, which passes preAuthenticate false, so nothing
+/// goes out before a 407 asks (AuthenticationHelper.cs:481). The challenge
+/// is picked in .NET's order, Negotiate, NTLM, Digest, Basic. A Digest
+/// answer gets one more try when the nonce is stale. NTLM and Negotiate
+/// are SendWithNtAuthAsync (:630-745): Type 1 and Type 3 go on one stream.
 #[derive(Default)]
 struct ProxyAuth {
-    /// The Proxy-Authorization the next CONNECT carries.
+    /// The Proxy-Authorization the next request carries.
     authorization: Option<String>,
     /// The scheme answered, lower case.
     sent: Option<&'static str>,
@@ -368,17 +454,151 @@ struct ProxyAuth {
     nt: Option<crate::ntlm::NtlmAuth>,
 }
 
+/// What Digest signs: the method, the request URI's path and query, and
+/// the body auth-int hashes.
+struct Signed<'a> {
+    method: &'a str,
+    uri: &'a str,
+    content: &'a [u8],
+}
+
+impl ProxyAuth {
+    /// The Proxy-Authorization a 407 asks for next; None when .NET stops
+    /// and the 407 is the answer.
+    async fn answer(
+        &mut self,
+        head: &Head,
+        proxy: &ProxyUrl,
+        signed: &Signed<'_>,
+    ) -> Result<Option<String>, OperatorError> {
+        let Some((name, password)) = &proxy.user else {
+            return Ok(None);
+        };
+        let (user, domain) = proxy_credential(name);
+        let challenges = auth_challenges(head.headers.values("Proxy-Authenticate"));
+        let password = password.as_deref().unwrap_or("");
+        let digest = |p: &HashMap<String, String>| {
+            crate::digest::token(user, password, p, signed.method, signed.uri, signed.content)
+                .map(|token| format!("Digest {token}"))
+        };
+        Ok(match self.sent {
+            None => {
+                let scheme = choose_challenge(&challenges);
+                self.sent = scheme;
+                match scheme {
+                    Some(scheme @ ("negotiate" | "ntlm")) => {
+                        ntlm_first(
+                            self,
+                            scheme,
+                            &challenges[scheme],
+                            proxy,
+                            user,
+                            domain,
+                            password,
+                        )
+                        .await?
+                    }
+                    Some("digest") => crate::digest::parse(&challenges["digest"])
+                        .as_ref()
+                        .and_then(digest),
+                    Some("basic") => proxy_authorization(proxy),
+                    _ => None,
+                }
+            }
+            Some(scheme @ ("negotiate" | "ntlm")) => match &mut self.nt {
+                Some(nt) if !nt.authenticated => match challenges.get(scheme) {
+                    None => None,
+                    Some(data) => {
+                        // A bare challenge is an empty blob: NTLM throws on
+                        // it, SPNEGO gives no token.
+                        let challenge = base64::engine::general_purpose::STANDARD
+                            .decode(data)
+                            .map_err(|_| ntlm_throw())?;
+                        let (token, status) = nt.respond(&challenge).map_err(|_| ntlm_throw())?;
+                        token
+                            .filter(|_| status <= crate::ntlm::Status::Continue)
+                            .map(|token| {
+                                format!(
+                                    "{} {}",
+                                    ntlm_scheme(scheme),
+                                    base64::engine::general_purpose::STANDARD.encode(token)
+                                )
+                            })
+                    }
+                },
+                _ => None,
+            },
+            Some("digest") if !self.stale => {
+                let stale = challenges
+                    .get("digest")
+                    .and_then(|data| crate::digest::parse(data))
+                    .filter(|p| p.get("stale").is_some_and(|v| v == "true"));
+                match stale {
+                    Some(p) => {
+                        self.stale = true;
+                        digest(&p)
+                    }
+                    None => None,
+                }
+            }
+            _ => None,
+        })
+    }
+
+    /// SendWithNtAuthAsync's last step: an answer that is not a 407 but
+    /// carries the scheme's token, while the handshake is still open
+    /// (RequestMic), is read, and a failed read fails the request with 401.
+    fn check_final(&mut self, head: &Head) -> Result<(), OperatorError> {
+        if head.status != 407
+            && self.authorization.is_some()
+            && let (Some(scheme), Some(nt)) = (self.sent, &mut self.nt)
+            && !nt.authenticated
+            && let Some(data) =
+                auth_challenges(head.headers.values("Proxy-Authenticate")).get(scheme)
+        {
+            let blob = base64::engine::general_purpose::STANDARD
+                .decode(data)
+                .map_err(|_| ntlm_throw())?;
+            let (_, status) = nt.respond(&blob).map_err(|_| ntlm_throw())?;
+            if status > crate::ntlm::Status::Continue {
+                return Err(OperatorError::Tunnel(401));
+            }
+        }
+        Ok(())
+    }
+
+    /// Takes `next` for the following request and drains the 407 as .NET
+    /// does: whether the stream is kept. NTLM and Negotiate keep it or fail
+    /// (DrainResponseAsync), except that a first 407 that says close moves
+    /// to a new stream; Basic and Digest drop a stream they cannot drain.
+    async fn retry<T: AsyncRead + Unpin + Send>(
+        &mut self,
+        next: String,
+        reader: &mut BufReader<T>,
+        head: &Head,
+    ) -> Result<bool, OperatorError> {
+        let first = self.authorization.is_none();
+        self.authorization = Some(next);
+        let framed = framing(head)?;
+        let closes = crate::wire::head_closes_conn(&head.headers);
+        if self.nt.is_some() {
+            if first && crate::wire::connection_header_closes(&head.headers) {
+                return Ok(false);
+            }
+            if framed == Framing::Close || closes || !drain(reader, framed, head.budget).await {
+                return Err(io::Error::other("the authentication conn failed").into());
+            }
+            return Ok(true);
+        }
+        Ok(framed != Framing::Close && !closes && drain(reader, framed, head.budget).await)
+    }
+}
+
 /// HttpConnectionPool.EstablishProxyTunnelAsync (System.Net.Http 10.0.11,
 /// decompiled; measured by C#'s ProxyConnectTunnelTests). Host, and no
 /// User-Agent, as the operator requests have none (HttpConnectionPool.cs
-/// :308-312, :660-664). Credentials only after a 407 challenge:
-/// SendWithProxyAuthAsync passes preAuthenticate false
-/// (AuthenticationHelper.cs:481). The challenge is picked in .NET's order,
-/// Negotiate, NTLM, Digest, Basic. A Digest answer gets one more try when
-/// the nonce is stale. NTLM and Negotiate are SendWithNtAuthAsync
-/// (:630-745): Type 1 and Type 3 go on one stream; only the first 407 may
-/// close it, and after the Type 3 the answer is final. Only 200 opens the
-/// tunnel (HttpConnectionPool.cs:666).
+/// :308-312, :660-664). Only 200 opens the tunnel (HttpConnectionPool.cs
+/// :666).
 async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     tcp: &mut S,
     authority: &str,
@@ -393,23 +613,7 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
         .await?;
     let mut reader = BufReader::new(&mut *tcp);
     let head = read_head(&mut reader, MAX_HEAD).await?;
-    if head.status != 407
-        && auth.authorization.is_some()
-        && let (Some(scheme), Some(nt)) = (auth.sent, &mut auth.nt)
-        && !nt.authenticated
-        && let Some(data) = auth_challenges(head.headers.values("Proxy-Authenticate")).get(scheme)
-    {
-        // SendWithNtAuthAsync's last step: an answer that is not a 407 but
-        // carries the scheme's token is read, and a failed read fails the
-        // request with 401 (a RequestMic handshake).
-        let blob = base64::engine::general_purpose::STANDARD
-            .decode(data)
-            .map_err(|_| ntlm_throw())?;
-        let (_, status) = nt.respond(&blob).map_err(|_| ntlm_throw())?;
-        if status > crate::ntlm::Status::Continue {
-            return Err(OperatorError::Tunnel(401));
-        }
-    }
+    auth.check_final(&head)?;
     if head.status == 200 {
         if !reader.buffer().is_empty() {
             // .NET hands these to the tunnel; before the server's TLS answer
@@ -422,99 +626,20 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
         }
         return Ok(Tunnel::Open);
     }
-    let next = match (&proxy.user, head.status) {
-        (Some((name, password)), 407) => {
-            let (user, domain) = proxy_credential(name);
-            let challenges = auth_challenges(head.headers.values("Proxy-Authenticate"));
-            let password = password.as_deref().unwrap_or("");
-            match auth.sent {
-                None => {
-                    let scheme = choose_challenge(&challenges);
-                    auth.sent = scheme;
-                    match scheme {
-                        Some(scheme @ ("negotiate" | "ntlm")) => {
-                            ntlm_first(
-                                auth,
-                                scheme,
-                                &challenges[scheme],
-                                proxy,
-                                user,
-                                domain,
-                                password,
-                            )
-                            .await?
-                        }
-                        Some("digest") => crate::digest::parse(&challenges["digest"])
-                            .and_then(|p| crate::digest::token(user, password, &p))
-                            .map(|token| format!("Digest {token}")),
-                        Some("basic") => proxy_authorization(proxy),
-                        _ => None,
-                    }
-                }
-                Some(scheme @ ("negotiate" | "ntlm")) => match &mut auth.nt {
-                    Some(nt) if !nt.authenticated => match challenges.get(scheme) {
-                        None => None,
-                        Some(data) => {
-                            // A bare challenge is an empty blob: NTLM throws
-                            // on it, SPNEGO gives no token.
-                            let challenge = base64::engine::general_purpose::STANDARD
-                                .decode(data)
-                                .map_err(|_| ntlm_throw())?;
-                            let (token, status) =
-                                nt.respond(&challenge).map_err(|_| ntlm_throw())?;
-                            token
-                                .filter(|_| status <= crate::ntlm::Status::Continue)
-                                .map(|token| {
-                                    format!(
-                                        "{} {}",
-                                        ntlm_scheme(scheme),
-                                        base64::engine::general_purpose::STANDARD.encode(token)
-                                    )
-                                })
-                        }
-                    },
-                    _ => None,
-                },
-                Some("digest") if !auth.stale => challenges
-                    .get("digest")
-                    .and_then(|data| crate::digest::parse(data))
-                    .filter(|p| p.get("stale").is_some_and(|v| v == "true"))
-                    .and_then(|p| {
-                        auth.stale = true;
-                        crate::digest::token(user, password, &p)
-                    })
-                    .map(|token| format!("Digest {token}")),
-                _ => None,
-            }
-        }
+    // The CONNECT request's URI is the proxy's, so Digest signs "/".
+    let signed = Signed {
+        method: "CONNECT",
+        uri: "/",
+        content: &[],
+    };
+    let next = match head.status {
+        407 => auth.answer(&head, proxy, &signed).await?,
         _ => None,
     };
     let Some(next) = next else {
         return Err(OperatorError::Tunnel(head.status));
     };
-    let first = auth.authorization.is_none();
-    auth.authorization = Some(next);
-    let framed = framing(&head)?;
-    if auth.nt.is_some() {
-        // SendWithNtAuthAsync: only a first 407 that says close moves to a
-        // new stream; every other answer is drained or the request fails
-        // (DrainResponseAsync). A body read to the close fails too.
-        if first && crate::wire::connection_header_closes(&head.headers) {
-            return Ok(Tunnel::Again { keep: false });
-        }
-        if framed == Framing::Close
-            || crate::wire::head_closes_conn(&head.headers)
-            || !drain(reader, framed, head.budget).await
-        {
-            return Err(io::Error::other("the authentication conn failed").into());
-        }
-        return Ok(Tunnel::Again { keep: true });
-    }
-    // SendWithAuthAsync disposes the answer, which drains it; a stream that
-    // cannot be drained, or that the answer closes, is dropped.
-    let keep = framed != Framing::Close
-        && !crate::wire::head_closes_conn(&head.headers)
-        && drain(reader, framed, head.budget).await;
+    let keep = auth.retry(next, &mut reader, &head).await?;
     Ok(Tunnel::Again { keep })
 }
 
@@ -526,8 +651,8 @@ const DRAIN_TIME: Duration = Duration::from_secs(2);
 /// nothing follows the body. A length body is not read when more than the
 /// cap is left past what is buffered; a chunked one stops at the cap. .NET
 /// counts a chunked body's framing too; this counts its data only.
-async fn drain<S: AsyncRead + Unpin + Send>(
-    reader: BufReader<&mut S>,
+async fn drain<T: AsyncRead + Unpin + Send>(
+    reader: &mut BufReader<T>,
     framed: Framing,
     budget: usize,
 ) -> bool {
@@ -536,7 +661,7 @@ async fn drain<S: AsyncRead + Unpin + Send>(
     {
         return false;
     }
-    let mut body = Body::after_head(reader, framed, budget);
+    let mut body = Body::after_head(&mut *reader, framed, budget);
     let mut sink = [0u8; 4096];
     let mut drained = 0u64;
     let read = timeout_at(Instant::now() + DRAIN_TIME, async {
@@ -554,7 +679,7 @@ async fn drain<S: AsyncRead + Unpin + Send>(
         }
     })
     .await;
-    matches!(read, Ok(true)) && body.into_inner().buffer().is_empty()
+    matches!(read, Ok(true)) && reader.buffer().is_empty()
 }
 
 /// Proxy-Authenticate lines as each scheme's parameter text, lower-case

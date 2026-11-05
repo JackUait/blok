@@ -494,6 +494,19 @@ pub(crate) struct FakeJournalDoc {
     pub records: Vec<Record>,
     pub fence: i64,
     pub open: bool,
+    pub purged: bool,
+    pub created_at: Option<SystemTime>,
+    /// Lineages a reset replaced, oldest first.
+    pub superseded: Vec<FakeLineage>,
+}
+
+#[derive(Clone)]
+pub(crate) struct FakeLineage {
+    pub head: Head,
+    pub baseline: Vec<Vec<u8>>,
+    pub records: Vec<Record>,
+    pub created_at: Option<SystemTime>,
+    pub current: bool,
 }
 
 #[derive(Default)]
@@ -503,6 +516,10 @@ pub(crate) struct FakeJournalInner {
     pub fail_checkpoints: Fail,
     pub fail_resets: Fail,
     pub checkpoint_attempts: AtomicI32,
+    /// Journals the record before a fail_appends error: the unknown outcome.
+    pub commit_before_failing: AtomicBool,
+    /// Holds every append until the gate opens.
+    pub before_append: Mutex<Option<Gate>>,
 }
 
 #[derive(Clone, Default)]
@@ -512,7 +529,7 @@ impl FakeJournal {
     pub fn new() -> FakeJournal {
         FakeJournal::default()
     }
-    fn with<T>(&self, id: &str, f: impl FnOnce(&mut FakeJournalDoc) -> T) -> T {
+    pub(crate) fn with<T>(&self, id: &str, f: impl FnOnce(&mut FakeJournalDoc) -> T) -> T {
         f(lock(&self.0.docs).entry(id.to_owned()).or_default())
     }
     pub fn set_fail_resets(&self, f: Option<FailFn>) {
@@ -523,6 +540,12 @@ impl FakeJournal {
     }
     pub fn set_fail_appends(&self, f: Option<FailFn>) {
         *lock(&self.0.fail_appends) = f;
+    }
+    pub fn set_commit_before_failing(&self, on: bool) {
+        self.0.commit_before_failing.store(on, Ordering::SeqCst);
+    }
+    pub fn set_before_append(&self, gate: Option<Gate>) {
+        *lock(&self.0.before_append) = gate;
     }
     /// Another process takes the fence while a session is live.
     pub fn steal_fence(&self, id: &str) {
@@ -576,6 +599,9 @@ impl OperationStore for FakeJournal {
         _ctx: &'a Context,
         doc_id: &'a str,
     ) -> BoxFuture<'a, Result<Opened, Error>> {
+        if self.with(doc_id, |d| d.purged) {
+            return Box::pin(async { Ok((OpenOutcome::DocumentPurged, None)) });
+        }
         let session = self.open_session(doc_id);
         Box::pin(async move {
             Ok(match session {
@@ -622,6 +648,18 @@ impl FakeSession {
             return Err(err);
         }
         self.fenced(|d| {
+            if let Some(previous) = d.head.clone() {
+                d.superseded.push(FakeLineage {
+                    head: previous,
+                    baseline: d.baseline.clone(),
+                    records: d.records.clone(),
+                    created_at: d.created_at,
+                    current: false,
+                });
+            }
+            // Record times count seconds from the epoch, so a lineage start
+            // there never sorts after its own records.
+            d.created_at = Some(UNIX_EPOCH);
             d.baseline = reset.baseline.clone();
             d.checkpoint = None;
             d.records.clear();
@@ -637,7 +675,8 @@ impl FakeSession {
 
     pub fn do_append(&self, candidate: Candidate) -> Result<AppendResult, Error> {
         let id = self.id.clone();
-        let fail = failure(&self.store.0.fail_appends, &id);
+        let mut fail = failure(&self.store.0.fail_appends, &id);
+        let commit_first = self.store.0.commit_before_failing.load(Ordering::SeqCst);
         self.fenced(|d| {
             if let Some(existing) = d
                 .records
@@ -654,7 +693,7 @@ impl FakeSession {
                     sequence: existing.sequence,
                 });
             }
-            if let Some(err) = fail {
+            if !commit_first && let Some(err) = fail.take() {
                 return Err(err);
             }
             let Some(head) = d.head.as_mut() else {
@@ -673,6 +712,9 @@ impl FakeSession {
                 update: candidate.update,
                 digest: candidate.digest,
             });
+            if let Some(err) = fail {
+                return Err(err);
+            }
             Ok(AppendResult {
                 outcome: AppendOutcome::Committed,
                 sequence,
@@ -728,8 +770,13 @@ impl OperationSession for FakeSession {
         _ctx: &'a Context,
         candidate: Candidate,
     ) -> BoxFuture<'a, Result<AppendResult, Error>> {
-        let result = self.do_append(candidate);
-        Box::pin(async move { result })
+        let gate = lock(&self.store.0.before_append).clone();
+        Box::pin(async move {
+            if let Some(gate) = gate {
+                gate.wait().await;
+            }
+            self.do_append(candidate)
+        })
     }
     fn write_checkpoint<'a>(
         &'a self,

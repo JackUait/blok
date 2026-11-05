@@ -3,7 +3,10 @@
 
 use std::sync::Arc;
 
-use blok_collab_journal::{Context, OpenOutcome};
+use blok_collab::BoxFuture;
+use blok_collab_journal::{
+    Context, LineageDeleteOutcome, LineageInfo, OpenOutcome, PurgeOutcome, RecordHeader,
+};
 use blok_collab_operation::{AppendOutcome, Candidate, Checkpoint, LookupOutcome, Reset, Source};
 use blok_collab_workingset::CURRENT_FORMAT;
 use sha2::{Digest, Sha256};
@@ -174,13 +177,58 @@ async fn fails_an_append_without_journalling_it() {
     session.close().await.expect("close");
 }
 
-#[test]
-#[ignore = "the Rust FakeJournal has no CommitBeforeFailing: a failed append never journals the record"]
-fn keeps_an_unknown_outcome_durable_so_the_retry_reads_as_a_duplicate() {}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_an_unknown_outcome_durable_so_the_retry_reads_as_a_duplicate() {
+    let store = FakeJournal::new();
+    let session = open_seeded(&store).await;
+    store.set_fail_appends(Some(Box::new(|_| Some("acknowledgement lost".to_owned()))));
+    store.set_commit_before_failing(true);
 
-#[test]
-#[ignore = "the Rust FakeJournal has no BeforeAppend hook to hold an append"]
-fn holds_an_append_until_the_store_is_released() {}
+    let err = session
+        .append(&ctx(), candidate("a", 1))
+        .await
+        .expect_err("the caller sees a failure");
+
+    assert!(
+        matches!(&err, Error::Message(m) if m == "acknowledgement lost"),
+        "{err:?}"
+    );
+    // The caller saw a failure; the store is durable.
+    assert_eq!(store.committed(DOC).len(), 1);
+    store.set_fail_appends(None);
+    store.set_commit_before_failing(false);
+
+    let retry = session
+        .append(&ctx(), candidate("a", 1))
+        .await
+        .expect("retry");
+
+    assert_eq!(
+        (retry.outcome, retry.sequence),
+        (AppendOutcome::Duplicate, 1)
+    );
+    session.close().await.expect("close");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn holds_an_append_until_the_store_is_released() {
+    let store = FakeJournal::new();
+    let session = open_seeded(&store).await;
+    let release = Gate::new();
+    store.set_before_append(Some(release.clone()));
+
+    let held = Arc::clone(&session);
+    let append = tokio::spawn(async move { held.append(&ctx(), candidate("a", 1)).await });
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    assert!(!append.is_finished());
+    assert!(store.committed(DOC).is_empty());
+    release.open();
+
+    let result = append.await.expect("join").expect("append");
+    assert_eq!(result.outcome, AppendOutcome::Committed);
+    session.close().await.expect("close");
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn reports_a_second_open_as_held_elsewhere_until_the_first_is_disposed() {
@@ -377,10 +425,243 @@ async fn throws_object_disposed_on_every_call_after_disposal() {
     assert!(is_disposed(&reset_err.expect_err("reset")));
 }
 
-#[test]
-#[ignore = "the Rust FakeJournal keeps no superseded lineages (do_reset clears them) and is no HistoryStore"]
-fn keeps_superseded_lineages_for_history() {}
+// The C# fake's history and purge stores. as_history and as_purge stay
+// None, so the room tests still see the plain fake as neither.
+impl FakeJournal {
+    /// Oldest first, current last, one per lineage id (the newest).
+    fn lineages(&self, id: &str) -> Vec<FakeLineage> {
+        self.with(id, |d| {
+            if d.purged {
+                return Vec::new();
+            }
+            let mut all = d.superseded.clone();
+            if let Some(head) = d.head.clone() {
+                all.push(FakeLineage {
+                    head,
+                    baseline: d.baseline.clone(),
+                    records: d.records.clone(),
+                    created_at: d.created_at,
+                    current: true,
+                });
+            }
+            (0..all.len())
+                .filter(|&i| {
+                    !all[i + 1..]
+                        .iter()
+                        .any(|newer| newer.head.lineage == all[i].head.lineage)
+                })
+                .map(|i| all[i].clone())
+                .collect()
+        })
+    }
+    fn find(&self, id: &str, lineage: &str) -> Option<FakeLineage> {
+        self.lineages(id)
+            .into_iter()
+            .find(|l| l.head.lineage == lineage)
+    }
+}
 
-#[test]
-#[ignore = "the Rust FakeJournal is no HistoryStore or PurgeStore: no lineage delete, listing or purge"]
-fn deletes_only_a_superseded_lineage() {}
+impl PurgeStore for FakeJournal {
+    fn purge<'a>(
+        &'a self,
+        _ctx: &'a Context,
+        doc_id: &'a str,
+    ) -> BoxFuture<'a, Result<PurgeOutcome, Error>> {
+        let outcome = self.with(doc_id, |d| {
+            if d.open {
+                return PurgeOutcome::DocumentOpenElsewhere;
+            }
+            d.purged = true;
+            d.baseline.clear();
+            d.records.clear();
+            d.superseded.clear();
+            d.checkpoint = None;
+            d.head = None;
+            PurgeOutcome::Purged
+        });
+        Box::pin(async move { Ok(outcome) })
+    }
+}
+
+impl HistoryStore for FakeJournal {
+    fn is_purged(&self, _ctx: &Context, doc_id: &str) -> Result<bool, Error> {
+        Ok(self.with(doc_id, |d| d.purged))
+    }
+    fn list_lineages(&self, _ctx: &Context, doc_id: &str) -> Result<Vec<LineageInfo>, Error> {
+        Ok(self
+            .lineages(doc_id)
+            .into_iter()
+            .map(|l| LineageInfo {
+                lineage: l.head.lineage,
+                epoch: l.head.epoch,
+                format: l.head.format,
+                created_at: l.created_at,
+                current: l.current,
+            })
+            .collect())
+    }
+    fn read_baseline(
+        &self,
+        _ctx: &Context,
+        doc_id: &str,
+        lineage: &str,
+    ) -> Result<Option<Vec<Vec<u8>>>, Error> {
+        Ok(self.find(doc_id, lineage).map(|l| l.baseline))
+    }
+    fn read_headers<'a>(
+        &'a self,
+        ctx: &'a Context,
+        doc_id: &'a str,
+        lineage: &'a str,
+    ) -> Headers<'a> {
+        Box::new(self.read_records(ctx, doc_id, lineage, u64::MAX).map(|r| {
+            r.map(|record| RecordHeader {
+                sequence: record.sequence,
+                committed_at: record.committed_at,
+                actor_id: record.actor_id,
+            })
+        }))
+    }
+    fn read_records<'a>(
+        &'a self,
+        _ctx: &'a Context,
+        doc_id: &'a str,
+        lineage: &'a str,
+        through: u64,
+    ) -> Records<'a> {
+        let records = self
+            .find(doc_id, lineage)
+            .map(|l| l.records)
+            .unwrap_or_default();
+        Box::new(
+            records
+                .into_iter()
+                .filter(move |r| r.sequence <= through)
+                .map(Ok),
+        )
+    }
+    fn delete_lineage(
+        &self,
+        _ctx: &Context,
+        doc_id: &str,
+        lineage: &str,
+    ) -> Result<LineageDeleteOutcome, Error> {
+        Ok(self.with(doc_id, |d| {
+            if d.purged {
+                return LineageDeleteOutcome::Purged;
+            }
+            if d.head.as_ref().is_some_and(|h| h.lineage == lineage) {
+                return LineageDeleteOutcome::Current;
+            }
+            // Every superseded copy goes, so an older one sharing the id is
+            // not listed in its place.
+            let before = d.superseded.len();
+            d.superseded.retain(|old| old.head.lineage != lineage);
+            if d.superseded.len() < before {
+                LineageDeleteOutcome::Deleted
+            } else {
+                LineageDeleteOutcome::NotFound
+            }
+        }))
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn keeps_superseded_lineages_for_history() {
+    let store = FakeJournal::new();
+    let first = "a".repeat(32);
+    let second = "b".repeat(32);
+    let session = open(&store).await.1.expect("a session");
+    session
+        .reset(
+            &ctx(),
+            Reset {
+                format: CURRENT_FORMAT,
+                epoch: 1,
+                lineage: first.clone(),
+                baseline: vec![vec![0xb1]],
+            },
+        )
+        .await
+        .expect("first reset");
+    session.append(&ctx(), candidate("a", 1)).await.expect("a");
+    session.append(&ctx(), candidate("b", 2)).await.expect("b");
+    session
+        .reset(&ctx(), reset(2, Some(&second)))
+        .await
+        .expect("second reset");
+    session.append(&ctx(), candidate("c", 3)).await.expect("c");
+
+    let listed = store.list_lineages(&ctx(), DOC).expect("list");
+    let headers: Vec<u64> = store
+        .read_headers(&ctx(), DOC, &first)
+        .map(|h| h.expect("header").sequence)
+        .collect();
+    let records: Vec<String> = store
+        .read_records(&ctx(), DOC, &first, 1)
+        .map(|r| r.expect("record").operation_id)
+        .collect();
+
+    let lineages: Vec<&str> = listed.iter().map(|i| i.lineage.as_str()).collect();
+    assert_eq!(lineages, [first.as_str(), second.as_str()]);
+    let current: Vec<bool> = listed.iter().map(|i| i.current).collect();
+    assert_eq!(current, [false, true]);
+    let epochs: Vec<i64> = listed.iter().map(|i| i.epoch).collect();
+    assert_eq!(epochs, [1, 2]);
+    assert_eq!(headers, [1, 2]);
+    assert_eq!(records, ["a"]);
+    assert_eq!(
+        store.read_baseline(&ctx(), DOC, &first).expect("baseline"),
+        Some(vec![vec![0xb1]])
+    );
+    assert_eq!(
+        store
+            .read_baseline(&ctx(), DOC, &"f".repeat(32))
+            .expect("baseline"),
+        None
+    );
+
+    // The current lineage's accessors are unchanged by the history kept beside it.
+    let ids: Vec<String> = store
+        .committed(DOC)
+        .into_iter()
+        .map(|r| r.operation_id)
+        .collect();
+    assert_eq!(ids, ["c"]);
+    assert_eq!(store.head(DOC).map(|h| h.lineage), Some(second));
+    session.close().await.expect("close");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn deletes_only_a_superseded_lineage() {
+    let store = FakeJournal::new();
+    let first = "a".repeat(32);
+    let second = "b".repeat(32);
+    let session = open(&store).await.1.expect("a session");
+    session
+        .reset(&ctx(), reset(1, Some(&first)))
+        .await
+        .expect("first reset");
+    session
+        .reset(&ctx(), reset(2, Some(&second)))
+        .await
+        .expect("second reset");
+    session.close().await.expect("close");
+
+    let delete = |lineage: &str| store.delete_lineage(&ctx(), DOC, lineage).expect("delete");
+    assert_eq!(delete(&second), LineageDeleteOutcome::Current);
+    assert_eq!(delete(&first), LineageDeleteOutcome::Deleted);
+    assert_eq!(delete(&first), LineageDeleteOutcome::NotFound);
+    let listed: Vec<String> = store
+        .list_lineages(&ctx(), DOC)
+        .expect("list")
+        .into_iter()
+        .map(|i| i.lineage)
+        .collect();
+    assert_eq!(listed, [second.as_str()]);
+
+    store.purge(&ctx(), DOC).await.expect("purge");
+
+    assert_eq!(delete(&second), LineageDeleteOutcome::Purged);
+    assert!(store.list_lineages(&ctx(), DOC).expect("list").is_empty());
+}

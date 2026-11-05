@@ -6114,7 +6114,7 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
-  /// A logger that throws restarts the pump on a new task. A settle that
+  /// A logger that throws restarts the pump. A settle that
   /// began before the restart still waits for the records the new pump
   /// delivers.
   /// </summary>
@@ -6158,6 +6158,72 @@ public sealed class CollabRoomTests
     observer.Second.SetResult();
     await settling.WaitAsync(TimeSpan.FromSeconds(10));
     Assert.False(settledEarly);
+  }
+
+  /// <summary>
+  /// A backlog that makes the logger throw on every record still drains,
+  /// and a settle still waits for all of it. The restart goes round in the
+  /// same task, so it holds no task per throw.
+  /// </summary>
+  [Fact]
+  public async Task PumpRestartsUnderABacklogDeliverEveryRecord()
+  {
+    const int throws = 40;
+    endpoint.Holds(DocId, "hello");
+    var observer = new BacklogObserver();
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        message =>
+        {
+          if (message.Contains("activity observer failed", StringComparison.Ordinal))
+          {
+            throw new InvalidOperationException("logger failed");
+          }
+        },
+        activityObserver: observer);
+    await Join(manager, new FakeMember(actorId: "user-0")).WaitAsync(TimeSpan.FromSeconds(10));
+    await observer.FirstEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    for (var i = 1; i <= throws; i++)
+    {
+      await Join(manager, new FakeMember(actorId: $"user-{i}")).WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    observer.First.SetResult();
+    await manager.SettleAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal(throws + 1, observer.Calls);
+  }
+
+  /// <summary>The first call waits on its gate; every call fails.</summary>
+  private sealed class BacklogObserver : ICollabActivityObserver
+  {
+    private int calls;
+
+    internal int Calls => Volatile.Read(ref calls);
+
+    internal TaskCompletionSource First { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal TaskCompletionSource FirstEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public async ValueTask RecordAsync(
+        string documentId,
+        string actorId,
+        DateTimeOffset at,
+        CollabActivityKind kind,
+        CancellationToken cancellationToken = default)
+    {
+      if (Interlocked.Increment(ref calls) == 1)
+      {
+        FirstEntered.TrySetResult();
+        await First.Task;
+      }
+
+      throw new InvalidOperationException("the activity table is down");
+    }
   }
 
   /// <summary>The first call throws once released; the second waits on its gate.</summary>

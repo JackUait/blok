@@ -1627,6 +1627,24 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private async Task PumpActivityAsync(ICollabActivityObserver observer)
   {
+    // The restart goes round in this same task, never a nested one: a
+    // settle holding activityDispatch still waits for every record, and a
+    // steady backlog holds no task per restart.
+    while (!await DrainActivityAsync(observer))
+    {
+    }
+  }
+
+  /// <summary>
+  /// Delivers records until the queue is empty. False if the host's own
+  /// logger threw first: nothing else here is meant to, and it cannot be
+  /// trusted to report itself. Left set, the pumping flag would make this
+  /// room's activity dead for the rest of its life, so the pump goes round
+  /// again now rather than leaving the records for whenever the next enqueue
+  /// happens — a wait SettleAsync would otherwise return in front of.
+  /// </summary>
+  private async Task<bool> DrainActivityAsync(ICollabActivityObserver observer)
+  {
     try
     {
       while (true)
@@ -1642,7 +1660,7 @@ internal sealed class CollabRoom : IDisposable
             // its record with nothing left to drain it.
             activityPumping = false;
 
-            return;
+            return true;
           }
 
           next = activityQueue.First!.Value;
@@ -1667,30 +1685,7 @@ internal sealed class CollabRoom : IDisposable
     }
     catch (Exception)
     {
-      // Nothing above is meant to reach here; the host's own logger is the one
-      // thing that could, and it cannot be trusted to report itself. Left set,
-      // the flag would make this room's activity dead for the rest of its
-      // life.
-      Task next;
-
-      lock (activityQueue)
-      {
-        if (activityQueue.Count == 0)
-        {
-          activityPumping = false;
-
-          return;
-        }
-
-        // Records are still waiting. A fresh pump takes them now rather than
-        // leaving them for whenever the next enqueue happens — which is a wait
-        // SettleAsync would otherwise return in front of.
-        next = Task.Run(() => PumpActivityAsync(observer));
-        activityDispatch = next;
-      }
-
-      // A settle may hold this task: it ends only once the fresh pump does.
-      await next;
+      return false;
     }
   }
 

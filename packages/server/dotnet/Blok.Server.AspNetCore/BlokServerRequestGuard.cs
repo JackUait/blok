@@ -42,7 +42,7 @@ internal sealed class BlokServerRequestGuard
       return false;
     }
 
-    var origin =BlokServerCors.RequestOrigin(context.Request);
+    var origin = BlokServerCors.RequestOrigin(context.Request);
     var originAllowed = BlokServerCors.IsAllowed(
         origin,
         _options.AllowedOrigins);

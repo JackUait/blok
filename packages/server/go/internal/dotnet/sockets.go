@@ -390,16 +390,10 @@ func drainResponse(ctx context.Context, conn net.Conn, in *bufio.Reader, body io
 
 // drainForNtAuth is HttpConnection.DrainResponseAsync: the request fails
 // when the answer closes the conn, cannot be drained, or leaves bytes
-// after it. A body read to the close is not drained (NeedsDrain is
-// false), and the conn is used as it is.
+// after it. A body read to the close fails too, before the next message
+// goes out (C#'s drain1-closeframed and drain2-closeframed rows).
 func drainForNtAuth(ctx context.Context, conn net.Conn, in *bufio.Reader, body io.Reader, framing Framing, header http.Header) error {
-	if framing == FramedClose {
-		if headClosesConn(header) {
-			return errNtlmDrain
-		}
-		return nil
-	}
-	if headClosesConn(header) {
+	if framing == FramedClose || headClosesConn(header) {
 		return errNtlmDrain
 	}
 	if err := drainResponse(ctx, conn, in, body, framing); err != nil || in.Buffered() > 0 {

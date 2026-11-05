@@ -344,6 +344,41 @@ func readNtlmToken(scheme string, token []byte, state *ntlmProxyState, password 
 	return logged, proofOk && micOk && cbtOk && mlmicOk
 }
 
+// drainShape is C#'s DrainShape: the version and what follows the
+// challenge in a drain row's first 407 (drain1-) or Type 2 (drain2-).
+func drainShape(mode string, first bool) (string, string) {
+	prefix := "drain2-"
+	if first {
+		prefix = "drain1-"
+	}
+	shape, ok := strings.CutPrefix(mode, prefix)
+	if !ok {
+		return "1.1", "Content-Length: 0\r\n\r\n"
+	}
+	big := strings.Repeat("a", 2097152)
+	switch shape {
+	case "ka0":
+		return "1.1", "Keep-Alive: max=0\r\nContent-Length: 0\r\n\r\n"
+	case "extra":
+		return "1.1", "Content-Length: 0\r\n\r\nxyz"
+	case "big":
+		return "1.1", "Content-Length: 2097152\r\n\r\n" + big
+	case "bigchunked":
+		return "1.1", "Transfer-Encoding: chunked\r\n\r\n200000\r\n" + big + "\r\n0\r\n\r\n"
+	case "http10":
+		return "1.0", "Content-Length: 0\r\n\r\n"
+	case "body":
+		return "1.1", "Content-Length: 3\r\n\r\nabc"
+	case "chunked":
+		return "1.1", "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"
+	case "closeframed":
+		return "1.1", "\r\nabc"
+	case "stall":
+		return "1.1", "Content-Length: 10\r\n\r\nabc"
+	}
+	panic(mode)
+}
+
 func ntlmProxy(t *testing.T, mode, password string, network, address string, certificate *tls.Certificate) (string, func() []string) {
 	t.Helper()
 	listener, err := net.Listen(network, address)
@@ -433,7 +468,8 @@ func ntlmProxy(t *testing.T, mode, password string, network, address string, cer
 					if closing {
 						answer += "Connection: close\r\n"
 					}
-					_, _ = io.WriteString(client, "HTTP/1.1 407 Proxy Authentication Required\r\n"+answer+"Content-Length: 0\r\n\r\n")
+					version, tail := drainShape(mode, auth == "")
+					_, _ = io.WriteString(client, "HTTP/"+version+" 407 Proxy Authentication Required\r\n"+answer+tail)
 					if closing {
 						return
 					}
@@ -485,6 +521,20 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"upper", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"ipv6", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=340 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=210@112 user=u@322 dom=@324 ws=W@324 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/::1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"drain1-http10", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
+		{"drain1-extra", "u", "", "p", "error |1 auth=no"},
+		{"drain2-ka0", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain2-closeframed", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain1-ka0", "u", "", "p", "error |1 auth=no"},
+		{"drain2-http10", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
+		{"drain2-bigchunked", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain2-extra", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain2-stall", "u", "", "p", "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain2-big", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain1-closeframed", "u", "", "p", "error |1 auth=no"},
+		{"drain2-chunked", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
+		{"drain1-big", "u", "", "p", "error |1 auth=no"},
+		{"drain1-body", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 	} {
 		t.Run(c.mode, func(t *testing.T) {
 			var certificate *tls.Certificate

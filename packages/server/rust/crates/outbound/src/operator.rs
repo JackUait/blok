@@ -18,7 +18,7 @@ use tokio::time::{Instant, timeout_at};
 
 use crate::fetcher::{tls_connector, trust_for};
 use crate::proxy::{EnvironmentProxy, ProxyUrl};
-use crate::wire::{Body, Framing, Head, Headers, framing, read_head, request_head};
+use crate::wire::{Body, Framing, Head, Headers, Source, framing, read_head, request_head};
 
 /// .NET's default MaxResponseHeadersLength.
 const MAX_HEAD: usize = 64 << 10;
@@ -201,18 +201,19 @@ impl OperatorClient {
         })
     }
 
-    async fn connect(
+    /// The first hop: TCP, a SOCKS tunnel, and TLS of its own to an https
+    /// proxy, named by its host.
+    async fn open_hop(
         &self,
+        dial: &str,
         url: &Uri,
         proxy: Option<&ProxyUrl>,
+        trust: &crate::fetcher::Trust,
+        deadline: Instant,
     ) -> Result<Box<dyn Stream>, OperatorError> {
-        let deadline = Instant::now() + self.connect_timeout;
-        let authority = format!("{}:{}", url.host, url.port);
-        let dial = proxy.map_or(authority.clone(), |p| p.authority.clone());
-        let tcp = timeout_at(deadline, connect_authority(&dial))
+        let mut tcp = timeout_at(deadline, connect_authority(dial))
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
-        let mut tcp = tcp;
         if let Some(proxy) = proxy.filter(|p| p.scheme.starts_with("socks")) {
             timeout_at(
                 deadline,
@@ -221,9 +222,7 @@ impl OperatorClient {
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         }
-        let trust = trust_for(&self.roots, &None);
         let mut stream: Box<dyn Stream> = Box::new(tcp);
-        // An https proxy gets TLS of its own first, named by its host.
         if let Some(proxy) = proxy.filter(|p| p.scheme == "https") {
             let name = proxy_server_name(&proxy.authority)?;
             let tls = timeout_at(deadline, tls_connector(trust.clone()).connect(name, stream))
@@ -231,13 +230,40 @@ impl OperatorClient {
                 .map_err(|_| OperatorError::ConnectTimeout)??;
             stream = Box::new(tls);
         }
+        Ok(stream)
+    }
+
+    async fn connect(
+        &self,
+        url: &Uri,
+        proxy: Option<&ProxyUrl>,
+    ) -> Result<Box<dyn Stream>, OperatorError> {
+        let deadline = Instant::now() + self.connect_timeout;
+        let authority = format!("{}:{}", url.host, url.port);
+        let dial = proxy.map_or(authority.clone(), |p| p.authority.clone());
+        let trust = trust_for(&self.roots, &None);
+        let mut stream = self.open_hop(&dial, url, proxy, &trust, deadline).await?;
         if url.scheme != "https" {
             return Ok(stream);
         }
         if let Some(proxy) = proxy.filter(|p| is_http_proxy(p)) {
-            timeout_at(deadline, tunnel(&mut stream, &authority, proxy))
-                .await
-                .map_err(|_| OperatorError::ConnectTimeout)??;
+            let mut authorized = false;
+            loop {
+                let step = timeout_at(deadline, tunnel(&mut stream, &authority, proxy, authorized))
+                    .await
+                    .map_err(|_| OperatorError::ConnectTimeout)??;
+                match step {
+                    Tunnel::Open => break,
+                    Tunnel::Again { keep } => {
+                        authorized = true;
+                        if !keep {
+                            stream = self
+                                .open_hop(&dial, url, Some(proxy), &trust, deadline)
+                                .await?;
+                        }
+                    }
+                }
+            }
         }
         let name = match url.host_type.as_str() {
             "IPv4" | "IPv6" => ServerName::IpAddress(
@@ -283,7 +309,6 @@ fn proxy_authorization(proxy: &ProxyUrl) -> Option<String> {
     ))
 }
 
-/// CONNECT through an http proxy; any status but 2xx refuses the tunnel.
 /// An http or https proxy: a plain request names the whole URL, and an
 /// https target goes through CONNECT.
 fn is_http_proxy(proxy: &ProxyUrl) -> bool {
@@ -304,13 +329,28 @@ fn proxy_server_name(authority: &str) -> io::Result<ServerName<'static>> {
     }
 }
 
-async fn tunnel<S: AsyncRead + AsyncWrite + Unpin>(
+/// What one CONNECT gave: the tunnel, or a 407 Basic challenge to answer
+/// on this stream (`keep`) or on a new one.
+enum Tunnel {
+    Open,
+    Again { keep: bool },
+}
+
+/// HttpConnectionPool.EstablishProxyTunnelAsync (System.Net.Http 10.0.11,
+/// decompiled; measured by C#'s ProxyConnectTunnelTests). Host, and no
+/// User-Agent, as the operator requests have none (HttpConnectionPool.cs
+/// :308-312, :660-664). Credentials only after a 407 Basic challenge:
+/// SendWithProxyAuthAsync passes preAuthenticate false
+/// (AuthenticationHelper.cs:481) and the Basic case resends (:409-428).
+/// Only 200 opens the tunnel (HttpConnectionPool.cs:666).
+async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
     tcp: &mut S,
     authority: &str,
     proxy: &ProxyUrl,
-) -> Result<(), OperatorError> {
+    authorized: bool,
+) -> Result<Tunnel, OperatorError> {
     let mut headers = vec![("Host", authority)];
-    let authorization = proxy_authorization(proxy);
+    let authorization = authorized.then(|| proxy_authorization(proxy)).flatten();
     if let Some(value) = &authorization {
         headers.push(("Proxy-Authorization", value));
     }
@@ -318,13 +358,58 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin>(
         .await?;
     let mut reader = BufReader::new(&mut *tcp);
     let head = read_head(&mut reader, MAX_HEAD).await?;
-    if !(200..300).contains(&head.status) {
+    if head.status == 200 {
+        if !reader.buffer().is_empty() {
+            // .NET hands these to the tunnel; before the server's TLS answer
+            // they fail its handshake there too.
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "bytes after the tunnel answer",
+            )
+            .into());
+        }
+        return Ok(Tunnel::Open);
+    }
+    if head.status != 407
+        || authorized
+        || proxy.user.is_none()
+        || !offers_basic(head.headers.values("Proxy-Authenticate"))
+    {
         return Err(OperatorError::Tunnel(head.status));
     }
-    if !reader.buffer().is_empty() {
-        return Err(
-            io::Error::new(io::ErrorKind::InvalidData, "bytes after the tunnel answer").into(),
-        );
+    let framed = framing(&head)?;
+    let close = head
+        .headers
+        .values("Connection")
+        .flat_map(|v| v.split(|&c| c == b','))
+        .any(|token| crate::wire::trim_space_tab(token).eq_ignore_ascii_case(b"close"));
+    let mut keep = framed != Framing::Close && !head.http10 && !close;
+    if keep {
+        let mut body = Body::after_head(reader, framed, head.budget);
+        let mut sink = [0u8; 512];
+        loop {
+            match body.read(&mut sink).await {
+                Ok(0) => break,
+                Ok(_) => {}
+                Err(_) => {
+                    keep = false;
+                    break;
+                }
+            }
+        }
+        keep = keep && body.into_inner().buffer().is_empty();
     }
-    Ok(())
+    Ok(Tunnel::Again { keep })
+}
+
+/// Whether a Proxy-Authenticate challenge names Basic. Negotiate, NTLM and
+/// Digest, which .NET tries first, are not spoken here.
+fn offers_basic<'a>(values: impl Iterator<Item = &'a [u8]>) -> bool {
+    values
+        .flat_map(|v| v.split(|&c| c == b','))
+        .any(|challenge| {
+            let challenge = crate::wire::trim_space_tab(challenge);
+            let scheme = challenge.split(|&c| c == b' ').next().unwrap_or_default();
+            scheme.eq_ignore_ascii_case(b"Basic")
+        })
 }

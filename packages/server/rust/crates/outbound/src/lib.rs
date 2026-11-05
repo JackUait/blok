@@ -61,4 +61,6 @@ mod tls_test;
 #[cfg(test)]
 mod trustsettings_test;
 #[cfg(test)]
+mod tunnel_test;
+#[cfg(test)]
 mod wire_test;

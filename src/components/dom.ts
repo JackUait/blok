@@ -222,22 +222,21 @@ export class Dom {
    * @param holder - element where to find inputs
    */
   public static findAllInputs(holder: Element): HTMLElement[] {
-    const elements = Array.from(holder.querySelectorAll(Dom.allInputsSelector));
-    const htmlElements: HTMLElement[] = [];
+    const result: HTMLElement[] = [];
 
-    for (const element of elements) {
-      if (element instanceof HTMLElement) {
-        htmlElements.push(element);
+    for (const input of Array.from(holder.querySelectorAll(Dom.allInputsSelector))) {
+      if (!(input instanceof HTMLElement)) {
+        continue;
+      }
+
+      if (Dom.isNativeInput(input) || Dom.containsOnlyInlineElements(input)) {
+        result.push(input);
+      } else {
+        Dom.collectDeepestBlockElements(input, result);
       }
     }
 
-    return htmlElements.reduce((result, input) => {
-      if (Dom.isNativeInput(input) || Dom.containsOnlyInlineElements(input)) {
-        return [...result, input];
-      }
-
-      return [...result, ...Dom.getDeepestBlockElements(input)];
-    }, [] as HTMLElement[]);
+    return result;
   }
 
   /**
@@ -528,13 +527,28 @@ export class Dom {
    * @returns {HTMLElement[]}
    */
   public static getDeepestBlockElements(parent: HTMLElement): HTMLElement[] {
+    const result: HTMLElement[] = [];
+
+    Dom.collectDeepestBlockElements(parent, result);
+
+    return result;
+  }
+
+  /**
+   * Push `parent`'s deepest block elements onto `result`, in document order
+   * @param parent - root element
+   * @param result - array to fill
+   */
+  private static collectDeepestBlockElements(parent: HTMLElement, result: HTMLElement[]): void {
     if (Dom.containsOnlyInlineElements(parent)) {
-      return [ parent ];
+      result.push(parent);
+
+      return;
     }
 
-    return Array.from(parent.children).reduce((result, element) => {
-      return [...result, ...Dom.getDeepestBlockElements(element as HTMLElement)];
-    }, [] as HTMLElement[]);
+    for (const element of Array.from(parent.children)) {
+      Dom.collectDeepestBlockElements(element as HTMLElement, result);
+    }
   }
 
   /**

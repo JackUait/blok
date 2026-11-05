@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -39,7 +38,7 @@ type S3 struct {
 	TempDir       string
 	Now           func() time.Time
 	client        *http.Client
-	dialer        *net.Dialer
+	transport     *dotnet.SocketsTransport
 	// S3BlobStoreOptions.RequestTimeout and ResponseHeaderTimeout; zero is
 	// the default. Only tests set them.
 	requestTimeout, headerTimeout time.Duration
@@ -62,21 +61,15 @@ func NewS3(s *S3) (*S3, error) {
 	if s.connectTimeout <= 0 {
 		s.connectTimeout = s3ConnectTimeout
 	}
-	s.dialer = &net.Dialer{Timeout: s.connectTimeout}
+	// SocketsHttpHandler: the environment proxy, one connect budget for
+	// TCP, tunnel and TLS, a 1 minute idle pool, and no gzip, so a
+	// gzip-encoded object reads back as stored.
+	s.transport = dotnet.NewSocketsTransport(dotnet.SocketsOptions{ConnectTimeout: s.connectTimeout})
+	// Counts from the end of the body, like the PayloadContent callback in
+	// S3BlobStore.SendAsync.
+	s.transport.Transport.ResponseHeaderTimeout = s.headerTimeout
 	s.client = &http.Client{
-		Transport: &http.Transport{
-			// SocketsHttpHandler's default: the environment proxy.
-			Proxy:       dotnet.OSProxy(),
-			DialContext: s.dialer.DialContext,
-			// ConnectTimeout bounds the TLS handshake too.
-			TLSHandshakeTimeout: s.connectTimeout,
-			// Counts from the end of the body, like the PayloadContent
-			// callback in S3BlobStore.SendAsync.
-			ResponseHeaderTimeout: s.headerTimeout,
-			// SocketsHttpHandler neither asks for gzip nor decodes it, so a
-			// gzip-encoded object reads back as stored.
-			DisableCompression: true,
-		},
+		Transport:     s.transport,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	return s, nil

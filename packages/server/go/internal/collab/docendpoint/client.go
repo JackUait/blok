@@ -80,21 +80,16 @@ type Client struct {
 	http    *http.Client
 }
 
-// New builds a client. A nil transport is a fresh one with a 10 s connect
-// timeout. C# also caps a pooled connection's life at 5 minutes so a DNS
-// change is picked up; net/http has no such setting (idle connections are
-// closed after IdleConnTimeout instead).
+// New builds a client. A nil transport is DocEndpointClient.CreateHandler:
+// a 10 s connect timeout, and a pooled connection retired after 5 minutes
+// so a DNS change at the endpoint is picked up. It asks for no
+// compression, and the cap counts the raw body.
 func New(options Options, transport http.RoundTripper) *Client {
 	if transport == nil {
-		transport = &http.Transport{
-			Proxy:       dotnet.OSProxy(),
-			DialContext: (&net.Dialer{Timeout: connectTimeout}).DialContext,
-			// ConnectTimeout bounds the TLS handshake too.
-			TLSHandshakeTimeout: connectTimeout,
-			IdleConnTimeout:     5 * time.Minute,
-			// C# asks for no compression, and caps the raw body.
-			DisableCompression: true,
-		}
+		transport = dotnet.NewSocketsTransport(dotnet.SocketsOptions{
+			ConnectTimeout:           connectTimeout,
+			PooledConnectionLifetime: 5 * time.Minute,
+		})
 	}
 	if options.MaxResponseBytes == 0 {
 		options.MaxResponseBytes = DefaultMaxResponseBytes

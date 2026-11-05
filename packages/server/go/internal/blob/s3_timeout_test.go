@@ -138,10 +138,13 @@ func TestTheClientConnectsWithinTenSecondsAndFollowsNoRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.dialer.Timeout != 10*time.Second {
-		t.Fatalf("connect timeout %v", s.dialer.Timeout)
+	if s.connectTimeout != 10*time.Second {
+		t.Fatalf("connect timeout %v", s.connectTimeout)
 	}
-	transport := s.client.Transport.(*http.Transport)
+	transport := s.transport.Transport
+	if transport.IdleConnTimeout != time.Minute {
+		t.Fatalf("idle timeout %v", transport.IdleConnTimeout)
+	}
 	if transport.ResponseHeaderTimeout != 60*time.Second || s.requestTimeout != 5*time.Minute {
 		t.Fatalf("header %v request %v", transport.ResponseHeaderTimeout, s.requestTimeout)
 	}

@@ -2,8 +2,8 @@ package blob
 
 import (
 	"context"
+	"errors"
 	"net"
-	"strings"
 	"testing"
 	"time"
 )
@@ -44,7 +44,8 @@ func TestAStalledTLSHandshakeDiesAtTheConnectTimeout(t *testing.T) {
 	if elapsed := time.Since(start); err == nil || elapsed > testRequestTimeout/2 {
 		t.Fatalf("failed after %v with %v", elapsed, err)
 	}
-	if !strings.Contains(err.Error(), "handshake") {
-		t.Fatalf("got %v, want a handshake timeout", err)
+	var timeout net.Error
+	if !errors.As(err, &timeout) || !timeout.Timeout() {
+		t.Fatalf("got %v, want a connect timeout", err)
 	}
 }

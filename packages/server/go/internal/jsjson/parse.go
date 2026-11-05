@@ -39,7 +39,7 @@ func (n *Node) js() any {
 		text, _ := decodeJS(n.raw)
 		return text
 	case KindArray:
-		items := make([]any, len(n.Items))
+		items := ArrayOf(len(n.Items))
 		for i, item := range n.Items {
 			items[i] = item.js()
 		}
@@ -51,4 +51,11 @@ func (n *Node) js() any {
 		object.Set(key, member.Value.js())
 	}
 	return object
+}
+
+// ArrayOf is a JS array of n items with an identity of its own. An empty
+// Go slice has no backing array, so every [] would look like the same one;
+// a spare slot gives each its own (yjs compares mark arrays by identity).
+func ArrayOf(n int) []any {
+	return make([]any, n, max(n, 1))
 }

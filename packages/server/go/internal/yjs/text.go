@@ -638,8 +638,8 @@ func flatMembers(value any) (map[string]any, bool) {
 
 // strictEquals is ===: scalars by value (NaN !== NaN, -0 === 0), objects and
 // arrays by identity. Go cannot compare []any with ==, so an array's
-// identity is its backing array; an empty array with no backing store is
-// never identical to anything (UNVERIFIED edge: C# compares the reference).
+// identity is its backing array. jsjson.ArrayOf gives even [] one; a slice
+// with none is never identical to anything.
 func strictEquals(left, right any) bool {
 	switch l := left.(type) {
 	case nil:
@@ -658,7 +658,7 @@ func strictEquals(left, right any) bool {
 		return ok && l == r
 	case []any:
 		r, ok := right.([]any)
-		return ok && cap(l) > 0 && len(l) == len(r) && unsafe.SliceData(l) == unsafe.SliceData(r)
+		return ok && cap(l) > 0 && len(l) == len(r) && cap(l) == cap(r) && unsafe.SliceData(l) == unsafe.SliceData(r)
 	}
 	return false
 }

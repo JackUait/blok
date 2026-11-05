@@ -175,7 +175,7 @@ func NormalizeValue(value any) any {
 	case jsjson.Str:
 		return withoutNul(value)
 	case []any:
-		array := make([]any, len(value))
+		array := jsjson.ArrayOf(len(value))
 		for i, item := range value {
 			array[i] = NormalizeValue(item)
 		}

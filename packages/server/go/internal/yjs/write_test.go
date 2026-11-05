@@ -252,3 +252,22 @@ func TestEqualAttrsComparesFlatAndStrictEqualsByIdentity(t *testing.T) {
 		t.Fatal("a nested object only equals itself")
 	}
 }
+
+// C# StrictEquals compares arrays by reference: a parsed [] is === itself,
+// and two parsed [] are two arrays.
+func TestAnEmptyArrayStrictEqualsOnlyItself(t *testing.T) {
+	parse := func() any {
+		value, err := jsjson.Parse([]byte("[]"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	empty, other := parse(), parse()
+	if !strictEquals(empty, empty) {
+		t.Fatal("a parsed [] is not === itself")
+	}
+	if strictEquals(empty, other) {
+		t.Fatal("two parsed [] are ===")
+	}
+}

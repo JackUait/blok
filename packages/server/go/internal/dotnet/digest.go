@@ -26,8 +26,7 @@ func parseDigest(challenge string) (map[string]string, bool) {
 		if key == "" || i >= len(challenge) {
 			break
 		}
-		// OrdinalIgnoreCase over Latin-1 chars: only ASCII folds to a key.
-		lower := asciiLower(key)
+		lower := latin1Fold(key)
 		quoted := lower == "realm" || lower == "nonce" || lower == "opaque" || lower == "qop"
 		value, ok, next := digestValue(challenge, i, quoted)
 		i = next
@@ -43,6 +42,19 @@ func parseDigest(challenge string) (map[string]string, bool) {
 }
 
 func spaceOrTab(c byte) bool { return c == ' ' || c == '\t' }
+
+// latin1Fold lowers what OrdinalIgnoreCase folds among header bytes, which
+// .NET reads as Latin-1 chars: A-Z, and C0-DE less D7 (C#'s
+// DigestKeysFoldTheseLatin1Pairs).
+func latin1Fold(s string) string {
+	b := []byte(s)
+	for i, c := range b {
+		if 'A' <= c && c <= 'Z' || 0xC0 <= c && c <= 0xDE && c != 0xD7 {
+			b[i] = c + 0x20
+		}
+	}
+	return string(b)
+}
 
 // digestKey is GetNextKey: "" when no '=' follows the key.
 func digestKey(data string, i int) (string, int) {

@@ -334,8 +334,20 @@ type proxyAuth struct {
 }
 
 // answer is the Proxy-Authorization a 407 asks for next, "" when .NET
-// stops and the 407 is the answer.
+// stops and the 407 is the answer. A value .NET cannot write as ASCII (a
+// Digest realm or nonce from the proxy) fails before it goes out.
 func (a *proxyAuth) answer(ctx context.Context, header http.Header) (string, error) {
+	next, err := a.nextAuthorization(ctx, header)
+	if err == nil && !isASCII(next) {
+		return "", errHeaderNotASCII
+	}
+	return next, err
+}
+
+// errHeaderNotASCII is HttpConnection.WriteString's refusal.
+var errHeaderNotASCII = errors.New("Request headers must contain only ASCII characters.")
+
+func (a *proxyAuth) nextAuthorization(ctx context.Context, header http.Header) (string, error) {
 	if a.proxy.User == nil {
 		return "", nil
 	}
@@ -544,52 +556,140 @@ func ntlmSpnHost(ctx context.Context, host string) string {
 }
 
 // authChallenges reads Proxy-Authenticate lines into each scheme's
-// parameter text, the first one of a scheme kept: a comma-separated piece
-// that starts with a bare token starts a challenge, the rest are its
-// parameters.
+// parameter text, the first one of a scheme kept. Each line is a list of
+// AuthenticationHeaderValue (System.Net.Http 10.0.11, decompiled); a line
+// with any bad value is dropped whole, as HttpHeaders keeps it invalid.
 func authChallenges(values []string) map[string]string {
 	challenges := map[string]string{}
 	for _, value := range values {
-		scheme, data := "", []string(nil)
-		flush := func() {
-			if _, seen := challenges[scheme]; scheme != "" && !seen {
-				challenges[scheme] = strings.Join(data, ", ")
+		parsed, ok := parseChallengeLine(value)
+		if !ok {
+			continue
+		}
+		for _, c := range parsed {
+			if _, seen := challenges[c[0]]; !seen {
+				challenges[c[0]] = c[1]
 			}
 		}
-		for _, piece := range splitOutsideQuotes(value) {
-			piece = strings.Trim(piece, " \t")
-			token, rest, _ := strings.Cut(piece, " ")
-			if token != "" && isToken(token) {
-				flush()
-				scheme, data = strings.ToLower(token), nil
-				if rest = strings.Trim(rest, " \t"); rest != "" {
-					data = append(data, rest)
-				}
-			} else if piece != "" {
-				data = append(data, piece)
-			}
-		}
-		flush()
 	}
 	return challenges
 }
 
-// splitOutsideQuotes splits s at the commas outside quoted strings.
-func splitOutsideQuotes(s string) []string {
-	var pieces []string
-	start, quoted := 0, false
-	for i := 0; i < len(s); i++ {
-		switch {
-		case s[i] == '\\' && quoted:
-			i++
-		case s[i] == '"':
-			quoted = !quoted
-		case s[i] == ',' && !quoted:
-			pieces = append(pieces, s[start:i])
-			start = i + 1
+// parseChallengeLine is BaseHeaderParser.TryParseValue over one line:
+// values split by commas, empty ones skipped. Each item is the lower-case
+// scheme and its parameter text.
+func parseChallengeLine(line string) ([][2]string, bool) {
+	var out [][2]string
+	i := 0
+	for i < len(line) {
+		next, _ := nextNonEmpty(line, i)
+		if next == len(line) {
+			break
+		}
+		scheme, parameter, length := authenticationValue(line, next)
+		if length == 0 {
+			return nil, false
+		}
+		out = append(out, [2]string{asciiLower(scheme), parameter})
+		var separator bool
+		if i, separator = nextNonEmpty(line, next+length); !separator && i < len(line) {
+			return nil, false
 		}
 	}
-	return append(pieces, s[start:])
+	return out, true
+}
+
+// nextNonEmpty is HeaderUtilities.GetNextNonEmptyOrWhitespaceIndex with
+// empty values skipped.
+func nextNonEmpty(s string, i int) (int, bool) {
+	i += spaceLength(s, i)
+	if i == len(s) || s[i] != ',' {
+		return i, false
+	}
+	i++
+	i += spaceLength(s, i)
+	for i < len(s) && s[i] == ',' {
+		i++
+		i += spaceLength(s, i)
+	}
+	return i, true
+}
+
+// authenticationValue is AuthenticationHeaderValue.GetAuthenticationLength:
+// a scheme token, then either nothing or whitespace and a first blob of
+// any chars up to a comma, then name=value pairs. A token without "=" ends
+// the value: it starts the next challenge.
+func authenticationValue(s string, start int) (scheme, parameter string, length int) {
+	if strings.ContainsAny(s[start:], "\r\n\x00") {
+		return "", "", 0
+	}
+	n := tokenLength(s, start)
+	if n == 0 {
+		return "", "", 0
+	}
+	scheme = s[start : start+n]
+	i := start + n
+	space := spaceLength(s, i)
+	i += space
+	if i == len(s) || s[i] == ',' {
+		return scheme, "", i - start
+	}
+	if space == 0 {
+		return "", "", 0
+	}
+	from, end := i, i
+	for i < len(s) && s[i] != ',' {
+		if s[i] == '"' {
+			q := quotedStringLength(s, i)
+			if q == 0 {
+				return "", "", 0
+			}
+			i += q
+			end = i - 1
+		} else if w := spaceLength(s, i); w > 0 {
+			i += w
+		} else {
+			end = i
+			i++
+		}
+	}
+	if i < len(s) {
+		// TryGetParametersEndIndex, from the comma at i.
+		for {
+			j, _ := nextNonEmpty(s, i+1)
+			if j == len(s) {
+				i = j
+				break
+			}
+			t := tokenLength(s, j)
+			if t == 0 {
+				return "", "", 0
+			}
+			j += t
+			j += spaceLength(s, j)
+			if j == len(s) || s[j] != '=' {
+				break
+			}
+			j++
+			j += spaceLength(s, j)
+			v := 0
+			if j < len(s) {
+				if v = tokenLength(s, j); v == 0 {
+					v = quotedStringLength(s, j)
+				}
+			}
+			if v == 0 {
+				return "", "", 0
+			}
+			j += v
+			end = j - 1
+			i = j + spaceLength(s, j)
+			if i >= len(s) || s[i] != ',' {
+				break
+			}
+		}
+	}
+	return scheme, s[from : end+1], i - start
 }
 
 // chooseChallenge is TryGetAuthenticationChallenge's order: Negotiate,

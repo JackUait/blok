@@ -5,12 +5,14 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,6 +39,20 @@ func digestChallenge(mode string, second bool) string {
 		return `Digest realm="r", nonce="n"`
 	case "unsupported":
 		return `Digest realm="r", nonce="n", algorithm=SHA-512`
+	case "dup-ascii":
+		return `Digest realm="r", nonce="n", NONCE="m"`
+	case "dup-latin1":
+		return "Digest realm=\"r\", nonce=\"n\", \xe9=1, \xc9=2"
+	case "dup-utf8":
+		return "Digest realm=\"r\", nonce=\"n\", \xc3\xa9=1, \xc3\x89=2"
+	case "realm-latin1":
+		return "Digest realm=\"\xe9\", nonce=\"n\""
+	case "domain-quoted-latin1":
+		return "Digest realm=\"r\", nonce=\"n\", domain=\"\xe9\""
+	case "domain-token-latin1":
+		return "Digest realm=\"r\", nonce=\"n\", domain=\xe9"
+	case "firstkey-latin1":
+		return "Digest \xe9=1, realm=\"r\", nonce=\"n\""
 	}
 	return ""
 }
@@ -47,6 +63,8 @@ func challengeLines(mode string, second bool) string {
 		return "Proxy-Authenticate: Basic realm=\"r\"\r\nProxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n"
 	case "negotiate+basic":
 		return "Proxy-Authenticate: Negotiate\r\nProxy-Authenticate: Basic realm=\"r\"\r\n"
+	case "sameline-basic":
+		return "Proxy-Authenticate: Basic realm=\"r\", Digest realm=\"r\", nonce=\"n\", \xe9=1\r\n"
 	}
 	return "Proxy-Authenticate: " + digestChallenge(mode, second) + "\r\n"
 }
@@ -182,6 +200,14 @@ func TestAnswersADigestChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"unsupported", "u", "error|1 auth=no"},
 		{"digest+basic", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"`},
 		{"negotiate+basic", "u", "error|1 auth=no|1 auth=Negotiate T"},
+		{"dup-ascii", "u", "error|1 auth=no"},
+		{"dup-latin1", "u", "error|1 auth=no"},
+		{"dup-utf8", "u", "error|1 auth=no"},
+		{"sameline-basic", "u", "error|1 auth=no"},
+		{"domain-quoted-latin1", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"`},
+		{"domain-token-latin1", "u", "error|1 auth=no"},
+		{"firstkey-latin1", "u", `200 ok|1 auth=no|1 auth=Digest username="u", realm="r", nonce="n", uri="/", response="R"`},
+		{"realm-latin1", "u", "error|1 auth=no"},
 	} {
 		t.Run(c.mode, func(t *testing.T) {
 			proxy, seen := digestProxy(t, c.mode, c.user)
@@ -216,5 +242,28 @@ func TestDigestKeysFoldOnlyAscii(t *testing.T) {
 	}
 	if parameters["qop"] != "auth" {
 		t.Errorf("qop = %q", parameters["qop"])
+	}
+}
+
+// The twin of C#'s DigestKeysFoldTheseLatin1Pairs.
+func TestDigestKeysFoldTheseLatin1Pairs(t *testing.T) {
+	var got, want []string
+	for a := 0; a < 256; a++ {
+		for b := a + 1; b < 256; b++ {
+			if latin1Fold(string([]byte{byte(a)})) == latin1Fold(string([]byte{byte(b)})) {
+				got = append(got, fmt.Sprintf("%02X%02X", a, b))
+			}
+		}
+	}
+	for c := 0x41; c < 0x41+26; c++ {
+		want = append(want, fmt.Sprintf("%02X%02X", c, c+0x20))
+	}
+	for c := 0xC0; c < 0xC0+0x1F; c++ {
+		if c != 0xD7 {
+			want = append(want, fmt.Sprintf("%02X%02X", c, c+0x20))
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %v\nwant %v", got, want)
 	}
 }

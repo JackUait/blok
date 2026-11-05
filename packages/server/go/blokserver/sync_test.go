@@ -2,6 +2,7 @@ package blokserver
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -112,4 +113,58 @@ type liftCheckingRooms struct {
 func (r *liftCheckingRooms) Join(context.Context, string, collab.Member) (collab.JoinResult, error) {
 	r.liftedAtJoin = *r.lifted
 	return collab.JoinResult{Status: collab.JoinDraining}, nil
+}
+
+// The real rooms answer the sync door before the upgrade.
+func TestTheSyncDoorAsksTheRealRooms(t *testing.T) {
+	purged := collabServer(t, nil)
+	purged.rooms = purged.collab
+	if _, err := purged.PurgeDocument(context.Background(), "doc", func(context.Context) (bool, error) { return true, nil }); err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	purged.Handler("").ServeHTTP(recorder, upgradeRequest("GET", "/sync/doc"))
+	if recorder.Code != http.StatusForbidden || recorder.Body.String() != "forbidden\n" {
+		t.Errorf("purged: %d %q", recorder.Code, recorder.Body.String())
+	}
+
+	draining := collabServer(t, nil)
+	draining.rooms = draining.collab
+	if err := draining.Drain(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	recorder = httptest.NewRecorder()
+	draining.Handler("").ServeHTTP(recorder, upgradeRequest("GET", "/sync/doc"))
+	if recorder.Code != http.StatusServiceUnavailable || recorder.Body.String() != "shutting down\n" {
+		t.Errorf("draining: %d %q", recorder.Code, recorder.Body.String())
+	}
+}
+
+// Rooms that cannot be built are the host's empty 500 at the sync door.
+func TestTheSyncDoorAnswersAnEmpty500WhenTheRoomsCannotBeBuilt(t *testing.T) {
+	o := DefaultOptions()
+	o.CollabEnabled = true
+	o.CollabJournal = true
+	// New accepts it; the journal refuses an empty directory when the rooms
+	// are first built.
+	o.CollabDirectory = ""
+	o.DocEndpoint = "http://127.0.0.1:1/docs"
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A real server: a recorder cannot be hijacked, which is a 500 of its own.
+	host := httptest.NewServer(s.Handler(""))
+	defer host.Close()
+	request := upgradeRequest("GET", host.URL+"/sync/doc")
+	request.RequestURI = ""
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(response.Body)
+	response.Body.Close()
+	if response.StatusCode != http.StatusInternalServerError || len(body) != 0 {
+		t.Fatalf("got %d %q", response.StatusCode, body)
+	}
 }

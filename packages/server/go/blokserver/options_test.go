@@ -124,6 +124,10 @@ func TestValidateMatchesTheCSharpFixture(t *testing.T) {
 		if got != c.Error || path != c.LocalPublicPath {
 			t.Errorf("%s:\n got %q %q\nwant %q %q", c.Name, got, path, c.Error, c.LocalPublicPath)
 		}
+		// The exported check gives the same answer.
+		if public := o.Validate(); (public == nil) != (err == nil) || public != nil && public.Error() != got {
+			t.Errorf("%s: Validate() %v, validate() %q", c.Name, public, got)
+		}
 	}
 }
 

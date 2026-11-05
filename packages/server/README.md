@@ -369,6 +369,8 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 Outbound fetches follow at most 5 redirects. A redirect from `https` to `http` is refused. A response head over 64 KiB is refused. When a rate limit is on, each redirect hop counts as one more request for the caller.
 
+At most four page fetches (`/unfurl`, `/frame-check`) and four downloads (`/upload-by-url`) run at once, in separate pools, so slow downloads never hold up link checks. When a rate limit is on, one caller (client address, or ticket user) may run at most two of each at once. A third waits for one of that caller's own slots within its own deadline, and fails as any slot wait does when the deadline runs out.
+
 `GET /unfurl?url=…` answers `{"success": 1, "link": …, "meta": {"title", "description", "image": {"url"}, "favicon", "domain"}}`. A field with no value is left out, and `image` is then `{}`.
 
 - `link` is the final URL after redirects.

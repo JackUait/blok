@@ -3112,7 +3112,7 @@
       },
       "outbound-redirects": {
         "title": "Remote fetches follow five redirects at most, and never from https to http",
-        "body": "When the service fetches a URL for you, it follows at most 5 redirects. A redirect from https to http is refused. So is a response head over 64 KiB, and so is a URL whose raw text holds a control character (C0, DEL or C1), whether you send it or a redirect points to it.\n\nWhen a rate limit is on, each redirect hop counts as one more request for the caller. A long chain can then end in `{\"success\":0}` from /unfurl or 400 from /upload-by-url, and later requests reach 429 sooner. Raise --rate-limit if real traffic hits it."
+        "body": "When the service fetches a URL for you, it follows at most 5 redirects. A redirect from https to http is refused. So is a response head over 64 KiB, and so is a URL whose raw text holds a control character (C0, DEL or C1), whether you send it or a redirect points to it.\n\nWhen a rate limit is on, each redirect hop counts as one more request for the caller. A long chain can then end in `{\"success\":0}` from /unfurl or 400 from /upload-by-url, and later requests reach 429 sooner. Raise --rate-limit if real traffic hits it.\n\nThe service runs at most four page fetches for /unfurl and /frame-check, and four downloads for /upload-by-url, at once. So slow downloads never hold up link checks. When a rate limit is on, one caller may run at most two of each at once. A third waits for one of that caller's own slots, within its own time limit, and other callers are not held up."
       },
       "proxy-rate-limit": {
         "title": "Behind your own app, the rate limit is one allowance for everybody",

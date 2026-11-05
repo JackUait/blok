@@ -51,6 +51,9 @@ public sealed partial class ProxyConnectTunnelTests
   // Over TLS to an https proxy the channel binding pair is still zero.
   [InlineData("https", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
   [InlineData("localhost", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok")]
+  // A name is Dns.GetHostEntryAsync's HostName, the canonical name: here the
+  // /etc/hosts entry's own spelling.
+  [InlineData("upper", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok")]
   // An IPv6 proxy is named without brackets.
   [InlineData("ipv6", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=340 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=210@112 user=u@322 dom=@324 ws=W@324 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/::1,10:zero,6:02000000,0: proof=ok mic=ok")]
   [InlineData("negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
@@ -110,7 +113,7 @@ public sealed partial class ProxyConnectTunnelTests
     var secure = mode.EndsWith("https", StringComparison.Ordinal);
     _ = ServeNtlmProxy(proxy, mode, password, ((IPEndPoint)target.LocalEndpoint).Port, secure ? certificate : null, seen);
 
-    var host = mode switch { "localhost" => "localhost", "ipv6" => "[::1]", _ => "127.0.0.1" };
+    var host = mode switch { "localhost" => "localhost", "upper" => "LOCALHOST", "ipv6" => "[::1]", _ => "127.0.0.1" };
     using var handler = new SocketsHttpHandler
     {
       Proxy = new WebProxy($"{(secure ? "https" : "http")}://{host}:{((IPEndPoint)proxy.LocalEndpoint).Port}")

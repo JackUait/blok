@@ -217,8 +217,21 @@ export function isSameSiteHost(hostname: string, ownHosts: readonly string[]): b
 
 /** The page's hostname plus the host's `linkPaste.hostAliases`. */
 export function pageHosts(aliases: readonly string[] = []): string[] {
-  // Empty under file:// and about:blank; it must not count as a host.
-  const current = typeof window === 'undefined' ? '' : window.location.hostname;
+  const current = typeof window === 'undefined' ? '' : window.location.hostname || originHost(window.origin);
 
+  // Empty under file:// and in a sandboxed document; it must not count as a host.
   return current === '' ? [...aliases] : [current, ...aliases];
+}
+
+/**
+ * The hostname of `self.origin`. A blob:, about:srcdoc or about:blank
+ * document has no location hostname but still runs on (and sends the cookies
+ * of) the origin that made it. '' for an opaque origin ('null' does not parse).
+ */
+function originHost(origin: string): string {
+  try {
+    return new URL(origin).hostname;
+  } catch {
+    return '';
+  }
 }

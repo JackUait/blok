@@ -574,14 +574,32 @@ func (r *Room) drain(ctx context.Context) {
 		}
 		return nil
 	})
-	// C#'s WaitAsync returns at once on a settle that is already done, so
-	// an idle pump logs nothing even when the drain was cancelled.
-	if !r.activityPending() {
+	// C#'s SettleAsync takes its lane place at the call. WaitAsync returns
+	// at once on a settle that is already done, so a free lane and an idle
+	// pump log nothing, even when the drain was cancelled.
+	turn := r.lane.reserve()
+	free := false
+	select {
+	case <-turn:
+		r.lane.leave()
+		free = true
+	default:
+	}
+	if free && !r.activityPending() {
 		return
 	}
 	settled := make(chan struct{})
 	go func() {
-		r.settle()
+		if !free {
+			<-turn
+			r.lane.leave()
+		}
+		r.activityMu.Lock()
+		pending := r.activityDispatch
+		r.activityMu.Unlock()
+		if pending != nil {
+			<-pending
+		}
 		close(settled)
 	}()
 	select {

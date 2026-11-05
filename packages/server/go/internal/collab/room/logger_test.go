@@ -67,3 +67,76 @@ func TestAThrowingObserverAndLoggerDoNotStopTheActivityPump(t *testing.T) {
 		t.Fatalf("closes = %v", got)
 	}
 }
+
+// restartingObserver fails its first call once released; the second waits
+// on its own gate.
+type restartingObserver struct {
+	mu               sync.Mutex
+	calls            int
+	first, firstIn   chan struct{}
+	second, secondIn chan struct{}
+}
+
+func (o *restartingObserver) Record(context.Context, string, string, time.Time, ActivityKind) error {
+	o.mu.Lock()
+	o.calls++
+	call := o.calls
+	o.mu.Unlock()
+	if call == 1 {
+		close(o.firstIn)
+		<-o.first
+		return errors.New("the activity table is down")
+	}
+	if call == 2 {
+		close(o.secondIn)
+		<-o.second
+	}
+	return nil
+}
+
+// C# ASettleWaitsForRecordsARestartedPumpDelivers.
+func TestASettleWaitsForRecordsARestartedPumpDelivers(t *testing.T) {
+	observer := &restartingObserver{
+		first: make(chan struct{}), firstIn: make(chan struct{}),
+		second: make(chan struct{}), secondIn: make(chan struct{}),
+	}
+	manager := loggerManager(t, func(message string) {
+		if strings.Contains(message, "activity observer failed") {
+			panic(errors.New("logger failed"))
+		}
+	}, observer)
+	member := &fakeMember{actor: "user-1", source: collab.SourceClientV1}
+	membership := join(t, manager, "doc", member)
+	wait := func(c <-chan struct{}) {
+		t.Helper()
+		select {
+		case <-c:
+		case <-time.After(10 * time.Second):
+			t.Fatal("timed out")
+		}
+	}
+	wait(observer.firstIn)
+
+	if err := membership.Receive(context.Background(), syncFrame(t, wire.Activity{})); err != nil {
+		t.Fatal(err)
+	}
+	settled := make(chan struct{})
+	go func() {
+		manager.Settle()
+		close(settled)
+	}()
+	// Long enough for the settle to pass the lane and hold the first pump.
+	time.Sleep(100 * time.Millisecond)
+
+	close(observer.first)
+	wait(observer.secondIn)
+	time.Sleep(200 * time.Millisecond)
+	select {
+	case <-settled:
+		close(observer.second)
+		t.Fatal("the settle returned before the restarted pump delivered")
+	default:
+	}
+	close(observer.second)
+	wait(settled)
+}

@@ -94,6 +94,17 @@ func (m *Manager) logf(message string) {
 	}
 }
 
+// logfOrError logs, and turns a panicking logger into an error.
+func (m *Manager) logfOrError(message string) (err error) {
+	defer func() {
+		if failure := recover(); failure != nil {
+			err = errors.New(panicMessage(failure))
+		}
+	}()
+	m.logf(message)
+	return nil
+}
+
 // RetryAfter is how long an overloaded request should wait.
 func (m *Manager) RetryAfter() time.Duration { return m.options.RetryBackoff }
 
@@ -391,6 +402,8 @@ func (m *Manager) Drain(ctx context.Context) error {
 			return nil
 		}
 		var wg sync.WaitGroup
+		var failedMu sync.Mutex
+		var failed error
 		for _, r := range rooms {
 			wg.Add(1)
 			go func() {
@@ -401,13 +414,23 @@ func (m *Manager) Drain(ctx context.Context) error {
 				// One room that fails must not strand the others.
 				defer func() {
 					if failure := recover(); failure != nil {
-						m.logf(`collab: room "` + r.docID + `" could not be drained: ` + panicMessage(failure))
+						if err := m.logfOrError(`collab: room "` + r.docID + `" could not be drained: ` + panicMessage(failure)); err != nil {
+							failedMu.Lock()
+							if failed == nil {
+								failed = err
+							}
+							failedMu.Unlock()
+						}
 					}
 				}()
 				r.drain(ctx)
 			}()
 		}
 		wg.Wait()
+		// C#'s log throws out of DrainAsync; the host then reports it.
+		if failed != nil {
+			return failed
+		}
 	}
 }
 

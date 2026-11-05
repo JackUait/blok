@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -303,5 +304,45 @@ func TestACheckpointIsRefusedWhileTheEngineHoldsPendingState(t *testing.T) {
 	}
 	if got := r.operations.Checkpoint(testDoc); got != nil {
 		t.Fatalf("checkpoint = %+v", got)
+	}
+}
+
+// C# TheCheckpointLinesPrintTheStoresOwnTextForAWrappedCancel: a cancel the
+// store returns as is reads as .NET's cancel text; one the store wraps in
+// its own error keeps the store's own text.
+func TestTheCheckpointLinesPrintTheStoresOwnTextForAWrappedCancel(t *testing.T) {
+	for _, c := range []struct {
+		err  error
+		text string
+	}{
+		{context.DeadlineExceeded, "The operation was canceled."},
+		{fmt.Errorf("s3 put: %w", context.Canceled), "s3 put: context canceled"},
+	} {
+		t.Run(c.text, func(t *testing.T) {
+			r, manager, writer, membership, client := checkpointRoom(t, OptionsWith(func(ro *Options) { ro.CheckpointOperationThreshold = 1 }))
+			r.operations.setFailCheckpoints(func(string) error { return c.err })
+
+			for _, op := range []string{opOne, opTwo, opThree} {
+				sendOperation(t, membership, writer, op, updateAppending(client, "!"))
+			}
+			manager.Settle()
+
+			want := []string{
+				`collab: room "` + testDoc + `" could not publish a checkpoint (1 of 3), retrying later: ` + c.text,
+				`collab: room "` + testDoc + `" could not publish a checkpoint (2 of 3), retrying later: ` + c.text,
+				`collab: room "` + testDoc + `" could not publish a checkpoint, closing: ` + c.text,
+			}
+			var got []string
+			r.mu.Lock()
+			for _, line := range r.log {
+				if strings.Contains(line, "checkpoint") {
+					got = append(got, line)
+				}
+			}
+			r.mu.Unlock()
+			if strings.Join(got, "\n") != strings.Join(want, "\n") {
+				t.Fatalf("log =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+			}
+		})
 	}
 }

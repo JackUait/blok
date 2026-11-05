@@ -75,14 +75,17 @@ func (r *Room) pumpActivity(done chan struct{}) {
 			return
 		}
 		r.activityMu.Lock()
-		defer r.activityMu.Unlock()
 		if len(r.activityQueue) == 0 {
 			r.activityPumping = false
+			r.activityMu.Unlock()
 			return
 		}
 		next := make(chan struct{})
 		r.activityDispatch = next
 		go r.pumpActivity(next)
+		r.activityMu.Unlock()
+		// A settle may hold done: it closes only once the fresh pump ends.
+		<-next
 	}()
 	for {
 		r.activityMu.Lock()

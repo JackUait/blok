@@ -156,6 +156,8 @@ func TestADrainCutShortByItsTokenStillClosesEveryRoom(t *testing.T) {
 		t.Fatal(err)
 	}
 	manager.Settle()
+	settleWrites(t, manager, "doc-a")
+	settleWrites(t, manager, "doc-b")
 	gate := make(chan struct{})
 	defer close(gate)
 	r.endpoint.setSaveGate(gate)
@@ -254,6 +256,7 @@ func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T)
 		t.Fatal(err)
 	}
 	manager.Settle()
+	settleWrites(t, manager, "doc-a")
 	gate := make(chan struct{})
 	defer close(gate)
 	r.endpoint.setSaveGate(gate)
@@ -280,5 +283,61 @@ func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T)
 	}
 	if !slices.Equal(lines, want) {
 		t.Fatalf("log = %q, want %q", lines, want)
+	}
+}
+
+// settleWrites waits until the room has settled its working-set write. C#'s
+// fake store writes at once, so that write is settled on the lane before
+// anything after it. Go writes beside the lane.
+func settleWrites(t *testing.T, manager *Manager, doc string) {
+	t.Helper()
+	manager.mu.Lock()
+	room := manager.rooms[doc]
+	manager.mu.Unlock()
+	for deadline := time.Now().Add(5 * time.Second); ; {
+		var writing bool
+		_ = room.run(context.Background(), func() error { writing = room.inFlightPersist != nil; return nil })
+		if !writing {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the write never settled")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// C# ALoggerThatThrowsDuringTheDrainFailsTheDrain: the host then says the
+// drain did not complete, and the process lives on.
+func TestALoggerThatThrowsDuringTheDrainFailsTheDrain(t *testing.T) {
+	r := newTextRoom()
+	r.endpoint.Holds(t, "doc-a", "a", nil)
+	manager := NewManager(ManagerOptions{
+		Store: r.store, Endpoint: r.endpoint, Converter: r.converter,
+		Room: OptionsWith(func(ro *Options) {
+			ro.ExportDebounce = 5 * time.Minute
+			ro.ExportMaxDelay = 5 * time.Minute
+			ro.Now = r.clock.Now
+		}),
+		Log: func(string) { panic(errors.New("logger failed")) },
+	})
+	member := &fakeMember{source: collab.SourceClientV1, write: true}
+	membership := joinSynced(t, manager, "doc-a", member)
+	client := syncedClient(t, manager, "doc-a", "a")
+	if err := membership.Receive(context.Background(), syncFrame(t, wire.SyncUpdate{Update: updateAppending(client, "!")})); err != nil {
+		t.Fatal(err)
+	}
+	manager.Settle()
+	settleWrites(t, manager, "doc-a")
+	r.store.mu.Lock()
+	r.store.refusesCancelledWrites = true
+	r.store.mu.Unlock()
+	shutdown, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := manager.Drain(shutdown)
+
+	if err == nil || err.Error() != "logger failed" {
+		t.Fatalf("drain error = %v", err)
 	}
 }

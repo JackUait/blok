@@ -20,6 +20,8 @@ func TestACancelReadsAsDotNetsCancelText(t *testing.T) {
 		{wrapped, done, true, "A task was canceled."},
 		{wrapped, done, false, "The operation was canceled."},
 		{context.DeadlineExceeded, nil, false, "The operation was canceled."},
+		// With no ctx, a store that wraps a cancel keeps its own text.
+		{wrapped, nil, false, "put: context canceled"},
 		// A store's own timeout while our context is live keeps its text.
 		{context.DeadlineExceeded, context.Background(), false, "context deadline exceeded"},
 		{errors.New("s3 down"), done, true, "s3 down"},

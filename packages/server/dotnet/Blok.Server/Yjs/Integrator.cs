@@ -87,6 +87,9 @@ internal static class Integrator
     var state = new Dictionary<ulong, ulong>();
     var head = current.Refs[current.Index++];
 
+    // A parked tail can start on a struct this pass already integrated.
+    var integrated = new HashSet<YStruct>(ReferenceEqualityComparer.Instance);
+
     while (true)
     {
       if (head is not YSkip)
@@ -130,6 +133,7 @@ internal static class Integrator
           else if (offset == 0 || offset < (ulong)head.Length)
           {
             Integrate(head, transaction, (int)offset);
+            integrated.Add(head);
             state[client] = head.Id.Clock + (ulong)head.Length;
           }
 
@@ -160,7 +164,49 @@ internal static class Integrator
       }
     }
 
-    return rest.Count > 0 ? new IntegrationRest(missing, rest) : null;
+    if (rest.Count == 0)
+    {
+      return null;
+    }
+
+    // yjs parks the rest as encoded bytes, so a retry decodes fresh structs.
+    // Parking a live, integrated struct would let the retry's GetMissing
+    // rewire its Left and Right and cut the document's list.
+    if (integrated.Count > 0)
+    {
+      foreach (var run in rest.Values)
+      {
+        for (var index = 0; index < run.Count; index++)
+        {
+          if (integrated.Contains(run[index]))
+          {
+            run[index] = Detached(run[index]);
+          }
+        }
+      }
+    }
+
+    return new IntegrationRest(missing, rest);
+  }
+
+  /// <summary>The struct as it stands now, out of the store's list.</summary>
+  private static YStruct Detached(YStruct live)
+  {
+    return live switch
+    {
+      YItem item => new YItem
+      {
+        Id = item.Id,
+        Length = item.Length,
+        Origin = item.Origin,
+        RightOrigin = item.RightOrigin,
+        Parent = item.Parent,
+        ParentSub = item.ParentSub,
+        WireParentSubBit = item.WireParentSubBit,
+        Content = item.Content.Copy(),
+      },
+      _ => new YGc { Id = live.Id, Length = live.Length },
+    };
   }
 
   private static YStruct ToRuntimeStruct(DecodedStruct decoded)

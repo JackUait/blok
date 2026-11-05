@@ -46,12 +46,14 @@ func (k keeping) Open(ctx context.Context, docID string) (collabstore.OpenOutcom
 type observed struct {
 	mu    sync.Mutex
 	calls []string
+	at    []time.Time
 }
 
-func (o *observed) Record(_ context.Context, docID, actorID string, _ time.Time, kind collabstore.ActivityKind) error {
+func (o *observed) Record(_ context.Context, docID, actorID string, at time.Time, kind collabstore.ActivityKind) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.calls = append(o.calls, docID+" "+actorID+" "+kind.String())
+	o.at = append(o.at, at)
 	return nil
 }
 
@@ -190,6 +192,30 @@ func TestAHostActivityObserverHearsAnEdit(t *testing.T) {
 	}
 	if got := strings.Join(observer.seen(), ","); got != "doc u1 Edited" {
 		t.Fatalf("observed %q", got)
+	}
+}
+
+// C# hands the host's TimeProvider to the room manager, so activity is
+// stamped with the host's clock.
+func TestActivityIsStampedWithTheHostClock(t *testing.T) {
+	observer := &observed{}
+	fixed := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	host := hostServer(t, func(o *blokserver.Options) {
+		o.CollabJournal = true
+		o.CollabActivityObserver = observer
+		o.Clock = func() time.Time { return fixed }
+	})
+	if response := edit(t, host.URL, "doc", "k1"); response.StatusCode != http.StatusNoContent {
+		t.Fatalf("edit: %d", response.StatusCode)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for len(observer.seen()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	observer.mu.Lock()
+	defer observer.mu.Unlock()
+	if len(observer.at) != 1 || !observer.at[0].Equal(fixed) {
+		t.Fatalf("stamped %v, want %v", observer.at, fixed)
 	}
 }
 

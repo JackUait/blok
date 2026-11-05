@@ -92,8 +92,10 @@ type Options struct {
 	// calls.
 	CollabActivityObserver collabstore.ActivityObserver
 
-	// Clock is the TimeProvider override: tickets, the rate limit window and
-	// S3 signing read it. Nil is the system clock.
+	// Clock is the TimeProvider override: tickets, the rate limit window, S3
+	// signing and the rooms' timestamps (activity, cooldowns, export
+	// deadlines) read it. Room timers still run on wall time. Nil is the
+	// system clock.
 	Clock func() time.Time
 
 	// Logger receives the server's warnings, each with a "category"

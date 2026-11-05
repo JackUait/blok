@@ -65,6 +65,27 @@ func TestSeedsTheBlocksOfAnOutputDataObjectAndExportsThemBackWithATimestamp(t *t
 	}
 }
 
+// HTML that escapes markup characters reads as those characters, through the
+// live runtime.
+func TestEscapedMarkupCharactersReadAsText(t *testing.T) {
+	doc := yjs.NewDoc(yjs.Options{})
+	c := converter(t, nil)
+	if err := c.Seed(context.Background(), doc, parseNode(t, `{"blocks":[{"id":"a","type":"paragraph","data":{"text":"a &lt; b &amp;&amp; \"c\" &lt;b&gt;"}}]}`)); err != nil {
+		t.Fatal(err)
+	}
+	exported, err := c.Export(context.Background(), doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	segments := path(lookupValue(exported, "blocks"), 0, "data", "text").([]any)
+	if len(segments) != 1 {
+		t.Fatal(stringify(t, segments))
+	}
+	if got := path(segments, 0, "text").(jsjson.Str).String(); got != `a < b && "c" <b>` {
+		t.Fatal(got)
+	}
+}
+
 func setBlock(doc *yjs.Doc, id string, block *yjs.Map, root ...any) {
 	doc.Transact(func(tx *yjs.Transaction) {
 		doc.GetMap(str("blocks")).Set(tx, str(id), block)

@@ -1,0 +1,165 @@
+{
+  "about": "How the C# host decodes argv and environment bytes that are not UTF-8 (Unix). Captured by running the C# host with each byte string inside an unknown flag and reading the echo; BLOK_SECRET lengths agreed for ff, e080 and eda080.",
+  "cases": [
+    {
+      "bytes": "ff",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "e080",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "e08041",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "eda080",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "c080",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "c2",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "c241",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "e282",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "e28241",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "f09080",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "f0908041",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "f4908080",
+      "text": "\ufffd\ufffd\ufffd"
+    },
+    {
+      "bytes": "8080",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "f888808080",
+      "text": "\ufffd\ufffd\ufffd\ufffd\ufffd"
+    },
+    {
+      "bytes": "efbfbf",
+      "text": "\uffff"
+    },
+    {
+      "bytes": "f09f9880",
+      "text": "\ud83d\ude00"
+    },
+    {
+      "bytes": "e0a080",
+      "text": "\u0800"
+    },
+    {
+      "bytes": "ed9fbf",
+      "text": "\ud7ff"
+    },
+    {
+      "bytes": "c1bf",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "e09fbf",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "f08fbfbf",
+      "text": "\ufffd\ufffd\ufffd"
+    },
+    {
+      "bytes": "e08080",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "f08080",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "f48fbfbf",
+      "text": "\udbff\udfff"
+    },
+    {
+      "bytes": "f4a0",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "edbfbf",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "e180",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "e141",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "f18080",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "f18041",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "f041",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "e041",
+      "text": "\ufffdA"
+    },
+    {
+      "bytes": "e0c0",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "f090c0",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "c2c280",
+      "text": "\ufffd\u0080"
+    },
+    {
+      "bytes": "feff",
+      "text": "\ufffd\ufffd"
+    },
+    {
+      "bytes": "f0",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "f09f98",
+      "text": "\ufffd"
+    },
+    {
+      "bytes": "eda080e0a080",
+      "text": "\ufffd\ufffd\u0800"
+    },
+    {
+      "bytes": "41c3a9",
+      "text": "A\u00e9"
+    }
+  ]
+}

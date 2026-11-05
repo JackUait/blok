@@ -574,3 +574,29 @@ func TestSignalHandlersAreInstalledBeforeTheBindAndAfterValidation(t *testing.T)
 		t.Fatalf("exit %d, stderr %q", code, marks.String())
 	}
 }
+
+// Measured on the C# host: argv and environment bytes that are not UTF-8
+// are decoded with U+FFFD (native-text.json), never passed on raw.
+func TestTheBinaryDecodesNonUTF8ArgumentsAndEnvironmentAsCSharpDoes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary")
+	}
+	binary := buildBinary(t)
+
+	var stderr bytes.Buffer
+	command := exec.Command(binary, "--\x01\xe0\x80A\x01")
+	command.Stderr = &stderr
+	_ = command.Run()
+	if line, _, _ := strings.Cut(stderr.String(), "\n"); line != "flag provided but not defined: -\x01�A\x01" {
+		t.Fatalf("argv: %q", line)
+	}
+
+	stderr.Reset()
+	command = exec.Command(binary, "--listen", "127.0.0.1:0", "--auth", "ticket", "--allow-origin", "http://a.example")
+	command.Env = append(os.Environ(), "BLOK_SECRET="+strings.Repeat("\xed\xa0\x80", 11))
+	command.Stderr = &stderr
+	_ = command.Run()
+	if want := "blok-server refused to start: --secret must be at least 32 characters (got 22)\n"; stderr.String() != want {
+		t.Fatalf("environment: %q", stderr.String())
+	}
+}

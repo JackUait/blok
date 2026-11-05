@@ -13,6 +13,7 @@ import (
 
 	"github.com/JackUait/blok/packages/server/go/blokserver"
 	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 )
 
 // version is stamped at build time: -ldflags "-X main.version=1.2.3".
@@ -82,7 +83,14 @@ func main() {
 	// 2, where .NET dies by the signal before its handlers and stops
 	// gracefully after them. Go cannot reach the OS default.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGQUIT)
-	code := run(ctx, os.Args[1:], os.Getenv, os.Stderr)
+	// .NET decodes argv and the environment itself: bytes that are not
+	// UTF-8 become U+FFFD, not raw bytes in paths and error lines.
+	args := make([]string, 0, len(os.Args))
+	for _, arg := range os.Args[1:] {
+		args = append(args, dotnet.NativeText(arg))
+	}
+	getenv := func(name string) string { return dotnet.NativeText(os.Getenv(name)) }
+	code := run(ctx, args, getenv, os.Stderr)
 	stop()
 	os.Exit(code)
 }

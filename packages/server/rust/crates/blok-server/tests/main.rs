@@ -2008,3 +2008,44 @@ async fn every_answer_names_kestrel() {
     }
     serving.abort();
 }
+
+// Measured on the C# host: argv and environment bytes that are not UTF-8
+// are decoded with U+FFFD (native-text.json): no panic, and an environment
+// value is not dropped as unset.
+#[cfg(unix)]
+#[test]
+fn the_binary_decodes_non_utf8_arguments_and_environment_as_c_sharp_does() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_blok-server"))
+        .arg(OsStr::from_bytes(b"--\x01\xe0\x80A\x01"))
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert_eq!(output.status.code(), Some(2), "{stderr:?}");
+    assert_eq!(
+        stderr.lines().next(),
+        Some("flag provided but not defined: -\u{1}\u{FFFD}A\u{1}"),
+        "{stderr:?}"
+    );
+
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_blok-server"))
+        .args([
+            "--listen",
+            "127.0.0.1:0",
+            "--auth",
+            "ticket",
+            "--allow-origin",
+            "http://a.example",
+        ])
+        .env(
+            "BLOK_SECRET",
+            OsStr::from_bytes(&b"\xed\xa0\x80".repeat(11)),
+        )
+        .output()
+        .unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "blok-server refused to start: --secret must be at least 32 characters (got 22)\n"
+    );
+}

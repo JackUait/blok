@@ -6,14 +6,31 @@ const VERSION: &str = match option_env!("BLOK_SERVER_VERSION") {
     None => "dev",
 };
 
+/// .NET decodes argv and the environment itself: bytes that are not UTF-8
+/// become U+FFFD, not a panic or an unset variable.
+#[cfg(unix)]
+fn native(text: &std::ffi::OsStr) -> String {
+    use std::os::unix::ffi::OsStrExt;
+    blok_dotnet::native_text(text.as_bytes())
+}
+
+#[cfg(not(unix))]
+fn native(text: &std::ffi::OsStr) -> String {
+    text.to_string_lossy().into_owned()
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<String> = std::env::args_os()
+        .skip(1)
+        .map(|arg| native(&arg))
+        .collect();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("the tokio runtime");
     let stderr: blok_server::collablog::Stderr = Arc::new(Mutex::new(std::io::stderr()));
-    let getenv = |name: &str| std::env::var(name).unwrap_or_default();
+    let getenv =
+        |name: &str| std::env::var_os(name).map_or_else(String::new, |value| native(&value));
     let code = runtime.block_on(blok_server::run(
         &args,
         &getenv,

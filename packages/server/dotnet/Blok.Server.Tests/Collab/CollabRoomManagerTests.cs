@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
@@ -1351,6 +1352,7 @@ public sealed class CollabRoomManagerTests
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(clientB, "?"))),
         CancellationToken.None);
     await manager.SettleAsync();
+    await WritesSettledAsync(manager);
     endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     using var shutdown = new CancellationTokenSource();
 
@@ -1780,6 +1782,31 @@ public sealed class CollabRoomManagerTests
     {
       return ValueTask.CompletedTask;
     }
+  }
+
+  /// <summary>
+  /// The edits' working-set writes run beside the lane and post their finish
+  /// back later. A finish that lands during a drain queues the drain's settle
+  /// behind it, and a cancelled drain then logs one more line. No public
+  /// surface shows the write in flight, so the room's field is read.
+  /// </summary>
+  private static async Task WritesSettledAsync(CollabRoomManager manager)
+  {
+    var rooms = (Dictionary<string, CollabRoom>)typeof(CollabRoomManager)
+        .GetField("rooms", BindingFlags.NonPublic | BindingFlags.Instance)!
+        .GetValue(manager)!;
+    var inFlight = typeof(CollabRoom)
+        .GetField("inFlightPersist", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    CollabRoom[] live;
+
+    lock (rooms)
+    {
+      live = [.. rooms.Values];
+    }
+
+    await Waits.UntilAsync(
+        () => live.All(room => inFlight.GetValue(room) is null),
+        "the working-set writes to settle");
   }
 
   private CollabRoomManager CreateManager(

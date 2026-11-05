@@ -286,9 +286,9 @@ func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T)
 	}
 }
 
-// settleWrites waits until the room has settled its working-set write. C#'s
-// fake store writes at once, so that write is settled on the lane before
-// anything after it. Go writes beside the lane.
+// settleWrites waits until the room has settled its working-set write. The
+// write runs beside the lane and posts its finish back later; a finish that
+// lands during a drain queues the drain's settle behind it.
 func settleWrites(t *testing.T, manager *Manager, doc string) {
 	t.Helper()
 	manager.mu.Lock()

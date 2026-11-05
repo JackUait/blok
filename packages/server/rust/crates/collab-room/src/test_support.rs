@@ -200,10 +200,9 @@ pub(crate) async fn wait_for_lane_waiters(manager: &Manager, n: usize, what: &st
     .await;
 }
 
-/// Waits until every room has settled its working-set write. C#'s fake
-/// store writes at once, so that write is settled on the lane before
-/// anything after it. Here it runs beside the lane, and its finish is
-/// posted back later.
+/// Waits until every room has settled its working-set write. The write
+/// runs beside the lane and posts its finish back later; a finish that
+/// lands during a drain queues the drain's settle behind it.
 pub(crate) async fn settle_writes(manager: &Manager) {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
     loop {

@@ -277,8 +277,12 @@ var errTLSHostName = errors.New("outbound: the host is not a name TLS can check"
 // digits, '_' or '-', no '-' at a label's ends, at most 253 bytes, and a
 // last label that is not all digits. A trailing dot is allowed.
 func tlsHostName(host string) bool {
+	// rustls counts a trailing dot in the 253.
+	if len(host) > 253 {
+		return false
+	}
 	host = strings.TrimSuffix(host, ".")
-	if host == "" || len(host) > 253 {
+	if host == "" {
 		return false
 	}
 	labels := strings.Split(host, ".")

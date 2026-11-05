@@ -12,15 +12,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-// The roots are the trust settings' anchors for an SSL server check, as
-// trustd decides them for C#'s SecTrust (trustsettings.go); Rust reads the
-// same exports. Verification stays Go's own over a pool: the platform
+// The roots are the anchors trustd would use for C#'s SecTrust
+// (trustsettings.go): Apple's roots, the user and admin trust settings,
+// and the self-signed certs of the system root keychain, which holds the
+// same certs as trustd's own store (certsTable.data, measured). Rust reads
+// the same. Verification stays Go's own over a pool: the platform
 // verifier would let trustd fetch a certificate's caIssuers URL past the
 // guard (see tls_darwin_test.go). Intermediates kept only in the Keychain
 // are not used, as in Rust.
@@ -30,14 +33,68 @@ const (
 	macOSBundle = "/etc/ssl/cert.pem"
 )
 
-// trustDomains are the export flags for the user, admin and system domains,
-// in the order they override each other.
-var trustDomains = []string{"", "-d", "-s"}
+// trustDomains are the export flags for the user and admin domains. trustd
+// reads no system-domain trust settings: its system anchors are its own
+// store.
+var trustDomains = []string{"", "-d"}
 
+// keychains hold the certs the trust settings name. The system roots come
+// from systemRootsKeychain.
 var keychains = []string{
 	"~/Library/Keychains/login.keychain-db",
 	"/Library/Keychains/System.keychain",
-	"/System/Library/Keychains/SystemRootCertificates.keychain",
+}
+
+const (
+	systemRoots = "/System/Library/Keychains/SystemRootCertificates.keychain"
+	plutilTool  = "/usr/bin/plutil"
+)
+
+// trustd's trust store: the PKI asset named by AutoAsset.plist when its
+// VersionNumber is above the system bundle's (OTATrustUtilities.m
+// :1101-1114, kOTATrustStoreContentVersionKey at :194).
+var (
+	autoAssetPlist          = "/private/var/protected/trustd/AutoAsset.plist"
+	systemTrustStoreVersion = "/System/Library/Security/Certificates.bundle/Contents/Resources/AssetVersion.plist"
+)
+
+// systemRootsKeychain is the SystemRootCertificates keychain of the trust
+// store trustd uses; it holds the certs of that store's certsTable.data.
+// Any asset read that fails leaves the bundle, as trustd reads a missing
+// version as 0.
+func systemRootsKeychain(ctx context.Context) string {
+	data, err := os.ReadFile(autoAssetPlist)
+	if err != nil {
+		return systemRoots
+	}
+	dict, err := readPlistDict(data)
+	if err != nil {
+		return systemRoots
+	}
+	asset, _ := dict["AssetPath"].(string)
+	if asset == "" {
+		return systemRoots
+	}
+	assetVersion := plistVersion(ctx, filepath.Join(asset, "AssetVersion.plist"))
+	if assetVersion > plistVersion(ctx, systemTrustStoreVersion) {
+		return filepath.Join(asset, "SystemRootCertificates.keychain")
+	}
+	return systemRoots
+}
+
+// plistVersion is a plist's VersionNumber, or 0. plutil reads the binary
+// form the asset ships.
+func plistVersion(ctx context.Context, path string) int64 {
+	out, err := exec.CommandContext(ctx, plutilTool, "-convert", "xml1", "-o", "-", path).Output()
+	if err != nil {
+		return 0
+	}
+	dict, err := readPlistDict(out)
+	if err != nil {
+		return 0
+	}
+	version, _ := dict["VersionNumber"].(int64)
+	return version
 }
 
 var bundle = sync.OnceValue(func() *x509.CertPool { return loadRoots(securityTool) })
@@ -81,27 +138,31 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	certs := map[string][]byte{}
+	system := map[string]bool{}
 	home, _ := os.UserHomeDir()
-	for index, keychain := range keychains {
+	all := append(slices.Clone(keychains), systemRootsKeychain(ctx))
+	for index, keychain := range all {
 		keychain = strings.Replace(keychain, "~", home, 1)
 		out, err := exec.CommandContext(ctx, tool, "find-certificate", "-a", "-p", keychain).Output()
 		if err != nil {
 			return nil, err
 		}
-		found := 0
 		for rest := out; ; {
 			var block *pem.Block
 			if block, rest = pem.Decode(rest); block == nil {
 				break
 			}
 			sum := sha1.Sum(block.Bytes)
-			certs[strings.ToUpper(hex.EncodeToString(sum[:]))] = block.Bytes
-			found++
+			hash := strings.ToUpper(hex.EncodeToString(sum[:]))
+			certs[hash] = block.Bytes
+			if index == len(all)-1 {
+				system[hash] = true
+			}
 		}
-		// The tool exits 0 even for a keychain it cannot open.
-		if index == len(keychains)-1 && found == 0 {
-			return nil, errors.New("no system root certificates")
-		}
+	}
+	// The tool exits 0 even for a keychain it cannot open.
+	if len(system) == 0 {
+		return nil, errors.New("no system root certificates")
 	}
 	directory, err := os.MkdirTemp("", "blok-trust-")
 	if err != nil {
@@ -121,18 +182,7 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 		}
 		domains = append(domains, list)
 	}
-	// Every system root is in the system keychain: an empty system domain or
-	// a hash with no certificate means a read went wrong.
-	system := domains[len(domains)-1]
-	if len(system) == 0 {
-		return nil, errors.New("no system trust settings")
-	}
-	for hash := range system {
-		if _, ok := certs[hash]; !ok {
-			return nil, errors.New("a system trust setting has no certificate")
-		}
-	}
-	return trustedAnchors(domains, certs), nil
+	return trustedAnchors(domains[0], domains[1], system, certs, selfSigned, appleRoot), nil
 }
 
 func exportTrustList(ctx context.Context, tool string, args []string, path string) (map[string][]trustSetting, error) {

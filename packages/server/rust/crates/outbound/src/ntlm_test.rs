@@ -601,6 +601,13 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok",
         ),
         (
+            "upper",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok",
+        ),
+        (
             "ipv6",
             "u",
             "",
@@ -647,6 +654,7 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
         });
         let host = match mode {
             "localhost" => "localhost",
+            "upper" => "LOCALHOST",
             "ipv6" => "[::1]",
             _ => "127.0.0.1",
         };
@@ -712,5 +720,19 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             .replace("{AVS}", SERVER_AVS)
             .replace("{INIT}", SPNEGO_INIT);
         assert_eq!(got.join("|"), want, "{mode}");
+    }
+}
+
+// The twin of Go's TestNtlmSpnHostKeepsANameTheLookupCannotAnswer, with
+// C#'s upper row: /etc/hosts spells localhost in lower case.
+#[tokio::test]
+async fn ntlm_spn_host_keeps_a_name_the_lookup_cannot_answer() {
+    for (host, want) in [
+        ("127.0.0.1", "127.0.0.1"),
+        ("::1", "::1"),
+        ("LOCALHOST", "localhost"),
+        ("blok-ntlm-spn.invalid", "blok-ntlm-spn.invalid"),
+    ] {
+        assert_eq!(crate::operator::spn_host(host).await, want, "{host}");
     }
 }

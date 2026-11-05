@@ -535,11 +535,11 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 	}
 }
 
-// A name the canonical lookup cannot answer (an /etc/hosts or mDNS name,
-// which .NET's getaddrinfo still finds) stands as given: the dial has
-// already found it.
+// A name is its canonical spelling (/etc/hosts spells localhost in lower
+// case, as C#'s upper row shows), and a name the lookup cannot answer
+// stands as given: the dial has already found it.
 func TestNtlmSpnHostKeepsANameTheLookupCannotAnswer(t *testing.T) {
-	for host, want := range map[string]string{"127.0.0.1": "127.0.0.1", "::1": "::1", "blok-ntlm-spn.invalid": "blok-ntlm-spn.invalid"} {
+	for host, want := range map[string]string{"127.0.0.1": "127.0.0.1", "::1": "::1", "LOCALHOST": "localhost", "blok-ntlm-spn.invalid": "blok-ntlm-spn.invalid"} {
 		if got := ntlmSpnHost(t.Context(), host); got != want {
 			t.Errorf("ntlmSpnHost(%q) = %q", host, got)
 		}

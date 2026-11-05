@@ -12,6 +12,7 @@ blok-dotnet = { path = "../dotnet" }
 blok-jsjson = { path = "../jsjson" }
 blok-mediatype = { path = "../mediatype" }
 brotli = "8"
+dns-lookup = "=4.0.2"
 flate2 = "1"
 ring = "0.17"
 sha1 = "0.10"

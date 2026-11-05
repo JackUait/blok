@@ -550,6 +550,35 @@ fn ntlm_throw() -> OperatorError {
     ))
 }
 
+/// The SPN host of a proxy: an IP literal as it is (IPv6 without
+/// brackets), else Dns.GetHostEntryAsync's HostName, getaddrinfo's
+/// canonical name. When the lookup fails the name stands as given, as in
+/// Go: the dial has found it.
+pub(crate) async fn spn_host(host: &str) -> String {
+    if host.parse::<std::net::IpAddr>().is_ok() {
+        return host.to_owned();
+    }
+    let owned = host.to_owned();
+    let canonical = tokio::task::spawn_blocking(move || {
+        let hints = dns_lookup::AddrInfoHints {
+            // AI_CANONNAME on macOS, Linux and Windows.
+            flags: 2,
+            ..dns_lookup::AddrInfoHints::default()
+        };
+        dns_lookup::getaddrinfo(Some(&owned), None, Some(hints))
+            .ok()?
+            .next()?
+            .ok()?
+            .canonname
+    })
+    .await
+    .ok()
+    .flatten();
+    canonical
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| host.to_owned())
+}
+
 /// The scheme name .NET writes, whatever the server's case.
 fn ntlm_scheme(sent: &str) -> &'static str {
     if sent == "negotiate" {
@@ -585,9 +614,7 @@ async fn ntlm_first(
         .map_or(proxy.authority.as_str(), |(host, _)| host)
         .trim_start_matches('[')
         .trim_end_matches(']');
-    // .NET takes an IP literal as it is (IPv6 without brackets) and a name
-    // as Dns.GetHostEntryAsync's HostName, the canonical name. std cannot
-    // ask for that, so a name stands as given.
+    let host = spn_host(host).await;
     let Some(mut nt) = crate::ntlm::NtlmAuth::new(
         sent == "negotiate",
         user,

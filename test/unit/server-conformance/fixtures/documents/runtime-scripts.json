@@ -539,5 +539,24 @@
         }
       }
     ]
+  },
+  {
+    "name": "the engine adds no host globals",
+    "script": "let calls = 0;\nglobalThis.blokServerInvoke = function (operation) {\n  calls += 1;\n  if (operation === 'count') return String(calls);\n  const names = ['atob', 'btoa', 'performance', 'queueMicrotask', 'structuredClone', 'console', 'setTimeout', 'setInterval', 'clearTimeout', 'DOMException', 'navigator', 'process', 'require'];\n  return names.filter((name) => typeof globalThis[name] !== 'undefined' || Object.prototype.hasOwnProperty.call(globalThis, name)).join();\n};\n",
+    "steps": [
+      {
+        "op": "globals",
+        "expect": {
+          "result": ""
+        },
+        "why": "Jint, as C# builds it, has none of these names. goja has none either; QuickJS's full context adds atob, btoa, performance and queueMicrotask, which Rust leaves out. A bundle that feature-detects one must see the same answer on every server."
+      },
+      {
+        "op": "count",
+        "expect": {
+          "result": "2"
+        }
+      }
+    ]
   }
 ]

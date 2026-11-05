@@ -4,6 +4,7 @@ use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
 use icu_collator::{Collator, CollatorBorrowed};
+use rquickjs::context::intrinsic;
 use rquickjs::convert::Coerced;
 use rquickjs::function::{Opt, This};
 use rquickjs::promise::PromiseState;
@@ -69,7 +70,20 @@ impl Engine {
         rt.set_max_stack_size(MAX_STACK);
         let guard = Guard::new();
         rt.set_interrupt_handler(Some(Box::new(guard.handler(budget.clone()))));
-        let ctx = Context::full(&rt).map_err(engine_error)?;
+        // JS_NewContext's intrinsics minus atob/btoa (and the DOMException
+        // they bring) and performance: Jint and goja have none of them.
+        let ctx = Context::custom::<(
+            intrinsic::Date,
+            intrinsic::Eval,
+            intrinsic::RegExp,
+            intrinsic::Json,
+            intrinsic::Proxy,
+            intrinsic::MapSet,
+            intrinsic::TypedArrays,
+            intrinsic::Promise,
+            intrinsic::WeakRef,
+        )>(&rt)
+        .map_err(engine_error)?;
 
         let limit = budget;
         if let Some((timeout, budget)) = limits {
@@ -84,6 +98,8 @@ impl Engine {
                 .get::<_, Object>("prototype")?
                 .get("toWellFormed")?;
             install_locale_compare(&ctx)?;
+            // A base object in QuickJS, absent from Jint and goja.
+            ctx.globals().remove("queueMicrotask")?;
             let well_formed = Persistent::save(&ctx, well_formed);
             let mut options = rquickjs::context::EvalOptions::default();
             options.filename = Some(name.to_owned());

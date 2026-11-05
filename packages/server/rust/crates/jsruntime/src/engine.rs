@@ -19,10 +19,11 @@ use crate::runtime::{Error, JsError, Stop};
 /// aborts the process instead of throwing a RangeError.
 ///
 /// rquickjs 0.14 treats any limit above 16 MiB as no limit at all
-/// (`RawRuntime::set_max_stack_size`), so 16 MiB is the most there is. In a
-/// release build it converts about 1500 outline levels to HTML and 3000 to
-/// Markdown (measured); the unoptimized QuickJS of a debug build uses about
-/// 8.6 times the stack per JS frame, so there HTML stops near 500 levels.
+/// (`RawRuntime::set_max_stack_size`), so 16 MiB is the most there is. It
+/// converts 1687 outline levels to HTML and 4384 to plain text, in debug and
+/// release builds alike (Cargo.toml optimizes rquickjs-sys in dev too);
+/// Markdown stops at 2854 on the memory budget (all measured). C# converts
+/// 2411 to HTML.
 pub(crate) const MAX_STACK: usize = 16 << 20;
 
 const _: () = assert!(MAX_STACK <= 1 << 24);

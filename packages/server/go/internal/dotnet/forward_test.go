@@ -69,7 +69,7 @@ func forwardProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 						logged = maskDigest(auth)
 					}
 					answer, closing, ok := "", false, false
-					if (mode == "ntlm" || mode == "negotiate") && strings.HasPrefix(auth, scheme+" ") {
+					if (mode == "ntlm" || mode == "negotiate" || strings.HasPrefix(mode, "ntlm-chunk")) && strings.HasPrefix(auth, scheme+" ") {
 						name, data, _ := strings.Cut(auth, " ")
 						token, _ := base64.StdEncoding.DecodeString(data)
 						read, valid := readNtlmToken(name, token, state, "p", map[string]string{})
@@ -108,7 +108,7 @@ func forwardProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 							answer = "Proxy-Authenticate: Basic realm=\"r\"\r\n"
 						case "digest":
 							answer = "Proxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n"
-						case "ntlm", "negotiate":
+						case "ntlm", "negotiate", "ntlm-chunkcap", "ntlm-chunkunder":
 							answer = "Proxy-Authenticate: " + scheme + "\r\n"
 						}
 						closing = mode == "basic-close"
@@ -124,7 +124,21 @@ func forwardProxy(t *testing.T, mode string) (*url.URL, func() []string) {
 					if closing {
 						answer += "Connection: close\r\n"
 					}
-					_, _ = io.WriteString(client, "HTTP/1.1 407 Proxy Authentication Required\r\n"+answer+"Content-Length: 0\r\n\r\n")
+					tail := "Content-Length: 0\r\n\r\n"
+					if strings.HasPrefix(answer, "Proxy-Authenticate: NTLM ") {
+						switch mode {
+						case "ntlm-chunkcap":
+							tail = chunkedAroundThePause(1 << 20)
+						case "ntlm-chunkunder":
+							tail = chunkedAroundThePause(1<<20 - 1)
+						}
+					}
+					for i, part := range strings.Split("HTTP/1.1 407 Proxy Authentication Required\r\n"+answer+tail, "{PAUSE}") {
+						if i > 0 {
+							time.Sleep(300 * time.Millisecond)
+						}
+						_, _ = io.WriteString(client, part)
+					}
 					if closing {
 						return
 					}

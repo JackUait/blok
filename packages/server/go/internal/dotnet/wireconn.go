@@ -26,6 +26,8 @@ const maxResponseHeadersBytes = 64 << 10
 type wireConn struct {
 	net.Conn
 	in *bufio.Reader
+	// count is DrainAsync's byte count since the last head.
+	count *drainCount
 	// out is what net/http reads next; body feeds it between heads.
 	out     []byte
 	body    io.Reader
@@ -94,7 +96,9 @@ func (c *wireConn) Close() error {
 }
 
 func newWireConn(conn net.Conn) *wireConn {
-	return &wireConn{Conn: conn, in: bufio.NewReader(conn)}
+	count := &drainCount{src: conn}
+	count.in = bufio.NewReader(count)
+	return &wireConn{Conn: conn, in: count.in, count: count}
 }
 
 // NetConn lets the lifetime check find the dialed conn.
@@ -188,6 +192,7 @@ func (c *wireConn) nextHead() error {
 	if err != nil {
 		return err
 	}
+	c.count.reset()
 	body, framing := reader.Body(status, head, header)
 	id := strconv.FormatUint(headSeq.Add(1), 10)
 	heads.Store(id, pendingHead{header: header, conn: c})

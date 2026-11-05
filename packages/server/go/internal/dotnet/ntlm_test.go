@@ -432,6 +432,17 @@ func readNtlmToken(scheme string, token []byte, state *ntlmProxyState, password 
 
 // drainShape is C#'s DrainShape: the version and what follows the
 // challenge in a drain row's first 407 (drain1-) or Type 2 (drain2-).
+// chunkedAroundThePause is C#'s ChunkedAroundThePause: a chunked 407 body
+// whose first sent bytes after the head (size line and data) are exactly
+// sent, then {PAUSE}, then the rest.
+func chunkedAroundThePause(sent int) string {
+	const chunk = 1 << 20
+	line := fmt.Sprintf("%x\r\n", chunk)
+	before := sent - len(line)
+	return "Transfer-Encoding: chunked\r\n\r\n" + line + strings.Repeat("a", before) + "{PAUSE}" +
+		strings.Repeat("a", chunk-before) + "\r\n0\r\n\r\n"
+}
+
 func drainShape(mode string, first bool) (string, string) {
 	prefix := "drain2-"
 	if first {
@@ -461,6 +472,10 @@ func drainShape(mode string, first bool) (string, string) {
 		return "1.1", "\r\nabc"
 	case "stall":
 		return "1.1", "Content-Length: 10\r\n\r\nabc"
+	case "chunkcap":
+		return "1.1", chunkedAroundThePause(1 << 20)
+	case "chunkunder":
+		return "1.1", chunkedAroundThePause(1<<20 - 1)
 	}
 	panic(mode)
 }
@@ -555,7 +570,12 @@ func ntlmProxy(t *testing.T, mode, password string, network, address string, cer
 						answer += "Connection: close\r\n"
 					}
 					version, tail := drainShape(mode, auth == "")
-					_, _ = io.WriteString(client, "HTTP/"+version+" 407 Proxy Authentication Required\r\n"+answer+tail)
+					for i, part := range strings.Split("HTTP/"+version+" 407 Proxy Authentication Required\r\n"+answer+tail, "{PAUSE}") {
+						if i > 0 {
+							time.Sleep(300 * time.Millisecond)
+						}
+						_, _ = io.WriteString(client, part)
+					}
 					if closing {
 						return
 					}
@@ -617,6 +637,8 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"drain2-bigchunked", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"drain2-extra", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"drain2-stall", "u", "", "p", "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain2-chunkcap", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"drain2-chunkunder", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"mic-none", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
 		{"mic-kerberos", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
 		{"mic-bare", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},

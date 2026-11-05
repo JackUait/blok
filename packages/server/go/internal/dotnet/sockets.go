@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/proxy"
@@ -252,12 +253,15 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		if _, err := io.WriteString(conn, head+"\r\n"); err != nil {
 			return conn, err
 		}
-		in := bufio.NewReader(conn)
+		count := &drainCount{src: conn}
+		in := bufio.NewReader(count)
+		count.in = in
 		reader := NewResponseReader(in, maxResponseHeadersBytes)
 		status, _, header, err := reader.ReadHead()
 		if err != nil {
 			return conn, err
 		}
+		count.reset()
 		if status != http.StatusProxyAuthRequired {
 			if err := auth.checkFinal(header); err != nil {
 				return conn, err
@@ -293,7 +297,7 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 				}
 				continue
 			}
-			if err := drainForNtAuth(ctx, conn, in, body, framing, header); err != nil {
+			if err := drainForNtAuth(ctx, conn, in, count, body, framing, header); err != nil {
 				return conn, err
 			}
 			continue
@@ -301,7 +305,7 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		// SendWithAuthAsync disposes the answer, which drains it; a conn
 		// that cannot be drained, or that the answer closes, is dropped.
 		keep := framing != FramedClose && !headClosesConn(header) &&
-			drainResponse(ctx, conn, in, body, framing) == nil && in.Buffered() == 0
+			drainResponse(ctx, conn, in, count, body, framing) == nil && in.Buffered() == 0
 		if !keep {
 			conn.Close()
 			if conn, err = open(); err != nil {
@@ -443,11 +447,36 @@ const (
 
 var errDrain = errors.New("proxy: the answer could not be drained")
 
+// drainCount sits under a conn's bufio.Reader and counts as
+// ChunkedEncodingReadStream.DrainAsync does: every byte after the head,
+// framing too, and the bytes still unparsed at each read once more. While
+// armed, a read with the count at the cap fails instead: the body is not
+// done, and .NET stops there.
+type drainCount struct {
+	src   io.Reader
+	in    *bufio.Reader
+	count atomic.Int64
+	armed atomic.Bool
+}
+
+func (d *drainCount) Read(p []byte) (int, error) {
+	if d.armed.Load() && d.count.Load() >= maxResponseDrainSize {
+		return 0, errDrain
+	}
+	// Inside bufio's fill: what it holds now is what .NET still holds.
+	left := d.in.Buffered()
+	n, err := d.src.Read(p)
+	d.count.Add(int64(left + n))
+	return n, err
+}
+
+// reset starts the count at a head's end: the bytes read past it.
+func (d *drainCount) reset() { d.count.Store(int64(d.in.Buffered())) }
+
 // drainResponse is HttpContentReadStream.DrainAsync: a length body is not
-// read when more than the cap is left past what is buffered; a chunked one
-// stops at the cap. Both stop at the drain time. .NET counts a chunked
-// body's framing too; this counts its data only.
-func drainResponse(ctx context.Context, conn net.Conn, in *bufio.Reader, body io.Reader, framing Framing) error {
+// read when more than the cap is left past what count has seen; a chunked
+// one fails at a read with count at the cap. Both stop at the drain time.
+func drainResponse(ctx context.Context, conn net.Conn, in *bufio.Reader, count *drainCount, body io.Reader, framing Framing) error {
 	switch framing {
 	case FramedNone:
 		return nil
@@ -463,25 +492,23 @@ func drainResponse(ctx context.Context, conn net.Conn, in *bufio.Reader, body io
 		deadline, _ := ctx.Deadline()
 		_ = conn.SetReadDeadline(deadline)
 	}()
-	n, err := io.Copy(io.Discard, io.LimitReader(body, maxResponseDrainSize+1))
-	if err != nil {
-		return err
+	if framing == FramedChunked {
+		count.armed.Store(true)
+		defer count.armed.Store(false)
 	}
-	if n > maxResponseDrainSize {
-		return errDrain
-	}
-	return nil
+	_, err := io.Copy(io.Discard, body)
+	return err
 }
 
 // drainForNtAuth is HttpConnection.DrainResponseAsync: the request fails
 // when the answer closes the conn, cannot be drained, or leaves bytes
 // after it. A body read to the close fails too, before the next message
 // goes out (C#'s drain1-closeframed and drain2-closeframed rows).
-func drainForNtAuth(ctx context.Context, conn net.Conn, in *bufio.Reader, body io.Reader, framing Framing, header http.Header) error {
+func drainForNtAuth(ctx context.Context, conn net.Conn, in *bufio.Reader, count *drainCount, body io.Reader, framing Framing, header http.Header) error {
 	if framing == FramedClose || headClosesConn(header) {
 		return errNtlmDrain
 	}
-	if err := drainResponse(ctx, conn, in, body, framing); err != nil || in.Buffered() > 0 {
+	if err := drainResponse(ctx, conn, in, count, body, framing); err != nil || in.Buffered() > 0 {
 		return errNtlmDrain
 	}
 	return nil
@@ -853,7 +880,7 @@ func (t *SocketsTransport) forward(request *http.Request, r *route) (*http.Respo
 			} else {
 				framing := responseFraming(response.Header)
 				drained := framing != FramedClose && !headClosesConn(response.Header) &&
-					drainBody(response.Body) && !conn.ended.Load()
+					drainNtBody(conn, response, framing) && !conn.ended.Load()
 				response.Body.Close()
 				if !drained {
 					return nil, errNtlmDrain
@@ -896,6 +923,25 @@ func drainBody(body io.ReadCloser) bool {
 	defer timer.Stop()
 	n, err := io.Copy(io.Discard, io.LimitReader(body, maxResponseDrainSize+1))
 	return err == nil && n <= maxResponseDrainSize
+}
+
+// drainNtBody is DrainAsync on a 407 net/http reads, as DrainResponseAsync
+// awaits it: a length body with more than the cap left past what came is
+// not read; a chunked one fails at a read with the conn's count at the cap.
+func drainNtBody(conn *wireConn, response *http.Response, framing Framing) bool {
+	switch framing {
+	case FramedLength:
+		if response.ContentLength-min(conn.count.count.Load(), response.ContentLength) > maxResponseDrainSize {
+			return false
+		}
+	case FramedChunked:
+		conn.count.armed.Store(true)
+		defer conn.count.armed.Store(false)
+	}
+	timer := time.AfterFunc(maxResponseDrainTime, func() { response.Body.Close() })
+	defer timer.Stop()
+	_, err := io.Copy(io.Discard, response.Body)
+	return err == nil
 }
 
 // attempt is one request on the pool. onConn, when set, learns the conn.

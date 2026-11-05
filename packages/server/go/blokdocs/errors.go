@@ -139,11 +139,6 @@ func (e *AnswerError) Error() string {
 
 func (e *AnswerError) Unwrap() error { return e.Err }
 
-// ErrHeapBackstop is inside a DocumentTooLarge ConversionError when the
-// process live heap, not the call's own allocation budget, stopped it: the
-// whole process grew past 1 GiB during the call.
-var ErrHeapBackstop = jsruntime.ErrHeapBackstop
-
 // ErrNoVersion is a bundle built without the VERSION define.
 var ErrNoVersion = &AnswerError{Message: "The embedded Blok runtime reports no version; it was built without the VERSION define."}
 

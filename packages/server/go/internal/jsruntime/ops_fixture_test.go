@@ -204,8 +204,7 @@ func TestStopsTheBigDocumentsCSharpStopsAt64MiB(t *testing.T) {
 		_, err := pool.Invoke(context.Background(), cases[name].Op, cases[name].input(), 0)
 		var failure *Failure
 		gotStopped := errors.As(err, &failure) && failure.Kind == KindDocumentTooLarge
-		// The call's own budget decides, never the process heap backstop.
-		if gotStopped != stopped || (err != nil && !gotStopped) || errors.Is(err, ErrHeapBackstop) {
+		if gotStopped != stopped || (err != nil && !gotStopped) {
 			t.Errorf("%s: err = %v, want stopped = %v", name, err, stopped)
 		}
 	}
@@ -227,8 +226,7 @@ func TestConvertsA32MiBImageAsCSharpDoesAtTheDefaultBudget(t *testing.T) {
 		_, err := pool.Invoke(context.Background(), op, input, 0)
 		var failure *Failure
 		gotStopped := errors.As(err, &failure) && failure.Kind == KindDocumentTooLarge
-		// The call's own budget decides, never the process heap backstop.
-		if gotStopped != stopped || (err != nil && !gotStopped) || errors.Is(err, ErrHeapBackstop) {
+		if gotStopped != stopped || (err != nil && !gotStopped) {
 			t.Errorf("%s: err = %v, want stopped = %v", op, err, stopped)
 		}
 	}

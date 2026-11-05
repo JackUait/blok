@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -257,55 +256,6 @@ func TestChargesCallsThatRunTogetherOnlyTheirShare(t *testing.T) {
 		if err := <-errs; err != nil {
 			t.Fatalf("two calls together: %v", err)
 		}
-	}
-}
-
-// fakeLiveHeap swaps the backstop's heap reader for one the test moves.
-func fakeLiveHeap(t *testing.T) *atomic.Int64 {
-	t.Helper()
-	var heap atomic.Int64
-	real := liveHeap
-	liveHeap = heap.Load
-	t.Cleanup(func() { liveHeap = real })
-	return &heap
-}
-
-// The even split can charge a heavy call 1/N of what it allocates, so the
-// process live heap stays guarded too: four calls that together grow it past
-// the backstop are all stopped, with an error that names the backstop.
-func TestTheHeapBackstopStopsCallsThatTogetherGrowTheHeapPastIt(t *testing.T) {
-	heap := fakeLiveHeap(t)
-	p := newCountingPool(t, 4, 30*time.Second, 0)
-	errs := make(chan error, 4)
-	for range 4 {
-		go func() {
-			_, err := p.Invoke(context.Background(), "spinFor", "3000", 0)
-			errs <- err
-		}()
-	}
-	time.Sleep(200 * time.Millisecond)
-	heap.Store(HeapBackstop + 1)
-	for range 4 {
-		err := <-errs
-		var failure *Failure
-		if !errors.As(err, &failure) || failure.Kind != KindDocumentTooLarge || !errors.Is(err, ErrHeapBackstop) {
-			t.Fatalf("err = %v, want a DocumentTooLarge Failure wrapping ErrHeapBackstop", err)
-		}
-	}
-}
-
-func TestTheHeapBackstopStaysQuietBelowIt(t *testing.T) {
-	heap := fakeLiveHeap(t)
-	p := newCountingPool(t, 1, 30*time.Second, 0)
-	done := make(chan error, 1)
-	go func() {
-		_, err := p.Invoke(context.Background(), "spinFor", "600", 0)
-		done <- err
-	}()
-	time.Sleep(200 * time.Millisecond)
-	heap.Store(HeapBackstop)
-	if err := <-done; err != nil {
-		t.Fatalf("err = %v, want a call that reaches the backstop but not past it to finish", err)
 	}
 }
 

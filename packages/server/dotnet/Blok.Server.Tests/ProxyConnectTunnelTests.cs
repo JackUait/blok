@@ -12,7 +12,7 @@ namespace Blok.Server.Tests;
 // How SocketsHttpHandler opens a CONNECT tunnel, which the Go and Rust
 // operator clients copy (S3, doc endpoint): no credentials until a 407
 // challenge asks for them, and only a 200 opens the tunnel.
-public sealed class ProxyConnectTunnelTests
+public sealed partial class ProxyConnectTunnelTests
 {
   [Theory]
   // A Basic challenge: the CONNECT goes out again with the credentials.

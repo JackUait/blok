@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/docendpoint"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Twins of C# CollabRoomTests cases that had no Go twin.

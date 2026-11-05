@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // JSON the way the C# executor handles it: JsonNode.Parse with default

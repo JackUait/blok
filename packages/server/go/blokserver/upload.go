@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/internal/blob"
-	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mediatype"
 )
 
 const (

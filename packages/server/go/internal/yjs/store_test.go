@@ -6,8 +6,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs/yjstest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs/yjstest"
 )
 
 // Ports of DeleteSetTests, StateVectorTests and DeepDocumentTests.

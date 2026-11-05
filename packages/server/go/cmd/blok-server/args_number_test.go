@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 // The flag number grammar is strconv.ParseInt(s, 0, 64), which the C# host

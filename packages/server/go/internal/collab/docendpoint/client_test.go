@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 const lineage = "00112233445566778899aabbccddeeff"

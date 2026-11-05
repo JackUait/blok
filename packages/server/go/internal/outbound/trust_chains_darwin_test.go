@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/sectrust/trustfixture"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/sectrust/trustfixture"
 )
 
 // The guarded fetcher's TLS check accepts and refuses the fixture's chains

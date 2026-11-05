@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
 )
 
 // slotOrigin serves /plain and /png at once, and /stall: the head, then a

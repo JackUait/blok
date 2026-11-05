@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/blob"
 )
 
 // The real store is blob.S3, which signs, reads 404 as absent and deletes idempotently.

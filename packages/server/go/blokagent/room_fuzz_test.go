@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // Seeds are the expectRevision texts of the room-expect-* scenarios.

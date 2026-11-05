@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/docendpoint"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
 )
 
 // persistLocked writes the blob INSIDE the lane; only the seed, edits and

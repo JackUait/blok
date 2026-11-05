@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/blob"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
-	"github.com/JackUait/blok/packages/server/go/internal/unfurl"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mediatype"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/unfurl"
 )
 
 const maxEnvelopeBytes = 8 << 10

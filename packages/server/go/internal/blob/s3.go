@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mediatype"
 )
 
 const (

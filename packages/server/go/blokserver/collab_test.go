@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // recordingHandler keeps every record with its category.

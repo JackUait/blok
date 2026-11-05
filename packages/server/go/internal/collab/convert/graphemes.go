@@ -3,7 +3,7 @@ package convert
 import (
 	"sort"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // graphemeBreak is .NET's GraphemeClusterBreakType.

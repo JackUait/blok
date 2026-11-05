@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Go twins of the C# room tests a scenario cannot express: timing,

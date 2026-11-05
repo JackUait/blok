@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 type pipeHijacker struct{ *httptest.ResponseRecorder }

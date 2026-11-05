@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // A port of C# JintFormulaLimitsTests: the formula caps of

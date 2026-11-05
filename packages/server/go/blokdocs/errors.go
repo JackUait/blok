@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // Reason says why a conversion could not finish. The values match C#

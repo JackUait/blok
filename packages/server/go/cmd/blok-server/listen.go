@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // listen binds what Kestrel's UseUrls makes of --listen (Program.cs:74-77):

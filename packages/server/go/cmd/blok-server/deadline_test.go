@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 func serveWithDeadline(t *testing.T, handler http.Handler, timeout time.Duration) string {

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // The S3 and doc-endpoint clients run on dotnet.SocketsTransport, and C#'s

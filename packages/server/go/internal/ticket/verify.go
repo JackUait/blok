@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // HeaderSegment is the only JWT header accepted, byte for byte.

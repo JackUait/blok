@@ -12,7 +12,7 @@ import (
 	"math"
 	"unicode/utf8"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // ErrFormat matches every malformed or truncated input (Lib0FormatException).

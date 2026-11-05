@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/auth"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
 )
 
 // gatedHook holds every read check once held, as C# GatedAuthorization does.

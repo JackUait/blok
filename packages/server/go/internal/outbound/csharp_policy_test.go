@@ -3,7 +3,7 @@ package outbound
 import (
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // Twins of the GuardedOutboundPolicyTests cases the shared fixture does not

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // Router picks a route like ASP.NET endpoint routing does with the C# host's

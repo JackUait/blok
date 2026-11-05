@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/route"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/route"
 )
 
 // Measured on the C# host: Kestrel takes any codings whose last non-empty

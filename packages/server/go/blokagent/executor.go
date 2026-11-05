@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // invoker is the runtime seam; tests put a scripted runtime behind it.

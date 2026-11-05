@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // The stored Go runner over test/fixtures/agent-commands, as C#

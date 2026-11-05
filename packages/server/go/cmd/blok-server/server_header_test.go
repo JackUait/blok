@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/ws"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ws"
 )
 
 // Measured on the C# host: Kestrel names itself on every answer, its own

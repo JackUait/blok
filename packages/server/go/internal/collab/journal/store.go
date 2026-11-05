@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
 )
 
 // syncJournal is the append's flush; tests swap it to stage a failed fsync.

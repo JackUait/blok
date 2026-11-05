@@ -22,7 +22,7 @@ import { GO_TARGETS, buildCommand } from './publish-server-go.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const moduleDirectory = 'packages/server/go';
-const modulePath = 'github.com/JackUait/blok/packages/server/go';
+const modulePath = 'github.com/JackUait/blok/packages/server/go/v2';
 const fixtureDirectory = join(repositoryRoot, 'test/fixtures/go-server-consumer');
 const hostVersion = '0.0.0-go-module';
 const consumerVersion = 'package-fixture';

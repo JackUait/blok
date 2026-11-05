@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // DocEndpointClient keeps SocketsHttpHandler's environment proxy, the rules

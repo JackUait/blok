@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/collabtest"
 )
 
 // fixtures/converter-keys.json is shared with the client tests and C#

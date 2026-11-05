@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // Hand ports of the TLS cases in GuardedOutboundFetcherTests, plus the

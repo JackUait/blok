@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
 )
 
 // /unfurl echoes the asked URL and the page's metadata. The JSON encoder

@@ -2,7 +2,7 @@ module example.test/blok-server-consumer
 
 go 1.27.1
 
-require github.com/JackUait/blok/packages/server/go v0.0.0
+require github.com/JackUait/blok/packages/server/go/v2 v2.0.0
 
 require (
 	github.com/andybalholm/brotli v1.2.6 // indirect
@@ -16,4 +16,4 @@ require (
 
 // scripts/test-server-go-module.mjs points this at a copy of the tracked
 // module files, which is what a consumer of the tag downloads.
-replace github.com/JackUait/blok/packages/server/go => ../../../packages/server/go
+replace github.com/JackUait/blok/packages/server/go/v2 => ../../../packages/server/go

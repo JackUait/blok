@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 // maxRequestBodyBytes is Kestrel's MaxRequestBodySize default. A var so a

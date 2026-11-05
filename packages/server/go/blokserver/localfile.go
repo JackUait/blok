@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/blob"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 const maxRanges = 16

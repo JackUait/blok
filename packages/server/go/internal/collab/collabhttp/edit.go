@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/synchttp"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
 )
 
 // IdempotencyKeyHeader names the edit's operation.

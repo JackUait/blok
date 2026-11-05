@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/synchttp"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // version is stamped at build time: -ldflags "-X main.version=1.2.3".

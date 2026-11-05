@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
 )
 
 // blockingStore holds Put until release closes.

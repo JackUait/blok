@@ -8,7 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/JackUait/blok/packages/server/go/internal/ws"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ws"
 )
 
 // ErrUpgradeLimit is Kestrel's refusal past MaxConcurrentUpgradedConnections.

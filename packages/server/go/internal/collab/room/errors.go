@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
 )
 
 // isTransient is CollabTransientException.

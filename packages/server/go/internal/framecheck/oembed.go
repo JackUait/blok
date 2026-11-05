@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"unicode/utf16"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
 )
 
 // In UTF-16 units, like every other cap in the server.

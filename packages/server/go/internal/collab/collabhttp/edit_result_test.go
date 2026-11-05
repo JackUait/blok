@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
 )
 
 // E7: every edit result as C# EditEndpoint.WriteResultAsync answers it

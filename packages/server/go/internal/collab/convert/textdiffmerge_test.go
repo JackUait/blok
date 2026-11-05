@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode/utf16"
 
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Twins of C# YDocConverterTextDiffTests: a host's /edit on a custom tool's

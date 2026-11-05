@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // Go twins of C# RoomEditTranslatorTests: the translator has no runtime

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver/ticket"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/ticket"
 )
 
 const guardSecret = "s3cret-value-at-least-32-chars-long!"

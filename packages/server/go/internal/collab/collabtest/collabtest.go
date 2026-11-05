@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/yjs/yjstest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs/yjstest"
 )
 
 // Path is the absolute path of a file under fixtures/.

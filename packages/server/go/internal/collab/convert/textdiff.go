@@ -5,7 +5,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // TextEdit turns the stored text into the saved text: at Index (UTF-16

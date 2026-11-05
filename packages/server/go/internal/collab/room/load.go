@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 const (

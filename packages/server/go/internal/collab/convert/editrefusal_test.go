@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Twins of the C# YDocConverterEditTests theories whose ops never pass the

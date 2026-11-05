@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs/yjstest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs/yjstest"
 )
 
 // Port of Blok.Server.Tests/Yjs/ScenarioSupport.cs and JsonRenderer.cs: the

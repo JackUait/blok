@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // Hand ports of GuardedOutboundFetcherTests that need a resolver or a dial

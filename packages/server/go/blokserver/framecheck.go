@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/framecheck"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
-	"github.com/JackUait/blok/packages/server/go/internal/unfurl"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/framecheck"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/unfurl"
 )
 
 const maxOEmbedBytes = 64 << 10

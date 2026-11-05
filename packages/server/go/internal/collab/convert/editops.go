@@ -11,8 +11,8 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // EditError is a refused edit request (C# CollabEditException): a 422 whose

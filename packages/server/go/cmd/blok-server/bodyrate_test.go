@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 const kestrel408 = "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"

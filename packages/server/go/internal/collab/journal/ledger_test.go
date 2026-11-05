@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/collabtest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 func TestEncodesEveryLedgerEntryToTheBytesCSharpWrites(t *testing.T) {

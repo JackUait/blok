@@ -3,9 +3,9 @@ package collabhttp
 import (
 	"net/http"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/synchttp"
-	"github.com/JackUait/blok/packages/server/go/internal/route"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/synchttp"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/route"
 )
 
 // State is GET /sync/{doc}/state: the live document as the consumer export.

@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/collabtest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // The scenarios C# CollabJournalStoreCaptureTests ran against its store.

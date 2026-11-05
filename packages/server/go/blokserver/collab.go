@@ -9,17 +9,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokagent"
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
-	"github.com/JackUait/blok/packages/server/go/internal/blob"
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/docendpoint"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // CollabLogCategory is the category every room warning carries, as C#'s

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
 )
 
 // manualTimers is C#'s ManualTimeProvider for timers: nothing fires until

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 const conformanceOriginPrefix = "http://127.0.0.1:"

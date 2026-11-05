@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/docendpoint"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/docendpoint"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
 )
 
 // Twins of the C# CollabRoomManagerTests join outcomes (M3): SeedFailed,

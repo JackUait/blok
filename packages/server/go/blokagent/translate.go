@@ -3,8 +3,8 @@ package blokagent
 import (
 	"strconv"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // translate is C# RoomEditTranslator.Translate: the planner's edits as room

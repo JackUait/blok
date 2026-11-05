@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/ws"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ws"
 )
 
 func newTestMember(maxQueuedBytes int64) *SocketMember {

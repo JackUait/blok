@@ -3,8 +3,8 @@ package outbound
 import (
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // In UTF-16 units, like every other cap in the server.

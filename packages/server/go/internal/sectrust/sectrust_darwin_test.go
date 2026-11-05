@@ -5,7 +5,7 @@ package sectrust
 import (
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/sectrust/trustfixture"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/sectrust/trustfixture"
 )
 
 func verdict(ok bool) string {

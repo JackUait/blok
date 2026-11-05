@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokagent"
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // C# AddBlokServer registers one IBlokRuntime that the converter, the agent

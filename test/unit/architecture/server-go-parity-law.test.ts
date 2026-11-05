@@ -13,7 +13,7 @@ type Workflow = {
 
 const repoRoot = resolve(__dirname, '../../..');
 const runnerPath = resolve(repoRoot, 'scripts/test-server-conformance.mjs');
-const GO_MODULE_PATH = 'github.com/JackUait/blok/packages/server/go';
+const GO_MODULE_PATH = 'github.com/JackUait/blok/packages/server/go/v2';
 const read = (path: string): string => readFileSync(resolve(repoRoot, path), 'utf8');
 
 /** The module line of go.mod, or undefined when there is none. */

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // MigrationReadTimeout is the one-time budget a seed and a migration read

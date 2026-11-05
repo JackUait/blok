@@ -3,7 +3,7 @@ package synchttp
 import (
 	"net/http"
 
-	"github.com/JackUait/blok/packages/server/go/internal/auth"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
 )
 
 // The other collab routes share these with the sync door.

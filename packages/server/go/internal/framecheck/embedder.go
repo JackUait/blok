@@ -1,6 +1,6 @@
 package framecheck
 
-import "github.com/JackUait/blok/packages/server/go/internal/dotnet"
+import "github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 
 // Request is what Embedder reads from a frame-check request.
 type Request struct {

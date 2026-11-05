@@ -3,7 +3,7 @@ package synchttp
 import (
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
 )
 
 func TestTheProcessCeilingRefusesPastItAndFreesOnRelease(t *testing.T) {

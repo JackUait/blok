@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/yjs/yjstest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs/yjstest"
 )
 
 // The C#-captured golden (Blok.Server.Tests/Yjs/CSharpCaptureTests.cs):

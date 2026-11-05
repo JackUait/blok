@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // The repo root, from this package's directory.

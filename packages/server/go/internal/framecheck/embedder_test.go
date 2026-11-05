@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 const embedderFixture = "../../../../../test/unit/server-conformance/fixtures/frame-check-embedders.json"

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
-	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/collabstore"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
 )
 
 // unreadableHistory keeps history whose lineage list fails with err.

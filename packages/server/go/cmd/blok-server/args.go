@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 const defaultTicketRateLimit = 60

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 func customInsert(t *testing.T, id string) []convert.EditOp {

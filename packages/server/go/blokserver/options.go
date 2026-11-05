@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
-	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/collabstore"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // MinimumSecretLength is the shortest ticket secret, in UTF-16 code units.

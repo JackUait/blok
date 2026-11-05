@@ -36,7 +36,7 @@ var restricted = map[string]map[string]bool{
 }
 
 const (
-	socketsPackage = "github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	socketsPackage = "github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 	socketsOwner   = "internal/dotnet/sockets.go"
 )
 
@@ -203,9 +203,9 @@ func TestTheLawCatchesPlantedViolations(t *testing.T) {
 		"a websocket dial":                       "package p\nimport \"golang.org/x/net/websocket\"\nfunc f() { websocket.Dial(\"ws://x\", \"\", \"http://x\") }",
 		"a websocket config in S3":               "package blob\nimport \"golang.org/x/net/websocket\"\nfunc f() { websocket.NewConfig(\"ws://x\", \"http://x\") }",
 		"a websocket client in the doc endpoint": "package docendpoint\nimport ws \"golang.org/x/net/websocket\"\nfunc f() { ws.NewClient(nil, nil) }",
-		"a sockets transport in a new place":     "package p\nimport \"github.com/JackUait/blok/packages/server/go/internal/dotnet\"\nvar t = dotnet.NewSocketsTransport(dotnet.SocketsOptions{})",
-		"a sockets transport literal":            "package p\nimport d \"github.com/JackUait/blok/packages/server/go/internal/dotnet\"\nvar t = d.SocketsTransport{}",
-		"a second sockets transport in S3":       "package blob\nimport \"github.com/JackUait/blok/packages/server/go/internal/dotnet\"\nvar a, b = dotnet.NewSocketsTransport(dotnet.SocketsOptions{}), dotnet.NewSocketsTransport(dotnet.SocketsOptions{})",
+		"a sockets transport in a new place":     "package p\nimport \"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet\"\nvar t = dotnet.NewSocketsTransport(dotnet.SocketsOptions{})",
+		"a sockets transport literal":            "package p\nimport d \"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet\"\nvar t = d.SocketsTransport{}",
+		"a second sockets transport in S3":       "package blob\nimport \"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet\"\nvar a, b = dotnet.NewSocketsTransport(dotnet.SocketsOptions{}), dotnet.NewSocketsTransport(dotnet.SocketsOptions{})",
 		"a sockets transport inside dotnet":      "package dotnet\nvar t = NewSocketsTransport(SocketsOptions{})",
 	}
 	for name, source := range cases {

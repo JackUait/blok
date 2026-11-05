@@ -12,7 +12,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // Floors a host may not go below, as C# BlokDocuments publishes them.

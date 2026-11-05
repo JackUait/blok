@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
-	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/collabstore"
 )
 
 // openOnly is a host journal that cannot purge.

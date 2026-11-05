@@ -7,10 +7,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // emptyObjects is an S3 bucket that records every key it is asked for.

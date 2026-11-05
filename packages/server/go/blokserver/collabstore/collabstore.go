@@ -10,9 +10,9 @@
 package collabstore
 
 import (
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
 )
 
 // The store seams: ICollabOperationStore, ICollabOperationSession,

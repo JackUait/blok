@@ -4,7 +4,7 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
 )
 
 // DeleteRange is a run of deleted clocks.

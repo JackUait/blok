@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver/ticket"
-	"github.com/JackUait/blok/packages/server/go/internal/blob"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/ticket"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/blob"
 )
 
 // AddBlokServer TryAdds TimeProvider.System (BlokServerServiceCollectionExtensions.cs:77),

@@ -1,6 +1,6 @@
 package synchttp
 
-import "github.com/JackUait/blok/packages/server/go/internal/collab"
+import "github.com/JackUait/blok/packages/server/go/v2/internal/collab"
 
 // CloseFrame is a close status and its exact reason text: SyncCloseFrame.
 // Compared as a whole value, so code AND reason must match.

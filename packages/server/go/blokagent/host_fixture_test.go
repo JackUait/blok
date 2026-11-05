@@ -15,8 +15,8 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // The repo root, from this package's directory.

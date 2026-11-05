@@ -14,8 +14,8 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
 )
 
 const fixtureRel = "test/unit/server-conformance/fixtures/yjs-engine"

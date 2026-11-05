@@ -6,11 +6,11 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/JackUait/blok/packages/server/go/internal/auth"
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/ticket"
-	"github.com/JackUait/blok/packages/server/go/internal/ws"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ticket"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ws"
 )
 
 // The two subprotocol tokens. Matched ordinally, never by case.

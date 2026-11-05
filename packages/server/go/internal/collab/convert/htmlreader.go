@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // MaxEditHTMLChars is the HTML one edit field may carry, in UTF-16 units

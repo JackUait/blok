@@ -2,7 +2,7 @@
 
 package main
 
-import "github.com/JackUait/blok/packages/server/go/blokserver"
+import "github.com/JackUait/blok/packages/server/go/v2/blokserver"
 
 type conformanceArguments struct{}
 

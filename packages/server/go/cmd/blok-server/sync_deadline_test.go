@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
-	"github.com/JackUait/blok/packages/server/go/internal/ws"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ws"
 )
 
 // A sync socket opts out of the request deadline, as GET /sync/{doc} does

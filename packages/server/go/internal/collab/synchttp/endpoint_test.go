@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/auth"
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/route"
-	"github.com/JackUait/blok/packages/server/go/internal/ticket"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/route"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ticket"
 )
 
 const testSecret = "s3cret-value-at-least-32-chars-long!"

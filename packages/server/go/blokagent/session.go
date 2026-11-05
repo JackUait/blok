@@ -3,7 +3,7 @@ package blokagent
 import (
 	"context"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // Same caps as AGENT_HISTORY_LIMITS in src/shared/agent/document-session.ts.

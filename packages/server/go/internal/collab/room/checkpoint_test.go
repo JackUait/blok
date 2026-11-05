@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Twins of the C# CollabRoomTests checkpoint-policy cases (ops.go

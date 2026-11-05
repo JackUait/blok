@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // Errors are what C# throws; a batch the bundle refuses is never an error,

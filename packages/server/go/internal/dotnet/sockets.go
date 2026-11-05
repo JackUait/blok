@@ -21,7 +21,7 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"github.com/JackUait/blok/packages/server/go/internal/sectrust"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/sectrust"
 )
 
 // SocketsOptions are the SocketsHttpHandler settings the C# server sets.

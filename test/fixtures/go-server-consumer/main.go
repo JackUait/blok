@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
-	"github.com/JackUait/blok/packages/server/go/blokserver"
-	"github.com/JackUait/blok/packages/server/go/blokserver/collabstore"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver/collabstore"
 )
 
 const prefix = "/api/blok"

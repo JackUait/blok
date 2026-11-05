@@ -17,9 +17,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
-	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
-	"github.com/JackUait/blok/packages/server/go/internal/sectrust"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/mediatype"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/sectrust"
 )
 
 // UserAgent is sent with every fetch, and no other header but Host.

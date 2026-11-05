@@ -1,6 +1,6 @@
 package yjs
 
-import "github.com/JackUait/blok/packages/server/go/internal/jsjson"
+import "github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 
 const (
 	originBit      = 0x80

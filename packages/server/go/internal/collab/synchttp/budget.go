@@ -3,7 +3,7 @@ package synchttp
 import (
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
 )
 
 // amplifierBurst: a flaky reconnect can land a few resyncs at once.

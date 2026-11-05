@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/collabtest"
 )
 
 type frameCase struct {

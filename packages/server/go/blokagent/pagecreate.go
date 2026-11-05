@@ -3,7 +3,7 @@ package blokagent
 import (
 	"context"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // createPages makes the pages a batch inserts before the bundle runs it:

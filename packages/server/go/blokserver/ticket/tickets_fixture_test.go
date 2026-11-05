@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/ticket"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ticket"
 )
 
 // The passes C# reads in TicketVerifierTests, BlokTicketTests,

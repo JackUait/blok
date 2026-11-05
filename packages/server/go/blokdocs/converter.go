@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // Converter converts saved Blok documents. It is safe for concurrent use; at

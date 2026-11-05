@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/workingset"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/workingset"
 )
 
 // Twins of the C# CollabRoomTests headless-journal cases: a journal with no

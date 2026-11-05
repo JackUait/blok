@@ -9,7 +9,7 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // Failure is GuardedFetchFailure.

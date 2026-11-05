@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/auth"
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/route"
-	"github.com/JackUait/blok/packages/server/go/internal/ws"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/route"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/ws"
 )
 
 // outboundQueueFactor: the backlog budget is this many inbound messages.

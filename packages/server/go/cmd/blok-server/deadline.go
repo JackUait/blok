@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 // withDeadline is the host's RequestTimeoutPolicy: each request gets

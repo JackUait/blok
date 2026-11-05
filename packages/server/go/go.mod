@@ -1,4 +1,4 @@
-module github.com/JackUait/blok/packages/server/go
+module github.com/JackUait/blok/packages/server/go/v2
 
 go 1.27.1
 

@@ -1,8 +1,8 @@
 package yjs
 
 import (
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
 )
 
 // AbstractType is a shared type: *Map, *Array, *Text, *XmlText,

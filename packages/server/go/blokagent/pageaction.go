@@ -3,7 +3,7 @@ package blokagent
 import (
 	"context"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // runPageAction renames a page or sets its icon on the target's own

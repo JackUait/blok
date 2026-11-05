@@ -3,7 +3,7 @@
 package blokserver
 
 import (
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
 )
 
 // UseConformanceOrigin swaps the outbound policy for one that reaches only

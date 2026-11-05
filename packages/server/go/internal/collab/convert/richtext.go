@@ -5,8 +5,8 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Rich text segments ({text|embed, marks}) and the Y.XmlText delta, in the

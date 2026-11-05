@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // Transaction is one local or remote change to a Doc.

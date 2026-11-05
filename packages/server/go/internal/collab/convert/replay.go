@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"iter"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/operation"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/operation"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // ReplayError is a baseline frame or record that the history replay could

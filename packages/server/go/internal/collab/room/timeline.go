@@ -3,7 +3,7 @@ package room
 import (
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/journal"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/journal"
 )
 
 // Version is CollabVersion: one version in a document's history. Sequence 0

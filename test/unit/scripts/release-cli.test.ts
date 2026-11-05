@@ -43,11 +43,12 @@ describe('release.mjs Go module tag', () => {
     expect(() => releaseGitTags('1.17.0', 'go 1.27.1\n')).toThrow('packages/server/go/go.mod has no module line');
   });
 
-  it('accepts the family version with the go.mod on disk', () => {
-    const { version } = JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8')) as { version: string };
+  // The module path must carry the major of the next release before
+  // `yarn release` runs, so this names that major, not package.json's.
+  it('accepts the next major with the go.mod on disk', () => {
     const onDisk = readFileSync(resolve(repositoryRoot, 'packages/server/go/go.mod'), 'utf8');
 
-    expect(releaseGitTags(version, onDisk).goModuleTag).toBe(`packages/server/go/v${version}`);
+    expect(releaseGitTags('2.0.0', onDisk).goModuleTag).toBe('packages/server/go/v2.0.0');
   });
 
   it('checks the Go tag before publishing and pushes it before the family tag', () => {

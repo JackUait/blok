@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // Captured from GuardedOutboundPolicy by OutboundPolicyFixtureTests. The

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/room"
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/room"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // runVersionRead is a version history call: the journal's answer goes into

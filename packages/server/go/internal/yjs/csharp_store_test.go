@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // The C# StructStoreTests and YDocWriteTests assertions the older Go twins

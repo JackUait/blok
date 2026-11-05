@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"slices"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // PageMap is one of the PageMaps with its live top-level keys, raw: a value

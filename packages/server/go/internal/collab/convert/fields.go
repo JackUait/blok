@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // RichTextFields names the data keys stored as formatted text, per block

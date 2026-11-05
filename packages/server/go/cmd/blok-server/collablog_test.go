@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/blokserver"
+	"github.com/JackUait/blok/packages/server/go/v2/blokserver"
 )
 
 // H37: only the room category, Warning and up, one line each.

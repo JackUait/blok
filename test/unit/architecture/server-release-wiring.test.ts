@@ -838,7 +838,7 @@ describe('server release wiring', () => {
     expect(read('packages/server/README.md')).not.toContain('UseMySql');
     expect(read(RELEASE_WORKFLOW)).not.toContain('MySql');
     expect(read(RELEASE_WORKFLOW)).toContain('node scripts/publish-server-go.mjs');
-    expect(read('packages/server/README.md')).toContain('github.com/JackUait/blok/packages/server/go');
+    expect(read('packages/server/README.md')).toContain('github.com/JackUait/blok/packages/server/go/v2');
     expect(read('packages/server/README.md')).toContain('checksums-go.txt');
   });
 

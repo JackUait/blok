@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // LedgerFileName is the lineage ledger inside a document's journal directory.

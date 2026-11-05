@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab/collabtest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/collabtest"
 )
 
 // Twin of RichTextFieldsTests: the built-ins equal the client table the TS suite pins.

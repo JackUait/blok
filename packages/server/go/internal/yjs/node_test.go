@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs/yjstest"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs/yjstest"
 )
 
 // The engine → Node direction of the interop law (C# NodeReplay.cs): update

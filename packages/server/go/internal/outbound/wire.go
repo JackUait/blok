@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // readResponse reads a response to a GET as .NET's HttpClient does

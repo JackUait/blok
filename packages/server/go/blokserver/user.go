@@ -3,7 +3,7 @@ package blokserver
 import (
 	"context"
 
-	"github.com/JackUait/blok/packages/server/go/internal/auth"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/auth"
 )
 
 // User is the caller of one request.

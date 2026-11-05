@@ -19,7 +19,7 @@ import (
 
 	"golang.org/x/net/http/httpguts"
 
-	"github.com/JackUait/blok/packages/server/go/internal/route"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/route"
 )
 
 // targetStream sits between the socket and net/http and makes each request

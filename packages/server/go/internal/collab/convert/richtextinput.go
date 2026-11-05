@@ -1,6 +1,6 @@
 package convert
 
-import "github.com/JackUait/blok/packages/server/go/internal/jsjson"
+import "github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 
 // RichTextInput is what the seed and edit paths do with a rich field's HTML
 // (C# RichTextInput.cs). HTML needs the runtime, which the converter never

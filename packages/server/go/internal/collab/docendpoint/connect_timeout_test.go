@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/dotnet"
 )
 
 // SocketsHttpHandler.ConnectTimeout bounds the TCP connect and the TLS

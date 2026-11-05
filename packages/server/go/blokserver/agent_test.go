@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/blokagent"
-	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
+	"github.com/JackUait/blok/packages/server/go/v2/blokagent"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsruntime"
 )
 
 // C# registers one agent executor beside the documents runtime, with the

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/outbound"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/outbound"
 )
 
 const frameEditor = "http://editor.example"

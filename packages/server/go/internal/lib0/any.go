@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
 )
 
 // BigInt is a peer's bigint (tag 122). The engine never writes one of its

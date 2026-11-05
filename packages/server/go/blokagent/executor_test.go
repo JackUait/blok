@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/blokdocs"
+	"github.com/JackUait/blok/packages/server/go/v2/blokdocs"
 )
 
 // C# BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints. A nil

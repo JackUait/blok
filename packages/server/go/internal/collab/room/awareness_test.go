@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/convert"
-	"github.com/JackUait/blok/packages/server/go/internal/collab/wire"
-	"github.com/JackUait/blok/packages/server/go/internal/lib0"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/convert"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab/wire"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/lib0"
 )
 
 // Twins of the C# CollabRoomTests awareness ownership and identities cases

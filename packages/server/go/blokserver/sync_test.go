@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/collab"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/collab"
 )
 
 type countingRooms struct {

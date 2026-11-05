@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
-	"github.com/JackUait/blok/packages/server/go/internal/yjs"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/jsjson"
+	"github.com/JackUait/blok/packages/server/go/v2/internal/yjs"
 )
 
 // Twins of C# YDocConverterDatabaseRowTitleTests. A plain string and a YText

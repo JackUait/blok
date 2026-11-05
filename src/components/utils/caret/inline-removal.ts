@@ -40,10 +40,6 @@ const inlineRemovalObserver = typeof window !== 'undefined' && typeof window.Mut
           return;
         }
 
-        if (!isElementVisuallyEmpty(node as Element)) {
-          return;
-        }
-
         const candidateNode = referenceNextSibling?.nodeType === TEXT_NODE ? referenceNextSibling : null;
 
         if (candidateNode === null) {
@@ -65,7 +61,9 @@ const inlineRemovalObserver = typeof window !== 'undefined' && typeof window.Mut
         const firstChar = candidate.textContent?.[0] ?? null;
         const isWhitespace = firstChar === NBSP_CHAR || firstChar === ' ';
 
-        if (!isWhitespace) {
+        // Last: it walks the removed subtree, and a moved block holder is
+        // followed by another holder, not by text.
+        if (!isWhitespace || !isElementVisuallyEmpty(node as Element)) {
           return;
         }
 

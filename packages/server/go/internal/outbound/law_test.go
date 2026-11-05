@@ -28,6 +28,9 @@ var restricted = map[string]map[string]bool{
 	},
 	"net":        {"Dial": true, "DialTimeout": true, "Dialer": true, "DialTCP": true, "DialUDP": true, "DialIP": true, "DialUnix": true},
 	"crypto/tls": {"Dial": true, "DialWithDialer": true, "Client": true, "Dialer": true},
+	// C# bans ClientWebSocket everywhere, pinned owners too. NewConfig is
+	// listed because Config.DialContext is a method the scan cannot see.
+	"golang.org/x/net/websocket": {"Dial": true, "DialConfig": true, "NewConfig": true, "NewClient": true},
 }
 
 const guardOwner = "internal/outbound/fetcher.go"
@@ -174,17 +177,20 @@ func TestOnlyTheGuardedFetcherOwnsOutboundClients(t *testing.T) {
 
 func TestTheLawCatchesPlantedViolations(t *testing.T) {
 	cases := map[string]string{
-		"a client literal":             "package p\nimport \"net/http\"\nvar c = &http.Client{}",
-		"an aliased transport":         "package p\nimport h \"net/http\"\nvar t = h.Transport{}",
-		"the default client":           "package p\nimport \"net/http\"\nfunc f() { http.Get(\"x\") }",
-		"a raw dial":                   "package p\nimport \"net\"\nfunc f() { net.Dial(\"tcp\", \"x\") }",
-		"a TLS dial":                   "package p\nimport \"crypto/tls\"\nfunc f() { tls.Dial(\"tcp\", \"x\", nil) }",
-		"a dot import":                 "package p\nimport . \"net/http\"\nvar c = Client{}",
-		"a second client in S3":        "package blob\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
-		"a second doc endpoint client": "package docendpoint\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
-		"a new restricted name":        "package p\nimport \"net/http\"\nvar c = new(http.Client)",
-		"a client in a new place":      "package p\nimport \"net/http\"\nvar c http.Client",
-		"a pointer then a call":        "package p\nimport \"net/http\"\nvar c *http.Client = http.DefaultClient",
+		"a client literal":                       "package p\nimport \"net/http\"\nvar c = &http.Client{}",
+		"an aliased transport":                   "package p\nimport h \"net/http\"\nvar t = h.Transport{}",
+		"the default client":                     "package p\nimport \"net/http\"\nfunc f() { http.Get(\"x\") }",
+		"a raw dial":                             "package p\nimport \"net\"\nfunc f() { net.Dial(\"tcp\", \"x\") }",
+		"a TLS dial":                             "package p\nimport \"crypto/tls\"\nfunc f() { tls.Dial(\"tcp\", \"x\", nil) }",
+		"a dot import":                           "package p\nimport . \"net/http\"\nvar c = Client{}",
+		"a second client in S3":                  "package blob\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
+		"a second doc endpoint client":           "package docendpoint\nimport \"net/http\"\nvar a, b = &http.Client{}, &http.Client{}",
+		"a new restricted name":                  "package p\nimport \"net/http\"\nvar c = new(http.Client)",
+		"a client in a new place":                "package p\nimport \"net/http\"\nvar c http.Client",
+		"a pointer then a call":                  "package p\nimport \"net/http\"\nvar c *http.Client = http.DefaultClient",
+		"a websocket dial":                       "package p\nimport \"golang.org/x/net/websocket\"\nfunc f() { websocket.Dial(\"ws://x\", \"\", \"http://x\") }",
+		"a websocket config in S3":               "package blob\nimport \"golang.org/x/net/websocket\"\nfunc f() { websocket.NewConfig(\"ws://x\", \"http://x\") }",
+		"a websocket client in the doc endpoint": "package docendpoint\nimport ws \"golang.org/x/net/websocket\"\nfunc f() { ws.NewClient(nil, nil) }",
 	}
 	for name, source := range cases {
 		path := "internal/somewhere/x.go"

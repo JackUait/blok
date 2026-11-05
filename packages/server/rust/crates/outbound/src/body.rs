@@ -59,6 +59,11 @@ pub(crate) async fn read_bounded<R: Source>(
             }
             return Err(fail(Failure::TooLarge));
         }
+        // C# stops once the buffer is full; another read could wait on a
+        // server that holds the connection.
+        if truncate && total == max {
+            break;
+        }
     }
     if let Some(decoder) = decoder.as_mut() {
         decoder.finish(&mut out).map_err(decode_failure)?;

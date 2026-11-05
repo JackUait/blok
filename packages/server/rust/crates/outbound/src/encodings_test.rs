@@ -173,3 +173,36 @@ async fn gzip_header_crc_covers_a_long_name() {
         }
     }
 }
+
+/// Gives `left` bytes, then never answers, as a server that holds the
+/// connection after them.
+struct ThenStall {
+    left: usize,
+}
+
+impl crate::wire::Source for ThenStall {
+    async fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.left == 0 {
+            std::future::pending::<()>().await;
+        }
+        let n = buf.len().min(self.left);
+        buf[..n].fill(b'a');
+        self.left -= n;
+        Ok(n)
+    }
+}
+
+// GuardedOutboundFetcher.ReadPrefixAsync stops once the buffer is full:
+// a body of exactly the cap is never read past, so a held connection
+// cannot keep frame-check waiting for its deadline.
+#[tokio::test]
+async fn a_truncated_read_stops_at_the_cap_without_another_read() {
+    let max = 256 << 10;
+    let got = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        read_bounded(ThenStall { left: max }, None, &[], max as u64, true),
+    )
+    .await
+    .expect("read past the cap and waited");
+    assert_eq!(got.unwrap().len(), max);
+}

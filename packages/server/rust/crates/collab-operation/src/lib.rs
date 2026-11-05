@@ -26,7 +26,8 @@ impl fmt::Display for Source {
             Self::CLIENT_V2 => f.write_str("ClientV2"),
             Self::CLIENT_V1 => f.write_str("ClientV1"),
             Self::HTTP_EDIT => f.write_str("HttpEdit"),
-            Source(other) => write!(f, "Source({other})"),
+            // An undefined value prints as its number, as a C# enum does.
+            Source(other) => write!(f, "{other}"),
         }
     }
 }
@@ -142,6 +143,7 @@ mod tests {
         assert_eq!(Source::CLIENT_V2.to_string(), "ClientV2");
         assert_eq!(Source::CLIENT_V1.to_string(), "ClientV1");
         assert_eq!(Source::HTTP_EDIT.to_string(), "HttpEdit");
-        assert_eq!(Source(7).to_string(), "Source(7)");
+        assert_eq!(Source(7).to_string(), "7");
+        assert_eq!(Source(255).to_string(), "255");
     }
 }

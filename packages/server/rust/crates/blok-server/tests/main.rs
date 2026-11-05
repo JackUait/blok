@@ -2049,3 +2049,23 @@ fn the_binary_decodes_non_utf8_arguments_and_environment_as_c_sharp_does() {
         "blok-server refused to start: --secret must be at least 32 characters (got 22)\n"
     );
 }
+
+// Console.Error.WriteLine ends each C# record with Environment.NewLine:
+// "\r\n" in the Windows CoreLib, "\n" elsewhere. The usage text is a raw
+// literal, so it keeps "\n".
+#[tokio::test]
+async fn stderr_records_end_with_dot_nets_new_line() {
+    let want = if cfg!(windows) { "\r\n" } else { "\n" };
+    assert_eq!(blok_server::NEWLINE, want);
+    let (_, text) = run_to_exit(&["--not-a-real-flag"]).await;
+    assert!(
+        text.starts_with(&format!(
+            "flag provided but not defined: -not-a-real-flag{want}{}",
+            &USAGE[..10]
+        )),
+        "{text:?}"
+    );
+    let out = Buffer::default();
+    blok_server::collablog::write_log_line(&out.stderr(), "warning", "x").unwrap();
+    assert_eq!(out.text(), format!("warning: x{want}"));
+}

@@ -16,6 +16,10 @@ use crate::args::{USAGE, parse_host_arguments};
 use crate::collablog::{CollabStderr, Stderr, write_log_line};
 use crate::conformance::{apply_conformance, parse_conformance_arguments};
 
+/// .NET's Environment.NewLine, which Console.Error.WriteLine ends every C#
+/// record with: "\r\n" in the Windows CoreLib.
+pub const NEWLINE: &str = if cfg!(windows) { "\r\n" } else { "\n" };
+
 /// HostCollab.ShutdownTimeout: a ceiling for the drain and the graceful
 /// stop, not a wait.
 pub const SHUTDOWN_GRACE: Duration = Duration::from_secs(30);
@@ -90,7 +94,7 @@ pub async fn run<F: Future<Output = ()>>(
     let (host_args, conformance) = match parse_conformance_arguments(args) {
         Ok(parsed) => parsed,
         Err(message) => {
-            print(&stderr, &format!("{message}\n{USAGE}"));
+            print(&stderr, &format!("{message}{NEWLINE}{USAGE}"));
             return 2;
         }
     };
@@ -100,7 +104,7 @@ pub async fn run<F: Future<Output = ()>>(
         return 0;
     }
     if !parsed.err.is_empty() {
-        print(&stderr, &format!("{}\n{USAGE}", parsed.err));
+        print(&stderr, &format!("{}{NEWLINE}{USAGE}", parsed.err));
         return 2;
     }
     let mut options = parsed.options;
@@ -109,20 +113,27 @@ pub async fn run<F: Future<Output = ()>>(
     let server = match Server::new(options) {
         Ok(server) => server,
         Err(error) => {
-            print(&stderr, &format!("blok-server refused to start: {error}\n"));
+            print(
+                &stderr,
+                &format!("blok-server refused to start: {error}{NEWLINE}"),
+            );
             return 1;
         }
     };
     if parsed.secret_from_flag {
         print(
             &stderr,
-            "warning: --secret puts the shared secret in this machine's process list; set BLOK_SECRET in the environment instead\n",
+            &format!(
+                "warning: --secret puts the shared secret in this machine's process list; set BLOK_SECRET in the environment instead{NEWLINE}"
+            ),
         );
     }
     if parsed.doc_endpoint_auth_from_flag {
         print(
             &stderr,
-            "warning: --doc-endpoint-auth puts the credential in this machine's process list; set BLOK_DOC_ENDPOINT_AUTH in the environment instead\n",
+            &format!(
+                "warning: --doc-endpoint-auth puts the credential in this machine's process list; set BLOK_DOC_ENDPOINT_AUTH in the environment instead{NEWLINE}"
+            ),
         );
     }
     apply_conformance(&server, &conformance);
@@ -135,7 +146,10 @@ pub async fn run<F: Future<Output = ()>>(
     let listeners = match listen(&options.listen_address, blok_dotnet::parse_ip) {
         Ok(listeners) => listeners,
         Err(error) => {
-            print(&stderr, &format!("blok-server refused to start: {error}\n"));
+            print(
+                &stderr,
+                &format!("blok-server refused to start: {error}{NEWLINE}"),
+            );
             return 1;
         }
     };
@@ -156,14 +170,14 @@ pub async fn run<F: Future<Output = ()>>(
     print(
         &stderr,
         &format!(
-            "blok-server {version} listening on {} (--auth {})\n",
+            "blok-server {version} listening on {} (--auth {}){NEWLINE}",
             options.listen_address, options.auth
         ),
     );
 
     tokio::select! {
         Some(error) = served.recv() => {
-            print(&stderr, &format!("blok-server stopped: {error}\n"));
+            print(&stderr, &format!("blok-server stopped: {error}{NEWLINE}"));
             return 1;
         }
         () = shutdown => {}

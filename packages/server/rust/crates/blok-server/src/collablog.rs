@@ -28,7 +28,7 @@ impl Logger for CollabStderr {
     }
 }
 
-/// Writes "<kind>: <message>\n" with the message on one line. Messages
+/// Writes "<kind>: <message>" and NEWLINE, the message on one line. Messages
 /// carry doc ids from the URL, so a raw newline could forge a record. \n, \r
 /// and \t become those two-character escapes; every other C0 control, DEL,
 /// C1 control (U+0080-U+009F), U+2028 and U+2029 becomes \uXXXX in upper
@@ -51,7 +51,7 @@ pub fn write_log_line(out: &Stderr, kind: &str, message: &str) -> std::io::Resul
             c => line.push(c),
         }
     }
-    line.push('\n');
+    line.push_str(crate::NEWLINE);
     let mut out = out
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);

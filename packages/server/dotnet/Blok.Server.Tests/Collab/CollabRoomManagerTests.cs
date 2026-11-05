@@ -1279,6 +1279,23 @@ public sealed class CollabRoomManagerTests
   }
 
   /// <summary>
+  /// The "held off" log line prints its wait with TimeSpan's "c" format. Go
+  /// and Rust copy these rows.
+  /// </summary>
+  [Theory]
+  [InlineData(2_000_000_000L, "00:00:02")]
+  [InlineData(60_000_000_000L, "00:01:00")]
+  [InlineData(5_000_000L, "00:00:00.0050000")]
+  [InlineData(1_500_000_000L, "00:00:01.5000000")]
+  [InlineData(150L, "00:00:00.0000001")]
+  [InlineData(90_061_000_000_000L, "1.01:01:01")]
+  [InlineData(3_600_000_000_000L * 24 * 12 + 1_000_000_000L, "12.00:00:01")]
+  public void AHeldOffWaitPrintsAsATimeSpan(long nanoseconds, string printed)
+  {
+    Assert.Equal(printed, $"{TimeSpan.FromTicks(nanoseconds / 100)}");
+  }
+
+  /// <summary>
   /// The shutdown deadline cancels the drain's token mid-flush. Every room
   /// still closes, and the only lines are each room's own flush failure.
   /// </summary>

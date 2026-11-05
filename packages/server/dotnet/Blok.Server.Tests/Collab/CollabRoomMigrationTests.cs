@@ -215,7 +215,11 @@ public sealed class CollabRoomMigrationTests
     Assert.Equal(CollabJoinStatus.SeedFailed, first.Status);
     Assert.Equal(CollabJoinStatus.Unavailable, during.Status);
     Assert.Equal(1, reader.Calls);
-    Assert.Contains(log, line => line.Contains("held off", StringComparison.Ordinal));
+    // The wait prints as a TimeSpan ("c" format), which Go and Rust copy.
+    Assert.Contains(
+        $"collab: document \"{DocId}\" failed to load in a way the next open repeats, " +
+        "so it is held off for 00:00:02 (failure 1); the room's own log line says why",
+        log);
 
     time.Advance(new CollabRoomOptions().Backoff(1));
     var after = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);

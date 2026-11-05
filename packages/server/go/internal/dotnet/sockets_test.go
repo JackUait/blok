@@ -138,3 +138,70 @@ func TestAPooledConnectionRetiresAfterItsLifetime(t *testing.T) {
 		t.Fatalf("opened %d connections", opened.Load())
 	}
 }
+
+// socks4Proxy grants one SOCKS4 tunnel, records the handshake, then answers
+// the tunnelled request itself.
+func socks4Proxy(t *testing.T) (string, <-chan []byte) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+	handshakes := make(chan []byte, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		reader := bufio.NewReader(conn)
+		head := make([]byte, 8)
+		if _, err := io.ReadFull(reader, head); err != nil {
+			return
+		}
+		user, _ := reader.ReadBytes(0)
+		handshake := append(head, user...)
+		if head[4] == 0 && head[5] == 0 && head[6] == 0 && head[7] != 0 {
+			host, _ := reader.ReadBytes(0)
+			handshake = append(handshake, host...)
+		}
+		handshakes <- handshake
+		_, _ = conn.Write([]byte{0, 90, 0, 0, 0, 0, 0, 0})
+		if _, err := http.ReadRequest(reader); err != nil {
+			return
+		}
+		_, _ = io.WriteString(conn, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+	}()
+	return listener.Addr().String(), handshakes
+}
+
+// SocksHelper.EstablishSocks4TunnelAsync (System.Net.Http 10.0.11,
+// decompiled): SOCKS4 sends an IPv4 address and the user name; SOCKS4a
+// hands a name to the proxy behind 0.0.0.255.
+func TestTunnelsThroughSocks4AndSocks4aAsDotNetDoes(t *testing.T) {
+	cases := []struct {
+		scheme, target string
+		want           []byte
+	}{
+		{"socks4", "http://127.0.0.1:8080/a", append([]byte{4, 1, 0x1f, 0x90, 127, 0, 0, 1}, "user\x00"...)},
+		{"socks4a", "http://docs.blok-proxy.invalid/a", append([]byte{4, 1, 0, 80, 0, 0, 0, 255}, "user\x00docs.blok-proxy.invalid\x00"...)},
+	}
+	for _, c := range cases {
+		address, handshakes := socks4Proxy(t)
+		t.Setenv("ALL_PROXY", c.scheme+"://user@"+address)
+		transport := NewSocketsTransport(SocketsOptions{ConnectTimeout: 5 * time.Second})
+		response, err := (&http.Client{Transport: transport, Timeout: 5 * time.Second}).Get(c.target)
+		if err != nil {
+			t.Fatalf("%s: %v", c.scheme, err)
+		}
+		body, _ := io.ReadAll(response.Body)
+		response.Body.Close()
+		if string(body) != "ok" {
+			t.Fatalf("%s: body %q", c.scheme, body)
+		}
+		if got := <-handshakes; string(got) != string(c.want) {
+			t.Fatalf("%s: handshake % x, want % x", c.scheme, got, c.want)
+		}
+	}
+}

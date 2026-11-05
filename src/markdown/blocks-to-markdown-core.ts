@@ -20,6 +20,7 @@ import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 import { isPagePointer } from '../shared/page-pointer';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
+import { matchEmbedService } from '../shared/embed-registry';
 import { withoutAnnotations } from '../shared/annotation-blocks';
 
 export interface SerializableBlock {
@@ -382,6 +383,26 @@ const CONTAINER_TOOLS = new Set([
  * @param value - value to coerce
  */
 const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+/**
+ * The stored embed `service` when `url` really matches it, else ''. The
+ * field is free text in saved data, so it must not name another site's link.
+ * Some registry id builders throw in the Jint server runtime (no
+ * URLSearchParams); that reads as no match.
+ * @param service - stored service name
+ * @param url - stored source URL
+ */
+const matchedService = (service: string, url: string): string => {
+  if (service === '') {
+    return '';
+  }
+
+  try {
+    return matchEmbedService(url)?.service === service ? service : '';
+  } catch {
+    return '';
+  }
+};
 
 /**
  * Narrow an unknown value to a plain record.
@@ -1391,7 +1412,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 
       const url = asString(data.url) || asString(data.source);
       const label = inlineMarkdown(context, asString(data.caption))
-        || escapePlainText(asString(data.title) || asString(data.fileName) || asString(data.service) || url);
+        || escapePlainText(asString(data.title) || asString(data.fileName) || matchedService(asString(data.service), url) || url);
 
       const href = markdownDestination(url, 'href');
 

@@ -748,16 +748,17 @@ export const builtinEmitters: Record<string, Emitter> = {
   embed: (block, env) => {
     const service = str(block.data, 'service');
     const source = str(block.data, 'source');
-    const link = (): string => trail(`<a${env.url('href', source, block.type)}>${env.escape(service || source)}</a>`, block, env);
+    // `service` is free text in saved data: it is the link text only when the source matches it.
+    const link = (label: string): string => trail(`<a${env.url('href', source, block.type)}>${env.escape(label)}</a>`, block, env);
 
     if (!Object.hasOwn(EMBED_SERVICES, service)) {
-      return link();
+      return link(source);
     }
 
     const match = matchEmbedServiceOrLink(source);
 
     if (match === 'link') {
-      return link();
+      return link(source);
     }
 
     if (match?.service !== service) {
@@ -768,7 +769,7 @@ export const builtinEmitters: Record<string, Emitter> = {
     const srcAttr = match.kind === 'iframe' ? env.frameSrc(match.embedUrl, block.type) : '';
 
     if (srcAttr === '') {
-      return link();
+      return link(service);
     }
 
     return trail(`<figure><iframe${srcAttr} sandbox="${registryIframeSandbox(EMBED_SERVICES[service])}" referrerpolicy="strict-origin-when-cross-origin"></iframe>${figcaption(block, env)}</figure>`, block, env);

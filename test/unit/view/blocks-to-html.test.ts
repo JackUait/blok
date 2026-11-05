@@ -502,7 +502,7 @@ describe('blocksToHtml', () => {
       ]));
 
       expect(html).not.toContain('<iframe');
-      expect(html).toBe('<a href="https://attacker.example/page">phish</a>');
+      expect(html).toBe('<a href="https://attacker.example/page">https://attacker.example/page</a>');
     });
 
     it('renders nothing for a registry service whose source does not match it', () => {
@@ -587,7 +587,7 @@ describe('blocksToHtml', () => {
         { type: 'embed', data: { service: 'evil', source: 'https://ok.example', embed: 'javascript:alert(1)' } },
       ]));
 
-      expect(html).toBe('<a href="https://ok.example">evil</a>');
+      expect(html).toBe('<a href="https://ok.example">https://ok.example</a>');
       expect(html).not.toContain('javascript:');
     });
   });

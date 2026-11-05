@@ -79,7 +79,7 @@ describe('blocksToMarkdown', () => {
     expect(md('<a href=" java\tscript:alert(1)">ws</a>')).toBe('ws');
     expect(md('x <img src="javascript:alert(1)" alt="i"> y')).toBe('x  y');
     expect(blocksToMarkdown([{ tool: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }])).toBe('Alt');
-    expect(blocksToMarkdown([{ tool: 'embed', data: { url: 'javascript:alert(1)', service: 'evil' } }])).toBe('evil');
+    expect(blocksToMarkdown([{ tool: 'embed', data: { url: 'javascript:alert(1)', service: 'evil' } }])).toBe('javascript:alert(1)');
   });
 
   it('escapes a link destination that would break out, and leaves balanced parens alone', () => {

@@ -139,7 +139,7 @@ describe('blocksToMarkdown (view)', () => {
     it('drops the link from an image block and a link-like block with an unsafe url', () => {
       expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'javascript:alert(1)', alt: 'Alt' } }]))).toBe('Alt');
       expect(blocksToMarkdown(doc([{ type: 'bookmark', data: { url: 'javascript:alert(1)', title: 'X' } }]))).toBe('X');
-      expect(blocksToMarkdown(doc([{ type: 'embed', data: { source: 'data:text/html,x', service: 'evil' } }]))).toBe('evil');
+      expect(blocksToMarkdown(doc([{ type: 'embed', data: { source: 'data:text/html,x', service: 'evil' } }]))).toBe('data:text/html,x');
     });
   });
 

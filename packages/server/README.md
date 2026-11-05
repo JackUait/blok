@@ -405,6 +405,16 @@ The verdict is a hint for your UI, not a security check. The server cannot see t
 
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
 
+With `--auth none` or `proxy`, the standalone host also checks `Host` on these routes. This stops DNS rebinding: a page whose name now points at 127.0.0.1 sends its own name as `Host`.
+
+- Allowed: `localhost`, a `127.x.x.x` address and `[::1]`, with any port, and a request with no `Host`.
+- Also allowed: the host of each `--allow-origin` entry and of `--public-url`.
+- Anything else gets `421` `host not allowed`.
+
+If a front proxy forwards your public `Host`, add that origin to `--allow-origin`, or make the proxy send a loopback `Host`. Ticket mode does not check `Host`; behind a proxy that is the proxy's job.
+
+In your own ASP.NET Core app the check is off. Turn it on with `AddBlokServer(...).UseLoopbackHostCheck()` when the app listens on loopback only. Leave it off when the app serves the routes under its own public name. The Go handler has the same switch: `Options.LoopbackHostCheck`.
+
 A ticket with `write: false` may call `GET /unfurl`, `GET /frame-check`, `GET /sync/{doc}/state`, the three `GET` history routes and open `GET /sync/{doc}` read-only; both upload routes, `reset`, `edit`, the history `DELETE` and `restore` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset`, its `edit`, its `state` and its history routes are refused when the pass names no document or a different one. `state` and the three history reads ask your `IBlokAuthorization` for read access only. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ### Version history

@@ -660,6 +660,11 @@ export const serverLimits: ServerLimit[] = [
     body: 'Every request that carries an Origin must match an address listed with --allow-origin, in every auth mode. In none and proxy modes, an originless request marked Sec-Fetch-Site: cross-site is also refused. A genuine server-to-server backend request that carries neither header still works.\n\nTicket mode always requires an allowed Origin. Preflight requests follow the same allowlist.',
   },
   {
+    id: 'loopback-host',
+    title: 'A loopback server answers only its own names',
+    body: 'With --auth none or proxy, the standalone service refuses a request whose Host is not its own with 421 host not allowed. This stops DNS rebinding: a web page whose name now points at 127.0.0.1 sends its own name as Host.\n\n- Allowed: localhost, a 127.x.x.x address and [::1], with any port.\n- Also allowed: the host of each --allow-origin entry and of --public-url.\n\nIf a front proxy forwards your public Host, add that origin to --allow-origin, or make the proxy send a loopback Host. Ticket mode does not check Host. Behind a proxy that is the proxy\'s job.\n\nAn ASP.NET Core app turns the check on with UseLoopbackHostCheck(). Leave it off when the app serves the routes under its own public name.',
+  },
+  {
     id: 'upload-by-url-json',
     title: 'Remote uploads accept JSON requests only',
     body: 'POST /upload-by-url requires Content-Type: application/json. Parameters such as charset=utf-8 are allowed. Other media types, including application/problem+json, receive 415 before the service fetches the URL.',

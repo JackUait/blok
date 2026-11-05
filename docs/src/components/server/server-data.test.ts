@@ -451,7 +451,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
-  it('states the thirty-five service limits the design refuses to bury', () => {
+  it('states the thirty-six service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -468,6 +468,7 @@ describe('server docs data', () => {
       'asset-cors',
       's3-untested',
       'cors-preflight',
+      'loopback-host',
       'upload-by-url-json',
       'frame-check',
       'outbound-redirects',

@@ -40,6 +40,32 @@ pub fn upgrade_limit(options: &Options) -> Option<i64> {
     options.collab_enabled.then_some(MAX_UPGRADED_CONNECTIONS)
 }
 
+/// The name of the host runtime's threads; [`panic_hook`] keys on it.
+pub const WORKER_THREAD: &str = "blok-server-worker";
+
+/// The host's tokio runtime, its threads named [`WORKER_THREAD`].
+pub fn runtime() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .thread_name(WORKER_THREAD)
+        .build()
+        .expect("the tokio runtime")
+}
+
+type PanicHook = Box<dyn Fn(&std::panic::PanicHookInfo<'_>) + Send + Sync>;
+
+/// The C# host clears Kestrel's loggers, and .NET drops an unobserved
+/// task's exception: neither reaches stderr. So a panic on a runtime
+/// thread (a handler, a task) reports nothing; any other goes to
+/// `fallback`, Rust's default report in the host.
+pub fn panic_hook(fallback: PanicHook) -> PanicHook {
+    Box::new(move |info| {
+        if std::thread::current().name() != Some(WORKER_THREAD) {
+            fallback(info);
+        }
+    })
+}
+
 fn print(stderr: &Stderr, text: &str) {
     let mut out = stderr
         .lock()

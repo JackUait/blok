@@ -24,10 +24,8 @@ fn main() {
         .skip(1)
         .map(|arg| native(&arg))
         .collect();
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .expect("the tokio runtime");
+    std::panic::set_hook(blok_server::panic_hook(std::panic::take_hook()));
+    let runtime = blok_server::runtime();
     let stderr: blok_server::collablog::Stderr = Arc::new(Mutex::new(std::io::stderr()));
     let getenv =
         |name: &str| std::env::var_os(name).map_or_else(String::new, |value| native(&value));

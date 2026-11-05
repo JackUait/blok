@@ -76,6 +76,29 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("drain2-chunked", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
   [InlineData("drain2-closeframed", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
   [InlineData("drain2-stall", "u", "", "p", "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}")]
+  // A RequestMic Type 2 leaves the handshake open, so .NET reads the
+  // proxy's last Negotiate token even on a 200 (SendWithNtAuthAsync's
+  // !IsAuthenticationChallenge branch): a wrong MIC, a state that is not
+  // accept-completed with a MIC, a reject or an unreadable token throws.
+  [InlineData("mic-ok", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-bad", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-incomplete", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-reject", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-completed-nomic", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-incomplete-nomic", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-nostate", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-padded", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-badoid", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-kerberos", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-otheroid", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-trailing", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-garbage", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-bare", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-none", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  [InlineData("mic-emptymic", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok")]
+  // Strict DER in the Type 2's NegTokenResp: a padded negState, a bad mech.
+  [InlineData("negotiate-padded", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}")]
+  [InlineData("negotiate-badoid", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}")]
   public async Task AnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(string mode, string user, string domain, string password, string want)
   {
     var got = await RunNtlm(mode, user, domain, password);
@@ -263,17 +286,75 @@ public sealed partial class ProxyConnectTunnelTests
 
   private static readonly byte[] NtlmOid = Convert.FromHexString("060a2b06010401823702020a");
 
-  // A NegTokenResp: accept-incomplete, the NTLM mech and the Type 2.
-  private static byte[] SpnegoChallenge(byte[] type2) =>
-    DerWrap(0xa1, DerWrap(0x30, DerWrap(0xa0, Convert.FromHexString("0a0101"))
-      .Concat(DerWrap(0xa1, NtlmOid))
+  // A NegTokenResp: accept-incomplete (request-mic for the mic- rows), the
+  // NTLM mech and the Type 2.
+  private static byte[] SpnegoChallenge(byte[] type2, string mode = "") =>
+    DerWrap(0xa1, DerWrap(0x30, DerWrap(0xa0, Convert.FromHexString(mode switch
+    {
+      _ when mode.StartsWith("mic-", StringComparison.Ordinal) => "0a0103",
+      "negotiate-padded" => "0a020001",
+      _ => "0a0101",
+    }))
+      .Concat(DerWrap(0xa1, mode == "negotiate-badoid" ? Convert.FromHexString("06032b0681") : NtlmOid))
       .Concat(DerWrap(0xa2, DerWrap(0x04, type2))).ToArray()));
+
+  // The proxy's MIC over the mech list: the server-to-client keys, a
+  // fresh RC4, sequence 0 (ManagedNtlm VerifyMIC).
+  private static byte[] ServerMic(NtlmState state)
+  {
+    var signKey = MD5.HashData(state.Exported!.Concat("session key to server-to-client signing key magic constant\0"u8.ToArray()).ToArray());
+    var sealKey = MD5.HashData(state.Exported!.Concat("session key to server-to-client sealing key magic constant\0"u8.ToArray()).ToArray());
+    var checksum = HMACMD5.HashData(signKey, new byte[4].Concat(state.MechList!).ToArray());
+    return Convert.FromHexString("01000000").Concat(Rc4(sealKey, checksum[..8])).Concat(new byte[4]).ToArray();
+  }
+
+  // The Proxy-Authenticate line a mic- row's 200 carries, or none.
+  private static string FinalChallenge(string mode, NtlmState state)
+  {
+    if (!mode.StartsWith("mic-", StringComparison.Ordinal))
+    {
+      return "";
+    }
+
+    byte[] Resp(string? negState, byte[]? mech, byte[]? mic, byte[]? trailing = null) =>
+      DerWrap(0xa1, DerWrap(0x30, (negState is null ? [] : DerWrap(0xa0, Convert.FromHexString(negState)))
+        .Concat(mech is null ? [] : DerWrap(0xa1, mech))
+        .Concat(mic is null ? [] : DerWrap(0xa3, DerWrap(0x04, mic))).ToArray()).Concat(trailing ?? []).ToArray());
+    var good = ServerMic(state);
+    var bad = good.ToArray();
+    bad[5] ^= 1;
+    var token = mode switch
+    {
+      "mic-ok" => Resp("0a0100", null, good),
+      "mic-bad" => Resp("0a0100", null, bad),
+      "mic-incomplete" => Resp("0a0101", null, good),
+      "mic-reject" => Resp("0a0102", null, null),
+      "mic-completed-nomic" => Resp("0a0100", null, null),
+      "mic-incomplete-nomic" => Resp("0a0101", null, null),
+      "mic-nostate" => Resp(null, null, good),
+      "mic-padded" => Resp("0a020000", null, good),
+      "mic-badoid" => Resp("0a0100", Convert.FromHexString("06032b0681"), good),
+      "mic-kerberos" => Resp("0a0100", Convert.FromHexString("06092a864886f712010202"), good),
+      "mic-otheroid" => Resp("0a0100", Convert.FromHexString("06032a0304"), good),
+      "mic-trailing" => DerWrap(0xa1, DerWrap(0x30, DerWrap(0xa0, Convert.FromHexString("0a0100")).Concat(DerWrap(0xa3, DerWrap(0x04, good))).ToArray()).Concat(Convert.FromHexString("0500")).ToArray()),
+      "mic-garbage" => "garbage"u8.ToArray(),
+      "mic-emptymic" => Resp("0a0101", null, []),
+      _ => null,
+    };
+    return mode switch
+    {
+      "mic-bare" => "Proxy-Authenticate: Negotiate\r\n",
+      _ when token is null => "",
+      _ => $"Proxy-Authenticate: Negotiate {Convert.ToBase64String(token)}\r\n",
+    };
+  }
 
   private sealed class NtlmState
   {
     public byte[]? Type1;
     public byte[]? Type2;
     public byte[]? MechList;
+    public byte[]? Exported;
   }
 
   private static string Hex(ReadOnlySpan<byte> bytes) => Convert.ToHexStringLower(bytes);
@@ -351,6 +432,7 @@ public sealed partial class ProxyConnectTunnelTests
     var proof = HMACMD5.HashData(ntowf, ServerChallenge.Concat(blob).ToArray());
     var proofOk = proof.AsSpan().SequenceEqual(response.AsSpan(0, 16));
     var exported = Rc4(HMACMD5.HashData(ntowf, proof), t3.AsSpan(key.Offset, key.Length).ToArray());
+    state.Exported = exported;
     var zeroed = t3.ToArray();
     zeroed.AsSpan(72, 16).Clear();
     var mic = HMACMD5.HashData(exported, state.Type1!.Concat(state.Type2!).Concat(zeroed).ToArray());
@@ -432,7 +514,7 @@ public sealed partial class ProxyConnectTunnelTests
 
   private static async Task ServeNtlmProxy(TcpListener listener, string mode, string password, int targetPort, X509Certificate2? certificate, ConcurrentQueue<string> seen)
   {
-    var scheme = mode.StartsWith("negotiate", StringComparison.Ordinal) ? "Negotiate" : "NTLM";
+    var scheme = mode.StartsWith("negotiate", StringComparison.Ordinal) || mode.StartsWith("mic-", StringComparison.Ordinal) ? "Negotiate" : "NTLM";
     var connections = 0;
     while (true)
     {
@@ -486,7 +568,7 @@ public sealed partial class ProxyConnectTunnelTests
               seen.Enqueue($"{id} auth={logged}");
               if (valid)
               {
-                await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
+                await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n" + FinalChallenge(mode, state) + "\r\n"));
                 using var upstream = new TcpClient();
                 await upstream.ConnectAsync(IPAddress.Loopback, targetPort);
                 var remote = upstream.GetStream();
@@ -507,7 +589,7 @@ public sealed partial class ProxyConnectTunnelTests
                   "bare" or "negotiate-bare" => "",
                   "short" => " " + Convert.ToBase64String(state.Type2[..10]),
                   "base64" => " !!!",
-                  _ => " " + Convert.ToBase64String(scheme == "Negotiate" ? SpnegoChallenge(state.Type2) : state.Type2),
+                  _ => " " + Convert.ToBase64String(scheme == "Negotiate" ? SpnegoChallenge(state.Type2, mode) : state.Type2),
                 };
                 answer = $"Proxy-Authenticate: {scheme}{data}\r\n";
               }

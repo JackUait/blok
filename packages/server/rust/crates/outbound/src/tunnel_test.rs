@@ -53,7 +53,9 @@ async fn recording_proxy(mode: &'static str) -> (u16, Arc<Mutex<Vec<String>>>) {
                         .unwrap()
                         .push(format!("{id} {method} auth={auth}"));
                     let answer = match mode {
-                        "challenge" if auth == "no" => {
+                        "challenge" | "challenge-domain" | "challenge-empty-domain"
+                            if auth == "no" =>
+                        {
                             "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"r\"\r\nContent-Length: 0\r\n\r\n"
                         }
                         "challenge-close" if auth == "no" => {
@@ -113,6 +115,16 @@ async fn opens_a_tunnel_as_sockets_http_handler_does() {
             "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic dTpw",
         ),
         (
+            "challenge-domain",
+            "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic RE9NXHU6cA==",
+        ),
+        // GetCredentialsFromString splits "domain\\user": "\\u" has an
+        // empty domain, the same credential as C#'s plain "challenge" row.
+        (
+            "challenge-empty-domain",
+            "200 ok|1 CONNECT auth=no|1 CONNECT auth=Basic dTpw",
+        ),
+        (
             "challenge-close",
             "200 ok|1 CONNECT auth=no|2 CONNECT auth=Basic dTpw",
         ),
@@ -125,7 +137,12 @@ async fn opens_a_tunnel_as_sockets_http_handler_does() {
             connect_timeout: Duration::from_secs(5),
             header_timeout: None,
             proxy: EnvironmentProxy::from_lookup(move |name| {
-                (name == "ALL_PROXY").then(|| format!("http://u:p@127.0.0.1:{port}"))
+                let user = match mode {
+                    "challenge-domain" => "DOM%5Cu",
+                    "challenge-empty-domain" => "%5Cu",
+                    _ => "u",
+                };
+                (name == "ALL_PROXY").then(|| format!("http://{user}:p@127.0.0.1:{port}"))
             }),
             roots: Some(pki.roots.clone()),
         };
@@ -161,7 +178,7 @@ async fn opens_a_tunnel_as_sockets_http_handler_does() {
 
 fn digest_challenge(mode: &str, second: bool) -> &'static str {
     match mode {
-        "plain" | "utf8" => "Digest realm=\"r\", nonce=\"n\"",
+        "plain" | "utf8" | "domain" => "Digest realm=\"r\", nonce=\"n\"",
         "qop" => "Digest realm=\"r\", nonce=\"n\", qop=\"auth\", algorithm=MD5, opaque=\"o\"",
         "sha-sess" => {
             "Digest realm=\"r\", nonce=\"n\", qop=\"auth,auth-int\", algorithm=SHA-256-sess"
@@ -381,6 +398,11 @@ async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
             "200 ok|1 auth=no|1 auth=Digest username*=utf-8''%C3%A9, realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
         ),
         (
+            "domain",
+            "u",
+            "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"",
+        ),
+        (
             "stale",
             "u",
             "200 ok|1 auth=no|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n\", uri=\"/\", response=\"R\"|1 auth=Digest username=\"u\", realm=\"r\", nonce=\"n2\", uri=\"/\", response=\"R\"",
@@ -394,7 +416,11 @@ async fn answers_a_digest_challenge_as_sockets_http_handler_does() {
         ("negotiate+basic", "u", "error|1 auth=no|1 auth=Negotiate T"),
     ] {
         let (port, seen) = digest_proxy(mode, user).await;
-        let proxy_user = if user == "é" { "%C3%A9" } else { user };
+        let proxy_user = match (mode, user) {
+            (_, "é") => "%C3%A9",
+            ("domain", _) => "DOM%5Cu",
+            _ => user,
+        };
         let client = OperatorClient {
             connect_timeout: Duration::from_secs(5),
             header_timeout: None,

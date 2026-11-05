@@ -300,9 +300,22 @@ async fn connect_authority(authority: &str) -> io::Result<TcpStream> {
     Err(last)
 }
 
+/// GetCredentialsFromString's NetworkCredential: the user name split at
+/// its first backslash into domain and user. Digest and NTLM send the user
+/// alone.
+fn proxy_credential(name: &str) -> (&str, &str) {
+    name.split_once('\\')
+        .map_or((name, ""), |(domain, user)| (user, domain))
+}
+
+/// SetBasicAuthToken: a non-empty domain goes back in front of the user.
 fn proxy_authorization(proxy: &ProxyUrl) -> Option<String> {
-    let (user, password) = proxy.user.as_ref()?;
-    let credentials = format!("{user}:{}", password.as_deref().unwrap_or(""));
+    let (name, password) = proxy.user.as_ref()?;
+    let password = password.as_deref().unwrap_or("");
+    let credentials = match proxy_credential(name) {
+        (user, "") => format!("{user}:{password}"),
+        (user, domain) => format!("{domain}\\{user}:{password}"),
+    };
     Some(format!(
         "Basic {}",
         base64::engine::general_purpose::STANDARD.encode(credentials)
@@ -387,7 +400,8 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
         return Ok(Tunnel::Open);
     }
     let next = match (&proxy.user, head.status) {
-        (Some((user, password)), 407) => {
+        (Some((name, password)), 407) => {
+            let (user, domain) = proxy_credential(name);
             let challenges = auth_challenges(head.headers.values("Proxy-Authenticate"));
             let password = password.as_deref().unwrap_or("");
             match auth.sent {
@@ -396,8 +410,16 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
                     auth.sent = scheme;
                     match scheme {
                         Some(scheme @ ("negotiate" | "ntlm")) => {
-                            ntlm_first(auth, scheme, &challenges[scheme], proxy, user, password)
-                                .await?
+                            ntlm_first(
+                                auth,
+                                scheme,
+                                &challenges[scheme],
+                                proxy,
+                                user,
+                                domain,
+                                password,
+                            )
+                            .await?
                         }
                         Some("digest") => crate::digest::parse(&challenges["digest"])
                             .and_then(|p| crate::digest::token(user, password, &p))
@@ -588,16 +610,15 @@ fn ntlm_scheme(sent: &str) -> &'static str {
     }
 }
 
-/// Starts SendWithNtAuthAsync: the credentials are
-/// GetCredentialsFromString's, "domain\\user" split at the first
-/// backslash, and the SPN is "HTTP/" and the proxy host. The first
-/// challenge's data is decoded, which can throw, and then not read.
+/// Starts SendWithNtAuthAsync; the SPN is "HTTP/" and the proxy host. The
+/// first challenge's data is decoded, which can throw, and then not read.
 async fn ntlm_first(
     auth: &mut ProxyAuth,
     sent: &str,
     data: &str,
     proxy: &ProxyUrl,
     user: &str,
+    domain: &str,
     password: &str,
 ) -> Result<Option<String>, OperatorError> {
     if !data.is_empty()
@@ -607,7 +628,6 @@ async fn ntlm_first(
     {
         return Err(ntlm_throw());
     }
-    let (domain, user) = user.split_once('\\').unwrap_or(("", user));
     let host = proxy
         .authority
         .rsplit_once(':')

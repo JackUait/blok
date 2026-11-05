@@ -2,7 +2,6 @@ package dotnet
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"net/netip"
 	"net/url"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -99,11 +97,7 @@ func NewSocketsTransport(options SocketsOptions) *SocketsTransport {
 					// deadline is lifted once the connection is handed out.
 					_ = conn.SetDeadline(born.Add(options.ConnectTimeout))
 				}
-				pooled := &pooledConn{Conn: conn}
-				if options.PooledConnectionLifetime > 0 {
-					pooled.timer = time.AfterFunc(options.PooledConnectionLifetime, pooled.expire)
-				}
-				return pooled, nil
+				return &pooledConn{Conn: conn, born: born}, nil
 			},
 			IdleConnTimeout:    pooledConnectionIdleTimeout,
 			DisableCompression: true,
@@ -111,47 +105,16 @@ func NewSocketsTransport(options SocketsOptions) *SocketsTransport {
 	}
 }
 
-// pooledConn retires itself at PooledConnectionLifetime, as .NET drops an
-// expired connection instead of pooling it again: at once when idle, else
-// when its request gives it back. Closing an idle conn is safe: net/http
-// drops it from the pool, and a request that took it at that moment is
-// retried on a new one, as nothing was written.
+// pooledConn knows its age. .NET drops a connection past
+// PooledConnectionLifetime on rent, on return and in its idle scavenger,
+// never under a request. Closing a conn from outside net/http is never safe:
+// an idle conn can be handed to a request before any trace runs, and
+// CloseIdleConnections can close a conn whose bodiless answer is still on
+// its way to the caller. So an expired conn carries one last request with
+// "Connection: close", and net/http drops it when that answer says close.
 type pooledConn struct {
 	net.Conn
-	timer         *time.Timer
-	mu            sync.Mutex
-	busy, expired bool
-}
-
-func (c *pooledConn) expire() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.expired = true
-	if !c.busy {
-		c.Conn.Close()
-	}
-}
-
-func (c *pooledConn) taken() {
-	c.mu.Lock()
-	c.busy = true
-	c.mu.Unlock()
-}
-
-func (c *pooledConn) idle() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.busy = false
-	if c.expired {
-		c.Conn.Close()
-	}
-}
-
-func (c *pooledConn) Close() error {
-	if c.timer != nil {
-		c.timer.Stop()
-	}
-	return c.Conn.Close()
+	born time.Time
 }
 
 func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -160,29 +123,39 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 		ctx = context.WithValue(ctx, socks4Key{}, proxy)
 	}
 	request = request.Clone(ctx)
-	var used *pooledConn
+	header := request.Header
+	lifetime := t.options.PooledConnectionLifetime
 	trace := &httptrace.ClientTrace{
+		// Runs before the request is written. net/http's copy of a request
+		// with a body shares this header map.
 		GotConn: func(info httptrace.GotConnInfo) {
-			conn := info.Conn
-			if secure, ok := conn.(*tls.Conn); ok {
-				conn = secure.NetConn()
-			}
-			pooled, ok := conn.(*pooledConn)
-			if !ok {
+			pooled := findPooled(info.Conn)
+			if pooled == nil {
 				return
 			}
 			_ = pooled.SetDeadline(time.Time{})
-			pooled.taken()
-			used = pooled
-		},
-		PutIdleConn: func(err error) {
-			if err == nil && used != nil {
-				used.idle()
+			if lifetime > 0 && time.Since(pooled.born) > lifetime {
+				header.Set("Connection", "close")
 			}
 		},
 	}
 	request = request.WithContext(httptrace.WithClientTrace(request.Context(), trace))
 	return t.Transport.RoundTrip(request)
+}
+
+// findPooled unwraps every TLS layer: an https proxy puts the target's TLS
+// over the proxy's.
+func findPooled(conn net.Conn) *pooledConn {
+	for {
+		switch c := conn.(type) {
+		case *pooledConn:
+			return c
+		case interface{ NetConn() net.Conn }:
+			conn = c.NetConn()
+		default:
+			return nil
+		}
+	}
 }
 
 // CloseIdleConnections closes the pool's idle connections.

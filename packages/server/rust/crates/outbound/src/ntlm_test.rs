@@ -118,6 +118,7 @@ const SERVER_CHALLENGE: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xe
 const FIXED_TIME: [u8; 8] = [0x00, 0x80, 0x3e, 0xd5, 0xde, 0xb1, 0x9d, 0x01];
 const TYPE1: &str =
     "4e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f";
+const SPNEGO_INIT: &str = "604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f";
 const SERVER_AVS: &str = "2:44004f004d00410049004e00,1:530045005200560045005200,4:64006f006d00610069006e002e007400650073007400,3:7300650072007600650072002e0064006f006d00610069006e002e007400650073007400,7:00803ed5deb19d01,";
 
 fn av(id: u16, value: &[u8]) -> Vec<u8> {
@@ -231,7 +232,7 @@ fn read_ntlm(scheme: &str, token: &[u8], state: &mut State, password: &str) -> (
     if scheme == "Negotiate" {
         if token[0] == 0x60 {
             let (_, app, _) = der(token);
-            let (_, oid, rest) = der(app);
+            let (_, _, rest) = der(app);
             let (_, a0, _) = der(rest);
             let (_, init, _) = der(a0);
             let (_, mech_types, rest) = der(init);
@@ -239,19 +240,19 @@ fn read_ntlm(scheme: &str, token: &[u8], state: &mut State, password: &str) -> (
             state.mech_list = der_wrap(tag, list);
             let (_, a2, _) = der(rest);
             inner = der(a2).1;
-            spnego = format!("init oid={} mechs={} ", hex(oid), hex(&state.mech_list));
+            spnego = format!("init {} mechs={} ", hex(token), hex(&state.mech_list));
         } else {
             let (_, a1, _) = der(token);
             let (_, resp, _) = der(a1);
             let (tag, first, rest) = der(resp);
             inner = der(first).1;
-            let mut tags = format!("{tag:02x}");
+            let mut tags = format!("{:02x}/{:02x}/{tag:02x}:{:02x}", token[0], a1[0], first[0]);
             if !rest.is_empty() {
                 let (tag, second, _) = der(rest);
                 mech_list_mic = Some(der(second).1.to_vec());
-                tags += &format!(",{tag:02x}");
+                tags += &format!(",{tag:02x}:{:02x}", second[0]);
             }
-            spnego = format!("resp tags={tags} ");
+            spnego = format!("resp {tags} ");
         }
     }
     if inner[8] == 1 {
@@ -422,7 +423,7 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
                     let message = type2(mode);
                     closing = mode == "close2";
                     let challenge = match mode {
-                        "bare" => String::new(),
+                        "bare" | "negotiate-bare" => String::new(),
                         "short" => format!(
                             " {}",
                             base64::engine::general_purpose::STANDARD.encode(&message[..10])
@@ -499,7 +500,7 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "u",
             "",
             "p",
-            "200 ok|1 auth=no|1 auth=Negotiate init oid=2b0601050502 mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp tags=a2,a3 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
         ),
         (
             "domain",
@@ -536,6 +537,13 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "",
             "p",
             "error 407|1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "negotiate-bare",
+            "u",
+            "",
+            "p",
+            "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}",
         ),
         (
             "bare",
@@ -605,7 +613,7 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "u",
             "",
             "p",
-            "200 ok|1 auth=no|1 auth=Negotiate init oid=2b0601050502 mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp tags=a2,a3 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
         ),
     ] {
         let listener = TcpListener::bind(if mode == "ipv6" {
@@ -702,7 +710,8 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
         got.extend(seen.lock().unwrap().iter().cloned());
         let want = twin_outcome(want)
             .replace("{T1}", TYPE1)
-            .replace("{AVS}", SERVER_AVS);
+            .replace("{AVS}", SERVER_AVS)
+            .replace("{INIT}", SPNEGO_INIT);
         assert_eq!(got.join("|"), want, "{mode}");
     }
 }

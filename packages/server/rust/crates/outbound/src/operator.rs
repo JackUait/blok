@@ -410,13 +410,11 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
                     Some(nt) if !nt.authenticated => match challenges.get(scheme) {
                         None => None,
                         Some(data) => {
-                            // A bare challenge is an empty blob, which .NET
-                            // cannot read.
+                            // A bare challenge is an empty blob: NTLM throws
+                            // on it, SPNEGO gives no token.
                             let challenge = base64::engine::general_purpose::STANDARD
                                 .decode(data)
-                                .ok()
-                                .filter(|_| !data.is_empty())
-                                .ok_or_else(ntlm_throw)?;
+                                .map_err(|_| ntlm_throw())?;
                             nt.respond(&challenge)
                                 .map_err(|_| ntlm_throw())?
                                 .map(|token| {

@@ -76,6 +76,32 @@ async fn spawned<T: Send + 'static>(
     }
 }
 
+/// A join's result on its way to the caller. A caller dropped before it
+/// claims it never sees the membership, so the drop leaves the room.
+struct Unclaimed(Option<JoinResult>);
+
+impl Unclaimed {
+    fn new(result: JoinResult) -> Unclaimed {
+        Unclaimed(Some(result))
+    }
+
+    fn claim(mut self) -> JoinResult {
+        self.0.take().expect("an unclaimed join result")
+    }
+}
+
+impl Drop for Unclaimed {
+    fn drop(&mut self) {
+        let Some(membership) = self.0.take().and_then(|result| result.membership) else {
+            return;
+        };
+        // leave spawns; outside a runtime the room is going away anyway.
+        if tokio::runtime::Handle::try_current().is_ok() {
+            membership.leave();
+        }
+    }
+}
+
 fn caller() -> (Token, CancelOnDrop) {
     let token = Token::new();
     (token.clone(), CancelOnDrop(token))
@@ -286,8 +312,9 @@ impl Manager {
                 return Ok(status(JoinStatus::Purged));
             };
             let (r, t, m) = (room.clone(), token.clone(), member.clone());
-            if let Some(result) = spawned(async move { r.join(&t, m).await }).await? {
-                return Ok(result);
+            let joined = spawned(async move { Ok(r.join(&t, m).await?.map(Unclaimed::new)) });
+            if let Some(result) = joined.await? {
+                return Ok(result.claim());
             }
             self.forget(&room);
         }

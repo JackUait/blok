@@ -783,6 +783,38 @@ async fn a_cancelled_first_join_leaves_a_room_that_still_evicts() {
     evicted(&manager).await;
 }
 
+// The join's room work runs in its own task. A caller dropped after that
+// task admitted the member never receives the membership, so the room must
+// take the member back out itself.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_join_dropped_after_the_room_admitted_the_member_still_evicts() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "hello", None);
+    let manager = b.manager(fast());
+    let peer = Peer::new();
+    let mut join = Box::pin(manager.join(DOC, peer.clone() as Arc<dyn Member>));
+    let polled = join
+        .as_mut()
+        .poll(&mut std::task::Context::from_waker(std::task::Waker::noop()));
+    assert!(polled.is_pending(), "the join finished in its first poll");
+
+    let mut admitted = false;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    while !admitted {
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "timed out waiting for the member to be admitted"
+        );
+        if let Some(room) = manager.live_rooms().pop() {
+            admitted = room.state.lock().await.members.len() == 1;
+        }
+        tokio::time::sleep(ms(5)).await;
+    }
+    drop(join);
+
+    evicted(&manager).await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancelled_join_does_not_arm_the_linger_while_others_are_still_in_the_room() {
     let b = Bench::new();

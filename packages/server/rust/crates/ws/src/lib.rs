@@ -473,9 +473,12 @@ impl Conn {
                 return Err(Error::Aborted);
             };
             let mut chunk = [0u8; 4096];
+            // Done first: the read-ahead is always ready while it holds bytes,
+            // and a disposed socket serves none of them, as Kestrel's does.
             let n = tokio::select! {
-                result = reader.read(&mut chunk) => result.map_err(|error| Error::Io(error.kind()))?,
+                biased;
                 _ = done.wait_for(|done| *done) => return Err(Error::Aborted),
+                result = reader.read(&mut chunk) => result.map_err(|error| Error::Io(error.kind()))?,
             };
             if n == 0 {
                 return Err(Error::PrematureClose);
@@ -551,6 +554,10 @@ impl Conn {
     /// peer's close are handled inside. Returns (n, type, end of message).
     pub async fn receive(&self, buf: &mut [u8]) -> Result<(usize, MessageType, bool), Error> {
         let mut guard = self.inner.receive.lock().await;
+        // An aborted socket serves no frame, not even one framing has buffered.
+        if self.is_done() && lock(&self.inner.flags).aborted {
+            return Err(self.gone(Error::Aborted));
+        }
         let state = &mut *guard;
         loop {
             let mut header = state.last;
@@ -752,6 +759,8 @@ impl Utf8State {
     }
 }
 
+#[cfg(test)]
+mod abort_test;
 #[cfg(test)]
 mod fuzz_test;
 #[cfg(test)]

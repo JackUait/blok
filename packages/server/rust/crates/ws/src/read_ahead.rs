@@ -14,6 +14,7 @@ use tokio::sync::{Notify, watch};
 /// unconsumed bytes its transport buffers, upgraded or not (measured).
 pub(crate) const LIMIT: usize = 1 << 20;
 const CHUNK: usize = 16 * 1024;
+const SMALL: usize = 512;
 
 #[derive(Default)]
 struct State {
@@ -45,6 +46,49 @@ impl Shared {
         self.lock().buf.capacity()
     }
 
+    fn push(&self, bytes: &[u8]) {
+        let mut state = self.lock();
+        // Grow by hand: extend's doubling would pass LIMIT.
+        let (len, capacity) = (state.buf.len(), state.buf.capacity());
+        if len + bytes.len() > capacity {
+            let target = (len + bytes.len()).max(LIMIT.min(capacity * 2));
+            state.buf.reserve_exact(target - len);
+        }
+        state.buf.extend(bytes);
+        if let Some(waker) = state.reader.take() {
+            waker.wake();
+        }
+    }
+
+    /// Reads what the source has ready without waiting. Some is how the
+    /// socket ended.
+    async fn drain_ready(
+        &self,
+        source: &mut (impl AsyncRead + Unpin),
+    ) -> Option<Result<(), io::ErrorKind>> {
+        let mut chunk = vec![0u8; CHUNK];
+        loop {
+            let room = LIMIT - self.buffered();
+            if room == 0 {
+                return None;
+            }
+            let mut buf = ReadBuf::new(&mut chunk[..room.min(CHUNK)]);
+            let ready = std::future::poll_fn(|cx| {
+                Poll::Ready(match Pin::new(&mut *source).poll_read(cx, &mut buf) {
+                    Poll::Ready(result) => Some(result),
+                    Poll::Pending => None,
+                })
+            })
+            .await;
+            match ready {
+                None => return None,
+                Some(Err(error)) => return Some(Err(error.kind())),
+                Some(Ok(())) if buf.filled().is_empty() => return Some(Ok(())),
+                Some(Ok(())) => self.push(buf.filled()),
+            }
+        }
+    }
+
     fn end(&self, how: Result<(), io::ErrorKind>) {
         let mut state = self.lock();
         state.ended = Some(how);
@@ -67,8 +111,7 @@ impl ReadAhead {
         let shared = Arc::new(Shared::default());
         let task = Arc::clone(&shared);
         tokio::spawn(async move {
-            let mut chunk = vec![0u8; CHUNK];
-            loop {
+            let how = loop {
                 let room = loop {
                     let space = task.space.notified();
                     let room = LIMIT - task.buffered();
@@ -83,37 +126,35 @@ impl ReadAhead {
                         }
                     }
                 };
+                // An idle socket waits in this small buffer, not a chunk.
+                let mut small = [0u8; SMALL];
                 let read = tokio::select! {
-                    read = source.read(&mut chunk[..room.min(CHUNK)]) => read,
+                    read = source.read(&mut small[..room.min(SMALL)]) => read,
                     _ = done.wait_for(|done| *done) => {
                         task.end(Err(io::ErrorKind::NotConnected));
                         return;
                     }
                 };
-                let how = match read {
-                    Ok(0) => Ok(()),
+                match read {
+                    Ok(0) => break Ok(()),
                     Ok(n) => {
-                        let mut state = task.lock();
-                        // Grow by hand: extend's doubling would pass LIMIT.
-                        let (len, capacity) = (state.buf.len(), state.buf.capacity());
-                        if len + n > capacity {
-                            let target = (len + n).max(LIMIT.min(capacity * 2));
-                            state.buf.reserve_exact(target - len);
+                        task.push(&small[..n]);
+                        if n < SMALL {
+                            continue;
                         }
-                        state.buf.extend(&chunk[..n]);
-                        if let Some(waker) = state.reader.take() {
-                            waker.wake();
-                        }
-                        continue;
                     }
-                    Err(error) => Err(error.kind()),
-                };
-                if !*done.borrow() {
-                    gone.send_replace(true);
+                    Err(error) => break Err(error.kind()),
                 }
-                task.end(how);
-                return;
+                // A full small read: take what else is ready now into a
+                // chunk that lives only while bytes keep coming.
+                if let Some(how) = task.drain_ready(&mut source).await {
+                    break how;
+                }
+            };
+            if !*done.borrow() {
+                gone.send_replace(true);
             }
+            task.end(how);
         });
         (Self(Arc::clone(&shared)), shared)
     }

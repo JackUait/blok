@@ -126,7 +126,11 @@ async fn text_after_a_queued_frame(drop_kind: &str) -> String {
         rooms: Arc::new(rooms),
         has_operation_store: false,
         max_message_bytes: 1 << 20,
-        keep_alive_interval: Duration::ZERO,
+        keep_alive_interval: if drop_kind == "keepalive" {
+            Duration::from_millis(100)
+        } else {
+            Duration::ZERO
+        },
         connections: Arc::new(ConnectionTable::new(0, 8)),
         budget: BudgetOptions {
             frames_per_second: 0,
@@ -166,6 +170,7 @@ async fn text_after_a_queued_frame(drop_kind: &str) -> String {
         }
         _ => {}
     }
+    // Long enough to see the drop, or for the unanswered ping to time out.
     if !drop_kind.is_empty() {
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
@@ -207,4 +212,11 @@ async fn a_frame_waiting_on_a_busy_room_is_dropped_when_the_peer_connection_drop
 #[tokio::test(flavor = "multi_thread")]
 async fn a_frame_waiting_on_a_busy_room_is_applied_when_the_peer_stays() {
     assert_eq!(text_after_a_queued_frame("").await, "late");
+}
+
+// The peer never reads, so it never answers a ping: the keep-alive aborts
+// the socket while its frame waits on the lane.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_frame_waiting_on_a_busy_room_after_a_keep_alive_timeout() {
+    assert_eq!(text_after_a_queued_frame("keepalive").await, "");
 }

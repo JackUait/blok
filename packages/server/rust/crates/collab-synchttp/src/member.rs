@@ -39,6 +39,11 @@ pub trait Socket: Send + Sync {
     fn peer_gone(&self) -> BoxFuture<'_, ()> {
         Box::pin(std::future::pending())
     }
+    /// Resolves once the socket is disposed, a keep-alive timeout included.
+    /// Never, by default.
+    fn done(&self) -> BoxFuture<'_, ()> {
+        Box::pin(std::future::pending())
+    }
 }
 
 impl Socket for blok_ws::Conn {
@@ -60,6 +65,10 @@ impl Socket for blok_ws::Conn {
 
     fn peer_gone(&self) -> BoxFuture<'_, ()> {
         Box::pin(blok_ws::Conn::peer_gone(self))
+    }
+
+    fn done(&self) -> BoxFuture<'_, ()> {
+        Box::pin(blok_ws::Conn::done(self))
     }
 }
 
@@ -231,8 +240,15 @@ impl SocketMember {
         tokio::pin!(watchdog);
         let receive = self.receive_loop(socket, membership, max_message_bytes, &receiving);
         tokio::pin!(receive);
-        // C# links the receive token to RequestAborted for the whole run.
-        let peer_gone = socket.peer_gone();
+        // C# links the receive token to RequestAborted for the whole run. A
+        // keep-alive timeout aborts the connection there too, so a frame
+        // already waiting on the lane is dropped (SyncDroppedPeerTests.cs).
+        let peer_gone = async {
+            tokio::select! {
+                () = socket.peer_gone() => {}
+                () = socket.done() => {}
+            }
+        };
         tokio::pin!(peer_gone);
 
         let (mut pump_done, mut aborted, mut gone) = (false, false, false);

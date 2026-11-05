@@ -5,6 +5,7 @@ use blok_collab_operation::{AppendOutcome, Candidate, LookupOutcome, Source};
 use blok_collab_wire::{AwarenessEntry, Identity, MAX_AWARENESS_CLIENT_ID, Message};
 use sha2::{Digest, Sha256};
 
+use crate::error::error_text;
 use crate::options::MALFORMED_AWARENESS_LIMIT;
 use crate::room::{
     AwarenessOwner, Job, Room, State, must_encode, new_operation_id, queue_awareness_frame,
@@ -344,9 +345,12 @@ impl Room {
     /// The doc may hold bytes the journal does not, so the room closes
     /// every member with the retryable close and discards itself.
     pub(crate) async fn fail_commit_locked(&self, st: &mut State, what: &str, err: &Error) {
+        // Every commit step runs on a fresh commit timeout, so a cancel here
+        // came during the call.
         self.logf(&format!(
-            "collab: room \"{}\" could not {what}, closing: {err}",
-            self.doc_id
+            "collab: room \"{}\" could not {what}, closing: {}",
+            self.doc_id,
+            error_text(err, None, false)
         ));
         st.commit_unavailable = true;
         self.close_room_locked(st, Some(CloseReason::CommitUnavailable))

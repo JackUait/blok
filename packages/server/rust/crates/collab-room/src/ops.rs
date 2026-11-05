@@ -10,7 +10,7 @@ use blok_jsjson::Value;
 use blok_yjs::Doc;
 
 use crate::cancel::Token;
-use crate::error::is_transient;
+use crate::error::{error_text, is_transient};
 use crate::options::CHECKPOINT_FAILURE_LIMIT;
 use crate::room::{Phase, Room, State};
 use crate::{Converter, Error};
@@ -504,6 +504,7 @@ impl Room {
         }
         self.update_eviction_locked(st, None);
         let doc = st.doc();
+        let before = caller.is_cancelled();
         let exported = caller
             .run(self.converter.export(&doc))
             .await
@@ -516,8 +517,9 @@ impl Room {
             Ok(json) => json,
             Err(err) => {
                 self.logf(&format!(
-                    "collab: room \"{}\" could not export its state: {err}",
-                    self.doc_id
+                    "collab: room \"{}\" could not export its state: {}",
+                    self.doc_id,
+                    error_text(&err, Some(caller), before)
                 ));
                 let status = if is_transient(&err) {
                     StateStatus::Overloaded
@@ -603,8 +605,10 @@ impl Room {
                 return Ok(false);
             }
             self.logf(&format!(
-                "collab: room \"{}\" could not publish a checkpoint ({} of {CHECKPOINT_FAILURE_LIMIT}), retrying later: {err}",
-                self.doc_id, st.checkpoint_failures
+                "collab: room \"{}\" could not publish a checkpoint ({} of {CHECKPOINT_FAILURE_LIMIT}), retrying later: {}",
+                self.doc_id,
+                st.checkpoint_failures,
+                error_text(&err, None, false)
             ));
             return Ok(false);
         }

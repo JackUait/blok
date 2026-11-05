@@ -1778,13 +1778,50 @@ async fn a_drain_cut_short_by_its_token_still_closes_every_room() {
     assert_eq!(member_b.closed(), [CloseReason::Draining]);
     let mut lines = b.logs.lines();
     lines.sort();
-    // C# prints the cancel as "A task was canceled."; Rust errors say
-    // "context canceled". Only the line around it is compared.
     assert_eq!(
         lines,
         [
-            "collab: room \"doc-a\" could not export during flush: context canceled",
-            "collab: room \"doc-b\" could not export during flush: context canceled",
+            "collab: room \"doc-a\" could not export during flush: The operation was canceled.",
+            "collab: room \"doc-b\" could not export during flush: The operation was canceled.",
+        ]
+    );
+}
+
+/// C# ADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_drain_whose_token_is_already_cancelled_prints_the_task_cancel_text() {
+    let b = Bench::new();
+    b.endpoint.holds("doc-a", "a", None);
+    let manager = b.manager(slow_export());
+    let member = Peer::new();
+    let membership = enter(&manager, "doc-a", &member).await;
+    let client = synced(&membership, &member).await;
+    send_update(&membership, &client, "!").await;
+    // C#'s fake store writes inline; here the write runs beside the lane,
+    // so wait for it and its finish before the drain.
+    wait_until("the working set write", || {
+        b.store.holds("doc-a") && b.store.frames("doc-a").len() >= 2
+    })
+    .await;
+    manager.settle().await;
+    let gate = Gate::new();
+    b.endpoint.set_save_gate(Some(gate.clone()));
+    let shutdown = Token::new();
+    shutdown.cancel();
+
+    tokio::time::timeout(Duration::from_secs(10), manager.drain_with(&shutdown))
+        .await
+        .expect("the cancelled drain to finish")
+        .expect("drain");
+    gate.open();
+
+    assert_eq!(manager.live_room_count(), 0);
+    // The flush compacts, so it owes the store a write too.
+    assert_eq!(
+        b.logs.lines(),
+        [
+            "collab: room \"doc-a\" could not flush the working set: A task was canceled.",
+            "collab: room \"doc-a\" could not export during flush: A task was canceled.",
         ]
     );
 }

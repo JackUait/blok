@@ -5,7 +5,7 @@ use blok_jsjson::Value;
 
 use crate::Error;
 use crate::cancel::Token;
-use crate::error::{is_cancellation, is_runtime_limit, is_transient};
+use crate::error::{error_text, is_cancellation, is_runtime_limit, is_transient};
 use crate::options::TRANSIENT_EXPORT_FAILURE_LIMIT;
 use crate::room::{Job, Phase, Room, State, Task};
 
@@ -356,6 +356,10 @@ impl Room {
     /// returned. The work stops when the room's lifetime or the caller ends.
     pub(crate) async fn flush_locked(&self, st: &mut State, caller: &Token) {
         let ctx = Token::new();
+        // The link below runs later; C#'s linked token starts cancelled at once.
+        if caller.is_cancelled() || self.lifetime.is_cancelled() {
+            ctx.cancel();
+        }
         let (lifetime, caller_gone, linked) = (self.lifetime.clone(), caller.clone(), ctx.clone());
         let link = tokio::spawn(async move {
             tokio::select! {
@@ -392,13 +396,15 @@ impl Room {
                 self.doc_id
             ));
         }
+        let before = ctx.is_cancelled();
         if st.blob_version != st.persisted_version
             && let Err(err) = self.persist_locked(st, ctx).await
             && !self.lifetime.is_cancelled()
         {
             self.logf(&format!(
-                "collab: room \"{}\" could not flush the working set: {err}",
-                self.doc_id
+                "collab: room \"{}\" could not flush the working set: {}",
+                self.doc_id,
+                error_text(&err, Some(ctx), before)
             ));
         }
         if !st.export_dirty {
@@ -406,6 +412,7 @@ impl Room {
         }
         self.settle_version_locked(st).await;
         let doc = st.doc();
+        let before = ctx.is_cancelled();
         let snapshot = match ctx.run(self.converter.export(&doc)).await {
             Ok(snapshot) => snapshot,
             Err(err) => {
@@ -416,8 +423,9 @@ impl Room {
                     self.refuse_projection_locked(st, &err, None);
                 } else {
                     self.logf(&format!(
-                        "collab: room \"{}\" could not export during flush: {err}",
-                        self.doc_id
+                        "collab: room \"{}\" could not export during flush: {}",
+                        self.doc_id,
+                        error_text(&err, Some(ctx), before)
                     ));
                 }
                 return;
@@ -426,6 +434,7 @@ impl Room {
         st.projection_owed = false;
         let snapshot = Value::Object(snapshot);
         let projection = self.projection_locked(st);
+        let before = ctx.is_cancelled();
         let saved = ctx
             .run(self.endpoint.save(
                 &self.doc_id,
@@ -439,8 +448,9 @@ impl Room {
             Err(err) => {
                 if !self.lifetime.is_cancelled() {
                     self.logf(&format!(
-                        "collab: room \"{}\" could not export during flush: {err}",
-                        self.doc_id
+                        "collab: room \"{}\" could not export during flush: {}",
+                        self.doc_id,
+                        error_text(&err, Some(ctx), before)
                     ));
                 }
                 return;

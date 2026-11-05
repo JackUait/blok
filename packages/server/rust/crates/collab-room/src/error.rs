@@ -191,6 +191,33 @@ pub fn is_cancellation(err: &Error) -> bool {
     }
 }
 
+/// err as C# prints error.Message at a room log line. .NET words a cancel
+/// by when it came: HttpClient, SemaphoreSlim and channels say "A task was
+/// canceled." when the token was already cancelled as the call began, and
+/// "The operation was canceled." when it was cancelled during the call
+/// (DocEndpointClientTests.ACancelledSaveReadsAsDotNetsCancelText). A timeout
+/// is a cancel during the call. With ctx given, only a cancel of ctx itself
+/// counts; a store's own timeout keeps its own text.
+pub(crate) fn error_text(
+    err: &Error,
+    ctx: Option<&crate::Token>,
+    cancelled_before: bool,
+) -> String {
+    let cancelled = is_cancellation(err)
+        || matches!(
+            err,
+            Error::WorkingSet(blok_collab_workingset::Error::Canceled)
+        );
+    if !cancelled || ctx.is_some_and(|ctx| !ctx.is_cancelled()) {
+        return err.to_string();
+    }
+    if cancelled_before {
+        "A task was canceled.".to_owned()
+    } else {
+        "The operation was canceled.".to_owned()
+    }
+}
+
 /// The runtime's own timeout or allocation budget.
 pub(crate) fn is_runtime_limit(err: &Error) -> bool {
     any_convert(err, |e| {
@@ -215,5 +242,39 @@ pub(crate) fn is_corrupt(err: &Error) -> bool {
                 None => return false,
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod error_text_test {
+    use super::*;
+    use crate::Token;
+
+    #[test]
+    fn a_cancel_reads_as_dot_nets_cancel_text() {
+        let done = Token::new();
+        done.cancel();
+        let live = Token::new();
+        assert_eq!(
+            error_text(&Error::Canceled, Some(&done), true),
+            "A task was canceled."
+        );
+        assert_eq!(
+            error_text(&Error::Canceled, Some(&done), false),
+            "The operation was canceled."
+        );
+        assert_eq!(
+            error_text(&Error::DeadlineExceeded, None, false),
+            "The operation was canceled."
+        );
+        // A store's own timeout while our token is live keeps its text.
+        assert_eq!(
+            error_text(&Error::DeadlineExceeded, Some(&live), false),
+            "context deadline exceeded"
+        );
+        assert_eq!(
+            error_text(&Error::message("s3 down"), Some(&done), true),
+            "s3 down"
+        );
     }
 }

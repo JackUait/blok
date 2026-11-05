@@ -41,6 +41,20 @@ const DEPTH_MULTIPLIER_PROPERTY = '--_blok-block-depth';
  */
 const SLOT_DEPTH_PROPERTY = '--_blok-slot-depth';
 
+// A same-value setAttribute still queues a mutation record. A table fill
+// indents each of its 10k new holders twice.
+const setDepthIfChanged = (holder: HTMLElement, depth: string): void => {
+  if (holder.getAttribute('data-blok-depth') !== depth) {
+    holder.setAttribute('data-blok-depth', depth);
+  }
+};
+
+const setStyleIfChanged = (holder: HTMLElement, property: string, value: string): void => {
+  if (holder.style.getPropertyValue(property) !== value) {
+    holder.style.setProperty(property, value);
+  }
+};
+
 /**
  * BlockHierarchy manages hierarchical relationships between blocks
  */
@@ -995,13 +1009,13 @@ export class BlockHierarchy {
     const { holder } = block;
 
     // Table cells, lists and column trees never take the slot indent.
-    holder.style.setProperty(SLOT_DEPTH_PROPERTY, '0');
+    setStyleIfChanged(holder, SLOT_DEPTH_PROPERTY, '0');
 
     // Blocks inside table cells should not receive visual indentation.
     // The parent-child relationship is semantic (data tracking), not visual.
     if (holder.closest('[data-blok-table-cell-blocks]')) {
-      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
-      holder.setAttribute('data-blok-depth', '0');
+      setStyleIfChanged(holder, DEPTH_MULTIPLIER_PROPERTY, '0');
+      setDepthIfChanged(holder, '0');
 
       return;
     }
@@ -1012,8 +1026,8 @@ export class BlockHierarchy {
     // margin to the holder too would double the indent. Keep the holder flush
     // and still expose the structural depth via data-blok-depth.
     if (block.name === 'list') {
-      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
-      holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
+      setStyleIfChanged(holder, DEPTH_MULTIPLIER_PROPERTY, '0');
+      setDepthIfChanged(holder, String(this.getBlockDepth(block)));
 
       return;
     }
@@ -1021,9 +1035,9 @@ export class BlockHierarchy {
     // Blocks inside toggle child containers should not receive parentId-depth
     // margin (the container indents them).
     if (holder.closest('[data-blok-toggle-children]')) {
-      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
-      holder.style.setProperty(SLOT_DEPTH_PROPERTY, String(this.getSlotDepth(block)));
-      holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
+      setStyleIfChanged(holder, DEPTH_MULTIPLIER_PROPERTY, '0');
+      setStyleIfChanged(holder, SLOT_DEPTH_PROPERTY, String(this.getSlotDepth(block)));
+      setDepthIfChanged(holder, String(this.getBlockDepth(block)));
 
       return;
     }
@@ -1043,8 +1057,8 @@ export class BlockHierarchy {
       holder.closest('[data-blok-columns]') ||
       this.hasLayoutAncestor(block)
     ) {
-      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
-      holder.setAttribute('data-blok-depth', '0');
+      setStyleIfChanged(holder, DEPTH_MULTIPLIER_PROPERTY, '0');
+      setDepthIfChanged(holder, '0');
 
       return;
     }
@@ -1054,8 +1068,8 @@ export class BlockHierarchy {
 
     // Inside a plain slot the indent is split between the two terms, so a slot
     // that opts the step back in still gets depth x step, not more.
-    holder.style.setProperty(SLOT_DEPTH_PROPERTY, String(slotDepth));
-    holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, String(depth - slotDepth));
-    holder.setAttribute('data-blok-depth', depth.toString());
+    setStyleIfChanged(holder, SLOT_DEPTH_PROPERTY, String(slotDepth));
+    setStyleIfChanged(holder, DEPTH_MULTIPLIER_PROPERTY, String(depth - slotDepth));
+    setDepthIfChanged(holder, depth.toString());
   }
 }

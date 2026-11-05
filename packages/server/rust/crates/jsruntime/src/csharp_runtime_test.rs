@@ -4,8 +4,8 @@ use std::time::Duration;
 use crate::pool_test::{nested_outline, want_kind};
 use crate::test_json::{self, Json};
 use crate::{
-    ConstraintError, Kind, MINIMUM_MEMORY_BUDGET, MINIMUM_TIMEOUT, Options, Pool, PoolError,
-    StartupCause,
+    ConstraintError, InvokeError, Kind, MINIMUM_MEMORY_BUDGET, MINIMUM_TIMEOUT, Options, Pool,
+    PoolError, StartupCause,
 };
 
 // Twins of C# Blok.Server.Tests Runtime/JintBlokRuntimeTests.cs and
@@ -89,11 +89,7 @@ pub(crate) fn multi_megabyte_url(kind: &str, prefix: &str) -> (String, String) {
 async fn imports_markdown() {
     let pool = embedded(Duration::ZERO, 0);
     let output = pool
-        .invoke(
-            "markdownToBlocks",
-            r##"{"markdown":"# Hello"}"##,
-            Duration::ZERO,
-        )
+        .invoke("markdownToBlocks", r##"{"markdown":"# Hello"}"##, None)
         .await
         .expect("invoke");
     let block = first_block(&output);
@@ -109,11 +105,7 @@ async fn imports_markdown() {
 async fn imports_markdown_math() {
     let pool = embedded(Duration::ZERO, 0);
     let output = pool
-        .invoke(
-            "markdownToBlocks",
-            r#"{"markdown":"$$E = mc^2$$"}"#,
-            Duration::ZERO,
-        )
+        .invoke("markdownToBlocks", r#"{"markdown":"$$E = mc^2$$"}"#, None)
         .await
         .expect("invoke");
     let data = first_block(&output).get("data").clone();
@@ -128,7 +120,7 @@ async fn converts_html_fields_to_segments_in_order() {
         .invoke(
             "htmlFieldsToSegments",
             r#"[{"id":"a","type":"paragraph","field":"text","html":"Hi <b>there</b>"},{"type":"header","field":"text","html":"a &lt; b &amp;&amp; <img src=\"x.png\">"}]"#,
-            Duration::ZERO,
+            None,
         )
         .await
         .expect("invoke");
@@ -170,7 +162,7 @@ async fn renders_html() {
         .invoke(
             "blocksToHtml",
             r#"{"blocks":[{"type":"paragraph","data":{"text":"Hi <b>there</b>"}}]}"#,
-            Duration::ZERO,
+            None,
         )
         .await;
     assert_eq!(output.expect("invoke"), "<p>Hi <b>there</b></p>");
@@ -183,7 +175,7 @@ async fn renders_plain_text() {
         .invoke(
             "blocksToPlainText",
             r#"{"blocks":[{"type":"paragraph","data":{"text":"Hi <b>there</b>"}}]}"#,
-            Duration::ZERO,
+            None,
         )
         .await;
     assert_eq!(output.expect("invoke"), "Hi there");
@@ -207,9 +199,7 @@ async fn handles_concurrent_calls_without_sharing_an_engine_csharp() {
                     r#"{{"blocks":[{{"type":"paragraph","data":{{"text":{}}}}}]}}"#,
                     json_string(&expected)
                 );
-                let output = pool
-                    .invoke("blocksToPlainText", &input, Duration::ZERO)
-                    .await;
+                let output = pool.invoke("blocksToPlainText", &input, None).await;
                 (expected, output)
             })
         })
@@ -234,21 +224,15 @@ async fn replaces_an_engine_after_cancellation() {
       return 'ok';
     };";
     let pool = Pool::from_source(script, 1, Duration::ZERO, 0).expect("from_source");
-    let waited = tokio::time::timeout(
-        Duration::from_millis(50),
-        pool.invoke("wait", "{}", Duration::ZERO),
-    )
-    .await;
+    let waited =
+        tokio::time::timeout(Duration::from_millis(50), pool.invoke("wait", "{}", None)).await;
     assert!(
         waited.is_err(),
         "returned before the caller cancelled: {waited:?}"
     );
-    let output = tokio::time::timeout(
-        Duration::from_secs(5),
-        pool.invoke("ready", "{}", Duration::ZERO),
-    )
-    .await
-    .expect("within 5 s");
+    let output = tokio::time::timeout(Duration::from_secs(5), pool.invoke("ready", "{}", None))
+        .await
+        .expect("within 5 s");
     assert_eq!(output.expect("ready"), "ok");
 }
 
@@ -256,7 +240,7 @@ async fn replaces_an_engine_after_cancellation() {
 async fn times_out_instead_of_hanging_csharp() {
     let script = "globalThis.blokServerInvoke = function () { for (;;) {} };";
     let pool = Pool::from_source(script, 1, Duration::from_millis(200), 0).expect("from_source");
-    let result = pool.invoke("blocksToMarkdown", "{}", Duration::ZERO).await;
+    let result = pool.invoke("blocksToMarkdown", "{}", None).await;
     want_kind(result, Kind::TimedOut);
 }
 
@@ -264,7 +248,7 @@ async fn times_out_instead_of_hanging_csharp() {
 async fn reports_a_memory_limit_as_bloks_own_failure() {
     let script = "globalThis.blokServerInvoke = function () {  let grown = 'x';  for (;;) { grown += grown; }};";
     let pool = Pool::from_source(script, 1, Duration::ZERO, 8 * 1024 * 1024).expect("from_source");
-    let result = pool.invoke("blocksToHtml", "{}", Duration::ZERO).await;
+    let result = pool.invoke("blocksToHtml", "{}", None).await;
     want_kind(result, Kind::DocumentTooLarge);
 }
 
@@ -272,7 +256,7 @@ async fn reports_a_memory_limit_as_bloks_own_failure() {
 async fn does_not_blame_the_document_for_a_failure_that_is_not_about_it() {
     let script = "globalThis.blokServerInvoke = function () {  throw new Error('the bundle itself broke');};";
     let pool = Pool::from_source(script, 1, Duration::ZERO, 0).expect("from_source");
-    let result = pool.invoke("blocksToHtml", "{}", Duration::ZERO).await;
+    let result = pool.invoke("blocksToHtml", "{}", None).await;
     want_kind(result, Kind::Unknown);
 }
 
@@ -286,8 +270,8 @@ async fn survives_runaway_recursion_and_keeps_serving() {
         return 'ok';
       };";
     let pool = Pool::from_source(script, 1, Duration::ZERO, 0).expect("from_source");
-    assert!(pool.invoke("runaway", "{}", Duration::ZERO).await.is_err());
-    let output = pool.invoke("blocksToMarkdown", "{}", Duration::ZERO).await;
+    assert!(pool.invoke("runaway", "{}", None).await.is_err());
+    let output = pool.invoke("blocksToMarkdown", "{}", None).await;
     assert_eq!(output.expect("after the runaway"), "ok");
 }
 
@@ -295,18 +279,19 @@ async fn survives_runaway_recursion_and_keeps_serving() {
 async fn a_per_call_timeout_replaces_the_default_for_that_call_only_csharp() {
     let pool =
         Pool::from_source(SPINNING_SCRIPT, 1, Duration::from_millis(200), 0).expect("from_source");
-    let long = pool.invoke("spin", "{}", Duration::from_secs(30)).await;
+    let long = pool
+        .invoke("spin", "{}", Some(Duration::from_secs(30)))
+        .await;
     assert_eq!(long.expect("long call"), "ok");
-    want_kind(
-        pool.invoke("spin", "{}", Duration::ZERO).await,
-        Kind::TimedOut,
-    );
+    want_kind(pool.invoke("spin", "{}", None).await, Kind::TimedOut);
 }
 
 #[tokio::test]
 async fn a_per_call_timeout_can_be_shorter_than_the_default_csharp() {
     let pool = Pool::from_source(SPINNING_SCRIPT, 1, Duration::ZERO, 0).expect("from_source");
-    let result = pool.invoke("spin", "{}", Duration::from_millis(200)).await;
+    let result = pool
+        .invoke("spin", "{}", Some(Duration::from_millis(200)))
+        .await;
     want_kind(result, Kind::TimedOut);
 }
 
@@ -318,8 +303,8 @@ async fn keeps_serving_after_a_timeout() {
       };";
     let pool = Pool::from_source(script, 1, Duration::from_millis(200), 0).expect("from_source");
     for _ in 0..3 {
-        assert!(pool.invoke("spin", "{}", Duration::ZERO).await.is_err());
-        let output = pool.invoke("blocksToMarkdown", "{}", Duration::ZERO).await;
+        assert!(pool.invoke("spin", "{}", None).await.is_err());
+        let output = pool.invoke("blocksToMarkdown", "{}", None).await;
         assert_eq!(output.expect("after the timeout"), "ok");
     }
 }
@@ -330,7 +315,7 @@ async fn converts_a_long_article_without_exhausting_the_memory_limit() {
     let (input, paragraph) = long_article();
     assert!(input.len() > 600_000, "too short: {}", input.len());
     for op in ["blocksToPlainText", "blocksToMarkdown", "blocksToHtml"] {
-        let output = pool.invoke(op, &input, Duration::ZERO).await;
+        let output = pool.invoke(op, &input, None).await;
         let output = output.unwrap_or_else(|err| panic!("{op}: {err}"));
         assert!(output.contains(&paragraph), "{op}");
     }
@@ -344,9 +329,7 @@ async fn writes_a_multi_megabyte_url_to_markdown() {
         ("bookmark", "https://example.com/?q="),
     ] {
         let (input, url) = multi_megabyte_url(kind, prefix);
-        let output = pool
-            .invoke("blocksToMarkdown", &input, Duration::ZERO)
-            .await;
+        let output = pool.invoke("blocksToMarkdown", &input, None).await;
         let output = output.unwrap_or_else(|err| panic!("{kind}: {err}"));
         assert!(output.contains(&format!("({url})")), "{kind}");
     }
@@ -357,7 +340,7 @@ async fn converts_a_deeply_nested_outline_csharp() {
     let pool = embedded(Duration::from_secs(120), 0);
     let input = nested_outline(120);
     for op in ["blocksToPlainText", "blocksToMarkdown"] {
-        let output = pool.invoke(op, &input, Duration::ZERO).await;
+        let output = pool.invoke(op, &input, None).await;
         let output = output.unwrap_or_else(|err| panic!("{op}: {err}"));
         assert!(output.contains("level 119"), "{op}");
     }
@@ -369,7 +352,7 @@ async fn converts_a_long_article_whose_fields_carry_inline_markup() {
     let input = marked_up_article();
     assert!(input.len() > 700_000, "too short: {}", input.len());
     for op in ["blocksToPlainText", "blocksToMarkdown", "blocksToHtml"] {
-        let output = pool.invoke(op, &input, Duration::ZERO).await;
+        let output = pool.invoke(op, &input, None).await;
         let output = output.unwrap_or_else(|err| panic!("{op}: {err}"));
         assert!(output.contains("paragraph 1799"), "{op}");
     }
@@ -385,7 +368,7 @@ async fn converts_the_same_depth_whatever_the_caller_has_spent_of_its_stack() {
         .invoke(
             "blocksToHtml",
             &crate::pool_test::nested_outline(1000),
-            Duration::ZERO,
+            None,
         )
         .await
         .expect("1000 levels to HTML");
@@ -396,7 +379,7 @@ async fn converts_the_same_depth_whatever_the_caller_has_spent_of_its_stack() {
 async fn stops_a_conversion_that_outgrows_the_budget_it_was_given() {
     let pool = embedded(Duration::from_secs(300), 64 * 1024 * 1024);
     let result = pool
-        .invoke("blocksToHtml", &marked_up_article(), Duration::ZERO)
+        .invoke("blocksToHtml", &marked_up_article(), None)
         .await;
     want_kind(result, Kind::DocumentTooLarge);
 }
@@ -504,9 +487,7 @@ const ECHO_SCRIPT: &str = "globalThis.blokServerInvoke = function (op, input) { 
 #[tokio::test]
 async fn hands_the_engine_the_last_value_of_a_repeated_key() {
     let pool = Pool::from_source(ECHO_SCRIPT, 1, Duration::ZERO, 0).expect("from_source");
-    let output = pool
-        .invoke("x", r#"{"a":1,"b":1,"a":2}"#, Duration::ZERO)
-        .await;
+    let output = pool.invoke("x", r#"{"a":1,"b":1,"a":2}"#, None).await;
     assert_eq!(output.expect("echo"), r#"{"a":2,"b":1}"#);
 }
 
@@ -520,10 +501,79 @@ async fn refuses_a_rewrite_larger_than_the_allocation_budget_and_keeps_serving()
         .map(|i| format!(r#"{{"id":"b{i}","type":"paragraph","data":{{"text":"x"}}}}"#))
         .collect();
     let input = format!(r#"{{"blocks":[],"blocks":[{}]}}"#, blocks.join(","));
-    want_kind(
-        pool.invoke("x", &input, Duration::ZERO).await,
-        Kind::DocumentTooLarge,
-    );
-    let output = pool.invoke("x", "{}", Duration::ZERO).await;
+    want_kind(pool.invoke("x", &input, None).await, Kind::DocumentTooLarge);
+    let output = pool.invoke("x", "{}", None).await;
     assert_eq!(output.expect("after the refusal"), "{}");
+}
+
+// C#'s ArgumentOutOfRangeException text, word for word, as
+// BlokRuntimeStartupTests.RefusesALimitUnderItsFloorWithThisText pins it.
+// Rust has no negative Duration or pool size, so those C# rows have no twin.
+#[tokio::test]
+async fn refuses_a_limit_under_its_floor_with_this_text() {
+    let cases: [(Options, &str); 4] = [
+        (
+            Options {
+                pool_size: Some(0),
+                ..Options::default()
+            },
+            "poolSize ('0') must be greater than or equal to '1'. (Parameter 'poolSize')\nActual value was 0.",
+        ),
+        (
+            Options {
+                timeout: Some(Duration::ZERO),
+                ..Options::default()
+            },
+            "timeout ('00:00:00') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00.",
+        ),
+        (
+            Options {
+                timeout: Some(Duration::from_millis(50)),
+                ..Options::default()
+            },
+            "timeout ('00:00:00.0500000') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00.0500000.",
+        ),
+        (
+            Options {
+                memory_budget: Some(0),
+                ..Options::default()
+            },
+            "allocationBudgetBytes ('0') must be greater than or equal to '8388608'. (Parameter 'allocationBudgetBytes')\nActual value was 0.",
+        ),
+    ];
+    for (options, want) in cases {
+        match Pool::new(options) {
+            Err(PoolError::Constraint(err)) => assert_eq!(err.to_string(), want, "{options:?}"),
+            other => panic!("{options:?}: {:?}", other.err()),
+        }
+    }
+    let pool = Pool::new(Options {
+        pool_size: Some(1),
+        ..Options::default()
+    })
+    .expect("pool");
+    for (timeout, want) in [
+        (
+            Duration::ZERO,
+            "timeout ('00:00:00') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00.",
+        ),
+        (
+            Duration::from_nanos(99_999_900),
+            "timeout ('00:00:00.0999999') must be greater than or equal to '00:00:00.1000000'. (Parameter 'timeout')\nActual value was 00:00:00.0999999.",
+        ),
+    ] {
+        match pool.invoke("version", "{}", Some(timeout)).await {
+            Err(InvokeError::Constraint(err)) => assert_eq!(err.to_string(), want),
+            other => panic!("{timeout:?}: {other:?}"),
+        }
+    }
+}
+
+// TimeSpan's "c" format past a day, which no Rust refusal can reach.
+#[test]
+fn formats_a_duration_as_a_time_span() {
+    assert_eq!(
+        crate::pool::time_span(Duration::from_nanos(90_061_001_500_000)),
+        "1.01:01:01.0015000"
+    );
 }

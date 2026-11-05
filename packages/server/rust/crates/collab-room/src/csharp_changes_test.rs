@@ -723,7 +723,7 @@ impl HtmlReader for CountingReader {
     fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<Vec<Vec<Value>>, ConvertError>> + Send {
         self.read
             .lock()

@@ -19,14 +19,14 @@ use crate::wire::{
 pub type InvokeFuture<'a> = Pin<Box<dyn Future<Output = Result<String, Error>> + Send + 'a>>;
 
 /// The runtime seam: blokserver's shared pool, or a scripted runtime in
-/// tests. A zero timeout means the runtime's own.
+/// tests. A None timeout means the runtime's own.
 pub trait Invoker: Send + Sync + 'static {
     fn invoke<'a>(
         &'a self,
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a>;
 }
 
@@ -36,7 +36,7 @@ impl Invoker for Pool {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         Box::pin(async move {
             cancel.check()?;
@@ -55,7 +55,7 @@ impl<T: Invoker + ?Sized> Invoker for Arc<T> {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         T::invoke(self, cancel, op, input, timeout)
     }
@@ -266,7 +266,7 @@ pub(crate) async fn invoke_on(
     input: &Node,
 ) -> Result<String, Error> {
     let written = write(input)?;
-    runtime.invoke(cancel, op, &written, Duration::ZERO).await
+    runtime.invoke(cancel, op, &written, None).await
 }
 
 pub(crate) async fn agent_execute_on(

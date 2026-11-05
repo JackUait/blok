@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
-use std::time::Duration;
 
 use blok_collab_collabtest::read_bytes;
 use blok_jsjson::{Node, Options as JsonOptions, Str, Value, parse_node, stringify};
@@ -46,7 +45,7 @@ pub(crate) fn converted(blocks: &[Node]) -> HashMap<Str, Vec<Value>> {
     if found.is_empty() {
         return converted;
     }
-    let read = crate::csharp_yrs_compat_test::block_on(reader().read(&found, Duration::ZERO))
+    let read = crate::csharp_yrs_compat_test::block_on(reader().read(&found, None))
         .unwrap_or_else(|err| panic!("{err}"));
     for (field, segments) in found.iter().zip(read) {
         converted.insert(field.html.clone(), segments);

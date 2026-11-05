@@ -968,7 +968,7 @@ impl HtmlReader for NoHtml {
     async fn read(
         &self,
         fields: &[RichTextHtml],
-        _timeout: Duration,
+        _timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, blok_collab_convert::Error> {
         if fields.is_empty() {
             return Ok(Vec::new());

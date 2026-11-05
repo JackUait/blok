@@ -180,7 +180,7 @@ impl crate::Runtime for Counting {
         &'a self,
         _: &'a str,
         _: &'a str,
-        _: std::time::Duration,
+        _: Option<std::time::Duration>,
     ) -> crate::InvokeFuture<'a> {
         self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Box::pin(async { Ok("{}".to_owned()) })

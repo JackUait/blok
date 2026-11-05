@@ -32,7 +32,7 @@ struct Fixed {
 }
 
 impl Runtime for Fixed {
-    fn invoke<'a>(&'a self, _: &'a str, _: &'a str, _: Duration) -> InvokeFuture<'a> {
+    fn invoke<'a>(&'a self, _: &'a str, _: &'a str, _: Option<Duration>) -> InvokeFuture<'a> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let answer = self.answer.to_owned();
         Box::pin(async move { Ok::<_, InvokeError>(answer) })

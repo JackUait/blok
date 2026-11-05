@@ -13,7 +13,7 @@ struct Scripted {
 }
 
 impl Runtime for Scripted {
-    fn invoke<'a>(&'a self, _: &'a str, _: &'a str, _: Duration) -> InvokeFuture<'a> {
+    fn invoke<'a>(&'a self, _: &'a str, _: &'a str, _: Option<Duration>) -> InvokeFuture<'a> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let mut answers = self.answers.lock().expect("lock");
         let answer = answers[0].clone();
@@ -81,7 +81,7 @@ impl Drop for SetOnDrop {
 }
 
 impl Runtime for Never {
-    fn invoke<'a>(&'a self, _: &'a str, _: &'a str, _: Duration) -> InvokeFuture<'a> {
+    fn invoke<'a>(&'a self, _: &'a str, _: &'a str, _: Option<Duration>) -> InvokeFuture<'a> {
         let guard = SetOnDrop(self.dropped.clone());
         Box::pin(async move {
             let _guard = guard;

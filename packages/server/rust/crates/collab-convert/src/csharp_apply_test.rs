@@ -1,5 +1,4 @@
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use blok_jsjson::{
     Node, Options as JsonOptions, Str, Value, new_member, new_number, new_object, new_string,
@@ -57,7 +56,7 @@ pub(crate) fn rt_apply(doc: &Doc, ops: &[EditOp]) -> Result<(), Error> {
     let found = collect_ops_html(doc, ops, &fields)?;
     let mut table = std::collections::HashMap::new();
     if !found.is_empty() {
-        let read = block_on(reader().read(&found, Duration::ZERO))?;
+        let read = block_on(reader().read(&found, None))?;
         for (html, segments) in found.iter().zip(read) {
             table.insert(html.html.clone(), segments);
         }

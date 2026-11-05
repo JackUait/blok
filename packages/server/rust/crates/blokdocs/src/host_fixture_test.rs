@@ -22,7 +22,7 @@ struct Fake {
 }
 
 impl Runtime for Fake {
-    fn invoke<'a>(&'a self, op: &'a str, input: &'a str, _: Duration) -> InvokeFuture<'a> {
+    fn invoke<'a>(&'a self, op: &'a str, input: &'a str, _: Option<Duration>) -> InvokeFuture<'a> {
         self.requests
             .lock()
             .expect("lock")

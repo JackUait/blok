@@ -71,7 +71,7 @@ impl Invoker for SharedPool {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         Invoker::invoke(&shared_reader().runtime, cancel, op, input, timeout)
     }

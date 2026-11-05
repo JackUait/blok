@@ -297,7 +297,11 @@ fn custom_rich_fields_come_from_the_constructor() {
 pub(crate) struct FailingReader(pub(crate) fn() -> Error);
 
 impl HtmlReader for FailingReader {
-    async fn read(&self, _: &[RichTextHtml], _: Duration) -> Result<Vec<Vec<Value>>, Error> {
+    async fn read(
+        &self,
+        _: &[RichTextHtml],
+        _: Option<Duration>,
+    ) -> Result<Vec<Vec<Value>>, Error> {
         Err((self.0)())
     }
 }
@@ -401,7 +405,7 @@ impl HtmlReader for PendingReader {
     fn read(
         &self,
         _: &[RichTextHtml],
-        _: Duration,
+        _: Option<Duration>,
     ) -> impl Future<Output = Result<Vec<Vec<Value>>, Error>> + Send {
         Forever(self.dropped.clone())
     }
@@ -429,14 +433,14 @@ fn an_export_cancelled_by_its_token_stays_a_cancel() {
 
 #[derive(Default)]
 pub(crate) struct RecordingReader {
-    pub(crate) timeouts: Mutex<Vec<Duration>>,
+    pub(crate) timeouts: Mutex<Vec<Option<Duration>>>,
 }
 
 impl HtmlReader for RecordingReader {
     async fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, Error> {
         self.timeouts.lock().unwrap().push(timeout);
         Ok(vec![Vec::new(); fields.len()])
@@ -464,10 +468,10 @@ fn seed_and_migration_read_with_the_one_time_budget() {
     assert_eq!(
         *c.html.timeouts.lock().unwrap(),
         [
-            MIGRATION_READ_TIMEOUT,
-            Duration::ZERO,
-            Duration::ZERO,
-            MIGRATION_READ_TIMEOUT
+            Some(MIGRATION_READ_TIMEOUT),
+            None,
+            None,
+            Some(MIGRATION_READ_TIMEOUT)
         ]
     );
     assert_eq!(MIGRATION_READ_TIMEOUT, Duration::from_secs(60));
@@ -642,7 +646,7 @@ impl<R: HtmlReader + Sync> HtmlReader for CountingReader<R> {
     async fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, Error> {
         self.fields.fetch_add(fields.len(), Ordering::SeqCst);
         self.inner.read(fields, timeout).await

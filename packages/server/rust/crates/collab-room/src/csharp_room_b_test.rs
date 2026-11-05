@@ -425,7 +425,7 @@ impl HtmlReader for FailingHtml {
     async fn read(
         &self,
         _fields: &[RichTextHtml],
-        _timeout: Duration,
+        _timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, blok_collab_convert::Error> {
         Err((self.0)())
     }
@@ -437,9 +437,9 @@ impl HtmlReader for DefaultTimeoutTooShort {
     async fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, blok_collab_convert::Error> {
-        if timeout.is_zero() {
+        if timeout.is_none() {
             return Err(runtime_failure(Kind::TimedOut));
         }
         Ok(fields.iter().map(|_| Vec::new()).collect())

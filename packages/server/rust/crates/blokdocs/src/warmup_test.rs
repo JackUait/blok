@@ -13,7 +13,7 @@ struct Blocking {
 }
 
 impl Runtime for Blocking {
-    fn invoke<'a>(&'a self, op: &'a str, input: &'a str, _: Duration) -> InvokeFuture<'a> {
+    fn invoke<'a>(&'a self, op: &'a str, input: &'a str, _: Option<Duration>) -> InvokeFuture<'a> {
         let _ = self.seen.send((op.to_owned(), input.to_owned()));
         let (release, fail) = (self.release.clone(), self.fail);
         Box::pin(async move {

@@ -32,7 +32,7 @@ impl Invoker for Recording {
         _: &'a Cancel,
         op: &'a str,
         _: &'a str,
-        _: Duration,
+        _: Option<Duration>,
     ) -> InvokeFuture<'a> {
         self.0.lock().expect("lock").push(op.to_owned());
         Box::pin(async {

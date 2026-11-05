@@ -122,7 +122,7 @@ async fn expected_export(with_tail: bool) -> String {
                     field: Str::from("text"),
                     html: Str::from(html),
                 }],
-                Duration::ZERO,
+                None,
             )
             .await
             .expect("the runtime reads the tail");
@@ -362,7 +362,7 @@ impl HtmlReader for CountingReader {
     async fn read(
         &self,
         _fields: &[RichTextHtml],
-        _timeout: Duration,
+        _timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, blok_collab_convert::Error> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         Err((self.err)())

@@ -37,7 +37,7 @@ pub(crate) fn counting_pool(size: usize, timeout: Duration, budget: i64) -> Pool
 }
 
 pub(crate) async fn invoke(pool: &Pool, op: &str, input: &str) -> Result<String, InvokeError> {
-    pool.invoke(op, input, Duration::ZERO).await
+    pool.invoke(op, input, None).await
 }
 
 #[track_caller]
@@ -93,7 +93,9 @@ async fn keeps_serving_after_a_timeout_and_replaces_the_engine() {
 #[tokio::test]
 async fn a_per_call_timeout_replaces_the_default_for_that_call_only() {
     let pool = counting_pool(1, Duration::from_millis(200), 0);
-    let got = pool.invoke("spinFor", "600", Duration::from_secs(30)).await;
+    let got = pool
+        .invoke("spinFor", "600", Some(Duration::from_secs(30)))
+        .await;
     assert_eq!(got.expect("long call"), "ok");
     want_kind(invoke(&pool, "spinFor", "600").await, Kind::TimedOut);
 }
@@ -102,7 +104,7 @@ async fn a_per_call_timeout_replaces_the_default_for_that_call_only() {
 async fn a_per_call_timeout_can_be_shorter_than_the_default() {
     let pool = counting_pool(1, Duration::ZERO, 0);
     let got = pool
-        .invoke("spinFor", "600", Duration::from_millis(200))
+        .invoke("spinFor", "600", Some(Duration::from_millis(200)))
         .await;
     want_kind(got, Kind::TimedOut);
 }
@@ -110,11 +112,13 @@ async fn a_per_call_timeout_can_be_shorter_than_the_default() {
 #[tokio::test]
 async fn refuses_a_per_call_timeout_below_the_floor() {
     let pool = counting_pool(1, Duration::ZERO, 0);
-    match pool.invoke("count", "", Duration::from_millis(1)).await {
-        Err(InvokeError::Constraint(ConstraintError {
-            param: "timeout", ..
-        })) => {}
-        other => panic!("{other:?}, want a timeout ConstraintError"),
+    for timeout in [Duration::from_millis(1), Duration::ZERO] {
+        match pool.invoke("count", "", Some(timeout)).await {
+            Err(InvokeError::Constraint(ConstraintError {
+                param: "timeout", ..
+            })) => {}
+            other => panic!("{timeout:?}: {other:?}, want a timeout ConstraintError"),
+        }
     }
     // Refused before an engine was taken.
     want_count(&pool, "1").await;
@@ -261,7 +265,7 @@ async fn cancellation_ends_the_wait_for_an_engine() {
     let pool = Arc::new(counting_pool(1, Duration::from_secs(30), 0));
     let busy = {
         let pool = pool.clone();
-        tokio::spawn(async move { pool.invoke("spinFor", "500", Duration::ZERO).await })
+        tokio::spawn(async move { pool.invoke("spinFor", "500", None).await })
     };
     tokio::time::sleep(Duration::from_millis(50)).await;
 
@@ -330,9 +334,7 @@ async fn handles_concurrent_calls_without_sharing_an_engine() {
                 let input = format!(
                     r#"{{"blocks":[{{"id":"p","type":"paragraph","data":{{"text":"{text}"}}}}]}}"#
                 );
-                let got = pool
-                    .invoke("blocksToPlainText", &input, Duration::ZERO)
-                    .await;
+                let got = pool.invoke("blocksToPlainText", &input, None).await;
                 (i, text, got)
             })
         })
@@ -350,7 +352,7 @@ async fn callers_wait_when_every_engine_is_busy() {
     let calls: Vec<_> = (0..4)
         .map(|_| {
             let pool = pool.clone();
-            tokio::spawn(async move { pool.invoke("spinFor", "200", Duration::ZERO).await })
+            tokio::spawn(async move { pool.invoke("spinFor", "200", None).await })
         })
         .collect();
     for call in calls {
@@ -389,7 +391,7 @@ async fn converts_a_deeply_nested_outline() {
     .expect("new");
     let input = nested_outline(120);
     for op in ["blocksToPlainText", "blocksToMarkdown", "blocksToHtml"] {
-        let got = pool.invoke(op, &input, Duration::from_secs(60)).await;
+        let got = pool.invoke(op, &input, Some(Duration::from_secs(60))).await;
         let got = got.unwrap_or_else(|err| panic!("{op}: {err}"));
         assert!(got.contains("level 119"), "{op}: no level 119");
     }
@@ -406,7 +408,7 @@ async fn converts_as_many_outline_levels_to_html_as_csharp() {
     })
     .expect("new");
     let got = pool
-        .invoke("blocksToHtml", &nested_outline(2380), Duration::ZERO)
+        .invoke("blocksToHtml", &nested_outline(2380), None)
         .await
         .expect("2380 levels to HTML");
     assert!(got.contains("level 2379"));
@@ -548,10 +550,7 @@ async fn a_caught_out_of_memory_still_stops_the_call() {
     let script = "globalThis.blokServerInvoke = () => { try { const kept = []; for (;;) { kept.push({ a: [1, 2, 3, 4] }); } } catch (e) { return 'caught ' + e; } };";
     let pool =
         Pool::from_source(script, 1, Duration::from_secs(30), 64 << 20).expect("from_source");
-    want_kind(
-        pool.invoke("grow", "", Duration::ZERO).await,
-        Kind::DocumentTooLarge,
-    );
+    want_kind(pool.invoke("grow", "", None).await, Kind::DocumentTooLarge);
 }
 
 #[tokio::test]
@@ -563,5 +562,5 @@ async fn a_script_that_throws_null_is_unknown() {
         0,
     )
     .expect("from_source");
-    want_kind(pool.invoke("any", "", Duration::ZERO).await, Kind::Unknown);
+    want_kind(pool.invoke("any", "", None).await, Kind::Unknown);
 }

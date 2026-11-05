@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use blok_collab_collabtest::path;
 use blok_jsjson::{Str, Value};
@@ -80,8 +79,7 @@ fn migrate(doc: &Doc, fields: &RichTextFields) -> usize {
     let found = collect_legacy_rich_text(doc, fields).unwrap_or_else(|err| panic!("{err}"));
     let mut table = HashMap::new();
     if !found.is_empty() {
-        let read =
-            block_on(reader().read(&found, Duration::ZERO)).unwrap_or_else(|err| panic!("{err}"));
+        let read = block_on(reader().read(&found, None)).unwrap_or_else(|err| panic!("{err}"));
         for (html, segments) in found.iter().zip(read) {
             table.insert(html.html.clone(), segments);
         }

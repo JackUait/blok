@@ -234,7 +234,7 @@ impl Invoker for HistoryRuntime {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         if op == "agentExecute"
             && (input.contains(r#""name":"history.undo""#)
@@ -311,7 +311,7 @@ impl Invoker for AfterRestoreCheck {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         Box::pin(async move {
             let output = self.inner.invoke(cancel, op, input, timeout).await;
@@ -518,7 +518,7 @@ impl Invoker for FailingExecute {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         if op == "agentExecute" {
             let err = (self.err)();
@@ -750,7 +750,7 @@ impl Invoker for CancelOnExecute {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         if op == "agentExecute" {
             self.cancel.cancel();

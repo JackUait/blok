@@ -90,7 +90,7 @@ impl<R: HtmlReader + Sync> DocConverter<R> {
             _ => return Err(DataError::new("collab: the document has no blocks array.").into()),
         };
         let found = collect_seed_html(&blocks.items, self.fields())?;
-        let read = self.read(&found, MIGRATION_READ_TIMEOUT).await?;
+        let read = self.read(&found, Some(MIGRATION_READ_TIMEOUT)).await?;
         let mut page = Object::new();
         for key in ["title", "icon"] {
             let value = match member(output_data, key).map_err(Error::NotUnicode)? {
@@ -129,7 +129,7 @@ impl<R: HtmlReader + Sync> DocConverter<R> {
             }
             .into());
         }
-        let read = match self.read(&found, Duration::ZERO).await {
+        let read = match self.read(&found, None).await {
             Ok(read) => read,
             Err(err) if is_transient(&err) && !is_too_large(&err) => {
                 // Nothing is written yet: the room retries this one request.
@@ -163,7 +163,7 @@ impl<R: HtmlReader + Sync> DocConverter<R> {
     /// migrates it to formatted text; it returns the field count.
     pub async fn migrate_rich_text(&self, doc: &Doc) -> Result<usize, Error> {
         let found = collect_legacy_rich_text(doc, self.fields())?;
-        let read = self.read(&found, MIGRATION_READ_TIMEOUT).await?;
+        let read = self.read(&found, Some(MIGRATION_READ_TIMEOUT)).await?;
         migrate_rich_text(doc, &mut RichTextInput::converting(self.fields(), read))
     }
 
@@ -218,7 +218,7 @@ impl<R: HtmlReader + Sync> DocConverter<R> {
             return Ok(());
         }
         let found: Vec<RichTextHtml> = slots.iter().map(|slot| slot.html.clone()).collect();
-        let read = match self.read(&found, Duration::ZERO).await {
+        let read = match self.read(&found, None).await {
             Ok(read) => read,
             // A JavaScript error or a malformed answer repeats on every
             // attempt and keeps the refusal path, or a journal room would
@@ -249,7 +249,7 @@ impl<R: HtmlReader + Sync> DocConverter<R> {
     async fn read(
         &self,
         found: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<HashMap<Str, Vec<Value>>, Error> {
         let mut distinct = Vec::new();
         let mut seen = HashSet::new();

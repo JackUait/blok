@@ -15,14 +15,14 @@ pub const MAX_EDIT_HTML_CHARS: usize = 32768;
 /// fields never share a call; a larger field goes alone.
 pub const MAX_CALL_CHARS: usize = MAX_EDIT_HTML_CHARS;
 
-/// Runs one runtime op; `blok_jsruntime::Pool` is one. A zero timeout is the
+/// Runs one runtime op; `blok_jsruntime::Pool` is one. A None timeout is the
 /// runtime's default. Dropping the future cancels the call.
 pub trait Invoker {
     fn invoke(
         &self,
         op: &str,
         input: &str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<String, InvokeError>> + Send;
 }
 
@@ -31,7 +31,7 @@ impl Invoker for Pool {
         &self,
         op: &str,
         input: &str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<String, InvokeError>> + Send {
         Pool::invoke(self, op, input, timeout)
     }
@@ -42,7 +42,7 @@ pub trait HtmlReader {
     fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<Vec<Vec<Value>>, Error>> + Send;
 }
 
@@ -50,7 +50,7 @@ impl<T: HtmlReader + Sync> HtmlReader for &T {
     fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<Vec<Vec<Value>>, Error>> + Send {
         T::read(self, fields, timeout)
     }
@@ -66,7 +66,7 @@ impl<I: Invoker + Sync> HtmlReader for RuntimeHtmlReader<I> {
     async fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, Error> {
         let mut read = Vec::with_capacity(fields.len());
         let mut start = 0;
@@ -88,7 +88,7 @@ impl<I: Invoker + Sync> RuntimeHtmlReader<I> {
     async fn call(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, Error> {
         let request = fields
             .iter()

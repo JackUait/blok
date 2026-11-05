@@ -29,7 +29,7 @@ impl HtmlReader for NoHtml {
     fn read(
         &self,
         fields: &[RichTextHtml],
-        _timeout: Duration,
+        _timeout: Option<Duration>,
     ) -> impl Future<Output = Result<Vec<Vec<Value>>, ConvertError>> + Send {
         let count = fields.len();
         async move { panic!("{count} HTML fields read from a format-2 fixture") }

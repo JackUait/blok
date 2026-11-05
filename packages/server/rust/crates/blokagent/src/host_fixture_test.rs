@@ -243,13 +243,13 @@ impl Invoker for Arc<Scripted> {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         self.recorder.push(object(vec![
             ("op", string(op)),
             ("input", pinned(Some(input))),
         ]));
-        if !timeout.is_zero() {
+        if timeout.is_some() {
             self.problems
                 .lock()
                 .expect("lock")

@@ -1241,7 +1241,7 @@ impl HtmlReader for RecordingReader {
     async fn read(
         &self,
         fields: &[RichTextHtml],
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Vec<Vec<Value>>, blok_collab_convert::Error> {
         let longest = fields.iter().map(|f| f.html.len()).max().unwrap_or(0);
         {

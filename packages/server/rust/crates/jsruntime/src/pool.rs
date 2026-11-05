@@ -79,21 +79,69 @@ impl std::error::Error for StartupError {
     }
 }
 
-/// A limit below its floor, named by its `Options` field.
+/// A limit below its floor, named by its `Options` field. Its text is C#'s
+/// ArgumentOutOfRangeException message, word for word: C#'s parameter name
+/// and values in .NET's format.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConstraintError {
     pub param: &'static str,
     pub value: String,
     pub floor: String,
+    text: String,
+}
+
+impl ConstraintError {
+    /// ThrowIfLessThan's message for `name`, `value` and `floor` as .NET
+    /// prints them.
+    fn new(param: &'static str, name: &str, value: String, floor: String) -> ConstraintError {
+        let text = format!(
+            "{name} ('{value}') must be greater than or equal to '{floor}'. (Parameter '{name}')\nActual value was {value}."
+        );
+        ConstraintError {
+            param,
+            value,
+            floor,
+            text,
+        }
+    }
+
+    fn timeout(param: &'static str, value: Duration) -> ConstraintError {
+        ConstraintError::new(
+            param,
+            "timeout",
+            time_span(value),
+            time_span(MINIMUM_TIMEOUT),
+        )
+    }
+}
+
+/// TimeSpan.ToString(), the "c" format: `[d.]hh:mm:ss[.fffffff]`. A TimeSpan
+/// counts 100 ns ticks, so the nanoseconds under a tick are cut.
+pub(crate) fn time_span(value: Duration) -> String {
+    const SECOND: u128 = 10_000_000;
+    const DAY: u128 = 86_400 * SECOND;
+    let ticks = value.as_nanos() / 100;
+    let (days, rest) = (ticks / DAY, ticks % DAY);
+    let mut out = if days > 0 {
+        format!("{days}.")
+    } else {
+        String::new()
+    };
+    out.push_str(&format!(
+        "{:02}:{:02}:{:02}",
+        rest / (3600 * SECOND),
+        rest / (60 * SECOND) % 60,
+        rest / SECOND % 60
+    ));
+    if rest % SECOND != 0 {
+        out.push_str(&format!(".{:07}", rest % SECOND));
+    }
+    out
 }
 
 impl fmt::Display for ConstraintError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "jsruntime: {} is {}, below the floor of {}",
-            self.param, self.value, self.floor
-        )
+        f.write_str(&self.text)
     }
 }
 
@@ -136,11 +184,12 @@ pub struct Options {
 /// Refuses a pool size under 1. None means the default.
 pub fn validate_pool_size(size: Option<usize>) -> Result<(), ConstraintError> {
     match size {
-        Some(0) => Err(ConstraintError {
-            param: "PoolSize",
-            value: "0".to_owned(),
-            floor: "1".to_owned(),
-        }),
+        Some(0) => Err(ConstraintError::new(
+            "PoolSize",
+            "poolSize",
+            "0".to_owned(),
+            "1".to_owned(),
+        )),
         _ => Ok(()),
     }
 }
@@ -152,18 +201,15 @@ pub fn validate_constraints(
     budget: Option<i64>,
 ) -> Result<(), ConstraintError> {
     if let Some(budget) = budget.filter(|b| *b < MINIMUM_MEMORY_BUDGET) {
-        return Err(ConstraintError {
-            param: "MemoryBudget",
-            value: budget.to_string(),
-            floor: MINIMUM_MEMORY_BUDGET.to_string(),
-        });
+        return Err(ConstraintError::new(
+            "MemoryBudget",
+            "allocationBudgetBytes",
+            budget.to_string(),
+            MINIMUM_MEMORY_BUDGET.to_string(),
+        ));
     }
     if let Some(timeout) = timeout.filter(|t| *t < MINIMUM_TIMEOUT) {
-        return Err(ConstraintError {
-            param: "Timeout",
-            value: format!("{timeout:?}"),
-            floor: format!("{MINIMUM_TIMEOUT:?}"),
-        });
+        return Err(ConstraintError::timeout("Timeout", timeout));
     }
     Ok(())
 }
@@ -251,18 +297,21 @@ impl Pool {
         budget: i64,
     ) -> Result<Pool, PoolError> {
         if size < 1 {
-            return Err(PoolError::Constraint(ConstraintError {
-                param: "PoolSize",
-                value: size.to_string(),
-                floor: "1".to_owned(),
-            }));
+            return Err(PoolError::Constraint(ConstraintError::new(
+                "PoolSize",
+                "poolSize",
+                size.to_string(),
+                "1".to_owned(),
+            )));
         }
         if budget < 0 {
-            return Err(PoolError::Constraint(ConstraintError {
-                param: "MemoryBudget",
-                value: budget.to_string(),
-                floor: "1".to_owned(),
-            }));
+            // The constructor's own check, under C#'s name for it.
+            return Err(PoolError::Constraint(ConstraintError::new(
+                "MemoryBudget",
+                "budget",
+                budget.to_string(),
+                "1".to_owned(),
+            )));
         }
         let timeout = if timeout.is_zero() {
             DEFAULT_TIMEOUT
@@ -314,25 +363,22 @@ impl Pool {
     }
 
     /// Runs one operation on a free engine, waiting for one if all are busy.
-    /// A zero timeout uses the pool's; any other value must be at least
-    /// `MINIMUM_TIMEOUT`. Dropping the future stops the call.
+    /// None uses the pool's timeout; any other value, zero too, must be at
+    /// least `MINIMUM_TIMEOUT`. Dropping the future stops the call.
     pub async fn invoke(
         &self,
         op: &str,
         input: &str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<String, InvokeError> {
-        if !timeout.is_zero() && timeout < MINIMUM_TIMEOUT {
-            return Err(InvokeError::Constraint(ConstraintError {
-                param: "timeout",
-                value: format!("{timeout:?}"),
-                floor: format!("{MINIMUM_TIMEOUT:?}"),
-            }));
-        }
-        let timeout = if timeout.is_zero() {
-            self.timeout
-        } else {
-            timeout
+        let timeout = match timeout {
+            None => self.timeout,
+            Some(t) if t < MINIMUM_TIMEOUT => {
+                return Err(InvokeError::Constraint(ConstraintError::timeout(
+                    "timeout", t,
+                )));
+            }
+            Some(t) => t,
         };
         let worker = {
             let mut free = self.free.lock().await;

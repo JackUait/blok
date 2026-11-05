@@ -106,7 +106,7 @@ impl Invoker for Observing {
         cancel: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> InvokeFuture<'a> {
         Box::pin(async move {
             let output = Invoker::invoke(&SharedPool, cancel, op, input, timeout).await?;
@@ -137,7 +137,7 @@ impl Invoker for Fixed {
         _: &'a Cancel,
         op: &'a str,
         input: &'a str,
-        _: Duration,
+        _: Option<Duration>,
     ) -> InvokeFuture<'a> {
         self.inputs
             .lock()

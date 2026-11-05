@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use blok_collab_collabtest::{read, read_bytes};
 use blok_jsjson::{Node, Options as JsonOptions, Value, parse_node};
 use blok_yjs::{Doc, Options};
@@ -37,7 +35,7 @@ pub(crate) fn check_read(name: &str, found: &[RichTextHtml], recorded: &[Value])
     if found.is_empty() {
         return failures;
     }
-    let read = crate::csharp_yrs_compat_test::block_on(reader().read(found, Duration::ZERO))
+    let read = crate::csharp_yrs_compat_test::block_on(reader().read(found, None))
         .unwrap_or_else(|err| panic!("{name}: {err}"));
     for ((f, segments), r) in found.iter().zip(read).zip(recorded) {
         let (got, want) = (

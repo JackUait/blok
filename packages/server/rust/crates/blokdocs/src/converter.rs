@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use blok_jsjson::{
     Kind, Node, Options, Str, append_quoted, new_object, parse_node, to_string_lossy,
@@ -67,7 +66,7 @@ impl Converter {
     async fn invoke(&self, op: &str, input: &str) -> Result<String, Error> {
         self.inner
             .runtime
-            .invoke(op, input, Duration::ZERO)
+            .invoke(op, input, None)
             .await
             .map_err(from_runtime)
     }

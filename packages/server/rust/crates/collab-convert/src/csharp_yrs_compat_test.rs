@@ -2,7 +2,6 @@ use std::future::Future;
 use std::sync::Arc;
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::Thread;
-use std::time::Duration;
 
 use blok_jsjson::{Object, Str, Value};
 use blok_jsruntime::{Options as PoolOptions, Pool};
@@ -42,7 +41,7 @@ fn read_all(reader: &RuntimeHtmlReader<Pool>, found: &[RichTextHtml]) -> Vec<Vec
     if found.is_empty() {
         return Vec::new();
     }
-    block_on(reader.read(found, Duration::ZERO)).unwrap_or_else(|err| panic!("{err}"))
+    block_on(reader.read(found, None)).unwrap_or_else(|err| panic!("{err}"))
 }
 
 /// The (object path, key) of every HTML string in a built-in rich field, top

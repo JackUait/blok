@@ -55,14 +55,24 @@ pub struct Options {
 /// The future one runtime call returns.
 pub type InvokeFuture<'a> = Pin<Box<dyn Future<Output = Result<String, InvokeError>> + Send + 'a>>;
 
-/// Runs one bundle operation; blokserver's shared engine pool is one. A zero
+/// Runs one bundle operation; blokserver's shared engine pool is one. A None
 /// timeout means the runtime's own.
 pub trait Runtime: Send + Sync + 'static {
-    fn invoke<'a>(&'a self, op: &'a str, input: &'a str, timeout: Duration) -> InvokeFuture<'a>;
+    fn invoke<'a>(
+        &'a self,
+        op: &'a str,
+        input: &'a str,
+        timeout: Option<Duration>,
+    ) -> InvokeFuture<'a>;
 }
 
 impl Runtime for Pool {
-    fn invoke<'a>(&'a self, op: &'a str, input: &'a str, timeout: Duration) -> InvokeFuture<'a> {
+    fn invoke<'a>(
+        &'a self,
+        op: &'a str,
+        input: &'a str,
+        timeout: Option<Duration>,
+    ) -> InvokeFuture<'a> {
         Box::pin(Pool::invoke(self, op, input, timeout))
     }
 }

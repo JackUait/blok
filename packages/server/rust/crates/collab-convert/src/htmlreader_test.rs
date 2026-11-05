@@ -27,11 +27,11 @@ fn block_on<F: Future>(future: F) -> F::Output {
 #[derive(Default)]
 struct EchoRuntime {
     calls: Mutex<Vec<Vec<Str>>>,
-    timeouts: Mutex<Vec<Duration>>,
+    timeouts: Mutex<Vec<Option<Duration>>>,
 }
 
 impl EchoRuntime {
-    fn answer(&self, op: &str, input: &str, timeout: Duration) -> String {
+    fn answer(&self, op: &str, input: &str, timeout: Option<Duration>) -> String {
         self.timeouts.lock().unwrap().push(timeout);
         assert_eq!(op, "htmlFieldsToSegments");
         let Value::Array(entries) = blok_jsjson::parse(input.as_bytes()).unwrap() else {
@@ -70,7 +70,7 @@ impl Invoker for EchoRuntime {
         &self,
         op: &str,
         input: &str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<String, InvokeError>> + Send {
         std::future::ready(Ok(self.answer(op, input, timeout)))
     }
@@ -107,7 +107,7 @@ fn reads_a_large_batch_in_bounded_calls_and_keeps_the_order() {
     };
     let body = "x".repeat(MAX_CALL_CHARS / 4);
     let texts: Vec<String> = (0..10).map(|i| format!("{i}:{body}")).collect();
-    let read = block_on(reader.read(&html(&texts), Duration::ZERO)).unwrap();
+    let read = block_on(reader.read(&html(&texts), None)).unwrap();
     let calls = reader.runtime.calls();
     assert_eq!(calls.len(), 4, "{} calls", calls.len());
     for call in &calls {
@@ -123,11 +123,7 @@ fn two_fields_at_the_edit_cap_go_in_two_calls() {
         runtime: EchoRuntime::default(),
     };
     let body = "x".repeat(MAX_EDIT_HTML_CHARS - 1);
-    block_on(reader.read(
-        &html(&[format!("a{body}"), format!("b{body}")]),
-        Duration::ZERO,
-    ))
-    .unwrap();
+    block_on(reader.read(&html(&[format!("a{body}"), format!("b{body}")]), None)).unwrap();
     assert_eq!(reader.runtime.calls().len(), 2);
 }
 
@@ -138,11 +134,11 @@ fn passes_the_callers_budget_to_every_call() {
     };
     let body = "x".repeat(MAX_CALL_CHARS);
     let minute = Duration::from_secs(60);
-    block_on(reader.read(&html(&[body.clone(), body]), minute)).unwrap();
-    block_on(reader.read(&html(&["a".to_owned()]), Duration::ZERO)).unwrap();
+    block_on(reader.read(&html(&[body.clone(), body]), Some(minute))).unwrap();
+    block_on(reader.read(&html(&["a".to_owned()]), None)).unwrap();
     assert_eq!(
         *reader.runtime.timeouts.lock().unwrap(),
-        vec![minute, minute, Duration::ZERO]
+        vec![Some(minute), Some(minute), None]
     );
 }
 
@@ -153,7 +149,7 @@ fn reads_an_oversized_field_in_a_call_of_its_own() {
     };
     let huge = "h".repeat(MAX_CALL_CHARS + 1);
     let texts = ["a".to_owned(), huge.clone(), "b".to_owned()];
-    let read = block_on(reader.read(&html(&texts), Duration::ZERO)).unwrap();
+    let read = block_on(reader.read(&html(&texts), None)).unwrap();
     let calls = reader.runtime.calls();
     assert_eq!(calls.len(), 3, "{} calls", calls.len());
     assert_eq!(calls[1][0], Str::from(huge.as_str()));
@@ -167,7 +163,7 @@ fn the_call_cap_counts_utf16_units() {
         runtime: EchoRuntime::default(),
     };
     let half = "😀".repeat(MAX_CALL_CHARS / 4);
-    block_on(reader.read(&html(&[half.clone(), half, "x".to_owned()]), Duration::ZERO)).unwrap();
+    block_on(reader.read(&html(&[half.clone(), half, "x".to_owned()]), None)).unwrap();
     assert_eq!(reader.runtime.calls().len(), 2);
 }
 
@@ -177,6 +173,6 @@ fn fields_that_exactly_fill_a_call_share_it() {
         runtime: EchoRuntime::default(),
     };
     let half = "x".repeat(MAX_CALL_CHARS / 2);
-    block_on(reader.read(&html(&[half.clone(), half]), Duration::ZERO)).unwrap();
+    block_on(reader.read(&html(&[half.clone(), half]), None)).unwrap();
     assert_eq!(reader.runtime.calls().len(), 1);
 }

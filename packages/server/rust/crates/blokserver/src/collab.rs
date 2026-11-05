@@ -89,7 +89,7 @@ impl LazyRuntime {
         &self,
         op: &str,
         input: &str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<String, InvokeError> {
         self.pool().await?.invoke(op, input, timeout).await
     }
@@ -131,7 +131,7 @@ impl blok_blokdocs::Runtime for SharedRuntime {
         &'a self,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> blok_blokdocs::InvokeFuture<'a> {
         Box::pin(self.0.invoke(op, input, timeout))
     }
@@ -143,7 +143,7 @@ impl blok_blokagent::Invoker for SharedRuntime {
         cancel: &'a blok_blokagent::Cancel,
         op: &'a str,
         input: &'a str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> blok_blokagent::InvokeFuture<'a> {
         Box::pin(async move {
             let pool = self.0.pool().await.map_err(|err| match err {
@@ -165,7 +165,7 @@ impl Invoker for SharedRuntime {
         &self,
         op: &str,
         input: &str,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> impl Future<Output = Result<String, InvokeError>> + Send {
         self.0.invoke(op, input, timeout)
     }

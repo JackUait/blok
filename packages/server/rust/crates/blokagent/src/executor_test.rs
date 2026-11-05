@@ -71,7 +71,7 @@ impl Invoker for RecordingRuntime {
         _: &'a Cancel,
         _: &'a str,
         input: &'a str,
-        _: Duration,
+        _: Option<Duration>,
     ) -> InvokeFuture<'a> {
         *self.input.lock().expect("lock") = input.to_owned();
         Box::pin(async { Ok(self.answer.to_owned()) })

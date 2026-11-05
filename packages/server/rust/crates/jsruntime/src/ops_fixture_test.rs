@@ -141,7 +141,7 @@ async fn matches_node_on_the_document_ops_fixture() {
         };
         let start = Instant::now();
         let got = pool
-            .invoke(op, &input(case), Duration::from_secs(300))
+            .invoke(op, &input(case), Some(Duration::from_secs(300)))
             .await;
         if name.starts_with("big.") {
             println!("{name} {op}: {:?}", start.elapsed());

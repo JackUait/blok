@@ -320,10 +320,11 @@ const buildCases = async (invoke) => {
   add('big.url.bookmark.markdown', 'blocksToMarkdown', bigUrl('bookmark', 'https://example.com/?q='));
   add('big.fromMarkdown', 'markdownToBlocks', bigMarkdown);
   // C# converts these at its default budget, so every server must (C# stops
-  // a 14 MiB bookmark, a 16 MiB image, 2400 HTML and 1500 Markdown levels).
-  add('big.default.bookmark.12mib.markdown', 'blocksToMarkdown', bigUrlOf('bookmark', 'https://example.com/?q=', 12));
-  add('big.default.image.14mib.markdown', 'blocksToMarkdown', bigUrlOf('image', 'data:image/png;base64,', 14));
-  add('big.default.image.32mib.html', 'blocksToHtml', bigUrlOf('image', 'data:image/png;base64,', 32));
+  // a 28 MiB bookmark, a 64 MiB image to Markdown and 48 MiB to HTML, 2400
+  // HTML and 1500 Markdown levels).
+  add('big.default.bookmark.24mib.markdown', 'blocksToMarkdown', bigUrlOf('bookmark', 'https://example.com/?q=', 24));
+  add('big.default.image.56mib.markdown', 'blocksToMarkdown', bigUrlOf('image', 'data:image/png;base64,', 56));
+  add('big.default.image.40mib.html', 'blocksToHtml', bigUrlOf('image', 'data:image/png;base64,', 40));
   add('big.default.image.32mib.text', 'blocksToPlainText', bigUrlOf('image', 'data:image/png;base64,', 32));
   add('big.default.outline.2300.html', 'blocksToHtml', outline(2300));
   add('big.default.outline.1400.markdown', 'blocksToMarkdown', outline(1400));

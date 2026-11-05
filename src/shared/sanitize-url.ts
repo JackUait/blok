@@ -15,6 +15,9 @@
  */
 const IGNORED_URL_CHARS = /[\u0000-\u0020\u00a0\u2028\u2029\ufeff]/g;
 
+/** {@link IGNORED_URL_CHARS} without the `g` flag, so `test` keeps no state. */
+const HAS_IGNORED_URL_CHAR = /[\u0000-\u0020\u00a0\u2028\u2029\ufeff]/;
+
 /** Schemes safe to navigate to from an anchor href. */
 const SAFE_HREF_SCHEME = /^(?:https?|mailto|tel|sms):/i;
 
@@ -37,7 +40,8 @@ const SVG_IMAGE_DATA = /^data:image\/svg\+xml[;,]/i;
  * "javascript:"). Single source of truth for the ignored-character set.
  */
 export function stripIgnoredUrlChars(url: string): string {
-  return url.replace(IGNORED_URL_CHARS, '');
+  /** A replace that matches nothing still made QuickJS allocate the size of the string, and a data URL runs to MiB. */
+  return HAS_IGNORED_URL_CHAR.test(url) ? url.replace(IGNORED_URL_CHARS, '') : url;
 }
 
 /**

@@ -123,8 +123,39 @@ export type TextEscaper = (text: string) => string;
 /** Text inside a code span is literal: escaping it would print the backslashes. */
 export const RAW_TEXT: TextEscaper = (text) => text;
 
-/** A bare URL. GFM links it as written, so a backslash inside would join the URL. */
-const BARE_URL = /((?:https?:\/\/|www\.)[^\s<]*)/;
+/** Where a bare URL starts. GFM links it as written, so a backslash inside would join the URL. */
+const BARE_URL_START = /(?:https?:\/\/|www\.)/g;
+
+/** What ends a bare URL. */
+const BARE_URL_END = /[\s<]/g;
+
+/**
+ * `text.split(/((?:https?:\/\/|www\.)[^\s<]*)/)`: prose and bare URLs in
+ * turn, each URL at an odd index. Two searches, not that regex: its greedy
+ * run made QuickJS allocate over 256 MiB on a 12 MiB bookmark URL.
+ * @param text - plain text
+ */
+export const splitBareUrls = (text: string): string[] => {
+  const parts: string[] = [];
+  BARE_URL_START.lastIndex = 0;
+  /* eslint-disable no-restricted-syntax -- cursors moved as the scan goes */
+  let from = 0;
+  let start = BARE_URL_START.exec(text);
+  /* eslint-enable no-restricted-syntax */
+
+  while (start !== null) {
+    BARE_URL_END.lastIndex = start.index + start[0].length;
+    const end = BARE_URL_END.exec(text)?.index ?? text.length;
+
+    parts.push(text.slice(from, start.index), text.slice(start.index, end));
+    from = end;
+    BARE_URL_START.lastIndex = end;
+    start = BARE_URL_START.exec(text);
+  }
+  parts.push(text.slice(from));
+
+  return parts;
+};
 
 /** An `&` that would read as a character reference. */
 const ENTITY_LIKE = /&(?=#[0-9]{1,7};|#[xX][0-9a-fA-F]{1,6};|[A-Za-z][A-Za-z0-9]{1,31};)/g;
@@ -234,8 +265,7 @@ export const markdownTextEscaper = (html: string): TextEscaper => {
   const dollars = html.includes(EQUATION_MARKER) || (html.match(/\$/g) ?? []).length >= 2;
 
   /** The capture group keeps each URL in the split, at every odd index. */
-  return (text) => text
-    .split(BARE_URL)
+  return (text) => splitBareUrls(text)
     .map((part, index) => (index % 2 === 1 ? part : escapeProse(part, dollars)))
     .join('');
 };
@@ -248,6 +278,9 @@ const DESTINATION_BREAKER = /[\u0000-\u0020\u007f<>]/;
 
 /** Every character {@link markdownDestination} may rewrite: breakers, `&`, parens and `\`. */
 const DESTINATION_SPECIAL = /[\u0000-\u0020\u007f<>&()\\]/g;
+
+/** {@link DESTINATION_SPECIAL} without the `g` flag, so `test` keeps no state. */
+const HAS_DESTINATION_SPECIAL = /[\u0000-\u0020\u007f<>&()\\]/;
 
 /** What follows `&` in a CommonMark character reference. The longest entity name is 31 letters. */
 const CHARACTER_REFERENCE_TAIL = /^(?:#\d{1,7}|#[xX][\da-fA-F]{1,6}|[A-Za-z][A-Za-z\d]{0,31});/;
@@ -302,6 +335,10 @@ export const markdownDestination = (url: string, kind: 'href' | 'src'): string |
   if (hasUnsafeUrlProtocol(url, kind)) {
     return null;
   }
+  /** A replace that matches nothing still made QuickJS allocate the size of the string, and a data URL runs to MiB. */
+  if (!HAS_DESTINATION_SPECIAL.test(url)) {
+    return url;
+  }
 
   const escapeParens = !parensBalanced(url);
 
@@ -337,19 +374,25 @@ export const markdownDestination = (url: string, kind: 'href' | 'src'): string |
  */
 export const inlineEquation = (latex: string): string => (latex.trim() === '' ? '' : `$${latex.trim()}$`);
 
+/** The first character, after up to 3 spaces, of every line {@link escapeLineStarts} rewrites. */
+const LINE_START_SIGNIFICANT = /^ {0,3}[#>+\-=\d]/;
+
 /**
  * Escape what text can only mean at the start of a line: an ATX heading, a
  * blockquote, a list marker, a setext underline or a thematic break. A line
  * starts after every newline, and these can interrupt a paragraph.
+ *
+ * Other lines skip the five replaces: on one 12 MiB line (a pasted data URL)
+ * they made QuickJS allocate over 64 MiB.
  * @param markdown - one inline field's Markdown
  */
 const escapeLineStarts = (markdown: string): string =>
-  markdown.split('\n').map((line) => line
+  markdown.split('\n').map((line) => (!LINE_START_SIGNIFICANT.test(line) ? line : line
     .replace(/^( {0,3})(#{1,6})(?=[ \t]|$)/, '$1\\$2')
     .replace(/^( {0,3})>/, '$1\\>')
     .replace(/^( {0,3})([+-])(?=[ \t]|$)/, '$1\\$2')
     .replace(/^( {0,3})(-+|=+)([ \t]*)$/, '$1\\$2$3')
-    .replace(/^( {0,3}\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2')).join('\n');
+    .replace(/^( {0,3}\d{1,9})([.)])(?=[ \t]|$)/, '$1\\$2'))).join('\n');
 
 /** A construct that could not be carried into Markdown as-is. */
 export interface MarkdownDegradation {

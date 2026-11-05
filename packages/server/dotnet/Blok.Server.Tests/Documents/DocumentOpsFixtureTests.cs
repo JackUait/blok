@@ -151,8 +151,8 @@ public sealed partial class DocumentOpsFixtureTests
   [InlineData("big.marked.html", true)]
   [InlineData("big.marked.pageIndex", true)]
   [InlineData("big.marked.extract", false)]
-  [InlineData("big.url.image.markdown", true)]
-  [InlineData("big.url.bookmark.markdown", true)]
+  [InlineData("big.url.image.markdown", false)]
+  [InlineData("big.url.bookmark.markdown", false)]
   [InlineData("big.fromMarkdown", true)]
   public async Task StopsTheBigDocumentsOfTheSharedFixtureAt64MiB(string name, bool stopped)
   {
@@ -172,11 +172,10 @@ public sealed partial class DocumentOpsFixtureTests
   }
 
   /*
-   * One 32 MiB base64 image at the default budget: Markdown is refused,
-   * plain text and HTML convert (the shared big.default.image.32mib cases).
+   * One 32 MiB base64 image at the default budget: every reader converts it.
    */
   [Theory]
-  [InlineData("blocksToMarkdown", true)]
+  [InlineData("blocksToMarkdown", false)]
   [InlineData("blocksToPlainText", false)]
   [InlineData("blocksToHtml", false)]
   public async Task ConvertsA32MiBImageAtTheDefaultBudget(string op, bool stopped)

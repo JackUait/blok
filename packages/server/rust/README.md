@@ -34,5 +34,5 @@ Each Go `foo_test.go` has a Rust twin: a `#[cfg(test)] mod` in `foo.rs`, or `tes
 - Async code runs on tokio.
 - The HTTP/1.1 server and the WebSocket code are our own (`crates/http`, `crates/ws`). The conformance suite pins Kestrel's exact bytes, and a general crate hides the parts we must control.
 - JSON goes through `blok-jsjson`, never `serde_json`, for anything a fixture or a client reads. It matches `System.Text.Json` and JS strings, which `serde_json` does not.
-- No `unsafe`, except in `crates/jsruntime`: the JS engine's memory counter (`budget.rs`) and its stack limit (`engine.rs`, because rquickjs caps the safe setter at 16 MiB). And in `crates/outbound/src/sectrust.rs` (`mod raw`): security-framework binds neither `SecTrustCopyResult` nor `SecTrustGetTrustResult`, and the macOS operator check needs both; nor `SecCertificateCopyKey`, which the operator's handshake signature check needs.
+- No `unsafe`, except in `crates/jsruntime`: the JS engine's memory counter (`budget.rs`) and its stack limit (`engine.rs`, because rquickjs caps the safe setter at 16 MiB). And in `crates/outbound/src/sectrust.rs` (`mod raw`): security-framework binds neither `SecTrustCopyResult` nor `SecTrustGetTrustResult`, and the macOS operator check needs both.
 - `cargo fmt --check` and `cargo clippy -- -D warnings` pass.

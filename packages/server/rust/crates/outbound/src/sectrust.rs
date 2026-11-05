@@ -104,22 +104,6 @@ mod raw {
     unsafe extern "C" {
         fn SecTrustCopyResult(trust: *const c_void) -> *const c_void;
         fn SecTrustGetTrustResult(trust: *const c_void, result: *mut u32) -> i32;
-        fn SecCertificateCopyKey(certificate: *const c_void) -> *const c_void;
-    }
-
-    /// The certificate's public key, as SecureTransport checks a handshake
-    /// signature with it; None when macOS cannot read it.
-    pub(super) fn certificate_key(
-        certificate: &security_framework::certificate::SecCertificate,
-    ) -> Option<security_framework::key::SecKey> {
-        // SAFETY: `certificate` is a live SecCertificate; the copy follows
-        // the Create rule.
-        let key = unsafe { SecCertificateCopyKey(certificate.as_CFTypeRef()) };
-        if key.is_null() {
-            return None;
-        }
-        // SAFETY: a non-null result is a SecKey this call now owns.
-        Some(unsafe { security_framework::key::SecKey::wrap_under_create_rule(key as _) })
     }
 
     /// SecTrustGetTrustResult succeeds with a result other than Invalid.
@@ -165,72 +149,22 @@ mod raw {
     }
 }
 
-use raw::{certificate_key, detail_keys, evaluated};
+use raw::{detail_keys, evaluated};
 
 /// The signature_algorithms SslStream's ClientHello carries on macOS
-/// (SecureTransport), in its order: no RSA-PSS and no EdDSA, measured with
-/// `openssl s_server -trace` under a C# connect.
-const OPERATOR_SCHEMES: [SignatureScheme; 8] = [
+/// (SecureTransport), in its order, measured with `openssl s_server -trace`
+/// under a C# connect: no RSA-PSS and no EdDSA. SecureTransport also offers
+/// RSA and ECDSA with SHA-1; those two are left out on purpose. ring checks
+/// the signatures, so RSA keys under 2048 bits and P-521 fail here where
+/// .NET takes them: a security choice, not an oversight.
+const OPERATOR_SCHEMES: [SignatureScheme; 6] = [
     SignatureScheme::RSA_PKCS1_SHA256,
-    SignatureScheme::RSA_PKCS1_SHA1,
     SignatureScheme::RSA_PKCS1_SHA384,
     SignatureScheme::RSA_PKCS1_SHA512,
     SignatureScheme::ECDSA_NISTP256_SHA256,
-    SignatureScheme::ECDSA_SHA1_Legacy,
     SignatureScheme::ECDSA_NISTP384_SHA384,
     SignatureScheme::ECDSA_NISTP521_SHA512,
 ];
-
-/// A TLS 1.2 handshake signature checked with SecKey, which takes RSA keys
-/// of any size and every NIST curve, as SecureTransport does; ring takes
-/// RSA from 2048 bits only. In TLS 1.2 an ECDSA scheme names only its hash.
-fn sec_key_verify(
-    cert: &CertificateDer<'_>,
-    dss: &DigitallySignedStruct,
-    message: &[u8],
-) -> Result<HandshakeSignatureValid, rustls::Error> {
-    if !OPERATOR_SCHEMES.contains(&dss.scheme) {
-        return Err(rustls::PeerMisbehaved::SignedHandshakeWithUnadvertisedSigScheme.into());
-    }
-    if signature_holds(cert.as_ref(), dss.scheme, message, dss.signature()) {
-        Ok(HandshakeSignatureValid::assertion())
-    } else {
-        Err(rustls::Error::InvalidCertificate(
-            CertificateError::BadSignature,
-        ))
-    }
-}
-
-/// Whether `signature` over `message` holds under the leaf's key.
-pub(crate) fn signature_holds(
-    cert: &[u8],
-    scheme: SignatureScheme,
-    message: &[u8],
-    signature: &[u8],
-) -> bool {
-    use security_framework::key::Algorithm;
-    let algorithm = match scheme {
-        SignatureScheme::RSA_PKCS1_SHA1 => Algorithm::RSASignatureMessagePKCS1v15SHA1,
-        SignatureScheme::RSA_PKCS1_SHA256 => Algorithm::RSASignatureMessagePKCS1v15SHA256,
-        SignatureScheme::RSA_PKCS1_SHA384 => Algorithm::RSASignatureMessagePKCS1v15SHA384,
-        SignatureScheme::RSA_PKCS1_SHA512 => Algorithm::RSASignatureMessagePKCS1v15SHA512,
-        SignatureScheme::ECDSA_SHA1_Legacy => Algorithm::ECDSASignatureMessageX962SHA1,
-        SignatureScheme::ECDSA_NISTP256_SHA256 => Algorithm::ECDSASignatureMessageX962SHA256,
-        SignatureScheme::ECDSA_NISTP384_SHA384 => Algorithm::ECDSASignatureMessageX962SHA384,
-        SignatureScheme::ECDSA_NISTP521_SHA512 => Algorithm::ECDSASignatureMessageX962SHA512,
-        _ => return false,
-    };
-    SecCertificate::from_der(cert)
-        .ok()
-        .as_ref()
-        .and_then(certificate_key)
-        .is_some_and(|key| {
-            matches!(
-                key.verify_signature(algorithm, message, signature),
-                Ok(true)
-            )
-        })
-}
 
 /// TrustResultDetails read as AppleCryptoNative_X509ChainGetStatusAtIndex
 /// does: any key that maps to a status fails, as does an unknown key or a
@@ -294,9 +228,6 @@ impl ServerCertVerifier for TrustdVerifier {
         cert: &CertificateDer<'_>,
         dss: &DigitallySignedStruct,
     ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        if let Check::Operator = self.check {
-            return sec_key_verify(cert, dss, message);
-        }
         rustls::crypto::verify_tls12_signature(
             message,
             cert,

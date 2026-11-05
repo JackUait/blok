@@ -1,9 +1,10 @@
-//! The operator client's TLS handshake against servers whose leaf key
-//! ring cannot check. C# measured (SslStream on macOS, trust set aside):
-//! TLS 1.2 only, RSA keys of 512 to 2048 bits and ECDSA P-256, P-384 and
-//! P-521 accepted, Ed25519 and RSA-PSS keys refused, a TLS 1.3-only server
-//! refused. The test servers sign with SecKey, so any size macOS makes
-//! works; the leaf is signed by the test root, which the operator trusts.
+//! The operator client's TLS handshake on macOS. C# measured (SslStream
+//! on SecureTransport, trust set aside): TLS 1.2 only; RSA keys of 512 to
+//! 2048 bits and ECDSA P-256, P-384 and P-521 accepted; Ed25519 and RSA-PSS
+//! keys refused; a TLS 1.3-only server refused. Rust keeps ring's check
+//! for the signatures, so RSA under 2048 bits and P-521 are refused here:
+//! a security choice over parity. The test servers sign with SecKey, so
+//! the key sizes ring cannot make still get served.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,6 +21,9 @@ use crate::pki_test::{Fields, Key, bit_string, certificate, key, oid, seq, tlv};
 struct SecSigning {
     key: SecKey,
     rsa: bool,
+    /// The curve size; an ECDSA key signs with its curve's hash, as
+    /// OpenSSL servers pick.
+    bits: u32,
 }
 
 impl std::fmt::Debug for SecSigning {
@@ -50,20 +54,20 @@ impl SecSigning {
                 ),
             ]
         } else {
-            &[
-                (
-                    SignatureScheme::ECDSA_NISTP521_SHA512,
-                    Algorithm::ECDSASignatureMessageX962SHA512,
-                ),
-                (
-                    SignatureScheme::ECDSA_NISTP384_SHA384,
-                    Algorithm::ECDSASignatureMessageX962SHA384,
-                ),
-                (
+            match self.bits {
+                256 => &[(
                     SignatureScheme::ECDSA_NISTP256_SHA256,
                     Algorithm::ECDSASignatureMessageX962SHA256,
-                ),
-            ]
+                )],
+                384 => &[(
+                    SignatureScheme::ECDSA_NISTP384_SHA384,
+                    Algorithm::ECDSASignatureMessageX962SHA384,
+                )],
+                _ => &[(
+                    SignatureScheme::ECDSA_NISTP521_SHA512,
+                    Algorithm::ECDSASignatureMessageX962SHA512,
+                )],
+            }
         }
     }
 }
@@ -208,23 +212,29 @@ async fn get(origin: &Origin) -> bool {
 const BOTH: &[&rustls::SupportedProtocolVersion] =
     &[&rustls::version::TLS12, &rustls::version::TLS13];
 
+// RSA-1024 and P-521: C# accepts both, and Rust refuses both on purpose
+// (ring's floor and curves), so these rows pin the refusal.
 #[tokio::test]
-async fn the_operator_handshake_takes_the_keys_dotnet_takes() {
-    for (rsa, bits) in [
-        (true, 1024),
-        (true, 2048),
-        (false, 256),
-        (false, 384),
-        (false, 521),
+async fn the_operator_handshake_takes_the_keys_ring_checks() {
+    for (rsa, bits, accepted) in [
+        (true, 1024, false),
+        (true, 2048, true),
+        (false, 256, true),
+        (false, 384, true),
+        (false, 521, false),
     ] {
         let (private, spki) = sec_key(rsa, bits);
         let o = origin(
             vec![leaf(spki)],
-            Arc::new(SecSigning { key: private, rsa }),
+            Arc::new(SecSigning {
+                key: private,
+                rsa,
+                bits,
+            }),
             BOTH,
         )
         .await;
-        assert!(get(&o).await, "rsa={rsa} {bits}: refused");
+        assert_eq!(get(&o).await, accepted, "rsa={rsa} {bits}");
     }
 }
 
@@ -253,6 +263,7 @@ async fn the_operator_handshake_refuses_what_dotnet_refuses() {
         Arc::new(SecSigning {
             key: private,
             rsa: false,
+            bits: 256,
         }),
         &[&rustls::version::TLS13],
     )
@@ -261,7 +272,8 @@ async fn the_operator_handshake_refuses_what_dotnet_refuses() {
 }
 
 // The signature_algorithms SslStream's ClientHello carries on macOS, in
-// its order (openssl s_server -trace of a C# connect).
+// its order (openssl s_server -trace of a C# connect), less the two SHA-1
+// schemes, which Rust leaves out on purpose.
 #[test]
 fn the_operator_offers_the_schemes_dotnet_offers() {
     let verifier = crate::sectrust::TrustdVerifier {
@@ -274,45 +286,11 @@ fn the_operator_offers_the_schemes_dotnet_offers() {
         verifier.supported_verify_schemes(),
         [
             SignatureScheme::RSA_PKCS1_SHA256,
-            SignatureScheme::RSA_PKCS1_SHA1,
             SignatureScheme::RSA_PKCS1_SHA384,
             SignatureScheme::RSA_PKCS1_SHA512,
             SignatureScheme::ECDSA_NISTP256_SHA256,
-            SignatureScheme::ECDSA_SHA1_Legacy,
             SignatureScheme::ECDSA_NISTP384_SHA384,
             SignatureScheme::ECDSA_NISTP521_SHA512,
         ]
     );
-}
-
-// SecKey makes no RSA key under 1024 bits, so the smaller sizes C# took
-// are checked at the verifier: a leaf and a SHA-256 PKCS#1 signature over
-// MESSAGE, both made once with openssl (genpkey, x509 -req, dgst -sign).
-const MESSAGE: &[u8] = b"blok remnants handshake";
-const RSA512_LEAF: &str = "308201c030820167a00302010202142daab90ec3c0398c2d6433e37941a05378a52c0d300a06082a8648ce3d04030230183116301406035504030c0d72656d6e616e74732d726f6f74301e170d3236313130353136303235325a170d3236313132353136303235325a30143112301006035504030c096c6f63616c686f7374305c300d06092a864886f70d0101010500034b003048024100b37e27ff4701a9a1c5752a969db8323118d2c2aa0fd67ed8ac06ecaab8524978dde1e95cb616f6c5595527c82e0b2cba055ccb8df4d0a0854cf9b05a881172030203010001a3818f30818c30090603551d1304023000300e0603551d0f0101ff0404030205a030130603551d25040c300a06082b06010505070301301a0603551d110413301182096c6f63616c686f737487047f000001301d0603551d0e041604148fae51c42e757399735376e9b36e1f71931755cd301f0603551d23041830168014d6d33c963535dcdafb30509b9b5d614ddba2217a300a06082a8648ce3d04030203470030440220705c918ca9089f7602b875cc643de03bc2a37e2dd023541600e7c48965a0c72b02205f92a3e45f8c03fdd33c1fdea628d0b25807ace620175a080fc283528c0a89c1";
-const RSA512_SIGNATURE: &str = "388073783a7fda4f99a0e3d737828942c27ecf8dfe0708108f37aab17fcb162230a55060b982d5f0bfe41c2c65f8c2cb42b0c3e6595dc3cea775d303346cb067";
-const RSA768_LEAF: &str = "308201e130820187a00302010202142daab90ec3c0398c2d6433e37941a05378a52c0e300a06082a8648ce3d04030230183116301406035504030c0d72656d6e616e74732d726f6f74301e170d3236313130353136303235325a170d3236313132353136303235325a30143112301006035504030c096c6f63616c686f7374307c300d06092a864886f70d0101010500036b003068026100df659e61f6caee61b5527ef6b635da6aad72ff10285152cfbb4fcdd394b20b4b4215ee0b5f6eb13b6dd9b0a57d685c7efd4dfee027bd3427b95085b63768bcf58ae106ef96edea0e90aac6e0b9a5999f56281522becd8cac21e0a9c55d80b1b30203010001a3818f30818c30090603551d1304023000300e0603551d0f0101ff0404030205a030130603551d25040c300a06082b06010505070301301a0603551d110413301182096c6f63616c686f737487047f000001301d0603551d0e041604143ae18ec459df0a0324a5ba298a2184edb52b33c7301f0603551d23041830168014d6d33c963535dcdafb30509b9b5d614ddba2217a300a06082a8648ce3d04030203480030450221008e5660ad1d0ee6150a0b9636f69b2d1d24b6c076177114bf776d1ef2d89a1a7a022047c30a66f67f63cd2c6eb87e46399311fd7a9d7534911eda9b92f0ed47743889";
-const RSA768_SIGNATURE: &str = "3390e70dac6da3d2e5c07c7a43c849171ccb83e5c7c3cf7daff7607a06bf84b4081824864e5089beb4e95ac0457a77b60a21424de14f4fcfd101c23c0a148e92067ba9c476603a0d6b079433bc1b92f5061857bdf22bcd020dc861477bc17f4b";
-
-#[test]
-fn the_operator_checks_rsa_signatures_under_1024_bits() {
-    use crate::pki_test::unhex;
-    for (leaf, signature) in [
-        (RSA512_LEAF, RSA512_SIGNATURE),
-        (RSA768_LEAF, RSA768_SIGNATURE),
-    ] {
-        let (leaf, signature) = (unhex(leaf), unhex(signature));
-        assert!(crate::sectrust::signature_holds(
-            &leaf,
-            SignatureScheme::RSA_PKCS1_SHA256,
-            MESSAGE,
-            &signature
-        ));
-        assert!(!crate::sectrust::signature_holds(
-            &leaf,
-            SignatureScheme::RSA_PKCS1_SHA256,
-            b"another message",
-            &signature
-        ));
-    }
 }

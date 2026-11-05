@@ -573,6 +573,11 @@ func (r *Room) drain(ctx context.Context) {
 		}
 		return nil
 	})
+	// C#'s WaitAsync returns at once on a settle that is already done, so
+	// an idle pump logs nothing even when the drain was cancelled.
+	if !r.activityPending() {
+		return
+	}
 	settled := make(chan struct{})
 	go func() {
 		r.settle()

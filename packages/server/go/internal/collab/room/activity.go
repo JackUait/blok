@@ -105,3 +105,19 @@ func (r *Room) settle() {
 		<-pending
 	}
 }
+
+// activityPending: the pump is still delivering records.
+func (r *Room) activityPending() bool {
+	r.activityMu.Lock()
+	pending := r.activityDispatch
+	r.activityMu.Unlock()
+	if pending == nil {
+		return false
+	}
+	select {
+	case <-pending:
+		return false
+	default:
+		return true
+	}
+}

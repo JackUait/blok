@@ -559,7 +559,7 @@ func (e *fakeEndpoint) answerLocked(doc string) (*docendpoint.Loaded, error) {
 	return &docendpoint.Loaded{Data: loaded.Data, Version: loaded.Version}, nil
 }
 
-func (e *fakeEndpoint) Save(_ context.Context, doc string, outputData any, version *string, projection *docendpoint.Projection) (*string, error) {
+func (e *fakeEndpoint) Save(ctx context.Context, doc string, outputData any, version *string, projection *docendpoint.Projection) (*string, error) {
 	encoded, err := docendpoint.Serialize(outputData)
 	if err != nil {
 		return nil, err
@@ -570,7 +570,12 @@ func (e *fakeEndpoint) Save(_ context.Context, doc string, outputData any, versi
 	gate := e.saveGate
 	e.mu.Unlock()
 	if gate != nil {
-		<-gate
+		// C#'s gate is WaitAsync(token): a cancelled save stops waiting.
+		select {
+		case <-gate:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()

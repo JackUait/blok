@@ -362,10 +362,16 @@ func (m *Manager) Drain(ctx context.Context) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				r.drain(ctx)
 				// drain always closes the room; forget it in case its close
 				// callback raced a newer room.
-				m.forget(r)
+				defer m.forget(r)
+				// One room that fails must not strand the others.
+				defer func() {
+					if failure := recover(); failure != nil {
+						m.logf(`collab: room "` + r.docID + `" could not be drained: ` + panicMessage(failure))
+					}
+				}()
+				r.drain(ctx)
 			}()
 		}
 		wg.Wait()
@@ -450,3 +456,11 @@ var _ collab.Rooms = (*Manager)(nil)
 
 // Converter is the converter the rooms use, which the agent exports with.
 func (m *Manager) Converter() Converter { return m.converter }
+
+// panicMessage is the panic's error text, as C# logs an exception's Message.
+func panicMessage(failure any) string {
+	if err, ok := failure.(error); ok {
+		return err.Error()
+	}
+	return fmt.Sprint(failure)
+}

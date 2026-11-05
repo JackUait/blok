@@ -13,13 +13,18 @@ import (
 // connection that stays open; after it, the connection is cut. net/http
 // alone would close without a word.
 //
-// WriteHeader counts as the start: net/http cannot take a status back,
-// and the host's deadline reads it the same way.
+// As in Kestrel, a status is held until the first write or flush, or the
+// handler's return: a panic before then is still a 500, and the host's
+// deadline still answers 504.
 func RecoverLikeKestrel(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		watched := &startWriter{ResponseWriter: w}
 		defer func() {
-			if failure := recover(); failure == nil || watched.refuse() {
+			if failure := recover(); failure == nil {
+				watched.commit()
+				return
+			}
+			if watched.refuse() {
 				return
 			}
 			// What the handler wrote still goes out before the cut, as
@@ -36,12 +41,25 @@ type startWriter struct {
 	mu       sync.Mutex
 	started  bool
 	hijacked bool
+	// held is the status WriteHeader set and nothing has sent yet.
+	held int
 }
 
-func (s *startWriter) begin() {
+// commit sends a held status and marks the answer started.
+func (s *startWriter) commit() {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.commitLocked()
+}
+
+func (s *startWriter) commitLocked() {
+	if s.started || s.hijacked {
+		return
+	}
 	s.started = true
-	s.mu.Unlock()
+	if s.held != 0 {
+		s.ResponseWriter.WriteHeader(s.held)
+	}
 }
 
 // refuse writes Kestrel's empty 500 unless the answer started; it reports
@@ -72,20 +90,31 @@ func (s *startWriter) refuse() bool {
 	return true
 }
 
+// WriteHeader holds a final status; the first one wins, as in net/http.
+// An informational one goes out at once.
 func (s *startWriter) WriteHeader(status int) {
-	if status >= 200 {
-		s.begin()
+	if status < 200 {
+		s.ResponseWriter.WriteHeader(status)
+		return
 	}
-	s.ResponseWriter.WriteHeader(status)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.started || s.hijacked {
+		s.ResponseWriter.WriteHeader(status)
+		return
+	}
+	if s.held == 0 {
+		s.held = status
+	}
 }
 
 func (s *startWriter) Write(b []byte) (int, error) {
-	s.begin()
+	s.commit()
 	return s.ResponseWriter.Write(b)
 }
 
 func (s *startWriter) FlushError() error {
-	s.begin()
+	s.commit()
 	return http.NewResponseController(s.ResponseWriter).Flush()
 }
 

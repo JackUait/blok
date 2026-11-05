@@ -71,10 +71,12 @@ func TestDeadlineEndsAStalledBody(t *testing.T) {
 	}
 }
 
-// An answer already started is left alone.
+// An answer already started is left alone. A status set but not flushed
+// has not started: TestAStatusSetWithoutAWriteIsHeldUntilTheHeadGoesOut.
 func TestDeadlineKeepsAStartedAnswer(t *testing.T) {
 	address := serveWithDeadline(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		_ = http.NewResponseController(w).Flush()
 		<-r.Context().Done()
 	}), 200*time.Millisecond)
 

@@ -82,3 +82,58 @@ async fn a_handler_panic_answers_as_kestrel_does() {
         "HTTP/1.1 200 OK\r\nContent-Length: 10\r\nDate: D\r\nServer: Kestrel\r\n\r\nhalf"
     );
 }
+
+// KestrelHeldStatusTests: a status a handler sets is not an answer until
+// the head is sent. A panic then is an empty 500, and the deadline is a 504.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_status_set_without_a_write_is_held_until_the_head_goes_out() {
+    let running = common::start(
+        |request: Request, mut response: ResponseWriter| async move {
+            match request.path() {
+                "/status-throw" => {
+                    response.set_status(404);
+                    panic!("boom");
+                }
+                "/status-timeout" => {
+                    response.set_status(202);
+                    request.cancel_token().cancelled().await;
+                }
+                "/status-returns" => response.set_status(202),
+                _ => {
+                    response.set_status(202);
+                    let _ = response.flush().await;
+                    request.cancel_token().cancelled().await;
+                }
+            }
+        },
+        Config {
+            request_timeout: Some(Duration::from_millis(200)),
+            ..Config::default()
+        },
+    )
+    .await;
+    for (path, head) in [
+        (
+            "/status-throw",
+            "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
+        ),
+        (
+            "/status-timeout",
+            "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
+        ),
+        (
+            "/status-returns",
+            "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\nDate: D\r\nServer: Kestrel\r\n\r\n",
+        ),
+        (
+            "/flushed-timeout",
+            "HTTP/1.1 202 Accepted\r\nDate: D\r\nServer: Kestrel\r\nTransfer-Encoding: chunked\r\n\r\n",
+        ),
+    ] {
+        let mut conn = common::connect(running.address).await;
+        conn.write_all(format!("GET {path} HTTP/1.1\r\nHost: x\r\n\r\n").as_bytes())
+            .await
+            .unwrap();
+        assert_eq!(strip_date(&read_head(&mut conn).await), head, "{path}");
+    }
+}

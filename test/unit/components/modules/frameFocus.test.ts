@@ -167,6 +167,27 @@ describe('FrameFocus', () => {
     expect(frame).toHaveFocus();
   });
 
+  it('lets the frame keep focus after a tap in the text, since a tap inside the frame never reaches the page', async () => {
+    const { paragraph, frame } = setup();
+
+    placeCaret(paragraph, 3);
+    paragraph.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    await frameTakesFocus(frame);
+
+    expect(frame).toHaveFocus();
+  });
+
+  it('gives focus back after a mouse click in the text that followed a tap', async () => {
+    const { paragraph, frame } = setup();
+
+    paragraph.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+    paragraph.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }));
+    placeCaret(paragraph, 3);
+    await frameTakesFocus(frame);
+
+    expect(paragraph).toHaveFocus();
+  });
+
   it('lets the frame keep focus when the reader tabs into it', async () => {
     const { paragraph, frame } = setup();
 

@@ -23,6 +23,12 @@ export class FrameFocus extends Module {
   private aimed: HTMLIFrameElement | null = null;
   private lastMove: { x: number; y: number } | null = null;
   private lastTab: { at: number; event: KeyboardEvent } | null = null;
+  /**
+   * The last press here was a finger or pen. A tap inside a frame sends this
+   * page no pointer event at all, so it can't be told from a steal; such
+   * focus moves are let through.
+   */
+  private byTouch = false;
 
   public prepare(): void {
     this.listeners.on(document, 'pointermove', this.onPointerMove, { capture: true, passive: true });
@@ -37,6 +43,7 @@ export class FrameFocus extends Module {
     this.aimed = null;
     this.lastMove = null;
     this.lastTab = null;
+    this.byTouch = false;
   }
 
   private readonly onPointerMove = (event: Event): void => {
@@ -61,8 +68,9 @@ export class FrameFocus extends Module {
   };
 
   /** Firefox leaves focus in a frame on a click in the page unless the frame is blurred first. */
-  private readonly onPointerDown = (): void => {
+  private readonly onPointerDown = (event: Event): void => {
     this.aimed = null;
+    this.byTouch = event instanceof PointerEvent && (event.pointerType === 'touch' || event.pointerType === 'pen');
 
     const active = document.activeElement;
 
@@ -105,7 +113,7 @@ export class FrameFocus extends Module {
       return false;
     }
 
-    if (frame === this.aimed || this.tabbedIn()) {
+    if (frame === this.aimed || this.byTouch || this.tabbedIn()) {
       return true;
     }
 

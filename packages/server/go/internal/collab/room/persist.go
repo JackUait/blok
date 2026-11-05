@@ -283,6 +283,10 @@ func (r *Room) flushLocked(caller context.Context) {
 	defer cancel()
 	stop := context.AfterFunc(caller, cancel)
 	defer stop()
+	// AfterFunc runs later; C#'s linked token starts cancelled at once.
+	if caller.Err() != nil {
+		cancel()
+	}
 
 	if save := r.inFlightSave; save != nil {
 		answered, err := save.wait()
@@ -302,14 +306,16 @@ func (r *Room) flushLocked(caller context.Context) {
 		}
 	}
 	if r.blobVersion != r.persistedVersion {
+		before := ctx.Err() != nil
 		if err := r.persistLocked(ctx); err != nil && r.lifetime.Err() == nil {
-			r.logf(`collab: room "` + r.docID + `" could not flush the working set: ` + err.Error())
+			r.logf(`collab: room "` + r.docID + `" could not flush the working set: ` + errorText(err, ctx, before))
 		}
 	}
 	if !r.exportDirty {
 		return
 	}
 	r.settleVersionLocked()
+	before := ctx.Err() != nil
 	snapshot, err := r.converter.Export(ctx, r.doc)
 	if err != nil {
 		if r.lifetime.Err() != nil {
@@ -318,15 +324,16 @@ func (r *Room) flushLocked(caller context.Context) {
 		if r.session != nil && !isTransientExportFailure(err) {
 			r.refuseProjectionLocked(err, "")
 		} else {
-			r.logf(`collab: room "` + r.docID + `" could not export during flush: ` + err.Error())
+			r.logf(`collab: room "` + r.docID + `" could not export during flush: ` + errorText(err, ctx, before))
 		}
 		return
 	}
 	r.projectionOwed = false
+	before = ctx.Err() != nil
 	answered, err := r.endpoint.Save(ctx, r.docID, snapshot, r.version, r.projectionLocked())
 	if err != nil {
 		if r.lifetime.Err() == nil {
-			r.logf(`collab: room "` + r.docID + `" could not export during flush: ` + err.Error())
+			r.logf(`collab: room "` + r.docID + `" could not export during flush: ` + errorText(err, ctx, before))
 		}
 		return
 	}

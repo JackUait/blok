@@ -328,13 +328,14 @@ func (r *Room) readState(ctx context.Context) (*StateResult, error) {
 			return nil
 		}
 		r.updateEvictionLocked(-1)
+		before := ctx.Err() != nil
 		exported, err := r.converter.Export(ctx, r.doc)
 		var json []byte
 		if err == nil {
 			json, err = docendpoint.Serialize(exported)
 		}
 		if err != nil {
-			r.logf(`collab: room "` + r.docID + `" could not export its state: ` + err.Error())
+			r.logf(`collab: room "` + r.docID + `" could not export its state: ` + errorText(err, ctx, before))
 			status := StateExportFailed
 			if isTransient(err) {
 				status = StateOverloaded
@@ -390,7 +391,7 @@ func (r *Room) checkpointLocked() (bool, error) {
 			return false, nil
 		}
 		r.logf(fmt.Sprintf(`collab: room "%s" could not publish a checkpoint (%d of %d), retrying later: %s`,
-			r.docID, r.checkpointFailures, checkpointFailureLimit, err.Error()))
+			r.docID, r.checkpointFailures, checkpointFailureLimit, errorText(err, nil, false)))
 		return false, nil
 	}
 	r.checkpointFailures = 0

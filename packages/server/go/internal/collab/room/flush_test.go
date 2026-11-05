@@ -183,11 +183,9 @@ func TestADrainCutShortByItsTokenStillClosesEveryRoom(t *testing.T) {
 	r.mu.Lock()
 	lines := slices.Sorted(slices.Values(r.log))
 	r.mu.Unlock()
-	// C# prints the cancel as "A task was canceled."; Go errors say
-	// "context canceled". Only the line around it is compared.
 	want := []string{
-		`collab: room "doc-a" could not export during flush: ` + context.Canceled.Error(),
-		`collab: room "doc-b" could not export during flush: ` + context.Canceled.Error(),
+		`collab: room "doc-a" could not export during flush: The operation was canceled.`,
+		`collab: room "doc-b" could not export during flush: The operation was canceled.`,
 	}
 	if !slices.Equal(lines, want) {
 		t.Fatalf("log = %q, want %q", lines, want)
@@ -239,5 +237,39 @@ func TestARoomWhoseDrainPanicsIsLoggedAndForgotten(t *testing.T) {
 	}
 	if manager.LiveRoomCount() != 0 {
 		t.Fatal("the room whose drain failed stayed loaded")
+	}
+}
+
+// C# ADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText.
+func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T) {
+	r := newTextRoom()
+	r.endpoint.Holds(t, "doc-a", "a", nil)
+	manager := r.newManager(t, Options{ExportDebounce: 5 * time.Minute, ExportMaxDelay: 5 * time.Minute}, false)
+	member := &fakeMember{source: collab.SourceClientV1, write: true}
+	membership := joinSynced(t, manager, "doc-a", member)
+	client := syncedClient(t, manager, "doc-a", "a")
+	if err := membership.Receive(context.Background(), syncFrame(t, wire.SyncUpdate{Update: updateAppending(client, "!")})); err != nil {
+		t.Fatal(err)
+	}
+	manager.Settle()
+	gate := make(chan struct{})
+	defer close(gate)
+	r.endpoint.setSaveGate(gate)
+	shutdown, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := manager.Drain(shutdown); err != nil {
+		t.Fatal(err)
+	}
+
+	if manager.LiveRoomCount() != 0 {
+		t.Fatal("a drained room stayed loaded")
+	}
+	r.mu.Lock()
+	lines := slices.Clone(r.log)
+	r.mu.Unlock()
+	want := []string{`collab: room "doc-a" could not export during flush: A task was canceled.`}
+	if !slices.Equal(lines, want) {
+		t.Fatalf("log = %q, want %q", lines, want)
 	}
 }

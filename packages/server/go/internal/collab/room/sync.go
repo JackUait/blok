@@ -216,7 +216,9 @@ func (r *Room) rejectLocked(membership *Membership, op wire.Operation, code stri
 // failCommitLocked: the doc may hold bytes the journal does not, so the room
 // closes every member with the retryable close and discards itself.
 func (r *Room) failCommitLocked(what string, err error) {
-	r.logf(`collab: room "` + r.docID + `" could not ` + what + `, closing: ` + err.Error())
+	// Every commit step runs on a fresh commit-timeout context, so a cancel
+	// here came during the call.
+	r.logf(`collab: room "` + r.docID + `" could not ` + what + `, closing: ` + errorText(err, nil, false))
 	r.commitUnavailable = true
 	r.closeRoomLocked(reasonPtr(collab.CloseCommitUnavailable))
 }

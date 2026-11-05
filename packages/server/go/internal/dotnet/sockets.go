@@ -208,12 +208,11 @@ func proxyAddress(proxy *url.URL) string {
 //
 // It returns the conn the tunnel runs on.
 func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (net.Conn, error)) (net.Conn, error) {
-	authorized := false
+	authorization, sent, stale := "", "", false
 	for {
 		head := "CONNECT " + target + " HTTP/1.1\r\nHost: " + target + "\r\n"
-		if authorized {
-			password, _ := proxy.User.Password()
-			head += "Proxy-Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(proxy.User.Username()+":"+password)) + "\r\n"
+		if authorization != "" {
+			head += "Proxy-Authorization: " + authorization + "\r\n"
 		}
 		if _, err := io.WriteString(conn, head+"\r\n"); err != nil {
 			return conn, err
@@ -232,11 +231,37 @@ func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (ne
 			}
 			return conn, nil
 		}
-		if status != http.StatusProxyAuthRequired || authorized || proxy.User == nil ||
-			!offersBasic(header.Values("Proxy-Authenticate")) {
+		next := ""
+		if status == http.StatusProxyAuthRequired && proxy.User != nil {
+			challenges := authChallenges(header.Values("Proxy-Authenticate"))
+			user := proxy.User.Username()
+			password, _ := proxy.User.Password()
+			switch {
+			case sent == "":
+				// SendWithAuthAsync's first answer.
+				sent = chooseChallenge(challenges)
+				switch sent {
+				case "digest":
+					if parameters, ok := parseDigest(challenges["digest"]); ok {
+						next = "Digest " + digestToken(user, password, parameters)
+					}
+				case "basic":
+					next = "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
+				}
+			case sent == "digest" && !stale:
+				// One more try when the server calls the nonce stale.
+				if data, ok := challenges["digest"]; ok {
+					if parameters, ok := parseDigest(data); ok && parameters["stale"] == "true" {
+						stale = true
+						next = "Digest " + digestToken(user, password, parameters)
+					}
+				}
+			}
+		}
+		if next == "" || next == "Digest " {
 			return conn, fmt.Errorf("proxy: CONNECT answered %d", status)
 		}
-		authorized = true
+		authorization = next
 		body, framing := reader.Body(status, false, header)
 		keep := framing != FramedClose && strings.HasPrefix(string(line), "HTTP/1.1 ") &&
 			!strings.Contains(strings.ToLower(connectionTokens(header)), "close")
@@ -253,18 +278,68 @@ func connectTunnel(conn net.Conn, proxy *url.URL, target string, open func() (ne
 	}
 }
 
-// offersBasic reports whether a Proxy-Authenticate challenge names Basic.
-// Negotiate, NTLM and Digest, which .NET tries first, are not spoken here.
-func offersBasic(values []string) bool {
+// authChallenges reads Proxy-Authenticate lines into each scheme's
+// parameter text, the first one of a scheme kept: a comma-separated piece
+// that starts with a bare token starts a challenge, the rest are its
+// parameters.
+func authChallenges(values []string) map[string]string {
+	challenges := map[string]string{}
 	for _, value := range values {
-		for _, challenge := range strings.Split(value, ",") {
-			scheme, _, _ := strings.Cut(strings.TrimLeft(challenge, " \t"), " ")
-			if strings.EqualFold(scheme, "Basic") {
-				return true
+		scheme, data := "", []string(nil)
+		flush := func() {
+			if _, seen := challenges[scheme]; scheme != "" && !seen {
+				challenges[scheme] = strings.Join(data, ", ")
 			}
 		}
+		for _, piece := range splitOutsideQuotes(value) {
+			piece = strings.Trim(piece, " \t")
+			token, rest, _ := strings.Cut(piece, " ")
+			if token != "" && isToken(token) {
+				flush()
+				scheme, data = strings.ToLower(token), nil
+				if rest = strings.Trim(rest, " \t"); rest != "" {
+					data = append(data, rest)
+				}
+			} else if piece != "" {
+				data = append(data, piece)
+			}
+		}
+		flush()
 	}
-	return false
+	return challenges
+}
+
+// splitOutsideQuotes splits s at the commas outside quoted strings.
+func splitOutsideQuotes(s string) []string {
+	var pieces []string
+	start, quoted := 0, false
+	for i := 0; i < len(s); i++ {
+		switch {
+		case s[i] == '\\' && quoted:
+			i++
+		case s[i] == '"':
+			quoted = !quoted
+		case s[i] == ',' && !quoted:
+			pieces = append(pieces, s[start:i])
+			start = i + 1
+		}
+	}
+	return append(pieces, s[start:])
+}
+
+// chooseChallenge is TryGetAuthenticationChallenge's order: Negotiate,
+// NTLM, Digest, Basic. Negotiate and NTLM are not spoken here, so they
+// give "": .NET would answer them with its own token, never Basic.
+func chooseChallenge(challenges map[string]string) string {
+	for _, scheme := range []string{"negotiate", "ntlm", "digest", "basic"} {
+		if _, ok := challenges[scheme]; ok {
+			if scheme == "negotiate" || scheme == "ntlm" {
+				return ""
+			}
+			return scheme
+		}
+	}
+	return ""
 }
 
 // socks5Tunnel opens a SOCKS5 tunnel on conn with the dialer net/http

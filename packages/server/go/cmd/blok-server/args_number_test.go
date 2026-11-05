@@ -17,7 +17,7 @@ import (
 func TestFlagNumbersAcceptTheBaseZeroGrammar(t *testing.T) {
 	for _, value := range []string{"16", "+16", "020", "0o20", "0x10", "0b10000", "1_6"} {
 		parsed := parseHostArguments([]string{"--max-upload", value, "--rate-limit", value}, noEnv)
-		if parsed.err != "" || parsed.options.MaxUploadBytes != 16 || parsed.options.RateLimitPerMinute != 16 {
+		if parsed.err != "" || *parsed.options.MaxUploadBytes != 16 || parsed.options.RateLimitPerMinute != 16 {
 			t.Errorf("%q: %q, max-upload %d, rate-limit %d",
 				value, parsed.err, parsed.options.MaxUploadBytes, parsed.options.RateLimitPerMinute)
 		}
@@ -26,7 +26,7 @@ func TestFlagNumbersAcceptTheBaseZeroGrammar(t *testing.T) {
 
 func TestALeadingZeroIsOctal(t *testing.T) {
 	parsed := parseHostArguments([]string{"--max-upload", "040000000", "--rate-limit", "010"}, noEnv)
-	if parsed.err != "" || parsed.options.MaxUploadBytes != 8<<20 || parsed.options.RateLimitPerMinute != 8 {
+	if parsed.err != "" || *parsed.options.MaxUploadBytes != 8<<20 || parsed.options.RateLimitPerMinute != 8 {
 		t.Fatalf("%q, max-upload %d, rate-limit %d", parsed.err, parsed.options.MaxUploadBytes, parsed.options.RateLimitPerMinute)
 	}
 }

@@ -918,6 +918,62 @@
       },
       "error": "",
       "localPublicPath": ""
+    },
+    {
+      "name": "zero keep-alive is off",
+      "options": {
+        "CollabKeepAliveIntervalMs": 0
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero frames is off",
+      "options": {
+        "CollabInboundFramesPerSecond": 0
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero resyncs is off",
+      "options": {
+        "CollabInboundResyncsPerMinute": 0
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "zero awareness is off",
+      "options": {
+        "CollabInboundAwarenessBytesPerSecond": 0
+      },
+      "error": "",
+      "localPublicPath": ""
+    },
+    {
+      "name": "empty auth",
+      "options": {
+        "Auth": ""
+      },
+      "error": "--auth must be none, proxy, or ticket (got \"\")",
+      "localPublicPath": ""
+    },
+    {
+      "name": "empty listen address",
+      "options": {
+        "ListenAddress": ""
+      },
+      "error": "--auth none serves anyone who can reach \"\" (an address with no host binds every network interface); it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service",
+      "localPublicPath": ""
+    },
+    {
+      "name": "empty version",
+      "options": {
+        "Version": ""
+      },
+      "error": "",
+      "localPublicPath": ""
     }
   ]
 }

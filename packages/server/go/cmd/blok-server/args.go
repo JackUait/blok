@@ -83,9 +83,9 @@ func parseHostArguments(args []string, getenv func(string) string) hostArguments
 		}
 		switch name {
 		case "listen":
-			options.ListenAddress = value
+			options.ListenAddress = new(value)
 		case "auth":
-			options.Auth = value
+			options.Auth = new(value)
 		case "secret":
 			options.Secret = value
 			result.secretFromFlag = true
@@ -100,7 +100,7 @@ func parseHostArguments(args []string, getenv func(string) string) hostArguments
 			if !ok {
 				return invalid()
 			}
-			options.MaxUploadBytes = parsed
+			options.MaxUploadBytes = new(parsed)
 		case "rate-limit":
 			parsed, ok := parseBaseZeroInt64(value)
 			if !ok {
@@ -139,12 +139,12 @@ func parseHostArguments(args []string, getenv func(string) string) hostArguments
 	options.AllowedOrigins = splitOrigins(origins)
 	options.PublicURL = publicURL
 	if publicURL == "" {
-		options.PublicURL = defaultPublicURL(options.ListenAddress)
+		options.PublicURL = defaultPublicURL(*options.ListenAddress)
 	}
 	switch {
 	case rateLimit != nil:
 		options.RateLimitPerMinute = *rateLimit
-	case options.Auth == "ticket":
+	case *options.Auth == "ticket":
 		options.RateLimitPerMinute = defaultTicketRateLimit
 	}
 	if !result.secretFromFlag {

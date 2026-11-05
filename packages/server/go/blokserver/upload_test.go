@@ -81,7 +81,7 @@ func uploadServer(t *testing.T, maxUpload int64) *httptest.Server {
 	o := DefaultOptions()
 	o.StorageDirectory = t.TempDir()
 	o.PublicURL = "/files"
-	o.MaxUploadBytes = maxUpload
+	o.MaxUploadBytes = new(maxUpload)
 	s, err := New(o)
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +116,7 @@ func TestUploadRaisesTheHostsBodyCapBeforeItReads(t *testing.T) {
 	o := DefaultOptions()
 	o.StorageDirectory = t.TempDir()
 	o.PublicURL = "/files"
-	o.MaxUploadBytes = 40_000_000
+	o.MaxUploadBytes = new(int64(40_000_000))
 	s, err := New(o)
 	if err != nil {
 		t.Fatal(err)

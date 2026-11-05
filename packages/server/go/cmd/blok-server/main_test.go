@@ -196,7 +196,7 @@ func noEnv(string) string { return "" }
 func TestListenDefault(t *testing.T) {
 	parsed := parseHostArguments([]string{}, noEnv)
 
-	if parsed.err != "" || parsed.options.ListenAddress != "127.0.0.1:4000" || parsed.options.Auth != "none" {
+	if parsed.err != "" || *parsed.options.ListenAddress != "127.0.0.1:4000" || *parsed.options.Auth != "none" {
 		t.Fatalf("%+v", parsed)
 	}
 }
@@ -209,7 +209,7 @@ func TestListenAcceptsEveryFlagSpelling(t *testing.T) {
 		{"-listen=127.0.0.1:5000"},
 	} {
 		parsed := parseHostArguments(args, noEnv)
-		if parsed.err != "" || parsed.options.ListenAddress != "127.0.0.1:5000" {
+		if parsed.err != "" || *parsed.options.ListenAddress != "127.0.0.1:5000" {
 			t.Fatalf("%v: %+v", args, parsed)
 		}
 	}
@@ -291,7 +291,7 @@ func TestListeningLineComesAfterBindAndHealthAnswers(t *testing.T) {
 
 func newHandler() http.Handler {
 	options := blokserver.DefaultOptions()
-	options.Version = version
+	options.Version = new(version)
 	server, err := blokserver.New(options)
 	if err != nil {
 		panic(err)

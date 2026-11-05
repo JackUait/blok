@@ -26,7 +26,7 @@ func TestOptionsClockDrivesTheTicketCheck(t *testing.T) {
 		{"system clock", nil, false},
 	} {
 		o := DefaultOptions()
-		o.Auth = "ticket"
+		o.Auth = new("ticket")
 		o.Secret = guardSecret
 		o.AllowedOrigins = []string{"https://app.example.com"}
 		o.Clock = c.clock
@@ -80,8 +80,9 @@ func TestS3StoreSpoolsToTheTempDirUpToTheUploadCap(t *testing.T) {
 	o.S3Bucket = "media"
 	o.S3AccessKey = "a"
 	o.S3SecretKey = "b"
-	o.MaxUploadBytes = 12345
-	store, err := newS3Store(&o, time.Now)
+	o.MaxUploadBytes = new(int64(12345))
+	resolved := o.resolve()
+	store, err := newS3Store(&resolved, time.Now)
 	if err != nil {
 		t.Fatal(err)
 	}

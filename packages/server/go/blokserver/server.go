@@ -26,7 +26,7 @@ import (
 
 // Server is a configured Blok server. Build it with New.
 type Server struct {
-	options    Options
+	options    settings
 	publicPath string
 	// hostNames is what hostAllowed takes besides loopback.
 	hostNames []string
@@ -57,7 +57,8 @@ type Server struct {
 
 // New validates o and returns a server. Like AddBlokServer, nothing heavy is
 // built until a request needs it.
-func New(o Options) (*Server, error) {
+func New(options Options) (*Server, error) {
+	o := options.resolve()
 	publicPath, err := o.validate()
 	if err != nil {
 		return nil, err
@@ -507,7 +508,7 @@ func uploadResponse(w http.ResponseWriter, url, fileName string, size int64, mim
 	writeJSON(w, http.StatusOK, append(body, "}\n"...))
 }
 
-func newS3Store(o *Options, clock func() time.Time) (blob.Store, error) {
+func newS3Store(o *settings, clock func() time.Time) (blob.Store, error) {
 	return blob.NewS3(&blob.S3{
 		Endpoint: o.S3Endpoint, Region: o.S3Region, Bucket: o.S3Bucket, AccessKey: o.S3AccessKey,
 		SecretKey: o.S3SecretKey, PublicURL: o.S3BucketURL, Addressing: o.S3Addressing,

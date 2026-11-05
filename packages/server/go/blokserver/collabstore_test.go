@@ -86,7 +86,7 @@ func nullEndpoint(t *testing.T) string {
 func hostServer(t *testing.T, configure func(*blokserver.Options)) *httptest.Server {
 	t.Helper()
 	options := blokserver.DefaultOptions()
-	options.Auth = "none"
+	options.Auth = new("none")
 	options.StorageDirectory = ""
 	options.CollabEnabled = true
 	options.CollabDirectory = t.TempDir()

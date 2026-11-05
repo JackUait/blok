@@ -25,7 +25,7 @@ func main() {
 	options := blokserver.DefaultOptions()
 	options.AllowedOrigins = []string{"https://app.example.test"}
 	options.UnfurlEnabled = true
-	options.Version = "package-fixture"
+	options.Version = new("package-fixture")
 	options.CollabActivityObserver = lastSeen{}
 	options.CollabOperationStore = elsewhere{}
 	poolSize := 1

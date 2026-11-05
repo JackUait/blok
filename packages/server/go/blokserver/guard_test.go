@@ -16,7 +16,7 @@ const guardSecret = "s3cret-value-at-least-32-chars-long!"
 func ticketServer(t *testing.T) *Server {
 	t.Helper()
 	o := DefaultOptions()
-	o.Auth = "ticket"
+	o.Auth = new("ticket")
 	o.Secret = guardSecret
 	o.AllowedOrigins = []string{"https://app.example.com"}
 	o.StorageDirectory = t.TempDir()

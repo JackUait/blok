@@ -71,7 +71,7 @@ func TestOpenSyncRoutesWarnUnderTheHostCategory(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Handler("")
-	o.Authorization, o.Auth, o.Secret, o.AllowedOrigins = nil, "ticket", strings.Repeat("s", 32), []string{"https://app.example.com"}
+	o.Authorization, o.Auth, o.Secret, o.AllowedOrigins = nil, new("ticket"), strings.Repeat("s", 32), []string{"https://app.example.com"}
 	if s, err = New(o); err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestDrainWaitsForOpenSyncConnectionsUpToItsContext(t *testing.T) {
 // never removed).
 func TestAPurgedDocumentAnswersForbiddenOnEveryDoor(t *testing.T) {
 	o := collabOptions(t)
-	o.Auth = "none"
+	o.Auth = new("none")
 	o.StorageDirectory = ""
 	o.CollabJournal = true
 	s, err := New(o)
@@ -221,7 +221,7 @@ func TestTheCollabRuntimeIsBuiltOnlyOnTheFirstHTMLRead(t *testing.T) {
 	}))
 	defer endpoint.Close()
 	o := collabOptions(t)
-	o.Auth = "none"
+	o.Auth = new("none")
 	o.StorageDirectory = ""
 	o.DocEndpoint = endpoint.URL + "/docs"
 	s, err := New(o)

@@ -33,7 +33,7 @@ func countBuilds(t *testing.T, gate <-chan struct{}) (*int, *[]jsruntime.Options
 
 func documentsOptions() Options {
 	o := DefaultOptions()
-	o.Auth = "none"
+	o.Auth = new("none")
 	o.StorageDirectory = ""
 	return o
 }

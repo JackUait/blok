@@ -32,7 +32,7 @@ func TestTheAgentExecutorEditsTheServersOwnRoomsOnOneEnginePool(t *testing.T) {
 	}))
 	defer endpoint.Close()
 	o := collabOptions(t)
-	o.Auth = "none"
+	o.Auth = new("none")
 	o.StorageDirectory = ""
 	o.DocEndpoint = endpoint.URL + "/docs"
 	o.CollabJournal = true
@@ -73,7 +73,7 @@ func TestTheAgentExecutorEditsTheServersOwnRoomsOnOneEnginePool(t *testing.T) {
 
 func TestTheAgentExecutorWithoutCollaborationHasNoRooms(t *testing.T) {
 	o := DefaultOptions()
-	o.Auth = "none"
+	o.Auth = new("none")
 	o.StorageDirectory = ""
 	s, err := New(o)
 	if err != nil {

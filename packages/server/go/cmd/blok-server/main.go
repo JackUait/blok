@@ -176,7 +176,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		return 2
 	}
 	options := parsed.options
-	options.Version = version
+	options.Version = new(version)
 	options.LoopbackHostCheck = true
 	configureCollab(&options, stderr)
 	server, err := blokserver.New(options)
@@ -194,7 +194,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 
 	ctx, stopSignals := notifyShutdown(ctx)
 	defer stopSignals()
-	listeners, err := listen(options.ListenAddress)
+	listeners, err := listen(*options.ListenAddress)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v%s", err, newline)
 		return 1
@@ -206,7 +206,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 
 	// The harness trusts /health only after this line, so it must follow the bind.
-	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)%s", version, options.ListenAddress, options.Auth, newline)
+	fmt.Fprintf(stderr, "blok-server %s listening on %s (--auth %s)%s", version, *options.ListenAddress, *options.Auth, newline)
 
 	select {
 	case err := <-served:

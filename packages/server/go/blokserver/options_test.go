@@ -19,10 +19,12 @@ type optionsCase struct {
 	LocalPublicPath string                     `json:"localPublicPath"`
 }
 
-// fromCSharp applies options named as the C# properties.
+// fromCSharp applies options named as the C# properties to the zero
+// Options, as the C# test does to new BlokServerOptions(): what a case does
+// not set must take the C# default.
 func fromCSharp(t *testing.T, spec map[string]json.RawMessage) Options {
 	t.Helper()
-	o := DefaultOptions()
+	var o Options
 	read := func(raw json.RawMessage, into any) {
 		if err := json.Unmarshal(raw, into); err != nil {
 			t.Fatal(err)
@@ -85,7 +87,7 @@ func fromCSharp(t *testing.T, spec map[string]json.RawMessage) Options {
 		case "CollabKeepAliveIntervalMs":
 			var ms int64
 			read(raw, &ms)
-			o.CollabKeepAliveInterval = time.Duration(ms) * time.Millisecond
+			o.CollabKeepAliveInterval = new(time.Duration(ms) * time.Millisecond)
 		case "CollabInboundFramesPerSecond":
 			read(raw, &o.CollabInboundFramesPerSecond)
 		case "CollabInboundBurstFrames":
@@ -116,7 +118,8 @@ func TestValidateMatchesTheCSharpFixture(t *testing.T) {
 	}
 	for _, c := range fixture.Cases {
 		o := fromCSharp(t, c.Options)
-		path, err := o.validate()
+		resolved := o.resolve()
+		path, err := resolved.validate()
 		got := ""
 		if err != nil {
 			got = err.Error()
@@ -172,5 +175,28 @@ func TestDefaultOptionsMatchTheCSharpDefaults(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("C# defaults applied over DefaultOptions changed it:\n got %+v\nwant %+v", got, want)
+	}
+}
+
+// new BlokServerOptions() is the default set: an unset field takes its
+// default, and a field set to 0 keeps it (off, for the keep-alive).
+func TestTheZeroOptionsAreTheCSharpDefaults(t *testing.T) {
+	zero, defaults := Options{}, DefaultOptions()
+	if got, want := zero.resolve(), defaults.resolve(); !reflect.DeepEqual(got.Version, want.Version) ||
+		got.Auth != want.Auth || got.ListenAddress != want.ListenAddress || got.MaxUploadBytes != want.MaxUploadBytes ||
+		got.CollabMaxConnectionsPerUserPerDoc != want.CollabMaxConnectionsPerUserPerDoc ||
+		got.CollabMaxMessageBytes != want.CollabMaxMessageBytes || got.CollabKeepAliveInterval != want.CollabKeepAliveInterval ||
+		got.CollabInboundFramesPerSecond != want.CollabInboundFramesPerSecond ||
+		got.CollabInboundBurstFrames != want.CollabInboundBurstFrames ||
+		got.CollabInboundResyncsPerMinute != want.CollabInboundResyncsPerMinute ||
+		got.CollabInboundAwarenessBytesPerSecond != want.CollabInboundAwarenessBytesPerSecond {
+		t.Fatalf("Options{} resolves to %+v, want %+v", got, want)
+	}
+	if _, err := New(Options{}); err != nil {
+		t.Fatal(err)
+	}
+	off := Options{CollabKeepAliveInterval: new(time.Duration(0))}
+	if resolved := off.resolve(); resolved.CollabKeepAliveInterval != 0 {
+		t.Fatalf("an explicit 0 became %v", resolved.CollabKeepAliveInterval)
 	}
 }

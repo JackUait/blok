@@ -28,14 +28,15 @@ const MinimumSecretLength = 32
 const maxRemoteUpload = 2147483591
 
 // Options configure the server. Field meanings and refusals follow the C#
-// BlokServerOptions; DefaultOptions returns its defaults. Start from
-// DefaultOptions, not Options{}: unlike new BlokServerOptions(), the zero
-// value is not the default set, and a zero keep-alive or inbound rate
-// field means off, as 0 does in C#.
+// BlokServerOptions. A pointer field left nil takes the C# default, as an
+// unset property of new BlokServerOptions() does; a value set, 0 or ""
+// included, means what it means in C#: a refusal, or "off" for the
+// keep-alive and the inbound rates. Options{} is the default set, and so is
+// DefaultOptions, which spells it out.
 type Options struct {
-	Version        string
-	ListenAddress  string
-	Auth           string
+	Version        *string
+	ListenAddress  *string
+	Auth           *string
 	Secret         string
 	AllowedOrigins []string
 	// LoopbackHostCheck refuses, with 421, a guarded request whose Host is
@@ -47,7 +48,7 @@ type Options struct {
 
 	StorageDirectory string
 	PublicURL        string
-	MaxUploadBytes   int64
+	MaxUploadBytes   *int64
 	// RateLimitPerMinute is requests a minute per caller; 0 is off.
 	RateLimitPerMinute int64
 
@@ -71,14 +72,14 @@ type Options struct {
 	CollabS3Prefix  string
 	CollabJournal   bool
 
-	CollabMaxConnectionsPerUserPerDoc    int
+	CollabMaxConnectionsPerUserPerDoc    *int
 	CollabMaxConnections                 int64
-	CollabMaxMessageBytes                int
-	CollabKeepAliveInterval              time.Duration
-	CollabInboundFramesPerSecond         int
-	CollabInboundBurstFrames             int
-	CollabInboundResyncsPerMinute        int
-	CollabInboundAwarenessBytesPerSecond int
+	CollabMaxMessageBytes                *int
+	CollabKeepAliveInterval              *time.Duration
+	CollabInboundFramesPerSecond         *int
+	CollabInboundBurstFrames             *int
+	CollabInboundResyncsPerMinute        *int
+	CollabInboundAwarenessBytesPerSecond *int
 
 	// RichTextFields lists custom tools' rich text fields by block type.
 	RichTextFields map[string][]string
@@ -116,9 +117,45 @@ type Options struct {
 	Logger *slog.Logger
 }
 
-// DefaultOptions returns the C# BlokServerOptions defaults.
+// DefaultOptions returns the C# BlokServerOptions defaults, every pointer
+// field set.
 func DefaultOptions() Options {
+	d := defaults()
 	return Options{
+		Version:                              &d.Version,
+		ListenAddress:                        &d.ListenAddress,
+		Auth:                                 &d.Auth,
+		MaxUploadBytes:                       &d.MaxUploadBytes,
+		CollabMaxConnectionsPerUserPerDoc:    &d.CollabMaxConnectionsPerUserPerDoc,
+		CollabMaxMessageBytes:                &d.CollabMaxMessageBytes,
+		CollabKeepAliveInterval:              &d.CollabKeepAliveInterval,
+		CollabInboundFramesPerSecond:         &d.CollabInboundFramesPerSecond,
+		CollabInboundBurstFrames:             &d.CollabInboundBurstFrames,
+		CollabInboundResyncsPerMinute:        &d.CollabInboundResyncsPerMinute,
+		CollabInboundAwarenessBytesPerSecond: &d.CollabInboundAwarenessBytesPerSecond,
+	}
+}
+
+// settings is Options with every pointer field resolved. Its plain fields
+// shadow the embedded pointers, so the server reads s.options.Auth as text.
+type settings struct {
+	Options
+	Version                              string
+	ListenAddress                        string
+	Auth                                 string
+	MaxUploadBytes                       int64
+	CollabMaxConnectionsPerUserPerDoc    int
+	CollabMaxMessageBytes                int
+	CollabKeepAliveInterval              time.Duration
+	CollabInboundFramesPerSecond         int
+	CollabInboundBurstFrames             int
+	CollabInboundResyncsPerMinute        int
+	CollabInboundAwarenessBytesPerSecond int
+}
+
+// defaults is new BlokServerOptions(): options-defaults.json pins it.
+func defaults() settings {
+	return settings{
 		Version:                              "dev",
 		ListenAddress:                        "127.0.0.1:4000",
 		Auth:                                 "none",
@@ -133,17 +170,44 @@ func DefaultOptions() Options {
 	}
 }
 
-func (o *Options) hasStorage() bool { return o.StorageDirectory != "" || o.S3Bucket != "" }
+func pick[T any](set *T, fallback T) T {
+	if set != nil {
+		return *set
+	}
+	return fallback
+}
+
+// resolve fills each unset pointer field with its C# default.
+func (o *Options) resolve() settings {
+	d := defaults()
+	return settings{
+		Options:                              *o,
+		Version:                              pick(o.Version, d.Version),
+		ListenAddress:                        pick(o.ListenAddress, d.ListenAddress),
+		Auth:                                 pick(o.Auth, d.Auth),
+		MaxUploadBytes:                       pick(o.MaxUploadBytes, d.MaxUploadBytes),
+		CollabMaxConnectionsPerUserPerDoc:    pick(o.CollabMaxConnectionsPerUserPerDoc, d.CollabMaxConnectionsPerUserPerDoc),
+		CollabMaxMessageBytes:                pick(o.CollabMaxMessageBytes, d.CollabMaxMessageBytes),
+		CollabKeepAliveInterval:              pick(o.CollabKeepAliveInterval, d.CollabKeepAliveInterval),
+		CollabInboundFramesPerSecond:         pick(o.CollabInboundFramesPerSecond, d.CollabInboundFramesPerSecond),
+		CollabInboundBurstFrames:             pick(o.CollabInboundBurstFrames, d.CollabInboundBurstFrames),
+		CollabInboundResyncsPerMinute:        pick(o.CollabInboundResyncsPerMinute, d.CollabInboundResyncsPerMinute),
+		CollabInboundAwarenessBytesPerSecond: pick(o.CollabInboundAwarenessBytesPerSecond, d.CollabInboundAwarenessBytesPerSecond),
+	}
+}
+
+func (o *settings) hasStorage() bool { return o.StorageDirectory != "" || o.S3Bucket != "" }
 
 // Validate returns an error unless the options work together. The messages
 // match BlokServerOptions.Validate byte for byte.
 func (o *Options) Validate() error {
-	_, err := o.validate()
+	resolved := o.resolve()
+	_, err := resolved.validate()
 	return err
 }
 
 // validate also returns the public path local files are served under.
-func (o *Options) validate() (string, error) {
+func (o *settings) validate() (string, error) {
 	fail := func(format string, args ...any) (string, error) {
 		return "", errors.New(fmt.Sprintf(format, args...))
 	}
@@ -227,7 +291,7 @@ func (o *Options) validate() (string, error) {
 	return publicPath, nil
 }
 
-func (o *Options) validateCollab() error {
+func (o *settings) validateCollab() error {
 	fail := func(format string, args ...any) error { return errors.New(fmt.Sprintf(format, args...)) }
 	switch {
 	case o.CollabMaxConnectionsPerUserPerDoc <= 0:
@@ -342,7 +406,7 @@ func checkRichTextFields(fields map[string][]string) error {
 	return nil
 }
 
-func (o *Options) localPublicPath() (string, error) {
+func (o *settings) localPublicPath() (string, error) {
 	if strings.ContainsAny(o.PublicURL, "?#") {
 		return "", fmt.Errorf("PublicUrl must not contain a query or fragment (got %s)", quote(o.PublicURL))
 	}

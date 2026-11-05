@@ -19,7 +19,7 @@ func TestALoopbackServerRefusesACollabReadUnderAForeignHost(t *testing.T) {
 	}))
 	defer endpoint.Close()
 	o := collabOptions(t)
-	o.Auth = "none"
+	o.Auth = new("none")
 	o.StorageDirectory = ""
 	o.DocEndpoint = endpoint.URL + "/docs"
 	o.LoopbackHostCheck = true
@@ -45,7 +45,7 @@ func TestALoopbackServerRefusesACollabReadUnderAForeignHost(t *testing.T) {
 func TestALoopbackServerRefusesAFrameCheckUnderAForeignHost(t *testing.T) {
 	o := DefaultOptions()
 	o.UnfurlEnabled = true
-	o.Auth = "proxy"
+	o.Auth = new("proxy")
 	o.LoopbackHostCheck = true
 	s, err := New(o)
 	if err != nil {
@@ -82,7 +82,7 @@ func TestTheHostCheckIsOffUnlessAsked(t *testing.T) {
 // front of it may forward the public Host, so it keeps any Host.
 func TestTicketModeKeepsAnyHost(t *testing.T) {
 	o := DefaultOptions()
-	o.Auth = "ticket"
+	o.Auth = new("ticket")
 	o.Secret = guardSecret
 	o.AllowedOrigins = []string{"https://app.example.com"}
 	o.StorageDirectory = t.TempDir()

@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/mediatype"
 )
 
@@ -248,12 +249,15 @@ func (f *Fetcher) get(ctx context.Context, raw string, limits Limits) (*Response
 		if err != nil {
 			return nil, err
 		}
-		if location := response.Header.Get("Location"); isRedirect(response.StatusCode) && location != "" {
+		// C# follows only a Location .NET parses as a Uri; else the 3xx is
+		// the answer.
+		if location := headerText(response.Header.Get("Location")); isRedirect(response.StatusCode) && location != "" &&
+			dotnet.ParsesAsURI(location) {
 			_ = response.Body.Close()
 			if redirects >= limits.MaxRedirects {
 				return nil, fail(TooManyRedirects)
 			}
-			next, err := f.Policy.Validate(headerText(location), target.URL)
+			next, err := f.Policy.Validate(location, target.URL)
 			if err != nil {
 				return nil, err
 			}

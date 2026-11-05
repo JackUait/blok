@@ -1,0 +1,507 @@
+{
+  "cases": [
+    {
+      "locations": [
+        "/ok"
+      ]
+    },
+    {
+      "locations": [
+        " /ok "
+      ]
+    },
+    {
+      "locations": [
+        "/ok",
+        "/other"
+      ]
+    },
+    {
+      "locations": [
+        "http://[::1"
+      ]
+    },
+    {
+      "locations": [
+        "http://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "http://h:99999/"
+      ]
+    },
+    {
+      "locations": [
+        "http://"
+      ]
+    },
+    {
+      "locations": [
+        "%"
+      ]
+    },
+    {
+      "locations": [
+        "//"
+      ]
+    },
+    {
+      "locations": [
+        "http:///x"
+      ]
+    },
+    {
+      "locations": [
+        "/o k"
+      ]
+    },
+    {
+      "locations": [
+        "/é"
+      ]
+    },
+    {
+      "locations": [
+        "Ã©"
+      ]
+    },
+    {
+      "locations": [
+        "ÿ"
+      ]
+    },
+    {
+      "locations": [
+        "javascript:x"
+      ]
+    },
+    {
+      "locations": [
+        "a:b"
+      ]
+    },
+    {
+      "locations": [
+        "a:"
+      ]
+    },
+    {
+      "locations": [
+        "a:/x"
+      ]
+    },
+    {
+      "locations": [
+        "http://h:1:2/"
+      ]
+    },
+    {
+      "locations": [
+        "\\\\srv\\share"
+      ]
+    },
+    {
+      "locations": [
+        "/ok\u0001"
+      ]
+    },
+    {
+      "locations": [
+        "?q"
+      ]
+    },
+    {
+      "locations": [
+        "#f"
+      ]
+    },
+    {
+      "locations": [
+        "http://[::1]:99999/"
+      ]
+    },
+    {
+      "locations": [
+        "x://"
+      ]
+    },
+    {
+      "locations": [
+        ":"
+      ]
+    },
+    {
+      "locations": [
+        "c:\\a"
+      ]
+    },
+    {
+      "locations": [
+        "http:\\\\x"
+      ]
+    },
+    {
+      "locations": [
+        "/%zz"
+      ]
+    },
+    {
+      "locations": [
+        "/a?b c"
+      ]
+    },
+    {
+      "locations": [
+        "http:x"
+      ]
+    },
+    {
+      "locations": [
+        "https:x"
+      ]
+    },
+    {
+      "locations": [
+        "http:/x"
+      ]
+    },
+    {
+      "locations": [
+        "HTTP://[::1"
+      ]
+    },
+    {
+      "locations": [
+        "ftp://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "x://a b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a b"
+      ]
+    },
+    {
+      "locations": [
+        "http://a%zzb/"
+      ]
+    },
+    {
+      "locations": [
+        "http://exa_mple.com/"
+      ]
+    },
+    {
+      "locations": [
+        "http://-a/"
+      ]
+    },
+    {
+      "locations": [
+        "http://a..b/"
+      ]
+    },
+    {
+      "locations": [
+        "http://1.2.3.4.5/"
+      ]
+    },
+    {
+      "locations": [
+        "http://[::1]x/"
+      ]
+    },
+    {
+      "locations": [
+        "http://a:/"
+      ]
+    },
+    {
+      "locations": [
+        "http://a:65536/"
+      ]
+    },
+    {
+      "locations": [
+        "http://user@/"
+      ]
+    },
+    {
+      "locations": [
+        "http://@a/"
+      ]
+    },
+    {
+      "locations": [
+        "\thttp://[::1\t"
+      ]
+    },
+    {
+      "locations": [
+        "http://Ã©/"
+      ]
+    },
+    {
+      "locations": [
+        "http://127.0.0.1:PORT/ok"
+      ]
+    },
+    {
+      "locations": [
+        "http://127.0.0.1:PORT"
+      ]
+    },
+    {
+      "locations": [
+        "HTTP://127.0.0.1:PORT/ok"
+      ]
+    },
+    {
+      "locations": [
+        "http://user@127.0.0.1:PORT/ok"
+      ]
+    },
+    {
+      "locations": [
+        "1a:b"
+      ]
+    },
+    {
+      "locations": [
+        "a1+.-:b"
+      ]
+    },
+    {
+      "locations": [
+        "+a:b"
+      ]
+    },
+    {
+      "locations": [
+        "http://a b/",
+        "/ok"
+      ]
+    },
+    {
+      "locations": [
+        "/ok",
+        "http://[::1"
+      ]
+    },
+    {
+      "locations": [
+        "http:"
+      ]
+    },
+    {
+      "locations": [
+        "http:?q"
+      ]
+    },
+    {
+      "locations": [
+        "http:#f"
+      ]
+    },
+    {
+      "locations": [
+        "//127.0.0.1:PORT/ok"
+      ]
+    },
+    {
+      "locations": [
+        "\\/127.0.0.1:PORT/ok"
+      ]
+    },
+    {
+      "locations": [
+        "/\\127.0.0.1:PORT/ok"
+      ]
+    },
+    {
+      "locations": [
+        "ws://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "wss://[::1"
+      ]
+    },
+    {
+      "locations": [
+        "gopher://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "news://a b"
+      ]
+    },
+    {
+      "locations": [
+        "nntp://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "file://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "ldap://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "net.tcp://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "telnet://a b/"
+      ]
+    },
+    {
+      "locations": [
+        "uuid:a b"
+      ]
+    },
+    {
+      "locations": [
+        "mailto:a@b"
+      ]
+    },
+    {
+      "locations": [
+        "ftp://h:99999/"
+      ]
+    },
+    {
+      "locations": [
+        "ws://h/"
+      ]
+    },
+    {
+      "locations": [
+        "/a\u007Fb"
+      ]
+    },
+    {
+      "locations": [
+        "/a\u0000b"
+      ]
+    },
+    {
+      "locations": [
+        "a\u0001"
+      ]
+    },
+    {
+      "locations": [
+        "http://h/\u0001"
+      ]
+    },
+    {
+      "locations": [
+        "Http:x"
+      ]
+    },
+    {
+      "locations": [
+        "https://[::1"
+      ]
+    }
+  ],
+  "answers": [
+    "200 /ok",
+    "200 /ok",
+    "200 /ok",
+    "302",
+    "302",
+    "302",
+    "302",
+    "200 /%25",
+    "BlockedDestination",
+    "302",
+    "200 /o%20k",
+    "200 /%C3%A9",
+    "200 /%C3%A9",
+    "200 /%C3%BF",
+    "BlockedDestination",
+    "302",
+    "200 /a:",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "200 /ok%01",
+    "200 /start?q",
+    "TooManyRedirects",
+    "302",
+    "BlockedDestination",
+    "200 /:",
+    "BlockedDestination",
+    "BlockedDestination",
+    "200 /%25zz",
+    "200 /a?b%20c",
+    "200 /x",
+    "BlockedDestination",
+    "200 /x",
+    "302",
+    "302",
+    "BlockedDestination",
+    "302",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "302",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "200 /ok",
+    "200 /",
+    "BlockedDestination",
+    "BlockedDestination",
+    "200 /1a:b",
+    "BlockedDestination",
+    "200 /+a:b",
+    "302",
+    "200 /ok",
+    "TooManyRedirects",
+    "200 /?q",
+    "200 /#f",
+    "200 /ok",
+    "BlockedDestination",
+    "200 //127.0.0.1:PORT/ok",
+    "302",
+    "302",
+    "302",
+    "BlockedDestination",
+    "302",
+    "302",
+    "302",
+    "302",
+    "302",
+    "BlockedDestination",
+    "BlockedDestination",
+    "302",
+    "BlockedDestination",
+    "200 /a%7Fb",
+    "200 /a%00b",
+    "200 /a%01",
+    "BlockedDestination",
+    "200 /x",
+    "302"
+  ]
+}

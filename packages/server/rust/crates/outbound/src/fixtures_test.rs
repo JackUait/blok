@@ -181,3 +181,82 @@ async fn request_headers_match_the_c_sharp_fixture() {
         assert_eq!(got, want, "{index} {path}");
     }
 }
+
+/// RedirectLocationsMatchTheFixture: a 302 with the listed Location lines,
+/// and what get makes of it. Each char of a location is one byte on the
+/// wire; PORT is the origin's port.
+#[tokio::test]
+async fn redirect_locations_match_the_c_sharp_fixture() {
+    let fixture = load("outbound-redirect-locations.json");
+    let cases = items(field(&fixture, "cases"));
+    let answers = items(field(&fixture, "answers"));
+    assert!(!cases.is_empty() && cases.len() == answers.len());
+    // Known gaps, not passes: mailto has its own grammar in .NET, and the
+    // wire codec refuses a NUL in a header value, which .NET keeps.
+    let known = ["mailto:a b", "/a\0b"];
+    for (case, answer) in cases.iter().zip(answers) {
+        let locations: Vec<String> = items(field(case, "locations"))
+            .iter()
+            .map(|value| crate::test_json::text(value).unwrap())
+            .collect();
+        let want = crate::test_json::text(answer).unwrap();
+        let got = fetch_redirect(locations.clone()).await;
+        if known.contains(&locations[0].as_str()) {
+            assert_ne!(
+                got, want,
+                "{locations:?} now matches C#: drop it from the known gaps"
+            );
+            continue;
+        }
+        assert_eq!(got, want, "{locations:?}");
+    }
+}
+
+async fn fetch_redirect(locations: Vec<String>) -> String {
+    let o = Origin::start(
+        "127.0.0.1:0",
+        None,
+        answer(move |seen, _| {
+            if seen.target != "/start" {
+                return b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"
+                    .to_vec();
+            }
+            let host = &seen
+                .headers
+                .iter()
+                .find(|(name, _)| name.eq_ignore_ascii_case("Host"))
+                .unwrap()
+                .1;
+            let port = host.rsplit(':').next().unwrap();
+            let mut head = String::from("HTTP/1.1 302 Found\r\n");
+            for location in &locations {
+                head.push_str(&format!("Location: {}\r\n", location.replace("PORT", port)));
+            }
+            head.push_str("Content-Length: 0\r\nConnection: close\r\n\r\n");
+            // Latin-1: one byte per char.
+            head.chars().map(|c| u8::try_from(c).unwrap()).collect()
+        }),
+    )
+    .await
+    .unwrap();
+    let start = format!("http://127.0.0.1:{}", o.port);
+    let got = conformance_fetcher(o.port)
+        .get(&format!("{start}/start"), &limits_of(2000, 1024, 3))
+        .await;
+    match got {
+        Ok(response) if response.status_code == 302 => "302".to_owned(),
+        Ok(response) => format!(
+            "{} {}",
+            response.status_code,
+            response.final_url[start.len()..].replace(&o.port.to_string(), "PORT")
+        ),
+        Err(error) => match error.failure {
+            Failure::Blocked => "BlockedDestination",
+            Failure::TooManyRedirects => "TooManyRedirects",
+            Failure::TooLarge => "ResponseTooLarge",
+            Failure::TimedOut => "TimedOut",
+            other => panic!("{other:?}"),
+        }
+        .to_owned(),
+    }
+}

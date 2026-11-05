@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Blok.Server.Tests;
 
-public sealed class GuardedOutboundFetcherTests
+public sealed partial class GuardedOutboundFetcherTests
 {
   private static readonly GuardedFetchLimits Limits = new(
       TimeSpan.FromSeconds(2),

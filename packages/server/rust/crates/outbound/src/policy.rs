@@ -225,10 +225,11 @@ impl Policy for ExactOriginPolicy {
         let Some(url) = resolve(raw, base) else {
             return blocked;
         };
-        let original = if base.is_some() {
-            url.absolute_uri.as_str()
-        } else {
-            raw
+        let original = match base {
+            Some(base) => {
+                blok_dotnet::resolve_uri_original(base, raw).map_or_else(String::new, |(_, o)| o)
+            }
+            None => raw.to_owned(),
         };
         let origin = self.origin.as_str();
         if url.scheme != "http"

@@ -76,26 +76,57 @@ func twoSlashes(s string) bool {
 
 // ResolveURI is Uri.TryCreate(base, reference) for an http(s) base.
 func ResolveURI(base *URI, reference string) (*URI, bool) {
+	u, _, ok := ResolveURIOriginal(base, reference)
+	return u, ok
+}
+
+// ResolveURIOriginal is ResolveURI that also answers Uri.OriginalString:
+// the reference for an absolute or network-path one, else the AbsoluteUri.
+func ResolveURIOriginal(base *URI, reference string) (*URI, string, bool) {
+	u, original, ok := resolveURI(base, reference)
+	if ok && original == "" {
+		original = u.AbsoluteURI
+	}
+	return u, original, ok
+}
+
+func resolveURI(base *URI, reference string) (*URI, string, bool) {
 	reference = trimURIWhitespace(reference)
 	if strings.HasPrefix(reference, `\\`) {
-		return &URI{Scheme: "file"}, true
+		return &URI{Scheme: "file"}, reference, true
 	}
 	if isDriveLetter(reference) && len(reference) > 2 {
-		return ParseAbsoluteURI(reference)
+		u, ok := ParseAbsoluteURI(reference)
+		return u, reference, ok
 	}
+	sameScheme := false
 	// A lone "x:" is a relative path to .NET.
 	if scheme, rest, ok := splitScheme(reference); ok && !isDriveLetter(reference) {
 		if scheme != base.Scheme || twoSlashes(rest) {
-			return ParseAbsoluteURI(reference)
+			u, ok := ParseAbsoluteURI(reference)
+			return u, reference, ok
 		}
 		// "http:x" against an http base is relative, as in .NET.
-		reference = rest
+		reference, sameScheme = rest, true
 	}
 	prefix := base.Scheme + "://" + base.authority
+	directory := base.AbsolutePath[:strings.LastIndexByte(base.AbsolutePath, '/')+1]
 	switch {
 	// "\/x" names a host as "//x" does; "/\x" is a path.
 	case strings.HasPrefix(reference, "//") || strings.HasPrefix(reference, `\/`):
-		return ParseAbsoluteURI(base.Scheme + ":" + reference)
+		u, ok := ParseAbsoluteURI(base.Scheme + ":" + reference)
+		return u, base.Scheme + ":" + reference, ok
+	// "http:?q" keeps the base directory, where "?q" keeps the base path.
+	case sameScheme && reference != "" && (reference[0] == '?' || reference[0] == '#'):
+		u, ok := ParseAbsoluteURI(prefix + directory + reference)
+		return u, "", ok
+	}
+	u, ok := resolveRelative(base, prefix, directory, reference)
+	return u, "", ok
+}
+
+func resolveRelative(base *URI, prefix, directory, reference string) (*URI, bool) {
+	switch {
 	case reference == "":
 		return ParseAbsoluteURI(prefix + base.AbsolutePath + base.Query)
 	case reference[0] == '#':
@@ -105,8 +136,40 @@ func ResolveURI(base *URI, reference string) (*URI, bool) {
 	case reference[0] == '/' || reference[0] == '\\':
 		return ParseAbsoluteURI(prefix + "/" + reference[1:])
 	}
-	directory := base.AbsolutePath[:strings.LastIndexByte(base.AbsolutePath, '/')+1]
 	return ParseAbsoluteURI(prefix + directory + reference)
+}
+
+// authoritySchemes are the schemes .NET parses with a server authority,
+// so a bad host or port after "//" fails Uri.TryCreate outright.
+var authoritySchemes = map[string]bool{
+	"http": true, "https": true, "ws": true, "wss": true, "ftp": true, "gopher": true,
+	"nntp": true, "ldap": true, "telnet": true, "net.tcp": true, "net.pipe": true,
+}
+
+// ParsesAsURI is Uri.TryCreate(s, UriKind.RelativeOrAbsolute): what a
+// Location header must pass before HttpClient exposes it. Nearly anything
+// is a relative reference; a scheme .NET knows with a bad authority, and a
+// drive letter not followed by a slash, are not. file may have no host.
+// mailto, which has a grammar of its own, is taken as it comes.
+func ParsesAsURI(s string) bool {
+	s = trimURIWhitespace(s)
+	if isDriveLetter(s) {
+		return len(s) == 2 || s[2] == '/' || s[2] == '\\'
+	}
+	scheme, rest, ok := splitScheme(s)
+	if !ok || !twoSlashes(rest) {
+		return true
+	}
+	authority := rest[2:]
+	if scheme == "file" {
+		if authority == "" || authority[0] == '/' || authority[0] == '\\' {
+			return true
+		}
+	} else if !authoritySchemes[scheme] {
+		return true
+	}
+	_, ok = parseHierarchical("http", authority)
+	return ok
 }
 
 // isDriveLetter reports whether s starts with one ASCII letter and ':'.

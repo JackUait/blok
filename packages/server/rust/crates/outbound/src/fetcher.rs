@@ -210,15 +210,20 @@ impl Fetcher {
             let head = read_head(&mut reader, MAX_RESPONSE_HEADER_BYTES)
                 .await
                 .map_err(|_| blocked)?;
-            let location = head.headers.get("Location").filter(|l| !l.is_empty());
+            // C# follows only a Location .NET parses as a Uri; else the 3xx
+            // is the answer.
+            let location = head
+                .headers
+                .get("Location")
+                .filter(|l| !l.is_empty())
+                .map(header_text)
+                .filter(|l| blok_dotnet::parses_as_uri(l));
             if let (true, Some(location)) = (is_redirect(head.status), location) {
                 drop(reader);
                 if redirects >= limits.max_redirects {
                     return Err(fail(Failure::TooManyRedirects));
                 }
-                let next = self
-                    .policy
-                    .validate(&header_text(location), Some(&target.url))?;
+                let next = self.policy.validate(&location, Some(&target.url))?;
                 if target.url.scheme == "https" && next.url.scheme != "https" {
                     return Err(blocked);
                 }

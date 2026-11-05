@@ -76,37 +76,89 @@ fn two_slashes(s: &str) -> bool {
 
 /// Uri.TryCreate(base, reference) for an http(s) base.
 pub fn resolve_uri(base: &Uri, reference: &str) -> Option<Uri> {
+    resolve_uri_original(base, reference).map(|(uri, _)| uri)
+}
+
+/// [`resolve_uri`] that also answers Uri.OriginalString: the reference for
+/// an absolute or network-path one, else the AbsoluteUri.
+pub fn resolve_uri_original(base: &Uri, reference: &str) -> Option<(Uri, String)> {
+    let (uri, original) = resolve(base, reference);
+    let uri = uri?;
+    let original = original.unwrap_or_else(|| uri.absolute_uri.clone());
+    Some((uri, original))
+}
+
+fn resolve(base: &Uri, reference: &str) -> (Option<Uri>, Option<String>) {
     let mut reference = trim_uri_whitespace(reference);
     if reference.starts_with("\\\\") {
-        return Some(Uri::with_scheme("file"));
+        return (Some(Uri::with_scheme("file")), Some(reference.to_owned()));
     }
     if is_drive_letter(reference) && reference.len() > 2 {
-        return parse_absolute_uri(reference);
+        return (parse_absolute_uri(reference), Some(reference.to_owned()));
     }
+    let mut same_scheme = false;
     // A lone "x:" is a relative path to .NET.
     if let Some((scheme, rest)) = split_scheme(reference).filter(|_| !is_drive_letter(reference)) {
         if scheme != base.scheme || two_slashes(rest) {
-            return parse_absolute_uri(reference);
+            return (parse_absolute_uri(reference), Some(reference.to_owned()));
         }
         // "http:x" against an http base is relative, as in .NET.
         reference = rest;
+        same_scheme = true;
     }
     let prefix = format!("{}://{}", base.scheme, base.authority);
     let (path, query) = (&base.absolute_path, &base.query);
+    let directory = &path[..path.rfind('/').map_or(0, |at| at + 1)];
     // "\/x" names a host as "//x" does; "/\x" is a path.
     if reference.starts_with("//") || reference.starts_with("\\/") {
-        return parse_absolute_uri(&format!("{}:{reference}", base.scheme));
+        let network = format!("{}:{reference}", base.scheme);
+        return (parse_absolute_uri(&network), Some(network));
     }
-    match reference.as_bytes().first() {
+    let uri = match reference.as_bytes().first() {
+        // "http:?q" keeps the base directory, where "?q" keeps the base path.
+        Some(b'?' | b'#') if same_scheme => {
+            parse_absolute_uri(&format!("{prefix}{directory}{reference}"))
+        }
         None => parse_absolute_uri(&format!("{prefix}{path}{query}")),
         Some(b'#') => parse_absolute_uri(&format!("{prefix}{path}{query}{reference}")),
         Some(b'?') => parse_absolute_uri(&format!("{prefix}{path}{reference}")),
         Some(b'/' | b'\\') => parse_absolute_uri(&format!("{prefix}/{}", &reference[1..])),
-        Some(_) => {
-            let directory = &path[..path.rfind('/').map_or(0, |at| at + 1)];
-            parse_absolute_uri(&format!("{prefix}{directory}{reference}"))
-        }
+        Some(_) => parse_absolute_uri(&format!("{prefix}{directory}{reference}")),
+    };
+    (uri, None)
+}
+
+/// The schemes .NET parses with a server authority, so a bad host or port
+/// after "//" fails Uri.TryCreate outright.
+const AUTHORITY_SCHEMES: &[&str] = &[
+    "http", "https", "ws", "wss", "ftp", "gopher", "nntp", "ldap", "telnet", "net.tcp", "net.pipe",
+];
+
+/// Uri.TryCreate(s, UriKind.RelativeOrAbsolute): what a Location header
+/// must pass before HttpClient exposes it. Nearly anything is a relative
+/// reference; a scheme .NET knows with a bad authority, and a drive letter
+/// not followed by a slash, are not. file may have no host. mailto, which
+/// has a grammar of its own, is taken as it comes.
+pub fn parses_as_uri(s: &str) -> bool {
+    let s = trim_uri_whitespace(s);
+    if is_drive_letter(s) {
+        return s.len() == 2 || matches!(s.as_bytes()[2], b'/' | b'\\');
     }
+    let Some((scheme, rest)) = split_scheme(s) else {
+        return true;
+    };
+    if !two_slashes(rest) {
+        return true;
+    }
+    let authority = &rest[2..];
+    if scheme == "file" {
+        if authority.is_empty() || matches!(authority.as_bytes()[0], b'/' | b'\\') {
+            return true;
+        }
+    } else if !AUTHORITY_SCHEMES.contains(&scheme.as_str()) {
+        return true;
+    }
+    parse_hierarchical("http", authority).is_some()
 }
 
 /// Whether `s` starts with one ASCII letter and ':'.

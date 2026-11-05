@@ -132,7 +132,7 @@ func (p ExactOriginPolicy) Validate(raw string, base *dotnet.URI) (Target, error
 	url, ok := resolve(raw, base)
 	original := raw
 	if base != nil && ok {
-		original = url.AbsoluteURI
+		_, original, _ = dotnet.ResolveURIOriginal(base, raw)
 	}
 	if !ok || url.Scheme != "http" || url.Host != "127.0.0.1" || url.Port != p.Port || url.UserInfo != "" ||
 		!strings.HasPrefix(original, p.Origin) ||

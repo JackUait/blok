@@ -24,4 +24,6 @@ pub use number::parse_uint64_none;
 pub use ordinal::equals_ordinal_ignore_case;
 pub use query::{query_all, query_first};
 pub use ticks::{MAX_TICKS, ticks, time_from_ticks};
-pub use uri::{Uri, parse_absolute_uri, resolve_uri, unescape_data_string};
+pub use uri::{
+    Uri, parse_absolute_uri, parses_as_uri, resolve_uri, resolve_uri_original, unescape_data_string,
+};

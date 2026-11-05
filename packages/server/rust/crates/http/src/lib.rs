@@ -41,8 +41,8 @@ pub struct Config {
     pub max_request_body: u64,
     /// MinRequestBodyDataRate. None: no rate.
     pub min_body_rate: Option<BodyRate>,
-    /// Kestrel sends "Server: Kestrel"; the Go host sends none. The suite
-    /// ignores it.
+    /// Kestrel's AddServerHeader default: "Server: Kestrel" on every
+    /// answer.
     pub server_header: Option<String>,
 }
 
@@ -57,7 +57,7 @@ impl Default for Config {
                 bytes_per_second: 240.0,
                 grace: Duration::from_secs(5),
             }),
-            server_header: None,
+            server_header: Some("Kestrel".to_owned()),
         }
     }
 }

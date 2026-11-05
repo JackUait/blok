@@ -497,7 +497,7 @@ async fn a_hook_error_before_the_upgrade_is_an_empty500_that_keeps_the_connectio
         .collect();
     assert_eq!(lines[0], "HTTP/1.1 500 Internal Server Error", "{text:?}");
     assert_eq!(body, "", "{text:?}");
-    assert_eq!(names.join(","), "Content-Length,Date", "{text:?}");
+    assert_eq!(names.join(","), "Content-Length,Date,Server", "{text:?}");
     assert_eq!(lines[1], "Content-Length: 0", "{text:?}");
 }
 

@@ -48,7 +48,7 @@ async fn answer(request: &[u8]) -> String {
     let bytes = read_all(&mut conn, Duration::from_millis(1500)).await;
     String::from_utf8_lossy(&bytes)
         .split("\r\n")
-        .filter(|line| !line.starts_with("Date: "))
+        .filter(|line| !line.starts_with("Date: ") && *line != "Server: Kestrel")
         .collect::<Vec<_>>()
         .join("\r\n")
 }

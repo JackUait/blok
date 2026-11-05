@@ -377,6 +377,7 @@ dependencies = [
  "blok-dotnet",
  "blok-http",
  "blok-jsjson",
+ "blok-ws",
  "tokio",
 ]
 

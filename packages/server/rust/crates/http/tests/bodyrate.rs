@@ -51,7 +51,7 @@ async fn trickle(server: &Running, head: &str, body: &str, size: usize, gap: Dur
     .await;
     String::from_utf8_lossy(&out)
         .split("\r\n")
-        .filter(|line| !line.starts_with("Date: "))
+        .filter(|line| !line.starts_with("Date: ") && *line != "Server: Kestrel")
         .collect::<Vec<_>>()
         .join("\r\n")
 }

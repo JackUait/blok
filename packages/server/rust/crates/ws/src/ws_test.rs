@@ -748,19 +748,26 @@ async fn answer_101(sub_protocol: &'static str) -> String {
         .unwrap();
     let mut bytes = Vec::new();
     let _ = tokio::time::timeout(Duration::from_secs(2), client.read_to_end(&mut bytes)).await;
-    String::from_utf8_lossy(&bytes).into_owned()
+    let text = String::from_utf8_lossy(&bytes).into_owned();
+    match text.split_once("\r\nDate: ") {
+        Some((before, after)) => {
+            let rest = after.split_once("\r\n").map_or("", |(_, rest)| rest);
+            format!("{before}\r\nDate: <date>\r\n{rest}")
+        }
+        None => text,
+    }
 }
 
-// Measured on the C# host (raw TCP), less its "Server: Kestrel" line, which
-// blok-http leaves out of every answer: no Date, and the sub-protocol last.
+// Measured on the C# host (raw TCP): Date and Server after Connection, and
+// the sub-protocol last.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_101_has_kestrels_bytes() {
     assert_eq!(
         answer_101("").await,
-        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
+        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nDate: <date>\r\nServer: Kestrel\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
     );
     assert_eq!(
         answer_101("blok-sync.v2").await,
-        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\nSec-WebSocket-Protocol: blok-sync.v2\r\n\r\n"
+        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nDate: <date>\r\nServer: Kestrel\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\nSec-WebSocket-Protocol: blok-sync.v2\r\n\r\n"
     );
 }

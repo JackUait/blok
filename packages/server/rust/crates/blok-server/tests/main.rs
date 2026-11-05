@@ -1915,3 +1915,96 @@ async fn the_rich_text_fields_flag_makes_a_custom_field_segments() {
         let _ = std::fs::remove_dir_all(&collab_dir);
     }
 }
+
+/// The head of the first answer, Date and Server kept.
+async fn raw_head(address: &str, request: &str) -> String {
+    let mut conn = TcpStream::connect(address).await.unwrap();
+    conn.write_all(request.as_bytes()).await.unwrap();
+    let mut answer = Vec::new();
+    let mut byte = [0u8; 1];
+    let _ = tokio::time::timeout(Duration::from_secs(5), async {
+        while !answer.ends_with(b"\r\n\r\n") {
+            match conn.read(&mut byte).await {
+                Ok(1) => answer.push(byte[0]),
+                _ => break,
+            }
+        }
+    })
+    .await;
+    String::from_utf8_lossy(&answer).trim_end().to_owned()
+}
+
+// Measured on the C# host: Kestrel names itself on every answer, its own
+// bare refusals and the 101 too. Order is not part of the contract.
+#[tokio::test(flavor = "multi_thread")]
+async fn every_answer_names_kestrel() {
+    let blok = Server::new(Options::default()).unwrap().handler("");
+    let blok = Arc::new(blok);
+    let config = blok_http::Config {
+        request_timeout: Some(Duration::from_millis(300)),
+        ..blok_http::Config::default()
+    };
+    let server = blok_http::Server::new(
+        move |request: blok_http::Request, response: blok_http::ResponseWriter| {
+            let blok = Arc::clone(&blok);
+            async move {
+                match request.path() {
+                    "/upgrade" => {
+                        if let Ok(conn) =
+                            blok_ws::upgrade(response, &request, blok_ws::Options::default()).await
+                        {
+                            conn.abort();
+                        }
+                    }
+                    "/slow" => request.cancel_token().cancelled().await,
+                    _ => blok_http::Handler::serve(&*blok, request, response).await,
+                }
+            }
+        },
+        config,
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+    let serving = tokio::spawn(async move {
+        let _ = server.serve(listener).await;
+    });
+    let upgrade = "GET /upgrade HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n";
+    let cases = [
+        (
+            "health",
+            "GET /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
+            "200",
+        ),
+        (
+            "catch-all",
+            "GET /missing HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
+            "404",
+        ),
+        (
+            "405",
+            "PUT /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
+            "405",
+        ),
+        ("bad request line", "GARBAGE\r\n\r\n", "400"),
+        ("bad version", "GET / HTTP/1.2\r\nHost: x\r\n\r\n", "505"),
+        (
+            "deadline",
+            "GET /slow HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
+            "504",
+        ),
+        ("upgrade", upgrade, "101"),
+    ];
+    for (name, request, status) in cases {
+        let answer = raw_head(&address, request).await;
+        assert!(
+            answer.starts_with(&format!("HTTP/1.1 {status} ")),
+            "{name}: {answer:?}"
+        );
+        let with_end = format!("{answer}\r\n");
+        assert!(
+            with_end.contains("\r\nServer: Kestrel\r\n") && answer.contains("\r\nDate: "),
+            "{name}: {answer:?}"
+        );
+    }
+    serving.abort();
+}

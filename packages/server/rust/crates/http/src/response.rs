@@ -130,6 +130,16 @@ impl ResponseWriter {
         &mut self.headers
     }
 
+    /// The Server value the host's answers carry, for a head written by
+    /// hand (the 101).
+    pub fn server_header(&self) -> Option<&str> {
+        self.exchange
+            .config
+            .server_header
+            .as_deref()
+            .filter(|value| is_field_value(value))
+    }
+
     /// Whether the head went out.
     pub fn started(&self) -> bool {
         self.committed

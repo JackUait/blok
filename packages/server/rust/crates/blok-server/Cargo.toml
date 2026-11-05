@@ -28,6 +28,7 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal"
 [dev-dependencies]
 blok-collab-workingset = { path = "../collab-workingset" }
 blok-http = { path = "../http" }
+blok-ws = { path = "../ws" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "signal", "sync", "time", "net", "io-util"] }
 
 [lints]

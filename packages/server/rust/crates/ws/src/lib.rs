@@ -162,10 +162,18 @@ pub async fn upgrade(
     options: Options,
 ) -> Result<Conn, Error> {
     let accept = accept_key(&joined_key(request.headers())).ok_or(Error::AcceptKey)?;
-    let upgraded = response.hijack().await.map_err(Error::Hijack)?;
+    // Kestrel's order.
     let mut answer = format!(
-        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: {accept}\r\n"
+        "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nDate: {}\r\n",
+        blok_http::wire::http_date(std::time::SystemTime::now())
     );
+    if let Some(server) = response.server_header() {
+        answer.push_str(&format!("Server: {server}\r\n"));
+    }
+    answer.push_str(&format!(
+        "Upgrade: websocket\r\nSec-WebSocket-Accept: {accept}\r\n"
+    ));
+    let upgraded = response.hijack().await.map_err(Error::Hijack)?;
     if !options.sub_protocol.trim().is_empty() {
         answer.push_str(&format!(
             "Sec-WebSocket-Protocol: {}\r\n",

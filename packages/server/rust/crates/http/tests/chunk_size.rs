@@ -109,7 +109,7 @@ async fn kestrel_chunk_prefix_waits_on_a_partial_line() {
     let answer = |bytes: Vec<u8>| {
         String::from_utf8_lossy(&bytes)
             .split("\r\n")
-            .filter(|line| !line.starts_with("Date: "))
+            .filter(|line| !line.starts_with("Date: ") && *line != "Server: Kestrel")
             .collect::<Vec<_>>()
             .join("\r\n")
     };

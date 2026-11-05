@@ -66,7 +66,7 @@ pub async fn raw_answer(address: SocketAddr, request: &[u8]) -> String {
     let answer = read_all(&mut conn, Duration::from_secs(5)).await;
     let text = String::from_utf8_lossy(&answer).into_owned();
     text.split("\r\n")
-        .filter(|line| !line.starts_with("Date: "))
+        .filter(|line| !line.starts_with("Date: ") && *line != "Server: Kestrel")
         .collect::<Vec<_>>()
         .join("\r\n")
 }

@@ -22,7 +22,7 @@ async fn stalled_headers_get_kestrels408() {
     assert!(
         answer.starts_with(
             "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnection: close\r\nDate: "
-        ) && answer.ends_with(" GMT\r\n\r\n"),
+        ) && answer.ends_with(" GMT\r\nServer: Kestrel\r\n\r\n"),
         "got {answer:?}"
     );
     let fixture = std::fs::read_to_string(concat!(
@@ -37,7 +37,10 @@ async fn stalled_headers_get_kestrels408() {
         .split("\r\n")
         .next()
         .unwrap();
-    let golden = answer.replace(date, "<date>");
+    // The golden leaves Server out, as the suite does.
+    let golden = answer
+        .replace(date, "<date>")
+        .replace("Server: Kestrel\r\n", "");
     let escaped = golden.replace('\r', "\\r").replace('\n', "\\n");
     assert!(
         fixture.contains(&format!("\"response\": \"{escaped}\"")),

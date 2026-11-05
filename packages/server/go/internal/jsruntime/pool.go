@@ -24,11 +24,11 @@ const (
 	// program allocated 6 MiB (measured), so 8 MiB still loads.
 	MinimumMemoryBudget int64 = 8 << 20
 	// MaxCallStackSize stops runaway recursion before it eats the heap.
-	// Measured frames per nesting level of an outline: about 3 for plain text
-	// and Markdown, 8 for HTML, so 10000 converts about 1200 levels to HTML.
-	// Jint, on an engine thread of 32 MiB, converts 2405 levels to HTML
-	// before its 512 MiB allocation budget stops it.
-	MaxCallStackSize = 10000
+	// Outline levels per frame differ by reader (about 8 frames a level to
+	// HTML, 3 to Markdown and plain text), so one cap cannot match C# for all
+	// three. It is set for HTML: 19500 converts 2435 levels to HTML, where C#
+	// stops at 2416 on its allocation budget (both measured).
+	MaxCallStackSize = 19500
 )
 
 // Kind says why a call failed. The values match C# BlokConversionFailure.

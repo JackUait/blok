@@ -332,25 +332,58 @@ func TestCallersWaitWhenEveryEngineIsBusy(t *testing.T) {
 	}
 }
 
-func TestConvertsADeeplyNestedOutline(t *testing.T) {
-	p, err := NewPool(Options{PoolSize: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
+func nestedOutline(levels int) string {
 	var blocks []string
-	for depth := range 120 {
+	for depth := range levels {
 		parent := "null"
 		if depth > 0 {
 			parent = fmt.Sprintf(`"n%d"`, depth-1)
 		}
 		blocks = append(blocks, fmt.Sprintf(`{"id":"n%d","parent":%s,"type":"list","data":{"style":"unordered","text":"level %d"}}`, depth, parent, depth))
 	}
-	input := `{"blocks":[` + strings.Join(blocks, ",") + `]}`
+	return `{"blocks":[` + strings.Join(blocks, ",") + `]}`
+}
+
+func TestConvertsADeeplyNestedOutline(t *testing.T) {
+	p, err := NewPool(Options{PoolSize: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := nestedOutline(120)
 	for _, op := range []string{"blocksToPlainText", "blocksToMarkdown", "blocksToHtml"} {
 		got, err := p.Invoke(context.Background(), op, input, time.Minute)
 		if err != nil || !strings.Contains(got, "level 119") {
 			t.Fatalf("%s: err = %v, has level 119 = %v", op, err, strings.Contains(got, "level 119"))
 		}
+	}
+}
+
+// C# JintBlokRuntimeTests.ConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack:
+// a 1000-level outline converts to HTML.
+func TestConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack(t *testing.T) {
+	p, err := NewPool(Options{PoolSize: 1, Timeout: 2 * time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(1000), 0)
+	if err != nil || !strings.Contains(got, "level 999") {
+		t.Fatalf("err = %v, has level 999 = %v", err, strings.Contains(got, "level 999"))
+	}
+}
+
+// C# converts 2411 outline levels to HTML and stops at 2416 on its
+// allocation budget (measured); Go's frame cap should reach as far.
+func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
+	if testing.Short() || raceEnabled {
+		t.Skip("slow")
+	}
+	p, err := NewPool(Options{PoolSize: 1, Timeout: 2 * time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := p.Invoke(context.Background(), "blocksToHtml", nestedOutline(2411), 0)
+	if err != nil || !strings.Contains(got, "level 2410") {
+		t.Fatalf("err = %v, has level 2410 = %v", err, strings.Contains(got, "level 2410"))
 	}
 }
 

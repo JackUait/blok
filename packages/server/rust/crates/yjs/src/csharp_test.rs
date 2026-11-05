@@ -1,17 +1,17 @@
-//! C# Blok.Server.Tests/Yjs cases with no Go twin, and the C# assertions
-//! the Go twins leave out. The halves that pipe bytes through Node and real
-//! yjs (NodeReplay.cs) are ignored: no Rust test starts Node.
+//! C# Blok.Server.Tests/Yjs cases, the C# assertions older twins left out,
+//! and the halves that pipe bytes through Node and real yjs (NodeReplay.cs).
 
 use std::sync::{Arc, Mutex};
 
-use blok_jsjson::{Str, Value};
+use blok_jsjson::{Object, Str, Value};
 use blok_lib0::Reader;
 use blok_yjs_yjstest as yjstest;
 
 use crate::content::Content;
 use crate::decode_test::{re_encode, render_decoded};
 use crate::scenario_test::{
-    ScenarioRunner, build_value, render_value, scenario_named, step_update,
+    ScenarioCase, ScenarioRunner, build_value, merge_text_runs, render, render_value,
+    scenario_named, step_update,
 };
 use crate::store::Store;
 use crate::structstore_test::{chain, create_type};
@@ -471,37 +471,424 @@ fn state_vector_reads_back_every_entry() {
     }
 }
 
-#[test]
-#[ignore = "needs node + yjs replay (EncoderTests.DiffAgainstAPeerVectorIsAcceptedByYjs)"]
-fn diff_against_a_peer_vector_is_accepted_by_yjs() {}
+// The engine -> Node direction of the interop law (C# NodeReplay.cs): bytes
+// the engine wrote are applied by real yjs through
+// scripts/replay-yjs-update.mjs, and yjs must render what the engine
+// renders. Like C#, a missing node or yjs fails the test: CI installs both
+// before the Rust job runs.
+struct NodeReplay {
+    json: Value,
+    sv: Vec<u8>,
+    has_pending: bool,
+    diff: Option<Vec<u8>>,
+}
 
-#[test]
-#[ignore = "needs node + yjs replay (EncoderTests.ForeignTextEmbedsAndFormatsSurviveTheOracle)"]
-fn foreign_text_embeds_and_formats_survive_the_oracle() {}
+fn node_replay(roots: &[(String, String)], updates: &[Vec<u8>]) -> NodeReplay {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
 
-#[test]
-#[ignore = "needs node + yjs replay (EncoderTests.DiffAgainstAnEmptyVector)"]
-fn diff_against_an_empty_vector_is_accepted_by_yjs() {}
+    let mut named = Object::new();
+    for (name, kind) in roots {
+        named.set(s(name), sv(kind));
+    }
+    let roots = Value::Object(named);
+    let updates = Value::Array(updates.iter().map(|u| sv(&b64_encode(u))).collect());
+    let request = blok_jsjson::stringify(&vobj(vec![
+        ("roots", roots),
+        ("updates", updates),
+        ("stateVectorFor", Value::Null),
+    ]))
+    .unwrap();
+    let mut child = Command::new("node")
+        .arg("scripts/replay-yjs-update.mjs")
+        .current_dir(yjstest::repo_root().unwrap())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap_or_else(|err| panic!("could not start node: {err}"));
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(request.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "node exited {}: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let replay = blok_jsjson::parse(output.stdout.trim_ascii()).unwrap();
+    let diff = match yjstest::field(&replay, "diff") {
+        Some(Value::String(diff)) => Some(b64(&diff.to_string())),
+        _ => None,
+    };
+    NodeReplay {
+        json: yjstest::field(&replay, "json")
+            .expect("the replay script printed no json")
+            .clone(),
+        sv: b64(&yjstest::string(&replay, "sv")),
+        has_pending: match yjstest::field(&replay, "hasPending") {
+            Some(Value::Bool(pending)) => *pending,
+            other => panic!("the replay script printed hasPending {other:?}"),
+        },
+        diff,
+    }
+}
 
-#[test]
-#[ignore = "needs node + yjs replay (EncoderTests: the Node halves of the emit and pending tests)"]
-fn emitted_updates_replay_into_yjs() {}
+fn roots(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+    pairs
+        .iter()
+        .map(|(name, kind)| (name.to_string(), kind.to_string()))
+        .collect()
+}
 
-#[test]
-#[ignore = "needs node + yjs replay (FuzzCorpusTests: every seed through yjs)"]
-fn every_fuzz_seed_replays_in_yjs() {}
+#[track_caller]
+fn same_json(what: &str, engine: &Value, replayed: &Value) {
+    assert_eq!(canonical(engine), canonical(replayed), "{what}");
+}
 
-#[test]
-#[ignore = "needs node + yjs replay (YDocWriteTests: the Node halves)"]
-fn local_writes_read_back_in_yjs() {}
+/// Runs each case on its own thread, four at a time: one node start costs
+/// about 90 ms.
+fn each_case(cases: Vec<ScenarioCase>, check: fn(ScenarioCase)) {
+    let chunks: Vec<Vec<ScenarioCase>> = cases
+        .chunks(cases.len().div_ceil(4))
+        .map(<[_]>::to_vec)
+        .collect();
+    std::thread::scope(|scope| {
+        for chunk in chunks {
+            scope.spawn(move || chunk.into_iter().for_each(check));
+        }
+    });
+}
 
-#[test]
-#[ignore = "needs node + yjs replay (YTextFormattingTests.FormattedWritesReadBackInYjs)"]
-fn formatted_writes_read_back_in_yjs() {}
+fn replays_whole(c: ScenarioCase) {
+    let mut runner = ScenarioRunner::new(c);
+    runner.run_all();
+    assert!(runner.failures.is_empty(), "{:?}", runner.failures);
+    let c = &runner.c;
+    let replay = node_replay(&c.roots, &[encode_state(&runner.doc, &[])]);
+    same_json(&c.name, &render(&runner.doc, &c.roots), &replay.json);
+    assert_eq!(runner.doc.encode_state_vector(), replay.sv, "{}", c.name);
+    assert_eq!(runner.doc.has_pending(), replay.has_pending, "{}", c.name);
+}
 
+// YjsEngineHarnessTests.NodeReplayAppliesAnEmptyUpdateAndReportsNoPending.
 #[test]
-#[ignore = "needs node + yjs replay (YjsEngineHarnessTests.NodeReplayAppliesAnEmptyUpdateAndReportsNoPending)"]
-fn node_replay_applies_an_empty_update_and_reports_no_pending() {}
+fn node_replay_applies_an_empty_update_and_reports_no_pending() {
+    let result = node_replay(&roots(&[("m", "map")]), &[vec![0, 0]]);
+    assert_eq!(canonical(&result.json), r#"{"m":{}}"#);
+    assert_eq!(result.sv, vec![0]);
+    assert!(!result.has_pending);
+    assert!(result.diff.is_none());
+}
+
+// EncoderTests.DiffAgainstAnEmptyVectorReplaysIntoYjsWithIdenticalJson.
+#[test]
+fn diff_against_an_empty_vector_is_accepted_by_yjs() {
+    each_case(crate::scenario_test::scenarios(), replays_whole);
+}
+
+// EncoderTests.DiffAgainstAPeerVectorIsAcceptedByYjs: a snapshot taken half
+// way plus the diff against its vector is the whole document.
+#[test]
+fn diff_against_a_peer_vector_is_accepted_by_yjs() {
+    each_case(crate::scenario_test::scenarios(), |c| {
+        let mut runner = ScenarioRunner::new(c.clone());
+        let half = c.steps.len() / 2;
+        for step in &c.steps[..half] {
+            runner.run(step);
+        }
+        let at_half = encode_state(&runner.doc, &[]);
+        let peer = runner.doc.encode_state_vector();
+        for step in &c.steps[half..] {
+            runner.run(step);
+        }
+        let replay = node_replay(&c.roots, &[at_half, encode_state(&runner.doc, &peer)]);
+        same_json(&c.name, &render(&runner.doc, &c.roots), &replay.json);
+        assert_eq!(runner.doc.encode_state_vector(), replay.sv, "{}", c.name);
+    });
+}
+
+// FuzzCorpusTests.EverySeedMatchesTheYjsOracleAtEveryStep, the Node half.
+#[test]
+fn every_fuzz_seed_replays_in_yjs() {
+    let seeds = crate::scenario_test::fuzz_seeds();
+    assert_eq!(seeds.len(), 50);
+    each_case(seeds, replays_whole);
+}
+
+// EncoderTests.ForeignTextEmbedsAndFormatsSurviveTheOracle.
+#[test]
+fn foreign_text_embeds_and_formats_survive_the_oracle() {
+    let c = fixture_case("structs.json", "text-insert-format-embed");
+    let roots = crate::scenario_test::roots_of(yjstest::field(&c, "roots").unwrap());
+    let doc = doc_with_id(4242);
+    apply_bytes(&doc, &fixture_bytes(&c, "update"));
+    let replay = node_replay(&roots, &[encode_state(&doc, &[])]);
+    same_json("json", &render(&doc, &roots), &replay.json);
+}
+
+// The Node halves of EncoderTests TransactionEmitsOneUpdateThatReplaysIntoYjs,
+// ApplyEmitsTheAppliedChangeOnly and PendingWithGapsEncodesSkipsReadableByYjs.
+#[test]
+fn emitted_updates_replay_into_yjs() {
+    let structs = fixture_case("structs.json", "map-set-any");
+    let seed = fixture_bytes(&structs, "update");
+    let map_roots = crate::scenario_test::roots_of(yjstest::field(&structs, "roots").unwrap());
+    let doc = doc_with_id(4242);
+    apply_bytes(&doc, &seed);
+    let m = doc.get_map("m").unwrap();
+    let written = doc
+        .transact(|txn| m.set(txn, "engine", sv("written")))
+        .unwrap()
+        .unwrap();
+    let replay = node_replay(&map_roots, &[seed, written]);
+    same_json("local write", &render(&doc, &map_roots), &replay.json);
+
+    let c = scenario_named("out-of-order-delivery");
+    let doc = doc_with_id(4242);
+    let first = step_update(&c, "s1");
+    apply_bytes(&doc, &first);
+    let events = record(&doc);
+    apply_bytes(&doc, &step_update(&c, "s2"));
+    let applied = events.lock().unwrap()[0].update.clone();
+    let replay = node_replay(&c.roots, &[first, applied]);
+    same_json("applied change", &render(&doc, &c.roots), &replay.json);
+
+    let c = scenario_named("engine-writes-while-pending");
+    let mut runner = ScenarioRunner::new(c.clone());
+    for step in &c.steps[..c.steps.len() - 2] {
+        runner.run(step);
+    }
+    let pending = encode_state(&runner.doc, &[]);
+    let replay = node_replay(&c.roots, std::slice::from_ref(&pending));
+    assert!(replay.has_pending, "yjs parked nothing");
+    same_json("pending", &render(&runner.doc, &c.roots), &replay.json);
+    let closing = step_update(&c, "s2");
+    apply_bytes(&runner.doc, &closing);
+    let converged = node_replay(&c.roots, &[pending, closing]);
+    assert!(!runner.doc.has_pending() && !converged.has_pending);
+    same_json("converged", &render(&runner.doc, &c.roots), &converged.json);
+}
+
+// The Node halves of YDocWriteTests.
+#[test]
+fn local_writes_read_back_in_yjs() {
+    let every = roots(&[("blocks", "map"), ("list", "array"), ("content", "text")]);
+    let doc = doc_with_id(4242);
+    let (blocks, list, content) = (
+        doc.get_map("blocks").unwrap(),
+        doc.get_array("list").unwrap(),
+        doc.get_text("content").unwrap(),
+    );
+    let written = doc
+        .transact(|txn| {
+            blocks.set(txn, "title", sv("hello"))?;
+            list.insert(txn, 0, vec![sv("a").into(), sv("b").into()])?;
+            content.insert(Some(txn), 0, "text", None)
+        })
+        .unwrap()
+        .unwrap();
+    let replay = node_replay(&every, &[written]);
+    same_json("one transaction", &render(&doc, &every), &replay.json);
+    assert_eq!(doc.encode_state_vector(), replay.sv);
+
+    // PrelimMapIntegratesWithItsParent, SetAdmitsUndefined and
+    // JsonNumbersAlwaysLowerToDouble.
+    let map_root = roots(&[("blocks", "map")]);
+    let numbers =
+        blok_jsjson::parse(br#"{"i": 1, "f": 0.5, "wide": 2147483648, "deep": [7]}"#).unwrap();
+    for (name, value) in [
+        (
+            "prelim",
+            In::from(crate::Map::new(vec![
+                crate::MapEntry::new("title", sv("first")),
+                crate::MapEntry::new(
+                    "tags",
+                    crate::Array::new(vec![sv("a").into(), sv("b").into()]),
+                ),
+            ])),
+        ),
+        ("undefined", In::Any(Value::Undefined)),
+        ("numbers", build_value(&numbers)),
+    ] {
+        let doc = doc_with_id(4242);
+        let blocks = doc.get_map("blocks").unwrap();
+        let written = doc
+            .transact(|txn| blocks.set(txn, name, value))
+            .unwrap()
+            .unwrap();
+        same_json(
+            name,
+            &render(&doc, &map_root),
+            &node_replay(&map_root, &[written]).json,
+        );
+    }
+
+    // TextWritesMatchYjs.
+    for name in [
+        "nul-and-astral-strings",
+        "text-format-and-embed",
+        "formatted-text-engine-writes",
+        "formatted-text-prelim-queue",
+        "formatted-text-link-key-order",
+        "formatted-text-equal-links-cleanup",
+        "formatted-text-remote-cleanup",
+    ] {
+        let mut runner = ScenarioRunner::new(scenario_named(name));
+        runner.run_all();
+        assert!(runner.checks > 0 && runner.failures.is_empty(), "{name}");
+        let c = &runner.c;
+        let mut rendered = render(&runner.doc, &c.roots);
+        let mut replayed = node_replay(&c.roots, &[encode_state(&runner.doc, &[])]).json;
+        if c.segments {
+            rendered = merge_text_runs(&rendered);
+            replayed = merge_text_runs(&replayed);
+        }
+        same_json(name, &rendered, &replayed);
+    }
+
+    // TextSplitsOnSurrogatePairsLikeYjs and TextRoundTripsThroughNode.
+    let text_root = roots(&[("content", "text")]);
+    for writes in [
+        vec![(0, "insert", "a😀b", 0), (1, "delete", "", 1)],
+        vec![
+            (0, "insert", "hello world", 0),
+            (5, "insert", ",", 0),
+            (0, "delete", "", 1),
+        ],
+    ] {
+        let doc = doc_with_id(4242);
+        let text = doc.get_text("content").unwrap();
+        let mut updates = Vec::new();
+        for (index, kind, chunk, length) in writes {
+            let update = doc
+                .transact(|txn| match kind {
+                    "insert" => text.insert(Some(txn), index, chunk, None),
+                    _ => text.delete(Some(txn), index, length),
+                })
+                .unwrap()
+                .unwrap();
+            updates.push(update);
+        }
+        let replay = node_replay(&text_root, &updates);
+        same_json("text", &render(&doc, &text_root), &replay.json);
+        assert_eq!(doc.encode_state_vector(), replay.sv);
+    }
+}
+
+fn delta_json(delta: Vec<crate::Delta>) -> Value {
+    Value::Array(
+        delta
+            .into_iter()
+            .map(|op| {
+                let mut entry = obj(vec![("insert", render_value(&op.insert))]);
+                if let Some(attributes) = op.attributes {
+                    entry.set(s("attributes"), Value::Object(attributes));
+                }
+                Value::Object(entry)
+            })
+            .collect(),
+    )
+}
+
+// YTextFormattingTests.FormattedWritesReadBackInYjs: every formatted write,
+// one transaction each; the production ToDelta must read what yjs reads.
+#[test]
+fn formatted_writes_read_back_in_yjs() {
+    let every = roots(&[("content", "text"), ("blocks", "map")]);
+    let doc = doc_with_id(4242);
+    let events = record(&doc);
+    let content = doc.get_text("content").unwrap();
+    let blocks = doc.get_map("blocks").unwrap();
+    doc.transact(|txn| blocks.set(txn, "b1", XmlText::new(None)))
+        .unwrap();
+    let rich = blocks.get("b1").unwrap().as_xml_text().unwrap();
+    let empty = obj(Vec::new());
+    let bold = obj(vec![("bold", Value::Bool(true))]);
+    let link = obj(vec![(
+        "link",
+        vobj(vec![("href", sv("h")), ("rel", sv("r"))]),
+    )]);
+    let unbold = obj(vec![("bold", Value::Null)]);
+    let italic = obj(vec![("italic", Value::Bool(true))]);
+    let equation = vobj(vec![("equation", vobj(vec![("expression", sv("x"))]))]);
+    macro_rules! writes {
+        ($text:expr) => {
+            let text = $text;
+            doc.transact(|txn| text.insert(Some(txn), 0, "Hello world", Some(&empty)))
+                .unwrap();
+            doc.transact(|txn| text.format(Some(txn), 0, 5, &bold))
+                .unwrap();
+            doc.transact(|txn| text.format(Some(txn), 6, 5, &link))
+                .unwrap();
+            doc.transact(|txn| text.format(Some(txn), 1, 2, &unbold))
+                .unwrap();
+            doc.transact(|txn| text.insert_embed(Some(txn), 5, equation.clone(), Some(&italic)))
+                .unwrap();
+            doc.transact(|txn| text.insert(Some(txn), 12, "!", None))
+                .unwrap();
+            doc.transact(|txn| text.delete(Some(txn), 3, 4)).unwrap();
+        };
+    }
+    writes!(&content);
+    writes!(&rich);
+    let updates: Vec<Vec<u8>> = events
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|event| event.update.clone())
+        .collect();
+    let replay = node_replay(&every, &updates);
+    same_json("json", &render(&doc, &every), &replay.json);
+    let replayed = |root: &str, key: Option<&str>| {
+        let mut value = yjstest::field(&replay.json, root).unwrap();
+        if let Some(key) = key {
+            value = yjstest::field(value, key).unwrap();
+        }
+        yjstest::field(value, "$text").unwrap().clone()
+    };
+    same_json(
+        "content delta",
+        &delta_json(content.to_delta()),
+        &replayed("content", None),
+    );
+    same_json(
+        "b1 delta",
+        &delta_json(rich.to_delta()),
+        &replayed("blocks", Some("b1")),
+    );
+    assert_eq!(doc.encode_state_vector(), replay.sv);
+}
+
+// YTextFormattingTests.AttachedTextNeedsATransaction.
+#[test]
+fn attached_text_needs_a_transaction() {
+    let doc = doc_with_id(4242);
+    let failure = doc
+        .get_text("content")
+        .unwrap()
+        .insert(None, 0, "a", None)
+        .unwrap_err();
+    assert_eq!(
+        failure.to_string(),
+        "yjs: a text in a document needs a transaction."
+    );
+}
+
+// IntegrationTests.OutOfOrderDeliveryRetainsPendingThenConverges: the end
+// state on top of the generic scenario run.
+#[test]
+fn out_of_order_delivery_retains_pending_then_converges() {
+    let mut runner = ScenarioRunner::new(scenario_named("out-of-order-delivery"));
+    runner.run_all();
+    assert!(runner.failures.is_empty(), "{:?}", runner.failures);
+    assert!(!runner.doc.has_pending());
+    assert!(runner.checks >= 9, "{} checks", runner.checks);
+}
 
 #[test]
 #[ignore = "ported to blok-collab-convert csharp_yrs_compat_test.rs: needs the converter, which blok-yjs cannot depend on"]

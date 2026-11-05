@@ -339,13 +339,29 @@ impl Inner {
             format!("POST {prefix}/sync/{{doc}}/history/{{lineage}}/{{sequence}}/restore"),
             format!("GET {prefix}/sync/{{doc}}/history/{{lineage}}/{{sequence}}/changes"),
         ];
-        logger.log(
+        let (sync, reset, edit, state) = (
+            format!("GET {prefix}/sync/{{doc}}"),
+            format!("POST {prefix}/sync/{{doc}}/reset"),
+            format!("POST {prefix}/sync/{{doc}}/edit"),
+            format!("GET {prefix}/sync/{{doc}}/state"),
+        );
+        let history = history.join(", ");
+        // The fields are C#'s EventId 2 "CollabOpen" and its message fields.
+        logger.log_fields(
             Level::Warn,
             HOST_LOG_CATEGORY,
             &format!(
-                "collab: no authorization hook is set and Auth is \"none\", so GET {prefix}/sync/{{doc}}, POST {prefix}/sync/{{doc}}/reset, POST {prefix}/sync/{{doc}}/edit, GET {prefix}/sync/{{doc}}/state and {} are open to anyone who can reach this app unless the host puts its own auth in front; set Options.Authorization or set Auth to \"ticket\"",
-                history.join(", ")
+                "collab: no authorization hook is set and Auth is \"none\", so {sync}, {reset}, {edit}, {state} and {history} are open to anyone who can reach this app unless the host puts its own auth in front; set Options.Authorization or set Auth to \"ticket\""
             ),
+            &[
+                ("EventId", "2"),
+                ("EventName", "CollabOpen"),
+                ("Sync", &sync),
+                ("Reset", &reset),
+                ("Edit", &edit),
+                ("State", &state),
+                ("History", &history),
+            ],
         );
     }
 }

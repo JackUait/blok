@@ -64,6 +64,53 @@ async fn deny() -> Result<bool, blok_collab_room::Error> {
     Ok(false)
 }
 
+/// Keeps the fields of every record that carries some.
+#[derive(Default)]
+struct Fields(Mutex<Vec<(String, String)>>);
+
+impl Logger for Fields {
+    fn log(&self, _: Level, _: &str, _: &str) {}
+
+    fn log_fields(&self, _: Level, _: &str, _: &str, fields: &[(&str, &str)]) {
+        let mut seen = self.0.lock().unwrap();
+        seen.extend(
+            fields
+                .iter()
+                .map(|(k, v)| ((*k).to_owned(), (*v).to_owned())),
+        );
+    }
+}
+
+// WarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess: C# logs
+// EventId 2 "CollabOpen" with the routes as fields, which shipped in
+// 1.16.1; log queries may key on them.
+#[tokio::test]
+async fn the_open_routes_warning_carries_c_sharp_s_fields() {
+    let fields = Arc::new(Fields::default());
+    let mut o = collab_options();
+    o.logger = Some(fields.clone());
+    Server::new(o).unwrap().handler("/blok");
+    let got = fields.0.lock().unwrap().clone();
+    let want: Vec<(String, String)> = [
+        ("EventId", "2"),
+        ("EventName", "CollabOpen"),
+        ("Sync", "GET /blok/sync/{doc}"),
+        ("Reset", "POST /blok/sync/{doc}/reset"),
+        ("Edit", "POST /blok/sync/{doc}/edit"),
+        ("State", "GET /blok/sync/{doc}/state"),
+        (
+            "History",
+            "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, \
+             DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, \
+             GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
+        ),
+    ]
+    .iter()
+    .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+    .collect();
+    assert_eq!(got, want);
+}
+
 // L9: collab on, Auth none and no hook warns once per mapping, under its own
 // category, so the standalone host (which prints only the room category)
 // never shows it.

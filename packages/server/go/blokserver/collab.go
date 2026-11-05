@@ -261,10 +261,16 @@ func (s *Server) warnOpenSyncRoutes(prefix string) {
 		"POST " + prefix + "/sync/{doc}/history/{lineage}/{sequence}/restore",
 		"GET " + prefix + "/sync/{doc}/history/{lineage}/{sequence}/changes",
 	}
-	logger.Warn(`collab: no authorization hook is set and Auth is "none", so GET `+prefix+`/sync/{doc}, POST `+prefix+
-		`/sync/{doc}/reset, POST `+prefix+`/sync/{doc}/edit, GET `+prefix+`/sync/{doc}/state and `+strings.Join(history, ", ")+
+	sync, reset, edit, state := "GET "+prefix+"/sync/{doc}", "POST "+prefix+"/sync/{doc}/reset",
+		"POST "+prefix+"/sync/{doc}/edit", "GET "+prefix+"/sync/{doc}/state"
+	// The fields are C#'s EventId 2 "CollabOpen" and its message fields.
+	logger.Warn(`collab: no authorization hook is set and Auth is "none", so `+sync+`, `+reset+`, `+edit+`, `+state+` and `+
+		strings.Join(history, ", ")+
 		` are open to anyone who can reach this app unless the host puts its own auth in front; set Options.Authorization or set Auth to "ticket"`,
-		slog.String("category", "Blok.Server.AspNetCore"))
+		slog.String("category", "Blok.Server.AspNetCore"),
+		slog.Int("EventId", 2), slog.String("EventName", "CollabOpen"),
+		slog.String("Sync", sync), slog.String("Reset", reset), slog.String("Edit", edit), slog.String("State", state),
+		slog.String("History", strings.Join(history, ", ")))
 }
 
 // DocumentConverter is the server's IBlokDocumentConverter: one converter

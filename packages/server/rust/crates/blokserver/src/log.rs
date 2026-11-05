@@ -17,4 +17,11 @@ pub enum Level {
 /// Receives the server's log records. category is "" when a record has none.
 pub trait Logger: Send + Sync {
     fn log(&self, level: Level, category: &str, message: &str);
+
+    /// A record that also carries C#'s structured fields (its EventId and
+    /// message fields), in order. The default drops the fields.
+    fn log_fields(&self, level: Level, category: &str, message: &str, fields: &[(&str, &str)]) {
+        let _ = fields;
+        self.log(level, category, message);
+    }
 }

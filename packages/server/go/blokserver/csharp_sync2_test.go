@@ -1,6 +1,7 @@
 package blokserver
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -96,4 +97,44 @@ func TestWarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess(t *testing.T
 	if strings.HasPrefix(warning, "WARN Blok.Server.Collab ") {
 		t.Errorf("warned under the room category: %s", warning)
 	}
+
+	// C# logs EventId 2 "CollabOpen" with the routes as fields, which
+	// shipped in 1.16.1; log queries may key on them.
+	fields := map[string]string{}
+	o = collabOptions(t)
+	o.Logger = slog.New(attrsHandler{fields})
+	s, err = New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Handler("/blok")
+	for key, want := range map[string]string{
+		"EventId":   "2",
+		"EventName": "CollabOpen",
+		"Sync":      "GET /blok/sync/{doc}",
+		"Reset":     "POST /blok/sync/{doc}/reset",
+		"Edit":      "POST /blok/sync/{doc}/edit",
+		"State":     "GET /blok/sync/{doc}/state",
+		"History": "GET /blok/sync/{doc}/history, GET /blok/sync/{doc}/history/{lineage}/{sequence}, " +
+			"DELETE /blok/sync/{doc}/history/{lineage}, POST /blok/sync/{doc}/history/{lineage}/{sequence}/restore, " +
+			"GET /blok/sync/{doc}/history/{lineage}/{sequence}/changes",
+	} {
+		if fields[key] != want {
+			t.Errorf("field %s = %q, want %q", key, fields[key], want)
+		}
+	}
 }
+
+// attrsHandler keeps every attribute of the records it gets, as text.
+type attrsHandler struct{ fields map[string]string }
+
+func (h attrsHandler) Enabled(context.Context, slog.Level) bool { return true }
+func (h attrsHandler) Handle(_ context.Context, r slog.Record) error {
+	r.Attrs(func(a slog.Attr) bool {
+		h.fields[a.Key] = a.Value.String()
+		return true
+	})
+	return nil
+}
+func (h attrsHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+func (h attrsHandler) WithGroup(string) slog.Handler      { return h }

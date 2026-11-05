@@ -58,7 +58,7 @@ pub use decode::{
 pub use deleteset::{DeleteRange, DeleteSet};
 pub use doc::{ApplyResult, Doc, Options, Outcome, Subscription, Transaction, UpdateEvent};
 pub use store::{StateVector, decode_state_vector};
-pub use text::Delta;
+pub use text::{Delta, Marks, marks};
 pub use types::{
     Array, In, Map, MapEntry, Out, Text, TypeKind, TypeRef, XmlElement, XmlFragment, XmlHook,
     XmlText,

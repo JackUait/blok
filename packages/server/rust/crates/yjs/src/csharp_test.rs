@@ -212,7 +212,7 @@ fn undefined_attribute_is_refused() {
     let content = doc.get_text("content").unwrap();
     let marks = obj(vec![("bold", Value::Undefined)]);
     assert!(
-        doc.transact(|txn| content.insert(Some(txn), 0, "a", Some(&marks)))
+        doc.transact(|txn| content.insert(Some(txn), 0, "a", Some(&crate::marks(&marks))))
             .is_err()
     );
 }
@@ -223,22 +223,30 @@ fn queued_writes_are_checked_when_made() {
     let text = XmlText::new(None);
     let undefined = obj(vec![("bold", Value::Undefined)]);
     let empty = obj(Vec::new());
-    assert!(text.insert(None, 0, "a", Some(&undefined)).is_err());
-    assert!(text.format(None, 0, 1, &undefined).is_err());
+    assert!(
+        text.insert(None, 0, "a", Some(&crate::marks(&undefined)))
+            .is_err()
+    );
+    assert!(text.format(None, 0, 1, &crate::marks(&undefined)).is_err());
     assert!(
         text.insert_embed(None, 0, vobj(vec![("big", Value::BigInt(1))]), None)
             .is_err()
     );
     assert!(
-        text.insert_embed(None, 0, vobj(vec![("page", sv("p"))]), Some(&undefined))
-            .is_err()
+        text.insert_embed(
+            None,
+            0,
+            vobj(vec![("page", sv("p"))]),
+            Some(&crate::marks(&undefined))
+        )
+        .is_err()
     );
     assert!(text.insert(None, -1, "a", None).is_err());
     assert!(
         text.insert_embed(None, -1, Value::Object(empty.clone()), None)
             .is_err()
     );
-    assert!(text.format(None, -1, 1, &empty).is_err());
+    assert!(text.format(None, -1, 1, &crate::marks(&empty)).is_err());
     assert!(text.delete(None, -1, 1).is_err());
     let doc = doc_with_id(4242);
     let blocks = doc.get_map("blocks").unwrap();
@@ -819,16 +827,20 @@ fn formatted_writes_read_back_in_yjs() {
     macro_rules! writes {
         ($text:expr) => {
             let text = $text;
-            doc.transact(|txn| text.insert(Some(txn), 0, "Hello world", Some(&empty)))
+            doc.transact(|txn| {
+                text.insert(Some(txn), 0, "Hello world", Some(&crate::marks(&empty)))
+            })
+            .unwrap();
+            doc.transact(|txn| text.format(Some(txn), 0, 5, &crate::marks(&bold)))
                 .unwrap();
-            doc.transact(|txn| text.format(Some(txn), 0, 5, &bold))
+            doc.transact(|txn| text.format(Some(txn), 6, 5, &crate::marks(&link)))
                 .unwrap();
-            doc.transact(|txn| text.format(Some(txn), 6, 5, &link))
+            doc.transact(|txn| text.format(Some(txn), 1, 2, &crate::marks(&unbold)))
                 .unwrap();
-            doc.transact(|txn| text.format(Some(txn), 1, 2, &unbold))
-                .unwrap();
-            doc.transact(|txn| text.insert_embed(Some(txn), 5, equation.clone(), Some(&italic)))
-                .unwrap();
+            doc.transact(|txn| {
+                text.insert_embed(Some(txn), 5, equation.clone(), Some(&crate::marks(&italic)))
+            })
+            .unwrap();
             doc.transact(|txn| text.insert(Some(txn), 12, "!", None))
                 .unwrap();
             doc.transact(|txn| text.delete(Some(txn), 3, 4)).unwrap();
@@ -943,10 +955,10 @@ fn a_negative_format_length_still_deletes_the_conflicting_mark_at_the_start() {
     let text = doc.get_text("content").unwrap();
     let bold = obj(vec![("bold", Value::Bool(true))]);
     let unbold = obj(vec![("bold", Value::Bool(false))]);
-    doc.transact(|txn| text.insert(Some(txn), 0, "ab", Some(&bold)))
+    doc.transact(|txn| text.insert(Some(txn), 0, "ab", Some(&crate::marks(&bold))))
         .unwrap();
     let update = doc
-        .transact(|txn| text.format(Some(txn), 0, -1, &unbold))
+        .transact(|txn| text.format(Some(txn), 0, -1, &crate::marks(&unbold)))
         .unwrap()
         .expect("an update");
     let hex: String = update.iter().map(|byte| format!("{byte:02X}")).collect();
@@ -958,4 +970,36 @@ fn a_negative_format_length_still_deletes_the_conflicting_mark_at_the_start() {
         blok_jsjson::stringify(&delta_json(text.to_delta())).unwrap(),
         r#"[{"insert":"ab","attributes":{"bold":true}}]"#
     );
+}
+
+// YTextFormattingTests.FormattingTheSameNestedMarkObjectTwiceWritesItOnce:
+// the mark keeps the caller's value, so the second call finds it === and
+// writes nothing.
+#[test]
+fn formatting_the_same_nested_mark_object_twice_writes_it_once() {
+    let doc = doc_with_id(4242);
+    let text = doc.get_text("content").unwrap();
+    // One Marks value passed twice: the same object, as in C#.
+    let link = crate::marks(&obj(vec![(
+        "link",
+        vobj(vec![
+            ("href", sv("h")),
+            ("meta", vobj(vec![("x", Value::Number(1.0))])),
+        ]),
+    )]));
+    doc.transact(|txn| text.insert(Some(txn), 0, "ab", Some(&crate::marks(&obj(Vec::new())))))
+        .unwrap();
+    let first = doc
+        .transact(|txn| text.format(Some(txn), 0, 2, &link))
+        .unwrap()
+        .expect("an update");
+    let second = doc
+        .transact(|txn| text.format(Some(txn), 0, 2, &link))
+        .unwrap();
+    let hex: String = first.iter().map(|byte| format!("{byte:02X}")).collect();
+    assert_eq!(
+        hex,
+        "010292210246922100046C696E6B1B7B2268726566223A2268222C226D657461223A7B2278223A317D7D86922101046C696E6B046E756C6C00"
+    );
+    assert_eq!(second, None);
 }

@@ -313,18 +313,18 @@ pub fn apply_text_op(text: &TextHandle, txn: Option<&Transaction<'_>>, op: &Valu
     let result = match yjstest::string(op, "op").as_str() {
         "text.insert" => {
             let chunk = str_of(yjstest::field(op, "text").unwrap()).clone();
-            on_text!(text, t => t.insert(txn, index, chunk, attributes.as_ref()))
+            on_text!(text, t => t.insert(txn, index, chunk, attributes.as_ref().map(crate::marks).as_ref()))
         }
         "text.delete" => on_text!(text, t => t.delete(txn, index, length)),
         "text.format" => {
-            on_text!(text, t => t.format(txn, index, length, attributes.as_ref().unwrap()))
+            on_text!(text, t => t.format(txn, index, length, &crate::marks(attributes.as_ref().unwrap())))
         }
         "text.embed" => {
             let embed = match build_value(yjstest::field(op, "embed").unwrap()) {
                 In::Any(value) => value,
                 In::Type(_) => panic!("a shared type embed"),
             };
-            on_text!(text, t => t.insert_embed(txn, index, embed, attributes.as_ref()))
+            on_text!(text, t => t.insert_embed(txn, index, embed, attributes.as_ref().map(crate::marks).as_ref()))
         }
         other => panic!("{other:?} is not an op the engine performs"),
     };

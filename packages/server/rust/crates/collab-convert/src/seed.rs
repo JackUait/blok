@@ -330,10 +330,20 @@ pub(crate) fn new_rich_text(segments: &[Value]) -> Result<XmlText, Error> {
     for op in to_write_ops(segments)? {
         match &op.insert {
             Value::String(characters) => {
-                text.insert(None, index as i64, characters.clone(), Some(&op.attributes))?;
+                text.insert(
+                    None,
+                    index as i64,
+                    characters.clone(),
+                    Some(&blok_yjs::marks(&op.attributes)),
+                )?;
             }
             embed => {
-                text.insert_embed(None, index as i64, embed.clone(), Some(&op.attributes))?;
+                text.insert_embed(
+                    None,
+                    index as i64,
+                    embed.clone(),
+                    Some(&blok_yjs::marks(&op.attributes)),
+                )?;
             }
         }
         index += op.length();

@@ -256,16 +256,26 @@ fn a_detached_type_refuses_writes() {
 fn a_queued_text_write_is_checked_when_made() {
     let text = XmlText::new(None);
     assert!(
-        text.insert(None, 0, "a", Some(&obj(vec![("bold", Value::Undefined)])))
-            .is_err(),
+        text.insert(
+            None,
+            0,
+            "a",
+            Some(&crate::marks(&obj(vec![("bold", Value::Undefined)])))
+        )
+        .is_err(),
         "an undefined mark"
     );
     assert!(
         text.insert_embed(None, 0, sv("x"), None).is_err(),
         "a string embed"
     );
-    text.insert(None, 0, "ab", Some(&obj(vec![("bold", Value::Bool(true))])))
-        .unwrap();
+    text.insert(
+        None,
+        0,
+        "ab",
+        Some(&crate::marks(&obj(vec![("bold", Value::Bool(true))]))),
+    )
+    .unwrap();
     let doc = doc_with_id(4242);
     let m = doc.get_map("m").unwrap();
     doc.transact(|txn| m.set(txn, "t", &text)).unwrap();
@@ -285,7 +295,7 @@ fn marks_are_written_in_js_key_order() {
         ("1", Value::Bool(true)),
         ("a", Value::Bool(true)),
     ]);
-    doc.transact(|txn| text.insert(Some(txn), 0, "a", Some(&marks)))
+    doc.transact(|txn| text.insert(Some(txn), 0, "a", Some(&crate::marks(&marks))))
         .unwrap();
     let st = doc.lock();
     let id = text.as_type().attached_id().unwrap();

@@ -26,18 +26,18 @@ pub(crate) enum TextOp {
     Insert {
         index: usize,
         chunk: Str,
-        attributes: Option<Object>,
+        attributes: Option<Marks>,
     },
     Embed {
         index: usize,
         embed: Value,
-        attributes: Option<Object>,
+        attributes: Option<Marks>,
     },
     Format {
         index: usize,
         // Signed: C# passes a negative length through to format_text.
         length: i64,
-        attributes: Object,
+        attributes: Marks,
     },
     Delete {
         index: usize,
@@ -102,16 +102,30 @@ fn check_index(index: i64) -> EngineResult<usize> {
     Ok(index as usize)
 }
 
-fn marks_of(attributes: &Object) -> EngineResult<Attrs> {
+/// Mark values as the caller holds them. A value's identity is its Arc: a
+/// mark compares === (C# ReferenceEquals) with what the caller passed, so
+/// the same Arc passed again is the same object.
+pub type Marks = Object<Arc<Value>>;
+
+/// Marks with a fresh identity per value, as new C# objects would have.
+pub fn marks(attributes: &Object) -> Marks {
+    let mut out = Marks::default();
+    for member in attributes.members() {
+        out.set(member.key.clone(), Arc::new(member.value.clone()));
+    }
+    out
+}
+
+fn marks_of(attributes: &Marks) -> EngineResult<Attrs> {
     let mut marks = Attrs::default();
     for member in attributes.members() {
-        if let Value::Undefined = member.value {
+        if let Value::Undefined = *member.value {
             fail!(
                 "yjs: the mark \"{}\" is undefined; use null to remove it.",
                 member.key
             );
         }
-        marks.set(member.key.clone(), Arc::new(member.value.clone()));
+        marks.set(member.key.clone(), Arc::clone(&member.value));
     }
     Ok(marks)
 }
@@ -140,7 +154,7 @@ impl TypeRef {
         txn: Option<&Transaction<'_>>,
         index: i64,
         chunk: Str,
-        attributes: Option<&Object>,
+        attributes: Option<&Marks>,
     ) -> EngineResult<()> {
         let index = check_index(index)?;
         if chunk.is_empty() {
@@ -165,7 +179,7 @@ impl TypeRef {
         txn: Option<&Transaction<'_>>,
         index: i64,
         embed: Value,
-        attributes: Option<&Object>,
+        attributes: Option<&Marks>,
     ) -> EngineResult<()> {
         let index = check_index(index)?;
         match embed {
@@ -195,7 +209,7 @@ impl TypeRef {
         txn: Option<&Transaction<'_>>,
         index: i64,
         length: i64,
-        attributes: &Object,
+        attributes: &Marks,
     ) -> EngineResult<()> {
         let index = check_index(index)?;
         if length == 0 {
@@ -273,7 +287,7 @@ macro_rules! text_api {
                 txn: Option<&Transaction<'_>>,
                 index: i64,
                 chunk: impl Into<Str>,
-                attributes: Option<&Object>,
+                attributes: Option<&Marks>,
             ) -> EngineResult<()> {
                 self.0.text_insert(txn, index, chunk.into(), attributes)
             }
@@ -284,7 +298,7 @@ macro_rules! text_api {
                 txn: Option<&Transaction<'_>>,
                 index: i64,
                 embed: Value,
-                attributes: Option<&Object>,
+                attributes: Option<&Marks>,
             ) -> EngineResult<()> {
                 self.0.text_insert_embed(txn, index, embed, attributes)
             }
@@ -295,7 +309,7 @@ macro_rules! text_api {
                 txn: Option<&Transaction<'_>>,
                 index: i64,
                 length: i64,
-                attributes: &Object,
+                attributes: &Marks,
             ) -> EngineResult<()> {
                 self.0.text_format(txn, index, length, attributes)
             }

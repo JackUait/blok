@@ -81,7 +81,13 @@ macro_rules! rich_text_target {
                 chunk: &Str,
                 attributes: &Object,
             ) -> Result<(), EngineError> {
-                $name::insert(self, Some(txn), index as i64, chunk.clone(), Some(attributes))
+                $name::insert(
+                    self,
+                    Some(txn),
+                    index as i64,
+                    chunk.clone(),
+                    Some(&blok_yjs::marks(attributes)),
+                )
             }
 
             fn insert_embed_run(
@@ -96,7 +102,7 @@ macro_rules! rich_text_target {
                     Some(txn),
                     index as i64,
                     Value::Object(embed.clone()),
-                    Some(attributes),
+                    Some(&blok_yjs::marks(attributes)),
                 )
             }
 
@@ -116,7 +122,13 @@ macro_rules! rich_text_target {
                 length: usize,
                 attributes: &Object,
             ) -> Result<(), EngineError> {
-                $name::format(self, Some(txn), index as i64, length as i64, attributes)
+                $name::format(
+                    self,
+                    Some(txn),
+                    index as i64,
+                    length as i64,
+                    &blok_yjs::marks(attributes),
+                )
             }
         }
     )*};

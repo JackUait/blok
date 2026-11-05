@@ -142,12 +142,18 @@ fn plans_and_applies_every_rich_text_edit_fixture() {
             let mut index = 0;
             for op in &seed {
                 match &op.insert {
-                    Value::String(insert) => {
-                        live.insert(Some(txn), index, insert.clone(), Some(&op.attributes))?
-                    }
-                    embed => {
-                        live.insert_embed(Some(txn), index, embed.clone(), Some(&op.attributes))?
-                    }
+                    Value::String(insert) => live.insert(
+                        Some(txn),
+                        index,
+                        insert.clone(),
+                        Some(&blok_yjs::marks(&op.attributes)),
+                    )?,
+                    embed => live.insert_embed(
+                        Some(txn),
+                        index,
+                        embed.clone(),
+                        Some(&blok_yjs::marks(&op.attributes)),
+                    )?,
                 }
                 index += op.length() as i64;
             }

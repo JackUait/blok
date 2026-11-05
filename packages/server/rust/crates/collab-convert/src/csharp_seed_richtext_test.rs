@@ -556,9 +556,19 @@ pub(crate) fn poison_formatted_text(doc: &Doc, block_id: &str) {
     )]);
     let empty = Object::new();
     doc.transact(|t| {
-        text.insert_embed(Some(t), 1, Value::Object(bad_equation), Some(&empty))?;
-        text.insert(Some(t), 2, "x", Some(&marks))?;
-        text.insert_embed(Some(t), 3, Value::Object(bad_page), Some(&empty))
+        text.insert_embed(
+            Some(t),
+            1,
+            Value::Object(bad_equation),
+            Some(&blok_yjs::marks(&empty)),
+        )?;
+        text.insert(Some(t), 2, "x", Some(&blok_yjs::marks(&marks)))?;
+        text.insert_embed(
+            Some(t),
+            3,
+            Value::Object(bad_page),
+            Some(&blok_yjs::marks(&empty)),
+        )
     })
     .unwrap_or_else(|err| panic!("{err}"));
 }

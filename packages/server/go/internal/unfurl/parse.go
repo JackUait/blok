@@ -168,33 +168,96 @@ func (s *selectState) drops() bool {
 	return s != nil && !s.open && !s.closed
 }
 
-// rawTitles is each <title>'s content as written, in document order: the
-// tokenizer gives a title's RCDATA raw, before any entity is decoded. An
-// svg or math <title> is read as RCDATA here, so one whose markup holds
-// another <title> shifts the pairing for the titles after it.
+// rawTitles is each <title>'s content as written, in document order, one
+// for every title element the walk in Parse counts: the tokenizer gives an
+// HTML title's RCDATA raw, before any entity is decoded. It follows the
+// tree builder far enough to stay paired: inside svg or math no tag is raw
+// text and a title is an element (written ""), svg's title, desc and
+// foreignObject are HTML integration points, a breakout tag leaves foreign
+// content, and titles in a template are skipped, as the walk never enters
+// template contents.
 func rawTitles(text string) []string {
+	type foreign struct {
+		name, space string
+		integration bool
+	}
 	tokenizer := html.NewTokenizer(strings.NewReader(text))
 	var titles []string
+	var open []foreign
+	templates := 0
 	for {
-		switch tokenizer.Next() {
-		case html.ErrorToken:
+		kind := tokenizer.Next()
+		if kind == html.ErrorToken {
 			return titles
-		case html.StartTagToken, html.SelfClosingTagToken:
-			name, _ := tokenizer.TagName()
-			if string(name) == "noscript" {
-				// Scripting is off, so the parser reads its markup.
-				tokenizer.NextIsNotRawText()
+		}
+		if kind != html.StartTagToken && kind != html.SelfClosingTagToken && kind != html.EndTagToken {
+			continue
+		}
+		nameBytes, _ := tokenizer.TagName()
+		name := string(nameBytes)
+		inForeign := len(open) > 0 && !open[len(open)-1].integration
+		if kind == html.EndTagToken {
+			popped := false
+			for i := len(open) - 1; i >= 0; i-- {
+				if open[i].name == name {
+					open, popped = open[:i], true
+					break
+				}
 			}
-			if string(name) != "title" {
-				continue
+			if !popped && !inForeign && name == "template" && templates > 0 {
+				templates--
 			}
-			var raw strings.Builder
-			for tokenizer.Next() == html.TextToken {
-				raw.Write(tokenizer.Raw())
+			continue
+		}
+		if inForeign && breakoutTags[name] {
+			open, inForeign = nil, false
+		}
+		if inForeign {
+			tokenizer.NextIsNotRawText()
+			if name == "title" && templates == 0 {
+				titles = append(titles, "")
 			}
+			if kind == html.StartTagToken {
+				space := open[len(open)-1].space
+				integration := space == "svg" && (name == "foreignobject" || name == "desc" || name == "title")
+				open = append(open, foreign{name, space, integration})
+			}
+			continue
+		}
+		switch name {
+		case "svg", "math":
+			if kind == html.StartTagToken {
+				open = append(open, foreign{name, name, false})
+			}
+			continue
+		case "template":
+			templates++
+		case "noscript":
+			// Scripting is off, so the parser reads its markup.
+			tokenizer.NextIsNotRawText()
+		}
+		if name != "title" {
+			continue
+		}
+		var raw strings.Builder
+		for tokenizer.Next() == html.TextToken {
+			raw.Write(tokenizer.Raw())
+		}
+		if templates == 0 {
 			titles = append(titles, raw.String())
 		}
 	}
+}
+
+// breakoutTags are the start tags that end foreign content (the HTML
+// spec's list; font only with color, face or size, which is left out).
+var breakoutTags = map[string]bool{
+	"b": true, "big": true, "blockquote": true, "body": true, "br": true, "center": true, "code": true,
+	"dd": true, "div": true, "dl": true, "dt": true, "em": true, "embed": true, "h1": true, "h2": true,
+	"h3": true, "h4": true, "h5": true, "h6": true, "head": true, "hr": true, "i": true, "img": true,
+	"li": true, "listing": true, "menu": true, "meta": true, "nobr": true, "ol": true, "p": true,
+	"pre": true, "ruby": true, "s": true, "small": true, "span": true, "strong": true, "strike": true,
+	"sub": true, "sup": true, "table": true, "tt": true, "u": true, "ul": true, "var": true,
 }
 
 // asciiLower stands in for ToLowerInvariant before a compare with an ASCII

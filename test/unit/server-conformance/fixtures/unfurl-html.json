@@ -1109,6 +1109,51 @@
       "name": "meta inside a title inside an option",
       "url": "https://example.com/x",
       "html": "<html><body><select><option><title>T<meta property=\"og:image\" content=\"/i.png\"></title></option></select></body></html>"
+    },
+    {
+      "name": "an svg title holding a title before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><svg><title>S<title>I</title></title></svg><select><option><title><b>X</b> Y</title></option></select></body></html>"
+    },
+    {
+      "name": "a math title holding a title before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><math><title>M<title>N</title></title></math><select><option><title><b>X</b> Y</title></option></select></body></html>"
+    },
+    {
+      "name": "an svg title holding a title after a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title><b>X</b> Y</title></option></select><svg><title>S<title>I</title></title></svg></body></html>"
+    },
+    {
+      "name": "a plain svg title before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><svg><title>S</title></svg><select><option><title><b>X</b> Y</title></option></select></body></html>"
+    },
+    {
+      "name": "an svg title with markup before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><svg><title>S <b>b</b></title></svg><select><option><title>A <b>B</b></title></option></select></body></html>"
+    },
+    {
+      "name": "an svg title holding a title before a title inside a button",
+      "url": "https://example.com/x",
+      "html": "<html><body><svg><title>S<title>I</title></title></svg><select><button><title><i>Q</i> R</title></button></select></body></html>"
+    },
+    {
+      "name": "a title in a template before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><template><title>T</title></template><select><option><title><b>X</b> Y</title></option></select></body></html>"
+    },
+    {
+      "name": "an svg style holding a title before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><svg><style><title>S</title></style></svg><select><option><title><b>X</b> Y</title></option></select></body></html>"
+    },
+    {
+      "name": "markup that leaves svg before a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><svg><title>S</title><p><title>P</title><select><option><title><b>X</b> Y</title></option></select></body></html>"
     }
   ],
   "answers": [
@@ -2884,6 +2929,78 @@
       "title": "T",
       "description": "",
       "image": "https://example.com/i.png",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "I",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "X",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "X",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "X",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "A",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "I",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "X",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "X",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "P",
+      "description": "",
+      "image": "",
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""

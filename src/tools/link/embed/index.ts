@@ -41,6 +41,7 @@ import { createEmbedWindow } from './empty-window';
 import { canFrameGeneric, genericEmbedPolicy, type GenericEmbedPolicy } from '../generic-embed-policy';
 import { embedCheckRefuses, type CheckEmbed } from '../check-embed';
 import { renderEmbedPreview } from './preview';
+import { DEFAULT_HEIGHT, DEFAULT_WIDTH, clampRatioHeight, embedFrameSize } from './frame-size';
 import { overrideStatic } from '../../../components/utils/override-static';
 import type { LazySheet } from '../../../components/utils/lazy-styles';
 
@@ -181,8 +182,6 @@ function resolveEmbedRender(
   return { mode: 'empty', src: '', service: '', href: '' };
 }
 
-const DEFAULT_WIDTH = 580;
-const DEFAULT_HEIGHT = 320;
 const FULL_WIDTH_PERCENT = 100;
 const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
 
@@ -980,8 +979,7 @@ export class Embed implements BlockTool {
   private buildIframeFigure(): HTMLElement {
     const figure = document.createElement('figure');
 
-    const w = this.data.width && this.data.width > 0 ? this.data.width : DEFAULT_WIDTH;
-    const h = this.data.height && this.data.height > 0 ? this.data.height : DEFAULT_HEIGHT;
+    const { width: w, height: h } = embedFrameSize(this.data.width, this.data.height, this.isHeightResizable());
     const fixedWidth = registryEntry(this.data.service)?.fixedWidth === true;
 
     figure.setAttribute('data-role', 'embed-figure');
@@ -1171,14 +1169,14 @@ export class Embed implements BlockTool {
 
     const aspect = figure.querySelector<HTMLElement>('[data-role="embed-aspect"]');
     const fixedHeight = this.isHeightResizable();
-    const width = this.data.width && this.data.width > 0 ? this.data.width : DEFAULT_WIDTH;
+    const { width } = embedFrameSize(this.data.width, this.data.height, fixedHeight);
     // A generic embed keeps its width/height ratio box, so saved embeds look
     // as before. The drag sets the shown height; this turns it into the
     // height at the saved width.
     const ratioHeight = (heightPx: number): number => {
       const shownWidth = aspect?.getBoundingClientRect().width ?? 0;
 
-      return shownWidth > 0 ? Math.round(heightPx * width / shownWidth) : heightPx;
+      return Math.round(clampRatioHeight(width, shownWidth > 0 ? heightPx * width / shownWidth : heightPx));
     };
 
     const detach = attachHeightResizeHandle({

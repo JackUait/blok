@@ -17,9 +17,9 @@ import (
 	"time"
 )
 
-// The roots are the trust settings' anchors, as rustls-native-certs reads
-// them for the Rust server: C# asks SecTrust, which trusts roots added to
-// the Keychain. Verification stays Go's own over a pool: the platform
+// The roots are the trust settings' anchors for an SSL server check, as
+// trustd decides them for C#'s SecTrust (trustsettings.go); Rust reads the
+// same exports. Verification stays Go's own over a pool: the platform
 // verifier would let trustd fetch a certificate's caIssuers URL past the
 // guard (see tls_darwin_test.go). Intermediates kept only in the Keychain
 // are not used, as in Rust.

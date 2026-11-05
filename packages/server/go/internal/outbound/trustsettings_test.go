@@ -16,34 +16,61 @@ func setting(policy string, result int64) trustSetting {
 	return s
 }
 
-// rustls-native-certs (load_native_certs, tls_trust_settings_for_certificate)
-// on macOS: user over admin over system, only sslServer or unnamed entries
-// count, Unspecified and unknown results fall through, none means trusted,
-// and only TrustRoot and TrustAsRoot are kept.
-func TestTrustSettingsDecideAsRustlsNativeCertsDoes(t *testing.T) {
-	certs := map[string][]byte{"A": {1}, "B": {2}, "C": {3}, "D": {4}, "E": {5}, "F": {6}, "G": {7}}
+// sslOID is the Apple SSL policy OID, as an export's kSecTrustSettingsPolicy
+// carries it (1.2.840.113635.100.1.3); basicOID is basicX509's.
+var (
+	sslOID   = []byte{0x2a, 0x86, 0x48, 0x86, 0xf7, 0x63, 0x64, 0x01, 0x03}
+	basicOID = []byte{0x2a, 0x86, 0x48, 0x86, 0xf7, 0x63, 0x64, 0x01, 0x02}
+)
+
+// trustd's SecPVCGetTrustSettingsResult and SecPVCMeetsConstraint
+// (apple-oss-distributions/Security, trust/trustd/SecPolicyServer.c), which
+// SecTrust runs for C#: an empty list trusts; otherwise the first entry
+// whose every constraint matches an SSL server check decides, with no
+// result meaning TrustRoot. An entry for another policy, or with a
+// constraint a fixed root set cannot check, does not match. Unspecified or
+// an unknown result decides nothing, nor does no match; then the next
+// domain decides.
+func TestTrustSettingsDecideAsTrustdDoes(t *testing.T) {
+	certs := map[string][]byte{}
+	for _, hash := range "ABCDEFGHIJKLMNOP" {
+		certs[string(hash)] = []byte(string(hash))
+	}
 	user := map[string][]trustSetting{
 		"A": {setting("sslServer", 3)},
+		"G": {setting("smime", 1)},
+		"H": {{policyOID: sslOID, result: 1, hasResult: true}},
+		"I": {{policyName: "sslServer", hasPolicyName: true, constrained: true}},
+		"J": {{policyName: "sslServer", hasPolicyName: true, policyOID: basicOID}},
+		"K": {{policyName: "sslServer", hasPolicyName: true, policyOID: sslOID, result: 2, hasResult: true}},
+		"L": {{policyOID: basicOID}},
 	}
 	admin := map[string][]trustSetting{
 		"A":       {},
 		"B":       {setting("basicX509", 3), setting("sslServer", 2)},
-		"C":       {setting("sslServer", 4), setting("", 3)},
+		"C":       {setting("sslServer", 4), setting("", 1)},
+		"M":       {setting("sslServer", 4), setting("", 1)},
 		"D":       {setting("sslServer", 4)},
 		"E":       {setting("", 9), setting("sslServer", 0)},
+		"N":       {setting("smime", 3)},
 		"missing": {},
 	}
 	system := map[string][]trustSetting{
 		"F": nil,
-		"G": {setting("smime", 3)},
 		"B": {setting("", 3)},
+		"M": nil,
+		"N": nil,
+		"P": {setting("smime", 1)},
 	}
 	got := trustedAnchors([]map[string][]trustSetting{user, admin, system}, certs)
-	// A: denied by the user. C: denied after an Unspecified. B: TrustAsRoot
-	// from admin wins over the system's deny.
-	want := [][]byte{{2}, {4}, {5}, {6}, {7}}
+	// A: the user denies. B: admin's TrustAsRoot beats the system's deny.
+	// C: Unspecified decides nothing. M: as C, then the system trusts it.
+	// G, L, P: only other policies. H: the SSL OID alone. I: a hostname-only
+	// rule. J: the name with another policy's OID. K: name and OID.
+	// N: admin's S/MIME rule leaves it to the system.
+	want := [][]byte{[]byte("B"), []byte("F"), []byte("H"), []byte("K"), []byte("M"), []byte("N")}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %v, want %v", got, want)
+		t.Fatalf("got %q, want %q", got, want)
 	}
 }
 
@@ -82,6 +109,18 @@ func TestReadsTheTrustListOfAnExport(t *testing.T) {
 					<key>kSecTrustSettingsAllowedError</key>
 					<integer>-2147409654</integer>
 				</dict>
+				<dict>
+					<key>kSecTrustSettingsPolicyString</key>
+					<string>docs.example</string>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsKeyUsage</key>
+					<integer>4294967295</integer>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsKeyUsage</key>
+					<integer>8</integer>
+				</dict>
 			</array>
 		</dict>
 		<key>925A8F8D2C6D04E0665F596AFF22D863E8256F3F</key>
@@ -102,7 +141,13 @@ func TestReadsTheTrustListOfAnExport(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string][]trustSetting{
-		"308763FAEDCBFA752EE972550B6B457277650C86": {setting("sslServer", 1), {}},
+		"308763FAEDCBFA752EE972550B6B457277650C86": {
+			{policyName: "sslServer", hasPolicyName: true, policyOID: sslOID, result: 1, hasResult: true},
+			{},
+			{constrained: true},
+			{},
+			{constrained: true},
+		},
 		"925A8F8D2C6D04E0665F596AFF22D863E8256F3F": nil,
 	}
 	if !reflect.DeepEqual(got, want) {

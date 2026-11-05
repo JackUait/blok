@@ -32,7 +32,7 @@ type fixturePolicy struct {
 
 func (p *fixturePolicy) Validate(raw string, base *dotnet.URI) (Target, error) {
 	url, ok := resolve(raw, base)
-	if !ok || url.Host != p.host || url.Port != p.port {
+	if !ok || url.Host != p.host || url.Port != p.port || url.UserInfo != "" || !url.IsHTTP() {
 		return Target{}, fail(Blocked)
 	}
 	return Target{URL: url, Host: url.IdnHost, Port: url.Port}, nil

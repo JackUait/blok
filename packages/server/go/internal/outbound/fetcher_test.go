@@ -3,6 +3,7 @@ package outbound
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -642,5 +643,29 @@ func TestTruncatesTheBodyAtTheCapWhenAskedAndKeepsTheFinalHeaders(t *testing.T) 
 	limits.Truncate = false
 	if _, err = f.Get(context.Background(), base+"/final", limits); !IsFailure(err, TooLarge) {
 		t.Fatalf("without Truncate got %v, want TooLarge", err)
+	}
+}
+
+// C# ValidateLimits throws ArgumentOutOfRangeException, not a
+// GuardedFetchException, before it resolves or connects.
+func TestRefusesLimitsOutsideTheSupportedRangeBeforeFetching(t *testing.T) {
+	for _, c := range []struct {
+		limits  Limits
+		message string
+	}{
+		{Limits{Timeout: 2 * time.Second, MaxBytes: -1}, "The response byte limit is outside the supported range."},
+		{Limits{Timeout: 2 * time.Second, MaxBytes: 0x7FFFFFC8}, "The response byte limit is outside the supported range."},
+		{Limits{Timeout: 2 * time.Second, MaxBytes: 4, MaxRedirects: -1}, "The redirect limit cannot be negative."},
+	} {
+		resolver := &countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}}
+		f := newTestFetcher(anyAddress{}, resolver)
+		_, err := f.Get(context.Background(), "http://limits.example/", c.limits)
+		var fetchErr *Error
+		if err == nil || errors.As(err, &fetchErr) || err.Error() != c.message {
+			t.Errorf("%+v: %v", c.limits, err)
+		}
+		if resolver.calls.Load() != 0 {
+			t.Errorf("%+v: resolved before refusing", c.limits)
+		}
 	}
 }

@@ -677,3 +677,15 @@ async fn tls_size_limit_disposes_the_connection() {
         .unwrap()
         .unwrap();
 }
+
+// C# ValidateLimits throws ArgumentOutOfRangeException before it resolves.
+// A usize cannot be negative, so only the byte cap ceiling is left.
+#[tokio::test]
+#[should_panic(expected = "The response byte limit is outside the supported range.")]
+async fn refuses_limits_outside_the_supported_range_before_fetching() {
+    let mut f = Fetcher::new(Arc::new(DefaultPolicy));
+    f.resolve = Arc::new(|_| panic!("resolved before refusing"));
+    let mut over = limits();
+    over.max_bytes = 0x7FFF_FFC8;
+    let _ = f.get("http://limits.example/", &over).await;
+}

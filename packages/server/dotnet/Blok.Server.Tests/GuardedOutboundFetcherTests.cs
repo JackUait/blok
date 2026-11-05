@@ -1182,6 +1182,28 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
   }
 
+  [Theory]
+  [InlineData(-1L, 0, "The response byte limit is outside the supported range. (Parameter 'limits')")]
+  [InlineData(0x7FFFFFC8L, 0, "The response byte limit is outside the supported range. (Parameter 'limits')")]
+  [InlineData(4L, -1, "The redirect limit cannot be negative. (Parameter 'limits')")]
+  public async Task RefusesLimitsOutsideTheSupportedRangeBeforeFetching(
+      long maximumBytes,
+      int maximumRedirects,
+      string message)
+  {
+    await using var origin = new LoopbackOrigin();
+    var fetcher = CreateFixtureFetcher(origin, "limits.example");
+
+    var error = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+        async () => await fetcher.GetAsync(
+            $"http://limits.example:{origin.Port}/",
+            new GuardedFetchLimits(TimeSpan.FromSeconds(2), maximumBytes, maximumRedirects),
+            CancellationToken.None));
+
+    Assert.Equal(message, error.Message);
+    Assert.Equal(0, origin.RequestCount);
+  }
+
   [Fact]
   public async Task TotalDeadlineStopsAResponseThatKeepsMakingProgress()
   {

@@ -153,7 +153,16 @@ impl Fetcher {
 
     /// Fetches `raw`. Every failure is an `Error`; the caller cancels by
     /// dropping the future, which closes the connection and frees the slot.
+    ///
+    /// # Panics
+    ///
+    /// When `max_bytes` is above .NET's `Array.MaxLength`, where C# throws
+    /// ArgumentOutOfRangeException.
     pub async fn get(&self, raw: &str, limits: &Limits) -> Result<Response, Error> {
+        assert!(
+            limits.max_bytes <= 0x7FFF_FFC7,
+            "The response byte limit is outside the supported range."
+        );
         let timed_out = fail(Failure::TimedOut);
         if limits.timeout.is_zero() {
             return Err(timed_out);

@@ -152,9 +152,12 @@ func systemResolve(ctx context.Context, host string) ([]netip.Addr, error) {
 }
 
 // Get fetches raw. The timeout covers the wait for a slot. Every failure
-// but the caller's own cancellation becomes an *Error.
+// but the caller's own cancellation and bad limits becomes an *Error.
 func (f *Fetcher) Get(ctx context.Context, raw string, limits Limits) (*Response, error) {
 	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := validateLimits(limits); err != nil {
 		return nil, err
 	}
 	deadline, cancel := context.WithTimeout(ctx, limits.Timeout)
@@ -186,6 +189,21 @@ func (f *Fetcher) Get(ctx context.Context, raw string, limits Limits) (*Response
 	}
 	response.release = release
 	return response, nil
+}
+
+// maxArrayLength is .NET's Array.MaxLength, C#'s byte cap ceiling.
+const maxArrayLength = 0x7FFFFFC7
+
+// validateLimits is C# ValidateLimits: ArgumentOutOfRangeException, so not
+// an *Error.
+func validateLimits(limits Limits) error {
+	if limits.MaxBytes < 0 || limits.MaxBytes > maxArrayLength {
+		return errors.New("The response byte limit is outside the supported range.")
+	}
+	if limits.MaxRedirects < 0 {
+		return errors.New("The redirect limit cannot be negative.")
+	}
+	return nil
 }
 
 func (f *Fetcher) collapse(ctx, deadline context.Context, err error) error {

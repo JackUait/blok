@@ -202,3 +202,25 @@ func TestEveryDoorChecksPurgingThenDrainingThenTheCooldown(t *testing.T) {
 		})
 	}
 }
+
+// C# AHeldOffWaitPrintsAsATimeSpan: the "held off" wait prints with
+// TimeSpan's "c" format.
+func TestAHeldOffWaitPrintsAsATimeSpan(t *testing.T) {
+	cases := []struct {
+		wait    time.Duration
+		printed string
+	}{
+		{2 * time.Second, "00:00:02"},
+		{time.Minute, "00:01:00"},
+		{5 * time.Millisecond, "00:00:00.0050000"},
+		{1500 * time.Millisecond, "00:00:01.5000000"},
+		{150, "00:00:00.0000001"},
+		{90_061 * time.Second, "1.01:01:01"},
+		{12*24*time.Hour + time.Second, "12.00:00:01"},
+	}
+	for _, c := range cases {
+		if got := timeSpan(c.wait); got != c.printed {
+			t.Errorf("timeSpan(%v) = %q, want %q", c.wait, got, c.printed)
+		}
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -434,7 +435,7 @@ func (m *Manager) onRoomClosed(r *Room) {
 		m.cooldowns[r.docID] = cooldown{failures: failures, until: m.options.Now().Add(wait)}
 		if r.loadHeldOff {
 			m.logf(`collab: document "` + r.docID + `" failed to load in a way the next open repeats, so it is held off for ` +
-				wait.String() + ` (failure ` + itoa(failures) + `); the room's own log line says why`)
+				timeSpan(wait) + ` (failure ` + itoa(failures) + `); the room's own log line says why`)
 		}
 	} else {
 		// An ordinary close: the next failure starts its wait over.
@@ -463,4 +464,26 @@ func panicMessage(failure any) string {
 		return err.Error()
 	}
 	return fmt.Sprint(failure)
+}
+
+// timeSpan prints d as a .NET TimeSpan does ("c" format):
+// [-][d.]hh:mm:ss[.fffffff], in whole 100 ns ticks.
+func timeSpan(d time.Duration) string {
+	ticks := int64(d / 100)
+	sign := ""
+	if ticks < 0 {
+		sign, ticks = "-", -ticks
+	}
+	const perSecond = int64(time.Second / 100)
+	fraction, seconds := ticks%perSecond, ticks/perSecond
+	days := seconds / 86400
+	text := sign
+	if days > 0 {
+		text += strconv.FormatInt(days, 10) + "."
+	}
+	text += fmt.Sprintf("%02d:%02d:%02d", seconds/3600%24, seconds/60%60, seconds%60)
+	if fraction > 0 {
+		text += fmt.Sprintf(".%07d", fraction)
+	}
+	return text
 }

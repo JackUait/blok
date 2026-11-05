@@ -460,7 +460,9 @@ func TestAMigrationThatRunsPastTheRuntimesLimitsIsHeldOff(t *testing.T) {
 	if got := reader.calls.Load(); got != 1 {
 		t.Fatalf("%d reads, want 1", got)
 	}
-	if !r.logged("held off") {
+	// C# prints the wait as a TimeSpan.
+	if !r.logged(`collab: document "` + testDoc + `" failed to load in a way the next open repeats, ` +
+		`so it is held off for 00:00:02 (failure 1); the room's own log line says why`) {
 		t.Fatalf("log = %q", r.log)
 	}
 

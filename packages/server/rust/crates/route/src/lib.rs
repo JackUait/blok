@@ -22,6 +22,8 @@ use blok_http::{BoxFuture, Handler, Request, ResponseWriter};
 #[derive(Default)]
 pub struct Router {
     routes: Vec<Entry>,
+    /// Answers a request no route matches; None is [`not_found`].
+    fallback: Option<Arc<dyn Handler>>,
 }
 
 struct Entry {
@@ -59,6 +61,11 @@ impl Router {
     /// mapped. Panics on a malformed pattern.
     pub fn handle(&mut self, pattern: &str, methods: Option<&[&str]>, handler: impl Handler) {
         self.handle_arc(pattern, methods, Arc::new(handler));
+    }
+
+    /// Answers every request no route matches.
+    pub fn set_fallback(&mut self, handler: impl Handler) {
+        self.fallback = Some(Arc::new(handler));
     }
 
     pub fn handle_arc(
@@ -133,7 +140,10 @@ impl Handler for Router {
                 request.extensions.insert(PathValues(values));
                 handler.serve(request, response)
             }
-            None => Box::pin(not_found(request, response)),
+            None => match &self.fallback {
+                Some(fallback) => fallback.serve(request, response),
+                None => Box::pin(not_found(request, response)),
+            },
         }
     }
 }
@@ -252,6 +262,22 @@ async fn bad_request(mut response: ResponseWriter) {
     headers.set("Connection", "close");
     headers.set("Content-Length", "0");
     let _ = response.start(400).await;
+}
+
+/// Whether the request path is `prefix` itself or below it, as
+/// MapGroup(prefix)'s "/{**path}" catch-all matches: by segment, ASCII case
+/// folded. "" is the root group, which takes every path.
+pub fn in_group(request: &Request, prefix: &str) -> bool {
+    let decoded = decode_keeping_slash(request.path());
+    let Some(parts) = path_segments(&decoded) else {
+        return false;
+    };
+    let group = path_segments(prefix).unwrap_or_default();
+    parts.len() >= group.len()
+        && group
+            .iter()
+            .zip(&parts)
+            .all(|(literal, part)| literal.eq_ignore_ascii_case(part))
 }
 
 /// The catch-all for a path no route matches, whatever the method.

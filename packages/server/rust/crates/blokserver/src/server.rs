@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime};
 use blok_auth::User;
 use blok_blob::Store;
 use blok_dotnet::equals_ordinal_ignore_case;
-use blok_http::{Request, ResponseWriter, is_field_value};
+use blok_http::{Handler, Request, ResponseWriter, is_field_value};
 use blok_jsjson::append_quoted;
 use blok_route::{Router, method_not_allowed, start_stream};
 
@@ -230,6 +230,24 @@ impl Server {
     /// the root), every other path answered 404, and local files served at
     /// the public URL path, outside the prefix.
     pub fn handler(&self, prefix: &str) -> Router {
+        self.map_routes(prefix, &|next| next)
+    }
+
+    /// handler with the host's own authentication in front of the group, as
+    /// MapBlokServer(prefix).RequireAuthorization() is in C#: `auth` wraps
+    /// every route, 405 answer and the group's 404, but /health (and its
+    /// 405) and every CORS preflight stay anonymous, as AllowAnonymous keeps
+    /// them. Local files and paths outside the group are not the group's,
+    /// so `auth` does not see them either.
+    pub fn handler_with_auth(
+        &self,
+        prefix: &str,
+        auth: impl Fn(Arc<dyn Handler>) -> Arc<dyn Handler>,
+    ) -> Router {
+        self.map_routes(prefix, &auth)
+    }
+
+    fn map_routes(&self, prefix: &str, protect: &Protect<'_>) -> Router {
         let prefix = prefix.trim_end_matches('/');
         let mut router = Router::new();
         let o = &self.inner.options;
@@ -270,12 +288,14 @@ impl Server {
                 &format!("{prefix}/unfurl"),
                 "GET",
                 crate::outbound::unfurl,
+                protect,
             );
             self.shell(
                 &mut router,
                 &format!("{prefix}/frame-check"),
                 "GET",
                 crate::outbound::frame_check,
+                protect,
             );
         }
         if o.has_storage() {
@@ -284,12 +304,14 @@ impl Server {
                 &format!("{prefix}/upload"),
                 "POST",
                 crate::upload::upload,
+                protect,
             );
             self.shell(
                 &mut router,
                 &format!("{prefix}/delete"),
                 "POST",
                 crate::handlers::delete,
+                protect,
             );
             if o.unfurl_enabled {
                 self.shell(
@@ -297,35 +319,45 @@ impl Server {
                     &format!("{prefix}/upload-by-url"),
                     "POST",
                     crate::outbound::upload_by_url,
+                    protect,
                 );
             }
         }
         if o.collab_enabled && self.inner.collab.is_some() {
-            self.map_collab(&mut router, prefix);
+            self.map_collab(&mut router, prefix, protect);
         }
+        let not_found: Arc<dyn Handler> = protect(Arc::new(blok_route::not_found));
+        let group = prefix.to_owned();
+        router.set_fallback(move |request: Request, response: ResponseWriter| {
+            if blok_route::in_group(&request, &group) {
+                not_found.serve(request, response)
+            } else {
+                Box::pin(blok_route::not_found(request, response))
+            }
+        });
         router
     }
 
-    fn map_collab(&self, router: &mut Router, prefix: &str) {
+    fn map_collab(&self, router: &mut Router, prefix: &str, protect: &Protect<'_>) {
         let o = &self.inner.options;
         // Not behind the guard: the handshake is its own door, and a live
         // socket outlasts any request deadline.
-        let endpoint = self.sync_endpoint();
+        let endpoint = protect(Arc::new(self.sync_endpoint()));
         router.handle(
             &format!("{prefix}/sync/{{doc}}"),
             Some(&["GET"]),
             move |request: Request, response: ResponseWriter| {
-                let endpoint = endpoint.clone();
+                let endpoint = Arc::clone(&endpoint);
                 async move {
                     request.lift_timeout();
-                    blok_http::Handler::serve(&endpoint, request, response).await;
+                    endpoint.serve(request, response).await;
                 }
             },
         );
-        router.handle(
+        router.handle_arc(
             &format!("{prefix}/sync/{{doc}}"),
             None,
-            method_not_allowed("GET"),
+            protect(Arc::new(method_not_allowed("GET"))),
         );
         let rooms = Arc::clone(&self.inner);
         let corrupt = Arc::clone(&self.inner);
@@ -367,6 +399,7 @@ impl Server {
                     let routes = routes.clone();
                     async move { route.serve(&routes, request, response).await }
                 },
+                protect,
             );
         }
         if o.auth == "none" && o.authorization.is_none() {
@@ -411,26 +444,34 @@ impl Server {
     }
 
     /// Maps one guarded route with its preflight and its 405 answer.
-    fn shell<F, Fut>(&self, router: &mut Router, pattern: &str, method: &'static str, handler: F)
-    where
+    fn shell<F, Fut>(
+        &self,
+        router: &mut Router,
+        pattern: &str,
+        method: &'static str,
+        handler: F,
+        protect: &Protect<'_>,
+    ) where
         F: Fn(Arc<Inner>, Request, ResponseWriter) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static,
     {
         let require_write = method != "GET";
         let handler = Arc::new(handler);
         let inner = Arc::clone(&self.inner);
-        router.handle(
+        router.handle_arc(
             pattern,
             Some(&[method]),
-            move |mut request: Request, mut response: ResponseWriter| {
-                let inner = Arc::clone(&inner);
-                let handler = Arc::clone(&handler);
-                async move {
-                    if guard(&inner, &mut request, &mut response, require_write).await {
-                        handler(inner, request, response).await;
+            protect(Arc::new(
+                move |mut request: Request, mut response: ResponseWriter| {
+                    let inner = Arc::clone(&inner);
+                    let handler = Arc::clone(&handler);
+                    async move {
+                        if guard(&inner, &mut request, &mut response, require_write).await {
+                            handler(inner, request, response).await;
+                        }
                     }
-                }
-            },
+                },
+            )),
         );
         let inner = Arc::clone(&self.inner);
         router.handle(
@@ -447,9 +488,12 @@ impl Server {
             "GET" => "GET, HEAD, OPTIONS".to_owned(),
             _ => format!("{method}, OPTIONS"),
         };
-        router.handle(pattern, None, method_not_allowed(allow));
+        router.handle_arc(pattern, None, protect(Arc::new(method_not_allowed(allow))));
     }
 }
+
+/// What wraps the routes the group's authorization covers.
+type Protect<'a> = dyn Fn(Arc<dyn Handler>) -> Arc<dyn Handler> + 'a;
 
 #[cfg(feature = "conformance")]
 impl Server {

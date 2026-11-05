@@ -468,3 +468,64 @@ async fn preserves_the_go_method_and_unknown_route_responses() {
         );
     }
 }
+
+/// A host's own authentication: 401 unless X-Test-User is set.
+fn require_test_user(next: Arc<dyn blok_http::Handler>) -> Arc<dyn blok_http::Handler> {
+    Arc::new(move |request: Request, mut response: ResponseWriter| {
+        let next = Arc::clone(&next);
+        async move {
+            if request.headers().get("X-Test-User").is_none() {
+                response.set_status(401);
+                return;
+            }
+            next.serve(request, response).await;
+        }
+    })
+}
+
+async fn authorized() -> crate::testutil::Running {
+    let server = Server::new(Options {
+        allowed_origins: vec!["https://app.example.test".into()],
+        unfurl_enabled: true,
+        ..Options::default()
+    })
+    .unwrap();
+    start(server.handler_with_auth("/blok", require_test_user)).await
+}
+
+// BlokServerRegistrationTests 'ApplicationAuthorizationProtectsGuardedRoutesOnly':
+// MapBlokServer(...).RequireAuthorization() keeps /health and CORS
+// preflights anonymous (AllowAnonymous).
+#[tokio::test]
+async fn application_authorization_protects_guarded_routes_only() {
+    let running = authorized().await;
+    for (head, status) in [
+        ("GET /blok/unfurl HTTP/1.1", 401),
+        ("GET /blok/unfurl HTTP/1.1\r\nX-Test-User: signed-in", 400),
+        ("GET /blok/health HTTP/1.1", 200),
+        (
+            "OPTIONS /blok/unfurl HTTP/1.1\r\nOrigin: https://app.example.test\r\nAccess-Control-Request-Method: GET",
+            204,
+        ),
+    ] {
+        let got = send(running.address, head, b"").await;
+        assert_eq!(got.status, status, "{head}");
+    }
+}
+
+// BlokServerRegistrationTests 'ApplicationAuthorizationCoversTheFallbacksButNotHealth':
+// the group's 405 fallbacks and its catch-all 404 need the host's auth;
+// /health's 405 and a path outside the group do not.
+#[tokio::test]
+async fn application_authorization_covers_the_fallbacks_but_not_health() {
+    let running = authorized().await;
+    for (head, status) in [
+        ("PUT /blok/unfurl HTTP/1.1", 401),
+        ("GET /blok/missing HTTP/1.1", 401),
+        ("PUT /blok/health HTTP/1.1", 405),
+        ("GET /elsewhere HTTP/1.1", 404),
+    ] {
+        let got = send(running.address, head, b"").await;
+        assert_eq!(got.status, status, "{head}");
+    }
+}

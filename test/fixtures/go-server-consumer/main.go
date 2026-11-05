@@ -28,7 +28,8 @@ func main() {
 	options.Version = "package-fixture"
 	options.CollabActivityObserver = lastSeen{}
 	options.CollabOperationStore = elsewhere{}
-	options.Documents.PoolSize = 1
+	poolSize := 1
+	options.Documents.PoolSize = &poolSize
 	server, err := blokserver.New(options)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

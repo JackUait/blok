@@ -191,8 +191,8 @@ func dirExists(path string) bool {
 }
 
 // globFiles is Directory.GetFiles(dir, stem + ".*"): files only, and .NET's
-// Win32 matching also takes a bare stem.
-func globFiles(dir, stem string) ([]string, error) {
+// Win32 matching also takes a bare stem. A variable so a test can fail it.
+var globFiles = func(dir, stem string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -1307,7 +1307,9 @@ func (s *Session) WriteCheckpoint(ctx context.Context, checkpoint operation.Chec
 	mine := "." + strconv.FormatUint(s.manifest.Fence, 10)
 	stale, err := globFiles(s.docDir, "checkpoint."+strconv.FormatUint(s.manifest.Generation, 10))
 	if err != nil {
-		return nil
+		// C# lets this throw too: the publication stands, and the caller's
+		// retry at the same sequence is a no-op.
+		return err
 	}
 	for _, other := range stale {
 		if other != name && strings.HasSuffix(other, mine) {

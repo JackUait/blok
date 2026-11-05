@@ -217,6 +217,12 @@ fn sorted_names(dir: &Path) -> io::Result<Vec<String>> {
     Ok(names)
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Fails the stale-checkpoint listing in WriteCheckpoint.
+    pub(crate) static FAIL_SWEEP_LISTING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 /// Directory.GetFiles(dir, stem + ".*"): files only, and .NET's Win32
 /// matching also takes a bare stem.
 fn glob_files(dir: &Path, stem: &str) -> io::Result<Vec<String>> {
@@ -1480,12 +1486,19 @@ impl Session {
         // checkpoint may be live. Superseded generations are history and are
         // never swept here.
         let mine = format!(".{}", self.manifest.fence);
-        let Ok(stale) = glob_files(
+        let stale = glob_files(
             &self.doc_dir,
             &format!("checkpoint.{}", self.manifest.generation),
-        ) else {
-            return Ok(());
+        );
+        #[cfg(test)]
+        let stale = if FAIL_SWEEP_LISTING.get() {
+            Err(io::Error::other("injected listing failure"))
+        } else {
+            stale
         };
+        // C# lets this throw too: the publication stands, and the caller's
+        // retry at the same sequence is a no-op.
+        let stale = stale?;
         for other in stale {
             if other != name
                 && other.ends_with(&mine)

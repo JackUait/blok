@@ -747,3 +747,34 @@ fn refuses_to_delete_when_the_manifest_is_empty() {
     assert_eq!(journal_names(&store, 3).len(), 1);
     assert_eq!(journal_names(&store, 1).len(), 1);
 }
+
+// C# LocalCollabOperationStore.WriteCheckpointAsync lists the folder for
+// stale checkpoints without a guard, so a listing failure after the
+// publication throws even though the manifest names the new checkpoint.
+#[test]
+fn a_listing_failure_after_a_checkpoint_is_published_is_reported() {
+    let store = new_twin_store();
+    let mut session = store.open();
+    twin_reset(&mut session, 1, &twin_lineage(1), &[]);
+    twin_append(&mut session, 1, &[0x01]).unwrap();
+    crate::store::FAIL_SWEEP_LISTING.set(true);
+    let result = session.write_checkpoint(
+        &Context::background(),
+        &Checkpoint {
+            through: 1,
+            state: vec![0x02],
+        },
+    );
+    crate::store::FAIL_SWEEP_LISTING.set(false);
+    match result {
+        Err(Error::Io(err)) => assert_eq!(err.to_string(), "injected listing failure"),
+        other => panic!("{other:?}"),
+    }
+    session.close();
+    let reopened = store.open();
+    let checkpoint = reopened.open_result().checkpoint.as_ref().unwrap();
+    assert_eq!(
+        (checkpoint.through, checkpoint.state.clone()),
+        (1, vec![0x02])
+    );
+}

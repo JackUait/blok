@@ -506,3 +506,27 @@ func TestAnAppendThatCannotBeUndoneFaultsTheSession(t *testing.T) {
 		t.Fatalf("err = %v, want %q", err, want)
 	}
 }
+
+// C# LocalCollabOperationStore.WriteCheckpointAsync lists the folder for
+// stale checkpoints without a guard, so a listing failure after the
+// publication throws even though the manifest names the new checkpoint.
+func TestAListingFailureAfterACheckpointIsPublishedIsReported(t *testing.T) {
+	store := newTwinStore(t)
+	session := store.open(t)
+	twinReset(t, session, 1, twinLineage(1))
+	if _, err := twinAppend(t, session, 1, 0x01); err != nil {
+		t.Fatal(err)
+	}
+	defer func(saved func(string, string) ([]string, error)) { globFiles = saved }(globFiles)
+	injected := errors.New("injected listing failure")
+	globFiles = func(string, string) ([]string, error) { return nil, injected }
+	err := session.WriteCheckpoint(context.Background(), operation.Checkpoint{Through: 1, State: []byte{0x02}})
+	if !errors.Is(err, injected) {
+		t.Fatalf("err = %v, want the listing failure", err)
+	}
+	session.Close()
+	reopened := store.open(t)
+	if checkpoint := reopened.OpenResult().Checkpoint; checkpoint == nil || checkpoint.Through != 1 {
+		t.Fatalf("reopened checkpoint = %+v, want the one through 1", checkpoint)
+	}
+}

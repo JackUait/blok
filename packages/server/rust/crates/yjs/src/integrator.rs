@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::decode::{DecodedStruct, DecodedUpdate, StructKind};
 use crate::doc::DocState;
 use crate::item::{Item, PARENT_SUB_BIT, Parent, Runtime, Struct};
-use crate::{EngineResult, Header, fail};
+use crate::{EngineResult, Header, Id, fail};
 
 /// client -> structs in insertion order.
 #[derive(Debug)]
@@ -135,6 +135,9 @@ impl DocState {
         let mut rest: ClientStructMap<usize> = ClientStructMap::new();
         let mut missing: HashMap<u64, u64> = HashMap::new();
         let mut state: HashMap<u64, u64> = HashMap::new();
+        // Where each integrated slot now starts in the store. C# parks the
+        // live struct when its client's tail is parked after it integrated.
+        let mut integrated: HashMap<usize, Id> = HashMap::new();
         let mut head = pending.get_mut(&current).expect("target").next();
         loop {
             let slot = slots[head].as_ref().expect("an unread struct");
@@ -172,6 +175,7 @@ impl DocState {
                     } else if offset == 0 || offset < h.length as u64 {
                         let taken = slots[head].take().expect("present");
                         self.integrate_struct(taken, offset as usize)?;
+                        integrated.insert(head, Id::new(client, h.id.clock + offset));
                         state.insert(client, h.id.clock + h.length as u64);
                     }
                     // Anything else is a run the store already holds: dropped.
@@ -196,16 +200,29 @@ impl DocState {
                         let mut structs = ClientStructMap::new();
                         for client in rest.order {
                             let run = rest.runs.remove(&client).unwrap_or_default();
-                            structs.set(
-                                client,
-                                run.into_iter().filter_map(|at| slots[at].take()).collect(),
-                            );
+                            let mut parked = Vec::with_capacity(run.len());
+                            for at in run {
+                                match slots[at].take() {
+                                    Some(waiting) => parked.push(waiting),
+                                    None => parked.push(self.integrated_copy(integrated[&at])?),
+                                }
+                            }
+                            structs.set(client, parked);
                         }
                         return Ok(Some(IntegrationRest { missing, structs }));
                     }
                 }
             }
         }
+    }
+
+    /// A copy of what the store holds at id. C# parks the struct object
+    /// itself; this copy is that object as it stands at the park.
+    fn integrated_copy(&self, id: Id) -> EngineResult<Runtime> {
+        Ok(match self.store.find(id)? {
+            Struct::Item(at) => Runtime::Item(Box::new(self.store.items[at].clone())),
+            Struct::Gc(header) => Runtime::Gc(header),
+        })
     }
 
     fn integrate_struct(&mut self, head: Runtime, offset: usize) -> EngineResult<()> {

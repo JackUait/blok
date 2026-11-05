@@ -485,3 +485,53 @@ fn steps_after_a_length_zero_item_match_yjs() {
     }
     assert!(probed > 0, "empty-structs.json has no probes");
 }
+
+fn hex(text: &str) -> Vec<u8> {
+    (0..text.len())
+        .step_by(2)
+        .map(|at| u8::from_str_radix(&text[at..at + 2], 16).unwrap())
+        .collect()
+}
+
+fn upper_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02X}")).collect()
+}
+
+// HostileUpdateTests.AParkAfterTheStackedClientIntegratedKeepsTheIntegratedStructInItsTail:
+// 2:0 is stacked on 1:0, 1:0 on 2:10; 2:3 integrates, then the park steps
+// client 2 back one struct, so the parked tail is a copy of the integrated
+// 2:3, as in C#, Go and yjs.
+#[test]
+fn a_park_after_the_stacked_client_integrated_keeps_the_integrated_struct_in_its_tail() {
+    let doc = doc_with_id(1000);
+    apply_bytes(&doc, &hex("01010200040101740361626300"));
+    let result = apply_bytes(
+        &doc,
+        &hex("020202008401000378797A840202016401010084020A017900"),
+    );
+    assert!(result.pending_remains && result.changed, "{result:?}");
+    assert_eq!(doc.get_text("t").unwrap().to_string(), "abcd");
+    let parked: Vec<String> = doc
+        .lock()
+        .store
+        .pending_structs
+        .iter()
+        .map(|waiting| {
+            let header = waiting.header();
+            format!("{}:{}+{}", header.id.client, header.id.clock, header.length)
+        })
+        .collect();
+    assert_eq!(parked, ["1:0+1", "2:3+1"]);
+    assert_eq!(upper_hex(&doc.encode_state_vector()), "010204");
+    assert_eq!(
+        upper_hex(&doc.encode_state_as_update(&[]).unwrap()),
+        "020202000401017403616263840202016401010084020A017900"
+    );
+
+    // The clocks 1:0 waits for arrive. yjs parks an encoded copy of 2:3, so
+    // the retry must not rewire the live item (yjs reads "abcdefghijky").
+    let healed = apply_bytes(&doc, &hex("010102048402030765666768696A6B00"));
+    assert!(!healed.pending_remains, "{healed:?}");
+    assert_eq!(doc.get_text("t").unwrap().to_string(), "abcdefghijky");
+    assert_eq!(upper_hex(&doc.encode_state_vector()), "02020B0101");
+}

@@ -5941,6 +5941,45 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The pump's outer catch: a logger that throws while reporting a failed
+  /// observer must not leave the room's activity dead.
+  /// </summary>
+  [Fact]
+  public async Task AThrowingObserverAndLoggerDoNotStopTheActivityPump()
+  {
+    endpoint.Holds(DocId, "hello");
+    activity.Failure = new InvalidOperationException("the activity table is down");
+    var manager = new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        message =>
+        {
+          if (message.Contains("activity observer failed", StringComparison.Ordinal))
+          {
+            throw new InvalidOperationException("logger failed");
+          }
+        },
+        activityObserver: activity);
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member);
+    await manager.SettleAsync();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Active, record.Kind));
+    Assert.Empty(member.Closes);
+  }
+
+  /// <summary>
   /// What this measures is AWAIT PLACEMENT: the observer has returned a
   /// ValueTask that has not completed, and the question is whether the room
   /// awaited it with the lane held. It is the only test that asks — running

@@ -13,7 +13,7 @@ use crate::s3::{Recorded, S3, Settings};
 use crate::s3_test::{deadline, frozen_time, no_proxy, test_options};
 use crate::s3_wire_test::raw_server;
 
-// Twins of the S3BlobStoreTests cases with no Go twin.
+// Twins of the S3BlobStoreTests cases (Go: blob/csharp_s3_test.go).
 
 fn store(
     dir: &TempDir,

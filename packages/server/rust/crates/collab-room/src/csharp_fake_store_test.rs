@@ -1,4 +1,4 @@
-// Twins of the C# FakeCollabOperationStoreTests.cs cases with no Go twin,
+// Twins of the C# FakeCollabOperationStoreTests.cs cases (Go: room/csharp_fake_store_test.go),
 // run against test_support's FakeJournal.
 
 use std::sync::Arc;

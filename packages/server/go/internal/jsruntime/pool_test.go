@@ -360,7 +360,7 @@ func TestReportsALoadThatRunsPastTheTimeout(t *testing.T) {
 	if !errors.As(err, &startup) || startup.Cause != StartupTimedOut {
 		t.Fatalf("err = %v, want a timed-out StartupError", err)
 	}
-	if !strings.Contains(startup.Error(), "200ms") {
+	if !strings.Contains(startup.Error(), "200ms") || !strings.Contains(startup.Error(), "timeout") {
 		t.Fatalf("message %q does not name the timeout", startup.Error())
 	}
 }
@@ -371,7 +371,8 @@ func TestReportsALoadThatOutgrowsTheBudget(t *testing.T) {
 	if !errors.As(err, &startup) || startup.Cause != StartupOverBudget {
 		t.Fatalf("err = %v, want an over-budget StartupError", err)
 	}
-	if !strings.Contains(startup.Error(), "1048576-byte") {
+	// C# BlokRuntimeStartupTests asserts the words "allocation budget".
+	if !strings.Contains(startup.Error(), "1048576-byte") || !strings.Contains(strings.ToLower(startup.Error()), "allocation budget") {
 		t.Fatalf("message %q does not name the budget", startup.Error())
 	}
 }
@@ -425,5 +426,30 @@ func TestTakesTheDefaultsForZeroOptions(t *testing.T) {
 	}
 	if want := max(1, min(runtime.NumCPU(), 4)); cap(p.engines) != want || len(p.engines) != want {
 		t.Fatalf("pool holds %d of %d engines, want %d", len(p.engines), cap(p.engines), want)
+	}
+}
+
+// C# JintBlokRuntimeTests.ReplacesAnEngineAfterCancellation. C# waits on the
+// pending promise until the caller cancels; goja has no event loop, so the
+// call fails at once (as in Rust). Either way the next call is served.
+func TestReplacesAnEngineAfterCancellation(t *testing.T) {
+	p, err := newPoolFromSource(`globalThis.blokServerInvoke = async (operation) => {
+  if (operation === 'wait') return await new Promise(() => {});
+  return 'ok';
+};`, 1, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cancelled, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	_, err = p.Invoke(cancelled, "wait", "{}", 0)
+	wantKind(t, err, KindUnknown)
+	if !errors.Is(err, ErrPending) {
+		t.Fatalf("err = %v, want ErrPending inside", err)
+	}
+	ready, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+	if output, err := p.Invoke(ready, "ready", "{}", 0); err != nil || output != "ok" {
+		t.Fatalf("ready = %q, %v", output, err)
 	}
 }

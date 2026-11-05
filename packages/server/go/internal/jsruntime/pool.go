@@ -188,7 +188,7 @@ func loadGuarded(program *goja.Program, timeout time.Duration, budget int64) (*R
 			return nil, &StartupError{
 				Cause: StartupOverBudget,
 				Message: fmt.Sprintf("Loading Blok's runtime bundle into an engine grew the heap past the %d-byte "+
-					"memory budget this runtime was created with. Loading runs under the same budget as a "+
+					"allocation budget this runtime was created with. Loading runs under the same allocation budget as a "+
 					"conversion, so raise MemoryBudget: the default is %d bytes (1 GiB), and %d bytes is "+
 					"the floor this package accepts at all.", budget, DefaultMemoryBudget, MinimumMemoryBudget),
 				Err: err,

@@ -123,3 +123,6 @@ stryker.log
 # Playwright blob reports from sharded runs
 blob-report/
 .vitest/
+
+# Local research notes
+research_notes/

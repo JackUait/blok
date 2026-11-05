@@ -104,3 +104,35 @@ async fn a_flood_of_tiny_frames_while_nothing_receives_stays_within_the_read_ahe
     let capacity = server.capacity_ahead();
     assert!(capacity <= read_ahead::LIMIT, "{capacity}-byte buffer");
 }
+
+// An idle socket holds no read chunk: thousands of quiet peers each pay for
+// one. A burst takes one only while it lasts.
+#[tokio::test]
+async fn an_idle_connection_holds_no_read_chunk() {
+    let (server, mut client) = pair().await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert_eq!(server.chunks_ahead(), 0, "while idle");
+
+    let frame = {
+        let mut frame = vec![0x82, 0x80 | 126, 0x40, 0x00, 0, 0, 0, 0];
+        frame.extend(std::iter::repeat_n(0u8, 0x4000));
+        frame
+    };
+    for _ in 0..16 {
+        client.write_all(&frame).await.unwrap();
+    }
+    timeout(Duration::from_secs(5), async {
+        while server.buffered_ahead() < 16 * frame.len() {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the burst was read ahead");
+    timeout(Duration::from_secs(2), async {
+        while server.chunks_ahead() != 0 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the chunk was let go after the burst");
+}

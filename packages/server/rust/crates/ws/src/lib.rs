@@ -369,6 +369,14 @@ impl Conn {
             .map_or(0, |ahead| ahead.buffered())
     }
 
+    /// Read chunks the read-ahead holds now.
+    #[cfg(test)]
+    pub(crate) fn chunks_ahead(&self) -> usize {
+        self.inner.ahead.as_ref().map_or(0, |ahead| {
+            ahead.chunks.load(std::sync::atomic::Ordering::SeqCst)
+        })
+    }
+
     #[cfg(test)]
     pub(crate) fn capacity_ahead(&self) -> usize {
         self.inner

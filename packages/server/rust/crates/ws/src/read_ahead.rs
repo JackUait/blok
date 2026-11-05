@@ -28,6 +28,9 @@ struct State {
 pub(crate) struct Shared {
     state: Mutex<State>,
     space: Notify,
+    /// Chunks alive now; an idle socket must hold none.
+    #[cfg(test)]
+    pub(crate) chunks: std::sync::atomic::AtomicUsize,
 }
 
 impl Shared {
@@ -67,6 +70,8 @@ impl Shared {
         source: &mut (impl AsyncRead + Unpin),
     ) -> Option<Result<(), io::ErrorKind>> {
         let mut chunk = vec![0u8; CHUNK];
+        #[cfg(test)]
+        let _alive = ChunkAlive::new(self);
         loop {
             let room = LIMIT - self.buffered();
             if room == 0 {
@@ -189,5 +194,27 @@ impl AsyncRead for ReadAhead {
                 Poll::Pending
             }
         }
+    }
+}
+
+#[cfg(test)]
+struct ChunkAlive<'a>(&'a Shared);
+
+#[cfg(test)]
+impl<'a> ChunkAlive<'a> {
+    fn new(shared: &'a Shared) -> Self {
+        shared
+            .chunks
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        ChunkAlive(shared)
+    }
+}
+
+#[cfg(test)]
+impl Drop for ChunkAlive<'_> {
+    fn drop(&mut self) {
+        self.0
+            .chunks
+            .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
     }
 }

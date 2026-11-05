@@ -201,3 +201,20 @@ func TestAnswersADigestChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		})
 	}
 }
+
+// DigestResponse keys match with OrdinalIgnoreCase over the Latin-1 chars
+// of the header (AuthenticationHelper.DigestResponse.Parameters). No
+// Latin-1 char folds to an ASCII letter, so the UTF-8 bytes of İ never
+// make "algorithm".
+func TestDigestKeysFoldOnlyAscii(t *testing.T) {
+	parameters, ok := parseDigest(`realm="r", nonce="n", algor` + "İ" + `thm=SHA-256, QOP="auth"`)
+	if !ok {
+		t.Fatal("refused")
+	}
+	if got, found := parameters["algorithm"]; found {
+		t.Errorf("algorithm = %q, want none", got)
+	}
+	if parameters["qop"] != "auth" {
+		t.Errorf("qop = %q", parameters["qop"])
+	}
+}

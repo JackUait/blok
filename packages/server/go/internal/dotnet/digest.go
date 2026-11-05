@@ -26,7 +26,8 @@ func parseDigest(challenge string) (map[string]string, bool) {
 		if key == "" || i >= len(challenge) {
 			break
 		}
-		lower := strings.ToLower(key)
+		// OrdinalIgnoreCase over Latin-1 chars: only ASCII folds to a key.
+		lower := asciiLower(key)
 		quoted := lower == "realm" || lower == "nonce" || lower == "opaque" || lower == "qop"
 		value, ok, next := digestValue(challenge, i, quoted)
 		i = next

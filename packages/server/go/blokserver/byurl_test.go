@@ -86,3 +86,48 @@ func TestUploadByURLHoldsItsFetchSlotUntilTheStoreReturns(t *testing.T) {
 		response.Release()
 	}
 }
+
+// recordingStore keeps every Put; C# RecordingBlobStore.
+type recordingStore struct{ puts int }
+
+func (r *recordingStore) Put(_ context.Context, extension, _ string, content io.Reader) (string, error) {
+	_, _ = io.Copy(io.Discard, content)
+	r.puts++
+	return "https://uploads.example.com/files/" + strings.Repeat("b", 32) + extension, nil
+}
+
+func (r *recordingStore) Delete(context.Context, string) error { return nil }
+
+// A later "url": null does not erase an earlier string.
+func TestDuplicateNullURLRetainsThePriorString(t *testing.T) {
+	var fetched []string
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fetched = append(fetched, r.URL.Path)
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte("png"))
+	}))
+	defer origin.Close()
+	port, _ := strconv.Atoi(strings.TrimPrefix(origin.URL, "http://127.0.0.1:"))
+	o := DefaultOptions()
+	o.StorageDirectory = t.TempDir()
+	o.PublicURL = "https://uploads.example.com/files/"
+	o.UnfurlEnabled = true
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.fetcher = outbound.NewFetcher(outbound.ExactOriginPolicy{Origin: origin.URL, Port: port})
+	store := &recordingStore{}
+	s.storeOnce.Do(func() { s.store = store })
+	body := `{"url":"` + origin.URL + `/file","url":null}`
+	request := httptest.NewRequest(http.MethodPost, "/upload-by-url", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	s.Handler("").ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", recorder.Code, recorder.Body)
+	}
+	if len(fetched) != 1 || fetched[0] != "/file" || store.puts != 1 {
+		t.Fatalf("fetched %v, puts %d", fetched, store.puts)
+	}
+}

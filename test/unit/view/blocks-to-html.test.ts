@@ -529,7 +529,8 @@ describe('blocksToHtml', () => {
       );
 
       expect(transformUrl).toHaveBeenCalledWith('https://www.youtube.com/embed/x', { attr: 'src', blockType: 'embed' });
-      expect(html).toBe(`<figure><iframe src="https://proxy.test/?u=https%3A%2F%2Fwww.youtube.com%2Fembed%2Fx" ${FRAME}></iframe></figure>`);
+      // The proxy is another origin, so the frame gets the generic sandbox.
+      expect(html).toBe('<figure><iframe src="https://proxy.test/?u=https%3A%2F%2Fwww.youtube.com%2Fembed%2Fx" sandbox="allow-scripts allow-forms allow-popups" referrerpolicy="strict-origin-when-cross-origin"></iframe></figure>');
     });
 
     it.each([

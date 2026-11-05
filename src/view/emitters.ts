@@ -13,7 +13,7 @@
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
 import { isSafeCssColor } from '../shared/css-color';
-import { registryIframeSandbox } from '../shared/embed-frame';
+import { GENERIC_IFRAME_SANDBOX, registryIframeSandbox } from '../shared/embed-frame';
 import { EMBED_SERVICES, matchEmbedService } from '../shared/embed-registry';
 import { databaseRowTitle, inRowOrder, isTemplateRow, titlePropertyIdOf } from '../shared/database-rows';
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
@@ -772,7 +772,18 @@ export const builtinEmitters: Record<string, Emitter> = {
       return link(service);
     }
 
-    return trail(`<figure><iframe${srcAttr} sandbox="${registryIframeSandbox(EMBED_SERVICES[service])}" referrerpolicy="strict-origin-when-cross-origin"></iframe>${figcaption(block, env)}</figure>`, block, env);
+    // The player sandbox trusts the provider's origin. A transformUrl that
+    // moves the frame elsewhere (maybe the page's own origin) gets the generic one.
+    // Jint has no URL, so the origin is compared as a string prefix.
+    const origin = /^https:\/\/[^/?#]+/.exec(match.embedUrl)?.[0] ?? '';
+    const prefix = ` src="${origin}`;
+    const sameOrigin = origin !== '' && srcAttr.startsWith(prefix) && '/?#"'.includes(srcAttr.charAt(prefix.length));
+    // Two literals, so iframe-sandbox-law can read each sandbox.
+    const frame = sameOrigin
+      ? `<iframe${srcAttr} sandbox="${registryIframeSandbox(EMBED_SERVICES[service])}" referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+      : `<iframe${srcAttr} sandbox="${GENERIC_IFRAME_SANDBOX}" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+
+    return trail(`<figure>${frame}${figcaption(block, env)}</figure>`, block, env);
   },
 
   table: emitTable,

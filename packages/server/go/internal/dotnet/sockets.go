@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -98,7 +99,11 @@ func NewSocketsTransport(options SocketsOptions) *SocketsTransport {
 					// deadline is lifted once the connection is handed out.
 					_ = conn.SetDeadline(born.Add(options.ConnectTimeout))
 				}
-				return &pooledConn{Conn: conn, born: born}, nil
+				pooled := &pooledConn{Conn: conn}
+				if options.PooledConnectionLifetime > 0 {
+					pooled.timer = time.AfterFunc(options.PooledConnectionLifetime, pooled.expire)
+				}
+				return pooled, nil
 			},
 			IdleConnTimeout:    pooledConnectionIdleTimeout,
 			DisableCompression: true,
@@ -106,9 +111,47 @@ func NewSocketsTransport(options SocketsOptions) *SocketsTransport {
 	}
 }
 
+// pooledConn retires itself at PooledConnectionLifetime, as .NET drops an
+// expired connection instead of pooling it again: at once when idle, else
+// when its request gives it back. Closing an idle conn is safe: net/http
+// drops it from the pool, and a request that took it at that moment is
+// retried on a new one, as nothing was written.
 type pooledConn struct {
 	net.Conn
-	born time.Time
+	timer         *time.Timer
+	mu            sync.Mutex
+	busy, expired bool
+}
+
+func (c *pooledConn) expire() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.expired = true
+	if !c.busy {
+		c.Conn.Close()
+	}
+}
+
+func (c *pooledConn) taken() {
+	c.mu.Lock()
+	c.busy = true
+	c.mu.Unlock()
+}
+
+func (c *pooledConn) idle() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.busy = false
+	if c.expired {
+		c.Conn.Close()
+	}
+}
+
+func (c *pooledConn) Close() error {
+	if c.timer != nil {
+		c.timer.Stop()
+	}
+	return c.Conn.Close()
 }
 
 func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -117,6 +160,7 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 		ctx = context.WithValue(ctx, socks4Key{}, proxy)
 	}
 	request = request.Clone(ctx)
+	var used *pooledConn
 	trace := &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
 			conn := info.Conn
@@ -128,10 +172,12 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 				return
 			}
 			_ = pooled.SetDeadline(time.Time{})
-			// net/http cannot drop a pooled conn before handing it out, so
-			// one past its life serves this request and then closes.
-			if t.options.PooledConnectionLifetime > 0 && time.Since(pooled.born) >= t.options.PooledConnectionLifetime {
-				request.Close = true
+			pooled.taken()
+			used = pooled
+		},
+		PutIdleConn: func(err error) {
+			if err == nil && used != nil {
+				used.idle()
 			}
 		},
 	}

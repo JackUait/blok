@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -117,23 +118,29 @@ func TestAPooledConnectionRetiresAfterItsLifetime(t *testing.T) {
 		t.Fatalf("idle timeout %v", transport.Transport.IdleConnTimeout)
 	}
 	client := &http.Client{Transport: transport}
-	get := func() {
+	// The doc endpoint saves with PUT: net/http copies a request with a
+	// body before it picks a connection.
+	put := func() {
 		t.Helper()
-		response, err := client.Get(server.URL)
+		request, err := http.NewRequest(http.MethodPut, server.URL, strings.NewReader("{}"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		response, err := client.Do(request)
 		if err != nil {
 			t.Fatal(err)
 		}
 		_, _ = io.Copy(io.Discard, response.Body)
 		response.Body.Close()
 	}
-	get()
-	get()
+	put()
+	put()
 	if opened.Load() != 1 {
 		t.Fatalf("a young connection was not reused: %d", opened.Load())
 	}
 	time.Sleep(400 * time.Millisecond)
-	get()
-	get()
+	put()
+	put()
 	if opened.Load() != 2 {
 		t.Fatalf("opened %d connections", opened.Load())
 	}

@@ -216,6 +216,94 @@ async fn holds_four_responses_until_one_is_released() {
         .unwrap();
 }
 
+// Four held uploads fill only the upload pool: a short check still runs at
+// once, and a fifth upload waits.
+#[tokio::test]
+async fn held_uploads_never_take_a_check_slot() {
+    let o = ok_origin("127.0.0.1:0").await.unwrap();
+    let f = fixture_fetcher("bounded.example", o.port);
+    let url = format!("http://bounded.example:{}/", o.port);
+    let upload = Limits {
+        upload: true,
+        caller: String::new(),
+        ..limits()
+    };
+    let mut held = Vec::new();
+    for _ in 0..4 {
+        held.push(f.get(&url, &upload).await.unwrap());
+    }
+    let check = Limits {
+        timeout: Duration::from_millis(300),
+        ..limits()
+    };
+    let checked = f.get(&url, &check).await;
+    assert!(
+        checked.is_ok(),
+        "a check waited behind four uploads: {:?}",
+        checked.err()
+    );
+    let fifth = Limits {
+        timeout: Duration::from_millis(300),
+        ..upload
+    };
+    assert!(
+        f.get(&url, &fifth).await.is_err(),
+        "a fifth upload ran while four were held"
+    );
+    drop(held);
+}
+
+// One caller holds at most two slots of a pool. Its third fetch waits for
+// one of its own, inside its own deadline, and never holds a pool slot while
+// it waits: other callers still get the two free slots.
+#[tokio::test]
+async fn a_callers_third_fetch_waits_for_its_own_slot() {
+    let o = ok_origin("127.0.0.1:0").await.unwrap();
+    let f = fixture_fetcher("bounded.example", o.port);
+    let url = format!("http://bounded.example:{}/", o.port);
+    let caller = Limits {
+        caller: "addr:192.0.2.1".into(),
+        ..limits()
+    };
+    let short = Limits {
+        timeout: Duration::from_millis(300),
+        ..caller.clone()
+    };
+    let mut held = [
+        f.get(&url, &caller).await.unwrap(),
+        f.get(&url, &caller).await.unwrap(),
+    ];
+    let timed_out = f.get(&url, &short).await;
+    assert!(
+        matches!(&timed_out, Err(e) if e.failure == Failure::TimedOut),
+        "a third fetch from one caller got {:?}",
+        timed_out.as_ref().err()
+    );
+    let (f2, url2, caller2) = (f.clone(), url.clone(), caller.clone());
+    let third = tokio::spawn(async move { f2.get(&url2, &caller2).await.map(|_| ()) });
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let mut others = Vec::new();
+    for other in ["addr:192.0.2.2", "addr:192.0.2.3"] {
+        let limits = Limits {
+            caller: other.into(),
+            ..short.clone()
+        };
+        let got = f.get(&url, &limits).await;
+        assert!(got.is_ok(), "{other} waited behind one caller's queue");
+        others.push(got);
+    }
+    assert!(
+        !third.is_finished(),
+        "the third fetch ran while its caller held two"
+    );
+    held[0].release();
+    tokio::time::timeout(Duration::from_secs(5), third)
+        .await
+        .expect("the third fetch never ran after its caller freed a slot")
+        .unwrap()
+        .unwrap();
+}
+
 fn redirect_forever() -> Handler {
     answer(|_, count| {
         format!("HTTP/1.1 302 Found\r\nLocation: /{count}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
@@ -414,6 +502,8 @@ async fn truncates_the_body_at_the_cap_when_asked_and_keeps_the_final_headers() 
     let base = format!("http://cut.example:{}", o.port);
     let limits = Limits {
         truncate: true,
+        upload: false,
+        caller: String::new(),
         ..limits_of(5000, 25, 5)
     };
     let response = f.get(&format!("{base}/start"), &limits).await.unwrap();
@@ -439,6 +529,8 @@ async fn truncates_the_body_at_the_cap_when_asked_and_keeps_the_final_headers() 
 
     let strict = Limits {
         truncate: false,
+        upload: false,
+        caller: String::new(),
         ..limits
     };
     let got = f.get(&format!("{base}/final"), &strict).await;

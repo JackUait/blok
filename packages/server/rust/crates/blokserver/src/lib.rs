@@ -36,6 +36,8 @@ mod host_test;
 #[cfg(test)]
 mod local_file_serving_test;
 #[cfg(test)]
+mod outbound_slots_test;
+#[cfg(test)]
 mod purge_errors_test;
 #[cfg(test)]
 mod request_guard_test;

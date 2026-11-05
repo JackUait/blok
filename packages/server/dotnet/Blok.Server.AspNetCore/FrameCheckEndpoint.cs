@@ -52,6 +52,7 @@ internal static class FrameCheckEndpoint
     GuardedResponse response;
     var started = Stopwatch.GetTimestamp();
     var allowHop = context.Features.Get<HopBudgetFeature>()?.AllowHop;
+    var caller = OutboundCaller.Of(context);
     var fetcher = context.RequestServices
         .GetRequiredService<IGuardedOutboundFetcher>();
 
@@ -59,7 +60,7 @@ internal static class FrameCheckEndpoint
     {
       response = await fetcher.GetAsync(
           target,
-          Limits with { AllowHop = allowHop },
+          Limits with { AllowHop = allowHop, Caller = caller },
           context.RequestAborted);
     }
     catch (GuardedFetchException)
@@ -115,6 +116,7 @@ internal static class FrameCheckEndpoint
         Limits.TotalTimeout - Stopwatch.GetElapsedTime(started),
         Limits.MaximumRedirects - redirects,
         allowHop,
+        caller,
         context.RequestAborted);
 
     await WriteAsync(
@@ -131,6 +133,7 @@ internal static class FrameCheckEndpoint
       TimeSpan remaining,
       int redirects,
       Func<bool>? allowHop,
+      string? caller,
       CancellationToken cancellationToken)
   {
     if (url == "" ||
@@ -145,7 +148,7 @@ internal static class FrameCheckEndpoint
     {
       await using var response = await fetcher.GetAsync(
           url,
-          new GuardedFetchLimits(remaining, MaximumOEmbedBytes, redirects, allowHop),
+          new GuardedFetchLimits(remaining, MaximumOEmbedBytes, redirects, allowHop, Caller: caller),
           cancellationToken);
       if (response.StatusCode is < 200 or > 299)
       {

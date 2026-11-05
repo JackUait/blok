@@ -79,7 +79,7 @@ impl Store for BlockingStore {
 
 // UploadByUrlEndpoint.cs:90 holds the response (and its fetch slot) with
 // `await using` until PutAsync returns, so a slow store still counts
-// against the four outbound fetches.
+// against the four upload fetches.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn upload_by_url_holds_its_fetch_slot_until_the_store_returns() {
     let origin_server = start(
@@ -122,6 +122,8 @@ async fn upload_by_url_holds_its_fetch_slot_until_the_store_returns() {
         max_redirects: 0,
         hop: None,
         truncate: false,
+        upload: true,
+        caller: String::new(),
     };
     let mut held = Vec::new();
     for i in 0..3 {
@@ -660,6 +662,8 @@ async fn assert_all_fetch_slots_free(server: &Server, origin: &str) {
         max_redirects: 0,
         hop: None,
         truncate: false,
+        upload: false,
+        caller: String::new(),
     };
     let mut held = Vec::new();
     for i in 0..4 {

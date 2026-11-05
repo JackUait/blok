@@ -35,6 +35,19 @@ fn hop_budget(inner: &Arc<Inner>, request: &Request) -> Arc<dyn Fn() -> bool + S
     Arc::new(move || inner.limiter.allow(&key))
 }
 
+/// The key the fetcher's per-caller lanes share: the one the guard charged.
+/// With the rate limit off there are no per-caller limits.
+fn fetch_caller(inner: &Inner, request: &Request) -> String {
+    if inner.options.rate_limit_per_minute <= 0 {
+        return String::new();
+    }
+    request
+        .extensions
+        .get::<RateKey>()
+        .map(|key| key.0.clone())
+        .unwrap_or_default()
+}
+
 /// The fetch, or None when the request was cancelled first: then nothing is
 /// answered, as the C# endpoints let the cancellation end the request.
 async fn fetch(
@@ -62,7 +75,8 @@ pub(crate) async fn unfurl(inner: Arc<Inner>, request: Request, mut response: Re
         write_json(&mut response, 400, b"{\"success\":0}\n").await;
         return;
     }
-    let limits = unfurl_limits(hop_budget(&inner, &request));
+    let mut limits = unfurl_limits(hop_budget(&inner, &request));
+    limits.caller = fetch_caller(&inner, &request);
     let cancel = request.cancel_token();
     let Some(result) = fetch(&inner, &cancel, &target, &limits).await else {
         return;
@@ -89,6 +103,8 @@ fn unfurl_limits(hop: Arc<dyn Fn() -> bool + Send + Sync>) -> Limits {
         max_redirects: 5,
         hop: Some(hop),
         truncate: false,
+        upload: false,
+        caller: String::new(),
     }
 }
 
@@ -144,7 +160,9 @@ pub(crate) async fn upload_by_url(
         write_text(&mut response, 400, "expected {\"url\": \"...\"}\n").await;
         return;
     };
-    let limits = upload_by_url_limits(inner.options.max_upload_bytes, hop_budget(&inner, &request));
+    let mut limits =
+        upload_by_url_limits(inner.options.max_upload_bytes, hop_budget(&inner, &request));
+    limits.caller = fetch_caller(&inner, &request);
     let cancel = request.cancel_token();
     let Some(result) = fetch(&inner, &cancel, &target, &limits).await else {
         return;
@@ -188,6 +206,8 @@ fn upload_by_url_limits(max_upload_bytes: i64, hop: Arc<dyn Fn() -> bool + Send 
         max_redirects: 5,
         hop: Some(hop),
         truncate: false,
+        upload: true,
+        caller: String::new(),
     }
 }
 
@@ -220,6 +240,8 @@ pub(crate) async fn frame_check(inner: Arc<Inner>, request: Request, mut respons
         max_redirects: 5,
         hop: Some(Arc::clone(&hop)),
         truncate: true,
+        upload: false,
+        caller: fetch_caller(&inner, &request),
     };
     let cancel = request.cancel_token();
     let Some(result) = fetch(&inner, &cancel, &target, &limits).await else {
@@ -261,6 +283,7 @@ pub(crate) async fn frame_check(inner: Arc<Inner>, request: Request, mut respons
         remaining,
         limits.max_redirects.checked_sub(redirects),
         hop,
+        limits.caller.clone(),
     )
     .await;
     if let Some(oembed) = oembed {
@@ -301,6 +324,7 @@ async fn fetch_oembed(
     remaining: Duration,
     redirects: Option<usize>,
     hop: Arc<dyn Fn() -> bool + Send + Sync>,
+    caller: String,
 ) -> Option<blok_framecheck::OEmbed> {
     let redirects = redirects?;
     if url.is_empty() || remaining.is_zero() || !hop() {
@@ -312,6 +336,8 @@ async fn fetch_oembed(
         max_redirects: redirects,
         hop: Some(hop),
         truncate: false,
+        upload: false,
+        caller,
     };
     let fetched = fetch(inner, cancel, url, &limits).await?.ok()?;
     if !(200..=299).contains(&fetched.status_code) {

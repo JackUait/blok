@@ -331,6 +331,101 @@ func TestHoldsFourResponsesUntilOneIsReleased(t *testing.T) {
 	}
 }
 
+// Four held uploads fill only the upload pool: a short check still runs at
+// once, and a fifth upload waits.
+func TestHeldUploadsNeverTakeACheckSlot(t *testing.T) {
+	o := startOrigin(t, "tcp4", "127.0.0.1:0")
+	policy := &fixturePolicy{host: "bounded.example", port: o.port, allowed: addrs("127.0.0.1")}
+	f := newTestFetcher(policy, &countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
+	url := "http://bounded.example:" + strconv.Itoa(o.port) + "/"
+	upload := testLimits
+	upload.Upload = true
+	var held []*Response
+	for i := 0; i < 4; i++ {
+		response, err := f.Get(context.Background(), url, upload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		held = append(held, response)
+	}
+	check := testLimits
+	check.Timeout = 300 * time.Millisecond
+	response, err := f.Get(context.Background(), url, check)
+	if err != nil {
+		t.Fatalf("a check waited behind four uploads: %v", err)
+	}
+	response.Release()
+	upload.Timeout = 300 * time.Millisecond
+	if response, err := f.Get(context.Background(), url, upload); err == nil {
+		response.Release()
+		t.Fatal("a fifth upload ran while four were held")
+	}
+	for _, response := range held {
+		response.Release()
+	}
+}
+
+// One caller holds at most two slots of a pool. Its third fetch waits for
+// one of its own, inside its own deadline, and never holds a pool slot while
+// it waits: other callers still get the two free slots.
+func TestACallersThirdFetchWaitsForItsOwnSlot(t *testing.T) {
+	o := startOrigin(t, "tcp4", "127.0.0.1:0")
+	policy := &fixturePolicy{host: "bounded.example", port: o.port, allowed: addrs("127.0.0.1")}
+	f := newTestFetcher(policy, &countingResolver{answers: [][]netip.Addr{addrs("127.0.0.1")}})
+	url := "http://bounded.example:" + strconv.Itoa(o.port) + "/"
+	caller := testLimits
+	caller.Caller = "addr:192.0.2.1"
+	var held []*Response
+	for i := 0; i < 2; i++ {
+		response, err := f.Get(context.Background(), url, caller)
+		if err != nil {
+			t.Fatal(err)
+		}
+		held = append(held, response)
+	}
+	short := caller
+	short.Timeout = 300 * time.Millisecond
+	if response, err := f.Get(context.Background(), url, short); !IsFailure(err, TimedOut) {
+		if err == nil {
+			response.Release()
+		}
+		t.Fatalf("a third fetch from one caller got %v, want TimedOut", err)
+	}
+	third := make(chan error, 1)
+	go func() {
+		response, err := f.Get(context.Background(), url, caller)
+		if err == nil {
+			response.Release()
+		}
+		third <- err
+	}()
+	time.Sleep(100 * time.Millisecond)
+	for _, other := range []string{"addr:192.0.2.2", "addr:192.0.2.3"} {
+		limits := short
+		limits.Caller = other
+		response, err := f.Get(context.Background(), url, limits)
+		if err != nil {
+			t.Fatalf("%s waited behind one caller's queue: %v", other, err)
+		}
+		defer response.Release()
+	}
+	select {
+	case err := <-third:
+		t.Fatalf("the third fetch ran while its caller held two: %v", err)
+	default:
+	}
+	held[0].Release()
+	select {
+	case err := <-third:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the third fetch never ran after its caller freed a slot")
+	}
+	held[1].Release()
+}
+
 // GuardedOutboundFetcherTests.RejectsTheRedirectAfterTheConfiguredCap.
 func TestRejectsTheRedirectAfterTheConfiguredCap(t *testing.T) {
 	var requests atomic.Int32

@@ -7,6 +7,7 @@ mod body;
 mod browserurl;
 mod decode;
 mod fetcher;
+mod lanes;
 pub mod operator;
 mod policy;
 mod proxy;

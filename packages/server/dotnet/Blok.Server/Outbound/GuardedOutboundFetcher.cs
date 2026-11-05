@@ -9,18 +9,24 @@ namespace Blok.Server.Outbound;
 
 // AllowHop is asked before every redirect hop. False fails the fetch as
 // RateLimited, so one request cannot fan out. TruncateBody keeps the first
-// MaximumResponseBytes of the body instead of failing past them.
+// MaximumResponseBytes of the body instead of failing past them. Upload takes
+// a slot from the upload pool, so long downloads never starve short checks.
+// Caller is the rate-limit key: a caller runs at most two fetches at once in
+// each pool, and more wait for one of its own slots. Null is no cap.
 internal readonly record struct GuardedFetchLimits(
     TimeSpan TotalTimeout,
     long MaximumResponseBytes,
     int MaximumRedirects,
     Func<bool>? AllowHop = null,
-    bool TruncateBody = false);
+    bool TruncateBody = false,
+    bool Upload = false,
+    string? Caller = null);
 
 internal sealed class GuardedResponse : IAsyncDisposable
 {
   private readonly Dictionary<string, List<string>> headers;
   private SemaphoreSlim? concurrencyPermit;
+  private IDisposable? callerLease;
 
   internal GuardedResponse(
       ReadOnlyMemory<byte> body,
@@ -56,11 +62,20 @@ internal sealed class GuardedResponse : IAsyncDisposable
 
   internal int StatusCode { get; }
 
+  /// <summary>Also frees the caller's lane slot on dispose.</summary>
+  internal void HoldCallerLease(IDisposable? lease)
+  {
+    callerLease = lease;
+  }
+
   public ValueTask DisposeAsync()
   {
     Interlocked.Exchange(
         ref concurrencyPermit,
         null)?.Release();
+    Interlocked.Exchange(
+        ref callerLease,
+        null)?.Dispose();
 
     return ValueTask.CompletedTask;
   }
@@ -89,6 +104,9 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       TimeSpan.FromSeconds(1);
 
   private readonly SemaphoreSlim concurrency = new(4, 4);
+  private readonly SemaphoreSlim uploadConcurrency = new(4, 4);
+  private readonly CallerLanes checkCallers = new();
+  private readonly CallerLanes uploadCallers = new();
   private readonly X509Certificate2Collection? customTrustRoots;
   private readonly IGuardedDnsResolver resolver;
   private readonly IGuardedOutboundPolicy policy;
@@ -135,18 +153,26 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       deadline.Cancel();
     }
 
+    var permit = limits.Upload ? uploadConcurrency : concurrency;
+    var callers = limits.Upload ? uploadCallers : checkCallers;
     var permitOwned = false;
+    IDisposable? lease = null;
 
     try
     {
-      await concurrency.WaitAsync(deadline.Token);
+      // The caller's own lane comes first, so a waiting fetch never holds a
+      // pool slot others could use.
+      lease = await callers.EnterAsync(limits.Caller, deadline.Token);
+      await permit.WaitAsync(deadline.Token);
       permitOwned = true;
       var response = await GetCoreAsync(
           rawUrl,
           limits,
-          concurrency,
+          permit,
           deadline.Token);
       permitOwned = false;
+      response.HoldCallerLease(lease);
+      lease = null;
 
       return response;
     }
@@ -173,8 +199,10 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
     {
       if (permitOwned)
       {
-        concurrency.Release();
+        permit.Release();
       }
+
+      lease?.Dispose();
     }
   }
 

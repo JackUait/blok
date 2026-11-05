@@ -565,7 +565,7 @@ impl Inner {
             .clone()
     }
 
-    /// The guarded fetcher. Clones share its four slots.
+    /// The guarded fetcher. Clones share its slots.
     pub fn fetcher(&self) -> blok_outbound::Fetcher {
         lock(&self.fetcher).clone()
     }

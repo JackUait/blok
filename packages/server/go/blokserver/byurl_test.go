@@ -30,7 +30,7 @@ func (b *blockingStore) Delete(context.Context, string) error { return nil }
 
 // UploadByUrlEndpoint.cs:90 holds the response (and its fetch slot) with
 // `await using` until PutAsync returns, so a slow store still counts
-// against the four outbound fetches.
+// against the four upload fetches.
 func TestUploadByURLHoldsItsFetchSlotUntilTheStoreReturns(t *testing.T) {
 	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
@@ -66,7 +66,7 @@ func TestUploadByURLHoldsItsFetchSlotUntilTheStoreReturns(t *testing.T) {
 		t.Fatal("upload-by-url never reached the store")
 	}
 
-	limits := outbound.Limits{Timeout: 200 * time.Millisecond, MaxBytes: 1 << 20, MaxRedirects: 0}
+	limits := outbound.Limits{Timeout: 200 * time.Millisecond, MaxBytes: 1 << 20, MaxRedirects: 0, Upload: true}
 	var held []*outbound.Response
 	for i := 0; i < 3; i++ {
 		response, err := s.fetcher.Get(context.Background(), origin.URL+"/", limits)

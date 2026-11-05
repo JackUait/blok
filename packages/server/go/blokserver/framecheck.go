@@ -37,6 +37,7 @@ func (s *Server) frameCheck(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	limits := frameCheckLimits
 	limits.Hop = s.hopBudget(r)
+	limits.Caller = s.fetchCaller(r)
 	response, err := s.fetcher.Get(r.Context(), target, limits)
 	if err != nil {
 		if r.Context().Err() == nil {
@@ -63,7 +64,7 @@ func (s *Server) frameCheck(w http.ResponseWriter, r *http.Request) {
 	// The page's slot is free again before the oEmbed fetch takes one.
 	response.Release()
 	oEmbed, ok := s.fetchOEmbed(r.Context(), oEmbedURL, limits.Timeout-time.Since(started),
-		limits.MaxRedirects-redirects, limits.Hop)
+		limits.MaxRedirects-redirects, limits.Hop, limits.Caller)
 	if ok {
 		body = append(body, `,"oembed":`...)
 		body = oEmbed.AppendJSON(body)
@@ -98,12 +99,12 @@ func frameCheckRequest(r *http.Request) framecheck.Request {
 // fetchOEmbed sends the discovered URL through the same guarded fetcher, on
 // what is left of the page's deadline and redirect budget, for one more hop.
 func (s *Server) fetchOEmbed(ctx context.Context, url string, remaining time.Duration, redirects int,
-	hop func() bool) (framecheck.OEmbed, bool) {
+	hop func() bool, caller string) (framecheck.OEmbed, bool) {
 	if url == "" || remaining <= 0 || redirects < 0 || hop != nil && !hop() {
 		return framecheck.OEmbed{}, false
 	}
 	response, err := s.fetcher.Get(ctx, url, outbound.Limits{
-		Timeout: remaining, MaxBytes: maxOEmbedBytes, MaxRedirects: redirects, Hop: hop,
+		Timeout: remaining, MaxBytes: maxOEmbedBytes, MaxRedirects: redirects, Hop: hop, Caller: caller,
 	})
 	if err != nil {
 		return framecheck.OEmbed{}, false

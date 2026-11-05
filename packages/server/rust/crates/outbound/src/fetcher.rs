@@ -14,6 +14,7 @@ use tokio::time::{Instant, timeout, timeout_at};
 use tokio_rustls::TlsConnector;
 
 use crate::body::read_bounded;
+use crate::lanes::{CallerLanes, Lease};
 use crate::policy::{Error, Failure, Policy, Target, fail};
 use crate::wire::{Body, Headers, framing, header_text, read_head, request_head};
 
@@ -39,6 +40,12 @@ pub struct Limits {
     /// Keeps the first `max_bytes` of the body instead of failing past
     /// them. Content-Length is not checked.
     pub truncate: bool,
+    /// Takes a slot from the upload pool, so long downloads never starve
+    /// the short checks.
+    pub upload: bool,
+    /// The rate-limit key. A caller runs at most two fetches at once in each
+    /// pool; more wait for one of its own slots. Empty is no cap.
+    pub caller: String,
 }
 
 /// GuardedResponse. Dropping it frees the concurrency slot; callers hold it
@@ -52,12 +59,14 @@ pub struct Response {
     pub header: Headers,
     pub redirects: usize,
     permit: Option<OwnedSemaphorePermit>,
+    lease: Option<Lease>,
 }
 
 impl Response {
     /// Frees the fetch slot. It is safe to call twice.
     pub fn release(&mut self) {
         self.permit = None;
+        self.lease = None;
     }
 }
 
@@ -66,9 +75,9 @@ type Lookup = Pin<Box<dyn Future<Output = io::Result<Vec<IpAddr>>> + Send>>;
 /// Looks a host up. Tests replace it.
 pub type Resolver = Arc<dyn Fn(String) -> Lookup + Send + Sync>;
 
-/// GuardedOutboundFetcher: at most four fetches at once across the whole
-/// server, each pinned to addresses the policy vetted. Clones share the
-/// slots.
+/// GuardedOutboundFetcher: at most four checks and four uploads at once
+/// across the whole server, at most two of each per caller, each pinned to
+/// addresses the policy vetted. Clones share the slots.
 #[derive(Clone)]
 pub struct Fetcher {
     pub policy: Arc<dyn Policy>,
@@ -76,6 +85,9 @@ pub struct Fetcher {
     /// Replaces the system roots; tests set it.
     pub roots: Option<Arc<RootCertStore>>,
     permits: Arc<Semaphore>,
+    uploads: Arc<Semaphore>,
+    check_callers: CallerLanes,
+    upload_callers: CallerLanes,
     pub(crate) dial_hook: Option<Arc<dyn Fn(SocketAddr) + Send + Sync>>,
 }
 
@@ -127,6 +139,9 @@ impl Fetcher {
             resolve: Arc::new(system_resolve),
             roots: None,
             permits: Arc::new(Semaphore::new(4)),
+            uploads: Arc::new(Semaphore::new(4)),
+            check_callers: CallerLanes::default(),
+            upload_callers: CallerLanes::default(),
             dial_hook: None,
         }
     }
@@ -144,7 +159,17 @@ impl Fetcher {
             return Err(timed_out);
         }
         let deadline = Instant::now() + limits.timeout;
-        let permit = timeout_at(deadline, self.permits.clone().acquire_owned())
+        let (permits, callers) = if limits.upload {
+            (&self.uploads, &self.upload_callers)
+        } else {
+            (&self.permits, &self.check_callers)
+        };
+        // The caller's own lane comes first, so a waiting fetch never holds a
+        // pool slot others could use.
+        let lease = timeout_at(deadline, callers.enter(&limits.caller))
+            .await
+            .map_err(|_| timed_out)?;
+        let permit = timeout_at(deadline, permits.clone().acquire_owned())
             .await
             .map_err(|_| timed_out)?
             .expect("the semaphore is never closed");
@@ -152,6 +177,7 @@ impl Fetcher {
             .await
             .map_err(|_| timed_out)??;
         response.permit = Some(permit);
+        response.lease = lease;
         Ok(response)
     }
 
@@ -216,6 +242,7 @@ impl Fetcher {
                 header: head.headers.clone(),
                 redirects,
                 permit: None,
+                lease: None,
             });
         }
     }

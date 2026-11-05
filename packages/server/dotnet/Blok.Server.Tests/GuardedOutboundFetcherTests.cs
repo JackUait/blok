@@ -85,6 +85,108 @@ public sealed class GuardedOutboundFetcherTests
     }
   }
 
+  // Four held uploads fill only the upload pool: a short check still runs at
+  // once, and a fifth upload waits.
+  [Fact]
+  public async Task HeldUploadsNeverTakeACheckSlot()
+  {
+    await using var origin = new LoopbackOrigin();
+    var policy = new FixtureOutboundPolicy(
+        "bounded.example",
+        origin.Port,
+        IPAddress.Loopback);
+    var fetcher = new GuardedOutboundFetcher(
+        policy,
+        new SequenceDnsResolver([IPAddress.Loopback]));
+    var url = $"http://bounded.example:{origin.Port}/";
+    var upload = Limits with { Upload = true };
+    var held = new List<GuardedResponse>();
+
+    try
+    {
+      for (var i = 0; i < 4; i++)
+      {
+        held.Add(await fetcher.GetAsync(url, upload, CancellationToken.None));
+      }
+
+      await using (var check = await fetcher.GetAsync(
+          url,
+          Limits with { TotalTimeout = TimeSpan.FromMilliseconds(300) },
+          CancellationToken.None))
+      {
+        Assert.Equal(200, check.StatusCode);
+      }
+
+      var fifth = await Assert.ThrowsAsync<GuardedFetchException>(
+          async () => await fetcher.GetAsync(
+              url,
+              upload with { TotalTimeout = TimeSpan.FromMilliseconds(300) },
+              CancellationToken.None));
+      Assert.Equal(GuardedFetchFailure.TimedOut, fifth.Failure);
+    }
+    finally
+    {
+      foreach (var response in held)
+      {
+        await response.DisposeAsync();
+      }
+    }
+  }
+
+  // One caller holds at most two slots of a pool. Its third fetch waits for
+  // one of its own, inside its own deadline, and never holds a pool slot
+  // while it waits: other callers still get the two free slots.
+  [Fact]
+  public async Task ACallersThirdFetchWaitsForItsOwnSlot()
+  {
+    await using var origin = new LoopbackOrigin();
+    var policy = new FixtureOutboundPolicy(
+        "bounded.example",
+        origin.Port,
+        IPAddress.Loopback);
+    var fetcher = new GuardedOutboundFetcher(
+        policy,
+        new SequenceDnsResolver([IPAddress.Loopback]));
+    var url = $"http://bounded.example:{origin.Port}/";
+    var caller = Limits with { Caller = "addr:192.0.2.1" };
+    var shortWait = caller with { TotalTimeout = TimeSpan.FromMilliseconds(300) };
+    var held = new List<GuardedResponse>();
+    Task<GuardedResponse>? third = null;
+
+    try
+    {
+      for (var i = 0; i < 2; i++)
+      {
+        held.Add(await fetcher.GetAsync(url, caller, CancellationToken.None));
+      }
+
+      var timedOut = await Assert.ThrowsAsync<GuardedFetchException>(
+          async () => await fetcher.GetAsync(url, shortWait, CancellationToken.None));
+      Assert.Equal(GuardedFetchFailure.TimedOut, timedOut.Failure);
+
+      third = fetcher.GetAsync(url, caller, CancellationToken.None).AsTask();
+      await Task.Delay(100);
+      foreach (var other in new[] { "addr:192.0.2.2", "addr:192.0.2.3" })
+      {
+        held.Add(await fetcher.GetAsync(
+            url,
+            shortWait with { Caller = other },
+            CancellationToken.None));
+      }
+
+      Assert.False(third.IsCompleted, "the third fetch ran while its caller held two");
+      await held[0].DisposeAsync();
+      held.Add(await third.WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+    finally
+    {
+      foreach (var response in held)
+      {
+        await response.DisposeAsync();
+      }
+    }
+  }
+
   [Fact]
   public async Task BoundsAndRedactsDnsAndTransportErrors()
   {

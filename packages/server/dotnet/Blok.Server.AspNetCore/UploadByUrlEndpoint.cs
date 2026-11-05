@@ -76,7 +76,9 @@ internal static class UploadByUrlEndpoint
               TimeSpan.FromMinutes(2),
               options.MaxUploadBytes,
               5,
-              context.Features.Get<HopBudgetFeature>()?.AllowHop),
+              context.Features.Get<HopBudgetFeature>()?.AllowHop,
+              Upload: true,
+              Caller: OutboundCaller.Of(context)),
           context.RequestAborted);
     }
     catch (GuardedFetchException)

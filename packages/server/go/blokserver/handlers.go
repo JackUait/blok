@@ -32,6 +32,7 @@ func (s *Server) unfurl(w http.ResponseWriter, r *http.Request) {
 	}
 	limits := unfurlLimits
 	limits.Hop = s.hopBudget(r)
+	limits.Caller = s.fetchCaller(r)
 	response, err := s.fetcher.Get(r.Context(), target, limits)
 	if err != nil {
 		if r.Context().Err() == nil {
@@ -150,6 +151,7 @@ func (s *Server) uploadByURL(w http.ResponseWriter, r *http.Request) {
 	}
 	response, err := s.fetcher.Get(r.Context(), target, outbound.Limits{
 		Timeout: 2 * time.Minute, MaxBytes: s.options.MaxUploadBytes, MaxRedirects: 5, Hop: s.hopBudget(r),
+		Upload: true, Caller: s.fetchCaller(r),
 	})
 	if err != nil {
 		if r.Context().Err() == nil {

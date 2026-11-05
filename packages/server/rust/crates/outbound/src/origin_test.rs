@@ -328,6 +328,8 @@ pub fn limits() -> Limits {
         max_redirects: 5,
         hop: None,
         truncate: false,
+        upload: false,
+        caller: String::new(),
     }
 }
 
@@ -338,6 +340,8 @@ pub fn limits_of(timeout_ms: u64, max_bytes: u64, max_redirects: usize) -> Limit
         max_redirects,
         hop: None,
         truncate: false,
+        upload: false,
+        caller: String::new(),
     }
 }
 

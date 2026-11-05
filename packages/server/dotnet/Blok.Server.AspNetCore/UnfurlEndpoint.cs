@@ -34,7 +34,11 @@ internal static class UnfurlEndpoint
           .GetRequiredService<IGuardedOutboundFetcher>();
       response = await fetcher.GetAsync(
           target,
-          Limits with { AllowHop = context.Features.Get<HopBudgetFeature>()?.AllowHop },
+          Limits with
+          {
+            AllowHop = context.Features.Get<HopBudgetFeature>()?.AllowHop,
+            Caller = OutboundCaller.Of(context),
+          },
           context.RequestAborted);
     }
     catch (GuardedFetchException)

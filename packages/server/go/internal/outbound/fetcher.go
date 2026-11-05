@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -40,6 +41,12 @@ type Limits struct {
 	// Truncate keeps the first MaxBytes of the body instead of failing past
 	// them. Content-Length is not checked.
 	Truncate bool
+	// Upload takes a slot from the upload pool, so long downloads never
+	// starve the short checks.
+	Upload bool
+	// Caller is the rate-limit key. A caller runs at most two fetches at
+	// once in each pool; more wait for one of its own slots. Empty is no cap.
+	Caller string
 }
 
 // Response is GuardedResponse. Release frees the concurrency slot; callers
@@ -66,20 +73,78 @@ func (r *Response) Release() {
 // Resolver looks a host up. Tests replace it.
 type Resolver func(ctx context.Context, host string) ([]netip.Addr, error)
 
-// Fetcher is GuardedOutboundFetcher: at most four fetches at once across the
-// whole server, each pinned to addresses the policy vetted.
+// Fetcher is GuardedOutboundFetcher: at most four checks and four uploads
+// at once across the whole server, at most two of each per caller, each
+// pinned to addresses the policy vetted.
 type Fetcher struct {
 	Policy  Policy
 	Resolve Resolver
 	// RootCAs replaces the system roots; tests set it.
-	RootCAs  *x509.CertPool
-	permits  chan struct{}
-	dialHook func(network, address string)
+	RootCAs *x509.CertPool
+	permits chan struct{}
+	uploads chan struct{}
+	// checkCallers and uploadCallers are each pool's per-caller lanes.
+	checkCallers  callerLanes
+	uploadCallers callerLanes
+	dialHook      func(network, address string)
 }
 
 // NewFetcher returns a fetcher over policy with the system resolver.
 func NewFetcher(policy Policy) *Fetcher {
-	return &Fetcher{Policy: policy, Resolve: systemResolve, permits: make(chan struct{}, 4)}
+	return &Fetcher{Policy: policy, Resolve: systemResolve,
+		permits: make(chan struct{}, 4), uploads: make(chan struct{}, 4)}
+}
+
+// fetchesPerCaller is each caller's share of a pool of four, so one caller
+// cannot fill a pool alone.
+const fetchesPerCaller = 2
+
+// callerLanes holds a lane of fetchesPerCaller slots per caller key, kept
+// while anyone holds or waits for one of its slots.
+type callerLanes struct {
+	mu    sync.Mutex
+	lanes map[string]*callerLane
+}
+
+type callerLane struct {
+	slots chan struct{}
+	users int
+}
+
+// enter takes one of key's slots, waiting until ctx ends. An empty key has
+// no lane.
+func (c *callerLanes) enter(ctx context.Context, key string) (func(), error) {
+	if key == "" {
+		return func() {}, nil
+	}
+	c.mu.Lock()
+	if c.lanes == nil {
+		c.lanes = map[string]*callerLane{}
+	}
+	lane := c.lanes[key]
+	if lane == nil {
+		lane = &callerLane{slots: make(chan struct{}, fetchesPerCaller)}
+		c.lanes[key] = lane
+	}
+	lane.users++
+	c.mu.Unlock()
+	done := func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if lane.users--; lane.users == 0 {
+			delete(c.lanes, key)
+		}
+	}
+	select {
+	case lane.slots <- struct{}{}:
+		return func() {
+			<-lane.slots
+			done()
+		}, nil
+	case <-ctx.Done():
+		done()
+		return nil, ctx.Err()
+	}
 }
 
 func systemResolve(ctx context.Context, host string) ([]netip.Addr, error) {
@@ -94,12 +159,26 @@ func (f *Fetcher) Get(ctx context.Context, raw string, limits Limits) (*Response
 	}
 	deadline, cancel := context.WithTimeout(ctx, limits.Timeout)
 	defer cancel()
+	permits, callers := f.permits, &f.checkCallers
+	if limits.Upload {
+		permits, callers = f.uploads, &f.uploadCallers
+	}
+	// The caller's own lane comes first, so a waiting fetch never holds a
+	// pool slot others could use.
+	leave, err := callers.enter(deadline, limits.Caller)
+	if err != nil {
+		return nil, f.collapse(ctx, deadline, err)
+	}
 	select {
-	case f.permits <- struct{}{}:
+	case permits <- struct{}{}:
 	case <-deadline.Done():
+		leave()
 		return nil, f.collapse(ctx, deadline, deadline.Err())
 	}
-	release := func() { <-f.permits }
+	release := func() {
+		<-permits
+		leave()
+	}
 	response, err := f.get(deadline, raw, limits)
 	if err != nil {
 		release()

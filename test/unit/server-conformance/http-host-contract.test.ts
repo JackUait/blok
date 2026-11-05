@@ -866,13 +866,15 @@ it('keeps frame-check closed when unfurl is off', async () => {
   });
 }, 60_000);
 
-it('shares four outbound fetches between unfurl and upload-by-url', async () => {
+// Uploads have their own four fetches, so a long download never makes a
+// short check wait.
+it('gives unfurl and upload-by-url four outbound fetches each', async () => {
   const origin = await startFixtureOrigin();
   const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-permits-'));
 
   try {
     await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl], async (server) => {
-      const requests = [0, 1, 2].flatMap((index) => [
+      const requests = [0, 1, 2, 3, 4].flatMap((index) => [
         server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/hold/page-${index}`)}`),
         server.request('POST', '/upload-by-url', {
           body: JSON.stringify({ url: `${origin.baseUrl}/hold/photo-${index}.png` }),
@@ -880,18 +882,68 @@ it('shares four outbound fetches between unfurl and upload-by-url', async () => 
         }),
       ]);
 
-      await waitFor(async () => origin.held.current, (current) => current >= 4);
-      // Give a fifth fetch the time to arrive if the server would let it.
+      await waitFor(async () => origin.held.current, (current) => current >= 8);
+      // Give a ninth fetch the time to arrive if the server would let it.
       await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(origin.held.peak).toBe(4);
+      expect(origin.held.peak).toBe(8);
+      expect(origin.received.filter((request) => request.path.endsWith('.png'))).toHaveLength(4);
 
-      while (origin.received.length < 6) {
+      while (origin.received.length < 10) {
         origin.held.release();
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
       origin.held.release();
 
       const statuses = (await Promise.all(requests)).map((response) => response.status);
+
+      expect(statuses).toEqual(Array.from({ length: 10 }, () => 200));
+    });
+  } finally {
+    await origin.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 60_000);
+
+// With the rate limit on, one caller runs at most two fetches at once in each
+// pool. A third waits for one of its own, within its own deadline, while the
+// pool's other slots stay free.
+it('makes a third concurrent outbound fetch from one caller wait for its own slot', async () => {
+  const origin = await startFixtureOrigin();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-http-host-caller-lane-'));
+
+  try {
+    await withServer(['--storage-dir', directory, '--conformance-origin', origin.baseUrl, '--rate-limit', '60'], async (server) => {
+      const upload = (path: string): Promise<HttpResponse> => server.request('POST', '/upload-by-url', {
+        body: JSON.stringify({ url: `${origin.baseUrl}${path}` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const held = [
+        upload('/hold/photo-0.png'),
+        upload('/hold/photo-1.png'),
+        server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/hold/page-0`)}`),
+        server.request('GET', `/frame-check?url=${encodeURIComponent(`${origin.baseUrl}/hold/page-1`)}`),
+      ];
+
+      await waitFor(async () => origin.held.current, (current) => current >= 4);
+
+      const third = [
+        upload('/hold/photo-2.png'),
+        server.request('GET', `/unfurl?url=${encodeURIComponent(`${origin.baseUrl}/hold/page-2`)}`),
+      ];
+
+      // Give the third fetches the time to arrive if the server would let them.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(origin.received).toHaveLength(4);
+
+      const until = Date.now() + 10_000;
+
+      while (origin.received.length < 6 && Date.now() < until) {
+        origin.held.release();
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      origin.held.release();
+
+      const statuses = (await Promise.all([...held, ...third])).map((response) => response.status);
 
       expect(statuses).toEqual([200, 200, 200, 200, 200, 200]);
     });

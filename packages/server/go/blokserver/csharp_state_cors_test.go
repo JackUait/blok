@@ -33,9 +33,10 @@ func corsExposed(t *testing.T, response *http.Response) []string {
 	return names
 }
 
-// A host's own CORS layer may expose headers first; ours are added, not
-// swapped in, and "etag" already covers ETag.
-func TestTheHeadHeadersJoinHeadersTheAppAlreadyExposes(t *testing.T) {
+// corsApp is SyncApp with the journal on, behind the whole server.
+// exposed is what the app's own CORS layer exposes first.
+func corsApp(t *testing.T, exposed string) func(method, path, key, ifMatch string) *http.Response {
+	t.Helper()
 	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
@@ -57,14 +58,19 @@ func TestTheHeadHeadersJoinHeadersTheAppAlreadyExposes(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = s.Drain(context.Background()) })
 	handler := s.Handler("")
-	// The app's own exposed names, set before the server runs.
 	host := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Expose-Headers", "X-Request-Id, etag")
+		if exposed != "" {
+			w.Header().Set("Access-Control-Expose-Headers", exposed)
+		}
 		handler.ServeHTTP(w, r)
 	}))
 	t.Cleanup(host.Close)
 
-	send := func(method, path, key, body string) *http.Response {
+	return func(method, path, key, ifMatch string) *http.Response {
+		body := ""
+		if method == http.MethodPost {
+			body = `{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "text": "!" } } } ] }`
+		}
 		request, err := http.NewRequest(method, host.URL+"/sync/doc"+path, strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
@@ -74,6 +80,9 @@ func TestTheHeadHeadersJoinHeadersTheAppAlreadyExposes(t *testing.T) {
 			request.Header.Set("Blok-Idempotency-Key", key)
 			request.Header.Set("Content-Type", "application/json")
 		}
+		if ifMatch != "" {
+			request.Header.Set("If-Match", ifMatch)
+		}
 		response, err := http.DefaultClient.Do(request)
 		if err != nil {
 			t.Fatal(err)
@@ -82,9 +91,33 @@ func TestTheHeadHeadersJoinHeadersTheAppAlreadyExposes(t *testing.T) {
 		response.Body.Close()
 		return response
 	}
+}
+
+// A browser hides every response header CORS does not expose, so a
+// cross-origin page could not build If-Match from /state or recover from a 412.
+func TestACrossOriginPageCanReadTheHeadHeadersOnStateAndEdit(t *testing.T) {
+	send := corsApp(t, "")
 	state := send("GET", "/state", "", "")
-	edit := send("POST", "/edit", "joined-edit",
-		`{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "text": "!" } } } ] }`)
+	applied := send("POST", "/edit", "exposed-edit", "")
+	stale := send("POST", "/edit", "exposed-stale", state.Header.Get("ETag"))
+
+	if applied.StatusCode != http.StatusNoContent || stale.StatusCode != http.StatusPreconditionFailed {
+		t.Fatalf("applied %d, stale %d", applied.StatusCode, stale.StatusCode)
+	}
+	want := []string{"Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"}
+	for name, response := range map[string]*http.Response{"state": state, "applied": applied, "stale": stale} {
+		if got := corsExposed(t, response); !slices.Equal(got, want) {
+			t.Errorf("%s exposes %q", name, got)
+		}
+	}
+}
+
+// A host's own CORS layer may expose headers first; ours are added, not
+// swapped in, and "etag" already covers ETag.
+func TestTheHeadHeadersJoinHeadersTheAppAlreadyExposes(t *testing.T) {
+	send := corsApp(t, "X-Request-Id, etag")
+	state := send("GET", "/state", "", "")
+	edit := send("POST", "/edit", "joined-edit", "")
 
 	if state.StatusCode != http.StatusOK || edit.StatusCode != http.StatusNoContent {
 		t.Fatalf("state %d, edit %d", state.StatusCode, edit.StatusCode)

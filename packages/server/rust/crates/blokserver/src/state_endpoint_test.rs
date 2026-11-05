@@ -44,82 +44,127 @@ async fn in_ticket_mode_a_pass_minted_by_blok_ticket_is_accepted() {
     app.close().await;
 }
 
-// TheHeadHeadersJoinHeadersTheAppAlreadyExposes through the whole server, so
-// Access-Control-Allow-Origin is what the server's own CORS step sent.
-#[tokio::test(flavor = "multi_thread")]
-async fn the_head_headers_join_headers_the_app_already_exposes() {
-    use std::sync::Arc;
+const CORS_ORIGIN: &str = "https://app.example.com";
+const APPEND_ONE: &[u8] =
+    br#"{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "text": "!" } } } ] }"#;
 
-    use blok_http::{Handler, Request, ResponseWriter};
+/// SyncApp with the journal on, behind the whole server, so
+/// Access-Control-Allow-Origin is what the server's own CORS step sent.
+/// `exposed` is what the app's own CORS layer exposes first.
+struct CorsApp {
+    host: crate::testutil::Running,
+    _endpoint: crate::testutil::Running,
+    server: crate::Server,
+}
 
-    use crate::testutil::{Answer, send, start, temp_dir};
-    use crate::{Options, Server};
+impl CorsApp {
+    async fn start(exposed: Option<&'static str>) -> Self {
+        use std::sync::Arc;
 
-    const ORIGIN: &str = "https://app.example.com";
-    let endpoint = start(
-        |request: Request, mut response: ResponseWriter| async move {
-            if request.method() == "GET" {
+        use blok_http::{Handler, Request, ResponseWriter};
+
+        use crate::testutil::{start, temp_dir};
+        use crate::{Options, Server};
+
+        let endpoint = start(
+            |request: Request, mut response: ResponseWriter| async move {
+                if request.method() == "GET" {
+                    response.headers_mut().set("Content-Type", "application/json");
+                    let _ = response
+                        .write(br#"{"blocks":[{"id":"a","type":"paragraph","data":{"text":"seeded"}}]}"#)
+                        .await;
+                    return;
+                }
+                response.set_status(204);
+            },
+        )
+        .await;
+        let server = Server::new(Options {
+            allowed_origins: vec![CORS_ORIGIN.into()],
+            collab_enabled: true,
+            collab_journal: true,
+            collab_directory: temp_dir().display().to_string(),
+            doc_endpoint: format!("http://{}/docs", endpoint.address),
+            ..Options::default()
+        })
+        .unwrap();
+        let router: Arc<dyn Handler> = Arc::new(server.handler(""));
+        let host = start(move |request: Request, mut response: ResponseWriter| {
+            let router = router.clone();
+            if let Some(exposed) = exposed {
                 response
                     .headers_mut()
-                    .set("Content-Type", "application/json");
-                let _ = response
-                    .write(
-                        br#"{"blocks":[{"id":"a","type":"paragraph","data":{"text":"seeded"}}]}"#,
-                    )
-                    .await;
-                return;
+                    .set("Access-Control-Expose-Headers", exposed);
             }
-            response.set_status(204);
-        },
-    )
-    .await;
-    let server = Server::new(Options {
-        allowed_origins: vec![ORIGIN.into()],
-        collab_enabled: true,
-        collab_journal: true,
-        collab_directory: temp_dir().display().to_string(),
-        doc_endpoint: format!("http://{}/docs", endpoint.address),
-        ..Options::default()
-    })
-    .unwrap();
-    let router: Arc<dyn Handler> = Arc::new(server.handler(""));
-    // The app's own exposed names, set before the server runs.
-    let host = start(move |request: Request, mut response: ResponseWriter| {
-        let router = router.clone();
-        response
-            .headers_mut()
-            .set("Access-Control-Expose-Headers", "X-Request-Id, etag");
-        async move { router.serve(request, response).await }
-    })
-    .await;
-    let exposed = |answer: &Answer| {
-        assert_eq!(answer.headers_all("Access-Control-Allow-Origin"), [ORIGIN]);
-        let mut names: Vec<String> = answer
-            .headers_all("Access-Control-Expose-Headers")
-            .iter()
-            .flat_map(|value| value.split(',').map(|name| name.trim().to_owned()))
-            .collect();
-        names.sort();
-        names
-    };
+            async move { router.serve(request, response).await }
+        })
+        .await;
+        CorsApp {
+            host,
+            _endpoint: endpoint,
+            server,
+        }
+    }
 
-    let state = send(
-        host.address,
-        &format!("GET /sync/doc/state HTTP/1.1\r\nOrigin: {ORIGIN}"),
-        b"",
-    )
-    .await;
-    let body: &[u8] =
-        br#"{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "text": "!" } } } ] }"#;
-    let edit = send(
-        host.address,
-        &format!(
-            "POST /sync/doc/edit HTTP/1.1\r\nOrigin: {ORIGIN}\r\nBlok-Idempotency-Key: joined-edit\r\nContent-Type: application/json\r\nContent-Length: {}",
-            body.len()
-        ),
-        body,
-    )
-    .await;
+    async fn state(&self) -> crate::testutil::Answer {
+        let head = format!("GET /sync/doc/state HTTP/1.1\r\nOrigin: {CORS_ORIGIN}");
+        crate::testutil::send(self.host.address, &head, b"").await
+    }
+
+    async fn edit(&self, key: &str, if_match: Option<&str>) -> crate::testutil::Answer {
+        let mut head = format!(
+            "POST /sync/doc/edit HTTP/1.1\r\nOrigin: {CORS_ORIGIN}\r\nBlok-Idempotency-Key: {key}\r\nContent-Type: application/json\r\nContent-Length: {}",
+            APPEND_ONE.len()
+        );
+        if let Some(etag) = if_match {
+            head.push_str(&format!("\r\nIf-Match: {etag}"));
+        }
+        crate::testutil::send(self.host.address, &head, APPEND_ONE).await
+    }
+
+    async fn close(self) {
+        let _ = self.server.drain(std::time::Duration::from_secs(30)).await;
+    }
+}
+
+/// C# ExposedHeaders: the names, split and sorted, after checking the
+/// answer is a CORS one.
+fn exposed_headers(answer: &crate::testutil::Answer) -> Vec<String> {
+    assert_eq!(
+        answer.headers_all("Access-Control-Allow-Origin"),
+        [CORS_ORIGIN]
+    );
+    let mut names: Vec<String> = answer
+        .headers_all("Access-Control-Expose-Headers")
+        .iter()
+        .flat_map(|value| value.split(',').map(|name| name.trim().to_owned()))
+        .collect();
+    names.sort();
+    names
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cross_origin_page_can_read_the_head_headers_on_state_and_edit() {
+    let app = CorsApp::start(None).await;
+    let state = app.state().await;
+    let applied = app.edit("exposed-edit", None).await;
+    let stale = app.edit("exposed-stale", Some(state.header("ETag"))).await;
+
+    assert_eq!((applied.status, stale.status), (204, 412));
+    let want = ["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"];
+    assert_eq!(exposed_headers(&state), want);
+    assert_eq!(exposed_headers(&applied), want);
+    assert_eq!(exposed_headers(&stale), want);
+    app.close().await;
+}
+
+// A host's own CORS layer may expose headers first; ours are added, not
+// swapped in.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_head_headers_join_headers_the_app_already_exposes() {
+    let app = CorsApp::start(Some("X-Request-Id, etag")).await;
+    let state = app.state().await;
+    let edit = app.edit("joined-edit", None).await;
 
     assert_eq!((state.status, edit.status), (200, 204), "{}", edit.text());
     let want = [
@@ -128,7 +173,7 @@ async fn the_head_headers_join_headers_the_app_already_exposes() {
         "X-Request-Id",
         "etag",
     ];
-    assert_eq!(exposed(&state), want);
-    assert_eq!(exposed(&edit), want);
-    let _ = server.drain(std::time::Duration::from_secs(30)).await;
+    assert_eq!(exposed_headers(&state), want);
+    assert_eq!(exposed_headers(&edit), want);
+    app.close().await;
 }

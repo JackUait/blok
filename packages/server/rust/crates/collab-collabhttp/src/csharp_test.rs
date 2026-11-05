@@ -326,56 +326,6 @@ async fn an_edit_the_converter_refuses_stays_a422() {
     app.drain().await;
 }
 
-/// The exposed names, sorted, after checking the answer is a CORS one.
-fn exposed_headers(answer: &Answer) -> Vec<String> {
-    assert_eq!(
-        answer.header("Access-Control-Allow-Origin"),
-        "https://app.example.com"
-    );
-    let mut names: Vec<String> = answer
-        .headers
-        .iter()
-        .filter(|(n, _)| n.eq_ignore_ascii_case("Access-Control-Expose-Headers"))
-        .flat_map(|(_, v)| v.split(',').map(|name| name.trim().to_owned()))
-        .collect();
-    names.sort();
-    names
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn a_cross_origin_page_can_read_the_head_headers_on_state_and_edit() {
-    let app = start_app(journal()).await;
-    let origin = ("Origin", "https://app.example.com");
-    let state = app.request("GET", "/state", &[origin], "").await;
-    let applied = app
-        .request(
-            "POST",
-            "/edit",
-            &[origin, ("Blok-Idempotency-Key", "exposed-edit")],
-            APPEND_ONE,
-        )
-        .await;
-    let stale = app
-        .request(
-            "POST",
-            "/edit",
-            &[
-                origin,
-                ("Blok-Idempotency-Key", "exposed-stale"),
-                ("If-Match", state.header("ETag")),
-            ],
-            APPEND_ONE,
-        )
-        .await;
-    assert_eq!(applied.status, 204);
-    assert_eq!(stale.status, 412);
-    let want = vec!["Blok-Doc-Lineage", "Blok-Doc-Sequence", "ETag"];
-    assert_eq!(exposed_headers(&state), want);
-    assert_eq!(exposed_headers(&applied), want);
-    assert_eq!(exposed_headers(&stale), want);
-    app.drain().await;
-}
-
 #[tokio::test(flavor = "multi_thread")]
 async fn state_needs_read_access_but_not_write_access() {
     let authorization = RecordingAuthorization::new(false, true);

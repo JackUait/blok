@@ -32,6 +32,7 @@ import { Caret } from './caret';
 import { CrossBlockSelection } from './crossBlockSelection';
 import { DragController as DragManager } from './drag/DragController';
 import { Find } from './find';
+import { FrameFocus } from './frameFocus';
 import { I18n } from './i18n';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
@@ -99,6 +100,7 @@ export const Modules = {
   CrossBlockSelection,
   DragManager,
   Find,
+  FrameFocus,
   Assistant,
   ModificationsObserver,
   Paste,

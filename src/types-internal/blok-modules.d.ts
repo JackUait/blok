@@ -35,6 +35,7 @@ import { Caret } from '../components/modules/caret';
 import { CrossBlockSelection } from '../components/modules/crossBlockSelection';
 import { DragController as DragManager } from '../components/modules/drag/DragController';
 import { Find } from '../components/modules/find';
+import { FrameFocus } from '../components/modules/frameFocus';
 import { Assistant } from '../components/modules/assistant';
 import { ModificationsObserver } from '../components/modules/modificationsObserver';
 import { Paste } from '../components/modules/paste';
@@ -99,6 +100,7 @@ export interface BlokModules {
   Caret: Caret,
   CrossBlockSelection: CrossBlockSelection,
   Find: Find,
+  FrameFocus: FrameFocus,
   Assistant: Assistant,
   DragManager: DragManager,
   ModificationsObserver: ModificationsObserver,

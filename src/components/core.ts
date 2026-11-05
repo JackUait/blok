@@ -457,6 +457,7 @@ export class Core {
       'ReadOnly',
       'ThemeManager',
       'Find',
+      'FrameFocus',
       'AgentAPI',
       'Assistant',
       'PageReferences',

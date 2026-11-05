@@ -122,14 +122,39 @@ impl Sink {
         false
     }
 
+    /// Whether `node` is an html select.
+    pub fn is_select(&self, node: usize) -> bool {
+        matches!(&self.nodes.borrow()[node].kind, Kind::Element { name, .. }
+            if name.ns == ns!(html) && &*name.local == "select")
+    }
+
     /// Builds an element html5ever dropped, as a last child of `parent`.
-    pub fn rescue(&self, parent: usize, name: QualName, attrs: Vec<Attribute>) {
+    pub fn rescue(&self, parent: usize, name: QualName, attrs: Vec<Attribute>) -> usize {
         let element = self.add(Kind::Element {
             name,
             attrs,
             contents: None,
         });
         self.insert(parent, usize::MAX, NodeOrText::AppendNode(element));
+        element
+    }
+
+    /// The local names of `elements`.
+    pub fn local_names(&self, elements: &[usize]) -> Vec<html5ever::LocalName> {
+        let nodes = self.nodes.borrow();
+        elements
+            .iter()
+            .map(|&at| match &nodes[at].kind {
+                Kind::Element { name, .. } => name.local.clone(),
+                _ => html5ever::LocalName::from(""),
+            })
+            .collect()
+    }
+
+    /// Appends text to a rescued element.
+    pub fn rescue_text(&self, parent: usize, text: StrTendril) {
+        let end = self.nodes.borrow()[parent].children.len();
+        self.insert(parent, end, NodeOrText::AppendText(text));
     }
 }
 

@@ -2,8 +2,11 @@ use blok_dotnet::{Uri, parse_absolute_uri, resolve_uri};
 use blok_jsjson::Str;
 use html5ever::interface::TreeSink;
 use html5ever::tendril::StrTendril;
+use std::cell::RefCell;
+
 use html5ever::tokenizer::{
-    BufferQueue, StartTag, TagToken, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
+    BufferQueue, CharacterTokens, EOFToken, EndTag, NullCharacterToken, StartTag, TagToken, Token,
+    TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
 };
 use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 use html5ever::{QualName, TokenizerResult, ns};
@@ -128,26 +131,111 @@ pub fn parse(body: &[u8], final_url: &str) -> Metadata {
     build(base, found)
 }
 
-/// AngleSharp 1.9.0's "in select" mode builds start tags normally while the
-/// current node is an option or optgroup; html5ever's drops them, as the
-/// older spec says. So a dropped meta or link there is built back, at the
-/// current node a probe comment finds. Comments change no insertion mode.
-/// unfurl-html.json pins the cases.
+/// AngleSharp 1.9.0's "in select" mode drops a start tag only when the
+/// current node is the select itself; inside an option, optgroup or button
+/// it builds normally. html5ever's drops them, as the older spec says, a
+/// button too. So a dropped meta, link or title there is built back, at the
+/// current node a probe comment finds, and a dropped button is built and
+/// stands in for that node until its end tag. A rescued title holds what
+/// follows, markup included (no RCDATA), until its end tag or the select
+/// ends. Comments change no insertion mode. unfurl-html.json pins the
+/// cases.
 struct Rescue {
     builder: TreeBuilder<usize, Sink>,
+    /// Rescued buttons still open, innermost last.
+    buttons: RefCell<Vec<usize>>,
+    /// A rescued title and the elements open inside it, innermost last.
+    title: RefCell<Vec<usize>>,
+}
+
+/// Elements with no end tag.
+fn is_void(name: &str) -> bool {
+    matches!(
+        name,
+        "area"
+            | "base"
+            | "br"
+            | "col"
+            | "embed"
+            | "hr"
+            | "img"
+            | "input"
+            | "keygen"
+            | "link"
+            | "meta"
+            | "param"
+            | "source"
+            | "track"
+            | "wbr"
+    )
+}
+
+/// Tags that end the select in AngleSharp's "in select" mode.
+fn ends_select(tag: &html5ever::tokenizer::Tag) -> bool {
+    match tag.kind {
+        EndTag => &*tag.name == "select",
+        StartTag => matches!(&*tag.name, "select" | "input" | "keygen" | "textarea"),
+    }
+}
+
+impl Rescue {
+    /// Builds what a rescued title holds. False when the token ends it and
+    /// goes on to html5ever.
+    fn inside_title(&self, token: &Token) -> bool {
+        let sink = &self.builder.sink;
+        let mut open = self.title.borrow_mut();
+        let Some(&top) = open.last() else {
+            return false;
+        };
+        match token {
+            CharacterTokens(text) => sink.rescue_text(top, text.clone()),
+            NullCharacterToken => sink.rescue_text(top, StrTendril::from("\u{FFFD}")),
+            TagToken(tag) if ends_select(tag) => {
+                open.clear();
+                return false;
+            }
+            TagToken(tag) if tag.kind == StartTag => {
+                let name = QualName::new(None, ns!(html), tag.name.clone());
+                let element = sink.rescue(top, name, tag.attrs.clone());
+                if !tag.self_closing && !is_void(&tag.name) {
+                    open.push(element);
+                }
+            }
+            TagToken(tag) => {
+                let names = sink.local_names(&open);
+                if let Some(at) = names.iter().rposition(|name| *name == tag.name) {
+                    open.truncate(at);
+                }
+            }
+            EOFToken => {
+                open.clear();
+                return false;
+            }
+            _ => {}
+        }
+        true
+    }
 }
 
 impl TokenSink for Rescue {
     type Handle = usize;
 
     fn process_token(&self, token: Token, line_number: u64) -> TokenSinkResult<usize> {
+        if self.inside_title(&token) {
+            return TokenSinkResult::Continue;
+        }
+        let sink = &self.builder.sink;
         let TagToken(tag) = &token else {
             return self.builder.process_token(token, line_number);
         };
-        if tag.kind != StartTag || !matches!(&*tag.name, "meta" | "link") {
+        if ends_select(tag) {
+            self.buttons.borrow_mut().clear();
+        } else if tag.kind == EndTag && &*tag.name == "button" {
+            self.buttons.borrow_mut().pop();
+        }
+        if tag.kind != StartTag || !matches!(&*tag.name, "meta" | "link" | "title" | "button") {
             return self.builder.process_token(token, line_number);
         }
-        let sink = &self.builder.sink;
         sink.probing.set(true);
         sink.probe_parent.set(None);
         let _ = self
@@ -155,14 +243,24 @@ impl TokenSink for Rescue {
             .process_token(Token::CommentToken(StrTendril::new()), line_number);
         sink.probing.set(false);
         let current = sink.probe_parent.get();
-        let (name, attrs) = (tag.name.clone(), tag.attrs.clone());
+        let (local, attrs) = (tag.name.clone(), tag.attrs.clone());
         let created = sink.created.get();
         let result = self.builder.process_token(token, line_number);
-        if let Some(current) = current
-            && sink.created.get() == created
-            && sink.in_select_option(current)
-        {
-            sink.rescue(current, QualName::new(None, ns!(html), name), attrs);
+        let Some(current) = current.filter(|_| sink.created.get() == created) else {
+            return result;
+        };
+        let open_button = self.buttons.borrow().last().copied();
+        let parent = match open_button {
+            Some(button) => button,
+            None if sink.in_select_option(current) => current,
+            None if &*local == "button" && sink.is_select(current) => current,
+            None => return result,
+        };
+        let element = sink.rescue(parent, QualName::new(None, ns!(html), local.clone()), attrs);
+        match &*local {
+            "button" => self.buttons.borrow_mut().push(element),
+            "title" => self.title.borrow_mut().push(element),
+            _ => {}
         }
         result
     }
@@ -186,6 +284,8 @@ fn build_tree(text: String) -> Vec<Node> {
     let tokenizer = Tokenizer::new(
         Rescue {
             builder: TreeBuilder::new(Sink::new(), options),
+            buttons: RefCell::new(Vec::new()),
+            title: RefCell::new(Vec::new()),
         },
         TokenizerOpts::default(),
     );

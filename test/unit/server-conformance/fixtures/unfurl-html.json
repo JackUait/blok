@@ -1044,6 +1044,71 @@
       "name": "og:image and icon whose IDN host maps to a delimiter: evil.example＠bank.example/a.png",
       "url": "https://example.com/x",
       "html": "<html><head><meta property=\"og:image\" content=\"https://evil.example＠bank.example/a.png\"><link rel=\"icon\" href=\"https://evil.example＠bank.example/a.png\"></head></html>"
+    },
+    {
+      "name": "meta inside a button in a select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><button><meta property=\"og:title\" content=\"Button Title\"></button></select></body></html>"
+    },
+    {
+      "name": "title inside an option in a select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title>Option Title</title></option></select></body></html>"
+    },
+    {
+      "name": "title inside a button in a select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><button><title>Button Title</title></button></select></body></html>"
+    },
+    {
+      "name": "title directly in a select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><title>Select Title</title></select></body></html>"
+    },
+    {
+      "name": "markup and an entity in a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title>A <b>B</b> &amp; C</title></option></select></body></html>"
+    },
+    {
+      "name": "meta after a closed button in a select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><button></button><meta property=\"og:title\" content=\"After Button\"></select></body></html>"
+    },
+    {
+      "name": "meta inside a button in an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><button><meta property=\"og:title\" content=\"Option Button\"></button></option></select></body></html>"
+    },
+    {
+      "name": "icon link inside a button in a select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><button><link rel=\"icon\" href=\"/b.ico\"></button></select></body></html>"
+    },
+    {
+      "name": "an unclosed button in a select ends with the select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><button></select><meta property=\"og:title\" content=\"Body Meta\"></body></html>"
+    },
+    {
+      "name": "a title inside an option that starts with markup",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title><b>X</b> Y</title></option></select></body></html>"
+    },
+    {
+      "name": "an escaped tag in a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title>A &lt;b&gt; C</title></option></select></body></html>"
+    },
+    {
+      "name": "an unclosed title inside an option ends with the select",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title>T</option></select><meta property=\"og:description\" content=\"After\"></body></html>"
+    },
+    {
+      "name": "meta inside a title inside an option",
+      "url": "https://example.com/x",
+      "html": "<html><body><select><option><title>T<meta property=\"og:image\" content=\"/i.png\"></title></option></select></body></html>"
     }
   ],
   "answers": [
@@ -2715,6 +2780,110 @@
       "title": "",
       "description": "",
       "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "Button Title",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "Option Title",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "Button Title",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "A",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "Option Button",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/b.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "Body Meta",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "X",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "A <b> C",
+      "description": "",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "T",
+      "description": "After",
+      "image": "",
+      "favicon": "https://example.com/favicon.ico",
+      "domain": "example.com",
+      "oembed": ""
+    },
+    {
+      "title": "T",
+      "description": "",
+      "image": "https://example.com/i.png",
       "favicon": "https://example.com/favicon.ico",
       "domain": "example.com",
       "oembed": ""

@@ -253,6 +253,21 @@ public sealed class TextDiffCaptureTests
       Add(before, before.Remove(at, cut).Insert(at, ConjunctText(conjunctRandom.Next(3))), markup: conjunctRandom.Next(4) != 0);
     }
 
+    // The hand-written cluster texts the client's atomize was recorded on, so
+    // Go and Rust split them from this file too. Sorted: reflection gives no
+    // fixed attribute order.
+    var clientTexts = typeof(TextDiffGraphemeTests)
+        .GetMethod(nameof(TextDiffGraphemeTests.SplitsACharacterTheWayTheClientDoes))!
+        .GetCustomAttributes<InlineDataAttribute>()
+        .Select(data => data.GetData(null!).Single())
+        .OrderBy(row => (string)row[0], StringComparer.Ordinal);
+
+    foreach (var row in clientTexts)
+    {
+      var text = (string)row[1];
+      Add(text, text + "!");
+    }
+
     var written = new StringBuilder();
     written.Append("{\n  \"$comment\": \"Captured from C# by TextDiffCaptureTests. Do not edit by hand. Edits are [index, remove, insert] in UTF-16 units.\",\n  \"cases\": [\n");
 

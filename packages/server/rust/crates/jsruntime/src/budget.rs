@@ -152,3 +152,68 @@ unsafe impl Allocator for CountingAllocator {
         unsafe { RustAllocator::usable_size(ptr) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MIB: usize = 1 << 20;
+
+    /// Allocates 1 MiB blocks until the budget refuses one; returns them.
+    fn fill(allocator: &mut CountingAllocator) -> Vec<*mut u8> {
+        let mut blocks = Vec::new();
+        for _ in 0..1024 {
+            let ptr = allocator.alloc(MIB);
+            if ptr.is_null() {
+                break;
+            }
+            blocks.push(ptr);
+        }
+        blocks
+    }
+
+    fn free(allocator: &mut CountingAllocator, blocks: Vec<*mut u8>) {
+        for ptr in blocks {
+            // SAFETY: each pointer came from this allocator's alloc.
+            unsafe { allocator.dealloc(ptr) };
+        }
+    }
+
+    #[test]
+    fn the_budget_bounds_what_a_call_can_hold() {
+        let budget = Budget::default();
+        let mut allocator = budget.allocator();
+        budget.arm(64 << 20, Charge::Allocated);
+        let blocks = fill(&mut allocator);
+        let held = budget.0.held.load(Ordering::Relaxed);
+        assert!(held <= 64 * MIB, "held {held} bytes past a 64 MiB budget");
+        assert!(
+            blocks.len() >= 60,
+            "refused early, after {} MiB",
+            blocks.len()
+        );
+        assert!(budget.disarm(), "the run is not marked over its budget");
+        free(&mut allocator, blocks);
+        assert_eq!(budget.0.held.load(Ordering::Relaxed), 0);
+    }
+
+    // Each engine has its own count, so one engine's allocations cannot use
+    // up another's budget.
+    #[test]
+    fn one_engines_allocations_are_not_charged_to_another() {
+        let (busy, quiet) = (Budget::default(), Budget::default());
+        let (mut busy_alloc, mut quiet_alloc) = (busy.allocator(), quiet.allocator());
+        busy.arm(64 << 20, Charge::Allocated);
+        quiet.arm(64 << 20, Charge::Allocated);
+        let hog = fill(&mut busy_alloc);
+        let mine = fill(&mut quiet_alloc);
+        assert!(
+            mine.len() >= 60,
+            "the quiet engine got only {} MiB",
+            mine.len()
+        );
+        busy.disarm();
+        free(&mut busy_alloc, hog);
+        free(&mut quiet_alloc, mine);
+    }
+}

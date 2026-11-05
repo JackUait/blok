@@ -363,3 +363,16 @@ func TestConcurrentNtlmHandshakesEachKeepTheirConn(t *testing.T) {
 		t.Errorf("%d reuses of a signed conn, want 1: %v", reused, logs)
 	}
 }
+
+// A conn one NTLM user signed is never handed to another user's request.
+func TestASignedConnIsParkedUnderItsCredentials(t *testing.T) {
+	proxy := func(user string) *route {
+		return &route{scheme: "http", proxy: &url.URL{Scheme: "http", Host: "p.example:8080", User: url.UserPassword(user, "p")}}
+	}
+	if parkKey(proxy("a")) == parkKey(proxy("b")) {
+		t.Fatal("two users share a park key")
+	}
+	if parkKey(proxy("a")) != parkKey(proxy("a")) {
+		t.Fatal("one user's key is not stable")
+	}
+}

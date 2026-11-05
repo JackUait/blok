@@ -211,7 +211,10 @@ func (t *SocketsTransport) forwardConn(conn net.Conn, r *route) *wireConn {
 	return wire
 }
 
-func parkKey(r *route) string { return r.proxy.Scheme + "://" + proxyAddress(r.proxy) }
+// parkKey names a signed conn by proxy and the credentials that signed it.
+func parkKey(r *route) string {
+	return r.proxy.Scheme + "://" + r.proxy.User.String() + "@" + proxyAddress(r.proxy)
+}
 
 // park keeps a signed conn for the pool's next dial to key.
 func (t *SocketsTransport) park(key string, conn net.Conn) {

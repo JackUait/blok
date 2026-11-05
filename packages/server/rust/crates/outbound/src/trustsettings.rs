@@ -184,6 +184,54 @@ fn is_anchor(
     })
 }
 
+/// The hashes trustd denies in any role. It checks the leaf and every parent
+/// with SecPathBuilderIsAnchor (SecTrustServer.c:855-875, 910-925): Apple's
+/// roots are found first, then the legacy source, whose Deny makes a
+/// "denied anchor" that SecPVCCheckUsageConstraints fails
+/// (SecPolicyServer.c:3425-3440). A Deny does not depend on the cert being
+/// self-signed. A cert whose constrained entries deny in any case is in the
+/// set, so a chain is never trusted where trustd refuses it.
+pub(crate) fn denied_certs(
+    user: &HashMap<String, Vec<TrustSetting>>,
+    admin: &HashMap<String, Vec<TrustSetting>>,
+    certs: &HashMap<String, Vec<u8>>,
+    apple: impl Fn(&[u8]) -> bool,
+) -> HashSet<String> {
+    admin
+        .keys()
+        .chain(user.keys())
+        .filter(|hash| !certs.get(*hash).is_some_and(|der| apple(der)))
+        .filter(|hash| {
+            let settings = admin
+                .get(*hash)
+                .or_else(|| user.get(*hash))
+                .map_or(&[][..], Vec::as_slice);
+            denied_in_some_case(settings)
+        })
+        .cloned()
+        .collect()
+}
+
+fn denied_in_some_case(settings: &[TrustSetting]) -> bool {
+    let open: Vec<usize> = settings
+        .iter()
+        .enumerate()
+        .filter(|(_, setting)| setting.constrained && setting.names_tls())
+        .map(|(index, _)| index)
+        .collect();
+    if open.len() > MAX_CONSTRAINED {
+        return true;
+    }
+    (0..1usize << open.len()).any(|world| {
+        let meets = |index: usize| {
+            open.iter()
+                .position(|&i| i == index)
+                .is_some_and(|bit| world & (1 << bit) != 0)
+        };
+        legacy_verdict(settings, false, meets) == AnchorVerdict::Denied
+    })
+}
+
 /// SHA-256 digests of SecGetAppleTrustAnchors (SecAppleAnchor.c:141-180):
 /// Apple Root CA, G2, G3 and the two Platform Backport roots.
 pub(crate) const APPLE_ROOTS: [[u8; 32]; 5] = [

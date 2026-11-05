@@ -17,7 +17,7 @@ use sha2::Sha256;
 
 use crate::selfsigned::self_signed;
 use crate::trustsettings::{
-    APPLE_ROOTS, Value, parse_trust_list, read_plist_dict, trusted_anchors,
+    APPLE_ROOTS, Value, denied_certs, parse_trust_list, read_plist_dict, trusted_anchors,
 };
 
 pub(crate) const SECURITY_TOOL: &str = "/usr/bin/security";
@@ -106,10 +106,13 @@ fn apple_root(der: &[u8]) -> bool {
 
 /// The anchors, or the bundle when any read fails: a set read in part would
 /// drop a keychain's roots or a domain's denials.
-pub(crate) fn load_roots(tool: &Path) -> Vec<CertificateDer<'static>> {
+pub(crate) fn load_roots(tool: &Path) -> (Vec<CertificateDer<'static>>, HashSet<String>) {
     match load_trust_settings_anchors(tool, &TrustStore::system()) {
-        Ok(anchors) => anchors.into_iter().map(CertificateDer::from).collect(),
-        Err(_) => bundle(),
+        Ok((anchors, denied)) => (
+            anchors.into_iter().map(CertificateDer::from).collect(),
+            denied,
+        ),
+        Err(_) => (bundle(), HashSet::new()),
     }
 }
 
@@ -124,7 +127,7 @@ pub(crate) fn bundle() -> Vec<CertificateDer<'static>> {
 pub(crate) fn load_trust_settings_anchors(
     tool: &Path,
     store: &TrustStore,
-) -> Result<Vec<Vec<u8>>, String> {
+) -> Result<(Vec<Vec<u8>>, HashSet<String>), String> {
     let deadline = Instant::now() + Duration::from_secs(10);
     let home = std::env::var("HOME").unwrap_or_default();
     let system_keychain = store.system_roots_keychain(deadline);
@@ -169,14 +172,8 @@ pub(crate) fn load_trust_settings_anchors(
         domains.push(parse_trust_list(&data)?);
     }
     let [user, admin] = <[_; 2]>::try_from(domains).map_err(|_| "two domains")?;
-    Ok(trusted_anchors(
-        &user,
-        &admin,
-        &system,
-        &certs,
-        self_signed,
-        apple_root,
-    ))
+    let anchors = trusted_anchors(&user, &admin, &system, &certs, self_signed, apple_root);
+    Ok((anchors, denied_certs(&user, &admin, &certs, apple_root)))
 }
 
 fn upper_hex(bytes: &[u8]) -> String {

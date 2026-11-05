@@ -16,7 +16,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::time::{Instant, timeout_at};
 
-use crate::fetcher::{system_roots, tls_connector};
+use crate::fetcher::{tls_connector, trust_for};
 use crate::proxy::{EnvironmentProxy, ProxyUrl};
 use crate::wire::{Body, Framing, Head, Headers, framing, read_head, request_head};
 
@@ -221,14 +221,17 @@ impl OperatorClient {
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         }
-        let roots = self.roots.clone().unwrap_or_else(system_roots);
+        let (roots, denied) = trust_for(&self.roots, &None);
         let mut stream: Box<dyn Stream> = Box::new(tcp);
         // An https proxy gets TLS of its own first, named by its host.
         if let Some(proxy) = proxy.filter(|p| p.scheme == "https") {
             let name = proxy_server_name(&proxy.authority)?;
-            let tls = timeout_at(deadline, tls_connector(roots.clone()).connect(name, stream))
-                .await
-                .map_err(|_| OperatorError::ConnectTimeout)??;
+            let tls = timeout_at(
+                deadline,
+                tls_connector(roots.clone(), denied.clone()).connect(name, stream),
+            )
+            .await
+            .map_err(|_| OperatorError::ConnectTimeout)??;
             stream = Box::new(tls);
         }
         if url.scheme != "https" {
@@ -248,7 +251,7 @@ impl OperatorClient {
             _ => ServerName::try_from(url.idn_host.clone())
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
         };
-        let tls = timeout_at(deadline, tls_connector(roots).connect(name, stream))
+        let tls = timeout_at(deadline, tls_connector(roots, denied).connect(name, stream))
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         Ok(Box::new(tls))

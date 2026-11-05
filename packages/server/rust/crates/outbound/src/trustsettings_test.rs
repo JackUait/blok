@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::trustsettings::{TrustSetting, parse_trust_list, trusted_anchors};
+use super::trustsettings::{TrustSetting, denied_certs, parse_trust_list, trusted_anchors};
 
 fn setting(policy: &str, result: i64) -> TrustSetting {
     TrustSetting {
@@ -250,5 +250,37 @@ fn reads_the_trust_list_of_an_export() {
         ),
         ("925A8F8D2C6D04E0665F596AFF22D863E8256F3F", vec![]),
     ]);
+    assert_eq!(got, want);
+}
+
+// The certs trustd denies in any role: the legacy source (admin's list,
+// else the user's) yields a denied anchor for them (SecPolicyServer.c
+// :3359-3375, 3378-3423), whatever the cert is in the chain, and Apple's
+// roots are found first (SecTrustServer.c:641-669). A constrained Deny
+// counts, since it denies in some evaluation.
+#[test]
+fn denied_certs_are_the_ones_trustd_denies() {
+    let certs: HashMap<String, Vec<u8>> = ["A", "M", "B"]
+        .iter()
+        .map(|h| (h.to_string(), h.as_bytes().to_vec()))
+        .collect();
+    let apple = |der: &[u8]| der == b"M";
+    let user = domain(vec![
+        ("A", vec![setting("sslServer", 3)]),
+        ("B", vec![setting("sslServer", 3)]),
+        ("C", vec![setting("sslServer", 4), setting("", 3)]),
+        ("D", vec![constrained_ssl(3)]),
+        ("E", vec![setting("smime", 3)]),
+        ("F", vec![]),
+        ("M", vec![setting("sslServer", 3)]),
+        // No cert in any keychain: still denied by its hash.
+        ("W", vec![setting("", 3)]),
+    ]);
+    let admin = domain(vec![
+        ("B", vec![setting("sslServer", 1)]),
+        ("V", vec![setting("sslServer", 3)]),
+    ]);
+    let got = denied_certs(&user, &admin, &certs, apple);
+    let want: HashSet<String> = ["A", "D", "V", "W"].iter().map(|h| h.to_string()).collect();
     assert_eq!(got, want);
 }

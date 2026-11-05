@@ -19,7 +19,7 @@ fn sorted(mut certs: Vec<CertificateDer<'static>>) -> Vec<Vec<u8>> {
 // Keychain is trusted as in C# and Go.
 #[test]
 fn the_mac_os_roots_come_from_the_trust_settings() {
-    let anchors =
+    let (anchors, _) =
         load_trust_settings_anchors(Path::new(SECURITY_TOOL), &TrustStore::system()).unwrap();
     assert!(!anchors.is_empty(), "no roots");
 }
@@ -56,7 +56,7 @@ fn any_failed_trust_read_falls_back_to_the_bundle() {
     for (index, (fail, action)) in cases.into_iter().enumerate() {
         let directory =
             std::env::temp_dir().join(format!("blok-failing-tool-{}-{index}", std::process::id()));
-        let got = sorted(load_roots(&failing_tool(&directory, fail, action)));
+        let got = sorted(load_roots(&failing_tool(&directory, fail, action)).0);
         let _ = std::fs::remove_dir_all(&directory);
         assert!(
             got == want,

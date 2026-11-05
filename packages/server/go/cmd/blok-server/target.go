@@ -1276,7 +1276,7 @@ func kestrelAnswer(status int) string {
 	if allow != "" {
 		allow = "Allow: " + allow + "\r\n"
 	}
-	return fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Length: 0\r\n%s%sDate: %s\r\n\r\n",
+	return fmt.Sprintf("HTTP/1.1 %d %s\r\nContent-Length: 0\r\n%s%sDate: %s\r\nServer: Kestrel\r\n\r\n",
 		status, kestrelReasons[status], connection, allow, time.Now().UTC().Format(http.TimeFormat))
 }
 

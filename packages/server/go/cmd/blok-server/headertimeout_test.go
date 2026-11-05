@@ -40,7 +40,7 @@ func TestStalledHeadersGetKestrels408(t *testing.T) {
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	answer, _ := io.ReadAll(conn)
 	text := string(answer)
-	if !strings.HasPrefix(text, "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnection: close\r\nDate: ") || !strings.HasSuffix(text, " GMT\r\n\r\n") {
+	if !strings.HasPrefix(text, "HTTP/1.1 408 Request Timeout\r\nContent-Length: 0\r\nConnection: close\r\nDate: ") || !strings.HasSuffix(text, " GMT\r\nServer: Kestrel\r\n\r\n") {
 		t.Fatalf("got %q", text)
 	}
 }

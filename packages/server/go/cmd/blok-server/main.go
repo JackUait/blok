@@ -99,7 +99,7 @@ var notifyShutdown = func(ctx context.Context) (context.Context, context.CancelF
 // listener wrapped too: serve on a headerListener.
 func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Server {
 	server := &http.Server{
-		Handler:     withDeadline(handler, requestTimeout),
+		Handler:     withServerHeader(withDeadline(handler, requestTimeout)),
 		IdleTimeout: keepAliveTimeout,
 		// Without this net/http answers "OPTIONS *" itself.
 		DisableGeneralOptionsHandler: true,
@@ -110,6 +110,15 @@ func newHTTPServer(handler http.Handler, requestTimeout time.Duration) *http.Ser
 	restoreTargets(server)
 	limitRequestHeaders(server, headerTimeout, keepAliveTimeout)
 	return server
+}
+
+// withServerHeader is Kestrel's AddServerHeader default: every answer says
+// "Server: Kestrel". kestrelAnswer and ws.Upgrade carry it too.
+func withServerHeader(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", "Kestrel")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // maxUpgradedConnections is HostCollab.DefaultMaxUpgradedConnections: an

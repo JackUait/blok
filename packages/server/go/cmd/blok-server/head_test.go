@@ -86,7 +86,7 @@ func rawAnswer(t *testing.T, address, request string) string {
 	lines := strings.Split(string(answer), "\r\n")
 	kept := lines[:0]
 	for _, line := range lines {
-		if !strings.HasPrefix(line, "Date: ") {
+		if !strings.HasPrefix(line, "Date: ") && line != "Server: Kestrel" {
 			kept = append(kept, line)
 		}
 	}

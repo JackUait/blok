@@ -193,7 +193,13 @@ func Upgrade(w http.ResponseWriter, r *http.Request, options Options) (*Conn, er
 	if err != nil {
 		return nil, errors.Join(ErrNotHijacked, err)
 	}
-	response := "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: " + accept + "\r\n"
+	// Kestrel's order. Server only when the host set one, as Kestrel's
+	// default does.
+	response := "HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nDate: " + time.Now().UTC().Format(http.TimeFormat) + "\r\n"
+	if server := w.Header().Get("Server"); server != "" && !strings.ContainsAny(server, "\r\n") {
+		response += "Server: " + server + "\r\n"
+	}
+	response += "Upgrade: websocket\r\nSec-WebSocket-Accept: " + accept + "\r\n"
 	if strings.TrimSpace(options.SubProtocol) != "" {
 		response += "Sec-WebSocket-Protocol: " + options.SubProtocol + "\r\n"
 	}

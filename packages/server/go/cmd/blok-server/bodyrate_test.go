@@ -46,7 +46,7 @@ func trickleAfter(t *testing.T, address, head, body string, size int, gap, pause
 	lines := strings.Split(string(answer), "\r\n")
 	kept := lines[:0]
 	for _, line := range lines {
-		if !strings.HasPrefix(line, "Date: ") {
+		if !strings.HasPrefix(line, "Date: ") && line != "Server: Kestrel" {
 			kept = append(kept, line)
 		}
 	}

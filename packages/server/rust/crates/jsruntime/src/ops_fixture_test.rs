@@ -27,7 +27,12 @@ fn input(case: &Json) -> String {
             if i > 0 {
                 text.push_str(join);
             }
-            text.push_str(&items[i % items.len()].str().replace("{i}", &i.to_string()));
+            text.push_str(
+                &items[i % items.len()]
+                    .str()
+                    .replace("{i}", &i.to_string())
+                    .replace("{i1}", &(i + 1).to_string()),
+            );
         }
     }
     text

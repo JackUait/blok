@@ -57,7 +57,8 @@ func (c opsCase) input() string {
 			if i > 0 {
 				b.WriteString(part.Join)
 			}
-			b.WriteString(strings.ReplaceAll(part.Items[i%len(part.Items)], "{i}", strconv.Itoa(i)))
+			item := strings.ReplaceAll(part.Items[i%len(part.Items)], "{i}", strconv.Itoa(i))
+			b.WriteString(strings.ReplaceAll(item, "{i1}", strconv.Itoa(i+1)))
 		}
 	}
 	return b.String()

@@ -2644,5 +2644,131 @@
     },
     "normalizeIds": true,
     "outputSha256": "f9c11a79f2c20339876b0ace654b8bf15727052580aa1ea407ca139e80ec3c25"
+  },
+  {
+    "name": "big.default.bookmark.12mib.markdown",
+    "op": "blocksToMarkdown",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"u1\",\"type\":\"bookmark\",\"data\":{\"url\":\"https://example.com/?q=",
+        {
+          "repeat": 12582912,
+          "join": "",
+          "items": [
+            "A"
+          ]
+        },
+        "\"}}]}"
+      ]
+    },
+    "outputSha256": "a33acfb6bf80ead2ae8c35424dc40014ff5578afa76fb6b6b856fd67fc784620"
+  },
+  {
+    "name": "big.default.image.14mib.markdown",
+    "op": "blocksToMarkdown",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"u1\",\"type\":\"image\",\"data\":{\"url\":\"data:image/png;base64,",
+        {
+          "repeat": 14680064,
+          "join": "",
+          "items": [
+            "A"
+          ]
+        },
+        "\"}}]}"
+      ]
+    },
+    "outputSha256": "fc052d6c2182b6edf6cb2cd53be1174eb3414555b38770c88029350fa037942a"
+  },
+  {
+    "name": "big.default.image.32mib.html",
+    "op": "blocksToHtml",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"u1\",\"type\":\"image\",\"data\":{\"url\":\"data:image/png;base64,",
+        {
+          "repeat": 33554432,
+          "join": "",
+          "items": [
+            "A"
+          ]
+        },
+        "\"}}]}"
+      ]
+    },
+    "outputSha256": "992bec407205d89126b73ff17195c15210a5a4c8ee94e56d5db4a567e6a6b581"
+  },
+  {
+    "name": "big.default.image.32mib.text",
+    "op": "blocksToPlainText",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"u1\",\"type\":\"image\",\"data\":{\"url\":\"data:image/png;base64,",
+        {
+          "repeat": 33554432,
+          "join": "",
+          "items": [
+            "A"
+          ]
+        },
+        "\"}}]}"
+      ]
+    },
+    "output": ""
+  },
+  {
+    "name": "big.default.outline.2300.html",
+    "op": "blocksToHtml",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"n0\",\"parent\":null,\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level 0\"}}",
+        {
+          "repeat": 2299,
+          "join": "",
+          "items": [
+            ",{\"id\":\"n{i1}\",\"parent\":\"n{i}\",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level {i1}\"}}"
+          ]
+        },
+        "]}"
+      ]
+    },
+    "outputSha256": "967a643aad4ed30d1b416588964d72dbfdf8ca13e8bb2994a42474f7a67383ea"
+  },
+  {
+    "name": "big.default.outline.1400.markdown",
+    "op": "blocksToMarkdown",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"n0\",\"parent\":null,\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level 0\"}}",
+        {
+          "repeat": 1399,
+          "join": "",
+          "items": [
+            ",{\"id\":\"n{i1}\",\"parent\":\"n{i}\",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level {i1}\"}}"
+          ]
+        },
+        "]}"
+      ]
+    },
+    "outputSha256": "4412957974a7dc7ad64f8a5e6b710d55228867f961ffb5cf6b284b32532152ed"
+  },
+  {
+    "name": "big.default.outline.10000.text",
+    "op": "blocksToPlainText",
+    "inputRecipe": {
+      "parts": [
+        "{\"blocks\":[{\"id\":\"n0\",\"parent\":null,\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level 0\"}}",
+        {
+          "repeat": 9999,
+          "join": "",
+          "items": [
+            ",{\"id\":\"n{i1}\",\"parent\":\"n{i}\",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"level {i1}\"}}"
+          ]
+        },
+        "]}"
+      ]
+    },
+    "outputSha256": "7601b7638af729e6a6aba915a3f053a6cd0ea4064e25ee3424e1e6e21bc1970f"
   }
 ]

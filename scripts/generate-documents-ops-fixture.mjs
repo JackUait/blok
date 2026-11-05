@@ -6,7 +6,8 @@
 //   node scripts/generate-documents-ops-fixture.mjs [--out <file>]
 //
 // Inputs come from the C# Documents and Runtime tests plus edge cases.
-// - A long input is a recipe: literal parts and repeats, `{i}` the index.
+// - A long input is a recipe: literal parts and repeats, `{i}` the index,
+//   `{i1}` the index plus one.
 // - A long output is stored as the sha256 of its UTF-8 bytes.
 // - Import ids carry the clock (`md-<base36>-N`), so every reader rewrites
 //   them to `md-X-N` before comparing.
@@ -15,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createContext, runInContext } from 'node:vm';
+import { Worker } from 'node:worker_threads';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const BUNDLE = join(REPO_ROOT, 'packages/server/go/internal/jsruntime/blok-server-runtime.js');
@@ -25,13 +26,13 @@ const LONG_INPUT = 100_000;
 
 export const normalizeIds = (text) => text.replace(/"(md|html)-[a-z0-9]+-/g, '"$1-X-');
 
-/** Expands a recipe: parts are strings or { repeat, join, items } with `{i}` the index. */
+/** Expands a recipe: parts are strings or { repeat, join, items } with `{i}` the index and `{i1}` the index plus one. */
 export const expandRecipe = (recipe) => recipe.parts.map((part) => {
   if (typeof part === 'string') {
     return part;
   }
 
-  return Array.from({ length: part.repeat }, (_, i) => part.items[i % part.items.length].replaceAll('{i}', String(i)))
+  return Array.from({ length: part.repeat }, (_, i) => part.items[i % part.items.length].replaceAll('{i}', String(i)).replaceAll('{i1}', String(i + 1)))
     .join(part.join);
 }).join('');
 
@@ -199,6 +200,15 @@ const longMarked = { parts: ['{"blocks":[', { repeat: 1800, join: ',', items: [
 const bigUrl = (type, prefix) => ({ parts: [
   `{"blocks":[{"id":"u1","type":"${type}","data":{"url":"${prefix}`, { repeat: 3 * 1024 * 1024, join: '', items: ['A'] }, '"}}]}',
 ] });
+const bigUrlOf = (type, prefix, mib) => ({ parts: [
+  `{"blocks":[{"id":"u1","type":"${type}","data":{"url":"${prefix}`, { repeat: mib * 1024 * 1024, join: '', items: ['A'] }, '"}}]}',
+] });
+// An outline nested `levels` deep: each list block is the previous one's child.
+const outline = (levels) => ({ parts: [
+  '{"blocks":[{"id":"n0","parent":null,"type":"list","data":{"style":"unordered","text":"level 0"}}',
+  { repeat: levels - 1, join: '', items: [',{"id":"n{i1}","parent":"n{i}","type":"list","data":{"style":"unordered","text":"level {i1}"}}'] },
+  ']}',
+] });
 const bigMarkdown = { parts: ['{"markdown":"', { repeat: 200, join: '\\n\\n', items: [inner(markdown)] }, '"}'] };
 const envelope = (inside, extra) => ({ parts: ['{"document":', ...inside.parts, extra] });
 
@@ -309,6 +319,15 @@ const buildCases = async (invoke) => {
   add('big.url.image.markdown', 'blocksToMarkdown', bigUrl('image', 'data:image/png;base64,'));
   add('big.url.bookmark.markdown', 'blocksToMarkdown', bigUrl('bookmark', 'https://example.com/?q='));
   add('big.fromMarkdown', 'markdownToBlocks', bigMarkdown);
+  // C# converts these at its default budget, so every server must (C# stops
+  // a 14 MiB bookmark, a 16 MiB image, 2400 HTML and 1500 Markdown levels).
+  add('big.default.bookmark.12mib.markdown', 'blocksToMarkdown', bigUrlOf('bookmark', 'https://example.com/?q=', 12));
+  add('big.default.image.14mib.markdown', 'blocksToMarkdown', bigUrlOf('image', 'data:image/png;base64,', 14));
+  add('big.default.image.32mib.html', 'blocksToHtml', bigUrlOf('image', 'data:image/png;base64,', 32));
+  add('big.default.image.32mib.text', 'blocksToPlainText', bigUrlOf('image', 'data:image/png;base64,', 32));
+  add('big.default.outline.2300.html', 'blocksToHtml', outline(2300));
+  add('big.default.outline.1400.markdown', 'blocksToMarkdown', outline(1400));
+  add('big.default.outline.10000.text', 'blocksToPlainText', outline(10000));
 
   return cases;
 };
@@ -316,17 +335,59 @@ const buildCases = async (invoke) => {
 const IMPORT_OPS = new Set(['markdownToBlocks', 'htmlToBlocks']);
 const BARE_STRING_OPS = new Set(['blocksToHtml', 'blocksToHtmlWithPages', 'blocksToPlainText', 'version', 'schema']);
 
+// The bundle runs on a worker with a deep stack: the deep outline cases
+// recurse past the main thread's.
+const WORKER = `
+const { parentPort, workerData } = require('node:worker_threads');
+const { createContext, runInContext } = require('node:vm');
+const sandbox = {};
+runInContext(workerData, createContext(sandbox));
+parentPort.on('message', async ({ id, op, input }) => {
+  try {
+    parentPort.postMessage({ id, output: await sandbox.blokServerInvoke(op, input) });
+  } catch (error) {
+    parentPort.postMessage({ id, errorName: error.name });
+  }
+});`;
+
 const loadInvoke = (source) => {
-  const sandbox = {};
+  const worker = new Worker(WORKER, { eval: true, workerData: source, resourceLimits: { stackSizeMb: 64 } });
+  const waiting = new Map();
+  let next = 0;
 
-  runInContext(source, createContext(sandbox));
+  worker.unref();
+  worker.on('message', ({ id, output, errorName }) => {
+    const { resolve, reject } = waiting.get(id);
 
-  return async (op, input) => sandbox.blokServerInvoke(op, input);
+    waiting.delete(id);
+    if (errorName === undefined) {
+      resolve(output);
+    } else {
+      reject(Object.assign(new Error(errorName), { name: errorName }));
+    }
+  });
+
+  const invoke = (op, input) => new Promise((resolve, reject) => {
+    next += 1;
+    waiting.set(next, { resolve, reject });
+    worker.postMessage({ id: next, op, input });
+  });
+
+  return { invoke, close: () => worker.terminate() };
 };
 
 /** Builds the fixture from the bundle at bundlePath. */
 export const generate = async (bundlePath = BUNDLE) => {
-  const invoke = loadInvoke(readFileSync(bundlePath, 'utf8'));
+  const { invoke, close } = loadInvoke(readFileSync(bundlePath, 'utf8'));
+
+  try {
+    return await generateWith(invoke);
+  } finally {
+    await close();
+  }
+};
+
+const generateWith = async (invoke) => {
   const cases = await buildCases(invoke);
   const names = new Set();
 
@@ -350,7 +411,6 @@ export const generate = async (bundlePath = BUNDLE) => {
     try {
       output = await invoke(entry.op, input);
     } catch (error) {
-      // A bundle error comes from the vm's own realm, so it is no host Error.
       entry.errorName = error.name;
       continue;
     }

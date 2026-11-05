@@ -195,7 +195,7 @@ public sealed partial class DocumentOpsFixtureTests
     Assert.Equal(BlokConversionFailure.DocumentTooLarge, failure.Reason);
   }
 
-  /// <summary>Parts are strings or { repeat, join, items }, with {i} the index.</summary>
+  /// <summary>Parts are strings or { repeat, join, items }, with {i} the index and {i1} the index plus one.</summary>
   private static string Expand(JsonNode recipe)
   {
     var text = new StringBuilder();
@@ -219,7 +219,9 @@ public sealed partial class DocumentOpsFixtureTests
           text.Append(join);
         }
 
-        text.Append(items[index % items.Length].Replace("{i}", index.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
+        text.Append(items[index % items.Length]
+            .Replace("{i}", index.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("{i1}", (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
       }
     }
 

@@ -37,6 +37,7 @@ type Job = {
   'runs-on'?: string;
   'timeout-minutes'?: number;
   if?: string;
+  env?: Record<string, WorkflowValue>;
   with?: Record<string, WorkflowValue>;
   steps?: Step[];
   strategy?: {
@@ -566,6 +567,8 @@ describe('CI critical-path law', () => {
     expect(workspace.name).toBe('Workspace Unit Tests');
     expect(workspace.needs).toEqual(['build']);
     expect(workspace['runs-on']).toBe('ubuntu-latest');
+    // Incremental data was most of the cached target and is never reused.
+    expect(workspace.env).toEqual({ CARGO_INCREMENTAL: 0 });
     expectOrderedSteps('ci.workspace-unit-tests', workspace, [
       checkout,
       setupNodeDependencies,
@@ -615,8 +618,8 @@ describe('CI critical-path law', () => {
         uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
         with: {
           path: ['~/.cargo/registry', '~/.cargo/git', 'packages/server/rust/target', ''].join('\n'),
-          key: "rust-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}",
-          'restore-keys': 'rust-${{ runner.os }}-',
+          key: "rust-v2-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}",
+          'restore-keys': 'rust-v2-${{ runner.os }}-',
         },
       },
       {

@@ -502,6 +502,10 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Incremental data was most of the 2 GB Rust cache, which took 40-70s to
+    # restore and save. v2 in the cache key keeps the old cache from coming back.
+    env:
+      CARGO_INCREMENTAL: 0
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -550,8 +554,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             packages/server/rust/target
-          key: rust-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}
-          restore-keys: rust-${{ runner.os }}-
+          key: rust-v2-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}
+          restore-keys: rust-v2-${{ runner.os }}-
 
       - name: Check Rust formatting
         working-directory: packages/server/rust

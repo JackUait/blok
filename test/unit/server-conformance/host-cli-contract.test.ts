@@ -12,6 +12,7 @@ import { join } from 'node:path';
 
 import { expect, it as baseIt } from 'vitest';
 
+import { startDocEndpoint } from './doc-endpoint';
 import { sendRequest } from './http-client';
 import { allocateLoopbackPort, runServerCommand } from './run-against';
 import { adoptChild, startServerProcess } from './server-process';
@@ -346,6 +347,65 @@ it('keeps a room warning on one line when the doc id holds a newline', async () 
   } finally {
     await server.stop();
     await new Promise<void>((resolve) => endpoint.close(() => resolve()));
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+const AUTH_WARNING =
+  "warning: --doc-endpoint-auth puts the credential in this machine's process list; " +
+  'set BLOK_DOC_ENDPOINT_AUTH in the environment instead\n';
+
+// HostArguments: the flag wins over BLOK_DOC_ENDPOINT_AUTH and warns; the
+// value goes verbatim as the room's Authorization header; empty sends none.
+it.each([
+  { name: 'the flag', flag: 'Bearer from-flag', variable: undefined, sent: 'Bearer from-flag' },
+  { name: 'the environment', flag: undefined, variable: 'Bearer from-env', sent: 'Bearer from-env' },
+  { name: 'the flag over the environment', flag: 'Bearer from-flag', variable: 'Bearer from-env', sent: 'Bearer from-flag' },
+  { name: 'an empty variable', flag: undefined, variable: '', sent: undefined },
+  { name: 'neither', flag: undefined, variable: undefined, sent: undefined },
+])('sends the doc endpoint credential from $name', async ({ flag, variable, sent }) => {
+  const endpoint = await startDocEndpoint();
+  const directory = await mkdtemp(join(tmpdir(), 'blok-doc-auth-'));
+  const port = await allocateLoopbackPort();
+  const env: NodeJS.ProcessEnv = { ...process.env };
+
+  delete env.BLOK_DOC_ENDPOINT_AUTH;
+  if (variable !== undefined) {
+    env.BLOK_DOC_ENDPOINT_AUTH = variable;
+  }
+
+  const server = await startServerProcess({
+    command: process.env.BLOK_CONFORMANCE_SERVER ?? '',
+    args: [
+      '--listen', `127.0.0.1:${port}`,
+      '--auth', 'none',
+      '--storage-dir', '',
+      '--rate-limit', '0',
+      '--collab',
+      '--collab-dir', directory,
+      '--doc-endpoint', endpoint.url,
+      ...(flag === undefined ? [] : ['--doc-endpoint-auth', flag]),
+    ],
+    baseUrl: `http://127.0.0.1:${port}`,
+    env,
+  });
+
+  try {
+    await sendRequest('POST', new URL(`http://127.0.0.1:${port}/sync/d/edit`), {
+      headers: { 'Content-Type': 'application/json', 'Blok-Idempotency-Key': 'k1' },
+      body: JSON.stringify({ ops: [{ op: 'insert', id: 'a', block: { type: 'paragraph', data: { text: 'x' } } }] }),
+    });
+    await expect.poll(() => endpoint.getHeaders.length, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    expect(endpoint.getHeaders[0].authorization).toBe(sent);
+    if (flag === undefined) {
+      expect(server.stderr).not.toContain('--doc-endpoint-auth');
+    } else {
+      expect(server.stderr).toContain(AUTH_WARNING);
+    }
+  } finally {
+    await server.stop();
+    await endpoint.stop();
     await rm(directory, { recursive: true, force: true });
   }
 });

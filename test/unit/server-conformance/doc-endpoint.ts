@@ -17,6 +17,8 @@ export interface FixtureDocEndpoint {
   readonly puts: readonly RecordedPut[];
   /** The doc id of every GET, in order. */
   readonly gets: readonly string[];
+  /** The headers of every GET, in the same order as `gets`. */
+  readonly getHeaders: readonly Record<string, string>[];
   /** Answer GETs for `docId` with `document` (bare OutputData or a `{data, version}` envelope). */
   serve(docId: string, document: unknown): void;
   stop(): Promise<void>;
@@ -69,6 +71,7 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
   const documents = new Map<string, unknown>();
   const puts: RecordedPut[] = [];
   const gets: string[] = [];
+  const getHeaders: Record<string, string>[] = [];
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
 
@@ -81,6 +84,7 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
 
     if (request.method === 'GET') {
       gets.push(docId);
+      getHeaders.push(flattenHeaders(request));
       // A literal `null` body is the endpoint's "nothing saved yet". An
       // empty body or a 404 makes the room fail its seed closed instead.
       sendJson(response, 200, JSON.stringify(documents.has(docId) ? documents.get(docId) : null));
@@ -117,6 +121,7 @@ export async function startDocEndpoint(): Promise<FixtureDocEndpoint> {
     url: `http://127.0.0.1:${address.port}${DOCUMENTS_PATH.slice(0, -1)}`,
     puts,
     gets,
+    getHeaders,
     serve: (docId, document) => {
       documents.set(docId, document);
     },

@@ -85,10 +85,7 @@ const (
 )
 
 func main() {
-	// SIGQUIT from the start: Go's default dumps every goroutine and exits
-	// 2, where .NET dies by the signal before its handlers and stops
-	// gracefully after them. Go cannot reach the OS default.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGQUIT)
+	armEarlyQuit()
 	// .NET decodes argv and the environment itself: bytes that are not
 	// UTF-8 become U+FFFD, not raw bytes in paths and error lines.
 	args := make([]string, 0, len(os.Args))
@@ -96,16 +93,16 @@ func main() {
 		args = append(args, dotnet.NativeText(arg))
 	}
 	getenv := func(name string) string { return dotnet.NativeText(os.Getenv(name)) }
-	code := run(ctx, args, getenv, os.Stderr)
-	stop()
+	code := run(context.Background(), args, getenv, os.Stderr)
 	os.Exit(code)
 }
 
 // notifyShutdown runs just before the bind, where C#'s StartAsync registers
-// its signal handlers: a SIGTERM or SIGINT before it takes the default
-// action, as in C#.
+// its signal handlers: a SIGTERM, SIGINT or SIGQUIT before it takes the
+// default action, as in C# (SIGQUIT through armEarlyQuit).
 var notifyShutdown = func(ctx context.Context) (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(ctx, syscall.SIGTERM, os.Interrupt)
+	quitBound.Store(true)
+	return signal.NotifyContext(ctx, syscall.SIGTERM, os.Interrupt, syscall.SIGQUIT)
 }
 
 // newHTTPServer is Kestrel's limits: 2 min idle, and every request cut off

@@ -428,7 +428,7 @@ func (w *histTitleWriter) write(t *testing.T, key string, value any) {
 func TestAGroupWindowReplacesTheDefaultGrouping(t *testing.T) {
 	b := histNewBench(t)
 	b.journal.spacing = 90 * time.Second
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	for _, text := range []string{"1", "2", "3"} {
 		histEdit(t, manager, histUpdate(t, "a", text))
@@ -461,7 +461,7 @@ func TestAGroupWindowReplacesTheDefaultGrouping(t *testing.T) {
 func histThreeEdits(t *testing.T) (*histBench, *Manager) {
 	t.Helper()
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "two"))
 	histEdit(t, manager, histInsert(t, "b", "three", "a"))
@@ -511,7 +511,7 @@ func histAssertPurgedEverywhere(t *testing.T, manager *Manager, lineage string) 
 
 func TestAPurgedDocumentAnswersPurgedFromEveryMethod(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	lineage := b.lineage(t)
 	histPurge(t, manager)
@@ -521,18 +521,18 @@ func TestAPurgedDocumentAnswersPurgedFromEveryMethod(t *testing.T) {
 
 func TestAFreshManagerSeesAPurgeFromAnEarlierProcess(t *testing.T) {
 	b := histNewBench(t)
-	earlier := b.manager(t, Options{})
+	earlier := b.manager(t, DefaultOptions())
 	histBlocks(t, earlier)
 	lineage := b.lineage(t)
 	histPurge(t, earlier)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 
 	histAssertPurgedEverywhere(t, manager, lineage)
 }
 
 func TestAVersionReadCarriesThePageMapsAndOmitsEmptyOnes(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	titles := histNewTitleWriter(t, manager)
 	titles.write(t, "title", jsjson.FromString("Old"))
@@ -557,7 +557,7 @@ func TestAVersionReadCarriesThePageMapsAndOmitsEmptyOnes(t *testing.T) {
 // instead of failing, the same as the export does.
 func TestAVersionReadSkipsAnIconThatIsNotJson(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	writer := histNewTitleWriter(t, manager)
 	icon := &jsjson.Object{}
@@ -583,7 +583,7 @@ func TestAVersionReadSkipsAnIconThatIsNotJson(t *testing.T) {
 
 func TestARetryAfterItsLineageWasDeletedGetsTheFirstReceipt(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "old"))
 	old := b.lineage(t)
@@ -680,9 +680,7 @@ func TestARestorePastTheStoreLimitButUnderTheMessageLimitIsRefusedAndTheRoomStay
 		t.Fatal(err)
 	}
 	reader := &histLargestReader{inner: histReader(t)}
-	manager := b.managerOver(t, LocalJournal{Store: local}, Options{
-		AnnouncedMaxMessageBytes: 4 * mib, MaxUpdateBytes: local.MaxUpdateBytes(),
-	}, histConverter(t, reader))
+	manager := b.managerOver(t, LocalJournal{Store: local}, OptionsWith(func(ro *Options) { ro.AnnouncedMaxMessageBytes = 4 * mib; ro.MaxUpdateBytes = local.MaxUpdateBytes() }), histConverter(t, reader))
 	histBlocks(t, manager)
 	member := v2Member()
 	joinSynced(t, manager, histDoc, member)
@@ -721,7 +719,7 @@ func TestARestorePastTheStoreLimitButUnderTheMessageLimitIsRefusedAndTheRoomStay
 func TestARestoreJustUnderTheFrameLimitIsApplied(t *testing.T) {
 	const limit = 2048
 	b := histNewBench(t)
-	manager := b.manager(t, Options{AnnouncedMaxMessageBytes: limit})
+	manager := b.manager(t, OptionsWith(func(ro *Options) { ro.AnnouncedMaxMessageBytes = limit }))
 	histBlocks(t, manager)
 	histEdit(t, manager, histInsert(t, "big", strings.Repeat("x", histBorderlineText), "a"))
 	histEdit(t, manager, convert.Remove{ID: "big"})
@@ -743,7 +741,7 @@ func TestARestoreJustUnderTheFrameLimitIsApplied(t *testing.T) {
 
 func TestARestoreOfTheCurrentPointWritesNothing(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "A"))
 	histEdit(t, manager, histInsert(t, "b", "B", "a"))
@@ -760,7 +758,7 @@ func TestARestoreOfTheCurrentPointWritesNothing(t *testing.T) {
 
 func TestARestoreBringsBackTheTitleWithTheBlocksInOneRecord(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	titles := histNewTitleWriter(t, manager)
 	titles.write(t, "title", jsjson.FromString("Old"))
@@ -797,7 +795,7 @@ func TestARestoreBringsBackTheTitleWithTheBlocksInOneRecord(t *testing.T) {
 
 func TestARestoreWhoseTitleIsTooLargeForOneFrameChangesNothing(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{AnnouncedMaxMessageBytes: 2048})
+	manager := b.manager(t, OptionsWith(func(ro *Options) { ro.AnnouncedMaxMessageBytes = 2048 }))
 	histBlocks(t, manager)
 	titles := histNewTitleWriter(t, manager)
 	titles.write(t, "title", jsjson.FromString(strings.Repeat("x", 8192)))
@@ -1203,7 +1201,7 @@ func TestWithoutAHistoryStoreEveryMethodAnswersNoHistory(t *testing.T) {
 	b := histNewBench(t)
 	ctx := context.Background()
 	for name, operations := range map[string]OperationStore{"none": nil, "journal without history": histNoHistory{b.journal.LocalJournal}} {
-		manager := b.managerOver(t, operations, Options{}, histConverter(t, nil))
+		manager := b.managerOver(t, operations, DefaultOptions(), histConverter(t, nil))
 		if list, err := manager.History(ctx, histDoc, 0); err != nil || list.Status != HistoryNone {
 			t.Errorf("%s: history = %v, %v", name, list.Status, err)
 		}
@@ -1236,7 +1234,7 @@ func histTimes(at ...*time.Time) []string {
 
 func TestTheListGroupsEveryLineageNewestFirst(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	first := b.lineage(t)
 	histEditOps(t, manager, []convert.EditOp{histUpdate(t, "a", "1")}, "u1")
@@ -1283,7 +1281,7 @@ func histTime(at time.Time) *time.Time { return &at }
 // Go's HistoryRead has no Time field: the time is checked in the JSON only.
 func TestAReadAnswersTheExportAtThatPointWithItsTime(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	atZero := histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "two"))
 	atOne := histBlocks(t, manager)
@@ -1327,7 +1325,7 @@ func histKinds(blocks []BlockChange) []string {
 
 func TestChangesListEachRecordAfterSinceThroughThePointOldestFirst(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEditOps(t, manager, []convert.EditOp{histUpdate(t, "a", "two")}, "u1")
 	histEditOps(t, manager, []convert.EditOp{histInsert(t, "b", "three", "a")}, "u2")
@@ -1368,7 +1366,7 @@ func TestChangesListEachRecordAfterSinceThroughThePointOldestFirst(t *testing.T)
 
 func TestChangesOfAnEmptyRangeAreEmpty(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "two"))
 
@@ -1400,7 +1398,7 @@ func TestChangesPastTheByteBudgetAreTheNewestAndSaySo(t *testing.T) {
 
 func TestChangesOfAnUnknownPointAreNotFound(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "two"))
 
@@ -1415,7 +1413,7 @@ func TestChangesOfAnUnknownPointAreNotFound(t *testing.T) {
 func TestABaselineWithAnUnknownCreatedAtHasNoTime(t *testing.T) {
 	b := histNewBench(t)
 	b.journal.unknownCreatedAt = true
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 
 	read := histRead(t, manager, b.lineage(t), 0)
@@ -1427,7 +1425,7 @@ func TestABaselineWithAnUnknownCreatedAtHasNoTime(t *testing.T) {
 
 func TestAnUnknownPointIsNotFound(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "two"))
 
@@ -1447,7 +1445,7 @@ func TestAnUnknownPointIsNotFound(t *testing.T) {
 
 func TestACorruptRecordIsCorrupt(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "two"))
 	lineage := b.lineage(t)
@@ -1469,7 +1467,7 @@ func TestACorruptRecordIsCorrupt(t *testing.T) {
 
 func TestARestoreMakesTheLiveDocumentEqualThePointAsOneJournalledEdit(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "A"))
 	pointA := histBlocks(t, manager)
@@ -1498,7 +1496,7 @@ func TestARestoreMakesTheLiveDocumentEqualThePointAsOneJournalledEdit(t *testing
 
 func TestARestoreReachesALineageAResetReplaced(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "old"))
 	old := histBlocks(t, manager)
@@ -1517,7 +1515,7 @@ func TestARestoreReachesALineageAResetReplaced(t *testing.T) {
 
 func TestARetriedRestoreGetsTheFirstReceipt(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "A"))
 	histEdit(t, manager, histUpdate(t, "a", "B"))
@@ -1537,7 +1535,7 @@ func TestARetriedRestoreGetsTheFirstReceipt(t *testing.T) {
 
 func TestAStalePreconditionRefusesTheRestore(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "A"))
 	lineage := b.lineage(t)
@@ -1554,7 +1552,7 @@ func TestAStalePreconditionRefusesTheRestore(t *testing.T) {
 
 func TestAStalePreconditionWinsOverAMissingPoint(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	histEdit(t, manager, histUpdate(t, "a", "A"))
 	lineage := b.lineage(t)
@@ -1571,7 +1569,7 @@ func TestAStalePreconditionWinsOverAMissingPoint(t *testing.T) {
 
 func TestARestoreTooLargeForOneFrameChangesNothing(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{AnnouncedMaxMessageBytes: 2048})
+	manager := b.manager(t, OptionsWith(func(ro *Options) { ro.AnnouncedMaxMessageBytes = 2048 }))
 	histBlocks(t, manager)
 	member := v2Member()
 	joinSynced(t, manager, histDoc, member)
@@ -1601,7 +1599,7 @@ func TestARestoreTooLargeForOneFrameChangesNothing(t *testing.T) {
 
 func TestADeleteRefusesTheCurrentLineageAndRemovesAnOldOne(t *testing.T) {
 	b := histNewBench(t)
-	manager := b.manager(t, Options{})
+	manager := b.manager(t, DefaultOptions())
 	histBlocks(t, manager)
 	old := b.lineage(t)
 	histReset(t, manager)

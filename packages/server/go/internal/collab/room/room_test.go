@@ -211,7 +211,7 @@ func syncFrame(t *testing.T, message wire.Message) []byte {
 }
 
 func TestAJoinerGetsControlLimitsAndIdentitiesAndTheOthersAreAsked(t *testing.T) {
-	manager, _, _ := newTestManager(t, Options{AnnouncedMaxMessageBytes: 1 << 20}, nil)
+	manager, _, _ := newTestManager(t, OptionsWith(func(ro *Options) { ro.AnnouncedMaxMessageBytes = 1 << 20 }), nil)
 	first := &fakeMember{source: collab.SourceClientV1, write: true}
 	join(t, manager, "doc", first)
 	second := &fakeMember{source: collab.SourceClientV1, write: true}
@@ -240,7 +240,7 @@ func TestAJoinerGetsControlLimitsAndIdentitiesAndTheOthersAreAsked(t *testing.T)
 // Many members write and leave at once; -race checks the lane is the only
 // door to the doc, and every write reaches every member still in the room.
 func TestConcurrentWritersAllConvergeThroughTheLane(t *testing.T) {
-	manager, _, _ := newTestManager(t, Options{}, nil)
+	manager, _, _ := newTestManager(t, DefaultOptions(), nil)
 	const writers = 8
 	members := make([]*fakeMember, writers)
 	memberships := make([]collab.Membership, writers)
@@ -283,7 +283,7 @@ func TestConcurrentWritersAllConvergeThroughTheLane(t *testing.T) {
 }
 
 func TestDrainFlushesThenClosesEveryMember1001AndRefusesNewJoins(t *testing.T) {
-	manager, store, endpoint := newTestManager(t, Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour}, nil)
+	manager, store, endpoint := newTestManager(t, OptionsWith(func(ro *Options) { ro.ExportDebounce = time.Hour; ro.ExportMaxDelay = time.Hour }), nil)
 	member := &fakeMember{source: collab.SourceClientV1, write: true}
 	membership := join(t, manager, "doc", member)
 	if err := membership.Receive(context.Background(), syncFrame(t, wire.SyncUpdate{Update: clientUpdate(t, 9, "k")})); err != nil {
@@ -308,7 +308,11 @@ func TestDrainFlushesThenClosesEveryMember1001AndRefusesNewJoins(t *testing.T) {
 }
 
 func TestAnEmptyRoomFlushesAndUnloadsAfterItsLinger(t *testing.T) {
-	manager, _, endpoint := newTestManager(t, Options{EvictionLinger: 20 * time.Millisecond, ExportDebounce: time.Hour, ExportMaxDelay: time.Hour}, nil)
+	manager, _, endpoint := newTestManager(t, OptionsWith(func(ro *Options) {
+		ro.EvictionLinger = 20 * time.Millisecond
+		ro.ExportDebounce = time.Hour
+		ro.ExportMaxDelay = time.Hour
+	}), nil)
 	membership := join(t, manager, "doc", &fakeMember{source: collab.SourceClientV1, write: true})
 	if err := membership.Receive(context.Background(), syncFrame(t, wire.SyncUpdate{Update: clientUpdate(t, 9, "k")})); err != nil {
 		t.Fatal(err)
@@ -338,7 +342,7 @@ func openJournal(t *testing.T) OperationStore {
 // T11/T12: a v2 write is broadcast to everyone, the sender included, then
 // acknowledged; an old lineage is refused before the id lookup.
 func TestAV2OperationIsRelayedToAllThenAcknowledged(t *testing.T) {
-	manager, _, _ := newTestManager(t, Options{}, openJournal(t))
+	manager, _, _ := newTestManager(t, DefaultOptions(), openJournal(t))
 	writer := &fakeMember{source: collab.SourceClientV2, write: true, actor: "alice"}
 	membership := join(t, manager, "doc", writer)
 	other := &fakeMember{source: collab.SourceClientV2, write: true}
@@ -429,7 +433,7 @@ func TestActivityReportsJoinedActiveOnceInTheWindowAndLeft(t *testing.T) {
 // closes 4403, the others stay, the room keeps its tag, and the expelled
 // member's queued write never lands.
 func TestRecheckExpelsOnlyRevokedMembersWithoutResettingTheRoom(t *testing.T) {
-	manager, store, _ := newTestManager(t, Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour}, nil)
+	manager, store, _ := newTestManager(t, OptionsWith(func(ro *Options) { ro.ExportDebounce = time.Hour; ro.ExportMaxDelay = time.Hour }), nil)
 	revoked := &fakeMember{source: collab.SourceClientV1, write: true}
 	failing := &fakeMember{source: collab.SourceClientV1, write: true}
 	allowed := &fakeMember{source: collab.SourceClientV1, write: true}
@@ -499,7 +503,7 @@ func (m *gatedPolicy) RecheckAccess(ctx context.Context) (bool, error) {
 // caller, then runs then before the policy answers.
 func recheckCancelled(t *testing.T, honoursCancel bool, then func(*gatedPolicy)) (int, error, *gatedPolicy) {
 	t.Helper()
-	manager, _, _ := newTestManager(t, Options{}, nil)
+	manager, _, _ := newTestManager(t, DefaultOptions(), nil)
 	member := &gatedPolicy{
 		fakeMember: &fakeMember{source: collab.SourceClientV1, write: true},
 		entered:    make(chan struct{}), gate: make(chan struct{}), honoursCancel: honoursCancel,

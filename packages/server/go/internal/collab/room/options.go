@@ -1,8 +1,13 @@
 package room
 
-import "time"
+import (
+	"reflect"
+	"time"
+)
 
-// Options is CollabRoomOptions. Zero fields take C#'s defaults in withDefaults.
+// Options is CollabRoomOptions. DefaultOptions holds C#'s defaults; a field
+// set to zero stays zero, as a C# init property does. Build one with
+// DefaultOptions or OptionsWith, not a bare literal.
 type Options struct {
 	ExportDebounce           time.Duration
 	ExportMaxDelay           time.Duration
@@ -38,39 +43,39 @@ const (
 	activityStampLimit = 256
 )
 
+// DefaultOptions is new CollabRoomOptions().
+func DefaultOptions() Options {
+	return Options{
+		ExportDebounce:               2 * time.Second,
+		ExportMaxDelay:               10 * time.Second,
+		EvictionLinger:               30 * time.Second,
+		CompactionFrameThreshold:     64,
+		CompactionByteThreshold:      1 << 20,
+		CheckpointOperationThreshold: 64,
+		CheckpointByteThreshold:      1 << 20,
+		MaxAwarenessClients:          256,
+		RetryBackoff:                 2 * time.Second,
+		RetryBackoffCap:              60 * time.Second,
+		CommitTimeout:                10 * time.Second,
+	}
+}
+
+// OptionsWith is DefaultOptions with set applied: C#'s object initializer.
+func OptionsWith(set func(*Options)) Options {
+	o := DefaultOptions()
+	set(&o)
+	return o
+}
+
+// withDefaults fills the clock. A wholly zero Options (ManagerOptions with
+// no Room) is C#'s `roomOptions ?? new CollabRoomOptions()`.
 func (o Options) withDefaults() Options {
-	if o.ExportDebounce == 0 {
-		o.ExportDebounce = 2 * time.Second
-	}
-	if o.ExportMaxDelay == 0 {
-		o.ExportMaxDelay = 10 * time.Second
-	}
-	if o.EvictionLinger == 0 {
-		o.EvictionLinger = 30 * time.Second
-	}
-	if o.CompactionFrameThreshold == 0 {
-		o.CompactionFrameThreshold = 64
-	}
-	if o.CompactionByteThreshold == 0 {
-		o.CompactionByteThreshold = 1 << 20
-	}
-	if o.CheckpointOperationThreshold == 0 {
-		o.CheckpointOperationThreshold = 64
-	}
-	if o.CheckpointByteThreshold == 0 {
-		o.CheckpointByteThreshold = 1 << 20
-	}
-	if o.MaxAwarenessClients == 0 {
-		o.MaxAwarenessClients = 256
-	}
-	if o.RetryBackoff == 0 {
-		o.RetryBackoff = 2 * time.Second
-	}
-	if o.RetryBackoffCap == 0 {
-		o.RetryBackoffCap = 60 * time.Second
-	}
-	if o.CommitTimeout == 0 {
-		o.CommitTimeout = 10 * time.Second
+	bare := o
+	bare.Now = nil
+	if reflect.ValueOf(bare).IsZero() {
+		bare = DefaultOptions()
+		bare.Now = o.Now
+		o = bare
 	}
 	if o.Now == nil {
 		o.Now = time.Now

@@ -66,9 +66,11 @@ func TestACallQueuedBehindAClosingRoomIsRetriedOnAFreshOne(t *testing.T) {
 	}
 	for _, c := range calls {
 		t.Run(c.name, func(t *testing.T) {
-			manager, store, endpoint := newTestManager(t, Options{
-				EvictionLinger: 10 * time.Millisecond, ExportDebounce: time.Hour, ExportMaxDelay: time.Hour,
-			}, nil)
+			manager, store, endpoint := newTestManager(t, OptionsWith(func(ro *Options) {
+				ro.EvictionLinger = 10 * time.Millisecond
+				ro.ExportDebounce = time.Hour
+				ro.ExportMaxDelay = time.Hour
+			}), nil)
 			gate := make(chan struct{})
 			endpoint.mu.Lock()
 			endpoint.gate = gate
@@ -172,7 +174,7 @@ func TestEveryDoorChecksPurgingThenDrainingThenTheCooldown(t *testing.T) {
 	}
 	for _, door := range doors {
 		t.Run(door.name+"/draining beats the cooldown", func(t *testing.T) {
-			manager, _, _ := newTestManager(t, Options{}, failingAppends{openJournal(t)})
+			manager, _, _ := newTestManager(t, DefaultOptions(), failingAppends{openJournal(t)})
 			member := &fakeMember{source: collab.SourceClientV1, write: true}
 			membership := join(t, manager, "doc", member)
 			_ = membership.Receive(context.Background(), syncFrame(t, wire.SyncUpdate{Update: clientUpdate(t, 9, "k")}))
@@ -188,7 +190,7 @@ func TestEveryDoorChecksPurgingThenDrainingThenTheCooldown(t *testing.T) {
 			}
 		})
 		t.Run(door.name+"/purging beats draining", func(t *testing.T) {
-			manager, _, _ := newTestManager(t, Options{}, nil)
+			manager, _, _ := newTestManager(t, DefaultOptions(), nil)
 			allow := func(context.Context) (bool, error) { return true, nil }
 			if _, err := manager.Purge(context.Background(), "doc", allow); err != nil {
 				t.Fatal(err)

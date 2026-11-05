@@ -23,7 +23,7 @@ func customInsert(t *testing.T, id string) []convert.EditOp {
 // (CollabRoomManager.cs:333,832,1088), and not on a restore that finds no
 // point. The agent drops its cached plans on it.
 func TestDocumentReplacedFiresOnResetAppliedRestoreAndPurge(t *testing.T) {
-	manager, _, _ := newTestManager(t, Options{}, openJournal(t))
+	manager, _, _ := newTestManager(t, DefaultOptions(), openJournal(t))
 	var mu sync.Mutex
 	var fired []string
 	manager.OnDocumentReplaced(func(docID string) {

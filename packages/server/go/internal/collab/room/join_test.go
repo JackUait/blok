@@ -17,7 +17,7 @@ import (
 func liveRooms(m *Manager) int { return len(m.liveRooms()) }
 
 func TestASeedFailureReportsSeedFailedWritesNothingAndRetriesOnTheNextJoin(t *testing.T) {
-	manager, store, endpoint := newTestManager(t, Options{}, nil)
+	manager, store, endpoint := newTestManager(t, DefaultOptions(), nil)
 	endpoint.fail(&docendpoint.Error{Message: "collab: the doc endpoint GET returned 503.", StatusCode: 503})
 	member := &fakeMember{source: collab.SourceClientV1}
 
@@ -40,7 +40,7 @@ func TestASeedFailureReportsSeedFailedWritesNothingAndRetriesOnTheNextJoin(t *te
 }
 
 func TestForbiddenFirstJoinDoesNotLoadOrRetainARoom(t *testing.T) {
-	manager, store, endpoint := newTestManager(t, Options{}, nil)
+	manager, store, endpoint := newTestManager(t, DefaultOptions(), nil)
 
 	denied, err := manager.Join(context.Background(), "doc", &fakeMember{source: collab.SourceClientV1, revoked: true})
 	if err != nil || denied.Status != collab.JoinForbidden || denied.Membership != nil {
@@ -55,7 +55,7 @@ func TestForbiddenFirstJoinDoesNotLoadOrRetainARoom(t *testing.T) {
 }
 
 func TestAStoredUpdateThatCannotBeAppliedFailsTheJoinClosed(t *testing.T) {
-	manager, store, endpoint := newTestManager(t, Options{}, nil)
+	manager, store, endpoint := newTestManager(t, DefaultOptions(), nil)
 	tag := workingset.Tag{Format: workingset.CurrentFormat, Epoch: 1, Lineage: "0123456789abcdef0123456789abcdef"}
 	if err := store.Write(context.Background(), "doc", []byte{2, 0, 0, 0, 0xde, 0xad}, tag); err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestAStoredUpdateThatCannotBeAppliedFailsTheJoinClosed(t *testing.T) {
 }
 
 func TestAPurgedDocumentRefusesEveryDoorForTheLifeOfTheProcess(t *testing.T) {
-	manager, store, endpoint := newTestManager(t, Options{}, nil)
+	manager, store, endpoint := newTestManager(t, DefaultOptions(), nil)
 	member := &fakeMember{source: collab.SourceClientV1, write: true}
 	join(t, manager, "doc", member)
 

@@ -208,12 +208,14 @@ func (k *rb1Kit) gateLoads(t *testing.T) func() {
 }
 
 func rb1Quick() Options {
-	return Options{
-		ExportDebounce: 10 * time.Millisecond, ExportMaxDelay: 10 * time.Millisecond,
-		EvictionLinger: 150 * time.Millisecond,
-		RetryBackoff:   10 * time.Millisecond, RetryBackoffCap: 10 * time.Millisecond,
-		CommitTimeout: 5 * time.Second,
-	}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = 10 * time.Millisecond
+		ro.ExportMaxDelay = 10 * time.Millisecond
+		ro.EvictionLinger = 150 * time.Millisecond
+		ro.RetryBackoff = 10 * time.Millisecond
+		ro.RetryBackoffCap = 10 * time.Millisecond
+		ro.CommitTimeout = 5 * time.Second
+	})
 }
 
 func rb1Threshold(operations int64) Options {

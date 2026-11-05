@@ -20,7 +20,7 @@ func TestAHeadlessJournalAdoptsTheWorkingSetAndThenDropsIt(t *testing.T) {
 	r := newTextRoom()
 	r.endpoint.Holds(t, testDoc, "from-endpoint", nil)
 	r.store.Seed(t, testDoc, [][]byte{fullState(t, docWith("from-ws"))}, tagAt(3))
-	manager := r.newManager(t, Options{}, true)
+	manager := r.newManager(t, DefaultOptions(), true)
 
 	if _, text := stateText(t, manager, testDoc); text != `{"text":"from-ws"}` {
 		t.Fatalf("state = %s", text)
@@ -41,7 +41,7 @@ func TestAHeadlessJournalAdoptsTheWorkingSetAndThenDropsIt(t *testing.T) {
 	if len(saves) == 0 || saves[len(saves)-1].data != `{"text":"from-ws"}` {
 		t.Fatalf("saves = %+v", saves)
 	}
-	if _, text := stateText(t, r.newManager(t, Options{}, true), testDoc); text != `{"text":"from-ws"}` {
+	if _, text := stateText(t, r.newManager(t, DefaultOptions(), true), testDoc); text != `{"text":"from-ws"}` {
 		t.Fatalf("reloaded state = %s", text)
 	}
 }
@@ -50,7 +50,7 @@ func TestAHeadlessJournalWithAnEmptyWorkingSetSeedsFromTheEndpoint(t *testing.T)
 	r := newTextRoom()
 	r.endpoint.Holds(t, testDoc, "from-endpoint", nil)
 	r.store.Seed(t, testDoc, nil, tagAt(3))
-	manager := r.newManager(t, Options{}, true)
+	manager := r.newManager(t, DefaultOptions(), true)
 
 	if _, text := stateText(t, manager, testDoc); text != `{"text":"from-endpoint"}` {
 		t.Fatalf("state = %s", text)
@@ -65,7 +65,7 @@ func TestAHeadlessJournalWithAnEmptyWorkingSetSeedsFromTheEndpoint(t *testing.T)
 func TestAStaleWorkingSetBesideAJournalHeadIsIgnoredAndDropped(t *testing.T) {
 	r := newTextRoom()
 	r.endpoint.Holds(t, testDoc, "hello", nil)
-	first := r.newManager(t, Options{}, true)
+	first := r.newManager(t, DefaultOptions(), true)
 	if result := httpEdit(t, first, testDoc, "0123456789abcdef0123456789abcdef", "!"); result.Status != EditApplied {
 		t.Fatalf("edit = %v (%v)", result.Status, result.Err)
 	}
@@ -74,7 +74,7 @@ func TestAStaleWorkingSetBesideAJournalHeadIsIgnoredAndDropped(t *testing.T) {
 	}
 	r.store.Seed(t, testDoc, [][]byte{fullState(t, docWith("stale"))}, tagAt(0))
 
-	if _, text := stateText(t, r.newManager(t, Options{}, true), testDoc); text != `{"text":"hello!"}` {
+	if _, text := stateText(t, r.newManager(t, DefaultOptions(), true), testDoc); text != `{"text":"hello!"}` {
 		t.Fatalf("state = %s", text)
 	}
 	if r.store.Holds(testDoc) {
@@ -96,7 +96,7 @@ func TestAQuarantinedWorkingCopySurvivesTheJournalTakingOver(t *testing.T) {
 	r.endpoint.Holds(t, testDoc, "from-endpoint", nil)
 	open := func() StateResult {
 		manager := NewManager(ManagerOptions{
-			Store: local, Endpoint: r.endpoint, Converter: r.converter, Room: Options{Now: r.clock.Now},
+			Store: local, Endpoint: r.endpoint, Converter: r.converter, Room: OptionsWith(func(ro *Options) { ro.Now = r.clock.Now }),
 			Log: r.logf, Operations: r.operations,
 		})
 		state, err := manager.State(context.Background(), testDoc)
@@ -130,7 +130,7 @@ func TestAResetOfAHeadlessDocumentAdoptsAndFlushesTheWorkingSetFirst(t *testing.
 	r := newTextRoom()
 	r.endpoint.Holds(t, testDoc, "from-endpoint", nil)
 	r.store.Seed(t, testDoc, [][]byte{fullState(t, docWith("from-ws"))}, tagAt(3))
-	manager := r.newManager(t, Options{}, true)
+	manager := r.newManager(t, DefaultOptions(), true)
 
 	result, err := manager.Reset(context.Background(), testDoc)
 	if err != nil || result.Status != ResetDone {
@@ -160,7 +160,7 @@ func TestAResetThatCannotRetireTheWorkingCopyIsRefused(t *testing.T) {
 	r.store.Seed(t, testDoc, [][]byte{fullState(t, docWith("from-ws"))}, tagAt(3))
 	busy := errors.New("the disk is busy")
 	r.store.setFailRetires(func(string) error { return busy })
-	manager := r.newManager(t, Options{}, true)
+	manager := r.newManager(t, DefaultOptions(), true)
 
 	refused, err := manager.Reset(context.Background(), testDoc)
 	if err != nil || refused.Status != ResetUnavailable {

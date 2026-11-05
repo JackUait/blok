@@ -209,7 +209,7 @@ func (r *textRoom) migrationManager(t *testing.T, reader convert.HTMLReader, jou
 	}
 	manager := NewManager(ManagerOptions{
 		Store: r.store, Endpoint: r.endpoint, Converter: converter,
-		Room: Options{Now: r.clock.Now}, Log: r.logf, Operations: operations,
+		Room: OptionsWith(func(ro *Options) { ro.Now = r.clock.Now }), Log: r.logf, Operations: operations,
 	})
 	t.Cleanup(func() { _ = manager.Drain(context.Background()) })
 	return manager
@@ -466,7 +466,7 @@ func TestAMigrationThatRunsPastTheRuntimesLimitsIsHeldOff(t *testing.T) {
 		t.Fatalf("log = %q", r.log)
 	}
 
-	r.clock.Advance(Options{}.withDefaults().Backoff(1))
+	r.clock.Advance(DefaultOptions().withDefaults().Backoff(1))
 	if got := joinStatus(t, manager); got != collab.JoinSeedFailed {
 		t.Fatalf("join after the hold = %v", got)
 	}
@@ -607,7 +607,11 @@ func TestAMigratedWorkingSetWritesTheRecordBack(t *testing.T) {
 	converter := &convert.DocConverter{Now: r.clock.Now, HTML: runtimeReader(t)}
 	manager := NewManager(ManagerOptions{
 		Store: r.store, Endpoint: r.endpoint, Converter: converter, Log: r.logf,
-		Room: Options{Now: r.clock.Now, ExportDebounce: 10 * time.Millisecond, ExportMaxDelay: 10 * time.Millisecond},
+		Room: OptionsWith(func(ro *Options) {
+			ro.Now = r.clock.Now
+			ro.ExportDebounce = 10 * time.Millisecond
+			ro.ExportMaxDelay = 10 * time.Millisecond
+		}),
 	})
 	t.Cleanup(func() { _ = manager.Drain(context.Background()) })
 	joinSynced(t, manager, testDoc, v2Member())

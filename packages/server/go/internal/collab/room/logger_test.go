@@ -20,7 +20,7 @@ func loggerManager(t *testing.T, log func(string), activity ActivityObserver) *M
 	t.Helper()
 	manager := NewManager(ManagerOptions{
 		Store: newMemoryStore(), Endpoint: &memoryEndpoint{}, Converter: &convert.DocConverter{Now: time.Now},
-		Room:     Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour},
+		Room:     OptionsWith(func(ro *Options) { ro.ExportDebounce = time.Hour; ro.ExportMaxDelay = time.Hour }),
 		Log:      log,
 		Activity: activity,
 	})

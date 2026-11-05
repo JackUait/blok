@@ -108,10 +108,10 @@ func (s *Server) buildRoomManager() (*room.Manager, error) {
 		Log:    s.collabLog,
 	}
 
-	roomOptions := room.Options{
-		AnnouncedMaxMessageBytes: int64(o.CollabMaxMessageBytes),
-		Now:                      func() time.Time { return s.clock() },
-	}
+	roomOptions := room.OptionsWith(func(ro *room.Options) {
+		ro.AnnouncedMaxMessageBytes = int64(o.CollabMaxMessageBytes)
+		ro.Now = func() time.Time { return s.clock() }
+	})
 	var operations room.OperationStore
 	if o.CollabOperationStore != nil {
 		// Only the built-in journal states its append limit.

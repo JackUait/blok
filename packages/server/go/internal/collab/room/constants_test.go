@@ -18,8 +18,8 @@ func TestTheRoomConstantsMatchCSharp(t *testing.T) {
 		return int64(value)
 	}
 	ms := func(d time.Duration) int64 { return d.Milliseconds() }
-	o := Options{}.withDefaults()
-	wide := Options{RetryBackoffCap: 10 * 24 * time.Hour}.withDefaults()
+	o := DefaultOptions().withDefaults()
+	wide := OptionsWith(func(ro *Options) { ro.RetryBackoffCap = 10 * 24 * time.Hour }).withDefaults()
 	for key, got := range map[string]int64{
 		"exportDebounce":               ms(o.ExportDebounce),
 		"exportMaxDelay":               ms(o.ExportMaxDelay),

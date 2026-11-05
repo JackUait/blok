@@ -40,7 +40,7 @@ func syn2Start(t *testing.T, o syn2Options) *synApp {
 	app := &synApp{endpoint: &synEndpoint{docs: map[string]string{synDoc: "seeded"}}}
 	app.store = workingset.NewLocalStore(t.TempDir(), nil)
 	operations := o.operations
-	var roomOptions room.Options
+	roomOptions := room.DefaultOptions()
 	if o.journalDir != "" {
 		store, err := journal.NewStore(o.journalDir, journal.StoreOptions{})
 		if err != nil {

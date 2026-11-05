@@ -51,11 +51,13 @@ func newExportRoom(t *testing.T, err error, operations OperationStore) *exportRo
 	e := &exportRoom{endpoint: &memoryEndpoint{}, converter: &failingExport{DocConverter: &convert.DocConverter{Now: time.Now}, err: err}}
 	e.manager = NewManager(ManagerOptions{
 		Store: newMemoryStore(), Endpoint: e.endpoint, Converter: e.converter, Operations: operations,
-		Room: Options{
-			ExportDebounce: time.Millisecond, ExportMaxDelay: time.Millisecond,
-			RetryBackoff: time.Millisecond, RetryBackoffCap: time.Millisecond,
-			EvictionLinger: 20 * time.Millisecond,
-		},
+		Room: OptionsWith(func(ro *Options) {
+			ro.ExportDebounce = time.Millisecond
+			ro.ExportMaxDelay = time.Millisecond
+			ro.RetryBackoff = time.Millisecond
+			ro.RetryBackoffCap = time.Millisecond
+			ro.EvictionLinger = 20 * time.Millisecond
+		}),
 		Log: func(message string) {
 			e.mu.Lock()
 			defer e.mu.Unlock()

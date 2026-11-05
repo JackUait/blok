@@ -155,7 +155,7 @@ func expectNothing(t *testing.T, m *fakeMember) {
 }
 
 func TestWithdrawsTheClientsOfAMemberThatLeftWithoutSayingGoodbye(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, leaver := a.join("")
 	other, _ := a.join("")
 	a.send(leaver, awarenessFor(42, 3, "{}"))
@@ -167,7 +167,7 @@ func TestWithdrawsTheClientsOfAMemberThatLeftWithoutSayingGoodbye(t *testing.T) 
 }
 
 func TestWithdrawsNothingForAMemberThatNeverPublishedPresence(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, leaver := a.join("")
 	other, _ := a.join("")
 	other.clear()
@@ -178,7 +178,7 @@ func TestWithdrawsNothingForAMemberThatNeverPublishedPresence(t *testing.T) {
 }
 
 func TestDoesNotWithdrawAClientAMemberOnlyRelayed(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, owner := a.join("")
 	_, relay := a.join("")
 	other, _ := a.join("")
@@ -192,7 +192,7 @@ func TestDoesNotWithdrawAClientAMemberOnlyRelayed(t *testing.T) {
 }
 
 func TestDoesNotClaimAClientFirstSeenInsideAReplayOfTheRoom(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, owner := a.join("")
 	_, replay := a.join("")
 	other, _ := a.join("")
@@ -208,7 +208,7 @@ func TestDoesNotClaimAClientFirstSeenInsideAReplayOfTheRoom(t *testing.T) {
 }
 
 func TestWithdrawsNothingTwiceWhenTheClientSaidGoodbyeItself(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, leaver := a.join("")
 	other, _ := a.join("")
 	a.send(leaver, awarenessFor(42, 3, "{}"))
@@ -221,7 +221,7 @@ func TestWithdrawsNothingTwiceWhenTheClientSaidGoodbyeItself(t *testing.T) {
 }
 
 func TestAJoiningMemberReceivesTheFullVerifiedIdentitiesMap(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, named := a.join("user-1")
 	a.send(named, awarenessFor(42, 3, "{}"))
 
@@ -233,7 +233,7 @@ func TestAJoiningMemberReceivesTheFullVerifiedIdentitiesMap(t *testing.T) {
 }
 
 func TestAMemberWithNoVerifiedIdentityAppearsInNoIdentitiesEntry(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	anonymous, anonymousMembership := a.join("")
 	a.send(anonymousMembership, awarenessFor(42, 3, "{}"))
 	_, named := a.join("user-1")
@@ -250,7 +250,7 @@ func TestAMemberWithNoVerifiedIdentityAppearsInNoIdentitiesEntry(t *testing.T) {
 }
 
 func TestBindingANewClientIdBroadcastsTheWholeMapToEveryoneIncludingTheSender(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	named, membership := a.join("user-1")
 	other, _ := a.join("")
 	named.clear()
@@ -271,7 +271,7 @@ func TestBindingANewClientIdBroadcastsTheWholeMapToEveryoneIncludingTheSender(t 
 }
 
 func TestAnAnonymousBindBroadcastsNoIdentitiesFrame(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, membership := a.join("")
 	observer, _ := a.join("")
 	observer.clear()
@@ -284,7 +284,7 @@ func TestAnAnonymousBindBroadcastsNoIdentitiesFrame(t *testing.T) {
 }
 
 func TestAnOwnershipTransferFromAnonymousToVerifiedBroadcastsTheChange(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, anonymous := a.join("")
 	a.send(anonymous, awarenessFor(42, 1, "{}"))
 	_, verified := a.join("user-1")
@@ -299,7 +299,7 @@ func TestAnOwnershipTransferFromAnonymousToVerifiedBroadcastsTheChange(t *testin
 }
 
 func TestLeavingBroadcastsTheRemainingMapWithoutTheClientIdsItOwned(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, staying := a.join("user-1")
 	_, leaving := a.join("user-2")
 	observer, _ := a.join("")
@@ -315,7 +315,7 @@ func TestLeavingBroadcastsTheRemainingMapWithoutTheClientIdsItOwned(t *testing.T
 }
 
 func TestAnAnonymousMemberLeavingBroadcastsNoIdentitiesFrame(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, leaving := a.join("")
 	observer, _ := a.join("")
 	a.send(leaving, awarenessFor(42, 3, "{}"))
@@ -329,7 +329,7 @@ func TestAnAnonymousMemberLeavingBroadcastsNoIdentitiesFrame(t *testing.T) {
 }
 
 func TestAnAwarenessClientIdPastTheSafeIntegerCeilingIsNeverMapped(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, membership := a.join("user-1")
 	observer, _ := a.join("")
 	observer.clear()
@@ -352,7 +352,7 @@ func TestAnAwarenessClientIdPastTheSafeIntegerCeilingIsNeverMapped(t *testing.T)
 }
 
 func TestAFrameOfFabricatedClientIdsIsLoggedOncePerFrameWithItsCount(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, membership := a.join("user-1")
 
 	a.send(membership, awarenessForBoth([2]uint64{1 << 53, 1}, [2]uint64{1<<53 + 1, 1}))
@@ -364,7 +364,7 @@ func TestAFrameOfFabricatedClientIdsIsLoggedOncePerFrameWithItsCount(t *testing.
 }
 
 func TestTheLargestSafeAwarenessClientIdStillBinds(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, membership := a.join("user-1")
 
 	a.send(membership, awarenessFor(1<<53-1, 1, "{}"))
@@ -376,7 +376,7 @@ func TestTheLargestSafeAwarenessClientIdStillBinds(t *testing.T) {
 }
 
 func TestARelayedFrameTransferringTwoClientIdsBroadcastsIdentitiesOnce(t *testing.T) {
-	a := newAwarenessRoom(t, Options{})
+	a := newAwarenessRoom(t, DefaultOptions())
 	_, first := a.join("user-1")
 	a.send(first, awarenessFor(1, 1, "{}"))
 	a.send(first, awarenessFor(2, 1, "{}"))
@@ -393,7 +393,7 @@ func TestARelayedFrameTransferringTwoClientIdsBroadcastsIdentitiesOnce(t *testin
 }
 
 func TestTheIdentitiesFrameNeverExceedsTheAwarenessClientCap(t *testing.T) {
-	a := newAwarenessRoom(t, Options{MaxAwarenessClients: 2})
+	a := newAwarenessRoom(t, OptionsWith(func(ro *Options) { ro.MaxAwarenessClients = 2 }))
 	_, first := a.join("user-1")
 	_, second := a.join("user-2")
 	_, third := a.join("user-3")

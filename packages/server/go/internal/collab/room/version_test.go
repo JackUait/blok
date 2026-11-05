@@ -17,11 +17,14 @@ const (
 )
 
 func versionOptions(commitTimeout time.Duration) Options {
-	return Options{
-		ExportDebounce: 10 * time.Millisecond, ExportMaxDelay: 10 * time.Millisecond,
-		EvictionLinger: 10 * time.Millisecond, CommitTimeout: commitTimeout,
-		RetryBackoff: 10 * time.Millisecond, RetryBackoffCap: 10 * time.Millisecond,
-	}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = 10 * time.Millisecond
+		ro.ExportMaxDelay = 10 * time.Millisecond
+		ro.EvictionLinger = 10 * time.Millisecond
+		ro.CommitTimeout = commitTimeout
+		ro.RetryBackoff = 10 * time.Millisecond
+		ro.RetryBackoffCap = 10 * time.Millisecond
+	})
 }
 
 func lastSave(t *testing.T, r *textRoom) recordedSave {

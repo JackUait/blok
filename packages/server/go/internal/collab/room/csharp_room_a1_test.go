@@ -296,13 +296,23 @@ func (r *ra1Room) committed() []operation.Record { return r.operations.Committed
 
 // ra1Quiet: no timer fires unless a test asks for one.
 func ra1Quiet() Options {
-	return Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour, EvictionLinger: time.Hour}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = time.Hour
+		ro.ExportMaxDelay = time.Hour
+		ro.EvictionLinger = time.Hour
+	})
 }
 
 // ra1Brisk: every room timer fires within milliseconds.
 func ra1Brisk() Options {
 	ms := 10 * time.Millisecond
-	return Options{ExportDebounce: ms, ExportMaxDelay: ms, EvictionLinger: ms, RetryBackoff: ms, RetryBackoffCap: ms}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = ms
+		ro.ExportMaxDelay = ms
+		ro.EvictionLinger = ms
+		ro.RetryBackoff = ms
+		ro.RetryBackoffCap = ms
+	})
 }
 
 // ra1Stock is C#'s default FakeMember: it negotiated no blok-sync
@@ -1747,4 +1757,25 @@ func TestWorkingSetOnlyRoomKeepsTheLegacyRelayPath(t *testing.T) {
 	if got := exportedText(t, manager, testDoc); got != "hello!" {
 		t.Fatalf("the room reads %q", got)
 	}
+}
+
+// AZeroAwarenessClientCapRelaysNoPresence: an explicit zero is kept, not
+// read as "use the default".
+func TestAZeroAwarenessClientCapRelaysNoPresence(t *testing.T) {
+	r := ra1NewRoom()
+	r.endpoint.Holds(t, testDoc, "hello", nil)
+	o := ra1Quiet()
+	o.MaxAwarenessClients = 0
+	manager := r.manager(t, o, false)
+	sender, other := ra1Writer(), ra1Writer()
+	membership := ra1Join(t, manager, sender)
+	ra1Join(t, manager, other)
+	other.clear()
+
+	ra1Send(t, membership, wire.Awareness{Update: ra1AwarenessClaiming(1)})
+
+	if got := other.messages(t); len(got) != 0 {
+		t.Fatalf("the other got %#v, want nothing", got)
+	}
+	ra1NotClosed(t, "the sender", sender)
 }

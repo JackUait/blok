@@ -47,7 +47,7 @@ func TestTheHeadHeadersJoinHeadersTheAppAlreadyExposes(t *testing.T) {
 	manager := room.NewManager(room.ManagerOptions{
 		Store: workingset.NewLocalStore(t.TempDir(), nil), Endpoint: heldDocument{},
 		Converter:  &convert.DocConverter{Now: time.Now, HTML: runtimeReader(t)},
-		Operations: room.LocalJournal{Store: store}, Room: room.Options{MaxUpdateBytes: store.MaxUpdateBytes()},
+		Operations: room.LocalJournal{Store: store}, Room: room.OptionsWith(func(ro *room.Options) { ro.MaxUpdateBytes = store.MaxUpdateBytes() }),
 	})
 	t.Cleanup(func() { _ = manager.Drain(context.Background()) })
 	routes := New(Config{Rooms: func() (*room.Manager, error) { return manager, nil }, MaxMessageBytes: 8 << 20})

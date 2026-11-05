@@ -51,7 +51,7 @@ func checkpointRoom(t *testing.T, o Options) (*textRoom, *Manager, *fakeMember, 
 // A failure that is not one of the fatal kinds is retried, but a run of
 // them stops the room: the session may never succeed again.
 func TestARunOfCheckpointFailuresStopsTheRoom(t *testing.T) {
-	r, manager, writer, membership, client := checkpointRoom(t, Options{})
+	r, manager, writer, membership, client := checkpointRoom(t, DefaultOptions())
 	sendOperation(t, membership, writer, opOne, updateAppending(client, "!"))
 	r.operations.setFailCheckpoints(func(string) error {
 		return errors.New("collab: this session can no longer say what is durable; reopen the document")
@@ -116,7 +116,7 @@ func TestACheckpointPublishedDuringAnInFlightProjectionStillEarnsOne(t *testing.
 // A checkpoint replaces the operations it covers on replay, so it never
 // names a sequence past the journal's, nor carries bytes past it.
 func TestCheckpointThroughNeverExceedsDurableThrough(t *testing.T) {
-	r, manager, writer, membership, client := checkpointRoom(t, Options{CheckpointOperationThreshold: 3})
+	r, manager, writer, membership, client := checkpointRoom(t, OptionsWith(func(ro *Options) { ro.CheckpointOperationThreshold = 3 }))
 	for _, op := range [][2]string{{opOne, "a"}, {opTwo, "b"}, {opThree, "c"}} {
 		sendOperation(t, membership, writer, op[0], updateAppending(client, op[1]))
 	}
@@ -151,7 +151,7 @@ func TestCheckpointThroughNeverExceedsDurableThrough(t *testing.T) {
 // A parked update holds the cursor back: the threshold may fire, the
 // checkpoint may not.
 func TestPendingYjsStatePreventsCheckpointAdvancement(t *testing.T) {
-	r, manager, writer, membership, _ := checkpointRoom(t, Options{CheckpointOperationThreshold: 2})
+	r, manager, writer, membership, _ := checkpointRoom(t, OptionsWith(func(ro *Options) { ro.CheckpointOperationThreshold = 2 }))
 	author := syncedClient(t, manager, testDoc, "hello")
 	other := syncedClient(t, manager, testDoc, "hello")
 	first := updateAppending(author, "a")
@@ -186,7 +186,7 @@ func TestPendingYjsStatePreventsCheckpointAdvancement(t *testing.T) {
 // Three consecutive failures close the room, so a failed checkpoint costs
 // another whole threshold before it retries.
 func TestAFailedCheckpointCostsAnotherThresholdBeforeItRetries(t *testing.T) {
-	r, manager, writer, membership, client := checkpointRoom(t, Options{CheckpointOperationThreshold: 2})
+	r, manager, writer, membership, client := checkpointRoom(t, OptionsWith(func(ro *Options) { ro.CheckpointOperationThreshold = 2 }))
 	var attempts atomic.Int32
 	r.operations.setFailCheckpoints(func(string) error {
 		attempts.Add(1)
@@ -232,7 +232,7 @@ func TestAFailedCheckpointCostsAnotherThresholdBeforeItRetries(t *testing.T) {
 // Bytes accumulate across operations toward the byte threshold.
 func TestTheByteThresholdPublishesWhereTheOperationCountWouldNot(t *testing.T) {
 	const byteThreshold = 300
-	r, manager, writer, membership, client := checkpointRoom(t, Options{CheckpointOperationThreshold: 1000, CheckpointByteThreshold: byteThreshold})
+	r, manager, writer, membership, client := checkpointRoom(t, OptionsWith(func(ro *Options) { ro.CheckpointOperationThreshold = 1000; ro.CheckpointByteThreshold = byteThreshold }))
 
 	sendOperation(t, membership, writer, opOne, updateAppending(client, strings.Repeat("y", 200)))
 	manager.Settle()
@@ -260,7 +260,7 @@ func TestTheByteThresholdPublishesWhereTheOperationCountWouldNot(t *testing.T) {
 func TestTheThresholdCountsEveryJournalledWriteNotJustV2Operations(t *testing.T) {
 	r := newTextRoom()
 	r.endpoint.Holds(t, testDoc, "hello", nil)
-	manager := r.newManager(t, Options{CheckpointOperationThreshold: 2}, true)
+	manager := r.newManager(t, OptionsWith(func(ro *Options) { ro.CheckpointOperationThreshold = 2 }), true)
 	stock := join(t, manager, testDoc, &fakeMember{source: collab.SourceClientV1, write: true})
 	client := syncedClient(t, manager, testDoc, "hello")
 
@@ -286,7 +286,7 @@ func TestTheThresholdCountsEveryJournalledWriteNotJustV2Operations(t *testing.T)
 func TestACheckpointIsRefusedWhileTheEngineHoldsPendingState(t *testing.T) {
 	r := newTextRoom()
 	r.endpoint.Holds(t, testDoc, "hello", nil)
-	manager := r.newManager(t, Options{}, true)
+	manager := r.newManager(t, DefaultOptions(), true)
 	membership := join(t, manager, testDoc, &fakeMember{source: collab.SourceClientV1, write: true})
 
 	stray := newClient()

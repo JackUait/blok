@@ -72,7 +72,7 @@ func notes(t *testing.T, frames [][]byte) map[string]string {
 }
 
 func TestCompactsAnOversizedWorkingSetOnLoadByFrameCount(t *testing.T) {
-	manager, store, endpoint := newTestManager(t, Options{CompactionFrameThreshold: 4}, nil)
+	manager, store, endpoint := newTestManager(t, OptionsWith(func(ro *Options) { ro.CompactionFrameThreshold = 4 }), nil)
 	seedFrames(t, store, appending(t, "a", "b", "c", "d", "e"))
 
 	join(t, manager, "doc", &fakeMember{source: collab.SourceClientV1})
@@ -87,7 +87,7 @@ func TestCompactsAnOversizedWorkingSetOnLoadByFrameCount(t *testing.T) {
 }
 
 func TestCompactsAnOversizedWorkingSetOnLoadByByteSize(t *testing.T) {
-	manager, store, _ := newTestManager(t, Options{CompactionByteThreshold: 256}, nil)
+	manager, store, _ := newTestManager(t, OptionsWith(func(ro *Options) { ro.CompactionByteThreshold = 256 }), nil)
 	seedFrames(t, store, appending(t, strings.Repeat("a", 200), strings.Repeat("b", 200)))
 
 	join(t, manager, "doc", &fakeMember{source: collab.SourceClientV1})
@@ -98,7 +98,7 @@ func TestCompactsAnOversizedWorkingSetOnLoadByByteSize(t *testing.T) {
 }
 
 func TestLeavesASmallWorkingSetAloneOnLoad(t *testing.T) {
-	manager, store, _ := newTestManager(t, Options{}, nil)
+	manager, store, _ := newTestManager(t, DefaultOptions(), nil)
 	seedFrames(t, store, appending(t, "a", "b"))
 
 	join(t, manager, "doc", &fakeMember{source: collab.SourceClientV1})
@@ -111,7 +111,7 @@ func TestLeavesASmallWorkingSetAloneOnLoad(t *testing.T) {
 // C# compacts once frameCount reaches the threshold (CollabRoom.cs:2530).
 func TestCompactsAtExactlyTheFrameThresholdAndNotOneBelow(t *testing.T) {
 	for count, want := range map[int]int{4: 1, 3: 3} {
-		manager, store, _ := newTestManager(t, Options{CompactionFrameThreshold: 4}, nil)
+		manager, store, _ := newTestManager(t, OptionsWith(func(ro *Options) { ro.CompactionFrameThreshold = 4 }), nil)
 		seedFrames(t, store, appending(t, []string{"a", "b", "c", "d"}[:count]...))
 
 		join(t, manager, "doc", &fakeMember{source: collab.SourceClientV1})

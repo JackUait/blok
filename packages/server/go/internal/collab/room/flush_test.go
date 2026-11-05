@@ -42,11 +42,13 @@ func newFlushRoom(t *testing.T) *flushRoom {
 	f := &flushRoom{store: &failingWrites{memoryStore: newMemoryStore()}}
 	f.manager = NewManager(ManagerOptions{
 		Store: f.store, Endpoint: &memoryEndpoint{}, Converter: &convert.DocConverter{Now: time.Now},
-		Room: Options{
-			ExportDebounce: time.Hour, ExportMaxDelay: time.Hour,
-			RetryBackoff: 5 * time.Millisecond, RetryBackoffCap: 5 * time.Millisecond,
-			EvictionLinger: 5 * time.Millisecond,
-		},
+		Room: OptionsWith(func(ro *Options) {
+			ro.ExportDebounce = time.Hour
+			ro.ExportMaxDelay = time.Hour
+			ro.RetryBackoff = 5 * time.Millisecond
+			ro.RetryBackoffCap = 5 * time.Millisecond
+			ro.EvictionLinger = 5 * time.Millisecond
+		}),
 		Log: func(message string) {
 			f.mu.Lock()
 			defer f.mu.Unlock()
@@ -140,7 +142,7 @@ func TestADrainCutShortByItsTokenStillClosesEveryRoom(t *testing.T) {
 	r := newTextRoom()
 	r.endpoint.Holds(t, "doc-a", "a", nil)
 	r.endpoint.Holds(t, "doc-b", "b", nil)
-	manager := r.newManager(t, Options{ExportDebounce: 5 * time.Minute, ExportMaxDelay: 5 * time.Minute}, false)
+	manager := r.newManager(t, OptionsWith(func(ro *Options) { ro.ExportDebounce = 5 * time.Minute; ro.ExportMaxDelay = 5 * time.Minute }), false)
 	memberA := &fakeMember{source: collab.SourceClientV1, write: true}
 	memberB := &fakeMember{source: collab.SourceClientV1, write: true}
 	membershipA := joinSynced(t, manager, "doc-a", memberA)
@@ -213,7 +215,7 @@ func TestARoomWhoseDrainPanicsIsLoggedAndForgotten(t *testing.T) {
 	var log []string
 	manager := NewManager(ManagerOptions{
 		Store: newMemoryStore(), Endpoint: endpoint, Converter: &convert.DocConverter{Now: time.Now},
-		Room: Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour},
+		Room: OptionsWith(func(ro *Options) { ro.ExportDebounce = time.Hour; ro.ExportMaxDelay = time.Hour }),
 		Log: func(message string) {
 			mu.Lock()
 			defer mu.Unlock()
@@ -244,7 +246,7 @@ func TestARoomWhoseDrainPanicsIsLoggedAndForgotten(t *testing.T) {
 func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T) {
 	r := newTextRoom()
 	r.endpoint.Holds(t, "doc-a", "a", nil)
-	manager := r.newManager(t, Options{ExportDebounce: 5 * time.Minute, ExportMaxDelay: 5 * time.Minute}, false)
+	manager := r.newManager(t, OptionsWith(func(ro *Options) { ro.ExportDebounce = 5 * time.Minute; ro.ExportMaxDelay = 5 * time.Minute }), false)
 	member := &fakeMember{source: collab.SourceClientV1, write: true}
 	membership := joinSynced(t, manager, "doc-a", member)
 	client := syncedClient(t, manager, "doc-a", "a")

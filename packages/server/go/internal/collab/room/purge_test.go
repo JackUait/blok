@@ -105,7 +105,7 @@ func TestAnEmptyDocIDIsRefusedBeforeAuthorizeOnEveryStore(t *testing.T) {
 // C# refuses an empty doc id (ArgumentException) at every manager door,
 // and an empty operation id at the edit doors, before any room exists.
 func TestEveryDoorRefusesAnEmptyDocIDBeforeAnyRoomExists(t *testing.T) {
-	manager, _, endpoint := newTestManager(t, Options{}, nil)
+	manager, _, endpoint := newTestManager(t, DefaultOptions(), nil)
 	ctx := context.Background()
 	noPlan := func(context.Context, *yjs.Doc) ([]convert.EditOp, error) { return nil, nil }
 	doors := map[string]func() error{

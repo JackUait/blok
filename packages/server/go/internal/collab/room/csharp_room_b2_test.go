@@ -343,16 +343,18 @@ func (k *rb2Kit) manager(t *testing.T, o Options, journalled bool) *Manager {
 
 func (k *rb2Kit) activityManager(t *testing.T, journalled bool) *Manager {
 	t.Helper()
-	return k.build(t, Options{}, journalled, nil, true)
+	return k.build(t, DefaultOptions(), journalled, nil, true)
 }
 
 func rb2Quick() Options {
-	return Options{
-		ExportDebounce: 10 * time.Millisecond, ExportMaxDelay: 10 * time.Millisecond,
-		EvictionLinger: 150 * time.Millisecond,
-		RetryBackoff:   10 * time.Millisecond, RetryBackoffCap: 10 * time.Millisecond,
-		CommitTimeout: 5 * time.Second,
-	}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = 10 * time.Millisecond
+		ro.ExportMaxDelay = 10 * time.Millisecond
+		ro.EvictionLinger = 150 * time.Millisecond
+		ro.RetryBackoff = 10 * time.Millisecond
+		ro.RetryBackoffCap = 10 * time.Millisecond
+		ro.CommitTimeout = 5 * time.Second
+	})
 }
 
 func rb2V1(actor string, write bool) *fakeMember {
@@ -1465,7 +1467,7 @@ func TestAJoinAndLeaveAfterTheLimitStillSweepsTheInertStamps(t *testing.T) {
 func TestWithNoObserverAnActivityFrameChangesNothing(t *testing.T) {
 	k := newRb2Kit()
 	k.host.Holds(t, testDoc, "hello", nil)
-	manager := k.manager(t, Options{}, false)
+	manager := k.manager(t, DefaultOptions(), false)
 	member := rb2V1("user-1", true)
 	membership := rb2Enter(t, manager, member)
 	rb2Clear(member)
@@ -1498,7 +1500,7 @@ func TestWithNoObserverAnActivityFrameChangesNothing(t *testing.T) {
 func TestResetSettlesAnInFlightWriteSoItCannotOvertakeTheReset(t *testing.T) {
 	k := newRb2Kit()
 	k.host.Holds(t, testDoc, "hello", nil)
-	manager := k.manager(t, Options{}, false)
+	manager := k.manager(t, DefaultOptions(), false)
 	membership := rb2Enter(t, manager, rb2V1("", true))
 	client := syncedClient(t, manager, testDoc, "hello")
 
@@ -1556,7 +1558,7 @@ func TestResetSettlesAnInFlightWriteSoItCannotOvertakeTheReset(t *testing.T) {
 
 func TestDisposeIsIdempotent(t *testing.T) {
 	k := newRb2Kit()
-	manager := k.manager(t, Options{}, false)
+	manager := k.manager(t, DefaultOptions(), false)
 	r := newRoom(testDoc, manager)
 
 	r.dispose()

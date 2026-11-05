@@ -41,7 +41,7 @@ func TestTheActivityQueueDropsItsOldestPastTheBound(t *testing.T) {
 	var log []string
 	manager := NewManager(ManagerOptions{
 		Store: newMemoryStore(), Endpoint: &memoryEndpoint{}, Converter: &convert.DocConverter{Now: time.Now},
-		Room:     Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour},
+		Room:     OptionsWith(func(ro *Options) { ro.ExportDebounce = time.Hour; ro.ExportMaxDelay = time.Hour }),
 		Activity: observer,
 		Log: func(message string) {
 			logMu.Lock()
@@ -94,7 +94,7 @@ func TestTheDrainStopsWaitingForAStuckObserverAtTheCommitTimeout(t *testing.T) {
 	var log []string
 	manager := NewManager(ManagerOptions{
 		Store: newMemoryStore(), Endpoint: &memoryEndpoint{}, Converter: &convert.DocConverter{Now: time.Now},
-		Room:     Options{CommitTimeout: 50 * time.Millisecond},
+		Room:     OptionsWith(func(ro *Options) { ro.CommitTimeout = 50 * time.Millisecond }),
 		Activity: observer,
 		Log: func(message string) {
 			logMu.Lock()

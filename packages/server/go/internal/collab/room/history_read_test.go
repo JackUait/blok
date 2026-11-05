@@ -43,7 +43,7 @@ func TestAReadLeavesOutAPageMapValueHoldingAPeerBigint(t *testing.T) {
 	manager := NewManager(ManagerOptions{
 		Store: workingset.NewLocalStore(dir, nil), Endpoint: oneParagraphEndpoint{},
 		Converter:  &convert.DocConverter{Now: time.Now, HTML: convert.RuntimeHTMLReader{Runtime: pool}},
-		Operations: LocalJournal{Store: store}, Room: Options{MaxUpdateBytes: store.MaxUpdateBytes()},
+		Operations: LocalJournal{Store: store}, Room: OptionsWith(func(ro *Options) { ro.MaxUpdateBytes = store.MaxUpdateBytes() }),
 		Log: func(string) {},
 	})
 	ctx := context.Background()

@@ -319,16 +319,22 @@ func (r *ra2Room) committed() []operation.Record { return r.operations.Committed
 
 // ra2Quiet: no timer fires during a test unless it asks for one.
 func ra2Quiet() Options {
-	return Options{ExportDebounce: time.Hour, ExportMaxDelay: time.Hour, EvictionLinger: time.Hour}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = time.Hour
+		ro.ExportMaxDelay = time.Hour
+		ro.EvictionLinger = time.Hour
+	})
 }
 
 // ra2Brisk: every room timer fires within milliseconds.
 func ra2Brisk() Options {
-	return Options{
-		ExportDebounce: 10 * time.Millisecond, ExportMaxDelay: 10 * time.Millisecond,
-		EvictionLinger: 10 * time.Millisecond, RetryBackoff: 10 * time.Millisecond,
-		RetryBackoffCap: 10 * time.Millisecond,
-	}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = 10 * time.Millisecond
+		ro.ExportMaxDelay = 10 * time.Millisecond
+		ro.EvictionLinger = 10 * time.Millisecond
+		ro.RetryBackoff = 10 * time.Millisecond
+		ro.RetryBackoffCap = 10 * time.Millisecond
+	})
 }
 
 // ra2Stock is C# new FakeMember(): v1, may write.
@@ -1896,10 +1902,12 @@ func TestResetCommitsTheCurrentEndpointDocumentAndANewLineageBeforeReturning(t *
 // ra2ExportWindow is C# ExportWindow: debounce, max delay and backoff of
 // 100 ms. No room evicts, since eviction would flush a projection.
 func ra2ExportWindow() Options {
-	return Options{
-		ExportDebounce: 100 * time.Millisecond, ExportMaxDelay: 100 * time.Millisecond,
-		RetryBackoff: 100 * time.Millisecond, EvictionLinger: 5 * time.Minute,
-	}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = 100 * time.Millisecond
+		ro.ExportMaxDelay = 100 * time.Millisecond
+		ro.RetryBackoff = 100 * time.Millisecond
+		ro.EvictionLinger = 5 * time.Minute
+	})
 }
 
 // ra2SettleWindow gives an owed projection its whole window, then drains.

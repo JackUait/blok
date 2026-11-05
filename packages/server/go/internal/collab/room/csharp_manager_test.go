@@ -442,12 +442,14 @@ func (b *mgrBench) managerWith(t *testing.T, o Options, store WorkingSetStore, o
 }
 
 func mgrFast() Options {
-	return Options{
-		ExportDebounce: 40 * time.Millisecond, ExportMaxDelay: 40 * time.Millisecond,
-		EvictionLinger: 150 * time.Millisecond,
-		RetryBackoff:   20 * time.Millisecond, RetryBackoffCap: 40 * time.Millisecond,
-		Now: time.Now,
-	}
+	return OptionsWith(func(ro *Options) {
+		ro.ExportDebounce = 40 * time.Millisecond
+		ro.ExportMaxDelay = 40 * time.Millisecond
+		ro.EvictionLinger = 150 * time.Millisecond
+		ro.RetryBackoff = 20 * time.Millisecond
+		ro.RetryBackoffCap = 40 * time.Millisecond
+		ro.Now = time.Now
+	})
 }
 
 func mgrSlowExport() Options {
@@ -737,7 +739,8 @@ func TestEveryDocAccessGoesThroughOneLane(t *testing.T) {
 	b.endpoint.Holds(t, mgrDoc, "", nil)
 	b.store.writeDelay = time.Millisecond
 	o := mgrFast()
-	o.ExportDebounce, o.ExportMaxDelay = time.Millisecond, time.Millisecond
+	// C# sets both to TimeSpan.Zero; a zero now stays zero here too.
+	o.ExportDebounce, o.ExportMaxDelay = 0, 0
 	manager := b.manager(t, o)
 	var memberships []collab.Membership
 	for range 8 {

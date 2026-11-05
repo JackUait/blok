@@ -3,6 +3,8 @@ package room
 import (
 	"context"
 	"errors"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -139,4 +141,71 @@ func TestASettleWaitsForRecordsARestartedPumpDelivers(t *testing.T) {
 	}
 	close(observer.second)
 	wait(settled)
+}
+
+// backlogObserver blocks its first call and the call after `fails` failed
+// ones; the calls between fail.
+type backlogObserver struct {
+	mu             sync.Mutex
+	calls, fails   int
+	first, firstIn chan struct{}
+	last, lastIn   chan struct{}
+}
+
+func (o *backlogObserver) Record(context.Context, string, string, time.Time, ActivityKind) error {
+	o.mu.Lock()
+	o.calls++
+	call := o.calls
+	o.mu.Unlock()
+	switch {
+	case call == 1:
+		close(o.firstIn)
+		<-o.first
+		return nil
+	case call <= 1+o.fails:
+		return errors.New("the activity table is down")
+	case call == 2+o.fails:
+		close(o.lastIn)
+		<-o.last
+	}
+	return nil
+}
+
+// A pump restart after a logger throw continues in the same goroutine: a
+// steady backlog with N throws does not hold N goroutines.
+func TestPumpRestartsUnderABacklogDoNotPileUpGoroutines(t *testing.T) {
+	const throws = 40
+	observer := &backlogObserver{
+		fails: throws,
+		first: make(chan struct{}), firstIn: make(chan struct{}),
+		last: make(chan struct{}), lastIn: make(chan struct{}),
+	}
+	manager := loggerManager(t, func(message string) {
+		if strings.Contains(message, "activity observer failed") {
+			panic(errors.New("logger failed"))
+		}
+	}, observer)
+	wait := func(c <-chan struct{}) {
+		t.Helper()
+		select {
+		case <-c:
+		case <-time.After(10 * time.Second):
+			t.Fatal("timed out")
+		}
+	}
+	join(t, manager, "doc", &fakeMember{actor: "user-0", source: collab.SourceClientV1})
+	wait(observer.firstIn)
+	for i := 1; i <= throws+1; i++ {
+		join(t, manager, "doc", &fakeMember{actor: "user-" + strconv.Itoa(i), source: collab.SourceClientV1})
+	}
+	baseline := runtime.NumGoroutine()
+
+	close(observer.first)
+	wait(observer.lastIn)
+	grown := runtime.NumGoroutine() - baseline
+	close(observer.last)
+	manager.Settle()
+	if grown > throws/4 {
+		t.Fatalf("%d more goroutines after %d restarts", grown, throws)
+	}
 }

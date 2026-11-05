@@ -66,26 +66,23 @@ func (r *Room) sweepActivityStampsLocked(at time.Time) {
 }
 
 // pumpActivity drains the queue one call at a time. It never takes the lane.
+// done closes only once the queue is empty, so a settle holding it waits
+// for records delivered after a restart too.
 func (r *Room) pumpActivity(done chan struct{}) {
 	defer close(done)
-	// Only the host logger can panic here. Left set, the pumping flag would
-	// make this room's activity dead for good, so a fresh pump takes over.
+	for !r.drainActivity() {
+	}
+}
+
+// drainActivity delivers records until the queue is empty. False if the
+// host logger panicked first: left set, the pumping flag would make this
+// room's activity dead for good, so the pump goes round again in the same
+// goroutine.
+func (r *Room) drainActivity() (drained bool) {
 	defer func() {
-		if recover() == nil {
-			return
+		if recover() != nil {
+			drained = false
 		}
-		r.activityMu.Lock()
-		if len(r.activityQueue) == 0 {
-			r.activityPumping = false
-			r.activityMu.Unlock()
-			return
-		}
-		next := make(chan struct{})
-		r.activityDispatch = next
-		go r.pumpActivity(next)
-		r.activityMu.Unlock()
-		// A settle may hold done: it closes only once the fresh pump ends.
-		<-next
 	}()
 	for {
 		r.activityMu.Lock()
@@ -93,7 +90,7 @@ func (r *Room) pumpActivity(done chan struct{}) {
 			// Cleared under the lock that would start the next pump.
 			r.activityPumping = false
 			r.activityMu.Unlock()
-			return
+			return true
 		}
 		next := r.activityQueue[0]
 		r.activityQueue = r.activityQueue[1:]

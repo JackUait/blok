@@ -614,6 +614,32 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(1, manager.LiveRoomCount);
   }
 
+  /// <summary>
+  /// Only a CANCELLATION aborts a cancelled recheck. A policy that fails any
+  /// other way is a denial, even after the caller cancelled.
+  /// </summary>
+  [Fact]
+  public async Task APolicyThatFailsAfterTheCallerCancelledStillExpels()
+  {
+    endpoint.Holds(DocId, "seeded");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    Assert.Equal(CollabJoinStatus.Joined, (await manager.JoinAsync(DocId, member)).Status);
+    member.RecheckEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    member.RecheckGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    member.RecheckIgnoresCancellation = true;
+    using var cancellation = new CancellationTokenSource();
+    var recheck = ((ICollabRoomManager)manager).RecheckAccessAsync(DocId, cancellation.Token).AsTask();
+    await member.RecheckEntered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+
+    await cancellation.CancelAsync();
+    member.RecheckFailure = new InvalidOperationException("policy failed");
+    member.RecheckGate.SetResult();
+
+    Assert.Equal(1, await recheck.WaitAsync(TimeSpan.FromSeconds(3)));
+    Assert.Equal([CollabCloseReason.Forbidden], member.Closes);
+  }
+
   [Fact]
   public async Task AThrowingActivityDropLoggerDoesNotStrandOtherRevokedMembers()
   {

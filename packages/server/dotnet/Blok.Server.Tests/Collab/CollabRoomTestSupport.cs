@@ -773,13 +773,17 @@ internal sealed class FakeMember(
 
   internal TaskCompletionSource? RecheckGate { get; set; }
 
+  /// <summary>When set, the gate is awaited without the caller's token.</summary>
+  internal bool RecheckIgnoresCancellation { get; set; }
+
   public async ValueTask<bool> RecheckAccessAsync(CancellationToken cancellationToken)
   {
     RecheckEntered?.TrySetResult();
 
     if (RecheckGate is not null)
     {
-      await RecheckGate.Task.WaitAsync(cancellationToken);
+      await RecheckGate.Task.WaitAsync(
+          RecheckIgnoresCancellation ? CancellationToken.None : cancellationToken);
     }
 
     if (RecheckFailure is not null)

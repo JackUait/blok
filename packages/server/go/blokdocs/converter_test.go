@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/JackUait/blok/packages/server/go/internal/jsruntime"
 )
 
 type scriptedRuntime struct {
@@ -232,5 +234,19 @@ func TestARepeatedIdKeepsItsFirstPlaceAndItsLastValue(t *testing.T) {
 	}
 	if want := `{"document":{"blocks":[]},"blockIds":{"y":"3","x":"2"},"pageIds":{}}`; runtime.input != want {
 		t.Fatalf("input = %s, want %s", runtime.input, want)
+	}
+}
+
+// A host can tell the process heap backstop from a document's own budget.
+func TestNamesTheHeapBackstopApartFromTheBudget(t *testing.T) {
+	stopped := newConverter(&scriptedRuntime{err: &jsruntime.Failure{Kind: jsruntime.KindDocumentTooLarge, Err: jsruntime.ErrHeapBackstop}})
+	_, err := stopped.ToHTML(context.Background(), `{"blocks":[]}`)
+	var conversion *ConversionError
+	if !errors.As(err, &conversion) || conversion.Reason != DocumentTooLarge || !errors.Is(err, ErrHeapBackstop) {
+		t.Fatalf("err = %v, want DocumentTooLarge wrapping ErrHeapBackstop", err)
+	}
+	overBudget := newConverter(&scriptedRuntime{err: &jsruntime.Failure{Kind: jsruntime.KindDocumentTooLarge}})
+	if _, err := overBudget.ToHTML(context.Background(), `{"blocks":[]}`); errors.Is(err, ErrHeapBackstop) {
+		t.Fatalf("err = %v names the backstop for a plain budget stop", err)
 	}
 }

@@ -199,6 +199,12 @@ func loadGuarded(program *goja.Program, timeout time.Duration, budget int64) (*R
 					"the floor this package accepts at all.", budget, DefaultMemoryBudget, MinimumMemoryBudget),
 				Err: err,
 			}
+		case interruptHeap:
+			return nil, &StartupError{
+				Cause:   StartupOverBudget,
+				Message: "Loading Blok's runtime bundle into an engine grew the process live heap past the 1 GiB backstop.",
+				Err:     fmt.Errorf("%w: %w", ErrHeapBackstop, err),
+			}
 		case interruptTimeout:
 			return nil, &StartupError{
 				Cause: StartupTimedOut,
@@ -267,6 +273,8 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 			return "", false, &Failure{Kind: KindTimedOut, Err: err}
 		case interruptBudget:
 			return "", false, &Failure{Kind: KindDocumentTooLarge, Err: err}
+		case interruptHeap:
+			return "", false, &Failure{Kind: KindDocumentTooLarge, Err: fmt.Errorf("%w: %w", ErrHeapBackstop, err)}
 		case interruptCancel:
 			return "", false, ctx.Err()
 		}

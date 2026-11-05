@@ -1,6 +1,7 @@
 package jsruntime
 
 import (
+	"errors"
 	"runtime/metrics"
 	"sync"
 	"sync/atomic"
@@ -16,6 +17,7 @@ const (
 	interruptTimeout interruptReason = iota + 1
 	interruptBudget
 	interruptCancel
+	interruptHeap
 )
 
 // allocMetric is every heap byte the process has allocated so far.
@@ -46,6 +48,22 @@ const (
 
 const pollEvery = time.Millisecond
 
+// HeapBackstop bounds how far the process live heap may grow during one run,
+// whatever the run was charged. The even split above can charge a heavy run
+// that overlaps light ones as little as 1/N of its bytes, so this keeps the
+// process from running out of memory. 1 GiB, the old live-heap default.
+var HeapBackstop int64 = 1 << 30
+
+// ErrHeapBackstop is a run stopped by HeapBackstop, not by its own budget.
+var ErrHeapBackstop = errors.New("jsruntime: the process live heap grew past the 1 GiB backstop during the call")
+
+// liveHeap is the live heap the last GC marked, process-wide. Tests swap it.
+var liveHeap = func() int64 {
+	sample := []metrics.Sample{{Name: "/gc/heap/live:bytes"}}
+	metrics.Read(sample)
+	return int64(sample[0].Value.Uint64())
+}
+
 // running counts the guarded runs, to split each sample among them.
 var running atomic.Int64
 
@@ -69,6 +87,7 @@ func arm(vm *goja.Runtime, timeout time.Duration, budget int64, done <-chan stru
 	g := &guard{vm: vm, stop: make(chan struct{})}
 	g.timer = time.AfterFunc(timeout, func() { g.interrupt(interruptTimeout) })
 	running.Add(1)
+	heapStart := liveHeap()
 	last := heapAllocated()
 	var spent uint64
 	g.watching.Add(1)
@@ -90,6 +109,10 @@ func arm(vm *goja.Runtime, timeout time.Duration, budget int64, done <-chan stru
 				last = now
 				if spent/chargeDen*chargeNum > uint64(budget) {
 					g.interrupt(interruptBudget)
+					return
+				}
+				if liveHeap()-heapStart > HeapBackstop {
+					g.interrupt(interruptHeap)
 					return
 				}
 			}

@@ -101,8 +101,9 @@ var (
 )
 
 const (
-	ntlmTestType1 = "4e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f"
-	ntlmServerAvs = "2:44004f004d00410049004e00,1:530045005200560045005200,4:64006f006d00610069006e002e007400650073007400,3:7300650072007600650072002e0064006f006d00610069006e002e007400650073007400,7:00803ed5deb19d01,"
+	ntlmTestType1  = "4e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f"
+	ntlmSpnegoInit = "604806062b0601050502a03e303ca00e300c060a2b06010401823702020aa22a04284e544c4d535350000100000015828862000000000000000000000000000000000601b01d0000000f"
+	ntlmServerAvs  = "2:44004f004d00410049004e00,1:530045005200560045005200,4:64006f006d00610069006e002e007400650073007400,3:7300650072007600650072002e0064006f006d00610069006e002e007400650073007400,7:00803ed5deb19d01,"
 )
 
 func avPair(id int, value []byte) []byte {
@@ -232,7 +233,7 @@ func readNtlmToken(scheme string, token []byte, state *ntlmProxyState, password 
 	if scheme == "Negotiate" {
 		if token[0] == 0x60 {
 			_, app, _ := testDer(token)
-			_, oid, rest := testDer(app)
+			_, _, rest := testDer(app)
 			_, a0, _ := testDer(rest)
 			_, init, _ := testDer(a0)
 			_, mechTypes, rest := testDer(init)
@@ -240,19 +241,19 @@ func readNtlmToken(scheme string, token []byte, state *ntlmProxyState, password 
 			state.mechList = testDerWrap(tag, list)
 			_, a2, _ := testDer(rest)
 			_, inner, _ = testDer(a2)
-			spnego = "init oid=" + hex.EncodeToString(oid) + " mechs=" + hex.EncodeToString(state.mechList) + " "
+			spnego = "init " + hex.EncodeToString(token) + " mechs=" + hex.EncodeToString(state.mechList) + " "
 		} else {
 			_, a1, _ := testDer(token)
 			_, resp, _ := testDer(a1)
 			tag, first, rest := testDer(resp)
 			_, inner, _ = testDer(first)
-			tags := fmt.Sprintf("%02x", tag)
+			tags := fmt.Sprintf("%02x/%02x/%02x:%02x", token[0], a1[0], tag, first[0])
 			if len(rest) > 0 {
 				tag, second, _ := testDer(rest)
 				_, mechListMic, _ = testDer(second)
-				tags += fmt.Sprintf(",%02x", tag)
+				tags += fmt.Sprintf(",%02x:%02x", tag, second[0])
 			}
-			spnego = "resp tags=" + tags + " "
+			spnego = "resp " + tags + " "
 		}
 	}
 	if inner[8] == 1 {
@@ -414,7 +415,7 @@ func ntlmProxy(t *testing.T, mode, password string, network, address string, cer
 							closing = mode == "close2"
 							var challenge string
 							switch mode {
-							case "bare":
+							case "bare", "negotiate-bare":
 							case "short":
 								challenge = " " + base64.StdEncoding.EncodeToString(state.type2[:10])
 							case "base64":
@@ -465,13 +466,14 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 	trust := target.Client().Transport.(*http.Transport).TLSClientConfig
 	for _, c := range []struct{ mode, user, domain, password, want string }{
 		{"ntlm", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
-		{"negotiate", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init oid=2b0601050502 mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp tags=a2,a3 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"negotiate", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
 		{"domain", "u", "DOM", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=358 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=DOM@336 ws=W@342 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"empty", "u", "", "", "error 407|1 auth=no"},
 		{"sharp", "ß", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=ß@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"dotless", "ıſ", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=354 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=ıſ@334 dom=@338 ws=W@338 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"flags", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"no-nb", "u", "", "p", "error 407|1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"negotiate-bare", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}"},
 		{"bare", "u", "", "p", "throw ArgumentOutOfRangeException|1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"av9", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=194 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=64@112 user=u@176 dom=@178 ws=W@178 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs=0: proof=ok mic=ok"},
 		{"close1", "u", "", "p", "200 ok|1 auth=no|2 auth=NTLM T1 {T1}|2 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
@@ -481,7 +483,7 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"https", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"localhost", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/localhost,10:zero,6:02000000,0: proof=ok mic=ok"},
 		{"ipv6", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=340 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=210@112 user=u@322 dom=@324 ws=W@324 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/::1,10:zero,6:02000000,0: proof=ok mic=ok"},
-		{"negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init oid=2b0601050502 mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp tags=a2,a3 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"negotiate-https", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
 	} {
 		t.Run(c.mode, func(t *testing.T) {
 			var certificate *tls.Certificate
@@ -522,7 +524,7 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 			} else if strings.Contains(err.Error(), "CONNECT answered ") {
 				outcome = "error " + err.Error()[strings.LastIndex(err.Error(), " ")+1:]
 			}
-			want := strings.NewReplacer("{T1}", ntlmTestType1, "{AVS}", ntlmServerAvs).Replace(twinOutcome(c.want))
+			want := strings.NewReplacer("{T1}", ntlmTestType1, "{AVS}", ntlmServerAvs, "{INIT}", ntlmSpnegoInit).Replace(twinOutcome(c.want))
 			if got := strings.Join(append([]string{outcome}, seen()...), "|"); got != want {
 				t.Errorf("got %q\nC#  %q", got, want)
 			}

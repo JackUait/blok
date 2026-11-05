@@ -261,9 +261,10 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 				if !ok {
 					break
 				}
-				// A bare challenge is an empty blob, which .NET cannot read.
+				// A bare challenge is an empty blob: NTLM throws on it, SPNEGO
+				// gives no token.
 				challenge, err := base64.StdEncoding.DecodeString(data)
-				if err != nil || data == "" {
+				if err != nil {
 					return conn, errNtlmThrow
 				}
 				token, err := nt.respond(challenge)

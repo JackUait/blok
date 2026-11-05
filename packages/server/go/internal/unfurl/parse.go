@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/jsjson"
@@ -45,10 +46,30 @@ func Parse(body []byte, finalURL string) Metadata {
 		sel *selectState
 	}
 	stack := []frame{{document, 0, nil}}
+	var raws []string
+	titles := 0
 	for len(stack) > 0 {
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 		node := top.node
+		if node.Type == html.ElementNode && node.Data == "title" {
+			titles++
+		}
+		if node.Type == html.ElementNode && node.Namespace == "" && node.Data == "title" && top.sel != nil && top.sel.open {
+			// AngleSharp builds a title inside an option or button as
+			// markup, not RCDATA, so it holds what follows as written.
+			if raws == nil {
+				raws = rawTitles(text)
+			}
+			if titles <= len(raws) {
+				if held, err := html.ParseFragment(strings.NewReader(raws[titles-1]), &html.Node{Type: html.ElementNode, Data: "body", DataAtom: atom.Body}); err == nil {
+					node = &html.Node{Type: html.ElementNode, Data: "title"}
+					for _, child := range held {
+						node.AppendChild(child)
+					}
+				}
+			}
+		}
 		if node.Type == html.ElementNode {
 			if top.depth > maxOpenElementDepth {
 				return build(base, "", "", nil, nil, "")
@@ -145,6 +166,35 @@ type selectState struct {
 
 func (s *selectState) drops() bool {
 	return s != nil && !s.open && !s.closed
+}
+
+// rawTitles is each <title>'s content as written, in document order: the
+// tokenizer gives a title's RCDATA raw, before any entity is decoded. An
+// svg or math <title> is read as RCDATA here, so one whose markup holds
+// another <title> shifts the pairing for the titles after it.
+func rawTitles(text string) []string {
+	tokenizer := html.NewTokenizer(strings.NewReader(text))
+	var titles []string
+	for {
+		switch tokenizer.Next() {
+		case html.ErrorToken:
+			return titles
+		case html.StartTagToken, html.SelfClosingTagToken:
+			name, _ := tokenizer.TagName()
+			if string(name) == "noscript" {
+				// Scripting is off, so the parser reads its markup.
+				tokenizer.NextIsNotRawText()
+			}
+			if string(name) != "title" {
+				continue
+			}
+			var raw strings.Builder
+			for tokenizer.Next() == html.TextToken {
+				raw.Write(tokenizer.Raw())
+			}
+			titles = append(titles, raw.String())
+		}
+	}
 }
 
 // asciiLower stands in for ToLowerInvariant before a compare with an ASCII

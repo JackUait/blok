@@ -31,6 +31,9 @@ pub(crate) const SIGN_MAGIC: &[u8] =
     b"session key to client-to-server signing key magic constant\0";
 pub(crate) const SEAL_MAGIC: &[u8] =
     b"session key to client-to-server sealing key magic constant\0";
+/// The proxy's side, for VerifyMIC.
+const SERVER_SIGN_MAGIC: &[u8] = b"session key to server-to-client signing key magic constant\0";
+const SERVER_SEAL_MAGIC: &[u8] = b"session key to server-to-client sealing key magic constant\0";
 
 pub(crate) struct NtlmAuth {
     user: String,
@@ -45,9 +48,11 @@ pub(crate) struct NtlmAuth {
     exported: Vec<u8>,
     /// SPNEGO's mechanism, picked by the server's first answer.
     chosen: bool,
-    /// Set once a challenge is answered, as .NET sets it before it reads
-    /// the challenge.
+    /// IsAuthenticated: NTLM sets it once a challenge is answered, before
+    /// it reads the challenge; SPNEGO once its state is final.
     pub(crate) authenticated: bool,
+    /// VerifyMIC's sequence number.
+    server_sequence: u32,
 }
 
 impl NtlmAuth {
@@ -77,6 +82,7 @@ impl NtlmAuth {
             exported: Vec::new(),
             chosen: false,
             authenticated: false,
+            server_sequence: 0,
         })
     }
 
@@ -111,51 +117,100 @@ impl NtlmAuth {
         )
     }
 
-    /// Answers the server's challenge token: None when .NET sends nothing
-    /// more.
-    pub(crate) fn respond(&mut self, challenge: &[u8]) -> Result<Option<Vec<u8>>, Throw> {
+    /// Answers the server's challenge token (GetOutgoingBlob): the token
+    /// to send, None for none, and the status.
+    pub(crate) fn respond(&mut self, challenge: &[u8]) -> Result<(Option<Vec<u8>>, Status), Throw> {
         if !self.negotiate {
             self.authenticated = true;
-            return self.type3(challenge);
+            return Ok(match self.type3(challenge)? {
+                Some(token) => (Some(token), Status::Completed),
+                None => (None, Status::InvalidToken),
+            });
         }
-        let Some((neg_state, mech, token)) = read_neg_token_resp(challenge) else {
-            return Ok(None);
+        self.spnego(challenge)
+    }
+
+    /// ProcessSpNegoChallenge.
+    fn spnego(&mut self, challenge: &[u8]) -> Result<(Option<Vec<u8>>, Status), Throw> {
+        let Some(resp) = read_neg_token_resp(challenge) else {
+            return Ok((None, Status::InvalidToken));
         };
-        let name = if mech == NTLM_OID[2..] {
-            Some("NTLM")
-        } else if mech == KERBEROS_OID {
-            Some("Kerberos")
-        } else {
-            None
+        let name = match &resp.mech {
+            Some(mech) if mech[..] == NTLM_OID[2..] => Some("NTLM"),
+            Some(mech) if mech[..] == KERBEROS_OID => Some("Kerberos"),
+            _ => None,
         };
         if !self.chosen {
             // Kerberos would be a GSSAPI mechanism of its own: not ported.
             if name != Some("NTLM") {
-                return Ok(None);
+                return Ok((None, Status::Unsupported));
             }
             self.chosen = true;
         } else if name.is_some_and(|n| n != "NTLM") {
-            return Ok(None);
+            return Ok((None, Status::InvalidToken));
         }
-        if token.is_empty() {
-            return Ok(None);
+        if !resp.token.is_empty() {
+            let Some(type3) = self.type3(&resp.token)? else {
+                return Ok((None, Status::InvalidToken));
+            };
+            self.server_sequence = 0;
+            let mic = signature(&self.exported, 0, &self.mech_list);
+            let status = if resp.neg_state == NEG_REQUEST_MIC {
+                Status::Continue
+            } else {
+                Status::Completed
+            };
+            self.authenticated = status == Status::Completed;
+            let token = der(
+                0xa1,
+                &[&der(
+                    0x30,
+                    &[
+                        &der(0xa2, &[&der(0x04, &[&type3])]),
+                        &der(0xa3, &[&der(0x04, &[&mic])]),
+                    ],
+                )],
+            );
+            return Ok((Some(token), status));
         }
-        let Some(type3) = self.type3(&token)? else {
-            return Ok(None);
+        // A MIC equal to the (absent, so empty) token is not checked.
+        if let Some(mic) = &resp.mic
+            && *mic != resp.token
+        {
+            if self.mech_list.is_empty() || resp.neg_state != NEG_ACCEPT_COMPLETED {
+                return Ok((None, Status::GenericFailure));
+            }
+            if !self.verify_mic(mic) {
+                return Ok((None, Status::MessageAltered));
+            }
+        }
+        self.authenticated = matches!(resp.neg_state, NEG_ACCEPT_COMPLETED | NEG_REJECT);
+        let status = match resp.neg_state {
+            NEG_ACCEPT_COMPLETED => Status::Completed,
+            NEG_ACCEPT_INCOMPLETE => Status::Continue,
+            NEG_REJECT => Status::UnknownCredentials,
+            _ => Status::GenericFailure,
         };
-        // RequestMic (3) leaves the handshake open.
-        self.authenticated = neg_state != 3;
-        let mic = signature(&self.exported, 0, &self.mech_list);
-        Ok(Some(der(
-            0xa1,
-            &[&der(
-                0x30,
-                &[
-                    &der(0xa2, &[&der(0x04, &[&type3])]),
-                    &der(0xa3, &[&der(0x04, &[&mic])]),
-                ],
-            )],
-        )))
+        Ok((None, status))
+    }
+
+    /// VerifyMIC: CalculateSignature with the server-to-client keys, a
+    /// fresh server RC4 (made when the Type 3 was) and the server's
+    /// sequence number.
+    fn verify_mic(&mut self, signature: &[u8]) -> bool {
+        if signature.len() != 16 || signature[..4] != 1u32.to_le_bytes() || self.exported.is_empty()
+        {
+            return false;
+        }
+        let want = signature_with(
+            &self.exported,
+            SERVER_SIGN_MAGIC,
+            SERVER_SEAL_MAGIC,
+            self.server_sequence,
+            &self.mech_list,
+        );
+        self.server_sequence = self.server_sequence.wrapping_add(1);
+        want[..] == *signature
     }
 
     /// ProcessChallenge.
@@ -302,18 +357,48 @@ fn field(blob: &[u8], at: usize) -> Result<&[u8], Throw> {
     Ok(&blob[offset as usize..(offset + length) as usize])
 }
 
+/// NegotiateAuthenticationStatusCode values the handshake tells apart:
+/// anything past Continue is a failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Status {
+    Completed,
+    Continue,
+    GenericFailure,
+    Unsupported,
+    MessageAltered,
+    InvalidToken,
+    UnknownCredentials,
+}
+
+/// NegState values of a NegTokenResp; -1 is a NegTokenResp without one.
+const NEG_ACCEPT_COMPLETED: i64 = 0;
+const NEG_ACCEPT_INCOMPLETE: i64 = 1;
+const NEG_REJECT: i64 = 2;
+const NEG_REQUEST_MIC: i64 = 3;
+
+struct NegTokenResp {
+    neg_state: i64,
+    mech: Option<Vec<u8>>,
+    token: Vec<u8>,
+    mic: Option<Vec<u8>>,
+}
+
 /// [1] { SEQ { [0] negState, [1] supportedMech, [2] responseToken,
-/// [3] mechListMIC } } in strict DER, each part optional and in order.
-fn read_neg_token_resp(data: &[u8]) -> Option<(i64, Vec<u8>, Vec<u8>)> {
+/// [3] mechListMIC } } as AsnValueReader reads it under DER: each part
+/// optional and in order, ENUMERATED and OID strict. What follows the SEQ
+/// inside [1] is never read.
+fn read_neg_token_resp(data: &[u8]) -> Option<NegTokenResp> {
     let (outer, rest) = der_read(data, 0xa1)?;
     if !rest.is_empty() {
         return None;
     }
-    let (mut fields, rest) = der_read(outer, 0x30)?;
-    if !rest.is_empty() {
-        return None;
-    }
-    let (mut neg_state, mut mech, mut token) = (-1i64, Vec::new(), Vec::new());
+    let (mut fields, _) = der_read(outer, 0x30)?;
+    let mut resp = NegTokenResp {
+        neg_state: -1,
+        mech: None,
+        token: Vec::new(),
+        mic: None,
+    };
     for (i, (tag, inner_tag)) in [(0xa0, 0x0a), (0xa1, 0x06), (0xa2, 0x04), (0xa3, 0x04)]
         .into_iter()
         .enumerate()
@@ -328,28 +413,74 @@ fn read_neg_token_resp(data: &[u8]) -> Option<(i64, Vec<u8>, Vec<u8>)> {
             return None;
         }
         match i {
-            0 => {
-                if value.is_empty() || value.len() > 4 {
+            0 => resp.neg_state = der_int32(value)?,
+            1 => {
+                if !der_oid(value) {
                     return None;
                 }
-                neg_state = i64::from(value[0] as i8);
-                for &b in &value[1..] {
-                    neg_state = neg_state << 8 | i64::from(b);
-                }
+                resp.mech = Some(value.to_vec());
             }
-            1 => mech = value.to_vec(),
-            2 => token = value.to_vec(),
-            _ => {}
+            2 => resp.token = value.to_vec(),
+            _ => resp.mic = Some(value.to_vec()),
         }
     }
-    fields.is_empty().then_some((neg_state, mech, token))
+    fields.is_empty().then_some(resp)
+}
+
+/// ReadEnumeratedValue for an int enum: minimal two's complement, at most
+/// four bytes.
+fn der_int32(value: &[u8]) -> Option<i64> {
+    if value.is_empty() || value.len() > 4 {
+        return None;
+    }
+    if value.len() > 1
+        && (value[0] == 0 && value[1] & 0x80 == 0 || value[0] == 0xff && value[1] & 0x80 != 0)
+    {
+        return None;
+    }
+    let mut n = i64::from(value[0] as i8);
+    for &b in &value[1..] {
+        n = n << 8 | i64::from(b);
+    }
+    Some(n)
+}
+
+/// ReadObjectIdentifier's check: no empty content, no padded
+/// sub-identifier, and the last one ends.
+fn der_oid(value: &[u8]) -> bool {
+    let Some(last) = value.last() else {
+        return false;
+    };
+    if last & 0x80 != 0 {
+        return false;
+    }
+    let mut start = true;
+    for &b in value {
+        if start && b == 0x80 {
+            return false;
+        }
+        start = b & 0x80 == 0;
+    }
+    true
 }
 
 /// GetMIC (CalculateSignature) with the client signing key and a fresh
 /// client sealing RC4.
 pub(crate) fn signature(exported: &[u8], sequence: u32, message: &[u8]) -> [u8; 16] {
-    let sign_key = md5(&[exported, SIGN_MAGIC].concat());
-    let seal_key = md5(&[exported, SEAL_MAGIC].concat());
+    signature_with(exported, SIGN_MAGIC, SEAL_MAGIC, sequence, message)
+}
+
+/// CalculateSignature with the keys the magics derive and a fresh RC4
+/// from the sealing key.
+fn signature_with(
+    exported: &[u8],
+    signing: &[u8],
+    sealing: &[u8],
+    sequence: u32,
+    message: &[u8],
+) -> [u8; 16] {
+    let sign_key = md5(&[exported, signing].concat());
+    let seal_key = md5(&[exported, sealing].concat());
     let mut out = [0u8; 16];
     out[..4].copy_from_slice(&1u32.to_le_bytes());
     out[12..].copy_from_slice(&sequence.to_le_bytes());

@@ -393,6 +393,23 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
         .await?;
     let mut reader = BufReader::new(&mut *tcp);
     let head = read_head(&mut reader, MAX_HEAD).await?;
+    if head.status != 407
+        && auth.authorization.is_some()
+        && let (Some(scheme), Some(nt)) = (auth.sent, &mut auth.nt)
+        && !nt.authenticated
+        && let Some(data) = auth_challenges(head.headers.values("Proxy-Authenticate")).get(scheme)
+    {
+        // SendWithNtAuthAsync's last step: an answer that is not a 407 but
+        // carries the scheme's token is read, and a failed read fails the
+        // request with 401 (a RequestMic handshake).
+        let blob = base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .map_err(|_| ntlm_throw())?;
+        let (_, status) = nt.respond(&blob).map_err(|_| ntlm_throw())?;
+        if status > crate::ntlm::Status::Continue {
+            return Err(OperatorError::Tunnel(401));
+        }
+    }
     if head.status == 200 {
         if !reader.buffer().is_empty() {
             // .NET hands these to the tunnel; before the server's TLS answer
@@ -443,8 +460,10 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
                             let challenge = base64::engine::general_purpose::STANDARD
                                 .decode(data)
                                 .map_err(|_| ntlm_throw())?;
-                            nt.respond(&challenge)
-                                .map_err(|_| ntlm_throw())?
+                            let (token, status) =
+                                nt.respond(&challenge).map_err(|_| ntlm_throw())?;
+                            token
+                                .filter(|_| status <= crate::ntlm::Status::Continue)
                                 .map(|token| {
                                     format!(
                                         "{} {}",

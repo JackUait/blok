@@ -200,11 +200,90 @@ fn der_wrap(tag: u8, content: &[u8]) -> Vec<u8> {
     out
 }
 
-fn spnego_challenge(type2: &[u8]) -> Vec<u8> {
-    let mut seq = der_wrap(0xa0, &[0x0a, 0x01, 0x01]);
-    seq.extend(der_wrap(0xa1, &from_hex("060a2b06010401823702020a")));
+/// C#'s SpnegoChallenge: accept-incomplete (request-mic for the mic-
+/// rows), the NTLM mech and the Type 2.
+fn spnego_challenge(type2: &[u8], mode: &str) -> Vec<u8> {
+    let state = match mode {
+        _ if mode.starts_with("mic-") => "0a0103",
+        "negotiate-padded" => "0a020001",
+        _ => "0a0101",
+    };
+    let mech = if mode == "negotiate-badoid" {
+        "06032b0681"
+    } else {
+        "060a2b06010401823702020a"
+    };
+    let mut seq = der_wrap(0xa0, &from_hex(state));
+    seq.extend(der_wrap(0xa1, &from_hex(mech)));
     seq.extend(der_wrap(0xa2, &der_wrap(0x04, type2)));
     der_wrap(0xa1, &der_wrap(0x30, &seq))
+}
+
+/// C#'s ServerMic: the server-to-client keys, a fresh RC4, sequence 0.
+fn server_mic(state: &State) -> Vec<u8> {
+    let sign_key = md5(&[
+        &state.exported[..],
+        b"session key to server-to-client signing key magic constant\0",
+    ]
+    .concat());
+    let seal_key = md5(&[
+        &state.exported[..],
+        b"session key to server-to-client sealing key magic constant\0",
+    ]
+    .concat());
+    let checksum = hmac_md5_parts(&sign_key, &[&[0u8; 4], &state.mech_list]);
+    let mut out = from_hex("01000000");
+    out.extend(rc4(&seal_key, &checksum[..8]));
+    out.extend([0u8; 4]);
+    out
+}
+
+/// C#'s FinalChallenge: the Proxy-Authenticate line a mic- row's 200
+/// carries, or none.
+fn final_challenge(mode: &str, state: &State) -> String {
+    if !mode.starts_with("mic-") {
+        return String::new();
+    }
+    let resp = |neg_state: &str, mech: &str, mic: Option<&[u8]>, trailing: &[u8]| {
+        let mut seq = Vec::new();
+        if !neg_state.is_empty() {
+            seq.extend(der_wrap(0xa0, &from_hex(neg_state)));
+        }
+        if !mech.is_empty() {
+            seq.extend(der_wrap(0xa1, &from_hex(mech)));
+        }
+        if let Some(mic) = mic {
+            seq.extend(der_wrap(0xa3, &der_wrap(0x04, mic)));
+        }
+        let mut inner = der_wrap(0x30, &seq);
+        inner.extend_from_slice(trailing);
+        der_wrap(0xa1, &inner)
+    };
+    let good = server_mic(state);
+    let mut bad = good.clone();
+    bad[5] ^= 1;
+    let token = match mode {
+        "mic-ok" => resp("0a0100", "", Some(&good), &[]),
+        "mic-bad" => resp("0a0100", "", Some(&bad), &[]),
+        "mic-incomplete" => resp("0a0101", "", Some(&good), &[]),
+        "mic-reject" => resp("0a0102", "", None, &[]),
+        "mic-completed-nomic" => resp("0a0100", "", None, &[]),
+        "mic-incomplete-nomic" => resp("0a0101", "", None, &[]),
+        "mic-nostate" => resp("", "", Some(&good), &[]),
+        "mic-padded" => resp("0a020000", "", Some(&good), &[]),
+        "mic-badoid" => resp("0a0100", "06032b0681", Some(&good), &[]),
+        "mic-kerberos" => resp("0a0100", "06092a864886f712010202", Some(&good), &[]),
+        "mic-otheroid" => resp("0a0100", "06032a0304", Some(&good), &[]),
+        "mic-trailing" => resp("0a0100", "", Some(&good), &[0x05, 0x00]),
+        "mic-garbage" => b"garbage".to_vec(),
+        "mic-emptymic" => resp("0a0101", "", Some(&[]), &[]),
+        "mic-bare" => return "Proxy-Authenticate: Negotiate\r\n".to_owned(),
+        _ => return String::new(),
+    };
+    format!(
+        "Proxy-Authenticate: Negotiate {}\r\n",
+        base64::engine::general_purpose::STANDARD.encode(token)
+    )
 }
 
 #[derive(Default)]
@@ -212,6 +291,7 @@ struct State {
     type1: Option<Vec<u8>>,
     type2: Option<Vec<u8>>,
     mech_list: Vec<u8>,
+    exported: Vec<u8>,
 }
 
 fn text_field(m: &[u8], at: usize) -> (String, usize, usize) {
@@ -277,6 +357,7 @@ fn read_ntlm(scheme: &str, token: &[u8], state: &mut State, password: &str) -> (
     let proof = hmac_md5_parts(&ntowf, &[&SERVER_CHALLENGE, blob]);
     let proof_ok = proof[..] == response[..16];
     let exported = rc4(&hmac_md5(&ntowf, &proof), &t3[key_off..key_off + key_len]);
+    state.exported = exported.to_vec();
     let mut zeroed = t3.to_vec();
     zeroed[72..88].fill(0);
     let mic = hmac_md5_parts(
@@ -402,7 +483,7 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
     password: &str,
     log: &Mutex<Vec<String>>,
 ) {
-    let scheme = if mode.starts_with("negotiate") {
+    let scheme = if mode.starts_with("negotiate") || mode.starts_with("mic-") {
         "Negotiate"
     } else {
         "NTLM"
@@ -446,10 +527,11 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
                     let target = first.split(' ').nth(1).unwrap().to_owned();
                     let mut upstream = TcpStream::connect(target).await.unwrap();
                     let mut stream = reader.into_inner();
-                    stream
-                        .write_all(b"HTTP/1.1 200 Connection established\r\n\r\n")
-                        .await
-                        .unwrap();
+                    let head = format!(
+                        "HTTP/1.1 200 Connection established\r\n{}\r\n",
+                        final_challenge(mode, &state)
+                    );
+                    stream.write_all(head.as_bytes()).await.unwrap();
                     let _ = tokio::io::copy_bidirectional(&mut stream, &mut upstream).await;
                     return;
                 }
@@ -465,7 +547,7 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
                         "base64" => " !!!".to_owned(),
                         _ => {
                             let token = if scheme == "Negotiate" {
-                                spnego_challenge(&message)
+                                spnego_challenge(&message, mode)
                             } else {
                                 message.clone()
                             };
@@ -712,6 +794,132 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "",
             "p",
             "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "mic-none",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-kerberos",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-bare",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-reject",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-trailing",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-incomplete-nomic",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "negotiate-badoid",
+            "u",
+            "",
+            "p",
+            "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}",
+        ),
+        (
+            "mic-completed-nomic",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-badoid",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-ok",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-garbage",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-nostate",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-bad",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-otheroid",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-emptymic",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "negotiate-padded",
+            "u",
+            "",
+            "p",
+            "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}",
+        ),
+        (
+            "mic-padded",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
+        ),
+        (
+            "mic-incomplete",
+            "u",
+            "",
+            "p",
+            "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok",
         ),
         (
             "drain2-big",

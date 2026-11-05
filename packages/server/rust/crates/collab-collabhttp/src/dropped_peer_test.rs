@@ -32,6 +32,7 @@ impl Authorization for GatedHook {
         &'a self,
         _: &'a User,
         _: &'a str,
+        _: &'a blok_auth::Extensions,
     ) -> AuthFuture<'a, Result<bool, AuthError>> {
         Box::pin(async move {
             if self.held.load(Ordering::SeqCst) {
@@ -51,6 +52,7 @@ impl Authorization for GatedHook {
         &'a self,
         _: &'a User,
         _: &'a str,
+        _: &'a blok_auth::Extensions,
     ) -> AuthFuture<'a, Result<bool, AuthError>> {
         Box::pin(async { Ok(true) })
     }

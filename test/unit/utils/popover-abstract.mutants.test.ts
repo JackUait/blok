@@ -1065,27 +1065,6 @@ describe('PopoverAbstract — mutation coverage', () => {
         children };
     };
 
-    it('anchors an item clipped equally at both edges to its bottom edge', () => {
-      const popover = makePopover({
-        items: [ { title: 'Tall',
-          name: 'tall',
-          onActivate: vi.fn() } ],
-      });
-      const items = popover.testNodes.items;
-      const child = rootOf(popover.testItems[0]);
-
-      setMetrics(items, { clientHeight: 100,
-        scrollHeight: 300 });
-      setMetrics(child, { offsetTop: 50,
-        offsetHeight: 200 });
-
-      scroll(items, 100);
-
-      // Clipped 50px above and 50px below: the tie resolves to the top-edge curl.
-      expect(child.style.transformOrigin).toBe('center bottom');
-      expect(child.style.transform).toBe('perspective(800px) rotateX(6.25deg) scaleX(0.975) scaleY(0.900)');
-    });
-
     it('leaves an unmeasured item undistorted', () => {
       const { items, children } = reelFixture();
 

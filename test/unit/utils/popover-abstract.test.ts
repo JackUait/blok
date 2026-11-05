@@ -1222,6 +1222,29 @@ describe('PopoverAbstract', () => {
       expect(second.style.transform).toBe(expectedTransform(0.25, 'top'));
     });
 
+    it('leaves an item taller than the viewport undistorted at every scroll position', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
+      let scrollTopValue = 0;
+
+      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
+      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
+      Object.defineProperty(nodes.items, 'scrollTop', { get: () => scrollTopValue, configurable: true });
+      // One item holds a whole list, like the page picker's listbox
+      setItemMetrics(first, 0, 480);
+
+      popover.show();
+
+      for (const top of [0, 60, 140, 280]) {
+        scrollTopValue = top;
+        nodes.items.dispatchEvent(new Event('scroll'));
+
+        expect(first.style.transform).toBe('');
+        expect(first.style.opacity).toBe('');
+      }
+    });
+
     it('applies no distortion when items do not overflow', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();

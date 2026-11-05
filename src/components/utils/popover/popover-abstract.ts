@@ -1214,7 +1214,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
       const height = child.offsetHeight;
 
-      if (!hasOverflow || height === 0) {
+      // An item that cannot fit in view is a whole list (the page picker's
+      // listbox), not a row; curling it bends and jumps the entire menu.
+      if (!hasOverflow || height === 0 || height >= items.clientHeight) {
         this.clearReelDistortion(child);
         continue;
       }

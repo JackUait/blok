@@ -30,7 +30,9 @@ internal static class RequestHost
       return true;
     }
 
+    // A zone id ("%lo0") parses with a scope only where that interface exists, so the answer would differ by OS.
     if (name.StartsWith('[') &&
+        !name.Contains('%') &&
         IPAddress.TryParse(name[1..^1], out var address) &&
         address.AddressFamily == AddressFamily.InterNetworkV6 &&
         address.Equals(IPAddress.IPv6Loopback))

@@ -112,9 +112,11 @@ func digestValue(data string, i int, expectQuotes bool) (string, bool, int) {
 	return b.String(), true, i
 }
 
-// digestToken is GetDigestTokenForCredential for a CONNECT; "" when .NET
-// gives no token (an algorithm it lacks, no nonce, no realm).
-func digestToken(user, password string, parameters map[string]string) string {
+// digestToken is GetDigestTokenForCredential; "" when .NET gives no token
+// (an algorithm it lacks, no nonce, no realm). uri is the request URI's
+// path and query, content the body auth-int hashes. .NET hashes the body
+// read as a string (ReadAsStringAsync); this hashes its bytes.
+func digestToken(user, password, method, uri string, content []byte, parameters map[string]string) string {
 	algorithm, specified := parameters["algorithm"]
 	if specified {
 		switch strings.ToLower(algorithm) {
@@ -164,7 +166,7 @@ func digestToken(user, password string, parameters map[string]string) string {
 	}
 	pair("realm", realm, true, true)
 	pair("nonce", nonce, true, true)
-	pair("uri", "/", true, true)
+	pair("uri", uri, true, true)
 	qop := "auth"
 	offered, hasQop := parameters["qop"]
 	if hasQop {
@@ -178,10 +180,9 @@ func digestToken(user, password string, parameters map[string]string) string {
 	if len(algorithm) >= 4 && strings.EqualFold(algorithm[len(algorithm)-4:], "sess") {
 		a1 = hash(a1) + ":" + nonce + ":" + cnonce
 	}
-	a2 := "CONNECT:/"
+	a2 := method + ":" + uri
 	if qop == "auth-int" {
-		// A CONNECT has no content.
-		a2 += ":" + hash("")
+		a2 += ":" + hash(string(content))
 	}
 	response := hash(hash(a1) + ":" + nonce + ":" + hash(a2))
 	if hasQop {

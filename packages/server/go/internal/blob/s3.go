@@ -190,8 +190,7 @@ func (s *S3) Put(ctx context.Context, extension, mimeType string, content io.Rea
 			if err != nil {
 				return "", err
 			}
-			// Hides Close: net/http would close a caller's file.
-			body := struct{ io.Reader }{seeker}
+			body := replayable{ReadSeeker: seeker, start: start}
 			if _, err := s.send(ctx, http.MethodPut, key, sanitizeS3MediaType(mimeType), body, length, hash, false, false); err != nil {
 				return "", err
 			}
@@ -206,7 +205,7 @@ func (s *S3) Put(ctx context.Context, extension, mimeType string, content io.Rea
 		_ = spool.Close()
 		_ = os.Remove(spool.Name())
 	}()
-	if _, err := s.send(ctx, http.MethodPut, key, sanitizeS3MediaType(mimeType), spool, length, hash, false, false); err != nil {
+	if _, err := s.send(ctx, http.MethodPut, key, sanitizeS3MediaType(mimeType), replayable{ReadSeeker: spool}, length, hash, false, false); err != nil {
 		return "", err
 	}
 	return strings.TrimRight(s.PublicURL, "/") + "/" + key, nil
@@ -307,6 +306,13 @@ func (s *S3) DeleteObject(ctx context.Context, key string) error {
 	return err
 }
 
+// replayable is a seekable body from start. It hides Close: net/http
+// would close a caller's file.
+type replayable struct {
+	io.ReadSeeker
+	start int64
+}
+
 var emptyHash = func() string { sum := sha256.Sum256(nil); return hex.EncodeToString(sum[:]) }()
 
 func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Reader, length int64, hash string, readBody, allowNotFound bool) ([]byte, error) {
@@ -326,6 +332,15 @@ func (s *S3) send(ctx context.Context, method, key, mimeType string, body io.Rea
 		return nil, err
 	}
 	request.ContentLength = length
+	if r, ok := body.(replayable); ok {
+		// A proxy's 407 sends the body again, as .NET resends its content.
+		request.GetBody = func() (io.ReadCloser, error) {
+			if _, err := r.Seek(r.start, io.SeekStart); err != nil {
+				return nil, err
+			}
+			return io.NopCloser(r), nil
+		}
+	}
 	if length == 0 && method != http.MethodPut {
 		// C# sends Content-Length: 0 on GET and DELETE too. net/http drops
 		// the canonical key and never writes a zero length for GET, so

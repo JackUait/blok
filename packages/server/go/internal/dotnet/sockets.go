@@ -79,7 +79,11 @@ func (t *SocketsTransport) transport() *http.Transport {
 			if r == nil || r.proxy == nil || r.scheme == "https" || r.proxy.Scheme != "http" && r.proxy.Scheme != "https" {
 				return nil, nil
 			}
-			return r.proxy, nil
+			// net/http would send the user's Basic up front; forward
+			// answers the 407 instead.
+			proxy := *r.proxy
+			proxy.User = nil
+			return &proxy, nil
 		}
 		inner.DialContext = func(ctx context.Context, _, address string) (net.Conn, error) {
 			return t.dial(ctx, address, false)
@@ -238,12 +242,12 @@ func proxyAddress(proxy *url.URL) string {
 //
 // It returns the conn the tunnel runs on.
 func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target string, open func() (net.Conn, error)) (net.Conn, error) {
-	authorization, sent, stale := "", "", false
-	var nt *ntlmAuth
+	// The CONNECT request's URI is the proxy's, so Digest signs "/".
+	auth := &proxyAuth{proxy: proxy, method: "CONNECT", uri: "/"}
 	for {
 		head := "CONNECT " + target + " HTTP/1.1\r\nHost: " + target + "\r\n"
-		if authorization != "" {
-			head += "Proxy-Authorization: " + authorization + "\r\n"
+		if auth.authorization != "" {
+			head += "Proxy-Authorization: " + auth.authorization + "\r\n"
 		}
 		if _, err := io.WriteString(conn, head+"\r\n"); err != nil {
 			return conn, err
@@ -254,20 +258,9 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		if err != nil {
 			return conn, err
 		}
-		if status != http.StatusProxyAuthRequired && nt != nil && !nt.authenticated && authorization != "" {
-			// SendWithNtAuthAsync's last step: an answer that is not a 407
-			// but carries the scheme's token is read, and a failed read
-			// fails the request with 401 (a RequestMic handshake).
-			if data, ok := authChallenges(header.Values("Proxy-Authenticate"))[sent]; ok {
-				blob, err := base64.StdEncoding.DecodeString(data)
-				if err != nil {
-					return conn, errNtlmThrow
-				}
-				if _, check, err := nt.respond(blob); err != nil {
-					return conn, err
-				} else if check > statusContinue {
-					return conn, fmt.Errorf("proxy: CONNECT answered %d", http.StatusUnauthorized)
-				}
+		if status != http.StatusProxyAuthRequired {
+			if err := auth.checkFinal(header); err != nil {
+				return conn, err
 			}
 		}
 		if status == http.StatusOK {
@@ -279,65 +272,18 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 			return conn, nil
 		}
 		next := ""
-		if status == http.StatusProxyAuthRequired && proxy.User != nil {
-			challenges := authChallenges(header.Values("Proxy-Authenticate"))
-			user, domain := proxyCredential(proxy.User.Username())
-			password, _ := proxy.User.Password()
-			switch {
-			case sent == "":
-				// SendWithAuthAsync's first answer.
-				sent = chooseChallenge(challenges)
-				switch sent {
-				case "negotiate", "ntlm":
-					if next, nt, err = ntlmFirst(ctx, sent, challenges[sent], proxy, user, domain, password); err != nil {
-						return conn, err
-					}
-				case "digest":
-					if parameters, ok := parseDigest(challenges["digest"]); ok {
-						next = "Digest " + digestToken(user, password, parameters)
-					}
-				case "basic":
-					// SetBasicAuthToken puts a domain back in front.
-					if domain != "" {
-						user = domain + `\` + user
-					}
-					next = "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
-				}
-			case nt != nil && !nt.authenticated:
-				data, ok := challenges[sent]
-				if !ok {
-					break
-				}
-				// A bare challenge is an empty blob: NTLM throws on it, SPNEGO
-				// gives no token.
-				challenge, err := base64.StdEncoding.DecodeString(data)
-				if err != nil {
-					return conn, errNtlmThrow
-				}
-				token, check, err := nt.respond(challenge)
-				if err != nil {
-					return conn, err
-				}
-				if token != nil && check <= statusContinue {
-					next = ntlmScheme(sent) + " " + base64.StdEncoding.EncodeToString(token)
-				}
-			case sent == "digest" && !stale:
-				// One more try when the server calls the nonce stale.
-				if data, ok := challenges["digest"]; ok {
-					if parameters, ok := parseDigest(data); ok && parameters["stale"] == "true" {
-						stale = true
-						next = "Digest " + digestToken(user, password, parameters)
-					}
-				}
+		if status == http.StatusProxyAuthRequired {
+			if next, err = auth.answer(ctx, header); err != nil {
+				return conn, err
 			}
 		}
-		if next == "" || next == "Digest " {
+		if next == "" {
 			return conn, fmt.Errorf("proxy: CONNECT answered %d", status)
 		}
-		first := authorization == ""
-		authorization = next
+		first := auth.authorization == ""
+		auth.authorization = next
 		body, framing := reader.Body(status, false, header)
-		if nt != nil {
+		if auth.nt != nil {
 			// SendWithNtAuthAsync: only a first 407 that says close moves to
 			// a new conn; every other answer is drained or the request fails.
 			if first && connectionHeaderCloses(header) {
@@ -363,6 +309,120 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 			}
 		}
 	}
+}
+
+// proxyAuth is where one request's proxy authentication stands: .NET's
+// SendWithProxyAuthAsync, which passes preAuthenticate false, so nothing
+// goes out before a 407 asks (AuthenticationHelper.cs:481).
+//   - The challenge is picked in .NET's order: Negotiate, NTLM, Digest,
+//     Basic. Basic resends with UTF-8 "user:password" (:328-329); Digest
+//     gets one more try on a stale nonce.
+//   - NTLM and Negotiate are SendWithNtAuthAsync (:630-745): Type 1 and
+//     Type 3 go on one conn.
+type proxyAuth struct {
+	proxy *url.URL
+	// method and uri are what Digest signs; content is the body for
+	// auth-int, nil for none.
+	method, uri string
+	content     func() []byte
+	// authorization is the Proxy-Authorization the next request carries.
+	authorization string
+	// sent is the scheme answered, lower case.
+	sent  string
+	stale bool
+	nt    *ntlmAuth
+}
+
+// answer is the Proxy-Authorization a 407 asks for next, "" when .NET
+// stops and the 407 is the answer.
+func (a *proxyAuth) answer(ctx context.Context, header http.Header) (string, error) {
+	if a.proxy.User == nil {
+		return "", nil
+	}
+	challenges := authChallenges(header.Values("Proxy-Authenticate"))
+	user, domain := proxyCredential(a.proxy.User.Username())
+	password, _ := a.proxy.User.Password()
+	digest := func(parameters map[string]string) string {
+		var content []byte
+		if a.content != nil {
+			content = a.content()
+		}
+		if token := digestToken(user, password, a.method, a.uri, content, parameters); token != "" {
+			return "Digest " + token
+		}
+		return ""
+	}
+	switch {
+	case a.sent == "":
+		// SendWithAuthAsync's first answer.
+		a.sent = chooseChallenge(challenges)
+		switch a.sent {
+		case "negotiate", "ntlm":
+			next, nt, err := ntlmFirst(ctx, a.sent, challenges[a.sent], a.proxy, user, domain, password)
+			a.nt = nt
+			return next, err
+		case "digest":
+			if parameters, ok := parseDigest(challenges["digest"]); ok {
+				return digest(parameters), nil
+			}
+		case "basic":
+			// SetBasicAuthToken puts a domain back in front.
+			if domain != "" {
+				user = domain + `\` + user
+			}
+			return "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password)), nil
+		}
+	case a.nt != nil && !a.nt.authenticated:
+		data, ok := challenges[a.sent]
+		if !ok {
+			return "", nil
+		}
+		// A bare challenge is an empty blob: NTLM throws on it, SPNEGO
+		// gives no token.
+		challenge, err := base64.StdEncoding.DecodeString(data)
+		if err != nil {
+			return "", errNtlmThrow
+		}
+		token, check, err := a.nt.respond(challenge)
+		if err != nil {
+			return "", err
+		}
+		if token != nil && check <= statusContinue {
+			return ntlmScheme(a.sent) + " " + base64.StdEncoding.EncodeToString(token), nil
+		}
+	case a.sent == "digest" && !a.stale:
+		// One more try when the server calls the nonce stale.
+		if data, ok := challenges["digest"]; ok {
+			if parameters, ok := parseDigest(data); ok && parameters["stale"] == "true" {
+				a.stale = true
+				return digest(parameters), nil
+			}
+		}
+	}
+	return "", nil
+}
+
+// checkFinal is SendWithNtAuthAsync's last step: an answer that is not a
+// 407 but carries the scheme's token, while the handshake is still open
+// (RequestMic), is read, and a failed read fails the request with 401.
+func (a *proxyAuth) checkFinal(header http.Header) error {
+	if a.nt == nil || a.nt.authenticated || a.authorization == "" {
+		return nil
+	}
+	data, ok := authChallenges(header.Values("Proxy-Authenticate"))[a.sent]
+	if !ok {
+		return nil
+	}
+	blob, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return errNtlmThrow
+	}
+	if _, check, err := a.nt.respond(blob); err != nil {
+		return err
+	} else if check > statusContinue {
+		return fmt.Errorf("proxy: CONNECT answered %d", http.StatusUnauthorized)
+	}
+	return nil
 }
 
 // maxResponseDrainSize and maxResponseDrainTime are SocketsHttpHandler's
@@ -620,7 +680,6 @@ func (c *pooledConn) Write(b []byte) (int, error) {
 }
 
 func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	inner := t.transport()
 	r := &route{scheme: request.URL.Scheme}
 	if t.Transport.Proxy != nil {
 		proxy, err := t.Transport.Proxy(request)
@@ -629,6 +688,120 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 		}
 		r.proxy = proxy
 	}
+	if r.proxy != nil && r.proxy.User != nil && r.scheme == "http" && (r.proxy.Scheme == "http" || r.proxy.Scheme == "https") {
+		return t.forward(request, r)
+	}
+	return t.attempt(request, r, nil)
+}
+
+// forward sends an http target's request through an http or https proxy
+// as SendWithProxyAuthAsync does: no credentials until a 407 asks, then
+// the request again, on the same conn unless the 407 closes it. A 407
+// that .NET does not answer is the response. Measured by C#'s
+// AuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes.
+//
+// net/http picks the conn: a drained answer's conn is back in the pool
+// before the drain returns, and the next request takes the newest idle
+// conn, so a request sent alone stays on its conn. NTLM fails the request
+// when the conn changes anyway.
+func (t *SocketsTransport) forward(request *http.Request, r *route) (*http.Response, error) {
+	auth := &proxyAuth{proxy: r.proxy, method: request.Method, uri: request.URL.RequestURI()}
+	auth.content = func() []byte {
+		if request.GetBody == nil {
+			return nil
+		}
+		body, err := request.GetBody()
+		if err != nil {
+			return nil
+		}
+		defer body.Close()
+		content, _ := io.ReadAll(body)
+		return content
+	}
+	replayable := request.Body == nil || request.Body == http.NoBody || request.GetBody != nil
+	var conn, ntConn *wireConn
+	next := request
+	for {
+		response, err := t.attempt(next, r, func(c *wireConn) { conn = c })
+		if err != nil {
+			return nil, err
+		}
+		if ntConn != nil && conn != ntConn {
+			response.Body.Close()
+			return nil, errNtlmDrain
+		}
+		if response.StatusCode != http.StatusProxyAuthRequired {
+			if err := auth.checkFinal(response.Header); err != nil {
+				response.Body.Close()
+				return nil, err
+			}
+			return response, nil
+		}
+		answer, err := auth.answer(request.Context(), response.Header)
+		if err != nil {
+			response.Body.Close()
+			return nil, err
+		}
+		if answer == "" || !replayable {
+			return response, nil
+		}
+		first := auth.authorization == ""
+		auth.authorization = answer
+		if auth.nt != nil {
+			if first && connectionHeaderCloses(response.Header) {
+				// The Type 1 goes on a new conn; net/http drops this one.
+				response.Body.Close()
+			} else {
+				framing := responseFraming(response.Header)
+				drained := framing != FramedClose && !headClosesConn(response.Header) &&
+					drainBody(response.Body) && !conn.ended.Load()
+				response.Body.Close()
+				if !drained {
+					return nil, errNtlmDrain
+				}
+				ntConn = conn
+			}
+		} else {
+			// SendWithAuthAsync disposes the answer, which drains it; an
+			// answer left unread makes net/http drop the conn.
+			drainBody(response.Body)
+			response.Body.Close()
+		}
+		next = request.Clone(request.Context())
+		next.Header.Set("Proxy-Authorization", answer)
+		if request.GetBody != nil {
+			if next.Body, err = request.GetBody(); err != nil {
+				return nil, err
+			}
+		}
+	}
+}
+
+// responseFraming is how the head frames a 407's body.
+func responseFraming(header http.Header) Framing {
+	switch {
+	case transferEncodingChunked(header.Values("Transfer-Encoding")):
+		return FramedChunked
+	case ResponseContentLength(header) == 0:
+		return FramedNone
+	case ResponseContentLength(header) > 0:
+		return FramedLength
+	}
+	return FramedClose
+}
+
+// drainBody is DrainAsync on a body net/http reads: true when it ends
+// within the drain size and time.
+func drainBody(body io.ReadCloser) bool {
+	timer := time.AfterFunc(maxResponseDrainTime, func() { body.Close() })
+	defer timer.Stop()
+	n, err := io.Copy(io.Discard, io.LimitReader(body, maxResponseDrainSize+1))
+	return err == nil && n <= maxResponseDrainSize
+}
+
+// attempt is one request on the pool. onConn, when set, learns the conn.
+func (t *SocketsTransport) attempt(request *http.Request, r *route, onConn func(*wireConn)) (*http.Response, error) {
+	inner := t.transport()
 	request = request.Clone(context.WithValue(request.Context(), routeKey{}, r))
 	header := request.Header
 	method := request.Method
@@ -642,6 +815,9 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 		GotConn: func(info httptrace.GotConnInfo) {
 			if wire, ok := info.Conn.(*wireConn); ok {
 				wire.expect(method)
+				if onConn != nil {
+					onConn(wire)
+				}
 			}
 			pooled := findPooled(info.Conn)
 			if pooled == nil {

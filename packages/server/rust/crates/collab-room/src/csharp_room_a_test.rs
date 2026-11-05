@@ -1747,7 +1747,12 @@ async fn repeated_append_failure_does_not_reload_the_document_per_retry() {
     let joined = manager.join(TEST_DOC, v2("")).await.expect("join");
     assert_eq!(joined.status, JoinStatus::Joined);
 
-    assert_eq!(cs.journal.opens(), cs.endpoint().loaded());
+    // C# counts the version GET inside the join; Rust starts it on a task,
+    // so the count may land just after the join returns.
+    wait_until("each open's version read", || {
+        cs.journal.opens() == cs.endpoint().loaded()
+    })
+    .await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

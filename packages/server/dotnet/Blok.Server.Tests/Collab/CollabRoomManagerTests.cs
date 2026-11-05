@@ -1371,8 +1371,8 @@ public sealed class CollabRoomManagerTests
   }
 
   /// <summary>
-  /// A drain token already cancelled before the flush's save starts: the
-  /// save fails with the text a token cancelled before the call gets.
+  /// A drain token already cancelled before the flush: the working-set write
+  /// and the save fail with the text a token cancelled before the call gets.
   /// </summary>
   [Fact]
   public async Task ADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText()
@@ -1394,14 +1394,19 @@ public sealed class CollabRoomManagerTests
         CancellationToken.None);
     await manager.SettleAsync();
     endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    store.RefusesCancelledWrites = true;
     using var shutdown = new CancellationTokenSource();
     await shutdown.CancelAsync();
 
     await manager.DrainAsync(shutdown.Token).AsTask().WaitAsync(TimeSpan.FromSeconds(10));
 
     Assert.Equal(0, manager.LiveRoomCount);
+    // The flush compacts, so it owes the store a write too.
     Assert.Equal(
-        ["collab: room \"doc-a\" could not export during flush: A task was canceled."],
+        [
+          "collab: room \"doc-a\" could not flush the working set: A task was canceled.",
+          "collab: room \"doc-a\" could not export during flush: A task was canceled.",
+        ],
         log);
   }
 

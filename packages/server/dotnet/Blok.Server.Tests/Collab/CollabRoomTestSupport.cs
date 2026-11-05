@@ -223,6 +223,9 @@ internal sealed record StoredWorkingSet(byte[] Frames, CollabWorkingSetTag Tag);
 /// </summary>
 internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 {
+  /// <summary>Throw on a cancelled token as the real store does; off by default.</summary>
+  internal bool RefusesCancelledWrites { get; set; }
+
   private readonly Dictionary<string, StoredWorkingSet> documents = new(StringComparer.Ordinal);
   private readonly Lock guard = new();
   private readonly List<string> journal = [];
@@ -333,6 +336,12 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
       CollabWorkingSetTag tag,
       CancellationToken cancellationToken = default)
   {
+    // LocalCollabStore's answer to a token already cancelled.
+    if (RefusesCancelledWrites && cancellationToken.IsCancellationRequested)
+    {
+      throw new TaskCanceledException();
+    }
+
     using var entry = Enter();
     Interlocked.Increment(ref writes);
     Interlocked.Add(ref writtenBytes, updates.Length);

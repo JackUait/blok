@@ -333,6 +333,9 @@ type fakeWorkingSet struct {
 
 	failWrites  func(doc string) error
 	failRetires func(doc string) error
+	// refusesCancelledWrites fails a write whose context is already done,
+	// as the real store does (C# RefusesCancelledWrites).
+	refusesCancelledWrites bool
 }
 
 func newFakeWorkingSet() *fakeWorkingSet { return &fakeWorkingSet{sets: map[string]*workingset.Set{}} }
@@ -401,9 +404,12 @@ func (s *fakeWorkingSet) Read(_ context.Context, doc string) (*workingset.Set, e
 	return nil, nil
 }
 
-func (s *fakeWorkingSet) Write(_ context.Context, doc string, updates []byte, tag workingset.Tag) error {
+func (s *fakeWorkingSet) Write(ctx context.Context, doc string, updates []byte, tag workingset.Tag) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.refusesCancelledWrites && ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if s.failWrites != nil {
 		if failure := s.failWrites(doc); failure != nil {
 			return failure

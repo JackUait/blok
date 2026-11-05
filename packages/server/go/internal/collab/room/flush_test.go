@@ -255,6 +255,9 @@ func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T)
 	gate := make(chan struct{})
 	defer close(gate)
 	r.endpoint.setSaveGate(gate)
+	r.store.mu.Lock()
+	r.store.refusesCancelledWrites = true
+	r.store.mu.Unlock()
 	shutdown, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -268,7 +271,11 @@ func TestADrainWhoseTokenIsAlreadyCancelledPrintsTheTaskCancelText(t *testing.T)
 	r.mu.Lock()
 	lines := slices.Clone(r.log)
 	r.mu.Unlock()
-	want := []string{`collab: room "doc-a" could not export during flush: A task was canceled.`}
+	// The flush compacts, so it owes the store a write too.
+	want := []string{
+		`collab: room "doc-a" could not flush the working set: A task was canceled.`,
+		`collab: room "doc-a" could not export during flush: A task was canceled.`,
+	}
 	if !slices.Equal(lines, want) {
 		t.Fatalf("log = %q, want %q", lines, want)
 	}

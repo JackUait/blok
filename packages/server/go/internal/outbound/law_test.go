@@ -47,7 +47,7 @@ var pinned = map[string]map[string]int{
 	"internal/blob/s3.go":                   {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
 	"internal/collab/docendpoint/client.go": {"http.Client": 1, "dotnet.NewSocketsTransport": 1},
 	// SocketsHttpHandler's rules, shared by those two operator clients only.
-	socketsOwner: {"http.Transport": 1, "net.Dialer": 1},
+	socketsOwner: {"http.Transport": 1, "net.Dialer": 1, "tls.Client": 1},
 }
 
 type use struct {

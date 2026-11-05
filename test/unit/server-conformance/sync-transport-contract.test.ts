@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it as baseIt } from 'vitest';
+import * as Y from 'yjs';
 
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
 import {
@@ -637,6 +638,50 @@ describe('sync transport: keep-alive', () => {
       }
     });
   });
+});
+
+describe('sync transport: a peer that stops reading', () => {
+  /** A y-protocols sync update frame: messageSync, messageYjsUpdate, then the bytes. */
+  const updateFrame = (update: Uint8Array): Buffer => {
+    const length: number[] = [];
+
+    for (let rest = update.length; ; rest = Math.floor(rest / 128)) {
+      length.push(rest >= 128 ? (rest % 128) | 128 : rest);
+
+      if (rest < 128) {
+        break;
+      }
+    }
+
+    return Buffer.concat([Buffer.from([0, 2, ...length]), update]);
+  };
+
+  /** About 900 KB of new text from a fresh client each time. */
+  const bigUpdate = (): Uint8Array => {
+    const doc = new Y.Doc();
+
+    doc.getText('overflow').insert(0, 'x'.repeat(900_000));
+
+    return Y.encodeStateAsUpdate(doc);
+  };
+
+  it('closes it 1008 once its outbound queue passes 8 messages, and keeps serving the others', async () => {
+    await withServer({}, async (harness) => {
+      const stalled = await harness.open('/sync/doc-overflow');
+      const writer = await harness.open('/sync/doc-overflow');
+
+      stalled.pause();
+      for (let index = 0; index < 32; index++) {
+        writer.sendFrame(FIN | OP_BINARY, updateFrame(bigUpdate()));
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      stalled.resume();
+
+      expect(await stalled.closed(20_000)).toMatchObject({ code: 1008, reason: 'outbound queue overflow' });
+      await expectStillServed(writer);
+    });
+  }, 60_000);
 });
 
 describe('sync transport: closes the room decides', () => {

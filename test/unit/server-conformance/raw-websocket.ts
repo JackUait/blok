@@ -41,6 +41,9 @@ export interface RawSocket {
   ended(timeoutMs?: number): Promise<number>;
   /** Resolves once a frame with this opcode arrives. */
   frame(opcode: number, timeoutMs?: number): Promise<ServerFrame>;
+  /** Stops reading the socket, so the server's writes back up. */
+  pause(): void;
+  resume(): void;
   destroy(): void;
 }
 
@@ -297,6 +300,8 @@ export function openRaw(baseUrl: string, path: string, options: OpenOptions = {}
       closed: (timeoutMs = 10_000) => until(() => closeFrame ?? undefined, timeoutMs, () => `a close frame; saw ${describe()}`),
       ended: (timeoutMs = 10_000) => until(() => endedAt ?? undefined, timeoutMs, () => `the stream to end; saw ${describe()}`),
       frame: (opcode, timeoutMs = 10_000) => until(() => frames.find((f) => f.opcode === opcode), timeoutMs, () => `opcode ${opcode}; saw ${describe()}`),
+      pause: () => socket.pause(),
+      resume: () => socket.resume(),
       destroy: () => socket.destroy(),
     };
 

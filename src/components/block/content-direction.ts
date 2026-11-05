@@ -60,6 +60,12 @@ const fieldDirection = (field: HTMLElement, holder: HTMLElement): 'ltr' | 'rtl' 
  * @param readOnly - whether the block is read-only
  */
 const ownTextDirection = (toolRoot: HTMLElement, holder: HTMLElement, readOnly: boolean): 'ltr' | 'rtl' | null => {
+  // Every field's text is part of this, so no strong letter here means none in
+  // any field. Spares the per-field walk for an empty table's 10k cells.
+  if (firstStrongDirection(toolRoot.textContent ?? '') === null) {
+    return null;
+  }
+
   const selector = readOnly ? READ_ONLY_FIELD_SELECTOR : EDITABLE_FIELD_SELECTOR;
   const nested = Array.from(toolRoot.querySelectorAll<HTMLElement>(selector));
   const fields = toolRoot.matches(selector) ? [toolRoot, ...nested] : nested;

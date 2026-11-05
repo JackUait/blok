@@ -169,7 +169,7 @@ func TestClassifiesJavaScriptErrorsAndKeepsTheEngine(t *testing.T) {
 }
 
 func TestClassifiesTheBundlesOwnErrorsByName(t *testing.T) {
-	p, err := NewPool(Options{PoolSize: 1})
+	p, err := NewPool(Options{PoolSize: new(1)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestKeepsTheSlotWhenARebuildFails(t *testing.T) {
 }
 
 func TestHandlesConcurrentCallsWithoutSharingAnEngine(t *testing.T) {
-	p, err := NewPool(Options{PoolSize: 4})
+	p, err := NewPool(Options{PoolSize: new(4)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func nestedOutline(levels int) string {
 }
 
 func TestConvertsADeeplyNestedOutline(t *testing.T) {
-	p, err := NewPool(Options{PoolSize: 1})
+	p, err := NewPool(Options{PoolSize: new(1)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +361,7 @@ func TestConvertsADeeplyNestedOutline(t *testing.T) {
 // C# JintBlokRuntimeTests.ConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack:
 // a 1000-level outline converts to HTML.
 func TestConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack(t *testing.T) {
-	p, err := NewPool(Options{PoolSize: 1, Timeout: 2 * time.Minute})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +377,7 @@ func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("slow")
 	}
-	p, err := NewPool(Options{PoolSize: 1, Timeout: 2 * time.Minute})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,8 @@ func TestRefusesLimitsBelowTheirFloors(t *testing.T) {
 		{Options{MemoryBudget: -1}, "MemoryBudget"},
 		{Options{Timeout: time.Millisecond}, "Timeout"},
 		{Options{Timeout: -time.Second}, "Timeout"},
-		{Options{PoolSize: -1}, "PoolSize"},
+		{Options{PoolSize: new(-1)}, "PoolSize"},
+		{Options{PoolSize: new(0)}, "PoolSize"},
 	}
 	for _, c := range cases {
 		_, err := NewPool(c.options)
@@ -444,7 +445,7 @@ func TestRefusesLimitsBelowTheirFloors(t *testing.T) {
 }
 
 func TestLoadsAtTheFloors(t *testing.T) {
-	if _, err := NewPool(Options{PoolSize: 1, MemoryBudget: MinimumMemoryBudget, Timeout: 30 * time.Second}); err != nil {
+	if _, err := NewPool(Options{PoolSize: new(1), MemoryBudget: MinimumMemoryBudget, Timeout: 30 * time.Second}); err != nil {
 		t.Fatalf("NewPool at the budget floor: %v", err)
 	}
 }

@@ -121,14 +121,26 @@ impl std::error::Error for InvokeError {}
 /// Configures a Pool. Zero values take the defaults.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
-    /// Bounds concurrent calls; callers wait for a free engine. 0 means
-    /// max(1, min(cores, 4)), as C#.
-    pub pool_size: usize,
+    /// Bounds concurrent calls; callers wait for a free engine. None means
+    /// max(1, min(cores, 4)); 0 is refused, as C#.
+    pub pool_size: Option<usize>,
     /// The default wall-clock budget of one call and of each load.
     pub timeout: Duration,
     /// The bytes one call may allocate; a load may grow what the engine
     /// holds by as much. See budget.rs.
     pub memory_budget: i64,
+}
+
+/// Refuses a pool size under 1. None means the default.
+pub fn validate_pool_size(size: Option<usize>) -> Result<(), ConstraintError> {
+    match size {
+        Some(0) => Err(ConstraintError {
+            param: "PoolSize",
+            value: "0".to_owned(),
+            floor: "1".to_owned(),
+        }),
+        _ => Ok(()),
+    }
 }
 
 /// Refuses a timeout or budget below its floor. Zero means the default and
@@ -186,11 +198,10 @@ impl Pool {
     pub fn new(options: Options) -> Result<Pool, PoolError> {
         validate_constraints(options.timeout, options.memory_budget)
             .map_err(PoolError::Constraint)?;
-        let size = if options.pool_size == 0 {
+        validate_pool_size(options.pool_size).map_err(PoolError::Constraint)?;
+        let size = options.pool_size.unwrap_or_else(|| {
             std::thread::available_parallelism().map_or(1, |n| n.get().clamp(1, 4))
-        } else {
-            options.pool_size
-        };
+        });
         Pool::build(
             "blok-server-runtime.js",
             BUNDLE,

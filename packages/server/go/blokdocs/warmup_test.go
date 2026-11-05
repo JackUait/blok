@@ -52,14 +52,14 @@ func TestIgnoresAWarmUpThatFails(t *testing.T) {
 }
 
 func TestWarmsUpOnlyWhenAsked(t *testing.T) {
-	cold, err := New(Options{PoolSize: 1})
+	cold, err := New(Options{PoolSize: new(1)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cold.warmed != nil {
 		t.Fatal("warmed without being asked")
 	}
-	warm, err := New(Options{PoolSize: 1, WarmUp: true})
+	warm, err := New(Options{PoolSize: new(1), WarmUp: true})
 	if err != nil {
 		t.Fatal(err)
 	}

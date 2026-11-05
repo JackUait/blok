@@ -35,8 +35,9 @@ pub const MINIMUM_TIMEOUT: Duration = blok_jsruntime::MINIMUM_TIMEOUT;
 /// Configures `new`. Zero values take the defaults.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
-    /// Bounds concurrent conversions. 0 means max(1, min(cores, 4)).
-    pub pool_size: usize,
+    /// Bounds concurrent conversions. None means max(1, min(cores, 4));
+    /// 0 is refused, as C#.
+    pub pool_size: Option<usize>,
     /// The wall-clock budget of one conversion. 0 means 10 s. QuickJS checks
     /// it between JavaScript instructions, so a long native builtin (a
     /// backtracking regex) overruns it.

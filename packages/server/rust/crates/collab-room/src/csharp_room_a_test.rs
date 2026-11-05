@@ -2935,7 +2935,7 @@ fn runtime_reader() -> &'static blok_collab_convert::RuntimeHtmlReader<blok_jsru
     > = std::sync::OnceLock::new();
     READER.get_or_init(|| blok_collab_convert::RuntimeHtmlReader {
         runtime: blok_jsruntime::Pool::new(blok_jsruntime::Options {
-            pool_size: 1,
+            pool_size: Some(1),
             ..blok_jsruntime::Options::default()
         })
         .unwrap_or_else(|err| panic!("{err}")),

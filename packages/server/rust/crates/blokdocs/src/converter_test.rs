@@ -163,7 +163,7 @@ fn is_fully_understood_only_with_nothing_malformed_or_unknown() {
 
 pub(crate) fn real_converter() -> crate::Converter {
     new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         ..Options::default()
     })
     .expect("new")
@@ -234,6 +234,10 @@ fn refuses_limits_below_the_floors_before_loading() {
         },
         Options {
             memory_budget: 1024,
+            ..Options::default()
+        },
+        Options {
+            pool_size: Some(0),
             ..Options::default()
         },
     ] {

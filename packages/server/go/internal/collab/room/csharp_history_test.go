@@ -52,7 +52,7 @@ var (
 
 func histReader(t *testing.T) convert.HTMLReader {
 	t.Helper()
-	histPoolOnce.Do(func() { histPool, histPoolErr = jsruntime.NewPool(jsruntime.Options{PoolSize: 1}) })
+	histPoolOnce.Do(func() { histPool, histPoolErr = jsruntime.NewPool(jsruntime.Options{PoolSize: new(1)}) })
 	if histPoolErr != nil {
 		t.Fatal(histPoolErr)
 	}

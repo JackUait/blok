@@ -36,7 +36,7 @@ func TestAReadLeavesOutAPageMapValueHoldingAPeerBigint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pool, err := jsruntime.NewPool(jsruntime.Options{PoolSize: 1})
+	pool, err := jsruntime.NewPool(jsruntime.Options{PoolSize: new(1)})
 	if err != nil {
 		t.Fatal(err)
 	}

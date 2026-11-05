@@ -149,7 +149,7 @@ pub(crate) fn export_resolved(reader: &RuntimeHtmlReader<Pool>, doc: &Doc) -> Va
 fn captured_updates_apply_into_the_engine_and_export_the_canonical_json() {
     let reader = RuntimeHtmlReader {
         runtime: Pool::new(PoolOptions {
-            pool_size: 2,
+            pool_size: Some(2),
             ..PoolOptions::default()
         })
         .unwrap_or_else(|err| panic!("{err}")),

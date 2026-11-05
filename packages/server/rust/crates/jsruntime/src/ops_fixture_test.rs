@@ -124,7 +124,7 @@ async fn matches_node_on_the_document_ops_fixture() {
         cases.array().len()
     );
     let pool = Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         ..Options::default()
     })
     .expect("new");

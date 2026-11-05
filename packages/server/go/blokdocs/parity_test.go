@@ -19,7 +19,7 @@ var (
 
 func sharedConverter(t *testing.T) *Converter {
 	t.Helper()
-	parityOnce.Do(func() { parityConverter, parityErr = New(Options{PoolSize: 1}) })
+	parityOnce.Do(func() { parityConverter, parityErr = New(Options{PoolSize: new(1)}) })
 	if parityErr != nil {
 		t.Fatal(parityErr)
 	}

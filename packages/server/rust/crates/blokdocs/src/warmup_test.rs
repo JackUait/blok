@@ -98,13 +98,13 @@ async fn ignores_a_warm_up_that_fails() {
 #[tokio::test]
 async fn warms_up_only_when_asked() {
     let cold = new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         ..Options::default()
     })
     .expect("new");
     assert!(cold.warmed().is_none(), "warmed without being asked");
     let warm = new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         warm_up: true,
         ..Options::default()
     })

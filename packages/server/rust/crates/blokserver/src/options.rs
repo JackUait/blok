@@ -10,7 +10,7 @@ use std::time::SystemTime;
 use blok_auth::Authorization;
 use blok_blokdocs::ConstraintError;
 use blok_dotnet::{equals_ordinal_ignore_case, is_any, is_loopback, parse_absolute_uri, parse_ip};
-use blok_jsruntime::validate_constraints;
+use blok_jsruntime::{validate_constraints, validate_pool_size};
 
 use crate::log::Logger;
 
@@ -318,6 +318,7 @@ impl Options {
         // conversion.
         if let Err(constraint) =
             validate_constraints(self.documents.timeout, self.documents.memory_budget)
+                .and_then(|()| validate_pool_size(self.documents.pool_size))
         {
             return Err(OptionsError(constraint.to_string(), Some(constraint)));
         }

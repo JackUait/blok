@@ -147,7 +147,8 @@ fn default_options_match_the_csharp_defaults() {
 }
 
 // AddBlokDocuments validates its constraints in the call, not at the first
-// conversion. PoolSize is a usize here, so Go's -1 case cannot be built.
+// conversion. PoolSize is a usize here, so Go's -1 case cannot be built;
+// 0 is refused.
 #[test]
 fn new_refuses_document_limits_below_their_floor() {
     for (name, documents) in [
@@ -162,6 +163,13 @@ fn new_refuses_document_limits_below_their_floor() {
             "memory budget",
             blok_blokdocs::Options {
                 memory_budget: 1,
+                ..blok_blokdocs::Options::default()
+            },
+        ),
+        (
+            "zero pool size",
+            blok_blokdocs::Options {
+                pool_size: Some(0),
                 ..blok_blokdocs::Options::default()
             },
         ),

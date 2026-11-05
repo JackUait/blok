@@ -11,16 +11,17 @@ import (
 	"github.com/JackUait/blok/packages/server/go/blokdocs"
 )
 
-// C# BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints. Go's
-// zero means the default, so a pool below its floor is a negative size.
+// C# BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints. A nil
+// pool size means the default; 0 is below the floor, as in C#.
 func TestNewRefusesLimitsBelowTheirFloorsBeforeLoading(t *testing.T) {
 	for _, row := range []struct {
 		param   string
 		options FactoryOptions
 	}{
-		{"PoolSize", FactoryOptions{PoolSize: -1}},
-		{"Timeout", FactoryOptions{PoolSize: 1, Timeout: time.Millisecond}},
-		{"MemoryBudget", FactoryOptions{PoolSize: 1, MemoryBudget: 1024}},
+		{"PoolSize", FactoryOptions{PoolSize: new(-1)}},
+		{"PoolSize", FactoryOptions{PoolSize: new(0)}},
+		{"Timeout", FactoryOptions{PoolSize: new(1), Timeout: time.Millisecond}},
+		{"MemoryBudget", FactoryOptions{PoolSize: new(1), MemoryBudget: 1024}},
 	} {
 		var constraint *blokdocs.ConstraintError
 		if _, err := New(row.options); !errors.As(err, &constraint) || constraint.Param != row.param {
@@ -65,7 +66,7 @@ func (r *recordingRuntime) Invoke(_ context.Context, _, input string, _ time.Dur
 // An Executor is shared by every request, so calls on it may overlap; each
 // one must answer as if it ran alone. Run with -race.
 func TestConcurrentCallsAnswerAsTheyDoAlone(t *testing.T) {
-	executor, err := New(FactoryOptions{PoolSize: 2})
+	executor, err := New(FactoryOptions{PoolSize: new(2)})
 	if err != nil {
 		t.Fatal(err)
 	}

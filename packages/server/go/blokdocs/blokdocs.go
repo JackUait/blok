@@ -23,8 +23,9 @@ const (
 
 // Options configure New. Zero values take the defaults.
 type Options struct {
-	// PoolSize bounds concurrent conversions. 0 means max(1, min(NumCPU, 4)).
-	PoolSize int
+	// PoolSize bounds concurrent conversions. nil means
+	// max(1, min(NumCPU, 4)); under 1 is refused, as C#.
+	PoolSize *int
 	// Timeout is the wall-clock budget of one conversion. 0 means 10 s.
 	//
 	// It is not a hard bound: goja checks it between JavaScript

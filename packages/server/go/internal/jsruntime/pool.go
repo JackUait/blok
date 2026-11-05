@@ -93,8 +93,8 @@ func (e *ConstraintError) Error() string {
 // Options configure a Pool. Zero values take the defaults.
 type Options struct {
 	// PoolSize bounds concurrent calls; callers wait for a free engine.
-	// 0 means max(1, min(NumCPU, 4)), as C#.
-	PoolSize int
+	// nil means max(1, min(NumCPU, 4)); under 1 is refused, as C#.
+	PoolSize *int
 	// Timeout is the default wall-clock budget of one call and of each load.
 	Timeout time.Duration
 	// MemoryBudget is the heap growth one call may cause. Approximate: see guard.go.
@@ -113,6 +113,14 @@ func ValidateConstraints(timeout time.Duration, budget int64) error {
 	return nil
 }
 
+// ValidatePoolSize refuses a pool size under 1. nil means the default.
+func ValidatePoolSize(size *int) error {
+	if size != nil && *size < 1 {
+		return &ConstraintError{Param: "PoolSize", Value: fmt.Sprint(*size), Floor: "1"}
+	}
+	return nil
+}
+
 // Pool is a fixed set of engines with the bundle loaded.
 type Pool struct {
 	engines chan *Runtime
@@ -126,12 +134,12 @@ func NewPool(options Options) (*Pool, error) {
 	if err := ValidateConstraints(options.Timeout, options.MemoryBudget); err != nil {
 		return nil, err
 	}
-	if options.PoolSize < 0 {
-		return nil, &ConstraintError{Param: "PoolSize", Value: fmt.Sprint(options.PoolSize), Floor: "1"}
+	if err := ValidatePoolSize(options.PoolSize); err != nil {
+		return nil, err
 	}
-	size := options.PoolSize
-	if size == 0 {
-		size = max(1, min(runtime.NumCPU(), 4))
+	size := max(1, min(runtime.NumCPU(), 4))
+	if options.PoolSize != nil {
+		size = *options.PoolSize
 	}
 	program, err := compiled()
 	if err != nil {

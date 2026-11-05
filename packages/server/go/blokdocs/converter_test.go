@@ -99,7 +99,7 @@ func TestIsFullyUnderstoodOnlyWithNothingMalformedOrUnknown(t *testing.T) {
 
 func newRealConverter(t *testing.T) *Converter {
 	t.Helper()
-	c, err := New(Options{PoolSize: 1})
+	c, err := New(Options{PoolSize: new(1)})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

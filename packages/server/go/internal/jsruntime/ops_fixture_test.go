@@ -105,7 +105,7 @@ func TestMatchesNodeOnTheDocumentOpsFixture(t *testing.T) {
 	if len(cases) < 300 {
 		t.Fatalf("only %d cases", len(cases))
 	}
-	pool, err := NewPool(Options{PoolSize: 1})
+	pool, err := NewPool(Options{PoolSize: new(1)})
 	if err != nil {
 		t.Fatal(err)
 	}

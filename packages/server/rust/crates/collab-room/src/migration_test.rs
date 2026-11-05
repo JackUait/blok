@@ -29,7 +29,7 @@ fn runtime_reader() -> &'static RuntimeHtmlReader<Pool> {
     static READER: OnceLock<RuntimeHtmlReader<Pool>> = OnceLock::new();
     READER.get_or_init(|| RuntimeHtmlReader {
         runtime: Pool::new(blok_jsruntime::Options {
-            pool_size: 1,
+            pool_size: Some(1),
             ..blok_jsruntime::Options::default()
         })
         .unwrap_or_else(|err| panic!("{err}")),

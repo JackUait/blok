@@ -174,8 +174,8 @@ func (o *Options) validate() (string, error) {
 	if err := jsruntime.ValidateConstraints(o.Documents.Timeout, o.Documents.MemoryBudget); err != nil {
 		return "", err
 	}
-	if o.Documents.PoolSize < 0 {
-		return "", &blokdocs.ConstraintError{Param: "PoolSize", Value: fmt.Sprint(o.Documents.PoolSize), Floor: "1"}
+	if err := jsruntime.ValidatePoolSize(o.Documents.PoolSize); err != nil {
+		return "", err
 	}
 	if err := o.validateCollab(); err != nil {
 		return "", err

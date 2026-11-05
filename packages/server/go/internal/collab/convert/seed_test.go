@@ -20,7 +20,7 @@ var (
 )
 
 func runtimeReader(t *testing.T) HTMLReader {
-	poolOnce.Do(func() { sharedPool, poolErr = jsruntime.NewPool(jsruntime.Options{PoolSize: 1}) })
+	poolOnce.Do(func() { sharedPool, poolErr = jsruntime.NewPool(jsruntime.Options{PoolSize: new(1)}) })
 	if poolErr != nil {
 		t.Fatal(poolErr)
 	}

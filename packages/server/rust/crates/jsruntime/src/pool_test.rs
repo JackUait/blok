@@ -158,7 +158,7 @@ async fn classifies_java_script_errors_and_keeps_the_engine() {
 #[tokio::test]
 async fn classifies_the_bundles_own_errors_by_name() {
     let pool = Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         ..Options::default()
     })
     .expect("new");
@@ -291,7 +291,7 @@ async fn keeps_the_slot_when_a_rebuild_panics() {
 async fn handles_concurrent_calls_without_sharing_an_engine() {
     let pool = Arc::new(
         Pool::new(Options {
-            pool_size: 4,
+            pool_size: Some(4),
             ..Options::default()
         })
         .expect("new"),
@@ -357,7 +357,7 @@ pub(crate) fn nested_outline(depth: usize) -> String {
 #[tokio::test]
 async fn converts_a_deeply_nested_outline() {
     let pool = Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         ..Options::default()
     })
     .expect("new");
@@ -439,6 +439,13 @@ fn refuses_limits_below_their_floors() {
             },
             "Timeout",
         ),
+        (
+            Options {
+                pool_size: Some(0),
+                ..Options::default()
+            },
+            "PoolSize",
+        ),
     ];
     for (options, param) in cases {
         match Pool::new(options) {
@@ -453,7 +460,7 @@ fn refuses_limits_below_their_floors() {
 #[ignore = "QuickJS needs 9 MiB to load the bundle, as Jint does; C#'s 8 MiB floor is measured to fail in both"]
 fn loads_at_the_floors() {
     Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         memory_budget: MINIMUM_MEMORY_BUDGET,
         timeout: Duration::from_secs(30),
     })
@@ -463,7 +470,7 @@ fn loads_at_the_floors() {
 #[test]
 fn loads_one_mebibyte_above_the_floor() {
     Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         memory_budget: MINIMUM_MEMORY_BUDGET + (1 << 20),
         timeout: Duration::from_secs(30),
     })

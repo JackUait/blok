@@ -65,7 +65,7 @@ impl<T: Invoker + ?Sized> Invoker for Arc<T> {
 /// blokdocs::Options.
 #[derive(Clone, Debug, Default)]
 pub struct FactoryOptions {
-    pub pool_size: usize,
+    pub pool_size: Option<usize>,
     pub timeout: Duration,
     pub memory_budget: i64,
     /// When set, `execute_in_room` runs on these live rooms.

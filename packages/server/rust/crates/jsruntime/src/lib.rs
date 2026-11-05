@@ -15,7 +15,7 @@ mod worker;
 pub use pool::{
     ConstraintError, DEFAULT_MEMORY_BUDGET, DEFAULT_TIMEOUT, Failure, InvokeError, Kind,
     MINIMUM_MEMORY_BUDGET, MINIMUM_TIMEOUT, Options, Pool, PoolError, StartupCause, StartupError,
-    validate_constraints,
+    validate_constraints, validate_pool_size,
 };
 pub use runtime::{Error, JsError, Runtime, Stop};
 

@@ -130,7 +130,7 @@ var (
 // engine parses the bundle.
 func sharedExecutor(t *testing.T) *Executor {
 	t.Helper()
-	bundleOnce.Do(func() { bundleExecutor, bundleErr = New(FactoryOptions{PoolSize: 1}) })
+	bundleOnce.Do(func() { bundleExecutor, bundleErr = New(FactoryOptions{PoolSize: new(1)}) })
 	if bundleErr != nil {
 		t.Fatal(bundleErr)
 	}

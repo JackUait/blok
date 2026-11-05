@@ -7,14 +7,21 @@ use crate::roomharness_test::new_test_room;
 use crate::{Actor, Cancel, Executor, FactoryOptions, InvokeFuture, Invoker};
 
 // C# BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints. Rust's
-// pool size is a usize, so the negative-size row has no form.
+// pool size is a usize, so the negative-size row has no form; 0 is refused.
 #[test]
 fn new_refuses_limits_below_their_floors_before_loading() {
     for (param, options) in [
         (
+            "PoolSize",
+            FactoryOptions {
+                pool_size: Some(0),
+                ..FactoryOptions::default()
+            },
+        ),
+        (
             "Timeout",
             FactoryOptions {
-                pool_size: 1,
+                pool_size: Some(1),
                 timeout: Duration::from_millis(1),
                 ..FactoryOptions::default()
             },
@@ -22,7 +29,7 @@ fn new_refuses_limits_below_their_floors_before_loading() {
         (
             "MemoryBudget",
             FactoryOptions {
-                pool_size: 1,
+                pool_size: Some(1),
                 memory_budget: 1024,
                 ..FactoryOptions::default()
             },
@@ -111,7 +118,7 @@ fn untimed(document: &str) -> String {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_calls_answer_as_they_do_alone() {
     let executor = Executor::new(FactoryOptions {
-        pool_size: 2,
+        pool_size: Some(2),
         ..FactoryOptions::default()
     })
     .expect("new");

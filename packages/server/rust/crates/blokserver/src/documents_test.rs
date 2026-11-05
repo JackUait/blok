@@ -35,7 +35,7 @@ fn documents_options() -> Options {
 #[tokio::test(flavor = "multi_thread")]
 async fn the_document_converter_shares_the_agents_engine_pool_and_takes_its_size() {
     let size = PoolOptions {
-        pool_size: 1,
+        pool_size: Some(1),
         timeout: Duration::from_secs(120),
         memory_budget: 64 << 20,
     };

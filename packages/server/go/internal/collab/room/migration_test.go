@@ -40,7 +40,7 @@ var (
 // runtimeReader is C# RichTextRuntime.Reader: the client's own HTML reader.
 func runtimeReader(t *testing.T) convert.HTMLReader {
 	t.Helper()
-	runtimeOnce.Do(func() { runtimePool, runtimeErr = jsruntime.NewPool(jsruntime.Options{PoolSize: 1}) })
+	runtimeOnce.Do(func() { runtimePool, runtimeErr = jsruntime.NewPool(jsruntime.Options{PoolSize: new(1)}) })
 	if runtimeErr != nil {
 		t.Fatal(runtimeErr)
 	}

@@ -29,7 +29,7 @@ fn json_string(text: &str) -> String {
 
 fn embedded(timeout: Duration, budget: i64) -> Pool {
     Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         timeout,
         memory_budget: budget,
     })
@@ -192,7 +192,7 @@ async fn renders_plain_text() {
 async fn handles_concurrent_calls_without_sharing_an_engine_csharp() {
     let pool = Arc::new(
         Pool::new(Options {
-            pool_size: 4,
+            pool_size: Some(4),
             ..Options::default()
         })
         .expect("new"),
@@ -403,7 +403,7 @@ fn explains_a_start_up_too_small_to_load_the_bundle() {
     for (options, param) in [
         (
             Options {
-                pool_size: 1,
+                pool_size: Some(1),
                 memory_budget: 1024,
                 ..Options::default()
             },
@@ -411,7 +411,7 @@ fn explains_a_start_up_too_small_to_load_the_bundle() {
         ),
         (
             Options {
-                pool_size: 1,
+                pool_size: Some(1),
                 timeout: Duration::from_millis(1),
                 ..Options::default()
             },
@@ -428,7 +428,7 @@ fn explains_a_start_up_too_small_to_load_the_bundle() {
 #[test]
 fn refuses_an_allocation_budget_too_small_to_load_the_bundle() {
     match Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         memory_budget: 1024 * 1024,
         ..Options::default()
     }) {
@@ -446,7 +446,7 @@ fn refuses_an_allocation_budget_too_small_to_load_the_bundle() {
 #[test]
 fn refuses_a_timeout_too_short_to_load_the_bundle() {
     match Pool::new(Options {
-        pool_size: 1,
+        pool_size: Some(1),
         timeout: Duration::from_millis(5),
         ..Options::default()
     }) {

@@ -28,7 +28,7 @@ type Executor struct {
 // FactoryOptions configure New. Zero values take the defaults, as in
 // blokdocs.Options.
 type FactoryOptions struct {
-	PoolSize     int
+	PoolSize     *int
 	Timeout      time.Duration
 	MemoryBudget int64
 	// Rooms, when set, runs ExecuteInRoom on these live rooms.

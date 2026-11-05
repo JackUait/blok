@@ -23,6 +23,17 @@ fn input(case: &Json) -> String {
         let items = part.get("items").array();
         let join = part.get("join").str();
         let repeat = part.get("repeat").number() as usize;
+        // The big.* recipes repeat one letter up to 56 Mi times. Building
+        // that a letter at a time in a debug build took over a minute on CI.
+        if let [item] = items
+            && !item.str().contains("{i")
+        {
+            if repeat > 0 {
+                text.push_str(item.str());
+                text.push_str(&format!("{join}{}", item.str()).repeat(repeat - 1));
+            }
+            continue;
+        }
         for i in 0..repeat {
             if i > 0 {
                 text.push_str(join);
@@ -185,6 +196,18 @@ async fn matches_node_on_the_document_ops_fixture() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn expands_a_recipe_as_the_generator_does() {
+    let case = crate::test_json::parse(
+        r#"{"inputRecipe":{"parts":["[",
+            {"repeat":4,"join":",","items":["n{i1}<n{i}","x"]},
+            {"repeat":3,"join":"","items":["A"]},
+            {"repeat":3,"join":"-","items":["B"]},
+            {"repeat":0,"join":"-","items":["C"]},"]"]}}"#,
+    );
+    assert_eq!(input(&case), "[n1<n0,x,n3<n2,xAAAB-B-B]");
 }
 
 #[test]

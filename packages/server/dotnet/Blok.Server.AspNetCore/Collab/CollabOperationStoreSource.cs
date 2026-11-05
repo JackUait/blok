@@ -24,7 +24,9 @@ internal sealed class CollabOperationStoreSource(IServiceProvider provider)
     options.Validate();
 
     return options.CollabEnabled && options.CollabJournal
-      ? new LocalCollabOperationStore(options.CollabDirectory)
+      ? new LocalCollabOperationStore(
+          options.CollabDirectory,
+          log: BlokServerServiceCollectionExtensions.CollabLog(provider))
       : null;
   });
 

@@ -122,12 +122,13 @@ public static class BlokServerServiceCollectionExtensions
             CreateS3BlobStore(
                 effectiveOptions,
                 provider.GetRequiredService<TimeProvider>()),
-            effectiveOptions.CollabS3Prefix);
+            effectiveOptions.CollabS3Prefix,
+            CollabLog(provider));
       }
 
       if (effectiveOptions.CollabDirectory != "")
       {
-        return new LocalCollabStore(effectiveOptions.CollabDirectory);
+        return new LocalCollabStore(effectiveOptions.CollabDirectory, CollabLog(provider));
       }
 
       throw new InvalidOperationException(
@@ -185,7 +186,7 @@ public static class BlokServerServiceCollectionExtensions
     return new BlokServerBuilder(services);
   }
 
-  private static Action<string>? CollabLog(IServiceProvider provider)
+  internal static Action<string>? CollabLog(IServiceProvider provider)
   {
     var logger = provider.GetService<ILoggerFactory>()?.CreateLogger("Blok.Server.Collab");
 

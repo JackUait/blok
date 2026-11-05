@@ -34,8 +34,10 @@ public static class BlokServerConformanceExtensions
     ArgumentException.ThrowIfNullOrEmpty(directory);
 
     builder.Services.RemoveAll<ICollabOperationStore>();
-    builder.Services.AddSingleton<ICollabOperationStore>(
-        new LocalCollabOperationStore(directory));
+    builder.Services.AddSingleton<ICollabOperationStore>(provider =>
+        new LocalCollabOperationStore(
+            directory,
+            log: BlokServerServiceCollectionExtensions.CollabLog(provider)));
 
     return builder;
   }

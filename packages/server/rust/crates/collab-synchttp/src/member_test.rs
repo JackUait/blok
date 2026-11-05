@@ -314,3 +314,56 @@ async fn a_frame_waiting_on_the_room_is_cancelled_when_the_close_grace_ends() {
     assert!(membership.cancelled.load(Ordering::SeqCst));
     assert!(!membership.applied.load(Ordering::SeqCst));
 }
+
+// C# links its receive token to RequestAborted: a peer whose connection
+// drops while its frame waits for the room lane has that frame dropped.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_frame_waiting_on_the_room_is_cancelled_when_the_peer_connection_drops() {
+    for drop_kind in ["fin", "rst", ""] {
+        let (server, mut client) = ws_pair().await;
+        let membership = Arc::new(WaitingMembership::default());
+        let member = Arc::new(SocketMember::new(MemberOptions {
+            max_queued_bytes: 1 << 20,
+            ..MemberOptions::default()
+        }));
+        let running = Arc::clone(&member);
+        let held = Arc::clone(&membership);
+        let socket = server.clone();
+        let done = tokio::spawn(async move {
+            running
+                .run(
+                    &socket,
+                    Some(held.as_ref() as &dyn blok_collab::Membership),
+                    1 << 20,
+                    None,
+                )
+                .await;
+        });
+        let entered = membership.entered.notified();
+        client.write_all(&client_frame(0x82, &[1])).await.unwrap();
+        entered.await;
+        match drop_kind {
+            "fin" => client.shutdown().await.unwrap(),
+            "rst" => {
+                client.set_zero_linger().unwrap();
+                drop(client);
+            }
+            _ => {
+                tokio::time::sleep(Duration::from_millis(300)).await;
+                assert!(
+                    !membership.cancelled.load(Ordering::SeqCst),
+                    "cancelled with the peer still there"
+                );
+                server.abort();
+                done.abort();
+                continue;
+            }
+        }
+        tokio::time::timeout(Duration::from_secs(3), done)
+            .await
+            .unwrap_or_else(|_| panic!("the member to end after a {drop_kind} drop"))
+            .unwrap();
+        assert!(membership.cancelled.load(Ordering::SeqCst), "{drop_kind}");
+        assert!(!membership.applied.load(Ordering::SeqCst), "{drop_kind}");
+    }
+}

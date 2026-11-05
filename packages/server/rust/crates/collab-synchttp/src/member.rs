@@ -34,6 +34,11 @@ pub trait Socket: Send + Sync {
     fn send_binary<'a>(&'a self, payload: &'a [u8]) -> BoxFuture<'a, SocketResult<()>>;
     fn close_output<'a>(&'a self, status: u16, reason: &'a str) -> BoxFuture<'a, SocketResult<()>>;
     fn abort(&self);
+    /// Resolves once the peer ended the connection while nobody receives
+    /// (Kestrel's RequestAborted). Never, by default.
+    fn peer_gone(&self) -> BoxFuture<'_, ()> {
+        Box::pin(std::future::pending())
+    }
 }
 
 impl Socket for blok_ws::Conn {
@@ -51,6 +56,10 @@ impl Socket for blok_ws::Conn {
 
     fn abort(&self) {
         blok_ws::Conn::abort(self);
+    }
+
+    fn peer_gone(&self) -> BoxFuture<'_, ()> {
+        Box::pin(blok_ws::Conn::peer_gone(self))
     }
 }
 
@@ -222,13 +231,20 @@ impl SocketMember {
         tokio::pin!(watchdog);
         let receive = self.receive_loop(socket, membership, max_message_bytes, &receiving);
         tokio::pin!(receive);
+        // C# links the receive token to RequestAborted for the whole run.
+        let peer_gone = socket.peer_gone();
+        tokio::pin!(peer_gone);
 
-        let (mut pump_done, mut aborted) = (false, false);
+        let (mut pump_done, mut aborted, mut gone) = (false, false, false);
         loop {
             tokio::select! {
                 () = &mut receive => break,
                 () = &mut pump, if !pump_done => pump_done = true,
                 () = &mut watchdog, if !aborted => aborted = true,
+                () = &mut peer_gone, if !gone => {
+                    gone = true;
+                    receiving.after(Duration::ZERO);
+                }
             }
         }
 
@@ -246,6 +262,10 @@ impl SocketMember {
             tokio::select! {
                 () = &mut pump => pump_done = true,
                 () = &mut watchdog, if !aborted => aborted = true,
+                () = &mut peer_gone, if !gone => {
+                    gone = true;
+                    receiving.after(Duration::ZERO);
+                }
                 () = &mut grace => {
                     socket.abort();
                     (&mut pump).await;

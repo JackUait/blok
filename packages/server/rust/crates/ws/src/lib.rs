@@ -5,6 +5,7 @@
 //! exact close codes and reasons.
 
 mod keepalive;
+mod read_ahead;
 
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -237,6 +238,7 @@ pub(crate) struct Inner {
     /// An unsolicited pong waiting on the send lock.
     pub(crate) keep_alive_sending: AtomicBool,
     done: watch::Sender<bool>,
+    gone: watch::Sender<bool>,
     disposed: AtomicBool,
 }
 
@@ -267,11 +269,22 @@ impl Conn {
         options: Options,
     ) -> Self {
         let (done, _) = watch::channel(false);
+        let (gone, _) = watch::channel(false);
+        // Without a runtime nothing can read ahead; the peer's end is then
+        // seen only by a receive.
+        let reader: Reader = match tokio::runtime::Handle::try_current() {
+            Ok(_) => Box::new(read_ahead::ReadAhead::spawn(
+                reader,
+                done.subscribe(),
+                gone.clone(),
+            )),
+            Err(_) => Box::new(reader),
+        };
         let conn = Self {
             inner: Arc::new(Inner {
                 send: tokio::sync::Mutex::new(Some(Box::new(writer))),
                 receive: tokio::sync::Mutex::new(ReceiveState {
-                    reader: Some(Box::new(reader)),
+                    reader: Some(reader),
                     buffer: buffered,
                     start: 0,
                     last: FrameHeader {
@@ -288,6 +301,7 @@ impl Conn {
                 keep_alive: Mutex::new(None),
                 keep_alive_sending: AtomicBool::new(false),
                 done,
+                gone,
                 disposed: AtomicBool::new(false),
             }),
         };
@@ -333,6 +347,14 @@ impl Conn {
                 inner.receive.lock().await.reader.take();
             });
         }
+    }
+
+    /// Resolves once the peer ended the connection (FIN or RST), even while
+    /// nobody receives: Kestrel's RequestAborted. Our own abort does not
+    /// resolve it.
+    pub async fn peer_gone(&self) {
+        let mut gone = self.inner.gone.subscribe();
+        let _ = gone.wait_for(|gone| *gone).await;
     }
 
     /// WebSocket.Abort: the stream closes with no close frame.
@@ -712,5 +734,7 @@ impl Utf8State {
 
 #[cfg(test)]
 mod fuzz_test;
+#[cfg(test)]
+mod peer_gone_test;
 #[cfg(test)]
 mod ws_test;

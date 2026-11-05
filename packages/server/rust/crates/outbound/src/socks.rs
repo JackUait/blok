@@ -129,8 +129,9 @@ async fn socks4(
     port: u16,
 ) -> io::Result<()> {
     // SOCKS4 carries only an IPv4 address, so a name is looked up here;
-    // SOCKS4a hands the name to the proxy behind the 0.0.0.1 marker.
-    let address = match literal {
+    // SOCKS4a hands the name to the proxy behind the 0.0.0.255 marker, as
+    // SocksHelper does.
+    let address = match literal.map(|ip| ip.to_canonical()) {
         Some(IpAddr::V4(v4)) => Some(v4),
         Some(IpAddr::V6(_)) => return Err(refused("SOCKS4 cannot reach an IPv6 address")),
         None if proxy.scheme == "socks4a" => None,
@@ -147,7 +148,7 @@ async fn socks4(
     let user = proxy.user.as_ref().map_or("", |(user, _)| user.as_str());
     let mut request = vec![4, 1];
     request.extend_from_slice(&port.to_be_bytes());
-    request.extend_from_slice(&address.unwrap_or(Ipv4Addr::new(0, 0, 0, 1)).octets());
+    request.extend_from_slice(&address.unwrap_or(Ipv4Addr::new(0, 0, 0, 255)).octets());
     request.extend_from_slice(user.as_bytes());
     request.push(0);
     if address.is_none() {

@@ -70,7 +70,7 @@ async fn fake_proxy(version: u8, refuse: bool) -> (u16, Arc<Mutex<Log>>) {
         } else {
             let head = read(&mut conn, &log, 8).await;
             read_until_nul(&mut conn, &log).await;
-            if head[4..8] == [0, 0, 0, 1] {
+            if head[4..7] == [0, 0, 0] && head[7] != 0 {
                 read_until_nul(&mut conn, &log).await;
             }
             let status = if refuse { 91 } else { 90 };
@@ -193,6 +193,8 @@ async fn tunnels_through_socks4_with_an_address() {
     assert_eq!(log.lock().unwrap().handshake, want);
 }
 
+// SocksHelper.EstablishSocks4TunnelAsync (System.Net.Http 10.0.11,
+// decompiled) marks the name with 0.0.0.255.
 #[tokio::test]
 async fn tunnels_through_socks4a_by_name() {
     let (port, log) = fake_proxy(4, false).await;
@@ -202,7 +204,7 @@ async fn tunnels_through_socks4a_by_name() {
     )
     .await;
     assert_eq!(body.unwrap(), b"ok");
-    let mut want = vec![4, 1, 0, 80, 0, 0, 0, 1, 0];
+    let mut want = vec![4, 1, 0, 80, 0, 0, 0, 255, 0];
     want.extend_from_slice(b"docs.blok-proxy.invalid\0");
     assert_eq!(log.lock().unwrap().handshake, want);
 }
@@ -319,4 +321,20 @@ async fn reaches_http_and_https_targets_through_an_https_proxy() {
             "CONNECT target.blok-proxy.test:443 HTTP/1.1"
         ]
     );
+}
+
+// .NET unmaps an IPv4-mapped IPv6 literal for SOCKS4.
+#[tokio::test]
+async fn socks4_sends_an_ipv4_mapped_literal_as_ipv4() {
+    let (port, log) = fake_proxy(4, false).await;
+    let body = fetch(
+        format!("socks4://127.0.0.1:{port}"),
+        "http://[::ffff:127.0.0.1]:8080/x",
+    )
+    .await;
+    assert_eq!(body.unwrap(), b"ok");
+    let mut want = vec![4, 1];
+    want.extend_from_slice(&8080u16.to_be_bytes());
+    want.extend_from_slice(&[127, 0, 0, 1, 0]);
+    assert_eq!(log.lock().unwrap().handshake, want);
 }

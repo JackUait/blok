@@ -134,7 +134,7 @@ impl OperatorClient {
         if let Some(proxy) = &proxy
             && !matches!(
                 proxy.scheme.as_str(),
-                "http" | "socks4" | "socks4a" | "socks5"
+                "http" | "https" | "socks4" | "socks4a" | "socks5"
             )
         {
             return Err(OperatorError::Io(io::Error::new(
@@ -146,14 +146,14 @@ impl OperatorClient {
         let path = format!("{}{}", request.url.absolute_path, request.url.query);
         // A plain request through a proxy names the whole URL.
         let target = match (&proxy, scheme) {
-            (Some(p), "http") if p.scheme == "http" => format!("http://{}{path}", request.host),
+            (Some(p), "http") if is_http_proxy(p) => format!("http://{}{path}", request.host),
             _ => path,
         };
         let length = request.body.len().to_string();
         let mut headers: Vec<(&str, &str)> = vec![("Host", request.host)];
         let authorization;
         if let (Some(proxy), "http") = (&proxy, scheme)
-            && proxy.scheme == "http"
+            && is_http_proxy(proxy)
             && let Some(value) = proxy_authorization(proxy)
         {
             authorization = value;
@@ -221,11 +221,21 @@ impl OperatorClient {
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         }
-        if url.scheme != "https" {
-            return Ok(Box::new(tcp));
+        let roots = self.roots.clone().unwrap_or_else(system_roots);
+        let mut stream: Box<dyn Stream> = Box::new(tcp);
+        // An https proxy gets TLS of its own first, named by its host.
+        if let Some(proxy) = proxy.filter(|p| p.scheme == "https") {
+            let name = proxy_server_name(&proxy.authority)?;
+            let tls = timeout_at(deadline, tls_connector(roots.clone()).connect(name, stream))
+                .await
+                .map_err(|_| OperatorError::ConnectTimeout)??;
+            stream = Box::new(tls);
         }
-        if let Some(proxy) = proxy.filter(|p| p.scheme == "http") {
-            timeout_at(deadline, tunnel(&mut tcp, &authority, proxy))
+        if url.scheme != "https" {
+            return Ok(stream);
+        }
+        if let Some(proxy) = proxy.filter(|p| is_http_proxy(p)) {
+            timeout_at(deadline, tunnel(&mut stream, &authority, proxy))
                 .await
                 .map_err(|_| OperatorError::ConnectTimeout)??;
         }
@@ -238,8 +248,7 @@ impl OperatorClient {
             _ => ServerName::try_from(url.idn_host.clone())
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
         };
-        let roots = self.roots.clone().unwrap_or_else(system_roots);
-        let tls = timeout_at(deadline, tls_connector(roots).connect(name, tcp))
+        let tls = timeout_at(deadline, tls_connector(roots).connect(name, stream))
             .await
             .map_err(|_| OperatorError::ConnectTimeout)??;
         Ok(Box::new(tls))
@@ -275,8 +284,28 @@ fn proxy_authorization(proxy: &ProxyUrl) -> Option<String> {
 }
 
 /// CONNECT through an http proxy; any status but 2xx refuses the tunnel.
-async fn tunnel(
-    tcp: &mut TcpStream,
+/// An http or https proxy: a plain request names the whole URL, and an
+/// https target goes through CONNECT.
+fn is_http_proxy(proxy: &ProxyUrl) -> bool {
+    matches!(proxy.scheme.as_str(), "http" | "https")
+}
+
+/// The TLS name of an https proxy: its host, an IP literal as an address.
+fn proxy_server_name(authority: &str) -> io::Result<ServerName<'static>> {
+    let host = authority
+        .rsplit_once(':')
+        .map_or(authority, |(host, _)| host)
+        .trim_start_matches('[')
+        .trim_end_matches(']');
+    match host.parse::<std::net::IpAddr>() {
+        Ok(ip) => Ok(ServerName::IpAddress(ip.into())),
+        Err(_) => ServerName::try_from(host.to_owned())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e)),
+    }
+}
+
+async fn tunnel<S: AsyncRead + AsyncWrite + Unpin>(
+    tcp: &mut S,
     authority: &str,
     proxy: &ProxyUrl,
 ) -> Result<(), OperatorError> {

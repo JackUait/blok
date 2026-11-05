@@ -218,3 +218,105 @@ async fn a_refused_socks4_connect_fails_the_request() {
     .unwrap_err();
     assert!(err.contains("refused"), "{err}");
 }
+
+/// An https proxy: TLS to the proxy itself, then a plain proxied request,
+/// or a CONNECT and TLS to the target inside that TLS.
+async fn https_proxy(pki: &crate::pki_test::Pki) -> (u16, Arc<Mutex<Vec<String>>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let lines = Arc::new(Mutex::new(Vec::new()));
+    let seen = lines.clone();
+    let acceptor = crate::pki_test::acceptor(pki.chain.clone(), pki.key.clone_key(), &[]);
+    tokio::spawn(async move {
+        while let Ok((tcp, _)) = listener.accept().await {
+            let acceptor = acceptor.clone();
+            let seen = seen.clone();
+            tokio::spawn(async move {
+                let Ok(tls) = acceptor.accept(tcp).await else {
+                    return;
+                };
+                let mut reader = BufReader::new(tls);
+                let mut line = String::new();
+                reader.read_line(&mut line).await.unwrap();
+                seen.lock().unwrap().push(line.trim_end().to_owned());
+                loop {
+                    let mut header = String::new();
+                    if reader.read_line(&mut header).await.unwrap() == 0 || header == "\r\n" {
+                        break;
+                    }
+                }
+                let mut tls = reader.into_inner();
+                if !line.starts_with("CONNECT ") {
+                    let _ = tls
+                        .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                        .await;
+                    return;
+                }
+                tls.write_all(b"HTTP/1.1 200 Connection established\r\n\r\n")
+                    .await
+                    .unwrap();
+                let Ok(inner) = acceptor.accept(tls).await else {
+                    return;
+                };
+                let mut reader = BufReader::new(inner);
+                loop {
+                    let mut header = String::new();
+                    if reader.read_line(&mut header).await.unwrap() == 0 || header == "\r\n" {
+                        break;
+                    }
+                }
+                let _ = reader
+                    .get_mut()
+                    .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+                    .await;
+            });
+        }
+    });
+    (port, lines)
+}
+
+// HttpEnvironmentProxy takes an https:// proxy, and HttpConnectionPool
+// opens TLS to it before the request or the tunnel (System.Net.Http
+// 10.0.11, decompiled).
+#[tokio::test]
+async fn reaches_http_and_https_targets_through_an_https_proxy() {
+    let pki = crate::pki_test::pki("localhost", |fields| {
+        fields.names.push("target.blok-proxy.test".into());
+    });
+    let (port, lines) = https_proxy(&pki).await;
+    for url in [
+        "http://target.blok-proxy.test/a?b",
+        "https://target.blok-proxy.test/c",
+    ] {
+        let client = OperatorClient {
+            connect_timeout: Duration::from_secs(5),
+            header_timeout: None,
+            proxy: EnvironmentProxy::from_lookup(move |name| {
+                (name == "ALL_PROXY").then(|| format!("https://localhost:{port}"))
+            }),
+            roots: Some(pki.roots.clone()),
+        };
+        let url = blok_dotnet::parse_absolute_uri(url).unwrap();
+        let host = url.host.clone();
+        let mut response = client
+            .send(Request {
+                method: "GET",
+                url: &url,
+                host: &host,
+                headers: Vec::new(),
+                body: RequestBody::None,
+            })
+            .await
+            .unwrap_or_else(|e| panic!("{}: {e}", url.absolute_uri));
+        let mut body = vec![0u8; 16];
+        let n = response.body.read(&mut body).await.unwrap();
+        assert_eq!(&body[..n], b"ok");
+    }
+    assert_eq!(
+        *lines.lock().unwrap(),
+        [
+            "GET http://target.blok-proxy.test/a?b HTTP/1.1",
+            "CONNECT target.blok-proxy.test:443 HTTP/1.1"
+        ]
+    );
+}

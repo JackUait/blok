@@ -439,6 +439,17 @@ func (h *frameHeader) unmask(b []byte) {
 // the frame); an empty frame is one receive of 0. Pings, pongs and the
 // peer's close are handled inside.
 func (c *Conn) Receive(buf []byte) (n int, messageType MessageType, endOfMessage bool, err error) {
+	// An aborted socket serves no frame, not even one framing has buffered.
+	select {
+	case <-c.done:
+		c.stateMu.Lock()
+		aborted := c.aborted
+		c.stateMu.Unlock()
+		if aborted {
+			return 0, 0, false, c.gone(net.ErrClosed)
+		}
+	default:
+	}
 	for {
 		header := c.last
 		if header.processed {

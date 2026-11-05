@@ -29,9 +29,10 @@ type Socket interface {
 }
 
 // peerWatcher is a socket that sees the peer's FIN or RST while nobody
-// receives (ws.Conn).
+// receives, and its own dispose, a keep-alive timeout included (ws.Conn).
 type peerWatcher interface {
 	PeerGone() <-chan struct{}
+	Done() <-chan struct{}
 }
 
 // MemberOptions are SyncSocketMember's constructor arguments.
@@ -177,13 +178,17 @@ func (m *SocketMember) Run(ctx context.Context, socket Socket, membership collab
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	receiving := newCanceller(socket, cancel)
-	// C# links the receive token to RequestAborted for the whole run.
+	// C# links the receive token to RequestAborted for the whole run. A
+	// keep-alive timeout aborts the connection there too, so a frame
+	// already waiting on the lane is dropped (SyncDroppedPeerTests.cs).
 	if watched, ok := socket.(peerWatcher); ok {
 		runDone := make(chan struct{})
 		defer close(runDone)
 		go func() {
 			select {
 			case <-watched.PeerGone():
+				receiving.after(0)
+			case <-watched.Done():
 				receiving.after(0)
 			case <-runDone:
 			}

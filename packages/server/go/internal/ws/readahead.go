@@ -1,17 +1,14 @@
 package ws
 
 import (
-	"io"
+	"bufio"
 	"net"
 	"sync"
 )
 
 // Kestrel's SocketTransportOptions.MaxReadBufferSize default: the most
 // unconsumed bytes its transport buffers, upgraded or not (measured).
-const (
-	readAheadLimit = 1 << 20
-	readAheadChunk = 16 * 1024
-)
+const readAheadLimit = 1 << 20
 
 // readAhead reads the socket in the background, as Kestrel's transport
 // does, so the peer's end is seen while nothing is being received.
@@ -23,13 +20,15 @@ type readAhead struct {
 	ready chan struct{}
 	space chan struct{}
 	gone  chan struct{}
+	done  <-chan struct{}
 }
 
-func newReadAhead(src io.Reader, done <-chan struct{}) *readAhead {
+func newReadAhead(src *bufio.Reader, done <-chan struct{}) *readAhead {
 	r := &readAhead{
 		ready: make(chan struct{}, 1),
 		space: make(chan struct{}, 1),
 		gone:  make(chan struct{}),
+		done:  done,
 	}
 	go r.run(src, done)
 	return r
@@ -42,8 +41,9 @@ func wake(c chan struct{}) {
 	}
 }
 
-func (r *readAhead) run(src io.Reader, done <-chan struct{}) {
-	chunk := make([]byte, readAheadChunk)
+// run waits in src's own buffer (Peek), so an idle socket holds no read
+// buffer here; it copies only the bytes that came.
+func (r *readAhead) run(src *bufio.Reader, done <-chan struct{}) {
 	for {
 		r.mu.Lock()
 		full := len(r.buf) >= readAheadLimit
@@ -60,10 +60,14 @@ func (r *readAhead) run(src io.Reader, done <-chan struct{}) {
 		r.mu.Lock()
 		room := readAheadLimit - len(r.buf)
 		r.mu.Unlock()
-		n, err := src.Read(chunk[:min(len(chunk), room)])
-		r.mu.Lock()
-		r.push(chunk[:n])
-		r.mu.Unlock()
+		_, err := src.Peek(1)
+		if err == nil {
+			b, _ := src.Peek(min(src.Buffered(), room))
+			r.mu.Lock()
+			r.push(b)
+			r.mu.Unlock()
+			_, _ = src.Discard(len(b))
+		}
 		if err != nil {
 			select {
 			case <-done:
@@ -95,11 +99,18 @@ func (r *readAhead) fail(err error) {
 }
 
 // Read serves buffered bytes first, then the error that ended the socket.
+// Once the socket is disposed it serves nothing, as Kestrel's aborted
+// WebSocket does.
 func (r *readAhead) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
 	for {
+		select {
+		case <-r.done:
+			return 0, net.ErrClosed
+		default:
+		}
 		r.mu.Lock()
 		if len(r.buf) > 0 {
 			n := copy(p, r.buf)
@@ -117,6 +128,9 @@ func (r *readAhead) Read(p []byte) (int, error) {
 			return 0, err
 		}
 		r.mu.Unlock()
-		<-r.ready
+		select {
+		case <-r.ready:
+		case <-r.done:
+		}
 	}
 }

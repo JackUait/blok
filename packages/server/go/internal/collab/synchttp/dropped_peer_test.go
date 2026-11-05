@@ -46,7 +46,11 @@ func (h *gatedHook) CanWriteDocument(context.Context, auth.User, string) (bool, 
 // hook holds the lane while the peer's frame waits behind it.
 func droppedPeerText(t *testing.T, drop string) string {
 	hook := &gatedHook{entered: make(chan struct{})}
-	app := syn2Start(t, syn2Options{hook: hook})
+	options := syn2Options{hook: hook}
+	if drop == "keepalive" {
+		options.keepAlive = 100 * time.Millisecond
+	}
+	app := syn2Start(t, options)
 	peer := app.open(t)
 
 	hook.hold()
@@ -59,7 +63,10 @@ func droppedPeerText(t *testing.T, drop string) string {
 
 	peer.send(t, wire.SyncUpdate{Update: synAppend(synNewDoc(), "late")})
 	time.Sleep(300 * time.Millisecond)
-	if drop != "" {
+	if drop == "keepalive" {
+		// Long enough for the unanswered ping to time out.
+		time.Sleep(time.Second)
+	} else if drop != "" {
 		tcp := peer.conn.(*net.TCPConn)
 		if drop == "rst" {
 			_ = tcp.SetLinger(0)
@@ -91,6 +98,14 @@ func TestAFrameWaitingOnABusyRoomIsDroppedWhenThePeerConnectionDrops(t *testing.
 
 func TestAFrameWaitingOnABusyRoomIsAppliedWhenThePeerStays(t *testing.T) {
 	if got := droppedPeerText(t, ""); got == "seeded" {
+		t.Fatalf("text %q", got)
+	}
+}
+
+// The peer never reads, so it never answers a ping: the keep-alive aborts
+// the socket while its frame waits on the lane.
+func TestAFrameWaitingOnABusyRoomAfterAKeepAliveTimeout(t *testing.T) {
+	if got := droppedPeerText(t, "keepalive"); got != "seeded" {
 		t.Fatalf("text %q", got)
 	}
 }

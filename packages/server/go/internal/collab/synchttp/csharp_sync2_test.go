@@ -32,6 +32,7 @@ type syn2Options struct {
 	maxMessage int
 	budget     *BudgetOptions
 	clock      func() time.Time
+	keepAlive  time.Duration
 }
 
 // syn2Start is synStart with the options these cases set.
@@ -76,6 +77,9 @@ func syn2Start(t *testing.T, o syn2Options) *synApp {
 			c.Budget = *o.budget
 		}
 		c.BudgetClock = o.clock
+		if o.keepAlive != 0 {
+			c.KeepAliveInterval = o.keepAlive
+		}
 	}, nil)
 	t.Cleanup(func() { syn2Drain(app) })
 	return app

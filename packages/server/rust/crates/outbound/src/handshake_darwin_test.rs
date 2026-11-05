@@ -273,7 +273,7 @@ async fn the_operator_handshake_refuses_what_dotnet_refuses() {
 
 // The signature_algorithms SslStream's ClientHello carries on macOS, in
 // its order (openssl s_server -trace of a C# connect), less the two SHA-1
-// schemes, which Rust leaves out on purpose.
+// schemes and ecdsa_secp521r1_sha512, which ring cannot check.
 #[test]
 fn the_operator_offers_the_schemes_dotnet_offers() {
     let verifier = crate::sectrust::TrustdVerifier {
@@ -290,7 +290,6 @@ fn the_operator_offers_the_schemes_dotnet_offers() {
             SignatureScheme::RSA_PKCS1_SHA512,
             SignatureScheme::ECDSA_NISTP256_SHA256,
             SignatureScheme::ECDSA_NISTP384_SHA384,
-            SignatureScheme::ECDSA_NISTP521_SHA512,
         ]
     );
 }

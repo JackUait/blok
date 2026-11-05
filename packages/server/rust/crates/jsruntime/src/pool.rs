@@ -17,7 +17,7 @@ pub const MINIMUM_TIMEOUT: Duration = Duration::from_millis(100);
 /// Bounds the bytes one call allocates, freed or not, as C#'s 512 MiB
 /// bounds Jint's count of every allocation (see budget.rs). QuickJS
 /// allocates less than Jint for most documents, so a document can fit here
-/// that C# refuses: the shared ops.json big.* cases need 8 to 164 MiB here
+/// that C# refuses: the shared ops.json big.* cases need 8 to 168 MiB here
 /// and 11 to 281 MiB in C# (measured, fresh engine each).
 pub const DEFAULT_MEMORY_BUDGET: i64 = 512 << 20;
 /// C#'s floor.

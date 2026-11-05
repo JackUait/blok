@@ -370,6 +370,10 @@ async fn converts_a_deeply_nested_outline() {
 }
 
 #[test]
+#[ignore = "QuickJS's 16 MiB stack cap (the most rquickjs 0.14 allows) stops HTML at 1687 levels (measured)"]
+fn converts_as_many_outline_levels_to_html_as_csharp() {}
+
+#[test]
 fn reports_a_load_that_runs_past_the_timeout() {
     let err = startup_error(Pool::from_source(
         "for (;;) {}",

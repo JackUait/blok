@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn source_names_match_the_csharp_enum() {
+    fn names_a_source_or_prints_the_number_of_an_undefined_one() {
         assert_eq!(Source::CLIENT_V2.to_string(), "ClientV2");
         assert_eq!(Source::CLIENT_V1.to_string(), "ClientV1");
         assert_eq!(Source::HTTP_EDIT.to_string(), "HttpEdit");

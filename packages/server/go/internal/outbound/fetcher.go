@@ -3,13 +3,16 @@ package outbound
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -82,6 +85,9 @@ type Fetcher struct {
 	Resolve Resolver
 	// RootCAs replaces the system roots; tests set it.
 	RootCAs *x509.CertPool
+	// denied holds the certs the trust settings deny, by certHash. With
+	// RootCAs nil the system's set is used.
+	denied  map[string]bool
 	permits chan struct{}
 	uploads chan struct{}
 	// checkCallers and uploadCallers are each pool's per-caller lanes.
@@ -354,21 +360,40 @@ func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []neti
 func (f *Fetcher) tlsConfig(target Target) *tls.Config {
 	config := &tls.Config{NextProtos: []string{"http/1.1"}}
 	config.RootCAs = f.RootCAs
+	denied := f.denied
 	if config.RootCAs == nil {
-		config.RootCAs = defaultRoots()
+		config.RootCAs, denied = defaultRoots(), defaultDenied()
 	}
-	if !target.Literal.IsValid() {
+	literal := target.Literal.IsValid()
+	if !literal {
 		config.ServerName = target.Host
+	}
+	config.VerifyConnection = func(state tls.ConnectionState) error {
 		// Go matches any exact name; .NET refuses these at the certificate
 		// check, after the handshake, as this does.
-		config.VerifyConnection = func(tls.ConnectionState) error {
-			if !tlsHostName(target.Host) {
-				return errTLSHostName
-			}
-			return nil
+		if !literal && !tlsHostName(target.Host) {
+			return errTLSHostName
 		}
+		if !slices.ContainsFunc(state.VerifiedChains, func(chain []*x509.Certificate) bool {
+			return !slices.ContainsFunc(chain, func(c *x509.Certificate) bool { return denied[certHash(c.Raw)] })
+		}) {
+			return errDeniedCert
+		}
+		return nil
 	}
 	return config
+}
+
+// errDeniedCert: every chain runs through a cert the trust settings deny.
+// trustd checks the leaf and each parent against them
+// (SecTrustServer.c:855-875, 910-925) and fails a path with a denied cert
+// (SecPolicyServer.c:3425-3440).
+var errDeniedCert = errors.New("outbound: the certificate chain holds a denied certificate")
+
+// certHash is a cert's SHA-1 in upper hex, as the trust settings key it.
+func certHash(der []byte) string {
+	sum := sha1.Sum(der)
+	return strings.ToUpper(hex.EncodeToString(sum[:]))
 }
 
 var errTLSHostName = errors.New("outbound: the host is not a name TLS can check")

@@ -373,6 +373,54 @@ func plistText(decoder *xml.Decoder) (string, error) {
 	}
 }
 
+// deniedCerts are the hashes trustd denies in any role. It checks the leaf
+// and every parent with SecPathBuilderIsAnchor (SecTrustServer.c:855-875,
+// 910-925): Apple's roots are found first, then the legacy source, whose
+// Deny makes a "denied anchor" that SecPVCCheckUsageConstraints fails
+// (SecPolicyServer.c:3425-3440). A Deny does not depend on the cert being
+// self-signed. A cert whose constrained entries deny in any case is in the
+// set, so a chain is never trusted where trustd refuses it.
+func deniedCerts(user, admin map[string][]trustSetting, certs map[string][]byte, apple func([]byte) bool) map[string]bool {
+	out := map[string]bool{}
+	for _, domain := range []map[string][]trustSetting{admin, user} {
+		for hash := range domain {
+			if der, ok := certs[hash]; ok && apple(der) {
+				continue
+			}
+			settings, listed := admin[hash]
+			if !listed {
+				settings = user[hash]
+			}
+			if deniedInSomeCase(settings) {
+				out[hash] = true
+			}
+		}
+	}
+	return out
+}
+
+func deniedInSomeCase(settings []trustSetting) bool {
+	var open []int
+	for i, s := range settings {
+		if s.constrained && s.namesTLS() {
+			open = append(open, i)
+		}
+	}
+	if len(open) > maxConstrained {
+		return true
+	}
+	for world := 0; world < 1<<len(open); world++ {
+		meets := func(i int) bool {
+			bit := slices.Index(open, i)
+			return bit >= 0 && world&(1<<bit) != 0
+		}
+		if legacyVerdict(settings, false, meets) == denied {
+			return true
+		}
+	}
+	return false
+}
+
 // selfSigned is _SecCertificateIsSelfSigned (SecCertificate.c:6192-6222):
 // the issuer is the subject, an authority key ID equals the subject key
 // ID, and the cert's own key verifies its signature. Apple compares

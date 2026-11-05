@@ -92,7 +92,7 @@ func TestTheFetcherNeverLetsTheVerifierFetchAnIssuer(t *testing.T) {
 // The roots are read from the trust settings, so a root added only to the
 // Keychain is trusted as in C# and Rust.
 func TestTheMacOSRootsComeFromTheTrustSettings(t *testing.T) {
-	pool, err := loadTrustSettingsRoots(securityTool)
+	pool, _, err := loadTrustSettingsRoots(securityTool)
 	if err != nil {
 		t.Fatal(err)
 	}

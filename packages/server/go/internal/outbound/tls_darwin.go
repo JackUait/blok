@@ -97,14 +97,22 @@ func plistVersion(ctx context.Context, path string) int64 {
 	return version
 }
 
-var bundle = sync.OnceValue(func() *x509.CertPool { return loadRoots(securityTool) })
-
-func loadRoots(tool string) *x509.CertPool {
-	if pool, err := loadTrustSettingsRoots(tool); err == nil {
-		return pool
-	}
-	return bundlePool()
+// systemTrust is the anchor pool and the certs the trust settings deny.
+type systemTrust struct {
+	pool   *x509.CertPool
+	denied map[string]bool
 }
+
+var bundle = sync.OnceValue(func() systemTrust { return loadTrust(securityTool) })
+
+func loadTrust(tool string) systemTrust {
+	if pool, denied, err := loadTrustSettingsRoots(tool); err == nil {
+		return systemTrust{pool, denied}
+	}
+	return systemTrust{pool: bundlePool()}
+}
+
+func loadRoots(tool string) *x509.CertPool { return loadTrust(tool).pool }
 
 // bundlePool is empty when nothing loads: every https fetch then fails closed.
 func bundlePool() *x509.CertPool {
@@ -115,15 +123,17 @@ func bundlePool() *x509.CertPool {
 	return pool
 }
 
-func defaultRoots() *x509.CertPool { return bundle() }
+func defaultRoots() *x509.CertPool { return bundle().pool }
+
+func defaultDenied() map[string]bool { return bundle().denied }
 
 // loadTrustSettingsRoots fails when any keychain or domain cannot be read:
 // without a keychain's certificates its trusted hashes would be dropped, and
 // without a domain its denials would be. An empty domain exports fine.
-func loadTrustSettingsRoots(tool string) (*x509.CertPool, error) {
-	anchors, err := loadTrustSettingsAnchors(tool)
+func loadTrustSettingsRoots(tool string) (*x509.CertPool, map[string]bool, error) {
+	anchors, denied, err := loadTrustSettingsAnchors(tool)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pool := x509.NewCertPool()
 	for _, der := range anchors {
@@ -131,10 +141,10 @@ func loadTrustSettingsRoots(tool string) (*x509.CertPool, error) {
 			pool.AddCert(certificate)
 		}
 	}
-	return pool, nil
+	return pool, denied, nil
 }
 
-func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
+func loadTrustSettingsAnchors(tool string) ([][]byte, map[string]bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	certs := map[string][]byte{}
@@ -145,7 +155,7 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 		keychain = strings.Replace(keychain, "~", home, 1)
 		out, err := exec.CommandContext(ctx, tool, "find-certificate", "-a", "-p", keychain).Output()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for rest := out; ; {
 			var block *pem.Block
@@ -162,11 +172,11 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 	}
 	// The tool exits 0 even for a keychain it cannot open.
 	if len(system) == 0 {
-		return nil, errors.New("no system root certificates")
+		return nil, nil, errors.New("no system root certificates")
 	}
 	directory, err := os.MkdirTemp("", "blok-trust-")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer os.RemoveAll(directory)
 	domains := make([]map[string][]trustSetting, 0, len(trustDomains))
@@ -178,11 +188,12 @@ func loadTrustSettingsAnchors(tool string) ([][]byte, error) {
 		}
 		list, err := exportTrustList(ctx, tool, append(args, path), path)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		domains = append(domains, list)
 	}
-	return trustedAnchors(domains[0], domains[1], system, certs, selfSigned, appleRoot), nil
+	anchors := trustedAnchors(domains[0], domains[1], system, certs, selfSigned, appleRoot)
+	return anchors, deniedCerts(domains[0], domains[1], certs, appleRoot), nil
 }
 
 func exportTrustList(ctx context.Context, tool string, args []string, path string) (map[string][]trustSetting, error) {

@@ -301,3 +301,48 @@ func TestFollowsARedirectFromHTTPUpToHTTPS(t *testing.T) {
 		t.Fatalf("body %q", response.Body)
 	}
 }
+
+// trustd checks every cert of a path against the trust settings, the leaf
+// and each parent alike (SecTrustServer.c:855-875, 910-925): a Deny makes
+// it a denied anchor, and SecPVCCheckUsageConstraints fails the path
+// (SecPolicyServer.c:3425-3440). So a chain through a "Never Trust" cert
+// is refused, unless another chain avoids it.
+func TestRefusesAChainThroughADeniedCert(t *testing.T) {
+	now := time.Now()
+	newKey := func() *ecdsa.PrivateKey { key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader); return key }
+	rootKey, middleKey, leafKey := newKey(), newKey(), newKey()
+	ca := func(serial int64, name string) *x509.Certificate {
+		return &x509.Certificate{SerialNumber: big.NewInt(serial), Subject: pkix.Name{CommonName: name},
+			NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
+	}
+	root := makeCert(t, ca(1, "root"), ca(1, "root"), &rootKey.PublicKey, rootKey)
+	middle := makeCert(t, ca(2, "middle"), root, &middleKey.PublicKey, rootKey)
+	leaf := makeCert(t, &x509.Certificate{SerialNumber: big.NewInt(3), Subject: pkix.Name{CommonName: "denied.example"},
+		NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), DNSNames: []string{"denied.example"},
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}, middle, &leafKey.PublicKey, middleKey)
+	pool := x509.NewCertPool()
+	pool.AddCert(root)
+	o := startTLSOrigin(t, tls.Certificate{Certificate: [][]byte{leaf.Raw, middle.Raw}, PrivateKey: leafKey}, nil)
+	url := "https://denied.example:" + strconv.Itoa(o.port) + "/"
+
+	get := func(denied ...*x509.Certificate) error {
+		f := loopbackFetcher("denied.example", o.port, pool)
+		f.denied = map[string]bool{}
+		for _, certificate := range denied {
+			f.denied[certHash(certificate.Raw)] = true
+		}
+		response, err := f.Get(context.Background(), url, testLimits)
+		if err == nil {
+			response.Release()
+		}
+		return err
+	}
+	if err := get(); err != nil {
+		t.Fatalf("no deny: %v", err)
+	}
+	wantBlocked(t, get(middle))
+	wantBlocked(t, get(leaf))
+	if err := get(newPKI(t, "other.example", nil).root); err != nil {
+		t.Fatalf("a deny off the chain: %v", err)
+	}
+}

@@ -273,3 +273,35 @@ func TestReadsTheTrustListOfAnExport(t *testing.T) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
 }
+
+// The certs trustd denies in any role: the legacy source (admin's list,
+// else the user's) yields a denied anchor for them (SecPolicyServer.c
+// :3359-3375, 3378-3423), whatever the cert is in the chain, and Apple's
+// roots are found first (SecTrustServer.c:641-669). A constrained Deny
+// counts, since it denies in some evaluation.
+func TestDeniedCertsAreTheOnesTrustdDenies(t *testing.T) {
+	certs := map[string][]byte{"A": []byte("A"), "M": []byte("M"), "B": []byte("B")}
+	apple := func(der []byte) bool { return string(der) == "M" }
+	constrainedDeny := setting("sslServer", 3)
+	constrainedDeny.constrained = true
+	user := map[string][]trustSetting{
+		"A": {setting("sslServer", 3)},
+		"B": {setting("sslServer", 3)},
+		"C": {setting("sslServer", 4), setting("", 3)},
+		"D": {constrainedDeny},
+		"E": {setting("smime", 3)},
+		"F": {},
+		"M": {setting("sslServer", 3)},
+		// No cert in any keychain: still denied by its hash.
+		"W": {setting("", 3)},
+	}
+	admin := map[string][]trustSetting{
+		"B": {setting("sslServer", 1)},
+		"V": {setting("sslServer", 3)},
+	}
+	got := deniedCerts(user, admin, certs, apple)
+	want := map[string]bool{"A": true, "D": true, "V": true, "W": true}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}

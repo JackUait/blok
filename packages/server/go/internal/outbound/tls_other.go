@@ -8,3 +8,6 @@ import "crypto/x509"
 // never fetches a missing issuer. Windows uses the platform verifier, whose
 // issuer fetching is UNVERIFIED.
 func defaultRoots() *x509.CertPool { return nil }
+
+// defaultDenied is nil off macOS.
+func defaultDenied() map[string]bool { return nil }

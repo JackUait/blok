@@ -1035,7 +1035,8 @@ async fn first_join_is_refused_when_policy_and_logger_throw() {
     let manager = b.manager(fast());
     let peer = Peer::new();
     peer.fail_recheck("policy failed");
-    b.panic_when_logging("could not recheck member access");
+    // C#'s logger throws on every line.
+    b.panic_when_logging("");
 
     let denied = status_of(&manager, DOC, &peer).await;
 
@@ -1198,6 +1199,54 @@ async fn a_throwing_activity_drop_logger_does_not_strand_other_revoked_members()
     assert_eq!(first.closed(), [CloseReason::Forbidden]);
     assert_eq!(second.closed(), [CloseReason::Forbidden]);
     assert!(b.logs.logged("dropped an activity record"));
+}
+
+/// Fails every call and keeps the kinds it was told.
+#[derive(Default)]
+struct FailingObserver(Mutex<Vec<ActivityKind>>);
+
+impl ActivityObserver for FailingObserver {
+    fn record<'a>(
+        &'a self,
+        _doc_id: &'a str,
+        _actor_id: &'a str,
+        _at: SystemTime,
+        kind: ActivityKind,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        lock(&self.0).push(kind);
+        Box::pin(async { Err(Error::message("the activity table is down")) })
+    }
+}
+
+// C# AThrowingObserverAndLoggerDoNotStopTheActivityPump.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_throwing_observer_and_logger_do_not_stop_the_activity_pump() {
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "hello", None);
+    let observer = Arc::new(FailingObserver::default());
+    let manager = b.manager_with(
+        fast(),
+        b.store.clone(),
+        None,
+        Some(observer.clone() as Arc<dyn ActivityObserver>),
+    );
+    b.panic_when_logging("activity observer failed");
+    let peer = Peer::with("user-1", true);
+    let membership = enter(&manager, DOC, &peer).await;
+    tokio::time::timeout(Duration::from_secs(3), manager.settle())
+        .await
+        .expect("the join's activity to settle");
+
+    let _ = membership.receive(sync_frame(Message::Activity)).await;
+    tokio::time::timeout(Duration::from_secs(3), manager.settle())
+        .await
+        .expect("the activity to settle");
+
+    assert_eq!(
+        *lock(&observer.0),
+        [ActivityKind::Joined, ActivityKind::Active]
+    );
+    assert!(peer.closed().is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -128,8 +128,31 @@ impl Room {
         }
     }
 
-    /// Drains the queue one call at a time. It never takes the lane.
-    async fn pump_activity(self: Arc<Self>, dispatch: Arc<Dispatch>) {
+    /// Drains the queue one call at a time. It never takes the lane. Only
+    /// the host logger can panic in it; left set, the pumping flag would make
+    /// this room's activity dead for good, so a fresh pump takes over.
+    async fn pump_activity(self: Arc<Self>, mut dispatch: Arc<Dispatch>) {
+        loop {
+            let failed = tokio::spawn(self.clone().drain_activity()).await.is_err();
+            let fresh = failed.then(|| {
+                let mut q = self.activity_lock();
+                if q.queue.is_empty() {
+                    q.pumping = false;
+                    return None;
+                }
+                let fresh = Arc::new(Dispatch::default());
+                q.dispatch = Some(fresh.clone());
+                Some(fresh)
+            });
+            dispatch.finish();
+            match fresh.flatten() {
+                Some(fresh) => dispatch = fresh,
+                None => return,
+            }
+        }
+    }
+
+    async fn drain_activity(self: Arc<Self>) {
         loop {
             let next = {
                 let mut q = self.activity_lock();
@@ -145,7 +168,6 @@ impl Room {
             };
             self.record_one(next).await;
         }
-        dispatch.finish();
     }
 
     async fn record_one(&self, next: Pending) {

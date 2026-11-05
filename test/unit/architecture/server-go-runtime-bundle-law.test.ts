@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildServerRuntime } from '../../../scripts/build-server-runtime.mjs';
 import { isObject } from '../../../src/shared/type-guards';
+import { isInstrumented } from '../helpers/instrumented';
 
 /**
  * Go embeds the runtime bundle with `go:embed`, which cannot reach outside the
@@ -102,7 +103,9 @@ describe('Go runtime bundle', () => {
     expect(() => execFileSync('git', ['check-ignore', '-q', '--no-index', path.relative(ROOT, GO_BUNDLE)], { cwd: top })).toThrow();
   });
 
-  it('matches a fresh build byte for byte', () => {
+  // Stryker's sandbox adds `// @ts-nocheck` atop the committed copy, and the
+  // fresh build bundles any instrumented src file, so neither side is real there.
+  it.skipIf(isInstrumented())('matches a fresh build byte for byte', () => {
     expect(sha256(GO_BUNDLE), FIX).toBe(sha256(fresh));
   });
 

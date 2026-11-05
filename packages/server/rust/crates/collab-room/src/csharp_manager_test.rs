@@ -1835,6 +1835,7 @@ async fn a_drain_cut_short_by_its_token_still_closes_every_room() {
     send_update(&membership_a, &client_a, "!").await;
     send_update(&membership_b, &client_b, "?").await;
     manager.settle().await;
+    settle_writes(&manager).await;
     let gate = Gate::new();
     b.endpoint.set_save_gate(Some(gate.clone()));
     let shutdown = Token::new();

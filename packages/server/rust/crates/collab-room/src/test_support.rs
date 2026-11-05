@@ -200,6 +200,29 @@ pub(crate) async fn wait_for_lane_waiters(manager: &Manager, n: usize, what: &st
     .await;
 }
 
+/// Waits until every room has settled its working-set write. C#'s fake
+/// store writes at once, so that write is settled on the lane before
+/// anything after it. Here it runs beside the lane, and its finish is
+/// posted back later.
+pub(crate) async fn settle_writes(manager: &Manager) {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let mut writing = false;
+        for room in manager.live_rooms() {
+            let _held = room.enter(&Token::new()).await.expect("the lane");
+            writing |= room.state.lock().await.in_flight_persist.is_some();
+        }
+        if !writing {
+            return;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "timed out waiting for the working-set writes"
+        );
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+}
+
 pub(crate) fn sync_frame(message: Message) -> Vec<u8> {
     blok_collab_wire::encode(&message).expect("encodable")
 }

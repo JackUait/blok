@@ -43,7 +43,8 @@ func documentsOptions() Options {
 func TestTheDocumentConverterSharesTheAgentsEnginePoolAndTakesItsSize(t *testing.T) {
 	builds, seen := countBuilds(t, nil)
 	o := documentsOptions()
-	o.Documents = blokdocs.Options{PoolSize: new(1), Timeout: 2 * time.Minute, MemoryBudget: 64 << 20}
+	// An agent call needs 65 to 80 MiB in C# (measured).
+	o.Documents = blokdocs.Options{PoolSize: new(1), Timeout: 2 * time.Minute, MemoryBudget: 128 << 20}
 	s, err := New(o)
 	if err != nil {
 		t.Fatal(err)
@@ -68,8 +69,8 @@ func TestTheDocumentConverterSharesTheAgentsEnginePoolAndTakesItsSize(t *testing
 		t.Fatalf("%d engine pools built, want 1", *builds)
 	}
 	got := (*seen)[0]
-	if got.PoolSize == nil || *got.PoolSize != 1 || got.Timeout != 2*time.Minute || got.MemoryBudget != 64<<20 {
-		t.Fatalf("pool built with %+v, want size 1, 2m, 64 MiB", got)
+	if got.PoolSize == nil || *got.PoolSize != 1 || got.Timeout != 2*time.Minute || got.MemoryBudget != 128<<20 {
+		t.Fatalf("pool built with %+v, want size 1, 2m, 128 MiB", got)
 	}
 }
 

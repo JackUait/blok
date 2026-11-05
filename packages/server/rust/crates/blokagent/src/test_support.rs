@@ -48,13 +48,17 @@ pub(crate) fn pointer<'a>(root: &'a Node, path: &str) -> Option<&'a Node> {
     Some(found)
 }
 
+/// The shared pool's engines: the scenario test runs this many lanes. CI
+/// runners have four cores.
+pub(crate) const SHARED_ENGINES: usize = 4;
+
 /// One pool for the crate's real-bundle tests, which the rooms read HTML
 /// with too: each engine parses the bundle.
 pub(crate) fn shared_reader() -> &'static RuntimeHtmlReader<Pool> {
     static READER: OnceLock<RuntimeHtmlReader<Pool>> = OnceLock::new();
     READER.get_or_init(|| RuntimeHtmlReader {
         runtime: Pool::new(PoolOptions {
-            pool_size: Some(1),
+            pool_size: Some(SHARED_ENGINES),
             ..PoolOptions::default()
         })
         .expect("pool"),

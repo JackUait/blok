@@ -6,7 +6,9 @@ use blok_jsjson::{Kind, Node, new_member, new_object, to_string_lossy};
 use crate::host_fixture_test::{REPO_ROOT, read_repo_file};
 use crate::normalize_test::{deep_equals, records};
 use crate::scenario_room_test::{fill_scenario, headed, open_scenario_room, step_actor};
-use crate::test_support::{lookup, must_parse, pointer, shared_executor, stable, string_of};
+use crate::test_support::{
+    SHARED_ENGINES, lookup, must_parse, pointer, shared_executor, stable, string_of,
+};
 use crate::wire::{is_true, present, str_node, write};
 use crate::{
     Actor, Cancel, Error, Execution, Executor, HostFuture, Options, PageCreator, PageLocation,
@@ -613,19 +615,39 @@ async fn run_scenario(name: &str, scenario: &Node, failures: &mut Vec<String>) {
     }
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn matches_the_agent_server_scenarios() {
-    let names = scenario_names();
-    assert!(!names.is_empty(), "no scenarios");
-    let mut failures = Vec::new();
-    let mut rooms = 0;
-    for name in &names {
+/// Every `SHARED_ENGINES`th scenario from `first` on, one at a time.
+async fn run_lane(names: &[String], first: usize) -> (Vec<String>, usize) {
+    let (mut failures, mut rooms) = (Vec::new(), 0);
+    for name in names.iter().skip(first).step_by(SHARED_ENGINES) {
         let scenario = load(name);
         if lookup(Some(&scenario), "room").is_some() {
             rooms += 1;
         }
         run_scenario(name, &scenario, &mut failures).await;
     }
+    (failures, rooms)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn matches_the_agent_server_scenarios() {
+    let names = scenario_names();
+    assert!(!names.is_empty(), "no scenarios");
+    // The scenarios share no state, so four lanes run at once, one engine
+    // each. One at a time took up to two minutes on CI.
+    let lanes = tokio::join!(
+        run_lane(&names, 0),
+        run_lane(&names, 1),
+        run_lane(&names, 2),
+        run_lane(&names, 3),
+    );
+    let lanes = [lanes.0, lanes.1, lanes.2, lanes.3];
+    assert_eq!(lanes.len(), SHARED_ENGINES);
+    let rooms: usize = lanes.iter().map(|(_, rooms)| rooms).sum();
+    let mut failures: Vec<String> = lanes
+        .into_iter()
+        .flat_map(|(failures, _)| failures)
+        .collect();
+    failures.sort();
     assert!(failures.is_empty(), "{}", failures.join("\n"));
     assert_eq!(rooms, 88, "room scenarios");
 }

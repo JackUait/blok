@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::trustsettings::{TrustSetting, parse_trust_list, trusted_anchors};
 
@@ -29,88 +29,83 @@ fn domain(entries: Vec<(&str, Vec<TrustSetting>)>) -> HashMap<String, Vec<TrustS
         .collect()
 }
 
-// TrustSettings::evaluateCert and SecTrustSettingsEvaluateCert
-// (apple-oss-distributions/Security, OSX/libsecurity_keychain/lib/
-// TrustSettings.cpp and SecTrustSettings.cpp): domains user, admin, system;
-// an empty list trusts; within a list the first entry for an SSL server
-// check (SecPVCMeetsConstraint's name and OID rule, trust/trustd/
-// SecPolicyServer.c) with a definite result decides, no result meaning
-// TrustRoot, and Unspecified or an unknown result goes on to the next
-// entry. A rule a fixed root set cannot check (a hostname, say) still
-// denies, but never trusts. Nothing definite leaves it to the next domain.
+// trustd, which C#'s SecTrust runs (apple-oss-distributions/Security
+// db15acbe6a7f, cited in trustsettings.rs):
+// - Apple's roots anchor before any setting (SecTrustServer.c:260-285).
+// - Admin's list replaces the user's when admin lists the cert
+//   (SecCertificateSource.c:998-1021).
+// - In a list the first entry that meets decides, Unspecified included
+//   (SecPolicyServer.c:3359-3375): {Unspecified, Deny} does not deny, it
+//   leaves the cert to the system roots, as C# does.
+// - TrustRoot anchors only a self-signed cert, TrustAsRoot only one that is
+//   not; an empty list anchors a self-signed cert (:3378-3423).
+// - Deny ends the search; anything else leaves it to the system roots,
+//   which anchor a self-signed cert (SecCertificateSource.c:330-366).
+// - A constrained entry is an anchor only if it is one whether it meets or
+//   not.
 #[test]
-fn trust_settings_decide_as_sec_trust_settings_does() {
-    let certs: HashMap<String, Vec<u8>> = "ABCDEFGHIJKLMNOPQRS"
+fn trust_settings_decide_as_trustd_does() {
+    let certs: HashMap<String, Vec<u8>> = "ABCDEFGHIJKLMNOPQRSTUV"
         .chars()
         .map(|hash| (hash.to_string(), vec![hash as u8]))
         .collect();
+    let self_signed = |der: &[u8]| !b"DEHL".contains(&der[0]);
+    let apple = |der: &[u8]| der == b"M";
     let user = domain(vec![
         ("A", vec![setting("sslServer", 3)]),
-        ("G", vec![setting("smime", 1)]),
+        ("D", vec![setting("sslServer", 1)]),
+        ("E", vec![setting("sslServer", 2)]),
+        ("F", vec![setting("sslServer", 2)]),
+        ("G", vec![]),
+        ("H", vec![]),
+        ("I", vec![setting("sslServer", 3)]),
+        ("J", vec![setting("sslServer", 3)]),
+        ("M", vec![setting("sslServer", 3)]),
+        ("N", vec![constrained_ssl(1)]),
+        ("O", vec![constrained_ssl(3)]),
+        ("Q", vec![constrained_ssl(1), setting("", 1)]),
+        ("R", vec![setting("sslServer", 9), setting("", 1)]),
         (
-            "H",
+            "S",
             vec![TrustSetting {
                 policy_oid: Some(SSL_OID.to_vec()),
                 result: Some(1),
                 ..TrustSetting::default()
             }],
         ),
-        ("I", vec![constrained_ssl(0)]),
         (
-            "J",
+            "T",
             vec![TrustSetting {
                 policy_oid: Some(BASIC_OID.to_vec()),
-                ..setting("sslServer", 0)
+                ..setting("sslServer", 1)
             }],
         ),
-        (
-            "K",
-            vec![TrustSetting {
-                policy_oid: Some(SSL_OID.to_vec()),
-                ..setting("sslServer", 2)
-            }],
-        ),
-        (
-            "L",
-            vec![TrustSetting {
-                policy_oid: Some(BASIC_OID.to_vec()),
-                ..TrustSetting::default()
-            }],
-        ),
-        ("R", vec![constrained_ssl(3)]),
-        ("S", vec![constrained_ssl(1)]),
+        ("U", vec![setting("smime", 1)]),
+        ("missing", vec![setting("sslServer", 1)]),
     ]);
     let admin = domain(vec![
-        ("A", vec![]),
-        ("B", vec![setting("basicX509", 3), setting("sslServer", 2)]),
+        ("B", vec![setting("sslServer", 4), setting("", 3)]),
         ("C", vec![setting("sslServer", 4), setting("", 1)]),
-        ("M", vec![setting("sslServer", 4), setting("", 1)]),
-        ("D", vec![setting("sslServer", 4)]),
-        ("E", vec![setting("", 9), setting("sslServer", 0)]),
-        ("N", vec![setting("smime", 3)]),
-        ("Q", vec![setting("sslServer", 4), setting("", 3)]),
-        ("missing", vec![]),
+        ("I", vec![setting("smime", 1)]),
+        ("V", vec![setting("sslServer", 3)]),
     ]);
-    let system = domain(vec![
-        ("F", vec![]),
-        ("B", vec![setting("", 3)]),
-        ("M", vec![]),
-        ("N", vec![]),
-        ("P", vec![setting("smime", 1)]),
-        ("Q", vec![]),
-        ("R", vec![]),
-        ("S", vec![]),
-    ]);
-    let got = trusted_anchors(&[user, admin, system], &certs);
-    // A: the user denies. B: admin's TrustAsRoot beats the system's deny.
-    // C, M: past Unspecified to TrustRoot. D: only Unspecified. E: past an
-    // unknown result. G, L, P: only other policies. H: the SSL OID alone.
-    // I: a hostname-only trust is skipped. J: the name with another policy's
-    // OID. K: name and OID. N: admin's S/MIME rule leaves it to the system.
-    // Q: past Unspecified to Deny, over the system's trust. R: a hostname
-    // rule's Deny still denies. S: a hostname rule's trust leaves it to the
-    // system.
-    let want: Vec<Vec<u8>> = "BCEFHKMNS".bytes().map(|hash| vec![hash]).collect();
+    let system: HashSet<String> = ["A", "B", "I", "J", "K", "L", "M", "O", "U", "V"]
+        .iter()
+        .map(|h| h.to_string())
+        .collect();
+    let got = trusted_anchors(&user, &admin, &system, &certs, self_signed, apple);
+    // A, J: the user denies a system root. B: Unspecified decides, the
+    // system anchors. C: Unspecified decides, nothing else anchors. D:
+    // TrustRoot on a cert that is not self-signed. E: TrustAsRoot on one
+    // that is not. F: TrustAsRoot on a self-signed one. G: an empty list,
+    // self-signed. H: an empty list, not. I: admin's S/MIME list replaces the
+    // user's deny. K: a system root. L: a system cert that is not
+    // self-signed. M: Apple's root beats the user's deny. N: a hostname rule
+    // that trusts. O: a hostname rule that denies a system root. Q: trusted
+    // whether the hostname rule meets or not. R: an unknown result decides.
+    // S: the SSL OID alone. T: the name with another OID. U: only S/MIME, the
+    // system anchors. V: admin denies a system root.
+    let want: Vec<Vec<u8>> = "BEGIKMQSU".bytes().map(|hash| vec![hash]).collect();
     assert_eq!(got, want);
 }
 
@@ -161,6 +156,20 @@ fn reads_the_trust_list_of_an_export() {
 				<dict>
 					<key>kSecTrustSettingsKeyUsage</key>
 					<integer>8</integer>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsKeyUsage</key>
+					<integer>-1</integer>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsPolicyName</key>
+					<string>sslServer</string>
+				</dict>
+				<dict>
+					<key>kSecTrustSettingsPolicyOptions</key>
+					<dict/>
+					<key>kSecTrustSettingsResult</key>
+					<integer>3</integer>
 				</dict>
 			</array>
 		</dict>
@@ -215,9 +224,20 @@ fn reads_the_trust_list_of_an_export() {
                     constrained: true,
                     ..TrustSetting::default()
                 },
+                // -1 is not kSecTrustSettingsKeyUseAny read as 64 bits.
+                TrustSetting {
+                    constrained: true,
+                    ..TrustSetting::default()
+                },
+                // A name alone does not reach trustd; policy options are dropped.
+                TrustSetting {
+                    result: Some(3),
+                    ..TrustSetting::default()
+                },
             ],
         ),
-        // Entries it cannot read never trust: an empty list would.
+        // Entries it cannot read stay, as constrained. A bad name alone is
+        // dropped like any name alone.
         (
             "B8A0E8A6285B3B86B476C5796054EBFC6DA6EB80",
             vec![
@@ -225,7 +245,7 @@ fn reads_the_trust_list_of_an_export() {
                     constrained: true,
                     ..TrustSetting::default()
                 };
-                4
+                3
             ],
         ),
         ("925A8F8D2C6D04E0665F596AFF22D863E8256F3F", vec![]),

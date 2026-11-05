@@ -357,7 +357,9 @@ dependencies = [
  "flate2",
  "rustls",
  "rustls-native-certs",
+ "security-framework",
  "sha1",
+ "sha2",
  "tokio",
  "tokio-rustls",
 ]

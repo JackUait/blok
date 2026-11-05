@@ -11,6 +11,8 @@ mod lanes;
 pub mod operator;
 mod policy;
 mod proxy;
+#[cfg(target_os = "macos")]
+mod selfsigned;
 mod socks;
 #[cfg(target_os = "macos")]
 mod tls_darwin;

@@ -1,8 +1,9 @@
-//! The macOS roots: the trust settings' anchors for an SSL server check, as
-//! trustd decides them for C#'s SecTrust (trustsettings.rs). Go reads the
-//! same exports. Verification stays rustls's own over this set.
+//! The macOS roots: the anchors trustd would use for C#'s SecTrust
+//! (trustsettings.rs): Apple's roots, the user and admin trust settings, and
+//! the self-signed certs of the system root keychain of trustd's trust
+//! store. Go reads the same. Verification stays rustls's own over this set.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -12,27 +13,101 @@ use std::time::{Duration, Instant};
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
 use sha1::{Digest, Sha1};
+use sha2::Sha256;
 
-use crate::trustsettings::{parse_trust_list, trusted_anchors};
+use crate::selfsigned::self_signed;
+use crate::trustsettings::{
+    APPLE_ROOTS, Value, parse_trust_list, read_plist_dict, trusted_anchors,
+};
 
 pub(crate) const SECURITY_TOOL: &str = "/usr/bin/security";
 /// The fallback when any trust read fails.
 pub(crate) const MACOS_BUNDLE: &str = "/etc/ssl/cert.pem";
 
-/// The export flags for the user, admin and system domains, in the order
-/// they override each other.
-const TRUST_DOMAINS: [&str; 3] = ["", "-d", "-s"];
+/// The export flags for the user and admin domains. trustd reads no
+/// system-domain trust settings: its system anchors are its own store.
+const TRUST_DOMAINS: [&str; 2] = ["", "-d"];
 
-const KEYCHAINS: [&str; 3] = [
+/// The keychains that hold the certs the trust settings name. The system
+/// roots come from `system_roots_keychain`.
+const KEYCHAINS: [&str; 2] = [
     "~/Library/Keychains/login.keychain-db",
     "/Library/Keychains/System.keychain",
-    "/System/Library/Keychains/SystemRootCertificates.keychain",
 ];
+
+const SYSTEM_ROOTS: &str = "/System/Library/Keychains/SystemRootCertificates.keychain";
+const PLUTIL_TOOL: &str = "/usr/bin/plutil";
+
+/// trustd's trust store: the PKI asset named by AutoAsset.plist when its
+/// VersionNumber is above the system bundle's (apple-oss-distributions/
+/// Security db15acbe6a7f, trust/trustd/OTATrustUtilities.m:1101-1114,
+/// kOTATrustStoreContentVersionKey at :194).
+pub(crate) struct TrustStore {
+    pub(crate) auto_asset: PathBuf,
+    pub(crate) system_version: PathBuf,
+}
+
+impl TrustStore {
+    pub(crate) fn system() -> TrustStore {
+        TrustStore {
+            auto_asset: PathBuf::from("/private/var/protected/trustd/AutoAsset.plist"),
+            system_version: PathBuf::from(
+                "/System/Library/Security/Certificates.bundle/Contents/Resources/AssetVersion.plist",
+            ),
+        }
+    }
+
+    /// The SystemRootCertificates keychain of the store trustd uses; it holds
+    /// the certs of that store's certsTable.data. Any asset read that fails
+    /// leaves the bundle, as trustd reads a missing version as 0.
+    pub(crate) fn system_roots_keychain(&self, deadline: Instant) -> PathBuf {
+        let asset = std::fs::read(&self.auto_asset)
+            .ok()
+            .and_then(|data| read_plist_dict(&data).ok())
+            .and_then(|mut dict| match dict.remove("AssetPath") {
+                Some(Value::Text(path)) if !path.is_empty() => Some(PathBuf::from(path)),
+                _ => None,
+            });
+        if let Some(asset) = asset
+            && plist_version(&asset.join("AssetVersion.plist"), deadline)
+                > plist_version(&self.system_version, deadline)
+        {
+            return asset.join("SystemRootCertificates.keychain");
+        }
+        PathBuf::from(SYSTEM_ROOTS)
+    }
+}
+
+/// A plist's VersionNumber, or 0. plutil reads the binary form the asset
+/// ships.
+fn plist_version(path: &Path, deadline: Instant) -> i64 {
+    let Some(path) = path.to_str() else {
+        return 0;
+    };
+    let Ok(out) = run(
+        Path::new(PLUTIL_TOOL),
+        &["-convert", "xml1", "-o", "-", path],
+        deadline,
+    ) else {
+        return 0;
+    };
+    match read_plist_dict(&out).map(|mut dict| dict.remove("VersionNumber")) {
+        Ok(Some(Value::Integer(version))) => version,
+        _ => 0,
+    }
+}
+
+/// One of Apple's own roots, which no trust setting overrides: trustd checks
+/// them first, with no constraints.
+fn apple_root(der: &[u8]) -> bool {
+    let digest: [u8; 32] = Sha256::digest(der).into();
+    APPLE_ROOTS.contains(&digest)
+}
 
 /// The anchors, or the bundle when any read fails: a set read in part would
 /// drop a keychain's roots or a domain's denials.
 pub(crate) fn load_roots(tool: &Path) -> Vec<CertificateDer<'static>> {
-    match load_trust_settings_anchors(tool) {
+    match load_trust_settings_anchors(tool, &TrustStore::system()) {
         Ok(anchors) => anchors.into_iter().map(CertificateDer::from).collect(),
         Err(_) => bundle(),
     }
@@ -46,23 +121,38 @@ pub(crate) fn bundle() -> Vec<CertificateDer<'static>> {
     }
 }
 
-pub(crate) fn load_trust_settings_anchors(tool: &Path) -> Result<Vec<Vec<u8>>, String> {
+pub(crate) fn load_trust_settings_anchors(
+    tool: &Path,
+    store: &TrustStore,
+) -> Result<Vec<Vec<u8>>, String> {
     let deadline = Instant::now() + Duration::from_secs(10);
     let home = std::env::var("HOME").unwrap_or_default();
+    let system_keychain = store.system_roots_keychain(deadline);
+    let system_keychain = system_keychain
+        .to_str()
+        .ok_or("a keychain path that is not UTF-8")?
+        .to_string();
+    let mut keychains: Vec<String> = KEYCHAINS
+        .iter()
+        .map(|keychain| keychain.replacen('~', &home, 1))
+        .collect();
+    keychains.push(system_keychain);
     let mut certs = HashMap::new();
-    for (index, keychain) in KEYCHAINS.iter().enumerate() {
-        let keychain = keychain.replacen('~', &home, 1);
-        let out = run(tool, &["find-certificate", "-a", "-p", &keychain], deadline)?;
-        let mut found = 0;
+    let mut system = HashSet::new();
+    for (index, keychain) in keychains.iter().enumerate() {
+        let out = run(tool, &["find-certificate", "-a", "-p", keychain], deadline)?;
         for cert in CertificateDer::pem_slice_iter(&out) {
             let der = cert.map_err(|e| e.to_string())?.to_vec();
-            certs.insert(upper_hex(&Sha1::digest(&der)), der);
-            found += 1;
+            let hash = upper_hex(&Sha1::digest(&der));
+            if index == keychains.len() - 1 {
+                system.insert(hash.clone());
+            }
+            certs.insert(hash, der);
         }
-        // The tool exits 0 even for a keychain it cannot open.
-        if index == KEYCHAINS.len() - 1 && found == 0 {
-            return Err("no system root certificates".into());
-        }
+    }
+    // The tool exits 0 even for a keychain it cannot open.
+    if system.is_empty() {
+        return Err("no system root certificates".into());
     }
     let directory = TempDir::new()?;
     let mut domains = Vec::with_capacity(TRUST_DOMAINS.len());
@@ -78,16 +168,15 @@ pub(crate) fn load_trust_settings_anchors(tool: &Path) -> Result<Vec<Vec<u8>>, S
         let data = std::fs::read(&path).map_err(|e| e.to_string())?;
         domains.push(parse_trust_list(&data)?);
     }
-    // Every system root is in the system keychain: an empty system domain or
-    // a hash with no certificate means a read went wrong.
-    let system = domains.last().ok_or("no domains")?;
-    if system.is_empty() {
-        return Err("no system trust settings".into());
-    }
-    if system.keys().any(|hash| !certs.contains_key(hash)) {
-        return Err("a system trust setting has no certificate".into());
-    }
-    Ok(trusted_anchors(&domains, &certs))
+    let [user, admin] = <[_; 2]>::try_from(domains).map_err(|_| "two domains")?;
+    Ok(trusted_anchors(
+        &user,
+        &admin,
+        &system,
+        &certs,
+        self_signed,
+        apple_root,
+    ))
 }
 
 fn upper_hex(bytes: &[u8]) -> String {

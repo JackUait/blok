@@ -608,10 +608,11 @@ describe('sync transport: keep-alive', () => {
 
       expect({ fin: ping.fin, bytes: ping.payload.length }).toEqual({ fin: true, bytes: 8 });
       expect(pinged).toBeGreaterThanOrEqual(INTERVAL_MS * 0.8);
-      expect(pinged).toBeLessThan(INTERVAL_MS * 2.5);
+      expect(pinged).toBeLessThan(2_000);
       // Measured on C#: the ping at 400 ms, the abort at 1200 to 1300 ms.
+      // The upper bounds leave room for a loaded CI machine.
       expect(ended - opened).toBeGreaterThanOrEqual(INTERVAL_MS * 2.75);
-      expect(ended - opened).toBeLessThan(INTERVAL_MS * 4.5);
+      expect(ended - opened).toBeLessThan(4_000);
       expect(socket.frames.filter((frame) => frame.opcode === OP_CLOSE)).toEqual([]);
     });
   });

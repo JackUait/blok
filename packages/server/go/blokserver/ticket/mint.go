@@ -53,7 +53,7 @@ func Mint(secret string, c Claims, now time.Time) (string, error) {
 	}
 	// C# refuses a lone surrogate; invalid UTF-8 is Go's form of it.
 	if !utf8.ValidString(c.User) || c.Doc != nil && !utf8.ValidString(*c.Doc) {
-		return "", errors.New("user and doc must be valid UTF-8")
+		return "", errors.New("user and doc must be well-formed UTF-16")
 	}
 	exp := now.Unix() + ttl
 	if exp < now.Unix() {

@@ -121,8 +121,13 @@ func TestMintRefusesAZeroTTL(t *testing.T) {
 	}
 }
 
+// C# refuses a lone surrogate with this text; Rust says the same.
 func TestMintRefusesInvalidUTF8(t *testing.T) {
-	if _, err := Mint("s3cret-value-at-least-32-chars-long!", Claims{User: "\xff"}, time.Now()); err == nil {
-		t.Fatal("minted a pass for invalid UTF-8")
+	doc := "\xed\xa0\x80"
+	for _, claims := range []Claims{{User: "\xff"}, {User: "u", Doc: &doc}} {
+		_, err := Mint("s3cret-value-at-least-32-chars-long!", claims, time.Now())
+		if err == nil || err.Error() != "user and doc must be well-formed UTF-16" {
+			t.Fatalf("%+v: %v", claims, err)
+		}
 	}
 }

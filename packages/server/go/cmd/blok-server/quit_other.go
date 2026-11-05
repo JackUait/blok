@@ -1,4 +1,4 @@
-//go:build !darwin && !linux
+//go:build !darwin && !linux && !freebsd && !dragonfly
 
 package main
 
@@ -7,5 +7,8 @@ import (
 	"syscall"
 )
 
-// No SIGQUIT reaches a process here; exit as Go's default would.
+// Exit as Go's default would. Windows has no SIGQUIT. OpenBSD's
+// syscall.Syscall answers ENOSYS for sigaction, NetBSD's needs a signal
+// trampoline Go does not export, and the others reach sigaction only
+// through libc.
 func dieBySignal(syscall.Signal) { os.Exit(2) }

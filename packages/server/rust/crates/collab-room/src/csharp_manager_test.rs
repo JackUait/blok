@@ -1330,6 +1330,90 @@ async fn a_settle_waits_for_records_a_restarted_pump_delivers() {
     );
 }
 
+/// The first call fails once released, `fails` more fail at once, and the
+/// one after them waits on its own gate.
+struct BacklogObserver {
+    calls: AtomicUsize,
+    fails: usize,
+    first: tokio::sync::Notify,
+    first_in: tokio::sync::Notify,
+    last: tokio::sync::Notify,
+    last_in: tokio::sync::Notify,
+}
+
+impl ActivityObserver for BacklogObserver {
+    fn record<'a>(
+        &'a self,
+        _doc_id: &'a str,
+        _actor_id: &'a str,
+        _at: SystemTime,
+        _kind: ActivityKind,
+    ) -> BoxFuture<'a, Result<(), Error>> {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
+        Box::pin(async move {
+            if call == 1 {
+                self.first_in.notify_one();
+                self.first.notified().await;
+            } else if call == 2 + self.fails {
+                self.last_in.notify_one();
+                self.last.notified().await;
+                return Ok(());
+            }
+            Err(Error::message("the activity table is down"))
+        })
+    }
+}
+
+// Go TestPumpRestartsUnderABacklogDoNotPileUpGoroutines: N logger throws
+// under a backlog do not hold N tasks.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pump_restarts_under_a_backlog_do_not_pile_up_tasks() {
+    const THROWS: usize = 40;
+    let b = Bench::new();
+    b.endpoint.holds(DOC, "hello", None);
+    let observer = Arc::new(BacklogObserver {
+        calls: AtomicUsize::new(0),
+        fails: THROWS,
+        first: tokio::sync::Notify::new(),
+        first_in: tokio::sync::Notify::new(),
+        last: tokio::sync::Notify::new(),
+        last_in: tokio::sync::Notify::new(),
+    });
+    let manager = b.manager_with(
+        fast(),
+        b.store.clone(),
+        None,
+        Some(observer.clone() as Arc<dyn ActivityObserver>),
+    );
+    b.panic_when_logging("activity observer failed");
+    let bound = Duration::from_secs(10);
+    let first = Peer::with("user-0", true);
+    let _first = enter(&manager, DOC, &first).await;
+    tokio::time::timeout(bound, observer.first_in.notified())
+        .await
+        .expect("the first record");
+    let mut joined = Vec::new();
+    for i in 1..=THROWS + 1 {
+        let peer = Peer::with(&format!("user-{i}"), true);
+        let membership = enter(&manager, DOC, &peer).await;
+        joined.push((peer, membership));
+    }
+    let metrics = tokio::runtime::Handle::current().metrics();
+    let baseline = metrics.num_alive_tasks();
+
+    observer.first.notify_one();
+    tokio::time::timeout(bound, observer.last_in.notified())
+        .await
+        .expect("the last record");
+    let grown = metrics.num_alive_tasks().saturating_sub(baseline);
+    observer.last.notify_one();
+    manager.settle().await;
+    assert!(
+        grown <= THROWS / 4,
+        "{grown} more tasks after {THROWS} restarts"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn recheck_keeps_queued_writes_out_of_the_journal_and_rejects_a_queued_join() {
     let b = Bench::new();

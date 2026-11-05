@@ -130,32 +130,20 @@ impl Room {
 
     /// Drains the queue one call at a time. It never takes the lane. Only
     /// the host logger can panic in it; left set, the pumping flag would make
-    /// this room's activity dead for good, so a fresh pump takes over.
+    /// this room's activity dead for good, so the pump goes round again. A
+    /// settle holding `dispatch` waits for the records after a restart too.
     async fn pump_activity(self: Arc<Self>, dispatch: Arc<Dispatch>) {
-        // A settle may hold an earlier dispatch: each finishes only once the
-        // fresh pumps after it end.
-        let mut held = vec![dispatch];
         loop {
             let failed = tokio::spawn(self.clone().drain_activity()).await.is_err();
-            let fresh = failed.then(|| {
+            if failed {
                 let mut q = self.activity_lock();
-                if q.queue.is_empty() {
-                    q.pumping = false;
-                    return None;
+                if !q.queue.is_empty() {
+                    continue;
                 }
-                let fresh = Arc::new(Dispatch::default());
-                q.dispatch = Some(fresh.clone());
-                Some(fresh)
-            });
-            match fresh.flatten() {
-                Some(fresh) => held.push(fresh),
-                None => {
-                    for dispatch in held {
-                        dispatch.finish();
-                    }
-                    return;
-                }
+                q.pumping = false;
             }
+            dispatch.finish();
+            return;
         }
     }
 

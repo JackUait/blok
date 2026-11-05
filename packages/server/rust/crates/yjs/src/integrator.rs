@@ -220,7 +220,12 @@ impl DocState {
     /// itself; this copy is that object as it stands at the park.
     fn integrated_copy(&self, id: Id) -> EngineResult<Runtime> {
         Ok(match self.store.find(id)? {
-            Struct::Item(at) => Runtime::Item(Box::new(self.store.items[at].clone())),
+            Struct::Item(at) => {
+                // Out of the store's list, as C# and Go detach it.
+                let mut copy = self.store.items[at].clone();
+                (copy.left, copy.right, copy.deleted, copy.keep) = (None, None, false, false);
+                Runtime::Item(Box::new(copy))
+            }
             Struct::Gc(header) => Runtime::Gc(header),
         })
     }

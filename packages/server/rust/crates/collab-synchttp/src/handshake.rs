@@ -5,7 +5,7 @@
 use blok_auth::User;
 use blok_collab::OperationSource;
 use blok_dotnet::equals_ordinal_ignore_case;
-use blok_http::{Headers, Request};
+use blok_http::{Extensions, Headers, Request};
 
 use crate::close::*;
 use crate::endpoint::Endpoint;
@@ -55,7 +55,9 @@ impl Endpoint {
             };
         }
         match admission {
-            HandshakeResult::Accepted(candidate) => self.authorize(doc, candidate).await,
+            HandshakeResult::Accepted(candidate) => {
+                self.authorize(doc, candidate, &request.extensions).await
+            }
             other => other,
         }
     }
@@ -176,11 +178,19 @@ impl Endpoint {
 
     /// A denied read is closed 4403, a denied write makes the member
     /// read-only. A hook error fails closed.
-    async fn authorize(&self, doc: &str, mut candidate: Accepted) -> HandshakeResult {
+    async fn authorize(
+        &self,
+        doc: &str,
+        mut candidate: Accepted,
+        extensions: &Extensions,
+    ) -> HandshakeResult {
         let Some(hook) = &self.config().authorization else {
             return HandshakeResult::Accepted(candidate);
         };
-        match hook.can_read_document(&candidate.user, doc).await {
+        match hook
+            .can_read_document(&candidate.user, doc, extensions)
+            .await
+        {
             Err(_) => return HandshakeResult::HookFailed,
             Ok(false) => {
                 return HandshakeResult::Rejected {
@@ -191,7 +201,10 @@ impl Endpoint {
             Ok(true) => {}
         }
         if candidate.can_write {
-            match hook.can_write_document(&candidate.user, doc).await {
+            match hook
+                .can_write_document(&candidate.user, doc, extensions)
+                .await
+            {
                 Err(_) => return HandshakeResult::HookFailed,
                 Ok(allowed) => candidate.can_write = allowed,
             }

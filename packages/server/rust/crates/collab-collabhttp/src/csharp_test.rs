@@ -1077,3 +1077,22 @@ async fn a_purged_document_refuses_sync_before_upgrade() {
     assert_eq!(upgrade(&fresh).await, 101);
     fresh.drain().await;
 }
+
+// C# passes the policy the full principal; here the request's extensions
+// carry whatever the host attached, at both gates.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_document_routes_pass_the_hook_what_the_host_attached() {
+    let authorization = RecordingAuthorization::new(true, true);
+    let app = start_app(ticket(&authorization)).await;
+    let mut headers = vec![("Blok-Idempotency-Key", "edit-key"), ("X-Tenant", "acme")];
+    headers.extend(COMPATIBLE);
+
+    let allowed = app.request("POST", "/edit", &headers, APPEND_ONE).await;
+    assert_eq!(allowed.status, 204, "{}", allowed.text());
+    assert_eq!(
+        *authorization.tenants.lock().unwrap(),
+        ["acme", "acme"],
+        "read, then write"
+    );
+    app.drain().await;
+}

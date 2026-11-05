@@ -5,6 +5,8 @@
 use std::future::Future;
 use std::pin::Pin;
 
+pub use blok_http::Extensions;
+
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -23,16 +25,22 @@ pub struct User {
 
 /// Narrows document access: IBlokAuthorization. It is consulted on the
 /// document routes only, never on upload, unfurl or delete.
+///
+/// `request` is the request's extensions, so a policy can decide on
+/// anything the host's middleware attached, as a C# policy reads any claim
+/// of the principal. The sync recheck gets the upgrade request's.
 pub trait Authorization: Send + Sync {
     fn can_read_document<'a>(
         &'a self,
         user: &'a User,
         document_id: &'a str,
+        request: &'a Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>>;
     fn can_write_document<'a>(
         &'a self,
         user: &'a User,
         document_id: &'a str,
+        request: &'a Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>>;
 }
 
@@ -55,6 +63,7 @@ mod tests {
             &'a self,
             _user: &'a User,
             document_id: &'a str,
+            _request: &'a Extensions,
         ) -> BoxFuture<'a, Result<bool, Error>> {
             Box::pin(async move { Ok(document_id == "a") })
         }
@@ -62,6 +71,7 @@ mod tests {
             &'a self,
             user: &'a User,
             _document_id: &'a str,
+            _request: &'a Extensions,
         ) -> BoxFuture<'a, Result<bool, Error>> {
             Box::pin(async move { Ok(user.write) })
         }
@@ -75,10 +85,19 @@ mod tests {
             write: true,
             ..User::default()
         };
-        assert!(poll_once(authorization.can_read_document(&user, "a")));
-        assert!(!poll_once(authorization.can_read_document(&user, "b")));
-        assert!(!poll_once(authorization.can_write_document(&user, "a")));
-        assert!(poll_once(authorization.can_write_document(&writer, "a")));
+        let none = Extensions::default();
+        assert!(poll_once(
+            authorization.can_read_document(&user, "a", &none)
+        ));
+        assert!(!poll_once(
+            authorization.can_read_document(&user, "b", &none)
+        ));
+        assert!(!poll_once(
+            authorization.can_write_document(&user, "a", &none)
+        ));
+        assert!(poll_once(
+            authorization.can_write_document(&writer, "a", &none)
+        ));
     }
 
     fn poll_once(mut future: BoxFuture<'_, Result<bool, Error>>) -> bool {

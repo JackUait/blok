@@ -140,6 +140,7 @@ impl Authorization for DenyAll {
         &'a self,
         _: &'a User,
         _: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Box::pin(async { Ok(false) })
@@ -148,6 +149,7 @@ impl Authorization for DenyAll {
         &'a self,
         _: &'a User,
         _: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Box::pin(async { Ok(false) })

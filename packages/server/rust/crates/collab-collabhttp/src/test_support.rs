@@ -568,7 +568,12 @@ pub struct RecordingAuthorization {
     pub allow_read: AtomicBool,
     pub allow_write: AtomicBool,
     pub calls: Mutex<Vec<(String, String, String)>>,
+    /// The Tenant the host attached, per call ("" for none).
+    pub tenants: Mutex<Vec<String>>,
 }
+
+/// A value the host attaches from X-Tenant, as a C# host adds a claim.
+pub struct Tenant(pub String);
 
 impl RecordingAuthorization {
     pub fn new(read: bool, write: bool) -> Arc<Self> {
@@ -576,6 +581,7 @@ impl RecordingAuthorization {
             allow_read: AtomicBool::new(read),
             allow_write: AtomicBool::new(write),
             calls: Mutex::default(),
+            tenants: Mutex::default(),
         })
     }
 
@@ -588,7 +594,19 @@ impl RecordingAuthorization {
         self.calls.lock().unwrap().clone()
     }
 
-    fn answer(&self, gate: &str, user: &User, doc: &str, allowed: &AtomicBool) -> bool {
+    fn answer(
+        &self,
+        gate: &str,
+        user: &User,
+        doc: &str,
+        request: &blok_auth::Extensions,
+        allowed: &AtomicBool,
+    ) -> bool {
+        let tenant = request.get::<Tenant>().map(|t| t.0.clone());
+        self.tenants
+            .lock()
+            .unwrap()
+            .push(tenant.unwrap_or_default());
         self.calls
             .lock()
             .unwrap()
@@ -602,15 +620,21 @@ impl Authorization for RecordingAuthorization {
         &'a self,
         user: &'a User,
         document_id: &'a str,
+        request: &'a blok_auth::Extensions,
     ) -> AuthFuture<'a, Result<bool, AuthError>> {
-        Box::pin(async move { Ok(self.answer("read", user, document_id, &self.allow_read)) })
+        Box::pin(
+            async move { Ok(self.answer("read", user, document_id, request, &self.allow_read)) },
+        )
     }
     fn can_write_document<'a>(
         &'a self,
         user: &'a User,
         document_id: &'a str,
+        request: &'a blok_auth::Extensions,
     ) -> AuthFuture<'a, Result<bool, AuthError>> {
-        Box::pin(async move { Ok(self.answer("write", user, document_id, &self.allow_write)) })
+        Box::pin(
+            async move { Ok(self.answer("write", user, document_id, request, &self.allow_write)) },
+        )
     }
 }
 
@@ -737,6 +761,9 @@ pub async fn start_app(options: AppOptions) -> App {
             Some(&[method]),
             move |mut request: Request, mut response: ResponseWriter| {
                 let routes = routes.clone();
+                if let Some(tenant) = request.headers().get("X-Tenant").map(str::to_owned) {
+                    request.extensions.insert(Tenant(tenant));
+                }
                 if let Some(id) = request.headers().get("X-User").map(str::to_owned) {
                     let doc = request.headers().get("X-Doc").unwrap_or("").to_owned();
                     request.extensions.insert(User {

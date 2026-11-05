@@ -81,9 +81,13 @@ impl Handlers {
             return None;
         }
         if let Some(hook) = &self.config.authorization {
-            let mut allowed = hook.can_read_document(&user, &doc).await;
+            let mut allowed = hook
+                .can_read_document(&user, &doc, &request.extensions)
+                .await;
             if matches!(allowed, Ok(true)) && write {
-                allowed = hook.can_write_document(&user, &doc).await;
+                allowed = hook
+                    .can_write_document(&user, &doc, &request.extensions)
+                    .await;
             }
             match allowed {
                 Err(_) => {

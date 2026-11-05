@@ -53,6 +53,9 @@ dependencies = [
 [[package]]
 name = "blok-auth"
 version = "0.0.0"
+dependencies = [
+ "blok-http",
+]
 
 [[package]]
 name = "blok-blob"

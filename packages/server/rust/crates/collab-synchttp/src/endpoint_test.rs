@@ -517,6 +517,7 @@ impl blok_auth::Authorization for StuckHook {
         &'a self,
         _user: &'a User,
         _document_id: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
         let flag = DropFlag(Arc::clone(&self.0));
         Box::pin(async move {
@@ -530,6 +531,7 @@ impl blok_auth::Authorization for StuckHook {
         &'a self,
         _user: &'a User,
         _document_id: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
         Box::pin(async { Ok(true) })
     }
@@ -610,4 +612,59 @@ async fn require_authorization_on_the_group_protects_the_sync_route_and_the_sign
     );
     let bob = h.dial("/sync/doc", &[("X-User", "bob")]).await;
     assert_eq!(bob.status, 101, "{}", bob.body);
+}
+
+/// A value the host's middleware attaches, as a C# host adds a claim.
+struct Tenant(&'static str);
+
+/// Decides on the host's value, never on the User.
+struct TenantPolicy;
+
+impl blok_auth::Authorization for TenantPolicy {
+    fn can_read_document<'a>(
+        &'a self,
+        _user: &'a User,
+        _document_id: &'a str,
+        request: &'a blok_http::Extensions,
+    ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
+        Box::pin(async move { Ok(request.get::<Tenant>().is_some_and(|t| t.0 == "acme")) })
+    }
+    fn can_write_document<'a>(
+        &'a self,
+        user: &'a User,
+        document_id: &'a str,
+        request: &'a blok_http::Extensions,
+    ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
+        self.can_read_document(user, document_id, request)
+    }
+}
+
+// Twin of Go's TestTheRecheckSeesWhatTheHostAttachedToTheRequest: C#
+// asks with the handshake's principal at the upgrade and at the recheck.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_recheck_sees_what_the_host_attached_to_the_request() {
+    let wrap: Wrap = Box::new(|next: Arc<dyn blok_http::Handler>| {
+        Arc::new(
+            move |mut request: blok_http::Request, response: blok_http::ResponseWriter| {
+                request.extensions.insert(Tenant("acme"));
+                next.serve(request, response)
+            },
+        ) as Arc<dyn blok_http::Handler>
+    });
+    let h = start_endpoint(
+        |c| c.authorization = Some(Arc::new(TenantPolicy)),
+        Some(wrap),
+    )
+    .await;
+    let client = h.dial("/sync/doc", &[]).await;
+    assert_eq!(
+        client.status, 101,
+        "the upgrade did not see the host's value"
+    );
+    let member = h.rooms.last_member();
+    assert!(member.can_write(), "the write gate did not see it");
+    assert!(
+        member.recheck_access().await.unwrap(),
+        "the recheck lost the host's value"
+    );
 }

@@ -286,6 +286,7 @@ impl Authorization for FakeAuthorization {
         &'a self,
         user: &'a User,
         _document_id: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
         let mut state = lock(&self.state);
         state.seen.push(user.clone());
@@ -301,6 +302,7 @@ impl Authorization for FakeAuthorization {
         &'a self,
         user: &'a User,
         _document_id: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> blok_auth::BoxFuture<'a, Result<bool, blok_auth::Error>> {
         let mut state = lock(&self.state);
         state.writes.push(user.clone());

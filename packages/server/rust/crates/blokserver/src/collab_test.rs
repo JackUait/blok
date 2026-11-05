@@ -42,6 +42,7 @@ impl Authorization for AllowAll {
         &'a self,
         _: &'a User,
         _: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>> {
         Box::pin(async { Ok(true) })
     }
@@ -49,6 +50,7 @@ impl Authorization for AllowAll {
         &'a self,
         _: &'a User,
         _: &'a str,
+        _request: &'a blok_auth::Extensions,
     ) -> BoxFuture<'a, Result<bool, Error>> {
         Box::pin(async { Ok(true) })
     }

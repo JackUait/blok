@@ -7,7 +7,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use blok_auth::Authorization;
 use blok_collab::{BoxFuture, JoinStatus, Member, Rooms};
-use blok_http::{Handler, Request, ResponseWriter};
+use blok_http::{Extensions, Handler, Request, ResponseWriter};
 
 use crate::budget::{BudgetOptions, Clock, InboundBudget};
 use crate::close::*;
@@ -83,7 +83,7 @@ impl Endpoint {
         Arc::clone(&self.inner.members.lock().unwrap()[i])
     }
 
-    async fn handle(&self, request: Request, mut response: ResponseWriter) {
+    async fn handle(&self, mut request: Request, mut response: ResponseWriter) {
         let doc = blok_route::path_value(&request, "doc").to_owned();
         // Only the hook awaits in here; a client that leaves cancels it, as
         // RequestAborted does in C#.
@@ -102,7 +102,10 @@ impl Endpoint {
                     .await;
             }
             HandshakeResult::Accepted(accepted) => {
-                self.serve(&request, response, &doc, accepted).await;
+                // The recheck asks with them for as long as the member lives.
+                let extensions = Arc::new(std::mem::take(&mut request.extensions));
+                self.serve(&request, response, &doc, accepted, extensions)
+                    .await;
             }
             HandshakeResult::HookFailed => internal_error(&mut response).await,
         }
@@ -152,6 +155,7 @@ impl Endpoint {
         mut response: ResponseWriter,
         doc: &str,
         accepted: Accepted,
+        extensions: Arc<Extensions>,
     ) {
         let config = self.config();
         // Held until the request ends; the per-principal lease is freed
@@ -175,7 +179,7 @@ impl Endpoint {
         let recheck = config
             .authorization
             .as_ref()
-            .map(|hook| recheck(Arc::clone(hook), &accepted, doc));
+            .map(|hook| recheck(Arc::clone(hook), &accepted, doc, extensions));
         let member = Arc::new(SocketMember::new(MemberOptions {
             can_write: accepted.can_write,
             accepts_control_frames: !accepted.sub_protocol.is_empty(),
@@ -273,20 +277,26 @@ impl Endpoint {
 }
 
 /// Asks the hook for read, and for write only for a writer.
-fn recheck(hook: Arc<dyn Authorization>, accepted: &Accepted, doc: &str) -> Recheck {
+fn recheck(
+    hook: Arc<dyn Authorization>,
+    accepted: &Accepted,
+    doc: &str,
+    extensions: Arc<Extensions>,
+) -> Recheck {
     let user = accepted.user.clone();
     let doc = doc.to_owned();
     let can_write = accepted.can_write;
     Arc::new(move || {
         let (hook, user, doc) = (Arc::clone(&hook), user.clone(), doc.clone());
+        let extensions = Arc::clone(&extensions);
         Box::pin(async move {
-            if !hook.can_read_document(&user, &doc).await? {
+            if !hook.can_read_document(&user, &doc, &extensions).await? {
                 return Ok(false);
             }
             if !can_write {
                 return Ok(true);
             }
-            hook.can_write_document(&user, &doc).await
+            hook.can_write_document(&user, &doc, &extensions).await
         }) as BoxFuture<'static, _>
     })
 }

@@ -1061,6 +1061,42 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public async Task ApplicationAuthorizationCoversTheFallbacksButNotHealth()
+  {
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.UseTestServer();
+    builder.Services
+        .AddAuthentication("test")
+        .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+            "test",
+            _ => { });
+    builder.Services.AddAuthorization();
+    builder.Services.AddBlokServer(options =>
+    {
+      options.AllowedOrigins = ["https://app.example.test"];
+      options.UnfurlDisabled = false;
+    });
+    await using var app = builder.Build();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapBlokServer("/blok").RequireAuthorization();
+    await app.StartAsync();
+    using var client = app.GetTestClient();
+
+    using var wrongMethod = await client.PutAsync("/blok/unfurl", null);
+    Assert.Equal(HttpStatusCode.Unauthorized, wrongMethod.StatusCode);
+
+    using var missing = await client.GetAsync("/blok/missing");
+    Assert.Equal(HttpStatusCode.Unauthorized, missing.StatusCode);
+
+    using var healthWrongMethod = await client.PutAsync("/blok/health", null);
+    Assert.Equal(HttpStatusCode.MethodNotAllowed, healthWrongMethod.StatusCode);
+
+    using var outside = await client.GetAsync("/elsewhere");
+    Assert.Equal(HttpStatusCode.NotFound, outside.StatusCode);
+  }
+
+  [Fact]
   public async Task BareDefaultsMapOnlySafeRoutes()
   {
     await using var app = BuildApplication(

@@ -21,3 +21,23 @@ codegen-units = 4
 # optimized, so a debug build stopped deep outlines near 500 levels.
 [profile.dev.package.rquickjs-sys]
 opt-level = 3
+
+# Tests hash and compress hundreds of MiB: the ops.json outputs and the
+# 1 GiB decompression bombs. Unoptimized, that alone took about 30s on CI.
+[profile.dev.package.sha2]
+opt-level = 3
+
+[profile.dev.package.brotli]
+opt-level = 3
+
+[profile.dev.package.brotli-decompressor]
+opt-level = 3
+
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+
+[profile.dev.package.crc32fast]
+opt-level = 3
+
+[profile.dev.package.adler2]
+opt-level = 3

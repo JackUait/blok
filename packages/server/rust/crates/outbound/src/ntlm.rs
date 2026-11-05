@@ -403,17 +403,19 @@ fn file_time_now() -> u64 {
     EPOCH + (since.as_nanos() / 100) as u64
 }
 
-/// Environment.MachineName: on Unix the host name up to its first dot,
-/// on Windows COMPUTERNAME. Only Linux has a std source for the host name
-/// (the kernel's, which gethostname returns); elsewhere on Unix it is
-/// empty, as reading it needs FFI the crate does not allow.
+/// Environment.MachineName (System.Private.CoreLib 10.0.11, decompiled):
+/// on Unix gethostname up to its first dot, case kept. Windows .NET asks
+/// GetComputerName, which COMPUTERNAME carries.
 pub(crate) fn machine_name() -> String {
-    if cfg!(windows) {
-        return std::env::var("COMPUTERNAME").unwrap_or_default();
+    #[cfg(windows)]
+    {
+        std::env::var("COMPUTERNAME").unwrap_or_default()
     }
-    std::fs::read_to_string("/proc/sys/kernel/hostname")
-        .map(|name| name.trim().split('.').next().unwrap_or_default().to_owned())
-        .unwrap_or_default()
+    #[cfg(not(windows))]
+    {
+        let name = gethostname::gethostname().to_string_lossy().into_owned();
+        name.split('.').next().unwrap_or_default().to_owned()
+    }
 }
 
 /// HMAC (RFC 2104) with MD5.

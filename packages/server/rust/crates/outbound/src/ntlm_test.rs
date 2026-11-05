@@ -334,10 +334,9 @@ fn read_ntlm(scheme: &str, token: &[u8], state: &mut State, password: &str) -> (
         }
         .to_owned();
     }
-    // C# names the host up to its first dot. Rust reads it from /proc on
-    // Linux; on macOS std has no source, so the name is empty there.
-    let host = std::fs::read_to_string("/proc/sys/kernel/hostname").unwrap_or_default();
-    let ws = if ws == host.trim().split('.').next().unwrap_or_default() {
+    // C# names the host up to its first dot (Environment.MachineName).
+    let host = gethostname::gethostname().to_string_lossy().into_owned();
+    let ws = if !ws.is_empty() && ws == host.split('.').next().unwrap_or_default() {
         "W".to_owned()
     } else {
         ws

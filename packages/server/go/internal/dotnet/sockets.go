@@ -302,14 +302,12 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 	replayable := request.Body == nil || request.Body == http.NoBody || request.GetBody != nil
 	done := make(chan struct{})
 	defer close(done)
-	var wire *wireConn
 	trace := &httptrace.ClientTrace{
 		// Runs before the request is written. net/http's copy of a request
 		// with a body shares this header map.
 		GotConn: func(info httptrace.GotConnInfo) {
-			if w, ok := info.Conn.(*wireConn); ok {
-				w.expect(method)
-				wire = w
+			if wire, ok := info.Conn.(*wireConn); ok {
+				wire.expect(method)
 			}
 			pooled := findPooled(info.Conn)
 			if pooled == nil {
@@ -329,8 +327,8 @@ func (t *SocketsTransport) RoundTrip(request *http.Request) (*http.Response, err
 	}
 	request = request.WithContext(httptrace.WithClientTrace(request.Context(), trace))
 	response, err := inner.RoundTrip(request)
-	if err == nil && wire != nil {
-		response.Header = wire.header()
+	if err == nil {
+		response.Header = takeHeader(response)
 	}
 	return response, err
 }

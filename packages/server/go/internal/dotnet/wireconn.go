@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 // maxResponseHeadersBytes is SocketsHttpHandler's default
@@ -17,9 +18,11 @@ const maxResponseHeadersBytes = 64 << 10
 
 // wireConn sits under net/http on an operator client's connection. It
 // reads each response as .NET does (ResponseReader) and hands net/http a
-// head it accepts: the status line, then only the framing, re-chunked when
-// chunked. The real headers wait for RoundTrip to take them, so the body
-// framing and the pool stay net/http's.
+// head it accepts: the status line, the framing (re-chunked when chunked)
+// and headKey, an id for the real headers. RoundTrip takes them by that id
+// (takeHeader), so each response gets its own head's headers. The body
+// framing and the pool stay net/http's. No server header reaches net/http,
+// so a server cannot send headKey itself.
 type wireConn struct {
 	net.Conn
 	in *bufio.Reader
@@ -31,7 +34,54 @@ type wireConn struct {
 
 	mu     sync.Mutex
 	method string
-	last   http.Header
+	// pending are the ids of heads read and not yet taken.
+	pending map[string]bool
+}
+
+// headKey names a head's id in what net/http parses.
+const headKey = "X-Blok-Dotnet-Head"
+
+type pendingHead struct {
+	header http.Header
+	conn   *wireConn
+}
+
+// heads maps an id to the headers of one head; headSeq makes the ids.
+var (
+	heads   sync.Map
+	headSeq atomic.Uint64
+)
+
+// takeHeader is the headers of the head response came from, taken once.
+// A response with no known id gets none.
+func takeHeader(response *http.Response) http.Header {
+	id := response.Header.Get(headKey)
+	value, ok := heads.LoadAndDelete(id)
+	if !ok {
+		return http.Header{}
+	}
+	head := value.(pendingHead)
+	head.conn.mu.Lock()
+	delete(head.conn.pending, id)
+	head.conn.mu.Unlock()
+	return head.header
+}
+
+func (c *wireConn) pendingHeads() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.pending)
+}
+
+// Close drops the heads no response took.
+func (c *wireConn) Close() error {
+	c.mu.Lock()
+	for id := range c.pending {
+		heads.Delete(id)
+	}
+	c.pending = nil
+	c.mu.Unlock()
+	return c.Conn.Close()
 }
 
 func newWireConn(conn net.Conn) *wireConn {
@@ -47,13 +97,6 @@ func (c *wireConn) expect(method string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.method = method
-}
-
-// header is the last final response's headers, as .NET stores them.
-func (c *wireConn) header() http.Header {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.last
 }
 
 func (c *wireConn) Read(p []byte) (int, error) {
@@ -103,8 +146,13 @@ func (c *wireConn) nextHead() error {
 		return err
 	}
 	body, framing := reader.Body(status, head, header)
+	id := strconv.FormatUint(headSeq.Add(1), 10)
+	heads.Store(id, pendingHead{header: header, conn: c})
 	c.mu.Lock()
-	c.last = header
+	if c.pending == nil {
+		c.pending = map[string]bool{}
+	}
+	c.pending[id] = true
 	c.mu.Unlock()
 	tokens := connectionTokens(header)
 	if framing == FramedChunked && strings.HasPrefix(string(line), "HTTP/1.0 ") {
@@ -116,6 +164,7 @@ func (c *wireConn) nextHead() error {
 		}
 	}
 	out := append(append([]byte(nil), line...), "\r\n"...)
+	out = append(out, headKey+": "+id+"\r\n"...)
 	switch framing {
 	case FramedLength:
 		out = append(out, "Content-Length: "+strconv.FormatInt(ResponseContentLength(header), 10)+"\r\n"...)

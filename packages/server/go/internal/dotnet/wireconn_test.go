@@ -160,3 +160,127 @@ func TestEveryRouteReadsAHeaderNetHTTPWouldRefuse(t *testing.T) {
 		})
 	}
 }
+
+// fakeConn reads a fixed stream and discards writes.
+type fakeConn struct {
+	net.Conn
+	in io.Reader
+}
+
+func (f fakeConn) Read(p []byte) (int, error)  { return f.in.Read(p) }
+func (f fakeConn) Write(p []byte) (int, error) { return len(p), nil }
+func (f fakeConn) Close() error                { return nil }
+
+// The headers net/http hands back belong to the response that carried
+// them, even when the conn has read a later head first.
+func TestEachResponseTakesTheHeadersOfItsOwnHead(t *testing.T) {
+	wire := newWireConn(fakeConn{in: strings.NewReader(
+		"HTTP/1.1 200 OK\r\nX-Probe: one\x01\r\nContent-Length: 1\r\n\r\na" +
+			"HTTP/1.1 200 OK\r\nX-Probe: two\x01\r\nContent-Length: 1\r\n\r\nb")})
+	reader := bufio.NewReader(wire)
+	var responses []*http.Response
+	for range 2 {
+		response, err := http.ReadResponse(reader, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.ReadAll(response.Body)
+		responses = append(responses, response)
+	}
+	for i, want := range []string{"one\x01", "two\x01"} {
+		if got := takeHeader(responses[i]).Get("X-Probe"); got != want {
+			t.Errorf("response %d: X-Probe %q, want %q", i, got, want)
+		}
+	}
+	if got := takeHeader(responses[0]); len(got) != 0 {
+		t.Errorf("a head was taken twice: %v", got)
+	}
+	if pending := wire.pendingHeads(); pending != 0 {
+		t.Errorf("%d heads left on the conn", pending)
+	}
+	forged := &http.Response{Header: http.Header{headKey: {"1"}}}
+	if got := takeHeader(forged); len(got) != 0 {
+		t.Errorf("a made-up id found a head: %v", got)
+	}
+}
+
+// probeServer answers each request on a conn with X-Probe naming the conn
+// and the request, then keeps the conn.
+func probeServer(t *testing.T) (string, *atomic.Int32) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+	var accepted atomic.Int32
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			id := accepted.Add(1)
+			go func() {
+				defer conn.Close()
+				reader := bufio.NewReader(conn)
+				for n := 1; ; n++ {
+					request, err := http.ReadRequest(reader)
+					if err != nil {
+						return
+					}
+					_, _ = io.Copy(io.Discard, request.Body)
+					_, _ = io.WriteString(conn, "HTTP/1.1 103 Early Hints\r\nX-Probe: early\r\n\r\n"+
+						"HTTP/1.1 200 OK\r\nX-Probe: c"+strconv.Itoa(int(id))+"r"+strconv.Itoa(n)+"\x01\r\nContent-Length: 2\r\n\r\nok")
+				}
+			}()
+		}
+	}()
+	return "http://" + listener.Addr().String() + "/", &accepted
+}
+
+func probe(t *testing.T, client *http.Client, target string) string {
+	t.Helper()
+	response, err := client.Get(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if body, _ := io.ReadAll(response.Body); string(body) != "ok" {
+		t.Fatalf("body %q", body)
+	}
+	return response.Header.Get("X-Probe")
+}
+
+// Reused requests on one conn each get their own final head, never the
+// interim one before it.
+func TestReusedRequestsGetTheirOwnFinalHeads(t *testing.T) {
+	target, accepted := probeServer(t)
+	client := &http.Client{Transport: NewSocketsTransport(SocketsOptions{ConnectTimeout: 2 * time.Second})}
+	for n := 1; n <= 5; n++ {
+		if got, want := probe(t, client, target), "c1r"+strconv.Itoa(n)+"\x01"; got != want {
+			t.Fatalf("request %d: X-Probe %q, want %q", n, got, want)
+		}
+	}
+	if n := accepted.Load(); n != 1 {
+		t.Fatalf("%d conns for 5 requests", n)
+	}
+}
+
+// An expired conn refuses the write and net/http retries on a new one: the
+// answer carries the new conn's head, not the dead conn's last one.
+func TestARetryOnANewConnTakesTheNewConnsHead(t *testing.T) {
+	target, accepted := probeServer(t)
+	client := &http.Client{Transport: NewSocketsTransport(SocketsOptions{
+		ConnectTimeout: 2 * time.Second, PooledConnectionLifetime: 50 * time.Millisecond})}
+	if got := probe(t, client, target); got != "c1r1\x01" {
+		t.Fatalf("first: X-Probe %q", got)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if got := probe(t, client, target); got != "c2r1\x01" {
+		t.Fatalf("retry: X-Probe %q", got)
+	}
+	if n := accepted.Load(); n != 2 {
+		t.Fatalf("%d conns", n)
+	}
+}

@@ -76,6 +76,11 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("drain2-chunked", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
   [InlineData("drain2-closeframed", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
   [InlineData("drain2-stall", "u", "", "p", "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}")]
+  // The 1 MiB cap counts every byte after the head, chunk framing too:
+  // exactly 1 MiB in hand and the body not done fails; one byte less goes
+  // on. The proxy pauses there, so the reads cannot blur the edge.
+  [InlineData("drain2-chunkcap", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}")]
+  [InlineData("drain2-chunkunder", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok")]
   // A RequestMic Type 2 leaves the handshake open, so .NET reads the
   // proxy's last Negotiate token even on a 200 (SendWithNtAuthAsync's
   // !IsAuthenticationChallenge branch): a wrong MIC, a state that is not
@@ -508,8 +513,21 @@ public sealed partial class ProxyConnectTunnelTests
       "chunked" => ("1.1", "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"),
       "closeframed" => ("1.1", "\r\nabc"),
       "stall" => ("1.1", "Content-Length: 10\r\n\r\nabc"),
+      "chunkcap" => ("1.1", ChunkedAroundThePause(1 << 20)),
+      "chunkunder" => ("1.1", ChunkedAroundThePause((1 << 20) - 1)),
       _ => throw new ArgumentException(mode),
     };
+  }
+
+  // A chunked 407 body whose first sent bytes after the head (size line
+  // and data, framing counted) are exactly sent, then {PAUSE}, then the rest.
+  private static string ChunkedAroundThePause(int sent)
+  {
+    const int chunk = 1 << 20;
+    var line = $"{chunk:x}\r\n";
+    var before = sent - line.Length;
+    return "Transfer-Encoding: chunked\r\n\r\n" + line + new string('a', before) + "{PAUSE}"
+      + new string('a', chunk - before) + "\r\n0\r\n\r\n";
   }
 
   private static async Task ServeNtlmProxy(TcpListener listener, string mode, string password, int targetPort, X509Certificate2? certificate, ConcurrentQueue<string> seen)
@@ -596,8 +614,17 @@ public sealed partial class ProxyConnectTunnelTests
             }
 
             var (status, tail) = DrainShape(mode, auth is null);
-            await stream.WriteAsync(Encoding.ASCII.GetBytes(
-                $"HTTP/{status} 407 Proxy Authentication Required\r\n" + answer + (close ? "Connection: close\r\n" : "") + tail));
+            var parts = ($"HTTP/{status} 407 Proxy Authentication Required\r\n" + answer + (close ? "Connection: close\r\n" : "") + tail).Split("{PAUSE}");
+            for (var part = 0; part < parts.Length; part++)
+            {
+              if (part > 0)
+              {
+                await stream.FlushAsync();
+                await Task.Delay(300);
+              }
+
+              await stream.WriteAsync(Encoding.ASCII.GetBytes(parts[part]));
+            }
             if (close)
             {
               return;

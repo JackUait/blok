@@ -26,6 +26,15 @@ public sealed partial class ProxyConnectTunnelTests
   [InlineData("digest-int-invalid", "POST", "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=a?b|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=a?b")]
   [InlineData("digest-int-latin1", "POST", "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=?|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=?")]
   [InlineData("digest-int-bogus", "POST", "throw InvalidOperationException|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=abc")]
+  // Disposing a 407 drains it in the background (DrainOnDisposeAsync), so
+  // a body still arriving leaves the conn busy and the retry takes a new
+  // one, under the 1 MiB cap or not. Go and Rust drain first and reuse it.
+  [InlineData("basic-chunkcap", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|2 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Basic dTpw body=")]
+  [InlineData("basic-chunkunder", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|2 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Basic dTpw body=")]
+  // NTLM awaits the drain of the Type 2 (DrainResponseAsync) on its conn:
+  // 1 MiB after the head, framing counted, with the body not done fails.
+  [InlineData("ntlm-chunkcap", "GET", "error |1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body=")]
+  [InlineData("ntlm-chunkunder", "GET", "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=NTLM T3 ok body=")]
   public async Task AuthenticatesAForwardedRequestAsSocketsHttpHandlerDoes(string mode, string method, string want)
   {
     var proxy = new TcpListener(IPAddress.Loopback, 0);
@@ -151,7 +160,7 @@ public sealed partial class ProxyConnectTunnelTests
             var answer = "";
             var close = false;
             var ok = false;
-            if (mode is "ntlm" or "negotiate" && auth is not null)
+            if (mode is "ntlm" or "negotiate" or "ntlm-chunkcap" or "ntlm-chunkunder" && auth is not null)
             {
               var space = auth.IndexOf(' ', StringComparison.Ordinal);
               var (read, valid) = ReadNtlm(auth[..space], Convert.FromBase64String(auth[(space + 1)..]), state, "p");
@@ -178,9 +187,9 @@ public sealed partial class ProxyConnectTunnelTests
               ok = auth is not null && (mode != "digest" || ForwardDigestValid(auth, lines[0].Split(' ')[0]));
               answer = mode switch
               {
-                "basic" or "basic-close" => "Proxy-Authenticate: Basic realm=\"r\"\r\n",
+                "basic" or "basic-close" or "basic-chunkcap" or "basic-chunkunder" => "Proxy-Authenticate: Basic realm=\"r\"\r\n",
                 "digest" => "Proxy-Authenticate: Digest realm=\"r\", nonce=\"n\"\r\n",
-                "ntlm" or "negotiate" => $"Proxy-Authenticate: {scheme}\r\n",
+                "ntlm" or "negotiate" or "ntlm-chunkcap" or "ntlm-chunkunder" => $"Proxy-Authenticate: {scheme}\r\n",
                 _ => "",
               };
               close = mode == "basic-close";
@@ -193,8 +202,25 @@ public sealed partial class ProxyConnectTunnelTests
               continue;
             }
 
-            await stream.WriteAsync(Encoding.ASCII.GetBytes(
-                "HTTP/1.1 407 Proxy Authentication Required\r\n" + answer + (close ? "Connection: close\r\n" : "") + "Content-Length: 0\r\n\r\n"));
+            var tail = mode switch
+            {
+              "basic-chunkcap" => ChunkedAroundThePause(1 << 20),
+              "basic-chunkunder" => ChunkedAroundThePause((1 << 20) - 1),
+              "ntlm-chunkcap" when answer.StartsWith("Proxy-Authenticate: NTLM ", StringComparison.Ordinal) => ChunkedAroundThePause(1 << 20),
+              "ntlm-chunkunder" when answer.StartsWith("Proxy-Authenticate: NTLM ", StringComparison.Ordinal) => ChunkedAroundThePause((1 << 20) - 1),
+              _ => "Content-Length: 0\r\n\r\n",
+            };
+            var parts = ("HTTP/1.1 407 Proxy Authentication Required\r\n" + answer + (close ? "Connection: close\r\n" : "") + tail).Split("{PAUSE}");
+            for (var part = 0; part < parts.Length; part++)
+            {
+              if (part > 0)
+              {
+                await stream.FlushAsync();
+                await Task.Delay(300);
+              }
+
+              await stream.WriteAsync(Encoding.ASCII.GetBytes(parts[part]));
+            }
             if (close)
             {
               return;

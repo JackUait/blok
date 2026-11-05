@@ -45,6 +45,9 @@ var (
 	spnegoOid = []byte{0x06, 0x06, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x02}
 	signMagic = []byte("session key to client-to-server signing key magic constant\x00")
 	sealMagic = []byte("session key to client-to-server sealing key magic constant\x00")
+	// The proxy's side, for VerifyMIC.
+	serverSignMagic = []byte("session key to server-to-client signing key magic constant\x00")
+	serverSealMagic = []byte("session key to server-to-client sealing key magic constant\x00")
 )
 
 type ntlmAuth struct {
@@ -56,9 +59,12 @@ type ntlmAuth struct {
 	type1, mechList, exported   []byte
 	// chosen is SPNEGO's mechanism picked by the server's answer.
 	chosen bool
-	// authenticated is set once a challenge is answered, as .NET sets it
-	// before it reads the challenge.
+	// authenticated is IsAuthenticated: NTLM sets it once a challenge is
+	// answered, before it reads the challenge; SPNEGO once its state is
+	// final.
 	authenticated bool
+	// serverSequence is VerifyMIC's sequence number.
+	serverSequence uint32
 }
 
 // newNtlmAuth is NegotiateAuthentication for package NTLM or Negotiate;
@@ -100,58 +106,138 @@ func (a *ntlmAuth) initial() []byte {
 	return der(0x60, spnegoOid, der(0xa0, der(0x30, der(0xa0, a.mechList), der(0xa2, der(0x04, a.type1)))))
 }
 
-// respond answers the server's challenge token: nil when .NET sends
-// nothing more, errNtlmThrow when it throws.
-func (a *ntlmAuth) respond(challenge []byte) ([]byte, error) {
+// NegotiateAuthenticationStatusCode values the handshake tells apart:
+// anything above statusContinue is a failure.
+const (
+	statusCompleted = iota
+	statusContinue
+	statusGenericFailure
+	statusUnsupported
+	statusMessageAltered
+	statusInvalidToken
+	statusUnknownCredentials
+)
+
+// NegState values of a NegTokenResp.
+const (
+	negAcceptCompleted  = 0
+	negAcceptIncomplete = 1
+	negReject           = 2
+	negRequestMic       = 3
+	// negUnknown is a NegTokenResp without a negState.
+	negUnknown = -1
+)
+
+// respond answers the server's challenge token (GetOutgoingBlob): the
+// token to send, nil for none, and the status; errNtlmThrow when .NET
+// throws.
+func (a *ntlmAuth) respond(challenge []byte) ([]byte, int, error) {
 	if !a.negotiate {
 		a.authenticated = true
-		return a.type3(challenge)
+		token, err := a.type3(challenge)
+		if token == nil {
+			return nil, statusInvalidToken, err
+		}
+		return token, statusCompleted, nil
 	}
-	negState, mech, token, ok := readNegTokenResp(challenge)
+	return a.spnego(challenge)
+}
+
+// spnego is ProcessSpNegoChallenge.
+func (a *ntlmAuth) spnego(challenge []byte) ([]byte, int, error) {
+	resp, ok := readNegTokenResp(challenge)
 	if !ok {
-		return nil, nil
+		return nil, statusInvalidToken, nil
 	}
 	name := ""
-	switch mech {
-	case string(ntlmOid[2:]):
+	switch {
+	case !resp.hasMech:
+	case string(resp.mech) == string(ntlmOid[2:]):
 		name = "NTLM"
-	case kerberosOid:
+	case string(resp.mech) == kerberosOid:
 		name = "Kerberos"
 	}
 	if !a.chosen {
+		if name == "" {
+			return nil, statusUnsupported, nil
+		}
 		// Kerberos would be a GSSAPI mechanism of its own: not ported.
 		if name != "NTLM" {
-			return nil, nil
+			return nil, statusUnsupported, nil
 		}
 		a.chosen = true
 	} else if name != "" && name != "NTLM" {
-		return nil, nil
+		return nil, statusInvalidToken, nil
 	}
-	if len(token) == 0 {
-		return nil, nil
+	if len(resp.token) > 0 {
+		type3, err := a.type3(resp.token)
+		if err != nil {
+			return nil, 0, err
+		}
+		if type3 == nil {
+			return nil, statusInvalidToken, nil
+		}
+		a.serverSequence = 0
+		mic := ntlmSignature(a.exported, 0, a.mechList)
+		status := statusCompleted
+		if resp.negState == negRequestMic {
+			status = statusContinue
+		}
+		a.authenticated = status == statusCompleted
+		return der(0xa1, der(0x30, der(0xa2, der(0x04, type3)), der(0xa3, der(0x04, mic)))), status, nil
 	}
-	type3, err := a.type3(token)
-	if type3 == nil || err != nil {
-		return nil, err
+	// A MIC equal to the (absent, so empty) token is not checked.
+	if resp.hasMic && string(resp.mic) != string(resp.token) {
+		if a.mechList == nil || resp.negState != negAcceptCompleted {
+			return nil, statusGenericFailure, nil
+		}
+		if !a.verifyMic(resp.mic) {
+			return nil, statusMessageAltered, nil
+		}
 	}
-	// RequestMic (3) leaves the handshake open.
-	a.authenticated = negState != 3
-	mic := ntlmSignature(a.exported, 0, a.mechList)
-	return der(0xa1, der(0x30, der(0xa2, der(0x04, type3)), der(0xa3, der(0x04, mic)))), nil
+	a.authenticated = resp.negState == negAcceptCompleted || resp.negState == negReject
+	switch resp.negState {
+	case negAcceptCompleted:
+		return nil, statusCompleted, nil
+	case negAcceptIncomplete:
+		return nil, statusContinue, nil
+	case negReject:
+		return nil, statusUnknownCredentials, nil
+	}
+	return nil, statusGenericFailure, nil
+}
+
+// verifyMic is VerifyMIC: CalculateSignature with the server-to-client
+// keys, a fresh server RC4 (made when the Type 3 was) and the server's
+// sequence number.
+func (a *ntlmAuth) verifyMic(signature []byte) bool {
+	if len(signature) != 16 || binary.LittleEndian.Uint32(signature) != 1 || a.exported == nil {
+		return false
+	}
+	want := signatureWith(a.exported, serverSignMagic, serverSealMagic, a.serverSequence, a.mechList)
+	a.serverSequence++
+	return hmac.Equal(want, signature)
+}
+
+type negTokenResp struct {
+	negState         int
+	mech, token, mic []byte
+	hasMech, hasMic  bool
 }
 
 // readNegTokenResp reads [1] { SEQ { [0] negState, [1] supportedMech,
-// [2] responseToken, [3] mechListMIC } } in strict DER, each part
-// optional and in order.
-func readNegTokenResp(data []byte) (negState int, mech string, token []byte, ok bool) {
-	negState = -1
+// [2] responseToken, [3] mechListMIC } } as AsnValueReader does under
+// DER: each part optional and in order, ENUMERATED and OID strict. What
+// follows the SEQ inside [1] is never read.
+func readNegTokenResp(data []byte) (negTokenResp, bool) {
+	resp := negTokenResp{negState: negUnknown}
 	outer, rest, ok := derRead(data, 0xa1)
 	if !ok || len(rest) != 0 {
-		return 0, "", nil, false
+		return resp, false
 	}
-	fields, rest, ok := derRead(outer, 0x30)
-	if !ok || len(rest) != 0 {
-		return 0, "", nil, false
+	fields, _, ok := derRead(outer, 0x30)
+	if !ok {
+		return resp, false
 	}
 	for i, tag := range []byte{0xa0, 0xa1, 0xa2, 0xa3} {
 		if len(fields) == 0 || fields[0] != tag {
@@ -159,27 +245,62 @@ func readNegTokenResp(data []byte) (negState int, mech string, token []byte, ok 
 		}
 		var inner, value []byte
 		if inner, fields, ok = derRead(fields, tag); !ok {
-			return 0, "", nil, false
+			return resp, false
 		}
 		if value, rest, ok = derRead(inner, [...]byte{0x0a, 0x06, 0x04, 0x04}[i]); !ok || len(rest) != 0 {
-			return 0, "", nil, false
+			return resp, false
 		}
 		switch i {
 		case 0:
-			if len(value) == 0 || len(value) > 4 {
-				return 0, "", nil, false
+			state, ok := derInt32(value)
+			if !ok {
+				return resp, false
 			}
-			negState = int(int8(value[0]))
-			for _, b := range value[1:] {
-				negState = negState<<8 | int(b)
-			}
+			resp.negState = state
 		case 1:
-			mech = string(value)
+			if !derOid(value) {
+				return resp, false
+			}
+			resp.mech, resp.hasMech = value, true
 		case 2:
-			token = value
+			resp.token = value
+		case 3:
+			resp.mic, resp.hasMic = value, true
 		}
 	}
-	return negState, mech, token, len(fields) == 0
+	return resp, len(fields) == 0
+}
+
+// derInt32 is ReadEnumeratedValue for an int enum: minimal two's
+// complement, at most four bytes.
+func derInt32(value []byte) (int, bool) {
+	if len(value) == 0 || len(value) > 4 {
+		return 0, false
+	}
+	if len(value) > 1 && (value[0] == 0 && value[1]&0x80 == 0 || value[0] == 0xff && value[1]&0x80 != 0) {
+		return 0, false
+	}
+	n := int(int8(value[0]))
+	for _, b := range value[1:] {
+		n = n<<8 | int(b)
+	}
+	return n, true
+}
+
+// derOid is ReadObjectIdentifier's check: no empty content, no padded
+// sub-identifier, and the last one ends.
+func derOid(value []byte) bool {
+	if len(value) == 0 || value[len(value)-1]&0x80 != 0 {
+		return false
+	}
+	start := true
+	for _, b := range value {
+		if start && b == 0x80 {
+			return false
+		}
+		start = b&0x80 == 0
+	}
+	return true
 }
 
 // type3 is ProcessChallenge.
@@ -263,8 +384,14 @@ func (a *ntlmAuth) type3(blob []byte) ([]byte, error) {
 // ntlmSignature is GetMIC (CalculateSignature) with the client signing
 // key and a fresh client sealing RC4.
 func ntlmSignature(exported []byte, sequence uint32, message []byte) []byte {
-	signKey := md5.Sum(append(append([]byte(nil), exported...), signMagic...))
-	sealKey := md5.Sum(append(append([]byte(nil), exported...), sealMagic...))
+	return signatureWith(exported, signMagic, sealMagic, sequence, message)
+}
+
+// signatureWith is CalculateSignature with the keys the magics derive and
+// a fresh RC4 from the sealing key.
+func signatureWith(exported, signing, sealing []byte, sequence uint32, message []byte) []byte {
+	signKey := md5.Sum(append(append([]byte(nil), exported...), signing...))
+	sealKey := md5.Sum(append(append([]byte(nil), exported...), sealing...))
 	signature := make([]byte, 16)
 	binary.LittleEndian.PutUint32(signature, 1)
 	binary.LittleEndian.PutUint32(signature[12:], sequence)

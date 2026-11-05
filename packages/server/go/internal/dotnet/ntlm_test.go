@@ -192,15 +192,97 @@ func testDerWrap(tag byte, content []byte) []byte {
 	}
 }
 
-func spnegoChallenge(type2 []byte) []byte {
+// spnegoChallenge is C#'s SpnegoChallenge: accept-incomplete (request-mic
+// for the mic- rows), the NTLM mech and the Type 2.
+func spnegoChallenge(type2 []byte, mode string) []byte {
+	state, mech := "0a0101", "060a2b06010401823702020a"
+	switch {
+	case strings.HasPrefix(mode, "mic-"):
+		state = "0a0103"
+	case mode == "negotiate-padded":
+		state = "0a020001"
+	case mode == "negotiate-badoid":
+		mech = "06032b0681"
+	}
 	var seq []byte
-	seq = append(seq, testDerWrap(0xa0, []byte{0x0a, 0x01, 0x01})...)
-	seq = append(seq, testDerWrap(0xa1, fromHex("060a2b06010401823702020a"))...)
+	seq = append(seq, testDerWrap(0xa0, fromHex(state))...)
+	seq = append(seq, testDerWrap(0xa1, fromHex(mech))...)
 	seq = append(seq, testDerWrap(0xa2, testDerWrap(0x04, type2))...)
 	return testDerWrap(0xa1, testDerWrap(0x30, seq))
 }
 
-type ntlmProxyState struct{ type1, type2, mechList []byte }
+// serverMic is C#'s ServerMic: the server-to-client keys, a fresh RC4,
+// sequence 0.
+func serverMic(state *ntlmProxyState) []byte {
+	signKey := md5.Sum(append(append([]byte(nil), state.exported...), "session key to server-to-client signing key magic constant\x00"...))
+	sealKey := md5.Sum(append(append([]byte(nil), state.exported...), "session key to server-to-client sealing key magic constant\x00"...))
+	checksum := testHMAC(signKey[:], make([]byte, 4), state.mechList)
+	out := append(fromHex("01000000"), testRC4(sealKey[:], checksum[:8])...)
+	return append(out, 0, 0, 0, 0)
+}
+
+// finalChallenge is C#'s FinalChallenge: the Proxy-Authenticate line a
+// mic- row's 200 carries, or none.
+func finalChallenge(mode string, state *ntlmProxyState) string {
+	if !strings.HasPrefix(mode, "mic-") {
+		return ""
+	}
+	resp := func(negState, mech string, mic []byte, trailing ...byte) []byte {
+		var seq []byte
+		if negState != "" {
+			seq = append(seq, testDerWrap(0xa0, fromHex(negState))...)
+		}
+		if mech != "" {
+			seq = append(seq, testDerWrap(0xa1, fromHex(mech))...)
+		}
+		if mic != nil {
+			seq = append(seq, testDerWrap(0xa3, testDerWrap(0x04, mic))...)
+		}
+		return testDerWrap(0xa1, append(testDerWrap(0x30, seq), trailing...))
+	}
+	good := serverMic(state)
+	bad := append([]byte(nil), good...)
+	bad[5] ^= 1
+	var token []byte
+	switch mode {
+	case "mic-ok":
+		token = resp("0a0100", "", good)
+	case "mic-bad":
+		token = resp("0a0100", "", bad)
+	case "mic-incomplete":
+		token = resp("0a0101", "", good)
+	case "mic-reject":
+		token = resp("0a0102", "", nil)
+	case "mic-completed-nomic":
+		token = resp("0a0100", "", nil)
+	case "mic-incomplete-nomic":
+		token = resp("0a0101", "", nil)
+	case "mic-nostate":
+		token = resp("", "", good)
+	case "mic-padded":
+		token = resp("0a020000", "", good)
+	case "mic-badoid":
+		token = resp("0a0100", "06032b0681", good)
+	case "mic-kerberos":
+		token = resp("0a0100", "06092a864886f712010202", good)
+	case "mic-otheroid":
+		token = resp("0a0100", "06032a0304", good)
+	case "mic-trailing":
+		token = resp("0a0100", "", good, 0x05, 0x00)
+	case "mic-garbage":
+		token = []byte("garbage")
+	case "mic-emptymic":
+		token = resp("0a0101", "", []byte{})
+	case "mic-bare":
+		return "Proxy-Authenticate: Negotiate\r\n"
+	}
+	if token == nil {
+		return ""
+	}
+	return "Proxy-Authenticate: Negotiate " + base64.StdEncoding.EncodeToString(token) + "\r\n"
+}
+
+type ntlmProxyState struct{ type1, type2, mechList, exported []byte }
 
 func testHMAC(key []byte, parts ...[]byte) []byte {
 	mac := hmac.New(md5.New, key)
@@ -282,6 +364,7 @@ func readNtlmToken(scheme string, token []byte, state *ntlmProxyState, password 
 	proof := testHMAC(ntowf, ntlmServerChallenge, blob)
 	proofOk := bytes.Equal(proof, response[:16])
 	exported := testRC4(testHMAC(ntowf, proof), t3[keyOff:keyOff+keyLen])
+	state.exported = exported
 	zeroed := append([]byte(nil), t3...)
 	clear(zeroed[72:88])
 	micOk := bytes.Equal(testHMAC(exported, state.type1, state.type2, zeroed), t3[72:88])
@@ -393,7 +476,7 @@ func ntlmProxy(t *testing.T, mode, password string, network, address string, cer
 	}
 	t.Cleanup(func() { listener.Close() })
 	scheme := "NTLM"
-	if strings.HasPrefix(mode, "negotiate") {
+	if strings.HasPrefix(mode, "negotiate") || strings.HasPrefix(mode, "mic-") {
 		scheme = "Negotiate"
 	}
 	upper := map[string]string{"ß": "ß", "ıſ": "ıS"}
@@ -443,7 +526,7 @@ func ntlmProxy(t *testing.T, mode, password string, network, address string, cer
 								return
 							}
 							defer target.Close()
-							_, _ = io.WriteString(client, "HTTP/1.1 200 Connection established\r\n\r\n")
+							_, _ = io.WriteString(client, "HTTP/1.1 200 Connection established\r\n"+finalChallenge(mode, state)+"\r\n")
 							go func() { _, _ = io.Copy(target, reader) }()
 							_, _ = io.Copy(client, target)
 							return
@@ -461,7 +544,7 @@ func ntlmProxy(t *testing.T, mode, password string, network, address string, cer
 							default:
 								message := state.type2
 								if scheme == "Negotiate" {
-									message = spnegoChallenge(message)
+									message = spnegoChallenge(message, mode)
 								}
 								challenge = " " + base64.StdEncoding.EncodeToString(message)
 							}
@@ -534,6 +617,24 @@ func TestAnswersAnNtlmChallengeAsSocketsHttpHandlerDoes(t *testing.T) {
 		{"drain2-bigchunked", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"drain2-extra", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"drain2-stall", "u", "", "p", "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}"},
+		{"mic-none", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-kerberos", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-bare", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-reject", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-trailing", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-incomplete-nomic", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"negotiate-badoid", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}"},
+		{"mic-completed-nomic", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-badoid", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-ok", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-garbage", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-nostate", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-bad", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-otheroid", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-emptymic", "u", "", "p", "200 ok|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"negotiate-padded", "u", "", "p", "error 407|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}"},
+		{"mic-padded", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
+		{"mic-incomplete", "u", "", "p", "error 401|1 auth=no|1 auth=Negotiate init {INIT} mechs=300c060a2b06010401823702020a T1 {T1}|1 auth=Negotiate resp a1/30/a2:04,a3:04 T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok mlmic=ok"},
 		{"drain2-big", "u", "", "p", "error |1 auth=no|1 auth=NTLM T1 {T1}"},
 		{"drain1-closeframed", "u", "", "p", "error |1 auth=no"},
 		{"drain2-chunked", "u", "", "p", "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok"},

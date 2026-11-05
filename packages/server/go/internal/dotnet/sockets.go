@@ -254,6 +254,22 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		if err != nil {
 			return conn, err
 		}
+		if status != http.StatusProxyAuthRequired && nt != nil && !nt.authenticated && authorization != "" {
+			// SendWithNtAuthAsync's last step: an answer that is not a 407
+			// but carries the scheme's token is read, and a failed read
+			// fails the request with 401 (a RequestMic handshake).
+			if data, ok := authChallenges(header.Values("Proxy-Authenticate"))[sent]; ok {
+				blob, err := base64.StdEncoding.DecodeString(data)
+				if err != nil {
+					return conn, errNtlmThrow
+				}
+				if _, check, err := nt.respond(blob); err != nil {
+					return conn, err
+				} else if check > statusContinue {
+					return conn, fmt.Errorf("proxy: CONNECT answered %d", http.StatusUnauthorized)
+				}
+			}
+		}
 		if status == http.StatusOK {
 			if in.Buffered() > 0 {
 				// .NET hands these to the tunnel; before the server's TLS
@@ -298,11 +314,11 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 				if err != nil {
 					return conn, errNtlmThrow
 				}
-				token, err := nt.respond(challenge)
+				token, check, err := nt.respond(challenge)
 				if err != nil {
 					return conn, err
 				}
-				if token != nil {
+				if token != nil && check <= statusContinue {
 					next = ntlmScheme(sent) + " " + base64.StdEncoding.EncodeToString(token)
 				}
 			case sent == "digest" && !stale:

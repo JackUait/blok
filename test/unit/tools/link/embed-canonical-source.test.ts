@@ -62,7 +62,7 @@ describe('Embed — a generic source must be an absolute https:// URL', () => {
     }
   });
 
-  it('frames, labels and saves the canonical href, never the raw string', () => {
+  it('frames and saves the canonical href, never the raw string', () => {
     const tool = make(generic('https://Allowed.COM/a/../b'), {
       allowedEmbedOrigins: ['allowed.com'],
       genericEmbedClickToLoad: false,
@@ -70,7 +70,6 @@ describe('Embed — a generic source must be an absolute https:// URL', () => {
     const root = tool.render();
 
     expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://allowed.com/b');
-    expect(root.querySelector('[data-role="embed-host"]')?.textContent?.trim()).toBe('allowed.com');
     expect(tool.save()).toMatchObject({ source: 'https://allowed.com/b', embed: 'https://allowed.com/b' });
   });
 

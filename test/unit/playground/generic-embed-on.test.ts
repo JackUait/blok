@@ -23,6 +23,10 @@ const buildConfigSource = (): string => {
 
 describe('playground generic embeds', () => {
   it('turns on embeds for sites outside the registry', () => {
-    expect(buildConfigSource()).toMatch(/linkPaste:\s*\{\s*allowGenericEmbed:\s*true\s*\}/);
+    expect(buildConfigSource()).toMatch(/linkPaste:\s*\{[^}]*allowGenericEmbed:\s*true/);
+  });
+
+  it('loads them at once, without a click', () => {
+    expect(buildConfigSource()).toMatch(/linkPaste:\s*\{[^}]*genericEmbedClickToLoad:\s*false/);
   });
 });

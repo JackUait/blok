@@ -1017,6 +1017,59 @@ describe('Embed sizing & resize', () => {
   });
 });
 
+describe('Embed vertical resize (generic site embeds)', () => {
+  const genericData = (): Partial<EmbedData> => ({
+    service: '',
+    source: 'https://example.com/',
+    embed: 'https://example.com/',
+    kind: 'iframe',
+    width: 580,
+    height: 320,
+  });
+
+  const render = (dispatchChange = vi.fn()): { tool: Embed; root: HTMLElement; aspect: HTMLElement; handle: HTMLElement } => {
+    const tool = new Embed(createOptions(genericData(), { allowGenericEmbed: true, dispatchChange }));
+    const root = tool.render();
+    const aspect = root.querySelector<HTMLElement>('[data-role="embed-aspect"]');
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="bottom"]');
+
+    if (!aspect || !handle) {
+      throw new Error('aspect box or bottom handle missing');
+    }
+
+    return { tool, root, aspect, handle };
+  };
+
+  it('gives a generic embed a bottom resize handle', () => {
+    const { root } = render();
+
+    expect(root.querySelectorAll('[data-role="resize-handle"]')).toHaveLength(3);
+  });
+
+  it('keeps the shape tied to width while the bottom handle sets the height', () => {
+    const dispatchChange = vi.fn();
+    const { tool, aspect, handle } = render(dispatchChange);
+
+    // Shown at twice its saved width: 1160 x 640.
+    Object.defineProperty(aspect, 'getBoundingClientRect', {
+      value: () => ({ ...makeRect(1160), height: 640, bottom: 640 }),
+    });
+    Object.assign(handle, {
+      setPointerCapture: (): void => undefined,
+      releasePointerCapture: (): void => undefined,
+    });
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientY: 300, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientY: 400, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientY: 400, bubbles: true }));
+
+    // 740 px shown at 1160 px wide is 370 at the saved 580 width.
+    expect(tool.save().height).toBe(370);
+    expect(aspect.style.aspectRatio).toBe('580 / 370');
+    expect(aspect.style.height).toBe('');
+    expect(dispatchChange).toHaveBeenCalled();
+  });
+});
+
 describe('Embed vertical resize (Google document embeds)', () => {
   const googleData = (overrides: Partial<EmbedData> = {}): Partial<EmbedData> => ({
     service: 'googledocs',

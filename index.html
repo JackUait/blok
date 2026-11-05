@@ -2079,7 +2079,7 @@
         // The slot must exist before `new Blok`: core resolves the holder in prepare().
         pageTitle: { holder: '#page-title-slot', ...callbacks },
         tools,
-        linkPaste: { allowGenericEmbed: true },
+        linkPaste: { allowGenericEmbed: true, genericEmbedClickToLoad: false },
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
         i18n: { locale: state.locale, direction: state.rtl ? 'rtl' : 'ltr' },

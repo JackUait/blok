@@ -995,7 +995,6 @@ export class Embed implements BlockTool {
       aspect.appendChild(this.buildLoadGate());
     } else {
       aspect.appendChild(this.buildIframe());
-      this.appendHostLabel(figure);
     }
     figure.appendChild(aspect);
 
@@ -1036,35 +1035,6 @@ export class Embed implements BlockTool {
     }
   }
 
-  /**
-   * Names the real host of a generic frame in Blok's own chrome, above the
-   * frame, so nothing drawn inside the frame can claim another origin.
-   * Must stay outside the aspect box: that box holds only the frame.
-   */
-  private appendHostLabel(figure: HTMLElement): void {
-    if (this.embedRender().service !== '') {
-      return;
-    }
-
-    const label = document.createElement('div');
-
-    label.setAttribute('data-role', 'embed-host');
-    label.className = 'blok-embed-host';
-
-    const glyph = document.createElement('span');
-
-    glyph.className = 'blok-embed-host__glyph';
-    glyph.setAttribute('aria-hidden', 'true');
-    glyph.innerHTML = IconGlobe;
-
-    const name = document.createElement('span');
-
-    name.className = 'blok-embed-host__name';
-    name.textContent = this.framedHost();
-    label.append(glyph, name);
-    figure.prepend(label);
-  }
-
   /** Stands in for a generic frame until the reader clicks. Holds no URL of the site. */
   private buildLoadGate(): HTMLElement {
     // Punycode for IDN, so a lookalike name shows as what it is.
@@ -1094,14 +1064,7 @@ export class Embed implements BlockTool {
     button.textContent = this.api.i18n.t('tools.embed.loadFrom', { host });
     button.addEventListener('click', () => {
       this.genericLoaded = true;
-
-      const figure = gate.closest<HTMLElement>('[data-role="embed-figure"]');
-
       gate.replaceWith(this.buildIframe());
-
-      if (figure) {
-        this.appendHostLabel(figure);
-      }
     });
 
     gate.append(glyph, hostLabel, button);
@@ -1171,7 +1134,7 @@ export class Embed implements BlockTool {
       this.resizeDetach.push(detach);
     }
 
-    if (this.isHeightResizable()) {
+    if (this.isHeightResizable() || this.embedRender().service === '') {
       this.attachBottomResizeHandle(figure);
     }
   }
@@ -1189,6 +1152,16 @@ export class Embed implements BlockTool {
     figure.appendChild(handle);
 
     const aspect = figure.querySelector<HTMLElement>('[data-role="embed-aspect"]');
+    const fixedHeight = this.isHeightResizable();
+    const width = this.data.width && this.data.width > 0 ? this.data.width : DEFAULT_WIDTH;
+    // A generic embed keeps its width/height ratio box, so saved embeds look
+    // as before. The drag sets the shown height; this turns it into the
+    // height at the saved width.
+    const ratioHeight = (heightPx: number): number => {
+      const shownWidth = aspect?.getBoundingClientRect().width ?? 0;
+
+      return shownWidth > 0 ? Math.round(heightPx * width / shownWidth) : heightPx;
+    };
 
     const detach = attachHeightResizeHandle({
       handle,
@@ -1196,10 +1169,14 @@ export class Embed implements BlockTool {
       startHeight: () =>
         aspect?.getBoundingClientRect().height || this.data.height || DEFAULT_HEIGHT,
       onPreview: (heightPx) => {
-        aspect?.style.setProperty('height', `${heightPx}px`);
+        if (fixedHeight) {
+          aspect?.style.setProperty('height', `${heightPx}px`);
+        } else {
+          aspect?.style.setProperty('aspect-ratio', `${width} / ${ratioHeight(heightPx)}`);
+        }
       },
       onCommit: (heightPx) => {
-        this.data.height = heightPx;
+        this.data.height = fixedHeight ? heightPx : ratioHeight(heightPx);
         this.block.dispatchChange();
       },
     });

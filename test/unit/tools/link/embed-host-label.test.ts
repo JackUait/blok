@@ -41,43 +41,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('Embed — a loaded generic frame names its real host outside the frame', () => {
-  it('shows the framed host in punycode with its port, as Blok chrome beside the frame', () => {
-    const { root } = mount(generic('https://пример.рф:8443/page'));
-    const label = hostLabel(root);
-    const figure = root.querySelector('[data-role="embed-figure"]');
-
-    expect(label?.textContent?.trim()).toBe('xn--e1afmkfd.xn--p1ai:8443');
-    expect(label?.parentElement).toBe(figure);
-    expect(label?.contains(root.querySelector('iframe'))).toBe(false);
-  });
-
-  it('appears once the reader loads a click-to-load embed', () => {
-    const { root } = mount(generic('https://third.party.test/page'), { allowGenericEmbed: true });
+describe('Embed — a loaded generic frame has no host line above it', () => {
+  it('shows only the frame', () => {
+    const { root } = mount(generic('https://third.party.test/page'));
 
     expect(hostLabel(root)).toBeNull();
+    expect(root.querySelector('iframe')).not.toBeNull();
+  });
+
+  it('adds no host line once the reader loads a click-to-load embed', () => {
+    const { root } = mount(generic('https://third.party.test/page'), { allowGenericEmbed: true });
 
     root.querySelector<HTMLButtonElement>('button[data-role="embed-load"]')?.click();
-
-    expect(hostLabel(root)?.textContent?.trim()).toBe('third.party.test');
-  });
-
-  it('stays when read-only flips or the caption toggles', () => {
-    const { tool, root } = mount(generic('https://third.party.test/page'), undefined, false);
-
-    tool.setReadOnly(true);
-    tool.setReadOnly(false);
-    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
-
-    expect(root.querySelectorAll('[data-role="embed-host"]')).toHaveLength(1);
-  });
-
-  it('is not shown for a registry embed', () => {
-    const { root } = mount({
-      service: 'youtube',
-      source: 'https://youtu.be/dQw4w9WgXcQ',
-      embed: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    });
 
     expect(root.querySelector('iframe')).not.toBeNull();
     expect(hostLabel(root)).toBeNull();

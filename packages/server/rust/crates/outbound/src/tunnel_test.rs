@@ -213,7 +213,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 /// The fields of a Digest answer: key=value or key="value".
-fn digest_fields(header: &str) -> HashMap<String, String> {
+pub(crate) fn digest_fields(header: &str) -> HashMap<String, String> {
     let mut fields = HashMap::new();
     for part in header.trim_start_matches("Digest ").split(", ") {
         if let Some((key, value)) = part.split_once('=') {

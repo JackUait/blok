@@ -4,6 +4,7 @@
 //! redirect, size and encoding limits.
 
 mod body;
+mod bodytext;
 mod browserurl;
 mod decode;
 mod digest;

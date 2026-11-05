@@ -126,17 +126,16 @@ fn next_value(data: &[u8], mut i: usize, expect_quotes: bool) -> (Option<String>
 }
 
 /// GetDigestTokenForCredential; None when .NET gives no token (an
-/// algorithm it lacks, no nonce, no realm). `uri` is the request URI's path
-/// and query, `content` the body auth-int hashes. .NET hashes the body read
-/// as a string (ReadAsStringAsync); this hashes it as lossy UTF-8.
+/// algorithm it lacks, no nonce, no realm). `signed` carries the request
+/// URI's path and query, and the body auth-int hashes as ReadAsStringAsync
+/// reads it (bodytext.rs), read only for auth-int.
 pub(crate) fn token(
     user: &str,
     password: &str,
     p: &HashMap<String, String>,
-    method: &str,
-    uri: &str,
-    content: &[u8],
-) -> Option<String> {
+    signed: &crate::operator::Signed<'_>,
+) -> Result<Option<String>, crate::bodytext::BodyTextError> {
+    let (method, uri) = (signed.method, signed.uri);
     let specified = p.get("algorithm");
     let algorithm = match specified {
         Some(a) => {
@@ -145,14 +144,15 @@ pub(crate) fn token(
                 lower.as_str(),
                 "sha-256" | "md5" | "sha-256-sess" | "md5-sess"
             ) {
-                return None;
+                return Ok(None);
             }
             a.clone()
         }
         None => "MD5".to_owned(),
     };
-    let nonce = p.get("nonce")?;
-    let realm = p.get("realm")?;
+    let (Some(nonce), Some(realm)) = (p.get("nonce"), p.get("realm")) else {
+        return Ok(None);
+    };
     let opaque = p.get("opaque");
     let sha = algorithm.len() >= 7 && algorithm[..7].eq_ignore_ascii_case("SHA-256");
     let hash = |data: &str| -> String {
@@ -198,14 +198,17 @@ pub(crate) fn token(
     {
         qop = "auth-int";
     }
-    let cnonce = random_alphanumeric(16)?;
+    let Some(cnonce) = random_alphanumeric(16) else {
+        return Ok(None);
+    };
     let mut a1 = format!("{user}:{realm}:{password}");
     if algorithm.len() >= 4 && algorithm[algorithm.len() - 4..].eq_ignore_ascii_case("sess") {
         a1 = format!("{}:{nonce}:{cnonce}", hash(&a1));
     }
     let mut a2 = format!("{method}:{uri}");
     if qop == "auth-int" {
-        a2 = format!("{a2}:{}", hash(&String::from_utf8_lossy(content)));
+        let text = crate::bodytext::body_text(signed.content, signed.content_type)?;
+        a2 = format!("{a2}:{}", hash(&text));
     }
     let response = if offered.is_some() {
         hash(&format!(
@@ -234,7 +237,7 @@ pub(crate) fn token(
         pair("nc", "00000001", false, true);
         pair("cnonce", &cnonce, true, false);
     }
-    Some(out)
+    Ok(Some(out))
 }
 
 /// HeaderUtilities.Encode5987: utf-8'' and the attr-chars, anything else

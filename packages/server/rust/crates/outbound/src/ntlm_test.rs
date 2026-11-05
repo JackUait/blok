@@ -1133,6 +1133,21 @@ async fn serve_forward(
                     );
                 }
             }
+            _ if mode.starts_with("digest-int") => {
+                let method = line0.split(' ').next().unwrap();
+                answer =
+                    "Proxy-Authenticate: Digest realm=\"r\", nonce=\"n\", qop=\"auth-int\"\r\n"
+                        .to_owned();
+                closing = false;
+                ok = match &auth {
+                    Some(a) => {
+                        let used = auth_int_hash(a, method, mode);
+                        logged = format!("Digest int={used}");
+                        used == "text"
+                    }
+                    None => false,
+                };
+            }
             _ => {
                 let method = line0.split(' ').next().unwrap();
                 ok = match (&auth, mode) {
@@ -1161,10 +1176,14 @@ async fn serve_forward(
                 closing = mode == "basic-close";
             }
         }
-        log.lock().unwrap().push(format!(
-            "{id} {line0} auth={logged} body={}",
-            String::from_utf8_lossy(&body)
-        ));
+        // Encoding.ASCII.GetString, as C# logs it.
+        let body: String = body
+            .iter()
+            .map(|&c| if c < 0x80 { char::from(c) } else { '?' })
+            .collect();
+        log.lock()
+            .unwrap()
+            .push(format!("{id} {line0} auth={logged} body={body}"));
         if ok {
             let _ = reader
                 .get_mut()
@@ -1181,6 +1200,44 @@ async fn serve_forward(
         if reader.get_mut().write_all(head.as_bytes()).await.is_err() || closing {
             return;
         }
+    }
+}
+
+/// C#'s ForwardBody: a POST's body, its Content-Type, and the text
+/// auth-int is expected to hash.
+fn forward_body(mode: &str) -> (Vec<u8>, Option<&'static str>, &'static str) {
+    match mode {
+        "digest-int-invalid" => (vec![0x61, 0xFF, 0x62], None, "a\u{fffd}b"),
+        "digest-int-latin1" => (vec![0xE9], Some("text/plain; charset=iso-8859-1"), "\u{e9}"),
+        "digest-int-bogus" => (b"abc".to_vec(), Some("text/plain; charset=bogus"), "abc"),
+        _ => (b"abc".to_vec(), None, "abc"),
+    }
+}
+
+/// C#'s AuthIntHash: which body hash an auth-int answer used, "text",
+/// "bytes" or "none". User u, password p.
+fn auth_int_hash(header: &str, method: &str, mode: &str) -> &'static str {
+    let fields = crate::tunnel_test::digest_fields(header);
+    let hash = |d: &[u8]| hex(&md5(d));
+    let want = |body_hash: String| {
+        hash(
+            format!(
+                "{}:n:{}:{}:auth-int:{}",
+                hash(b"u:r:p"),
+                fields["nc"],
+                fields["cnonce"],
+                hash(format!("{method}:/x?q:{body_hash}").as_bytes())
+            )
+            .as_bytes(),
+        )
+    };
+    let (content, _, text) = forward_body(mode);
+    if fields["response"] == want(hash(text.as_bytes())) {
+        "text"
+    } else if fields["response"] == want(hash(&content)) {
+        "bytes"
+    } else {
+        "none"
     }
 }
 
@@ -1224,6 +1281,21 @@ async fn authenticates_a_forwarded_request_as_sockets_http_handler_does() {
             "GET",
             "200 ok|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T1 body=|1 GET http://127.0.0.1:1/x?q HTTP/1.1 auth=Negotiate T3 ok body=",
         ),
+        (
+            "digest-int-invalid",
+            "POST",
+            "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=a?b|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=a?b",
+        ),
+        (
+            "digest-int-latin1",
+            "POST",
+            "200 ok|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=?|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=Digest int=text body=?",
+        ),
+        (
+            "digest-int-bogus",
+            "POST",
+            "error|1 POST http://127.0.0.1:1/x?q HTTP/1.1 auth=no body=abc",
+        ),
     ] {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -1245,18 +1317,23 @@ async fn authenticates_a_forwarded_request_as_sockets_http_handler_does() {
             roots: None,
         };
         let url = blok_dotnet::parse_absolute_uri("http://127.0.0.1:1/x?q").unwrap();
-        let mut content = std::io::Cursor::new(b"abc".to_vec());
+        let (bytes, content_type, _) = forward_body(mode);
+        let length = bytes.len() as u64;
+        let mut content = std::io::Cursor::new(bytes);
         let body = if method == "POST" {
-            RequestBody::Reader(&mut content, 3)
+            RequestBody::Reader(&mut content, length)
         } else {
             RequestBody::None
         };
+        let headers = content_type
+            .map(|t| vec![("Content-Type".to_owned(), t.to_owned())])
+            .unwrap_or_default();
         let outcome = match client
             .send(Request {
                 method,
                 url: &url,
                 host: "127.0.0.1:1",
-                headers: Vec::new(),
+                headers,
                 body,
             })
             .await

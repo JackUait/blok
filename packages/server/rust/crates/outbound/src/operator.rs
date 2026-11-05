@@ -190,10 +190,16 @@ impl OperatorClient {
                     if auth_int && content.is_none() {
                         content = Some(self.content(&mut request, start).await?);
                     }
+                    let content_type = request
+                        .headers
+                        .iter()
+                        .find(|(name, _)| name.eq_ignore_ascii_case("Content-Type"))
+                        .map(|(_, value)| value.as_str());
                     let signed = Signed {
                         method: request.method,
                         uri: &path,
                         content: content.as_deref().unwrap_or_default(),
+                        content_type,
                     };
                     if let Some(next) = auth.answer(&head, proxy, &signed).await? {
                         stream = if auth.retry(next, &mut reader, &head).await? {
@@ -455,11 +461,12 @@ struct ProxyAuth {
 }
 
 /// What Digest signs: the method, the request URI's path and query, and
-/// the body auth-int hashes.
-struct Signed<'a> {
-    method: &'a str,
-    uri: &'a str,
-    content: &'a [u8],
+/// the body auth-int hashes, read under its raw Content-Type.
+pub(crate) struct Signed<'a> {
+    pub(crate) method: &'a str,
+    pub(crate) uri: &'a str,
+    pub(crate) content: &'a [u8],
+    pub(crate) content_type: Option<&'a str>,
 }
 
 impl ProxyAuth {
@@ -494,10 +501,12 @@ impl ProxyAuth {
         let (user, domain) = proxy_credential(name);
         let challenges = auth_challenges(head.headers.values("Proxy-Authenticate"));
         let password = password.as_deref().unwrap_or("");
-        let digest = |p: &HashMap<String, String>| {
-            crate::digest::token(user, password, p, signed.method, signed.uri, signed.content)
-                .map(|token| format!("Digest {token}"))
-        };
+        // A body .NET cannot read as a string fails the request.
+        let digest =
+            |p: &HashMap<String, String>| match crate::digest::token(user, password, p, signed) {
+                Ok(token) => Ok(token.map(|token| format!("Digest {token}"))),
+                Err(err) => Err(OperatorError::Io(io::Error::other(err.to_string()))),
+            };
         Ok(match self.sent {
             None => {
                 let scheme = choose_challenge(&challenges);
@@ -515,9 +524,10 @@ impl ProxyAuth {
                         )
                         .await?
                     }
-                    Some("digest") => crate::digest::parse(&challenges["digest"])
-                        .as_ref()
-                        .and_then(digest),
+                    Some("digest") => match crate::digest::parse(&challenges["digest"]) {
+                        Some(p) => digest(&p)?,
+                        None => None,
+                    },
                     Some("basic") => proxy_authorization(proxy),
                     _ => None,
                 }
@@ -553,7 +563,7 @@ impl ProxyAuth {
                 match stale {
                     Some(p) => {
                         self.stale = true;
-                        digest(&p)
+                        digest(&p)?
                     }
                     None => None,
                 }
@@ -648,6 +658,7 @@ async fn tunnel<S: AsyncRead + AsyncWrite + Unpin + Send>(
         method: "CONNECT",
         uri: "/",
         content: &[],
+        content_type: None,
     };
     let next = match head.status {
         407 => auth.answer(&head, proxy, &signed).await?,

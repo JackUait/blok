@@ -74,6 +74,7 @@ fn limits(max_bytes: u64, truncate: bool) -> Limits {
         hop: None,
         truncate,
         upload: false,
+        caller: String::new(),
     }
 }
 

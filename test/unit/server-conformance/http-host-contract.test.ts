@@ -916,7 +916,9 @@ it('drops a connection whose request headers stall for 10 seconds', async () => 
     });
 
     const elapsed = Date.now() - started;
-    const answer = Buffer.concat(chunks).toString('latin1')
+    const raw = Buffer.concat(chunks).toString('latin1');
+    expect(raw).toMatch(/\r\nServer: Kestrel\r\n/);
+    const answer = raw
       .replace(/^Date: .*\r\n/m, 'Date: <date>\r\n')
       .replace(/^Server: .*\r\n/m, '');
 
@@ -925,6 +927,38 @@ it('drops a connection whose request headers stall for 10 seconds', async () => 
     compareGolden('header-timeout.json', [{ name: 'stalled headers', response: answer }]);
   });
 }, 30_000);
+
+// The goldens leave Server out; this pins it. Kestrel's AddServerHeader
+// default names it on handler answers and on its own bare refusals.
+it('names itself Server: Kestrel on every answer', async () => {
+  const requests: Record<string, string> = {
+    'health': 'GET /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+    'catch-all 404': 'GET /missing HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+    'method not allowed': 'PUT /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+    'bad request line': 'GARBAGE\r\n\r\n',
+    'bad version': 'GET / HTTP/1.2\r\nHost: x\r\n\r\n',
+  };
+
+  await withServer(['--auth', 'none', '--storage-dir', ''], async (server) => {
+    const { hostname, port } = new URL(server.baseUrl);
+
+    for (const [name, request] of Object.entries(requests)) {
+      const socket = connect(Number(port), hostname);
+      const chunks: Buffer[] = [];
+
+      socket.on('data', (chunk: Buffer) => chunks.push(chunk));
+      socket.setTimeout(5_000, () => socket.destroy());
+      socket.write(request);
+      await new Promise<void>((resolve) => {
+        socket.once('close', () => resolve());
+      });
+      const head = Buffer.concat(chunks).toString('latin1').split('\r\n\r\n')[0] ?? '';
+
+      expect.soft(head.split('\r\n').filter((line) => /^server:/i.test(line)), name)
+        .toEqual(['Server: Kestrel']);
+    }
+  });
+});
 
 async function rawExchange(baseUrl: string, request: Buffer): Promise<string> {
   const { hostname, port } = new URL(baseUrl);

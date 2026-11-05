@@ -31,7 +31,7 @@ import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../typ
 import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
 import { protectPageReferenceAnchor } from '../../shared/page-reference';
-import { cleanHtml, type CleanerTags } from './html-cleaner';
+import { cleanHtml, isMarkupFree, type CleanerTags } from './html-cleaner';
 import { parseUntrustedHtml } from './inert-html';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
 import {
@@ -143,8 +143,9 @@ const cleanOneItem = (
    * Bypasses the global sanitizer too: a host-level config must not be able
    * to mangle a field the tool declared as literal text.
    */
-  // Nothing to clean; skips building the rules for every empty table cell.
-  if (isPlaintextRule(rule) || taintString === '') {
+  // Nothing to clean: every step below returns such text unchanged. Skips
+  // building the rules for each table cell's block id.
+  if (isPlaintextRule(rule) || isMarkupFree(taintString)) {
     return taintString;
   }
 

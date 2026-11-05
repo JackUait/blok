@@ -149,7 +149,7 @@ pub(crate) fn tls_connector(roots: &Option<Roots>, check: Check) -> TlsConnector
         .with_no_client_auth();
     #[cfg(not(target_os = "macos"))]
     let mut config = {
-        let _ = (provider, check);
+        let _ = provider;
         let store = match roots {
             Some(roots) => {
                 let mut store = RootCertStore::empty();
@@ -162,7 +162,11 @@ pub(crate) fn tls_connector(roots: &Option<Roots>, check: Check) -> TlsConnector
         };
         builder.with_root_certificates(store).with_no_client_auth()
     };
-    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    // MacOsTlsTransport offers http/1.1 only; SocketsHttpHandler offers no
+    // ALPN on an HTTP/1.1 connection.
+    if let Check::Guarded = check {
+        config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    }
     TlsConnector::from(Arc::new(config))
 }
 

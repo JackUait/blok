@@ -80,6 +80,36 @@ async fn offers_only_http11_during_tls_negotiation() {
     );
 }
 
+// SocketsHttpHandler offers no ALPN on an HTTP/1.1 connection
+// (HttpConnectionPool's _sslOptionsHttp11.ApplicationProtocols = null,
+// System.Net.Http 10.0.11; measured: a default HttpClient negotiates
+// nothing with a server offering h2 and http/1.1). The operator client is
+// HttpClient in C#.
+#[tokio::test]
+async fn the_operator_client_offers_no_alpn() {
+    let pki = pki("localhost", |_| {});
+    let o = tls_origin(&pki, &[b"h2", b"http/1.1"], ok_handler()).await;
+    let client = crate::operator::OperatorClient {
+        connect_timeout: Duration::from_secs(5),
+        header_timeout: None,
+        proxy: crate::proxy::EnvironmentProxy::from_lookup(|_| None),
+        roots: Some(pki.roots.clone()),
+    };
+    let url = blok_dotnet::parse_absolute_uri(&format!("https://localhost:{}/", o.port)).unwrap();
+    let host = format!("localhost:{}", o.port);
+    let response = client
+        .send(crate::operator::Request {
+            method: "GET",
+            url: &url,
+            host: &host,
+            headers: Vec::new(),
+            body: crate::operator::RequestBody::None,
+        })
+        .await;
+    assert!(response.is_ok(), "the request failed");
+    assert_eq!(o.last().unwrap().alpn, None);
+}
+
 // RevocationMode = NoCheck: a leaf that names a CRL and an OCSP responder
 // verifies without either being asked.
 #[tokio::test]

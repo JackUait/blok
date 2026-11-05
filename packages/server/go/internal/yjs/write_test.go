@@ -319,3 +319,25 @@ func TestFormattingTheSameNestedMarkObjectTwiceWritesItOnce(t *testing.T) {
 		t.Fatalf("second wrote %x", second)
 	}
 }
+
+// C# TwoMarkObjectsSharingOneNestedInstanceWriteOnce: the flat compare
+// finds the shared nested instance ===; a deep-equal copy is not.
+func TestTwoMarkObjectsSharingOneNestedInstanceWriteOnce(t *testing.T) {
+	for _, shared := range []bool{true, false} {
+		doc := docWithID(4242)
+		text := doc.GetText(s("content"))
+		meta := obj("x", 1.0)
+		other := meta
+		if !shared {
+			other = obj("x", 1.0)
+		}
+		first := obj("link", obj("href", s("h"), "meta", meta))
+		second := obj("link", obj("href", s("h"), "meta", other))
+		doc.Transact(func(txn *Transaction) { text.Insert(txn, 0, s("ab"), obj()) })
+		doc.Transact(func(txn *Transaction) { text.Format(txn, 0, 2, first) })
+		wrote := doc.Transact(func(txn *Transaction) { text.Format(txn, 0, 2, second) })
+		if shared != (wrote == nil) {
+			t.Fatalf("shared %v: second wrote %x", shared, wrote)
+		}
+	}
+}

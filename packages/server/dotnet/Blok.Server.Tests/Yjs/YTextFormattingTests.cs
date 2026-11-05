@@ -308,6 +308,31 @@ public sealed class YTextFormattingTests
         Convert.ToHexString(Assert.Single(updates)));
   }
 
+  /// <summary>
+  /// Two different link objects that share ONE nested meta instance: the
+  /// flat compare finds every member ===, so the second call writes
+  /// nothing. Two meta objects that are only deep-equal write again.
+  /// </summary>
+  [Theory]
+  [InlineData(true, 1)]
+  [InlineData(false, 2)]
+  public void TwoMarkObjectsSharingOneNestedInstanceWriteOnce(bool shared, int writes)
+  {
+    var doc = new YDoc(4242);
+    var text = doc.GetText("content");
+    var updates = new List<byte[]>();
+    var meta = Attrs(("x", 1d));
+    var first = Attrs(("link", Attrs(("href", "h"), ("meta", meta))));
+    var second = Attrs(("link", Attrs(("href", "h"), ("meta", shared ? meta : Attrs(("x", 1d))))));
+
+    doc.Transact(transaction => text.Insert(transaction, 0, "ab", Attrs()));
+    doc.UpdateEmitted += update => updates.Add(update.Update);
+    doc.Transact(transaction => text.Format(transaction, 0, 2, first));
+    doc.Transact(transaction => text.Format(transaction, 0, 2, second));
+
+    Assert.Equal(writes, updates.Count);
+  }
+
   private static AnyObject Attrs(params (string Key, object? Value)[] entries)
   {
     var attributes = new AnyObject();

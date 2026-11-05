@@ -1,6 +1,7 @@
 package outbound
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha1"
@@ -301,60 +302,76 @@ func isRedirect(status int) bool {
 	return false
 }
 
-// roundTrip sends one GET through a transport that dials only the vetted
-// addresses, uses no proxy, sends no Accept-Encoding and follows nothing.
+// roundTrip sends one GET on a fresh connection to a vetted address, with
+// no proxy, no Accept-Encoding, and nothing followed. The response is read
+// by wire.go, as .NET reads it.
 func (f *Fetcher) roundTrip(ctx context.Context, target Target, addresses []netip.Addr) (*http.Response, error) {
 	if !target.Literal.IsValid() && !plainHostName(target.Host) {
 		return nil, fail(Blocked)
 	}
-	dialer := &net.Dialer{}
-	transport := &http.Transport{
-		Proxy:              nil,
-		DisableCompression: true,
-		// No pooling, and no "Connection: close" header, which
-		// DisableKeepAlives would add and .NET does not send.
-		MaxIdleConnsPerHost:    -1,
-		ForceAttemptHTTP2:      false,
-		MaxResponseHeaderBytes: maxResponseHeaderBytes,
-		TLSClientConfig:        f.tlsConfig(target),
-		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-			if f.dialHook != nil {
-				f.dialHook(network, address)
-			}
-			_, port, err := net.SplitHostPort(address)
-			if err != nil || port != strconv.Itoa(target.Port) {
-				return nil, fail(Blocked)
-			}
-			var last error
-			for i, ip := range addresses {
-				// .NET dials a mapped address on an IPv6-only socket, which
-				// fails at once; Go would reach the IPv4 address instead.
-				if ip.Is4In6() {
-					last = errMappedAddress
-					continue
-				}
-				attempt := ctx
-				cancel := context.CancelFunc(func() {})
-				if i < len(addresses)-1 {
-					attempt, cancel = context.WithTimeout(ctx, connectAttemptTimeout)
-				}
-				conn, err := dialer.DialContext(attempt, "tcp", netip.AddrPortFrom(ip, uint16(target.Port)).String())
-				cancel()
-				if err == nil {
-					return conn, nil
-				}
-				last = err
-			}
-			return nil, last
-		},
-	}
-	defer transport.CloseIdleConnections()
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, target.URL.Scheme+"://"+hostHeader(target)+requestURI(target), nil)
+	conn, err := f.dial(ctx, target, addresses)
 	if err != nil {
-		return nil, fail(Blocked)
+		return nil, err
 	}
-	request.Header.Set("User-Agent", UserAgent)
-	return transport.RoundTrip(request)
+	// A cancel or the deadline ends any read or write in flight.
+	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	closeConn := func() error {
+		stop()
+		return conn.Close()
+	}
+	if target.URL.Scheme == "https" {
+		config := f.tlsConfig(target)
+		if config.ServerName == "" {
+			config.ServerName = target.Host
+		}
+		secure := tls.Client(conn, config)
+		if err := secure.HandshakeContext(ctx); err != nil {
+			_ = closeConn()
+			return nil, err
+		}
+		conn = secure
+	}
+	request := "GET " + requestURI(target) + " HTTP/1.1\r\nHost: " + hostHeader(target) +
+		"\r\nUser-Agent: " + UserAgent + "\r\n\r\n"
+	if _, err := io.WriteString(conn, request); err != nil {
+		_ = closeConn()
+		return nil, err
+	}
+	response, err := readResponse(bufio.NewReader(conn), maxResponseHeaderBytes, closeConn)
+	if err != nil {
+		_ = closeConn()
+		return nil, err
+	}
+	return response, nil
+}
+
+// dial connects to the first vetted address that answers.
+func (f *Fetcher) dial(ctx context.Context, target Target, addresses []netip.Addr) (net.Conn, error) {
+	if f.dialHook != nil {
+		f.dialHook("tcp", net.JoinHostPort(target.Host, strconv.Itoa(target.Port)))
+	}
+	dialer := &net.Dialer{}
+	var last error
+	for i, ip := range addresses {
+		// .NET dials a mapped address on an IPv6-only socket, which fails
+		// at once; Go would reach the IPv4 address instead.
+		if ip.Is4In6() {
+			last = errMappedAddress
+			continue
+		}
+		attempt := ctx
+		cancel := context.CancelFunc(func() {})
+		if i < len(addresses)-1 {
+			attempt, cancel = context.WithTimeout(ctx, connectAttemptTimeout)
+		}
+		conn, err := dialer.DialContext(attempt, "tcp", netip.AddrPortFrom(ip, uint16(target.Port)).String())
+		cancel()
+		if err == nil {
+			return conn, nil
+		}
+		last = err
+	}
+	return nil, last
 }
 
 func (f *Fetcher) tlsConfig(target Target) *tls.Config {

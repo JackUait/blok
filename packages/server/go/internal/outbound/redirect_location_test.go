@@ -31,9 +31,8 @@ func TestRedirectLocationsMatchTheFixture(t *testing.T) {
 	if len(fixture.Cases) != len(fixture.Answers) || len(fixture.Cases) == 0 {
 		t.Fatalf("%d cases, %d answers", len(fixture.Cases), len(fixture.Answers))
 	}
-	// Known gaps, not passes: net/http refuses a response header line with a
-	// control byte, which .NET keeps; mailto has its own grammar in .NET.
-	known := map[string]bool{"/ok\x01": true, "/a\x7fb": true, "/a\x00b": true, "a\x01": true, "mailto:a b": true}
+	// Known gaps, not passes: mailto has its own grammar in .NET.
+	known := map[string]bool{"mailto:a b": true}
 	for i, c := range fixture.Cases {
 		got := fetchRedirect(t, c.Locations)
 		if known[c.Locations[0]] {

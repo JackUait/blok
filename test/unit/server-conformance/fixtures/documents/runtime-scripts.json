@@ -549,7 +549,7 @@
         "expect": {
           "result": ""
         },
-        "why": "Jint, as C# builds it, has none of these names. goja has none either; QuickJS's full context adds atob, btoa, performance and queueMicrotask, which Rust leaves out. A bundle that feature-detects one must see the same answer on every server."
+        "why": "Jint, as C# builds it, has none of these names. goja has none either; QuickJS's full context adds atob, btoa, DOMException, performance and queueMicrotask, which Rust leaves out. A bundle that feature-detects one must see the same answer on every server."
       },
       {
         "op": "count",

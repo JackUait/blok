@@ -85,6 +85,36 @@ describe("embed safety guide", () => {
     expect(body(bundle as Bundle, "measured")).toContain("SVG");
   });
 
+  it.each([en, ru])("says a frame cannot take focus on its own, and names the Firefox gap", (bundle) => {
+    const text = body(bundle as Bundle, "whatBlokDoes");
+
+    expect(text).toContain("Tab");
+    expect(text).toContain("Firefox");
+  });
+
+  it.each([en, ru])("gives the frame size limits and the default size", (bundle) => {
+    const text = body(bundle as Bundle, "whatBlokDoes");
+
+    // Russian writes the decimal with a comma.
+    expect(text).toMatch(/0[.,]1 /);
+    expect(text).toContain("580×320");
+  });
+
+  it.each([en, ru])("says exports trust the service name and player sandbox only for the provider", (bundle) => {
+    const text = body(bundle as Bundle, "whatBlokDoes");
+
+    expect(text).toContain("`blocksToHtml`");
+    expect(text).toContain("`blocksToMarkdown`");
+    expect(text).toContain("`transformUrl`");
+  });
+
+  it.each([en, ru])("says host lists match an IPv4 address written as IPv6, and hostless documents", (bundle) => {
+    const text = body(bundle as Bundle, "ownPages");
+
+    expect(text).toContain("`[::ffff:10.0.0.1]`");
+    expect(text).toContain("`about:srcdoc`");
+  });
+
   it.each([en, ru])("lists the host list entry forms on the linkPaste option", (bundle) => {
     const text = at(bundle as Bundle, "api.configuration.table.linkPaste.description") ?? "";
 

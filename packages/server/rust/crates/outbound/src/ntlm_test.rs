@@ -445,6 +445,20 @@ fn read_ntlm(scheme: &str, token: &[u8], state: &mut State, password: &str) -> (
     (logged, proof_ok && mic_ok && cbt_ok && mlmic_ok)
 }
 
+/// C#'s ChunkedAroundThePause: a chunked 407 body whose first sent bytes
+/// after the head (size line and data) are exactly `sent`, then {PAUSE},
+/// then the rest.
+fn chunked_around_the_pause(sent: usize) -> String {
+    const CHUNK: usize = 1 << 20;
+    let line = format!("{CHUNK:x}\r\n");
+    let before = sent - line.len();
+    format!(
+        "Transfer-Encoding: chunked\r\n\r\n{line}{}{{PAUSE}}{}\r\n0\r\n\r\n",
+        "a".repeat(before),
+        "a".repeat(CHUNK - before)
+    )
+}
+
 /// C#'s DrainShape: the version and what follows the challenge in a drain
 /// row's first 407 (drain1-) or Type 2 (drain2-).
 fn drain_shape(mode: &str, first: bool) -> (&'static str, String) {
@@ -472,6 +486,8 @@ fn drain_shape(mode: &str, first: bool) -> (&'static str, String) {
         ),
         "closeframed" => ("1.1", "\r\nabc".to_owned()),
         "stall" => ("1.1", "Content-Length: 10\r\n\r\nabc".to_owned()),
+        "chunkcap" => ("1.1", chunked_around_the_pause(1 << 20)),
+        "chunkunder" => ("1.1", chunked_around_the_pause((1 << 20) - 1)),
         _ => panic!("{mode}"),
     }
 }
@@ -567,7 +583,15 @@ async fn serve_ntlm<S: AsyncRead + AsyncWrite + Unpin>(
         }
         let (version, tail) = drain_shape(mode, first_407);
         let head = format!("HTTP/{version} 407 Proxy Authentication Required\r\n{answer}{tail}");
-        if reader.get_mut().write_all(head.as_bytes()).await.is_err() || closing {
+        for (i, part) in head.split("{PAUSE}").enumerate() {
+            if i > 0 {
+                tokio::time::sleep(Duration::from_millis(300)).await;
+            }
+            if reader.get_mut().write_all(part.as_bytes()).await.is_err() {
+                return;
+            }
+        }
+        if closing {
             return;
         }
     }
@@ -794,6 +818,20 @@ async fn answers_an_ntlm_challenge_as_sockets_http_handler_does() {
             "",
             "p",
             "throw IOException|1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "drain2-chunkcap",
+            "u",
+            "",
+            "p",
+            "error |1 auth=no|1 auth=NTLM T1 {T1}",
+        ),
+        (
+            "drain2-chunkunder",
+            "u",
+            "",
+            "p",
+            "200 ok|1 auth=no|1 auth=NTLM T1 {T1}|1 auth=NTLM T3 len=352 flags=62888215 ver=0601b01d0000000f lm=24@88:0 nt=222@112 user=u@334 dom=@336 ws=W@336 key=16@ws+0 head=010100000000000000803ed5deb19d01 cc=CC avs={AVS}9:HTTP/127.0.0.1,10:zero,6:02000000,0: proof=ok mic=ok",
         ),
         (
             "mic-none",

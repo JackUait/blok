@@ -677,8 +677,8 @@ const DRAIN_TIME: Duration = Duration::from_secs(2);
 
 /// HttpContentReadStream.DrainAsync, then CompleteResponse's check that
 /// nothing follows the body. A length body is not read when more than the
-/// cap is left past what is buffered; a chunked one stops at the cap. .NET
-/// counts a chunked body's framing too; this counts its data only.
+/// cap is left past what is buffered; a chunked one fails at a fill with
+/// DrainCount at the cap.
 async fn drain<T: AsyncRead + Unpin + Send>(
     reader: &mut BufReader<T>,
     framed: Framing,
@@ -689,25 +689,75 @@ async fn drain<T: AsyncRead + Unpin + Send>(
     {
         return false;
     }
-    let mut body = Body::after_head(&mut *reader, framed, budget);
+    let chunked = framed == Framing::Chunked;
+    let counted = DrainCount {
+        count: reader.buffer().len() as u64,
+        armed: chunked,
+        reader: &mut *reader,
+    };
+    let mut body = Body::after_head(counted, framed, budget);
     let mut sink = [0u8; 4096];
-    let mut drained = 0u64;
     let read = timeout_at(Instant::now() + DRAIN_TIME, async {
         loop {
             match body.read(&mut sink).await {
                 Ok(0) => return true,
-                Ok(n) => {
-                    drained += n as u64;
-                    if drained > MAX_DRAIN {
-                        return false;
-                    }
-                }
+                Ok(_) => {}
                 Err(_) => return false,
             }
         }
     })
     .await;
     matches!(read, Ok(true)) && reader.buffer().is_empty()
+}
+
+/// ChunkedEncodingReadStream.DrainAsync's count: every byte after the
+/// head, framing too. While armed, a fill with the count at the cap fails
+/// instead: the body is not done, and .NET stops there. .NET also counts
+/// a line cut by a read again; read_line holds those bytes, so they are
+/// counted once here.
+struct DrainCount<'a, T> {
+    reader: &'a mut BufReader<T>,
+    count: u64,
+    armed: bool,
+}
+
+impl<T: AsyncRead + Unpin> tokio::io::AsyncRead for DrainCount<'_, T> {
+    fn poll_read(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<io::Result<()>> {
+        use tokio::io::AsyncBufRead;
+        let filled = std::task::ready!(self.as_mut().poll_fill_buf(cx))?;
+        let n = filled.len().min(buf.remaining());
+        buf.put_slice(&filled[..n]);
+        self.consume(n);
+        std::task::Poll::Ready(Ok(()))
+    }
+}
+
+impl<T: AsyncRead + Unpin> tokio::io::AsyncBufRead for DrainCount<'_, T> {
+    fn poll_fill_buf(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<io::Result<&[u8]>> {
+        let this = self.get_mut();
+        if this.reader.buffer().is_empty() {
+            if this.armed && this.count >= MAX_DRAIN {
+                return std::task::Poll::Ready(Err(io::Error::other(
+                    "the answer could not be drained",
+                )));
+            }
+            let filled =
+                std::task::ready!(std::pin::Pin::new(&mut *this.reader).poll_fill_buf(cx))?;
+            this.count += filled.len() as u64;
+        }
+        std::pin::Pin::new(&mut *this.reader).poll_fill_buf(cx)
+    }
+
+    fn consume(self: std::pin::Pin<&mut Self>, amt: usize) {
+        std::pin::Pin::new(&mut *self.get_mut().reader).consume(amt);
+    }
 }
 
 /// Proxy-Authenticate lines as each scheme's parameter text, lower-case

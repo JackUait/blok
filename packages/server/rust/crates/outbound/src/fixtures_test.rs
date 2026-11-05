@@ -319,3 +319,78 @@ async fn fetch_response(response: &str) -> String {
         .to_owned(),
     }
 }
+
+/// The S3 and doc-endpoint clients run on OperatorClient, and C#'s on
+/// HttpClient: the same rows, through the operator client. A failed
+/// request is BlockedDestination here.
+#[tokio::test]
+async fn the_operator_client_reads_response_heads_as_dot_net_does() {
+    use crate::operator::{OperatorClient, Request, RequestBody};
+    use crate::wire::Source;
+    use std::time::Duration;
+    let fixture = load("outbound-response-heads.json");
+    let cases = items(field(&fixture, "cases"));
+    let answers = items(field(&fixture, "answers"));
+    let mut client = OperatorClient::new(Duration::from_secs(2), None);
+    client.proxy = None;
+    let mut wrong = Vec::new();
+    for (case, expected) in cases.iter().zip(answers) {
+        let response = string(case, "response");
+        let want = crate::test_json::text(expected).unwrap();
+        let wire: Vec<u8> = expand_pads(&response)
+            .chars()
+            .map(|c| u8::try_from(c).unwrap())
+            .collect();
+        let o = Origin::start("127.0.0.1:0", None, answer(move |_, _| wire.clone()))
+            .await
+            .unwrap();
+        let url =
+            blok_dotnet::parse_absolute_uri(&format!("http://127.0.0.1:{}/", o.port)).unwrap();
+        let host = format!("127.0.0.1:{}", o.port);
+        let got = match client
+            .send(Request {
+                method: "GET",
+                url: &url,
+                host: &host,
+                headers: Vec::new(),
+                body: RequestBody::None,
+            })
+            .await
+        {
+            Err(_) => "BlockedDestination".to_owned(),
+            Ok(mut sent) => {
+                let mut body = Vec::new();
+                let mut chunk = [0u8; 1024];
+                let read = loop {
+                    match sent.body.read(&mut chunk).await {
+                        Ok(0) => break Ok(()),
+                        Ok(n) => body.extend_from_slice(&chunk[..n]),
+                        Err(e) => break Err(e),
+                    }
+                };
+                if read.is_err() {
+                    "BlockedDestination".to_owned()
+                } else {
+                    let mut bytes = sent
+                        .headers
+                        .values("X-Probe")
+                        .collect::<Vec<_>>()
+                        .join(&b"|"[..]);
+                    bytes.extend_from_slice(b" b=");
+                    bytes.extend_from_slice(&body);
+                    let mut text = format!(
+                        "{} ct={} x=",
+                        sent.status,
+                        crate::fetcher::content_type(sent.headers.get("Content-Type"))
+                    );
+                    text.extend(bytes.iter().map(|&b| char::from(b)));
+                    text
+                }
+            }
+        };
+        if got != want {
+            wrong.push(format!("{response:?}: got {got:?}, C# {want:?}"));
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}

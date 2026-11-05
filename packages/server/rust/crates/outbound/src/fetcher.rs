@@ -505,7 +505,7 @@ pub(crate) fn host_header(target: &Target) -> String {
 
 /// HttpContentHeaders.ContentType.ToString(): the header re-serialized as
 /// "type; name=value", or "" when it does not parse.
-fn content_type(header: Option<&[u8]>) -> String {
+pub(crate) fn content_type(header: Option<&[u8]>) -> String {
     let Some(header) = header else {
         return String::new();
     };

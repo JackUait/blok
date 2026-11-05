@@ -17,6 +17,7 @@ const SETUP_NODE_ACTION = '.github/actions/setup-node-deps/action.yml';
 const CHECKOUT_ACTION = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1';
 const SETUP_DOTNET_ACTION = 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68';
 const BUILDX_ACTION = 'docker/setup-buildx-action@';
+const QEMU_ACTION = 'docker/setup-qemu-action@';
 const LOGIN_ACTION = 'docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6';
 const SETUP_NODE_ACTION_SHA = 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1';
 const PUBLIC_PUBLISH_STEP = 'Publish NuGet packages';
@@ -541,6 +542,35 @@ describe('server release wiring', () => {
     expect(logoutIndex).toBe(pushIndex + 1);
     expect(logout?.if).toBe('always()');
     expect(logout?.run).toContain('docker logout ghcr.io');
+  });
+
+  // The base image lags Ubuntu's security fixes, and the CI Trivy gate fails
+  // on any fixable HIGH. The upgrade runs as root, so it must come before USER.
+  it('upgrades the runtime image packages as root', () => {
+    const dockerfile = read('packages/server/Dockerfile');
+    const runtimeStage = dockerfile.slice(
+      dockerfile.lastIndexOf('FROM mcr.microsoft.com/dotnet/runtime-deps:10.0'),
+    );
+    const upgradeIndex = runtimeStage.indexOf('apt-get upgrade -y');
+
+    expect(upgradeIndex).toBeGreaterThan(-1);
+    expect(runtimeStage.indexOf('apt-get update')).toBeLessThan(upgradeIndex);
+    expect(runtimeStage).toContain('rm -rf /var/lib/apt/lists/*');
+    expect(upgradeIndex).toBeLessThan(runtimeStage.indexOf('USER 65532:65532'));
+  });
+
+  // The runtime stage runs apt for the target platform. The runner registers
+  // no arm64 emulator, so without QEMU the arm64 build fails at that RUN.
+  it('registers QEMU before the builder for the multi-architecture push', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+    const qemuIndex = steps.findIndex((step) => (step.uses ?? '').startsWith(QEMU_ACTION));
+    const buildxIndex = steps.findIndex((step) => (step.uses ?? '').startsWith(BUILDX_ACTION));
+
+    expect(qemuIndex).toBeGreaterThan(-1);
+    expect(qemuIndex).toBe(buildxIndex - 1);
+    expect(steps[qemuIndex]?.uses).toMatch(/^docker\/setup-qemu-action@[0-9a-f]{40}$/);
+    expect(steps[qemuIndex]?.with).toEqual({ platforms: 'arm64' });
   });
 
   it('dispatches tagged docs deployment after publishing the release', () => {

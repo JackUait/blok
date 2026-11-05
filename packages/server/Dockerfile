@@ -54,6 +54,12 @@ RUN case "$TARGETARCH" in \
     && chown 65532:65532 /data
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
+# The base image ships Ubuntu fixes days after they land, and the CI scan
+# fails on any fixable HIGH. This targets the final platform, so the arm64
+# push needs QEMU (release-server.yml).
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=publish --chown=65532:65532 /data /data
 COPY --from=publish --chown=65532:65532 /out/blok-server /blok-server
 

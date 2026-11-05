@@ -328,6 +328,13 @@ jobs:
               /blok-server --help >/dev/null
             '
 
+      # The image's last stage runs apt for each target platform, and the
+      # runner registers no arm64 emulator. Must run before the builder starts.
+      - name: Set up QEMU for the arm64 image build
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
       # ubuntu-latest's default builder uses the docker driver, which cannot
       # build more than one platform at a time. Runner image 20260831 stopped
       # defaulting to a container builder and the push started failing.

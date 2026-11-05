@@ -441,14 +441,16 @@ func (r *Room) closeRoomLocked(reason *collab.CloseReason) {
 		r.session = nil
 		done := make(chan error, 1)
 		go func() { done <- closing.Close() }()
+		bound, stop := r.after(r.options.CommitTimeout)
 		select {
 		case err := <-done:
 			if err != nil {
 				r.logf(`collab: room "` + r.docID + `" could not release its operation session: ` + err.Error())
 			}
-		case <-r.after(r.options.CommitTimeout):
+		case <-bound:
 			r.logf(`collab: room "` + r.docID + `" could not release its operation session: it did not answer within the commit timeout`)
 		}
+		stop()
 	}
 	r.closeLocked(reason)
 }

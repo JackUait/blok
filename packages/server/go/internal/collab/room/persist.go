@@ -347,9 +347,9 @@ func (r *Room) flushLocked(caller context.Context) {
 	r.projectionRefused = false
 }
 
-// after is time.After on the room's timers.
-func (r *Room) after(d time.Duration) <-chan struct{} {
-	passed := make(chan struct{})
-	r.options.Timers.AfterFunc(d, func() { close(passed) })
-	return passed
+// after is time.After on the room's timers. Call stop once the select is
+// done, or the callback stays armed on the host's clock until d passes.
+func (r *Room) after(d time.Duration) (passed <-chan struct{}, stop func() bool) {
+	c := make(chan struct{})
+	return c, r.options.Timers.AfterFunc(d, func() { close(c) })
 }

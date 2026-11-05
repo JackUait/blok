@@ -137,3 +137,53 @@ func TestACommitTimeoutBoundRunsOnTheTimeProvider(t *testing.T) {
 		t.Fatalf("log = %q", log)
 	}
 }
+
+func (m *manualTimers) armedFor(d time.Duration) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for _, t := range m.pending {
+		if !t.done && t.due == m.now+d {
+			n++
+		}
+	}
+	return n
+}
+
+// A CommitTimeout bound that lost its select is stopped, as C# disposes the
+// timer behind WaitAsync: nothing stays armed on the host's clock.
+func TestABoundThatLostItsSelectIsStopped(t *testing.T) {
+	timers := &manualTimers{}
+	observer := &gatedObserver{gate: make(chan struct{}), entered: make(chan struct{})}
+	const bound = 7 * time.Minute
+	manager := NewManager(ManagerOptions{
+		Store: newMemoryStore(), Endpoint: &memoryEndpoint{}, Converter: &convert.DocConverter{Now: time.Now},
+		Room: OptionsWith(func(ro *Options) {
+			ro.CommitTimeout = bound
+			ro.Timers = timers
+		}),
+		Activity: observer,
+	})
+	join(t, manager, "doc", &fakeMember{actor: "user-0", source: collab.SourceClientV1})
+	select {
+	case <-observer.entered:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the observer was never called")
+	}
+
+	drained := make(chan error, 1)
+	go func() { drained <- manager.Drain(context.Background()) }()
+	time.Sleep(200 * time.Millisecond)
+	close(observer.gate)
+	select {
+	case err := <-drained:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the drain did not end")
+	}
+	if got := timers.armedFor(bound); got != 0 {
+		t.Fatalf("%d CommitTimeout timers still armed", got)
+	}
+}

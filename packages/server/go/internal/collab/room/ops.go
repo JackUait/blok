@@ -601,9 +601,11 @@ func (r *Room) drain(ctx context.Context) {
 		}
 		close(settled)
 	}()
+	bound, stop := r.after(r.options.CommitTimeout)
+	defer stop()
 	select {
 	case <-settled:
-	case <-r.after(r.options.CommitTimeout):
+	case <-bound:
 		r.logf(`collab: room "` + r.docID + `" abandoned its activity dispatch while draining: the observer is past its bound`)
 	case <-ctx.Done():
 		r.logf(`collab: room "` + r.docID + `" abandoned its activity dispatch while draining: the drain was cancelled`)

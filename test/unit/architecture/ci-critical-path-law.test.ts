@@ -552,6 +552,12 @@ describe('CI critical-path law', () => {
     expect(buildTests.filter((file) => !covered(file))).toEqual([]);
   });
 
+  // Same flags on every Rust build step, or each one rebuilds the crates.
+  const rustBuildEnv = { CARGO_INCREMENTAL: '0' };
+  const rustTestEnv = { ...rustBuildEnv, CARGO_PROFILE_TEST_DEBUG: 'line-tables-only' };
+  const NEXTEST_VERSION = '0.9.148';
+  const NEXTEST_SHA256 = '223ba936714cc861a9cdedad5a8eb664dfdd69d6fbdf6cea6aa8184f523290dc';
+
   it('runs unsharded workspace suites and the dist-reading unit tests after build', () => {
     const workspace = getJob(ci, 'workspace-unit-tests');
     const distTests = /const DIST_TESTS = \[([^\]]*)\]/.exec(readFileSync(resolve(root, 'vitest.config.ts'), 'utf8'))?.[1] ?? '';
@@ -618,8 +624,8 @@ describe('CI critical-path law', () => {
         uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
         with: {
           path: ['~/.cargo/registry', '~/.cargo/git', 'packages/server/rust/target', ''].join('\n'),
-          key: "rust-v2-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}",
-          'restore-keys': 'rust-v2-${{ runner.os }}-',
+          key: "rust-v3-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/Cargo.toml', 'packages/server/rust/rust-toolchain.toml') }}",
+          'restore-keys': 'rust-v3-${{ runner.os }}-',
         },
       },
       {
@@ -630,12 +636,31 @@ describe('CI critical-path law', () => {
       {
         name: 'Lint Rust server',
         'working-directory': 'packages/server/rust',
+        env: rustBuildEnv,
         run: 'cargo clippy --locked --all-targets -- -D warnings',
       },
       {
+        name: 'Install cargo-nextest',
+        run: [
+          'curl --fail --silent --show-error --location --output "$RUNNER_TEMP/nextest.tar.gz" \\',
+          `  https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${NEXTEST_VERSION}/cargo-nextest-${NEXTEST_VERSION}-x86_64-unknown-linux-gnu.tar.gz`,
+          `echo "${NEXTEST_SHA256}  $RUNNER_TEMP/nextest.tar.gz" | sha256sum --check`,
+          'tar -xzf "$RUNNER_TEMP/nextest.tar.gz" -C ~/.cargo/bin',
+        ].join('\n'),
+      },
+      // nextest runs every test binary at once.
+      {
         name: 'Test Rust server',
         'working-directory': 'packages/server/rust',
-        run: 'cargo test --locked --workspace',
+        env: rustTestEnv,
+        run: 'cargo nextest run --locked --workspace',
+      },
+      // nextest skips doc tests, so they run here.
+      {
+        name: 'Test Rust doc examples',
+        'working-directory': 'packages/server/rust',
+        env: rustTestEnv,
+        run: 'cargo test --locked --workspace --doc',
       },
     ]);
   });

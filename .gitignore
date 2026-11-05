@@ -108,6 +108,7 @@ override-extension/payload/
 # The Rust server's manifests
 !packages/server/rust/**/Cargo.toml
 !packages/server/rust/rust-toolchain.toml
+!packages/server/rust/.config/nextest.toml
 
 # Stryker's sandboxes: one full copy of the repo per concurrent runner, left
 # behind when a run is killed rather than finishing.

@@ -546,7 +546,9 @@ jobs:
           yarn vitest run --project=unit test/unit/architecture/react-fixture-import-map-law.test.ts
 
       # The Rust gates live here, not in a job of their own: a new job takes a
-      # slot of the 20-job cap, and this job has room under the 7-minute budget.
+      # slot of the 20-job cap. They are this job's longest part.
+      # Cargo.toml is in the key: its test profile sets opt-levels, and a
+      # stale snapshot would rebuild those crates on every run.
       - name: Cache Rust build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -554,20 +556,44 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             packages/server/rust/target
-          key: rust-v2-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/rust-toolchain.toml') }}
-          restore-keys: rust-v2-${{ runner.os }}-
+          key: rust-v3-${{ runner.os }}-${{ hashFiles('packages/server/rust/Cargo.lock', 'packages/server/rust/Cargo.toml', 'packages/server/rust/rust-toolchain.toml') }}
+          restore-keys: rust-v3-${{ runner.os }}-
 
       - name: Check Rust formatting
         working-directory: packages/server/rust
         run: cargo fmt --check
 
+      # No incremental data: it was most of the cached target and CI never
+      # reuses it. Every Rust build step needs the same flags, or it rebuilds.
       - name: Lint Rust server
         working-directory: packages/server/rust
+        env:
+          CARGO_INCREMENTAL: '0'
         run: cargo clippy --locked --all-targets -- -D warnings
 
+      - name: Install cargo-nextest
+        run: |
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/nextest.tar.gz" \
+            https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.148/cargo-nextest-0.9.148-x86_64-unknown-linux-gnu.tar.gz
+          echo "223ba936714cc861a9cdedad5a8eb664dfdd69d6fbdf6cea6aa8184f523290dc  $RUNNER_TEMP/nextest.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/nextest.tar.gz" -C ~/.cargo/bin
+
+      # nextest runs every test binary at once. Line tables keep file:line in
+      # backtraces at a third of the target size.
       - name: Test Rust server
         working-directory: packages/server/rust
-        run: cargo test --locked --workspace
+        env:
+          CARGO_INCREMENTAL: '0'
+          CARGO_PROFILE_TEST_DEBUG: line-tables-only
+        run: cargo nextest run --locked --workspace
+
+      # nextest skips doc tests, so they run here.
+      - name: Test Rust doc examples
+        working-directory: packages/server/rust
+        env:
+          CARGO_INCREMENTAL: '0'
+          CARGO_PROFILE_TEST_DEBUG: line-tables-only
+        run: cargo test --locked --workspace --doc
 
   validate-spec-coverage:
     name: Validate Spec File Coverage

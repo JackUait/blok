@@ -15,6 +15,8 @@ cargo test                                         # unit tests
 node ../../../scripts/test-server-conformance.mjs --target rust
 ```
 
+CI runs the unit tests with `cargo nextest run --workspace`, which runs every test binary at once, and runs doc tests with `cargo test --doc`. Each nextest test runs in its own process, so a test cannot rely on state another test left in the same process. `.config/nextest.toml` starts the slowest tests first.
+
 ## Layout
 
 One crate per Go package, named after its Go path:

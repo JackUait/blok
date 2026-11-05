@@ -1,0 +1,10 @@
+# nextest starts tests in list order, so the longest ones would start last
+# and set the wall time. These loop over whole fixtures; start them first.
+[[profile.default.overrides]]
+filter = 'test(=scenario_test::matches_the_agent_server_scenarios) | test(=ops_fixture_test::matches_node_on_the_document_ops_fixture) | binary(decompression_bomb) | binary(large_body) | test(/^parity_test::matches_the_agent_command_corpus/)'
+priority = 100
+
+# Its runtime has two worker threads.
+[[profile.default.overrides]]
+filter = 'test(=scenario_test::matches_the_agent_server_scenarios)'
+threads-required = 2

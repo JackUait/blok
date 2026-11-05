@@ -1,15 +1,21 @@
 package blokserver
 
 import (
+	"context"
+	"crypto/x509"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/JackUait/blok/packages/server/go/internal/dotnet"
 	"github.com/JackUait/blok/packages/server/go/internal/outbound"
 )
 
@@ -33,6 +39,52 @@ func unfurlServer(t *testing.T, handler http.HandlerFunc) (*Server, string) {
 	return s, origin.URL
 }
 
+// examplePolicy admits only https://example.com:PORT and pins it to
+// 127.0.0.1, so the page's final URL is https as in C#'s stub.
+type examplePolicy struct{ port int }
+
+func (p examplePolicy) Validate(raw string, base *dotnet.URI) (outbound.Target, error) {
+	u, ok := dotnet.ParseAbsoluteURI(raw)
+	if base != nil {
+		u, ok = dotnet.ResolveURI(base, raw)
+	}
+	if !ok || u.Scheme != "https" || u.Host != "example.com" || u.Port != p.port || u.UserInfo != "" {
+		return outbound.Target{}, &outbound.Error{Failure: outbound.Blocked}
+	}
+	return outbound.Target{URL: u, Host: "example.com", Port: p.port}, nil
+}
+
+func (examplePolicy) AddressAllowed(address netip.Addr) bool {
+	return address == netip.AddrFrom4([4]byte{127, 0, 0, 1})
+}
+
+// httpsUnfurlServer serves handler over TLS as https://example.com:PORT.
+func httpsUnfurlServer(t *testing.T, handler http.HandlerFunc) (*Server, string) {
+	t.Helper()
+	origin := httptest.NewTLSServer(handler)
+	t.Cleanup(origin.Close)
+	if !slices.Contains(origin.Certificate().DNSNames, "example.com") {
+		t.Fatalf("the test certificate names %v", origin.Certificate().DNSNames)
+	}
+	port := origin.Listener.Addr().(*net.TCPAddr).Port
+	o := DefaultOptions()
+	o.StorageDirectory = t.TempDir()
+	o.PublicURL = "https://uploads.example.com/files/"
+	o.UnfurlEnabled = true
+	s, err := New(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roots := x509.NewCertPool()
+	roots.AddCert(origin.Certificate())
+	s.fetcher = outbound.NewFetcher(examplePolicy{port})
+	s.fetcher.Resolve = func(context.Context, string) ([]netip.Addr, error) {
+		return []netip.Addr{netip.AddrFrom4([4]byte{127, 0, 0, 1})}, nil
+	}
+	s.fetcher.RootCAs = roots
+	return s, "https://example.com:" + strconv.Itoa(port)
+}
+
 func unfurlOf(t *testing.T, s *Server, target string) *httptest.ResponseRecorder {
 	t.Helper()
 	recorder := httptest.NewRecorder()
@@ -42,7 +94,7 @@ func unfurlOf(t *testing.T, s *Server, target string) *httptest.ResponseRecorder
 
 func TestFetchesThroughTheRegisteredGuardWithFrozenLimits(t *testing.T) {
 	var asked []string
-	s, origin := unfurlServer(t, func(w http.ResponseWriter, r *http.Request) {
+	s, origin := httpsUnfurlServer(t, func(w http.ResponseWriter, r *http.Request) {
 		asked = append(asked, r.URL.RequestURI())
 		if r.URL.Path == "/redirect" {
 			http.Redirect(w, r, "/final/page.html?from=redirect", http.StatusFound)
@@ -61,10 +113,9 @@ func TestFetchesThroughTheRegisteredGuardWithFrozenLimits(t *testing.T) {
 
 	response := unfurlOf(t, s, origin+"/redirect")
 
-	// The origin is plain http, so BrowserURL drops the image and the
-	// favicon; C#'s stub answers from https. unfurl-html.json pins those.
 	want := `{"success":1,"link":"` + origin + `/final/page.html?from=redirect","meta":{"title":"OpenGraph title",` +
-		`"description":"OpenGraph description","image":{},"domain":"127.0.0.1"}}` + "\n"
+		`"description":"OpenGraph description","image":{"url":"` + origin + `/images/cover.png?size=2"},` +
+		`"favicon":"` + origin + `/final/favicon.svg","domain":"example.com"}}` + "\n"
 	if response.Code != http.StatusOK || response.Body.String() != want {
 		t.Fatalf("%d %s\nwant %s", response.Code, response.Body, want)
 	}
@@ -98,14 +149,15 @@ func TestNonTwoHundredStatusIsNotParsed(t *testing.T) {
 
 func TestEveryTwoHundredStatusIsParsed(t *testing.T) {
 	for _, status := range []int{200, 203, 226} {
-		s, origin := unfurlServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		s, origin := httpsUnfurlServer(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(status)
 			_, _ = io.WriteString(w, "<title>T</title>")
 		})
 
 		response := unfurlOf(t, s, origin+"/a")
 
-		want := `{"success":1,"link":"` + origin + `/a","meta":{"title":"T","image":{},"domain":"127.0.0.1"}}` + "\n"
+		want := `{"success":1,"link":"` + origin + `/a","meta":{"title":"T","image":{},"favicon":"` + origin +
+			`/favicon.ico","domain":"example.com"}}` + "\n"
 		if response.Code != http.StatusOK || response.Body.String() != want {
 			t.Fatalf("%d: got %d %s\nwant %s", status, response.Code, response.Body, want)
 		}

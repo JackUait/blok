@@ -39,8 +39,8 @@ const toVisiblePage = (value: unknown): PageSearchResult | null => {
 /** Rows shown before the "N more results" row. */
 const COLLAPSED_ROWS = 6;
 
-/** The active row (the first one, as in Notion) and a hovered row get the menu's neutral fill. */
-const ROW_FILL_CLASSES = 'mx-1 cursor-pointer rounded-(--blok-radius-inner,var(--blok-radius-control)) aria-selected:bg-item-focus-bg can-hover:hover:bg-item-hover-bg';
+/** Only the active row is filled: the pointer moves it, so a hover fill would shade a second row. */
+const ROW_FILL_CLASSES = 'mx-1 cursor-pointer rounded-(--blok-radius-inner,var(--blok-radius-control)) aria-selected:bg-item-focus-bg';
 const ROW_CLASSES = `${ROW_FILL_CLASSES} flex items-start gap-2 px-2 py-1.5 text-sm text-text-primary`;
 
 /** Stands in for the query while a label template is split around it. */
@@ -66,6 +66,8 @@ export interface PagePickerOptions {
   newPage?: PagePickerNewPage;
   /** Called once when the picker closes without a pick. */
   onClose?: () => void;
+  /** Gets the active row's page title, or null when the active row is not a page. */
+  onActiveTitle?: (title: string | null) => void;
 }
 
 /** Options for {@link PagePicker.chooseParent}. */
@@ -80,6 +82,8 @@ interface Entry {
   key: string;
   element: HTMLElement;
   run: () => Promise<void> | void;
+  /** Set on page rows only. */
+  title?: string;
 }
 
 const skeletonRow = (): HTMLElement => {
@@ -115,6 +119,7 @@ export class PagePicker {
   private combobox: HTMLElement | null = null;
   private search: SearchInput | null = null;
   private onClose: (() => void) | null = null;
+  private onActiveTitle: ((title: string | null) => void) | null = null;
   private listbox: HTMLElement | null = null;
   private content: HTMLElement | null = null;
   private onPick: ((pageId: string) => void) | null = null;
@@ -160,6 +165,7 @@ export class PagePicker {
     }
     this.onPick = onPick;
     this.onClose = options.onClose ?? null;
+    this.onActiveTitle = options.onActiveTitle ?? null;
     this.sectioned = options.searchField === undefined;
     this.newPage = options.searchField === undefined ? options.newPage ?? null : null;
     this.content = document.createElement('div');
@@ -318,6 +324,7 @@ export class PagePicker {
     this.onPick = null;
     this.onChoose = null;
     this.onClose = null;
+    this.onActiveTitle = null;
     this.newPage = null;
     this.results = [];
     this.entries = [];
@@ -439,10 +446,10 @@ export class PagePicker {
     const hidden = this.results.length - visible.length;
     const rows: HTMLElement[] = [];
     const entries: Entry[] = [];
-    const add = ({ key, element, run }: Entry): void => {
-      element.setAttribute('id', `${this.listboxId}-option-${entries.length}`);
-      entries.push({ key, element, run });
-      rows.push(element);
+    const add = (entry: Entry): void => {
+      entry.element.setAttribute('id', `${this.listboxId}-option-${entries.length}`);
+      entries.push(entry);
+      rows.push(entry.element);
     };
 
     if (this.sectioned && (visible.length > 0 || this.loading)) {
@@ -452,6 +459,7 @@ export class PagePicker {
       key: `page:${result.pageId}`,
       element: this.buildPageOption(result),
       run: () => this.onChoose !== null ? this.onChoose(result.pageId) : this.pick(result.pageId),
+      title: result.title || this.fallback,
     }));
     if (hidden > 0) {
       add({ key: 'more', element: this.buildMoreOption(hidden), run: () => this.expand() });
@@ -550,8 +558,7 @@ export class PagePicker {
     }));
     body.className = 'flex min-w-0 flex-1 flex-col';
     option.append(slot, body);
-    option.addEventListener('pointerdown', (event) => event.preventDefault());
-    option.addEventListener('click', () => this.activate(this.entries.findIndex((entry) => entry.element === option)));
+    this.listenToPointer(option);
 
     return { option, body };
   }
@@ -594,10 +601,32 @@ export class PagePicker {
     option.setAttribute(DATA_ATTR.testid, 'page-picker-more');
     option.className = `${ROW_FILL_CLASSES} block px-2 py-1.5 text-sm leading-5 text-text-secondary`;
     option.textContent = this.t('tools.page.moreResults', { count });
-    option.addEventListener('pointerdown', (event) => event.preventDefault());
-    option.addEventListener('click', () => this.activate(this.entries.findIndex((entry) => entry.element === option)));
+    this.listenToPointer(option);
 
     return option;
+  }
+
+  /**
+   * Pointer motion makes the row active, as in the "/" menu. pointermove, not
+   * mouseover: a menu opening under a resting pointer gets a synthesized
+   * mouseover, which would steal the first row from the keyboard.
+   */
+  private listenToPointer(option: HTMLElement): void {
+    const index = (): number => this.entries.findIndex((entry) => entry.element === option);
+
+    option.addEventListener('pointerdown', (event) => event.preventDefault());
+    option.addEventListener('click', () => this.activate(index()));
+    option.addEventListener('pointermove', () => {
+      const at = index();
+
+      if (at === -1 || (at === this.activeIndex && !this.keyboardNavigated)) {
+        return;
+      }
+      this.activeIndex = at;
+      this.keyboardNavigated = false;
+      // The row is under the pointer, so it is in view; scrolling would move it away.
+      this.syncSelection(false);
+    });
   }
 
   /** `label` holds QUERY_MARK where the query goes; the query is drawn bold, as text. */
@@ -626,7 +655,7 @@ export class PagePicker {
     return option;
   }
 
-  private syncSelection(): void {
+  private syncSelection(scroll = true): void {
     this.entries.forEach(({ element, key }, index) => {
       element.setAttribute('aria-selected', String(index === this.activeIndex));
       element.style.setProperty('outline', this.keyboardNavigated && index === this.activeIndex
@@ -639,13 +668,17 @@ export class PagePicker {
       }
       element.style.setProperty('opacity', key === this.busyKey ? '0.5' : '');
     });
-    const active = this.entries[this.activeIndex]?.element;
+    const activeEntry = this.entries[this.activeIndex];
+    const active = activeEntry?.element;
 
+    this.onActiveTitle?.(activeEntry?.title ?? null);
     if (active === undefined) {
       this.combobox?.removeAttribute('aria-activedescendant');
     } else {
       this.combobox?.setAttribute('aria-activedescendant', active.id);
-      active.scrollIntoView?.({ block: 'nearest' });
+      if (scroll) {
+        active.scrollIntoView?.({ block: 'nearest' });
+      }
     }
   }
 }

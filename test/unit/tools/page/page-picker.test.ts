@@ -590,16 +590,53 @@ describe('PagePicker sections', () => {
     expect(document.querySelectorAll('[data-blok-testid="page-picker-skeleton"]')).toHaveLength(0);
   });
 
-  it('gives the active row and a hovered row the neutral menu fill, as popover items do', () => {
+  it('gives only the active row the neutral menu fill, as popover items do', () => {
     picker.open('', anchor, onPick, { newPage: { onSubPage: vi.fn(), onPageIn: vi.fn() } });
     picker.setResults(pages(7));
 
     options().forEach((option) => {
-      expect(option.className.split(' ')).toEqual(expect.arrayContaining([
-        'aria-selected:bg-item-focus-bg', 'can-hover:hover:bg-item-hover-bg',
-      ]));
+      expect(option.className.split(' ')).toContain('aria-selected:bg-item-focus-bg');
+      // A hover fill would shade a second row after the keyboard moves on.
+      expect(option.className).not.toContain('hover:bg-');
       expect(option.className).not.toMatch(/blue|primary-bg|accent/);
     });
+  });
+
+  it('makes the row under a moving pointer the active row, without a focus ring', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(3));
+
+    options()[2]?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+
+    expect(options().map((option) => option.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true']);
+    expect(anchor.getAttribute('aria-activedescendant')).toBe(options()[2]?.id);
+    expect(options()[2]?.style.outline).toBe('');
+    press('Enter');
+    expect(onPick).toHaveBeenCalledExactlyOnceWith('p3');
+  });
+
+  it('does not scroll the list when the pointer picks a row', () => {
+    picker.open('', anchor, onPick);
+    picker.setResults(pages(3));
+    const scroll = vi.fn();
+
+    options().forEach((option) => Object.assign(option, { scrollIntoView: scroll }));
+    options()[1]?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it('reports the active page title, and null on a row that is not a page', () => {
+    const onActiveTitle = vi.fn<(title: string | null) => void>();
+
+    picker.open('', anchor, onPick, { newPage: { onSubPage: vi.fn(), onPageIn: vi.fn() }, onActiveTitle });
+    picker.setResults([{ pageId: 'p1', title: 'Today' }, { pageId: 'p2' }]);
+
+    expect(onActiveTitle).toHaveBeenLastCalledWith('Today');
+    options()[1]?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+    expect(onActiveTitle).toHaveBeenLastCalledWith('Page');
+    press('ArrowDown');
+    expect(onActiveTitle).toHaveBeenLastCalledWith(null);
   });
 
   it('draws each row\'s emoji, image or the page glyph, hidden from readers', () => {

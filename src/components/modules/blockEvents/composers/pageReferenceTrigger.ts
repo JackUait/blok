@@ -1,4 +1,5 @@
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../../../../shared/page-reference';
+import { DATA_ATTR } from '../../../constants/data-attributes';
 import type { PagePicker, PagePickerNewPage } from '../../../../tools/page/page-picker';
 import { createdId } from '../../../../tools/page/page-values';
 import type { PageConfig, PageSearchResult } from '../../../../tools/page/types';
@@ -60,6 +61,9 @@ export class PageReferenceTrigger extends BlockEventComposer {
   private resultUnsubscribers: Array<() => void> = [];
   /** The "@query" whose parent step is showing: its search field holds the focus. */
   private parentStep: ActiveQuery | null = null;
+  /** The editable wearing the "/" menu's pill, while "@query" is its only text. */
+  private pillHost: HTMLElement | null = null;
+  private activeTitle: string | null = null;
 
   public get opened(): boolean {
     return this.picker?.opened ?? false;
@@ -132,6 +136,10 @@ export class PageReferenceTrigger extends BlockEventComposer {
       }, {
         newPage: this.newPageActions(page),
         onClose: () => this.handlePickerClosed(picker),
+        onActiveTitle: (title) => {
+          this.activeTitle = title;
+          this.paintPillHint();
+        },
       });
     }
 
@@ -204,7 +212,9 @@ export class PageReferenceTrigger extends BlockEventComposer {
     this.active = null;
     this.parentStep = null;
     paintMentionQuery(this, null);
+    this.clearPill();
     picker?.close();
+    this.activeTitle = null;
   }
 
   public destroy(): void {
@@ -399,7 +409,22 @@ export class PageReferenceTrigger extends BlockEventComposer {
     selection.addRange(range);
   }
 
-  private paintQuery({ input, start, end }: ActiveQuery): void {
+  private paintQuery({ input, start, end, text }: ActiveQuery): void {
+    // The same attribute and CSS as the "/" pill, so both look alike. An
+    // attribute on the editable is not saved; a span around a mid-text query
+    // would be content, so that case keeps the flat highlight.
+    if (input.textContent === text) {
+      paintMentionQuery(this, null);
+      if (this.pillHost !== input) {
+        this.clearPill();
+      }
+      this.pillHost = input;
+      this.paintPillHint();
+
+      return;
+    }
+    this.clearPill();
+
     const from = textPosition(input, start);
     const to = textPosition(input, end);
 
@@ -413,6 +438,18 @@ export class PageReferenceTrigger extends BlockEventComposer {
     range.setStart(from.node, from.offset);
     range.setEnd(to.node, to.offset);
     paintMentionQuery(this, range);
+  }
+
+  /** The pill names the active page until a query is typed, as "/" shows its hint. */
+  private paintPillHint(): void {
+    const query = this.active?.text.replace(/^(@|\[\[)/, '') ?? '';
+
+    this.pillHost?.setAttribute(DATA_ATTR.slashSearch, query === '' ? this.activeTitle ?? '' : '');
+  }
+
+  private clearPill(): void {
+    this.pillHost?.removeAttribute(DATA_ATTR.slashSearch);
+    this.pillHost = null;
   }
 
   /** Replaces "@query" with an inline page reference and closes the menu. */
@@ -435,6 +472,7 @@ export class PageReferenceTrigger extends BlockEventComposer {
       return;
     }
 
+    this.clearPill();
     this.Blok.YjsManager.startSubStep();
     const range = document.createRange();
 

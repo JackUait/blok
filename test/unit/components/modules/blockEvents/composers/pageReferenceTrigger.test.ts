@@ -724,14 +724,14 @@ describe('PageReferenceTrigger — Notion "@" menu', () => {
     });
 
     it('follows the query as it grows', async () => {
-      const { block } = mentionSetup('@ro');
+      const { block } = mentionSetup('See @ro');
 
       await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
       if (block.currentInput === undefined) {
         throw new Error('missing input');
       }
-      block.currentInput.textContent = '@road';
-      setCaret(block, 5);
+      block.currentInput.textContent = 'See @road';
+      setCaret(block, 9);
       await current?.handleInput(inputEvent(block.currentInput));
 
       expect(painted()).toEqual(['@road']);
@@ -748,7 +748,7 @@ describe('PageReferenceTrigger — Notion "@" menu', () => {
         current?.destroy();
       }],
     ])('is cleared on %s', async (_name, closeIt) => {
-      const { block } = mentionSetup('@road');
+      const { block } = mentionSetup('See @road');
 
       await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
       expect(painted()).toEqual(['@road']);
@@ -759,8 +759,8 @@ describe('PageReferenceTrigger — Notion "@" menu', () => {
       expect(current?.opened).toBe(false);
     });
 
-    it('is cleared after a pick inserts the mention', async () => {
-      const { block, search } = mentionSetup('@road');
+    it.each(['See @road', '@road'])('is cleared after a pick inserts the mention in "%s"', async (text) => {
+      const { block, search } = mentionSetup(text);
 
       search.mockResolvedValue([{ pageId: 'p1', title: 'Roadmap' }]);
       await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
@@ -768,6 +768,72 @@ describe('PageReferenceTrigger — Notion "@" menu', () => {
 
       await vi.waitFor(() => expect(block.currentInput?.querySelector('[data-blok-page-id]')).not.toBeNull());
       expect(painted()).toEqual([]);
+      expect(block.currentInput?.hasAttribute('data-blok-slash-search')).toBe(false);
+    });
+
+    describe('when "@query" is the block\'s only text', () => {
+      const pill = (block: Block): string | null => block.currentInput?.getAttribute('data-blok-slash-search') ?? null;
+
+      it('draws the "/" menu\'s pill on the editable, not a flat highlight, and leaves the text alone', async () => {
+        const { block, search } = mentionSetup('@road');
+        const before = block.currentInput?.innerHTML;
+
+        search.mockResolvedValue([{ pageId: 'p1', title: 'Roadmap' }]);
+        await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+        expect(pill(block)).toBe('');
+        expect(painted()).toEqual([]);
+        expect(block.currentInput?.innerHTML).toBe(before);
+      });
+
+      it('names the active page after a lone "@", and follows the pointer', async () => {
+        const { block, search } = mentionSetup('@');
+
+        search.mockResolvedValue([{ pageId: 'p1', title: 'Today' }, { pageId: 'p2', title: 'Roadmap' }]);
+        await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+
+        expect(pill(block)).toBe('Today');
+        document.querySelectorAll('[data-blok-testid="page-picker-option"]')[1]
+          ?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        expect(pill(block)).toBe('Roadmap');
+      });
+
+      it.each([
+        ['Escape', (): void => {
+          press('Escape');
+        }],
+        ['a close from outside', (): void => {
+          popovers.at(-1)?.closeFromOutside();
+        }],
+        ['destroy', (): void => {
+          current?.destroy();
+        }],
+      ])('is removed on %s', async (_name, closeIt) => {
+        const { block, search } = mentionSetup('@');
+
+        search.mockResolvedValue([{ pageId: 'p1', title: 'Today' }]);
+        await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+        expect(pill(block)).toBe('Today');
+
+        closeIt();
+
+        expect(block.currentInput?.hasAttribute('data-blok-slash-search')).toBe(false);
+      });
+
+      it('moves to a flat highlight once text is typed before the "@"', async () => {
+        const { block } = mentionSetup('@ro');
+
+        await current?.handleInput(inputEvent(block.currentInput as HTMLElement));
+        if (block.currentInput === undefined) {
+          throw new Error('missing input');
+        }
+        block.currentInput.textContent = 'x @ro';
+        setCaret(block, 5);
+        await current?.handleInput(inputEvent(block.currentInput));
+
+        expect(block.currentInput.hasAttribute('data-blok-slash-search')).toBe(false);
+        expect(painted()).toEqual(['@ro']);
+      });
     });
   });
 });

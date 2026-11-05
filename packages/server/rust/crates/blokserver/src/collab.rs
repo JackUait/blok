@@ -288,8 +288,10 @@ impl Inner {
             log: log.clone().map(|log| Box::new(move |m: &str| log(m)) as _),
         };
 
+        let clock = Arc::clone(&self.clock);
         let mut room = RoomOptions {
             announced_max_message_bytes: o.collab_max_message_bytes,
+            now: Some(Arc::new(move || clock())),
             ..RoomOptions::default()
         };
         let operations: Option<Arc<dyn OperationStore>> =

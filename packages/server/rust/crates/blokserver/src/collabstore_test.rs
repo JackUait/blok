@@ -43,16 +43,17 @@ impl OperationStore for Opening {
 }
 
 #[derive(Default)]
-struct Observed(Mutex<Vec<String>>);
+struct Observed(Mutex<Vec<String>>, Mutex<Vec<SystemTime>>);
 
 impl ActivityObserver for Observed {
     fn record<'a>(
         &'a self,
         doc_id: &'a str,
         actor_id: &'a str,
-        _at: SystemTime,
+        at: SystemTime,
         kind: ActivityKind,
     ) -> BoxFuture<'a, Result<(), Error>> {
+        self.1.lock().unwrap().push(at);
         self.0
             .lock()
             .unwrap()
@@ -196,6 +197,27 @@ async fn a_host_activity_observer_hears_an_edit() {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert_eq!(observer.0.lock().unwrap().join(","), "doc u1 Edited");
+    host.close().await;
+}
+
+// C# hands the host's TimeProvider to the room manager, so activity is
+// stamped with the host's clock.
+#[tokio::test(flavor = "multi_thread")]
+async fn activity_is_stamped_with_the_host_clock() {
+    let observer = Arc::new(Observed::default());
+    let fixed = SystemTime::UNIX_EPOCH + Duration::from_secs(981_173_106);
+    let host = host_server(|o| {
+        o.collab_journal = true;
+        o.collab_activity_observer = Some(observer.clone());
+        o.clock = Some(Arc::new(move || fixed));
+    })
+    .await;
+    assert_eq!(host.edit("doc", "k1").await.status, 204);
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    while observer.0.lock().unwrap().is_empty() && tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(*observer.1.lock().unwrap(), [fixed]);
     host.close().await;
 }
 

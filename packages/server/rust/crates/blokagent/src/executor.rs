@@ -61,13 +61,13 @@ impl<T: Invoker + ?Sized> Invoker for Arc<T> {
     }
 }
 
-/// Configures `Executor::new`. Zero values take the defaults, as in
+/// Configures `Executor::new`. A None limit takes the default, as in
 /// blokdocs::Options.
 #[derive(Clone, Debug, Default)]
 pub struct FactoryOptions {
     pub pool_size: Option<usize>,
-    pub timeout: Duration,
-    pub memory_budget: i64,
+    pub timeout: Option<Duration>,
+    pub memory_budget: Option<i64>,
     /// When set, `execute_in_room` runs on these live rooms.
     pub rooms: Option<Rooms>,
 }

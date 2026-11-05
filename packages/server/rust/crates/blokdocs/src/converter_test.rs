@@ -229,11 +229,19 @@ async fn converts_through_the_embedded_bundle() {
 fn refuses_limits_below_the_floors_before_loading() {
     for options in [
         Options {
-            timeout: Duration::from_millis(1),
+            timeout: Some(Duration::from_millis(1)),
             ..Options::default()
         },
         Options {
-            memory_budget: 1024,
+            timeout: Some(Duration::ZERO),
+            ..Options::default()
+        },
+        Options {
+            memory_budget: Some(1024),
+            ..Options::default()
+        },
+        Options {
+            memory_budget: Some(0),
             ..Options::default()
         },
         Options {

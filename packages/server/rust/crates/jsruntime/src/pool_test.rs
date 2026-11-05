@@ -401,7 +401,7 @@ async fn converts_a_deeply_nested_outline() {
 async fn converts_as_many_outline_levels_to_html_as_csharp() {
     let pool = Pool::new(Options {
         pool_size: Some(1),
-        timeout: Duration::from_secs(120),
+        timeout: Some(Duration::from_secs(120)),
         ..Options::default()
     })
     .expect("new");
@@ -459,21 +459,37 @@ fn refuses_limits_below_their_floors() {
     let cases = [
         (
             Options {
-                memory_budget: 1024,
+                memory_budget: Some(1024),
                 ..Options::default()
             },
             "MemoryBudget",
         ),
         (
             Options {
-                memory_budget: -1,
+                memory_budget: Some(-1),
+                ..Options::default()
+            },
+            "MemoryBudget",
+        ),
+        // C# RefusesAnExplicitZero: None is the default, Some(0) is under
+        // the floor.
+        (
+            Options {
+                memory_budget: Some(0),
                 ..Options::default()
             },
             "MemoryBudget",
         ),
         (
             Options {
-                timeout: Duration::from_millis(1),
+                timeout: Some(Duration::from_millis(1)),
+                ..Options::default()
+            },
+            "Timeout",
+        ),
+        (
+            Options {
+                timeout: Some(Duration::ZERO),
                 ..Options::default()
             },
             "Timeout",
@@ -500,8 +516,8 @@ fn refuses_limits_below_their_floors() {
 fn loads_at_the_floors() {
     Pool::new(Options {
         pool_size: Some(1),
-        memory_budget: MINIMUM_MEMORY_BUDGET,
-        timeout: Duration::from_secs(30),
+        memory_budget: Some(MINIMUM_MEMORY_BUDGET),
+        timeout: Some(Duration::from_secs(30)),
     })
     .expect("new at the budget floor");
 }
@@ -510,8 +526,8 @@ fn loads_at_the_floors() {
 fn loads_one_mebibyte_above_the_floor() {
     Pool::new(Options {
         pool_size: Some(1),
-        memory_budget: MINIMUM_MEMORY_BUDGET + (1 << 20),
-        timeout: Duration::from_secs(30),
+        memory_budget: Some(MINIMUM_MEMORY_BUDGET + (1 << 20)),
+        timeout: Some(Duration::from_secs(30)),
     })
     .expect("new one MiB above the budget floor");
 }

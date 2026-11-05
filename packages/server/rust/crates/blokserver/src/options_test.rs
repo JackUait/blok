@@ -155,14 +155,28 @@ fn new_refuses_document_limits_below_their_floor() {
         (
             "timeout",
             blok_blokdocs::Options {
-                timeout: std::time::Duration::from_millis(1),
+                timeout: Some(std::time::Duration::from_millis(1)),
+                ..blok_blokdocs::Options::default()
+            },
+        ),
+        (
+            "zero timeout",
+            blok_blokdocs::Options {
+                timeout: Some(std::time::Duration::ZERO),
                 ..blok_blokdocs::Options::default()
             },
         ),
         (
             "memory budget",
             blok_blokdocs::Options {
-                memory_budget: 1,
+                memory_budget: Some(1),
+                ..blok_blokdocs::Options::default()
+            },
+        ),
+        (
+            "zero budget",
+            blok_blokdocs::Options {
+                memory_budget: Some(0),
                 ..blok_blokdocs::Options::default()
             },
         ),

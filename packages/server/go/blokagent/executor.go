@@ -25,12 +25,12 @@ type Executor struct {
 	beforeHistoryLane func()
 }
 
-// FactoryOptions configure New. Zero values take the defaults, as in
+// FactoryOptions configure New. A nil limit takes the default, as in
 // blokdocs.Options.
 type FactoryOptions struct {
 	PoolSize     *int
-	Timeout      time.Duration
-	MemoryBudget int64
+	Timeout      *time.Duration
+	MemoryBudget *int64
 	// Rooms, when set, runs ExecuteInRoom on these live rooms.
 	Rooms *Rooms
 }

@@ -380,7 +380,7 @@ func TestConvertsADeeplyNestedOutline(t *testing.T) {
 // C# JintBlokRuntimeTests.ConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack:
 // a 1000-level outline converts to HTML.
 func TestConvertsTheSameDepthWhateverTheCallerHasSpentOfItsStack(t *testing.T) {
-	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: new(2 * time.Minute)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +396,7 @@ func TestConvertsAsManyOutlineLevelsToHTMLAsCSharp(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("slow")
 	}
-	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: new(2 * time.Minute)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,7 +413,7 @@ func TestConvertsAsManyOutlineLevelsAsCSharpForEachReader(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("slow")
 	}
-	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: new(2 * time.Minute)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +435,7 @@ func TestResetsTheFrameCapForEachCall(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("slow")
 	}
-	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: new(2 * time.Minute)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,10 +491,12 @@ func TestRefusesLimitsBelowTheirFloors(t *testing.T) {
 		options Options
 		param   string
 	}{
-		{Options{MemoryBudget: 1024}, "MemoryBudget"},
-		{Options{MemoryBudget: -1}, "MemoryBudget"},
-		{Options{Timeout: time.Millisecond}, "Timeout"},
-		{Options{Timeout: -time.Second}, "Timeout"},
+		{Options{MemoryBudget: new(int64(1024))}, "MemoryBudget"},
+		{Options{MemoryBudget: new(int64(-1))}, "MemoryBudget"},
+		{Options{MemoryBudget: new(int64(0))}, "MemoryBudget"},
+		{Options{Timeout: new(time.Millisecond)}, "Timeout"},
+		{Options{Timeout: new(-time.Second)}, "Timeout"},
+		{Options{Timeout: new(time.Duration(0))}, "Timeout"},
 		{Options{PoolSize: new(-1)}, "PoolSize"},
 		{Options{PoolSize: new(0)}, "PoolSize"},
 	}
@@ -508,7 +510,7 @@ func TestRefusesLimitsBelowTheirFloors(t *testing.T) {
 }
 
 func TestLoadsAtTheFloors(t *testing.T) {
-	if _, err := NewPool(Options{PoolSize: new(1), MemoryBudget: MinimumMemoryBudget, Timeout: 30 * time.Second}); err != nil {
+	if _, err := NewPool(Options{PoolSize: new(1), MemoryBudget: new(int64(MinimumMemoryBudget)), Timeout: new(30 * time.Second)}); err != nil {
 		t.Fatalf("NewPool at the budget floor: %v", err)
 	}
 }

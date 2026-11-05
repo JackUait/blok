@@ -27,11 +27,12 @@ fn json_string(text: &str) -> String {
     out
 }
 
+/// Zero is the default here, as C#'s null.
 fn embedded(timeout: Duration, budget: i64) -> Pool {
     Pool::new(Options {
         pool_size: Some(1),
-        timeout,
-        memory_budget: budget,
+        timeout: (!timeout.is_zero()).then_some(timeout),
+        memory_budget: (budget != 0).then_some(budget),
     })
     .expect("new")
 }
@@ -406,7 +407,7 @@ fn explains_a_start_up_too_small_to_load_the_bundle() {
         (
             Options {
                 pool_size: Some(1),
-                memory_budget: 1024,
+                memory_budget: Some(1024),
                 ..Options::default()
             },
             "MemoryBudget",
@@ -414,7 +415,7 @@ fn explains_a_start_up_too_small_to_load_the_bundle() {
         (
             Options {
                 pool_size: Some(1),
-                timeout: Duration::from_millis(1),
+                timeout: Some(Duration::from_millis(1)),
                 ..Options::default()
             },
             "Timeout",
@@ -431,7 +432,7 @@ fn explains_a_start_up_too_small_to_load_the_bundle() {
 fn refuses_an_allocation_budget_too_small_to_load_the_bundle() {
     match Pool::new(Options {
         pool_size: Some(1),
-        memory_budget: 1024 * 1024,
+        memory_budget: Some(1024 * 1024),
         ..Options::default()
     }) {
         Err(PoolError::Constraint(err)) => {
@@ -449,7 +450,7 @@ fn refuses_an_allocation_budget_too_small_to_load_the_bundle() {
 fn refuses_a_timeout_too_short_to_load_the_bundle() {
     match Pool::new(Options {
         pool_size: Some(1),
-        timeout: Duration::from_millis(5),
+        timeout: Some(Duration::from_millis(5)),
         ..Options::default()
     }) {
         Err(PoolError::Constraint(ConstraintError { param, .. })) => assert_eq!(param, "Timeout"),

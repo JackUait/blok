@@ -163,11 +163,17 @@ func TestRefusesADocumentNestedPastTheParseDepth(t *testing.T) {
 
 func TestRefusesLimitsBelowTheFloorsBeforeLoading(t *testing.T) {
 	var constraint *ConstraintError
-	if _, err := New(Options{Timeout: time.Millisecond}); !errors.As(err, &constraint) {
-		t.Fatalf("err = %v, want a ConstraintError", err)
-	}
-	if _, err := New(Options{MemoryBudget: 1024}); !errors.As(err, &constraint) {
-		t.Fatalf("err = %v, want a ConstraintError", err)
+	// C# BlokRuntimeStartupTests.RefusesAnExplicitZero: nil is the
+	// default, an explicit 0 is under the floor.
+	for _, options := range []Options{
+		{Timeout: new(time.Millisecond)},
+		{Timeout: new(time.Duration(0))},
+		{MemoryBudget: new(int64(1024))},
+		{MemoryBudget: new(int64(0))},
+	} {
+		if _, err := New(options); !errors.As(err, &constraint) {
+			t.Fatalf("%+v: err = %v, want a ConstraintError", options, err)
+		}
 	}
 }
 

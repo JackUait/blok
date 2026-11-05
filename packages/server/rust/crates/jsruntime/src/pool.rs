@@ -124,11 +124,13 @@ pub struct Options {
     /// Bounds concurrent calls; callers wait for a free engine. None means
     /// max(1, min(cores, 4)); 0 is refused, as C#.
     pub pool_size: Option<usize>,
-    /// The default wall-clock budget of one call and of each load.
-    pub timeout: Duration,
+    /// The default wall-clock budget of one call and of each load. None
+    /// means 10 s; under MINIMUM_TIMEOUT, zero too, is refused, as C#.
+    pub timeout: Option<Duration>,
     /// The bytes one call may allocate; a load may grow what the engine
-    /// holds by as much. See budget.rs.
-    pub memory_budget: i64,
+    /// holds by as much. See budget.rs. None means the default; under
+    /// MINIMUM_MEMORY_BUDGET, zero too, is refused, as C#.
+    pub memory_budget: Option<i64>,
 }
 
 /// Refuses a pool size under 1. None means the default.
@@ -143,17 +145,20 @@ pub fn validate_pool_size(size: Option<usize>) -> Result<(), ConstraintError> {
     }
 }
 
-/// Refuses a timeout or budget below its floor. Zero means the default and
+/// Refuses a timeout or budget below its floor. None means the default and
 /// passes.
-pub fn validate_constraints(timeout: Duration, budget: i64) -> Result<(), ConstraintError> {
-    if budget != 0 && budget < MINIMUM_MEMORY_BUDGET {
+pub fn validate_constraints(
+    timeout: Option<Duration>,
+    budget: Option<i64>,
+) -> Result<(), ConstraintError> {
+    if let Some(budget) = budget.filter(|b| *b < MINIMUM_MEMORY_BUDGET) {
         return Err(ConstraintError {
             param: "MemoryBudget",
             value: budget.to_string(),
             floor: MINIMUM_MEMORY_BUDGET.to_string(),
         });
     }
-    if !timeout.is_zero() && timeout < MINIMUM_TIMEOUT {
+    if let Some(timeout) = timeout.filter(|t| *t < MINIMUM_TIMEOUT) {
         return Err(ConstraintError {
             param: "Timeout",
             value: format!("{timeout:?}"),
@@ -222,8 +227,9 @@ impl Pool {
             "blok-server-runtime.js",
             BUNDLE,
             size,
-            options.timeout,
-            options.memory_budget,
+            // build reads zero as the default.
+            options.timeout.unwrap_or_default(),
+            options.memory_budget.unwrap_or_default(),
         )
     }
 

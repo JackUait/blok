@@ -67,7 +67,7 @@ func TestAConversionPassesWhileTheRestOfTheProcessAllocates(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("slow")
 	}
-	p, err := NewPool(Options{PoolSize: new(1), Timeout: 2 * time.Minute, MemoryBudget: 384 << 20})
+	p, err := NewPool(Options{PoolSize: new(1), Timeout: new(2 * time.Minute), MemoryBudget: new(int64(384 << 20))})
 	if err != nil {
 		t.Fatal(err)
 	}

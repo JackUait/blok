@@ -37,6 +37,24 @@ public sealed class BlokRuntimeStartupTests
     Assert.Equal("timeout", refusal.ParamName);
   }
 
+  /// <summary>
+  /// Unset means the default; an explicit zero is a value under the floor.
+  /// Go and Rust copy this with pointer and Option fields.
+  /// </summary>
+  [Theory]
+  [InlineData("timeout")]
+  [InlineData("allocationBudgetBytes")]
+  public void RefusesAnExplicitZero(string parameter)
+  {
+    var refusal = Assert.Throws<ArgumentOutOfRangeException>(
+        () => BlokDocuments.Create(
+            poolSize: 1,
+            timeout: parameter == "timeout" ? TimeSpan.Zero : null,
+            allocationBudgetBytes: parameter == "allocationBudgetBytes" ? 0 : null));
+
+    Assert.Equal(parameter, refusal.ParamName);
+  }
+
   /// <summary>The floors are published so a host can name them instead of guessing.</summary>
   [Fact]
   public void PublishesTheFloorsItEnforces()

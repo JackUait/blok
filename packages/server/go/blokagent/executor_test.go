@@ -12,7 +12,7 @@ import (
 )
 
 // C# BlokAgentExecutorTests.FactoryForwardsPoolAndStartupConstraints. A nil
-// pool size means the default; 0 is below the floor, as in C#.
+// limit means the default; an explicit 0 is below the floor, as in C#.
 func TestNewRefusesLimitsBelowTheirFloorsBeforeLoading(t *testing.T) {
 	for _, row := range []struct {
 		param   string
@@ -20,8 +20,10 @@ func TestNewRefusesLimitsBelowTheirFloorsBeforeLoading(t *testing.T) {
 	}{
 		{"PoolSize", FactoryOptions{PoolSize: new(-1)}},
 		{"PoolSize", FactoryOptions{PoolSize: new(0)}},
-		{"Timeout", FactoryOptions{PoolSize: new(1), Timeout: time.Millisecond}},
-		{"MemoryBudget", FactoryOptions{PoolSize: new(1), MemoryBudget: 1024}},
+		{"Timeout", FactoryOptions{PoolSize: new(1), Timeout: new(time.Millisecond)}},
+		{"Timeout", FactoryOptions{PoolSize: new(1), Timeout: new(time.Duration(0))}},
+		{"MemoryBudget", FactoryOptions{PoolSize: new(1), MemoryBudget: new(int64(1024))}},
+		{"MemoryBudget", FactoryOptions{PoolSize: new(1), MemoryBudget: new(int64(0))}},
 	} {
 		var constraint *blokdocs.ConstraintError
 		if _, err := New(row.options); !errors.As(err, &constraint) || constraint.Param != row.param {

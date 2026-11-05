@@ -100,18 +100,21 @@ type Options struct {
 	// nil means max(1, min(NumCPU, 4)); under 1 is refused, as C#.
 	PoolSize *int
 	// Timeout is the default wall-clock budget of one call and of each load.
-	Timeout time.Duration
-	// MemoryBudget is the heap growth one call may cause. Approximate: see guard.go.
-	MemoryBudget int64
+	// nil means 10 s; under MinimumTimeout, 0 too, is refused, as C#.
+	Timeout *time.Duration
+	// MemoryBudget is the heap growth one call may cause. Approximate: see
+	// guard.go. nil means 1 GiB; under MinimumMemoryBudget, 0 too, is
+	// refused, as C#.
+	MemoryBudget *int64
 }
 
-// ValidateConstraints refuses a timeout or budget below its floor. Zero means
+// ValidateConstraints refuses a timeout or budget below its floor. nil means
 // the default and passes.
-func ValidateConstraints(timeout time.Duration, budget int64) error {
-	if budget != 0 && budget < MinimumMemoryBudget {
-		return &ConstraintError{Param: "MemoryBudget", Value: fmt.Sprint(budget), Floor: fmt.Sprint(MinimumMemoryBudget)}
+func ValidateConstraints(timeout *time.Duration, budget *int64) error {
+	if budget != nil && *budget < MinimumMemoryBudget {
+		return &ConstraintError{Param: "MemoryBudget", Value: fmt.Sprint(*budget), Floor: fmt.Sprint(MinimumMemoryBudget)}
 	}
-	if timeout != 0 && timeout < MinimumTimeout {
+	if timeout != nil && *timeout < MinimumTimeout {
 		return &ConstraintError{Param: "Timeout", Value: timeout.String(), Floor: MinimumTimeout.String()}
 	}
 	return nil
@@ -149,7 +152,16 @@ func NewPool(options Options) (*Pool, error) {
 	if err != nil {
 		return nil, &StartupError{Message: "Could not load Blok's runtime bundle into an engine.", Err: err}
 	}
-	return newPool(program, size, options.Timeout, options.MemoryBudget)
+	// newPool reads 0 as the default.
+	var timeout time.Duration
+	if options.Timeout != nil {
+		timeout = *options.Timeout
+	}
+	var budget int64
+	if options.MemoryBudget != nil {
+		budget = *options.MemoryBudget
+	}
+	return newPool(program, size, timeout, budget)
 }
 
 func newPoolFromSource(source string, size int, timeout time.Duration, budget int64) (*Pool, error) {

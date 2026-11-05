@@ -38,12 +38,14 @@ pub struct Options {
     /// Bounds concurrent conversions. None means max(1, min(cores, 4));
     /// 0 is refused, as C#.
     pub pool_size: Option<usize>,
-    /// The wall-clock budget of one conversion. 0 means 10 s. QuickJS checks
-    /// it between JavaScript instructions, so a long native builtin (a
+    /// The wall-clock budget of one conversion. None means 10 s; under
+    /// MINIMUM_TIMEOUT, zero too, is refused, as C#. QuickJS checks it
+    /// between JavaScript instructions, so a long native builtin (a
     /// backtracking regex) overruns it.
-    pub timeout: Duration,
-    /// The growth in bytes one conversion's engine may hold. 0 means 512 MiB.
-    pub memory_budget: i64,
+    pub timeout: Option<Duration>,
+    /// The growth in bytes one conversion's engine may hold. None means
+    /// 512 MiB; under MINIMUM_MEMORY_BUDGET, zero too, is refused, as C#.
+    pub memory_budget: Option<i64>,
     /// Converts a long article in the background once the pool is built, so
     /// the first request does not pay for cold paths. `new` does not wait for
     /// it, and its failure is ignored.

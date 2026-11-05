@@ -36,9 +36,9 @@ fn documents_options() -> Options {
 async fn the_document_converter_shares_the_agents_engine_pool_and_takes_its_size() {
     let size = PoolOptions {
         pool_size: Some(1),
-        timeout: Duration::from_secs(120),
+        timeout: Some(Duration::from_secs(120)),
         // An agent call needs 65 to 80 MiB in C# (measured).
-        memory_budget: 128 << 20,
+        memory_budget: Some(128 << 20),
     };
     let s = Server::new(Options {
         documents: blok_blokdocs::Options {

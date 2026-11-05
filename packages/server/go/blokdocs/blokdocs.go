@@ -26,19 +26,20 @@ type Options struct {
 	// PoolSize bounds concurrent conversions. nil means
 	// max(1, min(NumCPU, 4)); under 1 is refused, as C#.
 	PoolSize *int
-	// Timeout is the wall-clock budget of one conversion. 0 means 10 s.
+	// Timeout is the wall-clock budget of one conversion. nil means 10 s;
+	// under MinimumTimeout, 0 too, is refused, as C#.
 	//
 	// It is not a hard bound: goja checks it between JavaScript
 	// instructions, so a long native builtin (a backtracking regex) overruns
 	// it by seconds.
-	Timeout time.Duration
-	// MemoryBudget is the live heap growth one conversion may cause. 0 means
-	// 1 GiB.
+	Timeout *time.Duration
+	// MemoryBudget is the live heap growth one conversion may cause. nil
+	// means 1 GiB; under MinimumMemoryBudget, 0 too, is refused, as C#.
 	//
 	// Approximate, unlike C#'s per-engine allocation count: it is the whole
 	// process's live heap as of the last GC, read every millisecond, so
 	// concurrent conversions add up.
-	MemoryBudget int64
+	MemoryBudget *int64
 	// WarmUp converts a long article in the background once the pool is
 	// built, so the first request does not pay for cold paths. New does not
 	// wait for it, and its failure is ignored.

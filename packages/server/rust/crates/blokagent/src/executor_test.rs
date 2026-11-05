@@ -22,7 +22,15 @@ fn new_refuses_limits_below_their_floors_before_loading() {
             "Timeout",
             FactoryOptions {
                 pool_size: Some(1),
-                timeout: Duration::from_millis(1),
+                timeout: Some(Duration::from_millis(1)),
+                ..FactoryOptions::default()
+            },
+        ),
+        (
+            "Timeout",
+            FactoryOptions {
+                pool_size: Some(1),
+                timeout: Some(Duration::ZERO),
                 ..FactoryOptions::default()
             },
         ),
@@ -30,7 +38,15 @@ fn new_refuses_limits_below_their_floors_before_loading() {
             "MemoryBudget",
             FactoryOptions {
                 pool_size: Some(1),
-                memory_budget: 1024,
+                memory_budget: Some(1024),
+                ..FactoryOptions::default()
+            },
+        ),
+        (
+            "MemoryBudget",
+            FactoryOptions {
+                pool_size: Some(1),
+                memory_budget: Some(0),
                 ..FactoryOptions::default()
             },
         ),

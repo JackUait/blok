@@ -250,7 +250,7 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		}
 		in := bufio.NewReader(conn)
 		reader := NewResponseReader(in, maxResponseHeadersBytes)
-		status, line, header, err := reader.ReadHead()
+		status, _, header, err := reader.ReadHead()
 		if err != nil {
 			return conn, err
 		}
@@ -318,23 +318,107 @@ func connectTunnel(ctx context.Context, conn net.Conn, proxy *url.URL, target st
 		if next == "" || next == "Digest " {
 			return conn, fmt.Errorf("proxy: CONNECT answered %d", status)
 		}
-		// After the Type 1 the conn is kept whatever the answer says.
-		handshake := nt != nil && authorization != ""
+		first := authorization == ""
 		authorization = next
 		body, framing := reader.Body(status, false, header)
-		keep := framing != FramedClose && strings.HasPrefix(string(line), "HTTP/1.1 ") &&
-			!strings.Contains(strings.ToLower(connectionTokens(header)), "close")
-		if keep || handshake {
-			_, err := io.Copy(io.Discard, body)
-			keep = keep && err == nil && in.Buffered() == 0
+		if nt != nil {
+			// SendWithNtAuthAsync: only a first 407 that says close moves to
+			// a new conn; every other answer is drained or the request fails.
+			if first && connectionHeaderCloses(header) {
+				conn.Close()
+				if conn, err = open(); err != nil {
+					return nil, err
+				}
+				continue
+			}
+			if err := drainForNtAuth(ctx, conn, in, body, framing, header); err != nil {
+				return conn, err
+			}
+			continue
 		}
-		if !keep && !handshake {
+		// SendWithAuthAsync disposes the answer, which drains it; a conn
+		// that cannot be drained, or that the answer closes, is dropped.
+		keep := framing != FramedClose && !headClosesConn(header) &&
+			drainResponse(ctx, conn, in, body, framing) == nil && in.Buffered() == 0
+		if !keep {
 			conn.Close()
 			if conn, err = open(); err != nil {
 				return nil, err
 			}
 		}
 	}
+}
+
+// maxResponseDrainSize and maxResponseDrainTime are SocketsHttpHandler's
+// MaxResponseDrainSize and ResponseDrainTimeout defaults.
+const (
+	maxResponseDrainSize = 1 << 20
+	maxResponseDrainTime = 2 * time.Second
+)
+
+var errDrain = errors.New("proxy: the answer could not be drained")
+
+// drainResponse is HttpContentReadStream.DrainAsync: a length body is not
+// read when more than the cap is left past what is buffered; a chunked one
+// stops at the cap. Both stop at the drain time. .NET counts a chunked
+// body's framing too; this counts its data only.
+func drainResponse(ctx context.Context, conn net.Conn, in *bufio.Reader, body io.Reader, framing Framing) error {
+	switch framing {
+	case FramedNone:
+		return nil
+	case FramedLength:
+		if body.(*lengthReader).remaining-int64(in.Buffered()) > maxResponseDrainSize {
+			return errDrain
+		}
+	case FramedClose:
+		return errDrain
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(maxResponseDrainTime))
+	defer func() {
+		deadline, _ := ctx.Deadline()
+		_ = conn.SetReadDeadline(deadline)
+	}()
+	n, err := io.Copy(io.Discard, io.LimitReader(body, maxResponseDrainSize+1))
+	if err != nil {
+		return err
+	}
+	if n > maxResponseDrainSize {
+		return errDrain
+	}
+	return nil
+}
+
+// drainForNtAuth is HttpConnection.DrainResponseAsync: the request fails
+// when the answer closes the conn, cannot be drained, or leaves bytes
+// after it. A body read to the close is not drained (NeedsDrain is
+// false), and the conn is used as it is.
+func drainForNtAuth(ctx context.Context, conn net.Conn, in *bufio.Reader, body io.Reader, framing Framing, header http.Header) error {
+	if framing == FramedClose {
+		if headClosesConn(header) {
+			return errNtlmDrain
+		}
+		return nil
+	}
+	if headClosesConn(header) {
+		return errNtlmDrain
+	}
+	if err := drainResponse(ctx, conn, in, body, framing); err != nil || in.Buffered() > 0 {
+		return errNtlmDrain
+	}
+	return nil
+}
+
+var errNtlmDrain = errors.New("proxy: the authentication conn failed")
+
+// connectionHeaderCloses is HttpHeaders.ConnectionClose alone, without
+// Keep-Alive.
+func connectionHeaderCloses(header http.Header) bool {
+	for _, value := range header.Values("Connection") {
+		if connectionLineCloses(value) {
+			return true
+		}
+	}
+	return false
 }
 
 // proxyCredential is GetCredentialsFromString's NetworkCredential: the

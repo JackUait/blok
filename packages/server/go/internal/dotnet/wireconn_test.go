@@ -174,9 +174,11 @@ func (f fakeConn) Close() error                { return nil }
 // The headers net/http hands back belong to the response that carried
 // them, even when the conn has read a later head first.
 func TestEachResponseTakesTheHeadersOfItsOwnHead(t *testing.T) {
-	wire := newWireConn(fakeConn{in: strings.NewReader(
-		"HTTP/1.1 200 OK\r\nX-Probe: one\x01\r\nContent-Length: 1\r\n\r\na" +
-			"HTTP/1.1 200 OK\r\nX-Probe: two\x01\r\nContent-Length: 1\r\n\r\nb")})
+	// Each answer arrives in a read of its own: bytes already buffered
+	// past an answer would end the conn, as in .NET.
+	wire := newWireConn(fakeConn{in: io.MultiReader(
+		strings.NewReader("HTTP/1.1 200 OK\r\nX-Probe: one\x01\r\nContent-Length: 1\r\n\r\na"),
+		strings.NewReader("HTTP/1.1 200 OK\r\nX-Probe: two\x01\r\nContent-Length: 1\r\n\r\nb"))})
 	reader := bufio.NewReader(wire)
 	var responses []*http.Response
 	for range 2 {

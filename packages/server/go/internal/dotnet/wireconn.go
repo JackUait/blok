@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -109,6 +108,9 @@ func (c *wireConn) Read(p []byte) (int, error) {
 		if len(c.out) > 0 {
 			n := copy(p, c.out)
 			c.out = c.out[n:]
+			if len(c.out) == 0 && c.body == nil && c.endsConn() {
+				return n, c.err
+			}
 			return n, nil
 		}
 		if c.err != nil {
@@ -140,8 +142,11 @@ func (c *wireConn) Read(p []byte) (int, error) {
 			continue
 		}
 		n, err := c.body.Read(p)
-		if errors.Is(err, io.EOF) && c.framing == FramedLength {
+		if c.framing == FramedLength && (errors.Is(err, io.EOF) || err == nil && c.body.(*lengthReader).remaining == 0) {
 			c.body, err = nil, nil
+			if c.endsConn() {
+				return n, c.err
+			}
 		}
 		if err != nil {
 			c.err = err
@@ -150,6 +155,16 @@ func (c *wireConn) Read(p []byte) (int, error) {
 			return n, err
 		}
 	}
+}
+
+// endsConn is CompleteResponse at the end of a response: bytes already
+// read past it make .NET drop the conn. The read that ends the response
+// then also ends the conn, so net/http never pools it.
+func (c *wireConn) endsConn() bool {
+	if c.err == nil && c.in.Buffered() > 0 {
+		c.err = io.EOF
+	}
+	return c.err != nil
 }
 
 // nextHead reads a response head and queues net/http's view of it. Read
@@ -173,15 +188,10 @@ func (c *wireConn) nextHead() error {
 	}
 	c.pending[id] = true
 	c.mu.Unlock()
-	tokens := connectionTokens(header)
-	if framing == FramedChunked && strings.HasPrefix(string(line), "HTTP/1.0 ") {
-		// .NET chunks an HTTP/1.0 body too; net/http would not. The conn
-		// still closes after it unless the server asked to keep it.
-		line = append([]byte("HTTP/1.1"), line[8:]...)
-		if !strings.Contains(strings.ToLower(tokens), "keep-alive") {
-			tokens = strings.TrimPrefix(tokens+", close", ", ")
-		}
-	}
+	// .NET keeps an HTTP/1.0 conn as it keeps a 1.1 one, and reads a 1.0
+	// chunked body; net/http does neither. So net/http sees 1.1 and the
+	// close .NET decides.
+	line = append([]byte("HTTP/1.1"), line[8:]...)
 	out := append(append([]byte(nil), line...), "\r\n"...)
 	out = append(out, headKey+": "+id+"\r\n"...)
 	switch framing {
@@ -193,11 +203,9 @@ func (c *wireConn) nextHead() error {
 		if n := ResponseContentLength(header); n >= 0 {
 			out = append(out, "Content-Length: "+strconv.FormatInt(n, 10)+"\r\n"...)
 		}
-	case FramedClose:
-		out = append(out, "Connection: close\r\n"...)
 	}
-	if framing != FramedClose && tokens != "" {
-		out = append(out, "Connection: "+tokens+"\r\n"...)
+	if framing == FramedClose || headClosesConn(header) {
+		out = append(out, "Connection: close\r\n"...)
 	}
 	c.out = append(out, "\r\n"...)
 	c.framing = framing
@@ -222,23 +230,4 @@ func (c *wireConn) nextChunk(size int) error {
 		return nil
 	}
 	return err
-}
-
-// connectionTokens is the Connection header's tokens, or "" when any is
-// not a token net/http would take.
-func connectionTokens(header http.Header) string {
-	var tokens []string
-	for _, value := range header.Values("Connection") {
-		for _, token := range strings.Split(value, ",") {
-			token = strings.Trim(token, " \t")
-			if token == "" {
-				continue
-			}
-			if !isToken(token) {
-				return ""
-			}
-			tokens = append(tokens, token)
-		}
-	}
-	return strings.Join(tokens, ", ")
 }

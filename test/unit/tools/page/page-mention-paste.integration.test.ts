@@ -177,3 +177,49 @@ describe('pasting a page link as a mention', () => {
     ]);
   });
 });
+
+describe('a mention the host cannot show', () => {
+  const MENTION = '<a data-blok-page-id="p1">Page</a>';
+
+  const title = (): string | null | undefined =>
+    reference()?.querySelector('[data-blok-testid="page-reference-title"]')?.textContent;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(async () => {
+    editor?.destroy();
+    editor = undefined;
+    await settle();
+    holder?.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('says the page is not found when resolve answers null', async () => {
+    await createEditor({ ...pageConfig(), resolve: () => null }, MENTION);
+
+    await vi.waitFor(() => expect(title()).toBe('Page not found'));
+    expect(reference()?.hasAttribute('href')).toBe(false);
+  });
+
+  it('keeps the neutral label while resolve answers undefined', async () => {
+    const resolve = vi.fn(() => undefined);
+
+    await createEditor({ ...pageConfig(), resolve }, MENTION);
+
+    await vi.waitFor(() => expect(resolve).toHaveBeenCalled());
+    await settle();
+    expect(title()).toBe('Page');
+  });
+
+  it('saves the neutral label, not the missing one', async () => {
+    const instance = await createEditor({ ...pageConfig(), resolve: () => null }, MENTION);
+
+    await vi.waitFor(() => expect(title()).toBe('Page not found'));
+
+    expect(await savedText(instance)).toBe(MENTION);
+  });
+});

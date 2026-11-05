@@ -241,9 +241,13 @@ export class PageReferences extends Module {
     const visibleTitle = allowed && typeof info.title === 'string' && info.title.trim() !== ''
       ? info.title
       : this.Blok.I18n.t('tools.page.unresolved');
-    const title = info?.access === 'none'
-      ? this.Blok.I18n.t('tools.page.noAccess')
-      : visibleTitle;
+    const title = ((): string => {
+      if (info === null) {
+        return this.Blok.I18n.t('tools.page.missing');
+      }
+
+      return info?.access === 'none' ? this.Blok.I18n.t('tools.page.noAccess') : visibleTitle;
+    })();
 
     const { icon, label } = this.parts(anchor);
 

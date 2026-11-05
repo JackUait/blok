@@ -122,8 +122,8 @@ test.describe('Generic embed + replace source', () => {
 
     await expect(iframe).toBeVisible();
     await expect(iframe).toHaveAttribute('src', /example\.com\/page/);
-    // The real host, drawn by Blok outside the frame.
-    await expect(page.getByText('example.com', { exact: true })).toBeVisible();
+    // A loaded generic frame has no host line above it.
+    await expect(page.getByText('example.com', { exact: true })).toHaveCount(0);
 
     await expect(iframe).toHaveAttribute('sandbox', /.+/);
   });

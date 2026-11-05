@@ -10,7 +10,12 @@ namespace Blok.Server.Tests;
 /// Reads test/unit/server-conformance/fixtures/outbound-body-text.json,
 /// which Go and Rust read too: the text Digest auth-int hashes, which is
 /// HttpContent.ReadAsStringAsync over the body under its raw Content-Type.
-/// Run with BLOK_WRITE_FIXTURES=1 to rewrite the answers.
+/// The answers are .NET's with no EncodingProvider. AngleSharp registers
+/// CodePagesEncodingProvider when its default configuration is built (the
+/// unfurl parser does), and from then on a code-page charset such as
+/// windows-1252 reads instead of throwing. When some earlier test in this
+/// process did that, those rows are skipped. Run with BLOK_WRITE_FIXTURES=1
+/// in a fresh process to rewrite the answers.
 /// </summary>
 public sealed class BodyTextFixtureTests
 {
@@ -54,6 +59,40 @@ public sealed class BodyTextFixtureTests
       return;
     }
 
-    Assert.Equal(fixture["answers"]!.ToJsonString(), answers.ToJsonString());
+    var cases = fixture["cases"]!.AsArray();
+    var wanted = fixture["answers"]!.AsArray();
+    Assert.Equal(wanted.Count, answers.Count);
+    for (var index = 0; index < answers.Count; index++)
+    {
+      if (CodePageCharset(cases[index]!["contentType"]?.GetValue<string>()))
+      {
+        continue;
+      }
+
+      Assert.Equal(wanted[index]!.ToJsonString(), answers[index]!.ToJsonString());
+    }
+  }
+
+  // Whether contentType names a charset only a registered
+  // CodePagesEncodingProvider knows, while one is registered.
+  private static bool CodePageCharset(string? contentType)
+  {
+    if (contentType is null ||
+        !System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(contentType, out var parsed) ||
+        parsed.CharSet is not { } name)
+    {
+      return false;
+    }
+
+    try
+    {
+      _ = System.Text.Encoding.GetEncoding(1252);
+    }
+    catch (NotSupportedException)
+    {
+      return false;
+    }
+
+    return System.Text.CodePagesEncodingProvider.Instance.GetEncoding(name.Trim('"')) is not null;
   }
 }

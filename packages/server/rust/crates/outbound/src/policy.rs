@@ -99,6 +99,8 @@ const FORBIDDEN: &[&str] = &[
     "240.0.0.0/4",
     "255.255.255.255/32",
     "100.64.0.0/10",
+    // Azure WireServer: every Azure VM reaches it.
+    "168.63.129.16/32",
     "::/96",
     "::ffff:0:0:0/96",
     "100::/64",

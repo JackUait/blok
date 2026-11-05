@@ -57,6 +57,8 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
     NetworkRange.Parse("240.0.0.0/4"),
     NetworkRange.Parse("255.255.255.255/32"),
     NetworkRange.Parse("100.64.0.0/10"),
+    // Azure WireServer: every Azure VM reaches it.
+    NetworkRange.Parse("168.63.129.16/32"),
     NetworkRange.Parse("::/96"),
     // SIIT ::ffff:0:a.b.c.d reaches IPv4 through a translator.
     NetworkRange.Parse("::ffff:0:0:0/96"),

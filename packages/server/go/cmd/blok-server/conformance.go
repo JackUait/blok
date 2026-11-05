@@ -5,6 +5,7 @@ package main
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/JackUait/blok/packages/server/go/blokserver"
 )
@@ -17,6 +18,8 @@ type conformanceArguments struct {
 	origin  string
 	port    int
 	journal bool
+	// keepAlive is CollabKeepAliveInterval, when set.
+	keepAlive *time.Duration
 }
 
 // parseConformanceArguments is ConformanceArguments.Parse: it takes its two
@@ -32,6 +35,14 @@ func parseConformanceArguments(args []string) ([]string, conformanceArguments, s
 		}
 		if argument == "--conformance-journal" || argument == "-conformance-journal" {
 			parsed.journal = true
+			continue
+		}
+		if text, ok := strings.CutPrefix(argument, "--conformance-keep-alive-ms="); ok {
+			milliseconds, err := strconv.Atoi(text)
+			if err != nil || !isDigits(text) {
+				return nil, parsed, "--conformance-keep-alive-ms must be a whole number of milliseconds (got " + csQuote(text) + ")"
+			}
+			parsed.keepAlive = new(time.Duration(milliseconds) * time.Millisecond)
 			continue
 		}
 		var value string
@@ -70,6 +81,13 @@ func isDigits(s string) bool {
 		}
 	}
 	return s != ""
+}
+
+// applyConformanceOptions sets what the flags change before New.
+func applyConformanceOptions(options *blokserver.Options, parsed conformanceArguments) {
+	if parsed.keepAlive != nil {
+		options.CollabKeepAliveInterval = parsed.keepAlive
+	}
 }
 
 // applyConformance wires the parsed flags into the server.

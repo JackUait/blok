@@ -44,6 +44,12 @@ options.Version = Assembly.GetEntryAssembly()
     ?.GetCustomAttributes<AssemblyMetadataAttribute>()
     .SingleOrDefault(metadata => metadata.Key == "BlokServerVersion")
     ?.Value ?? "dev";
+#if BLOK_SERVER_CONFORMANCE
+if (conformance.KeepAliveMs is { } keepAliveMs)
+{
+  options.CollabKeepAliveInterval = TimeSpan.FromMilliseconds(keepAliveMs);
+}
+#endif
 
 try
 {

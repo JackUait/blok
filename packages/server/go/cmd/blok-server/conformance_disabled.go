@@ -11,4 +11,6 @@ func parseConformanceArguments(args []string) ([]string, conformanceArguments, s
 	return args, conformanceArguments{}, ""
 }
 
+func applyConformanceOptions(*blokserver.Options, conformanceArguments) {}
+
 func applyConformance(*blokserver.Server, conformanceArguments) {}

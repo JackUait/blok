@@ -8,7 +8,8 @@ internal sealed record ConformanceParseResult(
     string? Origin,
     int Port,
     bool Journal,
-    string? Error);
+    string? Error,
+    int? KeepAliveMs = null);
 
 internal static class ConformanceArguments
 {
@@ -24,6 +25,7 @@ internal static class ConformanceArguments
     string? origin = null;
     var port = 0;
     var journal = false;
+    int? keepAliveMs = null;
 
     for (var index = 0; index < arguments.Length; index++)
     {
@@ -40,6 +42,18 @@ internal static class ConformanceArguments
       if (argument is "--conformance-journal" or "-conformance-journal")
       {
         journal = true;
+        continue;
+      }
+
+      if (argument.StartsWith("--conformance-keep-alive-ms=", StringComparison.Ordinal))
+      {
+        var text = argument["--conformance-keep-alive-ms=".Length..];
+        if (!int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var milliseconds))
+        {
+          return Error($"--conformance-keep-alive-ms must be a whole number of milliseconds (got \"{text}\")");
+        }
+
+        keepAliveMs = milliseconds;
         continue;
       }
 
@@ -103,7 +117,8 @@ internal static class ConformanceArguments
         origin,
         port,
         journal,
-        null);
+        null,
+        keepAliveMs);
   }
 
   private static ConformanceParseResult Error(string error)

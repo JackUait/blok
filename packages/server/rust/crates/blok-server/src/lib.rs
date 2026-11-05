@@ -14,7 +14,9 @@ use blok_http::listen::listen;
 
 use crate::args::{USAGE, parse_host_arguments};
 use crate::collablog::{CollabStderr, Stderr, write_log_line};
-use crate::conformance::{apply_conformance, parse_conformance_arguments};
+use crate::conformance::{
+    apply_conformance, apply_conformance_options, parse_conformance_arguments,
+};
 
 /// .NET's Environment.NewLine, which Console.Error.WriteLine ends every C#
 /// record with: "\r\n" in the Windows CoreLib.
@@ -111,6 +113,7 @@ pub async fn run<F: Future<Output = ()>>(
     options.version = version.to_owned();
     options.loopback_host_check = true;
     configure_collab(&mut options, &stderr);
+    apply_conformance_options(&mut options, &conformance);
     let server = match Server::new(options) {
         Ok(server) => server,
         Err(error) => {

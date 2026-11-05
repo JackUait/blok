@@ -1,7 +1,7 @@
 //! ConformanceArguments: two flags only the conformance build has. The
 //! ordinary build passes args through, so the host parser refuses them.
 
-use blok_blokserver::Server;
+use blok_blokserver::{Options, Server};
 
 #[cfg(feature = "conformance")]
 use crate::args::cs_quote;
@@ -17,6 +17,8 @@ pub struct ConformanceArguments {
     pub origin: String,
     pub port: u16,
     pub journal: bool,
+    /// CollabKeepAliveInterval in milliseconds, when set.
+    pub keep_alive_ms: Option<i64>,
 }
 
 /// Takes the two flags out of args, at any place before "--", before the
@@ -36,6 +38,21 @@ pub fn parse_conformance_arguments(
         }
         if argument == "--conformance-journal" || argument == "-conformance-journal" {
             parsed.journal = true;
+            i += 1;
+            continue;
+        }
+        if let Some(text) = argument.strip_prefix("--conformance-keep-alive-ms=") {
+            match text.parse::<i64>() {
+                Ok(ms) if !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()) => {
+                    parsed.keep_alive_ms = Some(ms);
+                }
+                _ => {
+                    return Err(format!(
+                        "--conformance-keep-alive-ms must be a whole number of milliseconds (got {})",
+                        cs_quote(text)
+                    ));
+                }
+            }
             i += 1;
             continue;
         }
@@ -79,6 +96,17 @@ pub fn parse_conformance_arguments(
 ) -> Result<(Vec<String>, ConformanceArguments), String> {
     Ok((args.to_vec(), ConformanceArguments::default()))
 }
+
+/// Sets what the flags change before the server is built.
+#[cfg(feature = "conformance")]
+pub fn apply_conformance_options(options: &mut Options, parsed: &ConformanceArguments) {
+    if let Some(ms) = parsed.keep_alive_ms {
+        options.collab_keep_alive_interval_nanos = ms * 1_000_000;
+    }
+}
+
+#[cfg(not(feature = "conformance"))]
+pub fn apply_conformance_options(_options: &mut Options, _parsed: &ConformanceArguments) {}
 
 #[cfg(feature = "conformance")]
 pub fn apply_conformance(server: &Server, parsed: &ConformanceArguments) {

@@ -23,6 +23,7 @@ import {
   openRaw,
   type OpenOptions,
   type RawSocket,
+  type ServerFrame,
 } from './raw-websocket';
 import { startServer, type RunningServer } from './run-against';
 
@@ -78,6 +79,8 @@ interface HarnessOptions {
   auth?: 'none' | 'ticket';
   rateLimit?: number;
   journal?: boolean;
+  /** CollabKeepAliveInterval, through a flag only the conformance build has. */
+  keepAliveMs?: number;
 }
 
 interface StartedHarness {
@@ -117,6 +120,7 @@ async function startHarness(options: HarnessOptions): Promise<StartedHarness> {
         '--collab-dir', collabDirectory,
         '--doc-endpoint', endpoint.url,
         ...(options.journal === true ? ['--conformance-journal'] : []),
+        ...(options.keepAliveMs === undefined ? [] : [`--conformance-keep-alive-ms=${options.keepAliveMs}`]),
         ...(auth === 'ticket' ? ['--allow-origin', ALLOWED_ORIGIN] : []),
       ],
       env: auth === 'ticket' ? { BLOK_SECRET: tickets.secret } : {},
@@ -586,6 +590,53 @@ describe('sync transport: a served socket', () => {
       expect(await socket.closed()).toMatchObject({ code: 1008, reason: 'inbound rate exceeded' });
     });
   }, TEST_TIMEOUT_MS);
+});
+
+describe('sync transport: keep-alive', () => {
+  const INTERVAL_MS = 400;
+
+  it('pings each keep-alive interval and aborts a peer that never answers after two more', async () => {
+    await withServer({ keepAliveMs: INTERVAL_MS }, async (harness) => {
+      const socket = await harness.open('/sync/doc-keep-alive');
+      const opened = Date.now();
+
+      expect(socket.response.status).toBe(101);
+      const ping = await socket.frame(OP_PING, 5 * INTERVAL_MS);
+      const pinged = Date.now() - opened;
+      const ended = await socket.ended(10 * INTERVAL_MS);
+
+      expect({ fin: ping.fin, bytes: ping.payload.length }).toEqual({ fin: true, bytes: 8 });
+      expect(pinged).toBeGreaterThanOrEqual(INTERVAL_MS * 0.8);
+      expect(pinged).toBeLessThan(INTERVAL_MS * 2.5);
+      // Measured on C#: the ping at 400 ms, the abort at 1200 to 1300 ms.
+      expect(ended - opened).toBeGreaterThanOrEqual(INTERVAL_MS * 2.75);
+      expect(ended - opened).toBeLessThan(INTERVAL_MS * 4.5);
+      expect(socket.frames.filter((frame) => frame.opcode === OP_CLOSE)).toEqual([]);
+    });
+  });
+
+  it('keeps a peer that answers every ping', async () => {
+    await withServer({ keepAliveMs: INTERVAL_MS }, async (harness) => {
+      const socket = await harness.open('/sync/doc-keep-alive');
+      const answered = new Set<ServerFrame>();
+      const pong = setInterval(() => {
+        for (const frame of socket.frames) {
+          if (frame.opcode === OP_PING && !answered.has(frame)) {
+            answered.add(frame);
+            socket.sendFrame(FIN | OP_PONG, frame.payload);
+          }
+        }
+      }, 20);
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS * 6));
+        expect(answered.size).toBeGreaterThanOrEqual(3);
+        await expectStillServed(socket);
+      } finally {
+        clearInterval(pong);
+      }
+    });
+  });
 });
 
 describe('sync transport: closes the room decides', () => {

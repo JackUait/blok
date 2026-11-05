@@ -179,6 +179,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	options.Version = new(version)
 	options.LoopbackHostCheck = true
 	configureCollab(&options, stderr)
+	applyConformanceOptions(&options, conformance)
 	server, err := blokserver.New(options)
 	if err != nil {
 		fmt.Fprintf(stderr, "blok-server refused to start: %v%s", err, newline)

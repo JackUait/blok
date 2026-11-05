@@ -12,6 +12,9 @@ pub enum Failure {
     TooManyRedirects,
     UnsupportedContentEncoding,
     RateLimited,
+    /// Not a GuardedFetchFailure: limits `get` cannot take, where C# throws
+    /// ArgumentOutOfRangeException before it fetches.
+    LimitOutOfRange,
 }
 
 /// GuardedFetchException. It carries no source: a resolver or transport
@@ -23,7 +26,10 @@ pub struct Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Outbound destination is not permitted.")
+        f.write_str(match self.failure {
+            Failure::LimitOutOfRange => "The response byte limit is outside the supported range.",
+            _ => "Outbound destination is not permitted.",
+        })
     }
 }
 

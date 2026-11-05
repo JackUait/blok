@@ -26,6 +26,9 @@ use crate::wire::{Body, Headers, content_length, framing, header_text, read_head
 /// Sent with every fetch, and no other header but Host.
 pub const USER_AGENT: &str = "blok-server (+https://blokeditor.com)";
 
+/// .NET's Array.MaxLength, C#'s byte cap ceiling.
+const MAX_ARRAY_LENGTH: u64 = 0x7FFF_FFC7;
+
 const CONNECT_ATTEMPT_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// .NET's default MaxResponseHeadersLength, 64 KiB; C# sets the same value
@@ -262,16 +265,12 @@ impl Fetcher {
 
     /// Fetches `raw`. Every failure is an `Error`; the caller cancels by
     /// dropping the future, which closes the connection and frees the slot.
-    ///
-    /// # Panics
-    ///
-    /// When `max_bytes` is above .NET's `Array.MaxLength`, where C# throws
-    /// ArgumentOutOfRangeException.
+    /// A `max_bytes` above .NET's `Array.MaxLength` fails as
+    /// `LimitOutOfRange` before anything resolves.
     pub async fn get(&self, raw: &str, limits: &Limits) -> Result<Response, Error> {
-        assert!(
-            limits.max_bytes <= 0x7FFF_FFC7,
-            "The response byte limit is outside the supported range."
-        );
+        if limits.max_bytes > MAX_ARRAY_LENGTH {
+            return Err(fail(Failure::LimitOutOfRange));
+        }
         let timed_out = fail(Failure::TimedOut);
         if limits.timeout.is_zero() {
             return Err(timed_out);

@@ -28,7 +28,10 @@ const MinimumSecretLength = 32
 const maxRemoteUpload = 2147483591
 
 // Options configure the server. Field meanings and refusals follow the C#
-// BlokServerOptions; DefaultOptions returns its defaults.
+// BlokServerOptions; DefaultOptions returns its defaults. Start from
+// DefaultOptions, not Options{}: unlike new BlokServerOptions(), the zero
+// value is not the default set, and a zero keep-alive or inbound rate
+// field means off, as 0 does in C#.
 type Options struct {
 	Version        string
 	ListenAddress  string

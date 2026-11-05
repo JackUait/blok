@@ -89,9 +89,9 @@ pub struct Options {
     /// UseCollabActivityObserver<T>. None makes no calls.
     pub collab_activity_observer: Option<Arc<dyn blok_collab_room::ActivityObserver>>,
 
-    /// The TimeProvider override: tickets, the rate limit window and the
-    /// rooms' timestamps (activity, cooldowns, export deadlines) read it.
-    /// Room timers still run on wall time. None is the system clock.
+    /// The TimeProvider override: tickets, the rate limit window, S3 signing
+    /// and the rooms' timestamps (activity, cooldowns, export deadlines) read
+    /// it. Room timers still run on wall time. None is the system clock.
     pub clock: Option<Clock>,
 
     /// Receives the server's warnings, each with a category

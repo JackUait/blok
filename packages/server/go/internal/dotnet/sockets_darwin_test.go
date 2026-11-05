@@ -44,3 +44,24 @@ func TestTheOperatorTransportAsksTrustdAsSslStreamDoes(t *testing.T) {
 		t.Fatal("a chain trustd refuses connected")
 	}
 }
+
+// The transport as S3 and the doc endpoint build it, with no TLS config:
+// net/http then adds h2, which an h2 server would pick.
+func TestTheDefaultOperatorTransportSpeaksHTTP11ToAnH2Server(t *testing.T) {
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	server.EnableHTTP2 = true
+	server.StartTLS()
+	defer server.Close()
+	saved := operatorTrusts
+	defer func() { operatorTrusts = saved }()
+	operatorTrusts = func([][]byte, string, [][]byte) bool { return true }
+	transport := NewSocketsTransport(SocketsOptions{ConnectTimeout: 5 * time.Second})
+	transport.Transport.Proxy = nil
+	for i := 0; i < 2; i++ {
+		response, err := (&http.Client{Transport: transport}).Get(server.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+	}
+}

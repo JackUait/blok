@@ -176,6 +176,9 @@ func (t *SocketsTransport) handshake(ctx context.Context, conn net.Conn, host st
 	if config.ServerName == "" {
 		config.ServerName = host
 	}
+	// SocketsHttpHandler offers no ALPN on an HTTP/1.1 connection; net/http
+	// puts h2 in a nil TLSClientConfig, which the HTTP/1.1 reader cannot speak.
+	config.NextProtos = nil
 	// With no roots of its own, trustd checks the chain as SslStream does
 	// for HttpClient's defaults; Go's own check is off then. Go's platform
 	// verifier would use an SSL policy, which refuses chains .NET accepts.

@@ -32,6 +32,7 @@ import {
   setSafeLinkHref,
   type EmbedKind,
   type EmbedMatch,
+  type EmbedService,
 } from '../registry';
 import { brandMarkElement } from '../../../components/utils/brand-mark-services';
 import { embedTypeIcon } from '../paste-menu/items';
@@ -92,6 +93,20 @@ function hostnameOf(url: string): string {
   }
 }
 
+/** The registry entry for a stored service name. Own keys only: `__proto__` is not a service. */
+function registryEntry(service: string | undefined): EmbedService | undefined {
+  return service !== undefined && Object.hasOwn(EMBED_SERVICES, service) ? EMBED_SERVICES[service] : undefined;
+}
+
+/** Saved JSON may hold any value; a non-string URL field reads as ''. */
+function stringField(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return typeof value === 'string' ? value : '';
+}
+
 type EmbedRenderMode = 'iframe' | 'script' | 'link' | 'empty';
 
 interface EmbedRenderDecision {
@@ -124,7 +139,7 @@ function resolveEmbedRender(
 ): EmbedRenderDecision {
   const service = data.service ?? '';
 
-  if (EMBED_SERVICES[service] !== undefined) {
+  if (registryEntry(service) !== undefined) {
     const match = data.source !== undefined ? matchEmbedService(data.source) : null;
     const src = match?.service === service ? toSafeEmbedSrc(match.embedUrl) : '';
 
@@ -219,7 +234,14 @@ export class Embed implements BlockTool {
     this.api = options.api;
     this.block = options.block;
     this.readOnly = options.readOnly;
-    this.data = { ...options.data };
+    const saved: Partial<EmbedData> = { ...options.data };
+
+    this.data = {
+      ...saved,
+      source: stringField(saved.source),
+      embed: stringField(saved.embed),
+      service: stringField(saved.service),
+    };
   }
 
   public static get toolbox(): ToolboxConfig {
@@ -357,7 +379,7 @@ export class Embed implements BlockTool {
 
   public save(): EmbedData {
     const service = this.data.service ?? '';
-    const generic = EMBED_SERVICES[service] === undefined;
+    const generic = registryEntry(service) === undefined;
     const genericSrc = generic ? toSafeEmbedSrc(this.data.source) : '';
     const genericHref = generic ? toCanonicalHttpUrl(this.data.source ?? '') : '';
 
@@ -960,8 +982,7 @@ export class Embed implements BlockTool {
 
     const w = this.data.width && this.data.width > 0 ? this.data.width : DEFAULT_WIDTH;
     const h = this.data.height && this.data.height > 0 ? this.data.height : DEFAULT_HEIGHT;
-    const fixedWidth = this.data.service !== undefined
-      && EMBED_SERVICES[this.data.service]?.fixedWidth === true;
+    const fixedWidth = registryEntry(this.data.service)?.fixedWidth === true;
 
     figure.setAttribute('data-role', 'embed-figure');
     figure.style.position = 'relative';
@@ -1010,7 +1031,7 @@ export class Embed implements BlockTool {
   private frameTitle(): string {
     const label = this.api.i18n.t('toolNames.embed');
     const service = this.data.service ?? '';
-    const registered = EMBED_SERVICES[service];
+    const registered = registryEntry(service);
     const provider = registered !== undefined ? registered.title : hostnameOf(this.embedSrc());
 
     return provider === '' ? label : `${label}: ${provider}`;
@@ -1086,7 +1107,7 @@ export class Embed implements BlockTool {
     const { service } = this.embedRender();
 
     if (service !== '') {
-      iframe.setAttribute('sandbox', registryIframeSandbox(EMBED_SERVICES[service]));
+      iframe.setAttribute('sandbox', registryIframeSandbox(registryEntry(service)));
       iframe.setAttribute('allow', IFRAME_ALLOW);
       iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     } else {
@@ -1104,9 +1125,7 @@ export class Embed implements BlockTool {
 
   private attachResizeHandles(figure: HTMLElement): void {
     const edges: ResizeEdge[] = ['left', 'right'];
-    const minWidthPx = this.data.service !== undefined
-      ? EMBED_SERVICES[this.data.service]?.minWidth
-      : undefined;
+    const minWidthPx = registryEntry(this.data.service)?.minWidth;
 
     for (const edge of edges) {
       const handle = document.createElement('div');
@@ -1140,8 +1159,7 @@ export class Embed implements BlockTool {
   }
 
   private isHeightResizable(): boolean {
-    return this.data.service !== undefined
-      && EMBED_SERVICES[this.data.service]?.resizableHeight === true;
+    return registryEntry(this.data.service)?.resizableHeight === true;
   }
 
   private attachBottomResizeHandle(figure: HTMLElement): void {

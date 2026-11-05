@@ -20,8 +20,8 @@ export type EmbedServiceType = SharedEmbedServiceType;
  * @param value - the URL to check
  * @param protocols - the schemes that are allowed
  */
-function canonicalUrl(value: string, protocols: readonly string[]): string {
-  if (!/^https?:\/\//i.test(value.trimStart())) {
+function canonicalUrl(value: unknown, protocols: readonly string[]): string {
+  if (typeof value !== 'string' || !/^https?:\/\//i.test(value.trimStart())) {
     return '';
   }
 

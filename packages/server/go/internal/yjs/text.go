@@ -644,6 +644,9 @@ func strictEquals(left, right any) bool {
 	switch l := left.(type) {
 	case nil:
 		return right == nil
+	case jsjson.Undefined:
+		_, ok := right.(jsjson.Undefined)
+		return ok
 	case bool:
 		r, ok := right.(bool)
 		return ok && l == r

@@ -271,3 +271,10 @@ func TestAnEmptyArrayStrictEqualsOnlyItself(t *testing.T) {
 		t.Fatal("two parsed [] are ===")
 	}
 }
+
+// C# StrictEquals: undefined === undefined.
+func TestUndefinedStrictEqualsUndefined(t *testing.T) {
+	if !strictEquals(jsjson.Undefined{}, jsjson.Undefined{}) || strictEquals(jsjson.Undefined{}, nil) {
+		t.Fatal("undefined")
+	}
+}

@@ -298,7 +298,9 @@ async fn refuses_at_tls_the_host_names_dot_net_refuses() {
         let pki = pki(host, |_| {});
         let o = tls_origin(&pki, &[], ok_handler()).await;
         let f = loopback_fetcher(host, o.port, Some(pki.roots.clone()));
-        let got = f.get(&format!("https://{host}:{}/", o.port), &limits()).await;
+        let got = f
+            .get(&format!("https://{host}:{}/", o.port), &limits())
+            .await;
         if ok {
             assert_eq!(got.unwrap().body, b"ok", "{host}");
         } else {

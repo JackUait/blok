@@ -1278,6 +1278,55 @@ public sealed class CollabRoomManagerTests
             .Select(save => save.Data["text"]?.GetValue<string>()));
   }
 
+  /// <summary>
+  /// The shutdown deadline cancels the drain's token mid-flush. Every room
+  /// still closes, and the only lines are each room's own flush failure.
+  /// </summary>
+  [Fact]
+  public async Task ADrainCutShortByItsTokenStillClosesEveryRoom()
+  {
+    var log = new List<string>();
+    endpoint.Holds("doc-a", "a");
+    endpoint.Holds("doc-b", "b");
+    var manager = CreateManager(
+        new CollabRoomOptions
+        {
+          ExportDebounce = TimeSpan.FromMinutes(5),
+          ExportMaxDelay = TimeSpan.FromMinutes(5),
+        },
+        log: log);
+    var memberA = new FakeMember();
+    var memberB = new FakeMember();
+    var membershipA = (await manager.JoinAsync("doc-a", memberA, CancellationToken.None)).Membership!;
+    var membershipB = (await manager.JoinAsync("doc-b", memberB, CancellationToken.None)).Membership!;
+    var clientA = await SyncedAsync(membershipA, memberA);
+    var clientB = await SyncedAsync(membershipB, memberB);
+    await membershipA.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(clientA, "!"))),
+        CancellationToken.None);
+    await membershipB.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(clientB, "?"))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    using var shutdown = new CancellationTokenSource();
+
+    var drain = manager.DrainAsync(shutdown.Token).AsTask();
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 2, "both drains to start their export");
+    await shutdown.CancelAsync();
+    await drain.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal([CollabCloseReason.Draining], memberA.Closes);
+    Assert.Equal([CollabCloseReason.Draining], memberB.Closes);
+    Assert.Equal(
+        [
+          "collab: room \"doc-a\" could not export during flush: A task was canceled.",
+          "collab: room \"doc-b\" could not export during flush: A task was canceled.",
+        ],
+        log.Order(StringComparer.Ordinal));
+  }
+
   [Theory]
   [InlineData("")]
   [InlineData(".")]

@@ -140,9 +140,10 @@ public sealed class JintBlokRuntimeTests
   }
 
   /*
-   * Go and Rust pin the same: the call timeout does not end the wait on a
-   * promise that never settles, only the caller's cancellation does, and the
-   * engine is replaced.
+   * The call timeout does not end the wait on a promise that never settles,
+   * only the caller's cancellation does, and the engine is replaced. With no
+   * cancel C# waits with no bound and holds the engine. Go and Rust stop at
+   * the call timeout instead (TestEndsAPendingPromiseAtTheCallTimeout).
    */
   [Fact]
   public async Task WaitsOnAPendingPromiseUntilTheCallerCancels()

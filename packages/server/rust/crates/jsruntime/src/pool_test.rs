@@ -200,17 +200,42 @@ async fn an_overflow_leaves_no_state_for_the_next_call() {
     assert_eq!(open.expect("open"), "0");
 }
 
-// C# JintBlokRuntimeTests.WaitsOnAPendingPromiseUntilTheCallerCancels: the
-// call timeout does not end the wait on a promise that never settles; the
-// caller's cancellation (dropping the future) does, and the engine is
-// replaced.
+// A promise that never settles: the caller's cancel (dropping the future)
+// ends the wait, as in C# (WaitsOnAPendingPromiseUntilTheCallerCancels), and
+// the engine is replaced.
 #[tokio::test]
 async fn waits_on_a_pending_promise_until_the_caller_cancels() {
-    let pool = counting_pool(1, Duration::from_millis(200), 0);
-    let waited = tokio::time::timeout(Duration::from_secs(1), invoke(&pool, "pending", "")).await;
+    let pool = counting_pool(1, Duration::from_secs(5), 0);
+    let start = Instant::now();
+    let waited =
+        tokio::time::timeout(Duration::from_millis(300), invoke(&pool, "pending", "")).await;
     assert!(
         waited.is_err(),
         "returned before the caller cancelled: {waited:?}"
+    );
+    want_count(&pool, "1").await;
+    assert!(
+        start.elapsed() < Duration::from_secs(4),
+        "took {:?}",
+        start.elapsed()
+    );
+}
+
+// C# waits on such a promise with no bound when the caller never cancels,
+// holding the engine. Rust stops at the call timeout instead, so one request
+// cannot hold an engine for good, and replaces the engine.
+#[tokio::test]
+async fn ends_a_pending_promise_at_the_call_timeout() {
+    let pool = counting_pool(1, Duration::from_millis(200), 0);
+    let start = Instant::now();
+    let result = tokio::time::timeout(Duration::from_secs(3), invoke(&pool, "pending", ""))
+        .await
+        .expect("ends at the call timeout");
+    want_kind(result, Kind::TimedOut);
+    assert!(
+        start.elapsed() >= Duration::from_millis(150),
+        "took {:?}",
+        start.elapsed()
     );
     want_count(&pool, "1").await;
 }

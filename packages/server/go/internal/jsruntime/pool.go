@@ -256,6 +256,8 @@ func (p *Pool) Invoke(ctx context.Context, op, input string, timeout time.Durati
 // reusable is false when the engine stopped mid-execution.
 func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout time.Duration, budget int64) (result string, reusable bool, err error) {
 	r.vm.SetMaxCallStackSize(callStackSize(op))
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
 	g := arm(r.vm, timeout, budget, ctx.Done())
 	result, err = r.safeInvoke(op, input)
 	g.disarm()
@@ -287,10 +289,16 @@ func (r *Runtime) guardedInvoke(ctx context.Context, op, input string, timeout t
 	case errors.As(err, &jsErr):
 		return "", true, &Failure{Kind: classify(jsErr.Name), Err: err}
 	// No event loop: a promise pending now can never settle. C# waits on it
-	// until the caller cancels, past the call timeout, and replaces the engine.
+	// until the caller cancels, with no bound, holding the engine. Go waits
+	// for the cancel too, but never past the call timeout, so one request
+	// cannot hold an engine for good. Either way the engine is replaced.
 	case errors.Is(err, ErrPending):
-		<-ctx.Done()
-		return "", false, ctx.Err()
+		select {
+		case <-ctx.Done():
+			return "", false, ctx.Err()
+		case <-deadline.C:
+			return "", false, &Failure{Kind: KindTimedOut, Err: err}
+		}
 	// C# AsString throws and its catch-all replaces the engine.
 	case errors.Is(err, ErrNotAString):
 		return "", false, &Failure{Kind: KindUnknown, Err: err}

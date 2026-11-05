@@ -207,20 +207,34 @@ func TestAnOverflowLeavesNoStateForTheNextCall(t *testing.T) {
 	}
 }
 
-// C# JintBlokRuntimeTests.WaitsOnAPendingPromiseUntilTheCallerCancels: the
-// call timeout does not end the wait on a promise that never settles; the
-// caller's cancellation does, and the engine is replaced.
+// A promise that never settles: the caller's cancel ends the wait, as in C#
+// (JintBlokRuntimeTests.WaitsOnAPendingPromiseUntilTheCallerCancels), and the
+// engine is replaced.
 func TestWaitsOnAPendingPromiseUntilTheCallerCancels(t *testing.T) {
-	p := newCountingPool(t, 1, 200*time.Millisecond, 0)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	p := newCountingPool(t, 1, 5*time.Second, 0)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 	start := time.Now()
 	_, err := p.Invoke(ctx, "pending", "", 0)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want the caller's context.DeadlineExceeded", err)
 	}
-	if elapsed := time.Since(start); elapsed < 900*time.Millisecond {
-		t.Fatalf("returned after %v, want the caller's 1s", elapsed)
+	if elapsed := time.Since(start); elapsed < 250*time.Millisecond || elapsed > 4*time.Second {
+		t.Fatalf("returned after %v, want the caller's 300ms", elapsed)
+	}
+	wantCount(t, p, "1")
+}
+
+// C# waits on such a promise with no bound when the caller never cancels,
+// holding the engine. Go stops at the call timeout instead, so one request
+// cannot hold an engine for good, and replaces the engine.
+func TestEndsAPendingPromiseAtTheCallTimeout(t *testing.T) {
+	p := newCountingPool(t, 1, 200*time.Millisecond, 0)
+	start := time.Now()
+	_, err := invoke(t, p, "pending", "")
+	wantKind(t, err, KindTimedOut)
+	if elapsed := time.Since(start); elapsed < 150*time.Millisecond || elapsed > 3*time.Second {
+		t.Fatalf("returned after %v, want the 200ms call timeout", elapsed)
 	}
 	wantCount(t, p, "1")
 }

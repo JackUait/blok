@@ -6,18 +6,17 @@
 
 use std::collections::HashMap;
 use std::io;
-use std::sync::Arc;
+
 use std::time::Duration;
 
 use base64::Engine;
 use blok_dotnet::Uri;
-use rustls::RootCertStore;
 use rustls::pki_types::ServerName;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::time::{Instant, timeout_at};
 
-use crate::fetcher::{tls_connector, trust_for};
+use crate::fetcher::{Check, Roots, tls_connector};
 use crate::proxy::{EnvironmentProxy, ProxyUrl};
 use crate::wire::{Body, Framing, Head, Headers, Source, framing, read_head, request_head};
 
@@ -110,7 +109,7 @@ pub struct OperatorClient {
     pub header_timeout: Option<Duration>,
     pub proxy: Option<EnvironmentProxy>,
     /// Replaces the system roots; tests set it.
-    pub roots: Option<Arc<RootCertStore>>,
+    pub roots: Option<Roots>,
 }
 
 impl OperatorClient {
@@ -209,7 +208,7 @@ impl OperatorClient {
         dial: &str,
         url: &Uri,
         proxy: Option<&ProxyUrl>,
-        trust: &crate::fetcher::Trust,
+        roots: &Option<Roots>,
         deadline: Instant,
     ) -> Result<Box<dyn Stream>, OperatorError> {
         let mut tcp = timeout_at(deadline, connect_authority(dial))
@@ -226,9 +225,12 @@ impl OperatorClient {
         let mut stream: Box<dyn Stream> = Box::new(tcp);
         if let Some(proxy) = proxy.filter(|p| p.scheme == "https") {
             let name = proxy_server_name(&proxy.authority)?;
-            let tls = timeout_at(deadline, tls_connector(trust.clone()).connect(name, stream))
-                .await
-                .map_err(|_| OperatorError::ConnectTimeout)??;
+            let tls = timeout_at(
+                deadline,
+                tls_connector(roots, Check::Operator).connect(name, stream),
+            )
+            .await
+            .map_err(|_| OperatorError::ConnectTimeout)??;
             stream = Box::new(tls);
         }
         Ok(stream)
@@ -242,8 +244,9 @@ impl OperatorClient {
         let deadline = Instant::now() + self.connect_timeout;
         let authority = format!("{}:{}", url.host, url.port);
         let dial = proxy.map_or(authority.clone(), |p| p.authority.clone());
-        let trust = trust_for(&self.roots, &None);
-        let mut stream = self.open_hop(&dial, url, proxy, &trust, deadline).await?;
+        let mut stream = self
+            .open_hop(&dial, url, proxy, &self.roots, deadline)
+            .await?;
         if url.scheme != "https" {
             return Ok(stream);
         }
@@ -258,7 +261,7 @@ impl OperatorClient {
                     Tunnel::Again { keep } => {
                         if !keep {
                             stream = self
-                                .open_hop(&dial, url, Some(proxy), &trust, deadline)
+                                .open_hop(&dial, url, Some(proxy), &self.roots, deadline)
                                 .await?;
                         }
                     }
@@ -274,9 +277,12 @@ impl OperatorClient {
             _ => ServerName::try_from(url.idn_host.clone())
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?,
         };
-        let tls = timeout_at(deadline, tls_connector(trust).connect(name, stream))
-            .await
-            .map_err(|_| OperatorError::ConnectTimeout)??;
+        let tls = timeout_at(
+            deadline,
+            tls_connector(&self.roots, Check::Operator).connect(name, stream),
+        )
+        .await
+        .map_err(|_| OperatorError::ConnectTimeout)??;
         Ok(Box::new(tls))
     }
 }

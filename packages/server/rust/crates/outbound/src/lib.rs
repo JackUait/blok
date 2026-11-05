@@ -9,22 +9,19 @@ mod decode;
 mod digest;
 mod fetcher;
 mod lanes;
+#[cfg(target_os = "macos")]
+mod names;
 mod ntlm;
 pub mod operator;
 mod policy;
 mod proxy;
 #[cfg(target_os = "macos")]
-mod selfsigned;
+mod sectrust;
 mod socks;
-#[cfg(target_os = "macos")]
-mod tls_darwin;
-// Only tls_darwin calls it; the tests run it on every OS.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-mod trustsettings;
 pub mod wire;
 
 pub use browserurl::browser_url;
-pub use fetcher::{Fetcher, Limits, Resolver, Response, USER_AGENT};
+pub use fetcher::{Fetcher, Limits, Resolver, Response, Roots, USER_AGENT};
 pub use policy::{
     DefaultPolicy, Error, ExactOriginPolicy, Failure, Policy, Target, has_control, is_failure,
 };
@@ -62,8 +59,8 @@ mod test_json;
 mod tls_darwin_test;
 #[cfg(test)]
 mod tls_test;
-#[cfg(test)]
-mod trustsettings_test;
+#[cfg(all(test, target_os = "macos"))]
+mod trust_chains_test;
 #[cfg(test)]
 mod tunnel_test;
 #[cfg(test)]

@@ -354,6 +354,7 @@ dependencies = [
  "blok-jsjson",
  "blok-mediatype",
  "brotli",
+ "core-foundation",
  "dns-lookup",
  "flate2",
  "gethostname",

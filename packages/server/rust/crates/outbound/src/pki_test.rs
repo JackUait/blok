@@ -7,8 +7,8 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use rustls::SignatureScheme;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
-use rustls::{RootCertStore, SignatureScheme};
 
 // Made once with `openssl ecparam -genkey -name prime256v1`.
 const ROOT_P8: &str = "308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b020101042033e71115770dc0b6ff1cf2e5a7141c28dd3130c9e483b123050bc9412ebd38f0a14403420004884bd0262d37ff4eb3c1f54654d85acee7bd4d0433a3de1e06e74b23fb829cccc76e519c91289f9b8a04ec9e71d8fb7753a8b61847c88c7dede789628a92b698";
@@ -18,14 +18,14 @@ const MIDDLE_SPKI: &str = "3059301306072a8648ce3d020106082a8648ce3d0301070342000
 const LEAF_P8: &str = "308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b02010104203accab9960c606d2f9beaa1c94c1a2bc448f628cf48d41c9467fb80385f17ebea14403420004bc741efdc4759d84c6d4278cf344c9e1ee27054e41e00763710bbb4b14c177b59b7cced8532b8361b0f768b91b9ea26f61d073a456771f3096e5d23eeaf67d44";
 const LEAF_SPKI: &str = "3059301306072a8648ce3d020106082a8648ce3d03010703420004bc741efdc4759d84c6d4278cf344c9e1ee27054e41e00763710bbb4b14c177b59b7cced8532b8361b0f768b91b9ea26f61d073a456771f3096e5d23eeaf67d44";
 
-fn unhex(s: &str) -> Vec<u8> {
+pub(crate) fn unhex(s: &str) -> Vec<u8> {
     (0..s.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
         .collect()
 }
 
-fn tlv(tag: u8, content: &[u8]) -> Vec<u8> {
+pub(crate) fn tlv(tag: u8, content: &[u8]) -> Vec<u8> {
     let mut out = vec![tag];
     let n = content.len();
     if n < 0x80 {
@@ -39,11 +39,11 @@ fn tlv(tag: u8, content: &[u8]) -> Vec<u8> {
     out
 }
 
-fn seq(parts: &[Vec<u8>]) -> Vec<u8> {
+pub(crate) fn seq(parts: &[Vec<u8>]) -> Vec<u8> {
     tlv(0x30, &parts.concat())
 }
 
-fn oid(arcs: &[u64]) -> Vec<u8> {
+pub(crate) fn oid(arcs: &[u64]) -> Vec<u8> {
     let mut body = vec![(arcs[0] * 40 + arcs[1]) as u8];
     for &arc in &arcs[2..] {
         let mut bytes = vec![(arc & 0x7f) as u8];
@@ -58,11 +58,11 @@ fn oid(arcs: &[u64]) -> Vec<u8> {
     tlv(0x06, &body)
 }
 
-fn bit_string(content: &[u8]) -> Vec<u8> {
+pub(crate) fn bit_string(content: &[u8]) -> Vec<u8> {
     tlv(0x03, &[&[0u8][..], content].concat())
 }
 
-fn name(common: &str) -> Vec<u8> {
+pub(crate) fn name(common: &str) -> Vec<u8> {
     seq(&[tlv(
         0x31,
         &seq(&[oid(&[2, 5, 4, 3]), tlv(0x0c, common.as_bytes())]),
@@ -70,7 +70,7 @@ fn name(common: &str) -> Vec<u8> {
 }
 
 /// UTCTime for `seconds` after the epoch.
-fn utc_time(seconds: i64) -> Vec<u8> {
+pub(crate) fn utc_time(seconds: i64) -> Vec<u8> {
     let days = seconds.div_euclid(86_400);
     let rem = seconds.rem_euclid(86_400);
     // Howard Hinnant's civil_from_days.
@@ -93,7 +93,7 @@ fn utc_time(seconds: i64) -> Vec<u8> {
     tlv(0x17, text.as_bytes())
 }
 
-fn extension(id: &[u64], critical: bool, value: Vec<u8>) -> Vec<u8> {
+pub(crate) fn extension(id: &[u64], critical: bool, value: Vec<u8>) -> Vec<u8> {
     let mut parts = vec![oid(id)];
     if critical {
         parts.push(tlv(0x01, &[0xff]));
@@ -118,8 +118,8 @@ pub struct Fields {
 }
 
 pub struct Key {
-    pkcs8: Vec<u8>,
-    spki: Vec<u8>,
+    pub(crate) pkcs8: Vec<u8>,
+    pub(crate) spki: Vec<u8>,
 }
 
 pub fn key(which: &str) -> Key {
@@ -216,7 +216,7 @@ pub fn certificate(
 /// `extra` fields.
 pub struct Pki {
     pub root: CertificateDer<'static>,
-    pub roots: Arc<RootCertStore>,
+    pub roots: crate::fetcher::Roots,
     pub chain: Vec<CertificateDer<'static>>,
     pub key: PrivateKeyDer<'static>,
 }
@@ -235,11 +235,9 @@ pub fn pki(subject: &str, extra: impl FnOnce(&mut Fields)) -> Pki {
     };
     extra(&mut leaf_fields);
     let leaf = certificate(&leaf_fields, 2, &key("leaf"), "root", &key("root"));
-    let mut roots = RootCertStore::empty();
-    roots.add(root.clone()).unwrap();
     Pki {
+        roots: Arc::new(vec![root.clone()]),
         root,
-        roots: Arc::new(roots),
         chain: vec![leaf],
         key: key("leaf").private(),
     }

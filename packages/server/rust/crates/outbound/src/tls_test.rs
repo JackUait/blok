@@ -2,8 +2,6 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use rustls::RootCertStore;
-
 use crate::fetcher::Fetcher;
 use crate::origin_test::*;
 use crate::pki_test::{Fields, Pki, acceptor, certificate, key, pki};
@@ -22,7 +20,7 @@ async fn tls_origin(pki: &Pki, protocols: &[&[u8]], handler: Handler) -> Origin 
     .unwrap()
 }
 
-fn loopback_fetcher(host: &str, port: u16, roots: Option<Arc<RootCertStore>>) -> Fetcher {
+fn loopback_fetcher(host: &str, port: u16, roots: Option<crate::fetcher::Roots>) -> Fetcher {
     let mut f = fixture_fetcher(host, port);
     f.roots = roots;
     f
@@ -188,7 +186,7 @@ async fn follows_a_redirect_from_http_up_to_https() {
 
 /// A leaf signed by an intermediate the server does not send, with a
 /// caIssuers URL pointing at a local listener.
-pub(crate) async fn aia_setup(send_middle: bool) -> (Origin, Origin, Arc<RootCertStore>) {
+pub(crate) async fn aia_setup(send_middle: bool) -> (Origin, Origin, crate::fetcher::Roots) {
     let middle_der = Arc::new(std::sync::Mutex::new(Vec::new()));
     let served = middle_der.clone();
     let issuer = Origin::start(
@@ -252,9 +250,7 @@ pub(crate) async fn aia_setup(send_middle: bool) -> (Origin, Origin, Arc<RootCer
     )
     .await
     .unwrap();
-    let mut roots = RootCertStore::empty();
-    roots.add(root).unwrap();
-    (origin, issuer, Arc::new(roots))
+    (origin, issuer, Arc::new(vec![root]))
 }
 
 // The analogue of SslStreamStillLeaksAnIssuerFetchOnMacOs: a platform
@@ -307,61 +303,4 @@ async fn refuses_at_tls_the_host_names_dot_net_refuses() {
             assert_eq!(failure(got), Some(Failure::Blocked), "{host}");
         }
     }
-}
-
-// trustd checks every cert of a path against the trust settings, the leaf
-// and each parent alike (SecTrustServer.c:855-875, 910-925): a Deny makes
-// it a denied anchor, and SecPVCCheckUsageConstraints fails the path
-// (SecPolicyServer.c:3425-3440). So a chain through a "Never Trust" cert
-// is refused, unless another chain avoids it.
-#[tokio::test]
-async fn refuses_a_chain_through_a_denied_cert() {
-    let root_fields = Fields {
-        common: "root".into(),
-        ca: true,
-        ..Fields::default()
-    };
-    let root = certificate(&root_fields, 1, &key("root"), "root", &key("root"));
-    let middle_fields = Fields {
-        common: "middle".into(),
-        ca: true,
-        ..Fields::default()
-    };
-    let middle = certificate(&middle_fields, 2, &key("middle"), "root", &key("root"));
-    let leaf_fields = Fields {
-        common: "denied.example".into(),
-        names: vec!["denied.example".into()],
-        ..Fields::default()
-    };
-    let leaf = certificate(&leaf_fields, 3, &key("leaf"), "middle", &key("middle"));
-    let mut store = RootCertStore::empty();
-    store.add(root.clone()).unwrap();
-    let pki = Pki {
-        root: root.clone(),
-        roots: Arc::new(store),
-        chain: vec![leaf.clone(), middle.clone()],
-        key: key("leaf").private(),
-    };
-    let o = tls_origin(&pki, &[], ok_handler()).await;
-    let url = format!("https://denied.example:{}/", o.port);
-    let get = |denied: Vec<&rustls::pki_types::CertificateDer<'static>>| {
-        let mut f = loopback_fetcher("denied.example", o.port, Some(pki.roots.clone()));
-        f.denied = Some(Arc::new(
-            denied
-                .iter()
-                .map(|c| crate::fetcher::cert_hash(c))
-                .collect(),
-        ));
-        let url = url.clone();
-        async move { f.get(&url, &limits()).await }
-    };
-    assert!(get(vec![]).await.is_ok(), "no deny");
-    assert_eq!(failure(get(vec![&middle]).await), Some(Failure::Blocked));
-    assert_eq!(failure(get(vec![&leaf]).await), Some(Failure::Blocked));
-    let other = pki_fn("other.example");
-    assert!(get(vec![&other]).await.is_ok(), "a deny off the chain");
-}
-
-fn pki_fn(name: &str) -> rustls::pki_types::CertificateDer<'static> {
-    pki(name, |_| {}).chain[0].clone()
 }

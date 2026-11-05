@@ -130,7 +130,7 @@ describe('embed frame size from saved data', () => {
 
     const saved = tool.save();
 
-    expect(saved.height / saved.width).toBeLessThanOrEqual(4);
+    expect((saved.height ?? Number.NaN) / (saved.width ?? Number.NaN)).toBeLessThanOrEqual(4);
     expect(aspect.style.aspectRatio).toBe(`${saved.width} / ${saved.height}`);
     expect(dispatchChange).toHaveBeenCalled();
   });

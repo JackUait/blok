@@ -134,6 +134,20 @@ func (s *Server) Drain(ctx context.Context) error {
 // ("" for the root), every other path in the group answered 404, and local
 // files served at the public URL path, outside the prefix.
 func (s *Server) Handler(prefix string) http.Handler {
+	return s.handler(prefix, func(next http.Handler) http.Handler { return next })
+}
+
+// HandlerWithAuth is Handler with the host's own authentication in front
+// of the group, as MapBlokServer(prefix).RequireAuthorization() is in C#:
+// auth wraps every route, 405 answer and the group's 404, but /health (and
+// its 405) and every CORS preflight stay anonymous, as AllowAnonymous
+// keeps them. Local files and paths outside the group are not the group's,
+// so auth does not see them either.
+func (s *Server) HandlerWithAuth(prefix string, auth func(http.Handler) http.Handler) http.Handler {
+	return s.handler(prefix, auth)
+}
+
+func (s *Server) handler(prefix string, protect func(http.Handler) http.Handler) http.Handler {
 	prefix = strings.TrimRight(prefix, "/")
 	router := &route.Router{}
 	o := &s.options
@@ -148,22 +162,25 @@ func (s *Server) Handler(prefix string) http.Handler {
 
 	router.Handle(prefix+"/health", []string{"GET", "HEAD"}, http.HandlerFunc(s.health))
 	router.Handle(prefix+"/health", nil, route.MethodNotAllowed("GET, HEAD"))
+	shell := func(pattern, method string, handler http.HandlerFunc) {
+		s.shell(router, pattern, method, handler, protect)
+	}
 	if o.UnfurlEnabled {
-		s.shell(router, prefix+"/unfurl", "GET", s.unfurl)
-		s.shell(router, prefix+"/frame-check", "GET", s.frameCheck)
+		shell(prefix+"/unfurl", "GET", s.unfurl)
+		shell(prefix+"/frame-check", "GET", s.frameCheck)
 	}
 	if o.hasStorage() {
-		s.shell(router, prefix+"/upload", "POST", s.upload)
-		s.shell(router, prefix+"/delete", "POST", s.delete)
+		shell(prefix+"/upload", "POST", s.upload)
+		shell(prefix+"/delete", "POST", s.delete)
 		if o.UnfurlEnabled {
-			s.shell(router, prefix+"/upload-by-url", "POST", s.uploadByURL)
+			shell(prefix+"/upload-by-url", "POST", s.uploadByURL)
 		}
 	}
 	if o.CollabEnabled && s.rooms != nil {
 		// Not behind the guard: the handshake is its own door, and a live
 		// socket outlasts any request deadline.
-		router.Handle(prefix+"/sync/{doc}", []string{"GET"}, withoutRequestTimeout(s.syncEndpoint()))
-		router.Handle(prefix+"/sync/{doc}", nil, route.MethodNotAllowed("GET"))
+		router.Handle(prefix+"/sync/{doc}", []string{"GET"}, withoutRequestTimeout(protect(s.syncEndpoint())))
+		router.Handle(prefix+"/sync/{doc}", nil, protect(route.MethodNotAllowed("GET")))
 		routes := collabhttp.New(collabhttp.Config{
 			TicketMode:      o.Auth == "ticket",
 			Authorization:   o.Authorization,
@@ -171,18 +188,26 @@ func (s *Server) Handler(prefix string) http.Handler {
 			MaxMessageBytes: o.CollabMaxMessageBytes,
 			CorruptLog:      s.corruptLog,
 		})
-		s.shell(router, prefix+"/sync/{doc}/reset", "POST", routes.Reset)
-		s.shell(router, prefix+"/sync/{doc}/edit", "POST", routes.Edit)
-		s.shell(router, prefix+"/sync/{doc}/state", "GET", routes.State)
-		s.shell(router, prefix+"/sync/{doc}/history", "GET", routes.HistoryList)
-		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}", "GET", routes.HistoryRead)
-		s.shell(router, prefix+"/sync/{doc}/history/{lineage}", "DELETE", routes.HistoryDelete)
-		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}/restore", "POST", routes.HistoryRestore)
-		s.shell(router, prefix+"/sync/{doc}/history/{lineage}/{sequence}/changes", "GET", routes.HistoryChanges)
+		shell(prefix+"/sync/{doc}/reset", "POST", routes.Reset)
+		shell(prefix+"/sync/{doc}/edit", "POST", routes.Edit)
+		shell(prefix+"/sync/{doc}/state", "GET", routes.State)
+		shell(prefix+"/sync/{doc}/history", "GET", routes.HistoryList)
+		shell(prefix+"/sync/{doc}/history/{lineage}/{sequence}", "GET", routes.HistoryRead)
+		shell(prefix+"/sync/{doc}/history/{lineage}", "DELETE", routes.HistoryDelete)
+		shell(prefix+"/sync/{doc}/history/{lineage}/{sequence}/restore", "POST", routes.HistoryRestore)
+		shell(prefix+"/sync/{doc}/history/{lineage}/{sequence}/changes", "GET", routes.HistoryChanges)
 		if o.Auth == "none" && o.Authorization == nil {
 			s.warnOpenSyncRoutes(prefix)
 		}
 	}
+	notFound := protect(route.NotFound)
+	router.Fallback = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if route.InGroup(r, prefix) {
+			notFound.ServeHTTP(w, r)
+			return
+		}
+		route.NotFound.ServeHTTP(w, r)
+	})
 	return withDefaultBodyLimits(router)
 }
 
@@ -210,13 +235,13 @@ func (s *Server) syncEndpoint() *synchttp.Endpoint {
 }
 
 // shell maps one guarded route with its preflight and its 405 answer.
-func (s *Server) shell(router *route.Router, pattern, method string, handler http.HandlerFunc) {
+func (s *Server) shell(router *route.Router, pattern, method string, handler http.HandlerFunc, protect func(http.Handler) http.Handler) {
 	requireWrite := method != "GET"
-	router.Handle(pattern, []string{method}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.Handle(pattern, []string{method}, protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r, ok := s.guard(w, r, requireWrite); ok {
 			handler(w, r)
 		}
-	}))
+	})))
 	router.Handle(pattern, []string{"OPTIONS"}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.preflight(w, r, method)
 	}))
@@ -229,7 +254,7 @@ func (s *Server) shell(router *route.Router, pattern, method string, handler htt
 	case method == "GET":
 		allow = "GET, HEAD, OPTIONS"
 	}
-	router.Handle(pattern, nil, route.MethodNotAllowed(allow))
+	router.Handle(pattern, nil, protect(route.MethodNotAllowed(allow)))
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {

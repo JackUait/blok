@@ -26,6 +26,8 @@ import (
 // a parameter value. Method names compare case-insensitively too.
 type Router struct {
 	routes []entry
+	// Fallback answers a request no route matches; nil is NotFound.
+	Fallback http.Handler
 }
 
 type entry struct {
@@ -96,7 +98,31 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
+	if r.Fallback != nil {
+		r.Fallback.ServeHTTP(w, req)
+		return
+	}
 	NotFound.ServeHTTP(w, req)
+}
+
+// InGroup is whether the request path is prefix itself or below it, as
+// MapGroup(prefix)'s "/{**path}" catch-all matches: by segment, ASCII case
+// folded. "" is the root group, which takes every path.
+func InGroup(req *http.Request, prefix string) bool {
+	parts, ok := pathSegments(decodeKeepingSlash(rawPath(req)))
+	if !ok {
+		return false
+	}
+	group, _ := pathSegments(prefix)
+	if len(parts) < len(group) {
+		return false
+	}
+	for i, literal := range group {
+		if !asciiEqualFold(parts[i], literal) {
+			return false
+		}
+	}
+	return true
 }
 
 func (e entry) allows(method string) bool {

@@ -41,3 +41,11 @@ opt-level = 3
 
 [profile.dev.package.adler2]
 opt-level = 3
+
+# Tests push tens of MiB through the JS engine; unoptimized glue made the
+# ops fixture test 3x slower. Debug assertions and overflow checks stay on.
+[profile.dev.package.blok-jsruntime]
+opt-level = 3
+
+[profile.dev.package.rquickjs-core]
+opt-level = 3

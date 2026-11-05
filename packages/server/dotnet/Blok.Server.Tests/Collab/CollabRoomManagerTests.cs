@@ -1446,6 +1446,8 @@ public sealed class CollabRoomManagerTests
         () => manager.DrainAsync(shutdown.Token).AsTask().WaitAsync(TimeSpan.FromSeconds(10)));
 
     Assert.Equal("logger failed", error.Message);
+    // The throw skips Forget: the room stays loaded.
+    Assert.Equal(1, manager.LiveRoomCount);
   }
 
   [Theory]

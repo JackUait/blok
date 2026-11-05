@@ -340,4 +340,8 @@ func TestALoggerThatThrowsDuringTheDrainFailsTheDrain(t *testing.T) {
 	if err == nil || err.Error() != "logger failed" {
 		t.Fatalf("drain error = %v", err)
 	}
+	// C#'s throw skips Forget: the room stays loaded.
+	if got := manager.LiveRoomCount(); got != 1 {
+		t.Fatalf("%d live rooms, want 1", got)
+	}
 }

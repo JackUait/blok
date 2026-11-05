@@ -571,6 +571,8 @@ impl Manager {
                         }))
                     {
                         failed.get_or_insert(Error::Message(payload_message(payload)));
+                        // C#'s log throws before its Forget: the room stays.
+                        continue;
                     }
                 }
                 // The drain always closes the room; forget it in case its

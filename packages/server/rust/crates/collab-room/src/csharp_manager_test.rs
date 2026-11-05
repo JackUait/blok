@@ -1928,7 +1928,8 @@ async fn a_logger_that_throws_during_the_drain_fails_the_drain() {
     let shutdown = Token::new();
     shutdown.cancel();
 
-    let drained = tokio::spawn(async move { manager.drain_with(&shutdown).await });
+    let draining = manager.clone();
+    let drained = tokio::spawn(async move { draining.drain_with(&shutdown).await });
     let result = tokio::time::timeout(Duration::from_secs(10), drained)
         .await
         .expect("the drain to finish");
@@ -1937,6 +1938,8 @@ async fn a_logger_that_throws_during_the_drain_fails_the_drain() {
         Ok(Err(err)) => assert_eq!(err.to_string(), "logger failed"),
         other => panic!("drain = {other:?}"),
     }
+    // C#'s throw skips Forget: the room stays loaded.
+    assert_eq!(manager.live_room_count(), 1);
 }
 
 /// C# DrainRoomAsync: a room whose drain throws is logged and forgotten,

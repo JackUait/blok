@@ -408,9 +408,6 @@ func (m *Manager) Drain(ctx context.Context) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				// drain always closes the room; forget it in case its close
-				// callback raced a newer room.
-				defer m.forget(r)
 				// One room that fails must not strand the others.
 				defer func() {
 					if failure := recover(); failure != nil {
@@ -420,8 +417,13 @@ func (m *Manager) Drain(ctx context.Context) error {
 								failed = err
 							}
 							failedMu.Unlock()
+							// C#'s log throws before its Forget: the room stays.
+							return
 						}
 					}
+					// drain always closes the room; forget it in case its close
+					// callback raced a newer room.
+					m.forget(r)
 				}()
 				r.drain(ctx)
 			}()

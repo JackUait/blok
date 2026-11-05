@@ -78,3 +78,28 @@ func TestQuitHelper(t *testing.T) {
 		os.Exit(3)
 	}
 }
+
+// The flag that silences the early SIGQUIT is set only once NotifyContext
+// holds SIGQUIT: in between, a SIGQUIT would reach no one.
+func TestShutdownTakesSigquitBeforeTheEarlyHandlerStandsDown(t *testing.T) {
+	saved := notifyContext
+	t.Cleanup(func() {
+		notifyContext = saved
+		quitBound.Store(false)
+	})
+	quitBound.Store(false)
+	var boundAtRegistration bool
+	notifyContext = func(ctx context.Context, signals ...os.Signal) (context.Context, context.CancelFunc) {
+		boundAtRegistration = quitBound.Load()
+		return saved(ctx, signals...)
+	}
+
+	_, stop := notifyShutdown(context.Background())
+	defer stop()
+	if boundAtRegistration {
+		t.Fatal("quitBound was set before SIGQUIT was registered")
+	}
+	if !quitBound.Load() {
+		t.Fatal("quitBound was never set")
+	}
+}

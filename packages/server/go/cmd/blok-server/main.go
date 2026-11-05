@@ -101,9 +101,15 @@ func main() {
 // its signal handlers: a SIGTERM, SIGINT or SIGQUIT before it takes the
 // default action, as in C# (SIGQUIT through armEarlyQuit).
 var notifyShutdown = func(ctx context.Context) (context.Context, context.CancelFunc) {
+	// Registered first: a SIGQUIT between the two reaches early, which
+	// still dies by it, rather than no one.
+	ctx, stop := notifyContext(ctx, syscall.SIGTERM, os.Interrupt, syscall.SIGQUIT)
 	quitBound.Store(true)
-	return signal.NotifyContext(ctx, syscall.SIGTERM, os.Interrupt, syscall.SIGQUIT)
+	return ctx, stop
 }
+
+// notifyContext is signal.NotifyContext; a test checks the order above.
+var notifyContext = signal.NotifyContext
 
 // newHTTPServer is Kestrel's limits: 2 min idle, and every request cut off
 // with 504 at the request deadline. The 10 s header limit needs the

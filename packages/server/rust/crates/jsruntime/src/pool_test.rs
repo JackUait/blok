@@ -369,9 +369,22 @@ async fn converts_a_deeply_nested_outline() {
     }
 }
 
-#[test]
-#[ignore = "QuickJS's 16 MiB stack cap (the most rquickjs 0.14 allows) stops HTML at 1687 levels (measured)"]
-fn converts_as_many_outline_levels_to_html_as_csharp() {}
+// C# converts 2411 outline levels to HTML and stops at 2416 on its
+// allocation budget (measured); QuickJS's stack must reach as far.
+#[tokio::test]
+async fn converts_as_many_outline_levels_to_html_as_csharp() {
+    let pool = Pool::new(Options {
+        pool_size: Some(1),
+        timeout: Duration::from_secs(120),
+        ..Options::default()
+    })
+    .expect("new");
+    let got = pool
+        .invoke("blocksToHtml", &nested_outline(2411), Duration::ZERO)
+        .await
+        .expect("2411 levels to HTML");
+    assert!(got.contains("level 2410"));
+}
 
 #[test]
 fn reports_a_load_that_runs_past_the_timeout() {

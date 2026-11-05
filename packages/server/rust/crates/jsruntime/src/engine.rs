@@ -16,17 +16,30 @@ use crate::runtime::{Error, JsError, Stop};
 
 /// QuickJS's own stack limit. It must stay below the worker thread's stack
 /// (`worker::THREAD_STACK`), or deep recursion overflows the native stack and
-/// aborts the process instead of throwing a RangeError.
+/// aborts the process instead of throwing a RangeError. It is set on QuickJS
+/// directly: rquickjs 0.14's `set_max_stack_size` treats any limit above
+/// 16 MiB as no limit at all.
 ///
-/// rquickjs 0.14 treats any limit above 16 MiB as no limit at all
-/// (`RawRuntime::set_max_stack_size`), so 16 MiB is the most there is. It
-/// converts 1687 outline levels to HTML and 4384 to plain text, in debug and
-/// release builds alike (Cargo.toml optimizes rquickjs-sys in dev too);
-/// Markdown stops at 2854 on the memory budget (all measured). C# converts
-/// 2411 to HTML.
-pub(crate) const MAX_STACK: usize = 16 << 20;
+/// Sized so plain text converts 11049 outline levels and fails at 11050, as
+/// Jint's stack guard does in C# (both measured). HTML and Markdown stop
+/// earlier, on the memory budget, as in C#.
+pub(crate) const MAX_STACK: usize = (40 << 20) + (317 << 10);
 
-const _: () = assert!(MAX_STACK <= 1 << 24);
+const _: () = assert!(MAX_STACK + (8 << 20) <= crate::worker::THREAD_STACK);
+
+/// Sets QuickJS's stack limit, measured from the stack top QuickJS took
+/// when the runtime was built (see `worker::THREAD_STACK`).
+#[allow(unsafe_code)]
+fn set_max_stack(ctx: &Ctx<'_>, limit: usize) {
+    // SAFETY: ctx is a live context of this thread's runtime, and rquickjs
+    // holds the runtime lock for the whole `with` closure.
+    unsafe {
+        rquickjs::qjs::JS_SetMaxStackSize(
+            rquickjs::qjs::JS_GetRuntime(ctx.as_raw().as_ptr()),
+            limit as _,
+        );
+    }
+}
 
 /// The guards of one pooled call.
 pub(crate) struct Limits {
@@ -68,7 +81,6 @@ impl Engine {
     ) -> Result<Engine, Error> {
         let budget = Budget::default();
         let rt = rquickjs::Runtime::new_with_alloc(budget.allocator()).map_err(engine_error)?;
-        rt.set_max_stack_size(MAX_STACK);
         let guard = Guard::new();
         rt.set_interrupt_handler(Some(Box::new(guard.handler(budget.clone()))));
         // JS_NewContext's intrinsics minus atob/btoa (and the DOMException
@@ -92,6 +104,7 @@ impl Engine {
             limit.arm(budget, Charge::Held);
         }
         let loaded = ctx.with(|ctx| {
+            set_max_stack(&ctx, MAX_STACK);
             // Taken before the bundle runs, so a script cannot swap it.
             let well_formed: Function = ctx
                 .globals()

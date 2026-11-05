@@ -6,8 +6,8 @@
 //! the budget at 8 MiB with 9 MiB measured to load. A budget hit cannot be
 //! caught by JS; QuickJS's own memory limit throws an ordinary error a `try`
 //! can swallow.
-// The only unsafe code in the crate: rquickjs's `Allocator` is an unsafe
-// trait, and its hook is the one place that sees every allocation.
+// Unsafe code, with engine.rs's stack limit: rquickjs's `Allocator` is an
+// unsafe trait, and its hook is the one place that sees every allocation.
 #![allow(unsafe_code)]
 
 use std::sync::Arc;

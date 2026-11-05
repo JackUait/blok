@@ -13,7 +13,7 @@ use crate::runtime::{Error, Stop};
 /// check. QuickJS measures the limit from the stack top of the thread that
 /// built the engine (rquickjs moves it only with its "parallel" feature), so
 /// an engine must run on the thread that built it.
-pub(crate) const THREAD_STACK: usize = 32 << 20;
+pub(crate) const THREAD_STACK: usize = 64 << 20;
 
 pub(crate) type Job = Box<dyn FnOnce(&mut Engine) + Send>;
 
